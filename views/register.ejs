@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-    <title>FeedBack</title>
+    <title>DocCollab</title>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
     <link rel="stylesheet" href="css/main.css"/>
 </head>
@@ -20,18 +20,18 @@
         <label>Apellido:</label>
         <input type="text" class="form-control" name="lastname"><br>
         <label>RUT:</label>
-        <input type="text" class="form-control" name="rut" required><br>
+        <input type="text" class="form-control" name="rut" pattern="[P]?[0-9]{7,8}-[0-9kK]" placeholder="sin puntos, con guión" required><br>
         <label>E-mail:</label>
         <input type="email" class="form-control" name="mail" required><br>
         <label>Sexo:</label>
         <select name="sex" class="form-control">
-            <option value="F">Female</option>
-            <option value="M">Male</option>
+            <option value="F">Femenino</option>
+            <option value="M">Masculino</option>
         </select><br/>
         <label>Contraseña:</label>
         <input type="password" class="form-control" name="pass"><br>
 
-        <button type="submit" class="btn btn-success form-control">Registrar</button>
+        <button type="submit" class="btn btn-primary form-control">Registrar</button>
     </form>
 
     <br><br>
