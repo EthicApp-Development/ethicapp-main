@@ -12,7 +12,9 @@
     "ejs": "~2.5.2",
     "express": "~4.14.0",
     "express-busboy": "^4.0.0",
+    "express-session": "^1.14.2",
     "morgan": "~1.7.0",
+    "pg": "^6.1.0",
     "serve-favicon": "~2.3.0"
   }
 }

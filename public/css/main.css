@@ -12,7 +12,7 @@ body{
     padding: 0;
     margin: 0;
     height: 100%;
-    background-color: #e0e0e0;
+    background-color: #984512;
 }
 
 hr{
@@ -30,4 +30,14 @@ hr{
 ::-webkit-scrollbar-thumb {
     border-radius: 10px;
     background-color: rgba(0,0,0,0.2);
+}
+
+.middle-box{
+    max-width: 320px;
+    display: block;
+    padding: 4px 24px 20px 24px;
+    border-bottom: 4px solid #aaaaaa;
+    background: #f3f3f3;
+    margin: 20px auto;
+    text-align: center;
 }
