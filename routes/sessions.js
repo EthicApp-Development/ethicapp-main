@@ -6,7 +6,10 @@ let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 
 router.get("/seslist", (req, res) => {
-    res.render("seslist");
+    if(req.session.uid)
+        res.render("seslist", {role: req.session.role});
+    else
+        res.redirect(".");
 });
 
 router.post("/get-session-list",rpg.multiSQL({
