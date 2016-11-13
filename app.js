@@ -10,6 +10,7 @@ let busboy = require('express-busboy');
 
 let index = require('./routes/index');
 let users = require('./routes/users');
+let sessions = require("./routes/sessions");
 
 let app = express();
 
@@ -27,6 +28,7 @@ app.use(session({secret: 'ssshhh', saveUninitialized: false, resave: false}));
 
 app.use('/', index);
 app.use('/', users);
+app.use("/", sessions);
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {

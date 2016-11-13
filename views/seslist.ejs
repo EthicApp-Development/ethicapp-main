@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es" ng-app="SesList">
+<head>
+    <meta charset="UTF-8">
+    <title>DocCollab</title>
+    <script src="libs/angular.min.js"></script>
+    <script src="js/ses-ctrl.js"></script>
+    <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body>
+
+<div class="main-container" ng-controller="SesListController">
+
+    <h3>Lista de Sesiones</h3>
+
+    <ul class="list-group">
+        <li class="list-group-item" nd-repeat="ses in sessions">
+            <span class="list-group-item-heading" ng-bind="ses.name">
+            </span>
+            <span ng-bind="ses.descr"></span>
+        </li>
+    </ul>
+
+</div>
+
+</body>
+</html>

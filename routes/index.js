@@ -14,8 +14,4 @@ router.get('/', (req, res) => {
         res.redirect("login");
 });
 
-router.get("/seslist", (req, res) => {
-    res.end("Registrado con el usuario " + req.session.uid);
-});
-
 module.exports = router;
