@@ -5,10 +5,10 @@
 var pg = require('pg');
 //var qs = require('querystring');
 
-function smartArrayConvert(params, ses, data, calc) {
+function smartArrayConvert(sqlParams, ses, data, calc) {
     var arr = [];
-    for (var i = 0; i < params.sqlParams.length; i++) {
-        var p = params.sqlParams[i];
+    for (var i = 0; i < sqlParams.length; i++) {
+        var p = sqlParams[i];
         //console.log(p);
         p = JSON.parse(p);
         if (p.type == "plain")
@@ -88,7 +88,7 @@ module.exports.execSQL = function (params) {
             sql = params.sql;
         var qry;
         if (params.sqlParams != null) {
-            var sqlarr = smartArrayConvert(params, ses, data, calc);
+            var sqlarr = smartArrayConvert(params.sqlParams, ses, data, calc);
             qry = db.query(sql, sqlarr);
         }
         else {
@@ -103,6 +103,76 @@ module.exports.execSQL = function (params) {
             db.end();
         });
         //});
+    }
+};
+
+/**
+ * Execute a n sql statements with ok / err response at the end of all.
+ * @param params Parameters including:
+ * <li> nsql (required): List of String sql to be executed.
+ * <li> dbcon (required): String of database connection.
+ * <li> sesReqData: List of session required data.
+ * <li> postReqData: List of post request required data.
+ * <li> nsqlParams: List of List of sql statement $ parameters.
+ * <li> onStart: Function to be executed just before sql execution.
+ * <li> onEnd: Function to be executed just before send end result.
+ */
+module.exports.nExecSQL = function (params) {
+
+    if (params.nsql == null || params.dbcon == null || params.dbcon == "")
+        return null;
+
+    return function (req, res) {
+        var ses;
+        var total = params.nsql.length;
+        var completed = 0;
+        ses = req.session;
+        if (params.sesReqData != null) {
+            for (var i = 0; i < params.sesReqData.length; i++) {
+                if (ses[params.sesReqData[i]] === null) {
+                    res.end('{"status":"err"}');
+                    return;
+                }
+            }
+        }
+        var data = req.body;
+        var calc = {};
+        if (params.postReqData != null) {
+            for (var i = 0; i < params.postReqData.length; i++) {
+                if (data[params.postReqData[i]] === null || data[params.postReqData[i]] === "") {
+                    res.end('{"status":"err"}');
+                    return;
+                }
+            }
+        }
+        var db = new pg.Client(params.dbcon);
+        db.connect();
+        for(var i = 0; i < total; i++){
+            var sql = "";
+            if (params.onStart != null)
+                sql = params.onStart(ses, data, calc, i) || params.nsql[i];
+            else
+                sql = params.nsql[i];
+            var qry;
+            if (params.nsqlParams[i] != null) {
+                var sqlarr = smartArrayConvert(params.nsqlParams[i], ses, data, calc);
+                qry = db.query(sql, sqlarr);
+            }
+            else {
+                qry = db.query(sql);
+            }
+            qry.on("end", function () {
+                completed++;
+                if(completed>=total){
+                    if (params.onEnd != null)
+                        params.onEnd(req, res);
+                    else
+                        res.send('{"status":"ok"}');
+                    res.end();
+                    db.end();
+                }
+            });
+        }
     }
 };
 
@@ -162,7 +232,7 @@ module.exports.singleSQL = function (params) {
         var sql = params.sql;
         var qry;
         if (params.sqlParams != null) {
-            var sqlarr = smartArrayConvert(params, ses, data, calc);
+            var sqlarr = smartArrayConvert(params.sqlParams, ses, data, calc);
             qry = db.query(sql, sqlarr);
         }
         else {
@@ -192,7 +262,7 @@ module.exports.singleSQL = function (params) {
 };
 
 /**
- * Execute a select single sql statement.
+ * Execute a select multiple sql statement.
  * @param params Parameters including:
  * <li> sql (required): String sql to be executed.
  * <li> dbcon (required): String of database connection.
@@ -249,7 +319,7 @@ module.exports.multiSQL = function (params) {
         var sql = params.sql;
         var qry;
         if (params.sqlParams != null) {
-            var sqlarr = smartArrayConvert(params, ses, data, calc);
+            var sqlarr = smartArrayConvert(params.sqlParams, ses, data, calc);
             qry = db.query(sql, sqlarr);
         }
         else {

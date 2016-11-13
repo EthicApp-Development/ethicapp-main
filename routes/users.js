@@ -42,7 +42,7 @@ router.post("/register", rpg.execSQL({
     sql: "insert into users(rut, pass, name, mail, sex, role) values ($1,$2,$3,$4,$5,'A')",
     postReqData: ["name", "rut", "pass", "mail", "sex"],
     onStart: (ses, data, calc) => {
-        if (data.pass.length < 5) return "select $1, $2, $3 from users";
+        if (data.pass.length < 5) return "select $1, $2, $3, $4, $5";
         calc.passcr = crypto.createHash('md5').update(data.pass).digest('hex');
         calc.fullname = (data.name + " " + data.lastname);
     },
