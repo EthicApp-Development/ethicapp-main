@@ -32,3 +32,14 @@ create table if not exists sesusers (
 );
 
 
+create table if not exists documents (
+    id serial,
+    title text not null,
+    descr text,
+    filename text not null,
+    sesid integer,
+    uploader integer,
+    primary key(id),
+    foreign key(sesid) references sessions(id),
+    foreign key(uploader) references users(id)
+);

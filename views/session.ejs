@@ -14,7 +14,7 @@
 
     <a href="logout" class="pull-right">Salir</a>
 
-    <h3>Lista de Sesiones</h3>
+    <h3>Sesión Actual</h3>
 
     <% if(role == "P") { %>
     <h4>Agregar Sesión:</h4>
@@ -30,13 +30,13 @@
     <br>
     <% } %>
 
-    <div class="list-group">
-        <a class="list-group-item" ng-repeat="ses in sessions" href="session?sesid={{ses.id}}">
-            <h4 class="list-group-item-heading" ng-bind="ses.name">
+    <ul class="list-group">
+        <li class="list-group-item" ng-repeat="doc in documents">
+            <h4 class="list-group-item-heading" ng-bind="ses.title">
             </h4>
             <p class="list-group-item-text" ng-bind="ses.descr"></p>
-        </a>
-    </div>
+        </li>
+    </ul>
 
 </div>
 
