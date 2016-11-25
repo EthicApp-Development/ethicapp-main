@@ -1,0 +1,46 @@
+<html ng-app="Admin">
+<head>
+    <meta charset="UTF-8">
+    <title>DocCollab</title>
+    <script src="libs/angular.min.js"></script>
+    <script src="js/admin-ctrl.js"></script>
+    <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body class="bg-white" ng-controller="AdminController">
+
+<div class="row top-bar">
+    <div class="col-sm-1">
+
+    </div>
+    <div class="col-sm-11">
+        <h5><i class="fa fa-sliders"></i> Panel de administración</h5>
+    </div>
+    <!--<div class="col-sm-2 pull-right">
+        Hola
+    </div>-->
+</div>
+
+<div class="row full-height">
+
+    <div class="col-sm-4">
+        <div class="side-panel">
+            <h4>Lista de Sesiones:</h4>
+            <div class="list-group">
+                <a class="list-group-item" ng-repeat="ses in sessions" ng-click="selectSession($index)"
+                    ng-class="{'active':$index==selectedIndex}">
+                    <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
+                    <p class="list-group-item-text" ng-bind="ses.descr"></p>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-8">
+        <h3>Detalles Sesión: {{selectedSes.name}}</h3>
+    </div>
+
+</div>
+
+</body>
+</html>

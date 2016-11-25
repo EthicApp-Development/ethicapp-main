@@ -6,8 +6,12 @@ let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 
 router.get("/seslist", (req, res) => {
-    if (req.session.uid)
-        res.render("seslist", {role: req.session.role});
+    if (req.session.uid) {
+        if(req.session.role == "P")
+            res.redirect("admin");
+        else
+            res.render("seslist");
+    }
     else
         res.redirect(".");
 });
@@ -43,6 +47,13 @@ router.get("/session", (req, res) => {
         req.session.ses = req.body.sesid;
         res.render("session", {role: req.session.role});
     }
+    else
+        res.redirect(".");
+});
+
+router.get("/admin", (req, res) => {
+    if(req.session.role == "P")
+        res.render("admin");
     else
         res.redirect(".");
 });

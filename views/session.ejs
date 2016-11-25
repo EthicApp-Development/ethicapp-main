@@ -16,20 +16,6 @@
 
     <h3>Sesión Actual</h3>
 
-    <% if(role == "P") { %>
-    <h4>Agregar Sesión:</h4>
-    <form action="add-session" method="post">
-        <label>Nombre:</label>
-        <input type="text" class="form-control" name="name">
-        <label>Descripción:</label>
-        <textarea name="descr" class="form-control" rows="2"></textarea>
-        <button class="btn btn-primary form-control" type="submit">Agregar Sesión</button>
-    </form>
-    <br>
-    <hr>
-    <br>
-    <% } %>
-
     <ul class="list-group">
         <li class="list-group-item" ng-repeat="doc in documents">
             <h4 class="list-group-item-heading" ng-bind="ses.title">

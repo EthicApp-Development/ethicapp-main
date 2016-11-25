@@ -21,6 +21,7 @@ hr{
 
 ::-webkit-scrollbar {
     width: 4px;
+    height: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -49,4 +50,28 @@ hr{
     min-height: 100vh;
     background: #f3f3f3;
     margin: 0 auto;
+}
+
+hr{
+    background: #000;
+}
+
+.bg-white{
+    background: #fff;
+}
+
+a:hover{
+    cursor: pointer;
+}
+
+.top-bar{
+    height: 32px;
+    background: #984512;
+    color: white;
+}
+
+.side-panel{
+    padding: 8px 24px;
+    background: #e2e2e2;
+    height: calc(100vh - 42px);
 }
