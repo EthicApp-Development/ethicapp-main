@@ -5,6 +5,7 @@
     <script src="libs/angular.min.js"></script>
     <script src="js/admin-ctrl.js"></script>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/font-awesome.min.css"/>
     <link rel="stylesheet" href="css/main.css"/>
 </head>
 <body class="bg-white" ng-controller="AdminController">
@@ -22,6 +23,7 @@
 
     <div class="col-sm-4">
         <div class="side-panel">
+            <button class="btn btn-sm btn-default pull-right" ng-click="addNewSes()">Nueva</button>
             <h4>Lista de Sesiones:</h4>
             <div class="list-group">
                 <a class="list-group-item" ng-repeat="ses in sessions" ng-click="selectSession($index)"
@@ -35,7 +37,6 @@
 
     <div class="col-sm-8" ng-show="selectedIndex!=-1" ng-controller="TabsController">
         <h3>{{selectedSes.name}}</h3>
-
         <div class="btn-group center-block w300">
             <button class="btn btn-default" ng-repeat="x in tabOptions" ng-bind="x"
                     ng-class="{active: $index==selectedTab}" ng-click="setTab($index)">
@@ -43,22 +44,80 @@
         </div>
 
         <br>
-        <hr>
         <br>
 
         <div class="pad-content" ng-show="selectedTab == 0">
+            <h4>Detalles</h4>
             <label>Titulo:</label>
             <input type="text" class="form-control" ng-model="selectedSes.name">
             <br>
             <label>Factor detonante:</label>
             <textarea class="form-control" ng-model="selectedSes.descr"></textarea>
             <br>
-            <button class="btn btn-primary pull-right">Guardar cambios</button>
+            <button class="btn btn-default pull-right">Guardar cambios</button>
             <br>
             <hr>
             <br>
             <h4>Documentos</h4>
+            <div class="list-group">
+                <div class="list-group-item" ng-repeat="doc in documents">
+                    <i class="fa fa-file-text-o"></i><span ng-bind="doc.name"></span>
+                    <button class="btn btn-sm btn-default pull-right">Eliminar</button>
+                </div>
+            </div>
+            <br>
+            <label>Agregar documento:</label>
+            <div class="input-group">
+                <input type="file" class="form-control">
+                <span class="input-group-btn">
+                    <button class="btn btn-default">Subir</button>
+                </span>
+            </div>
+            <br>
+            <hr>
+            <br>
+            <h4>Estado</h4>
+            <div class="center-block w500 font-large">
+                <span ng-repeat="st in sesStatusses">
+                    <span class="label label-default" ng-class="{'label-success': $index==selectedSes.status-1}"
+                          ng-bind="st"></span> <i class="fa fa-arrow-right" ng-hide="$last"></i>
+                </span>
+            </div>
+            <br>
+            <button class="btn btn-sm btn-default pull-right">Pasar al siguiente estado</button>
+        </div>
 
+        <div class="pad-content" ng-show="selectedTab == 1">
+            <h4>Alumnos</h4>
+            <span ng-repeat="alum in users" ng-bind="alum+' '"></span>
+            <br>
+            <hr>
+            <br>
+            <h4>Agregar Usuarios</h4>
+            <label>Por correo o RUT</label>
+            <div class="input-group">
+                <input type="text" class="form-control">
+                <span class="input-group-btn">
+                    <button class="btn btn-default">Agregar</button>
+                </span>
+            </div>
+            <br>
+            <label>Subir lista de alumnos</label>
+            <div class="input-group">
+                <input type="file" class="form-control">
+                <span class="input-group-btn">
+                    <button class="btn btn-default">Agregar</button>
+                </span>
+            </div>
+        </div>
+
+        <div class="pad-content" ng-show="selectedTab == 2">
+            <h4>Resultados</h4>
+            <span>TODO</span>
+        </div>
+
+        <div class="pad-content" ng-show="selectedTab == 3">
+            <a href="visor" class="btn btn-primary">Abrir documentos en visor</a>
         </div>
 
     </div>

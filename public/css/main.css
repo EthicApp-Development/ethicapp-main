@@ -85,7 +85,16 @@ a:hover{
     display: block;
 }
 
+.w500{
+    width: 500px;
+    display: block;
+}
+
 .pad-content{
     padding-right: 24px;
     padding-left: 8px;
+}
+
+.font-large{
+    font-size: 150%;
 }

@@ -7,6 +7,7 @@ app.controller("AdminController", function ($scope, $http) {
     self.sessions = [];
     self.selectedSes = null;
     self.selectedIndex = -1;
+    self.sesStatusses = ["No Publicada", "Lectura", "Edición", "Finalizada"];
 
     self.init = () => {
         $http({url: "get-session-list", method: "post"}).success((data) => {
