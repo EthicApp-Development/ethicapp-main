@@ -16,6 +16,7 @@ create table if not exists sessions (
     id serial,
     name text not null,
     descr text,
+    status integer,
     time timestamp with time zone,
     creator integer,
     code char(6),
@@ -42,4 +43,17 @@ create table if not exists documents (
     primary key(id),
     foreign key(sesid) references sessions(id),
     foreign key(uploader) references users(id)
+);
+
+
+create table if not exists ideas (
+    id serial,
+    content text,
+    descr text,
+    pos integer,
+    uid integer,
+    docid integer,
+    primary key(id),
+    foreign key(uid) references users(id),
+    foreign key(docid) references documents(id)
 );

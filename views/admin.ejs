@@ -16,9 +16,6 @@
     <div class="col-sm-11">
         <h5><i class="fa fa-sliders"></i> Panel de administración</h5>
     </div>
-    <!--<div class="col-sm-2 pull-right">
-        Hola
-    </div>-->
 </div>
 
 <div class="row full-height">
@@ -28,7 +25,7 @@
             <h4>Lista de Sesiones:</h4>
             <div class="list-group">
                 <a class="list-group-item" ng-repeat="ses in sessions" ng-click="selectSession($index)"
-                    ng-class="{'active':$index==selectedIndex}">
+                   ng-class="{'active':$index==selectedIndex}">
                     <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
                     <p class="list-group-item-text" ng-bind="ses.descr"></p>
                 </a>
@@ -36,8 +33,34 @@
         </div>
     </div>
 
-    <div class="col-sm-8">
-        <h3>Detalles Sesión: {{selectedSes.name}}</h3>
+    <div class="col-sm-8" ng-show="selectedIndex!=-1" ng-controller="TabsController">
+        <h3>{{selectedSes.name}}</h3>
+
+        <div class="btn-group center-block w300">
+            <button class="btn btn-default" ng-repeat="x in tabOptions" ng-bind="x"
+                    ng-class="{active: $index==selectedTab}" ng-click="setTab($index)">
+            </button>
+        </div>
+
+        <br>
+        <hr>
+        <br>
+
+        <div class="pad-content" ng-show="selectedTab == 0">
+            <label>Titulo:</label>
+            <input type="text" class="form-control" ng-model="selectedSes.name">
+            <br>
+            <label>Factor detonante:</label>
+            <textarea class="form-control" ng-model="selectedSes.descr"></textarea>
+            <br>
+            <button class="btn btn-primary pull-right">Guardar cambios</button>
+            <br>
+            <hr>
+            <br>
+            <h4>Documentos</h4>
+
+        </div>
+
     </div>
 
 </div>

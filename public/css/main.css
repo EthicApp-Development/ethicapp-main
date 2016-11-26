@@ -75,3 +75,17 @@ a:hover{
     background: #e2e2e2;
     height: calc(100vh - 42px);
 }
+
+.full-width{
+    width: 100%;
+}
+
+.w300{
+    width: 300px;
+    display: block;
+}
+
+.pad-content{
+    padding-right: 24px;
+    padding-left: 8px;
+}

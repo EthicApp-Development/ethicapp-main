@@ -21,3 +21,15 @@ app.controller("AdminController", function ($scope, $http) {
 
     self.init();
 });
+
+
+app.controller("TabsController", function($scope, $http){
+    let self = $scope;
+    self.tabOptions = ["Editar","Usuarios","Dashboard","Visor"];
+    self.selectedTab = 0;
+
+    self.setTab = (idx) => {
+        self.selectedTab = idx;
+    };
+
+});
