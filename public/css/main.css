@@ -60,6 +60,10 @@ hr{
     background: #fff;
 }
 
+.bg-black{
+    background: #000;
+}
+
 a:hover{
     cursor: pointer;
 }
@@ -105,4 +109,23 @@ a:hover{
 
 .discrete:hover{
     color: rgba(0,0,0,0.6);
+}
+
+.pdf-content{
+    background: #333;
+    height: calc(100vh - 42px);
+}
+
+.side-bar{
+    background: #999;
+    height: calc(100vh - 42px);
+}
+
+.centered{
+    margin: 0 auto;
+    display: block;
+}
+
+canvas{
+    opacity: 0;
 }

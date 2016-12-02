@@ -42,15 +42,6 @@ router.post("/add-session", rpg.execSQL({
     }
 }));
 
-router.get("/session", (req, res) => {
-    if (req.session.uid) {
-        req.session.ses = req.body.sesid;
-        res.render("session", {role: req.session.role});
-    }
-    else
-        res.redirect(".");
-});
-
 router.get("/admin", (req, res) => {
     if (req.session.role == "P")
         res.render("admin");

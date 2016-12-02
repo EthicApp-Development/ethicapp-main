@@ -6,19 +6,23 @@ app.controller("EditorController", function($scope, $http){
     let self = $scope;
 
     self.pdfBinary = null;
-    self.scale = 1.5;
+    self.scale = 1;
 
     self.init = () => {
-        $http({url: "get-pdf", method: "post"}).success((data) => {
+        /*$http({url: "get-pdf", method: "post"}).success((data) => {
             self.pdfBinary = data;
-        });
-        let pdfData = base64ToUint8Array(pdfBase64);
-        loadPdf(pdfData);
+        });*/
+        //let pdfData = base64ToUint8Array(pdfBase64);
+        let url = "uploads/f68e346c-ce18-4b19-a92b-13ab57b354ef/pdf/t3.pdf";
+        loadPdf(url);
     };
+
+    self.init();
 
 });
 
 // Static functions
+/*
 let base64ToUint8Array = (base64) => {
     var raw = atob(base64); //This is a native function that decodes a base64-encoded string.
     var uint8Array = new Uint8Array(new ArrayBuffer(raw.length));
@@ -27,6 +31,7 @@ let base64ToUint8Array = (base64) => {
     }
     return uint8Array;
 };
+*/
 
 let loadPdf = (pdfData) => {
     PDFJS.disableWorker = true;
@@ -39,15 +44,15 @@ let renderPdf = (pdf) => {
 };
 
 let renderPage = (page) => {
-    var viewport = page.getViewport(scale);
-    var $canvas = $("#pdf-canvas");
+    var viewport = page.getViewport(1);
+    var $canvas = $("<canvas></canvas>");
 
     var canvas = $canvas.get(0);
     var context = canvas.getContext("2d");
     canvas.height = viewport.height;
     canvas.width = viewport.width;
 
-    var $pdfContainer = $("#pdfContainer");
+    var $pdfContainer = $("#pdf-canvas");
     $pdfContainer.css("height", canvas.height + "px").css("width", canvas.width + "px");
     $pdfContainer.append($canvas);
 
