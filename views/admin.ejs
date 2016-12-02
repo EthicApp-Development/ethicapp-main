@@ -2,11 +2,13 @@
 <head>
     <meta charset="UTF-8">
     <title>DocCollab</title>
-    <script src="libs/angular.min.js"></script>
-    <script src="js/admin-ctrl.js"></script>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
     <link rel="stylesheet" href="css/font-awesome.min.css"/>
     <link rel="stylesheet" href="css/main.css"/>
+    <script src="libs/angular.min.js"></script>
+    <script src="libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
+    <script src="libs/angular-bootstrap-multiselect.js"></script>
+    <script src="js/admin-ctrl.js"></script>
 </head>
 <body class="bg-white" ng-controller="AdminController">
 
@@ -90,26 +92,35 @@
             <button class="btn btn-sm btn-default pull-right">Pasar al siguiente estado</button>
         </div>
 
-        <div class="pad-content" ng-show="selectedTab == 1">
+        <div class="pad-content" ng-show="selectedTab == 1" ng-controller="NewUsersController">
             <h4>Alumnos</h4>
-            <span ng-repeat="alum in users" ng-bind="alum+' '"></span>
+            <span ng-repeat="alum in users">
+                <strong ng-bind="alum.name"></strong>
+                <span ng-hide="$last"> - </span>
+            </span>
             <br>
             <hr>
             <br>
             <h4>Agregar Usuarios</h4>
-            <label>Por correo o RUT</label>
-            <div class="input-group">
-                <input type="text" class="form-control">
-                <span class="input-group-btn">
-                    <button class="btn btn-default">Agregar</button>
-                </span>
+            <label>Por usuarios específicos</label>
+            <div class="row">
+                <div class="col-xs-9">
+                    <multiselect ms-header="Select Users" multiple="true" options="x.name for x in newUsers" ng-model="newMembs">
+                    </multiselect>
+                </div>
+                <div class="col-xs-3">
+                    <button class="btn btn-default form-control" ng-click="addToSession()">
+                        <i class="fa fa-plus"></i> Agregar a sesión</button>
+                </div>
             </div>
+            <br/>
+            <hr/>
             <br>
             <label>Subir lista de alumnos</label>
             <div class="input-group">
-                <input type="file" class="form-control">
+                <input type="file" class="form-control" disabled>
                 <span class="input-group-btn">
-                    <button class="btn btn-default">Agregar</button>
+                    <button class="btn btn-default" disabled>Agregar</button>
                 </span>
             </div>
         </div>

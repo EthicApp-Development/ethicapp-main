@@ -1,12 +1,14 @@
 "use strict";
 
-let app = angular.module("Admin", []);
+let app = angular.module("Admin", ["ui.bootstrap","ui.multiselect"]);
 
-app.controller("AdminController", function ($scope, $http) {
+app.controller("AdminController", function ($scope, $http, $uibModal) {
     let self = $scope;
     self.sessions = [];
     self.selectedSes = null;
     self.documents = [];
+    self.newUsers = [];
+    self.users = [];
     self.selectedIndex = -1;
     self.sesStatusses = ["No Publicada", "Lectura", "Edición", "Finalizada"];
 
@@ -20,12 +22,28 @@ app.controller("AdminController", function ($scope, $http) {
         self.selectedIndex = idx;
         self.selectedSes = self.sessions[idx];
         self.requestDocuments();
+        self.getNewUsers();
+        self.getMembers();
     };
 
     self.requestDocuments = () => {
         let postdata = {sesid: self.selectedSes.id};
         $http({url: "documents-session", method: "post", data: postdata}).success((data) => {
             self.documents = data;
+        });
+    };
+
+    self.getNewUsers = () => {
+        let postdata = {sesid: self.selectedSes.id};
+        $http({url: "get-new-users", method: "post", data: postdata}).success((data) => {
+            self.newUsers = data;
+        });
+    };
+
+    self.getMembers = () => {
+        let postdata = {sesid: self.selectedSes.id};
+        $http({url: "get-ses-users", method: "post", data: postdata}).success((data) => {
+            self.users = data;
         });
     };
 
@@ -54,4 +72,23 @@ app.controller("SesEditorController", function ($scope, $http) {
             console.log("Session updated");
         });
     };
+});
+
+
+app.controller("NewUsersController", function($scope,$http){
+    let self = $scope;
+    let newMembs = [];
+
+    self.addToSession = () => {
+        if (self.newMembs.length == 0) return;
+        let postdata = {
+            users: self.newMembs.map(e => e.id),
+            sesid: self.selectedSes.id
+        };
+        $http({url: "add-ses-users", method: "post", data: postdata}).success((data) => {
+            if (data.status == "ok")
+                console.log("Hola");
+        });
+    };
+
 });
