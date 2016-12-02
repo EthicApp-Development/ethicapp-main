@@ -113,11 +113,12 @@ a:hover{
 
 .pdf-content{
     background: #333;
-    height: calc(100vh - 42px);
+    max-height: calc(100vh - 42px);
+    overflow-y: scroll;
 }
 
 .side-bar{
-    background: #999;
+    background: #eee;
     height: calc(100vh - 42px);
 }
 

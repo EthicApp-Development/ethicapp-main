@@ -21,7 +21,7 @@
     </div>
 
     <div class="row">
-        <div id="pdfContainer" class="col-sm-9 pdf-content">
+        <div id="pdf-container" class="col-sm-9 pdf-content">
             <div ng-repeat="doc in documents">
                 <h4 class="white" ng-bind="doc.title"></h4>
                 <div class="pdf-block">
@@ -32,7 +32,9 @@
             </div>
         </div>
         <div class="col-sm-3 side-bar">
-
+            <button class="btn btn-default" ng-click="selectText()">Get Selected text</button>
+            <br>
+            <span ng-bind="seltxt"></span>
         </div>
     </div>
 

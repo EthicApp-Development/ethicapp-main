@@ -7,6 +7,7 @@ app.controller("EditorController", function($scope, $http){
 
     self.pdfBinary = null;
     self.scale = 1;
+    self.seltxt = "";
 
     self.init = () => {
         /*$http({url: "get-pdf", method: "post"}).success((data) => {
@@ -15,6 +16,10 @@ app.controller("EditorController", function($scope, $http){
         //let pdfData = base64ToUint8Array(pdfBase64);
         let url = "uploads/f68e346c-ce18-4b19-a92b-13ab57b354ef/pdf/t3.pdf";
         loadPdf(url);
+    };
+
+    self.selectText = () => {
+        self.seltxt = window.getSelection().toString();
     };
 
     self.init();
@@ -40,7 +45,8 @@ let loadPdf = (pdfData) => {
 };
 
 let renderPdf = (pdf) => {
-    pdf.getPage(1).then(renderPage);
+    for(let i = 1; i <= pdf.numPages; i++)
+        pdf.getPage(i).then(renderPage);
 };
 
 let renderPage = (page) => {
