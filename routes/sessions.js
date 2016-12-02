@@ -58,4 +58,27 @@ router.get("/admin", (req, res) => {
         res.redirect(".");
 });
 
+router.post("/update-session", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "update sessions set name = $1, descr = $2 where id = $3",
+    sesReqData: ["name","descr","id"],
+    sqlParams: [rpg.param("post","name"),rpg.param("post","descr"),rpg.param("post","id")]
+}));
+
+router.post("/upload-file", (req, res) => {
+    if(req.session.uid!=null && req.body.title!=null && req.files.pdf != null && req.files.pdf.mimetype == "application/pdf") {
+        console.log(req.body);
+        rpg.execSQL({
+            dbcon: pass.dbcon,
+            sql: "insert into documents(title,path,sesid,uploader) values ($1,$2,$3,$4)",
+            sqlParams: [rpg.param("post","title"), rpg.param("calc","path"), rpg.param("post","sesid"), rpg.param("ses","uid")],
+            onStart: (ses, data, calc) => {
+                calc.path = req.files.pdf.file
+            },
+            onEnd: () => {}
+        })(req,res);
+    }
+    res.redirect("admin");
+});
+
 module.exports = router;

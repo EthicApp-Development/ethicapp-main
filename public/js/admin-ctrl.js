@@ -34,3 +34,15 @@ app.controller("TabsController", function($scope, $http){
     };
 
 });
+
+app.controller("SesEditorController", function($scope,$http){
+    let self = $scope;
+
+    self.updateSession = () => {
+        if(self.selectedSes.name.length < 3 || self.selectedSes.descr.length < 5) return;
+        let postdata = {name: self.selectedSes.name, descr: self.selectedSes.descr, id: self.selectedSes.id};
+        $http({url: "update-session", method: "post", data: postdata}).success((data) => {
+            console.log("Session updated");
+        });
+    };
+});

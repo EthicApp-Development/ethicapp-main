@@ -46,7 +46,7 @@
         <br>
         <br>
 
-        <div class="pad-content" ng-show="selectedTab == 0">
+        <div class="pad-content" ng-show="selectedTab == 0" ng-controller="SesEditorController">
             <h4>Detalles</h4>
             <label>Titulo:</label>
             <input type="text" class="form-control" ng-model="selectedSes.name">
@@ -54,7 +54,7 @@
             <label>Factor detonante:</label>
             <textarea class="form-control" ng-model="selectedSes.descr"></textarea>
             <br>
-            <button class="btn btn-default pull-right">Guardar cambios</button>
+            <button class="btn btn-default pull-right" ng-click="updateSession()">Guardar cambios</button>
             <br>
             <hr>
             <br>
@@ -67,12 +67,14 @@
             </div>
             <br>
             <label>Agregar documento:</label>
-            <div class="input-group">
-                <input type="file" class="form-control">
+            <form class="input-group" action="upload-file" method="post" enctype="multipart/form-data">
+                <input type="text" class="form-control" name="title" placeholder="Titulo">
+                <input type="file" class="form-control" name="pdf">
+                <input type="text" ng-model="selectedSes.id" name="sesid" hidden>
                 <span class="input-group-btn">
                     <button class="btn btn-default">Subir</button>
                 </span>
-            </div>
+            </form>
             <br>
             <hr>
             <br>

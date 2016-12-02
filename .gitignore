@@ -3,3 +3,4 @@ dev_other/*
 passwords.js
 node_modules/
 .DS_store
+uploads

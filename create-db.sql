@@ -36,8 +36,7 @@ create table if not exists sesusers (
 create table if not exists documents (
     id serial,
     title text not null,
-    descr text,
-    filename text not null,
+    path text not null,
     sesid integer,
     uploader integer,
     primary key(id),
