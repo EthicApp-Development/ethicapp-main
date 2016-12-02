@@ -98,3 +98,11 @@ a:hover{
 .font-large{
     font-size: 150%;
 }
+
+.discrete{
+    color: rgba(0,0,0,0.3);
+}
+
+.discrete:hover{
+    color: rgba(0,0,0,0.6);
+}

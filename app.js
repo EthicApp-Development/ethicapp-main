@@ -28,6 +28,7 @@ busboy.extend(app, {
 });
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use("/uploads",express.static(path.join(__dirname, 'uploads')));
 app.use(session({secret: 'ssshhh', saveUninitialized: false, resave: false}));
 
 app.use('/', index);

@@ -81,4 +81,11 @@ router.post("/upload-file", (req, res) => {
     res.redirect("admin");
 });
 
+router.post("/documents-session",rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select id, title, path from documents where sesid = $1",
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post","sesid")]
+}));
+
 module.exports = router;

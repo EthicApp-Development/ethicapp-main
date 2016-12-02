@@ -6,6 +6,7 @@ app.controller("AdminController", function ($scope, $http) {
     let self = $scope;
     self.sessions = [];
     self.selectedSes = null;
+    self.documents = [];
     self.selectedIndex = -1;
     self.sesStatusses = ["No Publicada", "Lectura", "Edición", "Finalizada"];
 
@@ -18,15 +19,23 @@ app.controller("AdminController", function ($scope, $http) {
     self.selectSession = (idx) => {
         self.selectedIndex = idx;
         self.selectedSes = self.sessions[idx];
+        self.requestDocuments();
+    };
+
+    self.requestDocuments = () => {
+        let postdata = {sesid: self.selectedSes.id};
+        $http({url: "documents-session", method: "post", data: postdata}).success((data) => {
+            self.documents = data;
+        });
     };
 
     self.init();
 });
 
 
-app.controller("TabsController", function($scope, $http){
+app.controller("TabsController", function ($scope, $http) {
     let self = $scope;
-    self.tabOptions = ["Editar","Usuarios","Dashboard","Visor"];
+    self.tabOptions = ["Editar", "Usuarios", "Dashboard", "Visor"];
     self.selectedTab = 0;
 
     self.setTab = (idx) => {
@@ -35,11 +44,11 @@ app.controller("TabsController", function($scope, $http){
 
 });
 
-app.controller("SesEditorController", function($scope,$http){
+app.controller("SesEditorController", function ($scope, $http) {
     let self = $scope;
 
     self.updateSession = () => {
-        if(self.selectedSes.name.length < 3 || self.selectedSes.descr.length < 5) return;
+        if (self.selectedSes.name.length < 3 || self.selectedSes.descr.length < 5) return;
         let postdata = {name: self.selectedSes.name, descr: self.selectedSes.descr, id: self.selectedSes.id};
         $http({url: "update-session", method: "post", data: postdata}).success((data) => {
             console.log("Session updated");

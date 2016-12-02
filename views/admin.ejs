@@ -61,8 +61,9 @@
             <h4>Documentos</h4>
             <div class="list-group">
                 <div class="list-group-item" ng-repeat="doc in documents">
-                    <i class="fa fa-file-text-o"></i><span ng-bind="doc.name"></span>
-                    <button class="btn btn-sm btn-default pull-right">Eliminar</button>
+                    <i class="fa fa-file-text-o"></i> <strong ng-bind="doc.title"></strong>
+                    <a href="{{doc.path}}" class="discrete"> - Ver documento original</a>
+                    <button class="btn btn-xs btn-default pull-right">Eliminar</button>
                 </div>
             </div>
             <br>
