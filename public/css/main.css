@@ -130,3 +130,7 @@ a:hover{
 canvas{
     opacity: 0;
 }
+
+.highlight{
+    background: red;
+}

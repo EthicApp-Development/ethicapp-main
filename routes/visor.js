@@ -21,4 +21,11 @@ router.get("/visor", (req,res) => {
         res.redirect(".");
 });
 
+router.post("/get-documents", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select id, title, path from documents where sesid = $1",
+    sesReqData: ["uid","ses"],
+    sqlParams: [rpg.param("ses","ses")]
+}));
+
 module.exports = router;

@@ -5,20 +5,34 @@ let app = angular.module("Editor", []);
 app.controller("EditorController", function($scope, $http){
     let self = $scope;
 
-    self.pdfBinary = null;
+    self.documents = [];
+    self.selectedDocument = -1;
     self.seltxt = "";
+    self.last_serial = "";
+    rangy.init();
+    self.applier = rangy.createClassApplier("highlight");
 
     self.init = () => {
-        /*$http({url: "get-pdf", method: "post"}).success((data) => {
-            self.pdfBinary = data;
-        });*/
-        //let pdfData = base64ToUint8Array(pdfBase64);
-        let url = "uploads/f68e346c-ce18-4b19-a92b-13ab57b354ef/pdf/t3.pdf";
-        loadPdf(url);
+        $http({url: "get-documents", method: "post"}).success((data) => {
+            self.documents = data;
+            self.renderPDF(0);
+        });
     };
 
     self.selectText = () => {
-        self.seltxt = window.getSelection().toString();
+        let selection = window.getSelection();
+        let serial = rangy.serializeSelection(window,true,$("#pdf-canvas")[0]);
+        self.seltxt = selection.toString() + " - " + serial;
+        self.last_serial = serial;
+    };
+
+    self.highlightSerial = () => {
+        self.applier.applyToRange(rangy.deserializeRange(self.last_serial,$("#pdf-canvas")[0],document));
+    };
+
+    self.renderPDF = (idx) => {
+        self.selectedDocument = idx;
+        loadPdf(self.documents[idx].path);
     };
 
     self.init();
