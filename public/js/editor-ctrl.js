@@ -6,7 +6,6 @@ app.controller("EditorController", function($scope, $http){
     let self = $scope;
 
     self.pdfBinary = null;
-    self.scale = 1;
     self.seltxt = "";
 
     self.init = () => {
@@ -29,9 +28,9 @@ app.controller("EditorController", function($scope, $http){
 // Static functions
 /*
 let base64ToUint8Array = (base64) => {
-    var raw = atob(base64); //This is a native function that decodes a base64-encoded string.
-    var uint8Array = new Uint8Array(new ArrayBuffer(raw.length));
-    for (var i = 0; i < raw.length; i++) {
+    let raw = atob(base64); //This is a native function that decodes a base64-encoded string.
+    let uint8Array = new Uint8Array(new ArrayBuffer(raw.length));
+    for (let i = 0; i < raw.length; i++) {
         uint8Array[i] = raw.charCodeAt(i);
     }
     return uint8Array;
@@ -40,7 +39,7 @@ let base64ToUint8Array = (base64) => {
 
 let loadPdf = (pdfData) => {
     PDFJS.disableWorker = true;
-    var pdf = PDFJS.getDocument(pdfData);
+    let pdf = PDFJS.getDocument(pdfData);
     pdf.then(renderPdf);
 };
 
@@ -50,20 +49,21 @@ let renderPdf = (pdf) => {
 };
 
 let renderPage = (page) => {
-    var viewport = page.getViewport(1);
-    var $canvas = $("<canvas></canvas>");
+    let scale = 1.3;
+    let viewport = page.getViewport(scale);
+    let $canvas = $("<canvas></canvas>");
 
-    var canvas = $canvas.get(0);
-    var context = canvas.getContext("2d");
+    let canvas = $canvas.get(0);
+    let context = canvas.getContext("2d");
     canvas.height = viewport.height;
     canvas.width = viewport.width;
 
-    var $pdfContainer = $("#pdf-canvas");
+    let $pdfContainer = $("#pdf-canvas");
     $pdfContainer.css("height", canvas.height + "px").css("width", canvas.width + "px");
     $pdfContainer.append($canvas);
 
-    var canvasOffset = $canvas.offset();
-    var $textLayerDiv = jQuery("<div />")
+    let canvasOffset = $canvas.offset();
+    let $textLayerDiv = jQuery("<div />")
         .addClass("textLayer")
         .css("height", viewport.height + "px")
         .css("width", viewport.width + "px")
