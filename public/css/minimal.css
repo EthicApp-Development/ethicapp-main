@@ -14,7 +14,7 @@ body {
 ::-moz-selection { background:rgba(0,0,255,0.3); }
 
 .textLayer {
-    position: absolute;
+    position: relative;
     left: 0;
     top: 0;
     right: 0;
@@ -24,6 +24,12 @@ body {
     overflow: hidden;
     background: white;
     box-shadow: black 0 0 16px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+canvas{
+    display: none;
 }
 
 .textLayer > div {

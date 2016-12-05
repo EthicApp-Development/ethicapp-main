@@ -134,3 +134,26 @@ canvas{
 .highlight{
     background: red;
 }
+
+.side-top-btn{
+    display: inline-block;
+    width: 120px;
+    height: 28px;
+    padding-top: 4px;
+    text-align: center;
+    background: rgba(0,0,0,0.1);
+    color: white;
+}
+
+.side-top-btn:hover{
+    background: rgba(0,0,0,0.2);
+    cursor: pointer;
+}
+
+.side-top-btn.active{
+    background: rgba(0,0,0,0.4);
+}
+
+.simple-margin-left{
+    margin-left: 32px;
+}

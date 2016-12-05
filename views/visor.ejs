@@ -21,20 +21,18 @@
 
     <div class="row top-bar">
         <div class="col-sm-6">
-            <span ng-repeat="doc in documents" ng-bind="doc.title"></span>
+            <span class="simple-margin-left">Documentos: </span>
+            <span ng-repeat="doc in documents" class="side-top-btn" ng-bind="doc.title"
+                  ng-class="{'active': $index==selectedDocument}" ng-click="selectPDF($index)"></span>
         </div>
         <div class="col-sm-6"></div>
     </div>
 
     <div class="row">
         <div id="pdf-container" class="col-sm-9 pdf-content">
-            <!--<div ng-repeat="doc in documents">
-                <h4 class="white" ng-bind="doc.title"></h4>
-                <div class="pdf-block">
-                </div>
-            </div>-->
             <div class="centered">
-                <div id="pdf-canvas" class="centered"></div>
+                <div ng-repeat="doc in documents" id="pdf-canvas-{{$index}}" class="centered"
+                ng-show="$index==selectedDocument"></div>
             </div>
         </div>
         <div class="col-sm-3 side-bar">

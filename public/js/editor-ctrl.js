@@ -15,13 +15,13 @@ app.controller("EditorController", function($scope, $http){
     self.init = () => {
         $http({url: "get-documents", method: "post"}).success((data) => {
             self.documents = data;
-            self.renderPDF(0);
+            self.renderAll();
         });
     };
 
     self.selectText = () => {
         let selection = window.getSelection();
-        let serial = rangy.serializeSelection(window,true,$("#pdf-canvas")[0]);
+        let serial = rangy.serializeSelection(window,true,$("#pdf-canvas-"+self.selectedDocument)[0]);
         self.seltxt = selection.toString() + " - " + serial;
         self.last_serial = serial;
     };
@@ -30,9 +30,14 @@ app.controller("EditorController", function($scope, $http){
         self.applier.applyToRange(rangy.deserializeRange(self.last_serial,$("#pdf-canvas")[0],document));
     };
 
-    self.renderPDF = (idx) => {
+    self.renderAll = () => {
+        self.documents.forEach((doc,idx) => {
+            loadPdf(doc.path,idx);
+        });
+    };
+
+    self.selectPDF = (idx) => {
         self.selectedDocument = idx;
-        loadPdf(self.documents[idx].path);
     };
 
     self.init();
@@ -51,18 +56,18 @@ let base64ToUint8Array = (base64) => {
 };
 */
 
-let loadPdf = (pdfData) => {
+let loadPdf = (pdfData,i) => {
     PDFJS.disableWorker = true;
     let pdf = PDFJS.getDocument(pdfData);
-    pdf.then(renderPdf);
+    pdf.then((pdf) => renderPdf(pdf,i));
 };
 
-let renderPdf = (pdf) => {
+let renderPdf = (pdf,idx) => {
     for(let i = 1; i <= pdf.numPages; i++)
-        pdf.getPage(i).then(renderPage);
+        pdf.getPage(i).then((p) => renderPage(p,idx));
 };
 
-let renderPage = (page) => {
+let renderPage = (page,i) => {
     let scale = 1.3;
     let viewport = page.getViewport(scale);
     let $canvas = $("<canvas></canvas>");
@@ -72,19 +77,19 @@ let renderPage = (page) => {
     canvas.height = viewport.height;
     canvas.width = viewport.width;
 
-    let $pdfContainer = $("#pdf-canvas");
+    let $pdfContainer = $("#pdf-canvas-"+i);
     $pdfContainer.css("height", canvas.height + "px").css("width", canvas.width + "px");
     $pdfContainer.append($canvas);
 
     let canvasOffset = $canvas.offset();
-    let $textLayerDiv = jQuery("<div />")
+    let $textLayerDiv = jQuery("<div></div>")
         .addClass("textLayer")
         .css("height", viewport.height + "px")
-        .css("width", viewport.width + "px")
-        .offset({
+        .css("width", viewport.width + "px");
+        /*.offset({
             top: canvasOffset.top,
             left: canvasOffset.left
-        });
+        });*/
 
     $pdfContainer.append($textLayerDiv);
 
