@@ -38,7 +38,7 @@ router.post("/add-session", rpg.execSQL({
         }
     },
     onEnd: (req, res) => {
-        res.redirect("seslist");
+        res.redirect("admin");
     }
 }));
 

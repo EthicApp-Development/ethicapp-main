@@ -47,6 +47,12 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
         });
     };
 
+    self.openNewSes = () => {
+        $uibModal.open({
+            templateUrl: "templ/new-ses.html"
+        });
+    };
+
     self.init();
 });
 
