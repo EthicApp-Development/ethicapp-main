@@ -27,7 +27,7 @@ app.controller("EditorController", function ($scope, $http) {
     };
 
     self.highlightSerial = () => {
-        self.applier.applyToRange(rangy.deserializeRange(self.last_serial, $("#pdf-canvas")[0], document));
+        self.applier.applyToRange(rangy.deserializeRange(self.last_serial, $("#pdf-canvas-" + self.selectedDocument)[0], document));
     };
 
     self.renderAll = () => {

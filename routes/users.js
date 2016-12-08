@@ -12,6 +12,8 @@ router.get('/login', (req, res) => {
 
 router.get("/logout", (req, res) => {
     req.session.uid = null;
+    req.session.role = null;
+    req.session.ses = null;
     res.redirect("login");
 });
 
@@ -28,6 +30,7 @@ router.post("/login", rpg.singleSQL({
         if(result.id != null) {
             req.session.uid = result.id;
             req.session.role = result.role;
+            req.session.ses = null;
         }
         res.redirect(".");
     }
