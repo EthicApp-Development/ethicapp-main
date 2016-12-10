@@ -25,7 +25,9 @@
             <span ng-repeat="doc in documents" class="side-top-btn" ng-bind="doc.title"
                   ng-class="{'active': $index==selectedDocument}" ng-click="selectPDF($index)"></span>
         </div>
-        <div class="col-sm-6"></div>
+        <div class="col-sm-6">
+            <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>
+        </div>
     </div>
 
     <div class="row">

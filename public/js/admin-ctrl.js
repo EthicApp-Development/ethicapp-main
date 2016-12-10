@@ -7,6 +7,7 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
     self.sessions = [];
     self.selectedSes = null;
     self.documents = [];
+    self.questions = [];
     self.newUsers = [];
     self.users = [];
     self.selectedIndex = -1;
@@ -22,6 +23,7 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
         self.selectedIndex = idx;
         self.selectedSes = self.sessions[idx];
         self.requestDocuments();
+        self.requestQuestions();
         self.getNewUsers();
         self.getMembers();
     };
@@ -30,6 +32,13 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
         let postdata = {sesid: self.selectedSes.id};
         $http({url: "documents-session", method: "post", data: postdata}).success((data) => {
             self.documents = data;
+        });
+    };
+
+    self.requestQuestions = () => {
+        let postdata = {sesid: self.selectedSes.id};
+        $http({url: "questions-session", method: "post", data: postdata}).success((data) => {
+            self.questions = data;
         });
     };
 
@@ -96,5 +105,44 @@ app.controller("NewUsersController", function($scope,$http){
                 console.log("Hola");
         });
     };
+
+});
+
+app.controller("QuestionsController", function($scope,$http){
+    let self = $scope;
+
+    self.newQuestion = {
+        content: "",
+        alternatives: ["","","","",""],
+        comment: "",
+        other: "",
+        answer: -1
+    };
+
+    self.selectAnswer = (i) => {
+        self.newQuestion.answer = i;
+    };
+
+    self.addQuestion = () => {
+        if(self.newQuestion.answer == -1) return;
+        let postdata = {
+            content: self.newQuestion.content,
+            options: self.newQuestion.alternatives.join("\n"),
+            comment: self.newQuestion.comment,
+            other: self.newQuestion.answer,
+            sesid: self.selectedSes.id
+        };
+        $http({url: "add-question", method: "post", data: postdata}).success((data) => {
+            if(data.status == "ok")
+                self.requestQuestions()
+        });
+        self.newQuestion = {
+            content: "",
+            alternatives: ["","","","",""],
+            comment: "",
+            other: "",
+            answer: -1
+        };
+    }
 
 });

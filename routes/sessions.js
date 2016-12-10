@@ -18,23 +18,23 @@ router.get("/seslist", (req, res) => {
 
 router.post("/get-session-list", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select s.id, s.name, s.descr, s.status from sessions as s, sesusers as su where su.uid = $1 and su.sesid = s.id",
+    sql: "select s.id, s.name, s.descr, s.status, s.type from sessions as s, sesusers as su where su.uid = $1 and su.sesid = s.id",
     sesReqData: ["uid"],
     sqlParams: [rpg.param("ses", "uid")]
 }));
 
 router.post("/add-session", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "with rows as (insert into sessions(name,descr,creator,time) values ($1,$2,$3,now()) returning id)" +
-    " insert into sesusers(sesid,uid) select id, $4 from rows",
+    sql: "with rows as (insert into sessions(name,descr,creator,time,status,type) values ($1,$2,$3,now(),1,$4) returning id)" +
+    " insert into sesusers(sesid,uid) select id, $5 from rows",
     sesReqData: ["uid"],
-    postReqData: ["name", "descr"],
-    sqlParams: [rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("ses", "uid"), rpg.param("ses", "uid")],
+    postReqData: ["name", "descr","type"],
+    sqlParams: [rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("ses", "uid"), rpg.param("post","type"), rpg.param("ses", "uid")],
     onStart: (ses, data, calc) => {
         if (ses.role != "P") {
             console.log("ERR: Solo profesor puede crear sesiones.");
             console.log(ses);
-            return "select $1, $2, $3, $4"
+            return "select $1, $2, $3, $4, $5"
         }
     },
     onEnd: (req, res) => {
@@ -80,6 +80,13 @@ router.post("/documents-session", rpg.multiSQL({
     sqlParams: [rpg.param("post", "sesid")]
 }));
 
+router.post("/questions-session", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select id, content, options from questions where sesid = $1",
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "sesid")]
+}));
+
 router.post("/get-new-users", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select id, name, mail from users where id not in (select u.id from users as u, sesusers as su where u.id = su.uid and su.sesid = $1)",
@@ -106,5 +113,21 @@ router.post("/add-ses-users", (req, res) => {
         sql: sql
     })(req, res);
 });
+
+router.post("/add-question", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "insert into questions(content,options,answer,comment,other,sesid) values ($1,$2,$3,$4,$5,$6)",
+    sesReqData: ["uid"],
+    postReqData: ["content","options","answer","comment","other","sesid"],
+    sqlParams: [rpg.param("post", "content"),rpg.param("post", "options"),rpg.param("post", "answer"),
+        rpg.param("post", "comment"),rpg.param("post", "other"),rpg.param("post", "sesid")],
+    onStart: (ses,data,calc) => {
+        if (ses.role != "P") {
+            console.log("ERR: Solo profesor puede crear sesiones.");
+            return "select $1, $2, $3, $4, $5, $6"
+        }
+    }
+}));
+
 
 module.exports = router;

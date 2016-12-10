@@ -28,4 +28,11 @@ router.post("/get-documents", rpg.multiSQL({
     sqlParams: [rpg.param("ses", "ses")]
 }));
 
+router.post("/get-questions", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select id, content, options from questions where sesid = $1",
+    sesReqData: ["uid", "ses"],
+    sqlParams: [rpg.param("ses", "ses")]
+}));
+
 module.exports = router;

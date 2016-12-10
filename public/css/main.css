@@ -97,6 +97,8 @@ a:hover{
 .pad-content{
     padding-right: 24px;
     padding-left: 8px;
+    overflow-y: scroll;
+    max-height: 80vh;
 }
 
 .font-large{
@@ -156,4 +158,8 @@ canvas{
 
 .simple-margin-left{
     margin-left: 32px;
+}
+
+.bg-green{
+    background: #75d332;
 }

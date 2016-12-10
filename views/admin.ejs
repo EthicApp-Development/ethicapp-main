@@ -63,24 +63,49 @@
             <br>
             <hr>
             <br>
-            <h4>Documentos</h4>
-            <div class="list-group">
-                <div class="list-group-item" ng-repeat="doc in documents">
-                    <i class="fa fa-file-text-o"></i> <strong ng-bind="doc.title"></strong>
-                    <a href="{{doc.path}}" class="discrete"> - Ver documento original</a>
-                    <button class="btn btn-xs btn-default pull-right">Eliminar</button>
+            <div ng-show="selectedSes.type == 'L'">
+                <h4>Documentos</h4>
+                <div class="list-group">
+                    <div class="list-group-item" ng-repeat="doc in documents">
+                        <i class="fa fa-file-text-o"></i> <strong ng-bind="doc.title"></strong>
+                        <a href="{{doc.path}}" class="discrete"> - Ver documento original</a>
+                        <button class="btn btn-xs btn-default pull-right">Eliminar</button>
+                    </div>
                 </div>
-            </div>
-            <br>
-            <label>Agregar documento:</label>
-            <form class="input-group" action="upload-file" method="post" enctype="multipart/form-data">
-                <input type="text" class="form-control" name="title" placeholder="Titulo">
-                <input type="file" class="form-control" name="pdf">
-                <input type="text" ng-model="selectedSes.id" name="sesid" hidden>
-                <span class="input-group-btn">
+                <br>
+                <label>Agregar documento:</label>
+                <form class="input-group" action="upload-file" method="post" enctype="multipart/form-data">
+                    <input type="text" class="form-control" name="title" placeholder="Titulo">
+                    <input type="file" class="form-control" name="pdf">
+                    <input type="text" ng-model="selectedSes.id" name="sesid" hidden>
+                    <span class="input-group-btn">
                     <button class="btn btn-default">Subir</button>
                 </span>
-            </form>
+                </form>
+            </div>
+            <div ng-show="selectedSes.type == 'S'" ng-controller="QuestionsController">
+                <h4>Preguntas</h4>
+                <div class="list-group-item" ng-repeat="qs in questions">
+                    <strong>{{($index+1) + ". " + qs.content | limitTo:80}}</strong>
+                    <button class="btn btn-xs btn-default pull-right">Eliminar</button>
+                </div>
+                <br>
+                <div>
+                    <label>Agregar Pregunta:</label>
+                    <textarea rows="2" class="form-control" ng-model="newQuestion.content"></textarea>
+                    <label>Alternativas:</label>
+                    <div class="input-group" ng-repeat=" x in ['A','B','C','D','E']">
+                        <a class="input-group-addon" ng-bind="x" ng-click="selectAnswer($index)"
+                           ng-class="{'bg-green': $index == newQuestion.answer}"></a>
+                        <input type="text" class="form-control" ng-model="newQuestion.alternatives[$index]">
+                    </div>
+                    <label>Comentario (Solución):</label>
+                    <textarea rows="2" class="form-control" ng-model="newQuestion.comment"></textarea>
+                    <label>Otros:</label>
+                    <input type="text" class="form-control" ng-model="newQuestion.other">
+                    <button class="btn btn-default pull-right" ng-click="addQuestion()">Agregar</button>
+                </div>
+            </div>
             <br>
             <hr>
             <br>

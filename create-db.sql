@@ -20,6 +20,7 @@ create table if not exists sessions (
     time timestamp with time zone,
     creator integer,
     code char(6),
+    type char(1),
     primary key (id),
     foreign key(creator) references users(id)
 );
@@ -49,10 +50,33 @@ create table if not exists ideas (
     id serial,
     content text,
     descr text,
-    pos integer,
+    pos varchar(255),
     uid integer,
     docid integer,
     primary key(id),
     foreign key(uid) references users(id),
     foreign key(docid) references documents(id)
+);
+
+create table if not exists questions (
+    id serial,
+    content text,
+    options text,
+    answer integer,
+    comment text,
+    other text,
+    sesid integer,
+    primary key(id),
+    foreign key(sesid) references sessions(id)
+);
+
+create table if not exists selection (
+    id serial,
+    answer integer,
+    uid integer,
+    comment text,
+    qid integer,
+    primary key(id),
+    foreign key(uid) references users(id),
+    foreign key(qid) references questions(id)
 );
