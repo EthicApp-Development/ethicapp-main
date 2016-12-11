@@ -21,6 +21,22 @@ router.get("/visor", (req, res) => {
         res.redirect(".");
 });
 
+router.get("/to-select", (req, res) => {
+    if (req.session.uid) {
+        req.session.ses = req.query.sesid;
+        res.redirect("select");
+    }
+    else
+        res.redirect(".");
+});
+
+router.get("/select", (req, res) => {
+    if (req.session.uid && req.session.ses)
+        res.render("select");
+    else
+        res.redirect(".");
+});
+
 router.post("/get-documents", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select id, title, path from documents where sesid = $1",

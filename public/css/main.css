@@ -160,6 +160,32 @@ canvas{
     margin-left: 32px;
 }
 
-.bg-green{
-    background: #75d332;
+.bg-green, .bg-green:focus, .bg-green:hover, .bg-green:active{
+    background: #75d332 !important;
+}
+
+.mid-container{
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    padding: 24px;
+    overflow: scroll;
+}
+
+.addon-little{
+    display: inline-block;
+    width: 40px;
+}
+
+.mini {
+    border: 1px solid #ccc;
+    width: calc(100% - 80px);
+    display: inline-block;
+    padding: 4px 12px;
+    margin-left: -4px;
+    border-radius: 0 6px 6px 0;
+}
+
+.sep-lines{
+    line-height: 1.25;
 }

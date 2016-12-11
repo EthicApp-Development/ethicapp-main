@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es" ng-app="Select">
+<head>
+    <meta charset="UTF-8">
+    <title>DocCollab</title>
+    <script src="libs/angular.min.js"></script>
+    <script src="js/select-ctrl.js"></script>
+    <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body class="bg-black">
+
+<div class="editor-container" ng-controller="SelectController">
+
+    <div class="row top-bar">
+        <div class="col-sm-6">
+            <span class="simple-margin-left">Preguntas: </span>
+            <span ng-bind="questions.length"></span>
+        </div>
+        <div class="col-sm-6">
+            <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>
+        </div>
+    </div>
+
+    <div class="bg-black">
+        <div class="mid-container">
+            <div ng-repeat="qs in questions">
+                <h4 class="sep-lines" ng-bind="($index+1)+'. '+qs.content"></h4>
+                <div class="list-group">
+                    <div class="" ng-repeat="x in optLabels">
+                        <a class="input-group-addon addon-little" ng-bind="x" ng-class="{'bg-green': answers[$parent.$index]==$index}"
+                           ng-click="setAnswer($parent.$index,$index)"></a>
+                        <span class="mini" ng-bind="qs.options[$index]"></span>
+                    </div>
+                </div>
+                <hr>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>
