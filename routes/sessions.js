@@ -107,7 +107,6 @@ router.post("/add-ses-users", (req, res) => {
         if (!isNaN(uid))
             sql += "(" + uid + "," + req.body.sesid + ") ";
     });
-    console.log(sql);
     rpg.execSQL({
         dbcon: pass.dbcon,
         sql: sql

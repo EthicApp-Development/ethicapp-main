@@ -71,12 +71,11 @@ create table if not exists questions (
 );
 
 create table if not exists selection (
-    id serial,
     answer integer,
     uid integer,
     comment text,
     qid integer,
-    primary key(id),
+    primary key(uid,qid),
     foreign key(uid) references users(id),
     foreign key(qid) references questions(id)
 );

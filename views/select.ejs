@@ -28,12 +28,21 @@
                 <h4 class="sep-lines" ng-bind="($index+1)+'. '+qs.content"></h4>
                 <div class="list-group">
                     <div class="" ng-repeat="x in optLabels">
-                        <a class="input-group-addon addon-little" ng-bind="x" ng-class="{'bg-green': answers[$parent.$index]==$index}"
-                           ng-click="setAnswer($parent.$index,$index)"></a>
+                        <a class="input-group-addon addon-little" ng-bind="x" ng-class="{'bg-green': answers[qs.id]==$index}"
+                           ng-click="setAnswer(qs.id,$index)"></a>
                         <span class="mini" ng-bind="qs.options[$index]"></span>
                     </div>
                 </div>
+                <div class="input-group">
+                    <input type="text" class="form-control" ng-model="comments[qs.id]">
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" ng-click="sendAnswer(qs.id)"
+                                ng-class="{'btn-success': sent[qs.id]}">{{(sent[qs.id])?"Re-":""}}Enviar</button>
+                    </span>
+                </div>
+                <br>
                 <hr>
+                <br>
             </div>
         </div>
     </div>

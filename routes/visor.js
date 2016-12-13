@@ -51,4 +51,41 @@ router.post("/get-questions", rpg.multiSQL({
     sqlParams: [rpg.param("ses", "ses")]
 }));
 
+/*
+router.post("/send-answers", (req, res) => {
+    if(isNaN(req.body.qid) || req.session.uid == null || req.session.ses == null)
+        res.end("{'result':'err'}");
+    let sql = "insert into selection(uid,qid,answer,comment) values ";
+    let params = [];
+    req.body.answers.forEach((ans,i) => {
+        if ("ABCDE".includes(ans.answer)) {
+            sql += "(" + req.session.uid + "," + req.body.qid + "," + ans.answer + ", $"+ i + ") ";
+            params.push(rpg.param("calc",))
+        }
+    });
+    sql += "on conflict do update";
+    rpg.execSQL({
+        dbcon: pass.dbcon,
+        sql: sql
+    })(req, res);
+});
+*/
+
+router.post("/send-answer", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "insert into selection(uid,qid,answer,comment) values ($1,$2,$3,$4) on conflict (uid,qid) do update " +
+            "set answer = excluded.answer, comment = excluded.comment",
+    sesReqData: ["uid","ses"],
+    postReqData: ["qid","answer","comment"],
+    sqlParams: [rpg.param("ses","uid"),rpg.param("post","qid"),rpg.param("post","answer"),rpg.param("post","comment")]
+}));
+
+router.post("/get-answers", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select s.qid, s.answer, s.comment from selection as s inner join questions as q on q.id = s.qid " +
+            "where q.sesid = $1 and s.uid = $2",
+    sesReqData: ["uid","ses"],
+    sqlParams: [rpg.param("ses","ses"),rpg.param("ses","uid")]
+}));
+
 module.exports = router;
