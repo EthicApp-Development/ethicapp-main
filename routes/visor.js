@@ -73,11 +73,14 @@ router.post("/send-answers", (req, res) => {
 
 router.post("/send-answer", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "insert into selection(uid,qid,answer,comment) values ($1,$2,$3,$4) on conflict (uid,qid) do update " +
-            "set answer = excluded.answer, comment = excluded.comment",
+    sql: "with rows as (update selection set answer = $1, comment = $2 where qid = $3 and uid = $4 returning 1) " +
+            "insert into selection(uid,qid,answer,comment) select $5,$6,$7,$8 where 1 not in (select * from rows)",
+    /*sql: "insert into selection(uid,qid,answer,comment) values ($1,$2,$3,$4) on conflict (uid,qid) do update " +
+            "set answer = excluded.answer, comment = excluded.comment",*/
     sesReqData: ["uid","ses"],
     postReqData: ["qid","answer","comment"],
-    sqlParams: [rpg.param("ses","uid"),rpg.param("post","qid"),rpg.param("post","answer"),rpg.param("post","comment")]
+    sqlParams: [rpg.param("post","answer"),rpg.param("post","comment"),rpg.param("post","qid"),rpg.param("ses","uid"),
+            rpg.param("ses","uid"),rpg.param("post","qid"),rpg.param("post","answer"),rpg.param("post","comment")]
 }));
 
 router.post("/get-answers", rpg.multiSQL({
