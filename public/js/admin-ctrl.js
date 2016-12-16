@@ -147,3 +147,24 @@ app.controller("QuestionsController", function($scope,$http){
     }
 
 });
+
+app.controller("DashboardController", function($scope,$http){
+    let self = $scope;
+    self.alumState = {};
+
+    self.updateState = () => {
+        let postdata = {sesid: self.selectedSes.id};
+        $http({url: "get-alum-full-state", method: "post", data: postdata}).success((data) => {
+            data.forEach((d) => {
+                if(self.alumState[d.uid] == null) {
+                    self.alumState[d.uid] = {};
+                    self.alumState[d.uid][d.qid] = d.correct;
+                }
+                else{
+                    self.alumState[d.uid][d.qid] = d.correct;
+                }
+            });
+        });
+    };
+
+});

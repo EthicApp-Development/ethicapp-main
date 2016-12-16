@@ -154,10 +154,19 @@
             </div>
         </div>
 
-        <div class="pad-content" ng-show="selectedTab == 2">
+        <div class="pad-content" ng-show="selectedTab == 2" ng-controller="DashboardController">
+            <button class="btn btn-default pull-right" ng-click="updateState()">Obtener Estado de Alumnos</button>
             <h4>Resultados</h4>
-            <button class="btn btn-default">Obtener Estado de Alumnos</button>
-
+            <table class="table table-bordered">
+                <tr>
+                    <th>Alumno</th>
+                    <th ng-repeat="qs in questions" ng-bind="$index"></th>
+                </tr>
+                <tr ng-repeat="(alum, data) in alumState">
+                    <td ng-bind="alum"></td>
+                    <td ng-repeat="qs in questions" ng-class="{'bg-green':data[qs.id]}"></td>
+                </tr>
+            </table>
         </div>
 
         <div class="pad-content" ng-show="selectedTab == 3">

@@ -5,7 +5,7 @@ let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 
-router.get("/get-alum-state", rpg.multiSQL({
+router.post("/get-alum-state", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select uid, sum(correct) as score, count(correct) as answered from (select s.uid, (s.answer = q.answer)::int " +
     "as correct from selection as s inner join questions as q on s.qid = q.id where q.sesid = $1) as r group by uid",
@@ -19,9 +19,9 @@ router.get("/get-alum-state", rpg.multiSQL({
     sqlParams: [rpg.param("post","sesid")]
 }));
 
-router.get("/get-alum-full-state", rpg.multiSQL({
+router.post("/get-alum-full-state", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select s.uid, (s.answer = q.answer)::int as correct from selection as s inner join questions as q on " +
+    sql: "select s.uid, q.id as qid, (s.answer = q.answer)::int as correct from selection as s inner join questions as q on " +
                 "s.qid = q.id where q.sesid = $1",
     postReqData: ["sesid"],
     onStart: (ses,data,calc) => {
