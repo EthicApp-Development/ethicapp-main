@@ -73,9 +73,24 @@ create table if not exists questions (
 create table if not exists selection (
     answer integer,
     uid integer,
+    iteration integer,
     comment text,
     qid integer,
     primary key(uid,qid),
     foreign key(uid) references users(id),
     foreign key(qid) references questions(id)
+);
+
+create table if not exists teams (
+    id serial,
+    sesid integer,
+    primary key(id),
+    foreign key(sesid) references sessions(id)
+);
+
+create table if not exists teamusers (
+    tmid integer,
+    uid integer,
+    foreign key(tmid) references team(id),
+    foreign key(uid) references users(id)
 );

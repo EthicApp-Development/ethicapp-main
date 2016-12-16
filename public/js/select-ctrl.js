@@ -58,7 +58,8 @@ app.controller("SelectController", function ($scope, $http) {
         let postdata = {
             qid: i,
             answer: self.answers[i],
-            comment: self.comments[i]
+            comment: self.comments[i],
+            iteration: 1
         };
         $http({url: "send-answer", method: "post", data: postdata}).success((data) => {
             if(data.status == "ok")
