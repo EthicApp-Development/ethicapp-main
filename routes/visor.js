@@ -79,8 +79,8 @@ router.post("/send-answer", rpg.execSQL({
             "set answer = excluded.answer, comment = excluded.comment",*/
     sesReqData: ["uid","ses"],
     postReqData: ["qid","answer","comment","iteration"],
-    sqlParams: [rpg.param("post","answer"),rpg.param("post","comment"),rpg.param("post","qid"),rpg.param("ses","uid"),rpg.param("post","iteration"),
-            rpg.param("ses","uid"),rpg.param("post","qid"),rpg.param("post","answer"),rpg.param("post","comment"),rpg.param("post","iteration"),]
+    sqlParams: [rpg.param("post","answer"),rpg.param("post","comment"),rpg.param("post","iteration"),rpg.param("post","qid"),rpg.param("ses","uid"),
+            rpg.param("ses","uid"),rpg.param("post","qid"),rpg.param("post","answer"),rpg.param("post","comment"),rpg.param("post","iteration")]
 }));
 
 router.post("/get-answers", rpg.multiSQL({

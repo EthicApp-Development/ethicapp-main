@@ -5,7 +5,7 @@ let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 
-router.get("/to-visor", (req, res) => {
+router.get("", (req, res) => {
     if (req.session.uid) {
         req.session.ses = req.query.sesid;
         res.redirect("visor");

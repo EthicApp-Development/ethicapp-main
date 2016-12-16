@@ -129,8 +129,9 @@ app.controller("QuestionsController", function($scope,$http){
             content: self.newQuestion.content,
             options: self.newQuestion.alternatives.join("\n"),
             comment: self.newQuestion.comment,
-            other: self.newQuestion.answer,
-            sesid: self.selectedSes.id
+            answer: self.newQuestion.answer,
+            sesid: self.selectedSes.id,
+            other: self.newQuestion.other
         };
         $http({url: "add-question", method: "post", data: postdata}).success((data) => {
             if(data.status == "ok")

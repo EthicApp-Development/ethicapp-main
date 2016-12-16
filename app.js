@@ -12,6 +12,7 @@ let index = require('./routes/index');
 let users = require('./routes/users');
 let sessions = require("./routes/sessions");
 let visor = require("./routes/visor");
+let analysis = require("./routes/analysis");
 
 let app = express();
 
@@ -36,6 +37,7 @@ app.use('/', index);
 app.use('/', users);
 app.use("/", sessions);
 app.use("/", visor);
+app.use("/", analysis);
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {
