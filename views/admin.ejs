@@ -4,10 +4,13 @@
     <title>DocCollab</title>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
     <link rel="stylesheet" href="css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="css/nv.d3.min.css">
     <link rel="stylesheet" href="css/main.css"/>
     <script src="libs/angular.min.js"></script>
     <script src="libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
     <script src="libs/angular-bootstrap-multiselect.js"></script>
+    <script src="libs/d3.min.js"></script>
+    <script src="libs/nv.d3.min.js"></script>
     <script src="libs/angular-nvd3.min.js"></script>
     <script src="js/admin-ctrl.js"></script>
 </head>
@@ -155,16 +158,18 @@
         </div>
 
         <div class="pad-content" ng-show="selectedTab == 2" ng-controller="DashboardController">
-            <button class="btn btn-default pull-right" ng-click="updateState()">Obtener Estado de Alumnos</button>
+            <button class="btn btn-default pull-right" ng-click="updateState()">Actualizar Estado de Alumnos</button>
             <h4>Resultados</h4>
+            <nvd3 options="barOpts" data="barData"></nvd3>
             <table class="table table-bordered">
                 <tr>
                     <th>Alumno</th>
-                    <th ng-repeat="qs in questions" ng-bind="$index"></th>
+                    <th ng-repeat="qs in questions" ng-bind="$index + 1"></th>
                 </tr>
                 <tr ng-repeat="(alum, data) in alumState">
                     <td ng-bind="alum"></td>
-                    <td ng-repeat="qs in questions" ng-class="{'bg-green':data[qs.id]}"></td>
+                    <td ng-repeat="qs in questions"
+                        ng-class="{'bg-blue': data[qs.id], 'bg-red': data[qs.id]!=null && !data[qs.id]}"></td>
                 </tr>
             </table>
         </div>

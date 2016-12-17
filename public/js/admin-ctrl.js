@@ -1,6 +1,6 @@
 "use strict";
 
-let app = angular.module("Admin", ["ui.bootstrap","ui.multiselect"]);
+let app = angular.module("Admin", ["ui.bootstrap","ui.multiselect","nvd3"]);
 
 app.controller("AdminController", function ($scope, $http, $uibModal) {
     let self = $scope;
@@ -151,6 +151,24 @@ app.controller("QuestionsController", function($scope,$http){
 app.controller("DashboardController", function($scope,$http){
     let self = $scope;
     self.alumState = {};
+    self.barOpts = {
+        chart: {
+            type: 'multiBarChart',
+            height: 320,
+            x: d => d.label,
+            y: d => d.value,
+            showControls: false,
+            showValues: false,
+            duration: 500,
+            xAxis: {
+                showMaxMin: false
+            },
+            yAxis: {
+                axisLabel: 'Cantidad Alumnos'
+            }
+        }
+    };
+    self.barData = [{key: "Alumnos", color:"#1f77b4", values:[]}];
 
     self.updateState = () => {
         let postdata = {sesid: self.selectedSes.id};
@@ -164,6 +182,22 @@ app.controller("DashboardController", function($scope,$http){
                     self.alumState[d.uid][d.qid] = d.correct;
                 }
             });
+        });
+        $http({url: "get-alum-state", method: "post", data: postdata}).success((data) => {
+            self.buildBarData(data);
+        });
+    };
+
+    self.buildBarData = (data) => {
+        const N = 5;
+        self.barData[0].values = [];
+        for(let i = 0; i < N; i++){
+            let lbl = (i*20) + "% - " + ((i+1)*20) + "%";
+            self.barData[0].values.push({label: lbl, value: 0});
+        }
+        data.forEach((d) => {
+            let rank = Math.min(Math.floor(N * d.score / self.questions.length),N-1);
+            self.barData[0].values[rank].value += 1;
         });
     };
 

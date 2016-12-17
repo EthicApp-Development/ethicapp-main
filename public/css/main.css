@@ -164,6 +164,14 @@ canvas{
     background: #75d332 !important;
 }
 
+.bg-red{
+    background: #d57754;
+}
+
+.bg-blue{
+    background: #3f97d4;
+}
+
 .mid-container{
     max-width: 800px;
     margin: 0 auto;
