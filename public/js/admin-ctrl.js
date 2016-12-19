@@ -9,9 +9,9 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
     self.documents = [];
     self.questions = [];
     self.newUsers = [];
-    self.users = [];
+    self.users = {};
     self.selectedIndex = -1;
-    self.sesStatusses = ["No Publicada", "Lectura", "Edición", "Finalizada"];
+    self.sesStatusses = ["No Publicada", "Lectura", "Personal", "Anónimo", "Grupal", "Finalizada"];
 
     self.init = () => {
         $http({url: "get-session-list", method: "post"}).success((data) => {
@@ -52,7 +52,9 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
     self.getMembers = () => {
         let postdata = {sesid: self.selectedSes.id};
         $http({url: "get-ses-users", method: "post", data: postdata}).success((data) => {
-            self.users = data;
+            data.forEach((d) => {
+                self.users[d.id] = d;
+            });
         });
     };
 
@@ -68,7 +70,7 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
 
 app.controller("TabsController", function ($scope, $http) {
     let self = $scope;
-    self.tabOptions = ["Editar", "Usuarios", "Dashboard", "Visor"];
+    self.tabOptions = ["Editar", "Usuarios", "Dashboard", "Grupos", "Visor"];
     self.selectedTab = 0;
 
     self.setTab = (idx) => {
@@ -198,6 +200,29 @@ app.controller("DashboardController", function($scope,$http){
         data.forEach((d) => {
             let rank = Math.min(Math.floor(N * d.score / self.questions.length),N-1);
             self.barData[0].values[rank].value += 1;
+        });
+    };
+
+});
+
+app.controller("GroupController", function($scope,$http){
+    let self = $scope;
+    self.groupNum = 3;
+    self.groups = [];
+    self.groupNames = [];
+
+    self.generateGroups = () => {
+        if(self.groupNum < 1 || self.groupNum > self.users.length) return;
+        let postdata = {
+            sesid: self.selectedSes.id,
+            gnum: self.groupNum
+        };
+        $http({url: "group-proposal", method: "post", data: postdata}).success((data) => {
+            self.groups = data;
+            self.groupNames = [];
+            data.forEach((d) => {
+                self.groupNames.push(d.map(i => self.users[i.uid].name).join(", "));
+            });
         });
     };
 

@@ -85,7 +85,7 @@ a:hover{
 }
 
 .w300{
-    width: 300px;
+    width: 380px;
     display: block;
 }
 
@@ -196,4 +196,9 @@ canvas{
 
 .sep-lines{
     line-height: 1.25;
+}
+
+.form-inline-mini{
+    display: inline-block;
+    width: 80px;
 }

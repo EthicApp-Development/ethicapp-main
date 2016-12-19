@@ -56,6 +56,18 @@
         <br>
 
         <div class="pad-content" ng-show="selectedTab == 0" ng-controller="SesEditorController">
+            <h4>Estado</h4>
+            <div class="center-block font-large">
+                <span ng-repeat="st in sesStatusses">
+                    <span class="label label-default" ng-class="{'label-success': $index==selectedSes.status-1}"
+                          ng-bind="st"></span> <i class="fa fa-arrow-right" ng-hide="$last"></i>
+                </span>
+            </div>
+            <br>
+            <button class="btn btn-sm btn-default pull-right">Pasar al siguiente estado</button>
+            <br>
+            <hr>
+            <br>
             <h4>Detalles</h4>
             <label>Titulo:</label>
             <input type="text" class="form-control" ng-model="selectedSes.name">
@@ -113,15 +125,6 @@
             <br>
             <hr>
             <br>
-            <h4>Estado</h4>
-            <div class="center-block w500 font-large">
-                <span ng-repeat="st in sesStatusses">
-                    <span class="label label-default" ng-class="{'label-success': $index==selectedSes.status-1}"
-                          ng-bind="st"></span> <i class="fa fa-arrow-right" ng-hide="$last"></i>
-                </span>
-            </div>
-            <br>
-            <button class="btn btn-sm btn-default pull-right">Pasar al siguiente estado</button>
         </div>
 
         <div class="pad-content" ng-show="selectedTab == 1" ng-controller="NewUsersController">
@@ -167,14 +170,30 @@
                     <th ng-repeat="qs in questions" ng-bind="$index + 1"></th>
                 </tr>
                 <tr ng-repeat="(alum, data) in alumState">
-                    <td ng-bind="alum"></td>
+                    <td ng-bind="users[alum].name"></td>
                     <td ng-repeat="qs in questions"
                         ng-class="{'bg-blue': data[qs.id], 'bg-red': data[qs.id]!=null && !data[qs.id]}"></td>
                 </tr>
             </table>
         </div>
 
-        <div class="pad-content" ng-show="selectedTab == 3">
+        <div class="pad-content" ng-show="selectedTab == 3" ng-controller="GroupController">
+            <h4>Grupos</h4>
+            <p>Las propuestas de grupo intentan agrupar alumnos con distintos tipos de puntaje</p>
+            <br>
+            <label>Número de alumnos por grupo: </label>
+            <input class="form-control form-inline-mini" ng-model="groupNum" type="number">
+            <button class="btn btn-default" ng-click="generateGroups()">Generar</button>
+            <br>
+            <hr>
+            <br>
+            <h4>Grupos:</h4>
+            <div class="list-group">
+                <div class="list-group-item" ng-repeat="group in groupNames" ng-bind="group"></div>
+            </div>
+        </div>
+
+        <div class="pad-content" ng-show="selectedTab == 4">
             <a href="to-visor?sesid={{selectedSes.id}}" class="btn btn-primary">Abrir documentos en visor</a>
         </div>
 

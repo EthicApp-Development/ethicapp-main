@@ -1,0 +1,25 @@
+<div>
+    <div class="modal-header">
+        <h4>Propuesta de Grupos</h4>
+    </div>
+    <div class="modal-body">
+        <!--<p>Las propuestas de grupo se basan en el puntaje obtenido por cada alumno el cual se calcula en base a las
+            respuestas correctas con respecto a lo indicado por el profesor. Los grupos intentan mantener a alumnos
+            con distinto puntaje juntos de manera que los de mayor puntaje ayuden a los de menor puntaje</p>-->
+        <p>Las propuestas de grupo intentan agrupar alumnos con distintos tipos de puntaje</p>
+        <br>
+        <label>Número de alumnos por grupo: </label>
+        <input class="form-control form-inline-mini" ng-model="groupNum" type="number">
+        <button class="btn btn-default" ng-click="generateGroups()">Generar</button>
+        <br>
+        <hr>
+        <br>
+        <h4>Grupos:</h4>
+        <div ng-repeat="group in groupNames">
+            <span ng-bind="group"></span>
+            <br>
+            <hr>
+            <br>
+        </div>
+    </div>
+</div>
