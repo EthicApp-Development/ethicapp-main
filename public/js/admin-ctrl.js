@@ -103,8 +103,10 @@ app.controller("NewUsersController", function($scope,$http){
             sesid: self.selectedSes.id
         };
         $http({url: "add-ses-users", method: "post", data: postdata}).success((data) => {
-            if (data.status == "ok")
-                console.log("Hola");
+            if (data.status == "ok") {
+                self.getNewUsers();
+                self.getMembers();
+            }
         });
     };
 
@@ -219,10 +221,25 @@ app.controller("GroupController", function($scope,$http){
         };
         $http({url: "group-proposal", method: "post", data: postdata}).success((data) => {
             self.groups = data;
+            console.log(data);
             self.groupNames = [];
             data.forEach((d) => {
                 self.groupNames.push(d.map(i => self.users[i.uid].name).join(", "));
             });
+        });
+    };
+
+    self.acceptGroups = () => {
+        if (self.groups == null) return;
+        let postdata = {
+            sesid: self.selectedSes.id,
+            groups: self.groups.map(e => e.map(f => f.uid))
+        };
+        console.log(postdata);
+        $http({url: "send-groups", method: "post", data: postdata}).success((data) => {
+            if(data.status == "ok") {
+                console.log("Groups accepted");
+            }
         });
     };
 

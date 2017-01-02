@@ -105,8 +105,9 @@ router.post("/add-ses-users", (req, res) => {
     let sql = "insert into sesusers(uid,sesid) values ";
     req.body.users.forEach((uid) => {
         if (!isNaN(uid))
-            sql += "(" + uid + "," + req.body.sesid + ") ";
+            sql += "(" + uid + "," + req.body.sesid + "), ";
     });
+    sql = sql.substring(0,sql.length-2);
     rpg.execSQL({
         dbcon: pass.dbcon,
         sql: sql

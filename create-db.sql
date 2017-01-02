@@ -91,6 +91,6 @@ create table if not exists teams (
 create table if not exists teamusers (
     tmid integer,
     uid integer,
-    foreign key(tmid) references team(id),
+    foreign key(tmid) references teams(id),
     foreign key(uid) references users(id)
 );
