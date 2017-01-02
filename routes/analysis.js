@@ -40,13 +40,35 @@ router.post("/group-proposal", (req, res) => {
     }
     rpg.multiSQL({
         dbcon: pass.dbcon,
-        sql: "select uid, sum(correct) as score from (select s.uid, (s.answer = q.answer)::int as correct from selection" +
-        " as s inner join questions as q on s.qid = q.id where q.sesid = " + req.body.sesid + ") as r group by uid",
-        onEnd: (req, res, arr) => {
-            let groups = generateTeams(arr, (s) => s.score, req.body.gnum);
-            res.end(JSON.stringify(groups));
+        sql: "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
+        "u.id = tu.uid and t.sesid = " + req.body.sesid,
+        onEnd: (req,res,arr) => {
+            if(arr.length == 0) {
+                rpg.multiSQL({
+                    dbcon: pass.dbcon,
+                    sql: "select uid, sum(correct) as score from (select s.uid, (s.answer = q.answer)::int as correct from selection" +
+                    " as s inner join questions as q on s.qid = q.id where q.sesid = " + req.body.sesid + ") as r group by uid",
+                    onEnd: (req, res, arr) => {
+                        let groups = generateTeams(arr, (s) => s.score, req.body.gnum);
+                        res.end(JSON.stringify(groups));
+                    }
+                })(req, res);
+            }
+            else{
+                let t = {};
+                let groups = [];
+                arr.forEach((row) => {
+                    if(t[row.team] == null) {
+                        t[row.team] = groups.length;
+                        groups.push([{uid: row.uid}]);
+                    }
+                    else
+                        groups[t[row.team]].push({uid: row.uid});
+                });
+                res.end(JSON.stringify(groups));
+            }
         }
-    })(req, res);
+    })(req,res);
 });
 
 let generateTeams = (alumArr, scFun, n) => {
@@ -72,22 +94,33 @@ router.post("/send-groups", (req, res) => {
     }
     let ses = req.body.sesid;
     let groups = req.body.groups;
-    groups.forEach((team, i) => {
-        rpg.singleSQL({
-            dbcon: pass.dbcon,
-            sql: "insert into teams(sesid) values (" + ses + ") returning id",
-            onEnd: (req,res,result) => {
-                team.forEach((uid) => {
-                    rpg.execSQL({
-                        dbcon: pass.dbcon,
-                        sql: "insert into teamusers(tmid,uid) values ("+result.id+","+uid+")",
-                        onEnd: () => {}
-                    })(req,res);
-                });
+    rpg.singleSQL({
+        dbcon: pass.dbcon,
+        sql: "select " + ses + " in (select sesid from teams) as ans",
+        onEnd: (req,res,result) => {
+            if(result) {
+                res.end("{'status':'unchanged'}");
             }
-        })(req, res);
-    });
-    res.end("{'status':'ok'}");
+            else{
+                groups.forEach((team, i) => {
+                    rpg.singleSQL({
+                        dbcon: pass.dbcon,
+                        sql: "insert into teams(sesid) values (" + ses + ") returning id",
+                        onEnd: (req,res,result) => {
+                            team.forEach((uid) => {
+                                rpg.execSQL({
+                                    dbcon: pass.dbcon,
+                                    sql: "insert into teamusers(tmid,uid) values ("+result.id+","+uid+")",
+                                    onEnd: () => {}
+                                })(req,res);
+                            });
+                        }
+                    })(req, res);
+                });
+                res.end("{'status':'ok'}");
+            }
+        }
+    })(req,res);
 });
 
 module.exports = router;

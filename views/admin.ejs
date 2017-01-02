@@ -70,12 +70,14 @@
             <br>
             <h4>Detalles</h4>
             <label>Titulo:</label>
-            <input type="text" class="form-control" ng-model="selectedSes.name">
+            <input type="text" class="form-control" ng-model="selectedSes.name" ng-disabled="selectedSes.status!=1">
             <br>
             <label>Factor detonante:</label>
-            <textarea class="form-control" ng-model="selectedSes.descr"></textarea>
+            <textarea class="form-control" ng-model="selectedSes.descr" ng-disabled="selectedSes.status!=1"></textarea>
             <br>
-            <button class="btn btn-default pull-right" ng-click="updateSession()">Guardar cambios</button>
+            <button class="btn btn-default pull-right" ng-click="updateSession()" ng-disabled="selectedSes.status!=1">
+                Guardar cambios
+            </button>
             <br>
             <hr>
             <br>
@@ -85,17 +87,17 @@
                     <div class="list-group-item" ng-repeat="doc in documents">
                         <i class="fa fa-file-text-o"></i> <strong ng-bind="doc.title"></strong>
                         <a href="{{doc.path}}" class="discrete"> - Ver documento original</a>
-                        <button class="btn btn-xs btn-default pull-right">Eliminar</button>
+                        <button class="btn btn-xs btn-default pull-right" ng-disabled="selectedSes.status!=1">Eliminar</button>
                     </div>
                 </div>
                 <br>
                 <label>Agregar documento:</label>
                 <form class="input-group" action="upload-file" method="post" enctype="multipart/form-data">
-                    <input type="text" class="form-control" name="title" placeholder="Titulo">
-                    <input type="file" class="form-control" name="pdf">
+                    <input type="text" class="form-control" name="title" placeholder="Titulo" ng-disabled="selectedSes.status!=1">
+                    <input type="file" class="form-control" name="pdf" ng-disabled="selectedSes.status!=1">
                     <input type="text" ng-model="selectedSes.id" name="sesid" hidden>
                     <span class="input-group-btn">
-                    <button class="btn btn-default">Subir</button>
+                    <button class="btn btn-default" ng-disabled="selectedSes.status!=1">Subir</button>
                 </span>
                 </form>
             </div>
@@ -103,23 +105,23 @@
                 <h4>Preguntas</h4>
                 <div class="list-group-item" ng-repeat="qs in questions">
                     <strong>{{($index+1) + ". " + qs.content | limitTo:80}}</strong>
-                    <button class="btn btn-xs btn-default pull-right">Eliminar</button>
+                    <button class="btn btn-xs btn-default pull-right" ng-disabled="selectedSes.status!=1">Eliminar</button>
                 </div>
                 <br>
                 <div>
                     <label>Agregar Pregunta:</label>
-                    <textarea rows="2" class="form-control" ng-model="newQuestion.content"></textarea>
+                    <textarea rows="2" class="form-control" ng-model="newQuestion.content" ng-disabled="selectedSes.status!=1"></textarea>
                     <label>Alternativas:</label>
                     <div class="input-group" ng-repeat=" x in ['A','B','C','D','E']">
                         <a class="input-group-addon" ng-bind="x" ng-click="selectAnswer($index)"
-                           ng-class="{'bg-green': $index == newQuestion.answer}"></a>
-                        <input type="text" class="form-control" ng-model="newQuestion.alternatives[$index]">
+                           ng-class="{'bg-green': $index == newQuestion.answer}" ng-disabled="selectedSes.status!=1"></a>
+                        <input type="text" class="form-control" ng-model="newQuestion.alternatives[$index]" ng-disabled="selectedSes.status!=1">
                     </div>
                     <label>Comentario (Solución):</label>
-                    <textarea rows="2" class="form-control" ng-model="newQuestion.comment"></textarea>
+                    <textarea rows="2" class="form-control" ng-model="newQuestion.comment" ng-disabled="selectedSes.status!=1"></textarea>
                     <label>Otros:</label>
-                    <input type="text" class="form-control" ng-model="newQuestion.other">
-                    <button class="btn btn-default pull-right" ng-click="addQuestion()">Agregar</button>
+                    <input type="text" class="form-control" ng-model="newQuestion.other" ng-disabled="selectedSes.status!=1">
+                    <button class="btn btn-default pull-right" ng-click="addQuestion()" ng-disabled="selectedSes.status!=1">Agregar</button>
                 </div>
             </div>
             <br>
@@ -182,9 +184,10 @@
             <p>Las propuestas de grupo intentan agrupar alumnos con distintos tipos de puntaje</p>
             <br>
             <label>Número de alumnos por grupo: </label>
-            <input class="form-control form-inline-mini" ng-model="groupNum" type="number">
-            <button class="btn btn-default" ng-click="generateGroups()">Generar</button>
-            <button class="btn btn-default pull-right" ng-click="acceptGroups()">Fijar Grupos</button>
+            <input class="form-control form-inline-mini" ng-model="groupNum" type="number" ng-disabled="selectedSes.grouped">
+            <button class="btn btn-default" ng-click="generateGroups()" ng-disabled="selectedSes.grouped">Generar</button>
+            <span ng-show="selectedSes.grouped"> - Los grupos están fijados</span>
+            <button class="btn btn-default pull-right" ng-click="acceptGroups()" ng-disabled="selectedSes.grouped">Fijar Grupos</button>
             <br>
             <hr>
             <br>

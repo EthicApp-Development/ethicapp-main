@@ -1,11 +1,14 @@
 "use strict";
 
-let ok = (expr, msg) => {
-    if (!expr) throw new Error(msg);
-};
+let assert = require("assert");
 
-suite("String");
-
-test("lenght", function () {
-    ok("hola".length == 4);
+describe("String", () => {
+    it("String length", () => {
+        assert.equal("hola".length, 4);
+    });
+    it("String substring", () => {
+        let initial = "(1,2), (3,4), ";
+        let expected = "(1,2), (3,4)";
+        assert.equal(initial.substring(0, initial.length - 2), expected);
+    });
 });

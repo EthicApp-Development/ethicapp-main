@@ -4,6 +4,7 @@ let app = angular.module("Admin", ["ui.bootstrap","ui.multiselect","nvd3"]);
 
 app.controller("AdminController", function ($scope, $http, $uibModal) {
     let self = $scope;
+    self.shared = {};
     self.sessions = [];
     self.selectedSes = null;
     self.documents = [];
@@ -26,6 +27,7 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
         self.requestQuestions();
         self.getNewUsers();
         self.getMembers();
+        self.shared.verifyGroups();
     };
 
     self.requestDocuments = () => {
@@ -213,8 +215,15 @@ app.controller("GroupController", function($scope,$http){
     self.groups = [];
     self.groupNames = [];
 
-    self.generateGroups = () => {
-        if(self.groupNum < 1 || self.groupNum > self.users.length) return;
+    self.shared.verifyGroups = () => {
+        if(self.selectedSes != null && self.selectedSes.grouped){
+            self.groupNum = null;
+            self.generateGroups(true);
+        }
+    };
+
+    self.generateGroups = (key) => {
+        if(key == null && (self.groupNum < 1 || self.groupNum > self.users.length)) return;
         let postdata = {
             sesid: self.selectedSes.id,
             gnum: self.groupNum
