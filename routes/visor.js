@@ -91,4 +91,20 @@ router.post("/get-answers", rpg.multiSQL({
     sqlParams: [rpg.param("ses","ses"),rpg.param("ses","uid")]
 }));
 
+router.post("/send-idea", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "insert into ideas(content,descr,serial,docid,uid) values ($1,$2,$3,$4,$5)",
+    sesReqData: ["uid", "ses"],
+    postReqData: ["docid","text","comment","serial"],
+    sqlParams: [rpg.param("post","text"), rpg.param("post","comment"), rpg.param("post","serial"), rpg.param("post","docid"), rpg.param("ses","uid")]
+}));
+
+router.post("/get-ideas", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select i.id, i.content, i.descr, i.serial, i.docid from ideas as i inner join documents as d on i.docid = d.id where " +
+            "i.uid = $1 and d.sesid = $2",
+    sesReqData: ["uid","ses"],
+    sqlParams: [rpg.param("ses","uid"),rpg.param("ses","ses")]
+}));
+
 module.exports = router;

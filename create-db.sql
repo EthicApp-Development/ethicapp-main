@@ -50,7 +50,7 @@ create table if not exists ideas (
     id serial,
     content text,
     descr text,
-    pos varchar(255),
+    serial varchar(255),
     uid integer,
     docid integer,
     primary key(id),

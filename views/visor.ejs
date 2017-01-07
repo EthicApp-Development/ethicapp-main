@@ -10,8 +10,10 @@
     <script src="libs/rangy-serializer.min.js"></script>
     <script src="libs/textlayerbuilder.js"></script>
     <script src="libs/angular.min.js"></script>
+    <script src="libs/angular-drag-and-drop-lists.min.js"></script>
     <script src="js/editor-ctrl.js"></script>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/font-awesome.min.css">
     <link rel="stylesheet" href="css/minimal.css">
     <link rel="stylesheet" href="css/main.css"/>
 </head>
@@ -27,6 +29,7 @@
         </div>
         <div class="col-sm-6">
             <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>
+            <button class="btn btn-sm btn-default pull-right" ng-click="selectText()">Select Text</button>
         </div>
     </div>
 
@@ -38,10 +41,21 @@
             </div>
         </div>
         <div class="col-sm-3 side-bar">
-            <button class="btn btn-default" ng-click="selectText()">Get Selected text</button>
-            <button class="btn btn-default" ng-click="highlightSerial()">Highlight Serialized</button>
-            <br>
-            <span ng-bind="seltxt"></span>
+            <h3>Ideas Fuerza:</h3>
+            <div class="y-scrollable">
+                <ul class="list-group" dnd-list="selections">
+                    <li ng-repeat="sel in selections" class="list-group-item" dnd-draggable="sel"
+                        dnd-moved="selections.splice($index, 1)" dnd-effect-allowed="move">
+                        <a ng-click="sel.expanded=!sel.expanded" class="pull-right"><i class="fa fa-minus"></i></a>
+                        <strong ng-bind="sel.text"></strong>
+                        <span class="text-gray"> - {{documents[sel.document].title}}</span>
+                        <div class="input-group" ng-show="sel.expanded">
+                            <textarea class="form-control" ng-model="sel.comment"></textarea>
+                            <span class="input-group-addon btn btn-default"><i class="fa fa-send"></i></span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 

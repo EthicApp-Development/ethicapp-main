@@ -6,7 +6,9 @@ app.controller("SelectController", function ($scope, $http) {
     let self = $scope;
 
     self.selectedQs = -1;
+    self.iteration = 1;
     self.questions = [];
+    self.otherAnswsers = {};
     self.answers = {};
     self.comments = {};
     self.optLabels = ["A", "B", "C", "D", "E"];
@@ -15,6 +17,18 @@ app.controller("SelectController", function ($scope, $http) {
     self.init = () => {
         self.loadQuestions();
         self.loadAnswers();
+        self.getIteration();
+    };
+
+    self.getIteration = () => {
+        $http({url: "get-team-iteration", method: "post"}).success((data) => {
+            self.iteration = data.iteration;
+            if(self.iteration > 1) {
+                $http({url: "get-team-selection", method: "post"}).success((data) => {
+                    // TBD
+                });
+            }
+        });
     };
 
     self.loadQuestions = () => {

@@ -1,14 +1,14 @@
 "use strict";
 
-let app = angular.module("Editor", []);
+let app = angular.module("Editor", ['dndLists']);
 
 app.controller("EditorController", function ($scope, $http) {
     let self = $scope;
 
     self.documents = [];
+    self.selections = [];
     self.selectedDocument = -1;
-    self.seltxt = "";
-    self.last_serial = "";
+
     rangy.init();
     self.applier = rangy.createClassApplier("highlight");
 
@@ -22,12 +22,21 @@ app.controller("EditorController", function ($scope, $http) {
     self.selectText = () => {
         let selection = window.getSelection();
         let serial = rangy.serializeSelection(window, true, $("#pdf-canvas-" + self.selectedDocument)[0]);
-        self.seltxt = selection.toString() + " - " + serial;
-        self.last_serial = serial;
+        let textDef = {
+            text: selection.toString(),
+            length: selection.toString().length,
+            serial: serial,
+            document: self.selectedDocument,
+            comment: "",
+            expanded: true
+        };
+        if(textDef.length < 2 || textDef.length > 50) return;
+        self.highlightSerial(textDef.serial,textDef.document);
+        self.selections.push(textDef);
     };
 
-    self.highlightSerial = () => {
-        self.applier.applyToRange(rangy.deserializeRange(self.last_serial, $("#pdf-canvas-" + self.selectedDocument)[0], document));
+    self.highlightSerial = (serial, index) => {
+        self.applier.applyToRange(rangy.deserializeRange(serial, $("#pdf-canvas-" + index)[0], document));
     };
 
     self.renderAll = () => {
