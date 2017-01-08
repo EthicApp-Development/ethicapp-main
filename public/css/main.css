@@ -164,6 +164,14 @@ canvas{
     background: #75d332 !important;
 }
 
+.bg-lightgreen, .bg-lightgreen:focus, .bg-lightgreen:hover, .bg-lightgreen:active{
+    background: #b3f4a7;
+}
+
+.bg-lightorange, .bg-lightorange:focus, .bg-lightorange:hover, .bg-lightorange:active{
+    background: #f5d376;
+}
+
 .bg-red{
     background: #d57754;
 }
@@ -212,21 +220,11 @@ canvas{
     color: #999;
 }
 
-/**
- * The dndDraggingSource class will be applied to
- * the source element of a drag operation. It makes
- * sense to hide it to give the user the feeling
- * that he's actually moving it.
- */
+
 ul[dnd-list] .dndDraggingSource {
     display: none;
 }
 
-/**
- * An element with .dndPlaceholder class will be
- * added to the dnd-list while the user is dragging
- * over it.
- */
 ul[dnd-list] .dndPlaceholder {
     background-color: #ddd;
     display: block;

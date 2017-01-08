@@ -2,7 +2,7 @@
 
 let app = angular.module("Editor", ['dndLists']);
 
-app.controller("EditorController", function ($scope, $http) {
+app.controller("EditorController", function ($scope, $http, $timeout) {
     let self = $scope;
 
     self.documents = [];
@@ -16,6 +16,7 @@ app.controller("EditorController", function ($scope, $http) {
         $http({url: "get-documents", method: "post"}).success((data) => {
             self.documents = data;
             self.renderAll();
+            $timeout(self.getIdeas, 2000); // To be changed by promises
         });
     };
 
@@ -28,10 +29,11 @@ app.controller("EditorController", function ($scope, $http) {
             serial: serial,
             document: self.selectedDocument,
             comment: "",
-            expanded: true
+            expanded: true,
+            status: "unsaved"
         };
-        if(textDef.length < 2 || textDef.length > 50) return;
-        self.highlightSerial(textDef.serial,textDef.document);
+        if (textDef.length < 2 || textDef.length > 50) return;
+        self.highlightSerial(textDef.serial, textDef.document);
         self.selections.push(textDef);
     };
 
@@ -49,6 +51,55 @@ app.controller("EditorController", function ($scope, $http) {
         self.selectedDocument = idx;
     };
 
+    self.getIdeas = () => {
+        $http({url: "get-ideas", method: "post"}).success((data) => {
+            self.selections = [];
+            data.forEach((idea) => {
+                let textDef = {
+                    id: idea.id,
+                    text: idea.content,
+                    serial: idea.serial,
+                    document: arrayIndexOfId(self.documents, idea.docid),
+                    comment: idea.descr,
+                    expanded: false,
+                    status: "saved"
+                };
+                self.highlightSerial(textDef.serial, textDef.document);
+                self.selections.push(textDef);
+            });
+        });
+    };
+
+    self.sendIdea = (sel) => {
+        let postadata = {
+            text: sel.text,
+            comment: sel.comment,
+            serial: sel.serial,
+            docid: self.documents[sel.document].id
+        };
+        if (sel.status == "unsaved") {
+            $http({url: "send-idea", method: "post", data: postadata}).success((data) => {
+                if (data.status == "ok") {
+                    sel.expanded = false;
+                    sel.status = "saved"
+                }
+            });
+        }
+        else if(sel.status == "dirty" && sel.id != null) {
+            postadata.id = sel.id;
+            $http({url: "update-idea", method: "post", data: postadata}).success((data) => {
+                if (data.status == "ok") {
+                    sel.expanded = false;
+                    sel.status = "saved"
+                }
+            });
+        }
+    };
+
+    self.selTextChange = (sel) => {
+        sel.status = (sel.status == 'saved') ? 'dirty' : sel.status;
+    };
+
     self.init();
 
 });
@@ -64,6 +115,10 @@ app.controller("EditorController", function ($scope, $http) {
  return uint8Array;
  };
  */
+
+let arrayIndexOfId = (arr, id) => {
+    return arr.reduce((prev, cur, i) => (cur.id == id) ? i : prev, -1);
+};
 
 let loadPdf = (pdfData, i) => {
     PDFJS.disableWorker = true;

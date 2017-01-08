@@ -99,6 +99,14 @@ router.post("/send-idea", rpg.execSQL({
     sqlParams: [rpg.param("post","text"), rpg.param("post","comment"), rpg.param("post","serial"), rpg.param("post","docid"), rpg.param("ses","uid")]
 }));
 
+router.post("/update-idea", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "update ideas set content = $1, descr = $2, serial = $3 where id = $4",
+    sesReqData: ["uid", "ses"],
+    postReqData: ["docid","text","comment","serial", "id"],
+    sqlParams: [rpg.param("post","text"), rpg.param("post","comment"), rpg.param("post","serial"), rpg.param("post","id")]
+}));
+
 router.post("/get-ideas", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select i.id, i.content, i.descr, i.serial, i.docid from ideas as i inner join documents as d on i.docid = d.id where " +

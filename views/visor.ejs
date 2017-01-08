@@ -50,8 +50,10 @@
                         <strong ng-bind="sel.text"></strong>
                         <span class="text-gray"> - {{documents[sel.document].title}}</span>
                         <div class="input-group" ng-show="sel.expanded">
-                            <textarea class="form-control" ng-model="sel.comment"></textarea>
-                            <span class="input-group-addon btn btn-default"><i class="fa fa-send"></i></span>
+                            <textarea class="form-control" ng-model="sel.comment" ng-change="selTextChange(sel)"></textarea>
+                            <a class="input-group-addon btn btn-default" ng-click="sendIdea(sel)" ng-class="{'bg-lightgreen': sel.status=='saved', 'bg-lightorange': sel.status=='dirty'}">
+                                <i class="fa fa-send"></i>
+                            </a>
                         </div>
                     </li>
                 </ul>
