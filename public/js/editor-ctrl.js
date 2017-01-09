@@ -7,7 +7,7 @@ app.controller("EditorController", function ($scope, $http, $timeout) {
 
     self.documents = [];
     self.selections = [];
-    self.selectedDocument = -1;
+    self.selectedDocument = 0;
 
     rangy.init();
     self.applier = rangy.createClassApplier("highlight");
@@ -81,16 +81,17 @@ app.controller("EditorController", function ($scope, $http, $timeout) {
             $http({url: "send-idea", method: "post", data: postadata}).success((data) => {
                 if (data.status == "ok") {
                     sel.expanded = false;
-                    sel.status = "saved"
+                    sel.status = "saved";
+                    sel.id = data.id;
                 }
             });
         }
-        else if(sel.status == "dirty" && sel.id != null) {
+        else if (sel.status == "dirty" && sel.id != null) {
             postadata.id = sel.id;
             $http({url: "update-idea", method: "post", data: postadata}).success((data) => {
                 if (data.status == "ok") {
                     sel.expanded = false;
-                    sel.status = "saved"
+                    sel.status = "saved";
                 }
             });
         }
@@ -98,6 +99,21 @@ app.controller("EditorController", function ($scope, $http, $timeout) {
 
     self.selTextChange = (sel) => {
         sel.status = (sel.status == 'saved') ? 'dirty' : sel.status;
+    };
+
+    self.checkAllSync = () => {
+        return self.selections.filter(e => e.status != "saved").length == 0;
+    };
+
+    self.setSelOrder = () => {
+        if (!self.checkAllSync()) return;
+        let order = self.selections.map(e => e.id);
+        let postdata = {orden: order};
+        $http({url: "set-ideas-orden", method: "post", data: postdata}).success((data) => {
+            if (data.status == "ok") {
+                console.log("Order saved");
+            }
+        });
     };
 
     self.init();

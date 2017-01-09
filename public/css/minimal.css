@@ -48,8 +48,6 @@ canvas {
 .textLayer .highlight {
     margin: -1px;
     padding: 1px;
-
-    background-color: rgba(180, 0, 170, 0.2);
     border-radius: 4px;
 }
 
@@ -63,9 +61,5 @@ canvas {
 
 .textLayer .highlight.middle {
     border-radius: 0;
-}
-
-.textLayer .highlight.selected {
-    background-color: rgba(0, 100, 0, 0.2);
 }
 

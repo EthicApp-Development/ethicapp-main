@@ -41,7 +41,9 @@
             </div>
         </div>
         <div class="col-sm-3 side-bar">
+            <a class="btn btn-sm btn-default pull-right margin-top-8" ng-click="setSelOrder()" ng-disabled="!checkAllSync()">Fijar orden</a>
             <h3>Ideas Fuerza:</h3>
+            <div class="text-gray text-center" ng-show="selections.length==0">Cargando...</div>
             <div class="y-scrollable">
                 <ul class="list-group" dnd-list="selections">
                     <li ng-repeat="sel in selections" class="list-group-item" dnd-draggable="sel"

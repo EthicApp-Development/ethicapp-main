@@ -52,67 +52,87 @@ router.post("/get-questions", rpg.multiSQL({
 }));
 
 /*
-router.post("/send-answers", (req, res) => {
-    if(isNaN(req.body.qid) || req.session.uid == null || req.session.ses == null)
-        res.end("{'result':'err'}");
-    let sql = "insert into selection(uid,qid,answer,comment) values ";
-    let params = [];
-    req.body.answers.forEach((ans,i) => {
-        if ("ABCDE".includes(ans.answer)) {
-            sql += "(" + req.session.uid + "," + req.body.qid + "," + ans.answer + ", $"+ i + ") ";
-            params.push(rpg.param("calc",))
-        }
-    });
-    sql += "on conflict do update";
-    rpg.execSQL({
-        dbcon: pass.dbcon,
-        sql: sql
-    })(req, res);
-});
-*/
+ router.post("/send-answers", (req, res) => {
+ if(isNaN(req.body.qid) || req.session.uid == null || req.session.ses == null)
+ res.end("{'result':'err'}");
+ let sql = "insert into selection(uid,qid,answer,comment) values ";
+ let params = [];
+ req.body.answers.forEach((ans,i) => {
+ if ("ABCDE".includes(ans.answer)) {
+ sql += "(" + req.session.uid + "," + req.body.qid + "," + ans.answer + ", $"+ i + ") ";
+ params.push(rpg.param("calc",))
+ }
+ });
+ sql += "on conflict do update";
+ rpg.execSQL({
+ dbcon: pass.dbcon,
+ sql: sql
+ })(req, res);
+ });
+ */
 
 router.post("/send-answer", rpg.execSQL({
     dbcon: pass.dbcon,
     sql: "with rows as (update selection set answer = $1, comment = $2, iteration = $3 where qid = $4 and uid = $5 returning 1) " +
-            "insert into selection(uid,qid,answer,comment,iteration) select $6,$7,$8,$9,$10 where 1 not in (select * from rows)",
+    "insert into selection(uid,qid,answer,comment,iteration) select $6,$7,$8,$9,$10 where 1 not in (select * from rows)",
     /*sql: "insert into selection(uid,qid,answer,comment) values ($1,$2,$3,$4) on conflict (uid,qid) do update " +
-            "set answer = excluded.answer, comment = excluded.comment",*/
-    sesReqData: ["uid","ses"],
-    postReqData: ["qid","answer","comment","iteration"],
-    sqlParams: [rpg.param("post","answer"),rpg.param("post","comment"),rpg.param("post","iteration"),rpg.param("post","qid"),rpg.param("ses","uid"),
-            rpg.param("ses","uid"),rpg.param("post","qid"),rpg.param("post","answer"),rpg.param("post","comment"),rpg.param("post","iteration")]
+     "set answer = excluded.answer, comment = excluded.comment",*/
+    sesReqData: ["uid", "ses"],
+    postReqData: ["qid", "answer", "comment", "iteration"],
+    sqlParams: [rpg.param("post", "answer"), rpg.param("post", "comment"), rpg.param("post", "iteration"), rpg.param("post", "qid"), rpg.param("ses", "uid"),
+        rpg.param("ses", "uid"), rpg.param("post", "qid"), rpg.param("post", "answer"), rpg.param("post", "comment"), rpg.param("post", "iteration")]
 }));
 
 router.post("/get-answers", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select s.qid, s.answer, s.comment from selection as s inner join questions as q on q.id = s.qid " +
-            "where q.sesid = $1 and s.uid = $2",
-    sesReqData: ["uid","ses"],
-    sqlParams: [rpg.param("ses","ses"),rpg.param("ses","uid")]
+    "where q.sesid = $1 and s.uid = $2",
+    sesReqData: ["uid", "ses"],
+    sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "uid")]
 }));
 
-router.post("/send-idea", rpg.execSQL({
+router.post("/send-idea", rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: "insert into ideas(content,descr,serial,docid,uid) values ($1,$2,$3,$4,$5)",
+    sql: "insert into ideas(content,descr,serial,docid,uid) values ($1,$2,$3,$4,$5) returning id",
     sesReqData: ["uid", "ses"],
-    postReqData: ["docid","text","comment","serial"],
-    sqlParams: [rpg.param("post","text"), rpg.param("post","comment"), rpg.param("post","serial"), rpg.param("post","docid"), rpg.param("ses","uid")]
+    postReqData: ["docid", "text", "comment", "serial"],
+    sqlParams: [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "docid"), rpg.param("ses", "uid")]
 }));
 
 router.post("/update-idea", rpg.execSQL({
     dbcon: pass.dbcon,
     sql: "update ideas set content = $1, descr = $2, serial = $3 where id = $4",
     sesReqData: ["uid", "ses"],
-    postReqData: ["docid","text","comment","serial", "id"],
-    sqlParams: [rpg.param("post","text"), rpg.param("post","comment"), rpg.param("post","serial"), rpg.param("post","id")]
+    postReqData: ["docid", "text", "comment", "serial", "id"],
+    sqlParams: [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "id")]
 }));
 
 router.post("/get-ideas", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select i.id, i.content, i.descr, i.serial, i.docid from ideas as i inner join documents as d on i.docid = d.id where " +
-            "i.uid = $1 and d.sesid = $2",
-    sesReqData: ["uid","ses"],
-    sqlParams: [rpg.param("ses","uid"),rpg.param("ses","ses")]
+    "i.uid = $1 and d.sesid = $2 order by i.orden asc",
+    sesReqData: ["uid", "ses"],
+    sqlParams: [rpg.param("ses", "uid"), rpg.param("ses", "ses")]
 }));
+
+router.post("/set-ideas-orden", (req, res) => {
+    res.header("Content-type", "application/json");
+    let uid = req.session.uid;
+    let ses = req.session.ses;
+    if (uid == null || ses == null || req.body.orden == null) {
+        res.end('{"status":"err"}');
+        return;
+    }
+    req.body.orden.forEach((ideaId, i) => {
+        if (!isNaN(ideaId)) {
+            rpg.execSQL({
+                dbcon: pass.dbcon,
+                sql: "update ideas set orden = " + i + " where id = " + ideaId,
+                onEnd: () => {}
+            })(req, res);
+        }
+    });
+    res.end('{"status":"ok"}');
+});
 
 module.exports = router;

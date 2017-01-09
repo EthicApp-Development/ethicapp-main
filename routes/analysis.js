@@ -88,8 +88,9 @@ let generateTeams = (alumArr, scFun, n) => {
 };
 
 router.post("/send-groups", (req, res) => {
+    res.header("Content-type", "application/json");
     if (req.session.role != "P" || req.body.sesid == null || req.body.groups == null) {
-        res.end("{'status':'err'}");
+        res.end('{"status":"err"}');
         return;
     }
     let ses = req.body.sesid;
@@ -99,7 +100,7 @@ router.post("/send-groups", (req, res) => {
         sql: "select " + ses + " in (select sesid from teams) as ans",
         onEnd: (req,res,result) => {
             if(result) {
-                res.end("{'status':'unchanged'}");
+                res.end('{"status":"unchanged"}');
             }
             else{
                 groups.forEach((team, i) => {
@@ -117,7 +118,7 @@ router.post("/send-groups", (req, res) => {
                         }
                     })(req, res);
                 });
-                res.end("{'status':'ok'}");
+                res.end('{"status":"ok"}');
             }
         }
     })(req,res);
