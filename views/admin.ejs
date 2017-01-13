@@ -64,7 +64,10 @@
                 </span>
             </div>
             <br>
-            <button class="btn btn-sm btn-default pull-right">Pasar al siguiente estado</button>
+            <div class="row">
+                <button class="btn btn-sm btn-default pull-right">Pasar al siguiente estado</button>
+                <a href="to-visor?sesid={{selectedSes.id}}" class="btn btn-default btn-sm pull-right" ng-show="selectedSes.type=='L'">Ir al editor</a>
+            </div>
             <br>
             <hr>
             <br>
@@ -174,7 +177,7 @@
                 <tr ng-repeat="(alum, data) in alumState">
                     <td ng-bind="users[alum].name"></td>
                     <td ng-repeat="qs in questions"
-                        ng-class="{'bg-blue': data[qs.id], 'bg-red': data[qs.id]!=null && !data[qs.id]}"></td>
+                        ng-class="{'bg-darkgreen': data[qs.id], 'bg-darkred': data[qs.id]!=null && !data[qs.id]}"></td>
                 </tr>
             </table>
         </div>
@@ -195,10 +198,6 @@
             <div class="list-group">
                 <div class="list-group-item" ng-repeat="group in groupNames" ng-bind="group"></div>
             </div>
-        </div>
-
-        <div class="pad-content" ng-show="selectedTab == 4">
-            <a href="to-visor?sesid={{selectedSes.id}}" class="btn btn-primary">Abrir documentos en visor</a>
         </div>
 
     </div>

@@ -42,6 +42,7 @@ router.post("/group-proposal", (req, res) => {
         dbcon: pass.dbcon,
         sql: "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
         "u.id = tu.uid and t.sesid = " + req.body.sesid,
+        preventResEnd: true,
         onEnd: (req,res,arr) => {
             if(arr.length == 0) {
                 rpg.multiSQL({

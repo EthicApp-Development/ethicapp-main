@@ -340,7 +340,8 @@ module.exports.multiSQL = function (params) {
                 params.onEnd(req, res, arr);
             else
                 res.send(JSON.stringify(arr));
-            res.end();
+            if (!params.preventResEnd)
+                res.end();
             db.end();
         });
         //});

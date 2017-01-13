@@ -168,12 +168,20 @@ canvas{
     background: #b3f4a7;
 }
 
+.bg-darkgreen{
+    background: #44973f;
+}
+
 .bg-lightorange, .bg-lightorange:focus, .bg-lightorange:hover, .bg-lightorange:active{
     background: #f5d376;
 }
 
 .bg-red{
-    background: #d57754;
+     background: #d54744;
+ }
+
+.bg-darkred{
+    background: #a53734;
 }
 
 .bg-blue{

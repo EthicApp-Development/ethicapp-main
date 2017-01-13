@@ -25,7 +25,7 @@ app.controller("SelectController", function ($scope, $http) {
             self.iteration = data.iteration;
             if(self.iteration > 1) {
                 $http({url: "get-team-selection", method: "post"}).success((data) => {
-                    // TBD
+                    // TODO Mostrar las respuestas del equipo
                 });
             }
         });

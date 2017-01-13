@@ -72,7 +72,7 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
 
 app.controller("TabsController", function ($scope, $http) {
     let self = $scope;
-    self.tabOptions = ["Editar", "Usuarios", "Dashboard", "Grupos", "Visor"];
+    self.tabOptions = ["Editar", "Usuarios", "Dashboard", "Grupos"];
     self.selectedTab = 0;
 
     self.setTab = (idx) => {
