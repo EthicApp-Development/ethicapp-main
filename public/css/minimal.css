@@ -27,18 +27,16 @@ body {
     color: #000;
     font-family: sans-serif;
     overflow: hidden;
-    background: white;
+    /*background: white;*/
     box-shadow: black 0 0 16px;
     margin-top: 10px;
     margin-bottom: 10px;
 }
 
-canvas {
-    display: none;
-}
+
 
 .textLayer > div {
-    color: black;
+    color: rgba(0,0,0,0.1);
     position: absolute;
     line-height: 1;
     white-space: pre;

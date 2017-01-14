@@ -2,12 +2,13 @@
 
 let app = angular.module("Editor", ['ui.tree']);
 
-app.controller("EditorController", function ($scope, $http, $timeout) {
+app.controller("EditorController", function ($scope, $http, $q) {
     let self = $scope;
 
     self.documents = [];
     self.selections = [];
     self.selectedDocument = 0;
+    self.numPages = 0;
 
     rangy.init();
     self.applier = rangy.createClassApplier("highlight");
@@ -16,7 +17,6 @@ app.controller("EditorController", function ($scope, $http, $timeout) {
         $http({url: "get-documents", method: "post"}).success((data) => {
             self.documents = data;
             self.renderAll();
-            $timeout(self.getIdeas, 3000); // To be changed by promises
         });
     };
 
@@ -42,9 +42,11 @@ app.controller("EditorController", function ($scope, $http, $timeout) {
     };
 
     self.renderAll = () => {
+        self.numPages = 0;
         self.documents.forEach((doc, idx) => {
             loadPdf(doc.path, idx);
         });
+
     };
 
     self.selectPDF = (idx) => {
@@ -116,6 +118,66 @@ app.controller("EditorController", function ($scope, $http, $timeout) {
         });
     };
 
+    let arrayIndexOfId = (arr, id) => {
+        return arr.reduce((prev, cur, i) => (cur.id == id) ? i : prev, -1);
+    };
+
+    let loadPdf = (pdfData, i) => {
+        PDFJS.disableWorker = true;
+        let pdf = PDFJS.getDocument(pdfData);
+        pdf.then((pdf) => renderPdf(pdf, i));
+    };
+
+    let renderPdf = (pdf, idx) => {
+        for (let i = 1; i <= pdf.numPages; i++) {
+            let p = pdf.getPage(i).then((p) => renderPage(p, idx));
+            self.numPages += 1;
+        }
+    };
+
+    let renderPage = (page, i) => {
+        let scale = 1.3;
+        let viewport = page.getViewport(scale);
+        let $canvas = $("<canvas></canvas>");
+
+        let canvas = $canvas.get(0);
+        let context = canvas.getContext("2d");
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        let $pdfContainer = $("#pdf-canvas-" + i);
+        $pdfContainer.css("height", canvas.height + "px").css("width", canvas.width + "px");
+        $pdfContainer.append($canvas);
+
+        let canvasOffset = $canvas.offset();
+        let $textLayerDiv = jQuery("<div></div>")
+            .addClass("textLayer")
+            .css("height", viewport.height + "px")
+            .css("width", viewport.width + "px");
+        /*.offset({
+         top: canvasOffset.top,
+         left: canvasOffset.left
+         });*/
+
+        $pdfContainer.append($textLayerDiv);
+
+        page.getTextContent().then((textContent) => {
+            let textLayer = new TextLayerBuilder($textLayerDiv.get(0), 0);
+            textLayer.setTextContent(textContent);
+            let renderContext = {
+                canvasContext: context,
+                viewport: viewport,
+                textLayer: textLayer
+            };
+            page.render(renderContext).then(() => {
+                self.numPages -= 1;
+                if (self.numPages == 0) {
+                    self.getIdeas();
+                }
+            });
+        });
+    };
+
     self.init();
 
 });
@@ -132,55 +194,3 @@ app.controller("EditorController", function ($scope, $http, $timeout) {
  };
  */
 
-let arrayIndexOfId = (arr, id) => {
-    return arr.reduce((prev, cur, i) => (cur.id == id) ? i : prev, -1);
-};
-
-let loadPdf = (pdfData, i) => {
-    PDFJS.disableWorker = true;
-    let pdf = PDFJS.getDocument(pdfData);
-    pdf.then((pdf) => renderPdf(pdf, i));
-};
-
-let renderPdf = (pdf, idx) => {
-    for (let i = 1; i <= pdf.numPages; i++)
-        pdf.getPage(i).then((p) => renderPage(p, idx));
-};
-
-let renderPage = (page, i) => {
-    let scale = 1.3;
-    let viewport = page.getViewport(scale);
-    let $canvas = $("<canvas></canvas>");
-
-    let canvas = $canvas.get(0);
-    let context = canvas.getContext("2d");
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
-
-    let $pdfContainer = $("#pdf-canvas-" + i);
-    $pdfContainer.css("height", canvas.height + "px").css("width", canvas.width + "px");
-    $pdfContainer.append($canvas);
-
-    let canvasOffset = $canvas.offset();
-    let $textLayerDiv = jQuery("<div></div>")
-        .addClass("textLayer")
-        .css("height", viewport.height + "px")
-        .css("width", viewport.width + "px");
-    /*.offset({
-     top: canvasOffset.top,
-     left: canvasOffset.left
-     });*/
-
-    $pdfContainer.append($textLayerDiv);
-
-    page.getTextContent().then((textContent) => {
-        let textLayer = new TextLayerBuilder($textLayerDiv.get(0), 0);
-        textLayer.setTextContent(textContent);
-        let renderContext = {
-            canvasContext: context,
-            viewport: viewport,
-            textLayer: textLayer
-        };
-        page.render(renderContext);
-    });
-};

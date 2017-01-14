@@ -27,7 +27,8 @@ app.use(logger('dev'));
 busboy.extend(app, {
     upload: true,
     mimeTypeLimit: ["application/pdf"],
-    path: path.join(__dirname, 'uploads')
+    path: './uploads',
+    limits: { fileSize: 1024*1024 }
 });
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));

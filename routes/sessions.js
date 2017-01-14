@@ -58,7 +58,7 @@ router.post("/update-session", rpg.execSQL({
 }));
 
 router.post("/upload-file", (req, res) => {
-    if (req.session.uid != null && req.body.title != null && req.files.pdf != null && req.files.pdf.mimetype == "application/pdf") {
+    if (req.session.uid != null && req.body.title != null && req.body.title != "" && req.files.pdf != null && req.files.pdf.mimetype == "application/pdf") {
         console.log(req.body);
         rpg.execSQL({
             dbcon: pass.dbcon,

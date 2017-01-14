@@ -130,7 +130,8 @@ a:hover{
 }
 
 canvas{
-    opacity: 0;
+    position: absolute;
+    margin-top: -2px;
 }
 
 .highlight{
