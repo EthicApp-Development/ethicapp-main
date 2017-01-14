@@ -5,7 +5,7 @@ let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 
-router.post("/get-alum-state", rpg.multiSQL({
+router.post("/get-alum-state-sel", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select uid, sum(correct) as score, count(correct) as answered from (select s.uid, (s.answer = q.answer)::int " +
     "as correct from selection as s inner join questions as q on s.qid = q.id where q.sesid = $1) as r group by uid",
@@ -19,7 +19,7 @@ router.post("/get-alum-state", rpg.multiSQL({
     sqlParams: [rpg.param("post", "sesid")]
 }));
 
-router.post("/get-alum-full-state", rpg.multiSQL({
+router.post("/get-alum-full-state-sel", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select s.uid, q.id as qid, (s.answer = q.answer)::int as correct from selection as s inner join questions as q on " +
     "s.qid = q.id where q.sesid = $1",
@@ -33,7 +33,7 @@ router.post("/get-alum-full-state", rpg.multiSQL({
     sqlParams: [rpg.param("post", "sesid")]
 }));
 
-router.post("/group-proposal", (req, res) => {
+router.post("/group-proposal-sel", (req, res) => {
     if (req.session.role != "P") {
         res.end("[]");
         return;
@@ -71,6 +71,49 @@ router.post("/group-proposal", (req, res) => {
         }
     })(req,res);
 });
+
+router.post("/get-alum-state-lect", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select a.uid, a.orden, a.serial, a.content, a.docid, p.serial as serial_ans, p.content as content_ans, p.docid as docid_ans" +
+            " from ideas as a, ideas as p, sessions as s where s.creator = p.uid and a.uid != s.creator and a.orden = p.orden and " +
+            "s.id = $1 and a.docid in (select id from documents where sesid = s.id) and p.docid in (select id from documents where " +
+            "sesid = s.id) order by uid, a.orden asc",
+    postReqData: ["sesid"],
+    onStart: (ses, data, calc) => {
+        if (ses.role != "P") {
+            console.log("ERR: Solo profesor puede ver estado de alumnos.");
+            return "select $1"
+        }
+    },
+    preventResEnd: true,
+    sqlParams: [rpg.param("post", "sesid")],
+    onEnd: (req,res,arr) => {
+        rpg.singleSQL({
+            dbcon: pass.dbcon,
+            sql: "select count(*) as total from ideas as p, sessions as s where s.creator = p.uid and s.id = " + req.body.sesid,
+            onEnd: (reqin,res,rowin) => {
+                let scores = [];
+                let last_uid = -1;
+                let i = -1;
+                let total = rowin.total;
+                arr.forEach((row) => {
+                    if(row.uid != last_uid) {
+                        if(i >= 0)
+                            scores[i].score /= Math.pow(2,total) - 1;
+                        i++;
+                        last_uid = row.uid;
+                        scores.push({uid: last_uid, score:0});
+                    }
+                    if(row.docid == row.docid_ans && row.serial == row.serial_ans){
+                        scores[i].score += Math.pow(2, total - row.orden - 1);
+                    }
+                });
+                scores[i].score /= Math.pow(2,total) - 1;
+                res.end(JSON.stringify(scores));
+            }
+        })(req,res);
+    }
+}));
 
 let generateTeams = (alumArr, scFun, n) => {
     let arr = alumArr;

@@ -45,7 +45,7 @@
         <div class="col-sm-3 side-bar">
             <a class="btn btn-sm btn-default pull-right margin-top-8" ng-click="setSelOrder()" ng-disabled="!checkAllSync()">Fijar orden</a>
             <h3>Ideas Fuerza:</h3>
-            <div class="text-gray text-center" ng-show="selections.length==0">Cargando...</div>
+            <div class="text-gray text-center" ng-show="numPages>0">Cargando...</div>
             <div class="y-scrollable" ui-tree data-max-depth="1">
                 <ul class="full-height" ui-tree-nodes="" ng-model="selections">
                     <li class="row idea-item" ng-repeat="sel in selections" ui-tree-node>
