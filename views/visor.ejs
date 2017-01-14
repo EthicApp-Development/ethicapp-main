@@ -10,12 +10,13 @@
     <script src="libs/rangy-serializer.min.js"></script>
     <script src="libs/textlayerbuilder.js"></script>
     <script src="libs/angular.min.js"></script>
-    <script src="libs/angular-drag-and-drop-lists.min.js"></script>
-    <!--<script src="js/editor-ctrl.js"></script>-->
-    <script src="minjs/editor-ctrl.min.js"></script>
+    <script src="libs/angular-ui-tree.min.js"></script>
+    <script src="js/editor-ctrl.js"></script>
+    <!--<script src="minjs/editor-ctrl.min.js"></script>-->
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
     <link rel="stylesheet" href="css/font-awesome.min.css">
     <link rel="stylesheet" href="css/minimal.css">
+    <link rel="stylesheet" href="css/angular-ui-tree.min.css">
     <link rel="stylesheet" href="css/main.css"/>
 </head>
 <body class="bg-black">
@@ -45,11 +46,12 @@
             <a class="btn btn-sm btn-default pull-right margin-top-8" ng-click="setSelOrder()" ng-disabled="!checkAllSync()">Fijar orden</a>
             <h3>Ideas Fuerza:</h3>
             <div class="text-gray text-center" ng-show="selections.length==0">Cargando...</div>
-            <div class="y-scrollable">
-                <ul class="list-group" dnd-list="selections">
-                    <li ng-repeat="sel in selections" class="list-group-item" dnd-draggable="sel"
-                        dnd-moved="selections.splice($index, 1)" dnd-effect-allowed="move">
-                        <a ng-click="sel.expanded=!sel.expanded" class="pull-right"><i class="fa fa-minus"></i></a>
+            <div class="y-scrollable" ui-tree>
+                <ul class="full-height" ui-tree-nodes="" ng-model="selections">
+                    <li class="row idea-item" ng-repeat="sel in selections" ui-tree-node>
+                        <div class="col-xs-1" ui-tree-handle>:::</div>
+                        <div class="col-xs-11">
+                        <a ng-click="sel.expanded=!sel.expanded" class="spaced pull-right"><i class="fa fa-plus"></i></a>
                         <strong ng-bind="sel.text"></strong>
                         <span class="text-gray"> - {{documents[sel.document].title}}</span>
                         <div class="input-group" ng-show="sel.expanded">
@@ -57,6 +59,7 @@
                             <a class="input-group-addon btn btn-default" ng-click="sendIdea(sel)" ng-class="{'bg-lightgreen': sel.status=='saved', 'bg-lightorange': sel.status=='dirty'}">
                                 <i class="fa fa-send"></i>
                             </a>
+                        </div>
                         </div>
                     </li>
                 </ul>

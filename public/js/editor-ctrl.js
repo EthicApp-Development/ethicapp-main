@@ -1,6 +1,6 @@
 "use strict";
 
-let app = angular.module("Editor", ['dndLists']);
+let app = angular.module("Editor", ['ui.tree']);
 
 app.controller("EditorController", function ($scope, $http, $timeout) {
     let self = $scope;
@@ -16,7 +16,7 @@ app.controller("EditorController", function ($scope, $http, $timeout) {
         $http({url: "get-documents", method: "post"}).success((data) => {
             self.documents = data;
             self.renderAll();
-            $timeout(self.getIdeas, 2000); // To be changed by promises
+            $timeout(self.getIdeas, 3000); // To be changed by promises
         });
     };
 
