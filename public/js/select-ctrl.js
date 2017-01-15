@@ -7,6 +7,7 @@ app.controller("SelectController", function ($scope, $http) {
 
     self.selectedQs = -1;
     self.iteration = 1;
+    self.uid = -1;
     self.questions = [];
     self.otherAnswsers = {};
     self.answers = {};
@@ -14,20 +15,27 @@ app.controller("SelectController", function ($scope, $http) {
     self.optLabels = ["A", "B", "C", "D", "E"];
     self.sent = {};
 
+    self.ansIter1 = {};
+
     self.init = () => {
         self.loadQuestions();
-        self.loadAnswers();
-        self.getIteration();
+        self.getSesInfo();
     };
 
-    self.getIteration = () => {
-        $http({url: "get-team-iteration", method: "post"}).success((data) => {
+    self.getSesInfo = () => {
+        $http({url: "get-ses-info", method: "post"}).success((data) => {
             self.iteration = data.iteration;
+            self.uid = data.uid;
+            self.sesName = data.name;
             if(self.iteration > 1) {
-                $http({url: "get-team-selection", method: "post"}).success((data) => {
-                    // TODO Mostrar las respuestas del equipo
+                $http({url: "get-team-selection", method: "post", data: {iteration: 1}}).success((data) => {
+                    data.forEach((ans) => {
+                        self.ansIter1[ans.qid] = self.ansIter1[ans.qid] || {};
+                        self.ansIter1[ans.qid][ans.uid] = {answer: ans.answer, comment: ans.comment};
+                    });
                 });
             }
+            self.loadAnswers();
         });
     };
 
@@ -41,7 +49,7 @@ app.controller("SelectController", function ($scope, $http) {
     };
 
     self.loadAnswers = () => {
-        $http({url: "get-answers", method: "post"}).success((data) => {
+        $http({url: "get-answers", method: "post", data: {iteration: self.iteration}}).success((data) => {
             data.forEach((ans) => {
                 self.answers[ans.qid] = ans.answer;
                 self.comments[ans.qid] = ans.comment;
@@ -73,7 +81,7 @@ app.controller("SelectController", function ($scope, $http) {
             qid: i,
             answer: self.answers[i],
             comment: self.comments[i],
-            iteration: 1
+            iteration: self.iteration
         };
         $http({url: "send-answer", method: "post", data: postdata}).success((data) => {
             if(data.status == "ok")

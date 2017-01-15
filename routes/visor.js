@@ -86,9 +86,10 @@ router.post("/send-answer", rpg.execSQL({
 router.post("/get-answers", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select s.qid, s.answer, s.comment from selection as s inner join questions as q on q.id = s.qid " +
-    "where q.sesid = $1 and s.uid = $2",
+    "where q.sesid = $1 and s.uid = $2 and s.iteration = $3",
     sesReqData: ["uid", "ses"],
-    sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "uid")]
+    postReqData: ["iteration"],
+    sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "uid"), rpg.param("post","iteration")]
 }));
 
 router.post("/send-idea", rpg.singleSQL({

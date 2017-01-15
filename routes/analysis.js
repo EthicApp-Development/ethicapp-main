@@ -104,7 +104,7 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
                         last_uid = row.uid;
                         scores.push({uid: last_uid, score:0});
                     }
-                    if(row.docid == row.docid_ans && row.serial == row.serial_ans){
+                    if(ideasMatch(row)){
                         scores[i].score += Math.pow(2, total - row.orden - 1);
                     }
                 });
@@ -114,6 +114,10 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
         })(req,res);
     }
 }));
+
+let ideasMatch = (row) => {
+    return row.docid == row.docid_ans && row.serial == row.serial_ans;
+};
 
 let generateTeams = (alumArr, scFun, n) => {
     let arr = alumArr;
@@ -143,7 +147,7 @@ router.post("/send-groups", (req, res) => {
         dbcon: pass.dbcon,
         sql: "select " + ses + " in (select sesid from teams) as ans",
         onEnd: (req,res,result) => {
-            if(result) {
+            if(result.ans) {
                 res.end('{"status":"unchanged"}');
             }
             else{

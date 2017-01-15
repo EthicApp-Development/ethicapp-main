@@ -169,7 +169,7 @@
             <button class="btn btn-default pull-right" ng-click="updateState()">Actualizar Estado de Alumnos</button>
             <h4>Resultados</h4>
             <nvd3 options="barOpts" data="barData"></nvd3>
-            <table class="table table-bordered">
+            <table class="table table-bordered" ng-show="selectedSes.type == 'S'">
                 <tr>
                     <th>Alumno</th>
                     <th ng-repeat="qs in questions" ng-bind="$index + 1"></th>

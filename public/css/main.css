@@ -161,6 +161,10 @@ canvas{
     margin-left: 32px;
 }
 
+.simple-padding-top{
+    padding-top: 4px;
+}
+
 .bg-green, .bg-green:focus, .bg-green:hover, .bg-green:active{
     background: #75d332 !important;
 }
@@ -194,7 +198,7 @@ canvas{
     margin: 0 auto;
     background: white;
     padding: 24px;
-    overflow: scroll;
+    box-shadow: black 0 0 36px;
 }
 
 .addon-little{
@@ -265,4 +269,10 @@ ul[dnd-list] .dndPlaceholder {
 
 .spaced{
     padding: 0 4px;
+}
+
+.scrollable-container{
+    max-height: calc(100vh - 42px);
+    overflow-y: scroll;
+    background: #333;
 }

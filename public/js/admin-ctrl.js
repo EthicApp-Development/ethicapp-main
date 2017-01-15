@@ -28,6 +28,7 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
         self.getNewUsers();
         self.getMembers();
         self.shared.verifyGroups();
+        self.shared.resetGraphs();
     };
 
     self.requestDocuments = () => {
@@ -156,42 +157,56 @@ app.controller("QuestionsController", function($scope,$http){
 
 app.controller("DashboardController", function($scope,$http){
     let self = $scope;
-    self.alumState = {};
-    self.barOpts = {
-        chart: {
-            type: 'multiBarChart',
-            height: 320,
-            x: d => d.label,
-            y: d => d.value,
-            showControls: false,
-            showValues: false,
-            duration: 500,
-            xAxis: {
-                showMaxMin: false
-            },
-            yAxis: {
-                axisLabel: 'Cantidad Alumnos'
+
+    self.shared.resetGraphs = () => {
+        self.alumState = {};
+        self.barOpts = {
+            chart: {
+                type: 'multiBarChart',
+                height: 320,
+                x: d => d.label,
+                y: d => d.value,
+                showControls: false,
+                showValues: false,
+                duration: 500,
+                xAxis: {
+                    showMaxMin: false
+                },
+                yAxis: {
+                    axisLabel: 'Cantidad Alumnos'
+                }
             }
-        }
+        };
+        self.barData = [{key: "Alumnos", color:"#1f77b4", values:[]}];
     };
-    self.barData = [{key: "Alumnos", color:"#1f77b4", values:[]}];
 
     self.updateState = () => {
         let postdata = {sesid: self.selectedSes.id};
-        $http({url: "get-alum-full-state", method: "post", data: postdata}).success((data) => {
-            data.forEach((d) => {
-                if(self.alumState[d.uid] == null) {
-                    self.alumState[d.uid] = {};
-                    self.alumState[d.uid][d.qid] = d.correct;
-                }
-                else{
-                    self.alumState[d.uid][d.qid] = d.correct;
-                }
+        if (self.selectedSes.type == "S") {
+            $http({url: "get-alum-full-state-sel", method: "post", data: postdata}).success((data) => {
+                data.forEach((d) => {
+                    if (self.alumState[d.uid] == null) {
+                        self.alumState[d.uid] = {};
+                        self.alumState[d.uid][d.qid] = d.correct;
+                    }
+                    else {
+                        self.alumState[d.uid][d.qid] = d.correct;
+                    }
+                });
             });
-        });
-        $http({url: "get-alum-state", method: "post", data: postdata}).success((data) => {
-            self.buildBarData(data);
-        });
+            $http({url: "get-alum-state-sel", method: "post", data: postdata}).success((data) => {
+                let dataNorm = data.map(d => {
+                    d.score /= self.questions.length;
+                    return d;
+                });
+                self.buildBarData(dataNorm);
+            });
+        }
+        else if (self.selectedSes.type == "L") {
+            $http({url: "get-alum-state-lect", method: "post", data: postdata}).success((data) => {
+                self.buildBarData(data);
+            });
+        }
     };
 
     self.buildBarData = (data) => {
@@ -202,7 +217,7 @@ app.controller("DashboardController", function($scope,$http){
             self.barData[0].values.push({label: lbl, value: 0});
         }
         data.forEach((d) => {
-            let rank = Math.min(Math.floor(N * d.score / self.questions.length),N-1);
+            let rank = Math.min(Math.floor(N * d.score),N-1);
             self.barData[0].values[rank].value += 1;
         });
     };
@@ -211,11 +226,11 @@ app.controller("DashboardController", function($scope,$http){
 
 app.controller("GroupController", function($scope,$http){
     let self = $scope;
-    self.groupNum = 3;
-    self.groups = [];
-    self.groupNames = [];
 
     self.shared.verifyGroups = () => {
+        self.groupNum = 3;
+        self.groups = [];
+        self.groupNames = [];
         if(self.selectedSes != null && self.selectedSes.grouped){
             self.groupNum = null;
             self.generateGroups(true);
@@ -228,14 +243,16 @@ app.controller("GroupController", function($scope,$http){
             sesid: self.selectedSes.id,
             gnum: self.groupNum
         };
-        $http({url: "group-proposal", method: "post", data: postdata}).success((data) => {
-            self.groups = data;
-            console.log(data);
-            self.groupNames = [];
-            data.forEach((d) => {
-                self.groupNames.push(d.map(i => self.users[i.uid].name).join(", "));
+        if (self.selectedSes.type == "S") {
+            $http({url: "group-proposal-sel", method: "post", data: postdata}).success((data) => {
+                self.groups = data;
+                console.log(data);
+                self.groupNames = [];
+                data.forEach((d) => {
+                    self.groupNames.push(d.map(i => self.users[i.uid].name).join(", "));
+                });
             });
-        });
+        }
     };
 
     self.acceptGroups = () => {
@@ -248,6 +265,7 @@ app.controller("GroupController", function($scope,$http){
         $http({url: "send-groups", method: "post", data: postdata}).success((data) => {
             if(data.status == "ok") {
                 console.log("Groups accepted");
+                self.shared.verifyGroups();
             }
         });
     };
