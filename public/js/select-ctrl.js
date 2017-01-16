@@ -7,7 +7,7 @@ app.controller("SelectController", function ($scope, $http) {
 
     self.selectedQs = -1;
     self.iteration = 1;
-    self.uid = -1;
+    self.myUid = -1;
     self.questions = [];
     self.otherAnswsers = {};
     self.answers = {};
@@ -16,6 +16,7 @@ app.controller("SelectController", function ($scope, $http) {
     self.sent = {};
 
     self.ansIter1 = {};
+    self.ansIter2 = {};
 
     self.init = () => {
         self.loadQuestions();
@@ -25,13 +26,21 @@ app.controller("SelectController", function ($scope, $http) {
     self.getSesInfo = () => {
         $http({url: "get-ses-info", method: "post"}).success((data) => {
             self.iteration = data.iteration;
-            self.uid = data.uid;
+            self.myUid = data.uid;
             self.sesName = data.name;
             if(self.iteration > 1) {
                 $http({url: "get-team-selection", method: "post", data: {iteration: 1}}).success((data) => {
                     data.forEach((ans) => {
                         self.ansIter1[ans.qid] = self.ansIter1[ans.qid] || {};
                         self.ansIter1[ans.qid][ans.uid] = {answer: ans.answer, comment: ans.comment};
+                    });
+                });
+            }
+            if(self.iteration > 2) {
+                $http({url: "get-team-selection", method: "post", data: {iteration: 2}}).success((data) => {
+                    data.forEach((ans) => {
+                        self.ansIter2[ans.qid] = self.ansIter2[ans.qid] || {};
+                        self.ansIter2[ans.qid][ans.uid] = {answer: ans.answer, comment: ans.comment};
                     });
                 });
             }

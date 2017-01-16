@@ -46,11 +46,17 @@
                 <div class="row">
                     <div class="col-sm-6" ng-show="iteration > 1">
                     <strong>Respuestas iteración 1:</strong>
-                    <div ng-repeat="(uid, ans) in ansIter1[qs.id]">Anonimo {{$index + 1}}: <strong>{{optLabels[ans.answer]}}</strong> - {{ans.comment}}</div>
+                    <div ng-repeat="(uid, ans) in ansIter1[qs.id]">
+                        <span ng-show="uid != myUid">Anónimo {{uid}}: </span>
+                        <span ng-hide="uid != myUid">Mi respuesta: </span>
+                        <strong>{{optLabels[ans.answer]}}</strong> - {{ans.comment}}</div>
                     </div>
                     <div class="col-sm-6" ng-show="iteration > 2">
                         <strong>Respuestas iteración 2:</strong>
-                        <div ng-repeat="(uid, ans) in ansIter2[qs.id]">Anonimo {{$index + 1}}: <strong>{{optLabels[ans.answer]}}</strong> - {{ans.comment}}</div>
+                        <div ng-repeat="(uid, ans) in ansIter2[qs.id]">
+                        <span ng-show="uid != myUid">Anónimo {{uid}}: </span>
+                        <span ng-hide="uid != myUid">Mi respuesta: </span>
+                        <strong>{{optLabels[ans.answer]}}</strong> - {{ans.comment}}</div>
                     </div>
                 </div>
                 <hr>

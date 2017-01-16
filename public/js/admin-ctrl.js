@@ -15,9 +15,7 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
     self.sesStatusses = ["No Publicada", "Lectura", "Personal", "Anónimo", "Grupal", "Finalizada"];
 
     self.init = () => {
-        $http({url: "get-session-list", method: "post"}).success((data) => {
-            self.sessions = data;
-        });
+        self.shared.updateSesData();
     };
 
     self.selectSession = (idx) => {
@@ -29,6 +27,14 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
         self.getMembers();
         self.shared.verifyGroups();
         self.shared.resetGraphs();
+        self.shared.resetTab();
+    };
+
+    self.shared.updateSesData = () => {
+        $http({url: "get-session-list", method: "post"}).success((data) => {
+            console.log("Session data updated");
+            self.sessions = data;
+        });
     };
 
     self.requestDocuments = () => {
@@ -76,6 +82,10 @@ app.controller("TabsController", function ($scope, $http) {
     self.tabOptions = ["Editar", "Usuarios", "Dashboard", "Grupos"];
     self.selectedTab = 0;
 
+    self.shared.resetTab = () => {
+        self.selectedTab = 0;
+    };
+
     self.setTab = (idx) => {
         self.selectedTab = idx;
     };
@@ -92,6 +102,16 @@ app.controller("SesEditorController", function ($scope, $http) {
             console.log("Session updated");
         });
     };
+
+    self.changeState = () => {
+        if (self.selectedSes.status > 6) return;
+        if (self.selectedSes.status >= 3 && !self.selectedSes.grouped) return;
+        let postdata = {sesid: self.selectedSes.id};
+        $http({url: "change-state-session", method: "post", data: postdata}).success((data) => {
+            window.location = window.location.href;
+        });
+    }
+
 });
 
 

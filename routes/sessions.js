@@ -19,7 +19,7 @@ router.get("/seslist", (req, res) => {
 router.post("/get-session-list", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select s.id, s.name, s.descr, s.status, s.type, (s.id in (select sesid from teams)) as grouped from sessions as s, " +
-        "sesusers as su, users as u where su.uid = $1 and u.id = su.uid and su.sesid = s.id and (u.role='P' or s.status > 1)",
+        "sesusers as su, users as u where su.uid = $1 and u.id = su.uid and su.sesid = s.id and (u.role='P' or s.status > 1) order by s.time desc",
     sesReqData: ["uid"],
     sqlParams: [rpg.param("ses", "uid")]
 }));
@@ -129,6 +129,14 @@ router.post("/add-question", rpg.execSQL({
         }
     }
 }));
+
+router.post("/change-state-session", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "update sessions set status = status + 1 where id = $1",
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "sesid")]
+}));
+
 
 
 module.exports = router;
