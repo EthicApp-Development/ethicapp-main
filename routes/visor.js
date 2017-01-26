@@ -75,10 +75,10 @@ router.post("/get-answers", rpg.multiSQL({
 
 router.post("/send-idea", rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: "insert into ideas(content,descr,serial,docid,uid) values ($1,$2,$3,$4,$5) returning id",
+    sql: "insert into ideas(content,descr,serial,docid,uid,iteration) values ($1,$2,$3,$4,$5,$6) returning id",
     sesReqData: ["uid", "ses"],
-    postReqData: ["docid", "text", "comment", "serial"],
-    sqlParams: [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "docid"), rpg.param("ses", "uid")]
+    postReqData: ["docid", "text", "comment", "serial", "iteration"],
+    sqlParams: [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "docid"), rpg.param("ses", "uid"), rpg.param("post", "iteration")]
 }));
 
 router.post("/update-idea", rpg.execSQL({
@@ -92,9 +92,10 @@ router.post("/update-idea", rpg.execSQL({
 router.post("/get-ideas", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select i.id, i.content, i.descr, i.serial, i.docid from ideas as i inner join documents as d on i.docid = d.id where " +
-    "i.uid = $1 and d.sesid = $2 order by i.orden asc",
+    "i.uid = $1 and d.sesid = $2 and i.iteration = $3 order by i.orden asc",
     sesReqData: ["uid", "ses"],
-    sqlParams: [rpg.param("ses", "uid"), rpg.param("ses", "ses")]
+    postReqData: ["iteration"],
+    sqlParams: [rpg.param("ses", "uid"), rpg.param("ses", "ses"), rpg.param("post", "iteration")]
 }));
 
 router.post("/set-ideas-orden", (req, res) => {

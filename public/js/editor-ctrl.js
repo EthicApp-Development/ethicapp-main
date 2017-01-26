@@ -5,6 +5,8 @@ let app = angular.module("Editor", ['ui.tree']);
 app.controller("EditorController", function ($scope, $http, $q) {
     let self = $scope;
 
+    self.iteration = 1;
+    self.myUid = -1;
     self.documents = [];
     self.selections = [];
     self.selectedDocument = 0;
@@ -14,9 +16,35 @@ app.controller("EditorController", function ($scope, $http, $q) {
     self.applier = rangy.createClassApplier("highlight");
 
     self.init = () => {
-        $http({url: "get-documents", method: "post"}).success((data) => {
-            self.documents = data;
-            self.renderAll();
+        self.getSesInfo();
+    };
+
+    self.getSesInfo = () => {
+        $http({url: "get-ses-info", method: "post"}).success((data) => {
+            self.iteration = data.iteration;
+            self.myUid = data.uid;
+            self.sesName = data.name;
+            $http({url: "get-documents", method: "post"}).success((data) => {
+                self.documents = data;
+                self.renderAll();
+            });
+            /*if(self.iteration > 1) {
+                $http({url: "get-team-selection", method: "post", data: {iteration: 1}}).success((data) => {
+                    data.forEach((ans) => {
+                        self.ansIter1[ans.qid] = self.ansIter1[ans.qid] || {};
+                        self.ansIter1[ans.qid][ans.uid] = {answer: ans.answer, comment: ans.comment};
+                    });
+                });
+            }
+            if(self.iteration > 2) {
+                $http({url: "get-team-selection", method: "post", data: {iteration: 2}}).success((data) => {
+                    data.forEach((ans) => {
+                        self.ansIter2[ans.qid] = self.ansIter2[ans.qid] || {};
+                        self.ansIter2[ans.qid][ans.uid] = {answer: ans.answer, comment: ans.comment};
+                    });
+                });
+            }
+            self.loadAnswers();*/
         });
     };
 
@@ -46,7 +74,6 @@ app.controller("EditorController", function ($scope, $http, $q) {
         self.documents.forEach((doc, idx) => {
             loadPdf(doc.path, idx);
         });
-
     };
 
     self.selectPDF = (idx) => {
@@ -54,7 +81,8 @@ app.controller("EditorController", function ($scope, $http, $q) {
     };
 
     self.getIdeas = () => {
-        $http({url: "get-ideas", method: "post"}).success((data) => {
+        let postdata = {iteration: self.iteration};
+        $http({url: "get-ideas", method: "post", data: postdata}).success((data) => {
             self.selections = [];
             data.forEach((idea) => {
                 let textDef = {
@@ -77,7 +105,8 @@ app.controller("EditorController", function ($scope, $http, $q) {
             text: sel.text,
             comment: sel.comment,
             serial: sel.serial,
-            docid: self.documents[sel.document].id
+            docid: self.documents[sel.document].id,
+            iteration: self.iteration
         };
         if (sel.status == "unsaved") {
             $http({url: "send-idea", method: "post", data: postadata}).success((data) => {

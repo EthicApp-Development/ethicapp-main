@@ -166,10 +166,14 @@
         </div>
 
         <div class="pad-content" ng-show="selectedTab == 2" ng-controller="DashboardController">
-            <button class="btn btn-default pull-right" ng-click="updateState()">Actualizar Estado de Alumnos</button>
+            <div class="pull-right">
+                <label>Iteración:</label>
+                <select class="" ng-options="x for x in [1,2,3]" ng-model="iterationIndicator"></select>
+                <button class="btn btn-default" ng-click="updateState()">Actualizar Estado de Alumnos</button>
+            </div>
             <h4>Resultados</h4>
             <nvd3 options="barOpts" data="barData"></nvd3>
-            <table class="table table-bordered" ng-show="selectedSes.type == 'S'">
+            <table class="table table-bordered" ng-if="selectedSes.type == 'S'">
                 <tr>
                     <th>Alumno</th>
                     <th ng-repeat="qs in questions" ng-bind="$index + 1"></th>
@@ -178,6 +182,20 @@
                     <td ng-bind="users[alum].name"></td>
                     <td ng-repeat="qs in questions"
                         ng-class="{'bg-darkgreen': data[qs.id], 'bg-darkred': data[qs.id]!=null && !data[qs.id]}"></td>
+                </tr>
+            </table>
+            <table class="table table-bordered" ng-if="selectedSes.type == 'L' && alumState!={}">
+                <tr>
+                    <th>Alumno</th>
+                    <th style="width: 420px">Puntaje</th>
+                </tr>
+                <tr ng-repeat="dato in alumState | orderBy:'-score'">
+                    <td ng-bind="users[dato.uid].name"></td>
+                    <td>
+                        <div class="bg-darkgreen table-green-bar" style="width: {{400*dato.score}}px;">
+                            {{100*dato.score | number:0}}%
+                        </div>
+                    </td>
                 </tr>
             </table>
         </div>

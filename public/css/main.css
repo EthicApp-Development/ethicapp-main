@@ -276,3 +276,10 @@ ul[dnd-list] .dndPlaceholder {
     overflow-y: scroll;
     background: #333;
 }
+
+.table-green-bar{
+    height: 24px;
+    color: #fff;
+    padding-left: 4px;
+    text-shadow: #666 1px 1px;
+}

@@ -177,9 +177,10 @@ app.controller("QuestionsController", function($scope,$http){
 
 app.controller("DashboardController", function($scope,$http){
     let self = $scope;
+    self.iterationIndicator = 1;
 
     self.shared.resetGraphs = () => {
-        self.alumState = {};
+        self.alumState = null;
         self.barOpts = {
             chart: {
                 type: 'multiBarChart',
@@ -201,9 +202,10 @@ app.controller("DashboardController", function($scope,$http){
     };
 
     self.updateState = () => {
-        let postdata = {sesid: self.selectedSes.id};
+        let postdata = {sesid: self.selectedSes.id, iteration: self.iterationIndicator};
         if (self.selectedSes.type == "S") {
             $http({url: "get-alum-full-state-sel", method: "post", data: postdata}).success((data) => {
+                self.alumState = {};
                 data.forEach((d) => {
                     if (self.alumState[d.uid] == null) {
                         self.alumState[d.uid] = {};
@@ -224,6 +226,7 @@ app.controller("DashboardController", function($scope,$http){
         }
         else if (self.selectedSes.type == "L") {
             $http({url: "get-alum-state-lect", method: "post", data: postdata}).success((data) => {
+                self.alumState = data;
                 self.buildBarData(data);
             });
         }
@@ -293,6 +296,7 @@ app.controller("GroupController", function($scope,$http){
         $http({url: "send-groups", method: "post", data: postdata}).success((data) => {
             if(data.status == "ok") {
                 console.log("Groups accepted");
+                self.selectedSes.grouped = true;
                 self.shared.verifyGroups();
             }
         });
