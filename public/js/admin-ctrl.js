@@ -259,12 +259,20 @@ app.controller("GroupController", function($scope,$http){
 
     self.generateGroups = (key) => {
         if(key == null && (self.groupNum < 1 || self.groupNum > self.users.length)) return;
+
         let postdata = {
             sesid: self.selectedSes.id,
             gnum: self.groupNum
         };
-        if (self.selectedSes.type == "S") {
-            $http({url: "group-proposal-sel", method: "post", data: postdata}).success((data) => {
+
+        let urlRequest = "";
+        if (self.selectedSes.type == "S")
+            urlRequest = "group-proposal-sel";
+        else if (self.selectedSes.type == "L")
+            urlRequest = "group-proposal-lect";
+
+        if(urlRequest != ""){
+            $http({url: urlRequest, method: "post", data: postdata}).success((data) => {
                 self.groups = data;
                 console.log(data);
                 self.groupNames = [];

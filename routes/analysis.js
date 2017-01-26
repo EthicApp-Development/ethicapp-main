@@ -115,6 +115,80 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
     }
 }));
 
+router.post("/group-proposal-lect", (req,res) => {
+    if (req.session.role != "P") {
+        res.end("[]");
+        return;
+    }
+    rpg.multiSQL({
+        dbcon: pass.dbcon,
+        sql: "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
+        "u.id = tu.uid and t.sesid = " + req.body.sesid,
+        preventResEnd: true,
+        onEnd: (req,res,arr) => {
+            if(arr.length == 0) {
+                rpg.multiSQL({
+                    dbcon: pass.dbcon,
+                    sql: "select a.uid, a.orden, a.serial, a.content, a.docid, p.serial as serial_ans, p.content as content_ans, p.docid as docid_ans" +
+                    " from ideas as a, ideas as p, sessions as s where s.creator = p.uid and a.uid != s.creator and a.orden = p.orden and " +
+                    "s.id = $1 and a.docid in (select id from documents where sesid = s.id) and p.docid in (select id from documents where " +
+                    "sesid = s.id) order by uid, a.orden asc",
+                    postReqData: ["sesid"],
+                    onStart: (ses, data, calc) => {
+                        if (ses.role != "P") {
+                            console.log("ERR: Solo profesor puede ver estado de alumnos.");
+                            return "select $1"
+                        }
+                    },
+                    preventResEnd: true,
+                    sqlParams: [rpg.param("post", "sesid")],
+                    onEnd: (req,res,arr) => {
+                        rpg.singleSQL({
+                            dbcon: pass.dbcon,
+                            sql: "select count(*) as total from ideas as p, sessions as s where s.creator = p.uid and s.id = " + req.body.sesid,
+                            onEnd: (reqin,res,rowin) => {
+                                let scores = [];
+                                let last_uid = -1;
+                                let i = -1;
+                                let total = rowin.total;
+                                arr.forEach((row) => {
+                                    if(row.uid != last_uid) {
+                                        if(i >= 0)
+                                            scores[i].score /= Math.pow(2,total) - 1;
+                                        i++;
+                                        last_uid = row.uid;
+                                        scores.push({uid: last_uid, score:0});
+                                    }
+                                    if(ideasMatch(row)){
+                                        scores[i].score += Math.pow(2, total - row.orden - 1);
+                                    }
+                                });
+                                if (i >= 0)
+                                    scores[i].score /= Math.pow(2,total) - 1;
+                                let groups = generateTeams(scores, (s) => s.score, req.body.gnum);
+                                res.end(JSON.stringify(groups));
+                            }
+                        })(req,res);
+                    }
+                })(req,res);
+            }
+            else{
+                let t = {};
+                let groups = [];
+                arr.forEach((row) => {
+                    if(t[row.team] == null) {
+                        t[row.team] = groups.length;
+                        groups.push([{uid: row.uid}]);
+                    }
+                    else
+                        groups[t[row.team]].push({uid: row.uid});
+                });
+                res.end(JSON.stringify(groups));
+            }
+        }
+    })(req,res);
+});
+
 let ideasMatch = (row) => {
     return row.docid == row.docid_ans && row.serial == row.serial_ans;
 };
