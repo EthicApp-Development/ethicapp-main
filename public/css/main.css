@@ -94,6 +94,16 @@ a:hover{
     display: block;
 }
 
+.w50{
+    width: 50px;
+    display: block;
+}
+
+.w150{
+    width: 150px;
+    display: block;
+}
+
 .pad-content{
     padding-right: 24px;
     padding-left: 8px;
@@ -224,6 +234,11 @@ canvas{
     width: 80px;
 }
 
+.form-inline-med{
+    display: inline-block;
+    width: 180px;
+}
+
 .y-scrollable{
     overflow-y: scroll;
     height: 90%;
@@ -282,4 +297,8 @@ ul[dnd-list] .dndPlaceholder {
     color: #fff;
     padding-left: 4px;
     text-shadow: #666 1px 1px;
+}
+
+.red{
+    color: #c9302c;
 }

@@ -27,6 +27,7 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
         self.getMembers();
         self.shared.verifyGroups();
         self.shared.resetGraphs();
+        self.shared.verifyTabs();
         self.shared.resetTab();
     };
 
@@ -84,6 +85,12 @@ app.controller("TabsController", function ($scope, $http) {
 
     self.shared.resetTab = () => {
         self.selectedTab = 0;
+    };
+
+    self.shared.verifyTabs = () => {
+        if(self.selectedSes.type == "L"){
+            self.tabOptions= ["Editar", "Usuarios", "Dashboard", "Grupos", "Rúbrica"];
+        }
     };
 
     self.setTab = (idx) => {
@@ -249,13 +256,16 @@ app.controller("DashboardController", function($scope,$http){
 
 app.controller("GroupController", function($scope,$http){
     let self = $scope;
+    self.methods = ["Aleatorio","Puntaje Homogeneo","Puntaje Heterogeneo","Habilidad Homogeneo","Habilidad Heterogeoneo"];
 
     self.shared.verifyGroups = () => {
         self.groupNum = 3;
+        self.groupMet = self.methods[0];
         self.groups = [];
         self.groupNames = [];
         if(self.selectedSes != null && self.selectedSes.grouped){
             self.groupNum = null;
+            self.groupMet = null;
             self.generateGroups(true);
         }
     };
@@ -301,5 +311,27 @@ app.controller("GroupController", function($scope,$http){
             }
         });
     };
+
+});
+
+app.controller("RubricaController", function($scope){
+    let self = $scope;
+    self.criterios = [];
+    self.newCriterio = {};
+
+    self.addCriterio = () => {
+        self.criterios.push(self.newCriterio);
+        self.newCriterio = {};
+    };
+
+    self.removeCriterio = (idx) => {
+        self.criterios.splice(idx,1);
+    };
+
+    self.checkSum = () => {
+        let sum = self.criterios.reduce((e,p) => e+p.ponderador,0);
+        return sum == 100;
+    }
+
 
 });

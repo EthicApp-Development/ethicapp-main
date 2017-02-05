@@ -30,7 +30,7 @@
 
 <div class="row full-height">
 
-    <div class="col-sm-4">
+    <div class="col-sm-3">
         <div class="side-panel">
             <button class="btn btn-sm btn-default pull-right" ng-click="openNewSes()">Nueva</button>
             <h4>Lista de Sesiones:</h4>
@@ -44,9 +44,9 @@
         </div>
     </div>
 
-    <div class="col-sm-8" ng-show="selectedIndex!=-1" ng-controller="TabsController">
+    <div class="col-sm-9" ng-show="selectedIndex!=-1" ng-controller="TabsController">
         <h3>{{selectedSes.name}}</h3>
-        <div class="btn-group center-block w300">
+        <div class="btn-group center-block w500">
             <button class="btn btn-default" ng-repeat="x in tabOptions" ng-bind="x"
                     ng-class="{active: $index==selectedTab}" ng-click="setTab($index)">
             </button>
@@ -206,6 +206,7 @@
             <br>
             <label>Número de alumnos por grupo: </label>
             <input class="form-control form-inline-mini" ng-model="groupNum" type="number" ng-disabled="selectedSes.grouped">
+            <select class="form-control form-inline-med" ng-options="x for x in methods" ng-model="groupMet"></select>
             <button class="btn btn-default" ng-click="generateGroups()" ng-disabled="selectedSes.grouped">Generar</button>
             <span ng-show="selectedSes.grouped"> - Los grupos están fijados</span>
             <button class="btn btn-default pull-right" ng-click="acceptGroups()" ng-disabled="selectedSes.grouped">Fijar Grupos</button>
@@ -216,6 +217,58 @@
             <div class="list-group">
                 <div class="list-group-item" ng-repeat="group in groupNames" ng-bind="group"></div>
             </div>
+        </div>
+
+        <div class="pad-content" ng-show="selectedTab == 4" ng-controller="RubricaController">
+            <h4>Rúbricas</h4>
+            <h5>Definir esquema de rúbrica:</h5>
+            <table class="table table-bordered">
+                <tr>
+                    <th>Criterio</th>
+                    <th>% Pond</th>
+                    <th>Inicio (1 pto)</th>
+                    <th>Proceso (2 pto)</th>
+                    <th>Competente (3 pto)</th>
+                    <th>Avanzado (4 pto)</th>
+                    <th></th>
+                </tr>
+                <tr ng-repeat="criterio in criterios">
+                    <td ng-bind="criterio.nombre"></td>
+                    <td ng-bind="criterio.ponderador"></td>
+                    <td ng-bind="criterio.inicio"></td>
+                    <td ng-bind="criterio.proceso"></td>
+                    <td ng-bind="criterio.competente"></td>
+                    <td ng-bind="criterio.avanzado"></td>
+                    <td><button class="btn btn-default btn-sm" ng-click="removeCriterio($index)"><i class="fa fa-times"></i></button></td>
+                </tr>
+                <tr ng-hide="checkSum()">
+                    <td><input ng-model="newCriterio.nombre" class="w150"></td>
+                    <td><input ng-model="newCriterio.ponderador" class="w50" type="number"></td>
+                    <td><input ng-model="newCriterio.inicio" class="w150"></td>
+                    <td><input ng-model="newCriterio.proceso" class="w150"></td>
+                    <td><input ng-model="newCriterio.competente" class="w150"></td>
+                    <td><input ng-model="newCriterio.avanzado" class="w150"></td>
+                    <td><button class="btn btn-default btn-sm" ng-click="addCriterio()"><i class="fa fa-plus"></i></button></td>
+                </tr>
+            </table>
+            <div class="row">
+                <div class="col-sm-3 col-sm-offset-7">
+                    <span ng-show="!checkSum()" class="red">La suma de los criterios no es 100%</span>
+                </div>
+                <div class="col-sm-2">
+                    <button class="btn btn-default" ng-disabled="!checkSum()" ng-click="saveRubrica()">Guardar</button>
+                </div>
+            </div>
+            <br><br>
+            <hr>
+            <h4>Textos de Ejemplo</h4>
+            <ul class="list-group">
+                <li class="list-group-item" ng-repeat="text in textoEjemplo" ng-bind="text">
+                </li>
+            </ul>
+            <h5>Agregar texto de ejemplo:</h5>
+            <textarea rows="5" class="form-control" ng-model="newTextoEjemplo"></textarea>
+            <button class="btn btn-default pull-right">Guardar</button>
         </div>
 
     </div>
