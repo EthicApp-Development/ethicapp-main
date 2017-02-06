@@ -1,4 +1,4 @@
--- Postgres script for create database
+-- 1. Postgres script for create database
 
 create table if not exists users (
     id serial,
@@ -51,6 +51,7 @@ create table if not exists ideas (
     content text,
     descr text,
     serial varchar(255),
+    iteration integer default 1,
     uid integer,
     docid integer,
     primary key(id),
@@ -73,7 +74,7 @@ create table if not exists questions (
 create table if not exists selection (
     answer integer,
     uid integer,
-    iteration integer,
+    iteration integer default 1,
     comment text,
     qid integer,
     primary key(uid,qid),
