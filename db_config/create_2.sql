@@ -53,3 +53,6 @@ create table report_pair (
     foreign key(sesid) references sessions(id),
     foreign key(repid) references reports(id)
 );
+
+create type tipo_aprendizaje as enum('Reflexivo','Activo','Teorico','Pragmatico');
+alter table users add column aprendizaje tipo_aprendizaje;

@@ -275,7 +275,8 @@ app.controller("GroupController", function($scope,$http){
 
         let postdata = {
             sesid: self.selectedSes.id,
-            gnum: self.groupNum
+            gnum: self.groupNum,
+            method: self.groupMet
         };
 
         let urlRequest = "";
@@ -283,6 +284,11 @@ app.controller("GroupController", function($scope,$http){
             urlRequest = "group-proposal-sel";
         else if (self.selectedSes.type == "L")
             urlRequest = "group-proposal-lect";
+
+        if (self.groupMet == "Habilidad Homogeneo" || self.groupMet == "Habilidad Heterogeoneo")
+            urlRequest = "group-proposal-hab";
+        else if(self.groupMet == "Aleatorio")
+            urlRequest = "group-proposal-rand";
 
         if(urlRequest != ""){
             $http({url: urlRequest, method: "post", data: postdata}).success((data) => {
