@@ -46,14 +46,21 @@
         <div class="col-sm-3 side-bar">
             <a class="btn btn-sm btn-default pull-right margin-top-8" ng-click="setSelOrder()" ng-disabled="!checkAllSync()">Fijar orden</a>
             <h3>Ideas Fuerza:</h3>
+            <div class="row">
+                <div class="btn-group center-block w250" ng-show="tabOptions.length > 1">
+                    <button class="btn btn-default" ng-repeat="x in tabOptions" ng-bind="x"
+                            ng-class="{active: $index==sideTab}" ng-click="setTab($index)">
+                    </button>
+                </div>
+            </div>
             <div class="text-gray text-center" ng-show="numPages>0">Cargando...</div>
             <div class="y-scrollable" ui-tree data-max-depth="1">
-                <ul class="full-height" ui-tree-nodes="" ng-model="selections">
+                <ul class="full-height" ui-tree-nodes="" ng-model="selections" ng-show="sideTab == 0">
                     <li class="row idea-item" ng-repeat="sel in selections" ui-tree-node>
                         <div class="col-xs-1" ui-tree-handle>:::</div>
                         <div class="col-xs-11">
                         <a ng-click="sel.expanded=!sel.expanded" class="spaced pull-right"><i class="fa fa-plus"></i></a>
-                        <strong ng-bind="sel.text"></strong>
+                        <strong ng-bind="sel.text" ng-click="goToSerial(sel.text,sel.document)"></strong>
                         <span class="text-gray"> - {{documents[sel.document].title}}</span>
                         <div class="input-group" ng-show="sel.expanded">
                             <textarea class="form-control" ng-model="sel.comment" ng-change="selTextChange(sel)"></textarea>
@@ -64,6 +71,36 @@
                         </div>
                     </li>
                 </ul>
+                <div ng-show="iteration > 1 && sideTab == 1">
+                    <h4>Ideas iteración 1:</h4>
+                    <div ng-repeat="(uid, sels) in ansIter1">
+                        <h5 ng-show="uid != myUid">Anónimo {{uid}}: </h5>
+                        <h5 ng-hide="uid != myUid">Mi respuesta: </h5>
+                        <ul class="list-group">
+                            <li class="list-group-item" ng-repeat="sel in sels">
+                                <a ng-click="sel.expanded=!sel.expanded" class="spaced pull-right"><i class="fa fa-plus"></i></a>
+                                <strong ng-bind="sel.content" ng-click="goToSerial(sel.content,docIdx[sel.docid])"></strong>
+                                <span class="text-gray"> - {{documents[docIdx[sel.docid]].title}}</span>
+                                <div ng-show="sel.expanded" ng-bind="sel.descr"></div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div ng-show="iteration > 2 && sideTab == 2">
+                    <h4>Ideas iteración 2:</h4>
+                    <div ng-repeat="(uid, sels) in ansIter2">
+                        <h5 ng-show="uid != myUid">Anónimo {{uid}}: </h5>
+                        <h5 ng-hide="uid != myUid">Mi respuesta: </h5>
+                        <ul class="list-group">
+                            <li class="list-group-item" ng-repeat="sel in sels">
+                                <a ng-click="sel.expanded=!sel.expanded" class="spaced pull-right"><i class="fa fa-plus"></i></a>
+                                <strong ng-bind="sel.content" ng-click="goToSerial(sel.content,docIdx[sel.docid])"></strong>
+                                <span class="text-gray"> - {{documents[docIdx[sel.docid]].title}}</span>
+                                <div ng-show="sel.expanded" ng-bind="sel.descr"></div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

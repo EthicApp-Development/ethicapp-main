@@ -2,7 +2,7 @@
 
 let app = angular.module("Editor", ['ui.tree']);
 
-app.controller("EditorController", function ($scope, $http, $q) {
+app.controller("EditorController", function ($scope, $http, $q, $timeout) {
     let self = $scope;
 
     self.iteration = 1;
@@ -11,6 +11,12 @@ app.controller("EditorController", function ($scope, $http, $q) {
     self.selections = [];
     self.selectedDocument = 0;
     self.numPages = 0;
+    self.ansIter1 = {};
+    self.ansIter2 = {};
+    self.sideTab = 0;
+    self.docIdx = {};
+
+    self.tabOptions = ["Actual"];
 
     rangy.init();
     self.applier = rangy.createClassApplier("highlight");
@@ -26,26 +32,34 @@ app.controller("EditorController", function ($scope, $http, $q) {
             self.sesName = data.name;
             $http({url: "get-documents", method: "post"}).success((data) => {
                 self.documents = data;
+                data.forEach((doc,i) => {
+                    self.docIdx[doc.id] = i;
+                });
                 self.renderAll();
             });
-            /*if(self.iteration > 1) {
-                $http({url: "get-team-selection", method: "post", data: {iteration: 1}}).success((data) => {
+            if(self.iteration > 1) {
+                $http({url: "get-team-ideas", method: "post", data: {iteration: 1}}).success((data) => {
                     data.forEach((ans) => {
-                        self.ansIter1[ans.qid] = self.ansIter1[ans.qid] || {};
-                        self.ansIter1[ans.qid][ans.uid] = {answer: ans.answer, comment: ans.comment};
+                        self.ansIter1[ans.uid] = self.ansIter1[ans.uid] || [];
+                        self.ansIter1[ans.uid].push(ans);
                     });
+                    self.tabOptions.push("Iteración 1");
                 });
             }
             if(self.iteration > 2) {
-                $http({url: "get-team-selection", method: "post", data: {iteration: 2}}).success((data) => {
+                $http({url: "get-team-ideas", method: "post", data: {iteration: 2}}).success((data) => {
                     data.forEach((ans) => {
-                        self.ansIter2[ans.qid] = self.ansIter2[ans.qid] || {};
-                        self.ansIter2[ans.qid][ans.uid] = {answer: ans.answer, comment: ans.comment};
+                        self.ansIter2[ans.uid] = self.ansIter2[ans.uid] || [];
+                        self.ansIter2[ans.uid].push(ans);
                     });
+                    self.tabOptions.push("Iteración 2");
                 });
             }
-            self.loadAnswers();*/
         });
+    };
+
+    self.setTab = (idx) => {
+        self.sideTab = idx;
     };
 
     self.selectText = () => {
@@ -65,7 +79,19 @@ app.controller("EditorController", function ($scope, $http, $q) {
         self.selections.push(textDef);
     };
 
+    self.goToSerial = (text, index) => {
+        console.log(text, index);
+        self.selectedDocument = index;
+        let highs = angular.element(".highlight");
+        highs = highs.filter((i,e) => e.innerHTML == text);
+        console.log(highs);
+        if (highs.length > 0){
+            $timeout(() => highs[0].scrollIntoView(),100);
+        }
+    };
+
     self.highlightSerial = (serial, index) => {
+        console.log(serial,index);
         self.applier.applyToRange(rangy.deserializeRange(serial, $("#pdf-canvas-" + index)[0], document));
     };
 

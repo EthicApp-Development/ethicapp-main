@@ -343,13 +343,15 @@ router.post("/send-groups", (req, res) => {
                         dbcon: pass.dbcon,
                         sql: "insert into teams(sesid) values (" + ses + ") returning id",
                         onEnd: (req,res,result) => {
+                            let insertSql = "insert into teamusers(tmid,uid) values ";
                             team.forEach((uid) => {
-                                rpg.execSQL({
-                                    dbcon: pass.dbcon,
-                                    sql: "insert into teamusers(tmid,uid) values ("+result.id+","+uid+")",
-                                    onEnd: () => {}
-                                })(req,res);
+                                insertSql += "("+result.id+","+uid+"), ";
                             });
+                            rpg.execSQL({
+                                dbcon: pass.dbcon,
+                                sql: insertSql.substring(0,insertSql.length-2),
+                                onEnd: () => { console.log("Team " + i + " ok") }
+                            })(req,res);
                         }
                     })(req, res);
                 });

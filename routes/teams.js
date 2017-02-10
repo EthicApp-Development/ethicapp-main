@@ -15,6 +15,16 @@ router.post("/get-team-selection",rpg.multiSQL({
     sqlParams: [rpg.param("ses","ses"),rpg.param("ses","ses"),rpg.param("ses","uid"),rpg.param("post","iteration")]
 }));
 
+router.post("/get-team-ideas",rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select i.id, i.uid, i.content, i.descr, i.serial, i.docid from ideas as i inner join documents as d on i.docid = d.id where " +
+        "d.sesid = $1 and i.uid in (select tu.uid from teamusers as tu where tu.tmid = (select t.id from teamusers as tu, teams as t where " +
+        "t.sesid = $2 and tu.tmid = t.id and tu.uid = $3)) and i.iteration = $4 order by i.orden asc",
+    sesReqData: ["ses","uid"],
+    postReqData: ["iteration"],
+    sqlParams: [rpg.param("ses","ses"),rpg.param("ses","ses"),rpg.param("ses","uid"),rpg.param("post","iteration")]
+}));
+
 router.post("/get-ses-info",rpg.singleSQL({
     dbcon: pass.dbcon,
     sql: "select greatest(1,least(3,status-2)) as iteration, $1::int as uid, name from sessions where id = $2",
