@@ -233,17 +233,17 @@
                     <th></th>
                 </tr>
                 <tr ng-repeat="criterio in criterios">
-                    <td ng-bind="criterio.nombre"></td>
-                    <td ng-bind="criterio.ponderador"></td>
+                    <td ng-bind="criterio.name"></td>
+                    <td ng-bind="criterio.pond"></td>
                     <td ng-bind="criterio.inicio"></td>
                     <td ng-bind="criterio.proceso"></td>
                     <td ng-bind="criterio.competente"></td>
                     <td ng-bind="criterio.avanzado"></td>
-                    <td><button class="btn btn-default btn-sm" ng-click="removeCriterio($index)"><i class="fa fa-times"></i></button></td>
+                    <td><button class="btn btn-default btn-sm" ng-if="editable" ng-click="removeCriterio($index)"><i class="fa fa-times"></i></button></td>
                 </tr>
-                <tr ng-hide="checkSum()">
-                    <td><input ng-model="newCriterio.nombre" class="w150"></td>
-                    <td><input ng-model="newCriterio.ponderador" class="w50" type="number"></td>
+                <tr ng-hide="checkSum() || !editable">
+                    <td><input ng-model="newCriterio.name" class="w150"></td>
+                    <td><input ng-model="newCriterio.pond" class="w50" type="number"></td>
                     <td><input ng-model="newCriterio.inicio" class="w150"></td>
                     <td><input ng-model="newCriterio.proceso" class="w150"></td>
                     <td><input ng-model="newCriterio.competente" class="w150"></td>
@@ -256,7 +256,7 @@
                     <span ng-show="!checkSum()" class="red">La suma de los criterios no es 100%</span>
                 </div>
                 <div class="col-sm-2">
-                    <button class="btn btn-default" ng-disabled="!checkSum()" ng-click="saveRubrica()">Guardar</button>
+                    <button class="btn btn-default" ng-disabled="!checkSum() || !editable" ng-click="saveRubrica()">Guardar</button>
                 </div>
             </div>
             <br><br>

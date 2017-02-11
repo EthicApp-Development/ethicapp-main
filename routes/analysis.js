@@ -323,6 +323,7 @@ let generateTeams = (alumArr, scFun, n, different) => {
 };
 
 router.post("/send-groups", (req, res) => {
+    // TODO cambiar porque tiene problemas de performance
     res.header("Content-type", "application/json");
     if (req.session.role != "P" || req.body.sesid == null || req.body.groups == null) {
         res.end('{"status":"err"}');

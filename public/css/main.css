@@ -154,6 +154,10 @@ canvas{
     background: rgba(245,167,67,0.5);
 }
 
+.highlight-secondary{
+    background: rgba(245,217,67,0.5);
+}
+
 .side-top-btn{
     display: inline-block;
     width: 120px;

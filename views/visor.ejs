@@ -79,7 +79,7 @@
                         <ul class="list-group">
                             <li class="list-group-item" ng-repeat="sel in sels">
                                 <a ng-click="sel.expanded=!sel.expanded" class="spaced pull-right"><i class="fa fa-plus"></i></a>
-                                <strong ng-bind="sel.content" ng-click="goToSerial(sel.content,docIdx[sel.docid])"></strong>
+                                <strong ng-bind="sel.content" ng-click="goToSerial(sel.content,docIdx[sel.docid],'.highlight-secondary')"></strong>
                                 <span class="text-gray"> - {{documents[docIdx[sel.docid]].title}}</span>
                                 <div ng-show="sel.expanded" ng-bind="sel.descr"></div>
                             </li>
@@ -94,7 +94,7 @@
                         <ul class="list-group">
                             <li class="list-group-item" ng-repeat="sel in sels">
                                 <a ng-click="sel.expanded=!sel.expanded" class="spaced pull-right"><i class="fa fa-plus"></i></a>
-                                <strong ng-bind="sel.content" ng-click="goToSerial(sel.content,docIdx[sel.docid])"></strong>
+                                <strong ng-bind="sel.content" ng-click="goToSerial(sel.content,docIdx[sel.docid],'.highlight-secondary')"></strong>
                                 <span class="text-gray"> - {{documents[docIdx[sel.docid]].title}}</span>
                                 <div ng-show="sel.expanded" ng-bind="sel.descr"></div>
                             </li>

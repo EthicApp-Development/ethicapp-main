@@ -14,6 +14,7 @@ let sessions = require("./routes/sessions");
 let visor = require("./routes/visor");
 let analysis = require("./routes/analysis");
 let teams = require("./routes/teams");
+let rubrica = require("./routes/rubrica");
 
 let app = express();
 
@@ -41,6 +42,7 @@ app.use("/", sessions);
 app.use("/", visor);
 app.use("/", analysis);
 app.use("/", teams);
+app.use("/", rubrica);
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {

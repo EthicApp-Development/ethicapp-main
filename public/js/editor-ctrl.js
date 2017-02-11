@@ -20,6 +20,7 @@ app.controller("EditorController", function ($scope, $http, $q, $timeout) {
 
     rangy.init();
     self.applier = rangy.createClassApplier("highlight");
+    self.secondaryApplier = rangy.createClassApplier("highlight-secondary");
 
     self.init = () => {
         self.getSesInfo();
@@ -37,24 +38,6 @@ app.controller("EditorController", function ($scope, $http, $q, $timeout) {
                 });
                 self.renderAll();
             });
-            if(self.iteration > 1) {
-                $http({url: "get-team-ideas", method: "post", data: {iteration: 1}}).success((data) => {
-                    data.forEach((ans) => {
-                        self.ansIter1[ans.uid] = self.ansIter1[ans.uid] || [];
-                        self.ansIter1[ans.uid].push(ans);
-                    });
-                    self.tabOptions.push("Iteración 1");
-                });
-            }
-            if(self.iteration > 2) {
-                $http({url: "get-team-ideas", method: "post", data: {iteration: 2}}).success((data) => {
-                    data.forEach((ans) => {
-                        self.ansIter2[ans.uid] = self.ansIter2[ans.uid] || [];
-                        self.ansIter2[ans.uid].push(ans);
-                    });
-                    self.tabOptions.push("Iteración 2");
-                });
-            }
         });
     };
 
@@ -79,10 +62,10 @@ app.controller("EditorController", function ($scope, $http, $q, $timeout) {
         self.selections.push(textDef);
     };
 
-    self.goToSerial = (text, index) => {
-        console.log(text, index);
+    self.goToSerial = (text, index, hcls) => {
+        hcls = (hcls == null)? ".highlight" : hcls;
         self.selectedDocument = index;
-        let highs = angular.element(".highlight");
+        let highs = angular.element(hcls);
         highs = highs.filter((i,e) => e.innerHTML == text);
         console.log(highs);
         if (highs.length > 0){
@@ -90,9 +73,15 @@ app.controller("EditorController", function ($scope, $http, $q, $timeout) {
         }
     };
 
-    self.highlightSerial = (serial, index) => {
+    self.highlightSerial = (serial, index, applier) => {
         console.log(serial,index);
-        self.applier.applyToRange(rangy.deserializeRange(serial, $("#pdf-canvas-" + index)[0], document));
+        applier = (applier == null) ? self.applier : applier;
+        try{
+            applier.applyToRange(rangy.deserializeRange(serial, $("#pdf-canvas-" + index)[0], document));
+        }
+        catch (err){
+            console.log(serial + " no se pudo highlightear", err);
+        }
     };
 
     self.renderAll = () => {
@@ -124,6 +113,26 @@ app.controller("EditorController", function ($scope, $http, $q, $timeout) {
                 self.selections.push(textDef);
             });
         });
+        if(self.iteration > 1) {
+            $http({url: "get-team-ideas", method: "post", data: {iteration: 1}}).success((data) => {
+                data.forEach((ans) => {
+                    self.ansIter1[ans.uid] = self.ansIter1[ans.uid] || [];
+                    self.ansIter1[ans.uid].push(ans);
+                    self.highlightSerial(ans.serial, self.docIdx[ans.docid], self.secondaryApplier);
+                });
+                self.tabOptions.push("Iteración 1");
+            });
+        }
+        if(self.iteration > 2) {
+            $http({url: "get-team-ideas", method: "post", data: {iteration: 2}}).success((data) => {
+                data.forEach((ans) => {
+                    self.ansIter2[ans.uid] = self.ansIter2[ans.uid] || [];
+                    self.ansIter2[ans.uid].push(ans);
+                    self.highlightSerial(ans.serial, self.docIdx[ans.docid], self.secondaryApplier);
+                });
+                self.tabOptions.push("Iteración 2");
+            });
+        }
     };
 
     self.sendIdea = (sel) => {

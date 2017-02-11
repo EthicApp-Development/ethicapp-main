@@ -90,6 +90,7 @@ app.controller("TabsController", function ($scope, $http) {
     self.shared.verifyTabs = () => {
         if(self.selectedSes.type == "L"){
             self.tabOptions= ["Editar", "Usuarios", "Dashboard", "Grupos", "Rúbrica"];
+            self.shared.getRubrica();
         }
     };
 
@@ -320,10 +321,11 @@ app.controller("GroupController", function($scope,$http){
 
 });
 
-app.controller("RubricaController", function($scope){
+app.controller("RubricaController", function($scope,$http){
     let self = $scope;
     self.criterios = [];
     self.newCriterio = {};
+    self.editable = false;
 
     self.addCriterio = () => {
         self.criterios.push(self.newCriterio);
@@ -335,9 +337,40 @@ app.controller("RubricaController", function($scope){
     };
 
     self.checkSum = () => {
-        let sum = self.criterios.reduce((e,p) => e+p.ponderador,0);
+        let sum = self.criterios.reduce((e,p) => e + p.pond, 0);
         return sum == 100;
-    }
+    };
 
+    self.shared.getRubrica = () => {
+        self.criterios = [];
+        self.newCriterio = {};
+        self.editable = false;
+        let postdata = {sesid: self.selectedSes.id};
+        $http({url: "get-rubrica", method: "post", data: postdata}).success((data) => {
+            if(data.length == 0){
+                self.editable = true;
+            }
+            else{
+                self.criterios = data;
+            }
+        });
+    };
+
+    self.saveRubrica = () => {
+        let postdata = {sesid: self.selectedSes.id};
+        $http({url: "send-rubrica", method: "post", data: postdata}).success((data) => {
+            if(data.status == "ok"){
+                let rid = data.id;
+                self.criterios.forEach((criterio) => {
+                    let postdata = angular.copy(criterio);
+                    postdata.rid = rid;
+                    $http({url: "send-criteria", method: "post", data: postdata}).success((data) => {
+                        if(data.status == "ok") console.log("Ok");
+                    });
+                });
+                self.editable = false;
+            }
+        });
+    };
 
 });
