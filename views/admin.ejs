@@ -271,7 +271,8 @@
                     </div>
                     <div class="col-sm-1">
                         <button class="btn btn-default"><i class="fa fa-external-link"></i></button>
-                        <button class="btn btn-default"><i class="fa fa-share-alt"></i></button>
+                        <button class="btn btn-default" ng-click="setActiveExampleReport(text)" ng-class="{'btn-success':text.active}">
+                            <i class="fa fa-share-alt"></i></button>
                     </div>
                     </div>
                 </li>

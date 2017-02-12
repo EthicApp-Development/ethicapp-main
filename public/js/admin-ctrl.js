@@ -90,8 +90,13 @@ app.controller("TabsController", function ($scope, $http) {
     self.shared.verifyTabs = () => {
         if(self.selectedSes.type == "L"){
             self.tabOptions= ["Editar", "Usuarios", "Dashboard", "Grupos", "Rúbrica"];
+            self.sesStatusses = ["No Publicada", "Lectura", "Personal", "Anónimo", "Grupal", "Reporte", "Rubrica Ejemplo", "Evaluación de Pares", "Finalizada"];
             self.shared.getRubrica();
             self.shared.getExampleReports();
+        }
+        else{
+            self.tabOptions = ["Editar", "Usuarios", "Dashboard", "Grupos"];
+            self.sesStatusses = ["No Publicada", "Lectura", "Personal", "Anónimo", "Grupal", "Finalizada"];
         }
     };
 
@@ -388,6 +393,18 @@ app.controller("RubricaController", function($scope,$http){
         $http({url: "send-example-report", method: "post", data: postdata}).success((data) => {
             self.newExampleReport = "";
             self.shared.getExampleReports();
+        });
+    };
+
+    self.setActiveExampleReport = (rep) => {
+        let postdata = {sesid: self.selectedSes.id, rid: rep.id};
+        $http({url: "set-active-example-report", method:"post", data:postdata}).success((data) => {
+            if(data.status == 'ok') {
+                self.exampleReports.forEach(r => {
+                    r.active = false;
+                });
+                rep.active = true;
+            }
         });
     };
 

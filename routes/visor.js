@@ -5,10 +5,29 @@ let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 
+let sesStatusCache = {};
+
 router.get("/to-visor", (req, res) => {
-    if (req.session.uid) {
+    if (req.session.uid && !isNaN(req.query.sesid)) {
         req.session.ses = req.query.sesid;
-        res.redirect("visor");
+        let doRedirect = (status) => {
+            console.log(status);
+            if(status <= 6) res.redirect("visor");
+            else res.redirect("rubrica");
+        };
+        if(sesStatusCache[req.query.sesid] == null) {
+            rpg.singleSQL({
+                dbcon: pass.dbcon,
+                sql: "select status from sessions where id = " + req.query.sesid,
+                onEnd: (req, res, result) => {
+                    sesStatusCache[req.query.sesid] = result.status;
+                    doRedirect(result.status);
+                }
+            })(req, res);
+        }
+        else {
+            doRedirect(sesStatusCache[req.query.sesid]);
+        }
     }
     else
         res.redirect(".");
@@ -117,5 +136,17 @@ router.post("/set-ideas-orden", (req, res) => {
     });
     res.end('{"status":"ok"}');
 });
+
+router.post("/change-state-session", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "update sessions set status = status + 1 where id = $1",
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "sesid")],
+    onEnd: (req,res) => {
+        if(req.body.sesid != null && sesStatusCache[req.body.sesid] != null)
+            sesStatusCache[req.body.sesid] += 1;
+        res.send('"status":"ok"');
+    }
+}));
 
 module.exports = router;

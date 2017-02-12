@@ -130,13 +130,6 @@ router.post("/add-question", rpg.execSQL({
     }
 }));
 
-router.post("/change-state-session", rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql: "update sessions set status = status + 1 where id = $1",
-    postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "sesid")]
-}));
-
 
 
 module.exports = router;

@@ -14,7 +14,7 @@ app.controller("RubricaController", ["$scope", "$http", function ($scope, $http)
 
     self.getReport = () => {
         let postdata = {rid: 1};
-        $http({url: "get-report", method: "post", data: postdata}).success((data) => {
+        $http({url: "get-active-example-report", method: "post", data: postdata}).success((data) => {
             self.report = data;
         });
     };
