@@ -263,12 +263,14 @@
             <hr>
             <h4>Textos de Ejemplo</h4>
             <ul class="list-group">
-                <li class="list-group-item" ng-repeat="text in textoEjemplo" ng-bind="text">
+                <li class="list-group-item" ng-repeat="text in exampleReports">
+                    <span ng-bind="text.content | limitTo:500"></span>
+                    <span ng-show="text.content.length > 500">...</span>
                 </li>
             </ul>
             <h5>Agregar texto de ejemplo:</h5>
-            <textarea rows="5" class="form-control" ng-model="newTextoEjemplo"></textarea>
-            <button class="btn btn-default pull-right">Guardar</button>
+            <textarea rows="5" class="form-control" ng-model="newExampleReport"></textarea>
+            <button class="btn btn-default pull-right" ng-disabled="newExampleReport.length==0" ng-click="sendExampleReport()">Guardar</button>
         </div>
 
     </div>

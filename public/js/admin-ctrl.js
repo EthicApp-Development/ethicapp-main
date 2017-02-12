@@ -91,6 +91,7 @@ app.controller("TabsController", function ($scope, $http) {
         if(self.selectedSes.type == "L"){
             self.tabOptions= ["Editar", "Usuarios", "Dashboard", "Grupos", "Rúbrica"];
             self.shared.getRubrica();
+            self.shared.getExampleReports();
         }
     };
 
@@ -326,6 +327,8 @@ app.controller("RubricaController", function($scope,$http){
     self.criterios = [];
     self.newCriterio = {};
     self.editable = false;
+    self.exampleReports = [];
+    self.newExampleReport = "";
 
     self.addCriterio = () => {
         self.criterios.push(self.newCriterio);
@@ -370,6 +373,22 @@ app.controller("RubricaController", function($scope,$http){
                 });
                 self.editable = false;
             }
+        });
+    };
+
+    self.shared.getExampleReports = () => {
+        self.exampleReports = [];
+        let postdata = {sesid: self.selectedSes.id};
+        $http({url: "get-example-reports", method: "post", data: postdata}).success((data) => {
+            self.exampleReports = data;
+        });
+    };
+
+    self.sendExampleReport = () => {
+        let postdata = {sesid: self.selectedSes.id, content: self.newExampleReport};
+        $http({url: "send-example-report", method: "post", data: postdata}).success((data) => {
+            self.newExampleReport = "";
+            self.shared.getExampleReports();
         });
     };
 

@@ -34,4 +34,21 @@ router.post("/get-rubrica",rpg.multiSQL({
     sqlParams: [rpg.param("post","sesid")]
 }));
 
+router.post("/send-example-report",rpg.execSQL({
+    //TODO Auth
+    dbcon: pass.dbcon,
+    sql: "insert into reports (content,example,rid,uid) select $1, true, r.id, $2 from rubricas as r where r.sesid = $3 limit 1",
+    sesReqData: ["uid"],
+    postReqData: ["sesid","content"],
+    sqlParams: [rpg.param("post","content"),rpg.param("ses","uid"),rpg.param("post","sesid")]
+}));
+
+router.post("/get-example-reports", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select r.id, r.content, r.uid from reports as r, rubricas as b where r.rid = b.id and b.sesid = $1 and r.example = true",
+    sesReqData: ["uid"],
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post","sesid")]
+}));
+
 module.exports = router;
