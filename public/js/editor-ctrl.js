@@ -2,7 +2,7 @@
 
 let app = angular.module("Editor", ['ui.tree']);
 
-app.controller("EditorController", function ($scope, $http, $q, $timeout) {
+app.controller("EditorController", ["$scope", "$http", "$timeout", function ($scope, $http, $timeout) {
     let self = $scope;
 
     self.iteration = 1;
@@ -80,7 +80,7 @@ app.controller("EditorController", function ($scope, $http, $q, $timeout) {
             applier.applyToRange(rangy.deserializeRange(serial, $("#pdf-canvas-" + index)[0], document));
         }
         catch (err){
-            console.log(serial + " no se pudo highlightear", err);
+            console.log(serial + " no se pudo highlightear!", err);
         }
     };
 
@@ -244,7 +244,7 @@ app.controller("EditorController", function ($scope, $http, $q, $timeout) {
 
     self.init();
 
-});
+}]);
 
 // Static functions
 /*

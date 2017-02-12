@@ -264,8 +264,16 @@
             <h4>Textos de Ejemplo</h4>
             <ul class="list-group">
                 <li class="list-group-item" ng-repeat="text in exampleReports">
+                    <div class="row">
+                    <div class="col-sm-11 text-justify">
                     <span ng-bind="text.content | limitTo:500"></span>
                     <span ng-show="text.content.length > 500">...</span>
+                    </div>
+                    <div class="col-sm-1">
+                        <button class="btn btn-default"><i class="fa fa-external-link"></i></button>
+                        <button class="btn btn-default"><i class="fa fa-share-alt"></i></button>
+                    </div>
+                    </div>
                 </li>
             </ul>
             <h5>Agregar texto de ejemplo:</h5>

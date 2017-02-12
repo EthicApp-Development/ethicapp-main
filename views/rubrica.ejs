@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es" ng-app="Rubrica">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>DocCollab</title>
+    <script src="libs/angular.min.js"></script>
+    <script src="js/rubrica-ctrl.min.js"></script>
+    <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body class="bg-black">
+
+<div ng-controller="RubricaController">
+
+    <div class="row top-bar">
+        <div class="col-sm-6 full-height simple-padding-top">
+            <strong class="simple-margin-left" ng-bind="sesName"></strong>
+        </div>
+        <div class="col-sm-6">
+            <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>
+        </div>
+    </div>
+
+    <div class="scrollable-container">
+    <div class="mid-container">
+
+        <div class="report">
+            <h3>Texto</h3>
+            <p class="text-justify" ng-bind="report.content"></p>
+        </div>
+        <br>
+        <hr>
+        <div class="rubrica">
+            <h4>Rúbrica</h4>
+            <table class="table table-bordered">
+                <tr>
+                    <th>Criterio</th>
+                    <th>Inicio (1 pto)</th>
+                    <th>Proceso (2 pto)</th>
+                    <th>Competente (3 pto)</th>
+                    <th>Avanzado (4 pto)</th>
+                </tr>
+                <tr ng-repeat="criterio in criterios">
+                    <td ng-bind="criterio.name"></td>
+                    <td class="clickable" ng-click="criterio.select = 1" ng-class="{active: criterio.select == 1}"
+                        ng-bind="criterio.inicio"></td>
+                    <td class="clickable" ng-click="criterio.select = 2" ng-class="{active: criterio.select == 2}"
+                        ng-bind="criterio.proceso"></td>
+                    <td class="clickable" ng-click="criterio.select = 3" ng-class="{active: criterio.select == 3}"
+                        ng-bind="criterio.competente"></td>
+                    <td class="clickable" ng-click="criterio.select = 4" ng-class="{active: criterio.select == 4}"
+                        ng-bind="criterio.avanzado"></td>
+                </tr>
+            </table>
+            <button class="pull-right btn btn-default" ng-click="sendSelection()" ng-disabled="!checkCriteria()">Enviar</button>
+            <div class="row"></div>
+        </div>
+
+    </div>
+    </div>
+
+</div>
+
+</body>
+</html>

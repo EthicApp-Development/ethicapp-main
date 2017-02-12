@@ -19,7 +19,9 @@
     "serve-favicon": "~2.3.0"
   },
   "devDependencies": {
-    "supertest": "^2.0.1",
-    "heapdump": "latest"
+    "babel-preset-babili": "^1.0.2",
+    "babel-preset-es2015": "^6.22.0",
+    "heapdump": "latest",
+    "supertest": "^2.0.1"
   }
 }

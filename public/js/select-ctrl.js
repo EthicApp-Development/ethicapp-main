@@ -2,7 +2,7 @@
 
 let app = angular.module("Select", []);
 
-app.controller("SelectController", function ($scope, $http) {
+app.controller("SelectController", ["$scope", "$http", function ($scope, $http) {
     let self = $scope;
 
     self.selectedQs = -1;
@@ -93,11 +93,12 @@ app.controller("SelectController", function ($scope, $http) {
             iteration: self.iteration
         };
         $http({url: "send-answer", method: "post", data: postdata}).success((data) => {
-            if(data.status == "ok")
+            if(data.status == "ok") {
                 self.sent[postdata.qid] = true;
+            }
         });
     };
 
     self.init();
 
-});
+}]);

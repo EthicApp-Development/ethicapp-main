@@ -340,8 +340,7 @@ app.controller("RubricaController", function($scope,$http){
     };
 
     self.checkSum = () => {
-        let sum = self.criterios.reduce((e,p) => e + p.pond, 0);
-        return sum == 100;
+        return self.criterios.reduce((e,p) => e + p.pond, 0) == 100;
     };
 
     self.shared.getRubrica = () => {

@@ -5,6 +5,13 @@ let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 
+router.get("/rubrica", (req, res) => {
+    if (req.session.uid && req.session.ses)
+        res.render("rubrica");
+    else
+        res.redirect(".");
+});
+
 router.post("/send-rubrica",rpg.singleSQL({
     //TODO Auth
     dbcon: pass.dbcon,
@@ -29,9 +36,8 @@ router.post("/get-rubrica",rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select c.name, c.pond, c.inicio, c.proceso, c.competente, c.avanzado from criteria as c, rubricas as r " +
             "where c.rid = r.id and r.sesid = $1",
-    sesReqData: ["uid"],
-    postReqData: ["sesid"],
-    sqlParams: [rpg.param("post","sesid")]
+    sesReqData: ["uid","ses"],
+    sqlParams: [rpg.param("ses","ses")]
 }));
 
 router.post("/send-example-report",rpg.execSQL({
@@ -49,6 +55,13 @@ router.post("/get-example-reports", rpg.multiSQL({
     sesReqData: ["uid"],
     postReqData: ["sesid"],
     sqlParams: [rpg.param("post","sesid")]
+}));
+
+router.post("/get-report", rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: "select r.id, r.content, r.uid from reports as r where r.id = $1",
+    sesReqData: ["uid"],
+    sqlParams: [rpg.param("post","rid")]
 }));
 
 module.exports = router;
