@@ -58,7 +58,7 @@ app.controller("SelectController", ["$scope", "$http", function ($scope, $http) 
     };
 
     self.loadAnswers = () => {
-        $http({url: "get-answers", method: "post", data: {iteration: self.iteration}}).success((data) => {
+        $http({url: "get-answers", method: "post", data: {iteration: Math.min(3,self.iteration)}}).success((data) => {
             data.forEach((ans) => {
                 self.answers[ans.qid] = ans.answer;
                 self.comments[ans.qid] = ans.comment;

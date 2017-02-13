@@ -320,3 +320,51 @@ td.clickable:hover{
 .table>tbody>tr>td.clickable.active{
     background: #8cd87c;
 }
+
+.report-window{
+    position: absolute;
+    bottom: 0;
+    width: 60vw;
+    background: #fff;
+    left: 20vw;
+    box-shadow: #333 0 0 32px;
+}
+
+.report-window .bar{
+    height: 36px;
+    background: #984512;
+    color: #fff;
+    padding-left: 20px;
+    padding-right: 10px;
+    padding-top: 4px;
+    font-size: 120%;
+}
+
+.report-window .content{
+    height: 28vh;
+}
+
+.report-window .content textarea{
+    height: 100%;
+    font-size: 105%;
+    text-align: justify;
+}
+
+.splash{
+    position: absolute;
+    z-index: 100;
+    background: rgba(0,0,0,0.35);
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+}
+
+.splash .splash-box{
+    background: #eee;
+    width: 320px;
+    padding: 16px;
+    margin: 20vh auto;
+    text-align: center;
+    box-shadow: #333 0 2px 32px;
+}

@@ -15,6 +15,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
     self.ansIter2 = {};
     self.sideTab = 0;
     self.docIdx = {};
+    self.writingReport = true;
 
     self.tabOptions = ["Actual"];
 
@@ -96,7 +97,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
     };
 
     self.getIdeas = () => {
-        let postdata = {iteration: self.iteration};
+        let postdata = {iteration: Math.min(3,self.iteration)};
         $http({url: "get-ideas", method: "post", data: postdata}).success((data) => {
             self.selections = [];
             data.forEach((idea) => {
@@ -132,6 +133,12 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
                 });
                 self.tabOptions.push("Iteración 2");
             });
+        }
+        if(self.iteration == 4){
+            self.writingReport = true;
+        }
+        else if(self.iteration == 5){
+            window.location.replace("rubrica");
         }
     };
 
@@ -243,6 +250,37 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
     };
 
     self.init();
+
+}]);
+
+app.controller("ReportController", ["$scope", "$http", function ($scope, $http) {
+    let self = $scope;
+    self.isFull = true;
+    self.content = "";
+    self.lastSent = null;
+
+    self.toggleFull = () => {
+        self.isFull = !self.isFull;
+    };
+
+    self.sendReport = () => {
+        let postdata = {content: self.content};
+        $http({url:"send-report", method:"post", data:postdata}).success((data) => {
+            if (data.status == "ok"){
+                self.lastSent = new Date();
+            }
+        });
+    };
+
+    self.getReport = () => {
+        $http({url:"get-my-report", method:"post"}).success((data) => {
+            if (data.status == "ok"){
+                self.content = data.content;
+            }
+        });
+    };
+
+    self.getReport();
 
 }]);
 

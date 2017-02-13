@@ -31,7 +31,7 @@
         </div>
         <div class="col-sm-6">
             <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>
-            <button class="btn btn-sm btn-default pull-right" ng-click="selectText()">Select Text</button>
+            <button class="btn btn-sm btn-default pull-right" ng-disabled="writingReport" ng-click="selectText()">Seleccionar idea</button>
         </div>
     </div>
 
@@ -101,6 +101,20 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="report-window" ng-if="writingReport" ng-controller="ReportController">
+        <div class="bar">
+            <span>Reporte Final</span>
+            <div class="pull-right">
+                <span ng-show="lastSent != null && isFull">Enviado {{lastSent | date:'HH:mm'}}</span>
+                <button class="btn btn-sm btn-primary" ng-click="sendReport()" ng-show="isFull"><i class="fa fa-send"></i></button>
+                <button class="btn btn-sm btn-primary" ng-click="toggleFull()"><i class="fa fa-minus"></i></button>
+            </div>
+        </div>
+        <div class="content" ng-show="isFull">
+            <textarea class="form-control" ng-model="content"></textarea>
         </div>
     </div>
 

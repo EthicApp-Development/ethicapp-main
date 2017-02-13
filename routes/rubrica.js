@@ -94,4 +94,21 @@ router.post("/set-active-example-report", (req,res) => {
     res.end('{"status":"ok"}');
 });
 
+router.post("/send-report", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "with rows as (update reports as r set content = $1 from rubricas as b where r.uid = $2 and r.rid = b.id and b.sesid = $3 returning 1) " +
+        "insert into reports(content,uid,example,rid) select $4,$5,false,id from rubricas as t where t.sesid = $6 and 1 not in (select * from rows)",
+    sesReqData: ["uid","ses"],
+    postReqData: ["content"],
+    sqlParams: [rpg.param("post","content"),rpg.param("ses","uid"),rpg.param("ses","ses"),rpg.param("post","content"),rpg.param("ses","uid"),rpg.param("ses","ses")]
+}));
+
+router.post("/get-my-report", rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: "select r.id, r.content from reports as r, rubricas as b where r.uid = $1 and b.id = r.rid and b.sesid = $2",
+    sesReqData: ["uid","ses"],
+    sqlParams: [rpg.param("ses","uid"),rpg.param("ses","ses")]
+}));
+
+
 module.exports = router;
