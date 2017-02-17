@@ -7,6 +7,7 @@
     <script src="libs/angular.min.js"></script>
     <script src="js/select-ctrl.min.js"></script>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/font-awesome.min.css">
     <link rel="stylesheet" href="css/main.css"/>
 </head>
 <body class="bg-black">
@@ -30,20 +31,31 @@
                 <div class="list-group">
                     <div class="" ng-repeat="x in optLabels">
                         <a class="input-group-addon addon-little" ng-bind="x" ng-class="{'bg-green': answers[qs.id]==$index}"
-                           ng-click="setAnswer(qs.id,$index)"></a>
+                           ng-click="setAnswer(qs,$index)"></a>
                         <span class="mini" ng-bind="qs.options[$index]"></span>
                     </div>
                 </div>
                 <div class="input-group">
                     <input type="text" class="form-control" ng-model="comments[qs.id]">
                     <span class="input-group-btn">
-                        <button class="btn btn-default" ng-click="sendAnswer(qs.id)"
-                                ng-class="{'btn-success': sent[qs.id]}">{{(sent[qs.id])?"Re-":""}}Enviar</button>
+                        <button class="btn btn-default" ng-click="sendAnswer(qs)" ng-class="{'btn-success': sent[qs.id], 'btn-warning': sent[qs.id] && qs.dirty}">
+                            <i class="fa fa-send"></i>
+                        </button>
                     </span>
                 </div>
                 <br>
-                <div class="row">
-                    <div class="col-sm-6" ng-show="iteration > 1">
+                <table class="table table-condensed table-bordered">
+                    <tr>
+                        <th class="col-sm-2">Alumno</th>
+                        <th class="col-sm-5">Iteración 1</th>
+                        <th class="col-sm-5">Iteración 2</th>
+                    </tr>
+                    <tr ng-repeat="uid in teamUids">
+                        <td><span ng-show="uid != myUid">Anónimo {{uid}}</span><span ng-hide="uid != myUid">Mi respuesta</span></td>
+                        <td><strong ng-bind="optLabels[ansIter1[qs.id][uid].answer]"></strong> <span ng-bind="ansIter1[qs.id][uid].comment"></span></td>
+                        <td><strong ng-bind="optLabels[ansIter2[qs.id][uid].answer]"></strong> <span ng-bind="ansIter2[qs.id][uid].comment"></span></td>
+                    </tr>
+                    <!--<div class="col-sm-6" ng-show="iteration > 1">
                     <strong>Respuestas iteración 1:</strong>
                     <div ng-repeat="(uid, ans) in ansIter1[qs.id]">
                         <span ng-show="uid != myUid">Anónimo {{uid}}: </span>
@@ -56,8 +68,8 @@
                         <span ng-show="uid != myUid">Anónimo {{uid}}: </span>
                         <span ng-hide="uid != myUid">Mi respuesta: </span>
                         <strong>{{optLabels[ans.answer]}}</strong> - {{ans.comment}}</div>
-                    </div>
-                </div>
+                    </div>-->
+                </table>
                 <hr>
                 <br>
             </div>

@@ -14,6 +14,7 @@ app.controller("SelectController", ["$scope", "$http", function ($scope, $http) 
     self.comments = {};
     self.optLabels = ["A", "B", "C", "D", "E"];
     self.sent = {};
+    self.teamUids = [];
 
     self.ansIter1 = {};
     self.ansIter2 = {};
@@ -28,11 +29,14 @@ app.controller("SelectController", ["$scope", "$http", function ($scope, $http) 
             self.iteration = data.iteration;
             self.myUid = data.uid;
             self.sesName = data.name;
+            let set = new Set();
             if(self.iteration > 1) {
                 $http({url: "get-team-selection", method: "post", data: {iteration: 1}}).success((data) => {
                     data.forEach((ans) => {
                         self.ansIter1[ans.qid] = self.ansIter1[ans.qid] || {};
                         self.ansIter1[ans.qid][ans.uid] = {answer: ans.answer, comment: ans.comment};
+                        set.add(ans.uid);
+                        self.teamUids = Array.from(set);
                     });
                 });
             }
@@ -41,6 +45,8 @@ app.controller("SelectController", ["$scope", "$http", function ($scope, $http) 
                     data.forEach((ans) => {
                         self.ansIter2[ans.qid] = self.ansIter2[ans.qid] || {};
                         self.ansIter2[ans.qid][ans.uid] = {answer: ans.answer, comment: ans.comment};
+                        set.add(ans.uid);
+                        self.teamUids = Array.from(set);
                     });
                 });
             }
@@ -67,8 +73,9 @@ app.controller("SelectController", ["$scope", "$http", function ($scope, $http) 
         });
     };
 
-    self.setAnswer = (qsi, ans) => {
-        self.answers[qsi] = ans;
+    self.setAnswer = (qs, ans) => {
+        self.answers[qs.id] = ans;
+        qs.dirty = true;
     };
 
     self.selectQuestion = (idx) => {
@@ -85,16 +92,17 @@ app.controller("SelectController", ["$scope", "$http", function ($scope, $http) 
         self.selectQuestion(seld.selectedQs - 1);
     };
 
-    self.sendAnswer = (i) => {
+    self.sendAnswer = (qs) => {
         let postdata = {
-            qid: i,
-            answer: self.answers[i],
-            comment: self.comments[i],
+            qid: qs.id,
+            answer: self.answers[qs.id],
+            comment: self.comments[qs.id],
             iteration: self.iteration
         };
         $http({url: "send-answer", method: "post", data: postdata}).success((data) => {
             if(data.status == "ok") {
                 self.sent[postdata.qid] = true;
+                qs.dirty = false;
             }
         });
     };

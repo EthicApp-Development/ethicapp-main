@@ -60,7 +60,7 @@
             <div class="center-block font-large">
                 <span ng-repeat="st in sesStatusses">
                     <span class="label label-default" ng-class="{'label-success': $index==selectedSes.status-1}"
-                          ng-bind="st"></span> <i class="fa fa-arrow-right" ng-hide="$last"></i>
+                          ng-bind="st"></span> <span ng-hide="$last">→</span>
                 </span>
             </div>
             <br>

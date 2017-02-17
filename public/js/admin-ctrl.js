@@ -353,7 +353,7 @@ app.controller("RubricaController", function($scope,$http){
         self.newCriterio = {};
         self.editable = false;
         let postdata = {sesid: self.selectedSes.id};
-        $http({url: "get-rubrica", method: "post", data: postdata}).success((data) => {
+        $http({url: "get-admin-rubrica", method: "post", data: postdata}).success((data) => {
             if(data.length == 0){
                 self.editable = true;
             }
