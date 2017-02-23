@@ -342,7 +342,7 @@ router.post("/send-groups", (req, res) => {
                 groups.forEach((team, i) => {
                     rpg.singleSQL({
                         dbcon: pass.dbcon,
-                        sql: "insert into teams(sesid) values (" + ses + ") returning id",
+                        sql: "insert into teams(sesid,leader) values (" + ses + "," + team[0] + ") returning id",
                         onEnd: (req,res,result) => {
                             let insertSql = "insert into teamusers(tmid,uid) values ";
                             team.forEach((uid) => {

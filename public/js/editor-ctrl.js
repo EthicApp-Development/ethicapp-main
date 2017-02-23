@@ -16,6 +16,8 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
     self.sideTab = 0;
     self.docIdx = {};
     self.writingReport = true;
+    self.followLeader = false;
+    self.leader = false;
 
     self.tabOptions = ["Actual"];
 
@@ -39,6 +41,16 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
                 });
                 self.renderAll();
             });
+            if (self.iteration == 3){
+                $http({url: "get-team-leader", method: "post"}).success((data) => {
+                    if(data.leader == self.myUid){
+                        self.leader = true;
+                    }
+                    else{
+                        self.followLeader = true;
+                    }
+                });
+            }
         });
     };
 
@@ -98,7 +110,8 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
 
     self.getIdeas = () => {
         let postdata = {iteration: Math.min(3,self.iteration)};
-        $http({url: "get-ideas", method: "post", data: postdata}).success((data) => {
+        let url = (postdata.iteration == 3)? "get-team-sync-ideas" : "get-ideas";
+        $http({url: url, method: "post", data: postdata}).success((data) => {
             self.selections = [];
             data.forEach((idea) => {
                 let textDef = {

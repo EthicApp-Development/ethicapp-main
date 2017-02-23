@@ -56,3 +56,6 @@ create table report_pair (
 
 create type tipo_aprendizaje as enum('Reflexivo','Activo','Teorico','Pragmatico');
 alter table users add column aprendizaje tipo_aprendizaje;
+
+alter table teams add column leader integer;
+alter table teams add constraint fk_leader foreign key(leader) references users(id);
