@@ -32,4 +32,35 @@ router.post("/get-ses-info",rpg.singleSQL({
     sqlParams: [rpg.param("ses","uid"),rpg.param("ses","ses")]
 }));
 
+router.post("/check-team-answer",rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select t.uid, s.answer from (select uid from teamusers where tmid in (select tmid from teams inner join teamusers " +
+        "on id = tmid where uid = $1 and sesid = $2)) as t left outer join (select uid, answer from selection where iteration = 3 " +
+        "and qid = $3) as s on s.uid = t.uid",
+    sesReqData: ["ses","uid"],
+    postReqData: ["qid"],
+    sqlParams: [rpg.param("ses","uid"),rpg.param("ses","ses"),rpg.param("post","qid")],
+    onEnd: (req,res,arr) => {
+        let answered = true;
+        let option = null;
+        let sameOption = true;
+        arr.forEach((row) => {
+            answered = answered && row.answer != null;
+            option = (option == null)? row.answer : option;
+            sameOption = sameOption && row.answer == option;
+        });
+        if(!answered){
+            res.end('{"status":"incomplete"}');
+        }
+        else if(!sameOption){
+            res.end('{"status":"different"}');
+        }
+        else{
+            res.end('{"status":"ok"}');
+        }
+    }
+}));
+
+
+
 module.exports = router;

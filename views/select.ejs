@@ -26,7 +26,7 @@
 
     <div class="scrollable-container">
         <div class="mid-container">
-            <div ng-repeat="qs in questions">
+            <div ng-repeat="qs in questions" ng-show="selectedQs == $index">
                 <h4 class="sep-lines" ng-bind="($index+1)+'. '+qs.content"></h4>
                 <div class="list-group">
                     <div class="" ng-repeat="x in optLabels">
@@ -55,23 +55,20 @@
                         <td><strong ng-bind="optLabels[ansIter1[qs.id][uid].answer]"></strong> <span ng-bind="ansIter1[qs.id][uid].comment"></span></td>
                         <td><strong ng-bind="optLabels[ansIter2[qs.id][uid].answer]"></strong> <span ng-bind="ansIter2[qs.id][uid].comment"></span></td>
                     </tr>
-                    <!--<div class="col-sm-6" ng-show="iteration > 1">
-                    <strong>Respuestas iteración 1:</strong>
-                    <div ng-repeat="(uid, ans) in ansIter1[qs.id]">
-                        <span ng-show="uid != myUid">Anónimo {{uid}}: </span>
-                        <span ng-hide="uid != myUid">Mi respuesta: </span>
-                        <strong>{{optLabels[ans.answer]}}</strong> - {{ans.comment}}</div>
-                    </div>
-                    <div class="col-sm-6" ng-show="iteration > 2">
-                        <strong>Respuestas iteración 2:</strong>
-                        <div ng-repeat="(uid, ans) in ansIter2[qs.id]">
-                        <span ng-show="uid != myUid">Anónimo {{uid}}: </span>
-                        <span ng-hide="uid != myUid">Mi respuesta: </span>
-                        <strong>{{optLabels[ans.answer]}}</strong> - {{ans.comment}}</div>
-                    </div>-->
                 </table>
                 <hr>
                 <br>
+                <div class="row">
+                    <div class="col-sm-1">
+                        <button class="btn btn-default" ng-click="prevQuestion()"><i class="fa fa-arrow-left"></i></button>
+                    </div>
+                    <div class="col-sm-10">
+                        <span class="text-danger full-width text-center center-block" ng-bind="bottomMsg"></span>
+                    </div>
+                    <div class="col-sm-1">
+                        <button class="btn btn-default" ng-click="nextQuestion()"><i class="fa fa-arrow-right"></i></button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
