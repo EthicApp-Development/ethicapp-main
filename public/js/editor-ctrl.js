@@ -15,7 +15,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
     self.ansIter2 = {};
     self.sideTab = 0;
     self.docIdx = {};
-    self.writingReport = true;
+    self.writingReport = false;
     self.followLeader = false;
     self.leader = false;
 
