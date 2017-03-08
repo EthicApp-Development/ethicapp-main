@@ -118,8 +118,9 @@ app.controller("SesEditorController", function ($scope, $http) {
     };
 
     self.changeState = () => {
-        if (self.selectedSes.status > 6) return;
+        if (self.selectedSes.status >= self.sesStatusses.length) return;
         if (self.selectedSes.status >= 3 && !self.selectedSes.grouped) return;
+        if (self.selectedSes.status >= 7 && !self.selectedSes.paired) return;
         let postdata = {sesid: self.selectedSes.id};
         $http({url: "change-state-session", method: "post", data: postdata}).success((data) => {
             window.location = window.location.href;

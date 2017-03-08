@@ -373,7 +373,7 @@ router.post("/assign-pairs", (req, res) => {
     let m = req.body.rnum;
     rpg.multiSQL({
         dbcon: pass.dbcon,
-        sql: "select r.id, r.uid from reports as r inner join rubricas as k on r.rid = k.id where k.sesid = " + ses,
+        sql: "select r.id, r.uid from reports as r inner join rubricas as k on r.rid = k.id where r.example = false and k.sesid = " + ses,
         onEnd: (req, res, arr) => {
             let n = arr.length;
             if (m >= n) {
@@ -395,20 +395,36 @@ router.post("/assign-pairs", (req, res) => {
                 let k = m;
                 while(k > 0){
                     let sel = Object.keys(counter);
+                    console.log("Seleccionable son: " + sel);
                     if(sel.length == 0 || sel.length == 1 && sel[0] == uids[i]){
                         console.log("Infinite loop");
                         res.end('{"status":"err"}');
                         return;
                     }
                     let r = ~~(Math.random()*sel.length);
+                    console.log("Indice random es: " + r + ", rid es: " + ri);
                     if (sel[r] != uids[i]){
                         k -= 1;
                         pairs.push({uid: sel[r], rid: ri});
+                        counter[sel[r]] -= 1;
+                        if(counter[sel[r]] <= 0){
+                            delete counter[sel[r]];
+                        }
                     }
                 }
             });
 
-            console.log("Pairs formed: " + pairs.map(e => "("+e.uid+","+e.rid+")")).join(" ");
+            let pairstr = pairs.map(e => "("+e.uid+","+e.rid+")");
+            if(pairs.length != n*m){
+                res.end('{"status":"err"}');
+                return;
+            }
+            if(hasDuplicates(pairstr)){
+                console.log("Se encontraron duplicados");
+                res.end('{"status":"err"}');
+                return;
+            }
+            console.log("Pairs formed: " + pairstr.join(" "));
 
             let sql = "insert into report_pair(sesid,uid,repid) values ";
             sql += pairs.map(e => "("+ses+","+e.uid+","+e.rid+")").join(",");
@@ -423,5 +439,15 @@ router.post("/assign-pairs", (req, res) => {
         }
     })(req,res);
 });
+
+let hasDuplicates = (arr) => {
+    let dict = {};
+    for (var i = 0; i < arr.length; i++) {
+        if(dict[arr[i]] != null)
+            return true;
+        dict[arr[i]] = true;
+    }
+    return false;
+};
 
 module.exports = router;
