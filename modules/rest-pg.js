@@ -99,7 +99,8 @@ module.exports.execSQL = function (params) {
                 params.onEnd(req, res);
             else
                 res.send('{"status":"ok"}');
-            res.end();
+            if (!params.preventResEnd)
+                res.end();
             db.end();
         });
         //});

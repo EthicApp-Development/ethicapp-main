@@ -362,4 +362,66 @@ router.post("/send-groups", (req, res) => {
     })(req,res);
 });
 
+router.post("/assign-pairs", (req, res) => {
+    res.header("Content-type", "application/json");
+    if (req.session.role != "P" || req.body.sesid == null || req.body.rnum == null) {
+        console.log("Data not provided");
+        res.end('{"status":"err"}');
+        return;
+    }
+    let ses = req.body.sesid;
+    let m = req.body.rnum;
+    rpg.multiSQL({
+        dbcon: pass.dbcon,
+        sql: "select r.id, r.uid from reports as r inner join rubricas as k on r.rid = k.id where k.sesid = " + ses,
+        onEnd: (req, res, arr) => {
+            let n = arr.length;
+            if (m >= n) {
+                console.log("More pairs than reports");
+                res.end('{"status":"err"}');
+                return;
+            }
+
+            let uids = arr.map(e => e.uid);
+            let rids = arr.map(e => e.id);
+
+            let counter = {};
+            uids.forEach(u => {
+                counter[u] = m;
+            });
+
+            let pairs = [];
+            rids.forEach((ri,i) => {
+                let k = m;
+                while(k > 0){
+                    let sel = Object.keys(counter);
+                    if(sel.length == 0 || sel.length == 1 && sel[0] == uids[i]){
+                        console.log("Infinite loop");
+                        res.end('{"status":"err"}');
+                        return;
+                    }
+                    let r = ~~(Math.random()*sel.length);
+                    if (sel[r] != uids[i]){
+                        k -= 1;
+                        pairs.push({uid: sel[r], rid: ri});
+                    }
+                }
+            });
+
+            console.log("Pairs formed: " + pairs.map(e => "("+e.uid+","+e.rid+")")).join(" ");
+
+            let sql = "insert into report_pair(sesid,uid,repid) values ";
+            sql += pairs.map(e => "("+ses+","+e.uid+","+e.rid+")").join(",");
+            rpg.execSQL({
+                dbcon: pass.dbcon,
+                sql: sql,
+                onEnd: () => {},
+                preventResEnd: true
+            })(req,res);
+
+            res.end('{"status":"ok"}');
+        }
+    })(req,res);
+});
+
 module.exports = router;

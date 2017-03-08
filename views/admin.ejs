@@ -280,6 +280,11 @@
             <h5>Agregar texto de ejemplo:</h5>
             <textarea rows="5" class="form-control" ng-model="newExampleReport"></textarea>
             <button class="btn btn-default pull-right" ng-disabled="newExampleReport.length==0" ng-click="sendExampleReport()">Guardar</button>
+            <br><br>
+            <hr>
+            <h4>Evaluación de pares</h4>
+            <span ng-show="selectedSes.paired">Ya se ha asignado a los alumnos los reportes a evaluar</span>
+            <button ng-hide="selectedSes.paired" class="btn btn-default" ng-click="pairAssign()">Asignar pares</button>
         </div>
 
     </div>
