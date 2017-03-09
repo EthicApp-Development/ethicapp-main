@@ -84,6 +84,14 @@ router.post("/get-active-example-report", rpg.singleSQL({
     sqlParams: [rpg.param("calc","rid")]
 }));
 
+router.post("/get-paired-report", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select rp.repid as id, r.content, r.uid from report_pair as rp inner join reports as r on rp.repid = r.id " +
+        "inner join rubricas as k on r.rid = k.id where k.sesid = $1 and rp.uid = $2",
+    sesReqData: ["uid","ses"],
+    sqlParams: [rpg.param("ses","ses"),rpg.param("ses","uid")]
+}));
+
 router.post("/send-criteria-selection", rpg.execSQL({
     dbcon: pass.dbcon,
     sql: "with rows as (update criteria_selection set selection = $1 where cid = $2 and uid = $3 and repid = $4 returning 1) " +
