@@ -21,11 +21,13 @@ app.controller("RubricaController", ["$scope", "$http", function ($scope, $http)
             if(self.iteration == 5) {
                 $http({url: "get-active-example-report", method: "post"}).success((data) => {
                     self.reports = [data];
+                    self.fillSelections();
                 });
             }
             else if(self.iteration == 6){
                 $http({url: "get-paired-report", method: "post"}).success((data) => {
                     self.reports = data;
+                    self.fillSelections();
                 });
             }
         });
@@ -37,19 +39,31 @@ app.controller("RubricaController", ["$scope", "$http", function ($scope, $http)
         });
     };
 
-    self.checkCriteria = () => {
-        return self.criterios.reduce((prev, crit) => (crit.select != null) ? prev : false, true);
+    self.checkCriteria = (report) => {
+        return report.select != null && self.criterios.reduce((prev, crit) => (report.select[crit.id] != null) ? prev : false, true);
     };
 
-    self.sendSelection = () => {
-        if(self.checkCriteria()){
+    self.sendSelection = (report) => {
+        if(self.checkCriteria(report)){
             self.criterios.forEach((criterio) => {
-                let postdata = {cid: criterio.id, sel: criterio.select, rid: self.report.id};
+                let postdata = {cid: criterio.id, sel: report.select[criterio.id], rid: report.id};
                 $http({url: "send-criteria-selection", method:"post", data:postdata}).success((data) => {
                     console.log("ok");
                 });
             });
         }
+    };
+
+    self.fillSelections = () => {
+        self.reports.forEach((report) => {
+            let postdata = {rid: report.id};
+            $http({url: "get-criteria-selection", method:"post", data:postdata}).success((data) => {
+                report.select = {};
+                data.forEach((sel) => {
+                    report.select[sel.cid] = sel.selection;
+                });
+            });
+        });
     };
 
     self.init();

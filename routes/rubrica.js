@@ -44,10 +44,18 @@ router.post("/get-admin-rubrica",rpg.multiSQL({
 
 router.post("/get-rubrica",rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select c.id, c.name, c.pond, c.inicio, c.proceso, c.competente, c.avanzado, s.selection as select from criteria as c, rubricas as r, " +
-        "criteria_selection as s where c.rid = r.id and r.sesid = $1 and s.cid = c.id and s.uid = $2 and s.repid = r.id",
-    sesReqData: ["uid","ses"],
-    sqlParams: [rpg.param("ses","ses"),rpg.param("ses","uid")]
+    sql: "select c.id, c.name, c.pond, c.inicio, c.proceso, c.competente, c.avanzado from criteria as c, rubricas as r " +
+        "where c.rid = r.id and r.sesid = $1",
+    sesReqData: ["ses"],
+    sqlParams: [rpg.param("ses","ses")]
+}));
+
+router.post("/get-criteria-selection",rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select id, cid, selection from criteria_selection where uid = $1 and repid = $2",
+    sesReqData: ["uid"],
+    postReqData: ["rid"],
+    sqlParams: [rpg.param("ses","uid"),rpg.param("post","rid")]
 }));
 
 router.post("/send-example-report",rpg.execSQL({
