@@ -149,7 +149,7 @@ router.post("/change-state-session", rpg.execSQL({
     }
 }));
 
-router.post("/delete-idea", rpg.multiSQL({
+router.post("/delete-idea", rpg.execSQL({
     dbcon: pass.dbcon,
     sql: "delete from ideas where uid = $1 and id = $2",
     sesReqData: ["uid"],
