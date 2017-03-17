@@ -264,7 +264,7 @@ app.controller("DashboardController", function($scope,$http){
 
 app.controller("GroupController", function($scope,$http){
     let self = $scope;
-    self.methods = ["Aleatorio","Puntaje Homogeneo","Puntaje Heterogeneo","Habilidad Homogeneo","Habilidad Heterogeoneo"];
+    self.methods = ["Aleatorio","Rendimiento Homogeneo","Rendimiento Heterogeneo","Tipo Aprendizaje Homogeneo","Tipo Aprendizaje Heterogeoneo"];
 
     self.shared.verifyGroups = () => {
         self.groupNum = 3;
@@ -293,7 +293,7 @@ app.controller("GroupController", function($scope,$http){
         else if (self.selectedSes.type == "L")
             urlRequest = "group-proposal-lect";
 
-        if (self.groupMet == "Habilidad Homogeneo" || self.groupMet == "Habilidad Heterogeoneo")
+        if (self.groupMet == "Tipo Aprendizaje Homogeneo" || self.groupMet == "Tipo Aprendizaje Heterogeoneo")
             urlRequest = "group-proposal-hab";
         else if(self.groupMet == "Aleatorio")
             urlRequest = "group-proposal-rand";

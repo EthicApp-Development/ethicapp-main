@@ -32,7 +32,7 @@
         <div class="col-sm-6">
             <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>
             <button class="btn btn-sm btn-default pull-right" ng-disabled="writingReport || followLeader" ng-click="selectText()">Seleccionar idea</button>
-            <span class="pull-right simple-padding-top w150"><i class="fa fa-star"></i> Representante </span>
+            <span class="pull-right simple-padding-top w150" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i> Representante </span>
         </div>
     </div>
 
@@ -57,7 +57,7 @@
             <div class="y-scrollable" ui-tree data-max-depth="1">
                 <ul class="full-height" ui-tree-nodes="" ng-model="selections" ng-show="sideTab == 0">
                     <li class="row idea-item" ng-repeat="sel in selections" ui-tree-node>
-                        <div class="col-xs-1" ui-tree-handle>:::</div>
+                        <div class="col-xs-1" ui-tree-handle>::: <a ng-click="deleteIdea(sel)" class="margin-top-24" ng-show="sel.expanded"><i class="fa fa-trash"></i></a></div>
                         <div class="col-xs-11">
                         <a ng-click="sel.expanded=!sel.expanded" class="spaced pull-right"><i class="fa fa-plus"></i></a>
                         <strong ng-bind="sel.text" ng-click="goToSerial(sel.text,sel.document)"></strong>

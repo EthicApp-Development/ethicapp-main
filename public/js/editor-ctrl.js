@@ -183,6 +183,20 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
         }
     };
 
+    self.deleteIdea = (sel, index) => {
+        if (sel.id != null) {
+            let postadata = {id: sel.id};
+            $http({url: "delete-idea", method: "post", data: postadata}).success((data) => {
+                if(data.status == "ok") {
+                    self.selections.splice(index, 1);
+                }
+            });
+        }
+        else{
+            self.selections.splice(index, 1);
+        }
+    };
+
     self.selTextChange = (sel) => {
         sel.status = (sel.status == 'saved') ? 'dirty' : sel.status;
     };

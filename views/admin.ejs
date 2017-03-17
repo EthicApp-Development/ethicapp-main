@@ -66,7 +66,6 @@
             <br>
             <div class="row">
                 <button class="btn btn-sm btn-default pull-right" ng-click="changeState()">Pasar al siguiente estado</button>
-                <a href="to-visor?sesid={{selectedSes.id}}" class="btn btn-default btn-sm pull-right" ng-show="selectedSes.type=='L'">Ir al editor</a>
             </div>
             <br>
             <hr>
@@ -103,6 +102,9 @@
                     <button class="btn btn-default" ng-disabled="selectedSes.status!=1">Subir</button>
                 </span>
                 </form>
+                <br>
+                <hr>
+                <a href="to-visor?sesid={{selectedSes.id}}" class="btn btn-primary btn" ng-show="selectedSes.type=='L'">Editar Pauta de Ideas Fuerza</a>
             </div>
             <div ng-show="selectedSes.type == 'S'" ng-controller="QuestionsController">
                 <h4>Preguntas</h4>

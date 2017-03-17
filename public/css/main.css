@@ -273,6 +273,11 @@ ul[dnd-list] .dndPlaceholder {
     margin-top: 8px;
 }
 
+.margin-top-24{
+    display: block;
+    margin-top: 24px;
+}
+
 .full-height{
     height: 100%;
 }

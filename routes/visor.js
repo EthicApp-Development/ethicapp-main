@@ -149,4 +149,12 @@ router.post("/change-state-session", rpg.execSQL({
     }
 }));
 
+router.post("/delete-idea", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "delete from ideas where uid = $1 and id = $2",
+    sesReqData: ["uid"],
+    postReqData: ["id"],
+    sqlParams: [rpg.param("ses", "uid"), rpg.param("post", "id")]
+}));
+
 module.exports = router;
