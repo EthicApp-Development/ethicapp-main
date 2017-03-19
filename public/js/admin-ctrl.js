@@ -303,9 +303,9 @@ app.controller("GroupController", function($scope,$http){
                 self.groups = data;
                 console.log(data);
                 self.groupNames = [];
-                data.forEach((d) => {
+                /*data.forEach((d) => {
                     self.groupNames.push(d.map(i => self.users[i.uid].name).join(", "));
-                });
+                });*/
             });
         }
     };
@@ -324,6 +324,12 @@ app.controller("GroupController", function($scope,$http){
                 self.shared.verifyGroups();
             }
         });
+    };
+
+    self.swapTable = (i1,j1,i2,j2) => {
+        let temp = self.groups[i1][j1];
+        self.groups[i1][j1] = self.groups[i2][j2];
+        self.groups[i2][j2] = temp;
     };
 
 });

@@ -274,13 +274,13 @@ let ideasMatch = (row) => {
 
 let isDifferent = (type) => {
     switch (type){
-        case "Puntaje Homogeneo":
+        case "Rendimiento Homogeneo":
             return false;
-        case "Puntaje Heterogeneo":
+        case "Rendimiento Heterogeneo":
             return true;
-        case "Habilidad Homogeneo":
+        case "Tipo Aprendizaje Homogeneo":
             return false;
-        case "Habilidad Heterogeoneo":
+        case "Tipo Aprendizaje Heterogeoneo":
             return true;
     }
     return false;

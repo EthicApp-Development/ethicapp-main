@@ -208,7 +208,7 @@
             <br>
             <label>Número de alumnos por grupo: </label>
             <input class="form-control form-inline-mini" ng-model="groupNum" type="number" ng-disabled="selectedSes.grouped">
-            <select class="form-control form-inline-med" ng-options="x for x in methods" ng-model="groupMet"></select>
+            <select class="form-control form-inline-med" ng-options="x for x in methods" ng-disabled="selectedSes.grouped" ng-model="groupMet"></select>
             <button class="btn btn-default" ng-click="generateGroups()" ng-disabled="selectedSes.grouped">Generar</button>
             <span ng-show="selectedSes.grouped"> - Los grupos están fijados</span>
             <button class="btn btn-default pull-right" ng-click="acceptGroups()" ng-disabled="selectedSes.grouped">Fijar Grupos</button>
@@ -216,9 +216,16 @@
             <hr>
             <br>
             <h4>Grupos:</h4>
-            <div class="list-group">
-                <div class="list-group-item" ng-repeat="group in groupNames" ng-bind="group"></div>
-            </div>
+            <table class="table table-bordered">
+                <tr ng-repeat="group in groups">
+                    <td ng-bind="$index + 1"></td>
+                    <td ng-repeat="alum in group">
+                        <strong ng-bind="users[alum.uid].name"></strong>
+                        <span class="label label-success" ng-bind="(alum.score!=null)? alum.score * 100 : null"></span>
+                        <span class="label label-info" ng-bind="alum.aprendizaje"></span>
+                    </td>
+                </tr>
+            </table>
         </div>
 
         <div class="pad-content" ng-show="selectedTab == 4" ng-controller="RubricaController">
