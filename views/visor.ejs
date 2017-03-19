@@ -72,31 +72,33 @@
                     </li>
                 </ul>
                 <div ng-show="iteration > 1 && sideTab == 1">
-                    <h4>Ideas iteración 1:</h4>
+                    <h4>Ideas Individual:</h4>
                     <div ng-repeat="(uid, sels) in ansIter1">
                         <h5 ng-show="uid != myUid">Anónimo {{uid}}: </h5>
                         <h5 ng-hide="uid != myUid">Mi respuesta: </h5>
                         <ul class="list-group">
-                            <li class="list-group-item" ng-repeat="sel in sels">
+                            <li class="list-group-item" ng-repeat="sel in sels" ng-class="{'bg-lightgreen':sel.copied}">
                                 <a ng-click="sel.expanded=!sel.expanded" class="spaced pull-right"><i class="fa fa-plus"></i></a>
                                 <strong ng-bind="sel.content" ng-click="goToSerial(sel.content,docIdx[sel.docid],'.highlight-secondary')"></strong>
                                 <span class="text-gray"> - {{documents[docIdx[sel.docid]].title}}</span>
                                 <div ng-show="sel.expanded" ng-bind="sel.descr"></div>
+                                <a ng-show="sel.expanded" ng-click="copyIdea(sel)"><i class="fa fa-copy"></i> Copiar a Actual</a>
                             </li>
                         </ul>
                     </div>
                 </div>
                 <div ng-show="iteration > 2 && sideTab == 2">
-                    <h4>Ideas iteración 2:</h4>
+                    <h4>Ideas Grupal Anónimo:</h4>
                     <div ng-repeat="(uid, sels) in ansIter2">
                         <h5 ng-show="uid != myUid">Anónimo {{uid}}: </h5>
                         <h5 ng-hide="uid != myUid">Mi respuesta: </h5>
                         <ul class="list-group">
-                            <li class="list-group-item" ng-repeat="sel in sels">
+                            <li class="list-group-item" ng-repeat="sel in sels" ng-class="{'bg-lightgreen':sel.copied}">
                                 <a ng-click="sel.expanded=!sel.expanded" class="spaced pull-right"><i class="fa fa-plus"></i></a>
                                 <strong ng-bind="sel.content" ng-click="goToSerial(sel.content,docIdx[sel.docid],'.highlight-secondary')"></strong>
                                 <span class="text-gray"> - {{documents[docIdx[sel.docid]].title}}</span>
                                 <div ng-show="sel.expanded" ng-bind="sel.descr"></div>
+                                <a ng-show="sel.expanded" ng-click="copyIdea(sel)"><i class="fa fa-copy"></i> Copiar a Actual</a>
                             </li>
                         </ul>
                     </div>

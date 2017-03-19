@@ -134,7 +134,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
                     self.ansIter1[ans.uid].push(ans);
                     self.highlightSerial(ans.serial, self.docIdx[ans.docid], self.secondaryApplier);
                 });
-                self.tabOptions.push("Iteración 1");
+                self.tabOptions.push("Individual");
             });
         }
         if(self.iteration > 2) {
@@ -144,7 +144,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
                     self.ansIter2[ans.uid].push(ans);
                     self.highlightSerial(ans.serial, self.docIdx[ans.docid], self.secondaryApplier);
                 });
-                self.tabOptions.push("Iteración 2");
+                self.tabOptions.push("Grupal Anónimo");
             });
         }
         if(self.iteration == 4){
@@ -195,6 +195,24 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
         else{
             self.selections.splice(index, 1);
         }
+    };
+
+    self.copyIdea = (sel) => {
+        console.log(sel);
+        if(sel == null || (sel.copied != null && !sel.copied)) return;
+        let textDef = {
+            text: sel.content,
+            length: sel.content.length,
+            serial: sel.serial,
+            document: self.docIdx[sel.docid],
+            comment: sel.descr,
+            expanded: true,
+            status: "unsaved"
+        };
+        self.selections.push(textDef);
+        sel.copied = true;
+        sel.expanded = false;
+        self.setTab(0);
     };
 
     self.selTextChange = (sel) => {
@@ -310,16 +328,4 @@ app.controller("ReportController", ["$scope", "$http", function ($scope, $http) 
     self.getReport();
 
 }]);
-
-// Static functions
-/*
- let base64ToUint8Array = (base64) => {
- let raw = atob(base64); //This is a native function that decodes a base64-encoded string.
- let uint8Array = new Uint8Array(new ArrayBuffer(raw.length));
- for (let i = 0; i < raw.length; i++) {
- uint8Array[i] = raw.charCodeAt(i);
- }
- return uint8Array;
- };
- */
 
