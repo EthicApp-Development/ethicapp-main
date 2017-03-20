@@ -1,6 +1,6 @@
 "use strict";
 
-let app = angular.module("Admin", ["ui.bootstrap","ui.multiselect","nvd3"]);
+let app = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3"]);
 
 app.controller("AdminController", function ($scope, $http, $uibModal) {
     let self = $scope;
@@ -88,13 +88,13 @@ app.controller("TabsController", function ($scope, $http) {
     };
 
     self.shared.verifyTabs = () => {
-        if(self.selectedSes.type == "L"){
-            self.tabOptions= ["Editar", "Usuarios", "Dashboard", "Grupos", "Rúbrica"];
+        if (self.selectedSes.type == "L") {
+            self.tabOptions = ["Editar", "Usuarios", "Dashboard", "Grupos", "Rúbrica"];
             self.sesStatusses = ["No Publicada", "Lectura", "Personal", "Anónimo", "Grupal", "Reporte", "Rubrica Ejemplo", "Evaluación de Pares", "Finalizada"];
             self.shared.getRubrica();
             self.shared.getExampleReports();
         }
-        else{
+        else {
             self.tabOptions = ["Editar", "Usuarios", "Dashboard", "Grupos"];
             self.sesStatusses = ["No Publicada", "Lectura", "Personal", "Anónimo", "Grupal", "Finalizada"];
         }
@@ -130,7 +130,7 @@ app.controller("SesEditorController", function ($scope, $http) {
 });
 
 
-app.controller("NewUsersController", function($scope,$http){
+app.controller("NewUsersController", function ($scope, $http) {
     let self = $scope;
     let newMembs = [];
 
@@ -150,12 +150,12 @@ app.controller("NewUsersController", function($scope,$http){
 
 });
 
-app.controller("QuestionsController", function($scope,$http){
+app.controller("QuestionsController", function ($scope, $http) {
     let self = $scope;
 
     self.newQuestion = {
         content: "",
-        alternatives: ["","","","",""],
+        alternatives: ["", "", "", "", ""],
         comment: "",
         other: "",
         answer: -1
@@ -166,7 +166,7 @@ app.controller("QuestionsController", function($scope,$http){
     };
 
     self.addQuestion = () => {
-        if(self.newQuestion.answer == -1) return;
+        if (self.newQuestion.answer == -1) return;
         let postdata = {
             content: self.newQuestion.content,
             options: self.newQuestion.alternatives.join("\n"),
@@ -176,12 +176,12 @@ app.controller("QuestionsController", function($scope,$http){
             other: self.newQuestion.other
         };
         $http({url: "add-question", method: "post", data: postdata}).success((data) => {
-            if(data.status == "ok")
+            if (data.status == "ok")
                 self.requestQuestions()
         });
         self.newQuestion = {
             content: "",
-            alternatives: ["","","","",""],
+            alternatives: ["", "", "", "", ""],
             comment: "",
             other: "",
             answer: -1
@@ -190,7 +190,7 @@ app.controller("QuestionsController", function($scope,$http){
 
 });
 
-app.controller("DashboardController", function($scope,$http){
+app.controller("DashboardController", function ($scope, $http) {
     let self = $scope;
     self.iterationIndicator = 1;
 
@@ -213,7 +213,7 @@ app.controller("DashboardController", function($scope,$http){
                 }
             }
         };
-        self.barData = [{key: "Alumnos", color:"#1f77b4", values:[]}];
+        self.barData = [{key: "Alumnos", color: "#1f77b4", values: []}];
     };
 
     self.updateState = () => {
@@ -250,28 +250,30 @@ app.controller("DashboardController", function($scope,$http){
     self.buildBarData = (data) => {
         const N = 5;
         self.barData[0].values = [];
-        for(let i = 0; i < N; i++){
-            let lbl = (i*20) + "% - " + ((i+1)*20) + "%";
+        for (let i = 0; i < N; i++) {
+            let lbl = (i * 20) + "% - " + ((i + 1) * 20) + "%";
             self.barData[0].values.push({label: lbl, value: 0});
         }
         data.forEach((d) => {
-            let rank = Math.min(Math.floor(N * d.score),N-1);
+            let rank = Math.min(Math.floor(N * d.score), N - 1);
             self.barData[0].values[rank].value += 1;
         });
     };
 
 });
 
-app.controller("GroupController", function($scope,$http){
+app.controller("GroupController", function ($scope, $http) {
     let self = $scope;
-    self.methods = ["Aleatorio","Rendimiento Homogeneo","Rendimiento Heterogeneo","Tipo Aprendizaje Homogeneo","Tipo Aprendizaje Heterogeoneo"];
+    self.methods = ["Aleatorio", "Rendimiento Homogeneo", "Rendimiento Heterogeneo", "Tipo Aprendizaje Homogeneo", "Tipo Aprendizaje Heterogeoneo"];
+    self.lastI = -1;
+    self.lastJ = -1;
 
     self.shared.verifyGroups = () => {
         self.groupNum = 3;
         self.groupMet = self.methods[0];
         self.groups = [];
         self.groupNames = [];
-        if(self.selectedSes != null && self.selectedSes.grouped){
+        if (self.selectedSes != null && self.selectedSes.grouped) {
             self.groupNum = null;
             self.groupMet = null;
             self.generateGroups(true);
@@ -279,7 +281,7 @@ app.controller("GroupController", function($scope,$http){
     };
 
     self.generateGroups = (key) => {
-        if(key == null && (self.groupNum < 1 || self.groupNum > self.users.length)) return;
+        if (key == null && (self.groupNum < 1 || self.groupNum > self.users.length)) return;
 
         let postdata = {
             sesid: self.selectedSes.id,
@@ -295,30 +297,31 @@ app.controller("GroupController", function($scope,$http){
 
         if (self.groupMet == "Tipo Aprendizaje Homogeneo" || self.groupMet == "Tipo Aprendizaje Heterogeoneo")
             urlRequest = "group-proposal-hab";
-        else if(self.groupMet == "Aleatorio")
+        else if (self.groupMet == "Aleatorio")
             urlRequest = "group-proposal-rand";
 
-        if(urlRequest != ""){
+        if (urlRequest != "") {
             $http({url: urlRequest, method: "post", data: postdata}).success((data) => {
                 self.groups = data;
+                self.groupsProp = angular.copy(self.groups);
                 console.log(data);
                 self.groupNames = [];
                 /*data.forEach((d) => {
-                    self.groupNames.push(d.map(i => self.users[i.uid].name).join(", "));
-                });*/
+                 self.groupNames.push(d.map(i => self.users[i.uid].name).join(", "));
+                 });*/
             });
         }
     };
 
     self.acceptGroups = () => {
-        if (self.groups == null) return;
+        if (self.groupsProp == null) return;
         let postdata = {
             sesid: self.selectedSes.id,
-            groups: self.groups.map(e => e.map(f => f.uid))
+            groups: self.groupsProp.map(e => e.map(f => f.uid))
         };
         console.log(postdata);
         $http({url: "send-groups", method: "post", data: postdata}).success((data) => {
-            if(data.status == "ok") {
+            if (data.status == "ok") {
                 console.log("Groups accepted");
                 self.selectedSes.grouped = true;
                 self.shared.verifyGroups();
@@ -326,15 +329,25 @@ app.controller("GroupController", function($scope,$http){
         });
     };
 
-    self.swapTable = (i1,j1,i2,j2) => {
-        let temp = self.groups[i1][j1];
-        self.groups[i1][j1] = self.groups[i2][j2];
-        self.groups[i2][j2] = temp;
+    self.swapTable = (i, j) => {
+        console.log(i, j, self.groups);
+        if (self.lastI == -1 && self.lastJ == -1) {
+            self.lastI = i;
+            self.lastJ = j;
+            return;
+        }
+        if (!(self.lastI == i && self.lastJ == j)) {
+            let temp = angular.copy(self.groupsProp[i][j]);
+            self.groupsProp[i][j] = angular.copy(self.groupsProp[self.lastI][self.lastJ]);
+            self.groupsProp[self.lastI][self.lastJ] = temp;
+        }
+        self.lastI = -1;
+        self.lastJ = -1;
     };
 
 });
 
-app.controller("RubricaController", function($scope,$http){
+app.controller("RubricaController", function ($scope, $http) {
     let self = $scope;
     self.criterios = [];
     self.newCriterio = {};
@@ -348,11 +361,11 @@ app.controller("RubricaController", function($scope,$http){
     };
 
     self.removeCriterio = (idx) => {
-        self.criterios.splice(idx,1);
+        self.criterios.splice(idx, 1);
     };
 
     self.checkSum = () => {
-        return self.criterios.reduce((e,p) => e + p.pond, 0) == 100;
+        return self.criterios.reduce((e, p) => e + p.pond, 0) == 100;
     };
 
     self.shared.getRubrica = () => {
@@ -361,10 +374,10 @@ app.controller("RubricaController", function($scope,$http){
         self.editable = false;
         let postdata = {sesid: self.selectedSes.id};
         $http({url: "get-admin-rubrica", method: "post", data: postdata}).success((data) => {
-            if(data.length == 0){
+            if (data.length == 0) {
                 self.editable = true;
             }
-            else{
+            else {
                 self.criterios = data;
             }
         });
@@ -373,13 +386,13 @@ app.controller("RubricaController", function($scope,$http){
     self.saveRubrica = () => {
         let postdata = {sesid: self.selectedSes.id};
         $http({url: "send-rubrica", method: "post", data: postdata}).success((data) => {
-            if(data.status == "ok"){
+            if (data.status == "ok") {
                 let rid = data.id;
                 self.criterios.forEach((criterio) => {
                     let postdata = angular.copy(criterio);
                     postdata.rid = rid;
                     $http({url: "send-criteria", method: "post", data: postdata}).success((data) => {
-                        if(data.status == "ok") console.log("Ok");
+                        if (data.status == "ok") console.log("Ok");
                     });
                 });
                 self.editable = false;
@@ -405,8 +418,8 @@ app.controller("RubricaController", function($scope,$http){
 
     self.setActiveExampleReport = (rep) => {
         let postdata = {sesid: self.selectedSes.id, rid: rep.id};
-        $http({url: "set-active-example-report", method:"post", data:postdata}).success((data) => {
-            if(data.status == 'ok') {
+        $http({url: "set-active-example-report", method: "post", data: postdata}).success((data) => {
+            if (data.status == 'ok') {
                 self.exampleReports.forEach(r => {
                     r.active = false;
                 });
@@ -417,8 +430,8 @@ app.controller("RubricaController", function($scope,$http){
 
     self.pairAssign = () => {
         let postdata = {sesid: self.selectedSes.id, rnum: 2};
-        $http({url: "assign-pairs", method:"post", data:postdata}).success((data) => {
-            if(data.status == "ok"){
+        $http({url: "assign-pairs", method: "post", data: postdata}).success((data) => {
+            if (data.status == "ok") {
                 self.selectedSes.paired = true;
             }
         });

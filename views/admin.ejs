@@ -226,6 +226,18 @@
                     </td>
                 </tr>
             </table>
+            <hr>
+            <table class="table table-bordered" ng-if="!selectedSes.grouped">
+                <tr ng-repeat="group in groupsProp">
+                    <td ng-bind="$index + 1"></td>
+                    <td ng-repeat="alum in group" class="pointable" ng-click="swapTable($parent.$index,$index)"
+                        ng-class="{'bg-lightgreen': $parent.$index == lastI && $index == lastJ}">
+                        <strong ng-bind="users[alum.uid].name"></strong>
+                        <span class="label label-success" ng-bind="(alum.score!=null)? alum.score * 100 : null"></span>
+                        <span class="label label-info" ng-bind="alum.aprendizaje"></span>
+                    </td>
+                </tr>
+            </table>
         </div>
 
         <div class="pad-content" ng-show="selectedTab == 4" ng-controller="RubricaController">
