@@ -317,10 +317,10 @@ app.controller("GroupController", function ($scope, $http) {
         if (self.groupsProp == null) return;
         let postdata = {
             sesid: self.selectedSes.id,
-            groups: self.groupsProp.map(e => e.map(f => f.uid))
+            groups: JSON.stringify(self.groupsProp.map(e => e.map(f => f.uid)))
         };
         console.log(postdata);
-        $http({url: "send-groups", method: "post", data: postdata}).success((data) => {
+        $http({url: "set-groups", method: "post", data: postdata}).success((data) => {
             if (data.status == "ok") {
                 console.log("Groups accepted");
                 self.selectedSes.grouped = true;

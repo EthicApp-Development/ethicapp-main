@@ -255,7 +255,8 @@ module.exports.singleSQL = function (params) {
                 result["status"] = "ok";
                 res.end(JSON.stringify(result));
             }
-            res.end();
+            if (!params.preventResEnd)
+                res.end();
             db.end();
         });
         //});

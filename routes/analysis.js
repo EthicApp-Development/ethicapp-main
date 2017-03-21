@@ -300,7 +300,64 @@ let habMetric = (u) => {
     return 0;
 };
 
+router.post("/set-groups", (req, res) => {
+    if (req.session.role != "P" || req.body.sesid == null || req.body.groups == null) {
+        res.end('{"status":"err"}');
+        return;
+    }
+    let sql = "delete from teamusers as tu using teams as t where tu.tmid = t.id and t.sesid = " + req.body.sesid+"; "
+            + "delete from teams where sesid = " + req.body.sesid + "; ";
+    let grupos = JSON.parse(req.body.groups);
+    grupos.forEach((team) => {
+        sql += "with rows as (insert into teams(sesid,leader) values (" + req.body.sesid + "," + team[0] + ") returning id) " +
+            "insert into teamusers(tmid,uid) select id, unnest('{" + team.join(",") + "}'::int[]) from rows; ";
+    });
+    console.log(sql);
+    rpg.execSQL({
+        dbcon: pass.dbcon,
+        sql: sql,
+        onEnd: () => {
+            res.end('{"status":"ok"}');
+        }
+    })(req,res);
+    /*rpg.execSQL({
+     dbcon: pass.dbcon,
+     sql: sql,
+     preventResEnd: true,
+     onEnd: () => { console.log("Team generation ok"); }
+     })(req,res);
+     res.end('{"status":"ok"}');
+     /*rpg.multiSQL({
+     dbcon: pass.dbcon,
+     sql: "select " + req.body.sesid + " in (select sesid from teams) as ans",
+     onEnd: (req,res,arr) => {
+     if(arr == null || arr.length == 0 || !arr[0]) {
+     res.end('{"status":"unchanged"}');
+     }
+     else{
+     console.log(req.body);
+     console.log(req.body.groups);
+     console.log(req.body.sesid);
+     let sql = "";
+     req.body.groups.forEach((team) => {
+     sql += "with rows as (insert into teams(sesid,leader) values (" + req.body.sesid + "," + team[0] + ") returning id) " +
+     "insert into teamusers(tmid,uid) select id, unnest('{" + team.join(",") + "}'::int[]) from rows; ";
+     });
+     console.log(sql);
+     /*rpg.execSQL({
+     dbcon: pass.dbcon,
+     sql: sql,
+     preventResEnd: true,
+     onEnd: () => { console.log("Team generation ok"); }
+     })(req,res);
+     res.end('{"status":"ok"}');
+     }
+     }
+     })(req,res);*/
+});
+
 let generateTeams = (alumArr, scFun, n, different) => {
+    if(n == null || n == 0) return [];
     let arr = alumArr;
     arr.sort((a, b) => scFun(b) - scFun(a));
     let groups = [];
@@ -321,46 +378,6 @@ let generateTeams = (alumArr, scFun, n, different) => {
     }
     return groups;
 };
-
-router.post("/send-groups", (req, res) => {
-    // TODO cambiar porque tiene problemas de performance
-    res.header("Content-type", "application/json");
-    if (req.session.role != "P" || req.body.sesid == null || req.body.groups == null) {
-        res.end('{"status":"err"}');
-        return;
-    }
-    let ses = req.body.sesid;
-    let groups = req.body.groups;
-    rpg.singleSQL({
-        dbcon: pass.dbcon,
-        sql: "select " + ses + " in (select sesid from teams) as ans",
-        onEnd: (req,res,result) => {
-            if(result.ans) {
-                res.end('{"status":"unchanged"}');
-            }
-            else{
-                groups.forEach((team, i) => {
-                    rpg.singleSQL({
-                        dbcon: pass.dbcon,
-                        sql: "insert into teams(sesid,leader) values (" + ses + "," + team[0] + ") returning id",
-                        onEnd: (req,res,result) => {
-                            let insertSql = "insert into teamusers(tmid,uid) values ";
-                            team.forEach((uid) => {
-                                insertSql += "("+result.id+","+uid+"), ";
-                            });
-                            rpg.execSQL({
-                                dbcon: pass.dbcon,
-                                sql: insertSql.substring(0,insertSql.length-2),
-                                onEnd: () => { console.log("Team " + i + " ok") }
-                            })(req,res);
-                        }
-                    })(req, res);
-                });
-                res.end('{"status":"ok"}');
-            }
-        }
-    })(req,res);
-});
 
 router.post("/assign-pairs", (req, res) => {
     res.header("Content-type", "application/json");
