@@ -104,7 +104,9 @@
                 </form>
                 <br>
                 <hr>
-                <a href="to-visor?sesid={{selectedSes.id}}" class="btn btn-primary btn" ng-show="selectedSes.type=='L'">Editar Pauta de Ideas Fuerza</a>
+                <a href="to-pauta?sesid={{selectedSes.id}}" class="btn btn-primary btn" ng-show="selectedSes.type=='L'" ng-disabled="selectedSes.status!=1">
+                    Editar Pauta de Ideas Fuerza
+                </a>
             </div>
             <div ng-show="selectedSes.type == 'S'" ng-controller="QuestionsController">
                 <h4>Preguntas</h4>
@@ -194,7 +196,7 @@
                 <tr ng-repeat="dato in alumState | orderBy:'-score'">
                     <td ng-bind="users[dato.uid].name"></td>
                     <td>
-                        <div class="bg-darkgreen table-green-bar" style="width: {{400*dato.score}}px;">
+                        <div class="bg-darkgreen table-green-bar" style="width: {{400*dato.score}}px">
                             {{100*dato.score | number:0}}%
                         </div>
                     </td>

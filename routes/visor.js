@@ -33,9 +33,42 @@ router.get("/to-visor", (req, res) => {
         res.redirect(".");
 });
 
+router.get("/to-pauta", (req, res) => {
+    if (req.session.uid && !isNaN(req.query.sesid) && req.session.role == "P") {
+        req.session.ses = req.query.sesid;
+        let doRedirect = (status) => {
+            console.log(status);
+            if(status == 1) res.redirect("pauta");
+            else res.redirect(".");
+        };
+        if(sesStatusCache[req.query.sesid] == null) {
+            rpg.singleSQL({
+                dbcon: pass.dbcon,
+                sql: "select status from sessions where id = " + req.query.sesid,
+                onEnd: (req, res, result) => {
+                    sesStatusCache[req.query.sesid] = result.status;
+                    doRedirect(result.status);
+                }
+            })(req, res);
+        }
+        else {
+            doRedirect(sesStatusCache[req.query.sesid]);
+        }
+    }
+    else
+        res.redirect(".");
+});
+
 router.get("/visor", (req, res) => {
     if (req.session.uid && req.session.ses)
         res.render("visor");
+    else
+        res.redirect(".");
+});
+
+router.get("/pauta", (req, res) => {
+    if (req.session.uid && req.session.ses && req.session.role == "P")
+        res.render("visor-pauta");
     else
         res.redirect(".");
 });

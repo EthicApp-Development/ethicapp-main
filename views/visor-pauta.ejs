@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es" ng-app="Editor">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <title>DocCollab</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+    <script src="libs/pdf.min.js"></script>
+    <script src="libs/rangy-core.min.js"></script>
+    <script src="libs/rangy-classapplier.min.js"></script>
+    <script src="libs/rangy-serializer.min.js"></script>
+    <script src="libs/textlayerbuilder.js"></script>
+    <script src="libs/angular.min.js"></script>
+    <script src="libs/angular-ui-tree.min.js"></script>
+    <script src="js/editor-pauta-ctrl.min.js"></script>
+    <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/minimal.css">
+    <link rel="stylesheet" href="css/angular-ui-tree.min.css">
+    <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body class="bg-black">
+
+<div class="editor-container" ng-controller="EditorController">
+
+    <div class="row top-bar">
+        <div class="col-sm-6 full-height">
+            <span class="simple-margin-left">Documentos: </span>
+            <span ng-repeat="doc in documents" class="side-top-btn" ng-bind="doc.title"
+                  ng-class="{'active': $index==selectedDocument}" ng-click="selectPDF($index)"></span>
+        </div>
+        <div class="col-sm-6">
+            <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>
+            <button class="btn btn-sm btn-default pull-right" ng-click="selectText()">Seleccionar idea</button>
+            <input type="number" class="form-control input-sm form-inline-mini pull-right" ng-model="orden" min="1" step="1"></input>
+        </div>
+    </div>
+
+    <div class="row">
+        <div id="pdf-container" class="col-sm-9 pdf-content">
+            <div class="centered">
+                <div ng-repeat="doc in documents" id="pdf-canvas-{{$index}}" class="centered" ng-show="$index==selectedDocument">
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-3 side-bar">
+            <a class="btn btn-sm btn-default pull-right margin-top-8" ng-click="setSelOrder()" ng-disabled="!checkAllSync()">Fijar orden</a>
+            <h3>Ideas Fuerza:</h3>
+            <div class="text-gray text-center" ng-show="numPages>0">Cargando...</div>
+            <div class="y-scrollable" ui-tree data-max-depth="1">
+                <ul class="full-height" ui-tree-nodes="" ng-model="selections">
+                    <li class="row idea-item" ng-repeat="sel in selections" ui-tree-node>
+                        <div class="col-xs-1"><span ui-tree-handle>:::</span> <a ng-click="deleteIdea(sel,$index)" class="margin-top-24" ng-if="sel.expanded"><i class="fa fa-trash"></i></a></div>
+                        <div class="col-xs-10">
+                        <a ng-click="sel.expanded=!sel.expanded" class="spaced pull-right"><i class="fa fa-plus"></i></a>
+                        <strong ng-bind="sel.text" ng-click="goToSerial(sel.text,sel.document)"></strong>
+                        <span class="text-gray"> - {{documents[sel.document].title}}</span>
+                        <div class="input-group" ng-show="sel.expanded">
+                            <textarea class="form-control" ng-model="sel.comment" ng-change="selTextChange(sel)"></textarea>
+                            <a class="input-group-addon btn btn-default" ng-click="sendIdea(sel)" ng-class="{'bg-lightgreen': sel.status=='saved', 'bg-lightorange': sel.status=='dirty'}">
+                                <i class="fa fa-send"></i>
+                            </a>
+                        </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

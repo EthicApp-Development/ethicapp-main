@@ -5,7 +5,7 @@ let router = express.Router();
 
 router.get('/', (req, res) => {
     if (req.session.uid) {
-        if (req.session.ses)
+        if (req.session.ses && req.session.role != "P")
             res.redirect("visor");
         else {
             if (req.session.role == "A")
