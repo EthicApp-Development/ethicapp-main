@@ -135,5 +135,29 @@ router.post("/get-my-report", rpg.singleSQL({
     sqlParams: [rpg.param("ses","uid"),rpg.param("ses","ses")]
 }));
 
+router.post("/get-report-list", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select r.id, r.example, r.uid from reports as r inner join rubricas as ru on ru.id = r.rid and ru.sesid = $1",
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post","sesid")]
+}));
+
+router.post("/get-report-result", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select cs.id, cs.selection, cs.uid, c.pond from criteria_selection as cs inner join criteria as c on cs.cid = c.id where cs.repid = $1",
+    postReqData: ["repid"],
+    sqlParams: [rpg.param("post","repid")],
+    onEnd: (req,res,arr) => {
+        let d = {};
+        arr.forEach((row) => {
+             if(d[row.uid] == null)
+                 d[row.uid] = row.selection * row.pond * 0.01;
+             else
+                 d[row.uid] += row.selection * row.pond * 0.01;
+        });
+        let resArr = Object.keys(d).map(u => {return {uid: u, val: d[u]}});
+        res.end(JSON.stringify(resArr));
+    }
+}));
 
 module.exports = router;

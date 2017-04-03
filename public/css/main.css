@@ -96,7 +96,7 @@ a:hover{
 }
 
 .w500{
-    width: 500px;
+    width: 600px;
     display: block;
 }
 
@@ -118,7 +118,7 @@ a:hover{
 }
 
 .font-large{
-    font-size: 150%;
+    font-size: 110%;
 }
 
 .discrete{
@@ -372,4 +372,8 @@ td.clickable:hover{
     margin: 20vh auto;
     text-align: center;
     box-shadow: #333 0 2px 32px;
+}
+
+.label-light:not(.label-success){
+    background-color: #adadad;
 }

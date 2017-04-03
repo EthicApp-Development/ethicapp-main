@@ -46,6 +46,14 @@
 
     <div class="col-sm-9" ng-show="selectedIndex!=-1" ng-controller="TabsController">
         <h3>{{selectedSes.name}}</h3>
+        <div class="center-block font-large">
+            <button class="btn btn-sm btn-default pull-right" ng-click="shared.changeState()">Ir al siguiente</button>
+            <span ng-repeat="st in sesStatusses">
+                <span class="label label-default" ng-class="{'label-primary': $index==selectedSes.status-1}" ng-bind="st"></span>
+                <span ng-hide="$last">→</span>
+            </span>
+        </div>
+        <br>
         <div class="btn-group center-block w500">
             <button class="btn btn-default" ng-repeat="x in tabOptions" ng-bind="x"
                     ng-class="{active: $index==selectedTab}" ng-click="setTab($index)">
@@ -56,17 +64,6 @@
         <br>
 
         <div class="pad-content" ng-show="selectedTab == 0" ng-controller="SesEditorController">
-            <h4>Estado</h4>
-            <div class="center-block font-large">
-                <span ng-repeat="st in sesStatusses">
-                    <span class="label label-default" ng-class="{'label-success': $index==selectedSes.status-1}"
-                          ng-bind="st"></span> <span ng-hide="$last">→</span>
-                </span>
-            </div>
-            <br>
-            <div class="row">
-                <button class="btn btn-sm btn-default pull-right" ng-click="changeState()">Pasar al siguiente estado</button>
-            </div>
             <br>
             <hr>
             <br>
@@ -308,6 +305,34 @@
             <h4>Evaluación de pares</h4>
             <span ng-show="selectedSes.paired">Ya se ha asignado a los alumnos los reportes a evaluar</span>
             <button ng-hide="selectedSes.paired" class="btn btn-default" ng-click="pairAssign()">Asignar pares</button>
+        </div>
+
+        <div class="pad-content" ng-show="selectedTab == 5" ng-controller="DashboardRubricaController">
+            <h4>Resultados Rúbrica</h4>
+            <div class="row">
+                <div class="col-sm-2">Texto: </div>
+                <div class="col-sm-8">
+                    <select class="form-control" ng-model="selectedReport" ng-options="showName(x) for x in reports"></select>
+                </div>
+                <div class="col-sm-2">
+                    <button class="btn btn-default" ng-click="getReportResult()">Ver resultados</button>
+                </div>
+            </div>
+            <nvd3 options="barOpts" data="barData"></nvd3>
+            <table class="table table-bordered">
+                <tr>
+                    <th>Alumno</th>
+                    <th style="width: 420px">Evaluación</th>
+                </tr>
+                <tr ng-repeat="dato in result | orderBy:'-score'">
+                    <td ng-bind="users[dato.uid].name"></td>
+                    <td>
+                        <div class="bg-darkgreen table-green-bar" style="width: {{100*dato.val}}px">
+                            {{dato.val | number:2}}
+                        </div>
+                    </td>
+                </tr>
+            </table>
         </div>
 
     </div>

@@ -89,10 +89,11 @@ app.controller("TabsController", function ($scope, $http) {
 
     self.shared.verifyTabs = () => {
         if (self.selectedSes.type == "L") {
-            self.tabOptions = ["Editar", "Usuarios", "Dashboard", "Grupos", "Rúbrica"];
+            self.tabOptions = ["Editar", "Usuarios", "Dashboard", "Grupos", "Rúbrica", "Dashboard Rúbrica"];
             self.sesStatusses = ["No Publicada", "Lectura", "Personal", "Anónimo", "Grupal", "Reporte", "Rubrica Ejemplo", "Evaluación de Pares", "Finalizada"];
             self.shared.getRubrica();
             self.shared.getExampleReports();
+            self.shared.getReports();
         }
         else {
             self.tabOptions = ["Editar", "Usuarios", "Dashboard", "Grupos"];
@@ -117,7 +118,7 @@ app.controller("SesEditorController", function ($scope, $http) {
         });
     };
 
-    self.changeState = () => {
+    self.shared.changeState = () => {
         if (self.selectedSes.status >= self.sesStatusses.length) return;
         if (self.selectedSes.status >= 3 && !self.selectedSes.grouped) return;
         if (self.selectedSes.status >= 7 && !self.selectedSes.paired) return;
@@ -434,6 +435,35 @@ app.controller("RubricaController", function ($scope, $http) {
             if (data.status == "ok") {
                 self.selectedSes.paired = true;
             }
+        });
+    };
+
+});
+
+app.controller("DashboardRubricaController", function($scope, $http){
+    let self = $scope;
+    self.reports = [];
+    self.result = [];
+    self.selectedReport = null;
+
+    self.showName = (report) => {
+        if(report.example)
+            return report.id + " - Texto ejemplo";
+        else
+            return report.id + " - Reporte de Alumno " + self.users[report.uid].name;
+    };
+
+    self.shared.getReports = () => {
+        let postdata = {sesid: self.selectedSes.id};
+        $http({url: "get-report-list", method: "post", data: postdata}).success((data) => {
+            self.reports = data;
+        });
+    };
+
+    self.getReportResult = () => {
+        let postdata = {repid: self.selectedReport.id};
+        $http({url: "get-report-result", method: "post", data: postdata}).success((data) => {
+            self.result = data;
         });
     };
 

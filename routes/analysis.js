@@ -77,7 +77,7 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
     sql: "select a.uid, a.orden, a.serial, a.content, a.docid, p.serial as serial_ans, p.content as content_ans, p.docid as docid_ans" +
             " from ideas as a, ideas as p, sessions as s where s.creator = p.uid and a.uid != s.creator and a.orden = p.orden and " +
             "s.id = $1 and a.docid in (select id from documents where sesid = s.id) and p.docid in (select id from documents where " +
-            "sesid = s.id) and p.iteration = $2 order by uid, a.orden asc",
+            "sesid = s.id) and a.iteration = $2 order by uid, a.orden asc",
     postReqData: ["sesid","iteration"],
     onStart: (ses, data, calc) => {
         if (ses.role != "P") {
@@ -133,7 +133,7 @@ router.post("/group-proposal-lect", (req,res) => {
                     sql: "select a.uid, a.orden, a.serial, a.content, a.docid, p.serial as serial_ans, p.content as content_ans, p.docid as docid_ans" +
                     " from ideas as a, ideas as p, sessions as s where s.creator = p.uid and a.uid != s.creator and a.orden = p.orden and " +
                     "s.id = $1 and a.docid in (select id from documents where sesid = s.id) and p.docid in (select id from documents where " +
-                    "sesid = s.id) and p.iteration = 1 order by uid, a.orden asc",
+                    "sesid = s.id) and a.iteration = 1 order by uid, a.orden asc",
                     postReqData: ["sesid"],
                     onStart: (ses, data, calc) => {
                         if (ses.role != "P") {
@@ -269,7 +269,7 @@ router.post("/group-proposal-rand", (req, res) => {
 });
 
 let ideasMatch = (row) => {
-    return row.docid == row.docid_ans && row.serial == row.serial_ans;
+    return row.docid == row.docid_ans && row.content.toLowerCase().trim() == row.content_ans.toLowerCase().trim();
 };
 
 let isDifferent = (type) => {
