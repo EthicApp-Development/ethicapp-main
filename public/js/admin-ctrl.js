@@ -245,6 +245,20 @@ app.controller("DashboardController", function ($scope, $http) {
                 self.alumState = data;
                 self.buildBarData(data);
             });
+            $http({url: "get-ideas-progress", method: "post", data: postdata}).success((data) => {
+                self.numComplete = 0;
+                self.numProgress = 0;
+                self.numUsers = Object.keys(self.users).length - 1;
+                let n = self.documents.length * 3;
+                if(n!=0) {
+                    data.forEach((d) => {
+                        if(d.count == n)
+                            self.numComplete += 1;
+                        self.numProgress += d.count/n;
+                    });
+                    self.numProgress *= 100/self.numUsers;
+                }
+            });
         }
     };
 

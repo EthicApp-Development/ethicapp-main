@@ -457,6 +457,14 @@ router.post("/assign-pairs", (req, res) => {
     })(req,res);
 });
 
+router.post("/get-ideas-progress", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select i.uid, count(*) as count from ideas as i inner join users as u on i.uid = u.id where iteration = $1 and u.role = 'A' " +
+        "and i.docid in (select id from documents where sesid = $2) group by uid",
+    postReqData: ["iteration", "sesid"],
+    sqlParams: [rpg.param("post", "iteration"), rpg.param("post", "sesid")]
+}));
+
 let hasDuplicates = (arr) => {
     let dict = {};
     for (var i = 0; i < arr.length; i++) {

@@ -174,6 +174,16 @@
             </div>
             <h4>Resultados</h4>
             <nvd3 options="barOpts" data="barData"></nvd3>
+            <div class="row">
+                <div class="col-sm-4 col-sm-offset-2">
+                    Completo: <strong>{{numComplete}} / {{numUsers}}</strong>
+                </div>
+                <div class="col-sm-6">
+                    Progreso: <strong>{{numProgress}}%</strong>
+                </div>
+            </div>
+            <hr>
+            <br>
             <table class="table table-bordered" ng-if="selectedSes.type == 'S'">
                 <tr>
                     <th>Alumno</th>
