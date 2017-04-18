@@ -133,6 +133,14 @@ router.post("/send-idea", rpg.singleSQL({
     sqlParams: [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "docid"), rpg.param("ses", "uid"), rpg.param("post", "iteration")]
 }));
 
+router.post("/send-pauta-idea", rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: "insert into ideas(content,descr,serial,docid,uid,iteration,orden) values ($1,$2,$3,$4,$5,$6,$7) returning id",
+    sesReqData: ["uid", "ses"],
+    postReqData: ["docid", "text", "comment", "serial", "iteration", "order"],
+    sqlParams: [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "docid"), rpg.param("ses", "uid"), rpg.param("post", "iteration"), rpg.param("post", "order")]
+}));
+
 router.post("/update-idea", rpg.execSQL({
     dbcon: pass.dbcon,
     sql: "update ideas set content = $1, descr = $2, serial = $3 where id = $4",

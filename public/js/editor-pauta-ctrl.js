@@ -40,6 +40,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
             document: self.selectedDocument,
             comment: "",
             expanded: true,
+            order: self.orden,
             status: "unsaved"
         };
         if (textDef.length < 2 || textDef.length > 50) return;
@@ -107,10 +108,11 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
             comment: sel.comment,
             serial: sel.serial,
             docid: self.documents[sel.document].id,
-            iteration: 1
+            iteration: 1,
+            order: sel.order
         };
         if (sel.status == "unsaved") {
-            $http({url: "send-idea", method: "post", data: postadata}).success((data) => {
+            $http({url: "send-pauta-idea", method: "post", data: postadata}).success((data) => {
                 if (data.status == "ok") {
                     sel.expanded = false;
                     sel.status = "saved";
