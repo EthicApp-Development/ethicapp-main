@@ -44,7 +44,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
             status: "unsaved"
         };
         if (textDef.length < 2 || textDef.length > 50) return;
-        self.highlightSerial(textDef.serial, textDef.document);
+        //self.highlightSerial(textDef.serial, textDef.document);
         self.selections.push(textDef);
     };
 
@@ -96,7 +96,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
                     expanded: false,
                     status: "saved"
                 };
-                self.highlightSerial(textDef.serial, textDef.document);
+                //self.highlightSerial(textDef.serial, textDef.document);
                 self.selections.push(textDef);
             });
         });

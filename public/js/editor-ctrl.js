@@ -50,6 +50,9 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
                         self.followLeader = true;
                     }
                 });
+                $http({url: "get-team", method: "post"}).success((data) => {
+                    self.teamstr = data.join(", ");
+                });
             }
         });
     };
