@@ -5,7 +5,7 @@ let app = angular.module("Editor", ['ui.tree']);
 app.controller("EditorController", ["$scope", "$http", "$timeout", function ($scope, $http, $timeout) {
     let self = $scope;
 
-    self.iteration = 1;
+    self.iteration = 0;
     self.myUid = -1;
     self.documents = [];
     self.selections = [];
@@ -51,7 +51,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
                     }
                 });
                 $http({url: "get-team", method: "post"}).success((data) => {
-                    self.teamstr = data.join(", ");
+                    self.teamstr = data.map(e => e.name).join(", ");
                 });
             }
         });

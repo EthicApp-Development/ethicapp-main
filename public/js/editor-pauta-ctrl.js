@@ -29,7 +29,6 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
         });
     };
 
-    //TODO incluir orden
     self.selectText = () => {
         let selection = window.getSelection();
         let serial = rangy.serializeSelection(window, true, $("#pdf-canvas-" + self.selectedDocument)[0]);
@@ -94,6 +93,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
                     document: arrayIndexOfId(self.documents, idea.docid),
                     comment: idea.descr,
                     expanded: false,
+                    order: idea.orden + 1,
                     status: "saved"
                 };
                 //self.highlightSerial(textDef.serial, textDef.document);
@@ -109,7 +109,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
             serial: sel.serial,
             docid: self.documents[sel.document].id,
             iteration: 1,
-            order: sel.order
+            order: sel.order - 1
         };
         if (sel.status == "unsaved") {
             $http({url: "send-pauta-idea", method: "post", data: postadata}).success((data) => {
@@ -122,7 +122,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
         }
         else if (sel.status == "dirty" && sel.id != null) {
             postadata.id = sel.id;
-            $http({url: "update-idea", method: "post", data: postadata}).success((data) => {
+            $http({url: "update-pauta-idea", method: "post", data: postadata}).success((data) => {
                 if (data.status == "ok") {
                     sel.expanded = false;
                     sel.status = "saved";

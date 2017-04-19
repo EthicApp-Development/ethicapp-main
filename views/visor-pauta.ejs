@@ -32,7 +32,7 @@
         <div class="col-sm-6">
             <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>
             <button class="btn btn-sm btn-default pull-right" ng-click="selectText()">Seleccionar idea</button>
-            <input type="number" class="form-control input-sm form-inline-mini pull-right" ng-model="orden" min="1" step="1"></input>
+            <input type="number" class="form-control input-sm form-inline-mini pull-right" ng-model="orden" min="1" step="1" max="{{documents.length * 3}}"></input>
             <span class="pull-right margin-top-8">Orden </span>
         </div>
     </div>
@@ -51,7 +51,7 @@
             <div class="y-scrollable" ui-tree data-max-depth="1">
                 <ul class="full-height" ui-tree-nodes="" ng-model="selections">
                     <li class="row idea-item" ng-repeat="sel in selections" ui-tree-node>
-                        <div class="col-xs-1"><span ui-tree-handle>:::</span> <a ng-click="deleteIdea(sel,$index)" class="margin-top-24" ng-if="sel.expanded"><i class="fa fa-trash"></i></a></div>
+                        <div class="col-xs-1"><span ui-tree-handle></span> <a ng-click="deleteIdea(sel,$index)" class="margin-top-24" ng-if="sel.expanded"><i class="fa fa-trash"></i></a></div>
                         <div class="col-xs-10">
                         <a ng-click="sel.expanded=!sel.expanded" class="spaced pull-right"><i class="fa fa-plus"></i></a>
                         <strong ng-bind="sel.order"></strong>.

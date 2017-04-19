@@ -31,20 +31,20 @@
         </div>
         <div class="col-sm-6">
             <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>
-            <button class="btn btn-sm btn-default pull-right" ng-disabled="writingReport || followLeader" ng-click="selectText()">Seleccionar idea</button>
+            <button class="btn btn-sm btn-default pull-right" ng-disabled="writingReport || followLeader || selections.length >= documents.length * 3" ng-click="selectText()" ng-show="iteration > 0">Seleccionar idea</button>
             <span class="pull-right simple-padding-top w150" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i> Representante </span>
             <span class="pull-right" ng-bind="teamstr"></span>
         </div>
     </div>
 
     <div class="row">
-        <div id="pdf-container" class="col-sm-9 pdf-content">
+        <div id="pdf-container" class="pdf-content" ng-class="{'col-sm-12': iteration == 0, 'col-sm-9': iteration > 0}">
             <div class="centered">
                 <div ng-repeat="doc in documents" id="pdf-canvas-{{$index}}" class="centered"
                 ng-show="$index==selectedDocument"></div>
             </div>
         </div>
-        <div class="col-sm-3 side-bar">
+        <div class="col-sm-3 side-bar" ng-hide="iteration == 0">
             <a class="btn btn-sm btn-default pull-right margin-top-8" ng-click="setSelOrder()" ng-disabled="!checkAllSync()">Fijar orden</a>
             <h3>Ideas Fuerza:</h3>
             <div class="row">

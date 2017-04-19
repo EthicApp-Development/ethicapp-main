@@ -149,9 +149,17 @@ router.post("/update-idea", rpg.execSQL({
     sqlParams: [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "id")]
 }));
 
+router.post("/update-pauta-idea", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "update ideas set content = $1, descr = $2, serial = $3, orden = $4 where id = $5",
+    sesReqData: ["uid", "ses"],
+    postReqData: ["docid", "text", "comment", "serial", "id", "order"],
+    sqlParams: [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "order"), rpg.param("post", "id")]
+}));
+
 router.post("/get-ideas", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select i.id, i.content, i.descr, i.serial, i.docid from ideas as i inner join documents as d on i.docid = d.id where " +
+    sql: "select i.id, i.content, i.descr, i.serial, i.docid, i.orden from ideas as i inner join documents as d on i.docid = d.id where " +
     "i.uid = $1 and d.sesid = $2 and i.iteration = $3 order by i.orden asc",
     sesReqData: ["uid", "ses"],
     postReqData: ["iteration"],

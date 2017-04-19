@@ -252,7 +252,7 @@ app.controller("DashboardController", function ($scope, $http) {
                 let n = self.documents.length * 3;
                 if(n!=0) {
                     data.forEach((d) => {
-                        if(d.count == n)
+                        if(d.count >= n)
                             self.numComplete += 1;
                         self.numProgress += d.count/n;
                     });
