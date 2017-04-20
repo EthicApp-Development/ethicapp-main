@@ -13,6 +13,7 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
     self.users = {};
     self.selectedIndex = -1;
     self.sesStatusses = ["No Publicada", "Lectura", "Personal", "Anónimo", "Grupal", "Finalizada"];
+    self.iterationNames = [{name: "Individual", val: 1}, {name: "Grupal anónimo", val: 2}, {name: "Grupal", val: 3}];
 
     self.init = () => {
         self.shared.updateSesData();
@@ -35,6 +36,8 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
         $http({url: "get-session-list", method: "post"}).success((data) => {
             console.log("Session data updated");
             self.sessions = data;
+            if(self.selectedIndex != -1)
+                self.selectSession(self.selectedIndex);
         });
     };
 
@@ -124,7 +127,7 @@ app.controller("SesEditorController", function ($scope, $http) {
         if (self.selectedSes.status >= 7 && !self.selectedSes.paired) return;
         let postdata = {sesid: self.selectedSes.id};
         $http({url: "change-state-session", method: "post", data: postdata}).success((data) => {
-            window.location = window.location.href;
+            self.shared.updateSesData();
         });
     }
 

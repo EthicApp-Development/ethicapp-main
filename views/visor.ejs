@@ -12,7 +12,9 @@
     <script src="libs/textlayerbuilder.js"></script>
     <script src="libs/angular.min.js"></script>
     <script src="libs/angular-ui-tree.min.js"></script>
+    <script src="libs/socket.min.js"></script>
     <script src="js/editor-ctrl.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
     <link rel="stylesheet" href="css/font-awesome.min.css">
     <link rel="stylesheet" href="css/minimal.css">
@@ -28,6 +30,7 @@
             <span class="simple-margin-left">Documentos: </span>
             <span ng-repeat="doc in documents" class="side-top-btn" ng-bind="doc.title"
                   ng-class="{'active': $index==selectedDocument}" ng-click="selectPDF($index)"></span>
+            <strong class="pull-right margin-top-8" ng-bind="iterationNames[iteration]"></strong>
         </div>
         <div class="col-sm-6">
             <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>

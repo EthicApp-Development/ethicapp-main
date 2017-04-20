@@ -1,8 +1,12 @@
 "use strict";
 
-let app = angular.module("Editor", ['ui.tree']);
+let app = angular.module("Editor", ['ui.tree', 'btford.socket-io']);
 
-app.controller("EditorController", ["$scope", "$http", "$timeout", function ($scope, $http, $timeout) {
+app.factory("$socket", ["socketFactory", function (socketFactory) {
+    return socketFactory();
+}]);
+
+app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", function ($scope, $http, $timeout, $socket) {
     let self = $scope;
 
     self.iteration = 0;
@@ -19,6 +23,8 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
     self.followLeader = false;
     self.leader = false;
 
+    self.iterationNames = ["Lectura", "Individual", "Grupal Anónimo", "Grupal"];
+
     self.tabOptions = ["Actual"];
 
     rangy.init();
@@ -27,6 +33,12 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
 
     self.init = () => {
         self.getSesInfo();
+        $socket.on("stateChange", (data) => {
+            console.log("SOCKET.IO", data);
+            if(data.ses == self.sesId){
+                window.location.reload();
+            }
+        });
     };
 
     self.getSesInfo = () => {
@@ -34,6 +46,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
             self.iteration = data.iteration;
             self.myUid = data.uid;
             self.sesName = data.name;
+            self.sesId = data.id;
             $http({url: "get-documents", method: "post"}).success((data) => {
                 self.documents = data;
                 data.forEach((doc,i) => {

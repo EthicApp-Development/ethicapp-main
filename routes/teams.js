@@ -27,7 +27,7 @@ router.post("/get-team-ideas",rpg.multiSQL({
 
 router.post("/get-ses-info",rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: "select greatest(0,least(6,status-2)) as iteration, $1::int as uid, name from sessions where id = $2",
+    sql: "select greatest(0,least(6,status-2)) as iteration, $1::int as uid, name, id from sessions where id = $2",
     sesReqData: ["ses","uid"],
     sqlParams: [rpg.param("ses","uid"),rpg.param("ses","ses")]
 }));

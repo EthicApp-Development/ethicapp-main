@@ -169,7 +169,7 @@
         <div class="pad-content" ng-show="selectedTab == 2" ng-controller="DashboardController">
             <div class="pull-right">
                 <label>Iteración:</label>
-                <select class="" ng-options="x for x in [1,2,3]" ng-model="iterationIndicator"></select>
+                <select class="" ng-options="x.val as x.name for x in iterationNames" ng-model="iterationIndicator"></select>
                 <button class="btn btn-default" ng-click="updateState()">Actualizar Estado de Alumnos</button>
             </div>
             <h4>Resultados</h4>

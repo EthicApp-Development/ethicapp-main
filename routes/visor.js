@@ -4,6 +4,7 @@ let express = require('express');
 let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
+let socket = require("../modules/socket.config");
 
 let sesStatusCache = {};
 
@@ -195,6 +196,7 @@ router.post("/change-state-session", rpg.execSQL({
         if(req.body.sesid != null && sesStatusCache[req.body.sesid] != null)
             sesStatusCache[req.body.sesid] += 1;
         res.send('"status":"ok"');
+        socket.stateChange(req.body.sesid);
     }
 }));
 
