@@ -15,6 +15,7 @@ let visor = require("./routes/visor");
 let analysis = require("./routes/analysis");
 let teams = require("./routes/teams");
 let rubrica = require("./routes/rubrica");
+let pass = require("./modules/passwords");
 
 let app = express();
 
@@ -28,7 +29,7 @@ app.use(logger('[Readings] :method :url :status - :response-time ms'));
 busboy.extend(app, {
     upload: true,
     mimeTypeLimit: ["application/pdf"],
-    path: './uploads',
+    path: pass.uploadPath,
     limits: { fileSize: 1024*1024 }
 });
 app.use(cookieParser());
