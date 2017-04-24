@@ -207,7 +207,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
 
         $pdfContainer.append($textLayerDiv);
 
-        page.getTextContent().then((textContent) => {
+        page.getTextContent({normalizeWhitespace: true}).then((textContent) => {
             let textLayer = new TextLayerBuilder($textLayerDiv.get(0), 0);
             textLayer.setTextContent(textContent);
             let renderContext = {
