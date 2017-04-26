@@ -54,6 +54,9 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
                 });
                 self.renderAll();
             });
+            $http({url: "data/instructions.json", method: "get"}).success((data) => {
+                self.instructions = data;
+            });
             if (self.iteration == 3){
                 $http({url: "get-team-leader", method: "post"}).success((data) => {
                     if(data.leader == self.myUid){
@@ -305,6 +308,9 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
                 self.numPages -= 1;
                 if (self.numPages == 0) {
                     self.getIdeas();
+                    $(".textLayer").html(function() {
+                        return this.innerHTML.replace(/\t/g, ' ');
+                    });
                 }
             });
         });

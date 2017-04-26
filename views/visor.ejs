@@ -48,6 +48,9 @@
             </div>
         </div>
         <div class="col-sm-3 side-bar" ng-hide="iteration == 0">
+            <h4>Instrucciones:</h4>
+            <div ng-bind="instructions[iteration]"></div>
+            <hr>
             <a class="btn btn-sm btn-default pull-right margin-top-8" ng-click="setSelOrder()" ng-disabled="!checkAllSync()">Fijar orden</a>
             <h3>Ideas Fuerza:</h3>
             <div class="row">
