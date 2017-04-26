@@ -219,6 +219,9 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
                 self.numPages -= 1;
                 if (self.numPages == 0) {
                     self.getIdeas();
+                    $(".textLayer").html(function() {
+                        return this.innerHTML.replace(/\t/g, ' ');
+                    });
                 }
             });
         });

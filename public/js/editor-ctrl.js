@@ -163,7 +163,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
                     self.ansIter2[ans.uid].push(ans);
                     self.highlightSerial(ans.serial, self.docIdx[ans.docid], self.secondaryApplier);
                 });
-                self.tabOptions.push("Grupal Anónimo");
+                self.tabOptions.push("G. Anónimo");
             });
         }
         if(self.iteration == 4){
