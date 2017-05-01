@@ -27,7 +27,7 @@ app.controller("SelectController", ["$scope", "$http", function ($scope, $http) 
 
     self.getSesInfo = () => {
         $http({url: "get-ses-info", method: "post"}).success((data) => {
-            self.iteration = data.iteration;
+            self.iteration = data.iteration + 1;
             self.myUid = data.uid;
             self.sesName = data.name;
             let set = new Set();

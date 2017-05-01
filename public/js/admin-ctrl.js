@@ -100,7 +100,7 @@ app.controller("TabsController", function ($scope, $http) {
         }
         else {
             self.tabOptions = ["Editar", "Usuarios", "Dashboard", "Grupos"];
-            self.sesStatusses = ["No Publicada", "Lectura", "Personal", "Anónimo", "Grupal", "Finalizada"];
+            self.sesStatusses = ["No Publicada", "Personal", "Anónimo", "Grupal", "Finalizada"];
         }
     };
 
