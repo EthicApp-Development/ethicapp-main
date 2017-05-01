@@ -101,8 +101,8 @@
                 </form>
                 <br>
                 <hr>
-                <a href="to-pauta?sesid={{selectedSes.id}}" class="btn btn-primary btn" ng-show="selectedSes.type=='L'" ng-disabled="selectedSes.status!=1">
-                    Editar Pauta de Ideas Fuerza
+                <a href="to-pauta?sesid={{selectedSes.id}}" class="btn btn-primary btn" ng-show="selectedSes.type=='L'">
+                    Pauta de Ideas Fuerza
                 </a>
             </div>
             <div ng-show="selectedSes.type == 'S'" ng-controller="QuestionsController">
@@ -179,7 +179,7 @@
                     Completo: <strong>{{numComplete}} / {{numUsers}}</strong>
                 </div>
                 <div class="col-sm-6">
-                    Progreso: <strong>{{numProgress}}%</strong>
+                    Progreso: <strong>{{numProgress }}%</strong>
                 </div>
             </div>
             <hr>
@@ -236,6 +236,7 @@
                 </tr>
             </table>
             <hr>
+            <h4 ng-if="!selectedSes.grouped">Editor de Grupos:</h4>
             <table class="table table-bordered" ng-if="!selectedSes.grouped">
                 <tr ng-repeat="group in groupsProp">
                     <td ng-bind="$index + 1"></td>

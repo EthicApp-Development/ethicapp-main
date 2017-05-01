@@ -39,8 +39,7 @@ router.get("/to-pauta", (req, res) => {
         req.session.ses = req.query.sesid;
         let doRedirect = (status) => {
             console.log(status);
-            if(status == 1) res.redirect("pauta");
-            else res.redirect(".");
+            res.redirect("pauta");
         };
         if(sesStatusCache[req.query.sesid] == null) {
             rpg.singleSQL({
@@ -156,6 +155,13 @@ router.post("/update-pauta-idea", rpg.execSQL({
     sesReqData: ["uid", "ses"],
     postReqData: ["docid", "text", "comment", "serial", "id", "order"],
     sqlParams: [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "order"), rpg.param("post", "id")]
+}));
+
+router.post("/pauta-editable", rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: "select status = 1 as editable from sessions where id = $1",
+    sesReqData: ["uid", "ses"],
+    sqlParams: [rpg.param("ses","ses")]
 }));
 
 router.post("/get-ideas", rpg.multiSQL({

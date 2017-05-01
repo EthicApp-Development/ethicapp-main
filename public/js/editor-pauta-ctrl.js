@@ -10,6 +10,8 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
     self.selectedDocument = 0;
     self.numPages = 0;
     self.docIdx = {};
+    self.editable = false;
+    self.orden = 1;
 
     rangy.init();
     self.applier = rangy.createClassApplier("highlight");
@@ -26,6 +28,9 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
                 self.docIdx[doc.id] = i;
             });
             self.renderAll();
+        });
+        $http({url: "pauta-editable", method: "post"}).success((data) => {
+            self.editable = data.editable;
         });
     };
 

@@ -102,6 +102,9 @@ app.controller("SelectController", ["$scope", "$http", function ($scope, $http) 
                 else if(data.status == "different"){
                     self.bottomMsg = "Las respuestas de los miembros del equipo no coinciden";
                 }
+                else if(data.status == "incorrect"){
+                    self.bottomMsg = data.msg;
+                }
             });
         }
         else {

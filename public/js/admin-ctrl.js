@@ -83,7 +83,7 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
 
 app.controller("TabsController", function ($scope, $http) {
     let self = $scope;
-    self.tabOptions = ["Editar", "Usuarios", "Dashboard", "Grupos"];
+    self.tabOptions = ["Descripción", "Usuarios", "Dashboard", "Grupos"];
     self.selectedTab = 0;
 
     self.shared.resetTab = () => {
@@ -92,14 +92,14 @@ app.controller("TabsController", function ($scope, $http) {
 
     self.shared.verifyTabs = () => {
         if (self.selectedSes.type == "L") {
-            self.tabOptions = ["Editar", "Usuarios", "Dashboard", "Grupos", "Rúbrica", "Dashboard Rúbrica"];
+            self.tabOptions = ["Descripción", "Usuarios", "Dashboard", "Grupos", "Rúbrica", "Dashboard Rúbrica"];
             self.sesStatusses = ["No Publicada", "Lectura", "Personal", "Anónimo", "Grupal", "Reporte", "Rubrica Ejemplo", "Evaluación de Pares", "Finalizada"];
             self.shared.getRubrica();
             self.shared.getExampleReports();
             self.shared.getReports();
         }
         else {
-            self.tabOptions = ["Editar", "Usuarios", "Dashboard", "Grupos"];
+            self.tabOptions = ["Descripción", "Usuarios", "Dashboard", "Grupos"];
             self.sesStatusses = ["No Publicada", "Personal", "Anónimo", "Grupal", "Finalizada"];
         }
     };

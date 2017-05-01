@@ -31,9 +31,9 @@
         </div>
         <div class="col-sm-6">
             <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>
-            <button class="btn btn-sm btn-default pull-right" ng-click="selectText()">Seleccionar idea</button>
-            <input type="number" class="form-control input-sm form-inline-mini pull-right" ng-model="orden" min="1" step="1" max="{{documents.length * 3}}"></input>
-            <span class="pull-right margin-top-8">Orden </span>
+            <button class="btn btn-sm btn-default pull-right" ng-click="selectText()" ng-if="editable">Seleccionar idea</button>
+            <input type="number" class="form-control input-sm form-inline-mini pull-right" ng-model="orden" min="1" step="1" max="{{documents.length * 3}}" ng-if="editable"></input>
+            <span class="pull-right margin-top-8" ng-if="editable">Orden </span>
         </div>
     </div>
 
@@ -51,15 +51,15 @@
             <div class="y-scrollable" ui-tree data-max-depth="1">
                 <ul class="full-height" ui-tree-nodes="" ng-model="selections">
                     <li class="row idea-item" ng-repeat="sel in selections" ui-tree-node>
-                        <div class="col-xs-1"><span ui-tree-handle></span> <a ng-click="deleteIdea(sel,$index)" class="margin-top-24" ng-if="sel.expanded"><i class="fa fa-trash"></i></a></div>
+                        <div class="col-xs-1"><span ui-tree-handle></span> <a ng-click="deleteIdea(sel,$index)" class="margin-top-24" ng-if="sel.expanded && editable"><i class="fa fa-trash"></i></a></div>
                         <div class="col-xs-10">
                         <a ng-click="sel.expanded=!sel.expanded" class="spaced pull-right"><i class="fa fa-plus"></i></a>
                         <strong ng-bind="sel.order"></strong>.
                         <strong ng-bind="sel.text" ng-click="goToSerial(sel.text,sel.document)"></strong>
                         <span class="text-gray"> - {{documents[sel.document].title}}</span>
                         <div class="input-group" ng-show="sel.expanded">
-                            <textarea class="form-control" ng-model="sel.comment" ng-change="selTextChange(sel)"></textarea>
-                            <a class="input-group-addon btn btn-default" ng-click="sendIdea(sel)" ng-class="{'bg-lightgreen': sel.status=='saved', 'bg-lightorange': sel.status=='dirty'}">
+                            <textarea class="form-control" ng-model="sel.comment" ng-change="selTextChange(sel)" ng-disabled="!editable"></textarea>
+                            <a class="input-group-addon btn btn-default" ng-if="editable" ng-click="sendIdea(sel)" ng-class="{'bg-lightgreen': sel.status=='saved', 'bg-lightorange': sel.status=='dirty'}">
                                 <i class="fa fa-send"></i>
                             </a>
                         </div>
