@@ -82,7 +82,7 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
     onStart: (ses, data, calc) => {
         if (ses.role != "P") {
             console.log("ERR: Solo profesor puede ver estado de alumnos.");
-            return "select $1"
+            return "select $1, $2"
         }
     },
     preventResEnd: true,
@@ -90,7 +90,8 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
     onEnd: (req,res,arr) => {
         rpg.singleSQL({
             dbcon: pass.dbcon,
-            sql: "select max(orden) as total from ideas as p, sessions as s where s.creator = p.uid and s.id = " + req.body.sesid,
+            sql: "select max(orden) as total from ideas as p, sessions as s, documents as d where p.docid = d.id and " +
+                "d.sesid = s.id and s.creator = p.uid and s.id = " + req.body.sesid,
             onEnd: (reqin,res,rowin) => {
                 let scores = [];
                 let last_uid = -1;
