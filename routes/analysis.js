@@ -96,7 +96,7 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
                 let scores = [];
                 let last_uid = -1;
                 let i = -1;
-                let total = rowin.total;
+                let total = rowin.total + 1;
                 console.log(rowin);
                 arr.forEach((row) => {
                     console.log(row);
