@@ -377,3 +377,7 @@ td.clickable:hover{
 .label-light:not(.label-success){
     background-color: #adadad;
 }
+
+span.boxed{
+    margin: 4px 16px;
+}

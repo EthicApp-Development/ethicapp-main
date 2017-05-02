@@ -4,6 +4,7 @@ let express = require('express');
 let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
+let socket = require("../modules/socket.config");
 
 router.post("/get-team-selection",rpg.multiSQL({
     dbcon: pass.dbcon,
@@ -34,7 +35,7 @@ router.post("/get-ses-info",rpg.singleSQL({
 
 router.post("/get-team-leader",rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: "select leader from teams inner join teamusers on tmid = id where uid = $1 and sesid = $2",
+    sql: "select leader, id from teams inner join teamusers on tmid = id where uid = $1 and sesid = $2",
     sesReqData: ["ses","uid"],
     sqlParams: [rpg.param("ses","uid"),rpg.param("ses","ses")]
 }));
@@ -84,6 +85,23 @@ router.post("/get-team", rpg.multiSQL({
         "and t.id in (select tmid from teamusers where uid = $2)",
     sesReqData: ["uid", "ses"],
     sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "uid")]
+}));
+
+router.post("/update-my-team", rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: "select id from teams inner join teamusers on tmid = id where uid = $1 and sesid = $2",
+    sesReqData: ["ses","uid"],
+    sqlParams: [rpg.param("ses","uid"),rpg.param("ses","ses")],
+    onEnd: (req,res,ans) => {
+        socket.updateTeam(ans.id);
+    }
+}));
+
+router.post("/take-team-control", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "update teams set leader = $1 from teamusers where tmid = id and uid = $2 and sesid = $3",
+    sesReqData: ["uid", "ses"],
+    sqlParams: [rpg.param("ses", "uid"), rpg.param("ses", "uid"), rpg.param("ses", "ses")]
 }));
 
 module.exports = router;

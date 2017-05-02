@@ -22,6 +22,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
     self.writingReport = false;
     self.followLeader = false;
     self.leader = false;
+    self.teamId = -1;
 
     self.iterationNames = ["Lectura", "Individual", "Grupal Anónimo", "Grupal"];
 
@@ -38,6 +39,12 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
             if(data.ses == self.sesId){
                 window.location.reload();
             }
+        });
+        $socket.on("updateTeam", (data) => {
+             if(self.teamId == data.tmid){
+                 self.getIdeas();
+                 self.getTeamInfo();
+             }
         });
     };
 
@@ -58,18 +65,25 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
                 self.instructions = data;
             });
             if (self.iteration == 3){
-                $http({url: "get-team-leader", method: "post"}).success((data) => {
-                    if(data.leader == self.myUid){
-                        self.leader = true;
-                    }
-                    else{
-                        self.followLeader = true;
-                    }
-                });
-                $http({url: "get-team", method: "post"}).success((data) => {
-                    self.teamstr = data.map(e => e.name).join(", ");
-                });
+                self.getTeamInfo();
             }
+        });
+    };
+
+    self.getTeamInfo = () => {
+        $http({url: "get-team-leader", method: "post"}).success((data) => {
+            self.teamId = data.id;
+            if(data.leader == self.myUid){
+                self.leader = true;
+                self.followLeader = false;
+            }
+            else{
+                self.leader = false;
+                self.followLeader = true;
+            }
+        });
+        $http({url: "get-team", method: "post"}).success((data) => {
+            self.teamstr = data.map(e => e.name).join(", ");
         });
     };
 
@@ -147,23 +161,25 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
             });
         });
         if(self.iteration > 1) {
+            self.tabOptions = ["Actual","Individual"];
             $http({url: "get-team-ideas", method: "post", data: {iteration: 1}}).success((data) => {
+                self.ansIter1 = {};
                 data.forEach((ans) => {
                     self.ansIter1[ans.uid] = self.ansIter1[ans.uid] || [];
                     self.ansIter1[ans.uid].push(ans);
                     self.highlightSerial(ans.serial, self.docIdx[ans.docid], self.secondaryApplier);
                 });
-                self.tabOptions.push("Individual");
             });
         }
         if(self.iteration > 2) {
+            self.tabOptions = ["Actual","Individual","G. Anonimo"];
             $http({url: "get-team-ideas", method: "post", data: {iteration: 2}}).success((data) => {
+                self.ansIter2 = {};
                 data.forEach((ans) => {
                     self.ansIter2[ans.uid] = self.ansIter2[ans.uid] || [];
                     self.ansIter2[ans.uid].push(ans);
                     self.highlightSerial(ans.serial, self.docIdx[ans.docid], self.secondaryApplier);
                 });
-                self.tabOptions.push("G. Anónimo");
             });
         }
         if(self.iteration == 4){
@@ -189,6 +205,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
                     sel.status = "saved";
                     sel.id = data.id;
                 }
+                self.updateSignal();
             });
         }
         else if (sel.status == "dirty" && sel.id != null) {
@@ -198,8 +215,15 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
                     sel.expanded = false;
                     sel.status = "saved";
                 }
+                self.updateSignal();
             });
         }
+    };
+
+    self.updateSignal = () => {
+        $http({url: "update-my-team", method:"post"}).success((data) => {
+            console.log("Team updated");
+        });
     };
 
     self.deleteIdea = (sel, index) => {
@@ -209,6 +233,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
                 if(data.status == "ok") {
                     self.selections.splice(index, 1);
                 }
+                self.updateSignal();
             });
         }
         else{
@@ -232,6 +257,13 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
         sel.copied = true;
         sel.expanded = false;
         self.setTab(0);
+    };
+
+    self.takeControl = () => {
+        $http({url: "take-team-control", method: "post"}).success((data) => {
+            console.log("Control given");
+            self.updateSignal();
+        });
     };
 
     self.selTextChange = (sel) => {

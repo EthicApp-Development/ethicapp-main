@@ -90,13 +90,15 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
     onEnd: (req,res,arr) => {
         rpg.singleSQL({
             dbcon: pass.dbcon,
-            sql: "select count(*) as total from ideas as p, sessions as s where s.creator = p.uid and s.id = " + req.body.sesid,
+            sql: "select max(orden) as total from ideas as p, sessions as s where s.creator = p.uid and s.id = " + req.body.sesid,
             onEnd: (reqin,res,rowin) => {
                 let scores = [];
                 let last_uid = -1;
                 let i = -1;
                 let total = rowin.total;
+                console.log(rowin);
                 arr.forEach((row) => {
+                    console.log(row);
                     if(row.uid != last_uid) {
                         if(i >= 0)
                             scores[i].score /= Math.pow(2,total) - 1;
