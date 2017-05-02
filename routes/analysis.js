@@ -74,7 +74,7 @@ router.post("/group-proposal-sel", (req, res) => {
 
 router.post("/get-alum-state-lect", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select a.uid, a.orden, a.serial, a.content, a.docid, p.serial as serial_ans, p.content as content_ans, p.docid as docid_ans" +
+    sql: "select distinct a.uid, a.orden, a.serial, a.content, a.docid, p.serial as serial_ans, p.content as content_ans, p.docid as docid_ans" +
             " from ideas as a, ideas as p, sessions as s where s.creator = p.uid and a.uid != s.creator and a.orden = p.orden and " +
             "s.id = $1 and a.docid in (select id from documents where sesid = s.id) and p.docid in (select id from documents where " +
             "sesid = s.id) and a.iteration = $2 order by uid, a.orden asc",
@@ -99,7 +99,7 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
                 let total = rowin.total + 1;
                 console.log(rowin);
                 arr.forEach((row) => {
-                    console.log(row);
+                    //console.log(row);
                     if(row.uid != last_uid) {
                         if(i >= 0)
                             scores[i].score /= Math.pow(2,total) - 1;
@@ -134,7 +134,7 @@ router.post("/group-proposal-lect", (req,res) => {
             if(arr.length == 0) {
                 rpg.multiSQL({
                     dbcon: pass.dbcon,
-                    sql: "select a.uid, a.orden, a.serial, a.content, a.docid, p.serial as serial_ans, p.content as content_ans, p.docid as docid_ans" +
+                    sql: "select distinct a.uid, a.orden, a.serial, a.content, a.docid, p.serial as serial_ans, p.content as content_ans, p.docid as docid_ans" +
                     " from ideas as a, ideas as p, sessions as s where s.creator = p.uid and a.uid != s.creator and a.orden = p.orden and " +
                     "s.id = $1 and a.docid in (select id from documents where sesid = s.id) and p.docid in (select id from documents where " +
                     "sesid = s.id) and a.iteration = 1 order by uid, a.orden asc",
@@ -150,7 +150,7 @@ router.post("/group-proposal-lect", (req,res) => {
                     onEnd: (req,res,arr) => {
                         rpg.singleSQL({
                             dbcon: pass.dbcon,
-                            sql: "select count(*) as total from ideas as p, sessions as s where s.creator = p.uid and s.id = " + req.body.sesid,
+                            sql: "select max(orden) as total from ideas as p, sessions as s, documents as d where p.docid = d.id and d.sesid = s.id and s.creator = p.uid and s.id = " + req.body.sesid,
                             onEnd: (reqin,res,rowin) => {
                                 let scores = [];
                                 let last_uid = -1;
