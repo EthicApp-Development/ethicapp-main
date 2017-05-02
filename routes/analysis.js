@@ -108,6 +108,7 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
                         scores.push({uid: last_uid, score:0});
                     }
                     if(ideasMatch(row)){
+                        console.log(row);
                         scores[i].score += Math.pow(2, total - row.orden - 1);
                     }
                 });
