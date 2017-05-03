@@ -160,4 +160,30 @@ router.post("/get-report-result", rpg.multiSQL({
     }
 }));
 
+router.post("/get-report-result-all", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select r.id as repid, cs.id, cs.selection, cs.uid, c.pond from criteria_selection as cs inner join criteria as c on cs.cid = c.id " +
+        "inner join reports as r on r.id = cs.repid inner join rubricas as rb on r.rid = rb.id where rb.sesid = $1 and r.example = false",
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post","sesid")],
+    onEnd: (req,res,arr) => {
+        let d = {};
+        arr.forEach((row) => {
+            if(d[row.repid] == null)
+                d[row.repid] = {};
+            if(d[row.repid][row.uid] == null)
+                d[row.repid][row.uid] = row.selection * row.pond * 0.01;
+            else
+                d[row.repid][row.uid] += row.selection * row.pond * 0.01;
+        });
+        let resArr = Object.keys(d).map(repObj => {
+            return Object.keys(d[repObj]).map(u => {
+                return {uid: u, val: d[repObj][u]};
+            })
+        });
+        console.log(d);
+        res.end(JSON.stringify(resArr));
+    }
+}));
+
 module.exports = router;

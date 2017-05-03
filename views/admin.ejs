@@ -320,6 +320,10 @@
 
         <div class="pad-content" ng-show="selectedTab == 5" ng-controller="DashboardRubricaController">
             <h4>Resultados Rúbrica</h4>
+            <button class="pull-right btn btn-default" ng-click="getAllReportResult()">Actualizar</button>
+            <nvd3 options="barOpts" data="barData"></nvd3>
+            <hr>
+            <h4>Detalle:</h4>
             <div class="row">
                 <div class="col-sm-2">Texto: </div>
                 <div class="col-sm-8">
@@ -329,7 +333,6 @@
                     <button class="btn btn-default" ng-click="getReportResult()">Ver resultados</button>
                 </div>
             </div>
-            <nvd3 options="barOpts" data="barData"></nvd3>
             <table class="table table-bordered">
                 <tr>
                     <th>Alumno</th>

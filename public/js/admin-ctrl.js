@@ -463,6 +463,28 @@ app.controller("DashboardRubricaController", function($scope, $http){
     self.result = [];
     self.selectedReport = null;
 
+    self.shared.resetRubricaGraphs = () => {
+        self.alumState = null;
+        self.barOpts = {
+            chart: {
+                type: 'multiBarChart',
+                height: 320,
+                x: d => d.label,
+                y: d => d.value,
+                showControls: false,
+                showValues: false,
+                duration: 500,
+                xAxis: {
+                    showMaxMin: false
+                },
+                yAxis: {
+                    axisLabel: 'Cantidad Alumnos'
+                }
+            }
+        };
+        self.barData = [{key: "Alumnos", color: "#1f77b4", values: []}];
+    };
+
     self.showName = (report) => {
         if(report.example)
             return report.id + " - Texto ejemplo";
@@ -483,5 +505,30 @@ app.controller("DashboardRubricaController", function($scope, $http){
             self.result = data;
         });
     };
+
+    self.getAllReportResult = () => {
+        let postdata = {sesid: self.selectedSes.id};
+        $http({url: "get-report-result-all", method: "post", data: postdata}).success((data) => {
+            self.resultAll = data;
+            console.log(data);
+            self.buildBarData(data);
+        });
+    };
+
+    self.buildBarData = (data) => {
+        const N = 3;
+        self.barData[0].values = [];
+        for (let i = 0; i < N; i++) {
+            let lbl = (i + 1) + " - " + (i + 2);
+            self.barData[0].values.push({label: lbl, value: 0});
+        }
+        data.forEach((d) => {
+            let score = d.reduce((e,v) => e + v.val, 0) / d.length;
+            let rank = Math.min(Math.floor(score - 1), N - 1);
+            self.barData[0].values[rank].value += 1;
+        });
+    };
+
+    self.shared.resetRubricaGraphs();
 
 });
