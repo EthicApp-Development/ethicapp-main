@@ -25,6 +25,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
     self.teamId = -1;
 
     self.iterationNames = ["Lectura", "Individual", "Grupal Anónimo", "Grupal"];
+    self.sesStatusses = ["Lectura", "Individual", "Anónimo", "Grupal", "Reporte", "Rubrica Calibración", "Evaluación de Pares", "Finalizada"];
 
     self.tabOptions = ["Actual"];
 

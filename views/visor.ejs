@@ -25,16 +25,24 @@
 
 <div class="editor-container" ng-controller="EditorController">
 
+    <div class="row top-bar-mini">
+        <div class="text-center">
+            <span ng-repeat="st in sesStatusses">
+                <span class="label label-primary" ng-class="{'label-warning': $index==iteration}" ng-bind="st"></span>
+                <span ng-hide="$last">→</span>
+            </span>
+        </div>
+    </div>
+
     <div class="row top-bar">
         <div class="col-sm-6 full-height">
             <span class="simple-margin-left">Documentos: </span>
             <span ng-repeat="doc in documents" class="side-top-btn" ng-bind="doc.title"
                   ng-class="{'active': $index==selectedDocument}" ng-click="selectPDF($index)"></span>
-            <strong class="pull-right margin-top-8" ng-bind="iterationNames[iteration]"></strong>
+            <!--<strong class="pull-right margin-top-8" ng-bind="iterationNames[iteration]"></strong>-->
         </div>
         <div class="col-sm-6">
             <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>
-            <button class="btn btn-sm btn-default pull-right" ng-disabled="writingReport || followLeader || selections.length >= documents.length * 3" ng-click="selectText()" ng-show="iteration > 0">Seleccionar idea</button>
             <button disabled class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i> Representante </button>
             <button class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && followLeader" ng-click="takeControl()">Tomar Control</button>
             <span class="pull-right boxed" ng-bind="teamstr"></span>
@@ -42,16 +50,17 @@
     </div>
 
     <div class="row">
-        <div id="pdf-container" class="pdf-content" ng-class="{'col-sm-12': iteration == 0, 'col-sm-9': iteration > 0}">
+        <div id="pdf-container" class="pdf-content col-sm-9">
             <div class="centered">
                 <div ng-repeat="doc in documents" id="pdf-canvas-{{$index}}" class="centered"
                 ng-show="$index==selectedDocument"></div>
             </div>
         </div>
-        <div class="col-sm-3 side-bar" ng-hide="iteration == 0">
+        <div class="col-sm-3 side-bar">
             <h4>Instrucciones:</h4>
             <div ng-bind="instructions[iteration]"></div>
             <hr>
+            <div ng-hide="iteration == 0">
             <a class="btn btn-sm btn-default pull-right margin-top-8" ng-click="setSelOrder()" ng-disabled="!checkAllSync()">Fijar orden</a>
             <h3>Ideas Fuerza:</h3>
             <div class="row">
@@ -71,14 +80,17 @@
                         <strong ng-bind="sel.text" ng-click="goToSerial(sel.text,sel.document)"></strong>
                         <span class="text-gray"> - {{documents[sel.document].title}}</span>
                         <div class="input-group" ng-show="sel.expanded">
-                            <textarea class="form-control" ng-model="sel.comment" ng-change="selTextChange(sel)"></textarea>
-                            <a class="input-group-addon btn btn-default" ng-click="sendIdea(sel)" ng-class="{'bg-lightgreen': sel.status=='saved', 'bg-lightorange': sel.status=='dirty'}">
+                            <textarea class="form-control" ng-model="sel.comment" ng-change="selTextChange(sel)" ng-disabled="writingReport || followLeader"></textarea>
+                            <a class="input-group-addon btn btn-default" ng-click="sendIdea(sel)" ng-class="{'bg-lightgreen': sel.status=='saved', 'bg-lightorange': sel.status=='dirty'}" ng-disabled="writingReport || followLeader">
                                 <i class="fa fa-send"></i>
                             </a>
                         </div>
                         </div>
                     </li>
+                    <button class="form-control btn btn-sm btn-default margin-top-8" ng-disabled="writingReport || followLeader || selections.length >= documents.length * 3" ng-click="selectText()" ng-show="iteration > 0"><i class="fa fa-plus"></i> Nueva Idea</button>
                 </ul>
+            </div>
+            <div>
                 <div ng-show="iteration > 1 && sideTab == 1">
                     <h4>Ideas Individual:</h4>
                     <div ng-repeat="(uid, sels) in ansIter1">
@@ -111,6 +123,7 @@
                         </ul>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     </div>
