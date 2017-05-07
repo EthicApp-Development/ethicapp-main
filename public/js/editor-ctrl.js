@@ -161,7 +161,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
             });
         });
         if(self.iteration > 1) {
-            self.tabOptions = ["Actual","Individual"];
+            self.tabOptions = ["Reelaboración","Original"];
             $http({url: "get-team-ideas", method: "post", data: {iteration: 1}}).success((data) => {
                 self.ansIter1 = {};
                 data.forEach((ans) => {
@@ -172,7 +172,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
             });
         }
         if(self.iteration > 2) {
-            self.tabOptions = ["Actual","Individual","G. Anonimo"];
+            self.tabOptions = ["Reelaboración","Original","Reelaboración Anonima"];
             $http({url: "get-team-ideas", method: "post", data: {iteration: 2}}).success((data) => {
                 self.ansIter2 = {};
                 data.forEach((ans) => {

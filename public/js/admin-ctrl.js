@@ -92,15 +92,15 @@ app.controller("TabsController", function ($scope, $http) {
 
     self.shared.verifyTabs = () => {
         if (self.selectedSes.type == "L") {
-            self.tabOptions = ["Descripción", "Usuarios", "Dashboard", "Grupos", "Rúbrica", "Dashboard Rúbrica"];
-            self.sesStatusses = ["No Publicada", "Lectura", "Personal", "Anónimo", "Grupal", "Reporte", "Rubrica Ejemplo", "Evaluación de Pares", "Finalizada"];
+            self.tabOptions = ["Configuración", "Usuarios", "Dashboard", "Grupos", "Rúbrica", "Dashboard Rúbrica"];
+            self.sesStatusses = ["Configuración", "Lectura", "Individual", "Anónimo", "Grupal", "Reporte", "Rubrica Calibración", "Evaluación de Pares", "Finalizada"];
             self.shared.getRubrica();
             self.shared.getExampleReports();
             self.shared.getReports();
         }
         else {
-            self.tabOptions = ["Descripción", "Usuarios", "Dashboard", "Grupos"];
-            self.sesStatusses = ["No Publicada", "Personal", "Anónimo", "Grupal", "Finalizada"];
+            self.tabOptions = ["Configuración", "Usuarios", "Dashboard", "Grupos"];
+            self.sesStatusses = ["Configuración", "Individual", "Anónimo", "Grupal", "Finalizada"];
         }
     };
 

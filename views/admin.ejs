@@ -251,16 +251,16 @@
         </div>
 
         <div class="pad-content" ng-show="selectedTab == 4" ng-controller="RubricaController">
-            <h4>Rúbricas</h4>
-            <h5>Definir esquema de rúbrica:</h5>
+            <h4>Especificación de Rúbrica</h4>
+            <!--<h5>Definir esquema de rúbrica:</h5>-->
             <table class="table table-bordered">
                 <tr>
                     <th>Criterio</th>
                     <th>% Pond</th>
-                    <th>Inicio (1 pto)</th>
-                    <th>Proceso (2 pto)</th>
-                    <th>Competente (3 pto)</th>
-                    <th>Avanzado (4 pto)</th>
+                    <th>No Logrado (1 pto)</th>
+                    <th>En Proceso (2 pto)</th>
+                    <th>Por Lograr (3 pto)</th>
+                    <th>Logrado (4 pto)</th>
                     <th></th>
                 </tr>
                 <tr ng-repeat="criterio in criterios">
