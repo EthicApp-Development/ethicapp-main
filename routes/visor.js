@@ -106,8 +106,8 @@ router.post("/get-questions", rpg.multiSQL({
 
 router.post("/send-answer", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "with rows as (update selection set answer = $1, comment = $2 where qid = $3 and uid = $4 and iteration = $5 returning 1) " +
-    "insert into selection(uid,qid,answer,comment,iteration) select $6,$7,$8,$9,$10 where 1 not in (select * from rows)",
+    sql: "with rows as (update selection set answer = $1, comment = $2, stime = now() where qid = $3 and uid = $4 and iteration = $5 returning 1) " +
+    "insert into selection(uid,qid,answer,comment,iteration,stime) select $6,$7,$8,$9,$10, now() where 1 not in (select * from rows)",
     /*sql: "insert into selection(uid,qid,answer,comment) values ($1,$2,$3,$4) on conflict (uid,qid) do update " +
      "set answer = excluded.answer, comment = excluded.comment",*/
     sesReqData: ["uid", "ses"],
@@ -127,7 +127,7 @@ router.post("/get-answers", rpg.multiSQL({
 
 router.post("/send-idea", rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: "insert into ideas(content,descr,serial,docid,uid,iteration) values ($1,$2,$3,$4,$5,$6) returning id",
+    sql: "insert into ideas(content,descr,serial,docid,uid,iteration,stime) values ($1,$2,$3,$4,$5,$6,now()) returning id",
     sesReqData: ["uid", "ses"],
     postReqData: ["docid", "text", "comment", "serial", "iteration"],
     sqlParams: [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "docid"), rpg.param("ses", "uid"), rpg.param("post", "iteration")]
@@ -143,7 +143,7 @@ router.post("/send-pauta-idea", rpg.singleSQL({
 
 router.post("/update-idea", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "update ideas set content = $1, descr = $2, serial = $3 where id = $4",
+    sql: "update ideas set content = $1, descr = $2, serial = $3, stime = now() where id = $4",
     sesReqData: ["uid", "ses"],
     postReqData: ["docid", "text", "comment", "serial", "id"],
     sqlParams: [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "id")]
@@ -195,7 +195,8 @@ router.post("/set-ideas-orden", (req, res) => {
 
 router.post("/change-state-session", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "update sessions set status = status + 1 where id = $1",
+    sql: "with rows as (update sessions set status = status + 1 where id = $1 returning id, status) insert into " +
+            "status_record(sesid,status,stime) select id, status, now() from rows",
     postReqData: ["sesid"],
     sqlParams: [rpg.param("post", "sesid")],
     onEnd: (req,res) => {
@@ -204,6 +205,14 @@ router.post("/change-state-session", rpg.execSQL({
         res.send('"status":"ok"');
         socket.stateChange(req.body.sesid);
     }
+}));
+
+router.post("/record-finish", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "with rows as (update finish_session set stime = now() where uid = $1 and sesid = $2 and status = $3 returning 1) " +
+        "insert into finish_session(uid,sesid,status,stime) select $4,$5,$6,now() where 1 not in (select * from rows)",
+    postReqData: ["uid","sesid"],
+    sqlParams: [rpg.param("ses", "uid"),rpg.param("ses", "sesid"),rpg.param("post", "status"),rpg.param("ses", "uid"),rpg.param("ses", "sesid"),rpg.param("post", "status")]
 }));
 
 router.post("/delete-idea", rpg.execSQL({

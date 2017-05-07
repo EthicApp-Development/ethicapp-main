@@ -134,14 +134,6 @@
         </div>
 
         <div class="pad-content" ng-show="selectedTab == 1" ng-controller="NewUsersController">
-            <h4>Alumnos</h4>
-            <span ng-repeat="alum in users">
-                <strong ng-bind="alum.name"></strong>
-                <span ng-hide="$last"> - </span>
-            </span>
-            <br>
-            <hr>
-            <br>
             <h4>Agregar Usuarios</h4>
             <label>Por usuarios específicos</label>
             <div class="row">
@@ -154,6 +146,18 @@
                         <i class="fa fa-plus"></i> Agregar a sesión</button>
                 </div>
             </div>
+            <br>
+            <hr>
+            <br>
+            <h4>Usuarios</h4>
+            <table class="table table-bordered">
+                <tr><th>Usuaio</th><th>Email</th><th>Tipo de Aprendizaje</th></tr>
+                <tr ng-repeat="alum in usersArr" ng-class="{'bg-info': alum.role == 'P'}">
+                    <td ng-bind="alum.name"></td>
+                    <td ng-bind="alum.mail"></td>
+                    <td ng-bind="alum.aprendizaje"></td>
+                </tr>
+            </table>
             <br/>
             <hr/>
             <br>

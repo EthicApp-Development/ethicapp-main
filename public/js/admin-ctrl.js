@@ -2,7 +2,7 @@
 
 let app = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3"]);
 
-app.controller("AdminController", function ($scope, $http, $uibModal) {
+app.controller("AdminController", function ($scope, $http, $uibModal, $location) {
     let self = $scope;
     self.shared = {};
     self.sessions = [];
@@ -30,6 +30,7 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
         self.shared.resetGraphs();
         self.shared.verifyTabs();
         self.shared.resetTab();
+        $location.path(self.selectedSes.id);
     };
 
     self.shared.updateSesData = () => {
@@ -38,7 +39,17 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
             self.sessions = data;
             if(self.selectedIndex != -1)
                 self.selectSession(self.selectedIndex);
+            else {
+                self.sesFromURL();
+            }
         });
+    };
+
+    self.sesFromURL = () => {
+        let sesid = +($location.path().substring(1));
+        let sidx = self.sessions.findIndex(e => e.id == sesid);
+        if(sidx != -1)
+            self.selectSession(sidx);
     };
 
     self.requestDocuments = () => {
@@ -65,6 +76,7 @@ app.controller("AdminController", function ($scope, $http, $uibModal) {
     self.getMembers = () => {
         let postdata = {sesid: self.selectedSes.id};
         $http({url: "get-ses-users", method: "post", data: postdata}).success((data) => {
+            self.usersArr = data;
             data.forEach((d) => {
                 self.users[d.id] = d;
             });

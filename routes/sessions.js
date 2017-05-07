@@ -97,7 +97,7 @@ router.post("/get-new-users", rpg.multiSQL({
 
 router.post("/get-ses-users", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select u.id, u.name, u.mail from users as u, sesusers as su where u.id = su.uid and su.sesid = $1",
+    sql: "select u.id, u.name, u.mail, u.aprendizaje, u.role from users as u, sesusers as su where u.id = su.uid and su.sesid = $1 order by u.role desc",
     postReqData: ["sesid"],
     sqlParams: [rpg.param("post", "sesid")]
 }));
