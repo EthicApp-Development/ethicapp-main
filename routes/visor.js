@@ -211,8 +211,9 @@ router.post("/record-finish", rpg.execSQL({
     dbcon: pass.dbcon,
     sql: "with rows as (update finish_session set stime = now() where uid = $1 and sesid = $2 and status = $3 returning 1) " +
         "insert into finish_session(uid,sesid,status,stime) select $4,$5,$6,now() where 1 not in (select * from rows)",
-    postReqData: ["uid","sesid"],
-    sqlParams: [rpg.param("ses", "uid"),rpg.param("ses", "sesid"),rpg.param("post", "status"),rpg.param("ses", "uid"),rpg.param("ses", "sesid"),rpg.param("post", "status")]
+    sesReqData: ["uid","ses"],
+    postReqData: ["status"],
+    sqlParams: [rpg.param("ses", "uid"),rpg.param("ses", "ses"),rpg.param("post", "status"),rpg.param("ses", "uid"),rpg.param("ses", "ses"),rpg.param("post", "status")]
 }));
 
 router.post("/delete-idea", rpg.execSQL({

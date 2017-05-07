@@ -71,6 +71,13 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
         });
     };
 
+    self.finishState = () => {
+        let postdata = {status: self.iteration + 2};
+        $http({url: "record-finish", method: "post", data: postdata}).success((data) => {
+            console.log("FINISH");
+        });
+    };
+
     self.getTeamInfo = () => {
         $http({url: "get-team-leader", method: "post"}).success((data) => {
             self.teamId = data.id;

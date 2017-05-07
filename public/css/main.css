@@ -387,3 +387,7 @@ td.clickable:hover{
 span.boxed{
     margin: 4px 16px;
 }
+
+.bg-black-alpha{
+    background: rgba(0,0,0,0.4);
+}
