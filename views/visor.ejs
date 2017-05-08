@@ -12,6 +12,7 @@
     <script src="libs/textlayerbuilder.js"></script>
     <script src="libs/angular.min.js"></script>
     <script src="libs/angular-ui-tree.min.js"></script>
+    <script src="libs/angular-timer.min.js"></script>
     <script src="libs/socket.min.js"></script>
     <script src="js/editor-ctrl.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -30,6 +31,9 @@
             <span ng-repeat="st in sesStatusses">
                 <span class="label label-primary" ng-class="{'bg-black-alpha': $index==iteration}" ng-bind="st"></span>
                 <span ng-hide="$last">→</span>
+            </span>
+            <span class="pull-right margin-right-24" ng-show="sesSTime != null">
+                <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
             </span>
         </div>
     </div>

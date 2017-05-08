@@ -1,6 +1,6 @@
 "use strict";
 
-let app = angular.module("Editor", ['ui.tree', 'btford.socket-io']);
+let app = angular.module("Editor", ['ui.tree', 'btford.socket-io', "timer"]);
 
 app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
@@ -55,6 +55,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
             self.myUid = data.uid;
             self.sesName = data.name;
             self.sesId = data.id;
+            self.sesSTime = (data.stime != null) ? new Date(data.stime) : null;
             $http({url: "get-documents", method: "post"}).success((data) => {
                 self.documents = data;
                 data.forEach((doc,i) => {

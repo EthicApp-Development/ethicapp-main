@@ -391,3 +391,7 @@ span.boxed{
 .bg-black-alpha{
     background: rgba(0,0,0,0.4);
 }
+
+.margin-right-24{
+    margin-right: 24px;
+}
