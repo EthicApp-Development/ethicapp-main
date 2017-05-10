@@ -59,17 +59,16 @@ router.post("/get-criteria-selection",rpg.multiSQL({
 }));
 
 router.post("/send-example-report",rpg.execSQL({
-    //TODO Auth
     dbcon: pass.dbcon,
-    sql: "insert into reports (content,example,rid,uid) select $1, true, r.id, $2 from rubricas as r where r.sesid = $3 limit 1",
+    sql: "insert into reports (content,example,rid,uid,title) select $1, true, r.id, $2, $3 from rubricas as r where r.sesid = $4 limit 1",
     sesReqData: ["uid"],
-    postReqData: ["sesid","content"],
-    sqlParams: [rpg.param("post","content"),rpg.param("ses","uid"),rpg.param("post","sesid")]
+    postReqData: ["sesid","content","title"],
+    sqlParams: [rpg.param("post","content"),rpg.param("ses","uid"),rpg.param("post","title"),rpg.param("post","sesid")]
 }));
 
 router.post("/get-example-reports", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select r.id, r.content, r.uid from reports as r, rubricas as b where r.rid = b.id and b.sesid = $1 and r.example = true",
+    sql: "select r.id, r.title, r.content, r.uid from reports as r, rubricas as b where r.rid = b.id and b.sesid = $1 and r.example = true",
     sesReqData: ["uid"],
     postReqData: ["sesid"],
     sqlParams: [rpg.param("post","sesid")]
@@ -126,6 +125,15 @@ router.post("/send-report", rpg.execSQL({
     sesReqData: ["uid","ses"],
     postReqData: ["content"],
     sqlParams: [rpg.param("post","content"),rpg.param("ses","uid"),rpg.param("ses","ses"),rpg.param("post","content"),rpg.param("ses","uid"),rpg.param("ses","ses")]
+}));
+
+router.post("/send-report-comment", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "with rows as (update report_comment as r set comment = $1 where r.uid = $2 and r.repid = $3 returning 1) " +
+    "insert into report_comment(comment,uid,repid) select $4,$5,$6 where 1 not in (select * from rows)",
+    sesReqData: ["uid","ses"],
+    postReqData: ["rid","text"],
+    sqlParams: [rpg.param("post","text"),rpg.param("ses","uid"),rpg.param("post","rid"),rpg.param("post","text"),rpg.param("ses","uid"),rpg.param("post","rid")]
 }));
 
 router.post("/get-my-report", rpg.singleSQL({

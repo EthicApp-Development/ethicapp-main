@@ -278,6 +278,7 @@
                     <li class="list-group-item" ng-repeat="text in exampleReports">
                         <div class="row">
                             <div class="col-sm-11 text-justify">
+                                <strong ng-bind="text.title"></strong><br>
                                 <span ng-bind="text.content | limitTo:500"></span>
                                 <span ng-show="text.content.length > 500">...</span>
                             </div>
@@ -290,8 +291,9 @@
                     </li>
                 </ul>
                 <h5>Agregar texto de ejemplo:</h5>
-                <textarea rows="5" class="form-control" ng-model="newExampleReport"></textarea>
-                <button class="btn btn-default pull-right" ng-disabled="newExampleReport.length==0" ng-click="sendExampleReport()">Guardar</button>
+                <input class="form-control" ng-model="newExampleReport.title" placeholder="Titulo">
+                <textarea rows="5" class="form-control" ng-model="newExampleReport.text" placeholder="Contenido"></textarea>
+                <button class="btn btn-default pull-right" ng-disabled="newExampleReport.text.length==0" ng-click="sendExampleReport()">Guardar</button>
                 <br><br>
                 <hr>
                 <h4>Evaluación de pares</h4>

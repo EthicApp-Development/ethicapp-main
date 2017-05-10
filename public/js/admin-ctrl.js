@@ -468,7 +468,7 @@ app.controller("RubricaController", function ($scope, $http) {
     };
 
     self.sendExampleReport = () => {
-        let postdata = {sesid: self.selectedSes.id, content: self.newExampleReport};
+        let postdata = {sesid: self.selectedSes.id, content: self.newExampleReport.text, title: self.newExampleReport.title};
         $http({url: "send-example-report", method: "post", data: postdata}).success((data) => {
             self.newExampleReport = "";
             self.shared.getExampleReports();
@@ -528,7 +528,7 @@ app.controller("DashboardRubricaController", function($scope, $http){
 
     self.showName = (report) => {
         if(report.example)
-            return report.id + " - Texto ejemplo";
+            return report.titl + " - Texto ejemplo";
         else
             return report.id + " - Reporte de Alumno " + self.users[report.uid].name;
     };
