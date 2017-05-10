@@ -23,6 +23,18 @@
 
 <div class="editor-container" ng-controller="EditorController">
 
+    <div class="row top-bar-mini">
+        <div class="text-center">
+            <span ng-repeat="st in sesStatusses">
+                <span class="label label-primary" ng-class="{'bg-black-alpha': $index==iteration}" ng-bind="st"></span>
+                <span ng-hide="$last">→</span>
+            </span>
+            <span class="pull-right margin-right-24" ng-show="sesSTime != null">
+                <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
+            </span>
+        </div>
+    </div>
+
     <div class="row top-bar">
         <div class="col-sm-6 full-height">
             <span class="simple-margin-left">Documentos: </span>

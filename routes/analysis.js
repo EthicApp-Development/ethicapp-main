@@ -469,6 +469,14 @@ router.post("/get-ideas-progress", rpg.multiSQL({
     sqlParams: [rpg.param("post", "iteration"), rpg.param("post", "sesid")]
 }));
 
+router.post("/get-alum-done-time", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select f.uid, extract(epoch from f.stime - s.stime) as dtime from finish_session as f, status_record as s where s.status = f.status and " +
+        "s.sesid = f.sesid and f.status = ($1 + 2) and f.sesid = $2",
+    postReqData: ["iteration", "sesid"],
+    sqlParams: [rpg.param("post", "iteration"), rpg.param("post", "sesid")]
+}));
+
 let hasDuplicates = (arr) => {
     let dict = {};
     for (var i = 0; i < arr.length; i++) {

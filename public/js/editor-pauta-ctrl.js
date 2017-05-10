@@ -12,6 +12,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
     self.docIdx = {};
     self.editable = false;
     self.orden = 1;
+    self.sesStatusses = ["Lectura", "Individual", "Anónimo", "Grupal", "Reporte", "Rubrica Calibración", "Evaluación de Pares", "Finalizada"];
 
     rangy.init();
     self.applier = rangy.createClassApplier("highlight");
@@ -22,15 +23,19 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
     };
 
     self.getSesInfo = () => {
-        $http({url: "get-documents", method: "post"}).success((data) => {
-            self.documents = data;
-            data.forEach((doc,i) => {
-                self.docIdx[doc.id] = i;
+        $http({url: "get-ses-info", method: "post"}).success((data) => {
+            self.iteration = data.iteration;
+            self.sesSTime = (data.stime != null) ? new Date(data.stime) : null;
+            $http({url: "get-documents", method: "post"}).success((data) => {
+                self.documents = data;
+                data.forEach((doc, i) => {
+                    self.docIdx[doc.id] = i;
+                });
+                self.renderAll();
             });
-            self.renderAll();
-        });
-        $http({url: "pauta-editable", method: "post"}).success((data) => {
-            self.editable = data.editable;
+            $http({url: "pauta-editable", method: "post"}).success((data) => {
+                self.editable = data.editable;
+            });
         });
     };
 
@@ -142,6 +147,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
             $http({url: "delete-idea", method: "post", data: postadata}).success((data) => {
                 if(data.status == "ok") {
                     self.selections.splice(index, 1);
+
                 }
             });
         }

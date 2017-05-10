@@ -13,7 +13,7 @@ app.controller("AdminController", function ($scope, $http, $uibModal, $location)
     self.users = {};
     self.selectedIndex = -1;
     self.sesStatusses = ["No Publicada", "Lectura", "Personal", "Anónimo", "Grupal", "Finalizada"];
-    self.iterationNames = [{name: "Individual", val: 1}, {name: "Grupal anónimo", val: 2}, {name: "Grupal", val: 3}];
+    self.iterationNames = [{name: "Lectura", val: 0}, {name: "Individual", val: 1}, {name: "Grupal anónimo", val: 2}, {name: "Grupal", val: 3}];
 
     self.init = () => {
         self.shared.updateSesData();
@@ -95,29 +95,46 @@ app.controller("AdminController", function ($scope, $http, $uibModal, $location)
 
 app.controller("TabsController", function ($scope, $http) {
     let self = $scope;
-    self.tabOptions = ["Descripción", "Usuarios", "Dashboard", "Grupos"];
+    self.tabOptions = ["Descripción", "Dashboard"];
+    self.tabConfig = ["Usuarios","Grupos"];
     self.selectedTab = 0;
+    self.selectedTabConfig = -1;
 
     self.shared.resetTab = () => {
         self.selectedTab = 0;
+        if(self.selectedSes != null && self.selectedSes.status > 1){
+            self.selectedTab = 1;
+        }
+        self.selectedTabConfig = -1;
     };
 
     self.shared.verifyTabs = () => {
         if (self.selectedSes.type == "L") {
-            self.tabOptions = ["Configuración", "Usuarios", "Dashboard", "Grupos", "Rúbrica", "Dashboard Rúbrica"];
+            self.iterationNames = [{name: "Lectura", val: 0}, {name: "Individual", val: 1}, {name: "Grupal anónimo", val: 2}, {name: "Grupal", val: 3}];
+            self.tabOptions = ["Configuración", "Dashboard", "Dashboard Rúbrica"];
+            self.tabConfig = ["Usuarios", "Grupos", "Rúbrica"];
             self.sesStatusses = ["Configuración", "Lectura", "Individual", "Anónimo", "Grupal", "Reporte", "Rubrica Calibración", "Evaluación de Pares", "Finalizada"];
             self.shared.getRubrica();
             self.shared.getExampleReports();
             self.shared.getReports();
         }
         else {
-            self.tabOptions = ["Configuración", "Usuarios", "Dashboard", "Grupos"];
+            self.iterationNames = [{name: "Individual", val: 1}, {name: "Grupal anónimo", val: 2}, {name: "Grupal", val: 3}];
+            self.tabOptions = ["Configuración", "Dashboard"];
+            self.tabConfig = ["Usuarios","Grupos"];
             self.sesStatusses = ["Configuración", "Individual", "Anónimo", "Grupal", "Finalizada"];
+        }
+        if(self.selectedSes.status > 1){
+            self.selectedTab = 1;
         }
     };
 
     self.setTab = (idx) => {
         self.selectedTab = idx;
+    };
+
+    self.setTabConfig = (idx) => {
+        self.selectedTabConfig = idx;
     };
 
 });
@@ -211,6 +228,12 @@ app.controller("DashboardController", function ($scope, $http) {
     self.iterationIndicator = 1;
 
     self.shared.resetGraphs = () => {
+        if(self.selectedSes != null && self.selectedSes.type == "L"){
+            self.iterationIndicator = Math.max(Math.min(3,self.selectedSes.status-2),0);
+        }
+        else if(self.selectedSes.type == "S"){
+            self.iterationIndicator = Math.max(Math.min(3,self.selectedSes.status-1),1);
+        }
         self.alumState = null;
         self.barOpts = {
             chart: {
@@ -233,6 +256,7 @@ app.controller("DashboardController", function ($scope, $http) {
     };
 
     self.updateState = () => {
+        self.alumTime = {};
         let postdata = {sesid: self.selectedSes.id, iteration: self.iterationIndicator};
         if (self.selectedSes.type == "S") {
             $http({url: "get-alum-full-state-sel", method: "post", data: postdata}).success((data) => {
@@ -275,6 +299,11 @@ app.controller("DashboardController", function ($scope, $http) {
                 }
             });
         }
+        $http({url: "get-alum-done-time", method: "post", data: postdata}).success((data) => {
+            data.forEach((row) => {
+                self.alumTime[row.uid] = ~~(row.dtime);
+            });
+        });
     };
 
     self.buildBarData = (data) => {

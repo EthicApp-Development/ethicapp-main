@@ -66,7 +66,7 @@
             <div ng-bind="instructions[iteration]"></div>
             <hr>
             <div ng-hide="iteration == 0">
-            <a class="btn btn-sm btn-default pull-right margin-top-8" ng-click="setSelOrder()" ng-disabled="!checkAllSync()">Fijar orden</a>
+            <a class="btn btn-sm btn-default pull-right margin-top-8" ng-click="setSelOrder()" ng-disabled="!checkAllSync() || followLeader || writingReport">Fijar orden</a>
             <h3>Ideas Fuerza:</h3>
             <div class="row">
                 <div class="btn-group center-block w250" ng-show="tabOptions.length > 1">
@@ -79,7 +79,7 @@
             <div class="y-scrollable" ui-tree data-max-depth="1">
                 <ul class="full-height" ui-tree-nodes="" ng-model="selections" ng-show="sideTab == 0">
                     <li class="row idea-item" ng-repeat="sel in selections" ui-tree-node>
-                        <div class="col-xs-1"><span ui-tree-handle>:::</span> <a ng-click="deleteIdea(sel,$index)" class="margin-top-24" ng-if="sel.expanded && !followLeader"><i class="fa fa-trash"></i></a></div>
+                        <div class="col-xs-1"><span ui-tree-handle ng-if="!followLeader && !writtingReport">:::</span> <a ng-click="deleteIdea(sel,$index)" class="margin-top-24" ng-if="sel.expanded && !followLeader && !writtingReport"><i class="fa fa-trash"></i></a></div>
                         <div class="col-xs-10">
                         <a ng-click="sel.expanded=!sel.expanded" class="spaced pull-right"><i class="fa fa-plus"></i></a>
                         <strong ng-bind="sel.text" ng-click="goToSerial(sel.text,sel.document)"></strong>
@@ -102,12 +102,12 @@
                         <h5 ng-show="uid != myUid">Anónimo {{uid}}: </h5>
                         <h5 ng-hide="uid != myUid">Mi respuesta: </h5>
                         <ul class="list-group">
-                            <li class="list-group-item" ng-repeat="sel in sels" ng-class="{'bg-lightgreen':sel.copied}">
+                            <li class="list-group-item" ng-repeat="sel in sels" ng-class="{'bg-warning':sel.copied}">
                                 <a ng-click="sel.expanded=!sel.expanded" class="spaced pull-right"><i class="fa fa-plus"></i></a>
                                 <strong ng-bind="sel.content" ng-click="goToSerial(sel.content,docIdx[sel.docid],'.highlight-secondary')"></strong>
                                 <span class="text-gray"> - {{documents[docIdx[sel.docid]].title}}</span>
                                 <div ng-show="sel.expanded" ng-bind="sel.descr"></div>
-                                <a ng-show="sel.expanded && !followLeader" ng-click="copyIdea(sel)"><i class="fa fa-copy"></i> Copiar a Actual</a>
+                                <a ng-show="sel.expanded && !followLeader && !writtingReport" ng-click="copyIdea(sel)"><i class="fa fa-copy"></i> Copiar a Actual</a>
                             </li>
                         </ul>
                     </div>
@@ -118,12 +118,12 @@
                         <h5 ng-show="uid != myUid">Anónimo {{uid}}: </h5>
                         <h5 ng-hide="uid != myUid">Mi respuesta: </h5>
                         <ul class="list-group">
-                            <li class="list-group-item" ng-repeat="sel in sels" ng-class="{'bg-lightgreen':sel.copied}">
+                            <li class="list-group-item" ng-repeat="sel in sels" ng-class="{'bg-warning':sel.copied}">
                                 <a ng-click="sel.expanded=!sel.expanded" class="spaced pull-right"><i class="fa fa-plus"></i></a>
                                 <strong ng-bind="sel.content" ng-click="goToSerial(sel.content,docIdx[sel.docid],'.highlight-secondary')"></strong>
                                 <span class="text-gray"> - {{documents[docIdx[sel.docid]].title}}</span>
                                 <div ng-show="sel.expanded" ng-bind="sel.descr"></div>
-                                <a ng-show="sel.expanded && !followLeader" ng-click="copyIdea(sel)"><i class="fa fa-copy"></i> Copiar a Actual</a>
+                                <a ng-show="sel.expanded && !followLeader && !writtingReport" ng-click="copyIdea(sel)"><i class="fa fa-copy"></i> Copiar a Actual</a>
                             </li>
                         </ul>
                     </div>

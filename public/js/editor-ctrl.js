@@ -139,6 +139,10 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
         }
     };
 
+    self.unhighlightSerial = (serial, index, applier) => {
+        console.log("TODO");
+    };
+
     self.renderAll = () => {
         self.numPages = 0;
         self.documents.forEach((doc, idx) => {
@@ -241,18 +245,20 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
             $http({url: "delete-idea", method: "post", data: postadata}).success((data) => {
                 if(data.status == "ok") {
                     self.selections.splice(index, 1);
+                    self.unhighlightSerial(sel.serial, self.docIdx[sel.docid]);
                 }
                 self.updateSignal();
             });
         }
         else{
             self.selections.splice(index, 1);
+            self.unhighlightSerial(sel.serial, self.docIdx[sel.docid]);
         }
     };
 
     self.copyIdea = (sel) => {
         console.log(sel);
-        if(sel == null || (sel.copied != null && !sel.copied)) return;
+        if(sel == null || (sel.copied != null && sel.copied) || self.selections.length >= 3*self.documents.length) return;
         let textDef = {
             text: sel.content,
             length: sel.content.length,
@@ -264,8 +270,8 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
         };
         self.selections.push(textDef);
         sel.copied = true;
-        sel.expanded = false;
-        self.setTab(0);
+        //sel.expanded = false;
+        //self.setTab(0);
     };
 
     self.takeControl = () => {
