@@ -59,6 +59,31 @@ router.get("/to-pauta", (req, res) => {
         res.redirect(".");
 });
 
+router.get("/to-rubrica", (req, res) => {
+    if (req.session.uid && !isNaN(req.query.sesid) && req.session.role == "P") {
+        req.session.ses = req.query.sesid;
+        let doRedirect = (status) => {
+            console.log(status);
+            res.redirect("rubrica");
+        };
+        if(sesStatusCache[req.query.sesid] == null) {
+            rpg.singleSQL({
+                dbcon: pass.dbcon,
+                sql: "select status from sessions where id = " + req.query.sesid,
+                onEnd: (req, res, result) => {
+                    sesStatusCache[req.query.sesid] = result.status;
+                    doRedirect(result.status);
+                }
+            })(req, res);
+        }
+        else {
+            doRedirect(sesStatusCache[req.query.sesid]);
+        }
+    }
+    else
+        res.redirect(".");
+});
+
 router.get("/visor", (req, res) => {
     if (req.session.uid && req.session.ses)
         res.render("visor");

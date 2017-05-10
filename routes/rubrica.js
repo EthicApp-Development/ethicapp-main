@@ -58,6 +58,15 @@ router.post("/get-criteria-selection",rpg.multiSQL({
     sqlParams: [rpg.param("ses","uid"),rpg.param("post","rid")]
 }));
 
+router.post("/get-criteria-answer",rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select id, cid, selection from criteria_selection where uid in (select id from users inner join sesusers on id = uid " +
+        "where role = 'P' and sesid = $1) and repid = $2",
+    sesReqData: ["uid","ses"],
+    postReqData: ["rid"],
+    sqlParams: [rpg.param("ses","ses"),rpg.param("post","rid")]
+}));
+
 router.post("/send-example-report",rpg.execSQL({
     dbcon: pass.dbcon,
     sql: "insert into reports (content,example,rid,uid,title) select $1, true, r.id, $2, $3 from rubricas as r where r.sesid = $4 limit 1",

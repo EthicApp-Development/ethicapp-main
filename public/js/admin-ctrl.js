@@ -253,6 +253,7 @@ app.controller("DashboardController", function ($scope, $http) {
             }
         };
         self.barData = [{key: "Alumnos", color: "#1f77b4", values: []}];
+        self.updateState();
     };
 
     self.updateState = () => {
@@ -485,6 +486,11 @@ app.controller("RubricaController", function ($scope, $http) {
                 rep.active = true;
             }
         });
+    };
+
+    self.goToReport = (rep) => {
+        self.setActiveExampleReport(rep);
+        window.location.href = "to-rubrica?sesid=" + self.selectedSes.id;
     };
 
     self.pairAssign = () => {

@@ -13,6 +13,7 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", function ($sc
     self.iteration = -1;
     self.myUid = -1;
     self.sesStatusses = ["Lectura", "Individual", "Anónimo", "Grupal", "Reporte", "Rubrica Calibración", "Evaluación de Pares", "Finalizada"];
+    self.canAnswer = true;
 
     self.init = () => {
         self.getReports();
@@ -52,7 +53,7 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", function ($sc
     };
 
     self.checkCriteria = (report) => {
-        return report.select != null && self.criterios.reduce((prev, crit) => (report.select[crit.id] != null) ? prev : false, true);
+        return report.id!=null && report.select != null && self.criterios.reduce((prev, crit) => (report.select[crit.id] != null) ? prev : false, true);
     };
 
     self.sendSelection = (report) => {
@@ -67,6 +68,18 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", function ($sc
             $http({url: "send-report-comment", method:"post", data:postdata}).success((data) => {
                 console.log("ok");
             });
+            if(self.iteration == 5){
+                self.canAnswer = false;
+                let postdata = {rid: report.id};
+                $http({url: "get-criteria-answer", method:"post", data:postdata}).success((data) => {
+                    let i = self.reports.findIndex(e => e.id == report.id);
+                    console.log(i);
+                    self.reports[i].truev = {};
+                    data.forEach((sel) => {
+                        self.reports[i].truev[sel.cid] = sel.selection;
+                    });
+                });
+            }
         }
     };
 
@@ -77,6 +90,7 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", function ($sc
                 report.select = {};
                 data.forEach((sel) => {
                     report.select[sel.cid] = sel.selection;
+                    self.canAnswer = false;
                 });
             });
         });

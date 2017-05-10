@@ -10,6 +10,7 @@
     <script src="js/rubrica-ctrl.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/font-awesome.min.css"/>
     <link rel="stylesheet" href="css/main.css"/>
 </head>
 <body class="bg-black">
@@ -59,19 +60,23 @@
                     </tr>
                     <tr ng-repeat="criterio in criterios">
                         <td ng-bind="criterio.name"></td>
-                        <td class="clickable" ng-click="report.select[criterio.id] = 1" ng-class="{active: report.select[criterio.id] == 1}"
-                            ng-bind="criterio.inicio"></td>
-                        <td class="clickable" ng-click="report.select[criterio.id] = 2" ng-class="{active: report.select[criterio.id] == 2}"
-                            ng-bind="criterio.proceso"></td>
-                        <td class="clickable" ng-click="report.select[criterio.id] = 3" ng-class="{active: report.select[criterio.id] == 3}"
-                            ng-bind="criterio.competente"></td>
-                        <td class="clickable" ng-click="report.select[criterio.id] = 4" ng-class="{active: report.select[criterio.id] == 4}"
-                            ng-bind="criterio.avanzado"></td>
+                        <td class="clickable" ng-click="report.select[criterio.id] = 1" ng-class="{active: report.select[criterio.id] == 1}">
+                            <i class="fa fa-check" ng-show="report.truev[criterio.id] == 1"></i> <span ng-bind="criterio.inicio"></span>
+                        </td>
+                        <td class="clickable" ng-click="report.select[criterio.id] = 2" ng-class="{active: report.select[criterio.id] == 2}">
+                            <i class="fa fa-check" ng-show="report.truev[criterio.id] == 2"></i> <span ng-bind="criterio.proceso"></span>
+                        </td>
+                        <td class="clickable" ng-click="report.select[criterio.id] = 3" ng-class="{active: report.select[criterio.id] == 3}">
+                            <i class="fa fa-check" ng-show="report.truev[criterio.id] == 3"></i> <span ng-bind="criterio.competente"></span>
+                        </td>
+                        <td class="clickable" ng-click="report.select[criterio.id] = 4" ng-class="{active: report.select[criterio.id] == 4}">
+                            <i class="fa fa-check" ng-show="report.truev[criterio.id] == 4"></i> <span ng-bind="criterio.avanzado"></span>
+                        </td>
                     </tr>
                 </table>
                 <h4>Comentario:</h4>
-                <textarea class="form-control" ng-model="report.comment"></textarea>
-                <button class="pull-right btn btn-default" ng-click="sendSelection(report)" ng-disabled="!checkCriteria(report)">Enviar</button>
+                <textarea class="form-control" ng-model="report.comment" ng-disabled="!canAnswer"></textarea>
+                <button class="pull-right btn btn-default" ng-click="sendSelection(report)" ng-disabled="!checkCriteria(report) || !canAnswer">Enviar</button>
                 <div class="row"></div>
             </div>
             <br>
