@@ -154,7 +154,7 @@ router.post("/get-my-report", rpg.singleSQL({
 
 router.post("/get-report-list", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select r.id, r.example, r.uid from reports as r inner join rubricas as ru on ru.id = r.rid and ru.sesid = $1",
+    sql: "select r.id, r.title, r.example, r.uid from reports as r inner join rubricas as ru on ru.id = r.rid and ru.sesid = $1",
     postReqData: ["sesid"],
     sqlParams: [rpg.param("post","sesid")]
 }));

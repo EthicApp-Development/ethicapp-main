@@ -44,7 +44,7 @@ router.post("/get-team-leader",rpg.singleSQL({
 router.post("/get-team-sync-ideas", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select i.id, i.content, i.descr, i.serial, i.docid from ideas as i inner join documents as d on i.docid = d.id where " +
-        "i.uid in (select leader from teams inner join teamusers on tmid = id where uid = $1 and sesid = $2) and d.sesid = $3 and " +
+        "i.uid in (select original_leader from teams inner join teamusers on tmid = id where uid = $1 and sesid = $2) and d.sesid = $3 and " +
         "i.iteration = 3 order by i.orden asc",
     sesReqData: ["uid", "ses"],
     sqlParams: [rpg.param("ses", "uid"), rpg.param("ses", "ses"), rpg.param("ses", "ses")]

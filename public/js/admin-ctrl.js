@@ -110,8 +110,8 @@ app.controller("TabsController", function ($scope, $http) {
 
     self.shared.verifyTabs = () => {
         if (self.selectedSes.type == "L") {
-            self.iterationNames = [{name: "Lectura", val: 0}, {name: "Individual", val: 1}, {name: "Grupal anónimo", val: 2}, {name: "Grupal", val: 3}];
-            self.tabOptions = ["Configuración", "Dashboard", "Dashboard Rúbrica"];
+            self.iterationNames = [{name: "Lectura", val: 0}, {name: "Individual", val: 1}, {name: "Grupal anónimo", val: 2}, {name: "Grupal", val: 3}, {name: "Reporte", val: 4}, {name: "Calibración Rubrica", val: 5}, {name: "Evaluación de Pares", val: 6}];
+            self.tabOptions = ["Configuración", "Dashboard"];
             self.tabConfig = ["Usuarios", "Grupos", "Rúbrica"];
             self.sesStatusses = ["Configuración", "Lectura", "Individual", "Anónimo", "Grupal", "Reporte", "Rubrica Calibración", "Evaluación de Pares", "Finalizada"];
             self.shared.getRubrica();
@@ -229,7 +229,7 @@ app.controller("DashboardController", function ($scope, $http) {
 
     self.shared.resetGraphs = () => {
         if(self.selectedSes != null && self.selectedSes.type == "L"){
-            self.iterationIndicator = Math.max(Math.min(3,self.selectedSes.status-2),0);
+            self.iterationIndicator = Math.max(Math.min(6,self.selectedSes.status-2),0);
         }
         else if(self.selectedSes.type == "S"){
             self.iterationIndicator = Math.max(Math.min(3,self.selectedSes.status-1),1);
@@ -252,11 +252,18 @@ app.controller("DashboardController", function ($scope, $http) {
                 }
             }
         };
-        self.barData = [{key: "Alumnos", color: "#1f77b4", values: []}];
+        self.barData = [{key: "Alumnos", color: "#ef6c00", values: []}];
         self.updateState();
     };
 
     self.updateState = () => {
+        if(self.iterationIndicator <= 4)
+            self.updateStateIni();
+        else
+            self.updateStateRub();
+    };
+
+    self.updateStateIni = () => {
         self.alumTime = {};
         let postdata = {sesid: self.selectedSes.id, iteration: self.iterationIndicator};
         if (self.selectedSes.type == "S") {
@@ -318,6 +325,63 @@ app.controller("DashboardController", function ($scope, $http) {
             let rank = Math.min(Math.floor(N * d.score), N - 1);
             self.barData[0].values[rank].value += 1;
         });
+    };
+
+    self.updateStateRub = () => {
+        if(self.iterationIndicator == 5)
+            self.computeDif();
+        else if(self.iterationIndicator == 6)
+            self.getAllReportResult();
+    };
+
+    self.showName = (report) => {
+        if(report.example)
+            return report.title + " - Texto ejemplo";
+        else
+            return report.id + " - Reporte de Alumno " + self.users[report.uid].name;
+    };
+
+    self.shared.getReports = () => {
+        let postdata = {sesid: self.selectedSes.id};
+        $http({url: "get-report-list", method: "post", data: postdata}).success((data) => {
+            self.reports = data;
+            self.exampleReports = data.filter(e => e.example);
+        });
+    };
+
+    self.getReportResult = () => {
+        let postdata = {repid: self.selectedReport.id};
+        $http({url: "get-report-result", method: "post", data: postdata}).success((data) => {
+            self.result = data;
+        });
+    };
+
+    self.getAllReportResult = () => {
+        let postdata = {sesid: self.selectedSes.id};
+        $http({url: "get-report-result-all", method: "post", data: postdata}).success((data) => {
+            self.resultAll = data;
+            self.pairArr = (data[0]) ? new Array(data[0].length) : [];
+            console.log(data);
+            self.buildRubricaBarData(data);
+        });
+    };
+
+    self.buildRubricaBarData = (data) => {
+        const N = 3;
+        self.barData[0].values = [];
+        for (let i = 0; i < N; i++) {
+            let lbl = (i + 1) + " - " + (i + 2);
+            self.barData[0].values.push({label: lbl, value: 0});
+        }
+        data.forEach((d) => {
+            let score = d.reduce((e,v) => e + v.val, 0) / d.length;
+            let rank = Math.min(Math.floor(score - 1), N - 1);
+            self.barData[0].values[rank].value += 1;
+        });
+    };
+
+    self.computeDif = () => {
+        ;
     };
 
 });
@@ -529,51 +593,8 @@ app.controller("DashboardRubricaController", function($scope, $http){
                 }
             }
         };
-        self.barData = [{key: "Alumnos", color: "#1f77b4", values: []}];
-    };
-
-    self.showName = (report) => {
-        if(report.example)
-            return report.titl + " - Texto ejemplo";
-        else
-            return report.id + " - Reporte de Alumno " + self.users[report.uid].name;
-    };
-
-    self.shared.getReports = () => {
-        let postdata = {sesid: self.selectedSes.id};
-        $http({url: "get-report-list", method: "post", data: postdata}).success((data) => {
-            self.reports = data;
-        });
-    };
-
-    self.getReportResult = () => {
-        let postdata = {repid: self.selectedReport.id};
-        $http({url: "get-report-result", method: "post", data: postdata}).success((data) => {
-            self.result = data;
-        });
-    };
-
-    self.getAllReportResult = () => {
-        let postdata = {sesid: self.selectedSes.id};
-        $http({url: "get-report-result-all", method: "post", data: postdata}).success((data) => {
-            self.resultAll = data;
-            console.log(data);
-            self.buildBarData(data);
-        });
-    };
-
-    self.buildBarData = (data) => {
-        const N = 3;
-        self.barData[0].values = [];
-        for (let i = 0; i < N; i++) {
-            let lbl = (i + 1) + " - " + (i + 2);
-            self.barData[0].values.push({label: lbl, value: 0});
-        }
-        data.forEach((d) => {
-            let score = d.reduce((e,v) => e + v.val, 0) / d.length;
-            let rank = Math.min(Math.floor(score - 1), N - 1);
-            self.barData[0].values[rank].value += 1;
-        });
+        self.barData = [{key: "Alumnos", color: "#ef6c00", values: []}];
+        //self.updateGraph();
     };
 
     self.shared.resetRubricaGraphs();

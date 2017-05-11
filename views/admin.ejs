@@ -309,7 +309,7 @@
             <div class="pull-right">
                 <label>Iteración:</label>
                 <select class="" ng-options="x.val as x.name for x in iterationNames" ng-model="iterationIndicator"></select>
-                <button class="btn btn-default" ng-click="updateState()">Actualizar Estado de Alumnos</button>
+                <button class="btn btn-default" ng-click="updateState()">Actualizar</button>
             </div>
             <h4>Resultados</h4>
             <nvd3 options="barOpts" data="barData"></nvd3>
@@ -334,7 +334,7 @@
                         ng-class="{'bg-darkgreen': data[qs.id], 'bg-darkred': data[qs.id]!=null && !data[qs.id]}"></td>
                 </tr>
             </table>
-            <table class="table table-bordered" ng-if="selectedSes.type == 'L' && alumState!={}">
+            <table class="table table-bordered" ng-if="selectedSes.type == 'L' && alumState!={} && iterationIndicator <= 4">
                 <tr>
                     <th>Alumno</th>
                     <th style="width: 420px">Puntaje</th>
@@ -350,20 +350,13 @@
                     <td><span ng-show="alumTime[dato.uid] != null">{{alumTime[dato.uid]/60 | number:0}}m {{alumTime[dato.uid]%60 | number:0}}s</span></td>
                 </tr>
             </table>
-        </div>
-        <!-- / DASHBOARDS -->
-
-        <!-- DASHBOARDS RUBRICA -->
-        <div class="pad-content" ng-show="selectedTab == 2" ng-controller="DashboardRubricaController">
-            <h4>Resultados Rúbrica</h4>
-            <button class="pull-right btn btn-default" ng-click="getAllReportResult()">Actualizar</button>
-            <nvd3 options="barOpts" data="barData"></nvd3>
-            <hr>
+            <!-- RUBRICA DASHBOARD -->
+            <div ng-show="iterationIndicator == 5">
             <h4>Detalle:</h4>
             <div class="row">
                 <div class="col-sm-2">Texto: </div>
                 <div class="col-sm-8">
-                    <select class="form-control" ng-model="selectedReport" ng-options="showName(x) for x in reports"></select>
+                    <select class="form-control" ng-model="selectedReport" ng-options="showName(x) for x in exampleReports"></select>
                 </div>
                 <div class="col-sm-2">
                     <button class="btn btn-default" ng-click="getReportResult()">Ver resultados</button>
@@ -383,6 +376,32 @@
                     </td>
                 </tr>
             </table>
+            </div>
+            <div ng-show="iterationIndicator == 6">
+                <h4>Detalle Reportes:</h4>
+                <table class="table table-bordered">
+                    <tr>
+                        <th>Alumno</th>
+                        <th ng-repeat="x in pairArr">Ev. {{$index}}</th>
+                    </tr>
+                    <!--<tr ng-repeat="dato in result | orderBy:'-score'">-->
+                    <tr ng-repeat="(uid,res) in resultAll">
+                        <td ng-bind="users[dato.uid].name"></td>
+                        <td ng-repeat="val in res">
+                            {{dato.val | number:2}}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <!-- / DASHBOARDS -->
+
+        <!-- DASHBOARDS RUBRICA -->
+        <div class="pad-content" ng-show="selectedTab == 2" ng-controller="DashboardRubricaController">
+            <h4>Resultados Rúbrica</h4>
+            <button class="pull-right btn btn-default" ng-click="getAllReportResult()">Actualizar</button>
+            <nvd3 options="barOpts" data="barData"></nvd3>
+            <hr>
         </div>
         <!-- / DASHBOARDS RUBRICA -->
 

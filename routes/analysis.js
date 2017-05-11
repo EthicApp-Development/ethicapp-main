@@ -313,7 +313,7 @@ router.post("/set-groups", (req, res) => {
             + "delete from teams where sesid = " + req.body.sesid + "; ";
     let grupos = JSON.parse(req.body.groups);
     grupos.forEach((team) => {
-        sql += "with rows as (insert into teams(sesid,leader) values (" + req.body.sesid + "," + team[0] + ") returning id) " +
+        sql += "with rows as (insert into teams(sesid,leader,original_leader) values (" + req.body.sesid + "," + team[0] + "," + team[0] + ") returning id) " +
             "insert into teamusers(tmid,uid) select id, unnest('{" + team.join(",") + "}'::int[]) from rows; ";
     });
     console.log(sql);
