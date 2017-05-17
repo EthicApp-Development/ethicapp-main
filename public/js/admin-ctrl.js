@@ -2,8 +2,9 @@
 
 let adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer"]);
 
-adpp.controller("AdminController", function ($scope, $http, $uibModal, $location) {
+adpp.controller("AdminController", function ($scope, $http, $uibModal, $location, $locale) {
     let self = $scope;
+    $locale.NUMBER_FORMATS.GROUP_SEP = '';
     self.shared = {};
     self.sessions = [];
     self.selectedSes = null;
@@ -291,25 +292,32 @@ adpp.controller("DashboardController", function ($scope, $http) {
             $http({url: "get-alum-state-lect", method: "post", data: postdata}).success((data) => {
                 self.alumState = data;
                 self.buildBarData(data);
+                self.getAlumDoneTime(postdata);
             });
             $http({url: "get-ideas-progress", method: "post", data: postdata}).success((data) => {
-                self.numComplete = 0;
                 self.numProgress = 0;
                 self.numUsers = Object.keys(self.users).length - 1;
                 let n = self.documents.length * 3;
                 if(n!=0) {
                     data.forEach((d) => {
-                        if(d.count >= n)
-                            self.numComplete += 1;
                         self.numProgress += d.count/n;
                     });
                     self.numProgress *= 100/self.numUsers;
                 }
             });
         }
+    };
+
+    self.getAlumDoneTime = (postdata) => {
         $http({url: "get-alum-done-time", method: "post", data: postdata}).success((data) => {
+            self.numComplete = 0;
             data.forEach((row) => {
-                self.alumTime[row.uid] = ~~(row.dtime);
+                self.numComplete += 1;
+                let ai = self.alumState.findIndex(e => e.uid == row.uid);
+                if(ai == -1)
+                    self.alumState.push(row);
+                else
+                    self.alumState[ai].dtime = ~~(row.dtime);
             });
         });
     };

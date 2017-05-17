@@ -342,16 +342,16 @@
                 <tr>
                     <th>Alumno</th>
                     <th style="width: 420px">Puntaje</th>
-                    <th>Tiempo de termino</th>
+                    <th>Tiempo de término</th>
                 </tr>
                 <tr ng-repeat="dato in alumState | orderBy:'-score'">
                     <td ng-bind="users[dato.uid].name"></td>
                     <td>
-                        <div class="bg-darkgreen table-green-bar" style="width: {{400*dato.score}}px">
+                        <div class="bg-darkgreen table-green-bar" ng-show="dato.score != null" style="width: {{400*dato.score}}px">
                             {{100*dato.score | number:0}}%
                         </div>
                     </td>
-                    <td><span ng-show="alumTime[dato.uid] != null">{{alumTime[dato.uid]/60 | number:0}}m {{alumTime[dato.uid]%60 | number:0}}s</span></td>
+                    <td><span ng-show="dato.dtime != null">{{dato.dtime/60 | number:0}}m {{dato.dtime%60 | number:0}}s</span></td>
                 </tr>
             </table>
             <!-- RUBRICA DASHBOARD -->
