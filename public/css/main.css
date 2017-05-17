@@ -246,8 +246,14 @@ canvas{
 }
 
 .form-inline-mini{
+     display: inline-block;
+     width: 80px;
+ }
+
+.form-inline-micro{
     display: inline-block;
-    width: 80px;
+    width: 36px;
+    padding: 4px;
 }
 
 .form-inline-med{
@@ -277,6 +283,10 @@ ul[dnd-list] .dndPlaceholder {
 
 .margin-top-8{
     margin-top: 8px;
+}
+
+.margin-top-n24{
+    margin-top: -24px;
 }
 
 .margin-top-24{

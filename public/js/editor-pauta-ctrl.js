@@ -1,6 +1,6 @@
 "use strict";
 
-let app = angular.module("Editor", ['ui.tree']);
+let app = angular.module("Editor", ['ui.tree', "timer"]);
 
 app.controller("EditorController", ["$scope", "$http", "$timeout", function ($scope, $http, $timeout) {
     let self = $scope;
@@ -26,6 +26,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
         $http({url: "get-ses-info", method: "post"}).success((data) => {
             self.iteration = data.iteration;
             self.sesSTime = (data.stime != null) ? new Date(data.stime) : null;
+            console.log(self.sesSTime);
             $http({url: "get-documents", method: "post"}).success((data) => {
                 self.documents = data;
                 data.forEach((doc, i) => {

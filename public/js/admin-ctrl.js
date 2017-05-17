@@ -1,8 +1,8 @@
 "use strict";
 
-let app = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3"]);
+let adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer"]);
 
-app.controller("AdminController", function ($scope, $http, $uibModal, $location) {
+adpp.controller("AdminController", function ($scope, $http, $uibModal, $location) {
     let self = $scope;
     self.shared = {};
     self.sessions = [];
@@ -93,7 +93,7 @@ app.controller("AdminController", function ($scope, $http, $uibModal, $location)
 });
 
 
-app.controller("TabsController", function ($scope, $http) {
+adpp.controller("TabsController", function ($scope, $http) {
     let self = $scope;
     self.tabOptions = ["Descripción", "Dashboard"];
     self.tabConfig = ["Usuarios","Grupos"];
@@ -139,7 +139,7 @@ app.controller("TabsController", function ($scope, $http) {
 
 });
 
-app.controller("SesEditorController", function ($scope, $http) {
+adpp.controller("SesEditorController", function ($scope, $http) {
     let self = $scope;
 
     self.updateSession = () => {
@@ -163,7 +163,7 @@ app.controller("SesEditorController", function ($scope, $http) {
 });
 
 
-app.controller("NewUsersController", function ($scope, $http) {
+adpp.controller("NewUsersController", function ($scope, $http) {
     let self = $scope;
     let newMembs = [];
 
@@ -183,7 +183,7 @@ app.controller("NewUsersController", function ($scope, $http) {
 
 });
 
-app.controller("QuestionsController", function ($scope, $http) {
+adpp.controller("QuestionsController", function ($scope, $http) {
     let self = $scope;
 
     self.newQuestion = {
@@ -223,7 +223,7 @@ app.controller("QuestionsController", function ($scope, $http) {
 
 });
 
-app.controller("DashboardController", function ($scope, $http) {
+adpp.controller("DashboardController", function ($scope, $http) {
     let self = $scope;
     self.iterationIndicator = 1;
 
@@ -386,7 +386,7 @@ app.controller("DashboardController", function ($scope, $http) {
 
 });
 
-app.controller("GroupController", function ($scope, $http) {
+adpp.controller("GroupController", function ($scope, $http) {
     let self = $scope;
     self.methods = ["Aleatorio", "Rendimiento Homogeneo", "Rendimiento Heterogeneo", "Tipo Aprendizaje Homogeneo", "Tipo Aprendizaje Heterogeoneo"];
     self.lastI = -1;
@@ -471,7 +471,7 @@ app.controller("GroupController", function ($scope, $http) {
 
 });
 
-app.controller("RubricaController", function ($scope, $http) {
+adpp.controller("RubricaController", function ($scope, $http) {
     let self = $scope;
     self.criterios = [];
     self.newCriterio = {};
@@ -568,7 +568,7 @@ app.controller("RubricaController", function ($scope, $http) {
 
 });
 
-app.controller("DashboardRubricaController", function($scope, $http){
+adpp.controller("DashboardRubricaController", function($scope, $http){
     let self = $scope;
     self.reports = [];
     self.result = [];

@@ -12,6 +12,7 @@
     <script src="libs/d3.min.js"></script>
     <script src="libs/nv.d3.min.js"></script>
     <script src="libs/angular-nvd3.min.js"></script>
+    <script src="libs/angular-timer.min.js"></script>
     <script src="js/admin-ctrl.js"></script>
 </head>
 <body class="bg-white" ng-controller="AdminController">
@@ -45,6 +46,9 @@
     </div>
 
     <div class="col-sm-9" ng-show="selectedIndex!=-1" ng-controller="TabsController">
+        <span class="pull-right margin-right-24" ng-show="selectedSes.stime != null">
+            <timer start-time="selectedSes.stime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
+        </span>
         <h3>{{selectedSes.name}}</h3>
         <div class="center-block font-large">
             <button class="btn btn-sm btn-default pull-right" ng-click="shared.changeState()">Ir al siguiente</button>
