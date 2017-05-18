@@ -4,6 +4,7 @@ let express = require('express');
 let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
+let socket = require("../modules/socket.config");
 
 let exampleReports = {};
 
@@ -124,6 +125,7 @@ router.post("/set-active-example-report", (req,res) => {
         return;
     }
     exampleReports[req.body.sesid] = req.body.rid;
+    socket.reportChange(req.body.sesid);
     res.end('{"status":"ok"}');
 });
 

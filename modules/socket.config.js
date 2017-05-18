@@ -5,4 +5,7 @@ module.exports.configSocket = function(io){
     module.exports.updateTeam = function(tmid){
         io.of("/").emit("updateTeam", {tmid: tmid});
     };
+    module.exports.reportChange = function(sesid){
+        io.of("/").emit("reportChange", {ses: sesid});
+    };
 };

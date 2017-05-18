@@ -118,6 +118,10 @@ adpp.controller("TabsController", function ($scope, $http) {
             self.shared.getRubrica();
             self.shared.getExampleReports();
             self.shared.getReports();
+            if(self.selectedSes.status == 7){
+                self.selectedTab = 0;
+                self.selectedTabConfig = 2;
+            }
         }
         else {
             self.iterationNames = [{name: "Individual", val: 1}, {name: "Grupal anónimo", val: 2}, {name: "Grupal", val: 3}];

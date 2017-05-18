@@ -24,11 +24,18 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", function ($sc
                 self.getReports();
             }
         });
+        $socket.on("reportChange", (data) => {
+            console.log("SOCKET.IO", data);
+            if(data.ses == self.sesId){
+                self.getReports();
+            }
+        });
     };
 
     self.getReports = () => {
         $http({url: "get-ses-info", method: "post"}).success((data) => {
             self.iteration = data.iteration;
+            self.sesId = data.id;
             self.myUid = data.uid;
             self.sesSTime = (data.stime != null) ? new Date(data.stime) : null;
             if(self.iteration == 5) {
