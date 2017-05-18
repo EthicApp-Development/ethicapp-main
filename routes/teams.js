@@ -36,7 +36,7 @@ router.post("/get-ses-info",rpg.singleSQL({
 
 router.post("/get-team-leader",rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: "select leader, id from teams inner join teamusers on tmid = id where uid = $1 and sesid = $2",
+    sql: "select leader, original_leader, id from teams inner join teamusers on tmid = id where uid = $1 and sesid = $2",
     sesReqData: ["ses","uid"],
     sqlParams: [rpg.param("ses","uid"),rpg.param("ses","ses")]
 }));

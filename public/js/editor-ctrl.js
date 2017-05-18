@@ -82,6 +82,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
     self.getTeamInfo = () => {
         $http({url: "get-team-leader", method: "post"}).success((data) => {
             self.teamId = data.id;
+            self.originalLeader = data.original_leader;
             if(data.leader == self.myUid){
                 self.leader = true;
                 self.followLeader = false;
@@ -204,15 +205,17 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
     };
 
     self.sendIdea = (sel) => {
-        let postadata = {
+        let postdata = {
             text: sel.text,
             comment: sel.comment,
             serial: sel.serial,
             docid: self.documents[sel.document].id,
-            iteration: self.iteration
+            iteration: self.iteration,
+            uidoriginal: self.originalLeader,
         };
         if (sel.status == "unsaved") {
-            $http({url: "send-idea", method: "post", data: postadata}).success((data) => {
+            let url = (self.iteration == 3)? "send-team-idea" : "send-idea";
+            $http({url: url, method: "post", data: postdata}).success((data) => {
                 if (data.status == "ok") {
                     sel.expanded = false;
                     sel.status = "saved";
@@ -222,8 +225,8 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
             });
         }
         else if (sel.status == "dirty" && sel.id != null) {
-            postadata.id = sel.id;
-            $http({url: "update-idea", method: "post", data: postadata}).success((data) => {
+            postdata.id = sel.id;
+            $http({url: "update-idea", method: "post", data: postdata}).success((data) => {
                 if (data.status == "ok") {
                     sel.expanded = false;
                     sel.status = "saved";
