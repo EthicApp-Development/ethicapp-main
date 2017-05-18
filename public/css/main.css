@@ -328,6 +328,7 @@ ul[dnd-list] .dndPlaceholder {
     color: #fff;
     padding-left: 4px;
     text-shadow: #666 1px 1px;
+    transition: all 0.5s;
 }
 
 .red{

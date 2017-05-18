@@ -107,6 +107,10 @@ adpp.controller("TabsController", function ($scope, $http) {
             self.selectedTab = 1;
         }
         self.selectedTabConfig = -1;
+        if(self.selectedSes.status == 7){
+            self.selectedTab = 0;
+            self.selectedTabConfig = 2;
+        }
     };
 
     self.shared.verifyTabs = () => {
@@ -118,10 +122,6 @@ adpp.controller("TabsController", function ($scope, $http) {
             self.shared.getRubrica();
             self.shared.getExampleReports();
             self.shared.getReports();
-            if(self.selectedSes.status == 7){
-                self.selectedTab = 0;
-                self.selectedTabConfig = 2;
-            }
         }
         else {
             self.iterationNames = [{name: "Individual", val: 1}, {name: "Grupal anónimo", val: 2}, {name: "Grupal", val: 3}];
@@ -337,6 +337,7 @@ adpp.controller("DashboardController", function ($scope, $http) {
             let rank = Math.min(Math.floor(N * d.score), N - 1);
             self.barData[0].values[rank].value += 1;
         });
+        self.barOpts.chart.xAxis.axisLabel = "Rendimiento";
     };
 
     self.updateStateRub = () => {
@@ -365,6 +366,7 @@ adpp.controller("DashboardController", function ($scope, $http) {
         let postdata = {repid: self.selectedReport.id};
         $http({url: "get-report-result", method: "post", data: postdata}).success((data) => {
             self.result = data;
+            self.updateState();
         });
     };
 
@@ -390,10 +392,37 @@ adpp.controller("DashboardController", function ($scope, $http) {
             let rank = Math.min(Math.floor(score - 1), N - 1);
             self.barData[0].values[rank].value += 1;
         });
+        self.barOpts.chart.xAxis.axisLabel = "Puntaje";
     };
 
     self.computeDif = () => {
-        ;
+        if(self.result){
+            let pi = self.result.findIndex(e => self.users[e.uid].role == 'P');
+            if(pi != -1){
+                let pval = self.result[pi].val;
+                let difs = [];
+                self.result.forEach((e,i) => {
+                    if(i != pi){
+                        difs.push(Math.abs(pval - e.val));
+                    }
+                });
+                self.buildRubricaDiffData(difs);
+            }
+        }
+    };
+
+    self.buildRubricaDiffData = (difs) => {
+        const N = 6;
+        self.barData[0].values = [];
+        for (let i = 0; i < N; i++) {
+            let lbl = (i*0.5) + " - " + (i + 1)*0.5;
+            self.barData[0].values.push({label: lbl, value: 0});
+        }
+        difs.forEach((d) => {
+            let rank = Math.min(Math.floor(difs*2), N - 1);
+            self.barData[0].values[rank].value += 1;
+        });
+        self.barOpts.chart.xAxis.axisLabel = "Diferencia de Puntaje";
     };
 
 });

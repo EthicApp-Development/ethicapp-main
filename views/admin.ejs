@@ -287,7 +287,7 @@
                                 <span ng-show="text.content.length > 500">...</span>
                             </div>
                             <div class="col-sm-1">
-                                <button class="btn btn-default" ng-click="goToReport(text)"><i class="fa fa-external-link"></i></button>
+                                <button class="btn btn-default" ng-click="goToReport(text)"><i class="fa fa-edit"></i></button>
                                 <button class="btn btn-default" ng-click="setActiveExampleReport(text)" ng-class="{'btn-success':text.active}">
                                     <i class="fa fa-share-alt"></i></button>
                             </div>
@@ -312,12 +312,12 @@
         <div class="pad-content" ng-show="selectedTab == 1" ng-controller="DashboardController">
             <div class="pull-right">
                 <label>Iteración:</label>
-                <select class="" ng-options="x.val as x.name for x in iterationNames" ng-model="iterationIndicator"></select>
+                <select class="" ng-options="x.val as x.name for x in iterationNames" ng-model="iterationIndicator" ng-change="updateState()"></select>
                 <button class="btn btn-default" ng-click="updateState()">Actualizar</button>
             </div>
             <h4>Resultados</h4>
             <nvd3 options="barOpts" data="barData"></nvd3>
-            <div class="row">
+            <div class="row" ng-show="iterationIndicator < 5">
                 <div class="col-sm-4 col-sm-offset-2">
                     Completo: <strong>{{numComplete}} / {{numUsers}}</strong>
                 </div>
@@ -360,7 +360,8 @@
             <div class="row">
                 <div class="col-sm-2">Texto: </div>
                 <div class="col-sm-8">
-                    <select class="form-control" ng-model="selectedReport" ng-options="showName(x) for x in exampleReports"></select>
+                    <select class="form-control" ng-model="selectedReport" ng-options="showName(x) for x in exampleReports"
+                            ng-change="getReportResult()"></select>
                 </div>
                 <div class="col-sm-2">
                     <button class="btn btn-default" ng-click="getReportResult()">Ver resultados</button>
