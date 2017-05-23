@@ -65,7 +65,7 @@ router.post("/upload-file", (req, res) => {
             sql: "insert into documents(title,path,sesid,uploader) values ($1,$2,$3,$4)",
             sqlParams: [rpg.param("post", "title"), rpg.param("calc", "path"), rpg.param("post", "sesid"), rpg.param("ses", "uid")],
             onStart: (ses, data, calc) => {
-                calc.path = req.files.pdf.file
+                calc.path = "uploads" + req.files.pdf.file.split("uploads")[1];
             },
             onEnd: () => {
             }
