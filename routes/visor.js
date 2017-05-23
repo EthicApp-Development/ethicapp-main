@@ -116,9 +116,16 @@ router.get("/select", (req, res) => {
 
 router.post("/get-documents", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select id, title, path from documents where sesid = $1",
+    sql: "select id, title, path from documents where sesid = $1 and active = true",
     sesReqData: ["uid", "ses"],
     sqlParams: [rpg.param("ses", "ses")]
+}));
+
+router.post("/delete-document", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "update documents set active = false where id = $1",
+    postReqData: ["docid"],
+    sqlParams: [rpg.param("post", "docid")]
 }));
 
 router.post("/get-questions", rpg.multiSQL({

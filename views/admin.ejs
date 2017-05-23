@@ -92,7 +92,7 @@
                     <div class="list-group-item" ng-repeat="doc in documents">
                         <i class="fa fa-file-text-o"></i> <strong ng-bind="doc.title"></strong>
                         <a href="{{doc.path}}" class="discrete"> - Ver documento original</a>
-                        <button class="btn btn-xs btn-default pull-right" ng-disabled="selectedSes.status!=1">Eliminar</button>
+                        <button class="btn btn-xs btn-default pull-right" ng-disabled="selectedSes.status!=1" ng-click="deleteDocument(doc.id)">Eliminar</button>
                     </div>
                 </div>
                 <br>

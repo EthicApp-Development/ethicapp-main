@@ -76,7 +76,7 @@ router.post("/upload-file", (req, res) => {
 
 router.post("/documents-session", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select id, title, path from documents where sesid = $1",
+    sql: "select id, title, path from documents where sesid = $1 and active = true",
     postReqData: ["sesid"],
     sqlParams: [rpg.param("post", "sesid")]
 }));

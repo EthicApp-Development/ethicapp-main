@@ -60,6 +60,13 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         });
     };
 
+    self.deleteDocument = (docid) => {
+        let postdata = {docid: docid};
+        $http({url: "delete-document", method: "post", data: postdata}).success((data) => {
+            self.requestDocuments();
+        });
+    };
+
     self.requestQuestions = () => {
         let postdata = {sesid: self.selectedSes.id};
         $http({url: "questions-session", method: "post", data: postdata}).success((data) => {
