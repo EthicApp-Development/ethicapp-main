@@ -317,7 +317,7 @@
             </div>
             <h4>Resultados</h4>
             <nvd3 options="barOpts" data="barData"></nvd3>
-            <div class="row" ng-show="iterationIndicator < 5">
+            <div class="row" ng-show="iterationIndicator < 5 && selectesSes.type == 'L'">
                 <div class="col-sm-4 col-sm-offset-2">
                     Completo: <strong>{{numComplete}} / {{numUsers}}</strong>
                 </div>

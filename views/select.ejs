@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>DocCollab</title>
     <script src="libs/angular.min.js"></script>
+    <script src="libs/angular-timer.min.js"></script>
     <script src="js/select-ctrl.min.js"></script>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
     <link rel="stylesheet" href="css/font-awesome.min.css">
@@ -14,10 +15,22 @@
 
 <div class="editor-container" ng-controller="SelectController">
 
+    <div class="row top-bar-mini">
+        <div class="text-center">
+            <span ng-repeat="st in sesStatusses">
+                <span class="label label-primary" ng-class="{'bg-black-alpha': $index==iteration-1}" ng-bind="st"></span>
+                <span ng-hide="$last">→</span>
+            </span>
+            <span class="pull-right margin-right-24" ng-show="sesSTime != null">
+                <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
+            </span>
+        </div>
+    </div>
+
     <div class="row top-bar">
         <div class="col-sm-6 full-height simple-padding-top">
             <strong class="simple-margin-left" ng-bind="sesName"></strong>
-            <span> - Preguntas: {{questions.length}} - Iteración: {{iteration}}</span>
+            <span> - Preguntas: {{questions.length}}</span>
         </div>
         <div class="col-sm-6">
             <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>
@@ -44,7 +57,7 @@
                     </span>
                 </div>
                 <br>
-                <table class="table table-condensed table-bordered">
+                <table class="table table-condensed table-bordered" ng-show="iteration > 1">
                     <tr>
                         <th class="col-sm-2">Alumno</th>
                         <th class="col-sm-5">Iteración 1</th>

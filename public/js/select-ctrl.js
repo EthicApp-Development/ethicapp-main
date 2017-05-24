@@ -1,6 +1,6 @@
 "use strict";
 
-let app = angular.module("Select", []);
+let app = angular.module("Select", ["timer"]);
 
 app.controller("SelectController", ["$scope", "$http", function ($scope, $http) {
     let self = $scope;
@@ -20,6 +20,8 @@ app.controller("SelectController", ["$scope", "$http", function ($scope, $http) 
     self.ansIter1 = {};
     self.ansIter2 = {};
 
+    self.sesStatusses = ["Individual", "Anónimo", "Grupal", "Finalizada"];
+
     self.init = () => {
         self.loadQuestions();
         self.getSesInfo();
@@ -30,6 +32,7 @@ app.controller("SelectController", ["$scope", "$http", function ($scope, $http) 
             self.iteration = data.iteration + 1;
             self.myUid = data.uid;
             self.sesName = data.name;
+            self.sesSTime = data.stime;
             let set = new Set();
             if(self.iteration > 1) {
                 $http({url: "get-team-selection", method: "post", data: {iteration: 1}}).success((data) => {
