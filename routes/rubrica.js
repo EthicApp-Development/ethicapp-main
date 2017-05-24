@@ -205,4 +205,25 @@ router.post("/get-report-result-all", rpg.multiSQL({
     }
 }));
 
+router.post("/get-report-ideas", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select idea_id as ideaid from report_ideas where rid = $1",
+    postReqData: ["repid"],
+    sqlParams: [rpg.param("post","repid")]
+}));
+
+router.post("/clear-report-ideas", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "delete from report_ideas where rid = $1",
+    postReqData: ["repid"],
+    sqlParams: [rpg.param("post","repid")]
+}));
+
+router.post("/send-report-idea", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "insert into report_ideas(rid,idea_id) values ($1,$2)",
+    postReqData: ["repid", "iid"],
+    sqlParams: [rpg.param("post","repid"), rpg.param("post","iid")]
+}));
+
 module.exports = router;

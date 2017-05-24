@@ -410,3 +410,7 @@ span.boxed{
 .angular-ui-tree-empty{
     display: none;
 }
+
+.bg-warning{
+    background: #fbd387;
+}

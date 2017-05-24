@@ -23,6 +23,8 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
     self.followLeader = false;
     self.leader = false;
     self.teamId = -1;
+    self.reportIdeas = {};
+    self.shared = {};
 
     self.iterationNames = ["Lectura", "Individual", "Grupal Anónimo", "Grupal"];
     self.sesStatusses = ["Lectura", "Individual", "Anónimo", "Grupal", "Reporte", "Rubrica Calibración", "Evaluación de Pares", "Finalizada"];
@@ -366,6 +368,48 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
         });
     };
 
+
+    self.toggleUseIdea = (ideaId) => {
+        if(self.reportIdeas[ideaId] == null)
+            self.reportIdeas[ideaId] = true;
+        else
+            self.reportIdeas[ideaId] = !self.reportIdeas[ideaId];
+    };
+
+    self.shared.getReportIdeas = () => {
+        let postdata = {repid: self.shared.idReport};
+        $http({url:"get-report-ideas", method:"post", data:postdata}).success((data) => {
+            data.forEach((row) => {
+                self.reportIdeas[row.ideaid] = true;
+            });
+        });
+    };
+
+    self.shared.sendReportIdeas = () => {
+        if(self.shared.idReport != null){
+            let postdata = {repid: self.shared.idReport};
+            $http({url: "clear-report-ideas", method: "post", data: postdata}).success((data) => {
+                if(data.status == "ok"){
+                    for(var iid in self.reportIdeas){
+                        if(self.reportIdeas[iid]){
+                            $http({url: "send-report-idea", method: "post", data: {repid: self.shared.idReport, iid:iid}}).success((data) => {
+                                console.log("Report idea sent");
+                            });
+                        }
+                    }
+                }
+            })
+        }
+        else{
+            $http({url:"get-my-report", method:"post"}).success((data) => {
+                if (data.status == "ok"){
+                    self.shared.idReport = data.id;
+                    self.shared.sendReportIdeas();
+                }
+            });
+        }
+    };
+
     self.init();
 
 }]);
@@ -385,6 +429,7 @@ app.controller("ReportController", ["$scope", "$http", function ($scope, $http) 
         $http({url:"send-report", method:"post", data:postdata}).success((data) => {
             if (data.status == "ok"){
                 self.lastSent = new Date();
+                self.shared.sendReportIdeas();
             }
         });
     };
@@ -393,6 +438,8 @@ app.controller("ReportController", ["$scope", "$http", function ($scope, $http) 
         $http({url:"get-my-report", method:"post"}).success((data) => {
             if (data.status == "ok"){
                 self.content = data.content;
+                self.shared.idReport = data.id;
+                self.shared.getReportIdeas();
             }
         });
     };
