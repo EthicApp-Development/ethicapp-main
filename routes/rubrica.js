@@ -197,7 +197,7 @@ router.post("/get-report-result-all", rpg.multiSQL({
         });
         let resArr = Object.keys(d).map(repObj => {
             return Object.keys(d[repObj]).map(u => {
-                return {uid: u, val: d[repObj][u]};
+                return {uid: u, val: d[repObj][u], rid: repObj};
             })
         });
         console.log(d);

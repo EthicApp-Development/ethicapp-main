@@ -387,7 +387,7 @@ router.post("/assign-pairs", (req, res) => {
     res.header("Content-type", "application/json");
     if (req.session.role != "P" || req.body.sesid == null || req.body.rnum == null) {
         console.log("Data not provided");
-        res.end('{"status":"err"}');
+        res.end('{"status":"err", "msg":"No hay datos suficientes"}');
         return;
     }
     let ses = req.body.sesid;
@@ -399,7 +399,7 @@ router.post("/assign-pairs", (req, res) => {
             let n = arr.length;
             if (m >= n) {
                 console.log("More pairs than reports");
-                res.end('{"status":"err"}');
+                res.end('{"status":"err", "msg":"No hay suficientes reportes completos para asignar pares"}');
                 return;
             }
 
@@ -419,7 +419,7 @@ router.post("/assign-pairs", (req, res) => {
                     console.log("Seleccionable son: " + sel);
                     if(sel.length == 0 || sel.length == 1 && sel[0] == uids[i]){
                         console.log("Infinite loop");
-                        res.end('{"status":"err"}');
+                        res.end('{"status":"err", "msg":"Error de consistencia de los pares formados. Intente nuevamente"}');
                         return;
                     }
                     let r = ~~(Math.random()*sel.length);
@@ -437,12 +437,12 @@ router.post("/assign-pairs", (req, res) => {
 
             let pairstr = pairs.map(e => "("+e.uid+","+e.rid+")");
             if(pairs.length != n*m){
-                res.end('{"status":"err"}');
+                res.end('{"status":"err", "msg":"Error de consistencia de los pares formados. Intente nuevamente"}');
                 return;
             }
             if(hasDuplicates(pairstr)){
                 console.log("Se encontraron duplicados");
-                res.end('{"status":"err"}');
+                res.end('{"status":"err", "msg":"Error de duplicación de pares asignados. Intente nuevamente"}');
                 return;
             }
             console.log("Pairs formed: " + pairstr.join(" "));

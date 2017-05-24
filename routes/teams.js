@@ -52,9 +52,9 @@ router.post("/get-team-sync-ideas", rpg.multiSQL({
 
 router.post("/check-team-answer",rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select t.uid, s.answer from (select uid from teamusers where tmid in (select tmid from teams inner join teamusers " +
-        "on id = tmid where uid = $1 and sesid = $2)) as t left outer join (select uid, answer from selection where iteration = 3 " +
-        "and qid = $3) as s on s.uid = t.uid",
+    sql: "select t.uid, s.answer, q.comment, q.answer as realanswer from (select uid from teamusers where tmid in (select tmid from teams inner join teamusers " +
+        "on id = tmid where uid = $1 and sesid = $2)) as t left outer join (select uid, answer, qid from selection where iteration = 3 " +
+        "and qid = $3) as s on s.uid = t.uid inner join questions as q on s.qid = q.id",
     sesReqData: ["ses","uid"],
     postReqData: ["qid"],
     sqlParams: [rpg.param("ses","uid"),rpg.param("ses","ses"),rpg.param("post","qid")],
@@ -62,16 +62,23 @@ router.post("/check-team-answer",rpg.multiSQL({
         let answered = true;
         let option = null;
         let sameOption = true;
+        let real_ans = null;
+        let real_comment = null;
         arr.forEach((row) => {
             answered = answered && row.answer != null;
             option = (option == null)? row.answer : option;
             sameOption = sameOption && row.answer == option;
+            real_ans = row.realanswer;
+            real_comment = row.comment;
         });
         if(!answered){
             res.end('{"status":"incomplete"}');
         }
         else if(!sameOption){
             res.end('{"status":"different"}');
+        }
+        else if(option != real_ans){
+            res.end('{"status":"incorrect", "msg": "'+real_comment+'"}');
         }
         else{
             res.end('{"status":"ok"}');

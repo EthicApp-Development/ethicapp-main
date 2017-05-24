@@ -419,6 +419,7 @@ adpp.controller("DashboardController", function ($scope, $http) {
     };
 
     self.buildRubricaDiffData = (difs) => {
+        console.log("difs", difs);
         const N = 6;
         self.barData[0].values = [];
         for (let i = 0; i < N; i++) {
@@ -426,10 +427,18 @@ adpp.controller("DashboardController", function ($scope, $http) {
             self.barData[0].values.push({label: lbl, value: 0});
         }
         difs.forEach((d) => {
-            let rank = Math.min(Math.floor(difs*2), N - 1);
+            let rank = Math.min(Math.floor(d*2), N - 1);
             self.barData[0].values[rank].value += 1;
         });
         self.barOpts.chart.xAxis.axisLabel = "Diferencia de Puntaje";
+    };
+
+    self.getReportAuthor = (rid) => {
+        if(self.reports){
+            let rep = self.reports.find(e => e.id == rid);
+            if(rep)
+                return (self.users[rep.uid]) ? self.users[rep.uid].name : null;
+        }
     };
 
 });
@@ -610,6 +619,9 @@ adpp.controller("RubricaController", function ($scope, $http) {
         $http({url: "assign-pairs", method: "post", data: postdata}).success((data) => {
             if (data.status == "ok") {
                 self.selectedSes.paired = true;
+            }
+            else{
+                self.errPairMsg = data.msg;
             }
         });
     };
