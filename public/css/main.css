@@ -414,3 +414,8 @@ span.boxed{
 .bg-warning{
     background: #fbd387;
 }
+
+.boxed{
+    border: 1px solid #ccc;
+    padding: 8px;
+}

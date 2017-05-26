@@ -1,6 +1,6 @@
 "use strict";
 
-let adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer"]);
+let adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification"]);
 
 adpp.controller("AdminController", function ($scope, $http, $uibModal, $location, $locale) {
     let self = $scope;
@@ -115,8 +115,7 @@ adpp.controller("TabsController", function ($scope, $http) {
         }
         self.selectedTabConfig = -1;
         if(self.selectedSes.status == 7){
-            self.selectedTab = 0;
-            self.selectedTabConfig = 2;
+            self.shared.gotoRubrica();
         }
     };
 
@@ -149,9 +148,19 @@ adpp.controller("TabsController", function ($scope, $http) {
         self.selectedTabConfig = idx;
     };
 
+    self.shared.gotoGrupos = () => {
+        self.selectedTab = 0;
+        self.selectedTabConfig = 1;
+    };
+
+    self.shared.gotoRubrica = () => {
+        self.selectedTab = 0;
+        self.selectedTabConfig = 2;
+    };
+
 });
 
-adpp.controller("SesEditorController", function ($scope, $http) {
+adpp.controller("SesEditorController", function ($scope, $http, Notification) {
     let self = $scope;
 
     self.updateSession = () => {
@@ -164,8 +173,16 @@ adpp.controller("SesEditorController", function ($scope, $http) {
 
     self.shared.changeState = () => {
         if (self.selectedSes.status >= self.sesStatusses.length) return;
-        if (self.selectedSes.status >= 3 && !self.selectedSes.grouped) return;
-        if (self.selectedSes.status >= 7 && !self.selectedSes.paired) return;
+        if (self.selectedSes.status >= 3 && !self.selectedSes.grouped){
+            self.shared.gotoGrupos();
+            Notification.error("Los grupos no han sido generados");
+            return;
+        }
+        if (self.selectedSes.status >= 7 && !self.selectedSes.paired){
+            self.shared.gotoRubrica();
+            Notification.error("Los pares para la evaluación de pares no han sido asignados");
+            return;
+        }
         let postdata = {sesid: self.selectedSes.id};
         $http({url: "change-state-session", method: "post", data: postdata}).success((data) => {
             self.shared.updateSesData();
@@ -619,6 +636,7 @@ adpp.controller("RubricaController", function ($scope, $http) {
         $http({url: "assign-pairs", method: "post", data: postdata}).success((data) => {
             if (data.status == "ok") {
                 self.selectedSes.paired = true;
+                self.errPairMsg = "";
             }
             else{
                 self.errPairMsg = data.msg;

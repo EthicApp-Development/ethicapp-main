@@ -122,6 +122,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", function ($sc
             iteration: 1,
             order: sel.order - 1
         };
+        self.order = sel.order;
         if (sel.status == "unsaved") {
             $http({url: "send-pauta-idea", method: "post", data: postadata}).success((data) => {
                 if (data.status == "ok") {

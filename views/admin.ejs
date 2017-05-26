@@ -5,6 +5,7 @@
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
     <link rel="stylesheet" href="css/font-awesome.min.css"/>
     <link rel="stylesheet" href="css/nv.d3.min.css">
+    <link rel="stylesheet" href="css/angular-ui-notification.min.css">
     <link rel="stylesheet" href="css/main.css"/>
     <script src="libs/angular.min.js"></script>
     <script src="libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
@@ -13,6 +14,7 @@
     <script src="libs/nv.d3.min.js"></script>
     <script src="libs/angular-nvd3.min.js"></script>
     <script src="libs/angular-timer.min.js"></script>
+    <script src="libs/angular-ui-notification.min.js"></script>
     <script src="js/admin-ctrl.js"></script>
 </head>
 <body class="bg-white" ng-controller="AdminController">
@@ -66,14 +68,12 @@
 
         <br>
         <br>
+        <hr>
+        <br>
 
         <!-- CONFIGURACION -->
         <div class="pad-content" ng-show="selectedTab == 0" ng-controller="SesEditorController">
-            <br>
-            <hr>
-            <br>
             <div ng-show="selectedTabConfig == -1">
-            <h4>Detalles</h4>
             <label>Titulo:</label>
             <input type="text" class="form-control" ng-model="selectedSes.name" ng-disabled="selectedSes.status!=1">
             <br>
@@ -98,8 +98,8 @@
                 <br>
                 <label>Agregar documento:</label>
                 <form class="input-group" action="upload-file" method="post" enctype="multipart/form-data">
-                    <input type="text" class="form-control" name="title" placeholder="Titulo" ng-disabled="selectedSes.status!=1">
-                    <input type="file" class="form-control" name="pdf" ng-disabled="selectedSes.status!=1">
+                    <input type="text" class="form-control" name="title" placeholder="Titulo" required ng-disabled="selectedSes.status!=1">
+                    <input type="file" class="form-control" name="pdf" ng-disabled="selectedSes.status!=1" required>
                     <input type="text" ng-model="selectedSes.id" name="sesid" hidden>
                     <span class="input-group-btn">
                     <button class="btn btn-default" ng-disabled="selectedSes.status!=1">Subir</button>
@@ -137,9 +137,9 @@
             <br>
             <hr>
             <br>
-            </div>
-
             <h4>Configuración</h4>
+            </div>
+            <div ng-class="{boxed: selectedTabConfig >= 0}">
             <a class="pull-right btn btn-default" ng-click="setTabConfig(-1)"><i class="fa fa-close"></i></a>
             <div class="row">
             <div class="btn-group center-block w500">
@@ -220,7 +220,7 @@
                 </table>
                 <hr>
                 <h4 ng-if="!selectedSes.grouped">Editor de Grupos:</h4>
-                <table class="table table-bordered" ng-if="!selectedSes.grouped">
+                <table class="table table-bordered table-hover" ng-if="!selectedSes.grouped">
                     <tr ng-repeat="group in groupsProp">
                         <td ng-bind="$index + 1"></td>
                         <td ng-repeat="alum in group" class="pointable" ng-click="swapTable($parent.$index,$index)"
@@ -306,6 +306,7 @@
                 <span class="red" ng-bind="errPairMsg"></span>
             </div>
             <!-- / RUBRICA -->
+            </div>
         </div>
         <!-- / CONFIGURACION -->
 
@@ -316,7 +317,7 @@
                 <select class="" ng-options="x.val as x.name for x in iterationNames" ng-model="iterationIndicator" ng-change="updateState()"></select>
                 <button class="btn btn-default" ng-click="updateState()">Actualizar</button>
             </div>
-            <h4>Resultados</h4>
+            <h4></h4>
             <nvd3 options="barOpts" data="barData"></nvd3>
             <div class="row" ng-show="iterationIndicator < 5 && selectesSes.type == 'L'">
                 <div class="col-sm-4 col-sm-offset-2">
