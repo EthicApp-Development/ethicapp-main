@@ -76,7 +76,10 @@
                 </table>
                 <h4>Comentario:</h4>
                 <textarea class="form-control" ng-model="report.comment" ng-disabled="!canAnswer"></textarea>
-                <button class="pull-right btn btn-default" ng-click="sendSelection(report)" ng-disabled="!checkCriteria(report) || !canAnswer">Enviar</button>
+                <button class="pull-right btn btn-default" ng-click="sendSelection(report)" ng-disabled="!checkCriteria(report) || !canAnswer"
+                    ng-class="{'btn-success': report.status == 'SENT', 'btn-warning': report.status == 'DIRTY'}">
+                    <i class="fa fa-send"></i> Enviar
+                </button>
                 <div class="row"></div>
             </div>
             <br>

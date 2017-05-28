@@ -1,12 +1,12 @@
 "use strict";
 
-let app = angular.module("Editor", ['ui.tree', 'btford.socket-io', "timer"]);
+let app = angular.module("Editor", ['ui.tree', 'btford.socket-io', "timer", "ui-notification"]);
 
 app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
 
-app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", function ($scope, $http, $timeout, $socket) {
+app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", "Notification", function ($scope, $http, $timeout, $socket, Notification) {
     let self = $scope;
 
     self.iteration = 0;
@@ -75,6 +75,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
     };
 
     self.finishState = () => {
+        self.setSelOrder();
         let postdata = {status: self.iteration + 2};
         $http({url: "record-finish", method: "post", data: postdata}).success((data) => {
             console.log("FINISH");
@@ -115,7 +116,10 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
             expanded: true,
             status: "unsaved"
         };
-        if (textDef.length < 2 || textDef.length > 50) return;
+        if (textDef.length < 2 || textDef.length > 50){
+            Notification.warning("El texto es muy largo para ser usado como una idea fuerza");
+            return;
+        }
         self.highlightSerial(textDef.serial, textDef.document);
         self.selections.push(textDef);
     };
@@ -295,7 +299,10 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", fu
     };
 
     self.setSelOrder = () => {
-        if (!self.checkAllSync()) return;
+        if (!self.checkAllSync()){
+            Notification.warning("Hay ideas que no han sido enviadas.");
+            return;
+        }
         let order = self.selections.map(e => e.id);
         let postdata = {orden: order};
         $http({url: "set-ideas-orden", method: "post", data: postdata}).success((data) => {

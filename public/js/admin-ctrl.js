@@ -14,7 +14,10 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.users = {};
     self.selectedIndex = -1;
     self.sesStatusses = ["No Publicada", "Lectura", "Personal", "Anónimo", "Grupal", "Finalizada"];
-    self.iterationNames = [{name: "Lectura", val: 0}, {name: "Individual", val: 1}, {name: "Grupal anónimo", val: 2}, {name: "Grupal", val: 3}];
+    self.iterationNames = [{name: "Lectura", val: 0}, {name: "Individual", val: 1}, {
+        name: "Grupal anónimo",
+        val: 2
+    }, {name: "Grupal", val: 3}];
 
     self.init = () => {
         self.shared.updateSesData();
@@ -38,7 +41,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         $http({url: "get-session-list", method: "post"}).success((data) => {
             console.log("Session data updated");
             self.sessions = data;
-            if(self.selectedIndex != -1)
+            if (self.selectedIndex != -1)
                 self.selectSession(self.selectedIndex);
             else {
                 self.sesFromURL();
@@ -49,7 +52,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.sesFromURL = () => {
         let sesid = +($location.path().substring(1));
         let sidx = self.sessions.findIndex(e => e.id == sesid);
-        if(sidx != -1)
+        if (sidx != -1)
             self.selectSession(sidx);
     };
 
@@ -59,6 +62,8 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
             self.documents = data;
         });
     };
+
+    self.shared.updateDocuments = self.requestDocuments;
 
     self.deleteDocument = (docid) => {
         let postdata = {docid: docid};
@@ -104,24 +109,30 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
 adpp.controller("TabsController", function ($scope, $http) {
     let self = $scope;
     self.tabOptions = ["Descripción", "Dashboard"];
-    self.tabConfig = ["Usuarios","Grupos"];
+    self.tabConfig = ["Usuarios", "Grupos"];
     self.selectedTab = 0;
     self.selectedTabConfig = -1;
 
     self.shared.resetTab = () => {
         self.selectedTab = 0;
-        if(self.selectedSes != null && self.selectedSes.status > 1){
+        if (self.selectedSes != null && self.selectedSes.status > 1) {
             self.selectedTab = 1;
         }
         self.selectedTabConfig = -1;
-        if(self.selectedSes.status == 7){
+        if (self.selectedSes.status == 7) {
             self.shared.gotoRubrica();
         }
     };
 
     self.shared.verifyTabs = () => {
         if (self.selectedSes.type == "L") {
-            self.iterationNames = [{name: "Lectura", val: 0}, {name: "Individual", val: 1}, {name: "Grupal anónimo", val: 2}, {name: "Grupal", val: 3}, {name: "Reporte", val: 4}, {name: "Calibración Rubrica", val: 5}, {name: "Evaluación de Pares", val: 6}];
+            self.iterationNames = [{name: "Lectura", val: 0}, {name: "Individual", val: 1}, {
+                name: "Grupal anónimo",
+                val: 2
+            }, {name: "Grupal", val: 3}, {name: "Reporte", val: 4}, {
+                name: "Calibración Rubrica",
+                val: 5
+            }, {name: "Evaluación de Pares", val: 6}];
             self.tabOptions = ["Configuración", "Dashboard"];
             self.tabConfig = ["Usuarios", "Grupos", "Rúbrica"];
             self.sesStatusses = ["Configuración", "Lectura", "Individual", "Anónimo", "Grupal", "Reporte", "Rubrica Calibración", "Evaluación de Pares", "Finalizada"];
@@ -130,12 +141,15 @@ adpp.controller("TabsController", function ($scope, $http) {
             self.shared.getReports();
         }
         else {
-            self.iterationNames = [{name: "Individual", val: 1}, {name: "Grupal anónimo", val: 2}, {name: "Grupal", val: 3}];
+            self.iterationNames = [{name: "Individual", val: 1}, {name: "Grupal anónimo", val: 2}, {
+                name: "Grupal",
+                val: 3
+            }];
             self.tabOptions = ["Configuración", "Dashboard"];
-            self.tabConfig = ["Usuarios","Grupos"];
+            self.tabConfig = ["Usuarios", "Grupos"];
             self.sesStatusses = ["Configuración", "Individual", "Anónimo", "Grupal", "Finalizada"];
         }
-        if(self.selectedSes.status > 1){
+        if (self.selectedSes.status > 1) {
             self.selectedTab = 1;
         }
     };
@@ -160,6 +174,29 @@ adpp.controller("TabsController", function ($scope, $http) {
 
 });
 
+adpp.controller("DocumentsController", function ($scope, $http, Notification) {
+    let self = $scope;
+
+    self.busy = false;
+
+    self.uploadDocument = (event) => {
+        self.busy = true;
+        let fd = new FormData(event.target);
+        $http.post("upload-file", fd, {
+            transformRequest: angular.identity,
+            headers: {'Content-Type': undefined}
+        }).success((data) => {
+            if(data.status == "ok"){
+                Notification.success("Documento cargado correctamente");
+                event.target.reset();
+                self.busy = false;
+                self.shared.updateDocuments();
+            }
+        });
+    };
+
+});
+
 adpp.controller("SesEditorController", function ($scope, $http, Notification) {
     let self = $scope;
 
@@ -173,12 +210,12 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
 
     self.shared.changeState = () => {
         if (self.selectedSes.status >= self.sesStatusses.length) return;
-        if (self.selectedSes.status >= 3 && !self.selectedSes.grouped){
+        if (self.selectedSes.status >= 3 && !self.selectedSes.grouped) {
             self.shared.gotoGrupos();
             Notification.error("Los grupos no han sido generados");
             return;
         }
-        if (self.selectedSes.status >= 7 && !self.selectedSes.paired){
+        if (self.selectedSes.status >= 7 && !self.selectedSes.paired) {
             self.shared.gotoRubrica();
             Notification.error("Los pares para la evaluación de pares no han sido asignados");
             return;
@@ -257,11 +294,11 @@ adpp.controller("DashboardController", function ($scope, $http) {
     self.iterationIndicator = 1;
 
     self.shared.resetGraphs = () => {
-        if(self.selectedSes != null && self.selectedSes.type == "L"){
-            self.iterationIndicator = Math.max(Math.min(6,self.selectedSes.status-2),0);
+        if (self.selectedSes != null && self.selectedSes.type == "L") {
+            self.iterationIndicator = Math.max(Math.min(6, self.selectedSes.status - 2), 0);
         }
-        else if(self.selectedSes.type == "S"){
-            self.iterationIndicator = Math.max(Math.min(3,self.selectedSes.status-1),1);
+        else if (self.selectedSes.type == "S") {
+            self.iterationIndicator = Math.max(Math.min(3, self.selectedSes.status - 1), 1);
         }
         self.alumState = null;
         self.barOpts = {
@@ -286,7 +323,7 @@ adpp.controller("DashboardController", function ($scope, $http) {
     };
 
     self.updateState = () => {
-        if(self.iterationIndicator <= 4)
+        if (self.iterationIndicator <= 4)
             self.updateStateIni();
         else
             self.updateStateRub();
@@ -326,11 +363,11 @@ adpp.controller("DashboardController", function ($scope, $http) {
                 self.numProgress = 0;
                 self.numUsers = Object.keys(self.users).length - 1;
                 let n = self.documents.length * 3;
-                if(n!=0) {
+                if (n != 0) {
                     data.forEach((d) => {
-                        self.numProgress += d.count/n;
+                        self.numProgress += d.count / n;
                     });
-                    self.numProgress *= 100/self.numUsers;
+                    self.numProgress *= 100 / self.numUsers;
                 }
             });
         }
@@ -342,7 +379,7 @@ adpp.controller("DashboardController", function ($scope, $http) {
             data.forEach((row) => {
                 self.numComplete += 1;
                 let ai = self.alumState.findIndex(e => e.uid == row.uid);
-                if(ai == -1)
+                if (ai == -1)
                     self.alumState.push(row);
                 else
                     self.alumState[ai].dtime = ~~(row.dtime);
@@ -365,14 +402,14 @@ adpp.controller("DashboardController", function ($scope, $http) {
     };
 
     self.updateStateRub = () => {
-        if(self.iterationIndicator == 5)
+        if (self.iterationIndicator == 5)
             self.computeDif();
-        else if(self.iterationIndicator == 6)
+        else if (self.iterationIndicator == 6)
             self.getAllReportResult();
     };
 
     self.showName = (report) => {
-        if(report.example)
+        if (report.example)
             return report.title + " - Texto ejemplo";
         else
             return report.id + " - Reporte de Alumno " + self.users[report.uid].name;
@@ -412,7 +449,7 @@ adpp.controller("DashboardController", function ($scope, $http) {
             self.barData[0].values.push({label: lbl, value: 0});
         }
         data.forEach((d) => {
-            let score = d.reduce((e,v) => e + v.val, 0) / d.length;
+            let score = d.reduce((e, v) => e + v.val, 0) / d.length;
             let rank = Math.min(Math.floor(score - 1), N - 1);
             self.barData[0].values[rank].value += 1;
         });
@@ -420,13 +457,13 @@ adpp.controller("DashboardController", function ($scope, $http) {
     };
 
     self.computeDif = () => {
-        if(self.result){
+        if (self.result) {
             let pi = self.result.findIndex(e => self.users[e.uid].role == 'P');
-            if(pi != -1){
+            if (pi != -1) {
                 let pval = self.result[pi].val;
                 let difs = [];
-                self.result.forEach((e,i) => {
-                    if(i != pi){
+                self.result.forEach((e, i) => {
+                    if (i != pi) {
                         difs.push(Math.abs(pval - e.val));
                     }
                 });
@@ -440,20 +477,20 @@ adpp.controller("DashboardController", function ($scope, $http) {
         const N = 6;
         self.barData[0].values = [];
         for (let i = 0; i < N; i++) {
-            let lbl = (i*0.5) + " - " + (i + 1)*0.5;
+            let lbl = (i * 0.5) + " - " + (i + 1) * 0.5;
             self.barData[0].values.push({label: lbl, value: 0});
         }
         difs.forEach((d) => {
-            let rank = Math.min(Math.floor(d*2), N - 1);
+            let rank = Math.min(Math.floor(d * 2), N - 1);
             self.barData[0].values[rank].value += 1;
         });
         self.barOpts.chart.xAxis.axisLabel = "Diferencia de Puntaje";
     };
 
     self.getReportAuthor = (rid) => {
-        if(self.reports){
+        if (self.reports) {
             let rep = self.reports.find(e => e.id == rid);
-            if(rep)
+            if (rep)
                 return (self.users[rep.uid]) ? self.users[rep.uid].name : null;
         }
     };
@@ -607,7 +644,11 @@ adpp.controller("RubricaController", function ($scope, $http) {
     };
 
     self.sendExampleReport = () => {
-        let postdata = {sesid: self.selectedSes.id, content: self.newExampleReport.text, title: self.newExampleReport.title};
+        let postdata = {
+            sesid: self.selectedSes.id,
+            content: self.newExampleReport.text,
+            title: self.newExampleReport.title
+        };
         $http({url: "send-example-report", method: "post", data: postdata}).success((data) => {
             self.newExampleReport = "";
             self.shared.getExampleReports();
@@ -638,7 +679,7 @@ adpp.controller("RubricaController", function ($scope, $http) {
                 self.selectedSes.paired = true;
                 self.errPairMsg = "";
             }
-            else{
+            else {
                 self.errPairMsg = data.msg;
             }
         });
@@ -646,7 +687,7 @@ adpp.controller("RubricaController", function ($scope, $http) {
 
 });
 
-adpp.controller("DashboardRubricaController", function($scope, $http){
+adpp.controller("DashboardRubricaController", function ($scope, $http) {
     let self = $scope;
     self.reports = [];
     self.result = [];

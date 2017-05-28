@@ -75,6 +75,7 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", function ($sc
             $http({url: "send-report-comment", method:"post", data:postdata}).success((data) => {
                 console.log("ok");
             });
+            report.status = "SENT";
             if(self.iteration == 5){
                 self.canAnswer = false;
                 let postdata = {rid: report.id};
@@ -93,6 +94,7 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", function ($sc
     self.fillSelections = () => {
         self.reports.forEach((report) => {
             let postdata = {rid: report.id};
+            self.canAnswer = true;
             $http({url: "get-criteria-selection", method:"post", data:postdata}).success((data) => {
                 report.select = {};
                 data.forEach((sel) => {

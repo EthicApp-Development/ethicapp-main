@@ -71,7 +71,7 @@ router.post("/upload-file", (req, res) => {
             }
         })(req, res);
     }
-    res.redirect("admin");
+    res.end('{"status":"ok"}');
 });
 
 router.post("/documents-session", rpg.multiSQL({

@@ -86,7 +86,7 @@
             <br>
             <hr>
             <br>
-            <div ng-show="selectedSes.type == 'L'">
+            <div ng-show="selectedSes.type == 'L'" ng-controller="DocumentsController">
                 <h4>Documentos</h4>
                 <div class="list-group">
                     <div class="list-group-item" ng-repeat="doc in documents">
@@ -97,12 +97,12 @@
                 </div>
                 <br>
                 <label>Agregar documento:</label>
-                <form class="input-group" action="upload-file" method="post" enctype="multipart/form-data">
+                <form id="doc-form" class="input-group" ng-submit="uploadDocument($event)" enctype="multipart/form-data">
                     <input type="text" class="form-control" name="title" placeholder="Titulo" required ng-disabled="selectedSes.status!=1">
                     <input type="file" class="form-control" name="pdf" ng-disabled="selectedSes.status!=1" required>
                     <input type="text" ng-model="selectedSes.id" name="sesid" hidden>
                     <span class="input-group-btn">
-                    <button class="btn btn-default" ng-disabled="selectedSes.status!=1">Subir</button>
+                    <button class="btn btn-default" ng-disabled="selectedSes.status!=1 || busy">Subir <i ng-show="busy" class="fa fa-spinner fa-pulse"></i></button>
                 </span>
                 </form>
                 <br>
@@ -207,7 +207,7 @@
                 <br>
                 <hr>
                 <br>
-                <h4>Grupos:</h4>
+                <h4><span ng-show="groupsProp != null">Propuesta de </span>Grupos:</h4>
                 <table class="table table-bordered">
                     <tr ng-repeat="group in groups">
                         <td ng-bind="$index + 1"></td>
@@ -219,7 +219,7 @@
                     </tr>
                 </table>
                 <hr>
-                <h4 ng-if="!selectedSes.grouped">Editor de Grupos:</h4>
+                <h4 ng-if="!selectedSes.grouped">Editor de Propuesta de Grupos:</h4>
                 <table class="table table-bordered table-hover" ng-if="!selectedSes.grouped">
                     <tr ng-repeat="group in groupsProp">
                         <td ng-bind="$index + 1"></td>

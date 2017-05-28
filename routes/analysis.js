@@ -8,7 +8,7 @@ let pass = require("../modules/passwords");
 router.post("/get-alum-state-sel", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select uid, sum(correct) as score, count(correct) as answered from (select s.uid, (s.answer = q.answer)::int " +
-    "as correct from selection as s inner join questions as q on s.qid = q.id where q.sesid = $1 and s.iteration = $2) as r group by uid",
+        "as correct from selection as s inner join questions as q on s.qid = q.id where q.sesid = $1 and s.iteration = $2) as r group by uid",
     postReqData: ["sesid","iteration"],
     onStart: (ses, data, calc) => {
         if (ses.role != "P") {
@@ -47,8 +47,8 @@ router.post("/group-proposal-sel", (req, res) => {
             if(arr.length == 0) {
                 rpg.multiSQL({
                     dbcon: pass.dbcon,
-                    sql: "select uid sum(correct) as score from (select s.uid, (s.answer = q.answer)::int as correct from selection" +
-                    " as s inner join questions as q on s.qid = q.id where q.sesid = " + req.body.sesid + " and s.iteration = 1) as r group by uid",
+                    sql: "select uid, sum(correct) as score, count(correct) as answered from (select s.uid, (s.answer = q.answer)::int " +
+                        "as correct from selection as s inner join questions as q on s.qid = q.id where q.sesid = $1 and s.iteration = 1) as r group by uid",
                     onEnd: (req, res, arr) => {
                         let groups = generateTeams(arr, (s) => s.score, req.body.gnum, isDifferent(req.body.method));
                         res.end(JSON.stringify(groups));
