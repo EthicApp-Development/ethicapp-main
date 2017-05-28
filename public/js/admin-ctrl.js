@@ -201,7 +201,10 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
     let self = $scope;
 
     self.updateSession = () => {
-        if (self.selectedSes.name.length < 3 || self.selectedSes.descr.length < 5) return;
+        if (self.selectedSes.name.length < 3 || self.selectedSes.descr.length < 5){
+            Notification.error("Datos de la sesión incorrectos o incompletos");
+            return;
+        }
         let postdata = {name: self.selectedSes.name, descr: self.selectedSes.descr, id: self.selectedSes.id};
         $http({url: "update-session", method: "post", data: postdata}).success((data) => {
             console.log("Session updated");
@@ -209,7 +212,10 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
     };
 
     self.shared.changeState = () => {
-        if (self.selectedSes.status >= self.sesStatusses.length) return;
+        if (self.selectedSes.status >= self.sesStatusses.length){
+            Notification.error("La sesión está finalizada");
+            return;
+        }
         if (self.selectedSes.status >= 3 && !self.selectedSes.grouped) {
             self.shared.gotoGrupos();
             Notification.error("Los grupos no han sido generados");
@@ -229,12 +235,15 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
 });
 
 
-adpp.controller("NewUsersController", function ($scope, $http) {
+adpp.controller("NewUsersController", function ($scope, $http, Notification) {
     let self = $scope;
     let newMembs = [];
 
     self.addToSession = () => {
-        if (self.newMembs.length == 0) return;
+        if (self.newMembs.length == 0){
+            Notification.error("No hay usuarios seleccionados para agregar");
+            return;
+        }
         let postdata = {
             users: self.newMembs.map(e => e.id),
             sesid: self.selectedSes.id
@@ -249,7 +258,7 @@ adpp.controller("NewUsersController", function ($scope, $http) {
 
 });
 
-adpp.controller("QuestionsController", function ($scope, $http) {
+adpp.controller("QuestionsController", function ($scope, $http, Notification) {
     let self = $scope;
 
     self.newQuestion = {
@@ -265,7 +274,10 @@ adpp.controller("QuestionsController", function ($scope, $http) {
     };
 
     self.addQuestion = () => {
-        if (self.newQuestion.answer == -1) return;
+        if (self.newQuestion.answer == -1){
+            Notification.error("Debe indicar la respuesta correcta a la pregunta");
+            return;
+        }
         let postdata = {
             content: self.newQuestion.content,
             options: self.newQuestion.alternatives.join("\n"),
@@ -497,7 +509,7 @@ adpp.controller("DashboardController", function ($scope, $http) {
 
 });
 
-adpp.controller("GroupController", function ($scope, $http) {
+adpp.controller("GroupController", function ($scope, $http, Notification) {
     let self = $scope;
     self.methods = ["Aleatorio", "Rendimiento Homogeneo", "Rendimiento Heterogeneo", "Tipo Aprendizaje Homogeneo", "Tipo Aprendizaje Heterogeoneo"];
     self.lastI = -1;
@@ -516,7 +528,10 @@ adpp.controller("GroupController", function ($scope, $http) {
     };
 
     self.generateGroups = (key) => {
-        if (key == null && (self.groupNum < 1 || self.groupNum > self.users.length)) return;
+        if (key == null && (self.groupNum < 1 || self.groupNum > self.users.length)){
+            Notification.error("Error en los parámetros de formación de grupos");
+            return;
+        }
 
         let postdata = {
             sesid: self.selectedSes.id,
@@ -549,7 +564,10 @@ adpp.controller("GroupController", function ($scope, $http) {
     };
 
     self.acceptGroups = () => {
-        if (self.groupsProp == null) return;
+        if (self.groupsProp == null){
+            Notification.error("No hay propuesta de grupos para fijar");
+            return;
+        }
         let postdata = {
             sesid: self.selectedSes.id,
             groups: JSON.stringify(self.groupsProp.map(e => e.map(f => f.uid)))
