@@ -83,7 +83,7 @@ router.post("/documents-session", rpg.multiSQL({
 
 router.post("/questions-session", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select id, content, options from questions where sesid = $1",
+    sql: "select id, content, options, answer, comment, other from questions where sesid = $1",
     postReqData: ["sesid"],
     sqlParams: [rpg.param("post", "sesid")]
 }));

@@ -114,15 +114,27 @@
             <div ng-show="selectedSes.type == 'S'" ng-controller="QuestionsController">
                 <h4>Preguntas</h4>
                 <div class="list-group-item" ng-repeat="qs in questions">
-                    <strong>{{($index+1) + ". " + qs.content | limitTo:80}}</strong>
+                    <strong ng-show="!qs.expanded">{{($index+1) + ". " + qs.content | limitTo:80}}</strong>
+                    <strong ng-show="qs.expanded">{{($index+1) + ". " + qs.content}}</strong>
                     <button class="btn btn-xs btn-default pull-right" ng-disabled="selectedSes.status!=1">Eliminar</button>
+                    <button class="btn btn-xs btn-default pull-right margin-right-8" ng-click="qs.expanded = !qs.expanded">Ver</button>
+                    <div ng-show="qs.expanded">
+                        <div ng-repeat="x in qs.options" ng-class="{'bg-lightgreen': $index == qs.answer}">
+                            {{qsLabels[$index]}}. {{x}}
+                        </div>
+                        <br>
+                        <strong>Comentario:</strong>
+                        <p ng-bind="qs.comment"></p>
+                        <strong>Otros:</strong>
+                        <span ng-bind="qs.other"></span>
+                    </div>
                 </div>
                 <br>
                 <div>
                     <label>Agregar Pregunta:</label>
                     <textarea rows="2" class="form-control" ng-model="newQuestion.content" ng-disabled="selectedSes.status!=1"></textarea>
                     <label>Alternativas:</label>
-                    <div class="input-group" ng-repeat=" x in ['A','B','C','D','E']">
+                    <div class="input-group" ng-repeat=" x in qsLabels">
                         <a class="input-group-addon" ng-bind="x" ng-click="selectAnswer($index)"
                            ng-class="{'bg-green': $index == newQuestion.answer}" ng-disabled="selectedSes.status!=1"></a>
                         <input type="text" class="form-control" ng-model="newQuestion.alternatives[$index]" ng-disabled="selectedSes.status!=1">
@@ -213,7 +225,9 @@
                         <td ng-bind="$index + 1"></td>
                         <td ng-repeat="alum in group">
                             <strong ng-bind="users[alum.uid].name"></strong>
-                            <span class="label label-success" ng-bind="(alum.score!=null)? alum.score * 100 : null"></span>
+                            <span class="label label-success">
+                                {{(alum.score!=null)? ((selectedSes.type == "L") ? alum.score * 100 : alum.score) : null | number:0}}
+                            </span>
                             <span class="label label-info" ng-bind="alum.aprendizaje"></span>
                         </td>
                     </tr>
@@ -226,7 +240,9 @@
                         <td ng-repeat="alum in group" class="pointable" ng-click="swapTable($parent.$index,$index)"
                             ng-class="{'bg-lightgreen': $parent.$index == lastI && $index == lastJ}">
                             <strong ng-bind="users[alum.uid].name"></strong>
-                            <span class="label label-success" ng-bind="(alum.score!=null)? alum.score * 100 : null"></span>
+                            <span class="label label-success">
+                                {{(alum.score!=null)? ((selectedSes.type == "L") ? alum.score * 100 : alum.score) : null | number:0}}
+                            </span>
                             <span class="label label-info" ng-bind="alum.aprendizaje"></span>
                         </td>
                     </tr>

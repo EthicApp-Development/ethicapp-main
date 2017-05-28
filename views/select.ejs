@@ -61,12 +61,12 @@
                     <tr>
                         <th class="col-sm-2">Alumno</th>
                         <th class="col-sm-5">Iteración 1</th>
-                        <th class="col-sm-5">Iteración 2</th>
+                        <th class="col-sm-5" ng-show="iteration > 2">Iteración 2</th>
                     </tr>
                     <tr ng-repeat="uid in teamUids">
                         <td><span ng-show="uid != myUid">Anónimo {{uid}}</span><span ng-hide="uid != myUid">Mi respuesta</span></td>
                         <td><strong ng-bind="optLabels[ansIter1[qs.id][uid].answer]"></strong> <span ng-bind="ansIter1[qs.id][uid].comment"></span></td>
-                        <td><strong ng-bind="optLabels[ansIter2[qs.id][uid].answer]"></strong> <span ng-bind="ansIter2[qs.id][uid].comment"></span></td>
+                        <td ng-show="iteration > 2"><strong ng-bind="optLabels[ansIter2[qs.id][uid].answer]"></strong> <span ng-bind="ansIter2[qs.id][uid].comment"></span></td>
                     </tr>
                 </table>
                 <hr>

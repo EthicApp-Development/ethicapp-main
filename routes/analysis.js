@@ -49,6 +49,14 @@ router.post("/group-proposal-sel", (req, res) => {
                     dbcon: pass.dbcon,
                     sql: "select uid, sum(correct) as score, count(correct) as answered from (select s.uid, (s.answer = q.answer)::int " +
                         "as correct from selection as s inner join questions as q on s.qid = q.id where q.sesid = $1 and s.iteration = 1) as r group by uid",
+                    onStart: (ses, data, calc) => {
+                        if (ses.role != "P") {
+                            console.log("ERR: Solo profesor puede ver estado de alumnos.");
+                            return "select $1"
+                        }
+                    },
+                    preventResEnd: true,
+                    sqlParams: [rpg.param("post", "sesid")],
                     onEnd: (req, res, arr) => {
                         let groups = generateTeams(arr, (s) => s.score, req.body.gnum, isDifferent(req.body.method));
                         res.end(JSON.stringify(groups));

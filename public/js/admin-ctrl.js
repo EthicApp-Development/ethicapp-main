@@ -75,7 +75,10 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.requestQuestions = () => {
         let postdata = {sesid: self.selectedSes.id};
         $http({url: "questions-session", method: "post", data: postdata}).success((data) => {
-            self.questions = data;
+            self.questions = data.map(e => {
+                e.options = e.options.split("\n");
+                return e;
+            });
         });
     };
 
@@ -216,7 +219,8 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
             Notification.error("La sesión está finalizada");
             return;
         }
-        if (self.selectedSes.status >= 3 && !self.selectedSes.grouped) {
+        if (self.selectedSes.type == "L" && self.selectedSes.status >= 3 && !self.selectedSes.grouped
+            || self.selectedSes.type == "S" && self.selectedSes.status >= 2 && !self.selectedSes.grouped) {
             self.shared.gotoGrupos();
             Notification.error("Los grupos no han sido generados");
             return;
@@ -260,6 +264,8 @@ adpp.controller("NewUsersController", function ($scope, $http, Notification) {
 
 adpp.controller("QuestionsController", function ($scope, $http, Notification) {
     let self = $scope;
+
+    self.qsLabels = ['A','B','C','D','E'];
 
     self.newQuestion = {
         content: "",

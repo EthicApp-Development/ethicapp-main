@@ -407,6 +407,10 @@ span.boxed{
     margin-right: 24px;
 }
 
+.margin-right-8{
+    margin-right: 8px;
+}
+
 .angular-ui-tree-empty{
     display: none;
 }
