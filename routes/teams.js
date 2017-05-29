@@ -89,7 +89,7 @@ router.post("/check-team-answer",rpg.multiSQL({
 
 router.post("/get-team", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select u.name from users as u, teams as t, teamusers as tu where tu.uid = u.id and t.id = tu.tmid and t.sesid = $1 " +
+    sql: "select u.name, u.id from users as u, teams as t, teamusers as tu where tu.uid = u.id and t.id = tu.tmid and t.sesid = $1 " +
         "and t.id in (select tmid from teamusers where uid = $2)",
     sesReqData: ["uid", "ses"],
     sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "uid")]

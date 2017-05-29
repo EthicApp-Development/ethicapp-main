@@ -419,7 +419,7 @@ span.boxed{
     background: #fbd387;
 }
 
-.boxed{
+div.boxed{
     border: 1px solid #ccc;
     padding: 8px;
 }

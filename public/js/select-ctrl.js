@@ -1,8 +1,12 @@
 "use strict";
 
-let app = angular.module("Select", ["timer"]);
+let app = angular.module("Select", ["timer",'btford.socket-io',"ui-notification"]);
 
-app.controller("SelectController", ["$scope", "$http", function ($scope, $http) {
+app.factory("$socket", ["socketFactory", function (socketFactory) {
+    return socketFactory();
+}]);
+
+app.controller("SelectController", ["$scope", "$http", "$socket", "Notification", function ($scope, $http, $socket, Notification) {
     let self = $scope;
 
     self.selectedQs = 0;
@@ -25,6 +29,12 @@ app.controller("SelectController", ["$scope", "$http", function ($scope, $http) 
     self.init = () => {
         self.loadQuestions();
         self.getSesInfo();
+        $socket.on("stateChange", (data) => {
+            console.log("SOCKET.IO", data);
+            if(data.ses == self.sesId){
+                window.location.reload();
+            }
+        });
     };
 
     self.getSesInfo = () => {
@@ -32,6 +42,7 @@ app.controller("SelectController", ["$scope", "$http", function ($scope, $http) 
             self.iteration = data.iteration + 1;
             self.myUid = data.uid;
             self.sesName = data.name;
+            self.sesId = data.id;
             self.sesSTime = data.stime;
             let set = new Set();
             if(self.iteration > 1) {
@@ -51,6 +62,13 @@ app.controller("SelectController", ["$scope", "$http", function ($scope, $http) 
                         self.ansIter2[ans.qid][ans.uid] = {answer: ans.answer, comment: ans.comment};
                         set.add(ans.uid);
                         self.teamUids = Array.from(set);
+                    });
+                });
+                $http({url: "get-team", method: "post"}).success((data) => {
+                    self.team = {};
+                    self.teamstr = data.map(e => e.name).join(", ");
+                    data.forEach((tm) => {
+                        self.team[tm.id] = tm.name;
                     });
                 });
             }
@@ -88,7 +106,7 @@ app.controller("SelectController", ["$scope", "$http", function ($scope, $http) 
 
     self.nextQuestion = () => {
         if (self.selectedQs >= self.questions.length - 1){
-            self.bottomMsg = "Se alcanzo el final de la actividad";
+            Notification.info("Se alcanzo el final de la actividad");
             return;
         }
         if (self.iteration == 3){
@@ -105,8 +123,9 @@ app.controller("SelectController", ["$scope", "$http", function ($scope, $http) 
                 else if(data.status == "different"){
                     self.bottomMsg = "Las respuestas de los miembros del equipo no coinciden";
                 }
-                else if(data.status == "incorrect"){
+                else if(data.status == "incorrect" && !self.questions[self.selectedQs].hinted){
                     self.bottomMsg = data.msg;
+                    self.questions[self.selectedQs].hinted = true;
                 }
             });
         }
@@ -117,7 +136,7 @@ app.controller("SelectController", ["$scope", "$http", function ($scope, $http) 
 
     self.prevQuestion = () => {
         if (self.selectedQs <= 0){
-            self.bottomMsg = "Se alcanzo el inicio de la actividad";
+            Notification.info("Se alcanzo el inicio de la actividad");
             return;
         }
         if (self.iteration != 3) {
@@ -126,6 +145,14 @@ app.controller("SelectController", ["$scope", "$http", function ($scope, $http) 
     };
 
     self.sendAnswer = (qs) => {
+        if(self.answers[qs.id] == null || self.answers[qs.id] == -1){
+            Notification.error("Debe seleccionar una alternativa");
+            return;
+        }
+        if(self.comments[qs.id] == null || self.comments[qs.id] == ""){
+            Notification.error("Debe agregar un comentario");
+            return;
+        }
         let postdata = {
             qid: qs.id,
             answer: self.answers[qs.id],

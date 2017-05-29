@@ -6,9 +6,13 @@
     <title>DocCollab</title>
     <script src="libs/angular.min.js"></script>
     <script src="libs/angular-timer.min.js"></script>
+    <script src="libs/socket.min.js"></script>
+    <script src="libs/angular-ui-notification.min.js"></script>
     <script src="js/select-ctrl.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
     <link rel="stylesheet" href="css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/angular-ui-notification.min.css">
     <link rel="stylesheet" href="css/main.css"/>
 </head>
 <body class="bg-black">
@@ -34,6 +38,7 @@
         </div>
         <div class="col-sm-6">
             <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>
+            <span class="pull-right boxed" ng-bind="teamstr"></span>
         </div>
     </div>
 
@@ -60,11 +65,15 @@
                 <table class="table table-condensed table-bordered" ng-show="iteration > 1">
                     <tr>
                         <th class="col-sm-2">Alumno</th>
-                        <th class="col-sm-5">Iteración 1</th>
-                        <th class="col-sm-5" ng-show="iteration > 2">Iteración 2</th>
+                        <th class="col-sm-5">Original</th>
+                        <th class="col-sm-5" ng-show="iteration > 2">Reelaboración Anonima</th>
                     </tr>
                     <tr ng-repeat="uid in teamUids">
-                        <td><span ng-show="uid != myUid">Anónimo {{uid}}</span><span ng-hide="uid != myUid">Mi respuesta</span></td>
+                        <td>
+                            <span ng-show="uid != myUid && team[uid] == null">Anónimo {{uid}}</span>
+                            <span ng-show="uid != myUid && team[uid] != null" ng-bind="team[uid]"></span>
+                            <span ng-hide="uid != myUid">Mi respuesta</span>
+                        </td>
                         <td><strong ng-bind="optLabels[ansIter1[qs.id][uid].answer]"></strong> <span ng-bind="ansIter1[qs.id][uid].comment"></span></td>
                         <td ng-show="iteration > 2"><strong ng-bind="optLabels[ansIter2[qs.id][uid].answer]"></strong> <span ng-bind="ansIter2[qs.id][uid].comment"></span></td>
                     </tr>
