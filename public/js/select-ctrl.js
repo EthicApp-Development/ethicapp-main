@@ -105,7 +105,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
     };
 
     self.nextQuestion = () => {
-        if (self.selectedQs >= self.questions.length - 1){
+        if (self.selectedQs >= self.questions.length - 1 && self.iteration < 3){
             Notification.info("Se alcanzo el final de la actividad");
             return;
         }
@@ -126,6 +126,9 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                 else if(data.status == "incorrect" && !self.questions[self.selectedQs].hinted){
                     self.bottomMsg = data.msg;
                     self.questions[self.selectedQs].hinted = true;
+                }
+                else{
+                    Notification.info("Se alcanzo el final de la actividad");
                 }
             });
         }

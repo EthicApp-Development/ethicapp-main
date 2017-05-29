@@ -28,7 +28,7 @@ router.post("/get-team-ideas",rpg.multiSQL({
 
 router.post("/get-ses-info",rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: "select greatest(0,least(6,s.status-2)) as iteration, $1::int as uid, s.name, s.id, sr.stime from sessions as s " +
+    sql: "select greatest(0,least(7,s.status-2)) as iteration, $1::int as uid, s.name, s.id, sr.stime from sessions as s " +
         "left outer join status_record as sr on sr.sesid = s.id and s.status = sr.status where s.id = $2",
     sesReqData: ["ses","uid"],
     sqlParams: [rpg.param("ses","uid"),rpg.param("ses","ses")]
@@ -54,7 +54,7 @@ router.post("/check-team-answer",rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select t.uid, s.answer, q.comment, q.answer as realanswer from (select uid from teamusers where tmid in (select tmid from teams inner join teamusers " +
         "on id = tmid where uid = $1 and sesid = $2)) as t left outer join (select uid, answer, qid from selection where iteration = 3 " +
-        "and qid = $3) as s on s.uid = t.uid inner join questions as q on s.qid = q.id",
+        "and qid = $3) as s on s.uid = t.uid left outer join questions as q on s.qid = q.id",
     sesReqData: ["ses","uid"],
     postReqData: ["qid"],
     sqlParams: [rpg.param("ses","uid"),rpg.param("ses","ses"),rpg.param("post","qid")],

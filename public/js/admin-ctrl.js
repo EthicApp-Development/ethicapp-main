@@ -2,6 +2,9 @@
 
 let adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification"]);
 
+const DASHBOARD_AUTOREALOD = true;
+const DASHBOARD_AUTOREALOD_TIME = 15;
+
 adpp.controller("AdminController", function ($scope, $http, $uibModal, $location, $locale) {
     let self = $scope;
     $locale.NUMBER_FORMATS.GROUP_SEP = '';
@@ -307,9 +310,10 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification) {
 
 });
 
-adpp.controller("DashboardController", function ($scope, $http) {
+adpp.controller("DashboardController", function ($scope, $http, $timeout) {
     let self = $scope;
     self.iterationIndicator = 1;
+    self.currentTimer = null;
 
     self.shared.resetGraphs = () => {
         if (self.selectedSes != null && self.selectedSes.type == "L") {
@@ -338,6 +342,19 @@ adpp.controller("DashboardController", function ($scope, $http) {
         };
         self.barData = [{key: "Alumnos", color: "#ef6c00", values: []}];
         self.updateState();
+        if(DASHBOARD_AUTOREALOD) {
+            self.reload(true);
+        }
+    };
+
+    self.reload = (k) => {
+        if(!k){
+            self.updateState();
+        }
+        if (self.currentTimer != null) {
+            $timeout.cancel(self.currentTimer);
+        }
+        self.currentTimer = $timeout(self.reload, DASHBOARD_AUTOREALOD_TIME * 1000);
     };
 
     self.updateState = () => {

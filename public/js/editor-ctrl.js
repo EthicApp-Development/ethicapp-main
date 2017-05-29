@@ -78,6 +78,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", "N
         self.setSelOrder();
         let postdata = {status: self.iteration + 2};
         $http({url: "record-finish", method: "post", data: postdata}).success((data) => {
+            self.hasFinished = true;
             console.log("FINISH");
         });
     };
