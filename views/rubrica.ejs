@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>DocCollab</title>
     <script src="libs/angular.min.js"></script>
+    <script src="libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
     <script src="libs/angular-timer.min.js"></script>
     <script src="libs/socket.min.js"></script>
     <script src="js/rubrica-ctrl.min.js"></script>
@@ -30,8 +31,13 @@
     </div>
 
     <div class="row top-bar">
-        <div class="col-sm-6 full-height simple-padding-top">
-            <strong class="simple-margin-left" ng-bind="sesName"></strong>
+        <div class="col-sm-6 full-height">
+            <span class="simple-margin-left">Reportes: </span>
+            <span ng-repeat="report in reports" class="side-top-btn" ng-class="{'active': $index==selectedIndex}"
+                  ng-click="selectReport($index)">
+                Reporte {{$index + 1}}
+            </span>
+            <!--<strong class="pull-right margin-top-8" ng-bind="iterationNames[iteration]"></strong>-->
         </div>
         <div class="col-sm-6">
             <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>
@@ -41,14 +47,15 @@
     <div class="scrollable-container">
     <div class="mid-container">
 
-        <div ng-repeat="report in reports">
+        <div ng-if="report != null">
             <div class="report">
-                <h3>Texto</h3>
+                <h3 ng-show="iteration < 7">Texto</h3>
+                <h3 ng-show="iteration == 7">Mi Reporte</h3>
                 <p class="text-justify" ng-bind="report.content"></p>
             </div>
             <br>
             <hr>
-            <div class="rubrica">
+            <div class="rubrica" ng-show="iteration < 7">
                 <h4>Rúbrica</h4>
                 <table class="table table-bordered">
                     <tr>
@@ -82,8 +89,18 @@
                 </button>
                 <div class="row"></div>
             </div>
+            <div ng-show="iteration == 7">
+                <h4>Respuestas:</h4>
+                <ul class="list-group">
+                    <li class="list-group-item" ng-repeat="ans in answers">
+                        <strong>Respuesta {{$index + 1}}. Nota: {{ans.val | number:2}} / 4</strong>
+                        <p ng-bind="ans.com"></p>
+                    </li>
+                </ul>
+                <strong>Promedio: {{getAvg() | number:2}} / 4</strong>
+            </div>
             <br>
-            <hr>
+            <br>
         </div>
 
     </div>

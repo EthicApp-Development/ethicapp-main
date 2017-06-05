@@ -129,6 +129,15 @@ router.post("/set-active-example-report", (req,res) => {
     res.end('{"status":"ok"}');
 });
 
+router.post("/set-eval-report", (req,res) => {
+    if(req.session.uid == null || req.body.rid == null || req.body.sesid == null || req.session.role == null || req.session.role != 'P'){
+        res.end('{"status":"err"}');
+        return;
+    }
+    socket.reportBroadcast(req.body.sesid, req.body.rid);
+    res.end('{"status":"ok"}');
+});
+
 router.post("/send-report", rpg.execSQL({
     dbcon: pass.dbcon,
     sql: "with rows as (update reports as r set content = $1 from rubricas as b where r.uid = $2 and r.rid = b.id and b.sesid = $3 returning 1) " +
@@ -163,18 +172,22 @@ router.post("/get-report-list", rpg.multiSQL({
 
 router.post("/get-report-result", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select cs.id, cs.selection, cs.uid, c.pond from criteria_selection as cs inner join criteria as c on cs.cid = c.id where cs.repid = $1",
+    sql: "select cs.id, cs.selection, cs.uid, c.pond, rc.comment from criteria_selection as cs inner join criteria as c on cs.cid = c.id " +
+        "left outer join report_comment as rc on cs.uid = rc.uid and cs.repid = rc.repid where cs.repid = $1",
     postReqData: ["repid"],
     sqlParams: [rpg.param("post","repid")],
     onEnd: (req,res,arr) => {
         let d = {};
+        let c = {};
         arr.forEach((row) => {
-             if(d[row.uid] == null)
+             if(d[row.uid] == null) {
                  d[row.uid] = row.selection * row.pond * 0.01;
+                 c[row.uid] = row.comment;
+             }
              else
                  d[row.uid] += row.selection * row.pond * 0.01;
         });
-        let resArr = Object.keys(d).map(u => {return {uid: u, val: d[u]}});
+        let resArr = Object.keys(d).map(u => {return {uid: u, val: d[u], com: c[u]}});
         res.end(JSON.stringify(resArr));
     }
 }));

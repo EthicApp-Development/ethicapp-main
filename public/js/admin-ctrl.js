@@ -310,7 +310,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification) {
 
 });
 
-adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibModal) {
+adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibModal, Notification) {
     let self = $scope;
     self.iterationIndicator = 1;
     self.currentTimer = null;
@@ -342,7 +342,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         };
         self.barData = [{key: "Alumnos", color: "#ef6c00", values: []}];
         self.updateState();
-        if(DASHBOARD_AUTOREALOD) {
+        if(DASHBOARD_AUTOREALOD && self.selectedSes.status < 9) {
             self.reload(true);
         }
     };
@@ -558,7 +558,14 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 }
             });
         });
-    }
+    };
+
+    self.broadcastReport = (rid) => {
+        let postdata = {sesid: self.selectedSes.id, rid: rid};
+        $http({url: "set-eval-report", method: "post", data: postdata}).success((data) => {
+            Notification.success("Reporte enviado a alumnos");
+        });
+    };
 
 });
 
@@ -568,10 +575,6 @@ adpp.controller("ReportModalController", function ($scope, $uibModalInstance, re
 
     vm.cancel = () => {
         $uibModalInstance.dismiss('cancel');
-    };
-
-    vm.getAuthor = (uid) => {
-        console.log($scope);
     };
 
 });
