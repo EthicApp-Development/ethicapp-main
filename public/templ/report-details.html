@@ -1,0 +1,13 @@
+<div>
+    <div class="modal-header">
+        <h4 ng-if="vm.report.author != null">Reporte de {{vm.report.author.name}}</h4>
+        <h4 ng-if="vm.report.author == null">Reporte enviado</h4>
+    </div>
+    <div class="modal-body">
+        <p ng-bind="vm.report.content"></p>
+        <hr>
+        <div class="modal-footer">
+            <button class="btn btn-default" type="button" ng-click="vm.cancel()">Cerrar</button>
+        </div>
+    </div>
+</div>

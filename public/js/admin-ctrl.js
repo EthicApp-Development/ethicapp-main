@@ -310,7 +310,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification) {
 
 });
 
-adpp.controller("DashboardController", function ($scope, $http, $timeout) {
+adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibModal) {
     let self = $scope;
     self.iterationIndicator = 1;
     self.currentTimer = null;
@@ -528,6 +528,50 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout) {
             if (rep)
                 return (self.users[rep.uid]) ? self.users[rep.uid].name : null;
         }
+    };
+
+    self.getAvg = (row) => {
+        if(row == null || row.length == 0) return "";
+        let s = row.reduce((v,e) => v + e.val, 0);
+        return s/row.length;
+    };
+
+    self.getInMax = (res) => {
+        if(res == null || res.length == 0) return [];
+        let n = res.reduce((v,e) => Math.max(v,e.length), 0);
+        return new Array(n);
+    };
+
+    self.showReport = (rid) => {
+        let postdata = {rid: rid};
+        $http({url: "get-report", method:"post", data: postdata}).success((data) => {
+            $uibModal.open({
+                templateUrl: "templ/report-details.html",
+                controller: "ReportModalController",
+                controllerAs: "vm",
+                scope: self,
+                resolve: {
+                    report: function(){
+                        data.author = self.users[data.uid];
+                        return data;
+                    },
+                }
+            });
+        });
+    }
+
+});
+
+adpp.controller("ReportModalController", function ($scope, $uibModalInstance, report) {
+    var vm = this;
+    vm.report = report;
+
+    vm.cancel = () => {
+        $uibModalInstance.dismiss('cancel');
+    };
+
+    vm.getAuthor = (uid) => {
+        console.log($scope);
     };
 
 });

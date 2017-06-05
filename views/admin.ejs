@@ -405,11 +405,17 @@
                 <table class="table table-bordered">
                     <tr>
                         <th>Reporte</th>
-                        <th ng-repeat="x in pairArr">Ev. {{$index}}</th>
+                        <th>Promedio</th>
+                        <th ng-repeat="x in getInMax(resultAll) track by $index">Ev. {{$index + 1}}</th>
                     </tr>
                     <!--<tr ng-repeat="dato in result | orderBy:'-score'">-->
                     <tr ng-repeat="row in resultAll">
-                        <td>Reporte de <span ng-bind="getReportAuthor(row[0].rid)"></span></td>
+                        <td>
+                            Reporte de <span ng-bind="getReportAuthor(row[0].rid)"></span>
+                            <button class="btn btn-default btn-sm pull-right"><i class="fa fa-share-alt"></i></button>
+                            <button class="btn btn-default btn-sm pull-right" ng-click="showReport(row[0].rid)"><i class="fa fa-external-link"></i></button>
+                        </td>
+                        <td>{{getAvg(row) | number:2}}</td>
                         <td ng-repeat="cell in row">
                             {{cell.val | number:2}}
                         </td>
