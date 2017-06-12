@@ -57,6 +57,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", "N
             self.myUid = data.uid;
             self.sesName = data.name;
             self.sesId = data.id;
+            self.sesDescr = data.descr;
             self.sesSTime = (data.stime != null) ? new Date(data.stime) : null;
             $http({url: "get-documents", method: "post"}).success((data) => {
                 self.documents = data;

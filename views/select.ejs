@@ -44,6 +44,8 @@
 
     <div class="scrollable-container">
         <div class="mid-container">
+            <p ng-bind="sesDesc"></p>
+            <hr>
             <div ng-repeat="qs in questions" ng-show="selectedQs == $index">
                 <h4 class="sep-lines" ng-bind="($index+1)+'. '+qs.content"></h4>
                 <div class="list-group">

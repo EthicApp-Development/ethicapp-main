@@ -44,6 +44,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             self.sesName = data.name;
             self.sesId = data.id;
             self.sesSTime = data.stime;
+            self.sesDesc = data.descr;
             let set = new Set();
             if(self.iteration > 1) {
                 $http({url: "get-team-selection", method: "post", data: {iteration: 1}}).success((data) => {
