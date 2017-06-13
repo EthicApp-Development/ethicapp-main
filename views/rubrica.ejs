@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="css/font-awesome.min.css"/>
     <link rel="stylesheet" href="css/main.css"/>
 </head>
-<body class="bg-black">
+<body class="bg-white">
 
 <div ng-controller="RubricaController">
 
@@ -32,9 +32,9 @@
 
     <div class="row top-bar">
         <div class="col-sm-6 full-height">
-            <span class="simple-margin-left">Reportes: </span>
+            <span class="simple-margin-left" ng-show="iteration == 6">Reportes: </span>
             <span ng-repeat="report in reports" class="side-top-btn" ng-class="{'active': $index==selectedIndex}"
-                  ng-click="selectReport($index)">
+                  ng-click="selectReport($index)" ng-show="iteration == 6">
                 Reporte {{$index + 1}}
             </span>
             <!--<strong class="pull-right margin-top-8" ng-bind="iterationNames[iteration]"></strong>-->
@@ -44,10 +44,9 @@
         </div>
     </div>
 
-    <div class="scrollable-container">
-    <div class="mid-container">
-
-        <div ng-if="report != null">
+    <div class="pad-content">
+    <div class="row bg-white"  ng-if="report != null">
+        <div class="col-sm-6">
             <div class="report">
                 <h3 ng-show="iteration < 7">Texto</h3>
                 <h3 ng-show="iteration == 7">Mi Reporte</h3>
@@ -55,8 +54,13 @@
             </div>
             <br>
             <hr>
+        </div>
+        <div class="col-sm-6">
+            <h3>Instrucciones:</h3>
+            <div ng-bind="instructions[iteration]"></div>
+            <hr>
             <div class="rubrica" ng-show="iteration < 7">
-                <h4>Rúbrica</h4>
+                <h3>Rúbrica</h3>
                 <table class="table table-bordered">
                     <tr>
                         <th>Criterio</th>
@@ -90,7 +94,7 @@
                 <div class="row"></div>
             </div>
             <div ng-show="iteration == 7">
-                <h4>Respuestas:</h4>
+                <h3>Respuestas:</h3>
                 <ul class="list-group">
                     <li class="list-group-item" ng-repeat="ans in answers">
                         <strong>Respuesta {{$index + 1}}. Nota: {{ans.val | number:2}} / 4</strong>
@@ -102,7 +106,6 @@
             <br>
             <br>
         </div>
-
     </div>
     </div>
 

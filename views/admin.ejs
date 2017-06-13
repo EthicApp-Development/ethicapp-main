@@ -185,11 +185,12 @@
                 <br>
                 <h4>Usuarios</h4>
                 <table class="table table-bordered">
-                    <tr><th>Usuaio</th><th>Email</th><th>Tipo de Aprendizaje</th></tr>
+                    <tr><th>Usuaio</th><th>Email</th><th>Tipo de Aprendizaje</th><th></th></tr>
                     <tr ng-repeat="alum in usersArr" ng-class="{'bg-info': alum.role == 'P'}">
                         <td ng-bind="alum.name"></td>
                         <td ng-bind="alum.mail"></td>
                         <td ng-bind="alum.aprendizaje"></td>
+                        <td><button class="btn btn-default btn-sm" ng-click="removeUser(alum.id)" ng-disabled="selectedSes.status > 1"><i class="fa fa-trash"></i></button></td>
                     </tr>
                 </table>
                 <br/>

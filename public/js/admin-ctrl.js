@@ -263,6 +263,18 @@ adpp.controller("NewUsersController", function ($scope, $http, Notification) {
         });
     };
 
+    self.removeUser = (uid) => {
+        if(self.selectedSes.status == 1){
+            let postdata = {uid: uid, sesid: self.selectedSes.id};
+            $http({url: "delete-ses-user", method: "post", data: postdata}).success((data) => {
+                if (data.status == "ok") {
+                    self.getNewUsers();
+                    self.getMembers();
+                }
+            });
+        }
+    };
+
 });
 
 adpp.controller("QuestionsController", function ($scope, $http, Notification) {

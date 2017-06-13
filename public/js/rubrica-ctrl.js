@@ -38,6 +38,9 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
                 self.openReport(data);
             }
         });
+        $http({url: "data/instructions.json", method: "get"}).success((data) => {
+            self.instructions = data;
+        });
     };
 
     self.getReports = () => {

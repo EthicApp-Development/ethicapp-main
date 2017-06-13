@@ -130,6 +130,12 @@ router.post("/add-question", rpg.execSQL({
     }
 }));
 
+router.post("/delete-ses-user", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "delete from sesusers where sesid = $1 and uid = $2",
+    postReqData: ["sesid", "uid"],
+    sqlParams: [rpg.param("post", "sesid"), rpg.param("post", "uid")]
+}));
 
 
 module.exports = router;
