@@ -1,12 +1,12 @@
 "use strict";
 
-let app = angular.module("Select", ["timer",'btford.socket-io',"ui-notification"]);
+let app = angular.module("Select", ["ui.bootstrap", "timer",'btford.socket-io',"ui-notification"]);
 
 app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
 
-app.controller("SelectController", ["$scope", "$http", "$socket", "Notification", function ($scope, $http, $socket, Notification) {
+app.controller("SelectController", ["$scope", "$http", "$socket", "Notification", "$uibModal", function ($scope, $http, $socket, Notification, $uibModal) {
     let self = $scope;
 
     self.selectedQs = 0;
@@ -15,11 +15,13 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
     self.questions = [];
     self.otherAnswsers = {};
     self.answers = {};
+    self.anskey = {};
     self.comments = {};
     self.optLabels = ["A", "B", "C", "D", "E"];
     self.sent = {};
     self.teamUids = [];
     self.bottomMsg = "";
+    self.finished = false;
 
     self.ansIter1 = {};
     self.ansIter2 = {};
@@ -44,7 +46,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             self.sesName = data.name;
             self.sesId = data.id;
             self.sesSTime = data.stime;
-            self.sesDesc = data.descr;
+            self.sesDescr = data.descr;
             let set = new Set();
             if(self.iteration > 1) {
                 $http({url: "get-team-selection", method: "post", data: {iteration: 1}}).success((data) => {
@@ -73,6 +75,10 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                     });
                 });
             }
+            if(self.iteration >= 4){
+                self.finished = true;
+                self.loadAnskey();
+            }
             self.loadAnswers();
         });
     };
@@ -82,6 +88,15 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             self.questions = data;
             self.questions.forEach((qs) => {
                 qs.options = qs.options.split("\n");
+            });
+        });
+    };
+
+    self.loadAnskey = () => {
+        $http({url: "get-anskey", method: "post"}).success((data) => {
+            self.anskey = {};
+            data.forEach((qs) => {
+                self.anskey[qs.id] = qs;
             });
         });
     };
@@ -106,7 +121,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
     };
 
     self.nextQuestion = () => {
-        if (self.selectedQs >= self.questions.length - 1 && self.iteration < 3){
+        if (self.selectedQs >= self.questions.length - 1 && self.iteration != 3){
             Notification.info("Se alcanzo el final de la actividad");
             return;
         }
@@ -125,8 +140,12 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                     self.bottomMsg = "Las respuestas de los miembros del equipo no coinciden";
                 }
                 else if(data.status == "incorrect" && !self.questions[self.selectedQs].hinted){
-                    self.bottomMsg = data.msg;
+                    self.bottomMsg = "Comentario: " + data.msg;
                     self.questions[self.selectedQs].hinted = true;
+                }
+                else if(self.questions[self.selectedQs].hinted){
+                    self.selectQuestion(self.selectedQs + 1);
+                    self.bottomMsg = "";
                 }
                 else{
                     Notification.info("Se alcanzo el final de la actividad");
@@ -168,6 +187,13 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                 self.sent[postdata.qid] = true;
                 qs.dirty = false;
             }
+        });
+    };
+
+    self.showInfo = () => {
+        $uibModal.open({
+            template: '<div><div class="modal-header"><h4>Factor Detonante</h4></div><div class="modal-body"><p>' +
+                self.sesDescr + '</p></div></div>'
         });
     };
 

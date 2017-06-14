@@ -135,6 +135,12 @@ router.post("/get-questions", rpg.multiSQL({
     sqlParams: [rpg.param("ses", "ses")]
 }));
 
+router.post("/get-anskey", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select id, comment, answer from questions where sesid = $1",
+    sesReqData: ["uid", "ses"],
+    sqlParams: [rpg.param("ses", "ses")]
+}));
 
 router.post("/send-answer", rpg.execSQL({
     dbcon: pass.dbcon,

@@ -52,10 +52,10 @@
             <!--<strong class="pull-right margin-top-8" ng-bind="iterationNames[iteration]"></strong>-->
         </div>
         <div class="col-sm-6">
-            <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>
+            <a onclick="window.history.back()" class="btn btn-sm btn-default pull-right">Atrás</a>
             <button disabled class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i> Representante </button>
             <button class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && followLeader" ng-click="takeControl()">Tomar Control</button>
-            <button class="btn btn-sm btn-default pull-right" ng-click="finishState()" ng-class="{'btn-success': hasFinished}">
+            <button class="btn btn-sm btn-default pull-right" ng-click="finishState()" ng-class="{'btn-success': hasFinished}" ng-hide="finished">
                 <i class="fa fa-check"></i> Terminé</button>
             <span class="pull-right boxed" ng-bind="teamstr"></span>
         </div>
@@ -89,7 +89,7 @@
                     <li class="row idea-item" ng-repeat="sel in selections" ui-tree-node ng-class="{'bg-warning':reportIdeas[sel.id]}">
                         <div class="col-xs-1">
                             <span ui-tree-handle ng-if="!followLeader && !writingReport">:::</span>
-                            <a ng-click="deleteIdea(sel,$index)" class="margin-top-24" ng-if="sel.expanded && !followLeader && !writingReport"><h4><i class="fa fa-trash"></i></h4></a>
+                            <a ng-click="deleteIdea(sel,$index)" class="margin-top-24" ng-if="sel.expanded && !followLeader && !writingReport && !finished"><h4><i class="fa fa-trash"></i></h4></a>
                         </div>
                         <div class="col-xs-10">
                         <a ng-click="sel.expanded=!sel.expanded" class="spaced pull-right">
@@ -98,16 +98,16 @@
                         <strong ng-bind="sel.text" ng-click="goToSerial(sel.text,sel.document)"></strong>
                         <span class="text-gray"> - {{documents[sel.document].title}}</span>
                         <div class="input-group" ng-show="sel.expanded">
-                            <textarea class="form-control" ng-model="sel.comment" ng-change="selTextChange(sel)" ng-disabled="writingReport || followLeader"></textarea>
-                            <a class="input-group-addon btn btn-default" ng-click="sendIdea(sel)" ng-class="{'bg-lightgreen': sel.status=='saved', 'bg-lightorange': sel.status=='dirty'}" ng-disabled="writingReport || followLeader">
+                            <textarea class="form-control" ng-model="sel.comment" ng-change="selTextChange(sel)" ng-disabled="writingReport || followLeader || finished"></textarea>
+                            <a class="input-group-addon btn btn-default" ng-click="sendIdea(sel)" ng-class="{'bg-lightgreen': sel.status=='saved', 'bg-lightorange': sel.status=='dirty'}" ng-disabled="writingReport || followLeader || finished">
                                 <i class="fa fa-send"></i>
                             </a>
                         </div>
-                        <a ng-show="sel.expanded && writingReport" ng-click="toggleUseIdea(sel.id)"><i class="fa fa-star"></i> Marcar idea usada en reporte</a>
+                        <a ng-show="sel.expanded && writingReport && !finished" ng-click="toggleUseIdea(sel.id)"><i class="fa fa-star"></i> Marcar idea usada en reporte</a>
                         </div>
                     </li>
                     <span class="text-gray center-block text-center">Menos importante</span>
-                    <button class="form-control btn btn-sm btn-default margin-top-8" ng-disabled="writingReport || followLeader || selections.length >= documents.length * 3" ng-click="selectText()" ng-show="iteration > 0"><i class="fa fa-plus"></i> Nueva Idea</button>
+                    <button class="form-control btn btn-sm btn-default margin-top-8" ng-disabled="writingReport || followLeader || selections.length >= documents.length * 3 || finished" ng-click="selectText()" ng-show="iteration > 0"><i class="fa fa-plus"></i> Nueva Idea</button>
                 </ul>
             </div>
             <div>
@@ -122,8 +122,8 @@
                                 <strong ng-bind="sel.content" ng-click="goToSerial(sel.content,docIdx[sel.docid],'.highlight-secondary')"></strong>
                                 <span class="text-gray"> - {{documents[docIdx[sel.docid]].title}}</span>
                                 <div ng-show="sel.expanded" ng-bind="sel.descr"></div>
-                                <a ng-show="sel.expanded && !followLeader && !writingReport" ng-click="copyIdea(sel)"><i class="fa fa-copy"></i> Copiar a Actual</a>
-                                <a ng-show="sel.expanded && writingReport" ng-click="toggleUseIdea(sel.id)"><i class="fa fa-star"></i> Marcar idea usada en reporte</a>
+                                <a ng-show="sel.expanded && !followLeader && !writingReport && !finished" ng-click="copyIdea(sel)"><i class="fa fa-copy"></i> Copiar a Actual</a>
+                                <a ng-show="sel.expanded && writingReport && !finished" ng-click="toggleUseIdea(sel.id)"><i class="fa fa-star"></i> Marcar idea usada en reporte</a>
                             </li>
                         </ul>
                     </div>
@@ -139,8 +139,8 @@
                                 <strong ng-bind="sel.content" ng-click="goToSerial(sel.content,docIdx[sel.docid],'.highlight-secondary')"></strong>
                                 <span class="text-gray"> - {{documents[docIdx[sel.docid]].title}}</span>
                                 <div ng-show="sel.expanded" ng-bind="sel.descr"></div>
-                                <a ng-show="sel.expanded && !followLeader && !writingReport" ng-click="copyIdea(sel)"><i class="fa fa-copy"></i> Copiar a Actual</a>
-                                <a ng-show="sel.expanded && writingReport" ng-click="toggleUseIdea(sel.id)"><i class="fa fa-star"></i> Marcar idea usada en reporte</a>
+                                <a ng-show="sel.expanded && !followLeader && !writingReport && !finished" ng-click="copyIdea(sel)"><i class="fa fa-copy"></i> Copiar a Actual</a>
+                                <a ng-show="sel.expanded && writingReport && !finished" ng-click="toggleUseIdea(sel.id)"><i class="fa fa-star"></i> Marcar idea usada en reporte</a>
                             </li>
                         </ul>
                     </div>

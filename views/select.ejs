@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>DocCollab</title>
     <script src="libs/angular.min.js"></script>
+    <script src="libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
     <script src="libs/angular-timer.min.js"></script>
     <script src="libs/socket.min.js"></script>
     <script src="libs/angular-ui-notification.min.js"></script>
@@ -38,6 +39,7 @@
         </div>
         <div class="col-sm-6">
             <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>
+            <a ng-click="showInfo()" class="btn btn-sm btn-default pull-right"><i class="fa fa-question"></i></a>
             <span class="pull-right boxed" ng-bind="teamstr"></span>
         </div>
     </div>
@@ -51,14 +53,14 @@
                 <div class="list-group">
                     <div class="" ng-repeat="x in optLabels">
                         <a class="input-group-addon addon-little" ng-bind="x" ng-class="{'bg-green': answers[qs.id]==$index}"
-                           ng-click="setAnswer(qs,$index)"></a>
+                           ng-click="!finished && setAnswer(qs,$index)"></a>
                         <span class="mini" ng-bind="qs.options[$index]"></span>
                     </div>
                 </div>
                 <div class="input-group">
-                    <input type="text" class="form-control" ng-model="comments[qs.id]">
+                    <input type="text" class="form-control" ng-model="comments[qs.id]" ng-disabled="finished">
                     <span class="input-group-btn">
-                        <button class="btn btn-default" ng-click="sendAnswer(qs)" ng-class="{'btn-success': sent[qs.id], 'btn-warning': sent[qs.id] && qs.dirty}">
+                        <button class="btn btn-default" ng-disabled="finished" ng-click="sendAnswer(qs)" ng-class="{'btn-success': sent[qs.id], 'btn-warning': sent[qs.id] && qs.dirty}">
                             <i class="fa fa-send"></i>
                         </button>
                     </span>
@@ -76,12 +78,31 @@
                             <span ng-show="uid != myUid && team[uid] != null" ng-bind="team[uid]"></span>
                             <span ng-hide="uid != myUid">Mi respuesta</span>
                         </td>
-                        <td><strong ng-bind="optLabels[ansIter1[qs.id][uid].answer]"></strong> <span ng-bind="ansIter1[qs.id][uid].comment"></span></td>
-                        <td ng-show="iteration > 2"><strong ng-bind="optLabels[ansIter2[qs.id][uid].answer]"></strong> <span ng-bind="ansIter2[qs.id][uid].comment"></span></td>
+                        <td>
+                            <strong>Alternativa {{optLabels[ansIter1[qs.id][uid].answer]}}</strong>
+                            <br>
+                            <strong>Comentario:</strong>
+                            <span ng-bind="ansIter1[qs.id][uid].comment"></span>
+                        </td>
+                        <td ng-show="iteration > 2">
+                            <strong>Alternativa {{optLabels[ansIter2[qs.id][uid].answer]}}</strong>
+                            <br>
+                            <strong>Comentario:</strong>
+                            <span ng-bind="ansIter2[qs.id][uid].comment"></span>
+                        </td>
                     </tr>
                 </table>
                 <hr>
                 <br>
+                <div ng-if="iteration >= 4">
+                    <strong>Alternativa Correcta: {{optLabels[anskey[qs.id].answer]}}</strong>
+                    <br>
+                    <strong>Comentario: </strong><span ng-bind="anskey[qs.id].comment"></span>
+                    <br>
+                    <br>
+                    <hr>
+                    <br>
+                </div>
                 <div class="row">
                     <div class="col-sm-1">
                         <button class="btn btn-default" ng-click="prevQuestion()"><i class="fa fa-arrow-left"></i></button>
@@ -97,12 +118,12 @@
         </div>
     </div>
 
-    <div class="splash" ng-if="iteration > 3">
+    <!--<div class="splash" ng-if="iteration > 3">
         <div class="splash-box">
             <h3>La sesión ha finalizado</h3>
             <h5>Gracias por participar.</h5>
         </div>
-    </div>
+    </div>-->
 
 </div>
 

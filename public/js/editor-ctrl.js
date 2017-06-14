@@ -22,6 +22,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", "N
     self.writingReport = false;
     self.followLeader = false;
     self.leader = false;
+    self.finished = false;
     self.teamId = -1;
     self.reportIdeas = {};
     self.shared = {};
@@ -71,6 +72,9 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", "N
             });
             if (self.iteration == 3){
                 self.getTeamInfo();
+            }
+            if(self.iteration >= 5){
+                self.finished = true;
             }
         });
     };
