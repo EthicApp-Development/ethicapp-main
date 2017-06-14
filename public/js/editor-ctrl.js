@@ -102,7 +102,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", "N
             }
         });
         $http({url: "get-team", method: "post"}).success((data) => {
-            self.teamstr = data.map(e => e.name).join(", ");
+            self.teamstr = data.map(e => e.name + ((e.finished)? " ✓" : "")).join(", ");
         });
     };
 

@@ -89,10 +89,11 @@ router.post("/check-team-answer",rpg.multiSQL({
 
 router.post("/get-team", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select u.name, u.id from users as u, teams as t, teamusers as tu where tu.uid = u.id and t.id = tu.tmid and t.sesid = $1 " +
-        "and t.id in (select tmid from teamusers where uid = $2)",
+    sql: "select u.name, u.id, u.id in (select uid from finish_session where status = 5 and sesid = $1) as finished from " +
+        "users as u, teams as t, teamusers as tu where tu.uid = u.id and t.id = tu.tmid and t.sesid = $2 and t.id in " +
+        "(select tmid from teamusers where uid = $3)",
     sesReqData: ["uid", "ses"],
-    sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "uid")]
+    sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "ses"), rpg.param("ses", "uid")]
 }));
 
 router.post("/update-my-team", rpg.singleSQL({
