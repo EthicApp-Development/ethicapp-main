@@ -13,6 +13,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.selectedSes = null;
     self.documents = [];
     self.questions = [];
+    self.questionTexts = [];
     self.newUsers = [];
     self.users = {};
     self.selectedIndex = -1;
@@ -83,6 +84,10 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
                 return e;
             });
         });
+        $http({url: "get-question-text", method: "post", data: postdata}).success((data) => {
+            self.questionTexts = data;
+        });
+
     };
 
     self.getNewUsers = () => {
@@ -287,6 +292,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification) {
         alternatives: ["", "", "", "", ""],
         comment: "",
         other: "",
+        textid: null,
         answer: -1
     };
 
@@ -305,6 +311,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification) {
             comment: self.newQuestion.comment,
             answer: self.newQuestion.answer,
             sesid: self.selectedSes.id,
+            textid: self.newQuestion.textid,
             other: self.newQuestion.other
         };
         $http({url: "add-question", method: "post", data: postdata}).success((data) => {
@@ -316,9 +323,18 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification) {
             alternatives: ["", "", "", "", ""],
             comment: "",
             other: "",
+            textid: null,
             answer: -1
         };
-    }
+    };
+
+    self.addQuestionText = () => {
+        let postdata = {sesid: self.selectedSes.id, title: self.newText.title, content: self.newText.content};
+        $http({url: "add-question-text", method: "post", data: postdata}).success((data) => {
+            if(data.status == "ok")
+                self.requestQuestions();
+        });
+    };
 
 });
 

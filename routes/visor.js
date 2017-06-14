@@ -130,7 +130,8 @@ router.post("/delete-document", rpg.execSQL({
 
 router.post("/get-questions", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select id, content, options from questions where sesid = $1",
+    sql: "select q.id, q.content, q.options, qt.content as text_content from questions as q left outer join question_text as qt on " +
+        "q.textid = qt.id where q.sesid = $1",
     sesReqData: ["uid", "ses"],
     sqlParams: [rpg.param("ses", "ses")]
 }));

@@ -117,17 +117,31 @@ router.post("/add-ses-users", (req, res) => {
 
 router.post("/add-question", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "insert into questions(content,options,answer,comment,other,sesid) values ($1,$2,$3,$4,$5,$6)",
+    sql: "insert into questions(content,options,answer,comment,other,sesid,textid) values ($1,$2,$3,$4,$5,$6,$7)",
     sesReqData: ["uid"],
-    postReqData: ["content","options","answer","comment","sesid"],
+    postReqData: ["content","options","answer","comment","sesid","textid"],
     sqlParams: [rpg.param("post", "content"),rpg.param("post", "options"),rpg.param("post", "answer"),
-        rpg.param("post", "comment"),rpg.param("post", "other"),rpg.param("post", "sesid")],
+        rpg.param("post", "comment"),rpg.param("post", "other"),rpg.param("post", "sesid"),rpg.param("post", "textid")],
     onStart: (ses,data,calc) => {
         if (ses.role != "P") {
             console.log("ERR: Solo profesor puede crear sesiones.");
             return "select $1, $2, $3, $4, $5, $6"
         }
     }
+}));
+
+router.post("/add-question-text", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "insert into question_text(title,content,sesid) values ($1,$2,$3)",
+    postReqData: ["sesid", "title", "content"],
+    sqlParams: [rpg.param("post", "title"), rpg.param("post", "content"), rpg.param("post", "sesid")]
+}));
+
+router.post("/get-question-text", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select id, title, content from question_text where sesid = $1",
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "sesid")]
 }));
 
 router.post("/delete-ses-user", rpg.execSQL({

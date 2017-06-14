@@ -49,7 +49,11 @@
             <p ng-bind="sesDesc"></p>
             <hr>
             <div ng-repeat="qs in questions" ng-show="selectedQs == $index">
-                <h4 class="sep-lines" ng-bind="($index+1)+'. '+qs.content"></h4>
+                <h4 ng-bind="($index+1)+'.'"></h4>
+                <strong ng-show="qs.text_content != null">Texto:</strong>
+                <p ng-bind="qs.text_content"></p>
+                <br ng-show="qs.text_content != null">
+                <h4 ng-bind="qs.content"></h4>
                 <div class="list-group">
                     <div class="" ng-repeat="x in optLabels">
                         <a class="input-group-addon addon-little" ng-bind="x" ng-class="{'bg-green': answers[qs.id]==$index}"

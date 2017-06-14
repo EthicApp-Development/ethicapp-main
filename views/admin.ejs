@@ -112,6 +112,21 @@
                 </a>
             </div>
             <div ng-show="selectedSes.type == 'S'" ng-controller="QuestionsController">
+                <h4>Textos</h4>
+                <div class="list-group-item" ng-repeat="text in questionTexts">
+                    <strong ng-bind="text.title"></strong>
+                    <p>{{text.content | limitTo:360}}</p>
+                </div>
+                <div>
+                    <label>Agregar Texto</label>
+                    <input type="text" ng-model="newText.title" placeholder="Titulo" class="form-control">
+                    <textarea class="form-control" rows="5" ng-model="newText.content"></textarea>
+                    <button class="btn btn-default pull-right" ng-click="addQuestionText()">Agregar</button>
+                </div>
+
+                <hr>
+                <br>
+
                 <h4>Preguntas</h4>
                 <div class="list-group-item" ng-repeat="qs in questions">
                     <strong ng-show="!qs.expanded">{{($index+1) + ". " + qs.content | limitTo:80}}</strong>
@@ -139,6 +154,8 @@
                            ng-class="{'bg-green': $index == newQuestion.answer}" ng-disabled="selectedSes.status!=1"></a>
                         <input type="text" class="form-control" ng-model="newQuestion.alternatives[$index]" ng-disabled="selectedSes.status!=1">
                     </div>
+                    <label>Texto</label>
+                    <select ng-model="newQuestion.textid" ng-disabled="selectedSes.status!=1" ng-options="text.id as text.title for text in questionTexts" class="form-control"></select>
                     <label>Comentario (Solución):</label>
                     <textarea rows="2" class="form-control" ng-model="newQuestion.comment" ng-disabled="selectedSes.status!=1"></textarea>
                     <label>Otros:</label>
