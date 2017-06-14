@@ -49,7 +49,7 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
             self.sesId = data.id;
             self.myUid = data.uid;
             self.sesSTime = (data.stime != null) ? new Date(data.stime) : null;
-            if(self.iteration == 5) {
+            if(self.iteration <= 5) {
                 $http({url: "get-active-example-report", method: "post"}).success((data) => {
                     self.reports = [data];
                     self.report = data;
