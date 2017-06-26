@@ -84,6 +84,7 @@ a:hover{
     padding: 8px 24px;
     background: #e2e2e2;
     height: calc(100vh - 60px);
+    overflow-y: scroll;
 }
 
 .full-width{
