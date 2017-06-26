@@ -89,11 +89,22 @@ router.post("/check-team-answer",rpg.multiSQL({
 
 router.post("/get-team", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select u.name, u.id, u.id in (select uid from finish_session where status = 5 and sesid = $1) as finished from " +
+    sql: "select u.name, u.id, t.progress, t.id as tmid, u.id in (select uid from finish_session where status = 5 and sesid = $1) as finished from " +
         "users as u, teams as t, teamusers as tu where tu.uid = u.id and t.id = tu.tmid and t.sesid = $2 and t.id in " +
         "(select tmid from teamusers where uid = $3)",
     sesReqData: ["uid", "ses"],
     sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "ses"), rpg.param("ses", "uid")]
+}));
+
+router.post("/send-team-progress", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "update teams set progress = $1 where id = $2",
+    sesReqData: ["ses","uid"],
+    postReqData: ["tmid","progress"],
+    sqlParams: [rpg.param("post","progress"),rpg.param("post","tmid")],
+    onEnd: (req,res,ans) => {
+        socket.teamProgress(req.session.ses, req.body.tmid);
+    }
 }));
 
 router.post("/update-my-team", rpg.singleSQL({

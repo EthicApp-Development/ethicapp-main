@@ -295,6 +295,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification) {
         textid: null,
         answer: -1
     };
+    self.newText = {title: "", content: ""};
 
     self.selectAnswer = (i) => {
         self.newQuestion.answer = i;
@@ -315,24 +316,28 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification) {
             other: self.newQuestion.other
         };
         $http({url: "add-question", method: "post", data: postdata}).success((data) => {
-            if (data.status == "ok")
-                self.requestQuestions()
+            if (data.status == "ok") {
+                self.requestQuestions();
+                Notification.success("Pregunta agrgada correctamente");
+                self.newQuestion = {
+                    content: "",
+                    alternatives: ["", "", "", "", ""],
+                    comment: "",
+                    other: "",
+                    textid: null,
+                    answer: -1
+                };
+            }
         });
-        self.newQuestion = {
-            content: "",
-            alternatives: ["", "", "", "", ""],
-            comment: "",
-            other: "",
-            textid: null,
-            answer: -1
-        };
     };
 
     self.addQuestionText = () => {
         let postdata = {sesid: self.selectedSes.id, title: self.newText.title, content: self.newText.content};
         $http({url: "add-question-text", method: "post", data: postdata}).success((data) => {
-            if(data.status == "ok")
+            if(data.status == "ok") {
                 self.requestQuestions();
+                self.newText = {title: "", content: ""};
+            }
         });
     };
 
@@ -398,6 +403,10 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         if (self.selectedSes.type == "S") {
             $http({url: "get-alum-full-state-sel", method: "post", data: postdata}).success((data) => {
                 self.alumState = {};
+                for(let uid in self.users){
+                    if(self.users[uid].role == "A")
+                        self.alumState[uid] = {};
+                }
                 data.forEach((d) => {
                     if (self.alumState[d.uid] == null) {
                         self.alumState[d.uid] = {};

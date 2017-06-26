@@ -37,6 +37,12 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                 window.location.reload();
             }
         });
+        $socket.on("teamProgress", (data) => {
+            console.log("SOCKET.IO", data);
+            if(data.ses == self.sesId && data.tmid == self.teamId){
+                self.updateTeam();
+            }
+        });
     };
 
     self.getSesInfo = () => {
@@ -67,19 +73,28 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                         self.teamUids = Array.from(set);
                     });
                 });
-                $http({url: "get-team", method: "post"}).success((data) => {
-                    self.team = {};
-                    self.teamstr = data.map(e => e.name).join(", ");
-                    data.forEach((tm) => {
-                        self.team[tm.id] = tm.name;
-                    });
-                });
+                self.updateTeam();
             }
             if(self.iteration >= 4){
                 self.finished = true;
                 self.loadAnskey();
             }
             self.loadAnswers();
+        });
+    };
+
+    self.updateTeam = () => {
+        $http({url: "get-team", method: "post"}).success((data) => {
+            self.team = {};
+            self.teamstr = data.map(e => e.name).join(", ");
+            data.forEach((tm) => {
+                self.team[tm.id] = tm.name;
+            });
+            if(data.length > 0){
+                self.teamId = data[0].tmid;
+                self.teamProgress = data[0].progress;
+                self.selectQuestion(self.teamProgress);
+            }
         });
     };
 
@@ -121,16 +136,12 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
     };
 
     self.nextQuestion = () => {
-        if (self.selectedQs >= self.questions.length - 1 && self.iteration != 3){
-            Notification.info("Se alcanzo el final de la actividad");
-            return;
-        }
         if (self.iteration == 3){
             console.log("Checking team answers");
             let postdata = {qid: self.questions[self.selectedQs].id};
             $http({url: "check-team-answer", method: "post", data: postdata}).success((data) => {
                 if(data.status == "ok") {
-                    self.selectQuestion(self.selectedQs + 1);
+                    self.sendTeamProgress(self.selectedQs + 1);
                     self.bottomMsg = "";
                 }
                 else if(data.status == "incomplete"){
@@ -144,7 +155,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                     self.questions[self.selectedQs].hinted = true;
                 }
                 else if(self.questions[self.selectedQs].hinted){
-                    self.selectQuestion(self.selectedQs + 1);
+                    self.sendTeamProgress(self.selectedQs + 1);
                     self.bottomMsg = "";
                 }
                 else{
@@ -152,9 +163,23 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                 }
             });
         }
+        else if(self.questions[self.selectedQs].dirty){
+            Notification.error("No se ha enviado una respuesta a la pregunta");
+        }
+        else if (self.selectedQs >= self.questions.length - 1 && self.iteration != 3){
+            Notification.info("Se alcanzo el final de la actividad");
+        }
         else {
             self.selectQuestion(self.selectedQs + 1);
         }
+    };
+
+    self.sendTeamProgress = (pg) => {
+        let postdata = {tmid: self.teamId, progress: pg};
+        $http({url: "send-team-progress", method:"post", data: postdata}).success((data) => {
+            if(data.status == "ok")
+                console.log("Progress sent");
+        });
     };
 
     self.prevQuestion = () => {
@@ -162,7 +187,10 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             Notification.info("Se alcanzo el inicio de la actividad");
             return;
         }
-        if (self.iteration != 3) {
+        if(self.questions[self.selectedQs].dirty){
+            Notification.error("No se ha enviado una respuesta a la pregunta");
+        }
+        else if (self.iteration != 3) {
             self.selectQuestion(self.selectedQs - 1);
         }
     };

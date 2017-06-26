@@ -46,14 +46,11 @@
 
     <div class="scrollable-container">
         <div class="mid-container">
-            <p ng-bind="sesDesc"></p>
-            <hr>
             <div ng-repeat="qs in questions" ng-show="selectedQs == $index">
-                <h4 ng-bind="($index+1)+'.'"></h4>
                 <strong ng-show="qs.text_content != null">Texto:</strong>
                 <p ng-bind="qs.text_content"></p>
                 <br ng-show="qs.text_content != null">
-                <h4 ng-bind="qs.content"></h4>
+                <h4 ng-bind="($index+1)+'. '+qs.content"></h4>
                 <div class="list-group">
                     <div class="" ng-repeat="x in optLabels">
                         <a class="input-group-addon addon-little" ng-bind="x" ng-class="{'bg-green': answers[qs.id]==$index}"
@@ -61,10 +58,11 @@
                         <span class="mini" ng-bind="qs.options[$index]"></span>
                     </div>
                 </div>
+                <label>Comentario / Justificación:</label>
                 <div class="input-group">
-                    <input type="text" class="form-control" ng-model="comments[qs.id]" ng-disabled="finished">
+                    <input type="text" class="form-control" ng-model="comments[qs.id]" ng-change="qs.dirty = true" ng-disabled="finished">
                     <span class="input-group-btn">
-                        <button class="btn btn-default" ng-disabled="finished" ng-click="sendAnswer(qs)" ng-class="{'btn-success': sent[qs.id], 'btn-warning': sent[qs.id] && qs.dirty}">
+                        <button class="btn btn-default" ng-disabled="finished" ng-click="sendAnswer(qs)" ng-class="{'btn-success': sent[qs.id], 'btn-warning': qs.dirty}">
                             <i class="fa fa-send"></i>
                         </button>
                     </span>

@@ -119,7 +119,7 @@ router.post("/add-question", rpg.execSQL({
     dbcon: pass.dbcon,
     sql: "insert into questions(content,options,answer,comment,other,sesid,textid) values ($1,$2,$3,$4,$5,$6,$7)",
     sesReqData: ["uid"],
-    postReqData: ["content","options","answer","comment","sesid","textid"],
+    postReqData: ["content","options","answer","comment","sesid"],
     sqlParams: [rpg.param("post", "content"),rpg.param("post", "options"),rpg.param("post", "answer"),
         rpg.param("post", "comment"),rpg.param("post", "other"),rpg.param("post", "sesid"),rpg.param("post", "textid")],
     onStart: (ses,data,calc) => {

@@ -11,4 +11,7 @@ module.exports.configSocket = function(io){
     module.exports.reportBroadcast = function(sesid, rid){
         io.of("/").emit("reportReceived", {ses: sesid, rid: rid});
     };
+    module.exports.teamProgress = function(sesid, tmid){
+        io.of("/").emit("teamProgress", {ses: sesid, tmid: tmid});
+    };
 };
