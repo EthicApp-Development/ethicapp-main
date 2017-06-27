@@ -39,7 +39,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
         });
         $socket.on("teamProgress", (data) => {
             console.log("SOCKET.IO", data);
-            if(data.ses == self.sesId && data.tmid == self.teamId){
+            if(data.ses == self.sesId && data.tmid == self.teamId && self.iteration == 3){
                 self.updateTeam();
             }
         });
