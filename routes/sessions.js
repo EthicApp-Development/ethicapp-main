@@ -18,7 +18,7 @@ router.get("/seslist", (req, res) => {
 
 router.post("/get-session-list", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select * from (select distinct s.id, s.name, s.descr, s.status, s.type, (s.id in (select sesid from teams)) as grouped, (s.id in (select sesid from report_pair)) as paired, sr.stime from sessions as s left outer join status_record as sr on sr.sesid = s.id and s.status = sr.status, " +
+    sql: "select * from (select distinct s.id, s.name, s.descr, s.status, s.type, s.time, (s.id in (select sesid from teams)) as grouped, (s.id in (select sesid from report_pair)) as paired, sr.stime from sessions as s left outer join status_record as sr on sr.sesid = s.id and s.status = sr.status, " +
         "sesusers as su, users as u where su.uid = $1 and u.id = su.uid and su.sesid = s.id and (u.role='P' or s.status > 1)) as v order by v.time desc",
     sesReqData: ["uid"],
     sqlParams: [rpg.param("ses", "uid")]
