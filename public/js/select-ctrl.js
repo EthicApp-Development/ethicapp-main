@@ -93,7 +93,8 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             if(data.length > 0){
                 self.teamId = data[0].tmid;
                 self.teamProgress = data[0].progress;
-                self.selectQuestion(self.teamProgress);
+                if(self.iteration == 3)
+                    self.selectQuestion(self.teamProgress);
             }
         });
     };
