@@ -40,7 +40,11 @@
         <div class="col-sm-6">
             <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>
             <a ng-click="showInfo()" class="btn btn-sm btn-default pull-right"><i class="fa fa-question"></i></a>
-            <span class="pull-right boxed" ng-bind="teamstr"></span>
+            <span class="pull-right boxed" ng-bind="teamstr" style="
+    overflow-x: scroll;
+    max-height: 24px;
+    max-width: 340px;
+"></span>
         </div>
     </div>
 
