@@ -21,7 +21,7 @@
 
 <div class="row top-bar">
     <div class="col-sm-1">
-
+        <button class="btn btn-default" ng-click="openSidebar = !openSidebar"><i class="fa fa-bars"></i></button>
     </div>
     <div class="col-sm-10">
         <h5><i class="fa fa-sliders"></i> Panel de administración</h5>
@@ -33,7 +33,7 @@
 
 <div class="row full-height">
 
-    <div class="col-sm-3">
+    <div class="col-sm-3" ng-show="openSidebar">
         <div class="side-panel">
             <button class="btn btn-sm btn-default pull-right" ng-click="openNewSes()">Nueva</button>
             <h4>Lista de Sesiones:</h4>
@@ -47,7 +47,7 @@
         </div>
     </div>
 
-    <div class="col-sm-9" ng-show="selectedIndex!=-1" ng-controller="TabsController">
+    <div ng-class="{'col-sm-9': openSideBar, 'col-sm-12': !openSidebar}" ng-show="selectedIndex!=-1" ng-controller="TabsController">
         <span class="pull-right margin-right-24" ng-show="selectedSes.stime != null">
             <timer start-time="selectedSes.stime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
         </span>

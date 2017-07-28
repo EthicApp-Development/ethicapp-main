@@ -7,6 +7,7 @@ const DASHBOARD_AUTOREALOD_TIME = 15;
 
 adpp.controller("AdminController", function ($scope, $http, $uibModal, $location, $locale) {
     let self = $scope;
+
     $locale.NUMBER_FORMATS.GROUP_SEP = '';
     self.shared = {};
     self.sessions = [];
@@ -18,10 +19,9 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.users = {};
     self.selectedIndex = -1;
     self.sesStatusses = ["No Publicada", "Lectura", "Personal", "Anónimo", "Grupal", "Finalizada"];
-    self.iterationNames = [{name: "Lectura", val: 0}, {name: "Individual", val: 1}, {
-        name: "Grupal anónimo",
-        val: 2
-    }, {name: "Grupal", val: 3}];
+    self.iterationNames = [{name: "Lectura", val: 0}, {name: "Individual", val: 1}, {name: "Grupal anónimo", val: 2},
+                            {name: "Grupal", val: 3}];
+    self.openSidebar = true;
 
     self.init = () => {
         self.shared.updateSesData();
@@ -238,10 +238,13 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
             Notification.error("Los pares para la evaluación de pares no han sido asignados");
             return;
         }
-        let postdata = {sesid: self.selectedSes.id};
-        $http({url: "change-state-session", method: "post", data: postdata}).success((data) => {
-            self.shared.updateSesData();
-        });
+        let confirm = window.confirm("¿Esta seguro que quiere ir al siguiente estado?");
+        if(confirm) {
+            let postdata = {sesid: self.selectedSes.id};
+            $http({url: "change-state-session", method: "post", data: postdata}).success((data) => {
+                self.shared.updateSesData();
+            });
+        }
     }
 
 });
