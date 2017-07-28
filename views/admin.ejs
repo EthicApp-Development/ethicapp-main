@@ -376,12 +376,14 @@
             <br>
             <table class="table table-bordered" ng-if="selectedSes.type == 'S'">
                 <tr>
-                    <th>Alumno</th>
+                    <th ng-if="iterationIndicator != 3">Alumno</th>
+                    <th ng-if="iterationIndicator == 3">Grupo</th>
                     <th ng-repeat="qs in questions" ng-bind="$index + 1"></th>
                     <th>Pr.</th>
                 </tr>
                 <tr ng-repeat="(alum, data) in alumState">
-                    <td ng-bind="users[alum].name"></td>
+                    <td ng-if="iterationIndicator != 3" ng-bind="users[alum].name"></td>
+                    <td ng-if="iterationIndicator == 3" ng-bind="leaderTeamStr[alum]"></td>
                     <td ng-repeat="qs in questions"
                         ng-class="{'bg-darkgreen': data[qs.id], 'bg-darkred': data[qs.id]!=null && !data[qs.id]}"></td>
                     <td>{{avgAlum(alum) | number:0}}%</td>

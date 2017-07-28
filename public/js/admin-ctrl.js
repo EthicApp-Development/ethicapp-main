@@ -419,6 +419,17 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                         self.alumState[d.uid][d.qid] = d.correct;
                     }
                 });
+                if(self.iterationIndicator == 3){
+                    $http({url: "get-original-leaders", method: "post", data: {sesid: self.selectedSes.id}}).success((data) => {
+                        let temp = angular.copy(self.alumState);
+                        self.alumState = {};
+                        self.leaderTeamStr = {};
+                        data.forEach((r) => {
+                            self.alumState[r.leader] = temp[r.leader];
+                            self.leaderTeamStr[r.leader] = r.team.map(u => self.users[u].name).join(", ");
+                        });
+                    });
+                }
             });
             $http({url: "get-alum-state-sel", method: "post", data: postdata}).success((data) => {
                 let dataNorm = data.map(d => {
@@ -502,8 +513,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     t++;
                 }
             }
+            return 100*t/(Object.keys(self.alumState).length * self.questions.length);
         }
-        return 100*t/(Object.keys(self.alumState).length * self.questions.length);
+        return 0;
     };
 
     self.getAlumDoneTime = (postdata) => {
