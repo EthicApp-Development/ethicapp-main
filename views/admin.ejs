@@ -353,12 +353,23 @@
             </div>
             <h4></h4>
             <nvd3 options="barOpts" data="barData"></nvd3>
-            <div class="row" ng-show="iterationIndicator < 5 && selectesSes.type == 'L'">
+            <div class="row" ng-show="iterationIndicator < 5 && selectedSes.type == 'L'">
                 <div class="col-sm-4 col-sm-offset-2">
                     Completo: <strong>{{numComplete}} / {{numUsers}}</strong>
                 </div>
                 <div class="col-sm-6">
                     Progreso: <strong>{{numProgress | number:1 }}%</strong>
+                </div>
+            </div>
+            <div class="row" ng-show="selectedSes.type == 'S'">
+                <div class="col-sm-3 col-sm-offset-2">
+                    Progreso: <strong>{{progress() | number:0}}%</strong>
+                </div>
+                <div class="col-sm-3">
+                    Correctas logradas: <strong>{{avgAll() | number:0 }}%</strong>
+                </div>
+                <div class="col-sm-3">
+                    Incorrectas incurridas: <strong>{{100 - avgAll() | number:0 }}%</strong>
                 </div>
             </div>
             <hr>
@@ -367,11 +378,18 @@
                 <tr>
                     <th>Alumno</th>
                     <th ng-repeat="qs in questions" ng-bind="$index + 1"></th>
+                    <th>Pr.</th>
                 </tr>
                 <tr ng-repeat="(alum, data) in alumState">
                     <td ng-bind="users[alum].name"></td>
                     <td ng-repeat="qs in questions"
                         ng-class="{'bg-darkgreen': data[qs.id], 'bg-darkred': data[qs.id]!=null && !data[qs.id]}"></td>
+                    <td>{{avgAlum(alum) | number:0}}%</td>
+                </tr>
+                <tr>
+                    <td>Promedio</td>
+                    <td ng-repeat="qs in questions">{{avgPreg(qs.id) | number:0}}%</td>
+                    <td>{{avgAll() | number:0}}%</td>
                 </tr>
             </table>
             <table class="table table-bordered" ng-if="selectedSes.type == 'L' && alumState!={} && iterationIndicator <= 4">

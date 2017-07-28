@@ -448,6 +448,64 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         }
     };
 
+    self.avgAlum = (uid) => {
+        if(self.alumState != null && self.alumState[uid] != null){
+            let t = 0;
+            let c = 0;
+            for(let k in self.alumState[uid]){
+                if(self.alumState[uid][k])
+                    c++;
+                t++;
+            }
+            return (t>0)? 100*c/t : 0;
+        }
+        return 0;
+    };
+
+
+    self.avgPreg = (pid) => {
+        if(self.alumState != null){
+            let t = 0;
+            let c = 0;
+            for(let k in self.alumState){
+                if(self.alumState[k][pid] != null) {
+                    if(self.alumState[k][pid])
+                        c++;
+                    t++;
+                }
+            }
+            return (t>0)? 100*c/t : 0;
+        }
+        return 0;
+    };
+
+    self.avgAll = () => {
+        let t = 0;
+        let c = 0;
+        if(self.alumState != null) {
+            for (let u in self.alumState) {
+                for (let k in self.alumState[u]) {
+                    if (self.alumState[u][k])
+                        c++;
+                    t++;
+                }
+            }
+        }
+        return (t>0)? 100*c/t : 0;
+    };
+
+    self.progress = () => {
+        let t = 0;
+        if(self.alumState != null) {
+            for (let u in self.alumState) {
+                for (let k in self.alumState[u]) {
+                    t++;
+                }
+            }
+        }
+        return 100*t/(Object.keys(self.alumState).length * self.questions.length);
+    };
+
     self.getAlumDoneTime = (postdata) => {
         $http({url: "get-alum-done-time", method: "post", data: postdata}).success((data) => {
             self.numComplete = 0;
