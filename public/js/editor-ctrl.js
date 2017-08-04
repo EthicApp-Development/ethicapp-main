@@ -85,6 +85,15 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", "N
     };
 
     self.finishState = () => {
+        if(self.iteration == 0){
+            let postdata = {status: self.iteration + 2};
+            $http({url: "record-finish", method: "post", data: postdata}).success((data) => {
+                self.hasFinished = true;
+                self.finished = true;
+                console.log("FINISH");
+            });
+            return;
+        }
         if(self.finished){
             return;
         }
