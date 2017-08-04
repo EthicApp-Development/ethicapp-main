@@ -21,7 +21,9 @@
 
 <div class="row top-bar">
     <div class="col-sm-1">
-        <button class="btn btn-default" ng-click="openSidebar = !openSidebar"><i class="fa fa-bars"></i></button>
+        <button class="btn btn-default" ng-click="toggleSidebar()">
+            <i class="fa fa-bars"></i>
+        </button>
     </div>
     <div class="col-sm-10">
         <h5><i class="fa fa-sliders"></i> Panel de administración</h5>
@@ -97,12 +99,17 @@
                 </div>
                 <br>
                 <label>Agregar documento:</label>
-                <form id="doc-form" class="input-group" ng-submit="uploadDocument($event)" enctype="multipart/form-data">
-                    <input type="text" class="form-control" name="title" placeholder="Titulo" required ng-disabled="selectedSes.status!=1">
-                    <input type="file" class="form-control" name="pdf" ng-disabled="selectedSes.status!=1" required>
-                    <input type="text" ng-model="selectedSes.id" name="sesid" hidden>
-                    <span class="input-group-btn">
-                    <button class="btn btn-default" ng-disabled="selectedSes.status!=1 || busy">Subir <i ng-show="busy" class="fa fa-spinner fa-pulse"></i></button>
+                <form id="doc-form" class="row" ng-submit="uploadDocument($event)" enctype="multipart/form-data">
+                    <div class="col-sm-4">
+                        <input type="text" class="form-control" name="title" placeholder="Titulo" required ng-disabled="selectedSes.status!=1" maxlength="20">
+                    </div>
+                    <div class="col-sm-7">
+                        <input type="file" class="form-control" name="pdf" ng-disabled="selectedSes.status!=1" required>
+                        <input type="text" ng-model="selectedSes.id" name="sesid" hidden>
+                    </div>
+                    <div class="col-sm-1">
+                        <button class="form-control btn btn-default" ng-disabled="selectedSes.status!=1 || busy">Subir <i ng-show="busy" class="fa fa-spinner fa-pulse"></i></button>
+                    </div>
                 </span>
                 </form>
                 <br>
@@ -358,17 +365,17 @@
                     Completo: <strong>{{numComplete}} / {{numUsers}}</strong>
                 </div>
                 <div class="col-sm-6">
-                    Progreso: <strong>{{numProgress | number:1 }}%</strong>
+                    Avance: <strong>{{numProgress | number:1 }}%</strong>
                 </div>
             </div>
             <div class="row" ng-show="selectedSes.type == 'S'">
-                <div class="col-sm-3 col-sm-offset-2">
-                    Progreso: <strong>{{progress() | number:0}}%</strong>
+                <div class="col-sm-3 col-sm-offset-1">
+                    Avance: <strong>{{progress() | number:0}}%</strong>
                 </div>
-                <div class="col-sm-3">
+                <div class="col-sm-4">
                     Correctas logradas: <strong>{{avgAll() | number:0 }}%</strong>
                 </div>
-                <div class="col-sm-3">
+                <div class="col-sm-4">
                     Incorrectas incurridas: <strong>{{100 - avgAll() | number:0 }}%</strong>
                 </div>
             </div>
@@ -378,18 +385,27 @@
                 <tr>
                     <th ng-if="iterationIndicator != 3">Alumno</th>
                     <th ng-if="iterationIndicator == 3">Grupo</th>
+                    <th>Av.</th>
                     <th ng-repeat="qs in questions" ng-bind="$index + 1"></th>
                     <th>Pr.</th>
+                </tr>
+                <tr>
+                    <td>Avance</td>
+                    <td>{{progress() | number:0}}%</td>
+                    <td ng-repeat="qs in questions">{{progressPreg(qs.id) | number:0}}%</td>
+                    <td class="bg-gray"></td>
                 </tr>
                 <tr ng-repeat="(alum, data) in alumState">
                     <td ng-if="iterationIndicator != 3" ng-bind="users[alum].name"></td>
                     <td ng-if="iterationIndicator == 3" ng-bind="leaderTeamStr[alum]"></td>
+                    <td>{{progressAlum(alum) | number:0}}%</td>
                     <td ng-repeat="qs in questions"
                         ng-class="{'bg-darkgreen': data[qs.id], 'bg-darkred': data[qs.id]!=null && !data[qs.id]}"></td>
                     <td>{{avgAlum(alum) | number:0}}%</td>
                 </tr>
                 <tr>
-                    <td>Promedio</td>
+                    <td>Promedio correctas</td>
+                    <td class="bg-gray"></td>
                     <td ng-repeat="qs in questions">{{avgPreg(qs.id) | number:0}}%</td>
                     <td>{{avgAll() | number:0}}%</td>
                 </tr>

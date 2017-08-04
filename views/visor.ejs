@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="css/font-awesome.min.css">
     <link rel="stylesheet" href="css/minimal.css">
     <link rel="stylesheet" href="css/angular-ui-tree.min.css">
+    <link rel="stylesheet" href="css/angular-ui-notification.min.css">
     <link rel="stylesheet" href="css/main.css"/>
 </head>
 <body class="bg-black">
@@ -55,7 +56,7 @@
             <a onclick="window.history.back()" class="btn btn-sm btn-default pull-right">Atrás</a>
             <button disabled class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i> Representante </button>
             <button class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && followLeader" ng-click="takeControl()">Tomar Control</button>
-            <button class="btn btn-sm btn-default pull-right" ng-click="finishState()" ng-class="{'btn-success': hasFinished}" ng-hide="finished">
+            <button class="btn btn-sm btn-default pull-right" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}">
                 <i class="fa fa-check"></i> Terminé</button>
             <span class="pull-right boxed" ng-bind="teamstr"></span>
         </div>
@@ -77,8 +78,8 @@
             <h3>Ideas Fuerza:</h3>
             <div class="row">
                 <div class="btn-group center-block w250" ng-show="tabOptions.length > 1">
-                    <button class="btn btn-default" ng-repeat="x in tabOptions" ng-bind="x"
-                            ng-class="{active: $index==sideTab}" ng-click="setTab($index)">
+                    <button class="form-control btn btn-default" ng-repeat="x in tabOptions" ng-bind="x.name"
+                            ng-class="{active: x.idx==sideTab}" ng-click="setTab(x.idx)">
                     </button>
                 </div>
             </div>
@@ -107,12 +108,14 @@
                         </div>
                     </li>
                     <span class="text-gray center-block text-center">Menos importante</span>
-                    <button class="form-control btn btn-sm btn-default margin-top-8" ng-disabled="writingReport || followLeader || selections.length >= documents.length * 3 || finished" ng-click="selectText()" ng-show="iteration > 0"><i class="fa fa-plus"></i> Nueva Idea</button>
+                    <button class="form-control btn btn-sm btn-default margin-top-8" ng-disabled="writingReport || followLeader || selections.length >= documents.length * 3 || finished" ng-click="selectText()" ng-show="iteration > 0">
+                        <i class="fa fa-plus"></i> Nueva Idea Fuerza
+                    </button>
                 </ul>
             </div>
             <div>
                 <div ng-show="iteration > 1 && sideTab == 1">
-                    <h4>Ideas Individual:</h4>
+                    <!--<h4>Ideas Individual:</h4>-->
                     <div ng-repeat="(uid, sels) in ansIter1">
                         <h5 ng-show="uid != myUid">Anónimo {{uid}}: </h5>
                         <h5 ng-hide="uid != myUid">Mi respuesta: </h5>
@@ -129,7 +132,7 @@
                     </div>
                 </div>
                 <div ng-show="iteration > 2 && sideTab == 2">
-                    <h4>Ideas Grupal Anónimo:</h4>
+                    <!--<h4>Ideas Grupal Anónimo:</h4>-->
                     <div ng-repeat="(uid, sels) in ansIter2">
                         <h5 ng-show="uid != myUid">Anónimo {{uid}}: </h5>
                         <h5 ng-hide="uid != myUid">Mi respuesta: </h5>

@@ -27,7 +27,7 @@ router.post("/get-session-list", rpg.multiSQL({
 router.post("/add-session", rpg.execSQL({
     dbcon: pass.dbcon,
     sql: "with rows as (insert into sessions(name,descr,creator,time,status,type) values ($1,$2,$3,now(),1,$4) returning id)" +
-    " insert into sesusers(sesid,uid) select id, $5 from rows",
+        " insert into sesusers(sesid,uid) select id, $5 from rows",
     sesReqData: ["uid"],
     postReqData: ["name", "descr","type"],
     sqlParams: [rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("ses", "uid"), rpg.param("post","type"), rpg.param("ses", "uid")],
@@ -59,7 +59,7 @@ router.post("/update-session", rpg.execSQL({
 
 router.post("/upload-file", (req, res) => {
     if (req.session.uid != null && req.body.title != null && req.body.title != "" && req.files.pdf != null && req.files.pdf.mimetype == "application/pdf") {
-        console.log(req.body);
+        // console.log(req.body);
         rpg.execSQL({
             dbcon: pass.dbcon,
             sql: "insert into documents(title,path,sesid,uploader) values ($1,$2,$3,$4)",
@@ -151,5 +151,63 @@ router.post("/delete-ses-user", rpg.execSQL({
     sqlParams: [rpg.param("post", "sesid"), rpg.param("post", "uid")]
 }));
 
+
+/*router.post("/duplicate-session", (req, res) => {
+     if(req.session.uid != null && req.session.role == "P" && req.body.name != null && req.body.name != ""
+         && req.body.tipo != null && req.body.descr != null && req.body.originalSesid != null){
+         rpg.singleSQL({
+             dbcon: pass.dbcon,
+             sql: "insert into sessions(name,descr,creator,time,status,type) values ($1,$2,$3,now(),1,$4) returning id",
+             postReqData: ["sesid", "uid"],
+             sqlParams: [rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("ses", "uid"), rpg.param("post", "tipo")],
+             onEnd: (req, res, result) => {
+                 let sesid = result.id;
+                 let oldsesid = req.body.originalSesid;
+                 if(req.body.copyUsers) {
+                     rpg.execSQL({
+                         dbcon: pass.dbcon,
+                         sql: "insert into sesusers(sesid,uid) select " + sesid +
+                            " as sesid, uid from sesusers where sesid = " + oldsesid
+                     });
+                 }
+                 else{
+                     rpg.execSQL({
+                         dbcon: pass.dbcon,
+                         sql: "insert into sesusers(sesid,uid) values (" + sesid + "," + req.session.uid + ")"
+                     });
+                 }
+                 if(req.body.copyDocuments){
+                     rpg.execSQL({
+                         dbcon: pass.dbcon,
+                         sql: "insert into documents(sesid,title,path,uploader,active) select " + sesid +
+                            " as sesid, title, path, uploader, active from documents where sesid = " + oldsesid
+                     });
+                 }
+                 if(req.body.copyQuestions){
+                     rpg.execSQL({
+                         dbcon: pass.dbcon,
+                         sql: "insert into questions(sesid,content,options,answer,comment,other,textid) select " + sesid +
+                         " as sesid, content,options,answer,comment,other,textid from questions where sesid = " + oldsesid
+                     });
+                     rpg.execSQL({
+                         dbcon: pass.dbcon,
+                         sql: "insert into question_text(sesid,content,title) select " + sesid +
+                         " as sesid, content, title from question_text where sesid = " + oldsesid
+                     });
+                 }
+                 if(req.body.copyIdeas){
+
+                 }
+                 if(req.body.copyRubrica){
+
+                 }
+             }
+         });
+         res.end('{"status":"ok"}');
+     }
+     else{
+         res.end('{"status":"err"}');
+     }
+});*/
 
 module.exports = router;

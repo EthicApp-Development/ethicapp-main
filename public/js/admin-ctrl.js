@@ -11,6 +11,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     $locale.NUMBER_FORMATS.GROUP_SEP = '';
     self.shared = {};
     self.sessions = [];
+
     self.selectedSes = null;
     self.documents = [];
     self.questions = [];
@@ -101,6 +102,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         let postdata = {sesid: self.selectedSes.id};
         $http({url: "get-ses-users", method: "post", data: postdata}).success((data) => {
             self.usersArr = data;
+            self.users = {};
             data.forEach((d) => {
                 self.users[d.id] = d;
             });
@@ -111,6 +113,11 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         $uibModal.open({
             templateUrl: "templ/new-ses.html"
         });
+    };
+
+    self.toggleSidebar = () => {
+        self.openSidebar = !self.openSidebar;
+        self.shared.updateState()
     };
 
     self.init();
@@ -400,6 +407,8 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             self.updateStateRub();
     };
 
+    self.shared.updateState = self.updateState;
+
     self.updateStateIni = () => {
         self.alumTime = {};
         let postdata = {sesid: self.selectedSes.id, iteration: self.iterationIndicator};
@@ -514,6 +523,30 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 }
             }
             return 100*t/(Object.keys(self.alumState).length * self.questions.length);
+        }
+        return 0;
+    };
+
+    self.progressAlum = (uid) => {
+        let t = 0;
+        if(self.alumState != null && self.alumState[uid] != null) {
+            for (let k in self.alumState[uid]) {
+                t++;
+            }
+            return 100*t/(self.questions.length);
+        }
+        return 0;
+    };
+
+    self.progressPreg = (pid) => {
+        let t = 0;
+        if(self.alumState != null) {
+            for (let u in self.alumState) {
+                if(self.alumState[u][pid] != null){
+                    t++;
+                }
+            }
+            return 100*t/(Object.keys(self.alumState).length);
         }
         return 0;
     };

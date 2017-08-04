@@ -263,6 +263,13 @@ router.post("/record-finish", rpg.execSQL({
     sqlParams: [rpg.param("ses", "uid"),rpg.param("ses", "ses"),rpg.param("post", "status"),rpg.param("ses", "uid"),rpg.param("ses", "ses"),rpg.param("post", "status")]
 }));
 
+router.post("/get-finished", rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: "select $1 in (select uid from finish_session where sesid = $2 and status = $3) as finished",
+    sesReqData: ["ses","uid"],
+    sqlParams: [rpg.param("ses","uid"),rpg.param("ses","ses"),rpg.param("post","status")]
+}));
+
 router.post("/delete-idea", rpg.execSQL({
     dbcon: pass.dbcon,
     sql: "delete from ideas where uid = $1 and id = $2",

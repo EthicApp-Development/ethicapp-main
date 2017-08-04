@@ -76,16 +76,45 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", "N
             if(self.iteration >= 5){
                 self.finished = true;
             }
+            $http({url: "get-finished", method: "post", data: {status: self.iteration + 2}}).success((data) => {
+                if (data.finished) {
+                    self.finished = true;
+                }
+            });
         });
     };
 
     self.finishState = () => {
-        self.setSelOrder();
-        let postdata = {status: self.iteration + 2};
-        $http({url: "record-finish", method: "post", data: postdata}).success((data) => {
-            self.hasFinished = true;
-            console.log("FINISH");
-        });
+        if(self.finished){
+            return;
+        }
+        if(self.selections.length < self.documents.length){
+            Notification.error("No hay suficientes ideas fuerza para terminar la actividad");
+            return;
+        }
+        if(!self.areAllIdeasSync()) {
+            Notification.error("Hay ideas fuerza que no han sido enviadas");
+            return;
+        }
+        let confirm = window.confirm("¿Esta seguro que desea terminar la actividad?\nEsto implica no volver a poder editar sus respuestas");
+        if(confirm) {
+            self.setSelOrder();
+            let postdata = {status: self.iteration + 2};
+            $http({url: "record-finish", method: "post", data: postdata}).success((data) => {
+                self.hasFinished = true;
+                self.finished = true;
+                console.log("FINISH");
+            });
+        }
+    };
+
+    self.areAllIdeasSync = () => {
+        for(let i = 0; i < self.selections.length; i++){
+            let idea = self.selections[i];
+            if(idea.status == "unsaved" || idea.status == "dirty")
+                return false;
+        }
+        return true;
     };
 
     self.getTeamInfo = () => {
@@ -187,7 +216,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", "N
             });
         });
         if(self.iteration > 1) {
-            self.tabOptions = ["Reelaboración","Original"];
+            self.tabOptions = [{name:"Individual", idx:1},{name: "Reelaboración Anónima", idx: 0}];
             $http({url: "get-team-ideas", method: "post", data: {iteration: 1}}).success((data) => {
                 self.ansIter1 = {};
                 data.forEach((ans) => {
@@ -198,7 +227,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", "N
             });
         }
         if(self.iteration > 2) {
-            self.tabOptions = ["Reelaboración","Original","Reelaboración Anonima"];
+            self.tabOptions = [{name:"Individual", idx:1},{name: "Reelaboración Anónima", idx: 2},{name: "Reelaboración Grupal", idx: 0}];
             $http({url: "get-team-ideas", method: "post", data: {iteration: 2}}).success((data) => {
                 self.ansIter2 = {};
                 data.forEach((ans) => {
