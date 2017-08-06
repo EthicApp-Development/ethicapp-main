@@ -341,7 +341,7 @@ td.clickable:hover{
     cursor: pointer;
 }
 
-.table>tbody>tr>td.clickable.active{
+.table>tbody>tr>td.active{
     background: #8cd87c;
 }
 

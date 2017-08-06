@@ -358,14 +358,14 @@
                 <select class="" ng-options="x.val as x.name for x in iterationNames" ng-model="iterationIndicator" ng-change="updateState()"></select>
                 <button class="btn btn-default" ng-click="updateState()">Actualizar</button>
             </div>
-            <h4></h4>
-            <nvd3 options="barOpts" data="barData"></nvd3>
+            <h4></h4><br>
+            <nvd3 options="barOpts" data="barData" ng-hide="iterationIndicator == 0 || iterationIndicator == 4"></nvd3>
             <div class="row" ng-show="iterationIndicator < 5 && selectedSes.type == 'L'">
                 <div class="col-sm-4 col-sm-offset-2">
-                    Completo: <strong>{{numComplete}} / {{numUsers}}</strong>
+                    Actividad Finalizada: <strong>{{numComplete}} / {{numUsers}}</strong>
                 </div>
-                <div class="col-sm-6">
-                    Avance: <strong>{{numProgress | number:1 }}%</strong>
+                <div class="col-sm-6" ng-hide="iterationIndicator == 0 || iterationIndicator == 4">
+                    Rendimiento: <strong>{{numProgress | number:1 }}%</strong> <!-- TODO: Calcular rendimiento -->
                 </div>
             </div>
             <div class="row" ng-show="selectedSes.type == 'S'">
@@ -413,12 +413,12 @@
             <table class="table table-bordered" ng-if="selectedSes.type == 'L' && alumState!={} && iterationIndicator <= 4">
                 <tr>
                     <th>Alumno</th>
-                    <th style="width: 420px">Puntaje</th>
+                    <th style="width: 420px" ng-if="iterationIndicator != 0 && iterationIndicator != 4">Puntaje</th>
                     <th>Tiempo de término</th>
                 </tr>
                 <tr ng-repeat="dato in alumState | orderBy:'-score'">
                     <td ng-bind="users[dato.uid].name"></td>
-                    <td>
+                    <td ng-if="iterationIndicator != 0 && iterationIndicator != 4">
                         <div class="bg-darkgreen table-green-bar" ng-show="dato.score != null" style="width: {{400*dato.score}}px">
                             {{100*dato.score | number:0}}%
                         </div>

@@ -16,6 +16,7 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
     self.myUid = -1;
     self.sesStatusses = ["Lectura", "Individual", "Anónimo", "Grupal", "Reporte", "Rubrica Calibración", "Evaluación de Pares", "Finalizada"];
     self.canAnswer = true;
+    self.commentError = false;
 
     self.init = () => {
         self.getReports();
@@ -49,6 +50,7 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
             self.sesId = data.id;
             self.myUid = data.uid;
             self.sesSTime = (data.stime != null) ? new Date(data.stime) : null;
+            self.sesDescr = data.descr;
             if(self.iteration <= 5) {
                 $http({url: "get-active-example-report", method: "post"}).success((data) => {
                     self.reports = [data];
@@ -93,7 +95,12 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
     };
 
     self.sendSelection = (report) => {
+        if(report.comment == "" || report.comment == null || report.comment.length < 5){
+            self.commentError = true;
+            return;
+        }
         if(self.checkCriteria(report)){
+            self.commentError = false;
             self.criterios.forEach((criterio) => {
                 let postdata = {cid: criterio.id, sel: report.select[criterio.id], rid: report.id};
                 $http({url: "send-criteria-selection", method:"post", data:postdata}).success((data) => {
@@ -163,6 +170,12 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
                 }
             });
         });
+    };
+
+    self.selectCriterio = (cid, val) => {
+        if(self.canAnswer) {
+            self.report.select[cid] = val;
+        }
     };
 
     self.init();
