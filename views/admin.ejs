@@ -365,7 +365,7 @@
                     Actividad Finalizada: <strong>{{numComplete}} / {{numUsers}}</strong>
                 </div>
                 <div class="col-sm-6" ng-hide="iterationIndicator == 0 || iterationIndicator == 4">
-                    Rendimiento: <strong>{{numProgress | number:1 }}%</strong> <!-- TODO: Calcular rendimiento -->
+                    Rendimiento: <strong>{{lectPerformance() | number:0 }}%</strong>
                 </div>
             </div>
             <div class="row" ng-show="selectedSes.type == 'S'">

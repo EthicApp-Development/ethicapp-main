@@ -548,6 +548,20 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         return 0;
     };
 
+    self.lectPerformance = () => {
+        let t = 0;
+        let c = 0;
+        if (self.alumState != null) {
+            for (var i = 0; i < self.alumState.length; i++) {
+                var a = self.alumState[i];
+                t++;
+                c += a.score;
+            }
+            return 100 * c/t;
+        }
+        return 0;
+    };
+
     self.getAlumDoneTime = (postdata) => {
         $http({url: "get-alum-done-time", method: "post", data: postdata}).success((data) => {
             self.numComplete = 0;
