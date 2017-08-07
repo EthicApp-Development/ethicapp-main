@@ -104,7 +104,7 @@
                                 <i class="fa fa-send"></i>
                             </a>
                         </div>
-                        <a ng-show="sel.expanded && writingReport && !finished" ng-click="toggleUseIdea(sel.id)"><i class="fa fa-star"></i> Marcar idea usada en reporte</a>
+                        <a ng-show="sel.expanded && writingReport && !finished" ng-click="toggleUseIdea(sel.id)"><i class="fa fa-star"></i> Marcar idea usada en respuesta final</a>
                         </div>
                     </li>
                     <span class="text-gray center-block text-center">Menos importante</span>
@@ -126,7 +126,7 @@
                                 <span class="text-gray"> - {{documents[docIdx[sel.docid]].title}}</span>
                                 <div ng-show="sel.expanded" ng-bind="sel.descr"></div>
                                 <a ng-show="sel.expanded && !followLeader && !writingReport && !finished" ng-click="copyIdea(sel)"><i class="fa fa-copy"></i> Copiar a Actual</a>
-                                <a ng-show="sel.expanded && writingReport && !finished" ng-click="toggleUseIdea(sel.id)"><i class="fa fa-star"></i> Marcar idea usada en reporte</a>
+                                <a ng-show="sel.expanded && writingReport && !finished" ng-click="toggleUseIdea(sel.id)"><i class="fa fa-star"></i> Marcar idea usada en respuesta final</a>
                             </li>
                         </ul>
                     </div>
@@ -143,7 +143,7 @@
                                 <span class="text-gray"> - {{documents[docIdx[sel.docid]].title}}</span>
                                 <div ng-show="sel.expanded" ng-bind="sel.descr"></div>
                                 <a ng-show="sel.expanded && !followLeader && !writingReport && !finished" ng-click="copyIdea(sel)"><i class="fa fa-copy"></i> Copiar a Actual</a>
-                                <a ng-show="sel.expanded && writingReport && !finished" ng-click="toggleUseIdea(sel.id)"><i class="fa fa-star"></i> Marcar idea usada en reporte</a>
+                                <a ng-show="sel.expanded && writingReport && !finished" ng-click="toggleUseIdea(sel.id)"><i class="fa fa-star"></i> Marcar idea usada en respuesta final</a>
                             </li>
                         </ul>
                     </div>
@@ -155,7 +155,7 @@
 
     <div class="report-window" ng-if="writingReport" ng-controller="ReportController">
         <div class="bar">
-            <span>Reporte Final</span>
+            <span>Respuesta al factor detonante</span>
             <div class="pull-right">
                 <span ng-show="lastSent != null && isFull">Enviado {{lastSent | date:'HH:mm'}}</span>
                 <button class="btn btn-sm btn-primary" ng-click="sendReport()" ng-show="isFull"><i class="fa fa-send"></i></button>
@@ -163,7 +163,7 @@
             </div>
         </div>
         <div class="content" ng-show="isFull">
-            <textarea class="form-control" ng-model="content"></textarea>
+            <textarea class="form-control" ng-model="content" ng-disabled="finished"></textarea>
         </div>
     </div>
 

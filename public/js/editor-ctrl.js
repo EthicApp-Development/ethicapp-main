@@ -46,7 +46,9 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", "N
         });
         $socket.on("updateTeam", (data) => {
              if(self.teamId == data.tmid){
-                 self.getIdeas();
+                 if(!self.leader) {
+                     self.getIdeas();
+                 }
                  self.getTeamInfo();
              }
         });
@@ -271,7 +273,8 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", "N
                     sel.status = "saved";
                     sel.id = data.id;
                 }
-                self.updateSignal();
+                if(self.iteration == 3)
+                    self.updateSignal();
             });
         }
         else if (sel.status == "dirty" && sel.id != null) {
@@ -281,7 +284,8 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", "N
                     sel.expanded = false;
                     sel.status = "saved";
                 }
-                self.updateSignal();
+                if(self.iteration == 3)
+                    self.updateSignal();
             });
         }
     };
@@ -289,6 +293,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", "N
     self.updateSignal = () => {
         $http({url: "update-my-team", method:"post"}).success((data) => {
             console.log("Team updated");
+            // self.selection = selcop;
         });
     };
 
@@ -307,6 +312,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", "N
             self.selections.splice(index, 1);
             self.unhighlightSerial(sel.serial, self.docIdx[sel.docid]);
         }
+        self.uncopyAllIdeas();
     };
 
     self.copyIdea = (sel) => {
@@ -354,6 +360,24 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", "N
                 console.log("Order saved");
             }
         });
+    };
+
+    self.uncopyAllIdeas = () => {
+        if(self.ansIter1 != null) {
+            for (let u in self.ansIter1) {
+                self.ansIter1[u].forEach((e) => {
+                    e.copied = false;
+                });
+            }
+        }
+        if(self.ansIter2 != null) {
+            for (let u in self.ansIter2) {
+                self.ansIter2[u].forEach((e) => {
+                    e.copied = false;
+                });
+            }
+        }
+        console.log(self.ansIter1);
     };
 
     let arrayIndexOfId = (arr, id) => {
