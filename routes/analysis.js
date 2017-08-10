@@ -48,7 +48,7 @@ router.post("/group-proposal-sel", (req, res) => {
                 rpg.multiSQL({
                     dbcon: pass.dbcon,
                     sql: "select uid, sum(correct) as score, count(correct) as answered from (select s.uid, (s.answer = q.answer)::int " +
-                        "as correct from selection as s inner join questions as q on s.qid = q.id where q.sesid = $1 and s.iteration = 1) as r group by uid",
+                        "as correct from selection as s inner join questions as q on s.qid = q.id where q.sesid = $1 and s.iteration = $2) as r group by uid",
                     onStart: (ses, data, calc) => {
                         if (ses.role != "P") {
                             console.log("ERR: Solo profesor puede ver estado de alumnos.");
@@ -105,23 +105,37 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
                 let last_uid = -1;
                 let i = -1;
                 let total = rowin.total + 1;
-                console.log(rowin);
+                let allAns = [];
                 arr.forEach((row) => {
-                    //console.log(row);
+                     allAns.push(row.content_ans.trim().toLowerCase());
+                });
+                var scoresUsed = {};
+                arr.forEach((row) => {
                     if(row.uid != last_uid) {
                         if(i >= 0)
-                            scores[i].score /= Math.pow(2,total) - 1;
+                            scores[i].score /= total;
                         i++;
                         last_uid = row.uid;
                         scores.push({uid: last_uid, score:0});
+                        scoresUsed = {};
                     }
+                    console.log(row.orden, "|", row.content, "|", row.content_ans);
                     if(ideasMatch(row)){
-                        console.log(row);
-                        scores[i].score += Math.pow(2, total - row.orden - 1);
+                        if(!scoresUsed[row.orden]){
+                            scores[i].score += 1;
+                        }
+                        else {
+                            scores[i].score += 0.3;
+                        }
+                        scoresUsed[row.orden] = true;
+                    }
+                    else if(!scoresUsed[row.orden] && allAns.includes(row.content.trim().toLowerCase())){
+                        scores[i].score += 0.7;
+                        scoresUsed[row.orden] = true;
                     }
                 });
                 if (i>=0)
-                    scores[i].score /= Math.pow(2,total) - 1;
+                    scores[i].score /= total;
                 res.end(JSON.stringify(scores));
             }
         })(req,res);
@@ -163,21 +177,38 @@ router.post("/group-proposal-lect", (req,res) => {
                                 let scores = [];
                                 let last_uid = -1;
                                 let i = -1;
-                                let total = rowin.total;
+                                let total = rowin.total + 1;
+                                let allAns = [];
+                                arr.forEach((row) => {
+                                    allAns.push(row.content_ans.trim().toLowerCase());
+                                });
+                                var scoresUsed = {};
                                 arr.forEach((row) => {
                                     if(row.uid != last_uid) {
                                         if(i >= 0)
-                                            scores[i].score /= Math.pow(2,total) - 1;
+                                            scores[i].score /= total;
                                         i++;
                                         last_uid = row.uid;
                                         scores.push({uid: last_uid, score:0});
+                                        scoresUsed = {};
                                     }
+                                    console.log(row.orden, "|", row.content, "|", row.content_ans);
                                     if(ideasMatch(row)){
-                                        scores[i].score += Math.pow(2, total - row.orden - 1);
+                                        if(!scoresUsed[row.orden]){
+                                            scores[i].score += 1;
+                                        }
+                                        else {
+                                            scores[i].score += 0.3;
+                                        }
+                                        scoresUsed[row.orden] = true;
+                                    }
+                                    else if(!scoresUsed[row.orden] && allAns.includes(row.content.trim().toLowerCase())){
+                                        scores[i].score += 0.7;
+                                        scoresUsed[row.orden] = true;
                                     }
                                 });
-                                if (i >= 0)
-                                    scores[i].score /= Math.pow(2,total) - 1;
+                                if (i>=0)
+                                    scores[i].score /= total;
                                 let groups = generateTeams(scores, (s) => s.score, req.body.gnum, isDifferent(req.body.method));
                                 res.end(JSON.stringify(groups));
                             }

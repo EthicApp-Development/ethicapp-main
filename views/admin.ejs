@@ -26,10 +26,10 @@
         </button>
     </div>
     <div class="col-sm-10">
-        <h5><i class="fa fa-sliders"></i> Panel de administración</h5>
+        <h5>Panel de administración</h5>
     </div>
     <div class="col-sm-1">
-        <a class="btn btn-default" href="logout"><i class="fa fa-close"></i></a>
+        <a class="btn btn-default pull-right margin-right-24" href="logout"><i class="fa fa-close"></i></a>
     </div>
 </div>
 
@@ -419,7 +419,7 @@
                 <tr ng-repeat="dato in alumState | orderBy:'-score'">
                     <td ng-bind="users[dato.uid].name"></td>
                     <td ng-if="iterationIndicator != 0 && iterationIndicator != 4">
-                        <div class="bg-darkgreen table-green-bar" ng-show="dato.score != null" style="width: {{400*dato.score}}px">
+                        <div class="bg-darkgreen table-green-bar" ng-show="dato.score != null" style="width: {{400*dato.score}}px;">
                             {{100*dato.score | number:0}}%
                         </div>
                     </td>
@@ -447,7 +447,7 @@
                 <tr ng-repeat="dato in result | orderBy:'-val'">
                     <td ng-bind="users[dato.uid].name"></td>
                     <td>
-                        <div class="bg-darkgreen table-green-bar" style="width: {{100*dato.val}}px">
+                        <div class="bg-darkgreen table-green-bar" style="width: {{100*dato.val}}px;">
                             {{dato.val | number:2}}
                         </div>
                     </td>
