@@ -400,7 +400,8 @@
                     <td ng-if="iterationIndicator == 3" ng-bind="leaderTeamStr[alum]"></td>
                     <td>{{progressAlum(alum) | number:0}}%</td>
                     <td ng-repeat="qs in questions"
-                        ng-class="{'bg-darkgreen': data[qs.id], 'bg-darkred': data[qs.id]!=null && !data[qs.id]}"></td>
+                        ng-class="{'bg-darkgreen': data[qs.id], 'bg-darkred': data[qs.id]!=null && !data[qs.id]}"
+                        ng-click="showDetailAnswer(qs.id, alum, iterationIndicator)"></td>
                     <td>{{avgAlum(alum) | number:0}}%</td>
                 </tr>
                 <tr>

@@ -723,11 +723,45 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         });
     };
 
+    self.showDetailAnswer = (qid, uid, it) => {
+        let opts = ["A", "B", "C", "D", "E"];
+        let postdata = {uid: uid, qid: qid, iteration: it};
+        $http({url: "get-selection-comment", method: "post", data: postdata}).success((data) => {
+            let qs = self.questions.reduce((e,v) => (v.id == qid)? v : e, null);
+            console.log(qs);
+            let alt = opts[data.answer] + ". " + qs.options[data.answer];
+            let qstxt = qs.content;
+            $uibModal.open({
+                templateUrl: "templ/content-dialog.html",
+                controller: "ContentModalController",
+                controllerAs: "vm",
+                scope: self,
+                resolve: {
+                    data: function () {
+                        data.title = "Respuesta de " + self.users[uid].name;
+                        data.content = qstxt + "\n\n" + "Alternativa: " + alt + "\n\nComentario:\n" + data.comment;
+                        return data;
+                    },
+                }
+            });
+        });
+    };
+
 });
 
 adpp.controller("ReportModalController", function ($scope, $uibModalInstance, report) {
     var vm = this;
     vm.report = report;
+
+    vm.cancel = () => {
+        $uibModalInstance.dismiss('cancel');
+    };
+
+});
+
+adpp.controller("ContentModalController", function ($scope, $uibModalInstance, data) {
+    var vm = this;
+    vm.data = data;
 
     vm.cancel = () => {
         $uibModalInstance.dismiss('cancel');
