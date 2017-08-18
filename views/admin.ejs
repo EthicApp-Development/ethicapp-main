@@ -81,6 +81,7 @@
             <br>
             <label>Factor detonante:</label>
             <textarea class="form-control" ng-model="selectedSes.descr" ng-disabled="selectedSes.status!=1"></textarea>
+            <button class="btn btn-xs btn-default" ng-click="openDuplicateSes()">Duplicar sesion</button>
             <br>
             <button class="btn btn-default pull-right" ng-click="updateSession()" ng-disabled="selectedSes.status!=1">
                 Guardar cambios
@@ -105,7 +106,7 @@
                     </div>
                     <div class="col-sm-7">
                         <input type="file" class="form-control" name="pdf" ng-disabled="selectedSes.status!=1" required>
-                        <input type="text" ng-model="selectedSes.id" name="sesid" hidden>
+                        <input type="text" ng-value="selectedSes.id" name="sesid" hidden>
                     </div>
                     <div class="col-sm-1">
                         <button class="form-control btn btn-default" ng-disabled="selectedSes.status!=1 || busy">Subir <i ng-show="busy" class="fa fa-spinner fa-pulse"></i></button>
@@ -330,13 +331,13 @@
                             <div class="col-sm-1">
                                 <button class="btn btn-default" ng-click="goToReport(text)"><i class="fa fa-edit"></i></button>
                                 <button class="btn btn-default" ng-click="setActiveExampleReport(text)" ng-class="{'btn-success':text.active}">
-                                    <i class="fa fa-share-alt"></i></button>
+                                    <i class="fa fa-share"></i></button>
                             </div>
                         </div>
                     </li>
                 </ul>
                 <h5>Agregar texto de ejemplo:</h5>
-                <input class="form-control" ng-model="newExampleReport.title" placeholder="Titulo">
+                <input class="form-control" ng-model="newExampleReport.title" placeholder="Titulo" maxlength="20">
                 <textarea rows="5" class="form-control" ng-model="newExampleReport.text" placeholder="Contenido"></textarea>
                 <button class="btn btn-default pull-right" ng-disabled="newExampleReport.text.length==0" ng-click="sendExampleReport()">Guardar</button>
                 <br><br>
@@ -468,9 +469,9 @@
                         <td>
                             Reporte de <span ng-bind="getReportAuthor(row[0].rid)"></span>
                             <button class="btn btn-default btn-sm pull-right" ng-click="broadcastReport(row[0].rid)" ng-show="selectedSes.status == 9">
-                                <i class="fa fa-share-alt"></i>
+                                <i class="fa fa-share"></i>
                             </button>
-                            <button class="btn btn-default btn-sm pull-right" ng-click="showReport(row[0].rid)"><i class="fa fa-external-link"></i></button>
+                            <button class="btn btn-default btn-sm pull-right" ng-click="showReport(row[0].rid)"><i class="fa fa-eye"></i></button>
                         </td>
                         <td>{{getAvg(row) | number:2}}</td>
                         <td ng-repeat="cell in row">

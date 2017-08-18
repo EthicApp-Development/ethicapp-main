@@ -114,6 +114,22 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         });
     };
 
+    self.openDuplicateSes = () => {
+        if(self.selectedSes == null) return;
+        let ses = angular.copy(self.selectedSes);
+        $uibModal.open({
+            templateUrl: "templ/duplicate-ses.html",
+            controller: "DuplicateSesModalController",
+            controllerAs: "vm",
+            scope: self,
+            resolve: {
+                data: function () {
+                    return ses;
+                },
+            }
+        });
+    };
+
     self.toggleSidebar = () => {
         self.openSidebar = !self.openSidebar;
         self.shared.updateState()
@@ -185,7 +201,7 @@ adpp.controller("TabsController", function ($scope, $http) {
 
 });
 
-adpp.controller("DocumentsController", function ($scope, $http, Notification) {
+adpp.controller("DocumentsController", function ($scope, $http, Notification, $timeout) {
     let self = $scope;
 
     self.busy = false;
@@ -198,10 +214,12 @@ adpp.controller("DocumentsController", function ($scope, $http, Notification) {
             headers: {'Content-Type': undefined}
         }).success((data) => {
             if (data.status == "ok") {
-                Notification.success("Documento cargado correctamente");
-                event.target.reset();
-                self.busy = false;
-                self.shared.updateDocuments();
+                $timeout(() => {
+                    Notification.success("Documento cargado correctamente");
+                    event.target.reset();
+                    self.busy = false;
+                    self.shared.updateDocuments();
+                }, 2000);
             }
         });
     };
@@ -245,7 +263,7 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
                 self.shared.updateSesData();
             });
         }
-    }
+    };
 
 });
 
@@ -376,7 +394,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 }
             }
         };
-        self.barData = [{key: "Alumnos", color: "#6d97bc", values: []}];
+        self.barData = [{key: "Alumnos", color: "#4d6b87", values: []}];
         self.updateState();
         if (DASHBOARD_AUTOREALOD && self.selectedSes.status < 9) {
             self.reload(true);
@@ -739,7 +757,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 resolve: {
                     data: function () {
                         data.title = "Respuesta de " + self.users[uid].name;
-                        data.content = qstxt + "\n\n" + "Alternativa: " + alt + "\n\nComentario:\n" + data.comment;
+                        data.content = "Pregunta:\n" + qstxt + "\n\nRespuesta:\n" + alt + "\n\nComentario:\n" + data.comment;
                         return data;
                     },
                 }
@@ -765,6 +783,35 @@ adpp.controller("ContentModalController", function ($scope, $uibModalInstance, d
 
     vm.cancel = () => {
         $uibModalInstance.dismiss('cancel');
+    };
+
+});
+
+adpp.controller("DuplicateSesModalController", function ($scope, $http, $uibModalInstance, data) {
+    var vm = this;
+    vm.data = data;
+    vm.nses = {
+        name: vm.data.name,
+        tipo: vm.data.type,
+        descr: vm.data.descr,
+        originalSesid: vm.data.id,
+        copyDocuments: false,
+        copyIdeas: false,
+        copyQuestions: false,
+        copyRubrica: false,
+        copyUsers: false
+    };
+
+    vm.cancel = () => {
+        $uibModalInstance.dismiss('cancel');
+    };
+
+    vm.sendDuplicate = () => {
+        console.log(vm.nses);
+        $http({url: "duplicate-session", method: "post", data: vm.nses}).success((data) => {
+            console.log(data);
+            window.location.reload();
+        });
     };
 
 });

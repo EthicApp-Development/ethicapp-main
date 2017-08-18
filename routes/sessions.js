@@ -58,7 +58,7 @@ router.post("/update-session", rpg.execSQL({
 }));
 
 router.post("/upload-file", (req, res) => {
-    if (req.session.uid != null && req.body.title != null && req.body.title != "" && req.files.pdf != null && req.files.pdf.mimetype == "application/pdf") {
+    if (req.session.uid != null && req.body.title != null && req.body.title != "" && req.files.pdf != null && req.files.pdf.mimetype == "application/pdf" && req.body.sesid != null) {
         // console.log(req.body);
         rpg.execSQL({
             dbcon: pass.dbcon,
@@ -70,8 +70,9 @@ router.post("/upload-file", (req, res) => {
             onEnd: () => {
             }
         })(req, res);
+        res.end('{"status":"ok"}');
     }
-    res.end('{"status":"ok"}');
+    res.end('{"status":"err"}');
 });
 
 router.post("/documents-session", rpg.multiSQL({
@@ -159,7 +160,7 @@ router.post("/get-selection-comment", rpg.singleSQL({
     sqlParams: [rpg.param("post", "uid"), rpg.param("post", "qid"), rpg.param("post", "iteration")]
 }));
 
-/*router.post("/duplicate-session", (req, res) => {
+router.post("/duplicate-session", (req, res) => {
      if(req.session.uid != null && req.session.role == "P" && req.body.name != null && req.body.name != ""
          && req.body.tipo != null && req.body.descr != null && req.body.originalSesid != null){
          rpg.singleSQL({
@@ -175,46 +176,56 @@ router.post("/get-selection-comment", rpg.singleSQL({
                          dbcon: pass.dbcon,
                          sql: "insert into sesusers(sesid,uid) select " + sesid +
                             " as sesid, uid from sesusers where sesid = " + oldsesid
-                     });
+                     })(req,res);
                  }
                  else{
                      rpg.execSQL({
                          dbcon: pass.dbcon,
                          sql: "insert into sesusers(sesid,uid) values (" + sesid + "," + req.session.uid + ")"
-                     });
+                     })(req,res);
                  }
                  if(req.body.copyDocuments){
                      rpg.execSQL({
                          dbcon: pass.dbcon,
                          sql: "insert into documents(sesid,title,path,uploader,active) select " + sesid +
                             " as sesid, title, path, uploader, active from documents where sesid = " + oldsesid
-                     });
+                     })(req,res);
                  }
                  if(req.body.copyQuestions){
                      rpg.execSQL({
                          dbcon: pass.dbcon,
                          sql: "insert into questions(sesid,content,options,answer,comment,other,textid) select " + sesid +
                          " as sesid, content,options,answer,comment,other,textid from questions where sesid = " + oldsesid
-                     });
+                     })(req,res);
                      rpg.execSQL({
                          dbcon: pass.dbcon,
                          sql: "insert into question_text(sesid,content,title) select " + sesid +
                          " as sesid, content, title from question_text where sesid = " + oldsesid
-                     });
+                     })(req,res);
                  }
                  if(req.body.copyIdeas){
-
+                    console.log("Copy Ideas is not implemented yet");
                  }
                  if(req.body.copyRubrica){
-
+                    rpg.singleSQL({
+                        dbcon: pass.dbcon,
+                        sql: "insert into rubricas(sesid) values (" + sesid + ") returning id",
+                        onEnd: (req, res, result) => {
+                            rpg.execSQL({
+                                dbcon: pass.dbcon,
+                                sql: "insert into criteria(name,pond,inicio,proceso,competente,avanzado,rid) select " +
+                                    "name, pond, inicio, proceso,competente,avanzado, " + result.id + "as rid"
+                            })(req,res);
+                        }
+                    })(req,res);
                  }
              }
-         });
-         res.end('{"status":"ok"}');
+         })(req,res);
+         //res.end('{"status":"ok"}');
      }
      else{
          res.end('{"status":"err"}');
      }
-});*/
+});
 
 module.exports = router;

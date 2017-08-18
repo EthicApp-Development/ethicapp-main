@@ -162,8 +162,12 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", "N
             expanded: true,
             status: "unsaved"
         };
-        if (textDef.length < 2 || textDef.length > 50){
+        if (textDef.length > 50){
             Notification.warning("El texto es muy largo para ser usado como una idea fuerza");
+            return;
+        }
+        if (textDef.length < 2){
+            Notification.warning("No ha seleccionado un texto para ser usado como una idea fuerza");
             return;
         }
         self.highlightSerial(textDef.serial, textDef.document);
@@ -257,6 +261,7 @@ app.controller("EditorController", ["$scope", "$http", "$timeout", "$socket", "N
     };
 
     self.sendIdea = (sel) => {
+        if(self.iteration == 3 && !self.leader) return;
         let postdata = {
             text: sel.text,
             comment: sel.comment,
