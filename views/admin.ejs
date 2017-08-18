@@ -57,7 +57,7 @@
         <div class="center-block font-large">
             <button class="btn btn-sm btn-default pull-right" ng-click="shared.changeState()">Ir al siguiente</button>
             <span ng-repeat="st in sesStatusses">
-                <span class="label label-default" ng-class="{'label-primary': $index==selectedSes.status-1}" ng-bind="st"></span>
+                <span class="label label-default" ng-class="{'label-warning': $index==selectedSes.status-1}" ng-bind="st"></span>
                 <span ng-hide="$last">→</span>
             </span>
         </div>

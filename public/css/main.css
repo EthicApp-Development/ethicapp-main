@@ -12,7 +12,7 @@ body{
     padding: 0;
     margin: 0;
     height: 100%;
-    background-color: #984512;
+    background-color: #6c859b;
 }
 
 hr{
@@ -70,13 +70,13 @@ a:hover{
 
 .top-bar{
     height: 32px;
-    background: #984512;
+    background: #6c859b;
     color: white;
 }
 
 .top-bar-mini{
     height: 24px;
-    background: #984512;
+    background: #6c859b;
     color: white;
 }
 

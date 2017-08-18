@@ -376,7 +376,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 }
             }
         };
-        self.barData = [{key: "Alumnos", color: "#ef6c00", values: []}];
+        self.barData = [{key: "Alumnos", color: "#6d97bc", values: []}];
         self.updateState();
         if (DASHBOARD_AUTOREALOD && self.selectedSes.status < 9) {
             self.reload(true);
