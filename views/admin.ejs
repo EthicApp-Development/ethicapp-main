@@ -414,12 +414,14 @@
             </table>
             <table class="table table-bordered" ng-if="selectedSes.type == 'L' && alumState!={} && iterationIndicator <= 4">
                 <tr>
-                    <th>Alumno</th>
+                    <th ng-if="iterationIndicator != 3">Alumno</th>
+                    <th ng-if="iterationIndicator == 3">Grupo</th>
                     <th style="width: 420px" ng-if="iterationIndicator != 0 && iterationIndicator != 4">Puntaje</th>
                     <th>Tiempo de término</th>
                 </tr>
                 <tr ng-repeat="dato in alumState | orderBy:'-score'">
-                    <td ng-bind="users[dato.uid].name"></td>
+                    <td ng-if="iterationIndicator != 3" ng-bind="users[dato.uid].name"></td>
+                    <td ng-if="iterationIndicator == 3" ng-bind="leaderTeamStr[dato.uid]"></td>
                     <td ng-if="iterationIndicator != 0 && iterationIndicator != 4">
                         <div class="bg-darkgreen table-green-bar" ng-show="dato.score != null" style="width: {{400*dato.score}}px;">
                             {{100*dato.score | number:0}}%

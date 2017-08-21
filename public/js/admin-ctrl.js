@@ -468,6 +468,25 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 self.alumState = data;
                 self.buildBarData(data);
                 self.getAlumDoneTime(postdata);
+                if (self.iterationIndicator == 3) {
+                    $http({
+                        url: "get-original-leaders",
+                        method: "post",
+                        data: {sesid: self.selectedSes.id}
+                    }).success((data) => {
+                        let temp = {};
+                        self.alumState.forEach((data) => {
+                            temp[data.uid] = data;
+                        });
+                        self.alumState = [];
+                        self.leaderTeamStr = {};
+                        data.forEach((r) => {
+                            if(temp[r.leader] != null)
+                                self.alumState.push(temp[r.leader]);
+                            self.leaderTeamStr[r.leader] = r.team.map(u => self.users[u].name).join(", ");
+                        });
+                    });
+                }
             });
             $http({url: "get-ideas-progress", method: "post", data: postdata}).success((data) => {
                 self.numProgress = 0;
