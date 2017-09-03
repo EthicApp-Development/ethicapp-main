@@ -160,6 +160,23 @@ router.post("/get-selection-comment", rpg.singleSQL({
     sqlParams: [rpg.param("post", "uid"), rpg.param("post", "qid"), rpg.param("post", "iteration")]
 }));
 
+
+router.post("/add-semantic-document", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "insert into semantic_document(title,content,sesid) values ($1,$2,$3)",
+    postReqData: ["sesid", "title", "content"],
+    sqlParams: [rpg.param("post", "title"), rpg.param("post", "content"), rpg.param("post", "sesid")]
+}));
+
+router.post("/get-semantic-document", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select id, title, content from semantic_document where sesid = $1",
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "sesid")]
+}));
+
+
+
 router.post("/duplicate-session", (req, res) => {
      if(req.session.uid != null && req.session.role == "P" && req.body.name != null && req.body.name != ""
          && req.body.tipo != null && req.body.descr != null && req.body.originalSesid != null){
@@ -214,7 +231,7 @@ router.post("/duplicate-session", (req, res) => {
                             rpg.execSQL({
                                 dbcon: pass.dbcon,
                                 sql: "insert into criteria(name,pond,inicio,proceso,competente,avanzado,rid) select " +
-                                    "name, pond, inicio, proceso,competente,avanzado, " + result.id + "as rid"
+                                    "name, pond, inicio, proceso,competente,avanzado, " + result.id + "as rid from criteria"
                             })(req,res);
                         }
                     })(req,res);

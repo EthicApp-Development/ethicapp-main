@@ -81,7 +81,7 @@
             <br>
             <label>Factor detonante:</label>
             <textarea class="form-control" ng-model="selectedSes.descr" ng-disabled="selectedSes.status!=1"></textarea>
-            <button class="btn btn-xs btn-default" ng-click="openDuplicateSes()">Duplicar sesion</button>
+            <button class="btn btn-xs btn-default" ng-click="openDuplicateSes()" disabled>Duplicar sesion</button>
             <br>
             <button class="btn btn-default pull-right" ng-click="updateSession()" ng-disabled="selectedSes.status!=1">
                 Guardar cambios
@@ -89,6 +89,19 @@
             <br>
             <hr>
             <br>
+            <div ng-show="selectedSes.type == 'M'" ng-controller="SemDocController">
+                <h4>Documentos</h4>
+                <div class="list-group-item" ng-repeat="doc in semDocs">
+                    <strong ng-bind="doc.title"></strong>
+                    <p>{{doc.content | limitTo:360}}</p>
+                </div>
+                <div>
+                    <label>Agregar Documento</label>
+                    <input type="text" ng-model="newSDoc.title" placeholder="Titulo" class="form-control">
+                    <textarea class="form-control" rows="5" ng-model="newSDoc.content"></textarea>
+                    <button class="btn btn-default pull-right" ng-click="addSemDoc()">Agregar</button>
+                </div>
+            </div>
             <div ng-show="selectedSes.type == 'L'" ng-controller="DocumentsController">
                 <h4>Documentos</h4>
                 <div class="list-group">

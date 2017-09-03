@@ -114,6 +114,22 @@ router.get("/select", (req, res) => {
         res.redirect(".");
 });
 
+router.get("/to-semantic", (req, res) => {
+    if (req.session.uid) {
+        req.session.ses = req.query.sesid;
+        res.redirect("semantic");
+    }
+    else
+        res.redirect(".");
+});
+
+router.get("/semantic", (req, res) => {
+    if (req.session.uid && req.session.ses)
+        res.render("semantic");
+    else
+        res.redirect(".");
+});
+
 router.post("/get-documents", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select id, title, path from documents where sesid = $1 and active = true",

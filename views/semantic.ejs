@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es" ng-app="Semantic">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <title>DocCollab</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+    <script src="libs/pdf.min.js"></script>
+    <script src="libs/rangy-core.min.js"></script>
+    <script src="libs/rangy-classapplier.min.js"></script>
+    <script src="libs/rangy-serializer.min.js"></script>
+    <script src="libs/textlayerbuilder.js"></script>
+    <script src="libs/angular.min.js"></script>
+    <script src="libs/angular-ui-tree.min.js"></script>
+    <script src="libs/angular-timer.min.js"></script>
+    <script src="libs/socket.min.js"></script>
+    <script src="libs/angular-ui-notification.min.js"></script>
+    <script src="js/semantic-ctrl.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/minimal.css">
+    <link rel="stylesheet" href="css/angular-ui-tree.min.css">
+    <link rel="stylesheet" href="css/angular-ui-notification.min.css">
+    <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body class="bg-white">
+
+<div class="editor-container" ng-controller="SemanticController">
+
+    <div class="top-bar-mini">
+        <div class="text-center">
+            <span ng-repeat="st in sesStatusses">
+                <span class="label label-primary" ng-class="{'bg-black-alpha': $index==iteration}" ng-bind="st"></span>
+                <span ng-hide="$last">→</span>
+            </span>
+            <span class="pull-right margin-right-24" ng-show="sesSTime != null">
+                <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
+            </span>
+        </div>
+    </div>
+
+    <div class="top-bar-mini">
+        <strong class="simple-margin-left">Factor detonante: </strong>
+        <span ng-bind="sesDescr"></span>
+    </div>
+
+    <div class="top-bar">
+        <div class="col-sm-6 full-height">
+            <span class="simple-margin-left">Documentos: </span>
+            <span ng-repeat="doc in documents" class="side-top-btn" ng-bind="doc.title"
+                  ng-class="{'active': $index==selectedDocument}" ng-click="selectPDF($index)"></span>
+            <!--<strong class="pull-right margin-top-8" ng-bind="iterationNames[iteration]"></strong>-->
+        </div>
+        <div class="col-sm-6">
+            <a onclick="window.history.back()" class="btn btn-sm btn-default pull-right">Atrás</a>
+            <button disabled class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i> Representante </button>
+            <button class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && followLeader" ng-click="takeControl()">Tomar Control</button>
+            <button class="btn btn-sm btn-default pull-right" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}">
+                <i class="fa fa-check"></i> Terminé</button>
+            <span class="pull-right boxed" ng-bind="teamstr"></span>
+        </div>
+    </div>
+
+    <div class="vh50 boxed">
+        <div class="col-sm-10 col-sm-offset-1">
+            <h3>Texto 1</h3>
+            <p class="text-justify"><span ng-repeat="sent in sentences" ng-class="{'bg-lightorange': highlight[$index]}"> <input type="checkbox" ng-model="highlight[$index]">{{sent}}</span></p>
+        </div>
+    </div>
+
+    <div class="">
+        <div class="col-sm-10 col-sm-offset-1">
+            <h3>Unidades Semánticas:</h3>
+            <ul class="list-group">
+                <li class="list-group-item row">
+                    <strong class="col-sm-1">{{countHightlight()}} Sel.</strong>
+                    <div class="col-sm-11">
+                    <input type="text" class="form-control">
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="report-window" ng-if="writingReport" ng-controller="ReportController">
+        <div class="bar">
+            <span>Respuesta al factor detonante</span>
+            <div class="pull-right">
+                <span ng-show="lastSent != null && isFull">Enviado {{lastSent | date:'HH:mm'}}</span>
+                <button class="btn btn-sm btn-primary" ng-click="sendReport()" ng-show="isFull"><i class="fa fa-send"></i></button>
+                <button class="btn btn-sm btn-primary" ng-click="toggleFull()"><i class="fa fa-minus"></i></button>
+            </div>
+        </div>
+        <div class="content" ng-show="isFull">
+            <textarea class="form-control" ng-model="content" ng-disabled="finished"></textarea>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

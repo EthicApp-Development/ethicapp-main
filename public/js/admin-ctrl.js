@@ -90,6 +90,19 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
 
     };
 
+    self.requestSemDocuments = () => {
+        let postdata = {sesid: self.selectedSes.id};
+        /*$http({url: "questions-session", method: "post", data: postdata}).success((data) => {
+            self.questions = data.map(e => {
+                e.options = e.options.split("\n");
+                return e;
+            });
+        });*/
+        $http({url: "get-semantic-dicuments", method: "post", data: postdata}).success((data) => {
+            self.semDocs = data;
+        });
+    };
+
     self.getNewUsers = () => {
         let postdata = {sesid: self.selectedSes.id};
         $http({url: "get-new-users", method: "post", data: postdata}).success((data) => {
@@ -169,12 +182,18 @@ adpp.controller("TabsController", function ($scope, $http) {
             self.shared.getExampleReports();
             self.shared.getReports();
         }
-        else {
+        else if(self.selectedSes.type == "S"){
             self.iterationNames = [{name: "Individual", val: 1}, {name: "Grupal anónimo", val: 2},
                 {name: "Grupal", val: 3}];
             self.tabOptions = ["Configuración", "Dashboard"];
             self.tabConfig = ["Usuarios", "Grupos"];
             self.sesStatusses = ["Configuración", "Individual", "Anónimo", "Grupal", "Finalizada"];
+        }
+        else{
+            self.iterationNames = [{name: "Individual", val: 1}, {name: "Grupal", val: 3}, {name: "Reporte", val:4}, {name: "Evaluación de Pares", val: 6}];
+            self.tabOptions = ["Configuración", "Dashboard"];
+            self.tabConfig = ["Usuarios", "Grupos","Rúbrica"];
+            self.sesStatusses = ["Configuración", "Individual", "Grupal", "Reporte","Evaluación de Pares", "Finalizada"];
         }
         if (self.selectedSes.status > 1) {
             self.selectedTab = 1;
@@ -299,6 +318,23 @@ adpp.controller("NewUsersController", function ($scope, $http, Notification) {
                 }
             });
         }
+    };
+
+});
+
+adpp.controller("SemDocController", function ($scope, $http, Notification) {
+    let self = $scope;
+
+    self.newSDoc = {title: "", content: ""};
+
+    self.addSemDoc = () => {
+        let postdata = {sesid: self.selectedSes.id, title: self.newSDoc.title, content: self.newSDoc.content};
+        $http({url: "add-semantic-document", method: "post", data: postdata}).success((data) => {
+            if (data.status == "ok") {
+                self.requestSemDocuments();
+                self.newSDoc = {title: "", content: ""};
+            }
+        });
     };
 
 });

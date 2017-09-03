@@ -434,3 +434,8 @@ p{
 .bg-gray{
     background: #eee;
 }
+
+.vh50{
+    max-height: 50vh;
+    overflow-y: auto;
+}
