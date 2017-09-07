@@ -71,6 +71,14 @@
                         </button>
                     </span>
                 </div>
+                <div>
+                    <label>Grado de certeza en la respuesta:</label>
+                    <div class="btn-group simple-margin-left" ng-disabled="finished">
+                        <label class="btn btn-default" ng-repeat="conf in optConfidence" ng-class="{active: confidences[qs.id] == conf}" ng-disabled="finished">
+                            <input ng-disabled="finished" type="radio" name="confidence" ng-model="confidences[qs.id]" ng-value="conf"> {{conf}}%
+                        </label>
+                    </div>
+                </div>
                 <br>
                 <table class="table table-condensed table-bordered" ng-show="iteration > 1">
                     <tr>

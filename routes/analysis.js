@@ -516,6 +516,20 @@ router.post("/get-alum-done-time", rpg.multiSQL({
     sqlParams: [rpg.param("post", "iteration"), rpg.param("post", "sesid")]
 }));
 
+router.post("/get-alum-confidence", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select s.confidence as conf, q.id as qid, count(*) as freq from selection as s inner join questions as q on s.qid = q.id " +
+        "where q.sesid = $1 and s.iteration = $2 and s.confidence is not null group by s.confidence, q.id",
+    postReqData: ["sesid","iteration"],
+    onStart: (ses, data, calc) => {
+        if (ses.role != "P") {
+            console.log("ERR: Solo profesor puede ver estado de alumnos.");
+            return "select $1, $2"
+        }
+    },
+    sqlParams: [rpg.param("post", "sesid"),rpg.param("post", "iteration")]
+}));
+
 let hasDuplicates = (arr) => {
     let dict = {};
     for (var i = 0; i < arr.length; i++) {

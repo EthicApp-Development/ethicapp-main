@@ -20,6 +20,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.users = {};
     self.selectedIndex = -1;
     self.sesStatusses = ["No Publicada", "Lectura", "Personal", "Anónimo", "Grupal", "Finalizada"];
+    self.optConfidence = [0, 25, 50, 75, 100];
     self.iterationNames = [];
     self.openSidebar = true;
 
@@ -497,6 +498,14 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     return d;
                 });
                 self.buildBarData(dataNorm);
+            });
+            $http({url: "get-alum-confidence", method: "post", data: postdata}).success((data) => {
+                 self.confidence = {};
+                 data.forEach(r => {
+                     if(!self.confidence[r.qid])
+                         self.confidence[r.qid] = {};
+                     self.confidence[r.qid][r.conf] = r.freq;
+                 });
             });
         }
         else if (self.selectedSes.type == "L") {

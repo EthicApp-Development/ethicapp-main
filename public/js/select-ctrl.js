@@ -1,6 +1,6 @@
 "use strict";
 
-let app = angular.module("Select", ["ui.bootstrap", "timer",'btford.socket-io',"ui-notification"]);
+let app = angular.module("Select", ["ui.bootstrap", "timer", 'btford.socket-io', "ui-notification"]);
 
 app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
@@ -17,7 +17,9 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
     self.answers = {};
     self.anskey = {};
     self.comments = {};
+    self.confidences = {};
     self.optLabels = ["A", "B", "C", "D", "E"];
+    self.optConfidence = [0, 25, 50, 75, 100];
     self.sent = {};
     self.teamUids = [];
     self.bottomMsg = "";
@@ -33,13 +35,13 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
         self.getSesInfo();
         $socket.on("stateChange", (data) => {
             console.log("SOCKET.IO", data);
-            if(data.ses == self.sesId){
+            if (data.ses == self.sesId) {
                 window.location.reload();
             }
         });
         $socket.on("teamProgress", (data) => {
             console.log("SOCKET.IO", data);
-            if(data.ses == self.sesId && data.tmid == self.teamId && self.iteration == 3){
+            if (data.ses == self.sesId && data.tmid == self.teamId && self.iteration == 3) {
                 self.updateTeam();
             }
         });
@@ -54,7 +56,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             self.sesSTime = data.stime;
             self.sesDescr = data.descr;
             let set = new Set();
-            if(self.iteration > 1) {
+            if (self.iteration > 1) {
                 $http({url: "get-team-selection", method: "post", data: {iteration: 1}}).success((data) => {
                     data.forEach((ans) => {
                         self.ansIter1[ans.qid] = self.ansIter1[ans.qid] || {};
@@ -64,7 +66,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                     });
                 });
             }
-            if(self.iteration > 2) {
+            if (self.iteration > 2) {
                 $http({url: "get-team-selection", method: "post", data: {iteration: 2}}).success((data) => {
                     data.forEach((ans) => {
                         self.ansIter2[ans.qid] = self.ansIter2[ans.qid] || {};
@@ -75,7 +77,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                 });
                 self.updateTeam();
             }
-            if(self.iteration >= 4){
+            if (self.iteration >= 4) {
                 self.finished = true;
                 self.loadAnskey();
             }
@@ -90,10 +92,10 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             data.forEach((tm) => {
                 self.team[tm.id] = tm.name;
             });
-            if(data.length > 0){
+            if (data.length > 0) {
                 self.teamId = data[0].tmid;
                 self.teamProgress = data[0].progress;
-                if(self.iteration == 3)
+                if (self.iteration == 3)
                     self.selectQuestion(self.teamProgress);
             }
         });
@@ -118,10 +120,11 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
     };
 
     self.loadAnswers = () => {
-        $http({url: "get-answers", method: "post", data: {iteration: Math.min(3,self.iteration)}}).success((data) => {
+        $http({url: "get-answers", method: "post", data: {iteration: Math.min(3, self.iteration)}}).success((data) => {
             data.forEach((ans) => {
                 self.answers[ans.qid] = ans.answer;
                 self.comments[ans.qid] = ans.comment;
+                self.confidences[ans.qid] = ans.confidence;
                 self.sent[ans.qid] = true;
             });
         });
@@ -137,37 +140,37 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
     };
 
     self.nextQuestion = () => {
-        if (self.iteration == 3){
+        if (self.iteration == 3) {
             console.log("Checking team answers");
             let postdata = {qid: self.questions[self.selectedQs].id};
             $http({url: "check-team-answer", method: "post", data: postdata}).success((data) => {
-                if(data.status == "ok") {
+                if (data.status == "ok") {
                     self.sendTeamProgress(self.selectedQs + 1);
                     self.bottomMsg = "";
                 }
-                else if(data.status == "incomplete"){
+                else if (data.status == "incomplete") {
                     self.bottomMsg = "Debe esperar a que todos los miembros del equipo respondan";
                 }
-                else if(data.status == "different"){
+                else if (data.status == "different") {
                     self.bottomMsg = "Las respuestas de los miembros del equipo no coinciden";
                 }
-                else if(data.status == "incorrect" && !self.questions[self.selectedQs].hinted){
+                else if (data.status == "incorrect" && !self.questions[self.selectedQs].hinted) {
                     self.bottomMsg = "Comentario: " + data.msg;
                     self.questions[self.selectedQs].hinted = true;
                 }
-                else if(self.questions[self.selectedQs].hinted){
+                else if (self.questions[self.selectedQs].hinted) {
                     self.sendTeamProgress(self.selectedQs + 1);
                     self.bottomMsg = "";
                 }
-                else{
+                else {
                     Notification.info("Se alcanzo el final de la actividad");
                 }
             });
         }
-        else if(self.questions[self.selectedQs].dirty){
+        else if (self.questions[self.selectedQs].dirty) {
             Notification.error("No se ha enviado una respuesta a la pregunta");
         }
-        else if (self.selectedQs >= self.questions.length - 1 && self.iteration != 3){
+        else if (self.selectedQs >= self.questions.length - 1 && self.iteration != 3) {
             Notification.info("Se alcanzo el final de la actividad");
         }
         else {
@@ -177,18 +180,18 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
 
     self.sendTeamProgress = (pg) => {
         let postdata = {tmid: self.teamId, progress: pg};
-        $http({url: "send-team-progress", method:"post", data: postdata}).success((data) => {
-            if(data.status == "ok")
+        $http({url: "send-team-progress", method: "post", data: postdata}).success((data) => {
+            if (data.status == "ok")
                 console.log("Progress sent");
         });
     };
 
     self.prevQuestion = () => {
-        if (self.selectedQs <= 0){
+        if (self.selectedQs <= 0) {
             Notification.info("Se alcanzo el inicio de la actividad");
             return;
         }
-        if(self.questions[self.selectedQs].dirty){
+        if (self.questions[self.selectedQs].dirty) {
             Notification.error("No se ha enviado una respuesta a la pregunta");
         }
         else if (self.iteration != 3) {
@@ -197,11 +200,11 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
     };
 
     self.sendAnswer = (qs) => {
-        if(self.answers[qs.id] == null || self.answers[qs.id] == -1){
+        if (self.answers[qs.id] == null || self.answers[qs.id] == -1) {
             Notification.error("Debe seleccionar una alternativa");
             return;
         }
-        if(self.comments[qs.id] == null || self.comments[qs.id] == ""){
+        if (self.comments[qs.id] == null || self.comments[qs.id] == "") {
             Notification.error("Debe agregar un comentario");
             return;
         }
@@ -209,10 +212,11 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             qid: qs.id,
             answer: self.answers[qs.id],
             comment: self.comments[qs.id],
+            confidence: self.confidences[qs.id],
             iteration: self.iteration
         };
         $http({url: "send-answer", method: "post", data: postdata}).success((data) => {
-            if(data.status == "ok") {
+            if (data.status == "ok") {
                 self.sent[postdata.qid] = true;
                 qs.dirty = false;
             }
@@ -222,7 +226,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
     self.showInfo = () => {
         $uibModal.open({
             template: '<div><div class="modal-header"><h4>Factor Detonante</h4></div><div class="modal-body"><p>' +
-                self.sesDescr + '</p></div></div>'
+            self.sesDescr + '</p></div></div>'
         });
     };
 

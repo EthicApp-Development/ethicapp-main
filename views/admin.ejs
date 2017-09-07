@@ -79,7 +79,8 @@
             <label>Titulo:</label>
             <input type="text" class="form-control" ng-model="selectedSes.name" ng-disabled="selectedSes.status!=1">
             <br>
-            <label>Factor detonante:</label>
+            <label ng-if="selectedSes.type != 'S'">Factor detonante:</label>
+            <label ng-if="selectedSes.type == 'S'">Instrucción general:</label>
             <textarea class="form-control" ng-model="selectedSes.descr" ng-disabled="selectedSes.status!=1"></textarea>
             <button class="btn btn-xs btn-default" ng-click="openDuplicateSes()" disabled>Duplicar sesion</button>
             <br>
@@ -93,7 +94,9 @@
                 <h4>Documentos</h4>
                 <div class="list-group-item" ng-repeat="doc in semDocs">
                     <strong ng-bind="doc.title"></strong>
-                    <p>{{doc.content | limitTo:360}}</p>
+                    <button class="btn btn-xs btn-default pull-right margin-right-8" ng-click="doc.expanded = !doc.expanded">Ver</button>
+                    <p ng-show="!text.expanded">{{doc.content | limitTo:360}}</p>
+                    <p ng-show="text.expanded">{{doc.content}}</p>
                 </div>
                 <div>
                     <label>Agregar Documento</label>
@@ -136,7 +139,9 @@
                 <h4>Textos</h4>
                 <div class="list-group-item" ng-repeat="text in questionTexts">
                     <strong ng-bind="text.title"></strong>
-                    <p>{{text.content | limitTo:360}}</p>
+                    <button class="btn btn-xs btn-default pull-right margin-right-8" ng-click="text.expanded = !text.expanded">Ver</button>
+                    <p ng-show="!text.expanded">{{text.content | limitTo:360}}</p>
+                    <p ng-show="text.expanded">{{text.content}}</p>
                 </div>
                 <div>
                     <label>Agregar Texto</label>
@@ -167,7 +172,7 @@
                 </div>
                 <br>
                 <div>
-                    <label>Agregar Pregunta:</label>
+                    <label>Agregar Pregunta:</label> <span class="text-muted">(No incluya numeración)</span>
                     <textarea rows="2" class="form-control" ng-model="newQuestion.content" ng-disabled="selectedSes.status!=1"></textarea>
                     <label>Alternativas:</label>
                     <div class="input-group" ng-repeat=" x in qsLabels">
@@ -373,7 +378,9 @@
                 <button class="btn btn-default" ng-click="updateState()">Actualizar</button>
             </div>
             <h4></h4><br>
+
             <nvd3 options="barOpts" data="barData" ng-hide="iterationIndicator == 0 || iterationIndicator == 4"></nvd3>
+
             <div class="row" ng-show="iterationIndicator < 5 && selectedSes.type == 'L'">
                 <div class="col-sm-4 col-sm-offset-2">
                     Actividad Finalizada: <strong>{{numComplete}} / {{numUsers}}</strong>
@@ -394,6 +401,18 @@
                 </div>
             </div>
             <hr>
+            <button class="btn btn-default btn-sm pull-right" ng-click="showCf = !showCf">Mostrar Grado de confianza</button>
+            <table class="table table-bordered" ng-show="showCf">
+                <tr>
+                    <th>Nivel de Confianza</th>
+                    <th ng-repeat="qs in questions" ng-bind="$index + 1"></th>
+                </tr>
+                <tr ng-repeat="conf in optConfidence">
+                    <td>{{conf}}%</td>
+                    <td ng-repeat="qs in questions" ng-bind="confidence[qs.id][conf] || 0"></td>
+                </tr>
+            </table>
+
             <br>
             <table class="table table-bordered" ng-if="selectedSes.type == 'S'">
                 <tr>

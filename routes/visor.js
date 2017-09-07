@@ -161,19 +161,19 @@ router.post("/get-anskey", rpg.multiSQL({
 
 router.post("/send-answer", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "with rows as (update selection set answer = $1, comment = $2, stime = now() where qid = $3 and uid = $4 and iteration = $5 returning 1) " +
-    "insert into selection(uid,qid,answer,comment,iteration,stime) select $6,$7,$8,$9,$10, now() where 1 not in (select * from rows)",
+    sql: "with rows as (update selection set answer = $1, comment = $2, stime = now(), confidence = $3 where qid = $4 and uid = $5 and iteration = $6 returning 1) " +
+    "insert into selection(uid,qid,answer,comment,iteration,confidence,stime) select $7,$8,$9,$10,$11,$12, now() where 1 not in (select * from rows)",
     /*sql: "insert into selection(uid,qid,answer,comment) values ($1,$2,$3,$4) on conflict (uid,qid) do update " +
      "set answer = excluded.answer, comment = excluded.comment",*/
     sesReqData: ["uid", "ses"],
     postReqData: ["qid", "answer", "comment", "iteration"],
-    sqlParams: [rpg.param("post", "answer"), rpg.param("post", "comment"), rpg.param("post", "qid"), rpg.param("ses", "uid"), rpg.param("post", "iteration"),
-        rpg.param("ses", "uid"), rpg.param("post", "qid"), rpg.param("post", "answer"), rpg.param("post", "comment"), rpg.param("post", "iteration")]
+    sqlParams: [rpg.param("post", "answer"), rpg.param("post", "comment"), rpg.param("post", "confidence"), rpg.param("post", "qid"), rpg.param("ses", "uid"), rpg.param("post", "iteration"),
+        rpg.param("ses", "uid"), rpg.param("post", "qid"), rpg.param("post", "answer"), rpg.param("post", "comment"), rpg.param("post", "iteration"), rpg.param("post", "confidence")]
 }));
 
 router.post("/get-answers", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select s.qid, s.answer, s.comment from selection as s inner join questions as q on q.id = s.qid " +
+    sql: "select s.qid, s.answer, s.comment, s.confidence from selection as s inner join questions as q on q.id = s.qid " +
     "where q.sesid = $1 and s.uid = $2 and s.iteration = $3",
     sesReqData: ["uid", "ses"],
     postReqData: ["iteration"],
