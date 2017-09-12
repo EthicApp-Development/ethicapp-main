@@ -24,6 +24,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
     self.teamUids = [];
     self.bottomMsg = "";
     self.finished = false;
+    self.useConfidence = false;
 
     self.ansIter1 = {};
     self.ansIter2 = {};
@@ -55,6 +56,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             self.sesId = data.id;
             self.sesSTime = data.stime;
             self.sesDescr = data.descr;
+            self.useConfidence = (data.options != null && data.options.includes("C"));
             let set = new Set();
             if (self.iteration > 1) {
                 $http({url: "get-team-selection", method: "post", data: {iteration: 1}}).success((data) => {

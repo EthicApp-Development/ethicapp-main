@@ -71,7 +71,7 @@
                         </button>
                     </span>
                 </div>
-                <div>
+                <div ng-show="useConfidence">
                     <label>Grado de certeza en la respuesta:</label>
                     <div class="btn-group simple-margin-left" ng-disabled="finished">
                         <label class="btn btn-default" ng-repeat="conf in optConfidence" ng-class="{active: confidences[qs.id] == conf}" ng-disabled="finished">
