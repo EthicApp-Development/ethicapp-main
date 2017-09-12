@@ -155,7 +155,7 @@ router.post("/delete-ses-user", rpg.execSQL({
 
 router.post("/get-selection-comment", rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: "select answer, comment from selection where uid = $1 and qid = $2 and iteration = $3",
+    sql: "select answer, comment, confidence from selection where uid = $1 and qid = $2 and iteration = $3",
     postReqData: ["qid", "uid", "iteration"],
     sqlParams: [rpg.param("post", "uid"), rpg.param("post", "qid"), rpg.param("post", "iteration")]
 }));

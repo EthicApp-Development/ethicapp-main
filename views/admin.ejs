@@ -277,8 +277,8 @@
                     </tr>
                 </table>
                 <hr>
-                <h4 ng-if="!selectedSes.grouped">Editor de Propuesta de Grupos:</h4>
-                <table class="table table-bordered table-hover" ng-if="!selectedSes.grouped">
+                <h4 ng-if="!selectedSes.grouped" ng-show="false">Editor de Propuesta de Grupos:</h4>
+                <table class="table table-bordered table-hover" ng-if="!selectedSes.grouped" ng-show="false">
                     <tr ng-repeat="group in groupsProp">
                         <td ng-bind="$index + 1"></td>
                         <td ng-repeat="alum in group" class="pointable" ng-click="swapTable($parent.$index,$index)"

@@ -487,7 +487,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                         self.leaderTeamStr = {};
                         data.forEach((r) => {
                             self.alumState[r.leader] = temp[r.leader];
-                            self.leaderTeamStr[r.leader] = r.team.map(u => self.users[u].name).join(", ");
+                            self.leaderTeamStr[r.leader] = r.team.map(u => (self.users[u]) ? self.users[u].name : "- ").join(", ");
                         });
                     });
                 }
@@ -567,7 +567,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             let t = 0;
             let c = 0;
             for (let k in self.alumState) {
-                if (self.alumState[k][pid] != null) {
+                if (self.alumState[k] != null && self.alumState[k][pid] != null) {
                     if (self.alumState[k][pid])
                         c++;
                     t++;
@@ -822,6 +822,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     data: function () {
                         data.title = "Respuesta de " + self.users[uid].name;
                         data.content = "Pregunta:\n" + qstxt + "\n\nRespuesta:\n" + alt + "\n\nComentario:\n" + data.comment;
+                        if(data.confidence){
+                            data.content += "\n\nGrado de Confianza: " + data.confidence + "%";
+                        }
                         return data;
                     },
                 }
