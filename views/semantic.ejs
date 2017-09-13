@@ -49,7 +49,7 @@
         <div class="col-sm-6 full-height">
             <span class="simple-margin-left">Documentos: </span>
             <span ng-repeat="doc in documents" class="side-top-btn" ng-bind="doc.title"
-                  ng-class="{'active': $index==selectedDocument}" ng-click="selectPDF($index)"></span>
+                  ng-class="{'active': $index==selectedDocument}" ng-click="selectDocument($index)"></span>
             <!--<strong class="pull-right margin-top-8" ng-bind="iterationNames[iteration]"></strong>-->
         </div>
         <div class="col-sm-6">
@@ -64,7 +64,7 @@
 
     <div class="vh50 boxed">
         <div class="col-sm-10 col-sm-offset-1">
-            <h3>Texto 1</h3>
+            <h3>{{documents[selectedDocument].title}}</h3>
             <p class="text-justify"><span ng-repeat="sent in sentences" ng-class="{'bg-lightorange': highlight[$index]}"> <input type="checkbox" ng-model="highlight[$index]">{{sent}}</span></p>
         </div>
     </div>
@@ -73,13 +73,21 @@
         <div class="col-sm-10 col-sm-offset-1">
             <h3>Unidades Semánticas:</h3>
             <ul class="list-group">
-                <li class="list-group-item row">
-                    <strong class="col-sm-1">{{countHightlight()}} Sel.</strong>
+                <li class="list-group-item row" ng-repeat="unit in units">
+                    <strong class="col-sm-1">{{unit.sentences.length}} Sel.</strong>
                     <div class="col-sm-11">
-                    <input type="text" class="form-control">
+                        <div class="input-group">
+                            <input type="text" class="form-control" ng-model="unit.comment" ng-change="unit.dirty = true" ng-disabled="finished">
+                            <span class="input-group-btn">
+                                <button class="btn btn-default" ng-disabled="finished" ng-click="addSemUnit(unit)" ng-class="{'btn-success': sent[unit.id], 'btn-warning': unit.dirty}">
+                                    <i class="fa fa-send"></i>
+                                </button>
+                            </span>
+                        </div>
                     </div>
                 </li>
             </ul>
+            <button class="btn btn-default" ng-click="addEmptyUnit()" ng-disabled="finished || countHightlight() == 0">Agregar unidad semántica</button>
         </div>
     </div>
 

@@ -168,13 +168,37 @@ router.post("/add-semantic-document", rpg.execSQL({
     sqlParams: [rpg.param("post", "title"), rpg.param("post", "content"), rpg.param("post", "sesid")]
 }));
 
-router.post("/get-semantic-document", rpg.multiSQL({
+router.post("/semantic-documents", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select id, title, content from semantic_document where sesid = $1",
     postReqData: ["sesid"],
     sqlParams: [rpg.param("post", "sesid")]
 }));
 
+router.post("/get-semantic-documents", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select id, title, content from semantic_document where sesid = $1",
+    sesReqData: ["ses"],
+    sqlParams: [rpg.param("ses", "ses")]
+}));
+
+
+router.post("/add-semantic-unit", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "insert into semantic_unit(sentences,comment,uid,docid) values ($1,$2,$3,$4)",
+    postReqData: ["comment","sentences","docid"],
+    sesReqData: ["uid"],
+    sqlParams: [rpg.param("post", "sentences"), rpg.param("post", "comment"), rpg.param("ses", "uid"), rpg.param("post","docid")]
+}));
+
+
+router.post("/get-semantic-units", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select u.id, u.sentences, u.comment, u.docid from semantic_unit as u inner join semantic_document as d on d.id = u.docid " +
+        "where u.uid = $1 and d.sesid = $2",
+    sesReqData: ["uid","ses"],
+    sqlParams: [rpg.param("ses", "uid"), rpg.param("ses","ses")]
+}));
 
 
 router.post("/duplicate-session", (req, res) => {

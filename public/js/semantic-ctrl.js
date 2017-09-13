@@ -12,22 +12,134 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     self.iteration = 1;
     self.sesStatusses = ["Individual", "Grupal", "Reporte", "Evaluación de Pares", "Finalizada"];
 
-    self.originalText = `No deberíamos pronunciar la marca, pero la marca es Benetton. Su campaña publicitaria a costa de una agonía bate el récord de atentados contra la conciencia universal y lleva a sus extremos más peligrosos la tendencia a reconciliarnos con la atrocidad, integrándola en nuestra vida cotidiana. Conviene estar atentos: si la recibimos, ya nunca podremos librarnos de ella. Y aquí no se trata de tabúes. Se trata de preservar desesperadamente los últimos restos de una ética que, por otro tiempo, justificó a nuestra civilización. Se trata, pura y simplemente, de negarnos a regresar a las cavernas.
+    self.documents = [];
+    self.finished = false;
 
-En este caso, el objeto de la publicidad es un enfermo terminal de sida, como todo el mundo empieza a saber y algunos a criticar. Los voceros de la marca se defienden intentando convertir su miserable estrategia comercial en una campaña de alta filantropía. Según ellos, la visión de una imagen atroz nos hará meditar y, a la postre, reaccionar a su favor. Aseguran que ésta fue la última voluntad de la víctima y también la de sus familiares. La opción demuestra que las víctimas pueden equivocarse.
+    self.text = "";
+    self.sentences = [];
+    self.highlight = [];
 
-Es posible que no calculen en qué medida pueden ser manipuladas sus intenciones; hasta qué extremos puede ser trivializada su tragedia. Aun concediendo a la empresa Benetton el beneficio de la honestidad, el peligro de trivialización al difundir las imágenes del enfermo de sida debería tenerse en cuenta. El contexto va en contra de los propósitos. La atrocidad que, en el mejor de los casos, se pretende denunciar quedará ahogada por la abigarrada parafernalia que ha ido configurando nuestro mundo de sueños bastardos. La habitualidad del horror acabará por restarle importancia.
+    self.units = [];
 
-La víctima se convertirá en un compañero cotidiano, como doña Adelaida. Y, en el papel cuché de las revistas y dominicales, el sida podrá aparecer incluso elegante. Si se convierte en spot televisivo, la agonía lucirá divinamente entre fragmentos de una película de Martínez Soria, anuncios de refrescos tropicales y colonias para machos incontaminados. Después de todo, la foto no carece de estilo, y las expresiones de los familiares están muy conseguidas.
 
-Es cierto que el medio es el mensaje, y, en esta ocasión, el medio es una empresa experta en colorines que decide promocionar el dolor para atraer nuestras miradas por una elemental maniobra de contraste. Así lo han declarado los persuasores en una conferencia de prensa: las masas ya no se impresionan con los anuncios de colores idílicos, abusados hasta la saciedad en la estupidez cotidiana. Para interesar es necesario recurrir al impacto. Mala cosa cuando, a su vez, el impacto recurre al dolor como pregonero y a la muerte como estrella invitada.`;
+    self.init = () => {
+        self.getSesInfo();
+    };
 
-    self.sentences = self.originalText.match( /[^.!?\n]+[.!?\n]+/g );
+    self.getSesInfo = () => {
+        $http({url: "get-ses-info", method: "post"}).success((data) => {
+            self.iteration = data.iteration;
+            self.myUid = data.uid;
+            self.sesName = data.name;
+            self.sesId = data.id;
+            self.sesDescr = data.descr;
+            self.sesSTime = (data.stime != null) ? new Date(data.stime) : null;
+            self.getDocuments();
+            /*$http({url: "data/instructions.json", method: "get"}).success((data) => {
+                self.instructions = data;
+            });
+            if (self.iteration == 3){
+                self.getTeamInfo();
+            }
+            if(self.iteration >= 5){
+                self.finished = true;
+            }*/
+            $http({url: "get-finished", method: "post", data: {status: self.iteration + 2}}).success((data) => {
+                if (data.finished) {
+                    self.finished = true;
+                }
+            });
+        });
+    };
 
-    self.highlight = Array.from(self.sentences.length, () => false);
+    self.selectDocument = (idx) => {
+        if(self.selectedDocument == idx) return;
+        self.selectedDocument = idx;
+        self.text = self.documents[idx].content;
+        // -- ! IMPORTANT : No cambiar
+        self.text = self.text.replace(/.[ ]+\n/,".\n");
+        self.sentences = self.text.match(/[^.!?\n]+[.!?\n]+/g ) || [];
+        // -- ! IMPORTANT
+        self.highlight = Array.from(self.sentences.length, () => false);
+    };
 
     self.countHightlight = () => {
         return self.highlight.reduce((val, elem) => (elem)? val + 1 : val, 0);
     };
+
+    self.getDocuments = () => {
+        $http({method: "post", url: "get-semantic-documents"}).success((data) => {
+            self.documents = data;
+            if(self.documents.length > 0) {
+                self.selectDocument(0);
+                self.getUnits();
+            }
+        });
+    };
+
+    self.getUnits = () => {
+        $http({method: "post", url: "get-semantic-units"}).success((data) => {
+            self.units = data;
+            //self.addEmptyUnit();
+        });
+    };
+
+    self.getHgSents = () => {
+        return self.highlight.map((e,i) => { return {st: i, b: e}}).filter(e => e.b).map(e => e.st);
+    };
+
+    self.addSemUnit = (unit) => {
+        let postdata = {
+            comment: unit.comment,
+            sentences: self.getHgSents(),
+            docid: unit.docid
+        };
+        $http({method: "post", url: "add-semantic-unit", data:postdata}).success((data) => {
+            self.getUnits(); //Update?
+        });
+    };
+
+    self.addEmptyUnit = () => {
+        self.units.push({
+            comment: "",
+            sentences: self.getHgSents(),
+            status: "unsaved",
+            docid: self.documents[self.selectedDocument].id
+        });
+    };
+
+    self.finishState = () => {
+        if(self.finished){
+            return;
+        }
+        if(self.units.length - 1 < self.documents.length){
+            Notification.error("No hay suficientes unidades semánticas para terminar la actividad");
+            return;
+        }
+        if(!self.areAllUnitsSync()) {
+            Notification.error("Hay unidades semánticas que no han sido enviadas");
+            return;
+        }
+        let confirm = window.confirm("¿Esta seguro que desea terminar la actividad?\nEsto implica no volver a poder editar sus respuestas");
+        if(confirm) {
+            let postdata = {status: self.iteration + 2};
+            $http({url: "record-finish", method: "post", data: postdata}).success((data) => {
+                self.hasFinished = true;
+                self.finished = true;
+                console.log("FINISH");
+            });
+        }
+    };
+
+    self.areAllUnitsSync = () => {
+        for(let i = 0; i < self.units.length; i++){
+            let idea = self.units[i];
+            if(idea.status == "unsaved" || idea.status == "dirty")
+                return false;
+        }
+        return true;
+    };
+
+    self.init();
 
 }]);

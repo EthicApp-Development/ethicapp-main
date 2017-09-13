@@ -2,7 +2,7 @@ create table semantic_document(
     id serial primary key,
     title text,
     content text,
-    sesid integer references session(id)
+    sesid integer references sessions(id)
 );
 
 create table semantic_unit(

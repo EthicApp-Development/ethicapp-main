@@ -32,6 +32,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         self.selectedIndex = idx;
         self.selectedSes = self.sessions[idx];
         self.requestDocuments();
+        self.requestSemDocuments();
         self.requestQuestions();
         self.getNewUsers();
         self.getMembers();
@@ -93,13 +94,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
 
     self.requestSemDocuments = () => {
         let postdata = {sesid: self.selectedSes.id};
-        /*$http({url: "questions-session", method: "post", data: postdata}).success((data) => {
-            self.questions = data.map(e => {
-                e.options = e.options.split("\n");
-                return e;
-            });
-        });*/
-        $http({url: "get-semantic-dicuments", method: "post", data: postdata}).success((data) => {
+        $http({url: "semantic-documents", method: "post", data: postdata}).success((data) => {
             self.semDocs = data;
         });
     };

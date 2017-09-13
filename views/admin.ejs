@@ -95,8 +95,8 @@
                 <div class="list-group-item" ng-repeat="doc in semDocs">
                     <strong ng-bind="doc.title"></strong>
                     <button class="btn btn-xs btn-default pull-right margin-right-8" ng-click="doc.expanded = !doc.expanded">Ver</button>
-                    <p ng-show="!text.expanded">{{doc.content | limitTo:360}}</p>
-                    <p ng-show="text.expanded">{{doc.content}}</p>
+                    <p ng-show="!doc.expanded">{{doc.content | limitTo:360}}</p>
+                    <p ng-show="doc.expanded">{{doc.content}}</p>
                 </div>
                 <div>
                     <label>Agregar Documento</label>
@@ -135,6 +135,9 @@
                     Pauta de Ideas Fuerza
                 </a>
             </div>
+                <a href="to-semantic?sesid={{selectedSes.id}}" class="btn btn-primary btn" ng-show="selectedSes.type=='M'">
+                    Pauta de Unidades Semánticas
+                </a>
             <div ng-show="selectedSes.type == 'S'" ng-controller="QuestionsController">
                 <h4>Textos</h4>
                 <div class="list-group-item" ng-repeat="text in questionTexts">
