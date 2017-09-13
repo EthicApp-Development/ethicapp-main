@@ -142,6 +142,53 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
     }
 }));
 
+router.post("/get-alum-state-semantic", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select a.uid, a.sentences, a.docid, a.uid = s.creator as is_ans from semantic_unit as a, sessions as s " +
+        "where s.id = $1 and a.docid in (select id from semantic_document where sesid = s.id) and (a.iteration = $2 or " +
+        "a.uid = s.creator) order by is_ans desc, a.uid, a.sentences",
+    postReqData: ["sesid","iteration"],
+    onStart: (ses, data, calc) => {
+        if (ses.role != "P") {
+            console.log("ERR: Solo profesor puede ver estado de alumnos.");
+            return "select $1, $2"
+        }
+    },
+    preventResEnd: true,
+    sqlParams: [rpg.param("post", "sesid"), rpg.param("post", "iteration")],
+    onEnd: (req,res,arr) => {
+        let scores = [];
+        let i = 0;
+        let pauta = [];
+        let total = 0;
+        // PAUTA
+        while(i < arr.length && arr[i].is_ans){
+            pauta.push(arr[i]);
+            total++;
+            i++;
+        }
+        // ALUMNOS
+        let sc = 0;
+        let last_uid = arr[i].uid;
+        for(; i < arr.length; i++){
+            let alum = arr[i];
+            if(alum.uid != last_uid){
+                console.log(sc);
+                scores.push({uid: last_uid, score: sc/total});
+                last_uid = alum.uid;
+                sc = 0;
+            }
+            let m = 0;
+            pauta.forEach(p => {
+                m = Math.max(m, getSemanticScore(p,alum));
+            });
+            sc += m;
+        }
+        scores.push({uid: last_uid, score: sc/total});
+        res.end(JSON.stringify(scores));
+    }
+}));
+
 router.post("/group-proposal-lect", (req,res) => {
     if (req.session.role != "P") {
         res.end("[]");
@@ -538,6 +585,17 @@ let hasDuplicates = (arr) => {
         dict[arr[i]] = true;
     }
     return false;
+};
+
+let getSemanticScore = (pauta, alum) => {
+    if(pauta.docid != alum.docid)
+        return 0;
+    let r = 0;
+    alum.sentences.forEach(s => {
+        if(pauta.sentences.includes(s))
+            r++;
+    });
+    return r/pauta.sentences.length;
 };
 
 module.exports = router;

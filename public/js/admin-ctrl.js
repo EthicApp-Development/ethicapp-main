@@ -408,6 +408,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         else if (self.selectedSes.type == "S") {
             self.iterationIndicator = Math.max(Math.min(3, self.selectedSes.status - 1), 1);
         }
+        else if (self.selectedSes.type == "M") {
+            self.iterationIndicator = Math.max(Math.min(6, self.selectedSes.status - 1), 1);
+        }
         self.alumState = null;
         self.barOpts = {
             chart: {
@@ -539,6 +542,43 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     self.numProgress *= 100 / self.numUsers;
                 }
             });
+        }
+        else if (self.selectedSes.type == "M") {
+            $http({url: "get-alum-state-semantic", method: "post", data: postdata}).success((data) => {
+                self.alumState = data;
+                self.buildBarData(data);
+                self.getAlumDoneTime(postdata);
+                if (self.iterationIndicator == 3) {
+                    $http({
+                        url: "get-original-leaders",
+                        method: "post",
+                        data: {sesid: self.selectedSes.id}
+                    }).success((data) => {
+                        let temp = {};
+                        self.alumState.forEach((data) => {
+                            temp[data.uid] = data;
+                        });
+                        self.alumState = [];
+                        self.leaderTeamStr = {};
+                        data.forEach((r) => {
+                            if(temp[r.leader] != null)
+                                self.alumState.push(temp[r.leader]);
+                            self.leaderTeamStr[r.leader] = r.team.map(u => self.users[u].name).join(", ");
+                        });
+                    });
+                }
+            });
+            /*$http({url: "get-ideas-progress", method: "post", data: postdata}).success((data) => {
+                self.numProgress = 0;
+                self.numUsers = Object.keys(self.users).length - 1;
+                let n = self.documents.length * 3;
+                if (n != 0) {
+                    data.forEach((d) => {
+                        self.numProgress += d.count / n;
+                    });
+                    self.numProgress *= 100 / self.numUsers;
+                }
+            });*/
         }
     };
 

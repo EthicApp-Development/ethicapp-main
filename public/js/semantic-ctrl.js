@@ -9,7 +9,7 @@ app.factory("$socket", ["socketFactory", function (socketFactory) {
 app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", "Notification", function ($scope, $http, $timeout, $socket, Notification) {
     let self = $scope;
 
-    self.iteration = 1;
+    self.iteration = 0;
     self.sesStatusses = ["Individual", "Grupal", "Reporte", "Evaluación de Pares", "Finalizada"];
 
     self.documents = [];
@@ -18,6 +18,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     self.text = "";
     self.sentences = [];
     self.highlight = [];
+    self.sent = {};
 
     self.units = [];
 
@@ -30,7 +31,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
 
     self.getSesInfo = () => {
         $http({url: "get-ses-info", method: "post"}).success((data) => {
-            self.iteration = data.iteration;
+            self.iteration = data.iteration + 1;
             self.myUid = data.uid;
             self.sesName = data.name;
             self.sesId = data.id;
@@ -80,7 +81,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     };
 
     self.getUnits = () => {
-        $http({method: "post", url: "get-semantic-units"}).success((data) => {
+        $http({method: "post", url: "get-semantic-units", data: {iteration: self.iteration}}).success((data) => {
             self.units = data;
             //self.addEmptyUnit();
         });
@@ -101,10 +102,12 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             id: unit.id,
             comment: unit.comment,
             sentences: unit.sentences,
-            docid: unit.docid
+            docid: unit.docid,
+            iteration: self.iteration
         };
         $http({method: "post", url: url, data:postdata}).success((data) => {
             unit.dirty = false;
+            self.sent[unit.id] = true;
         });
     };
 
@@ -121,7 +124,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             docid: self.documents[self.selectedDocument].id
         });
         let i = self.units.length -1;
-        self.toggleEdit(i, self.unit[i]);
+        self.toggleEdit(i, self.units[i]);
     };
 
     self.finishState = () => {

@@ -185,10 +185,10 @@ router.post("/get-semantic-documents", rpg.multiSQL({
 
 router.post("/add-semantic-unit", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "insert into semantic_unit(sentences,comment,uid,docid) values ($1,$2,$3,$4)",
-    postReqData: ["comment","sentences","docid"],
+    sql: "insert into semantic_unit(sentences,comment,uid,docid,iteration) values ($1,$2,$3,$4,$5)",
+    postReqData: ["comment","sentences","docid","iteration"],
     sesReqData: ["uid"],
-    sqlParams: [rpg.param("post", "sentences"), rpg.param("post", "comment"), rpg.param("ses", "uid"), rpg.param("post","docid")]
+    sqlParams: [rpg.param("post", "sentences"), rpg.param("post", "comment"), rpg.param("ses", "uid"), rpg.param("post","docid"), rpg.param("post","iteration")]
 }));
 
 
@@ -203,10 +203,11 @@ router.post("/update-semantic-unit", rpg.execSQL({
 
 router.post("/get-semantic-units", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select u.id, u.sentences, u.comment, u.docid from semantic_unit as u inner join semantic_document as d on d.id = u.docid " +
-        "where u.uid = $1 and d.sesid = $2",
+    sql: "select u.id, u.sentences, u.comment, u.docid, u.iteration from semantic_unit as u inner join semantic_document as d on d.id = u.docid " +
+        "where u.uid = $1 and d.sesid = $2 and u.iteration = $3",
     sesReqData: ["uid","ses"],
-    sqlParams: [rpg.param("ses", "uid"), rpg.param("ses","ses")]
+    postReqData: ["iteration"],
+    sqlParams: [rpg.param("ses", "uid"), rpg.param("ses","ses"), rpg.param("post","iteration")]
 }));
 
 

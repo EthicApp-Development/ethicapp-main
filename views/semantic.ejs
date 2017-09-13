@@ -31,7 +31,7 @@
     <div class="top-bar-mini">
         <div class="text-center">
             <span ng-repeat="st in sesStatusses">
-                <span class="label label-primary" ng-class="{'bg-black-alpha': $index==iteration}" ng-bind="st"></span>
+                <span class="label label-primary" ng-class="{'bg-black-alpha': $index==iteration-1}" ng-bind="st"></span>
                 <span ng-hide="$last">→</span>
             </span>
             <span class="pull-right margin-right-24" ng-show="sesSTime != null">
