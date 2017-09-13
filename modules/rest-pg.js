@@ -109,7 +109,7 @@ module.exports.execSQL = function (params) {
             catch (e){
                 res.end('{"status":"err"}');
             }
-        }
+        };
 };
 
 /**

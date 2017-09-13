@@ -74,7 +74,11 @@
             <h3>Unidades Semánticas:</h3>
             <ul class="list-group">
                 <li class="list-group-item row" ng-repeat="unit in units">
-                    <strong class="col-sm-1">{{unit.sentences.length}} Sel.</strong>
+                    <div class="col-sm-1">
+                        <button class="btn btn-default" ng-class="{'active': unit.edit, 'btn-warning': unit.edit}" ng-click="toggleEdit($index,unit)">
+                            <i class="fa fa-check-square"></i> {{unit.sentences.length}} Sel.
+                        </button>
+                    </div>
                     <div class="col-sm-11">
                         <div class="input-group">
                             <input type="text" class="form-control" ng-model="unit.comment" ng-change="unit.dirty = true" ng-disabled="finished">
@@ -87,7 +91,9 @@
                     </div>
                 </li>
             </ul>
-            <button class="btn btn-default" ng-click="addEmptyUnit()" ng-disabled="finished || countHightlight() == 0">Agregar unidad semántica</button>
+            <button class="btn btn-default" ng-click="addEmptyUnit()" ng-disabled="finished || countHightlight() == 0 || editing != -1 || units.length > 3">
+                Agregar unidad semántica
+            </button>
         </div>
     </div>
 

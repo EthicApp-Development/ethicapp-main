@@ -192,6 +192,15 @@ router.post("/add-semantic-unit", rpg.execSQL({
 }));
 
 
+router.post("/update-semantic-unit", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "update semantic_unit set (sentences,comment,uid,docid) = ($1,$2,$3,$4) where id = $5",
+    postReqData: ["comment","sentences","docid","id"],
+    sesReqData: ["uid"],
+    sqlParams: [rpg.param("post", "sentences"), rpg.param("post", "comment"), rpg.param("ses", "uid"), rpg.param("post","docid"), rpg.param("post","id")]
+}));
+
+
 router.post("/get-semantic-units", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select u.id, u.sentences, u.comment, u.docid from semantic_unit as u inner join semantic_document as d on d.id = u.docid " +

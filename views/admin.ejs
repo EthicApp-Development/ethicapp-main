@@ -404,7 +404,7 @@
                 </div>
             </div>
             <hr>
-            <button class="btn btn-default btn-sm pull-right" ng-click="showCf = !showCf">Mostrar Grado de confianza</button>
+            <button class="btn btn-default btn-sm pull-right" ng-click="showCf = !showCf" ng-if="selectedSes.type == 'S'">Mostrar Grado de confianza</button>
             <table class="table table-bordered" ng-show="showCf">
                 <tr>
                     <th>Nivel de Confianza</th>

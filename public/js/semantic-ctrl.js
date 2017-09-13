@@ -21,6 +21,8 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
 
     self.units = [];
 
+    self.editing = -1;
+
 
     self.init = () => {
         self.getSesInfo();
@@ -60,7 +62,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
         self.text = self.text.replace(/.[ ]+\n/,".\n");
         self.sentences = self.text.match(/[^.!?\n]+[.!?\n]+/g ) || [];
         // -- ! IMPORTANT
-        self.highlight = Array.from(self.sentences.length, () => false);
+        self.highlight = Array.from({length: self.sentences.length}, () => false);
     };
 
     self.countHightlight = () => {
@@ -89,23 +91,37 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     };
 
     self.addSemUnit = (unit) => {
+        if(unit.edit){
+            self.toggleEdit(-1,unit);
+        }
+        let url = "add-semantic-unit";
+        if(unit.id != null)
+            url = "update-semantic-unit";
         let postdata = {
+            id: unit.id,
             comment: unit.comment,
-            sentences: self.getHgSents(),
+            sentences: unit.sentences,
             docid: unit.docid
         };
-        $http({method: "post", url: "add-semantic-unit", data:postdata}).success((data) => {
-            self.getUnits(); //Update?
+        $http({method: "post", url: url, data:postdata}).success((data) => {
+            unit.dirty = false;
         });
     };
 
     self.addEmptyUnit = () => {
+        if(self.editing != -1){
+            Notification.error("Debe terminar de editar la unidad actual para editar otra.");
+            return;
+        }
         self.units.push({
+            id: null,
             comment: "",
             sentences: self.getHgSents(),
             status: "unsaved",
             docid: self.documents[self.selectedDocument].id
         });
+        let i = self.units.length -1;
+        self.toggleEdit(i, self.unit[i]);
     };
 
     self.finishState = () => {
@@ -140,6 +156,30 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
         return true;
     };
 
+    self.toggleEdit = (idx, unit) => {
+        if(self.editing != -1 && !unit.edit){
+            Notification.error("Debe terminar de editar la unidad actual para editar otra.");
+            return;
+        }
+        if(!unit.edit) {
+            self.selectDocument(indexById(self.documents, unit.docid));
+            unit.edit = true;
+            self.editing = idx;
+            self.highlight = Array.from({length: self.sentences.length}, (v,i) => unit.sentences.includes(i));
+            unit.dirty = true;
+        }
+        else{
+            unit.sentences = self.getHgSents();
+            unit.edit = false;
+            self.editing = -1;
+            self.highlight = Array.from({length: self.sentences.length}, () => false);
+        }
+    };
+
     self.init();
 
 }]);
+
+let indexById = (arr, id) => {
+    return arr.findIndex(e => e.id == id);
+};
