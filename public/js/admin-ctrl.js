@@ -400,6 +400,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     let self = $scope;
     self.iterationIndicator = 1;
     self.currentTimer = null;
+    self.showCf = false;
 
     self.shared.resetGraphs = () => {
         if (self.selectedSes != null && self.selectedSes.type == "L") {
