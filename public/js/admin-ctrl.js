@@ -489,6 +489,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                         });
                     });
                 }
+                self.shared.alumState = self.alumState;
             });
             $http({url: "get-alum-state-sel", method: "post", data: postdata}).success((data) => {
                 let dataNorm = data.map(d => {
@@ -530,6 +531,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                         });
                     });
                 }
+                self.shared.alumState = self.alumState;
             });
             $http({url: "get-ideas-progress", method: "post", data: postdata}).success((data) => {
                 self.numProgress = 0;
@@ -567,6 +569,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                         });
                     });
                 }
+                self.shared.alumState = self.alumState;
             });
             /*$http({url: "get-ideas-progress", method: "post", data: postdata}).success((data) => {
                 self.numProgress = 0;
@@ -948,18 +951,41 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
             method: self.groupMet
         };
 
-        let urlRequest = "";
-        if (self.selectedSes.type == "S")
-            urlRequest = "group-proposal-sel";
-        else if (self.selectedSes.type == "L")
-            urlRequest = "group-proposal-lect";
+        console.log(self.shared.alumState);
+        let users = Object.values(self.users).filter(e => e.role == "A");
+        console.log(users);
 
-        if (self.groupMet == "Tipo Aprendizaje Homogeneo" || self.groupMet == "Tipo Aprendizaje Heterogeoneo")
-            urlRequest = "group-proposal-hab";
-        else if (self.groupMet == "Aleatorio")
-            urlRequest = "group-proposal-rand";
+        if (self.groupMet == "Tipo Aprendizaje Homogeneo" || self.groupMet == "Tipo Aprendizaje Heterogeoneo") {
+            self.groups = generateTeams(users, habMetric, self.groupNum, isDifferent(self.groupMet));
+        }
+        else if (self.groupMet == "Aleatorio") {
+            let arr = users.map(e => {
+                e.rnd = Math.random();
+                return e;
+            });
+            self.groups = generateTeams(arr, s => s.rnd, self.groupNum, true);
+        }
+        else if (self.selectedSes.type == "S") {
+            let arr = [];
+            for(let uid in self.shared.alumState){
+                let s = 0;
+                for(let q in self.shared.alumState[uid]){
+                    s += +q;
+                }
+                arr.push({uid: uid, score: s});
+            }
+            self.groups = generateTeams(arr, s => s.score, self.groupNum, isDifferent(self.groupMet));
+        }
+        else if (self.selectedSes.type == "L" || self.selectedSes.type == "M") {
+            self.groups = generateTeams(self.shared.alumState, s => s.score, self.groupNum, isDifferent(self.groupMet));
+        }
 
-        if (urlRequest != "") {
+        if(self.groups != null) {
+            self.groupsProp = angular.copy(self.groups);
+            self.groupNames = [];
+        }
+
+        /*if (urlRequest != "") {
             $http({url: urlRequest, method: "post", data: postdata}).success((data) => {
                 self.groups = data;
                 self.groupsProp = angular.copy(self.groups);
@@ -967,9 +993,9 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
                 self.groupNames = [];
                 /*data.forEach((d) => {
                  self.groupNames.push(d.map(i => self.users[i.uid].name).join(", "));
-                 });*/
+                 });*
             });
-        }
+        }*/
     };
 
     self.acceptGroups = () => {
@@ -1146,3 +1172,54 @@ adpp.controller("DashboardRubricaController", function ($scope, $http) {
     self.shared.resetRubricaGraphs();
 
 });
+
+let generateTeams = (alumArr, scFun, n, different) => {
+    if(n == null || n == 0) return [];
+    let arr = alumArr;
+    arr.sort((a, b) => scFun(b) - scFun(a));
+    let groups = [];
+    let numGroups = alumArr.length / n;
+    for (let i = 0; i < numGroups; i++) {
+        if (different) {
+            let rnd = [];
+            let offset = arr.length / n;
+            for (let j = 0; j < n; j++)
+                rnd.push(Math.floor(Math.random() * offset) + offset * j);
+            groups.push(arr.filter((a, i) => rnd.includes(Math.floor(i))));
+            arr = arr.filter((a, i) => !rnd.includes(Math.floor(i)));
+        }
+        else{
+            groups.push(arr.filter((a, i) => i < n));
+            arr = arr.filter((a, i) => i >= n);
+        }
+    }
+    return groups;
+};
+
+let isDifferent = (type) => {
+    switch (type){
+        case "Rendimiento Homogeneo":
+            return false;
+        case "Rendimiento Heterogeneo":
+            return true;
+        case "Tipo Aprendizaje Homogeneo":
+            return false;
+        case "Tipo Aprendizaje Heterogeoneo":
+            return true;
+    }
+    return false;
+};
+
+let habMetric = (u) => {
+    switch (u.aprendizaje){
+        case "Teorico":
+            return -2;
+        case "Reflexivo":
+            return -1;
+        case "Activo":
+            return 1;
+        case "Pragmatico":
+            return 2;
+    }
+    return 0;
+};

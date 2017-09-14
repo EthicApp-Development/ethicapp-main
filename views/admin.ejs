@@ -271,9 +271,9 @@
                     <tr ng-repeat="group in groups">
                         <td ng-bind="$index + 1"></td>
                         <td ng-repeat="alum in group">
-                            <strong ng-bind="users[alum.uid].name"></strong>
-                            <span class="label label-success">
-                                {{(alum.score!=null)? ((selectedSes.type == "L") ? alum.score * 100 : alum.score) : null | number:0}}
+                            <strong ng-bind="users[alum.uid || alum.id].name"></strong>
+                            <span class="label label-success" ng-show="alum.score!=null">
+                                {{(selectedSes.type == "L" || selectedSes.type == "M") ? alum.score * 100 : alum.score | number:0}}
                             </span>
                             <span class="label label-info" ng-bind="alum.aprendizaje"></span>
                         </td>
