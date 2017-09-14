@@ -169,7 +169,9 @@ router.post("/get-alum-state-semantic", rpg.multiSQL({
         }
         // ALUMNOS
         let sc = 0;
-        let last_uid = arr[i].uid;
+        let last_uid = -1;
+        if(arr[i] != null)
+            last_uid = arr[i].uid;
         for(; i < arr.length; i++){
             let alum = arr[i];
             if(alum.uid != last_uid){
@@ -184,7 +186,8 @@ router.post("/get-alum-state-semantic", rpg.multiSQL({
             });
             sc += m;
         }
-        scores.push({uid: last_uid, score: sc/total});
+        if(total > 0)
+            scores.push({uid: last_uid, score: sc/total});
         res.end(JSON.stringify(scores));
     }
 }));
