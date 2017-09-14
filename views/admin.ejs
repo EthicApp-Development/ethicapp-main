@@ -405,7 +405,7 @@
             </div>
             <hr>
             <button class="btn btn-default btn-sm pull-right" ng-click="showCf = !showCf" ng-if="selectedSes.type == 'S'">Mostrar Grado de confianza</button>
-            <table class="table table-bordered" ng-show="showCf">
+            <table class="table table-bordered">
                 <tr>
                     <th>Nivel de Confianza</th>
                     <th ng-repeat="qs in questions" ng-bind="$index + 1"></th>
