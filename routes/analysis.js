@@ -144,9 +144,8 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
 
 router.post("/get-alum-state-semantic", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select a.uid, a.sentences, a.docid, a.uid = s.creator as is_ans from semantic_unit as a, sessions as s " +
-        "where s.id = $1 and a.docid in (select id from semantic_document where sesid = s.id) and (a.iteration = $2 or " +
-        "a.uid = s.creator) order by is_ans desc, a.uid, a.sentences",
+    sql: "select a.uid, a.sentences, a.docs, a.uid = s.creator as is_ans from semantic_unit as a, sessions as s where " +
+        "s.id = $1 and a.sesid = s.id and (a.iteration = $2 or a.uid = s.creator) order by is_ans desc, a.uid, a.sentences",
     postReqData: ["sesid","iteration"],
     onStart: (ses, data, calc) => {
         if (ses.role != "P") {
@@ -591,11 +590,10 @@ let hasDuplicates = (arr) => {
 };
 
 let getSemanticScore = (pauta, alum) => {
-    if(pauta.docid != alum.docid)
-        return 0;
     let r = 0;
-    alum.sentences.forEach(s => {
-        if(pauta.sentences.includes(s))
+    alum.sentences.forEach((s,i) => {
+        let k = pauta.sentences.indexOf(s);
+        if(k != -1 && pauta.docs[k] == alum.docs[k])
             r++;
     });
     return r/pauta.sentences.length;

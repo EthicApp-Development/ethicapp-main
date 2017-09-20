@@ -18,6 +18,8 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     self.text = "";
     self.sentences = [];
     self.highlight = [];
+    self.originalTexts = [];
+    self.originalSentences = [];
     self.sent = {};
 
     self.units = [];
@@ -58,37 +60,63 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     self.selectDocument = (idx) => {
         if(self.selectedDocument == idx) return;
         self.selectedDocument = idx;
-        self.text = self.documents[idx].content;
-        // -- ! IMPORTANT : No cambiar
-        self.text = self.text.replace(/.[ ]+\n/,".\n");
-        self.sentences = self.text.match(/[^.!?\n]+[.!?\n]+/g ) || [];
-        // -- ! IMPORTANT
-        self.highlight = Array.from({length: self.sentences.length}, () => false);
+        self.text = self.originalTexts[idx];
+        self.sentences = self.originalSentences[idx];
     };
 
     self.countHightlight = () => {
-        return self.highlight.reduce((val, elem) => (elem)? val + 1 : val, 0);
+        //console.log(self.highlight);
+        return self.highlight != null &&
+            self.highlight.reduce((a,b) => a.concat(b), []).reduce((val, elem) => (elem)? val + 1 : val, 0);
     };
 
     self.getDocuments = () => {
         $http({method: "post", url: "get-semantic-documents"}).success((data) => {
             self.documents = data;
             if(self.documents.length > 0) {
+                self.processDocuments();
                 self.selectDocument(0);
                 self.getUnits();
             }
         });
     };
 
+    self.processDocuments = () => {
+        self.highlight = [];
+        self.originalTexts = [];
+        self.originalSentences = [];
+        for(let i = 0; i < self.documents.length; i++){
+            let text = self.documents[i].content;
+            self.originalTexts.push(text.replace(/.[ ]+\n/,".\n"));
+            self.originalSentences.push(self.originalTexts[i].match(/[^.!?\n]+[.!?\n]+/g ) || []);
+            self.highlight.push(Array.from({length: self.originalSentences[i].length}, () => false));
+        }
+    };
+
     self.getUnits = () => {
         $http({method: "post", url: "get-semantic-units", data: {iteration: self.iteration}}).success((data) => {
             self.units = data;
-            //self.addEmptyUnit();
         });
     };
 
     self.getHgSents = () => {
-        return self.highlight.map((e,i) => { return {st: i, b: e}}).filter(e => e.b).map(e => e.st);
+        return self.highlight.map((a,i) => a.map((e,j) => [e,j]).filter(e => e[0]).map(e => e[1]))
+            .reduce((v,e) => v.concat(e), []);
+        /*let out = [];
+        for(let i = 0; i < self.highlight.length; i++){
+            for(let j = 0; j < self.highlight[i].length; j++){
+                if(self.highlight[i][j]){
+                    out.push(j);
+                }
+            }
+        }
+        return out;
+        */
+    };
+
+    self.getHgDocs = () => {
+        return self.highlight.map((a,i) => a.map((e,j) => [e,j]).filter(e => e[0]).map(e => i))
+            .reduce((v,e) => v.concat(e), []);
     };
 
     self.addSemUnit = (unit) => {
@@ -96,18 +124,19 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             self.toggleEdit(-1,unit);
         }
         let url = "add-semantic-unit";
-        if(unit.id != null)
+        if(unit.id != null || self.sent[unit.id])
             url = "update-semantic-unit";
         let postdata = {
             id: unit.id,
             comment: unit.comment,
             sentences: unit.sentences,
-            docid: unit.docid,
+            docs: unit.docs,
             iteration: self.iteration
         };
         $http({method: "post", url: url, data:postdata}).success((data) => {
             unit.dirty = false;
             self.sent[unit.id] = true;
+            unit.id = data.id;
         });
     };
 
@@ -121,8 +150,9 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             comment: "",
             sentences: self.getHgSents(),
             status: "unsaved",
-            docid: self.documents[self.selectedDocument].id
+            docs: self.getHgDocs()
         });
+        console.log(self.units);
         let i = self.units.length -1;
         self.toggleEdit(i, self.units[i]);
     };
@@ -152,8 +182,8 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
 
     self.areAllUnitsSync = () => {
         for(let i = 0; i < self.units.length; i++){
-            let idea = self.units[i];
-            if(idea.status == "unsaved" || idea.status == "dirty")
+            let unit = self.units[i];
+            if(unit.dirty)
                 return false;
         }
         return true;
@@ -165,17 +195,37 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             return;
         }
         if(!unit.edit) {
-            self.selectDocument(indexById(self.documents, unit.docid));
+            //self.selectDocument(indexById(self.documents, unit.docid));
             unit.edit = true;
             self.editing = idx;
-            self.highlight = Array.from({length: self.sentences.length}, (v,i) => unit.sentences.includes(i));
+            self.fillHighlightByUnit(unit);
             unit.dirty = true;
         }
         else{
             unit.sentences = self.getHgSents();
+            unit.docs = self.getHgDocs();
             unit.edit = false;
             self.editing = -1;
-            self.highlight = Array.from({length: self.sentences.length}, () => false);
+            self.unselectAllHighlights();
+        }
+    };
+
+    self.fillHighlightByUnit = (unit) => {
+        self.unselectAllHighlights();
+        // console.log(unit);
+        for(let i = 0; i < unit.sentences.length; i++){
+            let doc = unit.docs[i];
+            let st = unit.sentences[i];
+            self.highlight[doc][st] = true;
+        }
+        // console.log(self.highlight);
+    };
+
+    self.unselectAllHighlights = () => {
+        for(let i = 0; i < self.highlight.length; i++){
+            for(let j = 0; j < self.highlight[i].length; j++){
+                self.highlight[i][j] = false;
+            }
         }
     };
 

@@ -163,48 +163,48 @@ router.post("/get-selection-comment", rpg.singleSQL({
 
 router.post("/add-semantic-document", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "insert into semantic_document(title,content,sesid) values ($1,$2,$3)",
-    postReqData: ["sesid", "title", "content"],
-    sqlParams: [rpg.param("post", "title"), rpg.param("post", "content"), rpg.param("post", "sesid")]
+    sql: "insert into semantic_document(title,content,sesid,orden) values ($1,$2,$3,$4)",
+    postReqData: ["sesid", "title", "content", "orden"],
+    sqlParams: [rpg.param("post", "title"), rpg.param("post", "content"), rpg.param("post", "sesid"), rpg.param("post", "orden")]
 }));
 
 router.post("/semantic-documents", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select id, title, content from semantic_document where sesid = $1",
+    sql: "select id, title, content from semantic_document where sesid = $1 order by orden asc",
     postReqData: ["sesid"],
     sqlParams: [rpg.param("post", "sesid")]
 }));
 
 router.post("/get-semantic-documents", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select id, title, content from semantic_document where sesid = $1",
+    sql: "select id, title, content from semantic_document where sesid = $1 order by orden asc",
     sesReqData: ["ses"],
     sqlParams: [rpg.param("ses", "ses")]
 }));
 
 
-router.post("/add-semantic-unit", rpg.execSQL({
+router.post("/add-semantic-unit", rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: "insert into semantic_unit(sentences,comment,uid,docid,iteration) values ($1,$2,$3,$4,$5)",
-    postReqData: ["comment","sentences","docid","iteration"],
+    sql: "insert into semantic_unit(sentences,docs,comment,uid,sesid,iteration) values ($1,$2,$3,$4,$5,$6) returning id",
+    postReqData: ["comment","sentences","docs","iteration"],
     sesReqData: ["uid"],
-    sqlParams: [rpg.param("post", "sentences"), rpg.param("post", "comment"), rpg.param("ses", "uid"), rpg.param("post","docid"), rpg.param("post","iteration")]
+    sqlParams: [rpg.param("post", "sentences"), rpg.param("post", "docs"), rpg.param("post", "comment"), rpg.param("ses", "uid"), rpg.param("ses","ses"), rpg.param("post","iteration")]
 }));
 
 
 router.post("/update-semantic-unit", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "update semantic_unit set (sentences,comment,uid,docid) = ($1,$2,$3,$4) where id = $5",
-    postReqData: ["comment","sentences","docid","id"],
+    sql: "update semantic_unit set (sentences,comment,uid,docs) = ($1,$2,$3,$4) where id = $5",
+    postReqData: ["comment","sentences","docs","id"],
     sesReqData: ["uid"],
-    sqlParams: [rpg.param("post", "sentences"), rpg.param("post", "comment"), rpg.param("ses", "uid"), rpg.param("post","docid"), rpg.param("post","id")]
+    sqlParams: [rpg.param("post", "sentences"), rpg.param("post", "comment"), rpg.param("ses", "uid"), rpg.param("post","docs"), rpg.param("post","id")]
 }));
 
 
 router.post("/get-semantic-units", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select u.id, u.sentences, u.comment, u.docid, u.iteration from semantic_unit as u inner join semantic_document as d on d.id = u.docid " +
-        "where u.uid = $1 and d.sesid = $2 and u.iteration = $3",
+    sql: "select u.id, u.sentences, u.comment, u.docs, u.iteration from semantic_unit as u " +
+        "where u.uid = $1 and u.sesid = $2 and u.iteration = $3",
     sesReqData: ["uid","ses"],
     postReqData: ["iteration"],
     sqlParams: [rpg.param("ses", "uid"), rpg.param("ses","ses"), rpg.param("post","iteration")]
