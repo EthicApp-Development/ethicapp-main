@@ -57,7 +57,8 @@
         <div class="center-block font-large">
             <button class="btn btn-sm btn-default pull-right" ng-click="shared.changeState()">Ir al siguiente</button>
             <span ng-repeat="st in sesStatusses">
-                <span class="label label-default" ng-class="{'label-warning': $index==selectedSes.status-1}" ng-bind="st"></span>
+                <span ng-if="selectedSes.type != 'M'" class="label label-default" ng-class="{'label-warning': $index==selectedSes.status-1}" ng-bind="st"></span>
+                <span ng-if="selectedSes.type == 'M'" class="label label-default" ng-class="{'label-warning': st.i == selectedSes.status-2}" ng-bind="st.name"></span>
                 <span ng-hide="$last">→</span>
             </span>
         </div>
@@ -404,15 +405,19 @@
                 </div>
             </div>
             <hr>
-            <button class="btn btn-default btn-sm pull-right" ng-click="showCf = !showCf" ng-if="selectedSes.type == 'S'">Mostrar Grado de confianza</button>
-            <table class="table table-bordered">
+            <button class="btn btn-default btn-sm pull-right" ng-click="showCf = !showCf" ng-show="selectedSes.type == 'S'">Mostrar Grado de confianza</button>
+            <table class="table table-bordered" ng-show="showCf">
                 <tr>
                     <th>Nivel de Confianza</th>
+                    <th>Av.</th>
                     <th ng-repeat="qs in questions" ng-bind="$index + 1"></th>
+                    <th>Pr.</th>
                 </tr>
                 <tr ng-repeat="conf in optConfidence">
                     <td>{{conf}}%</td>
+                    <td></td>
                     <td ng-repeat="qs in questions" ng-bind="confidence[qs.id][conf] || 0"></td>
+                    <td></td>
                 </tr>
             </table>
 
@@ -447,7 +452,7 @@
                     <td>{{avgAll() | number:0}}%</td>
                 </tr>
             </table>
-            <table class="table table-bordered" ng-if="selectedSes.type == 'L' && alumState!={} && iterationIndicator <= 4">
+            <table class="table table-bordered" ng-if="(selectedSes.type == 'L' || selectedSes.type == 'M') && alumState!={} && iterationIndicator <= 4">
                 <tr>
                     <th ng-if="iterationIndicator != 3">Alumno</th>
                     <th ng-if="iterationIndicator == 3">Grupo</th>

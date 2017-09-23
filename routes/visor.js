@@ -265,7 +265,21 @@ router.post("/change-state-session", rpg.execSQL({
     onEnd: (req,res) => {
         if(req.body.sesid != null && sesStatusCache[req.body.sesid] != null)
             sesStatusCache[req.body.sesid] += 1;
-        res.send('"status":"ok"');
+        res.send('{"status":"ok"}');
+        socket.stateChange(req.body.sesid);
+    }
+}));
+
+router.post("/force-state-session", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "with rows as (update sessions set status = $1 where id = $2 returning id, status) insert into " +
+    "status_record(sesid,status,stime) select id, status, now() from rows",
+    postReqData: ["sesid", "state"],
+    sqlParams: [rpg.param("post", "state"), rpg.param("post", "sesid")],
+    onEnd: (req,res) => {
+        if(req.body.sesid != null && sesStatusCache[req.body.sesid] != null)
+            sesStatusCache[req.body.sesid] = req.body.state;
+        res.send('{"status":"ok"}');
         socket.stateChange(req.body.sesid);
     }
 }));

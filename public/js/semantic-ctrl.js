@@ -10,7 +10,8 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     let self = $scope;
 
     self.iteration = 0;
-    self.sesStatusses = ["Individual", "Grupal", "Reporte", "Evaluación de Pares", "Finalizada"];
+    self.sesStatusses = [{i: 1, name: "Individual"}, {i: 3, name: "Grupal"}, {i: 4, name: "Reporte"},
+        {i: 5, name: "Evaluación de Pares"}, {i: 6, name: "Finalizada"}];
 
     self.documents = [];
     self.finished = false;
@@ -33,7 +34,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
 
     self.getSesInfo = () => {
         $http({url: "get-ses-info", method: "post"}).success((data) => {
-            self.iteration = data.iteration + 1;
+            self.iteration = data.iteration;
             self.myUid = data.uid;
             self.sesName = data.name;
             self.sesId = data.id;
@@ -161,7 +162,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
         if(self.finished){
             return;
         }
-        if(self.units.length - 1 < self.documents.length){
+        if(self.units.length == 0){
             Notification.error("No hay suficientes unidades semánticas para terminar la actividad");
             return;
         }
@@ -181,12 +182,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     };
 
     self.areAllUnitsSync = () => {
-        for(let i = 0; i < self.units.length; i++){
-            let unit = self.units[i];
-            if(unit.dirty)
-                return false;
-        }
-        return true;
+        return self.units.every(e => !e.dirty);
     };
 
     self.toggleEdit = (idx, unit) => {

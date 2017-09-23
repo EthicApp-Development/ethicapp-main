@@ -185,11 +185,12 @@ adpp.controller("TabsController", function ($scope, $http) {
             self.tabConfig = ["Usuarios", "Grupos"];
             self.sesStatusses = ["Configuración", "Individual", "Anónimo", "Grupal", "Finalizada"];
         }
-        else{
+        else if(self.selectedSes.type == "M"){
             self.iterationNames = [{name: "Individual", val: 1}, {name: "Grupal", val: 3}, {name: "Reporte", val:4}, {name: "Evaluación de Pares", val: 6}];
             self.tabOptions = ["Configuración", "Dashboard"];
             self.tabConfig = ["Usuarios", "Grupos","Rúbrica"];
-            self.sesStatusses = ["Configuración", "Individual", "Grupal", "Reporte","Evaluación de Pares", "Finalizada"];
+            self.sesStatusses = [{i:-1, name: "Configuración"}, {i: 1, name: "Individual"}, {i: 3, name: "Grupal"}, {i: 4, name: "Reporte"},
+                {i: 5, name: "Evaluación de Pares"}, {i: 6, name: "Finalizada"}];
         }
         if (self.selectedSes.status > 1) {
             self.selectedTab = 1;
@@ -244,6 +245,8 @@ adpp.controller("DocumentsController", function ($scope, $http, Notification, $t
 adpp.controller("SesEditorController", function ($scope, $http, Notification) {
     let self = $scope;
 
+    self.mTransition = {1: 3, 3: 5, 5: 6, 6: 8, 8: 9};
+
     self.updateSession = () => {
         if (self.selectedSes.name.length < 3 || self.selectedSes.descr.length < 5) {
             Notification.error("Datos de la sesión incorrectos o incompletos");
@@ -261,6 +264,7 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
             return;
         }
         if (self.selectedSes.type == "L" && self.selectedSes.status >= 3 && !self.selectedSes.grouped
+            || self.selectedSes.type == "M" && self.selectedSes.status >= 3 && !self.selectedSes.grouped
             || self.selectedSes.type == "S" && self.selectedSes.status >= 2 && !self.selectedSes.grouped) {
             self.shared.gotoGrupos();
             Notification.error("Los grupos no han sido generados");
@@ -273,10 +277,18 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
         }
         let confirm = window.confirm("¿Esta seguro que quiere ir al siguiente estado?");
         if (confirm) {
-            let postdata = {sesid: self.selectedSes.id};
-            $http({url: "change-state-session", method: "post", data: postdata}).success((data) => {
-                self.shared.updateSesData();
-            });
+            if(self.selectedSes.type == "M"){
+                let postdata = {sesid: self.selectedSes.id, state: self.mTransition[self.selectedSes.status] || self.selectedSes.status};
+                $http({url: "force-state-session", method: "post", data: postdata}).success((data) => {
+                    self.shared.updateSesData();
+                });
+            }
+            else {
+                let postdata = {sesid: self.selectedSes.id};
+                $http({url: "change-state-session", method: "post", data: postdata}).success((data) => {
+                    self.shared.updateSesData();
+                });
+            }
         }
     };
 
@@ -410,7 +422,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             self.iterationIndicator = Math.max(Math.min(3, self.selectedSes.status - 1), 1);
         }
         else if (self.selectedSes.type == "M") {
-            self.iterationIndicator = Math.max(Math.min(6, self.selectedSes.status - 1), 1);
+            self.iterationIndicator = Math.max(Math.min(6, self.selectedSes.status - 2), 0);
         }
         self.alumState = null;
         self.barOpts = {

@@ -31,7 +31,7 @@
     <div class="top-bar-mini">
         <div class="text-center">
             <span ng-repeat="st in sesStatusses">
-                <span class="label label-primary" ng-class="{'bg-black-alpha': $index==iteration-1}" ng-bind="st"></span>
+                <span class="label label-primary" ng-class="{'bg-black-alpha': st.i == iteration}" ng-bind="st.name"></span>
                 <span ng-hide="$last">→</span>
             </span>
             <span class="pull-right margin-right-24" ng-show="sesSTime != null">
@@ -63,19 +63,19 @@
     </div>
 
     <div class="vh50 boxed">
-        <div class="col-sm-10 col-sm-offset-1">
+        <div class="col-lg-10 col-lg-offset-1">
             <h3>{{documents[selectedDocument].title}}</h3>
             <p class="text-justify"><span ng-repeat="sent in sentences" ng-class="{'bg-lightorange': highlight[selectedDocument][$index]}"> <input type="checkbox" ng-model="highlight[selectedDocument][$index]">{{sent}}</span></p>
         </div>
     </div>
 
     <div class="">
-        <div class="col-sm-10 col-sm-offset-1">
-            <h3>Unidades Semánticas:</h3>
-            <ul class="list-group">
-                <li class="list-group-item row" ng-repeat="unit in units">
+        <div class="col-lg-10 col-lg-offset-1">
+            <h4>Unidades Semánticas:</h4>
+            <div>
+                <div class="row" ng-repeat="unit in units">
                     <div class="col-sm-1">
-                        <button class="btn btn-default" ng-class="{'active': unit.edit, 'btn-warning': unit.edit}" ng-click="toggleEdit($index,unit)">
+                        <button class="btn btn-default" ng-class="{'active': unit.edit, 'btn-warning': unit.edit}" ng-click="toggleEdit($index,unit)" ng-disabled="finished">
                             <i class="fa fa-check-square"></i> {{unit.sentences.length}} Sel.
                         </button>
                     </div>
@@ -89,7 +89,7 @@
                             </span>
                         </div>
                     </div>
-                </li>
+                </div>
             </ul>
             <button class="btn btn-default" ng-click="addEmptyUnit()" ng-disabled="finished || countHightlight() == 0 || editing != -1 || units.length > 3">
                 Agregar unidad semántica
