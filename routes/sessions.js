@@ -187,17 +187,27 @@ router.post("/add-semantic-unit", rpg.singleSQL({
     dbcon: pass.dbcon,
     sql: "insert into semantic_unit(sentences,docs,comment,uid,sesid,iteration) values ($1,$2,$3,$4,$5,$6) returning id",
     postReqData: ["comment","sentences","docs","iteration"],
-    sesReqData: ["uid"],
-    sqlParams: [rpg.param("post", "sentences"), rpg.param("post", "docs"), rpg.param("post", "comment"), rpg.param("ses", "uid"), rpg.param("ses","ses"), rpg.param("post","iteration")]
+    sesReqData: ["uid","ses"],
+    sqlParams: [rpg.param("post", "sentences"), rpg.param("post", "docs"), rpg.param("post", "comment"),
+        rpg.param("ses", "uid"), rpg.param("ses","ses"), rpg.param("post","iteration")]
+}));
+
+router.post("/add-sync-semantic-unit", rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: "insert into semantic_unit(sentences,docs,comment,uid,sesid,iteration) values ($1,$2,$3,$4,$5,$6) returning id",
+    postReqData: ["comment","sentences","docs","iteration","uidoriginal"],
+    sesReqData: ["uid","ses"],
+    sqlParams: [rpg.param("post", "sentences"), rpg.param("post", "docs"), rpg.param("post", "comment"),
+        rpg.param("post", "uidoriginal"), rpg.param("ses","ses"), rpg.param("post","iteration")]
 }));
 
 
 router.post("/update-semantic-unit", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "update semantic_unit set (sentences,comment,uid,docs) = ($1,$2,$3,$4) where id = $5",
+    sql: "update semantic_unit set (sentences,comment,docs) = ($1,$2,$3) where id = $4",
     postReqData: ["comment","sentences","docs","id"],
     sesReqData: ["uid"],
-    sqlParams: [rpg.param("post", "sentences"), rpg.param("post", "comment"), rpg.param("ses", "uid"), rpg.param("post","docs"), rpg.param("post","id")]
+    sqlParams: [rpg.param("post", "sentences"), rpg.param("post", "comment"), rpg.param("post","docs"), rpg.param("post","id")]
 }));
 
 
@@ -210,6 +220,21 @@ router.post("/get-semantic-units", rpg.multiSQL({
     sqlParams: [rpg.param("ses", "uid"), rpg.param("ses","ses"), rpg.param("post","iteration")]
 }));
 
+router.post("/get-team-sync-units", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select u.id, u.sentences, u.comment, u.docs, u.iteration from semantic_unit as u where " +
+        "u.uid in (select original_leader from teams inner join teamusers on tmid = id where uid = $1 and sesid = $2) and u.sesid = $3 and " +
+        "u.iteration = 3 order by u.id asc",
+    sesReqData: ["uid", "ses"],
+    sqlParams: [rpg.param("ses", "uid"), rpg.param("ses", "ses"), rpg.param("ses", "ses")]
+}));
+
+router.post("/delete-semantic-unit", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "delete from semantic_unit where id = $1",
+    postReqData: ["id"],
+    sqlParams: [rpg.param("post", "id")]
+}));
 
 router.post("/duplicate-session", (req, res) => {
      if(req.session.uid != null && req.session.role == "P" && req.body.name != null && req.body.name != ""

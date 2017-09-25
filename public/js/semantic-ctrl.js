@@ -22,6 +22,9 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     self.originalTexts = [];
     self.originalSentences = [];
     self.sent = {};
+    self.writingReport = false;
+    self.followLeader = false;
+    self.leader = false;
 
     self.views = {};
 
@@ -32,6 +35,20 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
 
 
     self.init = () => {
+        $socket.on("stateChange", (data) => {
+            console.log("SOCKET.IO", data);
+            if(data.ses == self.sesId){
+                window.location.reload();
+            }
+        });
+        $socket.on("updateTeam", (data) => {
+            if(self.teamId == data.tmid){
+                if(!self.leader) {
+                    self.getUnits();
+                }
+                self.getTeamInfo();
+            }
+        });
         self.getSesInfo();
     };
 
@@ -98,7 +115,8 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     };
 
     self.getUnits = () => {
-        $http({method: "post", url: "get-semantic-units", data: {iteration: self.iteration}}).success((data) => {
+        let url = (self.iteration == 3)? "get-team-sync-units" : "get-semantic-units";
+        $http({method: "post", url: url, data: {iteration: self.iteration}}).success((data) => {
             self.units = data;
         });
         if(self.iteration > 1){
@@ -119,10 +137,11 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     };
 
     self.addSemUnit = (unit) => {
+        if(self.iteration == 3 && !self.leader) return;
         if(unit.edit){
             self.toggleEdit(-1,unit);
         }
-        let url = "add-semantic-unit";
+        let url = (self.iteration == 3)? "add-sync-semantic-unit" : "add-semantic-unit";
         if(unit.id != null || self.sent[unit.id])
             url = "update-semantic-unit";
         let postdata = {
@@ -130,12 +149,28 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             comment: unit.comment,
             sentences: unit.sentences,
             docs: unit.docs,
-            iteration: self.iteration
+            iteration: self.iteration,
+            uidoriginal: self.originalLeader
         };
         $http({method: "post", url: url, data:postdata}).success((data) => {
             unit.dirty = false;
             self.sent[unit.id] = true;
             unit.id = data.id;
+            if(self.iteration == 3)
+                self.updateSignal();
+        });
+    };
+
+    self.updateSignal = () => {
+        $http({url: "update-my-team", method:"post"}).success((data) => {
+            console.log("Team updated");
+        });
+    };
+
+    self.takeControl = () => {
+        $http({url: "take-team-control", method: "post"}).success((data) => {
+            console.log("Control given");
+            self.updateSignal();
         });
     };
 
@@ -175,6 +210,8 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
                 self.hasFinished = true;
                 self.finished = true;
                 console.log("FINISH");
+                if(self.iteration == 3)
+                    self.updateSignal();
             });
         }
     };
@@ -184,6 +221,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     };
 
     self.toggleEdit = (idx, unit) => {
+        if(self.iteration == 3 && !self.leader) return;
         if(self.editing != -1 && !unit.edit){
             Notification.error("Debe terminar de editar la unidad actual para editar otra.");
             return;
@@ -252,6 +290,19 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
         $http({url: "get-team", method: "post"}).success((data) => {
             self.teamstr = data.map(e => e.name + ((e.finished)? " ✓" : "")).join(", ");
         });
+    };
+
+    self.deleteUnit = (idx, unit) => {
+        console.log("Hola");
+        if(unit.id != null){
+            let postdata = {id: unit.id};
+            $http({url: "delete-semantic-unit", method: "post", data: postdata}).success((data) => {
+                console.log("Idea deleted");
+                if(self.iteration == 3)
+                    self.updateSignal();
+            });
+        }
+        self.units.splice(idx,1);
     };
 
     self.init();
