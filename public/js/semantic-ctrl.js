@@ -23,7 +23,10 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     self.originalSentences = [];
     self.sent = {};
 
+    self.views = {};
+
     self.units = [];
+    self.unitsIter1 = [];
 
     self.editing = -1;
 
@@ -43,13 +46,13 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             self.getDocuments();
             /*$http({url: "data/instructions.json", method: "get"}).success((data) => {
                 self.instructions = data;
-            });
+            });*/
             if (self.iteration == 3){
                 self.getTeamInfo();
             }
             if(self.iteration >= 5){
                 self.finished = true;
-            }*/
+            }
             $http({url: "get-finished", method: "post", data: {status: self.iteration + 2}}).success((data) => {
                 if (data.finished) {
                     self.finished = true;
@@ -98,21 +101,16 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
         $http({method: "post", url: "get-semantic-units", data: {iteration: self.iteration}}).success((data) => {
             self.units = data;
         });
+        if(self.iteration > 1){
+            $http({method: "post", url: "get-team-semantic-units", data: {iteration: 1}}).success((data) => {
+                self.unitsIter1 = data;
+            });
+        }
     };
 
     self.getHgSents = () => {
         return self.highlight.map((a,i) => a.map((e,j) => [e,j]).filter(e => e[0]).map(e => e[1]))
             .reduce((v,e) => v.concat(e), []);
-        /*let out = [];
-        for(let i = 0; i < self.highlight.length; i++){
-            for(let j = 0; j < self.highlight[i].length; j++){
-                if(self.highlight[i][j]){
-                    out.push(j);
-                }
-            }
-        }
-        return out;
-        */
     };
 
     self.getHgDocs = () => {
@@ -206,6 +204,19 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
         }
     };
 
+    self.startView = (unit) => {
+        // console.log("Start viewing: ", unit.id);
+        self.views = {};
+        unit.sentences.filter((e,i) => unit.docs[i] == self.selectedDocument).forEach(e => {
+            self.views[e] = true;
+        });
+    };
+
+    self.stopView = (unit) => {
+        // console.log("Stop viewing: ", unit.id);
+        self.views = {};
+    };
+
     self.fillHighlightByUnit = (unit) => {
         self.unselectAllHighlights();
         // console.log(unit);
@@ -223,6 +234,24 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
                 self.highlight[i][j] = false;
             }
         }
+    };
+
+    self.getTeamInfo = () => {
+        $http({url: "get-team-leader", method: "post"}).success((data) => {
+            self.teamId = data.id;
+            self.originalLeader = data.original_leader;
+            if(data.leader == self.myUid){
+                self.leader = true;
+                self.followLeader = false;
+            }
+            else{
+                self.leader = false;
+                self.followLeader = true;
+            }
+        });
+        $http({url: "get-team", method: "post"}).success((data) => {
+            self.teamstr = data.map(e => e.name + ((e.finished)? " ✓" : "")).join(", ");
+        });
     };
 
     self.init();

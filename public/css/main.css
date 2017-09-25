@@ -439,3 +439,7 @@ p{
     max-height: 50vh;
     overflow-y: auto;
 }
+
+.bordered{
+    border: 1px solid #ccc;
+}

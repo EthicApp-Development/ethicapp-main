@@ -26,6 +26,16 @@ router.post("/get-team-ideas",rpg.multiSQL({
     sqlParams: [rpg.param("ses","ses"),rpg.param("ses","ses"),rpg.param("ses","uid"),rpg.param("post","iteration")]
 }));
 
+router.post("/get-team-semantic-units",rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select u.id, u.sentences, u.comment, u.docs, u.iteration, u.uid from semantic_unit as u where u.sesid = $1 and " +
+        "u.uid in (select tu.uid from teamusers as tu where tu.tmid = (select t.id from teamusers as tu, teams as t where " +
+        "t.sesid = $2 and tu.tmid = t.id and tu.uid = $3)) and u.iteration = $4 order by u.uid asc",
+    sesReqData: ["ses","uid"],
+    postReqData: ["iteration"],
+    sqlParams: [rpg.param("ses","ses"),rpg.param("ses","ses"),rpg.param("ses","uid"),rpg.param("post","iteration")]
+}));
+
 router.post("/get-ses-info",rpg.singleSQL({
     dbcon: pass.dbcon,
     sql: "select greatest(0,least(7,s.status-2)) as iteration, $1::int as uid, s.name, s.id, s.descr, s.options, sr.stime from sessions as s " +

@@ -185,7 +185,7 @@ router.post("/get-alum-state-semantic", rpg.multiSQL({
             });
             sc += m;
         }
-        if(total > 0)
+        if(total > 0 && last_uid != -1)
             scores.push({uid: last_uid, score: sc/total});
         res.end(JSON.stringify(scores));
     }
