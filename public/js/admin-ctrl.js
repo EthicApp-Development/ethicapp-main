@@ -960,6 +960,14 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
     };
 
     self.generateGroups = (key) => {
+        if (self.selectedSes.grouped) {
+            $http({url: "group-proposal-sel", method: "post", data: {sesid: self.selectedSes.id}}).success((data) => {
+                self.groups = data;
+                //self.groupsProp = angular.copy(self.groups);
+                console.log(data);
+                //self.groupNames = [];
+            });
+        }
         if (key == null && (self.groupNum < 1 || self.groupNum > self.users.length)) {
             Notification.error("Error en los parámetros de formación de grupos");
             return;
