@@ -190,7 +190,10 @@ adpp.controller("TabsController", function ($scope, $http) {
             self.tabOptions = ["Configuración", "Dashboard"];
             self.tabConfig = ["Usuarios", "Grupos","Rúbrica"];
             self.sesStatusses = [{i:-1, name: "Configuración"}, {i: 1, name: "Individual"}, {i: 3, name: "Grupal"}, {i: 4, name: "Reporte"},
-                {i: 5, name: "Evaluación de Pares"}, {i: 6, name: "Finalizada"}];
+                {i: 6, name: "Evaluación de Pares"}, {i: 7, name: "Finalizada"}];
+            self.shared.getRubrica();
+            self.shared.getExampleReports();
+            self.shared.getReports();
         }
         if (self.selectedSes.status > 1) {
             self.selectedTab = 1;
@@ -259,7 +262,11 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
     };
 
     self.shared.changeState = () => {
-        if (self.selectedSes.status >= self.sesStatusses.length) {
+        if (self.selectedSes.type != "M" && self.selectedSes.status >= self.sesStatusses.length) {
+            Notification.error("La sesión está finalizada");
+            return;
+        }
+        if (self.selectedSes.type == "M" && self.selectedSes.status >= 9) {
             Notification.error("La sesión está finalizada");
             return;
         }

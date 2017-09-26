@@ -94,7 +94,8 @@
                     </div>
                 </div>
             </div>
-            <button class="btn btn-default simple-margin-left" ng-click="addEmptyUnit()" ng-disabled="finished || countHightlight() == 0 || editing != -1 || units.length > 3 || followLeader">
+            <button class="btn btn-default simple-margin-left" ng-click="addEmptyUnit()" ng-show="iteration < 4"
+                    ng-disabled="finished || countHightlight() == 0 || editing != -1 || units.length > 3 || followLeader">
                 Agregar unidad semántica
             </button>
         </div>
@@ -102,14 +103,25 @@
         <br>
         <div class="col-lg-10 col-lg-offset-1">
             <div>
-                <div class="row bordered" ng-repeat="unit in unitsIter1">
+                <div class="row bordered" ng-repeat="unit in unitsIter3">
                     <div class="col-sm-1">
-                        <button class="btn btn-default" ng-class="{'active': unit.view}" ng-mousedown="startView(unit)" ng-mouseup="stopView(unit)" ng-mouseleave="stopView(unit)" ng-disabled="finished">
+                        <button class="btn btn-default" ng-class="{'active': unit.view}" ng-mousedown="startView(unit)" ng-mouseup="stopView(unit)" ng-mouseleave="stopView(unit)">
                             <i class="fa fa-check-square"></i> {{unit.sentences.length}} Sel.
                         </button>
                     </div>
                     <div class="col-sm-11 simple-padding-top">
-                        <strong ng-bind="unit.uid"></strong>: <span ng-bind="unit.comment"></span>
+                        <strong>Grupal</strong>: <span ng-bind="unit.comment"></span>
+                    </div>
+                    <hr>
+                </div>
+                <div class="row bordered" ng-repeat="unit in unitsIter1">
+                    <div class="col-sm-1">
+                        <button class="btn btn-default" ng-class="{'active': unit.view}" ng-mousedown="startView(unit)" ng-mouseup="stopView(unit)" ng-mouseleave="stopView(unit)">
+                            <i class="fa fa-check-square"></i> {{unit.sentences.length}} Sel.
+                        </button>
+                    </div>
+                    <div class="col-sm-11 simple-padding-top">
+                        <strong ng-bind="teamNames[unit.uid]"></strong>: <span ng-bind="unit.comment"></span>
                     </div>
                 </div>
             </div>
@@ -121,7 +133,7 @@
             <span>Respuesta al factor detonante</span>
             <div class="pull-right">
                 <span ng-show="lastSent != null && isFull">Enviado {{lastSent | date:'HH:mm'}}</span>
-                <button class="btn btn-sm btn-primary" ng-click="sendReport()" ng-show="isFull"><i class="fa fa-send"></i></button>
+                <button class="btn btn-sm btn-primary" ng-click="sendReport()" ng-show="isFull && !finished"><i class="fa fa-send"></i></button>
                 <button class="btn btn-sm btn-primary" ng-click="toggleFull()"><i class="fa fa-minus"></i></button>
             </div>
         </div>

@@ -25,11 +25,16 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     self.writingReport = false;
     self.followLeader = false;
     self.leader = false;
+    self.writingReport = false;
 
     self.views = {};
 
     self.units = [];
     self.unitsIter1 = [];
+    self.unitsIter3 = [];
+
+    self.shared = {};
+    self.teamNames = {};
 
     self.editing = -1;
 
@@ -67,8 +72,17 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             if (self.iteration == 3){
                 self.getTeamInfo();
             }
+            if(self.iteration > 3){
+                self.getSimpleTeamInfo();
+            }
+            if(self.iteration == 4){
+                self.writingReport = true;
+            }
             if(self.iteration >= 5){
                 self.finished = true;
+            }
+            if(self.iteration == 6){
+                window.location.replace("rubrica");
             }
             $http({url: "get-finished", method: "post", data: {status: self.iteration + 2}}).success((data) => {
                 if (data.finished) {
@@ -122,6 +136,11 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
         if(self.iteration > 1){
             $http({method: "post", url: "get-team-semantic-units", data: {iteration: 1}}).success((data) => {
                 self.unitsIter1 = data;
+            });
+        }
+        if(self.iteration > 3){
+            $http({method: "post", url: "get-team-sync-units", data: {iteration: 3}}).success((data) => {
+                self.unitsIter3 = data;
             });
         }
     };
@@ -195,13 +214,18 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
         if(self.finished){
             return;
         }
-        if(self.units.length == 0){
-            Notification.error("No hay suficientes unidades semánticas para terminar la actividad");
-            return;
+        if(self.iteration <= 3) {
+            if (self.units.length == 0) {
+                Notification.error("No hay suficientes unidades semánticas para terminar la actividad");
+                return;
+            }
+            if (!self.areAllUnitsSync()) {
+                Notification.error("Hay unidades semánticas que no han sido enviadas");
+                return;
+            }
         }
-        if(!self.areAllUnitsSync()) {
-            Notification.error("Hay unidades semánticas que no han sido enviadas");
-            return;
+        if(self.iteration == 4){
+            self.shared.sendReport();
         }
         let confirm = window.confirm("¿Esta seguro que desea terminar la actividad?\nEsto implica no volver a poder editar sus respuestas");
         if(confirm) {
@@ -292,6 +316,15 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
         });
     };
 
+    self.getSimpleTeamInfo = () => {
+        $http({url: "get-team", method: "post"}).success((data) => {
+            self.teamNames = {};
+            data.forEach(u => {
+                self.teamNames[u.id] = u.name;
+            });
+        });
+    };
+
     self.deleteUnit = (idx, unit) => {
         console.log("Hola");
         if(unit.id != null){
@@ -306,6 +339,42 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     };
 
     self.init();
+
+}]);
+
+app.controller("ReportController", ["$scope", "$http", function ($scope, $http) {
+    let self = $scope;
+    self.isFull = true;
+    self.content = "";
+    self.lastSent = null;
+
+    self.toggleFull = () => {
+        self.isFull = !self.isFull;
+    };
+
+    self.sendReport = () => {
+        let postdata = {content: self.content};
+        $http({url:"send-report", method:"post", data:postdata}).success((data) => {
+            if (data.status == "ok"){
+                self.lastSent = new Date();
+                //self.shared.sendReportIdeas();
+            }
+        });
+    };
+
+    self.shared.sendReport = self.sendReport;
+
+    self.getReport = () => {
+        $http({url:"get-my-report", method:"post"}).success((data) => {
+            if (data.status == "ok"){
+                self.content = data.content;
+                self.idReport = data.id;
+                //self.shared.getReportIdeas();
+            }
+        });
+    };
+
+    self.getReport();
 
 }]);
 
