@@ -1034,7 +1034,7 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
         }
         let postdata = {
             sesid: self.selectedSes.id,
-            groups: JSON.stringify(self.groupsProp.map(e => e.map(f => f.uid)))
+            groups: JSON.stringify(self.groups.map(e => e.map(f => f.uid)))
         };
         console.log(postdata);
         $http({url: "set-groups", method: "post", data: postdata}).success((data) => {
