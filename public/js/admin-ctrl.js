@@ -967,6 +967,7 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
                 console.log(data);
                 //self.groupNames = [];
             });
+            return;
         }
         if (key == null && (self.groupNum < 1 || self.groupNum > self.users.length)) {
             Notification.error("Error en los parámetros de formación de grupos");
@@ -991,7 +992,7 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
                 e.rnd = Math.random();
                 return e;
             });
-            self.groups = generateTeams(arr, s => s.rnd, self.groupNum, true);
+            self.groups = generateTeams(arr, s => s.rnd, self.groupNum, false);
         }
         else if (self.selectedSes.type == "S") {
             let arr = [];
@@ -1212,9 +1213,9 @@ let generateTeams = (alumArr, scFun, n, different) => {
             let rnd = [];
             let offset = arr.length / n;
             for (let j = 0; j < n; j++)
-                rnd.push(Math.floor(Math.random() * offset) + offset * j);
-            groups.push(arr.filter((a, i) => rnd.includes(Math.floor(i))));
-            arr = arr.filter((a, i) => !rnd.includes(Math.floor(i)));
+                rnd.push(~~(Math.random() * offset + offset * j));
+            groups.push(arr.filter((a, i) => rnd.includes(i)));
+            arr = arr.filter((a, i) => !rnd.includes(i));
         }
         else{
             groups.push(arr.filter((a, i) => i < n));
