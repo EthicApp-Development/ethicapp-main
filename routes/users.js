@@ -56,4 +56,20 @@ router.post("/register", rpg.execSQL({
     }
 }));
 
+router.post("/register-prof", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "insert into users(rut, pass, name, mail, sex, role) values ($1,$2,$3,$4,$5,'P')",
+    postReqData: ["name", "rut", "pass", "mail", "sex"],
+    onStart: (ses, data, calc) => {
+        if (ses.role == "S" || data.pass.length < 5) return "select $1, $2, $3, $4, $5";
+        calc.passcr = crypto.createHash('md5').update(data.pass).digest('hex');
+        calc.fullname = (data.name + " " + data.lastname);
+    },
+    sqlParams: [rpg.param("post", "rut"), rpg.param("calc", "passcr"), rpg.param("calc", "fullname"),
+        rpg.param("post", "mail"), rpg.param("post", "sex")],
+    onEnd: (req, res) => {
+        res.redirect(".");
+    }
+}));
+
 module.exports = router;

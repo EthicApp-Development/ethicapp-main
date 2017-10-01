@@ -72,7 +72,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             if (self.iteration == 3){
                 self.getTeamInfo();
             }
-            if(self.iteration > 3){
+            if(self.iteration >= 3){
                 self.getSimpleTeamInfo();
             }
             if(self.iteration == 4){

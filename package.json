@@ -17,6 +17,7 @@
     "morgan": "~1.7.0",
     "pg": "^6.1.0",
     "serve-favicon": "~2.3.0",
+    "simple-stats-server": "0.0.5",
     "socket.io": "latest"
   },
   "devDependencies": {

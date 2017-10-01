@@ -7,6 +7,7 @@ let favicon = require('serve-favicon');
 let logger = require('morgan');
 let cookieParser = require('cookie-parser');
 let busboy = require('express-busboy');
+let sss = require('simple-stats-server');
 
 let index = require('./routes/index');
 let users = require('./routes/users');
@@ -36,6 +37,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use("/uploads",express.static(path.join(__dirname, 'uploads')));
 app.use(session({secret: 'ssshhh', saveUninitialized: false, resave: false}));
+app.use("/stats",sss());
 
 app.use('/', index);
 app.use('/', users);

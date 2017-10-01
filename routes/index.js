@@ -10,12 +10,26 @@ router.get('/', (req, res) => {
         else {
             if (req.session.role == "A")
                 res.redirect("seslist");
-            else
+            else if (req.session.role == "P")
                 res.redirect("admin");
+            else if (req.session.role == "S")
+                res.redirect("super");
+            else
+                res.redirect("login");
         }
     }
     else
         res.redirect("login");
+});
+
+
+router.get("/super", (req,res) => {
+    if(req.session.uid && req.session.role == "S"){
+        res.render("super");
+    }
+    else{
+        res.redirect("/login");
+    }
 });
 
 module.exports = router;

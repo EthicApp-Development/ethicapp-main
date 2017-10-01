@@ -33,6 +33,13 @@ hr{
     background-color: rgba(0,0,0,0.2);
 }
 
+.row-eq-height {
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display:         flex;
+}
+
 .middle-box{
     max-width: 320px;
     display: block;
@@ -40,6 +47,19 @@ hr{
     border-bottom: 4px solid #aaaaaa;
     background: #f3f3f3;
     margin: 20px auto;
+    text-align: center;
+}
+
+.large-box{
+    max-width: 640px;
+    display: block;
+    padding: 4px 24px 20px 24px;
+    border-bottom: 4px solid #aaaaaa;
+    background: #f3f3f3;
+    margin: 20px auto;
+}
+
+.large-box h1, .large-box h2, .large-box h4{
     text-align: center;
 }
 
@@ -213,6 +233,10 @@ canvas{
 .bg-red{
      background: #d54744;
  }
+
+.border-right-sep{
+    border-right: 1px solid #999;
+}
 
 .bg-darkred{
     background: #a53734;
