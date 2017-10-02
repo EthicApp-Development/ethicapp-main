@@ -182,7 +182,7 @@ adpp.controller("TabsController", function ($scope, $http) {
             self.iterationNames = [{name: "Individual", val: 1}, {name: "Grupal anónimo", val: 2},
                 {name: "Grupal", val: 3}];
             self.tabOptions = ["Configuración", "Dashboard"];
-            self.tabConfig = ["Usuarios", "Grupos"];
+            self.tabConfig = ["Usuarios","Grupos",null,"Opciones"];
             self.sesStatusses = ["Configuración", "Individual", "Anónimo", "Grupal", "Finalizada"];
         }
         else if(self.selectedSes.type == "M"){
@@ -1165,6 +1165,48 @@ adpp.controller("RubricaController", function ($scope, $http) {
                 self.errPairMsg = data.msg;
             }
         });
+    };
+
+});
+
+adpp.controller("OptionsController", function ($scope, $http, Notification) {
+    let self = $scope;
+    self.conf = {};
+    self.sesidConfig = -1;
+    self.options = [{name: "Ocultar Cometarios", code:"J"}, {name: "Grados de Certeza", code:"C"}];
+
+    self.saveConfs = () => {
+        let postdata = {
+            sesid: self.selectedSes.id,
+            options: self.buildConfStr()
+        };
+        $http.post("update-ses-options", postdata).success((data) => {
+            if(data.status == "ok") {
+                Notification.success("Opciones actualizadas");
+                self.selectedSes.options = postdata.options;
+            }
+        });
+    };
+
+    self.updateConf = () => {
+        if(self.selectedSes.id != self.sesidConfig) {
+            self.conf = {};
+            let op = self.selectedSes.options || "";
+            for (var i = 0; i < op.length; i++) {
+                self.conf[op[i]] = true;
+            }
+            self.sesidConfig = self.selectedSes.id;
+        }
+        return true;
+    };
+
+    self.buildConfStr = () => {
+        let s = "";
+        for(let key in self.conf){
+            if(self.conf[key])
+                s += key;
+        }
+        return s;
     };
 
 });

@@ -202,7 +202,7 @@
             <a class="pull-right btn btn-default" ng-click="setTabConfig(-1)"><i class="fa fa-close"></i></a>
             <div class="row">
             <div class="btn-group center-block w500">
-                <button class="btn btn-default" ng-repeat="x in tabConfig" ng-bind="x"
+                <button class="btn btn-default" ng-repeat="x in tabConfig" ng-bind="x" ng-show="x != null"
                         ng-class="{active: $index==selectedTabConfig}" ng-click="setTabConfig($index)">
                 </button>
             </div>
@@ -370,6 +370,28 @@
                 <span class="red" ng-bind="errPairMsg"></span>
             </div>
             <!-- / RUBRICA -->
+
+            <!-- OPTIONS -->
+            <div class="pad-content" ng-show="selectedTabConfig == 3 && updateConf()" ng-controller="OptionsController">
+                <h4>Configuración de Opciones</h4>
+                <div class="row sliders">
+                    <div ng-repeat="opt in options">
+                    <div class="col-sm-4 col-sm-offset-2"><strong ng-bind="opt.name"></strong></div>
+                    <div class="col-md-4">
+                        <div class="onoffswitch">
+                            <input type="checkbox" id="sl{{$index}}" class="onoffswitch-checkbox" ng-model="conf[opt.code]">
+                            <label class="onoffswitch-label" for="sl{{$index}}">
+                                <span class="onoffswitch-inner"></span>
+                                <span class="onoffswitch-switch"></span>
+                            </label>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+                <hr>
+                <button class="btn btn-primary pull-right" ng-click="saveConfs()">Guardar cambios</button>
+
+            <!-- /OPTIONS -->
             </div>
         </div>
         <!-- / CONFIGURACION -->
