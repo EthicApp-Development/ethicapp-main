@@ -268,11 +268,11 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
 
     self.startView = (unit) => {
         // console.log("Start viewing: ", unit.id);
-        if(unit.view){
+        if(unit.viewing){
             self.stopView();
             return;
         }
-        unit.view = true;
+        unit.viewing = true;
         self.views = {};
         unit.sentences.filter((e,i) => unit.docs[i] == self.selectedDocument).forEach(e => {
             self.views[e] = true;
@@ -281,7 +281,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
 
     self.stopView = (unit) => {
         // console.log("Stop viewing: ", unit.id);
-        unit.view = false;
+        unit.viewing = false;
         self.views = {};
     };
 

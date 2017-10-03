@@ -107,7 +107,7 @@
             <div>
                 <div class="row bordered" ng-repeat="unit in unitsIter3">
                     <div class="col-sm-1">
-                        <button class="btn btn-default" ng-class="{'active': unit.view}" ng-mousedown="startView(unit)" ng-mouseup="stopView(unit)" ng-mouseleave="stopView(unit)">
+                        <button class="btn btn-default" ng-class="{'active': unit.view}" ng-click="startView(unit)">
                             <i class="fa fa-check-square"></i> {{unit.sentences.length}} Sel.
                         </button>
                     </div>
