@@ -161,7 +161,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             self.toggleEdit(-1,unit);
         }
         let url = (self.iteration == 3)? "add-sync-semantic-unit" : "add-semantic-unit";
-        if(unit.id != null || self.sent[unit.id])
+        if(unit.id != null)
             url = "update-semantic-unit";
         let postdata = {
             id: unit.id,
@@ -173,8 +173,8 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
         };
         $http({method: "post", url: url, data:postdata}).success((data) => {
             unit.dirty = false;
-            self.sent[unit.id] = true;
             unit.id = data.id;
+            self.sent[unit.id] = true;
             if(self.iteration == 3)
                 self.updateSignal();
         });

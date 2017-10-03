@@ -277,7 +277,8 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
             Notification.error("Los grupos no han sido generados");
             return;
         }
-        if (self.selectedSes.status >= 7 && !self.selectedSes.paired) {
+        if (self.selectedSes.type == "L" && self.selectedSes.status >= 7 && !self.selectedSes.paired
+            || self.selectedSes.type == "M" && self.selectedSes.status >= 6 && !self.selectedSes.paired) {
             self.shared.gotoRubrica();
             Notification.error("Los pares para la evaluación de pares no han sido asignados");
             return;
@@ -856,6 +857,24 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         });
     };
 
+    self.showReportByUid = (uid) => {
+        let postdata = {uid: uid, sesid: self.selectedSes.id};
+        $http({url: "get-report-uid", method: "post", data: postdata}).success((data) => {
+            $uibModal.open({
+                templateUrl: "templ/report-details.html",
+                controller: "ReportModalController",
+                controllerAs: "vm",
+                scope: self,
+                resolve: {
+                    report: function () {
+                        data.author = self.users[data.uid];
+                        return data;
+                    },
+                }
+            });
+        });
+    };
+
     self.broadcastReport = (rid) => {
         let postdata = {sesid: self.selectedSes.id, rid: rid};
         $http({url: "set-eval-report", method: "post", data: postdata}).success((data) => {
@@ -1155,7 +1174,7 @@ adpp.controller("RubricaController", function ($scope, $http) {
     };
 
     self.pairAssign = () => {
-        let postdata = {sesid: self.selectedSes.id, rnum: 2};
+        let postdata = {sesid: self.selectedSes.id, rnum: 3};
         $http({url: "assign-pairs", method: "post", data: postdata}).success((data) => {
             if (data.status == "ok") {
                 self.selectedSes.paired = true;
@@ -1264,7 +1283,17 @@ let generateTeams = (alumArr, scFun, n, different) => {
             arr = arr.filter((a, i) => i >= n);
         }
     }
-    return groups;
+    let final_groups = [];
+    let ov = 0;
+    for(let i = 0; i < groups.length; i++){
+        if(groups[i].length > 1 || final_groups.length == 0)
+            final_groups.push(groups[i]);
+        else {
+            final_groups[ov % final_groups.length].push(groups[i][0]);
+            ov++;
+        }
+    }
+    return final_groups;
 };
 
 let isDifferent = (type) => {

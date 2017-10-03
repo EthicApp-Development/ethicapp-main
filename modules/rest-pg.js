@@ -263,7 +263,7 @@ module.exports.singleSQL = function (params) {
                 res.end();
             db.end();
         });
-        qry.on("error", function(){
+        qry.on("error", function(err){
             console.error("[DB Error]: ", err);
             res.end('{"status":"err"}');
         });

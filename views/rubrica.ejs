@@ -49,18 +49,18 @@
         </div>
     </div>
 
-    <div class="pad-content">
+    <div class="pad-content" style="max-height: 100vh">
     <div class="row bg-white"  ng-if="report != null">
-        <div class="col-sm-6">
+        <div class="col-sm-4">
             <div class="report">
-                <h3 ng-show="iteration < 7">Texto</h3>
+                <h3 ng-show="iteration < 7">Reporte</h3>
                 <h3 ng-show="iteration == 7">Mi Reporte</h3>
                 <p class="text-justify" ng-bind="report.content"></p>
             </div>
             <br>
             <hr>
         </div>
-        <div class="col-sm-6">
+        <div class="col-sm-8">
             <h3>Instrucciones:</h3>
             <div ng-bind="instructions[iteration]"></div>
             <hr>
@@ -103,8 +103,26 @@
                 <h3>Respuestas:</h3>
                 <ul class="list-group">
                     <li class="list-group-item" ng-repeat="ans in answers">
-                        <strong>Respuesta {{$index + 1}}. Nota: {{ans.val | number:2}} / 4</strong>
+                        <strong>Respuesta {{$index + 1}}. Puntaje: {{ans.val | number:2}} / 4</strong>
                         <p ng-bind="ans.com"></p>
+
+                        <table class="table table-bordered font-mini">
+                            <tr>
+                                <th>Criterio</th>
+                                <th>No Logrado (1 pto)</th>
+                                <th>En Proceso (2 pto)</th>
+                                <th>Por Lograr (3 pto)</th>
+                                <th>Logrado (4 pto)</th>
+                            </tr>
+                            <tr ng-repeat="criterio in criterios">
+                                <td ng-bind="criterio.name"></td>
+                                <td ng-class="{active: answersRubrica[ans.uid][criterio.id] == 1}" ng-bind="criterio.inicio"></td>
+                                <td ng-class="{active: answersRubrica[ans.uid][criterio.id] == 2}" ng-bind="criterio.proceso"></td>
+                                <td ng-class="{active: answersRubrica[ans.uid][criterio.id] == 3}" ng-bind="criterio.competente"></td>
+                                <td ng-class="{active: answersRubrica[ans.uid][criterio.id] == 4}" ng-bind="criterio.avanzado"></td>
+                            </tr>
+                        </table>
+
                     </li>
                 </ul>
                 <strong>Promedio: {{getAvg() | number:2}} / 4</strong>

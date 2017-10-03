@@ -267,7 +267,7 @@
                 <br>
                 <hr>
                 <br>
-                <h4><span ng-show="groupsProp != null">Propuesta de </span>Grupos:</h4>
+                <h4><span ng-show="!self.selectedSes.grouped">Propuesta de </span>Grupos:</h4>
                 <table class="table table-bordered">
                     <tr ng-repeat="group in groups">
                         <td ng-bind="$index + 1"></td>
@@ -281,7 +281,7 @@
                     </tr>
                 </table>
                 <hr>
-                <h4 ng-if="!selectedSes.grouped" ng-show="false">Editor de Propuesta de Grupos:</h4>
+                <!--<h4 ng-if="!selectedSes.grouped" ng-show="false">Editor de Propuesta de Grupos:</h4>
                 <table class="table table-bordered table-hover" ng-if="!selectedSes.grouped">
                     <tr ng-repeat="group in groupsProp">
                         <td ng-bind="$index + 1"></td>
@@ -294,7 +294,7 @@
                             <span class="label label-info" ng-bind="alum.aprendizaje"></span>
                         </td>
                     </tr>
-                </table>
+                </table>-->
             </div>
             <!-- / GRUPOS -->
 
@@ -390,7 +390,7 @@
                 </div>
                 <hr>
                 <button class="btn btn-primary pull-right" ng-click="saveConfs()">Guardar cambios</button>
-
+            </div>
             <!-- /OPTIONS -->
             </div>
         </div>
@@ -482,7 +482,10 @@
                     <th>Tiempo de término</th>
                 </tr>
                 <tr ng-repeat="dato in alumState | orderBy:'-score'">
-                    <td ng-if="iterationIndicator != 3" ng-bind="users[dato.uid].name"></td>
+                    <td ng-if="iterationIndicator != 3">
+                        {{users[dato.uid].name}}
+                        <button class="btn btn-default btn-sm pull-right" ng-click="showReportByUid(dato.uid)" ng-show="iterationIndicator==4"><i class="fa fa-eye"></i></button>
+                    </td>
                     <td ng-if="iterationIndicator == 3" ng-bind="leaderTeamStr[dato.uid]"></td>
                     <td ng-if="iterationIndicator != 0 && iterationIndicator != 4">
                         <div class="bg-darkgreen table-green-bar" ng-show="dato.score != null" style="width: {{400*dato.score}}px;">

@@ -59,6 +59,22 @@ router.post("/get-criteria-selection",rpg.multiSQL({
     sqlParams: [rpg.param("ses","uid"),rpg.param("post","rid")]
 }));
 
+router.post("/get-report-comment",rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: "select comment from report_comment where uid = $1 and repid = $2",
+    sesReqData: ["uid"],
+    postReqData: ["rid"],
+    sqlParams: [rpg.param("ses","uid"),rpg.param("post","rid")]
+}));
+
+router.post("/get-criteria-selection-by-report",rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select uid, cid, selection from criteria_selection where repid = $1",
+    sesReqData: ["uid"],
+    postReqData: ["repid"],
+    sqlParams: [rpg.param("post","repid")]
+}));
+
 router.post("/get-criteria-answer",rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select id, cid, selection from criteria_selection where uid in (select id from users inner join sesusers on id = uid " +
@@ -89,6 +105,14 @@ router.post("/get-report", rpg.singleSQL({
     sql: "select r.id, r.content, r.uid from reports as r where r.id = $1",
     sesReqData: ["uid"],
     sqlParams: [rpg.param("post","rid")]
+}));
+
+router.post("/get-report-uid", rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: "select r.id, r.content, r.uid from reports as r inner join rubricas as ru on r.rid = ru.id " +
+            "where ru.sesid = $1 and r.uid = $2",
+    postReqData: ["uid","sesid"],
+    sqlParams: [rpg.param("post","sesid"), rpg.param("post","uid")]
 }));
 
 router.post("/get-active-example-report", rpg.singleSQL({

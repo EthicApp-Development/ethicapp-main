@@ -139,6 +139,9 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
                         self.canAnswer = false;
                 });
             });
+            $http({url: "get-report-comment", method:"post", data:postdata}).success((data) => {
+                report.comment = data.comment;
+            });
         });
     };
 
@@ -146,6 +149,14 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
         let postdata = {repid: rid};
         $http({url: "get-report-result", method: "post", data: postdata}).success((data) => {
             self.answers = data;
+        });
+        $http.post("get-criteria-selection-by-report", postdata).success((data) => {
+            self.answersRubrica = {};
+            data.forEach((row) => {
+                if(self.answersRubrica[row.uid] == null)
+                    self.answersRubrica[row.uid] = {};
+                self.answersRubrica[row.uid][row.cid] = row.selection;
+            });
         });
     };
 

@@ -48,14 +48,16 @@
     <div class="top-bar">
         <div class="col-sm-6 full-height">
             <span class="simple-margin-left">Documentos: </span>
-            <span ng-repeat="doc in documents" class="side-top-btn" ng-bind="doc.title"
-                  ng-class="{'active': $index==selectedDocument}" ng-click="selectDocument($index)"></span>
+            <span ng-repeat="doc in documents" class="side-top-btn" ng-class="{'active': $index==selectedDocument}" ng-click="selectDocument($index)">
+                {{doc.title | limitTo:16}}
+            </span>
             <!--<strong class="pull-right margin-top-8" ng-bind="iterationNames[iteration]"></strong>-->
         </div>
         <div class="col-sm-6">
             <a onclick="window.history.back()" class="btn btn-sm btn-default pull-right">Atrás</a>
             <button disabled class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i> Representante </button>
             <button class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && followLeader" ng-click="takeControl()">Tomar Control</button>
+            <a class="btn btn-sm btn-default pull-right" ng-show="iteration > 6" href="rubrica">Ir a evaluación</a>
             <button class="btn btn-sm btn-default pull-right" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}">
                 <i class="fa fa-check"></i> Terminé</button>
             <span class="pull-right boxed" ng-bind="teamstr"></span>

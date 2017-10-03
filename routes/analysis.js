@@ -593,7 +593,7 @@ let getSemanticScore = (pauta, alum) => {
     let r = 0;
     alum.sentences.forEach((s,i) => {
         let k = pauta.sentences.indexOf(s);
-        if(k != -1 && pauta.docs[k] == alum.docs[k])
+        if(k != -1 && pauta.docs[k] == alum.docs[i])
             r++;
     });
     return r/pauta.sentences.length;
