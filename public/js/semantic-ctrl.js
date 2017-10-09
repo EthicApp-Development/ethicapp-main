@@ -171,9 +171,11 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             iteration: self.iteration,
             uidoriginal: self.originalLeader
         };
+        console.log(postdata);
         $http({method: "post", url: url, data:postdata}).success((data) => {
             unit.dirty = false;
-            unit.id = data.id;
+            if(unit.id == null)
+                unit.id = data.id;
             self.sent[unit.id] = true;
             if(self.iteration == 3)
                 self.updateSignal();
@@ -205,7 +207,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             status: "unsaved",
             docs: self.getHgDocs()
         });
-        console.log(self.units);
+        //console.log(self.units);
         let i = self.units.length -1;
         self.toggleEdit(i, self.units[i]);
     };

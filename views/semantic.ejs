@@ -67,7 +67,7 @@
     <div class="vh50 boxed">
         <div class="col-lg-10 col-lg-offset-1">
             <h3>{{documents[selectedDocument].title}}</h3>
-            <p class="text-justify"><span ng-repeat="sent in sentences" ng-class="{'bg-lightorange': highlight[selectedDocument][$index] && !views[$index], 'bg-lightgreen': views[$index]}"> <input type="checkbox" ng-model="highlight[selectedDocument][$index]">{{sent}}</span></p>
+            <p class="text-justify"><span ng-repeat="sent in sentences track by $index" ng-class="{'bg-lightorange': highlight[selectedDocument][$index] && !views[$index], 'bg-lightgreen': views[$index]}"> <input type="checkbox" ng-model="highlight[selectedDocument][$index]">{{sent}}</span></p>
         </div>
     </div>
 
