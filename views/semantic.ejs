@@ -48,7 +48,7 @@
     <div class="top-bar">
         <div class="col-sm-6 full-height">
             <span class="simple-margin-left">Documentos: </span>
-            <span ng-repeat="doc in documents" class="side-top-btn" ng-class="{'active': $index==selectedDocument}" ng-click="selectDocument($index)">
+            <span ng-repeat="doc in documents" class="side-top-btn" ng-class="{'active': $index==selectedDocument, 'border-orange': hgDocs[$index]}" ng-click="selectDocument($index)">
                 {{doc.title | limitTo:16}}
             </span>
             <!--<strong class="pull-right margin-top-8" ng-bind="iterationNames[iteration]"></strong>-->
@@ -97,7 +97,7 @@
                 </div>
             </div>
             <button class="btn btn-default simple-margin-left" ng-click="addEmptyUnit()" ng-show="iteration < 4"
-                    ng-disabled="finished || countHightlight() == 0 || editing != -1 || units.length > 4 || followLeader">
+                    ng-disabled="finished || countHighlight() == 0 || editing != -1 || units.length > 4 || followLeader">
                 Agregar unidad semántica
             </button>
         </div>

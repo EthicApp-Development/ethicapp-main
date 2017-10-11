@@ -125,8 +125,34 @@ router.post("/add-question", rpg.execSQL({
         rpg.param("post", "comment"),rpg.param("post", "other"),rpg.param("post", "sesid"),rpg.param("post", "textid")],
     onStart: (ses,data,calc) => {
         if (ses.role != "P") {
-            console.log("ERR: Solo profesor puede crear sesiones.");
-            return "select $1, $2, $3, $4, $5, $6"
+            return "select $1, $2, $3, $4, $5, $6, $7"
+        }
+    }
+}));
+
+router.post("/update-question", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "update questions set (content,options,answer,comment,other,textid) = ($1,$2,$3,$4,$5,$6) where id = $7",
+    sesReqData: ["uid"],
+    postReqData: ["content","options","answer","comment","textid","id"],
+    sqlParams: [rpg.param("post", "content"),rpg.param("post", "options"),rpg.param("post", "answer"),
+        rpg.param("post", "comment"),rpg.param("post", "other"),rpg.param("post", "textid"),rpg.param("post", "id")],
+    onStart: (ses,data,calc) => {
+        if (ses.role != "P") {
+            return "select $1, $2, $3, $4, $5, $6, $7"
+        }
+    }
+}));
+
+router.post("/delete-question", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "delete from questions where id = $1",
+    sesReqData: ["uid"],
+    postReqData: ["id"],
+    sqlParams: [rpg.param("post", "id")],
+    onStart: (ses,data,calc) => {
+        if (ses.role != "P") {
+            return "select $1"
         }
     }
 }));
@@ -136,6 +162,13 @@ router.post("/add-question-text", rpg.execSQL({
     sql: "insert into question_text(title,content,sesid) values ($1,$2,$3)",
     postReqData: ["sesid", "title", "content"],
     sqlParams: [rpg.param("post", "title"), rpg.param("post", "content"), rpg.param("post", "sesid")]
+}));
+
+router.post("/update-question-text", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "update question_text set (title,content) = ($1,$2) where id = $3",
+    postReqData: ["id", "title", "content"],
+    sqlParams: [rpg.param("post", "title"), rpg.param("post", "content"), rpg.param("post", "id")]
 }));
 
 router.post("/get-question-text", rpg.multiSQL({

@@ -37,6 +37,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     self.teamNames = {};
 
     self.editing = -1;
+    self.hgDocs = {};
 
 
     self.init = () => {
@@ -99,7 +100,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
         self.sentences = self.originalSentences[idx];
     };
 
-    self.countHightlight = () => {
+    self.countHighlight = () => {
         //console.log(self.highlight);
         return self.highlight != null &&
             self.highlight.reduce((a,b) => a.concat(b), []).reduce((val, elem) => (elem)? val + 1 : val, 0);
@@ -159,6 +160,10 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
         if(self.iteration == 3 && !self.leader) return;
         if(unit.edit){
             self.toggleEdit(-1,unit);
+        }
+        if(self.iteration == 3 && (unit.comment == null || unit.comment.length ==0)){
+            Notification.error("Debe ingresar un comentario.")
+            return;
         }
         let url = (self.iteration == 3)? "add-sync-semantic-unit" : "add-semantic-unit";
         if(unit.id != null)
@@ -252,6 +257,10 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             Notification.error("Debe terminar de editar la unidad actual para editar otra.");
             return;
         }
+        if(unit.edit && self.countHighlight() == 0){
+            Notification.error("Debe seleccionar al menos una unidad semántica");
+            return;
+        }
         if(!unit.edit) {
             //self.selectDocument(indexById(self.documents, unit.docid));
             unit.edit = true;
@@ -290,8 +299,15 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     self.fillHighlightByUnit = (unit) => {
         self.unselectAllHighlights();
         // console.log(unit);
+        self.hgDocs = {};
+        let first = true;
         for(let i = 0; i < unit.sentences.length; i++){
             let doc = unit.docs[i];
+            self.hgDocs[doc] = true;
+            if(first) {
+                self.selectDocument(doc);
+                first = false;
+            }
             let st = unit.sentences[i];
             self.highlight[doc][st] = true;
         }
@@ -299,6 +315,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     };
 
     self.unselectAllHighlights = () => {
+        self.hgDocs = {};
         for(let i = 0; i < self.highlight.length; i++){
             for(let j = 0; j < self.highlight[i].length; j++){
                 self.highlight[i][j] = false;
@@ -334,7 +351,10 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     };
 
     self.deleteUnit = (idx, unit) => {
-        console.log("Hola");
+        if(unit.edit){
+            Notification.error("No puede eliminar una unidad que está siendo editada");
+            return;
+        }
         if(unit.id != null){
             let postdata = {id: unit.id};
             $http({url: "delete-semantic-unit", method: "post", data: postdata}).success((data) => {

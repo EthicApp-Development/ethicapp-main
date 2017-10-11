@@ -16,6 +16,7 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
     self.myUid = -1;
     self.sesStatusses = ["Lectura", "Individual", "Anónimo", "Grupal", "Reporte", "Rubrica Calibración", "Evaluación de Pares", "Finalizada"];
     self.canAnswer = true;
+    self.miters = 0;
     self.commentError = false;
 
     self.init = () => {
@@ -51,6 +52,10 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
             self.myUid = data.uid;
             self.sesSTime = (data.stime != null) ? new Date(data.stime) : null;
             self.sesDescr = data.descr;
+            if(data.type == "M"){
+                self.sesStatusses = ["Individual", "Grupal", "Reporte", "Evaluación de Pares", "Finalizada"];
+                self.miters = 1;
+            }
             if(self.iteration <= 5) {
                 $http({url: "get-active-example-report", method: "post"}).success((data) => {
                     self.reports = [data];

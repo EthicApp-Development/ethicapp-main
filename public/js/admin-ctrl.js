@@ -1090,6 +1090,7 @@ adpp.controller("RubricaController", function ($scope, $http) {
     self.editable = false;
     self.exampleReports = [];
     self.newExampleReport = "";
+    self.pairNum = 3;
 
     self.addCriterio = () => {
         self.criterios.push(self.newCriterio);
@@ -1174,7 +1175,7 @@ adpp.controller("RubricaController", function ($scope, $http) {
     };
 
     self.pairAssign = () => {
-        let postdata = {sesid: self.selectedSes.id, rnum: 3};
+        let postdata = {sesid: self.selectedSes.id, rnum: +self.pairNum || 3};
         $http({url: "assign-pairs", method: "post", data: postdata}).success((data) => {
             if (data.status == "ok") {
                 self.selectedSes.paired = true;

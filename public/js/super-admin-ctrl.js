@@ -14,7 +14,7 @@ app.controller("SuperAdminController", function ($scope, $http) {
     };
 
     self.getStats = () => {
-        $http.get("/stats").success((data) => {
+        $http.get("stats").success((data) => {
             self.sts = {
                 alive: data.check.ping,
                 memory: data.memory.process.heapUsed / 1024 / 1024,

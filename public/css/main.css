@@ -527,3 +527,7 @@ p{
 .font-mini{
     font-size: 80%;
 }
+
+.border-orange{
+    border-bottom: 3px solid orange;
+}
