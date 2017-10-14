@@ -147,7 +147,6 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.init();
 });
 
-
 adpp.controller("TabsController", function ($scope, $http) {
     let self = $scope;
     self.tabOptions = ["Descripción", "Dashboard"];
@@ -301,7 +300,6 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
     };
 
 });
-
 
 adpp.controller("NewUsersController", function ($scope, $http, Notification) {
     let self = $scope;
@@ -530,25 +528,29 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         }
         else if (self.selectedSes.type == "L") {
             $http({url: "get-alum-state-lect", method: "post", data: postdata}).success((data) => {
-                self.alumState = data;
+                self.alumState = {};
+                for (let uid in self.users) {
+                    if (self.users[uid].role == "A")
+                        self.alumState[uid] = {};
+                }
+                data.forEach((d) => {
+                    if (self.alumState[d.uid] == null) {
+                        self.alumState[d.uid] = d;
+                    }
+                    else {
+                        self.alumState[d.uid] = d;
+                    }
+                });
                 self.buildBarData(data);
                 self.getAlumDoneTime(postdata);
                 if (self.iterationIndicator == 3) {
-                    $http({
-                        url: "get-original-leaders",
-                        method: "post",
-                        data: {sesid: self.selectedSes.id}
-                    }).success((data) => {
-                        let temp = {};
-                        self.alumState.forEach((data) => {
-                            temp[data.uid] = data;
-                        });
-                        self.alumState = [];
+                    $http({url: "get-original-leaders", method: "post", data: {sesid: self.selectedSes.id}}).success((data) => {
+                        let temp = angular.copy(self.alumState);
+                        self.alumState = {};
                         self.leaderTeamStr = {};
                         data.forEach((r) => {
-                            if(temp[r.leader] != null)
-                                self.alumState.push(temp[r.leader]);
-                            self.leaderTeamStr[r.leader] = r.team.map(u => self.users[u].name).join(", ");
+                            self.alumState[r.leader] = temp[r.leader];
+                            self.leaderTeamStr[r.leader] = r.team.map(u => (self.users[u]) ? self.users[u].name : "- ").join(", ");
                         });
                     });
                 }
@@ -568,25 +570,32 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         }
         else if (self.selectedSes.type == "M") {
             $http({url: "get-alum-state-semantic", method: "post", data: postdata}).success((data) => {
-                self.alumState = data;
+                self.alumState = {};
+                self.numUsers = 0;
+                for (let uid in self.users) {
+                    if (self.users[uid].role == "A") {
+                        self.alumState[uid] = {};
+                        self.numUsers++;
+                    }
+                }
+                data.forEach((d) => {
+                    if (self.alumState[d.uid] == null) {
+                        self.alumState[d.uid] = d;
+                    }
+                    else {
+                        self.alumState[d.uid] = d;
+                    }
+                });
                 self.buildBarData(data);
                 self.getAlumDoneTime(postdata);
                 if (self.iterationIndicator == 3) {
-                    $http({
-                        url: "get-original-leaders",
-                        method: "post",
-                        data: {sesid: self.selectedSes.id}
-                    }).success((data) => {
-                        let temp = {};
-                        self.alumState.forEach((data) => {
-                            temp[data.uid] = data;
-                        });
-                        self.alumState = [];
+                    $http({url: "get-original-leaders", method: "post", data: {sesid: self.selectedSes.id}}).success((data) => {
+                        let temp = angular.copy(self.alumState);
+                        self.alumState = {};
                         self.leaderTeamStr = {};
                         data.forEach((r) => {
-                            if(temp[r.leader] != null)
-                                self.alumState.push(temp[r.leader]);
-                            self.leaderTeamStr[r.leader] = r.team.map(u => self.users[u].name).join(", ");
+                            self.alumState[r.leader] = temp[r.leader];
+                            self.leaderTeamStr[r.leader] = r.team.map(u => (self.users[u]) ? self.users[u].name : "- ").join(", ");
                         });
                     });
                 }
@@ -693,8 +702,8 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         let t = 0;
         let c = 0;
         if (self.alumState != null) {
-            for (var i = 0; i < self.alumState.length; i++) {
-                var a = self.alumState[i];
+            for (let u in self.alumState) {
+                var a = self.alumState[u];
                 t++;
                 c += a.score;
             }
@@ -708,11 +717,10 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             self.numComplete = 0;
             data.forEach((row) => {
                 self.numComplete += 1;
-                let ai = self.alumState.findIndex(e => e.uid == row.uid);
-                if (ai == -1)
-                    self.alumState.push(row);
+                if (self.alumState[row.uid] == null)
+                    self.alumState[row.uid] = row;
                 else
-                    self.alumState[ai].dtime = ~~(row.dtime);
+                    self.alumState[row.uid].dtime = ~~(row.dtime);
             });
         });
     };
@@ -764,9 +772,23 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.getAllReportResult = () => {
         let postdata = {sesid: self.selectedSes.id};
         $http({url: "get-report-result-all", method: "post", data: postdata}).success((data) => {
-            self.resultAll = data;
+            self.resultAll = {};
+            for (let uid in self.users) {
+                if (self.users[uid].role == "A")
+                    self.resultAll[uid] = [];
+            }
+            data.forEach((d) => {
+                if(d!=null && d.length > 0) {
+                    let uid = self.getReportAuthor(d[0].rid);
+                    if (uid != -1 && self.resultAll[uid] == null) {
+                        self.resultAll[uid] = d;
+                    }
+                    else if(uid != -1) {
+                        self.resultAll[uid] = d;
+                    }
+                }
+            });
             self.pairArr = (data[0]) ? new Array(data[0].length) : [];
-            console.log(data);
             self.buildRubricaBarData(data);
         });
     };
@@ -822,9 +844,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.getReportAuthor = (rid) => {
         if (self.reports) {
             let rep = self.reports.find(e => e.id == rid);
-            if (rep)
-                return (self.users[rep.uid]) ? self.users[rep.uid].name : null;
+            return (rep) ? rep.uid : -1;
         }
+        return -1;
     };
 
     self.getAvg = (row) => {
@@ -834,8 +856,11 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     };
 
     self.getInMax = (res) => {
-        if (res == null || res.length == 0) return [];
-        let n = res.reduce((v, e) => Math.max(v, e.length), 0);
+        if (res == null) return [];
+        let n = 0;
+        for(let u in res){
+            n = Math.max(n, res[u].length);
+        }
         return new Array(n);
     };
 

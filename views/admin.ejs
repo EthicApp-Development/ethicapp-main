@@ -409,7 +409,7 @@
 
             <nvd3 options="barOpts" data="barData" ng-hide="iterationIndicator == 0 || iterationIndicator == 4"></nvd3>
 
-            <div class="row" ng-show="iterationIndicator < 5 && selectedSes.type == 'L'">
+            <div class="row" ng-show="iterationIndicator < 5 && (selectedSes.type == 'L' || selectedSes.type == 'M')">
                 <div class="col-sm-4 col-sm-offset-2">
                     Actividad Finalizada: <strong>{{numComplete}} / {{numUsers}}</strong>
                 </div>
@@ -483,12 +483,12 @@
                     <th style="width: 420px" ng-if="iterationIndicator != 0 && iterationIndicator != 4">Puntaje</th>
                     <th>Tiempo de término</th>
                 </tr>
-                <tr ng-repeat="dato in alumState | orderBy:'-score'">
+                <tr ng-repeat="(alum, dato) in alumState">
                     <td ng-if="iterationIndicator != 3">
-                        {{users[dato.uid].name}}
+                        {{users[alum].name}}
                         <button class="btn btn-default btn-sm pull-right" ng-click="showReportByUid(dato.uid)" ng-show="iterationIndicator==4"><i class="fa fa-eye"></i></button>
                     </td>
-                    <td ng-if="iterationIndicator == 3" ng-bind="leaderTeamStr[dato.uid]"></td>
+                    <td ng-if="iterationIndicator == 3" ng-bind="leaderTeamStr[alum]"></td>
                     <td ng-if="iterationIndicator != 0 && iterationIndicator != 4">
                         <div class="bg-darkgreen table-green-bar" ng-show="dato.score != null" style="width: {{400*dato.score}}px;">
                             {{100*dato.score | number:0}}%
@@ -534,9 +534,9 @@
                         <th ng-repeat="x in getInMax(resultAll) track by $index">Ev. {{$index + 1}}</th>
                     </tr>
                     <!--<tr ng-repeat="dato in result | orderBy:'-score'">-->
-                    <tr ng-repeat="row in resultAll">
+                    <tr ng-repeat="(alum,row) in resultAll">
                         <td>
-                            Reporte de <span ng-bind="getReportAuthor(row[0].rid)"></span>
+                            Reporte de <span ng-bind="users[alum].name"></span>
                             <button class="btn btn-default btn-sm pull-right" ng-click="broadcastReport(row[0].rid)" ng-show="selectedSes.status == 9">
                                 <i class="fa fa-share"></i>
                             </button>
