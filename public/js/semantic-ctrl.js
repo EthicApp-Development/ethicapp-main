@@ -19,6 +19,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     self.text = "";
     self.sentences = [];
     self.highlight = [];
+    self.disabledSents = [];
     self.originalTexts = [];
     self.originalSentences = [];
     self.sent = {};
@@ -119,6 +120,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
 
     self.processDocuments = () => {
         self.highlight = [];
+        self.disabledSents = [];
         self.originalTexts = [];
         self.originalSentences = [];
         for(let i = 0; i < self.documents.length; i++){
@@ -126,13 +128,26 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             self.originalTexts.push(text.replace(/.[ ]+\n/,".\n"));
             self.originalSentences.push(self.originalTexts[i].match(/[^.!?\n]+[.!?\n]+/g ) || []);
             self.highlight.push(Array.from({length: self.originalSentences[i].length}, () => false));
+            self.disabledSents.push(Array.from({length: self.originalSentences[i].length}, () => false));
         }
+    };
+
+    self.processUnits = () => {
+        for(let i = 0; i < self.units.length; i++){
+            for(let j=0; j < self.units[i].sentences.length; j++){
+                let docid = self.units[i].docs[j];
+                let stid = self.units[i].sentences[j];
+                self.disabledSents[docid][stid] = true;
+            }
+        }
+        console.table(self.disabledSents);
     };
 
     self.getUnits = () => {
         let url = (self.iteration == 3)? "get-team-sync-units" : "get-semantic-units";
         $http({method: "post", url: url, data: {iteration: self.iteration}}).success((data) => {
             self.units = data;
+            self.processUnits();
         });
         if(self.iteration > 1){
             $http({method: "post", url: "get-team-semantic-units", data: {iteration: 1}}).success((data) => {
@@ -266,14 +281,24 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             unit.edit = true;
             self.editing = idx;
             self.fillHighlightByUnit(unit);
+            self.fillUnitDisabled(unit, false);
             unit.dirty = true;
         }
         else{
             unit.sentences = self.getHgSents();
             unit.docs = self.getHgDocs();
+            self.fillUnitDisabled(unit, true);
             unit.edit = false;
             self.editing = -1;
             self.unselectAllHighlights();
+        }
+    };
+
+    self.fillUnitDisabled = (unit, val) => {
+        for(let j=0; j < unit.sentences.length; j++){
+            let docid = unit.docs[j];
+            let stid = unit.sentences[j];
+            self.disabledSents[docid][stid] = val;
         }
     };
 
