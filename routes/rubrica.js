@@ -263,4 +263,11 @@ router.post("/send-report-idea", rpg.execSQL({
     sqlParams: [rpg.param("post","repid"), rpg.param("post","iid")]
 }));
 
+router.post("/get-report-evaluators", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select uid from report_pair where repid = $1",
+    postReqData: ["repid"],
+    sqlParams: [rpg.param("post","repid")]
+}));
+
 module.exports = router;

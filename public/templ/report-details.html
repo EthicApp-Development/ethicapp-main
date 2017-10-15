@@ -1,10 +1,44 @@
 <div>
     <div class="modal-header">
-        <h4 ng-if="vm.report.author != null">Reporte de {{vm.report.author.name}}</h4>
-        <h4 ng-if="vm.report.author == null">Reporte enviado</h4>
+        <h4 ng-if="vm.data.report.author != null">Reporte de {{vm.data.report.author.name}}</h4>
+        <h4 ng-if="vm.data.report.author == null">Reporte enviado</h4>
     </div>
     <div class="modal-body">
-        <p ng-bind="vm.report.content"></p>
+        <h4>Reporte:</h4>
+        <p ng-bind="vm.data.report.content"></p>
+        <hr>
+        <div ng-if="vm.data.answers">
+        <h4>Respuestas:</h4>
+        <ul class="list-group">
+            <li class="list-group-item" ng-repeat="ans in vm.data.answers">
+                <strong>{{$index + 1}}. Evaluador: {{ans.evaluatorName}}. Puntaje: {{ans.val | number:2}}</strong>
+                <div ng-if="ans.com != null">
+                <p ng-bind="ans.com"></p>
+
+                <table class="table table-bordered font-mini">
+                    <tr>
+                        <th>Criterio</th>
+                        <th>No Logrado (1 pto)</th>
+                        <th>En Proceso (2 pto)</th>
+                        <th>Por Lograr (3 pto)</th>
+                        <th>Logrado (4 pto)</th>
+                    </tr>
+                    <tr ng-repeat="criterio in vm.data.criterios">
+                        <td ng-bind="criterio.name"></td>
+                        <td ng-class="{active: vm.data.answersRubrica[ans.uid][criterio.id] == 1}" ng-bind="criterio.inicio"></td>
+                        <td ng-class="{active: vm.data.answersRubrica[ans.uid][criterio.id] == 2}" ng-bind="criterio.proceso"></td>
+                        <td ng-class="{active: vm.data.answersRubrica[ans.uid][criterio.id] == 3}" ng-bind="criterio.competente"></td>
+                        <td ng-class="{active: vm.data.answersRubrica[ans.uid][criterio.id] == 4}" ng-bind="criterio.avanzado"></td>
+                    </tr>
+                </table>
+                </div>
+                <span ng-if="ans.com == null">No hay evaluación realizada</span>
+
+            </li>
+        </ul>
+        </div>
+        <!--<strong>Promedio: {{getAvg() | number:2}} / 4</strong>-->
+        <br>
         <hr>
         <div class="modal-footer">
             <button class="btn btn-default" type="button" ng-click="vm.cancel()">Cerrar</button>

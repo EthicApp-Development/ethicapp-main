@@ -867,33 +867,58 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.showReport = (rid) => {
         let postdata = {rid: rid};
         $http({url: "get-report", method: "post", data: postdata}).success((data) => {
-            $uibModal.open({
-                templateUrl: "templ/report-details.html",
-                controller: "ReportModalController",
-                controllerAs: "vm",
-                scope: self,
-                resolve: {
-                    report: function () {
-                        data.author = self.users[data.uid];
-                        return data;
-                    },
-                }
+            let modalData = {report: data, criterios: self.shared.obtainCriterios()};
+            modalData.report.author = self.users[data.uid];
+            let postdata = {repid: data.id};
+            $http({url: "get-report-result", method: "post", data: postdata}).success((data) => {
+                modalData.answers = data;
+                $http.post("get-criteria-selection-by-report", postdata).success((data) => {
+                    modalData.answersRubrica = {};
+                    data.forEach((row) => {
+                        if (modalData.answersRubrica[row.uid] == null)
+                            modalData.answersRubrica[row.uid] = {};
+                        modalData.answersRubrica[row.uid][row.cid] = row.selection;
+                    });
+                    $http.post("get-report-evaluators", postdata).success((data) => {
+                        data.forEach(row => {
+                            let i = modalData.answers.findIndex(e => e.uid == row.uid);
+                            if(i == -1)
+                                modalData.answers.push({uid: row.uid, evaluatorName: self.users[row.uid].name});
+                            else
+                                modalData.answers[i].evaluatorName = self.users[row.uid].name;
+                        });
+                        $uibModal.open({
+                            templateUrl: "templ/report-details.html",
+                            controller: "ReportModalController",
+                            controllerAs: "vm",
+                            size: "lg",
+                            scope: self,
+                            resolve: {
+                                data: function () {
+                                    return modalData;
+                                },
+                            }
+                        });
+                    });
+                });
             });
         });
     };
 
     self.showReportByUid = (uid) => {
+        console.log(uid);
         let postdata = {uid: uid, sesid: self.selectedSes.id};
         $http({url: "get-report-uid", method: "post", data: postdata}).success((data) => {
+            let modalData = {report: data};
+            modalData.report.author = self.users[uid];
             $uibModal.open({
                 templateUrl: "templ/report-details.html",
                 controller: "ReportModalController",
                 controllerAs: "vm",
                 scope: self,
                 resolve: {
-                    report: function () {
-                        data.author = self.users[data.uid];
-                        return data;
+                    data: function () {
+                        return modalData;
                     },
                 }
             });
@@ -936,9 +961,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
 
 });
 
-adpp.controller("ReportModalController", function ($scope, $uibModalInstance, report) {
+adpp.controller("ReportModalController", function ($scope, $uibModalInstance, data) {
     var vm = this;
-    vm.report = report;
+    vm.data = data;
 
     vm.cancel = () => {
         $uibModalInstance.dismiss('cancel');
@@ -1210,6 +1235,10 @@ adpp.controller("RubricaController", function ($scope, $http) {
                 self.errPairMsg = data.msg;
             }
         });
+    };
+
+    self.shared.obtainCriterios = () => {
+        return self.criterios;
     };
 
 });

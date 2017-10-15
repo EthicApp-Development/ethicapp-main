@@ -486,7 +486,7 @@
                 <tr ng-repeat="(alum, dato) in alumState">
                     <td ng-if="iterationIndicator != 3">
                         {{users[alum].name}}
-                        <button class="btn btn-default btn-sm pull-right" ng-click="showReportByUid(dato.uid)" ng-show="iterationIndicator==4"><i class="fa fa-eye"></i></button>
+                        <button class="btn btn-default btn-sm pull-right" ng-click="showReportByUid(alum)" ng-show="iterationIndicator==4"><i class="fa fa-eye"></i></button>
                     </td>
                     <td ng-if="iterationIndicator == 3" ng-bind="leaderTeamStr[alum]"></td>
                     <td ng-if="iterationIndicator != 0 && iterationIndicator != 4">
