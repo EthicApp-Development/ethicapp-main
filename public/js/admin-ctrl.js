@@ -359,6 +359,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification) {
     self.qsLabels = ['A', 'B', 'C', 'D', 'E'];
 
     self.newQuestion = {
+        id: null,
         content: "",
         alternatives: ["", "", "", "", ""],
         comment: "",
@@ -366,7 +367,8 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification) {
         textid: null,
         answer: -1
     };
-    self.newText = {title: "", content: ""};
+
+    self.newText = {id: null, title: "", content: ""};
 
     self.selectAnswer = (i) => {
         self.newQuestion.answer = i;
@@ -391,6 +393,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification) {
                 self.requestQuestions();
                 Notification.success("Pregunta agrgada correctamente");
                 self.newQuestion = {
+                    id: null,
                     content: "",
                     alternatives: ["", "", "", "", ""],
                     comment: "",
@@ -402,9 +405,81 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification) {
         });
     };
 
+    self.updateQuestion = () => {
+        if(self.newQuestion.id == null){
+            Notification.error("No hay pregunta para editar");
+            return;
+        }
+        if (self.newQuestion.answer == -1) {
+            Notification.error("Debe indicar la respuesta correcta a la pregunta");
+            return;
+        }
+        let postdata = {
+            id: self.newQuestion.id,
+            content: self.newQuestion.content,
+            options: self.newQuestion.alternatives.join("\n"),
+            comment: self.newQuestion.comment,
+            answer: self.newQuestion.answer,
+            sesid: self.selectedSes.id,
+            textid: self.newQuestion.textid,
+            other: self.newQuestion.other
+        };
+        $http({url: "update-question", method: "post", data: postdata}).success((data) => {
+            if (data.status == "ok") {
+                self.requestQuestions();
+                Notification.success("Pregunta editada correctamente");
+                self.newQuestion = {
+                    id: null,
+                    content: "",
+                    alternatives: ["", "", "", "", ""],
+                    comment: "",
+                    other: "",
+                    textid: null,
+                    answer: -1
+                };
+            }
+        });
+    };
+
+    self.startEditQuestion = (qs) => {
+        self.newQuestion = {
+            id: qs.id,
+            content: qs.content,
+            alternatives: qs.options,
+            comment: qs.comment,
+            other: qs.other,
+            textid: qs.textid,
+            answer: qs.answer
+        };
+        Notification.info("Edite la pregunta en el formulario.");
+    };
+
+    self.startEditText = (tx) => {
+        self.newText = {
+            id: tx.id,
+            title: tx.title,
+            content: tx.content
+        };
+        Notification.info("Edite el texto en el formulario.");
+    };
+
     self.addQuestionText = () => {
         let postdata = {sesid: self.selectedSes.id, title: self.newText.title, content: self.newText.content};
         $http({url: "add-question-text", method: "post", data: postdata}).success((data) => {
+            if (data.status == "ok") {
+                self.requestQuestions();
+                self.newText = {id: null, title: "", content: ""};
+            }
+        });
+    };
+
+    self.updateQuestionText = () => {
+        if(self.newText.id == null){
+            Notification.error("No hay texto para editar");
+            return;
+        }
+        let postdata = {id: self.newText.id, sesid: self.selectedSes.id, title: self.newText.title, content: self.newText.content};
+        $http({url: "update-question-text", method: "post", data: postdata}).success((data) => {
             if (data.status == "ok") {
                 self.requestQuestions();
                 self.newText = {title: "", content: ""};

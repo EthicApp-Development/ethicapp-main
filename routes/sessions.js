@@ -84,7 +84,7 @@ router.post("/documents-session", rpg.multiSQL({
 
 router.post("/questions-session", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select id, content, options, answer, comment, other from questions where sesid = $1 order by id asc",
+    sql: "select id, content, options, answer, comment, other, textid from questions where sesid = $1 order by id asc",
     postReqData: ["sesid"],
     sqlParams: [rpg.param("post", "sesid")]
 }));
@@ -134,7 +134,7 @@ router.post("/update-question", rpg.execSQL({
     dbcon: pass.dbcon,
     sql: "update questions set (content,options,answer,comment,other,textid) = ($1,$2,$3,$4,$5,$6) where id = $7",
     sesReqData: ["uid"],
-    postReqData: ["content","options","answer","comment","textid","id"],
+    postReqData: ["content","options","answer","comment","id"],
     sqlParams: [rpg.param("post", "content"),rpg.param("post", "options"),rpg.param("post", "answer"),
         rpg.param("post", "comment"),rpg.param("post", "other"),rpg.param("post", "textid"),rpg.param("post", "id")],
     onStart: (ses,data,calc) => {

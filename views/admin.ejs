@@ -143,16 +143,19 @@
                 <h4>Textos</h4>
                 <div class="list-group-item" ng-repeat="text in questionTexts">
                     <strong ng-bind="text.title"></strong>
-                    <button class="btn btn-xs btn-default pull-right" ng-disabled="selectedSes.status!=1" ng-click="deleteQuestionText(qs.id)">Eliminar</button>
+                    <button class="btn btn-xs btn-default pull-right" ng-disabled="selectedSes.status!=1" ng-click="deleteQuestionText(text.id)">Eliminar</button>
+                    <button class="btn btn-xs btn-default pull-right margin-right-8" ng-disabled="selectedSes.status!=1" ng-click="startEditText(text)">Editar</button>
                     <button class="btn btn-xs btn-default pull-right margin-right-8" ng-click="text.expanded = !text.expanded">Ver</button>
                     <p ng-show="!text.expanded">{{text.content | limitTo:360}}</p>
                     <p ng-show="text.expanded">{{text.content}}</p>
                 </div>
                 <div>
-                    <label>Agregar Texto</label>
+                    <label ng-show="newText.id == null">Agregar Texto</label>
+                    <label ng-show="newText.id != null">Editar Texto</label>
                     <input type="text" ng-model="newText.title" placeholder="Titulo" class="form-control">
                     <textarea class="form-control" rows="5" ng-model="newText.content"></textarea>
-                    <button class="btn btn-default pull-right" ng-click="addQuestionText()">Agregar</button>
+                    <button class="btn btn-default pull-right" ng-show="newText.id == null" ng-click="addQuestionText()">Agregar</button>
+                    <button class="btn btn-default pull-right" ng-show="newText.id != null" ng-click="updateQuestionText()">Actualizar</button>
                 </div>
 
                 <hr>
@@ -163,6 +166,7 @@
                     <strong ng-show="!qs.expanded">{{($index+1) + ". " + qs.content | limitTo:80}}</strong>
                     <strong ng-show="qs.expanded">{{($index+1) + ". " + qs.content}}</strong>
                     <button class="btn btn-xs btn-default pull-right" ng-disabled="selectedSes.status!=1" ng-click="deleteQuestion(qs.id)">Eliminar</button>
+                    <button class="btn btn-xs btn-default pull-right margin-right-8" ng-disabled="selectedSes.status!=1" ng-click="startEditQuestion(qs)">Editar</button>
                     <button class="btn btn-xs btn-default pull-right margin-right-8" ng-click="qs.expanded = !qs.expanded">Ver</button>
                     <div ng-show="qs.expanded">
                         <div ng-repeat="x in qs.options" ng-class="{'bg-lightgreen': $index == qs.answer}">
@@ -177,7 +181,9 @@
                 </div>
                 <br>
                 <div>
-                    <label>Agregar Pregunta:</label> <span class="text-muted">(No incluya numeración)</span>
+                    <label ng-show="newQuestion.id == null">Agregar Pregunta:</label>
+                    <label ng-show="newQuestion.id != null">Editar Pregunta {{newQuestion.order}}:</label>
+                    <span class="text-muted">(No incluya numeración)</span>
                     <textarea rows="2" class="form-control" ng-model="newQuestion.content" ng-disabled="selectedSes.status!=1"></textarea>
                     <label>Alternativas:</label>
                     <div class="input-group" ng-repeat=" x in qsLabels">
@@ -191,7 +197,8 @@
                     <textarea rows="2" class="form-control" ng-model="newQuestion.comment" ng-disabled="selectedSes.status!=1"></textarea>
                     <label>Otros:</label>
                     <input type="text" class="form-control" ng-model="newQuestion.other" ng-disabled="selectedSes.status!=1">
-                    <button class="btn btn-default pull-right" ng-click="addQuestion()" ng-disabled="selectedSes.status!=1">Agregar</button>
+                    <button class="btn btn-default pull-right" ng-click="addQuestion()" ng-show="newQuestion.id == null" ng-disabled="selectedSes.status!=1">Agregar</button>
+                    <button class="btn btn-default pull-right" ng-click="updateQuestion()" ng-show="newQuestion.id != null" ng-disabled="selectedSes.status!=1">Actualizar</button>
                 </div>
             </div>
             <br>
