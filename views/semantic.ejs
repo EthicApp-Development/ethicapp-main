@@ -58,7 +58,7 @@
             <button disabled class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i> Representante </button>
             <button class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && followLeader" ng-click="takeControl()">Tomar Control</button>
             <a class="btn btn-sm btn-default pull-right" ng-show="iteration > 6" href="rubrica">Ir a evaluación</a>
-            <button class="btn btn-sm btn-default pull-right" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}">
+            <button class="btn btn-sm btn-default pull-right" ng-if="iteration > 0" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}">
                 <i class="fa fa-check"></i> Terminé</button>
             <span class="pull-right boxed" ng-bind="teamstr"></span>
         </div>

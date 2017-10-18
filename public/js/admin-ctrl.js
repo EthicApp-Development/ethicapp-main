@@ -412,6 +412,22 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification) {
         });
     };
 
+    self.deleteQuestion = (id) => {
+        let postdata = {id: id};
+        $http.post("delete-question", postdata).success((data) => {
+            self.requestQuestions();
+            Notification.success("Pregunta eliminada correctamente");
+        });
+    };
+
+    self.deleteQuestionText = (id) => {
+        let postdata = {id: id};
+        $http.post("delete-question-text", postdata).success((data) => {
+            self.requestQuestions();
+            Notification.success("Texto eliminado correctamente");
+        });
+    };
+
 });
 
 adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibModal, Notification) {

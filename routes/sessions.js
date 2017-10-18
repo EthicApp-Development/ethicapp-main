@@ -171,6 +171,19 @@ router.post("/update-question-text", rpg.execSQL({
     sqlParams: [rpg.param("post", "title"), rpg.param("post", "content"), rpg.param("post", "id")]
 }));
 
+router.post("/delete-question-text", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "delete from question_texts where id = $1",
+    sesReqData: ["uid"],
+    postReqData: ["id"],
+    sqlParams: [rpg.param("post", "id")],
+    onStart: (ses,data,calc) => {
+        if (ses.role != "P") {
+            return "select $1"
+        }
+    }
+}));
+
 router.post("/get-question-text", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select id, title, content from question_text where sesid = $1",
@@ -291,32 +304,42 @@ router.post("/duplicate-session", (req, res) => {
                      rpg.execSQL({
                          dbcon: pass.dbcon,
                          sql: "insert into sesusers(sesid,uid) select " + sesid +
-                            " as sesid, uid from sesusers where sesid = " + oldsesid
+                            " as sesid, uid from sesusers where sesid = " + oldsesid,
+                         preventResEnd: true,
+                         onEnd: () => {}
                      })(req,res);
                  }
                  else{
                      rpg.execSQL({
                          dbcon: pass.dbcon,
-                         sql: "insert into sesusers(sesid,uid) values (" + sesid + "," + req.session.uid + ")"
+                         sql: "insert into sesusers(sesid,uid) values (" + sesid + "," + req.session.uid + ")",
+                         preventResEnd: true,
+                         onEnd: () => {}
                      })(req,res);
                  }
                  if(req.body.copyDocuments){
                      rpg.execSQL({
                          dbcon: pass.dbcon,
                          sql: "insert into documents(sesid,title,path,uploader,active) select " + sesid +
-                            " as sesid, title, path, uploader, active from documents where sesid = " + oldsesid
+                            " as sesid, title, path, uploader, active from documents where sesid = " + oldsesid,
+                         preventResEnd: true,
+                         onEnd: () => {}
                      })(req,res);
                  }
                  if(req.body.copyQuestions){
                      rpg.execSQL({
                          dbcon: pass.dbcon,
                          sql: "insert into questions(sesid,content,options,answer,comment,other,textid) select " + sesid +
-                         " as sesid, content,options,answer,comment,other,textid from questions where sesid = " + oldsesid
+                         " as sesid, content,options,answer,comment,other,textid from questions where sesid = " + oldsesid,
+                         preventResEnd: true,
+                         onEnd: () => {}
                      })(req,res);
                      rpg.execSQL({
                          dbcon: pass.dbcon,
                          sql: "insert into question_text(sesid,content,title) select " + sesid +
-                         " as sesid, content, title from question_text where sesid = " + oldsesid
+                         " as sesid, content, title from question_text where sesid = " + oldsesid,
+                         preventResEnd: true,
+                         onEnd: () => {}
                      })(req,res);
                  }
                  if(req.body.copyIdeas){
@@ -330,9 +353,12 @@ router.post("/duplicate-session", (req, res) => {
                             rpg.execSQL({
                                 dbcon: pass.dbcon,
                                 sql: "insert into criteria(name,pond,inicio,proceso,competente,avanzado,rid) select " +
-                                    "name, pond, inicio, proceso,competente,avanzado, " + result.id + "as rid from criteria"
+                                    "name, pond, inicio, proceso,competente,avanzado, " + result.id + "as rid from criteria",
+                                onEnd: () => {},
+                                preventResEnd: true
                             })(req,res);
-                        }
+                        },
+                        preventResEnd: true
                     })(req,res);
                  }
              }

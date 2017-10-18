@@ -596,7 +596,7 @@ let getSemanticScore = (pauta, alum) => {
         if(k != -1 && pauta.docs[k] == alum.docs[i])
             r++;
     });
-    return r/pauta.sentences.length;
+    return r/Math.max(pauta.sentences.length, alum.sentences.length);
 };
 
 module.exports = router;
