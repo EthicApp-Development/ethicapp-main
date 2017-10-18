@@ -214,6 +214,32 @@ router.post("/add-semantic-document", rpg.execSQL({
     sqlParams: [rpg.param("post", "title"), rpg.param("post", "content"), rpg.param("post", "sesid"), rpg.param("post", "orden")]
 }));
 
+router.post("/update-semantic-document", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "update semantic_document set (title,content) = ($1,$2) where id = $3",
+    sesReqData: ["uid"],
+    postReqData: ["title", "content", "id"],
+    sqlParams: [rpg.param("post", "title"), rpg.param("post", "content"), rpg.param("post", "id")],
+    onStart: (ses,data,calc) => {
+        if (ses.role != "P") {
+            return "select $1, $2, $3"
+        }
+    }
+}));
+
+router.post("/delete-semantic-document", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "delete from semantic_document where id = $1",
+    sesReqData: ["uid"],
+    postReqData: ["id"],
+    sqlParams: [rpg.param("post", "id")],
+    onStart: (ses,data,calc) => {
+        if (ses.role != "P") {
+            return "select $1"
+        }
+    }
+}));
+
 router.post("/semantic-documents", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select id, title, content from semantic_document where sesid = $1 order by orden asc",

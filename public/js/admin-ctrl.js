@@ -339,17 +339,48 @@ adpp.controller("NewUsersController", function ($scope, $http, Notification) {
 adpp.controller("SemDocController", function ($scope, $http, Notification) {
     let self = $scope;
 
-    self.newSDoc = {title: "", content: ""};
+    self.newSDoc = {id:null, title: "", content: ""};
 
     self.addSemDoc = () => {
         let postdata = {sesid: self.selectedSes.id, title: self.newSDoc.title, content: self.newSDoc.content};
         $http({url: "add-semantic-document", method: "post", data: postdata}).success((data) => {
             if (data.status == "ok") {
                 self.requestSemDocuments();
-                self.newSDoc = {title: "", content: ""};
+                Notification.success("Texto agregado correctamente");
+                self.newSDoc = {id:null, title: "", content: ""};
             }
         });
     };
+
+    self.deleteText = (id) => {
+        let postdata = {id: id};
+        $http.post("delete-semantic-document", postdata).success((data) => {
+            if(data.status == "ok"){
+                self.requestSemDocuments();
+                Notification.success("Texto eliminado correctamente");
+            }
+        });
+    };
+
+    self.startEditText = (tx) => {
+        self.newSDoc = {id:tx.id, title: tx.title, content: tx.content};
+        Notification.info("Edite el texto en el formulario");
+    };
+
+    self.updateSemDoc = () => {
+        if(self.newSDoc.id == null){
+            Notification.error("No hay texto a editar.");
+            return;
+        }
+        let postdata = {id: self.newSDoc.id, sesid: self.selectedSes.id, title: self.newSDoc.title, content: self.newSDoc.content};
+        $http({url: "update-semantic-document", method: "post", data: postdata}).success((data) => {
+            if (data.status == "ok") {
+                self.requestSemDocuments();
+                Notification.success("Texto editado correctamente.");
+                self.newSDoc = {id: null, title: "", content: ""};
+            }
+        });
+    }
 
 });
 
