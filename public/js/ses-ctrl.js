@@ -1,12 +1,12 @@
 "use strict";
 
-let app = angular.module("SesList", ['btford.socket-io']);
+let adpp = angular.module("SesList", ['btford.socket-io']);
 
-app.factory("$socket", ["socketFactory", function (socketFactory) {
+adpp.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
 
-app.controller("SesListController", function ($scope, $http, $socket) {
+adpp.controller("SesListController", function ($scope, $http, $socket) {
     let self = $scope;
     self.sessions = [];
     self.sesOpen = false;
