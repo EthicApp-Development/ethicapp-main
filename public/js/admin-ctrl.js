@@ -249,7 +249,25 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
 
     self.mTransition = {1: 3, 3: 5, 5: 6, 6: 8, 8: 9};
 
+    self.splitDescr = false;
+    self.splDes1 = "";
+    self.splDes2 = "";
+
+    self.toggleSplit = () => {
+        self.splitDescr = !self.splitDescr;
+        if(self.splitDescr){
+            self.splDes1 = self.selectedSes.descr.split("\n")[0];
+            self.splDes2 = self.selectedSes.descr.split("\n")[1] || "";
+        }
+        else{
+            self.selectedSes.descr = self.splDes1 + "\n" + self.splDes2;
+        }
+    };
+
     self.updateSession = () => {
+        if(splitDescr){
+            self.selectedSes.descr = self.splDes1 + "\n" + self.splDes2;
+        }
         if (self.selectedSes.name.length < 3 || self.selectedSes.descr.length < 5) {
             Notification.error("Datos de la sesión incorrectos o incompletos");
             return;

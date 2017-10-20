@@ -80,9 +80,14 @@
             <label>Titulo:</label>
             <input type="text" class="form-control" ng-model="selectedSes.name" ng-disabled="selectedSes.status!=1">
             <br>
+            <button class="btn btn-default btn-sm pull-right" ng-class="{'active': splitDescr}" ng-click="toggleSplit()" ng-show="selectedSes.type == 'M'" ng-disabled="selectedSes.status!=1">Dividir Factor Detonante</button>
             <label ng-if="selectedSes.type != 'S'">Factor detonante:</label>
             <label ng-if="selectedSes.type == 'S'">Instrucción general:</label>
-            <textarea class="form-control" ng-model="selectedSes.descr" ng-disabled="selectedSes.status!=1"></textarea>
+            <textarea class="form-control" ng-model="selectedSes.descr" ng-disabled="selectedSes.status!=1" ng-show="!splitDescr"></textarea>
+            <div ng-show="splitDescr">
+                <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" ng-model="splDes1" placeholder="Selección de unidades">
+                <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" ng-model="splDes2" placeholder="Reporte">
+            </div>
             <button class="btn btn-xs btn-default" ng-click="openDuplicateSes()" ng-disabled="selectedSes.type != 'S'">Duplicar sesion</button>
             <br>
             <button class="btn btn-default pull-right" ng-click="updateSession()" ng-disabled="selectedSes.status!=1">
