@@ -531,3 +531,7 @@ p{
 .border-orange{
     border-bottom: 3px solid orange;
 }
+
+.simple-padding-bottom{
+    padding-bottom: 8px;
+}
