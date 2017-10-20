@@ -6,7 +6,7 @@ adpp.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
 
-adpp.controller("SesListController", function ($scope, $http, $socket) {
+adpp.controller("SesListController", ["$scope", "$http", "$socket", function ($scope, $http, $socket) {
     let self = $scope;
     self.sessions = [];
     self.sesOpen = false;
@@ -30,4 +30,4 @@ adpp.controller("SesListController", function ($scope, $http, $socket) {
     };
 
     self.init();
-});
+}]);
