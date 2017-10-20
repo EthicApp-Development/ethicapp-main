@@ -47,7 +47,7 @@
 
     <div class="top-bar">
         <div class="col-sm-6 full-height">
-            <span class="simple-margin-left">Documentos: </span>
+            <span class="simple-margin-left" style="vertical-align: top;">Documentos: </span>
             <span ng-repeat="doc in documents" class="side-top-btn" ng-class="{'active': $index==selectedDocument, 'border-orange': hgDocs[$index]}" ng-click="selectDocument($index)">
                 {{doc.title | limitTo:16}}
             </span>
