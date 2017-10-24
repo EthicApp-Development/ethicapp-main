@@ -13,8 +13,9 @@
         <label>Titulo:</label>
         <input type="text" class="form-control" ng-model="vm.nses.name">
         <label>Tipo de actividad:</label>
-        <span ng-show="vm.data.type == 'L'">Lectura</span>
+        <span ng-show="vm.data.type == 'L'">Lectura Ideas Fuerza</span>
         <span ng-show="vm.data.type == 'S'">Selección Múltiple</span>
+        <span ng-show="vm.data.type == 'M'">Lectura Unidades Semánticas</span>
         <br>
         <label>Factor detonante:</label>
         <textarea ng-model="vm.nses.descr" class="form-control" rows="3"></textarea>
@@ -23,12 +24,17 @@
             <label><input type="checkbox" ng-model="vm.nses.copyUsers"> Copiar Usuarios</label>
         </div>
         <div class="simple-margin-left" ng-if="vm.data.type == 'L'">
-            <label><input type="checkbox" ng-model="vm.nses.copyDocuments"> Copiar documentos</label><br>
+            <label><input type="checkbox" ng-model="vm.nses.copyDocuments"> Copiar Documentos</label><br>
             <label><input type="checkbox" ng-model="vm.nses.copyIdeas" disabled> Copiar Ideas fuerza </label><span class="text-muted"> (No disponible)</span><br>
             <label><input type="checkbox" ng-model="vm.nses.copyRubrica"> Copiar Rúbrica</label>
         </div>
         <div class="simple-margin-left" ng-if="vm.data.type == 'S'">
             <label><input type="checkbox" ng-model="vm.nses.copyQuestions"> Copiar Preguntas y Textos</label>
+        </div>
+        <div class="simple-margin-left" ng-if="vm.data.type == 'M'">
+            <label><input type="checkbox" ng-model="vm.nses.copySemDocs"> Copiar Documentos</label><br>
+            <label><input type="checkbox" ng-model="vm.nses.copySemUnits"> Copiar Pauta de Unidades Semánticas</label><br>
+            <label><input type="checkbox" ng-model="vm.nses.copyRubrica"> Copiar Rúbrica</label>
         </div>
         <hr>
         <br>

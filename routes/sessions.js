@@ -343,11 +343,30 @@ router.post("/duplicate-session", (req, res) => {
                          onEnd: () => {}
                      })(req,res);
                  }
+                 if(req.body.copySemDocs){
+                     rpg.execSQL({
+                         dbcon: pass.dbcon,
+                         sql: "insert into semantic_document(sesid,title,content,orden) select " + sesid +
+                         " as sesid, title, content, orden from semantic_document where sesid = " + oldsesid,
+                         preventResEnd: true,
+                         onEnd: () => {}
+                     })(req,res);
+                 }
+                 if(req.body.copySemUnits){
+                     rpg.execSQL({
+                         dbcon: pass.dbcon,
+                         sql: "insert into semantic_unit(sesid,sentences,comment,uid,iteration,docs) select " + sesid +
+                             " as sesid, sentences, comment, uid, 0 as iteration, docs from semantic_unit where sesid = "
+                             + oldsesid + " and iteration = 0",
+                         preventResEnd: true,
+                         onEnd: () => {}
+                     })(req,res);
+                 }
                  if(req.body.copyDocuments){
                      rpg.execSQL({
                          dbcon: pass.dbcon,
                          sql: "insert into documents(sesid,title,path,uploader,active) select " + sesid +
-                            " as sesid, title, path, uploader, active from documents where sesid = " + oldsesid,
+                         " as sesid, title, path, uploader, active from documents where sesid = " + oldsesid,
                          preventResEnd: true,
                          onEnd: () => {}
                      })(req,res);
@@ -379,7 +398,8 @@ router.post("/duplicate-session", (req, res) => {
                             rpg.execSQL({
                                 dbcon: pass.dbcon,
                                 sql: "insert into criteria(name,pond,inicio,proceso,competente,avanzado,rid) select " +
-                                    "name, pond, inicio, proceso,competente,avanzado, " + result.id + "as rid from criteria",
+                                    "c.name, c.pond, c.inicio, c.proceso, c.competente, c.avanzado, " + result.id + " as rid " +
+                                    "from criteria as c inner join rubricas as r on r.id = c.rid where r.sesid = " + oldsesid,
                                 onEnd: () => {},
                                 preventResEnd: true
                             })(req,res);
