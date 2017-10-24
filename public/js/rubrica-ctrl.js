@@ -14,7 +14,7 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
     self.selectedIndex = -1;
     self.iteration = -1;
     self.myUid = -1;
-    self.sesStatusses = ["Lectura", "Individual", "Anónimo", "Grupal", "Reporte", "Rubrica Calibración", "Evaluación de Pares", "Finalizada"];
+    self.sesStatusses = ["Lectura", "Individual", "Anónimo", "Grupal", "Reporte", ".", "Evaluación de Pares", "Finalizada"];
     self.canAnswer = true;
     self.miters = 0;
     self.commentError = false;
@@ -51,7 +51,7 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
             self.sesId = data.id;
             self.myUid = data.uid;
             self.sesSTime = (data.stime != null) ? new Date(data.stime) : null;
-            self.sesDescr = data.descr;
+            self.sesDescr = (self.iteration < 4) ? (data.descr.split("\n")[0] || data.descr) : (data.descr.split("\n")[1] || data.descr);
             if(data.type == "M"){
                 self.sesStatusses = ["Individual", "Grupal", "Reporte", "Evaluación de Pares", "Finalizada"];
                 self.miters = 1;

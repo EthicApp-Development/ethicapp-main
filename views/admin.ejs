@@ -385,9 +385,11 @@
                 <hr>
                 <h4>Evaluación de pares</h4>
                 <span ng-show="selectedSes.paired">Ya se ha asignado a los alumnos los reportes a evaluar</span>
-                <strong>Número de evaluadores:</strong>
-                <input type="number" class="form-control form-inline-mini" min="2" max="8" step="1" ng-model="pairNum">
-                <button ng-hide="selectedSes.paired" class="btn btn-default" ng-click="pairAssign()">Asignar pares</button>
+                <div ng-hide="selectedSes.paired">
+                    <strong>Número de evaluadores:</strong>
+                    <input type="number" class="form-control form-inline-mini" min="2" max="8" step="1" ng-model="pairNum">
+                    <button class="btn btn-default" ng-click="pairAssign()">Asignar pares</button>
+                </div>
                 <span class="red" ng-bind="errPairMsg"></span>
             </div>
             <!-- / RUBRICA -->
