@@ -265,7 +265,7 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
     };
 
     self.updateSession = () => {
-        if(splitDescr){
+        if(self.splitDescr){
             self.selectedSes.descr = self.splDes1 + "\n" + self.splDes2;
         }
         if (self.selectedSes.name.length < 3 || self.selectedSes.descr.length < 5) {
