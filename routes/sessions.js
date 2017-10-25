@@ -416,4 +416,22 @@ router.post("/duplicate-session", (req, res) => {
      }
 });
 
+router.get("/export-session-data-sel", (req,res) => {
+    let id = req.query.id;
+    if(!isNaN(id)) {
+        rpg.multiSQL({
+            dbcon: pass.dbcon,
+            sql: "select u.name as nombre, q.content as pregunta, substring('ABCDE' from s.answer + 1 for 1) as alternativa, s.answer = q.answer as " +
+            "correcta, s.iteration as iteracion, s.comment as comentario, s.confidence as confianza, s.stime as hora_respuesta from selection as s inner " +
+            "join users as u on s.uid = u.id inner join questions as q on s.qid = q.id where q.sesid = " + id + " order by s.stime",
+            onEnd: (req, res, arr) => {
+                res.xls("resultados.xlsx", arr);
+            }
+        })(req,res);
+    }
+    else {
+        res.end("Bad Request");
+    }
+});
+
 module.exports = router;
