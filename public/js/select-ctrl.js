@@ -1,6 +1,6 @@
 "use strict";
 
-let app = angular.module("Select", ["ui.bootstrap", "timer", 'btford.socket-io', "ui-notification"]);
+let app = angular.module("Select", ["ui.bootstrap", "timer", 'btford.socket-io', "ui-notification", "ngSanitize"]);
 
 app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
@@ -234,4 +234,10 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
 
     self.init();
 
+}]);
+
+app.filter("trustHtml", ["$sce", function($sce){
+    return function(html){
+        return $sce.trustAsHtml(html)
+    };
 }]);

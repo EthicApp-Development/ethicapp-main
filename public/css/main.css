@@ -535,3 +535,29 @@ p{
 .simple-padding-bottom{
     padding-bottom: 8px;
 }
+
+ng-quill-editor {
+    display: block;
+    height: 100px;
+    margin-bottom: 80px;
+}
+
+ng-quill-editor.large{
+    height: 200px;
+}
+
+.quill-disabled:after {
+    display: block;
+    width: 100%;
+    background: rgba(200,200,200,0.3);
+    height: 166px;
+    content: "";
+    position: relative;
+    top: -166px;
+    z-index: 500;
+}
+
+.quill-disabled.large:after {
+    height: 266px;
+    top: -266px;
+}

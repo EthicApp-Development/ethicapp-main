@@ -7,6 +7,7 @@
     <script src="libs/angular.min.js"></script>
     <script src="libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
     <script src="libs/angular-timer.min.js"></script>
+    <script src="libs/angular-sanitize.min.js"></script>
     <script src="libs/socket.min.js"></script>
     <script src="libs/angular-ui-notification.min.js"></script>
     <script src="js/select-ctrl.min.js"></script>
@@ -14,6 +15,7 @@
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
     <link rel="stylesheet" href="css/font-awesome.min.css">
     <link rel="stylesheet" href="css/angular-ui-notification.min.css">
+    <link rel="stylesheet" href="css/quill-sup.css">
     <link rel="stylesheet" href="css/main.css"/>
 </head>
 <body class="bg-black">
@@ -52,9 +54,10 @@
         <div class="mid-container">
             <div ng-repeat="qs in questions" ng-show="selectedQs == $index">
                 <strong ng-show="qs.text_content != null">Texto:</strong>
-                <p ng-bind="qs.text_content"></p>
+                <p ng-bind-html="qs.text_content | trustHtml"></p>
                 <br ng-show="qs.text_content != null">
-                <h4 ng-bind="($index+1)+'. '+qs.content"></h4>
+                <h4>{{$index + 1}}. <span ng-bind-html="qs.content | trustHtml"></span></h4>
+                <!--<h4 ng-bind="($index+1)+'. '+qs.content"></h4>-->
                 <div class="list-group">
                     <div class="" ng-repeat="x in optLabels">
                         <a class="input-group-addon addon-little" ng-bind="x" ng-class="{'bg-green': answers[qs.id]==$index}"

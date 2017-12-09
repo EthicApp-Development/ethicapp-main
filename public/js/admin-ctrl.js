@@ -1,12 +1,18 @@
 "use strict";
 
-let adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification"]);
+let adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill"]);
 
 const DASHBOARD_AUTOREALOD = true;
 const DASHBOARD_AUTOREALOD_TIME = 15;
 
+adpp.config(['ngQuillConfigProvider', function (ngQuillConfigProvider) {
+    ngQuillConfigProvider.set();
+}]);
+
 adpp.controller("AdminController", function ($scope, $http, $uibModal, $location, $locale) {
     let self = $scope;
+
+    self.temp = "";
 
     $locale.NUMBER_FORMATS.GROUP_SEP = '';
     self.shared = {};
@@ -1470,6 +1476,12 @@ adpp.controller("DashboardRubricaController", function ($scope, $http) {
 
     self.shared.resetRubricaGraphs();
 
+});
+
+adpp.filter('htmlExtractText', function() {
+    return function(text) {
+        return  text ? String(text).replace(/<[^>]+>/gm, '') : '';
+    };
 });
 
 let generateTeams = (alumArr, scFun, n, different) => {
