@@ -1,12 +1,44 @@
 "use strict";
 
-let adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill"]);
+let adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill", "ngMap"]);
 
 const DASHBOARD_AUTOREALOD = true;
 const DASHBOARD_AUTOREALOD_TIME = 15;
 
 adpp.config(['ngQuillConfigProvider', function (ngQuillConfigProvider) {
-    ngQuillConfigProvider.set();
+    ngQuillConfigProvider.set({
+        modules:{
+            toolbar: {
+                container: [
+                    ['bold', 'italic', 'underline', 'strike'],        // toggled buttons
+
+                    [{ 'color': [] }, { 'background': [] }],          // dropdown with defaults from theme
+                    [{ 'font': [] }],
+                    [{ 'align': [] }],
+
+
+                    //[{ 'header': 1 }, { 'header': 2 }],               // custom button values
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+
+                    [{ 'script': 'sub'}, { 'script': 'super' }],      // superscript/subscript
+
+                    //[{ 'indent': '-1'}, { 'indent': '+1' }],          // outdent/indent
+                    //[{ 'direction': 'rtl' }],                         // text direction
+
+                    //['blockquote', 'code-block'],
+                    [{ 'size': ['small', false, 'large', 'huge'] }],  // custom dropdown
+                    //[{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+
+                    ['clean'],                                         // remove formatting button
+                    ['image','link','video'],                                      // remove formatting button
+                    ['map']
+                ],
+                handlers: {
+                    map: quillMapHandler
+                }
+            }
+        }
+    });
 }]);
 
 adpp.controller("AdminController", function ($scope, $http, $uibModal, $location, $locale) {
@@ -420,7 +452,7 @@ adpp.controller("SemDocController", function ($scope, $http, Notification) {
 
 });
 
-adpp.controller("QuestionsController", function ($scope, $http, Notification) {
+adpp.controller("QuestionsController", function ($scope, $http, Notification, $uibModal, NgMap) {
     let self = $scope;
 
     self.qsLabels = ['A', 'B', 'C', 'D', 'E'];
@@ -436,6 +468,10 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification) {
     };
 
     self.newText = {id: null, title: "", content: ""};
+
+    NgMap.getMap().then((map) => {
+        self.map = map;
+    });
 
     self.selectAnswer = (i) => {
         self.newQuestion.answer = i;
@@ -567,6 +603,35 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification) {
         $http.post("delete-question-text", postdata).success((data) => {
             self.requestQuestions();
             Notification.success("Texto eliminado correctamente");
+        });
+    };
+
+    self.configQuillExtra = (editor) => {
+
+        self.editor = editor;
+
+        editor.getModule("toolbar").addHandler("map", function () {
+            let range = this.quill.getSelection();
+            if (range) {
+                let modal = $uibModal.open({
+                    templateUrl: "templ/map-selection.html",
+                    controller: "MapSelectionModalController",
+                    controllerAs: "vm",
+                    scope: self
+                });
+                modal.rendered.then(() => {
+                    google.maps.event.trigger(self.map, "resize");
+                });
+                modal.result.then((r) => {
+                    let lat = self.map.getCenter().lat();
+                    let lng = self.map.getCenter().lng();
+                    let zoom = self.map.getZoom();
+                    let script = "MAP " + lat + " " + lng + " " + zoom + (r.nav ? " NAV" : "") + (r.edit ? " EDIT" : "");
+                    this.quill.insertEmbed(range.index, "code-block", "");
+                    this.quill.insertText(range.index, script);
+                });
+            }
+            $scope.$apply();
         });
     };
 
@@ -1119,6 +1184,25 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
 
 });
 
+adpp.controller("MapSelectionModalController", function($scope, $uibModalInstance){
+    var vm = this;
+
+    vm.nav = true;
+    vm.edit = false;
+
+    vm.cancel = () => {
+        $uibModalInstance.dismiss('cancel');
+    };
+
+    vm.resolve = () => {
+        $uibModalInstance.close({
+            nav : vm.nav,
+            edit: vm.edit
+        });
+    };
+
+});
+
 adpp.controller("ReportModalController", function ($scope, $uibModalInstance, data) {
     var vm = this;
     vm.data = data;
@@ -1543,4 +1627,8 @@ let habMetric = (u) => {
             return 2;
     }
     return 0;
+};
+
+let quillMapHandler = function(){
+    alert("Mapa sólo disponible para preguntas");
 };

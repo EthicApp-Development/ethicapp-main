@@ -10,6 +10,8 @@
     <script src="libs/angular-sanitize.min.js"></script>
     <script src="libs/socket.min.js"></script>
     <script src="libs/angular-ui-notification.min.js"></script>
+    <script src="libs/ng-map.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&key=AIzaSyAx05l8YIv_oB8f5AMBGIcWmgnqFou0VJI&libraries=drawing,geometry,places"></script>
     <script src="js/select-ctrl.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
@@ -57,7 +59,7 @@
                 <p ng-bind-html="qs.text_content | trustHtml"></p>
                 <br ng-show="qs.text_content != null">
                 <h4>{{$index + 1}}. <span ng-bind-html="qs.content | trustHtml"></span></h4>
-                <!--<h4 ng-bind="($index+1)+'. '+qs.content"></h4>-->
+                <ng-map ng-show="qs.map" class="map-block map-tbl" center="{{qs.map.center}}" zoom="{{qs.map.zoom}}" draggable="{{qs.map.nav}}"></ng-map>
                 <div class="list-group">
                     <div class="" ng-repeat="x in optLabels">
                         <a class="input-group-addon addon-little" ng-bind="x" ng-class="{'bg-green': answers[qs.id]==$index}"

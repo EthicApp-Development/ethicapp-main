@@ -1,0 +1,19 @@
+<div>
+    <div class="modal-header">
+        <h4>Configuración de Mapa</h4>
+    </div>
+    <div class="modal-body">
+        <strong>Ajuste el mapa en la posición y zoom deseado</strong>
+        <ng-map class="map-block" center="[-33.45, -70.65]" zoom="12"></ng-map>
+        <h4>Opciones para Alumno</h4>
+        <label><input type="checkbox" ng-model="vm.nav"> Permitir Navegación</label>
+        <br>
+        <label><input type="checkbox" ng-model="vm.edit"> Permitir Edición</label>
+        <hr>
+        <br>
+        <button class="btn btn-primary pull-right" ng-click="vm.resolve()">Agregar</button>
+        <button class="btn btn-default pull-right" ng-click="vm.cancel()">Cancelar</button>
+        <br>
+        <br>
+    </div>
+</div>

@@ -14,6 +14,8 @@
     <script src="libs/d3.min.js"></script>
     <script src="libs/nv.d3.min.js"></script>
     <script src="libs/angular-nvd3.min.js"></script>
+    <script src="libs/ng-map.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&key=AIzaSyAx05l8YIv_oB8f5AMBGIcWmgnqFou0VJI&libraries=drawing,geometry,places"></script>
     <script type="text/javascript" src="libs/quill.min.js"></script>
     <script type="text/javascript" src="libs/ng-quill.min.js"></script>
     <script src="libs/angular-timer.min.js"></script>
@@ -168,7 +170,7 @@
                     <label ng-show="newText.id == null">Agregar Texto</label>
                     <label ng-show="newText.id != null">Editar Texto</label>
                     <input type="text" ng-model="newText.title" placeholder="Titulo" class="form-control" ng-disabled="selectedSes.status!=1">
-                    <ng-quill-editor ng-model="newText.content" class="large" read-only="selectedSes.status!=1" ng-class="{'quill-disabled': selectedSes.status!=1}"></ng-quill-editor>
+                    <ng-quill-editor ng-model="newText.content" class="large" ng-class="{'quill-disabled': selectedSes.status!=1}"></ng-quill-editor>
                     <button class="btn btn-default pull-right" ng-show="newText.id == null" ng-click="addQuestionText()" ng-disabled="selectedSes.status!=1">Agregar</button>
                     <button class="btn btn-default pull-right" ng-show="newText.id != null" ng-click="updateQuestionText()" ng-disabled="selectedSes.status!=1">Actualizar</button>
                 </div>
@@ -199,7 +201,7 @@
                     <label ng-show="newQuestion.id == null">Agregar Pregunta:</label>
                     <label ng-show="newQuestion.id != null">Editar Pregunta {{newQuestion.order}}:</label>
                     <span class="text-muted">(No incluya numeración)</span>
-                    <ng-quill-editor ng-model="newQuestion.content" read-only="selectedSes.status!=1" ng-class="{'quill-disabled': selectedSes.status!=1}"></ng-quill-editor>
+                    <ng-quill-editor ng-model="newQuestion.content" ng-class="{'quill-disabled': selectedSes.status!=1}" on-editor-created="configQuillExtra(editor)"></ng-quill-editor>
                     <!--<textarea rows="2" class="form-control" ng-model="newQuestion.content" ng-disabled="selectedSes.status!=1"></textarea>-->
                     <label>Alternativas:</label>
                     <div class="input-group" ng-repeat=" x in qsLabels">

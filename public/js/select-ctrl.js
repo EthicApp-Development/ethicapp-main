@@ -1,12 +1,12 @@
 "use strict";
 
-let app = angular.module("Select", ["ui.bootstrap", "timer", 'btford.socket-io', "ui-notification", "ngSanitize"]);
+let app = angular.module("Select", ["ui.bootstrap", "timer", 'btford.socket-io', "ui-notification", "ngSanitize", "ngMap"]);
 
 app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
 
-app.controller("SelectController", ["$scope", "$http", "$socket", "Notification", "$uibModal", function ($scope, $http, $socket, Notification, $uibModal) {
+app.controller("SelectController", ["$scope", "$http", "$socket", "Notification", "$uibModal", "NgMap", function ($scope, $http, $socket, Notification, $uibModal, NgMap) {
     let self = $scope;
 
     self.selectedQs = 0;
@@ -45,6 +45,9 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             if (data.ses == self.sesId && data.tmid == self.teamId && self.iteration == 3) {
                 self.updateTeam();
             }
+        });
+        NgMap.getMap().then((map) => {
+            self.map = map;
         });
     };
 
@@ -108,8 +111,27 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             self.questions = data;
             self.questions.forEach((qs) => {
                 qs.options = qs.options.split("\n");
+                qs.map = processMap(qs);
             });
         });
+    };
+
+    let processMap = (qs) => {
+        const MAP_SCRIPT = '<pre class="ql-syntax" spellcheck="false">MAP ';
+        let ini = qs.content.indexOf(MAP_SCRIPT);
+        let end = qs.content.indexOf("</pre>");
+        if(ini != -1 && end != -1 && ini < end){
+            let comps = qs.content.substring(ini + MAP_SCRIPT.length, end-1).split(" ");
+            qs.content = qs.content.substring(0,ini) + qs.content.substring(end+6);
+            //qs.content.replace(/<p><br><\/p>/g, "");
+            return {
+                center: "[" + comps[0] + ", " + comps[1]  + "]",
+                zoom: comps[2],
+                nav: comps[3] == "NAV",
+                edit: comps[3] == "EDIT" || comps[4] == "EDIT"
+            }
+        }
+        return null;
     };
 
     self.loadAnskey = () => {

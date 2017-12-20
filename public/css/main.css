@@ -561,3 +561,21 @@ ng-quill-editor.large{
     height: 266px;
     top: -266px;
 }
+
+.ql-map{
+    background: url('map.svg') no-repeat !important;
+}
+
+.map-block{
+    display: block;
+    background: #fbd387;
+    border: 1px solid #999;
+    width: 100%;
+    height: 240px;
+    text-align: center;
+}
+
+.map-tbl{
+    margin-top: -42px;
+    margin-bottom: 8px;
+}
