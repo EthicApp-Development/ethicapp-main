@@ -8,6 +8,7 @@ const DASHBOARD_AUTOREALOD_TIME = 15;
 adpp.config(['ngQuillConfigProvider', function (ngQuillConfigProvider) {
     ngQuillConfigProvider.set({
         modules:{
+            formula: true,
             toolbar: {
                 container: [
                     ['bold', 'italic', 'underline', 'strike'],        // toggled buttons
@@ -31,6 +32,7 @@ adpp.config(['ngQuillConfigProvider', function (ngQuillConfigProvider) {
 
                     ['clean'],                                         // remove formatting button
                     ['image','link','video'],                                      // remove formatting button
+                    ['formula'],
                     ['map']
                 ],
                 handlers: {

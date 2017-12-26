@@ -579,3 +579,11 @@ ng-quill-editor.large{
     margin-top: -42px;
     margin-bottom: 8px;
 }
+
+ng-quill-editor .ql-editor{
+    height: 75px;
+}
+
+ng-quill-editor.large .ql-editor{
+    height: 175px;
+}
