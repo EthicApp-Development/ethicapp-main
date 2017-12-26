@@ -47,9 +47,10 @@
         <div class="side-panel">
             <button class="btn btn-sm btn-default pull-right" ng-click="openNewSes()">Nueva</button>
             <h4>Lista de Sesiones:</h4>
+            <input placeholder="Buscar..." class="form-control" ng-model="sesSearch">
             <div class="list-group">
-                <a class="list-group-item" ng-repeat="ses in sessions" ng-click="selectSession($index)"
-                   ng-class="{'active':$index==selectedIndex}">
+                <a class="list-group-item" ng-repeat="ses in sessions | filter:sesSearch" ng-click="selectSession(ses,ses.id)"
+                   ng-class="{'active':ses.id==selectedId}">
                     <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
                     <p class="list-group-item-text" ng-bind="ses.descr"></p>
                 </a>
@@ -57,7 +58,7 @@
         </div>
     </div>
 
-    <div ng-class="{'col-sm-9': openSideBar, 'col-sm-12': !openSidebar}" ng-show="selectedIndex!=-1" ng-controller="TabsController">
+    <div ng-class="{'col-sm-9': openSideBar, 'col-sm-12': !openSidebar}" ng-show="selectedId!=-1" ng-controller="TabsController">
         <span class="pull-right margin-right-24" ng-show="selectedSes.stime != null">
             <timer start-time="selectedSes.stime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
         </span>

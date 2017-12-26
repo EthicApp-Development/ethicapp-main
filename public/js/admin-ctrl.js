@@ -58,7 +58,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.questionTexts = [];
     self.newUsers = [];
     self.users = {};
-    self.selectedIndex = -1;
+    self.selectedId = -1;
     self.sesStatusses = ["No Publicada", "Lectura", "Personal", "Anónimo", "Grupal", "Finalizada"];
     self.optConfidence = [0, 25, 50, 75, 100];
     self.iterationNames = [];
@@ -68,9 +68,9 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         self.shared.updateSesData();
     };
 
-    self.selectSession = (idx) => {
-        self.selectedIndex = idx;
-        self.selectedSes = self.sessions[idx];
+    self.selectSession = (ses,id) => {
+        self.selectedId = id;
+        self.selectedSes = ses;
         self.requestDocuments();
         self.requestSemDocuments();
         self.requestQuestions();
@@ -87,8 +87,8 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         $http({url: "get-session-list", method: "post"}).success((data) => {
             console.log("Session data updated");
             self.sessions = data;
-            if (self.selectedIndex != -1)
-                self.selectSession(self.selectedIndex);
+            if (self.selectedId != -1)
+                self.selectSession(self.selectedId);
             else {
                 self.sesFromURL();
             }
