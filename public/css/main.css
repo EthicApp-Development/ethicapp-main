@@ -587,3 +587,7 @@ ng-quill-editor .ql-editor{
 ng-quill-editor.large .ql-editor{
     height: 175px;
 }
+
+.question-block img{
+    max-width: 100%;
+}
