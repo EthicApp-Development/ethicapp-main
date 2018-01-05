@@ -507,6 +507,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
                     textid: null,
                     answer: -1
                 };
+                self.shared.sendOverlayBuffer(data.id);
             }
         });
     };
@@ -616,6 +617,8 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
         editor.getModule("toolbar").addHandler("map", function () {
             let range = this.quill.getSelection();
             if (range) {
+                if(self.shared.clearOverlayBuffer)
+                    self.shared.clearOverlayBuffer();
                 let modal = $uibModal.open({
                     templateUrl: "templ/map-selection.html",
                     controller: "MapSelectionModalController",
@@ -1569,6 +1572,205 @@ adpp.controller("DashboardRubricaController", function ($scope, $http) {
 
 });
 
+adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($scope, $http, NgMap) {
+
+    let self = $scope;
+
+    self.openRight = false;
+    self.rightTab = "";
+
+    self.mOverlays = [];
+    self.sOverlays = [];
+
+    self.selectedOverlay = null;
+    self.editing = false;
+
+    self.overlayBuffer = [];
+
+    let init = () => {
+        self.updateOverlayList();
+        self.clearOverlay();
+        NgMap.getMap().then((map) => {
+            console.log("MAP cargado correctamente");
+            self.map = map;
+            self.map.streetView.setOptions({addressControlOptions: {position: google.maps.ControlPosition.TOP_CENTER}});
+            self.map.infoWindows.iw.close();
+        });
+    };
+
+    let toOverlay = (data) => {
+        return {
+            id: data.id,
+            name: data.name,
+            description: data.description,
+            color: getColor(data),
+            type: data.type,
+            fullType: getFullType(data.type),
+            geom: JSON.parse(data.geom)
+        };
+    };
+
+    let getColor = (data) => {
+        return "blue";
+    };
+
+    let packOverlay = (overlay) => {
+        return {
+            name: overlay.name,
+            description: overlay.description,
+            iteration: 0,
+            qid: (self.questions[self.selectedQs] != null) ? self.questions[self.selectedQs].id : -1,
+            type: overlay.type,
+            geom: JSON.stringify(overlay.geom)
+        };
+    };
+
+    let getFullType = (t) => {
+        switch (t){
+            case "M":
+                return "marker";
+            case "P":
+                return "polygon";
+            case "L":
+                return "polyline";
+            case "R":
+                return "rectangle";
+            case "C":
+                return "circle";
+            case "I":
+                return "image";
+        }
+    };
+
+    self.clearOverlay = () => {
+        self.newOverlay = {
+            name: "",
+            description: "",
+            color: "blue",
+            type: "M",
+            fullType: "marker",
+            geom: {
+                position: null,
+                radius: null,
+                center: null,
+                path: null,
+                bounds: null
+            }
+        };
+    };
+
+    self.updateOverlayList = () => {
+        let postdata = {
+            qid: (self.questions[self.selectedQs] != null) ? self.questions[self.selectedQs].id : -1
+        };
+        $http.post("list-overlay", postdata).success((data) => {
+            let overlays = data.map(toOverlay);
+            self.mOverlays = overlays.filter(e => e.type == "M");
+            self.sOverlays = overlays.filter(e => e.type != "M");
+        });
+    };
+
+    self.shared.updateOverlayList = self.updateOverlayList;
+
+    self.onMapOverlayCompleted = (ev) => {
+        self.editing = true;
+        self.map.mapDrawingManager[0].setDrawingMode(null);
+
+        self.newOverlay.fullType = ev.type;
+        self.newOverlay.type = (ev.type == "polyline") ? "L" : ev.type[0].toUpperCase();
+        self.newOverlay.geom.position = ev.overlay.getPosition ? positionToArray(ev.overlay.getPosition()) : null;
+        self.newOverlay.geom.radius = ev.overlay.radius;
+        self.newOverlay.geom.center = positionToArray(ev.overlay.center);
+        self.newOverlay.geom.path = ev.overlay.getPath ? mutiplePositionToArray(ev.overlay.getPath()) : null;
+        self.newOverlay.geom.bounds = ev.overlay.getBounds ? boundsToArray(ev.overlay.getBounds()) : null;
+
+        self.newOverlay.centroid = centroidAsLatLng(self.newOverlay.type, self.newOverlay.geom);
+        self.map.showInfoWindow("iw2");
+
+        ev.overlay.setMap(null);
+    };
+
+    self.colorizeShape = (col) => {
+        if(self.map.shapes && self.map.shapes.nshp) {
+            self.map.shapes.nshp.set("fillColor", col);
+            self.map.shapes.nshp.set("strokeColor", "dark"+col);
+        }
+    };
+
+    self.closeOverlay = () => {
+        self.clearOverlay();
+        self.map.infoWindows.iw2.close();
+    };
+
+    let updateOverlay =  () => {
+        let ov = (self.newOverlay.type == "M")? self.map.markers.nmkr : self.map.shapes.nshp;
+        self.newOverlay.geom.position = ov.getPosition ? positionToArray(ov.getPosition()) : null;
+        self.newOverlay.geom.radius = ov.radius;
+        self.newOverlay.geom.center = positionToArray(ov.center);
+        self.newOverlay.geom.path = ov.getPath ? mutiplePositionToArray(ov.getPath()) : null;
+        self.newOverlay.geom.bounds = ov.getBounds ? boundsToArray(ov.getBounds()) : null;
+        self.newOverlay.centroid = centroidAsLatLng(self.newOverlay.type, self.newOverlay.geom);
+        self.map.showInfoWindow("iw2");
+    };
+
+    self.sendOverlay = () => {
+        updateOverlay();
+        //$http.post("add-overlay", packOverlay(self.newOverlay)).success((data) => {
+        //    if(data.status == "ok"){
+        self.overlayBuffer.push(packOverlay(self.newOverlay));
+        console.log(self.overlayBuffer);
+        if(self.newOverlay.type == "M")
+            self.mOverlays.push(self.newOverlay);
+        else
+            self.sOverlays.push(self.newOverlay);
+        self.closeOverlay();
+        //    }
+        //});
+    };
+
+    self.shared.clearOverlayBuffer = () => {
+        self.overlayBuffer = [];
+    };
+
+    self.shared.sendOverlayBuffer = (id) => {
+        console.log(id, self.overlayBuffer);
+        self.overlayBuffer.forEach((ov) => {
+            ov.qid = id;
+            $http.post("add-overlay", ov).success((data) => {
+                console.log("OK");
+            });
+        });
+    };
+
+    self.clickOverlay = function(event){
+        self.selectOverlay(this.id);
+    };
+
+    self.selectOverlay = (id) => {
+        self.selectedOverlay = self.mOverlays.find(e => e.id == id) || self.sOverlays.find(e => e.id == id);
+        self.selectedOverlay.centroid = centroidAsLatLng(self.selectedOverlay.type, self.selectedOverlay.geom);
+        self.map.panTo(self.selectedOverlay.centroid);
+        self.map.showInfoWindow("iw");
+    };
+
+    self.googleSearch = function(){
+        let p = this.getPlace();
+        if(p == null || p.geometry == null || p.geometry.location == null)
+            return;
+
+        self.map.mapDrawingManager[0].setDrawingMode(null);
+        self.newOverlay.fullType = "marker";
+        self.newOverlay.type = "M";
+        self.newOverlay.geom.position = positionToArray(p.geometry.location);
+
+        self.map.panTo(p.geometry.location);
+    };
+
+
+    init();
+
+}]);
+
 adpp.filter('htmlExtractText', function() {
     return function(text) {
         return  text ? String(text).replace(/<[^>]+>/gm, '') : '';
@@ -1638,4 +1840,50 @@ let habMetric = (u) => {
 
 let quillMapHandler = function(){
     alert("Mapa sólo disponible para preguntas");
+};
+
+let positionToArray = (pos) => {
+    if (pos == null)
+        return null;
+    return [pos.lat(), pos.lng()];
+};
+
+let mutiplePositionToArray = (mpos) => {
+    let r = [];
+    for (let i = 0; i < mpos.getLength(); i++) {
+        let pos = mpos.getAt(i);
+        r.push(positionToArray(pos));
+    }
+    return r;
+};
+
+let boundsToArray = (bounds) => {
+    return [positionToArray(bounds.getSouthWest()), positionToArray(bounds.getNorthEast())];
+};
+
+let avgCoord = (arr) => {
+    let slat = 0;
+    let slng = 0;
+    for (let i = 0; i < arr.length; i++) {
+        slat += arr[i][0];
+        slng += arr[i][1];
+    }
+    return [slat/arr.length, slng/arr.length];
+};
+
+let centroidAsLatLng = (type, geom) => {
+    let c = centroid(type, geom);
+    return new google.maps.LatLng(c[0], c[1]);
+};
+
+let centroid = (type, geom) => {
+    if(type == "M")
+        return geom.position;
+    if(type == "C")
+        return geom.center;
+    if(type == "R")
+        return avgCoord(geom.bounds);
+    if(type == "P" || type == "L")
+        return avgCoord(geom.path);
+    return null;
 };

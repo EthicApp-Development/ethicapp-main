@@ -116,9 +116,9 @@ router.post("/add-ses-users", (req, res) => {
     })(req, res);
 });
 
-router.post("/add-question", rpg.execSQL({
+router.post("/add-question", rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: "insert into questions(content,options,answer,comment,other,sesid,textid) values ($1,$2,$3,$4,$5,$6,$7)",
+    sql: "insert into questions(content,options,answer,comment,other,sesid,textid) values ($1,$2,$3,$4,$5,$6,$7) returning id",
     sesReqData: ["uid"],
     postReqData: ["content","options","answer","comment","sesid"],
     sqlParams: [rpg.param("post", "content"),rpg.param("post", "options"),rpg.param("post", "answer"),

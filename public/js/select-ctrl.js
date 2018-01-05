@@ -303,7 +303,7 @@ app.controller("GeoController", ["$scope", "$http", "NgMap", "$socket", function
     };
 
     let getColor = (data) => {
-        return "red";
+        return (data.iteration == 0) ? "blue" : "red";
     };
 
     let packOverlay = (overlay) => {

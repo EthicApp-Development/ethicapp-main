@@ -8,7 +8,7 @@ let socket = require("../modules/socket.config");
 
 router.post("/list-overlay", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select id, name, description, iteration, geom, type from overlays where qid = $1 and uid = $2",
+    sql: "select id, name, description, iteration, geom, type from overlays where qid = $1 and (uid = $2 or iteration = 0)",
     postReqData: ["qid"],
     sesReqData: ["uid"],
     sqlParams: [rpg.param("post", "qid"), rpg.param("ses","uid")]

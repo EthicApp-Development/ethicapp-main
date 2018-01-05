@@ -87,9 +87,9 @@
                                draggable="true"></shape>
 
                         <!-- SESSION OVERLAYS -->
-                        <marker ng-repeat="overlay in mOverlays | filter:fid" id="{{overlay.id}}" position="{{overlay.geom.position}}"
+                        <marker ng-repeat="overlay in mOverlays" id="{{overlay.id}}" position="{{overlay.geom.position}}"
                                 icon="img/marker-{{overlay.color}}.png" on-click="clickOverlay($event)"></marker>
-                        <shape ng-repeat="overlay in sOverlays | filter:fid" id="{{overlay.id}}" name="{{overlay.fullType}}"
+                        <shape ng-repeat="overlay in sOverlays" id="{{overlay.id}}" name="{{overlay.fullType}}"
                                path="{{overlay.geom.path}}" bounds="{{overlay.geom.bounds}}" center="{{overlay.geom.center}}"
                                radius="{{overlay.geom.radius}}" fill-color="{{overlay.color}}" on-click="clickOverlay($event)"
                                stroke-color="dark{{overlay.color}}" stroke-width="1"></shape>
