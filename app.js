@@ -17,6 +17,7 @@ let visor = require("./routes/visor");
 let analysis = require("./routes/analysis");
 let teams = require("./routes/teams");
 let rubrica = require("./routes/rubrica");
+let geo = require("./routes/geo");
 let pass = require("./modules/passwords");
 
 let app = express();
@@ -48,6 +49,7 @@ app.use("/", visor);
 app.use("/", analysis);
 app.use("/", teams);
 app.use("/", rubrica);
+app.use("/", geo);
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {

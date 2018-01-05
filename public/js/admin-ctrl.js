@@ -97,9 +97,9 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
 
     self.sesFromURL = () => {
         let sesid = +($location.path().substring(1));
-        let sidx = self.sessions.findIndex(e => e.id == sesid);
-        if (sidx != -1)
-            self.selectSession(sidx);
+        let ses = self.sessions.find(e => e.id == sesid);
+        if (ses != null)
+            self.selectSession(ses,sesid);
     };
 
     self.requestDocuments = () => {
@@ -472,6 +472,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
     self.newText = {id: null, title: "", content: ""};
 
     NgMap.getMap().then((map) => {
+        console.log("MAP correctly loaded");
         self.map = map;
     });
 
@@ -625,6 +626,10 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
                     google.maps.event.trigger(self.map, "resize");
                 });
                 modal.result.then((r) => {
+                    if(self.map == null){
+                        Notification.error("Ocurrio un error al cargar los datos del mapa, intente nuevamente.");
+                        return;
+                    }
                     let lat = self.map.getCenter().lat();
                     let lng = self.map.getCenter().lng();
                     let zoom = self.map.getZoom();

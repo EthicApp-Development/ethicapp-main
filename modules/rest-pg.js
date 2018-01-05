@@ -33,6 +33,17 @@ module.exports.param = function (t, n) {
 };
 
 /**
+ * Returns a list of sql statement parameters of the same type
+ * @param {String} t - type of parameters
+ * @param {Array<String>} arr - list of parameters names
+ * @return {Array<SqlParam>}
+ */
+module.exports.paramsOfType = (t, arr) => {
+    return arr.map(p => module.exports.param(t,p));
+};
+
+
+/**
  * Execute a single sql statement with ok / err response.
  * @param params Parameters including:
  * <li> sql (required): String sql to be executed.
