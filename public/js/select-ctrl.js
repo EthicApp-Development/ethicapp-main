@@ -33,7 +33,6 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
     self.sesStatusses = ["Individual", "Anónimo", "Grupal", "Finalizada"];
 
     self.init = () => {
-        self.loadQuestions();
         self.getSesInfo();
         $socket.on("stateChange", (data) => {
             console.log("SOCKET.IO", data);
@@ -68,8 +67,9 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                         self.ansIter1[ans.qid] = self.ansIter1[ans.qid] || {};
                         self.ansIter1[ans.qid][ans.uid] = {answer: ans.answer, comment: ans.comment};
                         set.add(ans.uid);
-                        self.teamUids = Array.from(set);
                     });
+                    self.teamUids = Array.from(set);
+                    self.shared.updateOverlayList();
                 });
             }
             if (self.iteration > 2) {
@@ -78,15 +78,17 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                         self.ansIter2[ans.qid] = self.ansIter2[ans.qid] || {};
                         self.ansIter2[ans.qid][ans.uid] = {answer: ans.answer, comment: ans.comment};
                         set.add(ans.uid);
-                        self.teamUids = Array.from(set);
                     });
+                    self.teamUids = Array.from(set);
                 });
                 self.updateTeam();
+                self.shared.updateOverlayList();
             }
             if (self.iteration >= 4) {
                 self.finished = true;
                 self.loadAnskey();
             }
+            self.loadQuestions();
             self.loadAnswers();
         });
     };
@@ -275,13 +277,12 @@ app.controller("GeoController", ["$scope", "$http", "NgMap", "$socket", function
     self.editing = false;
 
     let init = () => {
-        self.updateOverlayList();
+        //self.updateOverlayList();
         self.clearOverlay();
         NgMap.getMap().then((map) => {
             console.log("MAP cargado correctamente");
             self.map = map;
             self.map.streetView.setOptions({addressControlOptions: {position: google.maps.ControlPosition.TOP_CENTER}});
-            self.map.infoWindows.iw.close();
         });
         $socket.on("update-overlay", (data) => {
             if(data.sesid == self.sesId){
@@ -290,15 +291,17 @@ app.controller("GeoController", ["$scope", "$http", "NgMap", "$socket", function
         });
     };
 
-    let toOverlay = (data) => {
-        return {
-            id: data.id,
-            name: data.name,
-            description: data.description,
-            color: getColor(data),
-            type: data.type,
-            fullType: getFullType(data.type),
-            geom: JSON.parse(data.geom)
+    let toOverlay = (col) => {
+        return (data) => {
+            return {
+                id: data.id,
+                name: data.name,
+                description: data.description,
+                color: col,
+                type: data.type,
+                fullType: getFullType(data.type),
+                geom: JSON.parse(data.geom)
+            };
         };
     };
 
@@ -352,17 +355,62 @@ app.controller("GeoController", ["$scope", "$http", "NgMap", "$socket", function
     };
 
     self.updateOverlayList = () => {
+        self.mOverlays = [];
+        self.sOverlays = [];
+        if(self.iteration == 2 && self.teamUids == [] || self.iteration >= 3 && self.team == {})
+            return;
+
+        let qid = (self.questions[self.selectedQs] != null) ? self.questions[self.selectedQs].id : -1;
+
+        // Default Data
+        $http.post("list-default-overlay", {qid: qid}).success((data) => {
+            let overlays = data.map(toOverlay("blue"));
+            self.mOverlays = self.mOverlays.concat(overlays.filter(e => e.type == "M"));
+            self.sOverlays = self.sOverlays.concat(overlays.filter(e => e.type != "M"));
+        });
+
+        // Personal Data
         let postdata = {
-            qid: (self.questions[self.selectedQs] != null) ? self.questions[self.selectedQs].id : -1
+            qid: qid,
+            iteration: self.iteration
         };
         $http.post("list-overlay", postdata).success((data) => {
-            let overlays = data.map(toOverlay);
-            self.mOverlays = overlays.filter(e => e.type == "M");
-            self.sOverlays = overlays.filter(e => e.type != "M");
+            let overlays = data.map(toOverlay("red"));
+            self.mOverlays = self.mOverlays.concat(overlays.filter(e => e.type == "M"));
+            self.sOverlays = self.sOverlays.concat(overlays.filter(e => e.type != "M"));
         });
+
+        const colors = ["green", "orange", "violet", "grey"];
+
+        // Anonimous Data
+        if(self.iteration == 2){
+            self.teamUids.forEach((uid,i) => {
+                if(uid == self.myUid)
+                    return;
+                let udata = {qid: qid, iteration: 1, uid: uid};
+                $http.post("list-team-overlay", udata).success((data) => {
+                    let overlays = data.map(toOverlay(colors[i%4]));
+                    self.mOverlays = self.mOverlays.concat(overlays.filter(e => e.type == "M"));
+                    self.sOverlays = self.sOverlays.concat(overlays.filter(e => e.type != "M"));
+                });
+            })
+        }
+
+        // Groupal Data
+        if(self.iteration >= 3){
+            console.log(self.teamUids);
+            console.log(self.team);
+        }
+
     };
 
-    self.shared.updateOverlayList = self.updateOverlayList;
+    self.shared.updateOverlayList = () => {
+        if(self.map != null){
+            //google.maps.event.trigger(self.map, "resize");
+            self.map.infoWindows.iw.close();
+        }
+        self.updateOverlayList();
+    };
 
     self.onMapOverlayCompleted = (ev) => {
         self.editing = true;

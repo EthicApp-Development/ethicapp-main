@@ -87,8 +87,11 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         $http({url: "get-session-list", method: "post"}).success((data) => {
             console.log("Session data updated");
             self.sessions = data;
-            if (self.selectedId != -1)
-                self.selectSession(self.selectedId);
+            if (self.selectedId != -1) {
+                let ses = self.sessions.find(e => e.id == sesid);
+                if (ses != null)
+                    self.selectSession(self.selectedId);
+            }
             else {
                 self.sesFromURL();
             }

@@ -6,12 +6,28 @@ let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 let socket = require("../modules/socket.config");
 
-router.post("/list-overlay", rpg.multiSQL({
+router.post("/list-default-overlay", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select id, name, description, iteration, geom, type from overlays where qid = $1 and (uid = $2 or iteration = 0)",
+    sql: "select id, name, description, iteration, geom, type from overlays where qid = $1 and iteration = 0",
     postReqData: ["qid"],
     sesReqData: ["uid"],
-    sqlParams: [rpg.param("post", "qid"), rpg.param("ses","uid")]
+    sqlParams: [rpg.param("post", "qid")]
+}));
+
+router.post("/list-overlay", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select id, name, description, iteration, geom, type from overlays where qid = $1 and uid = $2 and iteration <= $3",
+    postReqData: ["qid", "iteration"],
+    sesReqData: ["uid"],
+    sqlParams: [rpg.param("post", "qid"), rpg.param("ses","uid"), rpg.param("post","iteration")]
+}));
+
+router.post("/list-team-overlay", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select id, name, description, iteration, geom, type from overlays where qid = $1 and uid = $2 and iteration <= $3",
+    postReqData: ["qid", "iteration", "uid"],
+    sesReqData: ["uid"],
+    sqlParams: [rpg.param("post", "qid"), rpg.param("post","uid"), rpg.param("post","iteration")]
 }));
 
 router.post("/add-overlay", rpg.singleSQL({

@@ -247,7 +247,7 @@ canvas{
 }
 
 .mid-container{
-    max-width: 800px;
+    max-width: 920px;
     margin: 0 auto;
     background: white;
     padding: 24px;
@@ -576,7 +576,7 @@ ng-quill-editor.large{
 }
 
 .map-tbl{
-    margin-top: -42px;
+    margin-top: 8px;
     margin-bottom: 8px;
 }
 
@@ -590,4 +590,19 @@ ng-quill-editor.large .ql-editor{
 
 .question-block img{
     max-width: 100%;
+}
+
+.map-sidebar{
+    display: block;
+    width: 100%;
+    background: #ddd;
+    height: 240px;
+    padding: 4px;
+    overflow-y: auto;
+    margin-top: 8px;
+}
+
+.row-no-padding > [class*="col-"] {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
 }
