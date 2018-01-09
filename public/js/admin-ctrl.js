@@ -88,9 +88,9 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
             console.log("Session data updated");
             self.sessions = data;
             if (self.selectedId != -1) {
-                let ses = self.sessions.find(e => e.id == sesid);
+                let ses = self.sessions.find(e => e.id == self.selectedId);
                 if (ses != null)
-                    self.selectSession(self.selectedId);
+                    self.selectSession(ses, self.selectedId);
             }
             else {
                 self.sesFromURL();

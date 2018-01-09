@@ -46,6 +46,12 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                 self.updateTeam();
             }
         });
+        $socket.on("updateOverlay", (data) => {
+            console.log("SOCKET.IO", data);
+            if(data.qid == self.questions[self.selectedQs].id && self.iteration == 3){
+                self.shared.updateOverlayList();
+            }
+        });
         NgMap.getMap().then((map) => {
             self.map = map;
         });
@@ -276,6 +282,8 @@ app.controller("GeoController", ["$scope", "$http", "NgMap", "$socket", function
     self.selectedOverlay = null;
     self.editing = false;
 
+    let requestIndex = 0;
+
     let init = () => {
         //self.updateOverlayList();
         self.clearOverlay();
@@ -283,6 +291,7 @@ app.controller("GeoController", ["$scope", "$http", "NgMap", "$socket", function
             console.log("MAP cargado correctamente");
             self.map = map;
             self.map.streetView.setOptions({addressControlOptions: {position: google.maps.ControlPosition.TOP_CENTER}});
+            self.shared.updateOverlayList();
         });
         $socket.on("update-overlay", (data) => {
             if(data.sesid == self.sesId){
@@ -296,7 +305,7 @@ app.controller("GeoController", ["$scope", "$http", "NgMap", "$socket", function
             return {
                 id: data.id,
                 name: data.name,
-                description: data.description,
+                description: data.description + "\n" + buildFooter(data),
                 color: col,
                 type: data.type,
                 fullType: getFullType(data.type),
@@ -307,6 +316,14 @@ app.controller("GeoController", ["$scope", "$http", "NgMap", "$socket", function
 
     let getColor = (data) => {
         return (data.iteration == 0) ? "blue" : "red";
+    };
+
+    let buildFooter = (data) => {
+        if(data.iteration == 0)
+            return "Predefinido";
+        if(data.uid == self.myUid)
+            return self.sesStatusses[data.iteration-1] + " - Propio";
+        return self.sesStatusses[data.iteration-1] + " - " + (self.team[data.uid] ? self.team[data.uid] : ("Anonimo " + data.uid));
     };
 
     let packOverlay = (overlay) => {
@@ -355,15 +372,17 @@ app.controller("GeoController", ["$scope", "$http", "NgMap", "$socket", function
     };
 
     self.updateOverlayList = () => {
+        let ri = requestIndex + 1;
         self.mOverlays = [];
         self.sOverlays = [];
-        if(self.iteration == 2 && self.teamUids == [] || self.iteration >= 3 && self.team == {})
+        if(self.iteration == 2 && angular.equals(self.teamUids, []) || self.iteration >= 3 && (self.team == null || angular.equals(self.team, {})))
             return;
 
         let qid = (self.questions[self.selectedQs] != null) ? self.questions[self.selectedQs].id : -1;
 
         // Default Data
         $http.post("list-default-overlay", {qid: qid}).success((data) => {
+            if(requestIndex > ri) return;
             let overlays = data.map(toOverlay("blue"));
             self.mOverlays = self.mOverlays.concat(overlays.filter(e => e.type == "M"));
             self.sOverlays = self.sOverlays.concat(overlays.filter(e => e.type != "M"));
@@ -375,6 +394,7 @@ app.controller("GeoController", ["$scope", "$http", "NgMap", "$socket", function
             iteration: self.iteration
         };
         $http.post("list-overlay", postdata).success((data) => {
+            if(requestIndex > ri) return;
             let overlays = data.map(toOverlay("red"));
             self.mOverlays = self.mOverlays.concat(overlays.filter(e => e.type == "M"));
             self.sOverlays = self.sOverlays.concat(overlays.filter(e => e.type != "M"));
@@ -389,27 +409,37 @@ app.controller("GeoController", ["$scope", "$http", "NgMap", "$socket", function
                     return;
                 let udata = {qid: qid, iteration: 1, uid: uid};
                 $http.post("list-team-overlay", udata).success((data) => {
+                    if(requestIndex > ri) return;
                     let overlays = data.map(toOverlay(colors[i%4]));
                     self.mOverlays = self.mOverlays.concat(overlays.filter(e => e.type == "M"));
                     self.sOverlays = self.sOverlays.concat(overlays.filter(e => e.type != "M"));
                 });
-            })
+            });
         }
 
         // Groupal Data
         if(self.iteration >= 3){
-            console.log(self.teamUids);
-            console.log(self.team);
+            self.teamUids.forEach((uid,i) => {
+                if(uid == self.myUid)
+                    return;
+                let udata = {qid: qid, iteration: 3, uid: uid};
+                $http.post("list-team-overlay", udata).success((data) => {
+                    if(requestIndex > ri) return;
+                    let overlays = data.map(toOverlay(colors[i%4]));
+                    self.mOverlays = self.mOverlays.concat(overlays.filter(e => e.type == "M"));
+                    self.sOverlays = self.sOverlays.concat(overlays.filter(e => e.type != "M"));
+                });
+            });
         }
 
     };
 
     self.shared.updateOverlayList = () => {
         if(self.map != null){
-            //google.maps.event.trigger(self.map, "resize");
+            google.maps.event.trigger(self.map, "resize");
             self.map.infoWindows.iw.close();
+            self.updateOverlayList();
         }
-        self.updateOverlayList();
     };
 
     self.onMapOverlayCompleted = (ev) => {
