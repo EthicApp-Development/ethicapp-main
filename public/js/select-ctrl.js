@@ -133,7 +133,8 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
         if(ini != -1 && end != -1 && ini < end){
             let comps = qs.content.substring(ini + MAP_SCRIPT.length, end-1).split(" ");
             qs.content = qs.content.substring(0,ini) + qs.content.substring(end+6);
-            //qs.content.replace(/<p><br><\/p>/g, "");
+            //console.log(qs.content);
+            qs.content = qs.content.replace(/<p><br><\/p>/g, "");
             return {
                 center: "[" + comps[0] + ", " + comps[1]  + "]",
                 zoom: comps[2],

@@ -600,6 +600,7 @@ ng-quill-editor.large .ql-editor{
     padding: 4px;
     overflow-y: auto;
     margin-top: 8px;
+    border: 1px solid #999;
 }
 
 .row-no-padding > [class*="col-"] {

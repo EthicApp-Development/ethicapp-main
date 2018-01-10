@@ -626,6 +626,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
                     templateUrl: "templ/map-selection.html",
                     controller: "MapSelectionModalController",
                     controllerAs: "vm",
+                    size: "lg",
                     scope: self
                 });
                 modal.rendered.then(() => {
@@ -633,7 +634,18 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
                 });
                 modal.result.then((r) => {
                     if(self.map == null){
-                        Notification.error("Ocurrio un error al cargar los datos del mapa, intente nuevamente.");
+                        NgMap.getMap().then((map) => {
+                            console.log("MAP correctly loaded");
+                            self.map = map;
+                            let lat = self.map.getCenter().lat();
+                            let lng = self.map.getCenter().lng();
+                            let zoom = self.map.getZoom();
+                            let script = "MAP " + lat + " " + lng + " " + zoom + (r.nav ? " NAV" : "") + (r.edit ? " EDIT" : "");
+                            this.quill.insertEmbed(range.index, "code-block", "");
+                            this.quill.insertText(range.index, script);
+                        }, (err) => {
+                            Notification.error("Ocurrio un error al cargar los datos del mapa, intente nuevamente.");
+                        });
                         return;
                     }
                     let lat = self.map.getCenter().lat();
@@ -1586,7 +1598,6 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
     self.sOverlays = [];
 
     self.selectedOverlay = null;
-    self.editing = false;
 
     self.overlayBuffer = [];
 
@@ -1676,7 +1687,6 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
     self.shared.updateOverlayList = self.updateOverlayList;
 
     self.onMapOverlayCompleted = (ev) => {
-        self.editing = true;
         self.map.mapDrawingManager[0].setDrawingMode(null);
 
         self.newOverlay.fullType = ev.type;
@@ -1713,22 +1723,20 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
         self.newOverlay.geom.path = ov.getPath ? mutiplePositionToArray(ov.getPath()) : null;
         self.newOverlay.geom.bounds = ov.getBounds ? boundsToArray(ov.getBounds()) : null;
         self.newOverlay.centroid = centroidAsLatLng(self.newOverlay.type, self.newOverlay.geom);
-        self.map.showInfoWindow("iw2");
+        //self.map.showInfoWindow("iw2");
     };
 
     self.sendOverlay = () => {
         updateOverlay();
-        //$http.post("add-overlay", packOverlay(self.newOverlay)).success((data) => {
-        //    if(data.status == "ok"){
         self.overlayBuffer.push(packOverlay(self.newOverlay));
         console.log(self.overlayBuffer);
-        if(self.newOverlay.type == "M")
+        if(self.newOverlay.type == "M") {
             self.mOverlays.push(self.newOverlay);
-        else
+        }
+        else {
             self.sOverlays.push(self.newOverlay);
+        }
         self.closeOverlay();
-        //    }
-        //});
     };
 
     self.shared.clearOverlayBuffer = () => {

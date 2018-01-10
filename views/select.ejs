@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="css/font-awesome.min.css">
     <link rel="stylesheet" href="css/angular-ui-notification.min.css">
     <link rel="stylesheet" href="css/quill-sup.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.9.0-alpha2/katex.min.css">
     <link rel="stylesheet" href="css/main.css"/>
 </head>
 <body class="bg-black">
@@ -61,10 +62,12 @@
                 <div class="map-sidebar">
                     <h4>Elementos</h4>
                     <div class="list-group">
-                        <a ng-repeat="overlay in mOverlays" class="list-group-item" ng-click="selectOverlay(overlay.id)">
+                        <a ng-repeat="overlay in mOverlays" class="list-group-item" ng-click="selectOverlay(overlay.id)"
+                            ng-class="{'active': overlay.id==selectedOverlay.id}">
                             {{overlay.name}}
                         </a>
-                        <a ng-repeat="overlay in sOverlays" class="list-group-item" ng-click="selectOverlay(overlay.id)">
+                        <a ng-repeat="overlay in sOverlays" class="list-group-item" ng-click="selectOverlay(overlay.id)"
+                           ng-class="{'active': overlay.id==selectedOverlay.id}">
                             {{overlay.name}}
                         </a>
                         <span ng-show="mOverlays.length == 0 && sOverlays.length == 0">Mapa sin elementos</span>
@@ -76,7 +79,7 @@
                         draggable="{{questions[selectedQs].map.nav}}">
                     <!-- DRAW MANAGER -->
                     <drawing-manager
-                            ng-if="questions[selectedQs].map.edit"
+                            ng-if="questions[selectedQs].map.edit && iteration <=3"
                             on-overlaycomplete="onMapOverlayCompleted()"
                             drawing-control-options="{position: 'TOP_CENTER'}"
                             drawingControl="true"
