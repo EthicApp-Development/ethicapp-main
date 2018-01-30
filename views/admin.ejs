@@ -207,6 +207,91 @@
                     <span class="text-muted">(No incluya numeración)</span>
                     <ng-quill-editor ng-model="newQuestion.content" ng-class="{'quill-disabled': selectedSes.status!=1}" on-editor-created="configQuillExtra(editor)"></ng-quill-editor>
                     <!--<textarea rows="2" class="form-control" ng-model="newQuestion.content" ng-disabled="selectedSes.status!=1"></textarea>-->
+
+                    <!-- MAP -->
+                    <button class="btn btn-default" ng-click="toggleMapPlugin()" ng-class="{active: newQuestion.includesMap}">
+                        <i class="fa fa-map"></i> Plugin Mapa
+                    </button>
+                    <br>
+                    <div class="plugin-content" ng-show="newQuestion.includesMap" ng-controller="GeoAdminController">
+                        <strong>Ajuste el mapa en la posición y zoom deseado. Opcionalmente puede agregar marcadores o formas que verán los alumnos</strong>
+                        <div class="row-no-padding">
+                            <div class="col-sm-2">
+                                <div class="map-sidebar">
+                                    <h4>Elementos</h4>
+                                    <div class="list-group">
+                                        <a ng-repeat="overlay in mOverlays" class="list-group-item" ng-click="selectOverlay(overlay.id)">
+                                            {{overlay.name}}
+                                        </a>
+                                        <a ng-repeat="overlay in sOverlays" class="list-group-item" ng-click="selectOverlay(overlay.id)">
+                                            {{overlay.name}}
+                                        </a>
+                                        <span ng-show="mOverlays.length == 0 && sOverlays.length == 0">Mapa sin elementos</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-10">
+                                <ng-map class="map-block map-tbl" center="[-33.45, -70.65]" zoom="12" trigger-resize="true">
+
+                                    <!-- DRAW MANAGER -->
+                                    <drawing-manager
+                                            on-overlaycomplete="onMapOverlayCompleted()"
+                                            drawing-control-options="{position: 'TOP_CENTER'}"
+                                            drawingControl="true"
+                                            drawingMode="null"
+                                            markerOptions="{draggable: true}"
+                                            polylineOptions="{strokeColor:'darkred', editable: true, draggable: true}"
+                                            rectangleOptions="{fillColor: 'red', strokeColor:'darkred', editable: true, draggable: true}"
+                                            polygonOptions="{fillColor: 'red', strokeColor:'darkred', editable: true, draggable: true}"
+                                            circleOptions="{fillColor: 'red', strokeColor:'darkred', editable: true, draggable: true}">
+                                    </drawing-manager>
+
+                                    <!-- NEW OVERLAYS -->
+                                    <marker ng-if="newOverlay.type == 'M' && newOverlay.geom.position != null" id="nmkr" draggable="true"
+                                            position="{{newOverlay.geom.position}}" icon="img/marker-{{newOverlay.color}}.png"></marker>
+                                    <shape ng-if="newOverlay.type != 'M'" id="nshp" name="{{newOverlay.fullType}}" path="{{newOverlay.geom.path}}"
+                                           bounds="{{newOverlay.geom.bounds}}" center="{{newOverlay.geom.center}}"
+                                           radius="{{newOverlay.geom.radius}}"
+                                           fill-color="{{newOverlay.color}}" stroke-color="dark{{newOverlay.color}}" editable="true"
+                                           draggable="true"></shape>
+
+                                    <!-- SESSION OVERLAYS -->
+                                    <marker ng-repeat="overlay in mOverlays" id="{{overlay.id}}" position="{{overlay.geom.position}}"
+                                            icon="img/marker-{{overlay.color}}.png" on-click="clickOverlay($event)"></marker>
+                                    <shape ng-repeat="overlay in sOverlays" id="{{overlay.id}}" name="{{overlay.fullType}}"
+                                           path="{{overlay.geom.path}}" bounds="{{overlay.geom.bounds}}" center="{{overlay.geom.center}}"
+                                           radius="{{overlay.geom.radius}}" fill-color="{{overlay.color}}" on-click="clickOverlay($event)"
+                                           stroke-color="dark{{overlay.color}}" stroke-width="1"></shape>
+
+                                    <!-- INFO WINDOW -->
+                                    <info-window id="iw" position="{{selectedOverlay.centroid}}">
+                                        <div ng-non-bindable>
+                                            <strong>{{selectedOverlay.name}}</strong>
+                                            <p>{{selectedOverlay.description}}</p>
+                                        </div>
+                                    </info-window>
+
+                                    <info-window id="iw2" position="{{newOverlay.centroid}}">
+                                        <div ng-non-bindable>
+                                            <input class="form-control" type="text" ng-model="newOverlay.name" placeholder="Nombre">
+                                            <textarea class="form-control" ng-model="newOverlay.description" placeholder="Descripción"></textarea>
+                                            <button class="btn btn-primary btn-sm" ng-click="sendOverlay()">Enviar</button>
+                                            <button class="btn btn-danger btn-sm" ng-click="closeOverlay()">Cancelar</button>
+                                        </div>
+                                    </info-window>
+
+                                </ng-map>
+                            </div>
+                        </div>
+                        <h4>Opciones para Alumno</h4>
+                        <label><input type="checkbox" ng-model="nav"> Permitir Navegación</label>
+                        <br>
+                        <label><input type="checkbox" ng-model="edit"> Permitir Edición</label>
+                        <hr>
+                        <br>
+                    </div>
+                    <!-- /MAP -->
+
                     <label>Alternativas:</label>
                     <div class="input-group" ng-repeat=" x in qsLabels">
                         <a class="input-group-addon" ng-bind="x" ng-click="selectAnswer($index)"

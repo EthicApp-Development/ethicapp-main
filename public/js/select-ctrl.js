@@ -127,19 +127,17 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
     };
 
     let processMap = (qs) => {
-        const MAP_SCRIPT = '<pre class="ql-syntax" spellcheck="false">MAP ';
-        let ini = qs.content.indexOf(MAP_SCRIPT);
-        let end = qs.content.indexOf("</pre>");
-        if(ini != -1 && end != -1 && ini < end){
-            let comps = qs.content.substring(ini + MAP_SCRIPT.length, end-1).split(" ");
-            qs.content = qs.content.substring(0,ini) + qs.content.substring(end+6);
+        if(qs.plugin_data && qs.plugin_data.startsWith("MAP")){
+            let comps = qs.plugin_data.split(" ");
+            console.log(comps);
+            //qs.content = qs.content.substring(0,ini) + qs.content.substring(end+6);
             //console.log(qs.content);
-            qs.content = qs.content.replace(/<p><br><\/p>/g, "");
+            //qs.content = qs.content.replace(/<p><br><\/p>/g, "");
             return {
-                center: "[" + comps[0] + ", " + comps[1]  + "]",
-                zoom: comps[2],
-                nav: comps[3] == "NAV",
-                edit: comps[3] == "EDIT" || comps[4] == "EDIT"
+                center: "[" + comps[1] + ", " + comps[2]  + "]",
+                zoom: comps[3],
+                nav: comps[4] == "NAV",
+                edit: comps[4] == "EDIT" || comps[5] == "EDIT"
             }
         }
         return null;

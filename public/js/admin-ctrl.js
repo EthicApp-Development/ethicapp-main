@@ -32,8 +32,8 @@ adpp.config(['ngQuillConfigProvider', function (ngQuillConfigProvider) {
 
                     ['clean'],                                         // remove formatting button
                     ['image','link','video'],                                      // remove formatting button
-                    ['formula'],
-                    ['map']
+                    ['formula']
+                    //['map']
                 ],
                 handlers: {
                     map: quillMapHandler
@@ -474,10 +474,10 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
 
     self.newText = {id: null, title: "", content: ""};
 
-    NgMap.getMap().then((map) => {
+    /*NgMap.getMap().then((map) => {
         console.log("MAP correctly loaded");
         self.map = map;
-    });
+    });*/
 
     self.selectAnswer = (i) => {
         self.newQuestion.answer = i;
@@ -488,6 +488,9 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
             Notification.error("Debe indicar la respuesta correcta a la pregunta");
             return;
         }
+        if(self.newQuestion.includesMap){
+            encodeMapPlugin();
+        }
         let postdata = {
             content: self.newQuestion.content,
             options: self.newQuestion.alternatives.join("\n"),
@@ -495,7 +498,8 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
             answer: self.newQuestion.answer,
             sesid: self.selectedSes.id,
             textid: self.newQuestion.textid,
-            other: self.newQuestion.other
+            other: self.newQuestion.other,
+            pluginData: self.newQuestion.pluginData
         };
         $http({url: "add-question", method: "post", data: postdata}).success((data) => {
             if (data.status == "ok") {
@@ -524,6 +528,9 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
             Notification.error("Debe indicar la respuesta correcta a la pregunta");
             return;
         }
+        if(self.newQuestion.includesMap){
+            encodeMapPlugin();
+        }
         let postdata = {
             id: self.newQuestion.id,
             content: self.newQuestion.content,
@@ -532,7 +539,8 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
             answer: self.newQuestion.answer,
             sesid: self.selectedSes.id,
             textid: self.newQuestion.textid,
-            other: self.newQuestion.other
+            other: self.newQuestion.other,
+            pluginData: self.newQuestion.pluginData
         };
         $http({url: "update-question", method: "post", data: postdata}).success((data) => {
             if (data.status == "ok") {
@@ -547,6 +555,8 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
                     textid: null,
                     answer: -1
                 };
+                if(self.shared.clearOverlayBuffer)
+                    self.shared.clearOverlayBuffer();
             }
         });
     };
@@ -559,9 +569,15 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
             comment: qs.comment,
             other: qs.other,
             textid: qs.textid,
-            answer: qs.answer
+            answer: qs.answer,
+            includesMap: qs.plugin_data && qs.plugin_data.startsWith("MAP")
         };
         Notification.info("Edite la pregunta en el formulario.");
+        if(self.newQuestion.includesMap){
+            if(self.shared.clearOverlayBuffer)
+                self.shared.clearOverlayBuffer();
+            self.shared.processMapData(qs.plugin_data, qs.id);
+        }
     };
 
     self.startEditText = (tx) => {
@@ -614,50 +630,33 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
     };
 
     self.configQuillExtra = (editor) => {
-
         self.editor = editor;
+    };
 
-        editor.getModule("toolbar").addHandler("map", function () {
-            let range = this.quill.getSelection();
-            if (range) {
-                if(self.shared.clearOverlayBuffer)
-                    self.shared.clearOverlayBuffer();
-                let modal = $uibModal.open({
-                    templateUrl: "templ/map-selection.html",
-                    controller: "MapSelectionModalController",
-                    controllerAs: "vm",
-                    size: "lg",
-                    scope: self
-                });
-                modal.rendered.then(() => {
-                    google.maps.event.trigger(self.map, "resize");
-                });
-                modal.result.then((r) => {
-                    if(self.map == null){
-                        NgMap.getMap().then((map) => {
-                            console.log("MAP correctly loaded");
-                            self.map = map;
-                            let lat = self.map.getCenter().lat();
-                            let lng = self.map.getCenter().lng();
-                            let zoom = self.map.getZoom();
-                            let script = "MAP " + lat + " " + lng + " " + zoom + (r.nav ? " NAV" : "") + (r.edit ? " EDIT" : "");
-                            this.quill.insertEmbed(range.index, "code-block", "");
-                            this.quill.insertText(range.index, script);
-                        }, (err) => {
-                            Notification.error("Ocurrio un error al cargar los datos del mapa, intente nuevamente.");
-                        });
-                        return;
-                    }
-                    let lat = self.map.getCenter().lat();
-                    let lng = self.map.getCenter().lng();
-                    let zoom = self.map.getZoom();
-                    let script = "MAP " + lat + " " + lng + " " + zoom + (r.nav ? " NAV" : "") + (r.edit ? " EDIT" : "");
-                    this.quill.insertEmbed(range.index, "code-block", "");
-                    this.quill.insertText(range.index, script);
-                });
-            }
-            $scope.$apply();
-        });
+    self.toggleMapPlugin = () => {
+        self.newQuestion.includesMap = !self.newQuestion.includesMap;
+    };
+
+    let encodeMapPlugin = () => {
+        let r = self.shared.getPluginMapOptions();
+        let map = self.shared.getActiveMap();
+        if(map == null){
+            /*NgMap.getMap().then((map) => {
+                console.log("MAP correctly loaded");
+                self.map = map;
+                let lat = self.map.getCenter().lat();
+                let lng = self.map.getCenter().lng();
+                let zoom = self.map.getZoom();
+                self.newQuestion.pluginData = "MAP " + lat + " " + lng + " " + zoom + (r.nav ? " NAV" : "") + (r.edit ? " EDIT" : "");
+            }, (err) => {*/
+                Notification.error("Ocurrio un error al cargar los datos del mapa, intente nuevamente.");
+            //});
+            return;
+        }
+        let lat = map.getCenter().lat();
+        let lng = map.getCenter().lng();
+        let zoom = map.getZoom();
+        self.newQuestion.pluginData = "MAP " + lat + " " + lng + " " + zoom + (r.nav ? " NAV" : "") + (r.edit ? " EDIT" : "");
     };
 
 });
@@ -1656,6 +1655,25 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
         }
     };
 
+    self.shared.processMapData = (data, qid) => {
+        let comps = data.split(" ");
+        console.log(comps);
+        self.map.setCenter(new google.maps.LatLng(+comps[1], +comps[2]));
+        self.map.setZoom(+comps[3]);
+        self.nav = comps[4] == "NAV";
+        self.edit = comps[4] == "EDIT" || comps[5] == "EDIT";
+        getPrevOverlays(qid);
+        google.maps.event.trigger(self.map, "resize");
+    };
+
+    let getPrevOverlays = (qid) => {
+        $http.post("list-default-overlay", {qid: qid}).success((data) => {
+            let overlays = data.map(toOverlay);
+            self.mOverlays = self.mOverlays.concat(overlays.filter(e => e.type == "M"));
+            self.sOverlays = self.sOverlays.concat(overlays.filter(e => e.type != "M"));
+        });
+    };
+
     self.clearOverlay = () => {
         self.newOverlay = {
             name: "",
@@ -1740,6 +1758,8 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
     };
 
     self.shared.clearOverlayBuffer = () => {
+        self.mOverlays = [];
+        self.sOverlays = [];
         self.overlayBuffer = [];
     };
 
@@ -1777,6 +1797,17 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
         self.map.panTo(p.geometry.location);
     };
 
+
+    self.shared.getPluginMapOptions = () => {
+        return {
+            nav: self.nav,
+            edit: self.edit
+        };
+    };
+
+    self.shared.getActiveMap = () => {
+        return self.map;
+    };
 
     init();
 
