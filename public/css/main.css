@@ -607,3 +607,15 @@ ng-quill-editor.large .ql-editor{
     padding-left: 0 !important;
     padding-right: 0 !important;
 }
+
+.gsearch{
+    position: absolute;
+    display: block;
+    width: 200px;
+    top: 14px;
+    right: 48px;
+    z-index: 100;
+    padding: 2px 4px;
+    box-shadow: #999 0 0 8px;
+    border: none;
+}

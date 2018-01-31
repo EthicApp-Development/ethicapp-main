@@ -512,7 +512,9 @@ app.controller("GeoController", ["$scope", "$http", "NgMap", "$socket", function
         self.newOverlay.fullType = "marker";
         self.newOverlay.type = "M";
         self.newOverlay.geom.position = positionToArray(p.geometry.location);
+        self.newOverlay.centroid = centroidAsLatLng(self.newOverlay.type, self.newOverlay.geom);
 
+        self.map.showInfoWindow("iw2");
         self.map.panTo(p.geometry.location);
     };
 

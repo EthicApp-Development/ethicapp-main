@@ -75,6 +75,7 @@
                 </div>
                 </div>
                 <div class="col-sm-10">
+                    <input class="gsearch" places-auto-complete on-place-changed="googleSearch()" ng-if="questions[selectedQs].map.edit && iteration <=3">
                 <ng-map class="map-block map-tbl" center="{{questions[selectedQs].map.center}}" zoom="{{questions[selectedQs].map.zoom}}"
                         draggable="{{questions[selectedQs].map.nav}}">
                     <!-- DRAW MANAGER -->

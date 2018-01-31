@@ -457,7 +457,7 @@ adpp.controller("SemDocController", function ($scope, $http, Notification) {
 
 });
 
-adpp.controller("QuestionsController", function ($scope, $http, Notification, $uibModal, NgMap) {
+adpp.controller("QuestionsController", function ($scope, $http, Notification, $uibModal, NgMap, $timeout) {
     let self = $scope;
 
     self.qsLabels = ['A', 'B', 'C', 'D', 'E'];
@@ -577,6 +577,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
             if(self.shared.clearOverlayBuffer)
                 self.shared.clearOverlayBuffer();
             self.shared.processMapData(qs.plugin_data, qs.id);
+            futureRefreshMap();
         }
     };
 
@@ -635,6 +636,16 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
 
     self.toggleMapPlugin = () => {
         self.newQuestion.includesMap = !self.newQuestion.includesMap;
+        if(self.newQuestion.includesMap){
+            futureRefreshMap();
+        }
+    };
+
+    let futureRefreshMap = () => {
+        $timeout(() => {
+            let map = self.shared.getActiveMap();
+            google.maps.event.trigger(map, "resize");
+        }, 1000);
     };
 
     let encodeMapPlugin = () => {
@@ -1793,7 +1804,9 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
         self.newOverlay.fullType = "marker";
         self.newOverlay.type = "M";
         self.newOverlay.geom.position = positionToArray(p.geometry.location);
+        self.newOverlay.centroid = centroidAsLatLng(self.newOverlay.type, self.newOverlay.geom);
 
+        self.map.showInfoWindow("iw2");
         self.map.panTo(p.geometry.location);
     };
 
