@@ -5,6 +5,8 @@ let adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "t
 const DASHBOARD_AUTOREALOD = true;
 const DASHBOARD_AUTOREALOD_TIME = 15;
 
+window.DIC = {};
+
 adpp.config(['ngQuillConfigProvider', function (ngQuillConfigProvider) {
     ngQuillConfigProvider.set({
         modules:{
@@ -59,13 +61,14 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.newUsers = [];
     self.users = {};
     self.selectedId = -1;
-    self.sesStatusses = ["No Publicada", "Lectura", "Personal", "Anónimo", "Grupal", "Finalizada"];
+    self.sesStatusses = ["notPublicada", "reading", "personal", "anon", "teamWork", "finished"];
     self.optConfidence = [0, 25, 50, 75, 100];
     self.iterationNames = [];
     self.openSidebar = true;
 
     self.init = () => {
         self.shared.updateSesData();
+        self.updateLang("english");
     };
 
     self.selectSession = (ses,id) => {
@@ -187,13 +190,19 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         self.shared.updateState()
     };
 
+    self.updateLang = (lang) => {
+        $http.get("data/" + lang + ".json").success((data) => {
+            window.DIC = data;
+        });
+    };
+
     self.init();
 });
 
 adpp.controller("TabsController", function ($scope, $http) {
     let self = $scope;
-    self.tabOptions = ["Descripción", "Dashboard"];
-    self.tabConfig = ["Usuarios", "Grupos"];
+    self.tabOptions = ["description", "dashboard"];
+    self.tabConfig = ["users", "groups"];
     self.selectedTab = 0;
     self.selectedTabConfig = -1;
 
@@ -210,29 +219,29 @@ adpp.controller("TabsController", function ($scope, $http) {
 
     self.shared.verifyTabs = () => {
         if (self.selectedSes.type == "L") {
-            self.iterationNames = [{name: "Lectura", val: 0}, {name: "Individual", val: 1},
-                {name: "Grupal anónimo", val: 2}, {name: "Grupal", val: 3}, {name: "Reporte", val: 4},
-                {name: "Calibración Rubrica", val: 5}, {name: "Evaluación de Pares", val: 6}];
-            self.tabOptions = ["Configuración", "Dashboard"];
-            self.tabConfig = ["Usuarios", "Grupos", "Rúbrica"];
-            self.sesStatusses = ["Configuración", "Lectura", "Individual", "Anónimo", "Grupal", "Reporte", "Rubrica Calibración", "Evaluación de Pares", "Finalizada"];
+            self.iterationNames = [{name: "reading", val: 0}, {name: "individual", val: 1},
+                {name: "anon", val: 2}, {name: "teamWork", val: 3}, {name: "report", val: 4},
+                {name: "rubricCalib", val: 5}, {name: "pairEval", val: 6}];
+            self.tabOptions = ["configuration", "dashboard"];
+            self.tabConfig = ["users", "groups", "rubrica"];
+            self.sesStatusses = ["configuration", "reading", "individual", "anon", "teamWork", "report", "rubricCalib", "pairEval", "finished"];
             self.shared.getRubrica();
             self.shared.getExampleReports();
             self.shared.getReports();
         }
         else if(self.selectedSes.type == "S"){
-            self.iterationNames = [{name: "Individual", val: 1}, {name: "Grupal anónimo", val: 2},
-                {name: "Grupal", val: 3}];
-            self.tabOptions = ["Configuración", "Dashboard"];
-            self.tabConfig = ["Usuarios","Grupos",null,"Opciones"];
-            self.sesStatusses = ["Configuración", "Individual", "Anónimo", "Grupal", "Finalizada"];
+            self.iterationNames = [{name: "individual", val: 1}, {name: "anon", val: 2},
+                {name: "teamWork", val: 3}];
+            self.tabOptions = ["configuration", "dashboard"];
+            self.tabConfig = ["users","groups",null,"options"];
+            self.sesStatusses = ["configuration", "individual", "anon", "teamWork", "finished"];
         }
         else if(self.selectedSes.type == "M"){
-            self.iterationNames = [{name: "Individual", val: 1}, {name: "Grupal", val: 3}, {name: "Reporte", val:4}, {name: "Evaluación de Pares", val: 6}];
-            self.tabOptions = ["Configuración", "Dashboard"];
+            self.iterationNames = [{name: "individual", val: 1}, {name: "teamWork", val: 3}, {name: "report", val:4}, {name: "pairEval", val: 6}];
+            self.tabOptions = ["configuration", "dashboard"];
             self.tabConfig = ["Usuarios", "Grupos","Rúbrica"];
-            self.sesStatusses = [{i:-1, name: "Configuración"}, {i: 1, name: "Individual"}, {i: 3, name: "Grupal"}, {i: 4, name: "Reporte"},
-                {i: 6, name: "Evaluación de Pares"}, {i: 7, name: "Finalizada"}];
+            self.sesStatusses = [{i:-1, name: "configuración"}, {i: 1, name: "individual"}, {i: 3, name: "teamWork"}, {i: 4, name: "report"},
+                {i: 6, name: "pairEval"}, {i: 7, name: "finished"}];
             self.shared.getRubrica();
             self.shared.getExampleReports();
             self.shared.getReports();
@@ -1830,6 +1839,18 @@ adpp.filter('htmlExtractText', function() {
     return function(text) {
         return  text ? String(text).replace(/<[^>]+>/gm, '') : '';
     };
+});
+
+adpp.filter('lang', function(){
+    filt.$stateful = true;
+    return filt;
+
+    function filt(label){
+        if(window.DIC[label])
+            return window.DIC[label];
+        console.warn("Cannot find translation for ", label);
+        return label;
+    }
 });
 
 let generateTeams = (alumArr, scFun, n, different) => {
