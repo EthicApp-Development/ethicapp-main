@@ -86,5 +86,6 @@
   "dashboard": "Dashboard",
   "generalInst": "General instructions",
   "individual": "Individual",
-  "delete": "Delete"
+  "delete": "Delete",
+  "pairEval": "Pair Evaluation"
 }

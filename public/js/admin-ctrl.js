@@ -6,6 +6,7 @@ const DASHBOARD_AUTOREALOD = true;
 const DASHBOARD_AUTOREALOD_TIME = 15;
 
 window.DIC = {};
+window.warnDIC = {};
 
 adpp.config(['ngQuillConfigProvider', function (ngQuillConfigProvider) {
     ngQuillConfigProvider.set({
@@ -1848,7 +1849,10 @@ adpp.filter('lang', function(){
     function filt(label){
         if(window.DIC[label])
             return window.DIC[label];
-        console.warn("Cannot find translation for ", label);
+        if(!window.warnDIC[label]) {
+            console.warn("Cannot find translation for ", label);
+            window.warnDIC[label] = true;
+        }
         return label;
     }
 });

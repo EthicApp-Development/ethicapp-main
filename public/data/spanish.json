@@ -87,5 +87,6 @@
   "dashboard": "Dashboard",
   "generalInst": "Instrucciones Generales",
   "individual": "Individual",
-  "delete": "Eliminar"
+  "delete": "Eliminar",
+  "pairEval": "Evaluación de Pares"
 }
