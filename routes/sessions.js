@@ -18,7 +18,7 @@ router.get("/seslist", (req, res) => {
 
 router.post("/get-session-list", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select * from (select distinct s.id, s.name, s.descr, s.status, s.type, s.time, s.options, (s.id in (select sesid from teams)) as grouped, (s.id in (select sesid from report_pair)) as paired, sr.stime from sessions as s left outer join status_record as sr on sr.sesid = s.id and s.status = sr.status, " +
+    sql: "select * from (select distinct s.id, s.name, s.descr, s.status, s.type, s.time, s.code, s.options, (s.id in (select sesid from teams)) as grouped, (s.id in (select sesid from report_pair)) as paired, sr.stime from sessions as s left outer join status_record as sr on sr.sesid = s.id and s.status = sr.status, " +
         "sesusers as su, users as u where su.uid = $1 and u.id = su.uid and su.sesid = s.id and (u.role='P' or s.status > 1)) as v order by v.time desc",
     sesReqData: ["uid"],
     sqlParams: [rpg.param("ses", "uid")]
@@ -435,5 +435,55 @@ router.get("/export-session-data-sel", (req,res) => {
         res.end("Bad Request");
     }
 });
+
+router.post("/generate-session-code", rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: "update sessions set code = $1 where id = $2 and code is null returning code",
+    postReqData: ["id"],
+    sesReqData: ["uid"],
+    sqlParams: [rpg.param("calc", "code"), rpg.param("post", "id")],
+    onStart: (ses, data, calc) => {
+        calc.code = generateCode(data.id);
+    }
+}));
+
+router.post("/enter-session-code", rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: "insert into sesusers(uid,sesid) select $1::int as uid, id from sessions where code = $2 returning sesid",
+    postReqData: ["code"],
+    sesReqData: ["uid"],
+    sqlParams: [rpg.param("ses", "uid"), rpg.param("post", "code")],
+    preventResEnd: true,
+    onEnd: (req, res, result) => {
+        if(result.sesid == null){
+            res.end('{"status": "end"}');
+        }
+        else{
+            let id = result.sesid;
+            rpg.singleSQL({
+                dbcon: pass.dbcon,
+                sql: "select type from sessions where id = " + id,
+                onEnd: (req,res,result) => {
+                    let type = result.type;
+                    if(type == null){
+                        res.end('{"status": "end"}');
+                    }
+                    else{
+                        req.session.ses = id;
+                        let urlr = (type == "L") ? "editor" : (type == "M") ? "semantic" : "select";
+                        res.end(JSON.stringify({status: "ok", redirect: urlr}));
+                    }
+                }
+            })(req,res);
+        }
+    }
+}));
+
+
+let generateCode = (id) => {
+    let n = id*5 + 255 + ~~(Math.random()*5);
+    let s = n.toString(16);
+    return "k00000".substring(0, 6 - s.length) + s;
+};
 
 module.exports = router;

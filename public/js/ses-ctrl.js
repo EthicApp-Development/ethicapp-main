@@ -10,6 +10,8 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", function ($s
     let self = $scope;
     self.sessions = [];
     self.sesOpen = false;
+    self.invCode = "";
+    self.showCodeError = false;
 
     self.init = () => {
         self.updateSessions();
@@ -27,6 +29,18 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", function ($s
 
     self.openSes = () => {
         self.sesOpen = true;
+    };
+
+    self.enterCode = () => {
+        let postdata = {code: self.invCode};
+        $http.post("enter-session-code", postdata).success((data) => {
+            if(data.status == "ok"){
+                window.location.replace(data.redirect);
+            }
+            else{
+                self.showCodeError = true;
+            }
+        });
     };
 
     self.init();

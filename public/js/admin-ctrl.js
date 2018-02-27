@@ -5,7 +5,7 @@ let adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "t
 const DASHBOARD_AUTOREALOD = true;
 const DASHBOARD_AUTOREALOD_TIME = 15;
 
-window.DIC = {};
+window.DIC = null;
 window.warnDIC = {};
 
 adpp.config(['ngQuillConfigProvider', function (ngQuillConfigProvider) {
@@ -46,7 +46,7 @@ adpp.config(['ngQuillConfigProvider', function (ngQuillConfigProvider) {
     });
 }]);
 
-adpp.controller("AdminController", function ($scope, $http, $uibModal, $location, $locale) {
+adpp.controller("AdminController", function ($scope, $http, $uibModal, $location, $locale, $filter) {
     let self = $scope;
 
     self.temp = "";
@@ -65,11 +65,14 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.sesStatusses = ["notPublicada", "reading", "personal", "anon", "teamWork", "finished"];
     self.optConfidence = [0, 25, 50, 75, 100];
     self.iterationNames = [];
-    self.openSidebar = true;
+    self.showSeslist = true;
+    self.lang = "english";
+
+    self.misc = {};
 
     self.init = () => {
         self.shared.updateSesData();
-        self.updateLang("english");
+        self.updateLang(self.lang);
     };
 
     self.selectSession = (ses,id) => {
@@ -197,20 +200,42 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         });
     };
 
+    self.shared.resetSesId = () => {
+        self.selectedId = -1;
+    };
+
+    self.changeLang = () => {
+        self.lang = (self.lang == "english") ? "spanish" : "english";
+        self.updateLang(self.lang);
+    };
+
+    self.generateCode = () => {
+        let postdata = {
+            id: self.selectedSes.id
+        };
+        $http.post("generate-session-code", postdata).success((data) => {
+            if(data.code != null)
+                self.selectedSes.code = data.code;
+        });
+    };
+
+    self.flang = (key) => {
+        return $filter("lang")(key);
+    };
+
     self.init();
 });
 
 adpp.controller("TabsController", function ($scope, $http) {
     let self = $scope;
-    self.tabOptions = ["description", "dashboard"];
+    self.tabOptions = [];
     self.tabConfig = ["users", "groups"];
-    self.selectedTab = 0;
-    self.selectedTabConfig = -1;
+    self.selectedTab = '';
 
     self.shared.resetTab = () => {
-        self.selectedTab = 0;
+        self.selectedTab = "configuration";
         if (self.selectedSes != null && self.selectedSes.status > 1) {
-            self.selectedTab = 1;
+            self.selectedTab = "dashboard";
         }
         self.selectedTabConfig = -1;
         if (self.selectedSes.status == 7) {
@@ -223,8 +248,7 @@ adpp.controller("TabsController", function ($scope, $http) {
             self.iterationNames = [{name: "reading", val: 0}, {name: "individual", val: 1},
                 {name: "anon", val: 2}, {name: "teamWork", val: 3}, {name: "report", val: 4},
                 {name: "rubricCalib", val: 5}, {name: "pairEval", val: 6}];
-            self.tabOptions = ["configuration", "dashboard"];
-            self.tabConfig = ["users", "groups", "rubrica"];
+            self.tabOptions = ["configuration", "editor", "users", "groups", "rubrica", "dashboard"];
             self.sesStatusses = ["configuration", "reading", "individual", "anon", "teamWork", "report", "rubricCalib", "pairEval", "finished"];
             self.shared.getRubrica();
             self.shared.getExampleReports();
@@ -233,22 +257,20 @@ adpp.controller("TabsController", function ($scope, $http) {
         else if(self.selectedSes.type == "S"){
             self.iterationNames = [{name: "individual", val: 1}, {name: "anon", val: 2},
                 {name: "teamWork", val: 3}];
-            self.tabOptions = ["configuration", "dashboard"];
-            self.tabConfig = ["users","groups",null,"options"];
+            self.tabOptions = ["configuration", "editor", "users", "groups", "dashboard", "options"];
             self.sesStatusses = ["configuration", "individual", "anon", "teamWork", "finished"];
         }
         else if(self.selectedSes.type == "M"){
             self.iterationNames = [{name: "individual", val: 1}, {name: "teamWork", val: 3}, {name: "report", val:4}, {name: "pairEval", val: 6}];
-            self.tabOptions = ["configuration", "dashboard"];
-            self.tabConfig = ["Usuarios", "Grupos","Rúbrica"];
-            self.sesStatusses = [{i:-1, name: "configuración"}, {i: 1, name: "individual"}, {i: 3, name: "teamWork"}, {i: 4, name: "report"},
+            self.tabOptions = ["configuration", "editor", "users", "groups", "rubrica", "dashboard"];
+            self.sesStatusses = [{i:-1, name: "configuration"}, {i: 1, name: "individual"}, {i: 3, name: "teamWork"}, {i: 4, name: "report"},
                 {i: 6, name: "pairEval"}, {i: 7, name: "finished"}];
             self.shared.getRubrica();
             self.shared.getExampleReports();
             self.shared.getReports();
         }
         if (self.selectedSes.status > 1) {
-            self.selectedTab = 1;
+            self.selectedTab = "dashboard";
         }
     };
 
@@ -260,14 +282,18 @@ adpp.controller("TabsController", function ($scope, $http) {
         self.selectedTabConfig = idx;
     };
 
+    self.backToList = () => {
+        self.shared.resetSesId();
+        self.tabOptions = [];
+        self.selectedTab = "";
+    };
+
     self.shared.gotoGrupos = () => {
-        self.selectedTab = 0;
-        self.selectedTabConfig = 1;
+        self.selectedTab = "groups";
     };
 
     self.shared.gotoRubrica = () => {
-        self.selectedTab = 0;
-        self.selectedTabConfig = 2;
+        self.selectedTab = "rubrica";
     };
 
 });
@@ -399,22 +425,25 @@ adpp.controller("NewUsersController", function ($scope, $http, Notification) {
         };
         $http({url: "add-ses-users", method: "post", data: postdata}).success((data) => {
             if (data.status == "ok") {
-                self.getNewUsers();
-                self.getMembers();
+                self.refreshUsers();
             }
         });
     };
 
     self.removeUser = (uid) => {
-        if (self.selectedSes.status == 1) {
+        if (self.selectedSes.status <= 2) {
             let postdata = {uid: uid, sesid: self.selectedSes.id};
             $http({url: "delete-ses-user", method: "post", data: postdata}).success((data) => {
                 if (data.status == "ok") {
-                    self.getNewUsers();
-                    self.getMembers();
+                    self.refreshUsers();
                 }
             });
         }
+    };
+
+    self.refreshUsers = () => {
+        self.getNewUsers();
+        self.getMembers();
     };
 
 });
@@ -712,11 +741,11 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     showMaxMin: false
                 },
                 yAxis: {
-                    axisLabel: 'Cantidad Alumnos'
+                    axisLabel: self.flang('students')
                 }
             }
         };
-        self.barData = [{key: "Alumnos", color: "#4d6b87", values: []}];
+        self.barData = [{key: self.flang('students'), color: "#4d6b87", values: []}];
         self.updateState();
         if (DASHBOARD_AUTOREALOD && self.selectedSes.status < 9) {
             self.reload(true);
@@ -1004,7 +1033,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             let rank = Math.min(Math.floor(N * d.score), N - 1);
             self.barData[0].values[rank].value += 1;
         });
-        self.barOpts.chart.xAxis.axisLabel = "Rendimiento";
+        self.barOpts.chart.xAxis.axisLabel = self.flang("performance");
     };
 
     self.updateStateRub = () => {
@@ -1016,9 +1045,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
 
     self.showName = (report) => {
         if (report.example)
-            return report.title + " - Texto ejemplo";
+            return report.title + " - " + self.flang("exampleReport");
         else
-            return report.id + " - Reporte de Alumno " + self.users[report.uid].name;
+            return report.id + " - " + self.flang("reportOf") + " " + self.users[report.uid].name;
     };
 
     self.shared.getReports = () => {
@@ -1063,7 +1092,8 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
 
     self.buildRubricaBarData = (data) => {
         const N = 3;
-        let rubnms = ["Inicio-Proceso", "Proceso-Competente", "Competente-Avanzado"];
+        //let rubnms = [self.flang("") + "-" + self.flang(""), "Proceso-Competente", "Competente-Avanzado"];
+        let rubnms = ["1 - 2", "2 - 3", "3 - 4"];
         self.barData[0].values = [];
         for (let i = 0; i < N; i++) {
             let lbl = (i + 1) + " - " + (i + 2) + " (" + rubnms[i] + ")";
@@ -1074,7 +1104,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             let rank = Math.min(Math.floor(score - 1), N - 1);
             self.barData[0].values[rank].value += 1;
         });
-        self.barOpts.chart.xAxis.axisLabel = "Distribución de Puntaje (Nivel)";
+        self.barOpts.chart.xAxis.axisLabel = self.flang("scoreDist");
     };
 
     self.computeDif = () => {
@@ -1096,7 +1126,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.buildRubricaDiffData = (difs) => {
         console.log("difs", difs);
         const N = 5;
-        let lblnms = ["Alto", "Medio Alto", "Medio", "Medio Bajo", "Bajo"];
+        let lblnms = self.flang("high2lowScale").split(",");
         self.barData[0].values = [];
         for (let i = 0; i < N; i++) {
             // let lbl = (i * 0.5) + " - " + (i + 1) * 0.5;
@@ -1106,7 +1136,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             let rank = Math.min(Math.floor(d * 2), N - 1);
             self.barData[0].values[rank].value += 1;
         });
-        self.barOpts.chart.xAxis.axisLabel = "Cercanía a evaluación correcta";
+        self.barOpts.chart.xAxis.axisLabel = self.flang("correctDistance");
     };
 
     self.getReportAuthor = (rid) => {
@@ -1215,10 +1245,10 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 scope: self,
                 resolve: {
                     data: function () {
-                        data.title = "Respuesta de " + self.users[uid].name;
-                        data.content = "Pregunta:\n" + qstxt + "\n\nRespuesta:\n" + alt + "\n\nComentario:\n" + data.comment;
+                        data.title = self.flang("answerOf") + " " + self.users[uid].name;
+                        data.content = self.flang("question") + ":\n" + qstxt + "\n\n" + self.flang("answer") + ":\n" + alt + "\n\n" + self.flang("comment") + ":\n" + data.comment;
                         if(data.confidence){
-                            data.content += "\n\nGrado de Confianza: " + data.confidence + "%";
+                            data.content += "\n\n" + self.flang("confidenceLevel") + ": " + data.confidence + "%";
                         }
                         return data;
                     },
@@ -1301,7 +1331,9 @@ adpp.controller("DuplicateSesModalController", function ($scope, $http, $uibModa
 
 adpp.controller("GroupController", function ($scope, $http, Notification) {
     let self = $scope;
-    self.methods = ["Aleatorio", "Rendimiento Homogeneo", "Rendimiento Heterogeneo", "Tipo Aprendizaje Homogeneo", "Tipo Aprendizaje Heterogeoneo"];
+    self.methods = [self.flang("random"),
+        self.flang("performance") + " " + self.flang("homog"), self.flang("performance") + " " + self.flang("heterg"),
+        self.flang("knowledgeType") + " " + self.flang("homog"), self.flang("knowledgeType") + " " + self.flang("heterg")];
     self.lastI = -1;
     self.lastJ = -1;
 
@@ -1847,6 +1879,8 @@ adpp.filter('lang', function(){
     return filt;
 
     function filt(label){
+        if(window.DIC == null)
+            return;
         if(window.DIC[label])
             return window.DIC[label];
         if(!window.warnDIC[label]) {

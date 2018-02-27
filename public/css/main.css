@@ -89,9 +89,10 @@ a:hover{
 }
 
 .top-bar{
-    height: 32px;
+    height: 42px;
     background: #6c859b;
     color: white;
+    padding: 2px;
 }
 
 .top-bar-mini{
@@ -140,7 +141,7 @@ a:hover{
 .pad-content{
     padding-right: 24px;
     padding-left: 8px;
-    overflow-y: scroll;
+    /* overflow-y: scroll; */
     max-height: 80vh;
 }
 
@@ -322,7 +323,12 @@ ul[dnd-list] .dndPlaceholder {
 }
 
 .full-height{
-    height: 100%;
+     height: 100%;
+}
+
+.full-height-topbar{
+    height: calc(100vh - 48px);
+    overflow: auto;
 }
 
 .idea-item{
@@ -618,4 +624,48 @@ ng-quill-editor.large .ql-editor{
     padding: 2px 4px;
     box-shadow: #999 0 0 8px;
     border: none;
+}
+
+.top-bar .chip{
+    background: rgba(0,0,0,0.1);
+    padding: 8px;
+    margin-left: 4px;
+    color: white;
+    height: 100%;
+    display: inline-block;
+    max-width: 240px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.top-bar .chip.hoverable:hover{
+    background: rgba(0,0,0,0.7);
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.top-bar .chip.active{
+    background: rgba(0,0,0,0.5);
+    font-weight: bold;
+}
+
+.invitation-code{
+    font-size: 300%;
+    font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+    color: black;
+    background: #ddd;
+    padding: 12px;
+    border-radius: 12px;
+    display: block;
+    margin: 2px auto;
+    text-align: center;
+}
+
+
+@media screen and (min-width: 1096px) {
+    .admin-container{
+        padding-left: 10%;
+        padding-right: 10%;
+    }
 }
