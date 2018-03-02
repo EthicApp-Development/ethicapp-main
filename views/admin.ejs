@@ -40,7 +40,7 @@
         </div>
 
         <div class="chip hoverable" ng-repeat="tab in tabOptions" ng-class="{active: tab == selectedTab}" ng-click="setTab(tab)">
-            {{tab | lang}}
+            <i class="fa fa-{{secIcons[tab]}}"></i> {{tab | lang}}
         </div>
 
         <a class="chip hoverable pull-right" href="logout">

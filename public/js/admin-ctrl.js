@@ -67,6 +67,8 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.iterationNames = [];
     self.showSeslist = true;
     self.lang = "english";
+    self.secIcons = {configuration: "cog", editor: "edit", dashboard: "bar-chart", users: "male",
+        rubrica: "check-square", groups: "users", options: "sliders"};
 
     self.misc = {};
 
