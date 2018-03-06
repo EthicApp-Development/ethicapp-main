@@ -393,7 +393,7 @@
                 <div class="row">
                     <div class="col-xs-6">
                         <multiselect ms-header="Seleccionar Usuarios" multiple="true" options="x.name for x in newUsers"
-                                     ng-model="newMembs">
+                                     ng-model="newMembs" show-search="true" ng-disabled="selectedSes.status > 2">
                         </multiselect>
                     </div>
                     <div class="col-xs-3">
@@ -478,7 +478,7 @@
             <!-- / GRUPOS -->
 
             <!-- RUBRICA -->
-            <div class="pad-content" ng-show="selectedTabConfig == 'rubrica'" ng-controller="RubricaController">
+            <div class="pad-content" ng-show="selectedTab == 'rubrica'" ng-controller="RubricaController">
                 <h4>{{'rubricaSpec' | lang}}</h4>
                 <!--<h5>Definir esquema de rúbrica:</h5>-->
                 <table class="table table-bordered">
