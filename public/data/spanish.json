@@ -88,7 +88,7 @@
   "generalInst": "Instrucciones Generales",
   "individual": "Individual",
   "delete": "Eliminar",
-  "selectSes": "Selecciona una sesión para comenzar",
+  "selectSes": "Seleccione una sesión",
   "langName": "Español",
   "workflow": "Workflow",
   "invitationCode": "Código de Invitación",
@@ -107,5 +107,8 @@
   "answer": "Respuesta",
   "answerOf": "Respuesta de",
   "scoreDist": "Distribución de puntajes",
+  "readComp": "Comprensión Lectora",
+  "multSel": "Selección Múltiple",
+  "semUnits": "Unidades Semánticas",
   "pairEval": "Evaluación de Pares"
 }

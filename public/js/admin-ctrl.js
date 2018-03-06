@@ -69,6 +69,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.lang = "english";
     self.secIcons = {configuration: "cog", editor: "edit", dashboard: "bar-chart", users: "male",
         rubrica: "check-square", groups: "users", options: "sliders"};
+    self.typeNames = {L: "readComp", S: "multSel", M: "semUnits"};
 
     self.misc = {};
 
@@ -178,6 +179,22 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.openDuplicateSes = () => {
         if(self.selectedSes == null) return;
         let ses = angular.copy(self.selectedSes);
+        $uibModal.open({
+            templateUrl: "templ/duplicate-ses.html",
+            controller: "DuplicateSesModalController",
+            controllerAs: "vm",
+            scope: self,
+            resolve: {
+                data: function () {
+                    return ses;
+                },
+            }
+        });
+    };
+
+    self.openDuplicateSesSpec = (sesr, $event) => {
+        $event.stopPropagation();
+        let ses = angular.copy(sesr);
         $uibModal.open({
             templateUrl: "templ/duplicate-ses.html",
             controller: "DuplicateSesModalController",

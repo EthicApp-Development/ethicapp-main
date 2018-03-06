@@ -134,7 +134,8 @@
                 <strong ng-show="qs.text_content != null">Texto:</strong>
                 <p class="question-block" ng-bind-html="qs.text_content | trustHtml"></p>
                 <br ng-show="qs.text_content != null">
-                <h4>{{$index + 1}}. <span ng-bind-html="qs.content | trustHtml"></span></h4>
+                <h4>{{$index + 1}}. </h4>
+                <div ng-bind-html="qs.content | trustHtml" class="question-content"></div>
 
                 <div class="list-group">
                     <div class="" ng-repeat="x in optLabels">

@@ -73,7 +73,12 @@
             <div class="list-group">
                 <a class="list-group-item" ng-repeat="ses in sessions | filter:sesSearch" ng-click="selectSession(ses,ses.id)"
                    ng-class="{'active':ses.id==selectedId}">
-                    <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
+                    <button class="btn btn-default pull-right" ng-click="openDuplicateSesSpec(ses,$event)" ng-disabled="ses.type != 'S' && ses.type != 'M'">
+                        <i class="fa fa-copy"></i>
+                    </button>
+                    <h4 class="list-group-item-heading">{{ses.name}}
+                        <span class="text-gray font-mini"> - {{typeNames[ses.type] | lang}} - {{ses.time | date}}</span>
+                    </h4>
                     <p class="list-group-item-text" ng-bind="ses.descr"></p>
                 </a>
             </div>

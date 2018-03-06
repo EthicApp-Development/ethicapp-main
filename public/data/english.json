@@ -106,5 +106,8 @@
   "answer": "Answer",
   "answerOf": "Answer of",
   "scoreDist": "Score distribution",
+  "readComp": "Reading Comprehension",
+  "multSel": "Multiple selection",
+  "semUnits": "Semantic units",
   "pairEval": "Pair Evaluation"
 }

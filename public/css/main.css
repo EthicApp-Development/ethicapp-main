@@ -669,3 +669,11 @@ ng-quill-editor.large .ql-editor{
         padding-right: 10%;
     }
 }
+
+.question-content{
+    font-size: 125%;
+}
+
+.question-content img{
+    max-width: 100%;
+}
