@@ -125,6 +125,32 @@
             <button class="btn btn-default pull-right" ng-click="updateSession()" ng-disabled="selectedSes.status!=1">
                 {{'saveChanges' | lang}}
             </button>
+            <br>
+            <br>
+            <hr>
+            <hr>
+            <br>
+            <!-- OPTIONS -->
+            <div ng-controller="OptionsController" ng-show="selectedSes.type == 'S'">
+                <h4>{{'optionsConfig' | lang}}</h4>
+                <div class="row sliders">
+                    <div ng-repeat="opt in options">
+                        <div class="col-sm-4 col-sm-offset-2"><strong ng-bind="opt.name"></strong></div>
+                        <div class="col-md-4">
+                            <div class="onoffswitch">
+                                <input type="checkbox" id="sl{{$index}}" class="onoffswitch-checkbox" ng-model="conf[opt.code]">
+                                <label class="onoffswitch-label" for="sl{{$index}}">
+                                    <span class="onoffswitch-inner"></span>
+                                    <span class="onoffswitch-switch"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <br>
+                <br>
+                <button class="btn btn-default pull-right" ng-click="saveConfs()">{{'saveChanges' | lang}}</button>
+            </div>
         </div>
 
         <!-- CONFIGURACION -->
@@ -233,7 +259,7 @@
                     <!--<textarea rows="2" class="form-control" ng-model="newQuestion.content" ng-disabled="selectedSes.status!=1"></textarea>-->
 
                     <!-- MAP -->
-                    <button class="btn btn-default" ng-click="toggleMapPlugin()" ng-class="{active: newQuestion.includesMap}">
+                    <button class="btn btn-default" ng-click="toggleMapPlugin()" ng-class="{active: newQuestion.includesMap}" ng-disabled="selectedSes.status!=1"
                         <i class="fa fa-map"></i> {{'mapPlugin' | lang}}
                     </button>
                     <br>
@@ -528,25 +554,9 @@
             </div>
             <!-- / RUBRICA -->
 
-            <!-- OPTIONS -->
+            <!-- OPTIONS --
             <div class="pad-content" ng-show="selectedTabConfig == 'options' && updateConf()" ng-controller="OptionsController">
-                <h4>{{'optionsConfig' | lang}}</h4>
-                <div class="row sliders">
-                    <div ng-repeat="opt in options">
-                    <div class="col-sm-4 col-sm-offset-2"><strong ng-bind="opt.name"></strong></div>
-                    <div class="col-md-4">
-                        <div class="onoffswitch">
-                            <input type="checkbox" id="sl{{$index}}" class="onoffswitch-checkbox" ng-model="conf[opt.code]">
-                            <label class="onoffswitch-label" for="sl{{$index}}">
-                                <span class="onoffswitch-inner"></span>
-                                <span class="onoffswitch-switch"></span>
-                            </label>
-                        </div>
-                    </div>
-                    </div>
-                </div>
-                <hr>
-                <button class="btn btn-primary pull-right" ng-click="saveConfs()">{{'saveChanges' | lang}}</button>
+
             </div>
             <!-- /OPTIONS -->
 

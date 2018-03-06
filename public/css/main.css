@@ -497,7 +497,7 @@ p{
 }
 .onoffswitch-inner:before {
     content: "SI";
-    padding-left: 6px;
+    padding-left: 10px;
     background-color: #42A5F5; color: #FFFFFF;
 }
 .onoffswitch-inner:after {
@@ -556,16 +556,16 @@ ng-quill-editor.large{
     display: block;
     width: 100%;
     background: rgba(200,200,200,0.3);
-    height: 166px;
+    height: 120px;
     content: "";
     position: relative;
-    top: -166px;
+    top: -120px;
     z-index: 500;
 }
 
 .quill-disabled.large:after {
-    height: 266px;
-    top: -266px;
+    height: 220px;
+    top: -220px;
 }
 
 .ql-map{

@@ -90,6 +90,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         self.shared.resetGraphs();
         self.shared.verifyTabs();
         self.shared.resetTab();
+        self.shared.updateConf();
         $location.path(self.selectedSes.id);
     };
 
@@ -276,7 +277,7 @@ adpp.controller("TabsController", function ($scope, $http) {
         else if(self.selectedSes.type == "S"){
             self.iterationNames = [{name: "individual", val: 1}, {name: "anon", val: 2},
                 {name: "teamWork", val: 3}];
-            self.tabOptions = ["configuration", "editor", "users", "groups", "dashboard", "options"];
+            self.tabOptions = ["configuration", "editor", "users", "groups", "dashboard"];
             self.sesStatusses = ["configuration", "individual", "anon", "teamWork", "finished"];
         }
         else if(self.selectedSes.type == "M"){
@@ -1350,13 +1351,14 @@ adpp.controller("DuplicateSesModalController", function ($scope, $http, $uibModa
 
 adpp.controller("GroupController", function ($scope, $http, Notification) {
     let self = $scope;
-    self.methods = [self.flang("random"),
-        self.flang("performance") + " " + self.flang("homog"), self.flang("performance") + " " + self.flang("heterg"),
-        self.flang("knowledgeType") + " " + self.flang("homog"), self.flang("knowledgeType") + " " + self.flang("heterg")];
+    self.methods = [];
     self.lastI = -1;
     self.lastJ = -1;
 
     self.shared.verifyGroups = () => {
+        self.methods = [self.flang("random"),
+            self.flang("performance") + " " + self.flang("homog"), self.flang("performance") + " " + self.flang("heterg"),
+            self.flang("knowledgeType") + " " + self.flang("homog"), self.flang("knowledgeType") + " " + self.flang("heterg")];
         self.groupNum = 3;
         self.groupMet = self.methods[0];
         self.groups = [];
@@ -1602,22 +1604,21 @@ adpp.controller("OptionsController", function ($scope, $http, Notification) {
         });
     };
 
-    self.updateConf = () => {
-        if(self.selectedSes.id != self.sesidConfig) {
-            self.conf = {};
+    self.shared.updateConf = () => {
+        if(self.selectedSes.conf == null) {
+            self.selectedSes.conf = {};
             let op = self.selectedSes.options || "";
-            for (var i = 0; i < op.length; i++) {
-                self.conf[op[i]] = true;
+            for (let i = 0; i < op.length; i++) {
+                self.selectedSes.conf[op[i]] = true;
             }
-            self.sesidConfig = self.selectedSes.id;
         }
         return true;
     };
 
     self.buildConfStr = () => {
         let s = "";
-        for(let key in self.conf){
-            if(self.conf[key])
+        for(let key in self.selectedSes.conf){
+            if(self.selectedSes.conf[key])
                 s += key;
         }
         return s;

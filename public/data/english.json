@@ -109,5 +109,8 @@
   "readComp": "Reading Comprehension",
   "multSel": "Multiple selection",
   "semUnits": "Semantic units",
+  "random": "Random",
+  "homog": "Homogeneous",
+  "heterg": "Heterogeneous",
   "pairEval": "Pair Evaluation"
 }

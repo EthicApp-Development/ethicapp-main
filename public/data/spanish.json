@@ -110,5 +110,8 @@
   "readComp": "Comprensión Lectora",
   "multSel": "Selección Múltiple",
   "semUnits": "Unidades Semánticas",
+  "random": "Aleatorio",
+  "homog": "Homogéneo",
+  "heterg": "Heterogéneo",
   "pairEval": "Evaluación de Pares"
 }
