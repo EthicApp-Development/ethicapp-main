@@ -94,8 +94,10 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                 self.finished = true;
                 self.loadAnskey();
             }
-            self.loadQuestions();
-            self.loadAnswers();
+            if(self.iteration > 0) {
+                self.loadQuestions();
+                self.loadAnswers();
+            }
         });
     };
 

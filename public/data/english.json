@@ -112,5 +112,6 @@
   "random": "Random",
   "homog": "Homogeneous",
   "heterg": "Heterogeneous",
+  "exportSesData": "Export session data",
   "pairEval": "Pair Evaluation"
 }

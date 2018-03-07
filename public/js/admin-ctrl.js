@@ -1343,7 +1343,7 @@ adpp.controller("DuplicateSesModalController", function ($scope, $http, $uibModa
         console.log(vm.nses);
         $http({url: "duplicate-session", method: "post", data: vm.nses}).success((data) => {
             console.log(data);
-            window.location.reload();
+            window.location.replace("admin");
         });
     };
 

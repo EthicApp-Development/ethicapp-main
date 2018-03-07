@@ -113,5 +113,6 @@
   "random": "Aleatorio",
   "homog": "Homogéneo",
   "heterg": "Heterogéneo",
+  "exportSesData": "Exportar datos de sesión",
   "pairEval": "Evaluación de Pares"
 }

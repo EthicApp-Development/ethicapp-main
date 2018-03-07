@@ -53,11 +53,11 @@
         </div>
     </div>
 
-    <div class="scrollable-container" ng-controller="GeoController">
-        <div class="mid-container">
+    <div class="scrollable-container">
+        <div class="mid-container" ng-show="iteration > 0">
 
             <!-- MAP AREA -->
-            <div ng-show="questions[selectedQs].map" class="row row-no-padding">
+            <div ng-show="questions[selectedQs].map" class="row row-no-padding" ng-controller="GeoController">
                 <div class="col-sm-2">
                 <div class="map-sidebar">
                     <h4>Elementos</h4>
@@ -214,12 +214,13 @@
         </div>
     </div>
 
-    <!--<div class="splash" ng-if="iteration > 3">
+    <div class="splash" ng-if="iteration == 0">
         <div class="splash-box">
-            <h3>La sesión ha finalizado</h3>
-            <h5>Gracias por participar.</h5>
+            <h3><i class="fa fa-clock-o"></i> Sesión en espera</h3>
+            <h5>Espere a que el profesor indique el inicio de la actividad.</h5>
+            <h5>Esta página se recargará automáticamente cuando comience.</h5>
         </div>
-    </div>-->
+    </div>
 
 </div>
 

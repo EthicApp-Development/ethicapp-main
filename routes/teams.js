@@ -38,7 +38,7 @@ router.post("/get-team-semantic-units",rpg.multiSQL({
 
 router.post("/get-ses-info",rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: "select greatest(0,least(7,s.status-2)) as iteration, $1::int as uid, s.name, s.id, s.descr, s.options, s.type, sr.stime from sessions as s " +
+    sql: "select greatest(-1,least(7,s.status-2)) as iteration, $1::int as uid, s.name, s.id, s.descr, s.options, s.type, sr.stime from sessions as s " +
         "left outer join status_record as sr on sr.sesid = s.id and s.status = sr.status where s.id = $2",
     sesReqData: ["ses","uid"],
     sqlParams: [rpg.param("ses","uid"),rpg.param("ses","ses")]
