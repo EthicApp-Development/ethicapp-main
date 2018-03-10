@@ -677,3 +677,8 @@ ng-quill-editor.large .ql-editor{
 .question-content img{
     max-width: 100%;
 }
+
+.slider-label{
+    font-size: 125%;
+    margin-top: 4px;
+}

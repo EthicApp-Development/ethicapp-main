@@ -113,5 +113,8 @@
   "homog": "Homogeneous",
   "heterg": "Heterogeneous",
   "exportSesData": "Export session data",
+  "optCom": "Ask for comments",
+  "optConfLv": "Ask for confidence level",
+  "optHint": "Include extra attempt in team work using comment",
   "pairEval": "Pair Evaluation"
 }

@@ -114,5 +114,8 @@
   "homog": "Homogéneo",
   "heterg": "Heterogéneo",
   "exportSesData": "Exportar datos de sesión",
+  "optCom": "Pedir comentarios",
+  "optConfLv": "Pedir grados de certeza",
+  "optHint": "Incluir intento extra en trabajo de equipo con comentario",
   "pairEval": "Evaluación de Pares"
 }

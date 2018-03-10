@@ -1589,7 +1589,7 @@ adpp.controller("OptionsController", function ($scope, $http, Notification) {
     let self = $scope;
     self.conf = {};
     self.sesidConfig = -1;
-    self.options = [{name: "Ocultar Cometarios", code:"J"}, {name: "Grados de Certeza", code:"C"}];
+    self.options = [{name: "optCom", code:"J"}, {name: "optConfLv", code:"C"}, {name: "optHint", code:"H"}];
 
     self.saveConfs = () => {
         let postdata = {

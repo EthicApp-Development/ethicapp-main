@@ -134,12 +134,12 @@
             <!-- OPTIONS -->
             <div ng-controller="OptionsController" ng-show="selectedSes.type == 'S'">
                 <h4>{{'optionsConfig' | lang}}</h4>
-                <div class="row sliders">
+                <div class="row sliders" ng-class="{'bg-gray': selectedSes.status!=1}">
                     <div ng-repeat="opt in options">
-                        <div class="col-sm-4 col-sm-offset-2"><strong ng-bind="opt.name"></strong></div>
-                        <div class="col-md-4">
+                        <div class="col-sm-6 col-sm-offset-2"><span class="slider-label">{{opt.name | lang}}</span></div>
+                        <div class="col-sm-4">
                             <div class="onoffswitch">
-                                <input type="checkbox" id="sl{{$index}}" class="onoffswitch-checkbox" ng-model="conf[opt.code]">
+                                <input type="checkbox" id="sl{{$index}}" class="onoffswitch-checkbox" ng-model="conf[opt.code]" ng-disabled="selectedSes.status!=1">
                                 <label class="onoffswitch-label" for="sl{{$index}}">
                                     <span class="onoffswitch-inner"></span>
                                     <span class="onoffswitch-switch"></span>
@@ -150,7 +150,7 @@
                 </div>
                 <br>
                 <br>
-                <button class="btn btn-default pull-right" ng-click="saveConfs()">{{'saveChanges' | lang}}</button>
+                <button class="btn btn-default pull-right" ng-click="saveConfs()" ng-disabled="selectedSes.status!=1">{{'saveChanges' | lang}}</button>
             </div>
         </div>
 
@@ -170,10 +170,10 @@
                 <div>
                     <label ng-show="newSDoc.id == null">{{'add' | lang}} {{'document' | lang}}</label>
                     <label ng-show="newSDoc.id != null">{{'edit' | lang}} {{'document' | lang}}</label>
-                    <input type="text" ng-model="newSDoc.title" placeholder="Titulo" class="form-control">
-                    <textarea class="form-control" rows="5" ng-model="newSDoc.content"></textarea>
-                    <button class="btn btn-default pull-right" ng-show="newSDoc.id == null" ng-click="addSemDoc()">{{'add' | lang}}</button>
-                    <button class="btn btn-default pull-right" ng-show="newSDoc.id != null" ng-click="updateSemDoc()">{{'update' | lang}}</button>
+                    <input type="text" ng-model="newSDoc.title" placeholder="Titulo" class="form-control" ng-disabled="selectedSes.status!=1">
+                    <textarea class="form-control" rows="5" ng-model="newSDoc.content" ng-disabled="selectedSes.status!=1"></textarea>
+                    <button class="btn btn-default pull-right" ng-show="newSDoc.id == null" ng-click="addSemDoc()" ng-disabled="selectedSes.status!=1">{{'add' | lang}}</button>
+                    <button class="btn btn-default pull-right" ng-show="newSDoc.id != null" ng-click="updateSemDoc()" ng-disabled="selectedSes.status!=1">{{'update' | lang}}</button>
                     <br>
                     <br>
                 </div>
