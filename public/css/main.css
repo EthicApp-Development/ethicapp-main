@@ -93,6 +93,7 @@ a:hover{
     background: #6c859b;
     color: white;
     padding: 2px;
+    overflow: hidden;
 }
 
 .top-bar-mini{
@@ -208,7 +209,7 @@ canvas{
 }
 
 .simple-margin-left{
-    margin-left: 32px;
+    margin-left: 8px;
 }
 
 .simple-padding-top{
@@ -681,4 +682,24 @@ ng-quill-editor.large .ql-editor{
 .slider-label{
     font-size: 125%;
     margin-top: 4px;
+}
+
+.quad{
+    display: inline-block;
+    margin: 2px;
+    border: 1px solid #333;
+    background: #B0BEC5;
+    width: 24px;
+    height: 24px;
+    text-align: center;
+    color: #000;
+}
+
+.quad.green{
+    background: #7CB342;
+    color: #fff;
+}
+
+.quad.yellow{
+    background: #FFC107;
 }

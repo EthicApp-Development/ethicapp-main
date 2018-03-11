@@ -25,12 +25,15 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
     self.bottomMsg = "";
     self.finished = false;
     self.useConfidence = false;
+    self.useHints = false;
     self.shared = {};
 
     self.ansIter1 = {};
     self.ansIter2 = {};
 
     self.sesStatusses = ["Individual", "Anónimo", "Grupal", "Finalizada"];
+
+    self.lang = "spanish";
 
     self.init = () => {
         self.getSesInfo();
@@ -55,6 +58,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
         NgMap.getMap().then((map) => {
             self.map = map;
         });
+        self.updateLang(self.lang);
     };
 
     self.getSesInfo = () => {
@@ -66,6 +70,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             self.sesSTime = data.stime;
             self.sesDescr = data.descr;
             self.useConfidence = (data.options != null && data.options.includes("C"));
+            self.useHints = (data.options != null && data.options.includes("H"));
             let set = new Set();
             if (self.iteration > 1) {
                 $http({url: "get-team-selection", method: "post", data: {iteration: 1}}).success((data) => {
@@ -173,6 +178,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
     self.selectQuestion = (idx) => {
         self.selectedQs = idx;
         self.shared.updateOverlayList();
+        self.bottomMsg = "";
     };
 
     self.nextQuestion = () => {
@@ -190,7 +196,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                 else if (data.status == "different") {
                     self.bottomMsg = "Las respuestas de los miembros del equipo no coinciden";
                 }
-                else if (data.status == "incorrect" && !self.questions[self.selectedQs].hinted) {
+                else if (data.status == "incorrect" && !self.questions[self.selectedQs].hinted && self.useHints) {
                     self.bottomMsg = "Comentario: " + data.msg;
                     self.questions[self.selectedQs].hinted = true;
                 }
@@ -264,6 +270,17 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             template: '<div><div class="modal-header"><h4>Factor Detonante</h4></div><div class="modal-body"><p>' +
             self.sesDescr + '</p></div></div>'
         });
+    };
+
+    self.updateLang = (lang) => {
+        $http.get("data/" + lang + ".json").success((data) => {
+            window.DIC = data;
+        });
+    };
+
+    self.changeLang = () => {
+        self.lang = (self.lang == "english") ? "spanish" : "english";
+        self.updateLang(self.lang);
     };
 
     self.init();
@@ -530,6 +547,26 @@ app.filter("trustHtml", ["$sce", function($sce){
         return $sce.trustAsHtml(html)
     };
 }]);
+
+window.DIC = null;
+window.warnDIC = {};
+
+app.filter('lang', function(){
+    filt.$stateful = true;
+    return filt;
+
+    function filt(label){
+        if(window.DIC == null)
+            return;
+        if(window.DIC[label])
+            return window.DIC[label];
+        if(!window.warnDIC[label]) {
+            console.warn("Cannot find translation for ", label);
+            window.warnDIC[label] = true;
+        }
+        return label;
+    }
+});
 
 let positionToArray = (pos) => {
     if (pos == null)

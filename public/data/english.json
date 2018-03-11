@@ -22,6 +22,7 @@
   "dontIncludeNumbering": "Do not include numbering",
   "mapPlugin": "Map plugin",
   "options": "Options",
+  "option": "Option",
   "comment": "Comment",
   "solution": "Solution",
   "others": "Others",
@@ -116,5 +117,7 @@
   "optCom": "Ask for comments",
   "optConfLv": "Ask for confidence level",
   "optHint": "Include extra attempt in team work using comment",
+  "myAnswer": "My answer",
+  "correctOption": "Correct Option",
   "pairEval": "Pair Evaluation"
 }

@@ -22,7 +22,8 @@
   "question": "Pregunta",
   "dontIncludeNumbering": "No incluya numeración",
   "mapPlugin": "Plugin de Mapa",
-  "options": "Opciones",
+  "options": "Alternativas",
+  "option": "Alternativa",
   "comment": "Comentario",
   "solution": "Solución",
   "others": "Otros",
@@ -67,7 +68,7 @@
   "corrects": "Correctas",
   "incorrects": "Incorrectas",
   "show": "Mostrar",
-  "confidenceLevel": "Nivel de confianza",
+  "confidenceLevel": "Grado de certeza",
   "Pr": "Av",
   "Av": "Pr",
   "details": "Detalles",
@@ -117,5 +118,7 @@
   "optCom": "Pedir comentarios",
   "optConfLv": "Pedir grados de certeza",
   "optHint": "Incluir intento extra en trabajo de equipo con comentario",
+  "myAnswer": "Mi respuesta",
+  "correctOption": "Alternativa Correcta",
   "pairEval": "Evaluación de Pares"
 }

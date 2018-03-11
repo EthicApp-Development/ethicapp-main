@@ -39,17 +39,20 @@
 
     <div class="row top-bar">
         <div class="col-sm-6 full-height simple-padding-top">
-            <strong class="simple-margin-left" ng-bind="sesName"></strong>
-            <span> - Preguntas: {{questions.length}}</span>
+            <strong class="simple-margin-left">{{sesName | limitTo:18}}</strong>
+            <div class="quad" ng-repeat="qs in questions" ng-class="{'green': sent[qs.id], 'yellow': qs.dirty}">{{$index + 1}}</div>
         </div>
         <div class="col-sm-6">
-            <a href="seslist" class="btn btn-sm btn-default pull-right">Atrás</a>
+            <a href="seslist" class="btn btn-sm btn-default pull-right">{{'logout' | lang}}</a>
             <a ng-click="showInfo()" class="btn btn-sm btn-default pull-right"><i class="fa fa-question"></i></a>
             <span class="pull-right boxed" ng-bind="teamstr" style="
     overflow-x: scroll;
     max-height: 24px;
     max-width: 340px;
 "></span>
+            <span class="chip hoverable pull-right" ng-click="changeLang()">
+                {{'langName' | lang}}
+            </span>
         </div>
     </div>
 
@@ -60,7 +63,7 @@
             <div ng-show="questions[selectedQs].map" class="row row-no-padding" ng-controller="GeoController">
                 <div class="col-sm-2">
                 <div class="map-sidebar">
-                    <h4>Elementos</h4>
+                    <h4>{{'elements' | lang}}</h4>
                     <div class="list-group">
                         <a ng-repeat="overlay in mOverlays" class="list-group-item" ng-click="selectOverlay(overlay.id)"
                             ng-class="{'active': overlay.id==selectedOverlay.id}">
@@ -70,7 +73,7 @@
                            ng-class="{'active': overlay.id==selectedOverlay.id}">
                             {{overlay.name}}
                         </a>
-                        <span ng-show="mOverlays.length == 0 && sOverlays.length == 0">Mapa sin elementos</span>
+                        <span ng-show="mOverlays.length == 0 && sOverlays.length == 0">{{'mapWoElements' | lang}}</span>
                     </div>
                 </div>
                 </div>
@@ -121,8 +124,8 @@
                         <div ng-non-bindable>
                             <input class="form-control" type="text" ng-model="newOverlay.name" placeholder="Nombre">
                             <textarea class="form-control" ng-model="newOverlay.description" placeholder="Descripción"></textarea>
-                            <button class="btn btn-primary btn-sm" ng-click="sendOverlay()">Enviar</button>
-                            <button class="btn btn-danger btn-sm" ng-click="closeOverlay()">Cancelar</button>
+                            <button class="btn btn-primary btn-sm" ng-click="sendOverlay()">{{'save' | lang}}</button>
+                            <button class="btn btn-danger btn-sm" ng-click="closeOverlay()">{{'cancel' | lang}}</button>
                         </div>
                     </info-window>
 
@@ -131,7 +134,7 @@
             </div>
 
             <div ng-repeat="qs in questions" ng-show="selectedQs == $index">
-                <strong ng-show="qs.text_content != null">Texto:</strong>
+                <strong ng-show="qs.text_content != null">{{'text' | lang}}:</strong>
                 <p class="question-block" ng-bind-html="qs.text_content | trustHtml"></p>
                 <br ng-show="qs.text_content != null">
                 <h4>{{$index + 1}}. </h4>
@@ -144,7 +147,7 @@
                         <span class="mini" ng-bind="qs.options[$index]"></span>
                     </div>
                 </div>
-                <label>Comentario / Justificación:</label>
+                <label>{{'comment' | lang}}:</label>
                 <div class="input-group">
                     <input type="text" class="form-control" ng-model="comments[qs.id]" ng-change="qs.dirty = true" ng-disabled="finished">
                     <span class="input-group-btn">
@@ -154,7 +157,7 @@
                     </span>
                 </div>
                 <div ng-show="useConfidence">
-                    <label>Grado de certeza en la respuesta:</label>
+                    <label>{{'confidenceLevel' | lang}}:</label>
                     <div class="btn-group simple-margin-left" ng-disabled="finished">
                         <label class="btn btn-default" ng-repeat="conf in optConfidence" ng-class="{active: confidences[qs.id] == conf}" ng-disabled="finished">
                             <input ng-disabled="finished" type="radio" name="confidence" ng-model="confidences[qs.id]" ng-value="conf"> {{conf}}%
@@ -164,26 +167,26 @@
                 <br>
                 <table class="table table-condensed table-bordered" ng-show="iteration > 1">
                     <tr>
-                        <th class="col-sm-2">Alumno</th>
+                        <th class="col-sm-2">{{'student' | lang}}</th>
                         <th class="col-sm-5">Original</th>
-                        <th class="col-sm-5" ng-show="iteration > 2">Reelaboración Anonima</th>
+                        <th class="col-sm-5" ng-show="iteration > 2">{{'anon' | lang}}</th>
                     </tr>
                     <tr ng-repeat="uid in teamUids">
                         <td>
-                            <span ng-show="uid != myUid && team[uid] == null">Anónimo {{uid}}</span>
+                            <span ng-show="uid != myUid && team[uid] == null">{{'anon' | lang}} {{uid}}</span>
                             <span ng-show="uid != myUid && team[uid] != null" ng-bind="team[uid]"></span>
-                            <span ng-hide="uid != myUid">Mi respuesta</span>
+                            <span ng-hide="uid != myUid">{{'myAnswer' | lang}}</span>
                         </td>
                         <td>
-                            <strong>Alternativa {{optLabels[ansIter1[qs.id][uid].answer]}}</strong>
+                            <strong>{{'option' | lang}} {{optLabels[ansIter1[qs.id][uid].answer]}}</strong>
                             <br>
-                            <strong>Comentario:</strong>
+                            <strong>{{'comment' | lang}}:</strong>
                             <span ng-bind="ansIter1[qs.id][uid].comment"></span>
                         </td>
                         <td ng-show="iteration > 2">
-                            <strong>Alternativa {{optLabels[ansIter2[qs.id][uid].answer]}}</strong>
+                            <strong>{{'option' | lang}} {{optLabels[ansIter2[qs.id][uid].answer]}}</strong>
                             <br>
-                            <strong>Comentario:</strong>
+                            <strong>{{'comment' | lang}}:</strong>
                             <span ng-bind="ansIter2[qs.id][uid].comment"></span>
                         </td>
                     </tr>
@@ -191,9 +194,9 @@
                 <hr>
                 <br>
                 <div ng-if="iteration >= 4">
-                    <strong>Alternativa Correcta: {{optLabels[anskey[qs.id].answer]}}</strong>
+                    <strong>{{'correctOption' | lang}}: {{optLabels[anskey[qs.id].answer]}}</strong>
                     <br>
-                    <strong>Comentario: </strong><span ng-bind="anskey[qs.id].comment"></span>
+                    <strong>{{'comment' | lang}}: </strong><span ng-bind="anskey[qs.id].comment"></span>
                     <br>
                     <br>
                     <hr>
