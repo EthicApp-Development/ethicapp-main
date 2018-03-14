@@ -52,6 +52,22 @@
             {{'langName' | lang}}
         </span>
 
+        <div class="top-bar-second" ng-show="selectedId != -1">
+            <span ng-repeat="st in sesStatusses">
+                <span ng-if="selectedSes.type != 'M'" class="label label-default bg-black-alpha" ng-class="{'bg-green': $index==selectedSes.status-1}">
+                    {{st | lang}}
+                </span>
+                <span ng-if="selectedSes.type == 'M'" class="label label-default bg-black-alpha" ng-class="{'bg-green': st.i == selectedSes.status-2}">
+                    {{st.name | lang}}
+                </span>
+                <span ng-hide="$last">→</span>
+            </span>
+            <span class="simple-margin-left">
+                <timer start-time="selectedSes.stime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
+            </span>
+            <button class="btn btn-xs btn-default simple-margin-left" ng-click="shared.changeState()">{{'gotoNext' | lang}}</button>
+        </div>
+
         <!--<div class="col-sm-1">
             <button class="btn btn-default" ng-click="toggleSidebar()">
                 <i class="fa fa-bars"></i>
@@ -86,7 +102,7 @@
         </div>
 
         <!-- SES INFO -->
-        <div ng-show="selectedTab == 'configuration'" ng-controller="SesEditorController">
+        <!--<div ng-show="selectedTab == 'configuration'" ng-controller="SesEditorController">
             <h3>{{selectedSes.name}}</h3>
             <h4>{{'workflow' | lang}}:</h4>
             <div class="center-block font-large">
@@ -120,7 +136,7 @@
                 <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" ng-model="splDes1" placeholder="Selección de unidades">
                 <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" ng-model="splDes2" placeholder="Reporte">
             </div>
-            <!-- <button class="btn btn-xs btn-default" ng-click="openDuplicateSes()" ng-disabled="selectedSes.type != 'S' && selectedSes.type != 'M'">{{'duplicateSes' | lang}}</button> -->
+            <!-- <button class="btn btn-xs btn-default" ng-click="openDuplicateSes()" ng-disabled="selectedSes.type != 'S' && selectedSes.type != 'M'">{{'duplicateSes' | lang}}</button> --
             <a class="btn btn-xs btn-default" href="export-session-data-sel?id={{selectedSes.id}}" ng-if="selectedSes.type == 'S' && selectedSes.status == 5">{{'exportSesData' | lang}}</a>
             <br>
             <button class="btn btn-default pull-right" ng-click="updateSession()" ng-disabled="selectedSes.status!=1">
@@ -131,7 +147,7 @@
             <hr>
             <hr>
             <br>
-            <!-- OPTIONS -->
+            <!-- OPTIONS --
             <div ng-controller="OptionsController" ng-show="selectedSes.type == 'S'">
                 <h4>{{'optionsConfig' | lang}}</h4>
                 <div class="row sliders" ng-class="{'bg-gray': selectedSes.status!=1}">
@@ -152,10 +168,58 @@
                 <br>
                 <button class="btn btn-default pull-right" ng-click="saveConfs()" ng-disabled="selectedSes.status!=1">{{'saveChanges' | lang}}</button>
             </div>
-        </div>
+        </div>-->
 
         <!-- CONFIGURACION -->
         <div class="pad-content" ng-show="selectedTab == 'editor'">
+            <div ng-controller="SesEditorController" class="simple-padding-top">
+                <label>{{'title' | lang}}:</label>
+                <input type="text" class="form-control" ng-model="selectedSes.name" ng-disabled="selectedSes.status!=1">
+                <br>
+                <button class="btn btn-default btn-sm pull-right" ng-class="{'active': splitDescr}" ng-click="toggleSplit()" ng-show="selectedSes.type == 'M'" ng-disabled="selectedSes.status!=1">Dividir Factor Detonante</button>
+                <label ng-if="selectedSes.type != 'S'">{{'detFactor' | lang}}:</label>
+                <label ng-if="selectedSes.type == 'S'">{{'generalInst' | lang}}:</label>
+                <textarea class="form-control" ng-model="selectedSes.descr" ng-disabled="selectedSes.status!=1" ng-show="!splitDescr"></textarea>
+                <div ng-show="splitDescr">
+                    <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" ng-model="splDes1" placeholder="Selección de unidades">
+                    <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" ng-model="splDes2" placeholder="Reporte">
+                </div>
+                <!-- <button class="btn btn-xs btn-default" ng-click="openDuplicateSes()" ng-disabled="selectedSes.type != 'S' && selectedSes.type != 'M'">{{'duplicateSes' | lang}}</button> -->
+                <a class="btn btn-xs btn-default" href="export-session-data-sel?id={{selectedSes.id}}" ng-if="selectedSes.type == 'S' && selectedSes.status == 5">{{'exportSesData' | lang}}</a>
+                <br>
+                <button class="btn btn-default pull-right" ng-click="updateSession()" ng-disabled="selectedSes.status!=1">
+                    {{'saveChanges' | lang}}
+                </button>
+                <br>
+                <br>
+                <hr>
+                <hr>
+                <br>
+                <!-- OPTIONS -->
+                <div ng-controller="OptionsController" ng-show="selectedSes.type == 'S'">
+                    <h4>{{'optionsConfig' | lang}}</h4>
+                    <div class="row sliders" ng-class="{'bg-gray': selectedSes.status!=1}">
+                        <div ng-repeat="opt in options">
+                            <div class="col-sm-6 col-sm-offset-2"><span class="slider-label">{{opt.name | lang}}</span></div>
+                            <div class="col-sm-4">
+                                <div class="onoffswitch">
+                                    <input type="checkbox" id="sl{{$index}}" class="onoffswitch-checkbox" ng-model="conf[opt.code]" ng-disabled="selectedSes.status!=1">
+                                    <label class="onoffswitch-label" for="sl{{$index}}">
+                                        <span class="onoffswitch-inner"></span>
+                                        <span class="onoffswitch-switch"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <br>
+                    <br>
+                    <button class="btn btn-default pull-right" ng-click="saveConfs()" ng-disabled="selectedSes.status!=1">{{'saveChanges' | lang}}</button>
+                    <br>
+                    <hr>
+                    <hr>
+                </div>
+            </div>
             <!--<div ng-show="selectedTabConfig == -1">-->
             <div ng-show="selectedSes.type == 'M'" ng-controller="SemDocController">
                 <h4>{{'documents' | lang}}</h4>

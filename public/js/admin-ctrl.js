@@ -268,7 +268,7 @@ adpp.controller("TabsController", function ($scope, $http) {
             self.iterationNames = [{name: "reading", val: 0}, {name: "individual", val: 1},
                 {name: "anon", val: 2}, {name: "teamWork", val: 3}, {name: "report", val: 4},
                 {name: "rubricCalib", val: 5}, {name: "pairEval", val: 6}];
-            self.tabOptions = ["configuration", "editor", "users", "groups", "rubrica", "dashboard"];
+            self.tabOptions = ["editor", "users", "groups", "rubrica", "dashboard"];
             self.sesStatusses = ["configuration", "reading", "individual", "anon", "teamWork", "report", "rubricCalib", "pairEval", "finished"];
             self.shared.getRubrica();
             self.shared.getExampleReports();
@@ -277,12 +277,12 @@ adpp.controller("TabsController", function ($scope, $http) {
         else if(self.selectedSes.type == "S"){
             self.iterationNames = [{name: "individual", val: 1}, {name: "anon", val: 2},
                 {name: "teamWork", val: 3}];
-            self.tabOptions = ["configuration", "editor", "users", "groups", "dashboard"];
+            self.tabOptions = ["editor", "users", "groups", "dashboard"];
             self.sesStatusses = ["configuration", "individual", "anon", "teamWork", "finished"];
         }
         else if(self.selectedSes.type == "M"){
             self.iterationNames = [{name: "individual", val: 1}, {name: "teamWork", val: 3}, {name: "report", val:4}, {name: "pairEval", val: 6}];
-            self.tabOptions = ["configuration", "editor", "users", "groups", "rubrica", "dashboard"];
+            self.tabOptions = ["editor", "users", "groups", "rubrica", "dashboard"];
             self.sesStatusses = [{i:-1, name: "configuration"}, {i: 1, name: "individual"}, {i: 3, name: "teamWork"}, {i: 4, name: "report"},
                 {i: 6, name: "pairEval"}, {i: 7, name: "finished"}];
             self.shared.getRubrica();
@@ -408,6 +408,12 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
                 });
             }
             else {
+                if(self.selectedSes.status == 1){
+                    self.updateSession();
+                    if(self.selectedSes.type == "S"){
+                        self.shared.saveConfs();
+                    }
+                }
                 let postdata = {sesid: self.selectedSes.id};
                 $http({url: "change-state-session", method: "post", data: postdata}).success((data) => {
                     self.shared.updateSesData();
@@ -1603,6 +1609,8 @@ adpp.controller("OptionsController", function ($scope, $http, Notification) {
             }
         });
     };
+
+    self.shared.saveConfs = self.saveConfs;
 
     self.shared.updateConf = () => {
         if(self.selectedSes.conf == null) {
