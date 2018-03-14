@@ -175,7 +175,7 @@ router.post("/update-question-text", rpg.execSQL({
 
 router.post("/delete-question-text", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "delete from question_texts where id = $1",
+    sql: "delete from question_text where id = $1",
     sesReqData: ["uid"],
     postReqData: ["id"],
     sqlParams: [rpg.param("post", "id")],
