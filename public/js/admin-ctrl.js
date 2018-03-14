@@ -253,7 +253,7 @@ adpp.controller("TabsController", function ($scope, $http) {
     self.selectedTab = '';
 
     self.shared.resetTab = () => {
-        self.selectedTab = "configuration";
+        self.selectedTab = "editor";
         if (self.selectedSes != null && self.selectedSes.status > 1) {
             self.selectedTab = "dashboard";
         }
@@ -1362,9 +1362,9 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
     self.lastJ = -1;
 
     self.shared.verifyGroups = () => {
-        self.methods = [self.flang("random"),
-            self.flang("performance") + " " + self.flang("homog"), self.flang("performance") + " " + self.flang("heterg"),
-            self.flang("knowledgeType") + " " + self.flang("homog"), self.flang("knowledgeType") + " " + self.flang("heterg")];
+        self.methods = [klg("random"),
+            klg("performance", "homog"), klg("performance", "heterg"),
+            klg("knowledgeType", "homog"), klg("knowledgeType", "heterg")];
         self.groupNum = 3;
         self.groupMet = self.methods[0];
         self.groups = [];
@@ -1373,6 +1373,13 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
             self.groupNum = null;
             self.groupMet = null;
             self.generateGroups(true);
+        }
+    };
+
+    let klg = (k1, k2) => {
+        return {
+            key: k1 + (k2 == null ? "" : " " + k2),
+            name: self.flang(k1) + (k2 == null ? "" : " " + self.flang(k2)),
         }
     };
 
@@ -1397,21 +1404,23 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
             method: self.groupMet
         };
 
+        console.log(postdata);
+
         console.log(self.shared.alumState);
         let users = Object.values(self.users).filter(e => e.role == "A");
         console.log(users);
 
-        if (self.groupMet == "Tipo Aprendizaje Homogeneo" || self.groupMet == "Tipo Aprendizaje Heterogeoneo") {
+        if (self.groupMet == "knowledgeType homog" || self.groupMet == "knowledgeType heterg") {
             self.groups = generateTeams(users, habMetric, self.groupNum, isDifferent(self.groupMet));
         }
-        else if (self.groupMet == "Aleatorio") {
+        else if (self.groupMet == "random") {
             let arr = users.map(e => {
                 e.rnd = Math.random();
                 return e;
             });
             self.groups = generateTeams(arr, s => s.rnd, self.groupNum, false);
         }
-        else if (self.selectedSes.type == "S") {
+        else if (self.selectedSes.type == "S" || self.selectedSes.type == "M") {
             let arr = [];
             for(let uid in self.shared.alumState){
                 let s = 0;
@@ -1422,7 +1431,7 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
             }
             self.groups = generateTeams(arr, s => s.score, self.groupNum, isDifferent(self.groupMet));
         }
-        else if (self.selectedSes.type == "L" || self.selectedSes.type == "M") {
+        else if (self.selectedSes.type == "L") {
             self.groups = generateTeams(self.shared.alumState, s => s.score, self.groupNum, isDifferent(self.groupMet));
         }
 
@@ -1921,6 +1930,7 @@ adpp.filter('lang', function(){
 
 let generateTeams = (alumArr, scFun, n, different) => {
     if(n == null || n == 0) return [];
+    console.log(alumArr);
     let arr = alumArr;
     arr.sort((a, b) => scFun(b) - scFun(a));
     let groups = [];
@@ -1954,13 +1964,13 @@ let generateTeams = (alumArr, scFun, n, different) => {
 
 let isDifferent = (type) => {
     switch (type){
-        case "Rendimiento Homogeneo":
+        case "performance homog":
             return false;
-        case "Rendimiento Heterogeneo":
+        case "performance heterg":
             return true;
-        case "Tipo Aprendizaje Homogeneo":
+        case "knowledgeType homog":
             return false;
-        case "Tipo Aprendizaje Heterogeoneo":
+        case "knowledgeType heterg":
             return true;
     }
     return false;

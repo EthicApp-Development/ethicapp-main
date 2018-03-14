@@ -62,7 +62,7 @@
                 </span>
                 <span ng-hide="$last">→</span>
             </span>
-            <span class="simple-margin-left">
+            <span class="simple-margin-left" ng-show="selectedSes != null && selectedSes.stime != null">
                 <timer start-time="selectedSes.stime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
             </span>
             <button class="btn btn-xs btn-default simple-margin-left" ng-click="shared.changeState()">{{'gotoNext' | lang}}</button>
@@ -503,8 +503,8 @@
                 <!--<p>Las propuestas de grupo intentan agrupar alumnos con distintos tipos de puntaje</p>-->
                 <br>
                 <label>{{'studentsPerGroup' | lang}}: </label>
-                <input class="form-control form-inline-mini" ng-model="groupNum" type="number" ng-disabled="selectedSes.grouped">
-                <select class="form-control form-inline-med" ng-options="x for x in methods" ng-disabled="selectedSes.grouped" ng-model="groupMet"></select>
+                <input class="form-control form-inline-mini" ng-model="groupNum" type="number" min="2" ng-disabled="selectedSes.grouped">
+                <select class="form-control form-inline-med" ng-options="x.key as x.name for x in methods" ng-disabled="selectedSes.grouped" ng-model="groupMet"></select>
                 <button class="btn btn-default" ng-click="generateGroups()" ng-disabled="selectedSes.grouped">Generar</button>
                 <span ng-show="selectedSes.grouped"> - {{'groupsAreSet' | lang}}</span>
                 <button class="btn btn-default pull-right" ng-click="acceptGroups()" ng-disabled="selectedSes.grouped">{{'setGroups' | lang}}</button>
