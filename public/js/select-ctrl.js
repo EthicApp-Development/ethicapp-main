@@ -71,6 +71,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             self.sesDescr = data.descr;
             self.useConfidence = (data.options != null && data.options.includes("C"));
             self.useHints = (data.options != null && data.options.includes("H"));
+            self.useComments = (data.options != null && data.options.includes("J"));
             let set = new Set();
             if (self.iteration > 1) {
                 $http({url: "get-team-selection", method: "post", data: {iteration: 1}}).success((data) => {
@@ -246,7 +247,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             Notification.error("Debe seleccionar una alternativa");
             return;
         }
-        if (self.comments[qs.id] == null || self.comments[qs.id] == "") {
+        if (self.useComments && (self.comments[qs.id] == null || self.comments[qs.id] == "")) {
             Notification.error("Debe agregar un comentario");
             return;
         }

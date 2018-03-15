@@ -1615,6 +1615,8 @@ adpp.controller("OptionsController", function ($scope, $http, Notification) {
             if(data.status == "ok") {
                 Notification.success("Opciones actualizadas");
                 self.selectedSes.options = postdata.options;
+                self.selectedSes.conf = null;
+                self.shared.updateConf();
             }
         });
     };
@@ -1628,6 +1630,7 @@ adpp.controller("OptionsController", function ($scope, $http, Notification) {
             for (let i = 0; i < op.length; i++) {
                 self.selectedSes.conf[op[i]] = true;
             }
+            console.log(self.selectedSes);
         }
         return true;
     };

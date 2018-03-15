@@ -49,7 +49,7 @@
         </a>
 
         <span class="chip hoverable pull-right" ng-click="changeLang()">
-            {{'langName' | lang}}
+            {{'langOther' | lang}}
         </span>
 
         <div class="top-bar-second" ng-show="selectedId != -1">
@@ -203,7 +203,7 @@
                             <div class="col-sm-6 col-sm-offset-2"><span class="slider-label">{{opt.name | lang}}</span></div>
                             <div class="col-sm-4">
                                 <div class="onoffswitch">
-                                    <input type="checkbox" id="sl{{$index}}" class="onoffswitch-checkbox" ng-model="conf[opt.code]" ng-disabled="selectedSes.status!=1">
+                                    <input type="checkbox" id="sl{{$index}}" class="onoffswitch-checkbox" ng-model="selectedSes.conf[opt.code]" ng-disabled="selectedSes.status!=1">
                                     <label class="onoffswitch-label" for="sl{{$index}}">
                                         <span class="onoffswitch-inner"></span>
                                         <span class="onoffswitch-switch"></span>

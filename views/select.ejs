@@ -149,7 +149,7 @@
                 </div>
                 <label>{{'comment' | lang}}:</label>
                 <div class="input-group">
-                    <input type="text" class="form-control" ng-model="comments[qs.id]" ng-change="qs.dirty = true" ng-disabled="finished">
+                    <input type="text" class="form-control" ng-model="comments[qs.id]" ng-change="qs.dirty = true" ng-disabled="finished || !useComments">
                     <span class="input-group-btn">
                         <button class="btn btn-default" ng-disabled="finished" ng-click="sendAnswer(qs)" ng-class="{'btn-success': sent[qs.id], 'btn-warning': qs.dirty}">
                             <i class="fa fa-send"></i>

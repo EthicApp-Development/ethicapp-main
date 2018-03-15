@@ -90,6 +90,7 @@
   "delete": "Delete",
   "selectSes": "Select a session to start",
   "langName": "English",
+  "langOther": "Español",
   "workflow": "Workflow",
   "invitationCode": "Invitation code",
   "invitationCodeNotActived": "Invitation code is not actived in this session",

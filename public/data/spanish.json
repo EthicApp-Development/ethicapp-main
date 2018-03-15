@@ -91,6 +91,7 @@
   "delete": "Eliminar",
   "selectSes": "Seleccione una sesión",
   "langName": "Español",
+  "langOther": "English",
   "workflow": "Workflow",
   "invitationCode": "Código de Invitación",
   "invitationCodeNotActived": "El código de invitación no está activo en esta sesión",
