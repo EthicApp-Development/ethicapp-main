@@ -201,7 +201,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                     self.bottomMsg = "Comentario: " + data.msg;
                     self.questions[self.selectedQs].hinted = true;
                 }
-                else if (self.questions[self.selectedQs].hinted) {
+                else if (self.questions[self.selectedQs].hinted || !self.useHints) {
                     self.sendTeamProgress(self.selectedQs + 1);
                     self.bottomMsg = "";
                 }
