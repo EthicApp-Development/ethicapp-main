@@ -1772,6 +1772,7 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
     };
 
     self.shared.processMapData = (data, qid) => {
+        self.shared.closePrevMapData();
         let comps = data.split(" ");
         console.log(comps);
         self.map.setCenter(new google.maps.LatLng(+comps[1], +comps[2]));
