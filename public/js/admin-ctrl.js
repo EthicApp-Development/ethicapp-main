@@ -1780,6 +1780,7 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
         self.edit = comps[4] == "EDIT" || comps[5] == "EDIT";
         getPrevOverlays(qid);
         google.maps.event.trigger(self.map, "resize");
+        self.misc.mapHasVisData = false;
     };
 
     self.shared.closePrevMapData = () => {
@@ -1892,7 +1893,8 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
                 console.log("OK");
             });
         });
-        //self.shared.clearOverlayBuffer();
+        self.shared.closePrevMapData();
+
     };
 
     self.clickOverlay = function(event){
