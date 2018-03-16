@@ -1777,8 +1777,8 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
         console.log(comps);
         self.map.setCenter(new google.maps.LatLng(+comps[1], +comps[2]));
         self.map.setZoom(+comps[3]);
-        self.nav = comps[4] == "NAV";
-        self.edit = comps[4] == "EDIT" || comps[5] == "EDIT";
+        self.misc.mapNav = comps[4] == "NAV";
+        self.misc.mapEdit = comps[4] == "EDIT" || comps[5] == "EDIT";
         getPrevOverlays(qid);
         google.maps.event.trigger(self.map, "resize");
         self.misc.mapHasVisData = false;
@@ -1927,8 +1927,8 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
 
     self.shared.getPluginMapOptions = () => {
         return {
-            nav: self.nav,
-            edit: self.edit
+            nav: self.misc.mapNav,
+            edit: self.misc.mapEdit
         };
     };
 
