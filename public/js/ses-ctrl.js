@@ -32,7 +32,7 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", function ($s
     };
 
     self.enterCode = () => {
-        let postdata = {code: self.invCode};
+        let postdata = {code: self.invCode.toLowerCase()};
         $http.post("enter-session-code", postdata).success((data) => {
             if(data.status == "ok"){
                 window.location.replace(data.redirect);

@@ -28,7 +28,7 @@
     <div class="row top-bar-mini">
         <div class="text-center">
             <span ng-repeat="st in sesStatusses">
-                <span class="label label-primary" ng-class="{'bg-black-alpha': $index==iteration-1}" ng-bind="st"></span>
+                <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': $index==iteration-1}">{{st | lang}}</span>
                 <span ng-hide="$last">→</span>
             </span>
             <span class="pull-right margin-right-24" ng-show="sesSTime != null">
@@ -37,7 +37,7 @@
         </div>
     </div>
 
-    <div class="row top-bar">
+    <div class="row top-bar top-bar-student">
         <div class="col-sm-6 full-height simple-padding-top">
             <strong class="simple-margin-left">{{sesName | limitTo:18}}</strong>
             <div class="quad" ng-repeat="qs in questions" ng-class="{'green': sent[qs.id], 'yellow': qs.dirty}">{{$index + 1}}</div>
@@ -51,13 +51,20 @@
     max-width: 340px;
 "></span>
             <span class="chip hoverable pull-right" ng-click="changeLang()">
-                {{'langName' | lang}}
+                {{'langOther' | lang}}
             </span>
         </div>
     </div>
 
     <div class="scrollable-container">
         <div class="mid-container" ng-show="iteration > 0">
+
+            <!-- TEXT AREA -->
+            <div ng-show="questions[selectedQs].text_content != null">
+                <strong>{{'text' | lang}}:</strong>
+                <p class="question-block" ng-bind-html="questions[selectedQs].text_content | trustHtml"></p>
+                <br>
+            </div>
 
             <!-- MAP AREA -->
             <div ng-show="questions[selectedQs].map" class="row row-no-padding" ng-controller="GeoController">
@@ -134,9 +141,6 @@
             </div>
 
             <div ng-repeat="qs in questions" ng-show="selectedQs == $index">
-                <strong ng-show="qs.text_content != null">{{'text' | lang}}:</strong>
-                <p class="question-block" ng-bind-html="qs.text_content | trustHtml"></p>
-                <br ng-show="qs.text_content != null">
                 <h4>{{$index + 1}}. </h4>
                 <div ng-bind-html="qs.content | trustHtml" class="question-content"></div>
 

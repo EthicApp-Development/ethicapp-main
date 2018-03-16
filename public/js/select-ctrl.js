@@ -31,7 +31,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
     self.ansIter1 = {};
     self.ansIter2 = {};
 
-    self.sesStatusses = ["Individual", "Anónimo", "Grupal", "Finalizada"];
+    self.sesStatusses = ["individual", "anon", "teamWork", "finished"];
 
     self.lang = "spanish";
 

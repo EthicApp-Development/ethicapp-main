@@ -579,7 +579,8 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
                     textid: null,
                     answer: -1
                 };
-                self.shared.sendOverlayBuffer(data.id);
+                if(self.shared.sendOverlayBuffer)
+                    self.shared.sendOverlayBuffer(data.id);
             }
         });
     };
@@ -620,8 +621,8 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
                     textid: null,
                     answer: -1
                 };
-                if(self.shared.clearOverlayBuffer)
-                    self.shared.clearOverlayBuffer();
+                if(self.shared.sendOverlayBuffer)
+                    self.shared.sendOverlayBuffer(postdata.id);
             }
         });
     };
@@ -703,6 +704,20 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
         self.newQuestion.includesMap = !self.newQuestion.includesMap;
         if(self.newQuestion.includesMap){
             futureRefreshMap();
+        }
+    };
+
+    self.expandQuestion = (qs) => {
+        if(qs.expanded){
+            qs.expanded = false;
+            self.shared.closePrevMapData();
+        }
+        else{
+            self.questions.forEach(qs => qs.expanded = false);
+            qs.expanded = true;
+            if(qs.plugin_data && qs.plugin_data.startsWith("MAP")) {
+                self.shared.processPrevMapData(qs.plugin_data, qs.id);
+            }
         }
     };
 
@@ -1702,6 +1717,7 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
             self.map.streetView.setOptions({addressControlOptions: {position: google.maps.ControlPosition.TOP_CENTER}});
             self.map.infoWindows.iw.close();
         });
+        self.misc.mapHasVisData = false;
     };
 
     let toOverlay = (data) => {
@@ -1748,6 +1764,13 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
         }
     };
 
+    self.shared.processPrevMapData = (data, qid) => {
+        self.shared.closePrevMapData();
+        self.shared.processMapData(data, qid);
+        self.misc.mapHasVisData = true;
+        console.log(self.misc);
+    };
+
     self.shared.processMapData = (data, qid) => {
         let comps = data.split(" ");
         console.log(comps);
@@ -1757,6 +1780,11 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
         self.edit = comps[4] == "EDIT" || comps[5] == "EDIT";
         getPrevOverlays(qid);
         google.maps.event.trigger(self.map, "resize");
+    };
+
+    self.shared.closePrevMapData = () => {
+        self.shared.clearOverlayBuffer();
+        self.misc.mapHasVisData = false;
     };
 
     let getPrevOverlays = (qid) => {
@@ -1864,6 +1892,7 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
                 console.log("OK");
             });
         });
+        //self.shared.clearOverlayBuffer();
     };
 
     self.clickOverlay = function(event){
@@ -1913,6 +1942,12 @@ adpp.filter('htmlExtractText', function() {
         return  text ? String(text).replace(/<[^>]+>/gm, '') : '';
     };
 });
+
+adpp.filter("trustHtml", ["$sce", function($sce){
+    return function(html){
+        return $sce.trustAsHtml(html)
+    };
+}]);
 
 adpp.filter('lang', function(){
     filt.$stateful = true;

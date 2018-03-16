@@ -96,6 +96,10 @@ a:hover{
     overflow: hidden;
 }
 
+.top-bar.top-bar-student{
+    height: 36px;
+}
+
 .top-bar-mini{
     /*height: 24px;*/
     background: #6c859b;
@@ -546,7 +550,7 @@ p{
 ng-quill-editor {
     display: block;
     height: 100px;
-    margin-bottom: 44px;
+    margin-bottom: 24px;
 }
 
 ng-quill-editor.large{
@@ -709,4 +713,8 @@ ng-quill-editor.large .ql-editor{
     height: 20px;
     margin-top: -4px;
     text-align: center;
+}
+
+.bg-yellow{
+    background: #dab347;
 }

@@ -376,10 +376,23 @@ router.post("/duplicate-session", (req, res) => {
                  if(req.body.copyQuestions){
                      rpg.execSQL({
                          dbcon: pass.dbcon,
-                         sql: "insert into questions(sesid,content,options,answer,comment,other,textid) select " + sesid +
-                         " as sesid, content,options,answer,comment,other,textid from questions where sesid = " + oldsesid,
+                         sql: "insert into questions(sesid,content,options,answer,comment,other,textid,plugin_data,cpid) select " + sesid +
+                            " as sesid, content,options,answer,comment,other,textid,plugin_data,id as cpid" +
+                            " from questions where sesid = " + oldsesid + " order by id asc",
                          preventResEnd: true,
-                         onEnd: () => {}
+                         onEnd: () => {
+                             if(req.body.tipo == "S"){
+                                 rpg.execSQL({
+                                     dbcon: pass.dbcon,
+                                     sql: "insert into overlays (uid, qid, type, iteration, geom, name, description) " +
+                                     "select o.uid, q.id as qid, o.type, 0 as iteration, o.geom, o.name, o.description " +
+                                     "from overlays as o inner join questions as q on o.qid = q.cpid " +
+                                     "where q.sesid = " + sesid + " and o.iteration = 0",
+                                     preventResEnd: true,
+                                     onEnd: () => {}
+                                 })(req,res);
+                             }
+                         }
                      })(req,res);
                      rpg.execSQL({
                          dbcon: pass.dbcon,
