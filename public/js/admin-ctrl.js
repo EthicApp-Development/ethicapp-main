@@ -393,6 +393,12 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
             Notification.error("Los grupos no han sido generados");
             return;
         }
+        if (self.selectedSes.type == "L" && self.selectedSes.status >= 6 && self.shared.isRubricaSet && !self.shared.isRubricaSet()
+            || self.selectedSes.type == "M" && self.selectedSes.status >= 5 && self.shared.isRubricaSet && !self.shared.isRubricaSet()) {
+            self.shared.gotoRubrica();
+            Notification.error("La rúbrica no ha sido asignada");
+            return;
+        }
         if (self.selectedSes.type == "L" && self.selectedSes.status >= 7 && !self.selectedSes.paired
             || self.selectedSes.type == "M" && self.selectedSes.status >= 6 && !self.selectedSes.paired) {
             self.shared.gotoRubrica();
@@ -1375,6 +1381,7 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
     self.methods = [];
     self.lastI = -1;
     self.lastJ = -1;
+    self.groupMet = "random";
 
     self.shared.verifyGroups = () => {
         self.methods = [klg("random"),
@@ -1611,6 +1618,10 @@ adpp.controller("RubricaController", function ($scope, $http) {
 
     self.shared.obtainCriterios = () => {
         return self.criterios;
+    };
+
+    self.shared.isRubricaSet = () => {
+        return !self.editable;
     };
 
 });

@@ -40,7 +40,7 @@
     <div class="row top-bar top-bar-student">
         <div class="col-sm-6 full-height simple-padding-top">
             <strong class="simple-margin-left">{{sesName | limitTo:18}}</strong>
-            <div class="quad" ng-repeat="qs in questions" ng-class="{'green': sent[qs.id], 'yellow': qs.dirty}">{{$index + 1}}</div>
+            <div class="quad" ng-repeat="qs in questions" ng-class="{'yellow': sent[qs.id]}">{{$index + 1}}</div>
         </div>
         <div class="col-sm-6">
             <a href="seslist" class="btn btn-sm btn-default pull-right">{{'logout' | lang}}</a>
@@ -86,8 +86,7 @@
                 </div>
                 <div class="col-sm-10">
                     <input class="gsearch" places-auto-complete on-place-changed="googleSearch()" ng-if="questions[selectedQs].map.edit && iteration <=3">
-                <ng-map class="map-block map-tbl" center="{{questions[selectedQs].map.center}}" zoom="{{questions[selectedQs].map.zoom}}"
-                        draggable="{{questions[selectedQs].map.nav}}">
+                <ng-map class="map-block map-tbl" center="{{questions[selectedQs].map.center}}" zoom="{{questions[selectedQs].map.zoom}}">
                     <!-- DRAW MANAGER -->
                     <drawing-manager
                             ng-if="questions[selectedQs].map.edit && iteration <=3"
@@ -141,8 +140,7 @@
             </div>
 
             <div ng-repeat="qs in questions" ng-show="selectedQs == $index">
-                <h4>{{$index + 1}}. </h4>
-                <div ng-bind-html="qs.content | trustHtml" class="question-content"></div>
+                <span ng-bind-html="($index+1) + '. ' + qs.content | trustHtml" class="question-content"></span>
 
                 <div class="list-group">
                     <div class="" ng-repeat="x in optLabels">

@@ -458,6 +458,7 @@ app.controller("GeoController", ["$scope", "$http", "NgMap", "$socket", function
             google.maps.event.trigger(self.map, "resize");
             self.map.infoWindows.iw.close();
             self.updateOverlayList();
+            self.map.setOptions({draggable: self.questions[self.selectedQs].map.nav});
         }
     };
 
