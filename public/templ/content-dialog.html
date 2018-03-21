@@ -3,7 +3,7 @@
         <h4>{{vm.data.title}}</h4>
     </div>
     <div class="modal-body">
-        <p ng-bind="vm.data.content"></p>
+        <p ng-bind-html="vm.data.content | trustHtml"></p>
         <hr>
         <div class="modal-footer">
             <button class="btn btn-default" type="button" ng-click="vm.cancel()">Cerrar</button>

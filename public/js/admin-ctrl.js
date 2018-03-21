@@ -1299,7 +1299,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     resolve: {
                         data: function () {
                             data.title = self.flang("answerOf") + " " + self.users[uid].name;
-                            data.content = self.flang("question") + ":\n" + qstxt + "\n\n" + self.flang("answer") + ":\n" + alt + "\n\n" + self.flang("comment") + ":\n" + data.comment;
+                            data.content = self.flang("question") + ":\n" + qstxt + "\n\n" + self.flang("answer") + ":\n" + alt + "\n\n" + self.flang("comment") + ":\n" + (data.comment) ? data.comment : "";
                             if (data.confidence) {
                                 data.content += "\n\n" + self.flang("confidenceLevel") + ": " + data.confidence + "%";
                             }
