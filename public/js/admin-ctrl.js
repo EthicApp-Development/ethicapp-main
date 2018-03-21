@@ -1329,7 +1329,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                             data.title = self.flang("answerOf") + " " + self.leaderTeamStr[uid];
                             data.content = self.flang("question") + ":\n" + qstxt + "\n\n" + self.flang("answer") + ":\n" + alt + "\n\n";
                             res.forEach(r => {
-                                data.content += self.flang("comment") + " " + r.uname + ":\n" + r.comment + "\n";
+                                data.content += self.flang("comment") + " " + r.uname + ":\n" + ((r.comment) ? r.comment : "") + "\n";
                                 if (r.confidence) {
                                     data.content += self.flang("confidenceLevel") + ": " + r.confidence + "%\n";
                                 }
