@@ -1281,7 +1281,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
 
     self.showDetailAnswer = (qid, uid, it) => {
         let opts = ["A", "B", "C", "D", "E"];
-        let postdata = {uid: uid, qid: qid, iteration: it, tmid: self.leaderTeamId[uid]};
+        let postdata = {uid: uid, qid: qid, iteration: it};
         let qs = self.questions.reduce((e, v) => (v.id == qid) ? v : e, null);
         if(it < 3) {
             $http({url: "get-selection-comment", method: "post", data: postdata}).success((data) => {
@@ -1310,6 +1310,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             });
         }
         else{
+            postdata.tmid = self.leaderTeamId[uid];
             $http({url: "get-selection-team-comment", method: "post", data: postdata}).success((res) => {
                 if(res == null || res.length == 0){
                     Notification.warning("No hay respuesta registrada para el grupo");
