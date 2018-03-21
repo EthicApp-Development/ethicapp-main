@@ -34,9 +34,17 @@ router.post("/send-criteria",rpg.execSQL({
         rpg.param("post","competente"),rpg.param("post","avanzado"),rpg.param("post","rid")]
 }));
 
+router.post("/delete-criterias", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "delete from criteria where rid = $1",
+    sesReqData: ["uid"],
+    postReqData: ["rid"],
+    sqlParams: [rpg.param("post","rid")]
+}));
+
 router.post("/get-admin-rubrica",rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select c.id, c.name, c.pond, c.inicio, c.proceso, c.competente, c.avanzado from criteria as c, rubricas as r " +
+    sql: "select c.id, c.name, c.pond, c.inicio, c.proceso, c.competente, c.avanzado, c.rid from criteria as c, rubricas as r " +
     "where c.rid = r.id and r.sesid = $1",
     sesReqData: ["uid"],
     postReqData: ["sesid"],

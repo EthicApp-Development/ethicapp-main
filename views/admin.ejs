@@ -561,33 +561,34 @@
                         <th>{{'inProcess' | lang}} (2p)</th>
                         <th>{{'toAccomplish' | lang}} (3p)</th>
                         <th>{{'accomplished' | lang}} (4p)</th>
-                        <th></th>
+                        <th ng-if="editable"></th>
                     </tr>
-                    <tr ng-repeat="criterio in criterios">
+                    <tr ng-repeat="criterio in criterios" ng-if="!editable">
                         <td ng-bind="criterio.name"></td>
                         <td ng-bind="criterio.pond"></td>
                         <td ng-bind="criterio.inicio"></td>
                         <td ng-bind="criterio.proceso"></td>
                         <td ng-bind="criterio.competente"></td>
                         <td ng-bind="criterio.avanzado"></td>
-                        <td><button class="btn btn-default btn-sm" ng-if="editable" ng-click="removeCriterio($index)"><i class="fa fa-times"></i></button></td>
                     </tr>
-                    <tr ng-hide="checkSum() || !editable">
-                        <td><input ng-model="newCriterio.name" class="w150"></td>
-                        <td><input ng-model="newCriterio.pond" class="w50" type="number"></td>
-                        <td><input ng-model="newCriterio.inicio" class="w150"></td>
-                        <td><input ng-model="newCriterio.proceso" class="w150"></td>
-                        <td><input ng-model="newCriterio.competente" class="w150"></td>
-                        <td><input ng-model="newCriterio.avanzado" class="w150"></td>
-                        <td><button class="btn btn-default btn-sm" ng-click="addCriterio()"><i class="fa fa-plus"></i></button></td>
+                    <tr ng-repeat="criterio in criterios" ng-if="editable">
+                        <td><input ng-model="criterio.name" class="w150"></td>
+                        <td><input ng-model="criterio.pond" class="w50" type="number"></td>
+                        <td><input ng-model="criterio.inicio" class="w150"></td>
+                        <td><input ng-model="criterio.proceso" class="w150"></td>
+                        <td><input ng-model="criterio.competente" class="w150"></td>
+                        <td><input ng-model="criterio.avanzado" class="w150"></td>
+                        <td><button class="btn btn-default btn-sm" ng-if="editable" ng-click="removeCriterio($index)"><i class="fa fa-times"></i></button></td>
                     </tr>
                 </table>
                 <div class="row">
-                    <div class="col-sm-3 col-sm-offset-7">
+                    <div class="col-sm-3 col-sm-offset-6">
                         <span ng-show="!checkSum()" class="red">{{'sumOfCritnot100p' | lang}}</span>
                     </div>
-                    <div class="col-sm-2">
+                    <div class="col-sm-3">
+                        <button class="btn btn-default" ng-if="editable" ng-click="addCriterio()" ng-disabled="checkSum()"><i class="fa fa-plus"></i> {{'add' | lang}}</button>
                         <button class="btn btn-default" ng-disabled="!checkSum() || !editable" ng-click="saveRubrica()">{{'save' | lang}}</button>
+                        <button class="btn btn-default" ng-if="!editable && selectedSes.status == 1" ng-click="startEditing()">{{'edit' | lang}}</button>
                     </div>
                 </div>
                 <br><br>

@@ -1559,10 +1559,10 @@ adpp.controller("RubricaController", function ($scope, $http) {
     self.exampleReports = [];
     self.newExampleReport = "";
     self.pairNum = 3;
+    self.rid = -1;
 
     self.addCriterio = () => {
-        self.criterios.push(self.newCriterio);
-        self.newCriterio = {};
+        self.criterios.push({});
     };
 
     self.removeCriterio = (idx) => {
@@ -1584,15 +1584,42 @@ adpp.controller("RubricaController", function ($scope, $http) {
             }
             else {
                 self.criterios = data;
+                self.rid = data[0].rid;
             }
         });
     };
 
+    self.startEditing = () => {
+        self.editable = true;
+    };
+
     self.saveRubrica = () => {
+        if(self.rid != -1){
+            self.saveEditRubrica();
+            return;
+        }
         let postdata = {sesid: self.selectedSes.id};
         $http({url: "send-rubrica", method: "post", data: postdata}).success((data) => {
             if (data.status == "ok") {
                 let rid = data.id;
+                self.criterios.forEach((criterio) => {
+                    let postdata = angular.copy(criterio);
+                    postdata.rid = rid;
+                    $http({url: "send-criteria", method: "post", data: postdata}).success((data) => {
+                        if (data.status == "ok") console.log("Ok");
+                    });
+                });
+                self.editable = false;
+            }
+        });
+    };
+
+    self.saveEditRubrica = () => {
+        if(self.rid == -1) return;
+        let postdata = {rid: self.rid};
+        $http({url: "delete-criterias", method: "post", data: postdata}).success((data) => {
+            if (data.status == "ok") {
+                let rid = self.rid;
                 self.criterios.forEach((criterio) => {
                     let postdata = angular.copy(criterio);
                     postdata.rid = rid;
