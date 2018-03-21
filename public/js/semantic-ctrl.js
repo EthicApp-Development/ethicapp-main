@@ -11,7 +11,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
 
     self.iteration = 0;
     self.sesStatusses = [{i: 1, name: "Individual"}, {i: 3, name: "Grupal"}, {i: 4, name: "Reporte"},
-        {i: 5, name: "Evaluación de Pares"}, {i: 6, name: "Finalizada"}];
+        {i: 6, name: "Evaluación de Pares"}, {i: 7, name: "Finalizada"}];
 
     self.documents = [];
     self.finished = false;
@@ -304,9 +304,15 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
 
     self.startView = (unit) => {
         // console.log("Start viewing: ", unit.id);
-        if(unit.viewing){
-            self.stopView(unit);
-            return;
+        if(self.unitsIter1){
+            self.unitsIter1.forEach(unit => {
+                unit.viewing = false;
+            });
+        }
+        if(self.unitsIter3){
+            self.unitsIter3.forEach(unit => {
+                unit.viewing = false;
+            });
         }
         unit.viewing = true;
         self.views = {};

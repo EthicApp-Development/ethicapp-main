@@ -19,6 +19,13 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", function ($s
             console.log("SOCKET.IO", data);
             self.updateSessions();
         });
+        self.showName();
+    };
+
+    self.showName = () => {
+        $http.post("get-my-name").success((data) => {
+            self.username = data.name;
+        });
     };
 
     self.updateSessions = () => {

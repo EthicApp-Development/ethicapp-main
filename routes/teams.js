@@ -136,8 +136,8 @@ router.post("/take-team-control", rpg.execSQL({
 
 router.post("/get-original-leaders", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select t.original_leader as leader, array_agg(tu.uid) as team from teams as t inner join teamusers as tu on " +
-        "t.id = tu.tmid where t.sesid = $1 group by t.original_leader",
+    sql: "select t.original_leader as leader, array_agg(tu.uid) as team, t.id from teams as t inner join teamusers as tu on " +
+        "t.id = tu.tmid where t.sesid = $1 group by t.original_leader, t.id",
     postReqData: ["sesid"],
     sqlParams: [rpg.param("post", "sesid")]
 }));

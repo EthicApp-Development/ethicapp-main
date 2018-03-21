@@ -174,8 +174,9 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
     self.openReport = (data) => {
         let postdata = {rid: data.rid};
         $http({url: "get-report", method:"post", data: postdata}).success((data) => {
+            console.log(data);
             $uibModal.open({
-                templateUrl: "templ/report-details.html",
+                templateUrl: "templ/report-forward.html",
                 controller: "ReportModalController",
                 controllerAs: "vm",
                 scope: self,

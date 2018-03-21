@@ -16,11 +16,14 @@
 
 <div class="main-container" ng-controller="SesListController">
 
-    <a href="logout" class="btn btn-default top-right">Salir</a>
+    <strong>{{username}}</strong>
+    <input type="text" class="form-control form-inline-med simple-margin-left" ng-model="invCode"
+           ng-keydown="$event.keyCode === 13 && enterCode()">
+    <button class="btn btn-primary" ng-click="enterCode()">Ingresar Código</button>
+
 
     <div class="pull-right">
-        <input type="text" class="form-control form-inline-med" ng-model="invCode">
-        <button class="btn btn-primary" ng-click="enterCode()">Ingresar Código</button>
+        <a href="logout" class="btn btn-default top-right">Salir</a>
     </div>
 
     <h3>Lista de Sesiones</h3>

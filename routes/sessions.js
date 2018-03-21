@@ -209,6 +209,15 @@ router.post("/get-selection-comment", rpg.singleSQL({
 }));
 
 
+router.post("/get-selection-team-comment", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select s.answer, s.comment, s.confidence, u.name as uname from selection as s inner join teamusers as tu on tu.uid = s.uid " +
+        "inner join users as u on u.id = s.uid where tu.tmid = $1 and s.qid = $2 and iteration = 3",
+    postReqData: ["qid", "tmid"],
+    sqlParams: [rpg.param("post", "tmid"), rpg.param("post", "qid")]
+}));
+
+
 router.post("/add-semantic-document", rpg.execSQL({
     dbcon: pass.dbcon,
     sql: "insert into semantic_document(title,content,sesid,orden) values ($1,$2,$3,$4)",

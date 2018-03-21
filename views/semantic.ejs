@@ -31,7 +31,7 @@
     <div class="top-bar-mini">
         <div class="text-center">
             <span ng-repeat="st in sesStatusses">
-                <span class="label label-primary" ng-class="{'bg-black-alpha': st.i == iteration}" ng-bind="st.name"></span>
+                <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': st.i == iteration}" ng-bind="st.name"></span>
                 <span ng-hide="$last">→</span>
             </span>
             <span class="pull-right margin-right-24" ng-show="sesSTime != null">
@@ -45,10 +45,10 @@
         <span ng-bind="sesDescr"></span>
     </div>
 
-    <div class="top-bar">
+    <div class="top-bar top-bar-student">
         <div class="col-sm-6 full-height">
             <span class="simple-margin-left" style="vertical-align: top;">Documentos: </span>
-            <span ng-repeat="doc in documents" class="side-top-btn font-mini" ng-class="{'active': $index==selectedDocument, 'border-orange': hgDocs[$index]}" ng-click="selectDocument($index)">
+            <span ng-repeat="doc in documents" class="side-top-btn" ng-class="{'active': $index==selectedDocument, 'border-orange': hgDocs[$index]}" ng-click="selectDocument($index)">
                 {{doc.title | limitTo:16}}
             </span>
             <!--<strong class="pull-right margin-top-8" ng-bind="iterationNames[iteration]"></strong>-->
@@ -71,7 +71,7 @@
         </div>
     </div>
 
-    <div class="">
+    <div ng-show="iteration > 0">
         <div class="col-lg-10 col-lg-offset-1">
             <h4>Unidades Semánticas:</h4>
             <div>
@@ -107,7 +107,7 @@
             <div>
                 <div class="row bordered" ng-repeat="unit in unitsIter3">
                     <div class="col-sm-1">
-                        <button class="btn btn-default" ng-class="{'active': unit.view}" ng-click="startView(unit)">
+                        <button class="btn btn-default" ng-class="{'active': unit.viewing}" ng-click="startView(unit)">
                             <i class="fa fa-check-square"></i> {{unit.sentences.length}} Sel.
                         </button>
                     </div>
@@ -118,7 +118,7 @@
                 </div>
                 <div class="row bordered" ng-repeat="unit in unitsIter1">
                     <div class="col-sm-1">
-                        <button class="btn btn-default" ng-class="{'active': unit.view}" ng-click="startView(unit)">
+                        <button class="btn btn-default" ng-class="{'active': unit.viewing}" ng-click="startView(unit)">
                             <i class="fa fa-check-square"></i> {{unit.sentences.length}} Sel.
                         </button>
                     </div>
@@ -135,12 +135,23 @@
             <span>Respuesta al factor detonante</span>
             <div class="pull-right">
                 <span ng-show="lastSent != null && isFull">Enviado {{lastSent | date:'HH:mm'}}</span>
-                <button class="btn btn-sm btn-primary" ng-click="sendReport()" ng-show="isFull && !finished"><i class="fa fa-send"></i></button>
+                <button class="btn btn-sm btn-primary" ng-click="sendReport()" ng-show="isFull && !finished"
+                        ng-class="{'btn-success': lastSent != null && isFull}">
+                    <i class="fa fa-send"></i>
+                </button>
                 <button class="btn btn-sm btn-primary" ng-click="toggleFull()"><i class="fa fa-minus"></i></button>
             </div>
         </div>
         <div class="content" ng-show="isFull">
             <textarea class="form-control" ng-model="content" ng-disabled="finished"></textarea>
+        </div>
+    </div>
+
+    <div class="splash" ng-if="iteration == 0">
+        <div class="splash-box">
+            <h3><i class="fa fa-clock-o"></i> Sesión en espera</h3>
+            <h5>Espere a que el profesor indique el inicio de la actividad.</h5>
+            <h5>Esta página se recargará automáticamente cuando comience.</h5>
         </div>
     </div>
 

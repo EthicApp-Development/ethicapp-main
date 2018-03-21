@@ -72,4 +72,11 @@ router.post("/register-prof", rpg.execSQL({
     }
 }));
 
+router.post("/get-my-name", rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: "select name from users where id = $1",
+    sesReqData: ["uid"],
+    sqlParams: [rpg.param("ses", "uid")]
+}));
+
 module.exports = router;

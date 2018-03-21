@@ -846,9 +846,11 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                         let temp = angular.copy(self.alumState);
                         self.alumState = {};
                         self.leaderTeamStr = {};
+                        self.leaderTeamId = {};
                         data.forEach((r) => {
                             self.alumState[r.leader] = temp[r.leader];
                             self.leaderTeamStr[r.leader] = r.team.map(u => (self.users[u]) ? self.users[u].name : "- ").join(", ");
+                            self.leaderTeamId[r.leader] = r.id;
                         });
                     });
                 }
@@ -1279,29 +1281,66 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
 
     self.showDetailAnswer = (qid, uid, it) => {
         let opts = ["A", "B", "C", "D", "E"];
-        let postdata = {uid: uid, qid: qid, iteration: it};
-        $http({url: "get-selection-comment", method: "post", data: postdata}).success((data) => {
-            let qs = self.questions.reduce((e,v) => (v.id == qid)? v : e, null);
-            console.log(qs);
-            let alt = opts[data.answer] + ". " + qs.options[data.answer];
-            let qstxt = qs.content;
-            $uibModal.open({
-                templateUrl: "templ/content-dialog.html",
-                controller: "ContentModalController",
-                controllerAs: "vm",
-                scope: self,
-                resolve: {
-                    data: function () {
-                        data.title = self.flang("answerOf") + " " + self.users[uid].name;
-                        data.content = self.flang("question") + ":\n" + qstxt + "\n\n" + self.flang("answer") + ":\n" + alt + "\n\n" + self.flang("comment") + ":\n" + data.comment;
-                        if(data.confidence){
-                            data.content += "\n\n" + self.flang("confidenceLevel") + ": " + data.confidence + "%";
-                        }
-                        return data;
-                    },
+        let postdata = {uid: uid, qid: qid, iteration: it, tmid: self.leaderTeamId[uid]};
+        let qs = self.questions.reduce((e, v) => (v.id == qid) ? v : e, null);
+        if(it < 3) {
+            $http({url: "get-selection-comment", method: "post", data: postdata}).success((data) => {
+                if(data == null || data.answer == null){
+                    Notification.warning("No hay respuesta registrada para el alumno");
+                    return;
                 }
+                let alt = opts[data.answer] + ". " + qs.options[data.answer];
+                let qstxt = qs.content;
+                $uibModal.open({
+                    templateUrl: "templ/content-dialog.html",
+                    controller: "ContentModalController",
+                    controllerAs: "vm",
+                    scope: self,
+                    resolve: {
+                        data: function () {
+                            data.title = self.flang("answerOf") + " " + self.users[uid].name;
+                            data.content = self.flang("question") + ":\n" + qstxt + "\n\n" + self.flang("answer") + ":\n" + alt + "\n\n" + self.flang("comment") + ":\n" + data.comment;
+                            if (data.confidence) {
+                                data.content += "\n\n" + self.flang("confidenceLevel") + ": " + data.confidence + "%";
+                            }
+                            return data;
+                        },
+                    }
+                });
             });
-        });
+        }
+        else{
+            $http({url: "get-selection-team-comment", method: "post", data: postdata}).success((res) => {
+                if(res == null || res.length == 0){
+                    Notification.warning("No hay respuesta registrada para el grupo");
+                    return;
+                }
+                let alt = opts[res[0].answer] + ". " + qs.options[res[0].answer];
+                let qstxt = qs.content;
+                $uibModal.open({
+                    templateUrl: "templ/content-dialog.html",
+                    controller: "ContentModalController",
+                    controllerAs: "vm",
+                    scope: self,
+                    resolve: {
+                        data: function () {
+                            let data = {};
+                            data.title = self.flang("answerOf") + " " + self.leaderTeamStr[uid];
+                            data.content = self.flang("question") + ":\n" + qstxt + "\n\n" + self.flang("answer") + ":\n" + alt + "\n\n";
+                            res.forEach(r => {
+                                data.content += self.flang("comment") + " " + r.uname + ":\n" + r.comment + "\n";
+                                if (data.confidence) {
+                                    data.content += self.flang("confidenceLevel") + ": " + r.confidence + "%\n";
+                                }
+                                data.content += "\n";
+                            });
+
+                            return data;
+                        },
+                    }
+                });
+            });
+        }
     };
 
 });

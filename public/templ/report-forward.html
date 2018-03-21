@@ -1,0 +1,15 @@
+<div>
+    <div class="modal-header">
+        <h4>Reporte recibido</h4>
+    </div>
+    <div class="modal-body">
+        <h4>Reporte:</h4>
+        <p ng-bind="vm.report.content"></p>
+        <!--<strong>Promedio: {{getAvg() | number:2}} / 4</strong>-->
+        <br>
+        <hr>
+        <div class="modal-footer">
+            <button class="btn btn-default" type="button" ng-click="vm.cancel()">Cerrar</button>
+        </div>
+    </div>
+</div>
