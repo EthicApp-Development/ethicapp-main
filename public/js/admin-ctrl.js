@@ -1330,7 +1330,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                             data.content = self.flang("question") + ":\n" + qstxt + "\n\n" + self.flang("answer") + ":\n" + alt + "\n\n";
                             res.forEach(r => {
                                 data.content += self.flang("comment") + " " + r.uname + ":\n" + r.comment + "\n";
-                                if (data.confidence) {
+                                if (r.confidence) {
                                     data.content += self.flang("confidenceLevel") + ": " + r.confidence + "%\n";
                                 }
                                 data.content += "\n";
