@@ -64,14 +64,14 @@
         </div>
     </div>
 
-    <div class="vh50 boxed">
+    <div class="vh50 boxed" ng-show="iteration > 0 || myRole == 'P'">
         <div class="col-lg-10 col-lg-offset-1">
             <h3>{{documents[selectedDocument].title}}</h3>
             <p class="text-justify"><span ng-repeat="sent in sentences track by $index" ng-class="{'bg-lightorange': highlight[selectedDocument][$index] && !views[$index], 'bg-lightgreen': views[$index]}"> <input type="checkbox" ng-model="highlight[selectedDocument][$index]" ng-disabled="disabledSents[selectedDocument][$index]">{{sent}}</span></p>
         </div>
     </div>
 
-    <div ng-show="iteration > 0">
+    <div ng-show="iteration > 0 || myRole == 'P'">
         <div class="col-lg-10 col-lg-offset-1">
             <h4>Unidades Semánticas:</h4>
             <div>

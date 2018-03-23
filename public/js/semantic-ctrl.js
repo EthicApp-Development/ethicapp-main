@@ -57,6 +57,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             }
         });
         self.getSesInfo();
+        self.getUserInfo();
     };
 
     self.getSesInfo = () => {
@@ -91,6 +92,13 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
                     self.finished = true;
                 }
             });
+        });
+    };
+
+    self.getUserInfo = () => {
+        $http.post("get-my-name").success(data => {
+            self.myName = data.name;
+            self.myRole = data.role;
         });
     };
 
