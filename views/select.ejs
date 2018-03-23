@@ -160,9 +160,9 @@
                 </div>
                 <div ng-show="useConfidence">
                     <label>{{'confidenceLevel' | lang}}:</label>
-                    <div class="btn-group simple-margin-left" ng-disabled="finished">
+                    <div class="btn-group simple-margin-left btn-group-justified" ng-disabled="finished">
                         <label class="btn btn-default" ng-repeat="conf in optConfidence" ng-class="{active: confidences[qs.id] == conf}" ng-disabled="finished">
-                            <input ng-disabled="finished" type="radio" name="confidence" ng-model="confidences[qs.id]" ng-value="conf"> {{conf}}%
+                            <input ng-disabled="finished" type="radio" name="confidence" ng-model="confidences[qs.id]" ng-value="conf" ng-change="qs.dirty = true"> {{conf}}%
                         </label>
                     </div>
                 </div>

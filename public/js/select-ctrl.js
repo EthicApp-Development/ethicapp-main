@@ -251,6 +251,10 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             Notification.error("Debe agregar un comentario");
             return;
         }
+        if (self.useConfidence && (self.confidences[qs.id] == null || self.confidences[qs.id] == "")) {
+            Notification.error("Debe agregar un grado de certeza");
+            return;
+        }
         let postdata = {
             qid: qs.id,
             answer: self.answers[qs.id],
@@ -458,7 +462,8 @@ app.controller("GeoController", ["$scope", "$http", "NgMap", "$socket", function
             google.maps.event.trigger(self.map, "resize");
             self.map.infoWindows.iw.close();
             self.updateOverlayList();
-            self.map.setOptions({draggable: self.questions[self.selectedQs].map.nav});
+            if(self.questions[self.selectedQs].map)
+                self.map.setOptions({draggable: self.questions[self.selectedQs].map.nav});
         }
     };
 
