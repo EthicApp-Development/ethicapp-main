@@ -1456,7 +1456,7 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
             klg("performance", "homog"), klg("performance", "heterg"),
             klg("knowledgeType", "homog"), klg("knowledgeType", "heterg")];
         self.groupNum = 3;
-        self.groupMet = self.methods[0];
+        self.groupMet = self.methods[0].key;
         self.groups = [];
         self.groupNames = [];
         if (self.selectedSes != null && self.selectedSes.grouped) {
