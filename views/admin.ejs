@@ -283,7 +283,7 @@
                     <button class="btn btn-xs btn-default pull-right margin-right-8" ng-disabled="selectedSes.status!=1" ng-click="startEditText(text)">{{'edit' | lang}}</button>
                     <button class="btn btn-xs btn-default pull-right margin-right-8" ng-click="text.expanded = !text.expanded">{{'view' | lang}}</button>
                     <p ng-show="!text.expanded">{{text.content | htmlExtractText | limitTo:360}}</p>
-                    <p ng-show="text.expanded">{{text.content | htmlExtractText}}</p>
+                    <div ng-show="text.expanded" ng-bind-html="text.content | trustHtml"></div>
                 </div>
                 <div>
                     <label ng-show="newText.id == null">{{'add' | lang}} {{'text' | lang}}</label>
@@ -395,7 +395,9 @@
                     <br>
                 </div>
 
-                <div>
+                <button class="btn btn-default form-control" ng-click="startNewQuestion()" ng-hide="newQsExp"><i class="fa fa-plus"></i> {{'add' | lang}} {{'question' | lang}}</button>
+
+                <div ng-show="newQsExp">
                     <label ng-show="newQuestion.id == null">{{'add' | lang}} {{'question' | lang}}:</label>
                     <label ng-show="newQuestion.id != null">{{'edit' | lang}} {{'question' | lang}} {{newQuestion.order}}:</label>
                     <span class="text-muted">({{'dontIncludeNumbering' | lang}})</span>
@@ -430,6 +432,10 @@
                     <button class="btn btn-default pull-right" ng-click="addQuestion()" ng-show="newQuestion.id == null" ng-disabled="selectedSes.status!=1">{{'add' | lang}}</button>
                     <button class="btn btn-default pull-right" ng-click="updateQuestion()" ng-show="newQuestion.id != null" ng-disabled="selectedSes.status!=1">{{'update' | lang}}</button>
                 </div>
+
+                <br>
+                <br>
+
             </div>
         </div>
             <!--<br>

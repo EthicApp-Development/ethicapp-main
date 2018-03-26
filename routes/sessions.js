@@ -30,7 +30,7 @@ router.post("/add-session", rpg.execSQL({
         " insert into sesusers(sesid,uid) select id, $5 from rows",
     sesReqData: ["uid"],
     postReqData: ["name", "descr","type"],
-    sqlParams: [rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("ses", "uid"), rpg.param("post","type"), rpg.param("ses", "uid")],
+    sqlParams: [rpg.param("post", "name"), rpg.param("ses", "uid"), rpg.param("post","type"), rpg.param("ses", "uid")],
     onStart: (ses, data, calc) => {
         if (ses.role != "P") {
             console.log("ERR: Solo profesor puede crear sesiones.");

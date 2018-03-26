@@ -545,6 +545,22 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
 
     self.newText = {id: null, title: "", content: ""};
 
+    self.newQsExp = false;
+
+    self.startNewQuestion = () => {
+        self.newQuestion = {
+            id: null,
+            content: "",
+            alternatives: ["", "", "", "", ""],
+            comment: "",
+            other: "",
+            textid: null,
+            answer: -1
+        };
+        self.newQsExp = true;
+        self.shared.closePrevMapData();
+    };
+
     /*NgMap.getMap().then((map) => {
         console.log("MAP correctly loaded");
         self.map = map;
@@ -557,6 +573,14 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
     self.addQuestion = () => {
         if (self.newQuestion.answer == -1) {
             Notification.error("Debe indicar la respuesta correcta a la pregunta");
+            return;
+        }
+        if (self.newQuestion.alternatives[0] == "" || self.newQuestion.alternatives[1] == "") {
+            Notification.error("Debe ingresar al menos 2 alternativas");
+            return;
+        }
+        if (self.newQuestion.comment == "") {
+            Notification.error("Debe ingresar un comentario para la pregunta");
             return;
         }
         if(self.newQuestion.includesMap){
@@ -587,6 +611,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
                 };
                 if(self.shared.sendOverlayBuffer)
                     self.shared.sendOverlayBuffer(data.id);
+                self.newQsExp = false;
             }
         });
     };
@@ -629,11 +654,13 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
                 };
                 if(self.shared.sendOverlayBuffer)
                     self.shared.sendOverlayBuffer(postdata.id);
+                self.newQsExp = false;
             }
         });
     };
 
     self.startEditQuestion = (qs) => {
+        self.questions.forEach(qs => qs.expanded = false);
         self.newQuestion = {
             id: qs.id,
             content: qs.content,
@@ -651,6 +678,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
             self.shared.processMapData(qs.plugin_data, qs.id);
             futureRefreshMap();
         }
+        self.newQsExp = true;
     };
 
     self.startEditText = (tx) => {
