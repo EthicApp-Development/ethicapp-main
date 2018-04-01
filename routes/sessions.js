@@ -368,7 +368,7 @@ router.post("/duplicate-session", (req, res) => {
                          dbcon: pass.dbcon,
                          sql: "insert into semantic_unit(sesid,sentences,comment,uid,iteration,docs) select " + sesid +
                              " as sesid, sentences, comment, uid, 0 as iteration, docs from semantic_unit where sesid = "
-                             + oldsesid + " and iteration = 0",
+                             + oldsesid + " and iteration <= 0",
                          preventResEnd: true,
                          onEnd: () => {}
                      })(req,res);

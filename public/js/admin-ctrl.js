@@ -478,6 +478,8 @@ adpp.controller("NewUsersController", function ($scope, $http, Notification) {
         self.getMembers();
     };
 
+    self.shared.refreshUsers = self.refreshUsers;
+
 });
 
 adpp.controller("SemDocController", function ($scope, $http, Notification) {
@@ -838,7 +840,10 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     };
 
     self.updateState = () => {
-        if (self.iterationIndicator <= 4)
+        if(self.selectedSes.status == 1){
+            self.shared.refreshUsers();
+        }
+        else if (self.iterationIndicator <= 4)
             self.updateStateIni();
         else
             self.updateStateRub();
