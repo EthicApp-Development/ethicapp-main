@@ -22,10 +22,11 @@ router.post("/login", rpg.singleSQL({
     sql: "select id, role from users where (rut = $1 and pass = $2) or (mail = $3 and pass=$4)",
     postReqData: ["user", "pass"],
     onStart: (ses, data, calc) => {
+        calc.user = data.user.trim();
         calc.passcr = crypto.createHash('md5').update(data.pass).digest('hex');
         //console.log(calc.passcr);
     },
-    sqlParams: [rpg.param("post","user"),rpg.param("calc","passcr"),rpg.param("post","user"),rpg.param("calc","passcr")],
+    sqlParams: [rpg.param("calc","user"),rpg.param("calc","passcr"),rpg.param("calc","user"),rpg.param("calc","passcr")],
     onEnd: (req, res, result) => {
         if(result.id != null) {
             req.session.uid = result.id;

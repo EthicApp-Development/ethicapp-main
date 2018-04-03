@@ -1152,22 +1152,27 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         let postdata = {sesid: self.selectedSes.id};
         $http({url: "get-report-result-all", method: "post", data: postdata}).success((data) => {
             self.resultAll = {};
+            let n = data.length;
             for (let uid in self.users) {
                 if (self.users[uid].role == "A")
-                    self.resultAll[uid] = [];
+                    self.resultAll[uid] = {reviews: 0, data: []};
             }
             data.forEach((d) => {
                 if(d!=null && d.length > 0) {
                     let uid = self.getReportAuthor(d[0].rid);
-                    if (uid != -1 && self.resultAll[uid] == null) {
-                        self.resultAll[uid] = d;
+                    if (uid != -1 && self.resultAll[uid].data == null) {
+                        self.resultAll[uid].data = d;
                     }
                     else if(uid != -1) {
-                        self.resultAll[uid] = d;
+                        self.resultAll[uid].data = d;
                     }
+                    d.forEach(ev => {
+                        self.resultAll[ev.uid].reviews += n;
+                    });
                 }
             });
             self.pairArr = (data[0]) ? new Array(data[0].length) : [];
+            //console.log(self.resul);
             self.buildRubricaBarData(data);
         });
     };
@@ -1239,7 +1244,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         if (res == null) return [];
         let n = 0;
         for(let u in res){
-            n = Math.max(n, res[u].length);
+            n = Math.max(n, res[u].data.length);
         }
         return new Array(n);
     };
@@ -1707,7 +1712,7 @@ adpp.controller("RubricaController", function ($scope, $http) {
         let postdata = {sesid: self.selectedSes.id, rnum: +self.pairNum || 3};
         $http({url: "assign-pairs", method: "post", data: postdata}).success((data) => {
             if (data.status == "ok") {
-                self.selectedSes.paired = true;
+                self.shared.updateSesData();
                 self.errPairMsg = "";
             }
             else {
