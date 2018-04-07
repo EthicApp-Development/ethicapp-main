@@ -399,8 +399,8 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
             Notification.error("La rúbrica no ha sido asignada");
             return;
         }
-        if (self.selectedSes.type == "L" && self.selectedSes.status >= 7 && !self.selectedSes.paired
-            || self.selectedSes.type == "M" && self.selectedSes.status >= 6 && !self.selectedSes.paired) {
+        if (self.selectedSes.type == "L" && self.selectedSes.status >= 7 && (self.selectedSes.paired == null || self.selectedSes.paired == 0)
+            || self.selectedSes.type == "M" && self.selectedSes.status >= 6 && (self.selectedSes.paired == null || self.selectedSes.paired == 0)) {
             self.shared.gotoRubrica();
             Notification.error("Los pares para la evaluación de pares no han sido asignados");
             return;
