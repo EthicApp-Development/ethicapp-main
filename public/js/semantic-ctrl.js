@@ -39,6 +39,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
 
     self.editing = -1;
     self.hgDocs = {};
+    self.misc = {};
 
 
     self.init = () => {
@@ -323,10 +324,19 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             });
         }
         unit.viewing = true;
-        self.views = {};
-        unit.sentences.filter((e,i) => unit.docs[i] == self.selectedDocument).forEach(e => {
-            self.views[e] = true;
-        });
+        let originalDoc = self.selectedDocument;
+        for (let i = 1; i <= self.documents.length; i++) {
+            self.views = {};
+            unit.sentences.filter((e,i) => unit.docs[i] == self.selectedDocument).forEach(e => {
+                self.views[e] = true;
+            });
+            if(angular.equals(self.views, {})){
+                self.selectDocument((originalDoc + i) % self.documents.length);
+            }
+            else{
+                break;
+            }
+        }
     };
 
     self.stopView = (unit) => {
@@ -402,6 +412,11 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
                     self.updateSignal();
             });
         }
+        for (let i = 0; i < unit.docs.length; i++) {
+            let doc = unit.docs[i];
+            let st = unit.sentences[i];
+            self.disabledSents[doc][st] = false;
+        }
         self.units.splice(idx,1);
     };
 
@@ -424,6 +439,7 @@ app.controller("ReportController", ["$scope", "$http", function ($scope, $http) 
         $http({url:"send-report", method:"post", data:postdata}).success((data) => {
             if (data.status == "ok"){
                 self.lastSent = new Date();
+                self.misc.reportDirty = false;
                 //self.shared.sendReportIdeas();
             }
         });

@@ -100,10 +100,10 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
     };
 
     self.sendSelection = (report) => {
-        if(report.comment == "" || report.comment == null || report.comment.length < 5){
+        /*if(report.comment == "" || report.comment == null || report.comment.length < 5){
             self.commentError = true;
             return;
-        }
+        }*/
         if(self.checkCriteria(report)){
             self.commentError = false;
             self.criterios.forEach((criterio) => {

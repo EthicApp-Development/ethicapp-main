@@ -136,14 +136,14 @@
             <div class="pull-right">
                 <span ng-show="lastSent != null && isFull">Enviado {{lastSent | date:'HH:mm'}}</span>
                 <button class="btn btn-sm btn-primary" ng-click="sendReport()" ng-show="isFull && !finished"
-                        ng-class="{'btn-success': lastSent != null && isFull}">
+                        ng-class="{'btn-success': lastSent != null && isFull, 'bg-warning': misc.reportDirty}">
                     <i class="fa fa-send"></i>
                 </button>
                 <button class="btn btn-sm btn-primary" ng-click="toggleFull()"><i class="fa fa-minus"></i></button>
             </div>
         </div>
         <div class="content" ng-show="isFull">
-            <textarea class="form-control" ng-model="content" ng-disabled="finished"></textarea>
+            <textarea class="form-control" ng-model="content" ng-disabled="finished" ng-change="misc.reportDirty = true"></textarea>
         </div>
     </div>
 

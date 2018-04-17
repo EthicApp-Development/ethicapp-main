@@ -251,7 +251,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             Notification.error("Debe agregar un comentario");
             return;
         }
-        if (self.useConfidence && (self.confidences[qs.id] == null || self.confidences[qs.id] == "")) {
+        if (self.useConfidence && (self.confidences[qs.id] == null)) {
             Notification.error("Debe agregar un grado de certeza");
             return;
         }

@@ -4,3 +4,4 @@ modules/passwords.js
 node_modules/
 .DS_store
 uploads
+public/fonts/*
