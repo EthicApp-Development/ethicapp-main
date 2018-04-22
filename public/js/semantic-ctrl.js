@@ -141,7 +141,16 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
         }
     };
 
+    self.clearDisabledSents = () => {
+        if(self.disabledSents){
+            self.disabledSents.map(docst =>
+                docst.map(st => false)
+            );
+        }
+    };
+
     self.processUnits = () => {
+        self.clearDisabledSents();
         for(let i = 0; i < self.units.length; i++){
             for(let j=0; j < self.units[i].sentences.length; j++){
                 let docid = self.units[i].docs[j];

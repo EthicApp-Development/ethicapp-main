@@ -192,6 +192,7 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
     self.selectCriterio = (cid, val) => {
         if(self.canAnswer) {
             self.report.select[cid] = val;
+            self.report.dirty = true;
         }
     };
 

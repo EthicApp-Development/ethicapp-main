@@ -91,10 +91,10 @@
                     </tr>
                 </table>
                 <h4>Comentario:</h4>
-                <textarea class="form-control" ng-model="report.comment" ng-disabled="!canAnswer" rows="4"></textarea>
+                <textarea class="form-control" ng-model="report.comment" ng-disabled="!canAnswer" rows="4" ng-change="report.dirty = true"></textarea>
                 <span class="red" ng-show="commentError">Debe agregar un comentario de la evaluación</span>
                 <button class="pull-right btn btn-default" ng-click="sendSelection(report)" ng-disabled="!checkCriteria(report) || !canAnswer"
-                    ng-class="{'btn-success': report.status == 'SENT', 'btn-warning': report.status == 'DIRTY'}">
+                    ng-class="{'btn-success': report.status == 'SENT', 'btn-warning': report.dirty}">
                     <i class="fa fa-send"></i> Enviar
                 </button>
                 <div class="row"></div>
