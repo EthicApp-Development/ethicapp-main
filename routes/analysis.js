@@ -166,6 +166,7 @@ router.post("/get-alum-state-semantic", rpg.multiSQL({
             total++;
             i++;
         }
+        total = (total >= 3) ? 3 : total;
         // ALUMNOS
         let sc = 0;
         let last_uid = -1;

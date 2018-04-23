@@ -97,7 +97,7 @@
                 </div>
             </div>
             <button class="btn btn-default simple-margin-left" ng-click="addEmptyUnit()" ng-show="iteration < 4"
-                    ng-disabled="finished || countHighlight() == 0 || editing != -1 || units.length > 4 || followLeader">
+                    ng-disabled="finished || countHighlight() == 0 || editing != -1 || (iteration > 0 && units.length >= 3) || followLeader">
                 Agregar unidad semántica
             </button>
         </div>
