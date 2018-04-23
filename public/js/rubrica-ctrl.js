@@ -106,6 +106,7 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
         }*/
         if(self.checkCriteria(report)){
             self.commentError = false;
+            report.dirty = false;
             self.criterios.forEach((criterio) => {
                 let postdata = {cid: criterio.id, sel: report.select[criterio.id], rid: report.id};
                 $http({url: "send-criteria-selection", method:"post", data:postdata}).success((data) => {
