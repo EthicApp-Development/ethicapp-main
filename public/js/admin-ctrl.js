@@ -1713,7 +1713,7 @@ adpp.controller("RubricaController", function ($scope, $http) {
         $http({url: "assign-pairs", method: "post", data: postdata}).success((data) => {
             if (data.status == "ok") {
                 // self.shared.updateSesData();
-                self.shared.paired = self.pairNum;
+                self.selectedSes.paired = self.pairNum;
                 self.errPairMsg = "";
             }
             else {
