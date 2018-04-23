@@ -65,6 +65,9 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
         $http({url: "get-ses-info", method: "post"}).success((data) => {
             self.iteration = data.iteration;
             self.myUid = data.uid;
+            if(self.iteration > 0 && self.myUid == 2){
+                self.iteration = 1;
+            }
             self.sesName = data.name;
             self.sesId = data.id;
             self.sesDescr = (self.iteration < 4) ? (data.descr.split("\n")[0] || data.descr) : (data.descr.split("\n")[1] || data.descr);
