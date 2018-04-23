@@ -84,11 +84,11 @@
                     <div class="col-sm-11">
                         <div class="input-group">
                             <input type="text" class="form-control" ng-model="unit.comment" ng-change="unit.dirty = true" ng-disabled="finished || followLeader">
-                            <span class="input-group-btn" ng-hide="myRole == 'P' && iteration > 0">
-                                <button class="btn btn-default" ng-disabled="finished || followLeader" ng-click="addSemUnit(unit)" ng-class="{'btn-success': sent[unit.id], 'btn-warning': unit.dirty}">
+                            <span class="input-group-btn">
+                                <button class="btn btn-default" ng-disabled="finished || followLeader || (myRole == 'P' && iteration > 0)" ng-click="addSemUnit(unit)" ng-class="{'btn-success': sent[unit.id], 'btn-warning': unit.dirty}">
                                     <i class="fa fa-send"></i>
                                 </button>
-                                <button class="btn btn-default" ng-disabled="finished || followLeader" ng-click="deleteUnit($index,unit)">
+                                <button class="btn btn-default" ng-disabled="finished || followLeader || (myRole == 'P' && iteration > 0)" ng-click="deleteUnit($index,unit)">
                                     <i class="fa fa-trash"></i>
                                 </button>
                             </span>
