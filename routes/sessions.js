@@ -297,7 +297,7 @@ router.post("/update-semantic-unit", rpg.execSQL({
 router.post("/get-semantic-units", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select u.id, u.sentences, u.comment, u.docs, u.iteration from semantic_unit as u " +
-        "where u.uid = $1 and u.sesid = $2 and (u.iteration = $3 or u.iteration = 0)",
+        "where u.uid = $1 and u.sesid = $2 and (u.iteration = $3 or u.iteration <= 0)",
     sesReqData: ["uid","ses"],
     postReqData: ["iteration"],
     sqlParams: [rpg.param("ses", "uid"), rpg.param("ses","ses"), rpg.param("post","iteration")]
