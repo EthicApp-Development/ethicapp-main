@@ -12,7 +12,7 @@
         <ul class="list-group">
             <li class="list-group-item" ng-repeat="ans in vm.data.answers">
                 <strong>{{$index + 1}}. Evaluador: {{ans.evaluatorName}}. Puntaje: {{ans.val | number:2}}</strong>
-                <div ng-if="ans.com != null">
+                <div ng-if="ans.val != null">
                 <p ng-bind="ans.com"></p>
 
                 <table class="table table-bordered font-mini">
@@ -32,7 +32,7 @@
                     </tr>
                 </table>
                 </div>
-                <span ng-if="ans.com == null">No hay evaluación realizada</span>
+                <span ng-if="ans.val == null">No hay evaluación realizada</span>
 
             </li>
         </ul>
