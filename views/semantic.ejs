@@ -58,7 +58,7 @@
             <button disabled class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i> Representante </button>
             <button class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && followLeader" ng-click="takeControl()">Tomar Control</button>
             <a class="btn btn-sm btn-default pull-right" ng-show="iteration > 6" href="rubrica">Ir a evaluación</a>
-            <button class="btn btn-sm btn-default pull-right" ng-if="iteration > 0" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}">
+            <button class="btn btn-sm btn-default pull-right" ng-if="iteration > 0" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}" ng-hide="myRole == 'P' && iteration > 0">
                 <i class="fa fa-check"></i> Terminé</button>
             <span class="pull-right boxed" ng-bind="teamstr"></span>
         </div>
@@ -82,7 +82,7 @@
                         </button>
                     </div>
                     <div class="col-sm-11">
-                        <div class="input-group">
+                        <div class="input-group" ng-hide="myRole == 'P' && iteration > 0">
                             <input type="text" class="form-control" ng-model="unit.comment" ng-change="unit.dirty = true" ng-disabled="finished || followLeader">
                             <span class="input-group-btn">
                                 <button class="btn btn-default" ng-disabled="finished || followLeader" ng-click="addSemUnit(unit)" ng-class="{'btn-success': sent[unit.id], 'btn-warning': unit.dirty}">
@@ -96,7 +96,7 @@
                     </div>
                 </div>
             </div>
-            <button class="btn btn-default simple-margin-left" ng-click="addEmptyUnit()" ng-show="iteration < 4"
+            <button class="btn btn-default simple-margin-left" ng-click="addEmptyUnit()" ng-show="iteration < 4" ng-hide="myRole == 'P' && iteration > 0"
                     ng-disabled="finished || countHighlight() == 0 || editing != -1 || (iteration > 0 && units.length >= 3) || followLeader">
                 Agregar unidad semántica
             </button>
