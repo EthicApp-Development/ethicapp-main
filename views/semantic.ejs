@@ -85,7 +85,7 @@
                         <div class="input-group">
                             <input type="text" class="form-control" ng-model="unit.comment" ng-change="unit.dirty = true" ng-disabled="finished || followLeader || (myRole == 'P' && iteration > 0)">
                             <span class="input-group-btn">
-                                <button class="btn btn-default" ng-disabled="finished || followLeader || (myRole == 'P' && iteration > 0)" ng-click="addSemUnit(unit)" ng-class="{'btn-success': sent[unit.id], 'btn-warning': unit.dirty}">
+                                <button class="btn btn-default" ng-disabled="finished || followLeader || (myRole == 'P' && iteration > 0)" ng-click="addSemUnit(unit)" ng-class="{'btn-success': sent[unit.id], 'btn-warning': unit.dirty && !(myRole == 'P' && iteration > 0)}">
                                     <i class="fa fa-send"></i>
                                 </button>
                                 <button class="btn btn-default" ng-disabled="finished || followLeader || (myRole == 'P' && iteration > 0)" ng-click="deleteUnit($index,unit)">
