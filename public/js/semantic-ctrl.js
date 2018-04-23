@@ -143,9 +143,11 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
 
     self.clearDisabledSents = () => {
         if(self.disabledSents){
-            self.disabledSents.map(docst =>
-                docst.map(st => false)
-            );
+            for (let i = 0; i < self.disabledSents.length; i++) {
+                for (let j = 0; j < self.disabledSents[i].length; j++) {
+                    self.disabledSents[i][j] = false;
+                }
+            }
         }
     };
 
