@@ -42,7 +42,7 @@
 
     <div class="top-bar-mini simple-padding-bottom">
         <strong>Factor detonante: </strong>
-        <span style="color: yellow" ng-bind="sesDescr"></span>
+        <span style="color: yellow; font-size: 105%;" ng-bind="sesDescr"></span>
     </div>
 
     <div class="top-bar top-bar-student">
@@ -88,7 +88,7 @@
                                 <button class="btn btn-default" ng-disabled="finished || followLeader || (myRole == 'P' && iteration > 0)" ng-click="addSemUnit(unit)" ng-class="{'btn-success': sent[unit.id], 'btn-warning': unit.dirty && !(myRole == 'P' && iteration > 0)}">
                                     <i class="fa fa-send"></i>
                                 </button>
-                                <button class="btn btn-default" ng-disabled="finished || followLeader || (myRole == 'P' && iteration > 0)" ng-click="deleteUnit($index,unit)">
+                                <button class="btn btn-default" style="margin-left: 16px;" ng-disabled="finished || followLeader || (myRole == 'P' && iteration > 0)" ng-click="deleteUnit($index,unit)">
                                     <i class="fa fa-trash"></i>
                                 </button>
                             </span>
