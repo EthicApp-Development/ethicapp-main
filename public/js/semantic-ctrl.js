@@ -142,6 +142,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             self.highlight.push(Array.from({length: self.originalSentences[i].length}, () => false));
             self.disabledSents.push(Array.from({length: self.originalSentences[i].length}, () => false));
         }
+        console.log(self.originalSentences);
     };
 
     self.clearDisabledSents = () => {
