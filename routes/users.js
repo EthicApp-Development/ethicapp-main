@@ -7,7 +7,7 @@ let pass = require("../modules/passwords");
 let crypto = require("crypto");
 
 router.get('/login', (req, res) => {
-    res.render('login');
+    res.render('login', {rc: req.query.rc});
 });
 
 router.get("/logout", (req, res) => {
@@ -33,7 +33,7 @@ router.post("/login", rpg.singleSQL({
             req.session.role = result.role;
             req.session.ses = null;
         }
-        res.redirect(".");
+        res.redirect("login?rc=2");
     }
 }));
 
@@ -53,7 +53,7 @@ router.post("/register", rpg.execSQL({
     sqlParams: [rpg.param("post", "rut"), rpg.param("calc", "passcr"), rpg.param("calc", "fullname"),
         rpg.param("post", "mail"), rpg.param("post", "sex")],
     onEnd: (req, res) => {
-        res.redirect(".");
+        res.redirect("login?rc=1");
     }
 }));
 
@@ -69,7 +69,7 @@ router.post("/register-prof", rpg.execSQL({
     sqlParams: [rpg.param("post", "rut"), rpg.param("calc", "passcr"), rpg.param("calc", "fullname"),
         rpg.param("post", "mail"), rpg.param("post", "sex")],
     onEnd: (req, res) => {
-        res.redirect(".");
+        res.redirect("login?rc=1");
     }
 }));
 

@@ -13,6 +13,16 @@
 
     <h2>Login</h2>
     <hr/>
+    <% if(rc == 1) {%>
+    <div class="alert alert-info">
+        Registro Completo. Ingrese con sus datos
+    </div>
+    <% } %>
+    <% if(rc == 2) {%>
+    <div class="alert alert-danger">
+        Login o Password Incorrectos
+    </div>
+    <% } %>
     <br/>
     <form action="login" method="POST">
         <label>RUT o E-mail:</label>
