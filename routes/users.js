@@ -33,7 +33,7 @@ router.post("/login", rpg.singleSQL({
             req.session.role = result.role;
             req.session.ses = null;
         }
-        res.redirect("login?rc=2");
+        res.redirect(".");
     }
 }));
 
