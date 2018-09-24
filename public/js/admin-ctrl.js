@@ -822,7 +822,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 }
             }
         };
-        self.barData = [{key: self.flang('students'), color: "#4d6b87", values: []}];
+        self.barData = [{key: self.flang('students'), color: "#0077c1", values: []}];
         self.updateState();
         if (DASHBOARD_AUTOREALOD && self.selectedSes.status < 9) {
             self.reload(true);

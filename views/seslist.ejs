@@ -10,6 +10,7 @@
     <script src="js/ses-ctrl.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/font-awesome.min.css">
     <link rel="stylesheet" href="css/main.css"/>
 </head>
 <body>
@@ -19,7 +20,7 @@
     <strong>{{username}}</strong>
     <input type="text" class="form-control form-inline-med simple-margin-left" ng-model="invCode"
            ng-keydown="$event.keyCode === 13 && enterCode()">
-    <button class="btn btn-primary" ng-click="enterCode()">Ingresar Código</button>
+    <button class="btn btn-primary" ng-disabled="invCode == ''" ng-click="enterCode()"><i class="fa fa-external-link-square"></i></button>
 
 
     <div class="pull-right">

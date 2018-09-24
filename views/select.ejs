@@ -68,7 +68,7 @@
 
             <!-- MAP AREA -->
             <div ng-show="questions[selectedQs].map" class="row row-no-padding" ng-controller="GeoController">
-                <div class="col-sm-2">
+                <div class="col-xs-2">
                 <div class="map-sidebar">
                     <h4>{{'elements' | lang}}</h4>
                     <div class="list-group">
@@ -84,7 +84,7 @@
                     </div>
                 </div>
                 </div>
-                <div class="col-sm-10">
+                <div class="col-xs-10">
                     <input class="gsearch" places-auto-complete on-place-changed="googleSearch()" ng-if="questions[selectedQs].map.edit && iteration <=3">
                 <ng-map class="map-block map-tbl" center="{{questions[selectedQs].map.center}}" zoom="{{questions[selectedQs].map.zoom}}">
                     <!-- DRAW MANAGER -->
@@ -205,13 +205,13 @@
                     <br>
                 </div>
                 <div class="row">
-                    <div class="col-sm-1">
+                    <div class="col-xs-2">
                         <button class="btn btn-default" ng-click="prevQuestion()"><i class="fa fa-arrow-left"></i></button>
                     </div>
-                    <div class="col-sm-10">
+                    <div class="col-xs-8">
                         <span class="text-danger full-width text-center center-block" ng-bind="bottomMsg"></span>
                     </div>
-                    <div class="col-sm-1">
+                    <div class="col-xs-2 text-right">
                         <button class="btn btn-default" ng-click="nextQuestion()"><i class="fa fa-arrow-right"></i></button>
                     </div>
                 </div>

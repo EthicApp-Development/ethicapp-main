@@ -12,7 +12,7 @@ body{
     padding: 0;
     margin: 0;
     height: 100%;
-    background-color: #6c859b;
+    background-color: #0077c1;
 }
 
 hr{
@@ -41,9 +41,9 @@ hr{
 }
 
 .middle-box{
-    max-width: 320px;
+    max-width: 360px;
     display: block;
-    padding: 4px 24px 20px 24px;
+    padding: 4px 44px 20px 44px;
     border-bottom: 4px solid #aaaaaa;
     background: #f3f3f3;
     margin: 20px auto;
@@ -90,19 +90,20 @@ a:hover{
 
 .top-bar{
     height: 62px;
-    background: #6c859b;
+    background: #0077c1;
     color: white;
     padding: 2px;
     overflow: hidden;
 }
 
 .top-bar.top-bar-student{
-    height: 36px;
+    min-height: 36px;
+    height: auto;
 }
 
 .top-bar-mini{
     /*height: 24px;*/
-    background: #6c859b;
+    background: #0077c1;
     color: white;
 }
 
@@ -392,7 +393,7 @@ td.clickable:hover{
 
 .report-window .bar{
     height: 36px;
-    background: #6c859b;
+    background: #0077c1;
     color: #fff;
     padding-left: 20px;
     padding-right: 10px;
@@ -717,4 +718,15 @@ ng-quill-editor.large .ql-editor{
 
 .bg-yellow{
     background: #dab347;
+}
+
+.logo{
+    text-align: center;
+    width: 100%;
+    margin-bottom: -12px;
+    margin-top: 4px;
+}
+
+.logo img{
+    height: 120px;
 }
