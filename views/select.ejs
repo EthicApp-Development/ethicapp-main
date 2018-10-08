@@ -21,24 +21,34 @@
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.9.0-alpha2/katex.min.css">
     <link rel="stylesheet" href="css/main.css"/>
 </head>
-<body class="bg-black">
+<body>
 
 <div class="editor-container" ng-controller="SelectController">
 
-    <div class="row top-bar-mini">
-        <div class="text-center">
+    <div class="top-bar-mini cflex">
+        <div class="cf1">
+            <a href="seslist" class="simple-margin-left">
+                <img src="img/logo.png" class="logo-bar">
+            </a>
+        </div>
+        <div class="cf3 grow text-center" ng-show="iteration > 0">
             <span ng-repeat="st in sesStatusses">
                 <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': $index==iteration-1}">{{st | lang}}</span>
-                <span ng-hide="$last">→</span>
+                <!-- <span ng-hide="$last">→</span> -->
             </span>
-            <span class="pull-right margin-right-24" ng-show="sesSTime != null">
+            <!-- <span class="pull-right margin-right-24" ng-show="sesSTime != null">
                 <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
-            </span>
+            </span> -->
+        </div>
+        <div class="cf1 text-right margin-right-8">
+            <a href="logout" class="text-white">
+                <i class="fa fa-sign-out fa-2x"></i>
+            </a>
         </div>
     </div>
 
-    <div class="row top-bar top-bar-student">
-        <div class="col-sm-6 full-height simple-padding-top">
+    <div class="top-bar top-bar-tabs">
+        <!-- <div class="col-sm-6 full-height simple-padding-top">
             <strong class="simple-margin-left">{{sesName | limitTo:18}}</strong>
             <div class="quad" ng-repeat="qs in questions" ng-class="{'yellow': sent[qs.id]}">{{$index + 1}}</div>
         </div>
@@ -53,11 +63,16 @@
             <span class="chip hoverable pull-right" ng-click="changeLang()">
                 {{'langOther' | lang}}
             </span>
+        </div>-->
+        <div class="qs-tabs" ng-show="iteration > 0">
+            <div class="tab" ng-repeat="qs in questions" ng-class="{active: selectedQs == $index, yellow: sent[qs.id]}" ng-click="selectQuestion($index)">
+                {{$index + 1 }}
+            </div>
         </div>
     </div>
 
-    <div class="scrollable-container">
-        <div class="mid-container" ng-show="iteration > 0">
+    <div class="scrollable-container blue">
+        <div class="mid-container qs-content" ng-show="iteration > 0">
 
             <!-- TEXT AREA -->
             <div ng-show="questions[selectedQs].text_content != null">
@@ -140,7 +155,7 @@
             </div>
 
             <div ng-repeat="qs in questions" ng-show="selectedQs == $index">
-                <span ng-bind-html="($index+1) + '. ' + qs.content | trustHtml" class="question-content"></span>
+                <span ng-bind-html="qs.content | trustHtml" class="question-content"></span>
 
                 <div class="list-group">
                     <div class="" ng-repeat="x in optLabels">
@@ -149,9 +164,9 @@
                         <span class="mini" ng-bind="qs.options[$index]"></span>
                     </div>
                 </div>
-                <label>{{'comment' | lang}}:</label>
+                <!-- <label>{{'comment' | lang}}:</label> -->
                 <div class="input-group">
-                    <input type="text" class="form-control" ng-model="comments[qs.id]" ng-change="qs.dirty = true" ng-disabled="finished || !useComments">
+                    <input type="text" class="form-control" placeholder="{{'comment' | lang}}" ng-model="comments[qs.id]" ng-change="qs.dirty = true" ng-disabled="finished || !useComments">
                     <span class="input-group-btn">
                         <button class="btn btn-default" ng-disabled="finished" ng-click="sendAnswer(qs)" ng-class="{'btn-success': sent[qs.id], 'btn-warning': qs.dirty}">
                             <i class="fa fa-send"></i>

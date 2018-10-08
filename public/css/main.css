@@ -730,3 +730,74 @@ ng-quill-editor.large .ql-editor{
 .logo img{
     height: 120px;
 }
+
+.top-bar-tabs{
+    height: auto;
+    padding: 0 8px;
+}
+
+.qs-tabs{
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin-top: 2px;
+}
+
+.qs-tabs .tab{
+    display: inline-block;
+    width: 42px;
+    margin-right: 8px;
+    border-top-right-radius: 8px;
+    border-top-left-radius: 8px;
+    background: #fff;
+    color: #000000;
+    text-align: center;
+    padding: 2px;
+    border-top: 4px solid #eee;
+    border-bottom: 1px solid #ddd;
+    opacity: 0.8;
+}
+
+.qs-tabs .tab:hover{
+    cursor: pointer;
+}
+
+.qs-tabs .tab.active{
+    border-bottom: 1px solid #fff;
+    opacity: 1;
+}
+
+.qs-tabs .tab.yellow{
+    border-top: 4px solid #ffc06a;
+}
+
+.mid-container.qs-content{
+    max-width: unset;
+    margin: 0 8px;
+    box-shadow: #333 0 4px 36px;
+}
+
+.scrollable-container.blue{
+    background: #0075c3;
+}
+
+.text-white{
+    color: #ffffff !important;
+}
+
+.cflex{
+    display: flex;
+    align-items: stretch;
+}
+
+.cflex > div.cf1 {
+    flex-grow: 1;
+}
+
+.cflex > div.cf3 {
+    flex-grow: 3;
+}
+
+.logo-bar{
+    width: 42px;
+    margin-top: -6px;
+}
