@@ -740,6 +740,14 @@ ng-quill-editor.large .ql-editor{
     overflow-x: auto;
     overflow-y: hidden;
     margin-top: 2px;
+    max-height: 28px;
+    white-space: nowrap;
+    -ms-overflow-style: none;
+    overflow: -moz-scrollbars-none;
+}
+
+.qs-tabs::-webkit-scrollbar{
+    display: none;
 }
 
 .qs-tabs .tab{
@@ -757,6 +765,11 @@ ng-quill-editor.large .ql-editor{
     opacity: 0.8;
 }
 
+.qs-tabs .tab.wide {
+    width: auto;
+    padding: 2px 8px;
+}
+
 .qs-tabs .tab:hover{
     cursor: pointer;
 }
@@ -768,6 +781,14 @@ ng-quill-editor.large .ql-editor{
 
 .qs-tabs .tab.yellow{
     border-top: 4px solid #ffc06a;
+}
+
+.qs-tabs .tab.green{
+    border-top: 4px solid #8BC369;
+}
+
+.qs-tabs .tab.red{
+    border-top: 4px solid #D75C37;
 }
 
 .mid-container.qs-content{
@@ -800,4 +821,36 @@ ng-quill-editor.large .ql-editor{
 .logo-bar{
     width: 42px;
     margin-top: -6px;
+}
+
+/** RADIO BUTTONS **/
+
+.ansoption{
+    display: block;
+    color: #000;
+    font-size: 115%;
+    margin: 8px;
+}
+
+.ansoption:hover{
+    cursor: pointer;
+}
+
+.ansoption .option{
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 4px solid #dddddd;
+    background: #dddddd;
+    vertical-align: middle;
+}
+
+.ansoption .option.selected{
+    border: 6px solid #0075c3;
+    background: #FFFFFF;
+}
+
+.question-content{
+    color: #000;
 }

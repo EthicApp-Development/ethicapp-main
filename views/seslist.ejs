@@ -15,7 +15,53 @@
 </head>
 <body>
 
-<div class="main-container" ng-controller="SesListController">
+<div ng-controller="SesListController">
+
+
+    <div class="top-bar-mini cflex">
+        <div class="cf1">
+            <a href="seslist" class="simple-margin-left">
+                <img src="img/logo.png" class="logo-bar">
+            </a>
+        </div>
+        <div class="cf3 grow text-center">
+            <div class="simple-padding-top input-group">
+                <input type="text" class="form-control form-inline-med" ng-model="invCode"
+                       ng-keydown="$event.keyCode === 13 && enterCode()" placeholder="Ingresar Código">
+                <span class="input-group-btn">
+                    <button class="btn btn-default" ng-disabled="invCode == ''" ng-click="enterCode()">
+                        <i class="fa fa-external-link-square"></i>
+                    </button>
+                </span>
+            </div>
+        </div>
+        <div class="cf1 text-right margin-right-8">
+            <a href="logout" class="text-white">
+                <i class="fa fa-sign-out fa-2x"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="top-bar top-bar-tabs">
+        <div class="qs-tabs">
+            <div class="tab wide active">
+                Sesiones
+            </div>
+        </div>
+    </div>
+
+    <div class="scrollable-container blue">
+        <div class="list-group pad-content">
+            <a class="list-group-item" ng-repeat="ses in sessions"
+               href="to-{{(ses.type=='L')?'visor':((ses.type=='S')?'select':'semantic')}}?sesid={{ses.id}}">
+                <h4 class="list-group-item-heading" ng-bind="ses.name">
+                </h4>
+                <p class="list-group-item-text" ng-bind="ses.descr"></p>
+            </a>
+        </div>
+    </div>
+
+    <!--
 
     <strong>{{username}}</strong>
     <input type="text" class="form-control form-inline-med simple-margin-left" ng-model="invCode"
@@ -37,6 +83,8 @@
             <p class="list-group-item-text" ng-bind="ses.descr"></p>
         </a>
     </div>
+
+    -->
 
 </div>
 

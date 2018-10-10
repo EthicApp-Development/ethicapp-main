@@ -36,6 +36,7 @@
                 <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': $index==iteration-1}">{{st | lang}}</span>
                 <!-- <span ng-hide="$last">→</span> -->
             </span>
+            <i class="fa fa-angle-right"></i>
             <!-- <span class="pull-right margin-right-24" ng-show="sesSTime != null">
                 <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
             </span> -->
@@ -65,7 +66,10 @@
             </span>
         </div>-->
         <div class="qs-tabs" ng-show="iteration > 0">
-            <div class="tab" ng-repeat="qs in questions" ng-class="{active: selectedQs == $index, yellow: sent[qs.id]}" ng-click="selectQuestion($index)">
+            <div class="tab" ng-repeat="qs in questions" ng-class="{active: selectedQs == $index, yellow: sent[qs.id],
+                green: anskey[qs.id] != null && anskey[qs.id].answer == answers[qs.id],
+                red: anskey[qs.id] != null && anskey[qs.id].answer != answers[qs.id]}"
+                 ng-click="selectQuestion($index)">
                 {{$index + 1 }}
             </div>
         </div>
@@ -157,13 +161,20 @@
             <div ng-repeat="qs in questions" ng-show="selectedQs == $index">
                 <span ng-bind-html="qs.content | trustHtml" class="question-content"></span>
 
-                <div class="list-group">
+                <div class="answers">
+                    <div class="ansoption" ng-repeat="x in optLabels" ng-click="!finished && setAnswer(qs,$index)">
+                        <div class="option" ng-class="{'selected': answers[qs.id]==$index}"></div>
+                        <span ng-bind="qs.options[$index]"></span>
+                    </div>
+                </div>
+
+                <!-- <div class="list-group">
                     <div class="" ng-repeat="x in optLabels">
                         <a class="input-group-addon addon-little" ng-bind="x" ng-class="{'bg-green': answers[qs.id]==$index}"
                            ng-click="!finished && setAnswer(qs,$index)"></a>
-                        <span class="mini" ng-bind="qs.options[$index]"></span>
+                        <span class="mini" ></span>
                     </div>
-                </div>
+                </div> -->
                 <!-- <label>{{'comment' | lang}}:</label> -->
                 <div class="input-group">
                     <input type="text" class="form-control" placeholder="{{'comment' | lang}}" ng-model="comments[qs.id]" ng-change="qs.dirty = true" ng-disabled="finished || !useComments">
@@ -177,7 +188,7 @@
                     <label>{{'confidenceLevel' | lang}}:</label>
                     <div class="btn-group simple-margin-left btn-group-justified" ng-disabled="finished">
                         <label class="btn btn-default" ng-repeat="conf in optConfidence" ng-class="{active: confidences[qs.id] == conf}" ng-disabled="finished">
-                            <input ng-disabled="finished" type="radio" name="confidence" ng-model="confidences[qs.id]" ng-value="conf" ng-change="qs.dirty = true"> {{conf}}%
+                            <input ng-disabled="finished" hidden type="radio" name="confidence" ng-model="confidences[qs.id]" ng-value="conf" ng-change="qs.dirty = true"> {{conf}}%
                         </label>
                     </div>
                 </div>

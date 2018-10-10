@@ -192,13 +192,16 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                     self.bottomMsg = "";
                 }
                 else if (data.status == "incomplete") {
-                    self.bottomMsg = "Debe esperar a que todos los miembros del equipo respondan";
+                    // self.bottomMsg = "Debe esperar a que todos los miembros del equipo respondan";
+                    notify("Error", "Debe esperar a que todos los miembros del equipo respondan");
                 }
                 else if (data.status == "different") {
-                    self.bottomMsg = "Las respuestas de los miembros del equipo no coinciden";
+                    // self.bottomMsg = "Las respuestas de los miembros del equipo no coinciden";
+                    notify("Error", "Las respuestas de los miembros del equipo no coinciden");
                 }
                 else if (data.status == "incorrect" && !self.questions[self.selectedQs].hinted && self.useHints) {
-                    self.bottomMsg = "Comentario: " + data.msg;
+                    // self.bottomMsg = "Comentario: " + data.msg;
+                    notify("Comentario", data.msg);
                     self.questions[self.selectedQs].hinted = true;
                 }
                 else if (self.questions[self.selectedQs].hinted || !self.useHints) {
@@ -206,15 +209,18 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                     self.bottomMsg = "";
                 }
                 else {
-                    Notification.info("Se alcanzo el final de la actividad");
+                    // Notification.info("Se alcanzo el final de la actividad");
+                    notify("Actividad", "Se alcanzo el final de la actividad");
                 }
             });
         }
         else if (self.questions[self.selectedQs].dirty) {
-            Notification.error("No se ha enviado una respuesta a la pregunta");
+            // Notification.error("No se ha enviado una respuesta a la pregunta");
+            notify("Error", "No se ha enviado una respuesta a la pregunta");
         }
         else if (self.selectedQs >= self.questions.length - 1 && self.iteration != 3) {
-            Notification.info("Se alcanzo el final de la actividad");
+            // Notification.info("Se alcanzo el final de la actividad");
+            notify("Actividad", "Se alcanzo el final de la actividad");
         }
         else {
             self.selectQuestion(self.selectedQs + 1);
@@ -231,11 +237,13 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
 
     self.prevQuestion = () => {
         if (self.selectedQs <= 0) {
-            Notification.info("Se alcanzo el inicio de la actividad");
+            // Notification.info("Se alcanzo el inicio de la actividad");
+            notify("Actividad", "Se alcanzo el inicio de la actividad");
             return;
         }
         if (self.questions[self.selectedQs].dirty) {
-            Notification.error("No se ha enviado una respuesta a la pregunta");
+            // Notification.error("No se ha enviado una respuesta a la pregunta");
+            notify("Error", "No se ha enviado una respuesta a la pregunta");
         }
         else if (self.iteration != 3) {
             self.selectQuestion(self.selectedQs - 1);
@@ -244,15 +252,18 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
 
     self.sendAnswer = (qs) => {
         if (self.answers[qs.id] == null || self.answers[qs.id] == -1) {
-            Notification.error("Debe seleccionar una alternativa");
+            // Notification.error("Debe seleccionar una alternativa");
+            notify("Error", "Debe seleccionar una alternativa");
             return;
         }
         if (self.useComments && (self.comments[qs.id] == null || self.comments[qs.id] == "")) {
-            Notification.error("Debe agregar un comentario");
+            // Notification.error("Debe agregar un comentario");
+            notify("Error", "Debe agregar un comentario");
             return;
         }
         if (self.useConfidence && (self.confidences[qs.id] == null)) {
-            Notification.error("Debe agregar un grado de certeza");
+            // Notification.error("Debe agregar un grado de certeza");
+            notify("Error", "Debe agregar un grado de certeza");
             return;
         }
         let postdata = {
@@ -270,11 +281,16 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
         });
     };
 
-    self.showInfo = () => {
+
+    let notify = (title, message, closable) => {
         $uibModal.open({
-            template: '<div><div class="modal-header"><h4>Factor Detonante</h4></div><div class="modal-body"><p>' +
-            self.sesDescr + '</p></div></div>'
+            template: '<div><div class="modal-header"><h4>' + title + '</h4></div><div class="modal-body"><p>' +
+                message + '</p></div></div>'
         });
+    };
+
+    self.showInfo = () => {
+        notify("Factor Detonante", self.sesDescr, false);
     };
 
     self.updateLang = (lang) => {
