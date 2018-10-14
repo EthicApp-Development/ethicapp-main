@@ -8,7 +8,7 @@ let socket = require("../modules/socket.config");
 
 router.post("/get-team-selection",rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select distinct s.answer, s.uid, s.qid, s.comment from selection as s, questions as q where q.sesid = $1 and " +
+    sql: "select distinct s.answer, s.uid, s.qid, s.comment from selection as s, questions as q where q.sesid = $1 and s.qid = q.id and " +
         "s.uid in (select tu.uid from teamusers as tu where tu.tmid = (select t.id from teamusers as tu, teams as t where " +
         "t.sesid = $2 and tu.tmid = t.id and tu.uid = $3)) and s.iteration = $4",
     sesReqData: ["ses","uid"],

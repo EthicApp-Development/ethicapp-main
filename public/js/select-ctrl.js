@@ -178,8 +178,49 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
 
     self.selectQuestion = (idx) => {
         self.selectedQs = idx;
-        self.shared.updateOverlayList();
-        self.bottomMsg = "";
+        if(self.questions[idx].plugin_data)
+            self.shared.updateOverlayList();
+    };
+
+    self.selectQuestionTab = (idx) => {
+        if (self.iteration == 3) {
+            console.log("Checking team answers");
+            let postdata = {qid: self.questions[self.selectedQs].id};
+            $http({url: "check-team-answer", method: "post", data: postdata}).success((data) => {
+                if (data.status == "ok") {
+                    self.sendTeamProgress(idx);
+                    // self.bottomMsg = "";
+                }
+                else if (data.status == "incomplete") {
+                    // self.bottomMsg = "Debe esperar a que todos los miembros del equipo respondan";
+                    notify("Error", "Debe esperar a que todos los miembros del equipo respondan");
+                }
+                else if (data.status == "different") {
+                    // self.bottomMsg = "Las respuestas de los miembros del equipo no coinciden";
+                    notify("Error", "Las respuestas de los miembros del equipo no coinciden");
+                }
+                else if (data.status == "incorrect" && !self.questions[self.selectedQs].hinted && self.useHints) {
+                    // self.bottomMsg = "Comentario: " + data.msg;
+                    notify("Comentario", data.msg);
+                    self.questions[self.selectedQs].hinted = true;
+                }
+                else if (self.questions[self.selectedQs].hinted || !self.useHints) {
+                    self.sendTeamProgress(idx);
+                    // self.bottomMsg = "";
+                }
+                else {
+                    // Notification.info("Se alcanzo el final de la actividad");
+                    notify("Actividad", "Se alcanzo el final de la actividad");
+                }
+            });
+        }
+        else if (self.questions[self.selectedQs].dirty) {
+            // Notification.error("No se ha enviado una respuesta a la pregunta");
+            notify("Error", "No se ha enviado una respuesta a la pregunta");
+        }
+        else {
+            self.selectQuestion(idx);
+        }
     };
 
     self.nextQuestion = () => {
@@ -281,13 +322,17 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
         });
     };
 
-
     let notify = (title, message, closable) => {
         $uibModal.open({
             template: '<div><div class="modal-header"><h4>' + title + '</h4></div><div class="modal-body"><p>' +
                 message + '</p></div></div>'
         });
     };
+
+    self.openComment = (com) => {
+        notify("Comentario", com);
+    };
+
 
     self.showInfo = () => {
         notify("Factor Detonante", self.sesDescr, false);

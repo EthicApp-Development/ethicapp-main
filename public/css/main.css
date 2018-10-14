@@ -740,7 +740,7 @@ ng-quill-editor.large .ql-editor{
     overflow-x: auto;
     overflow-y: hidden;
     margin-top: 2px;
-    max-height: 28px;
+    max-height: 36px;
     white-space: nowrap;
     -ms-overflow-style: none;
     overflow: -moz-scrollbars-none;
@@ -759,7 +759,7 @@ ng-quill-editor.large .ql-editor{
     background: #fff;
     color: #000000;
     text-align: center;
-    padding: 2px;
+    padding: 4px 2px;
     border-top: 4px solid #eee;
     border-bottom: 1px solid #ddd;
     opacity: 0.8;
@@ -767,7 +767,7 @@ ng-quill-editor.large .ql-editor{
 
 .qs-tabs .tab.wide {
     width: auto;
-    padding: 2px 8px;
+    padding: 4px 8px;
 }
 
 .qs-tabs .tab:hover{
@@ -853,4 +853,33 @@ ng-quill-editor.large .ql-editor{
 
 .question-content{
     color: #000;
+}
+
+.flat{
+    background: none;
+    border: none;
+    color: white;
+}
+
+.flat.btn:hover{
+    background: none;
+    border: 1px solid white;
+    color: white;
+}
+
+input.flat{
+    border-bottom: 1px solid #eee;
+    padding: 0 10px;
+    height: 32px;
+}
+
+input.flat:focus{
+    border-bottom: 2px solid #fff;
+    box-shadow: none;
+    -webkit-box-shadow: none;
+}
+
+input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+    color: rgba(255,255,255,0.8);
+    opacity: 1; /* Firefox */
 }

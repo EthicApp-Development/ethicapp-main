@@ -1,12 +1,12 @@
 "use strict";
 
-let adpp = angular.module("SesList", ['btford.socket-io']);
+let adpp = angular.module("SesList", ["ui.bootstrap",'btford.socket-io']);
 
 adpp.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
 
-adpp.controller("SesListController", ["$scope", "$http", "$socket", function ($scope, $http, $socket) {
+adpp.controller("SesListController", ["$scope", "$http", "$socket", "$uibModal", function ($scope, $http, $socket, $uibModal) {
     let self = $scope;
     self.sessions = [];
     self.sesOpen = false;
@@ -45,7 +45,10 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", function ($s
                 window.location.replace(data.redirect);
             }
             else{
-                self.showCodeError = true;
+                $uibModal.open({
+                    template: '<div><div class="modal-header"><h4>Error</h4></div><div class="modal-body">' +
+                        '<p>El código ingresado no es válido</p></div></div>'
+                });
             }
         });
     };

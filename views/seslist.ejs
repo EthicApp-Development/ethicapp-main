@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
     <title>DocCollab</title>
     <script src="libs/angular.min.js"></script>
+    <script src="libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
     <!--<script src="js/ses-ctrl.js"></script>-->
     <script src="libs/socket.min.js"></script>
     <script src="js/ses-ctrl.min.js"></script>
@@ -25,17 +26,17 @@
             </a>
         </div>
         <div class="cf3 grow text-center">
-            <div class="simple-padding-top input-group">
-                <input type="text" class="form-control form-inline-med" ng-model="invCode"
+            <div>
+                <input type="text" class="form-control form-inline-med flat" ng-model="invCode"
                        ng-keydown="$event.keyCode === 13 && enterCode()" placeholder="Ingresar Código">
-                <span class="input-group-btn">
-                    <button class="btn btn-default" ng-disabled="invCode == ''" ng-click="enterCode()">
+                <span>
+                    <button class="btn btn-default flat" ng-disabled="invCode == ''" ng-click="enterCode()">
                         <i class="fa fa-external-link-square"></i>
                     </button>
                 </span>
             </div>
         </div>
-        <div class="cf1 text-right margin-right-8">
+        <div class="cf1 text-right margin-right-8 simple-padding-top">
             <a href="logout" class="text-white">
                 <i class="fa fa-sign-out fa-2x"></i>
             </a>
