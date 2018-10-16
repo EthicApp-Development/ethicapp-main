@@ -58,7 +58,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
         NgMap.getMap().then((map) => {
             self.map = map;
         });
-        self.updateLang(self.lang);
+        self.getMe();
     };
 
     self.getSesInfo = () => {
@@ -104,6 +104,13 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                 self.loadQuestions();
                 self.loadAnswers();
             }
+        });
+    };
+
+    self.getMe = () => {
+        $http.post("get-my-name").success((data) => {
+            self.lang = data.lang;
+            self.updateLang(self.lang);
         });
     };
 
