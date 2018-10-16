@@ -179,8 +179,9 @@
                 <div class="input-group">
                     <input type="text" class="form-control" placeholder="{{'comment' | lang}}" ng-model="comments[qs.id]" ng-change="qs.dirty = true" ng-disabled="finished || !useComments">
                     <span class="input-group-btn">
-                        <button class="btn btn-default" ng-disabled="finished" ng-click="sendAnswer(qs)" ng-class="{'btn-success': sent[qs.id], 'btn-warning': qs.dirty}">
-                            <i class="fa fa-send"></i>
+                        <button class="btn btn-default" ng-disabled="finished || !qs.dirty" ng-click="sendAnswer(qs)">
+                            <i class="fa fa-check" ng-show="!qs.dirty"></i>
+                            <i class="fa fa-send" ng-show="qs.dirty"></i>
                         </button>
                     </span>
                 </div>

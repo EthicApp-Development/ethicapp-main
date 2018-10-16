@@ -75,9 +75,17 @@ router.post("/register-prof", rpg.execSQL({
 
 router.post("/get-my-name", rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: "select name, role from users where id = $1",
+    sql: "select name, role, lang from users where id = $1",
     sesReqData: ["uid"],
     sqlParams: [rpg.param("ses", "uid")]
+}));
+
+router.post("/update-lang", rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: "update users set lang = $1 where id = $2",
+    sesReqData: ["uid"],
+    postReqData: ["lang"],
+    sqlParams: [rpg.param("post", "lang"), rpg.param("ses", "uid")]
 }));
 
 module.exports = router;

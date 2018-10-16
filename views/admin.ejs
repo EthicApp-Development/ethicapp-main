@@ -32,26 +32,6 @@
 
     <div class="top-bar">
 
-        <div class="chip" ng-show="selectedId == -1">
-            <i class="fa fa-list"></i> {{'selectSes' | lang}}
-        </div>
-
-        <div class="chip hoverable" ng-show="selectedId != -1" ng-click="backToList()">
-            <i class="fa fa-caret-left"></i> {{selectedSes.name}}
-        </div>
-
-        <div class="chip hoverable" ng-repeat="tab in tabOptions" ng-class="{active: tab == selectedTab}" ng-click="setTab(tab)">
-            <i class="fa fa-{{secIcons[tab]}}"></i> {{tab | lang}}
-        </div>
-
-        <a class="chip hoverable pull-right" href="logout">
-            {{'logout' | lang}}
-        </a>
-
-        <span class="chip hoverable pull-right" ng-click="changeLang()">
-            {{'langOther' | lang}}
-        </span>
-
         <div class="top-bar-second" ng-show="selectedId != -1">
             <span ng-repeat="st in sesStatusses">
                 <span ng-if="selectedSes.type != 'M'" class="label label-default bg-black-alpha" ng-class="{'bg-yellow': $index==selectedSes.status-1}">
@@ -67,6 +47,26 @@
             </span>
             <button class="btn btn-xs btn-default simple-margin-left" ng-click="shared.changeState()">{{'gotoNext' | lang}}</button>
         </div>
+
+        <div class="chip" ng-show="selectedId == -1">
+            <i class="fa fa-list"></i> {{'selectSes' | lang}}
+        </div>
+
+        <div class="chip hoverable" ng-show="selectedId != -1" ng-click="backToList()">
+            <i class="fa fa-caret-left"></i> {{selectedSes.name}}
+        </div>
+
+        <div class="chip white hoverable" ng-repeat="tab in tabOptions" ng-class="{active: tab == selectedTab}" ng-click="setTab(tab)">
+            <i class="fa fa-{{secIcons[tab]}}"></i> {{tab | lang}}
+        </div>
+
+        <a class="chip hoverable pull-right" href="logout">
+            {{'logout' | lang}}
+        </a>
+
+        <span class="chip hoverable pull-right" ng-click="changeLang()">
+            {{'langOther' | lang}}
+        </span>
 
         <!--<div class="col-sm-1">
             <button class="btn btn-default" ng-click="toggleSidebar()">

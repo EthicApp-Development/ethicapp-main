@@ -25,6 +25,7 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", "$uibModal",
     self.showName = () => {
         $http.post("get-my-name").success((data) => {
             self.username = data.name;
+            self.mylang = data.lang;
         });
     };
 
@@ -50,6 +51,13 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", "$uibModal",
                         '<p>El código ingresado no es válido</p></div></div>'
                 });
             }
+        });
+    };
+
+    self.changeLang = () => {
+        let newlang = (self.mylang == "english") ? "spanish" : "english";
+        $http.post("update-lang", {lang: newlang}).success((data) => {
+            self.showName();
         });
     };
 
