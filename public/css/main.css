@@ -768,14 +768,14 @@ ng-quill-editor.large .ql-editor{
 .qs-tabs .tab{
     display: inline-block;
     width: 42px;
-    margin-right: 8px;
+    margin-right: 5px;
     border-top-right-radius: 8px;
     border-top-left-radius: 8px;
     background: #fff;
     color: #000000;
     text-align: center;
     padding: 4px 2px;
-    border-top: 4px solid #eee;
+    border-top: 8px solid #eee;
     border-bottom: 1px solid #ddd;
     opacity: 0.8;
 }
@@ -795,15 +795,15 @@ ng-quill-editor.large .ql-editor{
 }
 
 .qs-tabs .tab.yellow{
-    border-top: 4px solid #ffc06a;
+    border-top: 8px solid #ffc06a;
 }
 
 .qs-tabs .tab.green{
-    border-top: 4px solid #8BC369;
+    border-top: 8px solid #8BC369;
 }
 
 .qs-tabs .tab.red{
-    border-top: 4px solid #D75C37;
+    border-top: 8px solid #D75C37;
 }
 
 .mid-container.qs-content{
