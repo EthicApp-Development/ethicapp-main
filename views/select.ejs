@@ -163,6 +163,7 @@
 
                 <div class="answers">
                     <div class="ansoption" ng-repeat="x in optLabels" ng-click="!finished && setAnswer(qs,$index)">
+                        <span>{{x}}) </span>
                         <div class="option" ng-class="{'selected': answers[qs.id]==$index}"></div>
                         <span ng-bind="qs.options[$index]"></span>
                     </div>
