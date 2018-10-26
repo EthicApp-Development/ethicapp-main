@@ -929,3 +929,12 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 .mid-container.simple-pad{
     padding: 12px;
 }
+
+.margin-hor{
+    margin: 0 16px;
+}
+
+.btn.flat.btn-success{
+    background: #1f8c22;
+    border: 1px solid white;
+}

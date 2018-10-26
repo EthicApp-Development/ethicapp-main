@@ -53,7 +53,6 @@
 
     <div class="top-bar-mini">
         <span class="boxed" ng-bind="teamstr"></span>
-
     </div>
 
     <!-- <div class="top-bar-mini">
@@ -79,6 +78,11 @@
                  ng-click="selectDocument($index)">
                 {{doc.title}}
             </div>
+            <button class="btn btn-sm flat btn-default pull-right" ng-if="iteration > 0" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}" ng-hide="myRole == 'P' && iteration > 0">
+                <i class="fa fa-check"></i></button>
+            <button disabled class="btn btn-sm btn-default flat pull-right margin-right-8" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i></button>
+            <button class="btn btn-sm btn-default flat pull-right margin-right-8" ng-show="iteration == 3 && followLeader" ng-click="takeControl()"><i class="fa fa-level-down"></i></button>
+            <a class="btn btn-sm btn-default flat pull-right" ng-show="iteration > 6" href="rubrica"><i class="fa fa-list-alt"></i></a>
         </div>
     </div>
 
@@ -111,23 +115,27 @@
     </div>
 
     <div ng-show="iteration > 0 || myRole == 'P'">
-        <div class="col-lg-10 col-lg-offset-1">
+        <div>
             <h4>Unidades Semánticas:</h4>
-            <div>
+            <div class="margin-hor">
                 <div class="row" ng-repeat="unit in units">
-                    <div class="col-xs-3 col-md-1">
+                    <div class="col-xs-2 col-md-1">
                         <button class="btn btn-default" ng-class="{'active': unit.edit, 'btn-warning': unit.edit}" ng-click="toggleEdit($index,unit)" ng-disabled="finished || followLeader">
                             {{unit.sentences.length}} <i class="fa fa-check-square"></i>
                         </button>
                     </div>
-                    <div class="col-xs-9 col-md-11">
+                    <div class="col-xs-10 col-md-11">
                         <div class="input-group">
                             <input type="text" class="form-control" ng-model="unit.comment" ng-change="unit.dirty = true" ng-disabled="finished || followLeader || (myRole == 'P' && iteration > 0)">
                             <span class="input-group-btn">
-                                <button class="btn btn-default" ng-disabled="finished || followLeader || (myRole == 'P' && iteration > 0)" ng-click="addSemUnit(unit)" ng-class="{'btn-success': sent[unit.id], 'btn-warning': unit.dirty && !(myRole == 'P' && iteration > 0)}">
-                                    <i class="fa fa-send"></i>
+                                <button class="btn btn-default" ng-disabled="finished || !unit.dirty || followLeader || (myRole == 'P' && iteration > 0)" ng-click="addSemUnit(unit)">
+                                    <i class="fa fa-check" ng-show="!unit.dirty"></i>
+                                    <i class="fa fa-send" ng-show="unit.dirty"></i>
                                 </button>
-                                <button class="btn btn-default" style="margin-left: 16px;" ng-disabled="finished || followLeader || (myRole == 'P' && iteration > 0)" ng-click="deleteUnit($index,unit)">
+                                <!--<button class="btn btn-default" ng-disabled="finished || followLeader || (myRole == 'P' && iteration > 0)" ng-click="addSemUnit(unit)" ng-class="{'btn-success': sent[unit.id], 'btn-warning': unit.dirty && !(myRole == 'P' && iteration > 0)}">
+                                    <i class="fa fa-send"></i>
+                                </button>-->
+                                <button class="btn btn-default" ng-disabled="finished || followLeader || (myRole == 'P' && iteration > 0)" ng-click="deleteUnit($index,unit)">
                                     <i class="fa fa-trash"></i>
                                 </button>
                             </span>
@@ -140,26 +148,26 @@
                 Agregar unidad semántica
             </button>
         </div>
-        <div class="col-lg-10 col-lg-offset-1">
+        <div class="margin-hor">
             <div>
                 <div class="row bordered" ng-repeat="unit in unitsIter3">
-                    <div class="col-xs-3 col-md-1">
+                    <div class="col-xs-2 col-md-1">
                         <button class="btn btn-default" ng-class="{'active': unit.viewing}" ng-click="startView(unit)">
                             {{unit.sentences.length}} <i class="fa fa-check-square"></i>
                         </button>
                     </div>
-                    <div class="col-xs-9 col-md-11 simple-padding-top">
+                    <div class="col-xs-10 col-md-11 simple-padding-top">
                         <strong>Grupal</strong>: <span ng-bind="unit.comment"></span>
                     </div>
                     <hr>
                 </div>
                 <div class="row bordered" ng-repeat="unit in unitsIter1">
-                    <div class="col-xs-3 col-md-1">
+                    <div class="col-xs-2 col-md-1">
                         <button class="btn btn-default" ng-class="{'active': unit.viewing}" ng-click="startView(unit)">
                             {{unit.sentences.length}} <i class="fa fa-check-square"></i>
                         </button>
                     </div>
-                    <div class="col-xs-9 col-md-11 simple-padding-top">
+                    <div class="col-xs-10 col-md-11 simple-padding-top">
                         <strong ng-bind="teamNames[unit.uid]"></strong>: <span ng-bind="unit.comment"></span>
                     </div>
                 </div>
