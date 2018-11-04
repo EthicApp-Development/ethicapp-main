@@ -116,6 +116,10 @@
 
     <div ng-show="iteration > 0 || myRole == 'P'">
         <div>
+            <button class="btn btn-default pull-right" ng-click="addEmptyUnit()" ng-show="iteration < 4" ng-hide="myRole == 'P' && iteration > 0"
+                    ng-disabled="finished || countHighlight() == 0 || editing != -1 || (iteration > 0 && units.length >= 3) || followLeader">
+                <i class="fa fa-plus"></i> Agregar unidad semántica
+            </button>
             <h4>Unidades Semánticas:</h4>
             <div class="margin-hor">
                 <div class="row" ng-repeat="unit in units">
@@ -143,10 +147,6 @@
                     </div>
                 </div>
             </div>
-            <button class="btn btn-default simple-margin-left" ng-click="addEmptyUnit()" ng-show="iteration < 4" ng-hide="myRole == 'P' && iteration > 0"
-                    ng-disabled="finished || countHighlight() == 0 || editing != -1 || (iteration > 0 && units.length >= 3) || followLeader">
-                Agregar unidad semántica
-            </button>
         </div>
         <div class="margin-hor">
             <div>
@@ -179,14 +179,18 @@
 
     <div class="report-window" ng-if="writingReport" ng-controller="ReportController">
         <div class="bar">
-            <span>Respuesta al factor detonante</span>
+            <span>Reporte</span>
             <div class="pull-right">
                 <span ng-show="lastSent != null && isFull">Enviado {{lastSent | date:'HH:mm'}}</span>
                 <button class="btn btn-sm btn-primary" ng-click="sendReport()" ng-show="isFull && !finished"
-                        ng-class="{'btn-success': lastSent != null && isFull, 'bg-warning': misc.reportDirty}">
-                    <i class="fa fa-send"></i>
+                        ng-disabled="!misc.reportDirty">
+                    <i class="fa fa-check" ng-show="!misc.reportDirty"></i>
+                    <i class="fa fa-send" ng-show="misc.reportDirty"></i>
                 </button>
-                <button class="btn btn-sm btn-primary" ng-click="toggleFull()"><i class="fa fa-minus"></i></button>
+                <button class="btn btn-sm btn-primary" ng-click="toggleFull()">
+                    <i class="fa fa-caret-down" ng-show="isFull"></i>
+                    <i class="fa fa-caret-up" ng-show="!isFull"></i>
+                </button>
             </div>
         </div>
         <div class="content" ng-show="isFull">

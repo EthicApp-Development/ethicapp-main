@@ -18,7 +18,44 @@
 
 <div ng-controller="RubricaController">
 
-    <div class="row top-bar-mini">
+    <div class="top-bar-mini cflex">
+        <div class="cf1">
+            <a href="seslist" class="simple-margin-left">
+                <img src="img/logo.png" class="logo-bar">
+            </a>
+        </div>
+        <div class="cf3 grow text-center simple-padding-top" ng-show="iteration > 0">
+            <span ng-repeat="st in sesStatusses">
+                <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': $index==iteration - 3*miters}">{{st}}</span>
+                <!-- <span ng-hide="$last">→</span> -->
+            </span>
+            <i class="fa fa-angle-right"></i>
+            <!-- <span class="pull-right margin-right-24" ng-show="sesSTime != null">
+                <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
+            </span> -->
+        </div>
+        <div class="cf1 text-right margin-right-8 simple-padding-top">
+            <a href="logout" class="text-white">
+                <i class="fa fa-sign-out fa-2x"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="top-bar top-bar-tabs">
+        <div class="qs-tabs" ng-show="iteration > 0 || myRole == 'P'">
+            <div class="tab tab-text" ng-repeat="report in reports"  ng-class="{active: $index==selectedIndex}"
+                 ng-click="selectReport($index)">
+                Reporte {{$index + 1}}
+            </div>
+            <button class="btn btn-sm flat btn-default pull-right" ng-if="iteration > 0" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}" ng-hide="myRole == 'P' && iteration > 0">
+                <i class="fa fa-check"></i></button>
+            <!-- <button disabled class="btn btn-sm btn-default flat pull-right margin-right-8" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i></button>
+            <button class="btn btn-sm btn-default flat pull-right margin-right-8" ng-show="iteration == 3 && followLeader" ng-click="takeControl()"><i class="fa fa-level-down"></i></button>
+            <a class="btn btn-sm btn-default flat pull-right" ng-show="iteration > 6" href="rubrica"><i class="fa fa-list-alt"></i></a> -->
+        </div>
+    </div>
+
+    <!-- <div class="row top-bar-mini">
         <div class="text-center">
             <span ng-repeat="st in sesStatusses">
                 <span class="label label-primary" ng-class="{'bg-black-alpha': $index==iteration - 3*miters}" ng-bind="st"></span>
@@ -42,15 +79,17 @@
                   ng-click="selectReport($index)" ng-show="iteration == 6">
                 Reporte {{$index + 1}}
             </span>
-            <!--<strong class="pull-right margin-top-8" ng-bind="iterationNames[iteration]"></strong>-->
+            <!--<strong class="pull-right margin-top-8" ng-bind="iterationNames[iteration]"></strong>--
         </div>
         <div class="col-sm-6">
             <a onclick="window.history.back()" class="btn btn-sm btn-default pull-right">Atrás</a>
         </div>
     </div>
+    -->
 
-    <div class="pad-content" style="max-height: 100vh">
-    <div class="row bg-white"  ng-if="report != null">
+    <div class="scrollable-container blue">
+    <div class="mid-container qs-content simple-pad">
+    <div class="row"  ng-if="report != null">
         <div class="col-sm-4">
             <div class="report">
                 <h3 ng-show="iteration < 7">Reporte</h3>
@@ -61,9 +100,9 @@
             <hr>
         </div>
         <div class="col-sm-8">
-            <h3>Instrucciones:</h3>
+            <!--<h3>Instrucciones:</h3>
             <div ng-bind="instructions[iteration]"></div>
-            <hr>
+            <hr>-->
             <div class="rubrica" ng-show="iteration < 7">
                 <h3>Rúbrica</h3>
                 <table class="table table-bordered">
@@ -134,6 +173,7 @@
             <br>
             <br>
         </div>
+    </div>
     </div>
     </div>
 

@@ -415,6 +415,13 @@ td.clickable:hover{
     text-align: justify;
 }
 
+@media screen and (max-width: 600px) {
+    .report-window{
+        width: 100vw;
+        left: 0;
+    }
+}
+
 .splash{
     position: absolute;
     z-index: 100;
