@@ -76,7 +76,7 @@
         <div class="qs-tabs" ng-show="iteration > 0 || myRole == 'P'">
             <div class="tab tab-text" ng-repeat="doc in documents" ng-class="{active: selectedDocument == $index, yellow: hgDocs[$index]}"
                  ng-click="selectDocument($index)">
-                {{doc.title | limitTo:16}}
+                {{doc.title | limitTo:10}}
             </div>
             <button class="btn btn-sm flat btn-default pull-right" ng-if="iteration > 0" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}" ng-hide="myRole == 'P' && iteration > 0">
                 <i class="fa fa-check"></i></button>
