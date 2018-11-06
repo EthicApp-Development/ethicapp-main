@@ -47,8 +47,8 @@
                  ng-click="selectReport($index)">
                 Reporte {{$index + 1}}
             </div>
-            <a class="btn btn-sm flat btn-default pull-right" href="semantic"><i class="fa fa-external-link"></i></a>
-            <button class="btn btn-sm flat btn-default pull-right" ng-if="iteration < 7" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}" ng-hide="myRole == 'P' && iteration > 0">
+            <a class="btn btn-sm btn-default pull-right margin-right-8" href="semantic" ng-if="iteration >= 7"><i class="fa fa-external-link"></i></a>
+            <button class="btn btn-sm btn-default pull-right margin-right-8" ng-if="iteration < 7" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}" ng-hide="myRole == 'P' && iteration > 0">
                 <i class="fa fa-check"></i></button>
             <!-- <button disabled class="btn btn-sm btn-default flat pull-right margin-right-8" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i></button>
             <button class="btn btn-sm btn-default flat pull-right margin-right-8" ng-show="iteration == 3 && followLeader" ng-click="takeControl()"><i class="fa fa-level-down"></i></button>
