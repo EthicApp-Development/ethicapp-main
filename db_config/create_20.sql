@@ -1,0 +1,1 @@
+alter table sesusers add constraint no_dup_users unique(uid,sesid);

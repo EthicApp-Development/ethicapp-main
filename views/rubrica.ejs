@@ -43,11 +43,12 @@
 
     <div class="top-bar top-bar-tabs">
         <div class="qs-tabs" ng-show="iteration > 0 || myRole == 'P'">
-            <div class="tab tab-text" ng-repeat="report in reports"  ng-class="{active: $index==selectedIndex}"
+            <div class="tab tab-text" ng-repeat="report in reports"  ng-class="{active: $index==selectedIndex, yellow: report.status == 'SENT'}"
                  ng-click="selectReport($index)">
                 Reporte {{$index + 1}}
             </div>
-            <button class="btn btn-sm flat btn-default pull-right" ng-if="iteration > 0" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}" ng-hide="myRole == 'P' && iteration > 0">
+            <a class="btn btn-sm flat btn-default pull-right" href="semantic"><i class="fa fa-external-link"></i></a>
+            <button class="btn btn-sm flat btn-default pull-right" ng-if="iteration < 7" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}" ng-hide="myRole == 'P' && iteration > 0">
                 <i class="fa fa-check"></i></button>
             <!-- <button disabled class="btn btn-sm btn-default flat pull-right margin-right-8" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i></button>
             <button class="btn btn-sm btn-default flat pull-right margin-right-8" ng-show="iteration == 3 && followLeader" ng-click="takeControl()"><i class="fa fa-level-down"></i></button>
@@ -108,33 +109,34 @@
                 <table class="table table-bordered">
                     <tr>
                         <th>Criterio</th>
-                        <th>No Logrado (1 pto)</th>
-                        <th>En Proceso (2 pto)</th>
-                        <th>Por Lograr (3 pto)</th>
-                        <th>Logrado (4 pto)</th>
+                        <th>1p</th>
+                        <th>2p</th>
+                        <th>3p</th>
+                        <th>4p</th>
                     </tr>
                     <tr ng-repeat="criterio in criterios">
                         <td ng-bind="criterio.name"></td>
-                        <td ng-click="selectCriterio(criterio.id, 1)" ng-class="{active: report.select[criterio.id] == 1, clickable: canAnswer}">
-                            <i class="fa fa-check" ng-show="report.truev[criterio.id] == 1"></i> <span ng-bind="criterio.inicio"></span>
+                        <td ng-click="openCriterio(criterio)" ng-class="{active: report.select[criterio.id] == 1, clickable: canAnswer && !finished}">
+                            <i class="fa fa-check" ng-show="report.truev[criterio.id] == 1"></i> <span>{{criterio.inicio | limitTo:3}}</span>
                         </td>
-                        <td ng-click="selectCriterio(criterio.id, 2)" ng-class="{active: report.select[criterio.id] == 2, clickable: canAnswer}">
-                            <i class="fa fa-check" ng-show="report.truev[criterio.id] == 2"></i> <span ng-bind="criterio.proceso"></span>
+                        <td ng-click="openCriterio(criterio)" ng-class="{active: report.select[criterio.id] == 2, clickable: canAnswer && !finished}">
+                            <i class="fa fa-check" ng-show="report.truev[criterio.id] == 2"></i> <span>{{criterio.proceso | limitTo:3}}</span>
                         </td>
-                        <td ng-click="selectCriterio(criterio.id, 3)" ng-class="{active: report.select[criterio.id] == 3, clickable: canAnswer}">
-                            <i class="fa fa-check" ng-show="report.truev[criterio.id] == 3"></i> <span ng-bind="criterio.competente"></span>
+                        <td ng-click="openCriterio(criterio)" ng-class="{active: report.select[criterio.id] == 3, clickable: canAnswer && !finished}">
+                            <i class="fa fa-check" ng-show="report.truev[criterio.id] == 3"></i> <span>{{criterio.competente | limitTo:3}}</span>
                         </td>
-                        <td ng-click="selectCriterio(criterio.id, 4)" ng-class="{active: report.select[criterio.id] == 4, clickable: canAnswer}">
-                            <i class="fa fa-check" ng-show="report.truev[criterio.id] == 4"></i> <span ng-bind="criterio.avanzado"></span>
+                        <td ng-click="openCriterio(criterio)" ng-class="{active: report.select[criterio.id] == 4, clickable: canAnswer && !finished}">
+                            <i class="fa fa-check" ng-show="report.truev[criterio.id] == 4"></i> <span>{{criterio.avanzado | limitTo:3}}</span>
                         </td>
                     </tr>
                 </table>
                 <h4>Comentario:</h4>
-                <textarea class="form-control" ng-model="report.comment" ng-disabled="!canAnswer" rows="4" ng-change="report.dirty = true"></textarea>
+                <textarea class="form-control" ng-model="report.comment" ng-disabled="!canAnswer || finished" rows="4" ng-change="report.dirty = true"></textarea>
                 <span class="red" ng-show="commentError">Debe agregar un comentario de la evaluación</span>
-                <button class="pull-right btn btn-default" ng-click="sendSelection(report)" ng-disabled="!checkCriteria(report) || !canAnswer"
-                    ng-class="{'btn-success': report.status == 'SENT', 'btn-warning': report.dirty}">
-                    <i class="fa fa-send"></i> Enviar
+                <button class="pull-right btn btn-default" ng-click="sendSelection(report)" ng-disabled="!checkCriteria(report) || !canAnswer || !report.dirty || finished">
+                    <i class="fa fa-send" ng-show="report.dirty"></i>
+                    <i class="fa fa-check" ng-show="!report.dirty"></i>
+                    Enviar
                 </button>
                 <div class="row"></div>
             </div>
@@ -148,17 +150,17 @@
                         <table class="table table-bordered font-mini">
                             <tr>
                                 <th>Criterio</th>
-                                <th>No Logrado (1 pto)</th>
-                                <th>En Proceso (2 pto)</th>
-                                <th>Por Lograr (3 pto)</th>
-                                <th>Logrado (4 pto)</th>
+                                <th>1p</th>
+                                <th>2p</th>
+                                <th>3p</th>
+                                <th>4p</th>
                             </tr>
                             <tr ng-repeat="criterio in criterios">
                                 <td ng-bind="criterio.name"></td>
-                                <td ng-class="{active: answersRubrica[ans.uid][criterio.id] == 1}" ng-bind="criterio.inicio"></td>
-                                <td ng-class="{active: answersRubrica[ans.uid][criterio.id] == 2}" ng-bind="criterio.proceso"></td>
-                                <td ng-class="{active: answersRubrica[ans.uid][criterio.id] == 3}" ng-bind="criterio.competente"></td>
-                                <td ng-class="{active: answersRubrica[ans.uid][criterio.id] == 4}" ng-bind="criterio.avanzado"></td>
+                                <td ng-click="openCriterio(criterio, answersRubrica[ans.uid][criterio.id])" ng-class="{active: answersRubrica[ans.uid][criterio.id] == 1}">{{criterio.inicio | limitTo:3 }}</td>
+                                <td ng-click="openCriterio(criterio, answersRubrica[ans.uid][criterio.id])" ng-class="{active: answersRubrica[ans.uid][criterio.id] == 2}">{{criterio.proceso | limitTo:3 }}</td>
+                                <td ng-click="openCriterio(criterio, answersRubrica[ans.uid][criterio.id])" ng-class="{active: answersRubrica[ans.uid][criterio.id] == 3}">{{criterio.competente | limitTo:3}}</td>
+                                <td ng-click="openCriterio(criterio, answersRubrica[ans.uid][criterio.id])" ng-class="{active: answersRubrica[ans.uid][criterio.id] == 4}">{{criterio.avanzado | limitTo:3}}</td>
                             </tr>
                         </table>
 
@@ -166,9 +168,7 @@
                 </ul>
                 <strong>Promedio: {{getAvg() | number:2}} / 4</strong>
                 <br>
-                <hr>
                 <br>
-                <a href="semantic" class="btn btn-primary"><i class="fa fa-external-link"></i> Ver Unidades Semánticas</a>
             </div>
             <br>
             <br>
@@ -178,6 +178,8 @@
     </div>
 
 </div>
+
+
 
 </body>
 </html>

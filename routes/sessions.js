@@ -471,7 +471,8 @@ router.post("/generate-session-code", rpg.singleSQL({
 
 router.post("/enter-session-code", rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: "insert into sesusers(uid,sesid) select $1::int as uid, id from sessions where code = $2 returning sesid",
+    sql: "insert into sesusers(uid,sesid) select $1::int as uid, id from sessions where code = $2 on conflict (sesid,uid) do update " +
+        "set uid = sesusers.uid returning sesid",
     postReqData: ["code"],
     sesReqData: ["uid"],
     sqlParams: [rpg.param("ses", "uid"), rpg.param("post", "code")],

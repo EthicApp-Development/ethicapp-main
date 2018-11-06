@@ -18,6 +18,7 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
     self.canAnswer = true;
     self.miters = 0;
     self.commentError = false;
+    self.finished = false;
 
     self.init = () => {
         self.getReports();
@@ -52,6 +53,11 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
             self.myUid = data.uid;
             self.sesSTime = (data.stime != null) ? new Date(data.stime) : null;
             self.sesDescr = (self.iteration < 4) ? (data.descr.split("\n")[0] || data.descr) : (data.descr.split("\n")[1] || data.descr);
+            $http({url: "get-finished", method: "post", data: {status: self.iteration + 2}}).success((data) => {
+                if (data.finished) {
+                    self.finished = true;
+                }
+            });
             if(data.type == "M"){
                 self.sesStatusses = ["Individual", "Grupal", "Reporte", "Evaluación de Pares", "Finalizada"];
                 self.miters = 1;
@@ -133,6 +139,21 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
         }
     };
 
+    self.finishState = () => {
+        if(self.finished){
+            return;
+        }
+        let confirm = window.confirm("¿Esta seguro que desea terminar la actividad?\nEsto implica no volver a poder editar sus respuestas");
+        if(confirm) {
+            let postdata = {status: self.iteration + 2};
+            $http({url: "record-finish", method: "post", data: postdata}).success((data) => {
+                // self.hasFinished = true;
+                self.finished = true;
+                console.log("FINISH");
+            });
+        }
+    };
+
     self.fillSelections = () => {
         self.reports.forEach((report) => {
             let postdata = {rid: report.id};
@@ -197,6 +218,27 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
         }
     };
 
+    self.openCriterio = (c, r) => {
+        let modal = $uibModal.open({
+            templateUrl: "templ/criterio-dialog.html",
+            controller: "CriterioModalController",
+            controllerAs: "vm",
+            scope: self,
+            resolve: {
+                data: function () {
+                    return {
+                        criterio: c,
+                        dis: r || !self.canAnswer || self.finished,
+                        res: r ? r : self.report.select[c.id] || 0
+                    };
+                },
+            }
+        });
+        modal.result.then(res => {
+            self.selectCriterio(c.id, res);
+        });
+    };
+
     self.init();
 
 }]);
@@ -208,5 +250,25 @@ app.controller("ReportModalController", ["$scope", "$uibModalInstance", "report"
     vm.cancel = () => {
         $uibModalInstance.dismiss('cancel');
     };
+
+}]);
+
+app.controller("CriterioModalController", ["$scope", "$uibModalInstance", "data", function ($scope, $uibModalInstance, data) {
+    var vm = this;
+    vm.data = data;
+    vm.res = data.res;
+
+    vm.cancel = () => {
+        $uibModalInstance.dismiss('cancel');
+    };
+
+    vm.done = () => {
+        $uibModalInstance.close(vm.res);
+    };
+
+    vm.select = (i) => {
+        if(vm.data.dis) return;
+        vm.res = i;
+    }
 
 }]);

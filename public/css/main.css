@@ -945,3 +945,18 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     background: #1f8c22;
     border: 1px solid white;
 }
+
+.options div{
+    display: block;
+    border: 1px solid #ccc;
+    padding: 12px;
+    margin-bottom: 8px;
+}
+
+.options div:hover{
+    cursor: pointer;
+}
+
+.options div.active{
+    background: #8cd87c;
+}

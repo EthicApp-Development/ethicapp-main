@@ -1,0 +1,30 @@
+<div>
+    <div class="modal-header">
+        <h4>{{vm.data.criterio.name}}</h4>
+    </div>
+    <div class="modal-body">
+        <div class="options">
+            <strong>No Logrado (1p)</strong>
+            <div ng-click="vm.select(1)" ng-class="{active: vm.res == 1}">
+                <span ng-bind="vm.data.criterio.inicio"></span>
+            </div>
+            <strong>En Proceso (2p)</strong>
+            <div ng-click="vm.select(2)" ng-class="{active: vm.res == 2}">
+                <span ng-bind="vm.data.criterio.proceso"></span>
+            </div>
+            <strong>Por Lograr (3p)</strong>
+            <div ng-click="vm.select(3)" ng-class="{active: vm.res == 3}">
+                <span ng-bind="vm.data.criterio.competente"></span>
+            </div>
+            <strong>Logrado (4p)</strong>
+            <div ng-click="vm.select(4)" ng-class="{active: vm.res == 4}">
+                <span ng-bind="vm.data.criterio.avanzado"></span>
+            </div>
+        </div>
+        <hr>
+        <div class="modal-footer">
+            <button class="btn btn-primary" type="button" ng-show="!vm.data.dis" ng-click="vm.done()">Seleccionar</button>
+            <button class="btn btn-default" type="button" ng-show="vm.data.dis" ng-click="vm.cancel()">Cerrar</button>
+        </div>
+    </div>
+</div>
