@@ -960,3 +960,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 .options div.active{
     background: #8cd87c;
 }
+
+.border-white{
+    border: 1px solid white;
+}
