@@ -924,7 +924,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 ::-webkit-scrollbar {
     width: 8px;
     border: solid 2px transparent;
-    height: 4px;
+    height: 2px;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -963,4 +963,26 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 
 .border-white{
     border: 1px solid white;
+}
+
+.hscroll{
+    height: 30px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    margin: 0 8px;
+}
+
+.rtab{
+    display: inline-block;
+    position: absolute;
+    top: inherit;
+    right: 8px;
+    background: #0075c3;
+}
+
+.btab{
+    display: inline-block;
+    width: 90px;
+    background: #0075c3;
 }

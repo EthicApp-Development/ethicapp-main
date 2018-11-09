@@ -31,7 +31,7 @@
                 <img src="img/logo.png" class="logo-bar">
             </a>
         </div>
-        <div class="cf3 grow text-center simple-padding-top" ng-show="iteration > 0">
+        <div class="cf3 grow text-center simple-padding-top hscroll" ng-show="iteration > 0">
             <span ng-repeat="st in sesStatusses">
                 <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': $index==iteration-1}">{{st | lang}}</span>
                 <!-- <span ng-hide="$last">→</span> -->
@@ -198,8 +198,8 @@
                 <table class="table table-condensed table-bordered" ng-show="iteration > 1">
                     <tr>
                         <th class="col-sm-2">{{'student' | lang}}</th>
-                        <th class="col-sm-5">{{'individual' | lang}}</th>
-                        <th class="col-sm-5" ng-show="iteration > 2">{{'anon' | lang}}</th>
+                        <th class="col-sm-5 text-center">{{'individual' | lang}}</th>
+                        <th class="col-sm-5 text-center" ng-show="iteration > 2">{{'anon' | lang}}</th>
                     </tr>
                     <tr ng-repeat="uid in teamUids">
                         <td>

@@ -34,7 +34,7 @@
                 <img src="img/logo.png" class="logo-bar">
             </a>
         </div>
-        <div class="cf3 grow text-center simple-padding-top" ng-show="iteration > 0">
+        <div class="cf3 grow text-center simple-padding-top hscroll" ng-show="iteration > 0">
             <span ng-repeat="st in sesStatusses">
                 <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': st.i==iteration}">{{st.name}}</span>
                 <!-- <span ng-hide="$last">→</span> -->
@@ -78,11 +78,14 @@
                  ng-click="selectDocument($index)">
                 {{doc.title | limitTo:10}}
             </div>
-            <button class="btn btn-sm margin-right-8 btn-default pull-right" ng-if="iteration > 0" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished, 'border-white': hasFinished || finished}" ng-hide="myRole == 'P' && iteration > 0">
-                <i class="fa fa-check"></i></button>
-            <button disabled class="btn btn-sm btn-default pull-right margin-right-8" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i></button>
-            <button class="btn btn-sm btn-default pull-right margin-right-8" ng-show="iteration == 3 && followLeader" ng-click="takeControl()"><i class="fa fa-level-down"></i></button>
-            <a class="btn btn-sm btn-default pull-right" ng-show="iteration > 6" href="rubrica"><i class="fa fa-list-alt"></i></a>
+            <div class="btab"></div>
+            <div class="rtab">
+                <a class="btn btn-sm btn-default" ng-show="iteration > 6" href="rubrica"><i class="fa fa-list-alt"></i></a>
+                <button class="btn btn-sm btn-default margin-right-8" ng-show="iteration == 3 && followLeader" ng-click="takeControl()"><i class="fa fa-level-down"></i></button>
+                <button disabled class="btn btn-sm btn-default margin-right-8" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i></button>
+                <button class="btn btn-sm margin-right-8 btn-default" ng-if="iteration > 0 && iteration < 7" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished, 'border-white': hasFinished || finished}" ng-hide="myRole == 'P' && iteration > 0">
+                    <i class="fa fa-check"></i></button>
+            </div>
         </div>
     </div>
 
@@ -124,7 +127,10 @@
             <div class="margin-hor">
                 <div class="row" ng-repeat="unit in units">
                     <div class="col-xs-2 col-md-1">
-                        <button class="btn btn-default" ng-class="{'active': unit.edit, 'btn-warning': unit.edit}" ng-click="toggleEdit($index,unit)" ng-disabled="finished || followLeader">
+                        <button class="btn btn-default" ng-class="{'active': unit.edit, 'btn-warning': unit.edit}" ng-click="toggleEdit($index,unit)" ng-show="!finished && !followLeader">
+                            {{unit.sentences.length}} <i class="fa fa-check-square"></i>
+                        </button>
+                        <button class="btn btn-default" ng-class="{'active': unit.viewing}" ng-click="startView(unit)" ng-show="finished || followLeader">
                             {{unit.sentences.length}} <i class="fa fa-check-square"></i>
                         </button>
                     </div>

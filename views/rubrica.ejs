@@ -24,7 +24,7 @@
                 <img src="img/logo.png" class="logo-bar">
             </a>
         </div>
-        <div class="cf3 grow text-center simple-padding-top" ng-show="iteration > 0">
+        <div class="cf3 grow text-center simple-padding-top hscroll" ng-show="iteration > 0">
             <span ng-repeat="st in sesStatusses">
                 <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': $index==iteration - 3*miters}">{{st}}</span>
                 <!-- <span ng-hide="$last">→</span> -->
@@ -43,13 +43,16 @@
 
     <div class="top-bar top-bar-tabs">
         <div class="qs-tabs" ng-show="iteration > 0 || myRole == 'P'">
-            <div class="tab tab-text" ng-repeat="report in reports"  ng-class="{active: $index==selectedIndex, yellow: report.status == 'SENT'}"
+            <div class="tab tab-text" ng-repeat="report in reports"  ng-class="{active: $index==selectedIndex, green: report.status == 'SENT'}"
                  ng-click="selectReport($index)">
                 Reporte {{$index + 1}}
             </div>
-            <a class="btn btn-sm btn-default pull-right margin-right-8" href="semantic" ng-if="iteration >= 7"><i class="fa fa-external-link"></i></a>
-            <button class="btn btn-sm btn-default pull-right margin-right-8" ng-if="iteration < 7" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}" ng-hide="myRole == 'P' && iteration > 0">
-                <i class="fa fa-check"></i></button>
+            <div class="btab"></div>
+            <div class="rtab">
+                <a class="btn btn-sm btn-default pull-right margin-right-8" href="semantic" ng-if="iteration >= 7"><i class="fa fa-external-link"></i></a>
+                <button class="btn btn-sm btn-default pull-right margin-right-8" ng-if="iteration < 7" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}" ng-hide="myRole == 'P' && iteration > 0">
+                    <i class="fa fa-check"></i></button>
+            </div>
             <!-- <button disabled class="btn btn-sm btn-default flat pull-right margin-right-8" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i></button>
             <button class="btn btn-sm btn-default flat pull-right margin-right-8" ng-show="iteration == 3 && followLeader" ng-click="takeControl()"><i class="fa fa-level-down"></i></button>
             <a class="btn btn-sm btn-default flat pull-right" ng-show="iteration > 6" href="rubrica"><i class="fa fa-list-alt"></i></a> -->
@@ -115,17 +118,19 @@
                         <th>4p</th>
                     </tr>
                     <tr ng-repeat="criterio in criterios">
-                        <td ng-bind="criterio.name"></td>
-                        <td ng-click="openCriterio(criterio)" ng-class="{active: report.select[criterio.id] == 1, clickable: canAnswer && !finished}">
+                        <td>{{criterio.name}}
+                            <a href="#"><i class="fa fa-pencil-square-o" ng-click="openCriterio(criterio)"></i></a>
+                        </td>
+                        <td ng-class="{active: report.select[criterio.id] == 1, clickable: canAnswer && !finished}">
                             <i class="fa fa-check" ng-show="report.truev[criterio.id] == 1"></i> <span>{{criterio.inicio | limitTo:3}}</span>
                         </td>
-                        <td ng-click="openCriterio(criterio)" ng-class="{active: report.select[criterio.id] == 2, clickable: canAnswer && !finished}">
+                        <td ng-class="{active: report.select[criterio.id] == 2, clickable: canAnswer && !finished}">
                             <i class="fa fa-check" ng-show="report.truev[criterio.id] == 2"></i> <span>{{criterio.proceso | limitTo:3}}</span>
                         </td>
-                        <td ng-click="openCriterio(criterio)" ng-class="{active: report.select[criterio.id] == 3, clickable: canAnswer && !finished}">
+                        <td ng-class="{active: report.select[criterio.id] == 3, clickable: canAnswer && !finished}">
                             <i class="fa fa-check" ng-show="report.truev[criterio.id] == 3"></i> <span>{{criterio.competente | limitTo:3}}</span>
                         </td>
-                        <td ng-click="openCriterio(criterio)" ng-class="{active: report.select[criterio.id] == 4, clickable: canAnswer && !finished}">
+                        <td ng-class="{active: report.select[criterio.id] == 4, clickable: canAnswer && !finished}">
                             <i class="fa fa-check" ng-show="report.truev[criterio.id] == 4"></i> <span>{{criterio.avanzado | limitTo:3}}</span>
                         </td>
                     </tr>
@@ -156,11 +161,13 @@
                                 <th>4p</th>
                             </tr>
                             <tr ng-repeat="criterio in criterios">
-                                <td ng-bind="criterio.name"></td>
-                                <td ng-click="openCriterio(criterio, answersRubrica[ans.uid][criterio.id])" ng-class="{active: answersRubrica[ans.uid][criterio.id] == 1}">{{criterio.inicio | limitTo:3 }}</td>
-                                <td ng-click="openCriterio(criterio, answersRubrica[ans.uid][criterio.id])" ng-class="{active: answersRubrica[ans.uid][criterio.id] == 2}">{{criterio.proceso | limitTo:3 }}</td>
-                                <td ng-click="openCriterio(criterio, answersRubrica[ans.uid][criterio.id])" ng-class="{active: answersRubrica[ans.uid][criterio.id] == 3}">{{criterio.competente | limitTo:3}}</td>
-                                <td ng-click="openCriterio(criterio, answersRubrica[ans.uid][criterio.id])" ng-class="{active: answersRubrica[ans.uid][criterio.id] == 4}">{{criterio.avanzado | limitTo:3}}</td>
+                                <td>{{criterio.name}}
+                                    <a href="#"><i class="fa fa-eye" ng-click="openCriterio(criterio, answersRubrica[ans.uid][criterio.id])"></i></a>
+                                </td>
+                                <td ng-class="{active: answersRubrica[ans.uid][criterio.id] == 1}">{{criterio.inicio | limitTo:3 }}</td>
+                                <td ng-class="{active: answersRubrica[ans.uid][criterio.id] == 2}">{{criterio.proceso | limitTo:3 }}</td>
+                                <td ng-class="{active: answersRubrica[ans.uid][criterio.id] == 3}">{{criterio.competente | limitTo:3}}</td>
+                                <td ng-class="{active: answersRubrica[ans.uid][criterio.id] == 4}">{{criterio.avanzado | limitTo:3}}</td>
                             </tr>
                         </table>
 

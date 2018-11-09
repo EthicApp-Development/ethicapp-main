@@ -143,6 +143,10 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
         if(self.finished){
             return;
         }
+        if(self.reports.some(r => r.status != "SENT")){
+            notify("Error", "Debe terminar de responder todos los reportes");
+            return;
+        }
         let confirm = window.confirm("¿Esta seguro que desea terminar la actividad?\nEsto implica no volver a poder editar sus respuestas");
         if(confirm) {
             let postdata = {status: self.iteration + 2};
@@ -161,6 +165,7 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
             $http({url: "get-criteria-selection", method:"post", data:postdata}).success((data) => {
                 report.select = {};
                 data.forEach((sel) => {
+                    report.status = "SENT";
                     report.select[sel.cid] = sel.selection;
                     if(self.iteration == 5)
                         self.canAnswer = false;
@@ -236,6 +241,15 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
         });
         modal.result.then(res => {
             self.selectCriterio(c.id, res);
+        });
+    };
+
+    let notify = (title, message, closable) => {
+        $uibModal.open({
+            template: '<div><div class="modal-header">' +
+                '<i class="fa fa-close pull-right hoverable" ng-click="$uibModalInstance.dismiss()"></i> ' +
+                '<h4>' + title + '</h4></div>' +
+                '<div class="modal-body"><p>' + message + '</p></div></div>'
         });
     };
 
