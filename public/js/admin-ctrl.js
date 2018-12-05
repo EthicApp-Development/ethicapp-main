@@ -69,7 +69,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.lang = "english";
     self.secIcons = {configuration: "cog", editor: "edit", dashboard: "bar-chart", users: "male",
         rubrica: "check-square", groups: "users", options: "sliders"};
-    self.typeNames = {L: "readComp", S: "multSel", M: "semUnits"};
+    self.typeNames = {L: "readComp", S: "multSel", M: "semUnits", E: "ethics"};
 
     self.misc = {};
 
@@ -288,6 +288,12 @@ adpp.controller("TabsController", function ($scope, $http) {
             self.shared.getRubrica();
             self.shared.getExampleReports();
             self.shared.getReports();
+        }
+        else if(self.selectedSes.type == "E"){
+            self.iterationNames = [{name: "individual", val: 1}, {name: "anon", val: 2},
+                {name: "teamWork", val: 3}];
+            self.tabOptions = ["editor", "users", "groups", "edashboard"];
+            self.sesStatusses = ["configuration", "individual", "anon", "teamWork", "finished"];
         }
         if (self.selectedSes.status > 1) {
             self.selectedTab = "dashboard";

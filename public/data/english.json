@@ -13,7 +13,7 @@
   "document": "Document",
   "edit": "Edit",
   "update": "Update",
-  "upload": "Actualizar",
+  "upload": "Upload",
   "keywordPauta": "Keyword guideline",
   "texts": "Texts",
   "text": "Text",
@@ -120,5 +120,6 @@
   "optHint": "Include extra attempt in team work using comment",
   "myAnswer": "My answer",
   "correctOption": "Correct Option",
-  "pairEval": "Pair Evaluation"
+  "pairEval": "Pair Evaluation",
+  "ethics": "Ethics Differentials"
 }

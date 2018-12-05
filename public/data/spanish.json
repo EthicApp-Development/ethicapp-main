@@ -14,7 +14,7 @@
   "edit": "Editar",
   "update": "Actualizar",
   "docuemnts": "Documento",
-  "upload": "Actualizar",
+  "upload": "Subir",
   "keywordPauta": "Pauta de Ideas Fuerza",
   "texts": "Textos",
   "text": "Texto",
@@ -121,5 +121,6 @@
   "optHint": "Incluir intento extra en trabajo de equipo con comentario",
   "myAnswer": "Mi respuesta",
   "correctOption": "Alternativa Correcta",
-  "pairEval": "Evaluación de Pares"
+  "pairEval": "Evaluación de Pares",
+  "ethics": "Diferenciales Éticos"
 }

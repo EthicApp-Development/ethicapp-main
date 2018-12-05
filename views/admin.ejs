@@ -221,7 +221,7 @@
                 </div>
             </div>
             <!--<div ng-show="selectedTabConfig == -1">-->
-            <div ng-show="selectedSes.type == 'M'" ng-controller="SemDocController">
+            <div ng-if="selectedSes.type == 'M'" ng-controller="SemDocController">
                 <h4>{{'documents' | lang}}</h4>
                 <div class="list-group-item" ng-repeat="doc in semDocs">
                     <strong ng-bind="doc.title"></strong>
@@ -241,8 +241,11 @@
                     <br>
                     <br>
                 </div>
+                <a href="to-semantic?sesid={{selectedSes.id}}" class="btn btn-primary btn">
+                    {{'semanticUnitPauta' | lang}}
+                </a>
             </div>
-            <div ng-show="selectedSes.type == 'L'" ng-controller="DocumentsController">
+            <div ng-if="selectedSes.type == 'L'" ng-controller="DocumentsController">
                 <h4>{{'documents' | lang}}</h4>
                 <div class="list-group">
                     <div class="list-group-item" ng-repeat="doc in documents">
@@ -272,10 +275,48 @@
                     {{'keywordPauta' | lang}}
                 </a>
             </div>
-                <a href="to-semantic?sesid={{selectedSes.id}}" class="btn btn-primary btn" ng-show="selectedSes.type=='M'">
-                    {{'semanticUnitPauta' | lang}}
-                </a>
-            <div ng-show="selectedSes.type == 'S'" ng-controller="QuestionsController">
+            <div ng-if="selectedSes.type == 'E'" ng-controller="DocumentsController">
+                <h4>{{'documents' | lang}}</h4>
+                <div class="list-group">
+                    <div class="list-group-item" ng-repeat="doc in documents">
+                        <i class="fa fa-file-text-o"></i> <strong ng-bind="doc.title"></strong>
+                        <a href="{{doc.path}}" class="discrete"> - {{'view' | lang}}</a>
+                        <button class="btn btn-xs btn-default pull-right" ng-disabled="selectedSes.status!=1" ng-click="deleteDocument(doc.id)">{{'delete' | lang}}</button>
+                    </div>
+                </div>
+                <br>
+                <label>{{'add' | lang}} {{'document' | lang}}:</label>
+                <form id="doc-form" class="row" ng-submit="uploadDocument($event)" enctype="multipart/form-data">
+                    <div class="col-sm-4">
+                        <input type="text" class="form-control" name="title" placeholder="Titulo" required ng-disabled="selectedSes.status!=1" maxlength="20">
+                    </div>
+                    <div class="col-sm-6">
+                        <input type="file" class="form-control" name="pdf" ng-disabled="selectedSes.status!=1" required>
+                        <input type="text" ng-value="selectedSes.id" name="sesid" hidden>
+                    </div>
+                    <div class="col-sm-2">
+                        <button class="form-control btn btn-default" ng-disabled="selectedSes.status!=1 || busy">{{'upload' | lang}} <i ng-show="busy" class="fa fa-spinner fa-pulse"></i></button>
+                    </div>
+                </form>
+                <br>
+                <hr>
+                <h4>Diferenciales</h4>
+                <div class="differential">
+                    <h5 class="text-center"><strong>Título del diferencial</strong></h5>
+                    <div class="row">
+                        <div class="col-xs-3 text-right">
+                            LEFT
+                        </div>
+                        <div class="dopts col-xs-6">
+                            <div class="option eq-space" ng-repeat="i in [1,2,3,4,5,6,7]">{{i}}</div>
+                        </div>
+                        <div class="col-xs-3">
+                            RIGHT
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div ng-if="selectedSes.type == 'S'" ng-controller="QuestionsController">
                 <h4>{{'texts' | lang}}</h4>
                 <div class="list-group-item" ng-repeat="text in questionTexts">
                     <strong ng-bind="text.title"></strong>
