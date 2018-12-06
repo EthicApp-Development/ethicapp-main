@@ -12,6 +12,12 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", "$uibModal",
     self.sesOpen = false;
     self.invCode = "";
     self.showCodeError = false;
+    self.routes= {
+        L: "to-visor",
+        M: "to-semantic",
+        S: "to-select",
+        E: "to-differential"
+    };
 
     self.init = () => {
         self.updateSessions();

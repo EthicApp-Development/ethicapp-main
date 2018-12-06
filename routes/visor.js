@@ -130,6 +130,22 @@ router.get("/semantic", (req, res) => {
         res.redirect(".");
 });
 
+router.get("/to-differential", (req, res) => {
+    if (req.session.uid) {
+        req.session.ses = req.query.sesid;
+        res.redirect("differential");
+    }
+    else
+        res.redirect(".");
+});
+
+router.get("/differential", (req, res) => {
+    if (req.session.uid && req.session.ses)
+        res.render("differential");
+    else
+        res.redirect(".");
+});
+
 router.post("/get-documents", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select id, title, path from documents where sesid = $1 and active = true",

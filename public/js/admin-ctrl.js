@@ -328,6 +328,16 @@ adpp.controller("DocumentsController", function ($scope, $http, Notification, $t
     let self = $scope;
 
     self.busy = false;
+    self.dfs = [];
+
+    self.getDifferentials = () => {
+        $http.post("differentials", {sesid: self.selectedSes.id}).success(data => {
+            data.forEach(df => {
+                df.name = df.title;
+                self.dfs[df.orden] = df;
+            });
+        });
+    };
 
     self.uploadDocument = (event) => {
         self.busy = true;
@@ -346,6 +356,22 @@ adpp.controller("DocumentsController", function ($scope, $http, Notification, $t
             }
         });
     };
+
+    self.sendDFS = () => {
+        let k = 0;
+        self.dfs.forEach((df,i) => {
+            let url = df.id ? "update-differential" : "add-differential";
+            df.orden = i;
+            df.sesid = self.selectedSes.id;
+            $http.post(url, df).success(data => {
+                k += 1;
+                if(k == 3)
+                    Notification.success("Diferenciales guardados correctamente");
+            });
+        });
+    };
+
+    self.getDifferentials();
 
 });
 

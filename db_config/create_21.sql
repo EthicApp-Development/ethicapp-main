@@ -5,7 +5,8 @@ create table if not exists differential(
     tright  text not null,
     orden   integer not null,
     creator integer references users(id),
-    sesid   integer references sessions(id)
+    sesid   integer references sessions(id),
+    primary key(id)
 );
 
 create table if not exists differential_selection(

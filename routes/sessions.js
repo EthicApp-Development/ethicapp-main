@@ -326,6 +326,38 @@ router.post("/update-ses-options", rpg.execSQL({
     sqlParams: [rpg.param("post", "options"), rpg.param("post", "sesid")]
 }));
 
+router.post("/differentials", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select * from differential where sesid = $1 order by orden",
+    postReqData: ["sesid"],
+    sesReqData: ["uid"],
+    sqlParams: [rpg.param("post", "sesid")]
+}));
+
+router.post("/get-differentials", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select * from differential where sesid = $1 order by orden",
+    sesReqData: ["uid", "ses"],
+    sqlParams: [rpg.param("ses", "ses")]
+}));
+
+router.post("/add-differential", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "insert into differential(title, tleft, tright, orden, creator, sesid) values ($1, $2, $3, $4, $5, $6)",
+    postReqData: ["orden", "tleft", "tright", "name", "sesid"],
+    sesReqData: ["uid"],
+    sqlParams: [rpg.param("post", "name"), rpg.param("post", "tleft"), rpg.param("post", "tright"), rpg.param("post", "orden"),
+        rpg.param("ses", "uid"), rpg.param("post", "sesid")]
+}));
+
+router.post("/update-differential", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "update differential set title = $1, tleft = $2, tright = $3 where id = $4",
+    postReqData: ["tleft", "tright", "name", "id"],
+    sesReqData: ["uid"],
+    sqlParams: [rpg.param("post", "name"), rpg.param("post", "tleft"), rpg.param("post", "tright"), rpg.param("post", "id")]
+}));
+
 router.post("/duplicate-session", (req, res) => {
      if(req.session.uid != null && req.session.role == "P" && req.body.name != null && req.body.name != ""
          && req.body.tipo != null && req.body.descr != null && req.body.originalSesid != null){

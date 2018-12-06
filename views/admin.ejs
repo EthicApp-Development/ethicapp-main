@@ -301,20 +301,27 @@
                 <br>
                 <hr>
                 <h4>Diferenciales</h4>
-                <div class="differential">
-                    <h5 class="text-center"><strong>Título del diferencial</strong></h5>
+                <div class="differential" ng-repeat="j in [1,2,3]">
+                    <h4>DF{{j}}</h4>
+                    <h5 class="text-center">
+                        <input type="text" class="form-control text-center" ng-disabled="selectedSes.status!=1" placeholder="Titulo" ng-model="dfs[j].name">
+                    </h5>
                     <div class="row">
                         <div class="col-xs-3 text-right">
-                            LEFT
+                            <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" placeholder="Left" ng-model="dfs[j].tleft">
                         </div>
                         <div class="dopts col-xs-6">
                             <div class="option eq-space" ng-repeat="i in [1,2,3,4,5,6,7]">{{i}}</div>
                         </div>
                         <div class="col-xs-3">
-                            RIGHT
+                            <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" placeholder="Right" ng-model="dfs[j].tright">
                         </div>
                     </div>
+                    <br>
+                    <hr>
+                    <br>
                 </div>
+                <button class="btn btn-primary pull-right" ng-disabled="selectedSes.status!=1" ng-click="sendDFS()">{{'saveChanges' | lang}}</button>
             </div>
             <div ng-if="selectedSes.type == 'S'" ng-controller="QuestionsController">
                 <h4>{{'texts' | lang}}</h4>

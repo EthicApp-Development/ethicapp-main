@@ -60,7 +60,7 @@
     <div class="scrollable-container blue">
         <div class="list-group pad-content">
             <a class="list-group-item" ng-repeat="ses in sessions"
-               href="to-{{(ses.type=='L')?'visor':((ses.type=='S')?'select':'semantic')}}?sesid={{ses.id}}">
+               href="{{routes[ses.type]}}?sesid={{ses.id}}">
                 <h4 class="list-group-item-heading" ng-bind="ses.name">
                 </h4>
                 <p class="list-group-item-text" ng-bind="ses.descr"></p>
