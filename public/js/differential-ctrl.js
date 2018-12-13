@@ -188,7 +188,7 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
     };
 
     self.getDocURL = () => {
-        return $sce.trustAsResourceUrl("http://docs.google.com/viewer?url=" + BASE_APP + self.documents[self.selectedDocument].path + "&embedded=true");
+        return $sce.trustAsResourceUrl("https://docs.google.com/viewer?url=" + BASE_APP + self.documents[self.selectedDocument].path + "&embedded=true");
     };
 
     self.dfSelect = (i) => {
