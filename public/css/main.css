@@ -1003,3 +1003,27 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     width: 100%;
     height: calc(100vh - 220px);
 }
+
+.hoverable:hover{
+    cursor: pointer;
+}
+
+.anon-badge{
+    display: inline-block;
+    border: 1px solid #eee;
+    background: #004093;
+    color: white;
+    font-weight: 700;
+    padding: 2px 6px;
+}
+
+.break-words{
+    overflow-wrap: break-word;
+}
+
+.chat-msg{
+    border: 1px solid #999;
+    border-radius: 8px;
+    padding: 4px 12px;
+    margin-bottom: 2px;
+}

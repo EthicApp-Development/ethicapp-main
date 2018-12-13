@@ -196,6 +196,47 @@ router.post("/get-answers", rpg.multiSQL({
     sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "uid"), rpg.param("post","iteration")]
 }));
 
+router.post("/send-diff-selection", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "with rows as (update differential_selection set sel = $1, comment = $2, stime = now() where did = $3 and uid = $4 and iteration = $5 returning 1) " +
+        "insert into differential_selection(uid,did,sel,comment,iteration,stime) select $6,$7,$8,$9,$10, now() where 1 not in (select * from rows)",
+    /*sql: "insert into selection(uid,qid,answer,comment) values ($1,$2,$3,$4) on conflict (uid,qid) do update " +
+     "set answer = excluded.answer, comment = excluded.comment",*/
+    sesReqData: ["uid", "ses"],
+    postReqData: ["did", "sel", "comment", "iteration"],
+    sqlParams: [rpg.param("post", "sel"), rpg.param("post", "comment"), rpg.param("post", "did"), rpg.param("ses", "uid"), rpg.param("post", "iteration"),
+        rpg.param("ses", "uid"), rpg.param("post", "did"), rpg.param("post", "sel"), rpg.param("post", "comment"), rpg.param("post", "iteration")]
+}));
+
+router.post("/get-diff-selection", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select s.did, s.sel, s.comment from differential_selection as s inner join differential as d on d.id = s.did " +
+        "where d.sesid = $1 and s.uid = $2 and s.iteration = $3",
+    sesReqData: ["uid", "ses"],
+    postReqData: ["iteration"],
+    sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "uid"), rpg.param("post","iteration")]
+}));
+
+router.post("/get-chat-msgs", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select s.did, s.uid, s.content, s.stime from differential_chat as s inner join differential as d on d.id = s.did " +
+        "where d.sesid = $1 and s.uid in (select tu.uid from teamusers as tu where tu.tmid = (select t.id from teamusers " +
+        "as tu, teams as t where t.sesid = $2 and tu.tmid = t.id and tu.uid = $3))",
+    sesReqData: ["uid", "ses"],
+    sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "ses"), rpg.param("ses","uid")]
+}));
+
+router.post("/add-chat-msg", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "insert into differential_chat(uid,did,content) values ($1,$2,$3)",
+    sesReqData: ["uid", "ses"],
+    postReqData: ["did", "content", "tmid"],
+    sqlParams: [rpg.param("ses", "uid"), rpg.param("post", "did"), rpg.param("post","content")],
+    onEnd: (req,res) => {
+        socket.chatMsg(req.session.ses, req.body.tmid);
+    }
+}));
+
 router.post("/send-idea", rpg.singleSQL({
     dbcon: pass.dbcon,
     sql: "insert into ideas(content,descr,serial,docid,uid,iteration,stime) values ($1,$2,$3,$4,$5,$6,now()) returning id",

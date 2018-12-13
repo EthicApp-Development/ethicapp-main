@@ -36,6 +36,16 @@ router.post("/get-team-semantic-units",rpg.multiSQL({
     sqlParams: [rpg.param("ses","ses"),rpg.param("ses","ses"),rpg.param("ses","uid"),rpg.param("post","iteration")]
 }));
 
+router.post("/get-team-diff-selection",rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select distinct s.sel, s.uid, s.did, s.comment from differential_selection as s, differential as d where d.sesid = $1 and s.did = d.id and " +
+        "s.uid in (select tu.uid from teamusers as tu where tu.tmid = (select t.id from teamusers as tu, teams as t where " +
+        "t.sesid = $2 and tu.tmid = t.id and tu.uid = $3)) and s.iteration = $4",
+    sesReqData: ["ses","uid"],
+    postReqData: ["iteration"],
+    sqlParams: [rpg.param("ses","ses"),rpg.param("ses","ses"),rpg.param("ses","uid"),rpg.param("post","iteration")]
+}));
+
 router.post("/get-ses-info",rpg.singleSQL({
     dbcon: pass.dbcon,
     sql: "select greatest(-1,least(7,s.status-2)) as iteration, $1::int as uid, s.name, s.id, s.descr, s.options, s.type, sr.stime from sessions as s " +
@@ -101,7 +111,16 @@ router.post("/get-team", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select u.name, u.id, t.progress, t.id as tmid, u.id in (select uid from finish_session where status = 5 and sesid = $1) as finished from " +
         "users as u, teams as t, teamusers as tu where tu.uid = u.id and t.id = tu.tmid and t.sesid = $2 and t.id in " +
-        "(select tmid from teamusers where uid = $3)",
+        "(select tmid from teamusers where uid = $3) order by u.id",
+    sesReqData: ["uid", "ses"],
+    sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "ses"), rpg.param("ses", "uid")]
+}));
+
+router.post("/get-anon-team", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select u.id, t.id as tmid, u.id in (select uid from finish_session where status = 5 and sesid = $1) as finished from " +
+        "users as u, teams as t, teamusers as tu where tu.uid = u.id and t.id = tu.tmid and t.sesid = $2 and t.id in " +
+        "(select tmid from teamusers where uid = $3) order by u.id",
     sesReqData: ["uid", "ses"],
     sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "ses"), rpg.param("ses", "uid")]
 }));
