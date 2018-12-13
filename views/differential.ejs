@@ -84,7 +84,7 @@
             </div>
             <div class="btab"></div>
             <div class="rtab">
-                <div class="anon-badge">{{userAnon[myUid]}}</div>
+
                 <!--<button class="btn btn-sm margin-right-8 btn-default" ng-if="iteration > 0 && iteration < 7" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished, 'border-white': hasFinished || finished}" ng-hide="myRole == 'P' && iteration > 0">
                     <i class="fa fa-check"></i></button>-->
             </div>
@@ -143,6 +143,7 @@
                 <br>
                 <br>
                 <div class="input-group">
+                    <span class="input-group-addon"><span class="anon-badge">{{userAnon[df.uid]}}</span></span>
                     <input type="text" class="form-control" placeholder="{{'comment' | lang}}" ng-model="dfs[selectedDF].comment" ng-change="dfs[selectedDF].dirty = true" ng-disabled="finished">
                     <span class="input-group-btn">
                         <button class="btn btn-default" ng-disabled="finished || !dfs[selectedDF].dirty" ng-click="sendDFSel()">
@@ -159,7 +160,7 @@
                 <div class="differential margin-top-8" ng-repeat="df in ansIter1[dfs[selectedDF].id]">
                     <div class="row">
                         <div class="col-xs-3 text-right">
-                            <div class="anon-badge">{{userAnon[df.uid]}}</div>
+
                         </div>
                         <div class="dopts col-xs-6">
                             <div class="option eq-space" ng-repeat="i in [1,2,3,4,5,6,7]"
@@ -168,7 +169,7 @@
                         </div>
                         <div class="col-xs-3"></div>
                     </div>
-                    <div class="margin-top-24 bordered pad-content"><span>{{df.comment}}</span></div>
+                    <div class="margin-top-24 bordered pad-content"><div class="anon-badge">{{userAnon[df.uid]}}</div> <span>{{df.comment}}</span></div>
                     <br>
                     </div>
                 </div>
@@ -179,7 +180,7 @@
                 <div class="differential margin-top-8" ng-repeat="df in ansIter2[dfs[selectedDF].id]">
                     <div class="row">
                         <div class="col-xs-3 text-right">
-                            <div class="anon-badge">{{userAnon[df.uid]}}</div>
+
                         </div>
                         <div class="dopts col-xs-6">
                             <div class="option eq-space" ng-repeat="i in [1,2,3,4,5,6,7]"
@@ -188,7 +189,7 @@
                         </div>
                         <div class="col-xs-3"></div>
                     </div>
-                    <div class="margin-top-24 bordered pad-content"><span>{{df.comment}}</span></div>
+                    <div class="margin-top-24 bordered pad-content"><div class="anon-badge">{{userAnon[df.uid]}}</div> <span>{{df.comment}}</span></div>
                     <br>
                 </div>
                 <hr>
