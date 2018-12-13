@@ -1042,3 +1042,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     color: white;
     font-weight: 700;
 }
+
+.margin-left-n8{
+    margin-left: -8px;
+}
