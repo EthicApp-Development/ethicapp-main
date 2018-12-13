@@ -631,6 +631,11 @@ ng-quill-editor.large .ql-editor{
     padding-right: 0 !important;
 }
 
+.row-min-padding > [class*="col-"] {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+}
+
 .gsearch{
     position: absolute;
     display: block;
