@@ -1027,7 +1027,6 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 }
 
 .chat-msg{
-    border: 1px solid #999;
     border-radius: 8px;
     padding: 4px 12px;
     margin-bottom: 2px;
