@@ -80,7 +80,7 @@
             </div>
             <div class="tab tab-text" ng-repeat="df in dfs" ng-class="{active: selectedDF + 1 == df.orden && !showDoc}"
                  ng-click="selectDF($index)">
-                DF{{df.orden}}
+                DS{{df.orden}}
             </div>
             <div class="btab"></div>
             <div class="rtab">
@@ -123,7 +123,7 @@
     </div>
 
         <div ng-show="iteration > 0 && !showDoc">
-            <h4>DF{{dfs[selectedDF].orden}}</h4>
+            <!--<h4>DF{{dfs[selectedDF].orden}}</h4>-->
             <div class="differential">
                 <h5 class="text-center">
                     <strong>{{dfs[selectedDF].title}}</strong>
