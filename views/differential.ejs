@@ -195,7 +195,7 @@
                 <div class="chat bordered">
                     <div class="chat-msg" ng-repeat="msg in chatMsgs[dfs[selectedDF].id]">
                         <div class="anon-badge margin-left-n8">{{userAnon[msg.uid]}}</div>
-                        <span class="pull-right text-muted font-mini">{{msg.stime | date:'HH:mm dd-MM-YYYY'}}</span>
+                        <span class="pull-right text-muted font-mini">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
                         <span class="content">{{msg.content}}</span>
                     </div>
                     <div class="input-group">
