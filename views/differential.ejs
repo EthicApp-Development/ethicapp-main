@@ -143,7 +143,7 @@
                 <br>
                 <br>
                 <div class="input-group">
-                    <span class="input-group-addon"><span class="anon-badge">{{userAnon[myUid]}}</span></span>
+                    <span class="input-group-addon deep-blue">{{userAnon[myUid]}}</span>
                     <input type="text" class="form-control" placeholder="{{'comment' | lang}}" ng-model="dfs[selectedDF].comment" ng-change="dfs[selectedDF].dirty = true" ng-disabled="finished">
                     <span class="input-group-btn">
                         <button class="btn btn-default" ng-disabled="finished || !dfs[selectedDF].dirty" ng-click="sendDFSel()">

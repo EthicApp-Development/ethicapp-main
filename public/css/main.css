@@ -1036,3 +1036,9 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 .margin-top-28{
     margin-top: 28px !important;
 }
+
+.deep-blue{
+    background: #004093;
+    color: white;
+    font-weight: 700;
+}
