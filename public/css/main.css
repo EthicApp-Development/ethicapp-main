@@ -1049,3 +1049,16 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 .margin-top-n12{
     margin-top: -12px;
 }
+
+.dfc{
+    display: inline-block;
+    border: 1px solid #999;
+    padding: 2px 8px;
+    width: 36px;
+    height: 28px;
+    text-align: center;
+}
+
+.table>tbody+tbody {
+    border-top: 2px solid #bbb;
+}

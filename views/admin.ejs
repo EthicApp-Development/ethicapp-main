@@ -695,15 +695,16 @@
 
         <!-- DASHBOARDS -->
         <div class="pad-content" ng-show="selectedTab == 'dashboard'" ng-controller="DashboardController">
-            <div class="pull-right">
-                <label>{{'iteration' | lang}}:</label>
-                <select class="" ng-options="x.val as flang(x.name) for x in iterationNames" ng-model="iterationIndicator" ng-change="updateState()"></select>
-                <button class="btn btn-default" ng-click="updateState()">{{'update' | lang}}</button>
+            <div ng-show="selectedSes.type != 'E'">
+                <div class="pull-right">
+                    <label>{{'iteration' | lang}}:</label>
+                    <select class="" ng-options="x.val as flang(x.name) for x in iterationNames" ng-model="iterationIndicator" ng-change="updateState()"></select>
+                    <button class="btn btn-default" ng-click="updateState()">{{'update' | lang}}</button>
+                </div>
+                <h4></h4><br>
+
+                <nvd3 options="barOpts" data="barData" ng-hide="iterationIndicator == 0 || iterationIndicator == 4"></nvd3>
             </div>
-            <h4></h4><br>
-
-            <nvd3 options="barOpts" data="barData" ng-hide="iterationIndicator == 0 || iterationIndicator == 4"></nvd3>
-
             <div class="row" ng-show="iterationIndicator < 5 && (selectedSes.type == 'L' || selectedSes.type == 'M')">
                 <div class="col-sm-4 col-sm-offset-2">
                     {{'finished' | lang}}: <strong>{{numComplete}} / {{numUsers}}</strong>
@@ -843,6 +844,71 @@
                         </td>
                         <td>{{getAvg(row.data) | number:2}}</td>
                     </tr>
+                </table>
+            </div>
+            <!-- DIFFERENTIAL DASHBOARD -->
+            <div ng-show="selectedSes.type == 'E'">
+                <table class="table table-bordered">
+                    <tr>
+                        <th>Grupo</th>
+                        <th>Etapa</th>
+                        <th>DF1</th>
+                        <th>DF2</th>
+                        <th>DF3</th>
+                    </tr>
+                    <tbody ng-repeat="teamDF in dataDF">
+                        <tr ng-show="teamDF.ind.length > 0">
+                            <td>{{$index + 1}}</td>
+                            <td>{{'individual' | lang}}</td>
+                            <td>
+                                <span class="dfc" ng-repeat="s in DFAll(teamDF.ind,1) track by $index">{{s}}</span>
+                            </td>
+                            <td>
+                                <span class="dfc" ng-repeat="s in DFAll(teamDF.ind,2) track by $index">{{s}}</span>
+                            </td>
+                            <td>
+                                <span class="dfc" ng-repeat="s in DFAll(teamDF.ind,3) track by $index">{{s}}</span>
+                            </td>
+                        </tr>
+                        <tr ng-show="teamDF.anon.length > 0">
+                            <td>{{$index + 1}}</td>
+                            <td>{{'anon' | lang}}</td>
+                            <td>
+                                <span class="dfc">{{DFAvg(teamDF.anon,1) | number:1}}</span>
+                                <span class="dfc" ng-class="DFColor(teamDF.anon,1)">.</span>
+                                <span class="dfc">{{DFMed(teamDF.anon,1) | number:1}}</span>
+                            </td>
+                            <td>
+                                <span class="dfc">{{DFAvg(teamDF.anon,2) | number:1}}</span>
+                                <span class="dfc" ng-class="DFColor(teamDF.anon,2)">.</span>
+                                <span class="dfc">{{DFMed(teamDF.anon,2) | number:1}}</span>
+                            </td>
+                            <td>
+                                <span class="dfc">{{DFAvg(teamDF.anon,3) | number:1}}</span>
+                                <span class="dfc" ng-class="DFColor(teamDF.anon,3)">.</span>
+                                <span class="dfc">{{DFMed(teamDF.anon,3) | number:1}}</span>
+                            </td>
+                        </tr>
+                        <tr ng-show="teamDF.team.length > 0">
+                            <td>{{$index + 1}}</td>
+                            <td>{{'teamWork' | lang}}</td>
+                            <td>
+                                <span class="dfc">{{DFAvg(teamDF.team,1) | number:1}}</span>
+                                <span class="dfc" ng-class="DFColor(teamDF.team,1)">.</span>
+                                <span class="dfc">{{DFMed(teamDF.team,1) | number:1}}</span>
+                            </td>
+                            <td>
+                                <span class="dfc">{{DFAvg(teamDF.team,2) | number:1}}</span>
+                                <span class="dfc" ng-class="DFColor(teamDF.team,2)">.</span>
+                                <span class="dfc">{{DFMed(teamDF.team,2) | number:1}}</span>
+                            </td>
+                            <td>
+                                <span class="dfc">{{DFAvg(teamDF.team,3) | number:1}}</span>
+                                <span class="dfc" ng-class="DFColor(teamDF.team,3)">.</span>
+                                <span class="dfc">{{DFMed(teamDF.team,3) | number:1}}</span>
+                            </td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
         </div>

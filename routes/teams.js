@@ -161,4 +161,14 @@ router.post("/get-original-leaders", rpg.multiSQL({
     sqlParams: [rpg.param("post", "sesid")]
 }));
 
+router.post("/get-differential-all", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select tmid, iteration, orden, s.uid, s.did, sel, comment " +
+        "from differential_selection as s inner join differential d on s.did = d.id, teamusers as tu, teams as t " +
+        "where tu.tmid = t.id and tu.uid = s.uid and t.sesid = d.sesid and d.sesid = $1 " +
+        "order by tmid, iteration, orden",
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "sesid")]
+}));
+
 module.exports = router;

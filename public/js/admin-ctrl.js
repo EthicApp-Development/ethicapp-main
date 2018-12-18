@@ -292,7 +292,7 @@ adpp.controller("TabsController", function ($scope, $http) {
         else if(self.selectedSes.type == "E"){
             self.iterationNames = [{name: "individual", val: 1}, {name: "anon", val: 2},
                 {name: "teamWork", val: 3}];
-            self.tabOptions = ["editor", "users", "groups", "edashboard"];
+            self.tabOptions = ["editor", "users", "groups", "dashboard"];
             self.sesStatusses = ["configuration", "individual", "anon", "teamWork", "finished"];
         }
         if (self.selectedSes.status > 1) {
@@ -825,6 +825,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.iterationIndicator = 1;
     self.currentTimer = null;
     self.showCf = false;
+    self.dataDF = [];
 
     self.shared.resetGraphs = () => {
         if (self.selectedSes != null && self.selectedSes.type == "L") {
@@ -1024,6 +1025,31 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 }
             });*/
         }
+        else if(self.selectedSes.type == "E"){
+            let postdata = {
+                sesid: self.selectedSes.id
+            };
+            $http.post("get-differential-all", postdata).success(data => {
+                 self.dataDF = [];
+                 let tmid = -1;
+                 let i = -1;
+                 let mapAt = ["", "ind", "anon", "team"];
+                 data.forEach(d => {
+                     if(d.tmid != tmid){
+                         i += 1;
+                         tmid = d.tmid;
+                         self.dataDF.push({
+                             tmid: tmid,
+                             ind: [],
+                             anon: [],
+                             team: []
+                         });
+                     }
+                     self.dataDF[i][mapAt[d.iteration]].push(d);
+                 });
+                 console.log(self.dataDF);
+            });
+        }
     };
 
     self.avgAlum = (uid) => {
@@ -1121,6 +1147,34 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             return 100 * c/t;
         }
         return 0;
+    };
+
+    self.DFAll = (ans, orden) => {
+        return ans.filter(e => e.orden == orden).map(e => e.sel);
+    };
+
+    self.DFAvg = (ans, orden) => {
+        let a = ans.filter(e => e.orden == orden).map(e => e.sel);
+        return (a.length > 0) ? a.reduce((v,e) => v + e, 0) / a.length : 0;
+    };
+
+    self.DFMed = (ans, orden) => {
+        let a = ans.filter(e => e.orden == orden).map(e => e.sel);
+        a.sort();
+        let n = ~~(a.length/2);
+        return (a.length % 2 == 1) ? a[n] : 0.5*(a[n] + a[n-1]);
+    };
+
+    self.DFColor = (ans, orden) => {
+        let avg = self.DFAvg(ans, orden);
+        let med = self.DFMed(ans, orden);
+        let dif = Math.abs(avg - med);
+        if(dif <= 1)
+            return "bg-darkgreen";
+        else if(dif > 2.8)
+            return "bg-red";
+        else
+            return "bg-yellow";
     };
 
     self.getAlumDoneTime = (postdata) => {
