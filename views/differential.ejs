@@ -191,21 +191,26 @@
                 <br>
             </div>
             <hr>
-            <h4>Chat</h4>
-            <div class="chat bordered">
-                <div class="chat-msg" ng-repeat="msg in chatMsgs[dfs[selectedDF].id]">
-                    <div class="anon-badge margin-left-n8">{{userAnon[msg.uid]}}</div>
-                    <span class="pull-right text-muted font-mini">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
-                    <span class="content">{{msg.content}}</span>
-                </div>
-                <div class="input-group">
-                    <input type="text" class="form-control" placeholder="{{'comment' | lang}}" ng-model="chatmsg" ng-disabled="finished"
-                           ng-keydown="$event.keyCode === 13 && sendChatMsg()">
-                    <span class="input-group-btn">
-                    <button class="btn btn-default" ng-disabled="finished" ng-click="sendChatMsg()">
-                        <i class="fa fa-send"></i>
-                    </button>
-                </span>
+                <div class="chat-inv"></div>
+            <div class="chat-container">
+                <h4>Chat</h4>
+                <div class="chat bordered">
+                    <div class="chat-area">
+                    <div class="chat-msg" ng-repeat="msg in chatMsgs[dfs[selectedDF].id]">
+                        <div class="anon-badge margin-left-n8">{{userAnon[msg.uid]}}</div>
+                        <span class="pull-right text-muted font-mini">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
+                        <span class="content">{{msg.content}}</span>
+                    </div>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="{{'comment' | lang}}" ng-model="chatmsg" ng-disabled="finished"
+                               ng-keydown="$event.keyCode === 13 && sendChatMsg()">
+                        <span class="input-group-btn">
+                        <button class="btn btn-default" ng-disabled="finished" ng-click="sendChatMsg()">
+                            <i class="fa fa-send"></i>
+                        </button>
+                    </span>
+                    </div>
                 </div>
             </div>
             </div>

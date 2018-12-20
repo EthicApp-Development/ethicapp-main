@@ -1071,3 +1071,21 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 .btn.btn-padding-min{
     padding: 4px;
 }
+
+.chat-container{
+    position: absolute;
+    bottom: 0;
+    background: white;
+    margin-right: 16px;
+    margin-left: -8px;
+}
+
+.chat-area{
+    height: 20vh;
+    overflow-y: auto;
+}
+
+.chat-inv{
+    display: block;
+    height: 30vh;
+}
