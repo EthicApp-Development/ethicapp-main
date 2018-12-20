@@ -74,7 +74,6 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
                         self.ansIter2[ans.did].push({select: ans.sel, comment: ans.comment, uid: ans.uid});
                     });
                 });
-                updateChat();
             }
             if (self.iteration >= 4) {
                 self.finished = true;
@@ -139,6 +138,7 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
             self.dfs = data;
             console.log(self.dfs);
             self.loadDiffSelection();
+            updateChat();
         });
     };
 

@@ -193,9 +193,10 @@
             <hr>
                 <div class="chat-inv"></div>
             <div class="chat-container">
-                <h4>Chat</h4>
+                <!-- <h4>Chat</h4> -->
                 <div class="chat bordered">
                     <div class="chat-area">
+                        <strong ng-show="chatMsgs[dfs[selectedDF].id].length == 0">Chat</strong>
                     <div class="chat-msg" ng-repeat="msg in chatMsgs[dfs[selectedDF].id]">
                         <div class="anon-badge margin-left-n8">{{userAnon[msg.uid]}}</div>
                         <span class="pull-right text-muted font-mini">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
@@ -203,7 +204,7 @@
                     </div>
                     </div>
                     <div class="input-group">
-                        <input type="text" class="form-control" placeholder="{{'comment' | lang}}" ng-model="chatmsg" ng-disabled="finished"
+                        <input type="text" class="form-control" ng-model="chatmsg" ng-disabled="finished"
                                ng-keydown="$event.keyCode === 13 && sendChatMsg()">
                         <span class="input-group-btn">
                         <button class="btn btn-default" ng-disabled="finished" ng-click="sendChatMsg()">
