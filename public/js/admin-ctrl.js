@@ -1160,17 +1160,22 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         return (a.length > 0) ? a.reduce((v,e) => v + e, 0) / a.length : 0;
     };
 
-    self.DFMed = (ans, orden) => {
+    self.DFMinMax = (ans, orden) => {
         let a = ans.filter(e => e.orden == orden).map(e => e.sel);
         a.sort();
-        let n = ~~(a.length/2);
-        return (a.length % 2 == 1) ? a[n] : 0.5*(a[n] + a[n-1]);
+        let n = a.length - 1;
+        return a[n] - a[0];
     };
 
     self.DFColor = (ans, orden) => {
         let avg = self.DFAvg(ans, orden);
-        let med = self.DFMed(ans, orden);
-        let dif = Math.abs(avg - med);
+        let sd = 0;
+        let arr = ans.filter(e => e.orden == orden).map(e => e.sel);
+        arr.forEach(a => {
+            sd += (a - avg) * (a - avg);
+        });
+        let dif = Math.sqrt(sd/arr.length);
+
         if(dif <= 1)
             return "bg-darkgreen";
         else if(dif > 2.8)
