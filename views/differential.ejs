@@ -79,9 +79,9 @@
                  ng-click="selectDocument($index)">
                 {{doc.title | limitTo:10}}
             </div>
-            <div class="tab tab-text" ng-repeat="df in dfs" ng-class="{active: selectedDF + 1 == df.orden && !showDoc, 'yellow': !df.dirty && df.select != null}"
+            <div class="tab tab-text" ng-repeat="df in dfs" ng-class="{active: selectedDF + 1 == df.orden && !showDoc, 'green': !df.dirty && df.select != null}"
                  ng-click="selectDF($index)">
-                DS{{df.orden}} <!--<span class="badge bg-danger" ng-show="df.c && df.c > 0">{{df.c}}</span>-->
+                DS{{df.orden}} <span class="badge bg-red" ng-show="df.c != null && df.c > df.cr">{{df.c - df.cr}}</span>
             </div>
             <!--<div class="btab"></div>
             <div class="rtab">

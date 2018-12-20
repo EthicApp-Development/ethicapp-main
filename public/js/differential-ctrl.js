@@ -92,12 +92,17 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
         });
     };
 
-    let updateChat = () => {
+    let updateChat = (count) => {
         $http.post("get-chat-msgs").success((data) => {
             self.chatMsgs = {};
+            self.dfs.forEach(e => {
+                e.c = 0;
+            });
             data.forEach(msg => {
                 let df = self.dfs.find(e => e.id == msg.did);
                 df.c = df.c ? df.c + 1 : 1;
+                if(count)
+                    df.cr = df.c;
                 self.chatMsgs[msg.did] = self.chatMsgs[msg.did] || [];
                 self.chatMsgs[msg.did].push(msg);
             })
@@ -138,7 +143,7 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
             self.dfs = data;
             console.log(self.dfs);
             self.loadDiffSelection();
-            updateChat();
+            updateChat(true);
         });
     };
 
@@ -162,7 +167,7 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
 
     self.selectDF = (i) => {
         self.selectedDF = i;
-        self.dfs[self.selectedDF].c = 0;
+        self.dfs[self.selectedDF].cr = self.dfs[self.selectedDF].c;
         self.showDoc = false;
         self.chatmsg = "";
     };
