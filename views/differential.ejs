@@ -83,11 +83,11 @@
                  ng-click="selectDF($index)">
                 DS{{df.orden}} <!--<span class="badge bg-danger" ng-show="df.c && df.c > 0">{{df.c}}</span>-->
             </div>
-            <div class="btab"></div>
+            <!--<div class="btab"></div>
             <div class="rtab">
                 <button class="btn btn-sm margin-right-8 btn-default" ng-if="iteration > 0 && iteration < 4" ng-click="finishState()" ng-class="{'btn-success': finished, 'border-white': finished}">
                     <i class="fa fa-check"></i></button>
-            </div>
+            </div>-->
         </div>
     </div>
 
@@ -196,7 +196,7 @@
                 <!-- <h4>Chat</h4> -->
                 <div class="chat bordered">
                     <div class="chat-area">
-                        <strong ng-show="chatMsgs[dfs[selectedDF].id].length == 0">Chat</strong>
+                        <strong ng-show="chatMsgs[dfs[selectedDF].id] == null || chatMsgs[dfs[selectedDF].id].length == 0">Chat</strong>
                     <div class="chat-msg" ng-repeat="msg in chatMsgs[dfs[selectedDF].id]">
                         <div class="anon-badge margin-left-n8">{{userAnon[msg.uid]}}</div>
                         <span class="pull-right text-muted font-mini">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
