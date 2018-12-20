@@ -1,0 +1,37 @@
+<div>
+    <div class="modal-header">
+        <h4>DS{{vm.data.orden}}: {{vm.data.master.name}}</h4>
+    </div>
+    <div class="modal-body">
+        <div ng-repeat="dfIter in vm.data.dfIters">
+            <h4>{{vm.data.names[$index]}}</h4>
+            <div class="differential margin-top-8" ng-repeat="df in dfIter">
+                <div class="row">
+                    <div class="col-xs-3 text-right">
+                        <span>{{vm.data.master.tleft}}</span>
+                    </div>
+                    <div class="dopts col-xs-6">
+                        <div class="option eq-space" ng-repeat="i in [1,2,3,4,5,6,7]"
+                             ng-class="{selected: df.sel == i}">{{i}}</div>
+                        <br>
+                    </div>
+                    <div class="col-xs-3">
+                        <span>{{vm.data.master.tright}}</span>
+                    </div>
+                </div>
+                <div class="margin-top-28 bordered pad-content">
+                    <div class="anon-badge margin-left-n8">{{vm.data.users[df.uid].name}}</div>
+                    <span>{{df.comment}}</span>
+                </div>
+                <br>
+            </div>
+        </div>
+
+        <!--<strong>Promedio: {{getAvg() | number:2}} / 4</strong>-->
+        <br>
+        <hr>
+        <div class="modal-footer">
+            <button class="btn btn-default" type="button" ng-click="vm.cancel()">Cerrar</button>
+        </div>
+    </div>
+</div>

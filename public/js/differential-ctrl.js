@@ -97,6 +97,8 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
         $http.post("get-chat-msgs").success((data) => {
             self.chatMsgs = {};
             data.forEach(msg => {
+                let df = self.dfs.find(e => e.id == msg.did);
+                df.c = df.c ? df.c + 1 : 1;
                 self.chatMsgs[msg.did] = self.chatMsgs[msg.did] || [];
                 self.chatMsgs[msg.did].push(msg);
             })
@@ -159,12 +161,17 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
 
     self.selectDF = (i) => {
         self.selectedDF = i;
+        self.dfs[self.selectedDF].c = 0;
         self.showDoc = false;
         self.chatmsg = "";
     };
 
     self.sendDFSel = () => {
         let df = self.dfs[self.selectedDF];
+        if(df.select == null || df.select == -1 || df.comment == null || df.comment == ""){
+            notify("Error", "El diferencial no está completo");
+            return;
+        }
         let postdata = {
             sel: df.select,
             comment: df.comment,
@@ -174,6 +181,29 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
         $http.post("send-diff-selection", postdata).success((data) => {
             df.dirty = false;
         });
+    };
+
+    self.finishState = () => {
+        if(self.finished){
+            return;
+        }
+        if(self.iteration <= 3) {
+            if (self.dfs.some(e => e.id == null)) {
+                notify("Error", "Falta responder algunos diferenciales semánticos");
+                return;
+            }
+        }
+        let confirm = window.confirm("¿Esta seguro que desea terminar la actividad?\nEsto implica no volver a poder editar sus respuestas");
+        if(confirm) {
+            let postdata = {status: self.iteration + 2};
+            $http({url: "record-finish", method: "post", data: postdata}).success((data) => {
+                self.hasFinished = true;
+                self.finished = true;
+                console.log("FINISH");
+                //if(self.iteration == 3)
+                //    self.updateSignal();
+            });
+        }
     };
 
     self.sendChatMsg = () => {

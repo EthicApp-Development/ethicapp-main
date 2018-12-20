@@ -78,15 +78,14 @@
                  ng-click="selectDocument($index)">
                 {{doc.title | limitTo:10}}
             </div>
-            <div class="tab tab-text" ng-repeat="df in dfs" ng-class="{active: selectedDF + 1 == df.orden && !showDoc}"
+            <div class="tab tab-text" ng-repeat="df in dfs" ng-class="{active: selectedDF + 1 == df.orden && !showDoc, 'border-orange': df.id != null}"
                  ng-click="selectDF($index)">
-                DS{{df.orden}}
+                DS{{df.orden}} <span class="badge bg-danger" ng-show="df.c && df.c > 0">{{df.c}}</span>
             </div>
             <div class="btab"></div>
             <div class="rtab">
-
-                <!--<button class="btn btn-sm margin-right-8 btn-default" ng-if="iteration > 0 && iteration < 7" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished, 'border-white': hasFinished || finished}" ng-hide="myRole == 'P' && iteration > 0">
-                    <i class="fa fa-check"></i></button>-->
+                <button class="btn btn-sm margin-right-8 btn-default" ng-if="iteration > 0 && iteration < 4" ng-click="finishState()" ng-class="{'btn-success': finished, 'border-white': finished}">
+                    <i class="fa fa-check"></i></button>
             </div>
         </div>
     </div>
@@ -170,43 +169,44 @@
                     <div class="margin-top-28 bordered pad-content"><div class="anon-badge margin-left-n8">{{userAnon[df.uid]}}</div> <span>{{df.comment}}</span></div>
                     <br>
                     </div>
+            </div>
+            <br>
+            <div ng-show="iteration > 2">
+            <hr>
+            <h4>{{'anon' | lang}}</h4>
+            <div class="differential margin-top-8" ng-repeat="df in ansIter2[dfs[selectedDF].id]">
+                <div class="row">
+                    <div class="col-xs-3 text-right">
+
+                    </div>
+                    <div class="dopts col-xs-6">
+                        <div class="option eq-space" ng-repeat="i in [1,2,3,4,5,6,7]"
+                             ng-class="{selected: df.select == i}">{{i}}</div>
+                        <br>
+                    </div>
+                    <div class="col-xs-3"></div>
                 </div>
+                <div class="margin-top-28 bordered pad-content"><div class="anon-badge margin-left-n8">{{userAnon[df.uid]}}</div> <span>{{df.comment}}</span></div>
                 <br>
-                <div ng-show="iteration > 2">
-                <hr>
-                <h4>{{'anon' | lang}}</h4>
-                <div class="differential margin-top-8" ng-repeat="df in ansIter2[dfs[selectedDF].id]">
-                    <div class="row">
-                        <div class="col-xs-3 text-right">
-
-                        </div>
-                        <div class="dopts col-xs-6">
-                            <div class="option eq-space" ng-repeat="i in [1,2,3,4,5,6,7]"
-                                 ng-class="{selected: df.select == i}">{{i}}</div>
-                            <br>
-                        </div>
-                        <div class="col-xs-3"></div>
-                    </div>
-                    <div class="margin-top-28 bordered pad-content"><div class="anon-badge margin-left-n8">{{userAnon[df.uid]}}</div> <span>{{df.comment}}</span></div>
-                    <br>
+            </div>
+            <hr>
+            <h4>Chat</h4>
+            <div class="chat bordered">
+                <div class="chat-msg" ng-repeat="msg in chatMsgs[dfs[selectedDF].id]">
+                    <div class="anon-badge margin-left-n8">{{userAnon[msg.uid]}}</div>
+                    <span class="pull-right text-muted font-mini">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
+                    <span class="content">{{msg.content}}</span>
                 </div>
-                <hr>
-                <h4>Chat</h4>
-                <div class="chat bordered">
-                    <div class="chat-msg" ng-repeat="msg in chatMsgs[dfs[selectedDF].id]">
-                        <div class="anon-badge margin-left-n8">{{userAnon[msg.uid]}}</div>
-                        <span class="pull-right text-muted font-mini">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
-                        <span class="content">{{msg.content}}</span>
-                    </div>
-                    <div class="input-group">
-                        <input type="text" class="form-control" placeholder="{{'comment' | lang}}" ng-model="chatmsg" ng-disabled="finished">
-                        <span class="input-group-btn">
-                        <button class="btn btn-default" ng-disabled="finished" ng-click="sendChatMsg()">
-                            <i class="fa fa-send"></i>
-                        </button>
-                    </span>
-                    </div>
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="{{'comment' | lang}}" ng-model="chatmsg" ng-disabled="finished"
+                           ng-keydown="$event.keyCode === 13 && sendChatMsg()">
+                    <span class="input-group-btn">
+                    <button class="btn btn-default" ng-disabled="finished" ng-click="sendChatMsg()">
+                        <i class="fa fa-send"></i>
+                    </button>
+                </span>
                 </div>
+            </div>
             </div>
             </div>
 
@@ -214,12 +214,6 @@
         </div>
             <br>
         </div>
-
-
-
-
-    </div>
-    </div>
 
     <div class="splash" ng-if="iteration <= 0">
         <div class="splash-box">

@@ -329,6 +329,7 @@ adpp.controller("DocumentsController", function ($scope, $http, Notification, $t
 
     self.busy = false;
     self.dfs = [];
+    self.shared.dfs = self.dfs;
 
     self.getDifferentials = () => {
         $http.post("differentials", {sesid: self.selectedSes.id}).success(data => {
@@ -420,6 +421,7 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
         }
         if (self.selectedSes.type == "L" && self.selectedSes.status >= 3 && !self.selectedSes.grouped
             || self.selectedSes.type == "M" && self.selectedSes.status >= 3 && !self.selectedSes.grouped
+            || self.selectedSes.type == "E" && self.selectedSes.status >= 1 && !self.selectedSes.grouped
             || self.selectedSes.type == "S" && self.selectedSes.status >= 2 && !self.selectedSes.grouped) {
             self.shared.gotoGrupos();
             Notification.error("Los grupos no han sido generados");
@@ -1467,6 +1469,35 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             });
         }
     };
+
+    self.openDFDetails = (group, orden) => {
+        $uibModal.open({
+            templateUrl: "templ/differential-group.html",
+            controller: "ContentModalController",
+            controllerAs: "vm",
+            scope: self,
+            resolve: {
+                data: function () {
+                    let data = {};
+                    data.names = [self.flang("individual"), self.flang("anon"), self.flang("teamWork")];
+                    data.orden = orden;
+                    data.group = group;
+                    data.users = self.users;
+                    let dfgr = self.dataDF.find(e => e.tmid == group);
+                    // console.log(self.shared);
+                    if(dfgr.ind[0])
+                        data.master = self.shared.dfs.filter(e => e.id).find(e => e.id == dfgr.ind[0].did);
+                    data.dfIters = [];
+                    data.dfIters.push(dfgr.ind.filter(e => e.orden == orden));
+                    data.dfIters.push(dfgr.anon.filter(e => e.orden == orden));
+                    data.dfIters.push(dfgr.team.filter(e => e.orden == orden));
+                    console.log(data);
+                    return data;
+                },
+            }
+        });
+    };
+
 
 });
 
