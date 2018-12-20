@@ -66,13 +66,6 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
                         self.ansIter1[ans.did].push({select: ans.sel, comment: ans.comment, uid: ans.uid});
                     });
                 });
-                $http.post("get-anon-team").success((data) => {
-                    let alph = ["A", "B", "C", "D", "E"];
-                    data.forEach((u,i) => {
-                        self.userAnon[u.id] = alph[i];
-                        self.tmId = u.tmid;
-                    });
-                });
             }
             if (self.iteration > 2) {
                 $http({url: "get-team-diff-selection", method: "post", data: {iteration: 2}}).success((data) => {
@@ -89,6 +82,13 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
             if(self.iteration > 0) {
                 self.loadDocuments();
                 self.loadDifferentials();
+                $http.post("get-anon-team").success((data) => {
+                    let alph = ["A", "B", "C", "D", "E"];
+                    data.forEach((u,i) => {
+                        self.userAnon[u.id] = alph[i];
+                        self.tmId = u.tmid;
+                    });
+                });
             }
         });
     };
