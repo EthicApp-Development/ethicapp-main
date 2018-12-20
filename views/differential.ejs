@@ -80,7 +80,7 @@
             </div>
             <div class="tab tab-text" ng-repeat="df in dfs" ng-class="{active: selectedDF + 1 == df.orden && !showDoc, 'border-orange': df.id != null}"
                  ng-click="selectDF($index)">
-                DS{{df.orden}} <span class="badge bg-danger" ng-show="df.c && df.c > 0">{{df.c}}</span>
+                DS{{df.orden}} <!--<span class="badge bg-danger" ng-show="df.c && df.c > 0">{{df.c}}</span>-->
             </div>
             <div class="btab"></div>
             <div class="rtab">
