@@ -2,13 +2,13 @@
 
 let BASE_APP = "https://saduewa.dcc.uchile.cl:8888/Readings/";
 
-let app = angular.module("Differential", ['ui.tree', 'btford.socket-io', "timer", "ui-notification"]);
+let app = angular.module("Differential", ["ui.bootstrap", 'ui.tree', 'btford.socket-io', "timer", "ui-notification"]);
 
 app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
 
-app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socket", "Notification", "$sce", function ($scope, $http, $timeout, $socket, Notification, $sce) {
+app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socket", "Notification", "$sce", "$uibModal", function ($scope, $http, $timeout, $socket, Notification, $sce, $uibModal) {
     let self = $scope;
 
     self.iteration = 1;
@@ -29,7 +29,7 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
 
     self.userAnon = {};
 
-    self.sesStatusses = ["individual", "anon", "teamWork", "finished"];
+    self.sesStatusses = ["individual", "anon", "discussion", "finished"];
 
     self.lang = "spanish";
 
@@ -137,6 +137,7 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
     self.loadDifferentials = () => {
         $http({url: "get-differentials", method: "post"}).success((data) => {
             self.dfs = data;
+            console.log(self.dfs);
             self.loadDiffSelection();
         });
     };
