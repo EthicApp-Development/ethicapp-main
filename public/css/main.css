@@ -1067,3 +1067,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     margin-top: 8px;
     margin-bottom: 8px;
 }
+
+.btn.btn-padding-min{
+    padding: 4px;
+}
