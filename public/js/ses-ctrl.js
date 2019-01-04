@@ -63,7 +63,9 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", "$uibModal",
     };
 
     self.checkCode = (code) => {
+        console.log(self.sessions, code);
         let s = self.sessions.find(e => e.code == code);
+        console.log(s);
         if(s == null)
             return true;
         let url = routes[s.type]+ "?sesid=" + s.id;
