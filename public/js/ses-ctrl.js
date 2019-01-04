@@ -68,7 +68,7 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", "$uibModal",
         console.log(s);
         if(s == null)
             return true;
-        let url = routes[s.type]+ "?sesid=" + s.id;
+        let url = self.routes[s.type]+ "?sesid=" + s.id;
         window.location.replace(url);
         return false;
     };
