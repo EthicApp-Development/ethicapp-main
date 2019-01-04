@@ -2,7 +2,7 @@
 
 let BASE_APP = "https://saduewa.dcc.uchile.cl:8888/Readings/";
 
-let app = angular.module("Differential", ["ui.bootstrap", 'ui.tree', 'btford.socket-io', "timer", "ui-notification"]);
+let app = angular.module("Differential", ["ui.bootstrap", 'ui.tree', 'btford.socket-io', "timer", "ui-notification", "luegg.directives"]);
 
 app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
@@ -45,6 +45,12 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
             console.log("SOCKET.IO", data);
             if (data.ses == self.sesId && data.tmid == self.tmId && self.iteration == 3) {
                 updateChat();
+            }
+        });
+        $socket.on("diffReceived", (data) => {
+            console.log("SOCKET.IO", data);
+            if(data.ses == self.sesId){
+                self.openDetails(data);
             }
         });
         self.getMe();
@@ -100,6 +106,8 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
             });
             data.forEach(msg => {
                 let df = self.dfs.find(e => e.id == msg.did);
+                if(df.id == self.dfs[self.selectedDF].id)
+                    count = true;
                 df.c = df.c ? df.c + 1 : 1;
                 if(count)
                     df.cr = df.c;
@@ -166,6 +174,10 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
     };
 
     self.selectDF = (i) => {
+        if(self.dfs[self.selectedDF].dirty){
+            notify("Error", "Debe completar el diferencial antes de cambiar");
+            return;
+        }
         self.selectedDF = i;
         self.dfs[self.selectedDF].cr = self.dfs[self.selectedDF].c;
         self.showDoc = false;
@@ -228,6 +240,8 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
     };
 
     self.dfSelect = (i) => {
+        if(self.finished || self.hasFinished)
+            return;
         self.dfs[self.selectedDF].select = i;
         self.dfs[self.selectedDF].dirty = true;
     };
@@ -259,9 +273,39 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
         self.updateLang(self.lang);
     };
 
+    self.openDetails = (data) => {
+        $uibModal.open({
+            templateUrl: "templ/direct-content.html",
+            controller: "DirectContentController",
+            controllerAs: "vm",
+            scope: self,
+            resolve: {
+                data: function(){
+                    return data;
+                },
+            }
+        });
+    };
+
     self.init();
 
 }]);
+
+app.controller("DirectContentController", ["$scope", "$uibModalInstance", "data", function ($scope, $uibModalInstance, data) {
+    var vm = this;
+    vm.data = data;
+    vm.data.title = "Diferencial recibido";
+
+    setTimeout(() => {
+        console.log(vm);
+        document.getElementById("modal-content").innerHTML = vm.data.content;
+    }, 500);
+
+    vm.cancel = () => {
+        $uibModalInstance.dismiss('cancel');
+    };
+}]);
+
 
 window.DIC = null;
 window.warnDIC = {};

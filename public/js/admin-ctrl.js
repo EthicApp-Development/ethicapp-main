@@ -1478,7 +1478,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.openDFDetails = (group, orden) => {
         $uibModal.open({
             templateUrl: "templ/differential-group.html",
-            controller: "ContentModalController",
+            controller: "EthicsModalController",
             controllerAs: "vm",
             scope: self,
             resolve: {
@@ -1496,6 +1496,16 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     data.dfIters.push(dfgr.ind.filter(e => e.orden == orden));
                     data.dfIters.push(dfgr.anon.filter(e => e.orden == orden));
                     data.dfIters.push(dfgr.team.filter(e => e.orden == orden));
+                    data.anonNames = {};
+                    data.sesid = self.selectedSes.id;
+                    let abcd = "ABCD";
+                    let c = 0;
+                    data.dfIters.flat().forEach(e => {
+                        if(!data.anonNames[e.uid]) {
+                            data.anonNames[e.uid] = abcd[c];
+                            c++;
+                        }
+                    });
                     console.log(data);
                     return data;
                 },
@@ -1541,6 +1551,32 @@ adpp.controller("ContentModalController", function ($scope, $uibModalInstance, d
 
     vm.cancel = () => {
         $uibModalInstance.dismiss('cancel');
+    };
+
+});
+
+adpp.controller("EthicsModalController", function ($scope, $http, $uibModalInstance, Notification, data) {
+    var vm = this;
+    vm.data = data;
+
+
+    vm.cancel = () => {
+        $uibModalInstance.dismiss('cancel');
+    };
+
+    vm.shareDetails = () => {
+        if(!vm.isAnon){
+            Notification.error("Sólo se pueden enviar diferenciales en forma anónima");
+            return;
+        }
+        let content = document.getElementById("details-modal").innerHTML.replace(/<\!--.*?-->/g, "");
+        let postdata = {
+            sesid: vm.data.sesid,
+            content: content
+        };
+        $http({url: "broadcast-diff", method: "post", data: postdata}).success((data) => {
+            Notification.success("Diferencial enviado exitosamente");
+        });
     };
 
 });

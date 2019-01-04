@@ -5,17 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
     <title>DocCollab</title>
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
-    <script src="libs/pdf.min.js"></script>
-    <script src="libs/rangy-core.min.js"></script>
-    <script src="libs/rangy-classapplier.min.js"></script>
-    <script src="libs/rangy-serializer.min.js"></script>
-    <script src="libs/textlayerbuilder.js"></script>
     <script src="libs/angular.min.js"></script>
     <script src="libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
     <script src="libs/angular-ui-tree.min.js"></script>
     <script src="libs/angular-timer.min.js"></script>
     <script src="libs/socket.min.js"></script>
     <script src="libs/angular-ui-notification.min.js"></script>
+    <script src="libs/angular-glue.min.js"></script>
     <script src="js/differential-ctrl.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
@@ -195,13 +191,13 @@
             <div class="chat-container">
                 <!-- <h4>Chat</h4> -->
                 <div class="chat bordered">
-                    <div class="chat-area">
+                    <div class="chat-area" scroll-glue>
                         <strong ng-show="chatMsgs[dfs[selectedDF].id] == null || chatMsgs[dfs[selectedDF].id].length == 0">Chat</strong>
-                    <div class="chat-msg" ng-repeat="msg in chatMsgs[dfs[selectedDF].id]">
-                        <div class="anon-badge margin-left-n8">{{userAnon[msg.uid]}}</div>
-                        <span class="pull-right text-muted font-mini">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
-                        <span class="content">{{msg.content}}</span>
-                    </div>
+                        <div class="chat-msg" ng-repeat="msg in chatMsgs[dfs[selectedDF].id]">
+                            <div class="anon-badge margin-left-n8">{{userAnon[msg.uid]}}</div>
+                            <span class="pull-right text-muted font-mini">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
+                            <span class="content">{{msg.content}}</span>
+                        </div>
                     </div>
                     <div class="input-group">
                         <input type="text" class="form-control" ng-model="chatmsg" ng-disabled="finished"

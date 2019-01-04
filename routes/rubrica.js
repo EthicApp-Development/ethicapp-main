@@ -170,6 +170,16 @@ router.post("/set-eval-report", (req,res) => {
     res.end('{"status":"ok"}');
 });
 
+router.post("/broadcast-diff", (req,res) => {
+    if(req.session.uid == null || req.body.sesid == null || req.body.content == null || req.session.role == null || req.session.role != 'P'){
+        res.end('{"status":"err"}');
+        return;
+    }
+    socket.diffBroadcast(req.body.sesid, req.body.content);
+    res.end('{"status":"ok"}');
+});
+
+
 router.post("/send-report", rpg.execSQL({
     dbcon: pass.dbcon,
     sql: "with rows as (update reports as r set content = $1 from rubricas as b where r.uid = $2 and r.rid = b.id and b.sesid = $3 returning 1) " +
