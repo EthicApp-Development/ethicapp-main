@@ -505,10 +505,12 @@ router.post("/enter-session-code", rpg.singleSQL({
     dbcon: pass.dbcon,
     /*sql: "insert into sesusers(uid,sesid) select $1::int as uid, id from sessions where code = $2 on conflict (sesid,uid) do update " +
         "set uid = sesusers.uid returning sesid",*/
-    sql: "insert into sesusers(uid,sesid) select $1::int as uid, id from sessions where code = $2 returning sesid",
+    sql: "insert into sesusers(uid,sesid) select $1::int as uid, id from sessions where code = $2 and not exists " +
+        "(select su.sesid from sesusers as su, sessions as s where su.uid = $3 and s.code = $4 and su.sesid = s.id)" +
+        " returning sesid",
     postReqData: ["code"],
     sesReqData: ["uid"],
-    sqlParams: [rpg.param("ses", "uid"), rpg.param("post", "code")],
+    sqlParams: [rpg.param("ses", "uid"), rpg.param("post", "code"), rpg.param("ses", "uid"), rpg.param("post", "code")],
     preventResEnd: true,
     onEnd: (req, res, result) => {
         if(result.sesid == null){
