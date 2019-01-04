@@ -10,6 +10,10 @@ router.get('/login', (req, res) => {
     res.render('login', {rc: req.query.rc});
 });
 
+router.get("/forgot-pass", function(req,res){
+    res.render("forgot-pass");
+});
+
 router.get("/logout", (req, res) => {
     req.session.uid = null;
     req.session.role = null;
