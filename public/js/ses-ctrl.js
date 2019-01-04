@@ -46,18 +46,29 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", "$uibModal",
     };
 
     self.enterCode = () => {
-        let postdata = {code: self.invCode.toLowerCase()};
-        $http.post("enter-session-code", postdata).success((data) => {
-            if(data.status == "ok"){
-                window.location.replace(data.redirect);
-            }
-            else{
-                $uibModal.open({
-                    template: '<div><div class="modal-header"><h4>Error</h4></div><div class="modal-body">' +
-                        '<p>El código ingresado no es válido</p></div></div>'
-                });
-            }
-        });
+        if(self.checkCode(self.invCode.toLowerCase())) {
+            let postdata = {code: self.invCode.toLowerCase()};
+            $http.post("enter-session-code", postdata).success((data) => {
+                if (data.status == "ok") {
+                    window.location.replace(data.redirect);
+                }
+                else {
+                    $uibModal.open({
+                        template: '<div><div class="modal-header"><h4>Error</h4></div><div class="modal-body">' +
+                            '<p>El código ingresado no es válido</p></div></div>'
+                    });
+                }
+            });
+        }
+    };
+
+    self.checkCode = (code) => {
+        let s = self.sessions.find(e => e.code == code);
+        if(s == null)
+            return true;
+        let url = routes[s.type]+ "?sesid=" + s.id;
+        window.location.replace(url);
+        return false;
     };
 
     self.changeLang = () => {
