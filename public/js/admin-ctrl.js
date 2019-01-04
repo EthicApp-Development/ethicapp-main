@@ -724,6 +724,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
             content: tx.content
         };
         Notification.info("Edite el texto en el formulario.");
+        self.newTextExp = true;
     };
 
     self.addQuestionText = () => {
@@ -732,6 +733,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
             if (data.status == "ok") {
                 self.requestQuestions();
                 self.newText = {id: null, title: "", content: ""};
+                self.newTextExp = false;
             }
         });
     };
@@ -746,6 +748,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
             if (data.status == "ok") {
                 self.requestQuestions();
                 self.newText = {title: "", content: ""};
+                self.newTextExp = false;
             }
         });
     };
