@@ -32,8 +32,11 @@ router.post("/login", rpg.singleSQL({
             req.session.uid = result.id;
             req.session.role = result.role;
             req.session.ses = null;
+            res.redirect(".");
         }
-        res.redirect(".");
+        else{
+            res.redirect("login?rc=2");
+        }
     }
 }));
 
