@@ -194,7 +194,7 @@
                     <div class="chat-area" scroll-glue>
                         <strong ng-show="chatMsgs[dfs[selectedDF].id] == null || chatMsgs[dfs[selectedDF].id].length == 0">Chat</strong>
                         <div class="chat-msg" ng-repeat="msg in chatMsgs[dfs[selectedDF].id]" ng-class="{'bg-gray': chatmsgreply == msg.id}">
-                            <div class="font-mini" ng-show="msg.parent != null">
+                            <div class="font-mini parent-msg" ng-show="msg.parent != null">
                                 <div class="anon-badge margin-left-n8">{{userAnon[msg.parent.uid]}}</div>
                                 <span class="content">{{msg.parent.content | limitTo:100}}</span>
                             </div>
@@ -214,7 +214,7 @@
                                 <i class="fa fa-reply"></i>
                             </button>
                         </span>
-                        <input type="text" class="form-control" ng-model="chatmsg" ng-disabled="finished"
+                        <input type="text" class="form-control" ng-model="chatmsg" ng-disabled="finished" id="chat-input"
                                ng-keydown="$event.keyCode === 13 && sendChatMsg()">
                         <span class="input-group-btn">
                             <button class="btn btn-default" ng-disabled="finished" ng-click="sendChatMsg()">

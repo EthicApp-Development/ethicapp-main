@@ -294,6 +294,7 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
 
     self.setReply = (msg) => {
         self.chatmsgreply = msg == null ? null : msg.id;
+        document.getElementById("chat-input").focus();
     };
 
     self.init();

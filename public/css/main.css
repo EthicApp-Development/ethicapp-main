@@ -495,6 +495,10 @@ p{
     border: 2px solid #000;
 }
 
+.parent-msg{
+    background: rgba(0,0,0,0.1);
+}
+
 
 /* SLIDER */
 .onoffswitch {
