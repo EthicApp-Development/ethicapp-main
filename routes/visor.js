@@ -230,7 +230,7 @@ router.post("/add-chat-msg", rpg.execSQL({
     dbcon: pass.dbcon,
     sql: "insert into differential_chat(uid,did,content,parent_id) values ($1,$2,$3,$4)",
     sesReqData: ["uid", "ses"],
-    postReqData: ["did", "content", "tmid", "parent_id"],
+    postReqData: ["did", "content", "tmid"],
     sqlParams: [rpg.param("ses", "uid"), rpg.param("post", "did"), rpg.param("post","content"), rpg.param("post","parent_id")],
     onEnd: (req,res) => {
         socket.chatMsg(req.session.ses, req.body.tmid);
