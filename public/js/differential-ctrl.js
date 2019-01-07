@@ -107,16 +107,14 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
             });
             data.forEach(msg => {
                 let df = self.dfs.find(e => e.id == msg.did);
-                if(df.id == self.dfs[self.selectedDF].id)
-                    count = true;
                 df.c = df.c ? df.c + 1 : 1;
-                if(count)
+                if(count || df.id == self.dfs[self.selectedDF].id)
                     df.cr = df.c;
                 if(msg.parent_id)
                     msg.parent = data.find(e => e.id == msg.parent_id);
                 self.chatMsgs[msg.did] = self.chatMsgs[msg.did] || [];
                 self.chatMsgs[msg.did].push(msg);
-            })
+            });
         });
     };
 
