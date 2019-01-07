@@ -491,6 +491,11 @@ p{
     border: 1px solid #ccc;
 }
 
+.bordered.black{
+    border: 2px solid #000;
+}
+
+
 /* SLIDER */
 .onoffswitch {
     position: relative; width: 62px; height: 28px;
