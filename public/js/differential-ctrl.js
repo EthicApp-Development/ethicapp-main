@@ -23,6 +23,7 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
     self.ansIter2 = {};
     self.chatMsgs = {};
     self.chatmsg = "";
+    self.chatmsgreply = null;
     self.tmId = -1;
     self.sesId = -1;
     self.finished = false;
@@ -111,6 +112,8 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
                 df.c = df.c ? df.c + 1 : 1;
                 if(count)
                     df.cr = df.c;
+                if(msg.parent_id)
+                    msg.parent = data.find(e => e.id == msg.parent_id);
                 self.chatMsgs[msg.did] = self.chatMsgs[msg.did] || [];
                 self.chatMsgs[msg.did].push(msg);
             })
@@ -228,10 +231,12 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
         let postdata = {
             did: self.dfs[self.selectedDF].id,
             content: self.chatmsg,
-            tmid: self.tmId
+            tmid: self.tmId,
+            parent_id: self.chatmsgreply
         };
         $http.post("add-chat-msg", postdata).success(data => {
             self.chatmsg = "";
+            self.chatmsgreply = null;
         });
     };
 
@@ -285,6 +290,10 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
                 },
             }
         });
+    };
+
+    self.setReply = (msg) => {
+        self.chatmsgreply = msg == null ? null : msg.id;
     };
 
     self.init();

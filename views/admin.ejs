@@ -878,38 +878,38 @@
                             <td>{{$index + 1}}</td>
                             <td>{{'anon' | lang}}</td>
                             <td ng-click="openDFDetails(teamDF.tmid,1)">
-                                <span class="dfc">{{DFAvg(teamDF.anon,1) | number:1}}</span>
-                                <span class="dfc" ng-class="DFColor(teamDF.anon,1)">.</span>
-                                <span class="dfc">{{DFMinMax(teamDF.anon,1) | number:1}}</span>
+                                <span class="dfc" ng-repeat="s in DFAll(teamDF.anon,1) track by $index">{{s}}</span>
+                                <br>
+                                <span class="dfc">{{DFAvg(teamDF.anon,1) | number:1}}</span><span class="dfc inv" ng-class="DFColor(teamDF.anon,1)">.</span><span class="dfc">{{DFMinMax(teamDF.anon,1) | number:1}}</span>
                             </td>
                             <td ng-click="openDFDetails(teamDF.tmid,2)">
-                                <span class="dfc">{{DFAvg(teamDF.anon,2) | number:1}}</span>
-                                <span class="dfc" ng-class="DFColor(teamDF.anon,2)">.</span>
-                                <span class="dfc">{{DFMinMax(teamDF.anon,2) | number:1}}</span>
+                                <span class="dfc" ng-repeat="s in DFAll(teamDF.anon,2) track by $index">{{s}}</span>
+                                <br>
+                                <span class="dfc">{{DFAvg(teamDF.anon,2) | number:1}}</span><span class="dfc inv" ng-class="DFColor(teamDF.anon,2)">.</span><span class="dfc">{{DFMinMax(teamDF.anon,2) | number:1}}</span>
                             </td>
                             <td ng-click="openDFDetails(teamDF.tmid,3)">
-                                <span class="dfc">{{DFAvg(teamDF.anon,3) | number:1}}</span>
-                                <span class="dfc" ng-class="DFColor(teamDF.anon,3)">.</span>
-                                <span class="dfc">{{DFMinMax(teamDF.anon,3) | number:1}}</span>
+                                <span class="dfc" ng-repeat="s in DFAll(teamDF.anon,3) track by $index">{{s}}</span>
+                                <br>
+                                <span class="dfc">{{DFAvg(teamDF.anon,3) | number:1}}</span><span class="dfc inv" ng-class="DFColor(teamDF.anon,3)">.</span><span class="dfc">{{DFMinMax(teamDF.anon,3) | number:1}}</span>
                             </td>
                         </tr>
                         <tr ng-show="teamDF.team.length > 0">
                             <td>{{$index + 1}}</td>
                             <td>{{'teamWork' | lang}}</td>
                             <td ng-click="openDFDetails(teamDF.tmid,1)">
-                                <span class="dfc">{{DFAvg(teamDF.team,1) | number:1}}</span>
-                                <span class="dfc" ng-class="DFColor(teamDF.team,1)">.</span>
-                                <span class="dfc">{{DFMinMax(teamDF.team,1) | number:1}}</span>
+                                <span class="dfc" ng-repeat="s in DFAll(teamDF.team,1) track by $index">{{s}}</span>
+                                <br>
+                                <span class="dfc">{{DFAvg(teamDF.team,1) | number:1}}</span><span class="dfc inv" ng-class="DFColor(teamDF.team,1)">.</span><span class="dfc">{{DFMinMax(teamDF.team,1) | number:1}}</span>
                             </td>
                             <td ng-click="openDFDetails(teamDF.tmid,2)">
-                                <span class="dfc">{{DFAvg(teamDF.team,2) | number:1}}</span>
-                                <span class="dfc" ng-class="DFColor(teamDF.team,2)">.</span>
-                                <span class="dfc">{{DFMinMax(teamDF.team,2) | number:1}}</span>
+                                <span class="dfc" ng-repeat="s in DFAll(teamDF.team,2) track by $index">{{s}}</span>
+                                <br>
+                                <span class="dfc">{{DFAvg(teamDF.team,2) | number:1}}</span><span class="dfc inv" ng-class="DFColor(teamDF.team,2)">.</span><span class="dfc">{{DFMinMax(teamDF.team,2) | number:1}}</span>
                             </td>
                             <td ng-click="openDFDetails(teamDF.tmid,3)">
-                                <span class="dfc">{{DFAvg(teamDF.team,3) | number:1}}</span>
-                                <span class="dfc" ng-class="DFColor(teamDF.team,3)">.</span>
-                                <span class="dfc">{{DFMinMax(teamDF.team,3) | number:1}}</span>
+                                <span class="dfc" ng-repeat="s in DFAll(teamDF.team,3) track by $index">{{s}}</span>
+                                <br>
+                                <span class="dfc">{{DFAvg(teamDF.team,3) | number:1}}</span><span class="dfc inv" ng-class="DFColor(teamDF.team,3)">.</span><span class="dfc">{{DFMinMax(teamDF.team,3) | number:1}}</span>
                             </td>
                         </tr>
                     </tbody>

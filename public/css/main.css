@@ -1032,6 +1032,10 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     margin-bottom: 2px;
 }
 
+.chat-msg:hover{
+    background: rgba(0,0,0,0.1);
+}
+
 .margin-top-28{
     margin-top: 28px !important;
 }
@@ -1054,9 +1058,14 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     display: inline-block;
     border: 1px solid #999;
     padding: 2px 8px;
+    margin: 2px 4px;
     width: 36px;
     height: 28px;
     text-align: center;
+}
+
+.dfc.inv{
+    color: transparent;
 }
 
 .table>tbody+tbody {

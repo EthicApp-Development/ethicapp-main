@@ -193,20 +193,34 @@
                 <div class="chat bordered">
                     <div class="chat-area" scroll-glue>
                         <strong ng-show="chatMsgs[dfs[selectedDF].id] == null || chatMsgs[dfs[selectedDF].id].length == 0">Chat</strong>
-                        <div class="chat-msg" ng-repeat="msg in chatMsgs[dfs[selectedDF].id]">
-                            <div class="anon-badge margin-left-n8">{{userAnon[msg.uid]}}</div>
-                            <span class="pull-right text-muted font-mini">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
+                        <div class="chat-msg" ng-repeat="msg in chatMsgs[dfs[selectedDF].id]" ng-class="{'bg-gray': chatmsgreply == msg.id}">
+                            <div class="font-mini" ng-show="msg.parent != null">
+                                <div class="anon-badge margin-left-n8">{{userAnon[msg.parent.uid]}}</div>
+                                <span class="content">{{msg.parent.content | limitTo:100}}</span>
+                            </div>
+                            <i class="fa fa-reply" ng-show="msg.parent != null"></i>
+                            <div class="anon-badge" ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">{{userAnon[msg.uid]}}</div>
+                            <span class="pull-right font-mini text-right">
+                                <span class="text-muted">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
+                                <br>
+                                <a ng-click="setReply(msg)">{{'reply' | lang}}</a>
+                            </span>
                             <span class="content">{{msg.content}}</span>
                         </div>
                     </div>
                     <div class="input-group">
+                        <span class="input-group-btn" ng-show="chatmsgreply != null">
+                            <button class="btn btn-primary" ng-disabled="finished" ng-click="setReply(null)">
+                                <i class="fa fa-reply"></i>
+                            </button>
+                        </span>
                         <input type="text" class="form-control" ng-model="chatmsg" ng-disabled="finished"
                                ng-keydown="$event.keyCode === 13 && sendChatMsg()">
                         <span class="input-group-btn">
-                        <button class="btn btn-default" ng-disabled="finished" ng-click="sendChatMsg()">
-                            <i class="fa fa-send"></i>
-                        </button>
-                    </span>
+                            <button class="btn btn-default" ng-disabled="finished" ng-click="sendChatMsg()">
+                                <i class="fa fa-send"></i>
+                            </button>
+                        </span>
                     </div>
                 </div>
             </div>
