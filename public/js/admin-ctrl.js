@@ -1493,8 +1493,10 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     data.users = self.users;
                     let dfgr = self.dataDF.find(e => e.tmid == group);
                     // console.log(self.shared);
-                    if(dfgr.ind[0])
-                        data.master = self.shared.dfs.filter(e => e.id).find(e => e.id == dfgr.ind[0].did);
+                    if(dfgr.ind.some(e => e.orden == orden)) {
+                        let dfgri = dfgr.ind.find(e => e.orden == orden);
+                        data.master = self.shared.dfs.filter(e => e.id).find(e => e.id == dfgri.did);
+                    }
                     data.dfIters = [];
                     data.dfIters.push(dfgr.ind.filter(e => e.orden == orden));
                     data.dfIters.push(dfgr.anon.filter(e => e.orden == orden));

@@ -7,7 +7,7 @@
     <div class="modal-body">
         <div id="details-modal">
             <div ng-repeat="dfIter in vm.data.dfIters">
-                <h4>{{vm.data.names[$index]}}</h4>
+                <h4><strong>{{vm.data.names[$index]}}</strong></h4>
                 <div class="differential margin-top-8" ng-repeat="df in dfIter">
                     <div class="row">
                         <div class="col-xs-3 text-right">
@@ -29,6 +29,7 @@
                     </div>
                     <br>
                 </div>
+                <hr>
             </div>
         </div>
 
