@@ -414,6 +414,15 @@ router.post("/duplicate-session", (req, res) => {
                          onEnd: () => {}
                      })(req,res);
                  }
+                 if(req.body.copyDifferentials){
+                     rpg.execSQL({
+                         dbcon: pass.dbcon,
+                         sql: "insert into differential(sesid,title,tleft,tright,orden,creator) select " + sesid +
+                             " as sesid, title, tleft, tright, orden, creator from differential where sesid = " + oldsesid,
+                         preventResEnd: true,
+                         onEnd: () => {}
+                     })(req,res);
+                 }
                  if(req.body.copyQuestions){
                      rpg.execSQL({
                          dbcon: pass.dbcon,

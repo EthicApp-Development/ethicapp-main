@@ -1600,7 +1600,8 @@ adpp.controller("DuplicateSesModalController", function ($scope, $http, $uibModa
         copyRubrica: false,
         copyUsers: false,
         copySemUnits: false,
-        copySemDocs: false
+        copySemDocs: false,
+        copyDifferentials: false
     };
 
     vm.cancel = () => {

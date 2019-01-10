@@ -90,7 +90,7 @@
             <div class="list-group">
                 <a class="list-group-item" ng-repeat="ses in sessions | filter:sesSearch" ng-click="selectSession(ses,ses.id)"
                    ng-class="{'active':ses.id==selectedId}">
-                    <button class="btn btn-default pull-right" ng-click="openDuplicateSesSpec(ses,$event)" ng-disabled="ses.type != 'S' && ses.type != 'M'">
+                    <button class="btn btn-default pull-right" ng-click="openDuplicateSesSpec(ses,$event)" ng-disabled="ses.type != 'S' && ses.type != 'M' && ses.type != 'E'">
                         <i class="fa fa-copy"></i>
                     </button>
                     <h4 class="list-group-item-heading">{{ses.name}}
