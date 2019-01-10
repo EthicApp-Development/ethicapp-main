@@ -27,6 +27,17 @@
         Login o Password Incorrectos
     </div>
     <% } %>
+    <% if(rc == 3) {%>
+        <div class="alert alert-info">
+            Se ha enviado un correo con la información para recuperar la contraseña.
+            Este correo podría haber llegado a spam.
+        </div>
+    <% } %>
+    <% if(rc == 4) {%>
+        <div class="alert alert-info">
+            Contraseña cambiada correctamente. Ingrese con sus datos.
+        </div>
+    <% } %>
     <br/>
     <form action="login" method="POST">
         <label>RUT o E-mail:</label>
