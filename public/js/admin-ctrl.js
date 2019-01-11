@@ -1479,42 +1479,54 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     };
 
     self.openDFDetails = (group, orden) => {
-        $uibModal.open({
-            templateUrl: "templ/differential-group.html",
-            controller: "EthicsModalController",
-            controllerAs: "vm",
-            scope: self,
-            resolve: {
-                data: function () {
-                    let data = {};
-                    data.names = [self.flang("individual"), self.flang("anon"), self.flang("teamWork")];
-                    data.orden = orden;
-                    data.group = group;
-                    data.users = self.users;
-                    let dfgr = self.dataDF.find(e => e.tmid == group);
-                    // console.log(self.shared);
-                    if(dfgr.ind.some(e => e.orden == orden)) {
-                        let dfgri = dfgr.ind.find(e => e.orden == orden);
-                        data.master = self.shared.dfs.filter(e => e.id).find(e => e.id == dfgri.did);
-                    }
-                    data.dfIters = [];
-                    data.dfIters.push(dfgr.ind.filter(e => e.orden == orden));
-                    data.dfIters.push(dfgr.anon.filter(e => e.orden == orden));
-                    data.dfIters.push(dfgr.team.filter(e => e.orden == orden));
-                    data.anonNames = {};
-                    data.sesid = self.selectedSes.id;
-                    let abcd = "ABCD";
-                    let c = 0;
-                    data.dfIters.flat().forEach(e => {
-                        if(!data.anonNames[e.uid]) {
-                            data.anonNames[e.uid] = abcd[c];
-                            c++;
+        let postdata = {
+            sesid: self.selectedSes.id,
+            tmid: group,
+            orden: orden
+        };
+        $http.post("get-team-chat", postdata).success(res => {
+            $uibModal.open({
+                templateUrl: "templ/differential-group.html",
+                controller: "EthicsModalController",
+                controllerAs: "vm",
+                scope: self,
+                resolve: {
+                    data: function () {
+                        let data = {};
+                        data.names = [self.flang("individual"), self.flang("anon"), self.flang("teamWork")];
+                        data.orden = orden;
+                        data.group = group;
+                        data.users = self.users;
+                        let dfgr = self.dataDF.find(e => e.tmid == group);
+                        // console.log(self.shared);
+                        if (dfgr.ind.some(e => e.orden == orden)) {
+                            let dfgri = dfgr.ind.find(e => e.orden == orden);
+                            data.master = self.shared.dfs.filter(e => e.id).find(e => e.id == dfgri.did);
                         }
-                    });
-                    console.log(data);
-                    return data;
-                },
-            }
+                        data.dfIters = [];
+                        data.dfIters.push(dfgr.ind.filter(e => e.orden == orden));
+                        data.dfIters.push(dfgr.anon.filter(e => e.orden == orden));
+                        data.dfIters.push(dfgr.team.filter(e => e.orden == orden));
+                        data.anonNames = {};
+                        data.sesid = self.selectedSes.id;
+                        let abcd = "ABCD";
+                        let c = 0;
+                        data.dfIters.flat().forEach(e => {
+                            if (!data.anonNames[e.uid]) {
+                                data.anonNames[e.uid] = abcd[c];
+                                c++;
+                            }
+                        });
+                        data.chat = res;
+                        data.chat.forEach(msg => {
+                            if(msg.parent_id)
+                                msg.parent = data.chat.find(e => e.id == msg.parent_id);
+                        });
+                        console.log(data);
+                        return data;
+                    },
+                }
+            });
         });
     };
 

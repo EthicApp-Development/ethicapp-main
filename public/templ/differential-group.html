@@ -31,6 +31,30 @@
                 </div>
                 <hr class="bordered black">
             </div>
+            <h4><strong>Chat</strong></h4>
+            <div class="chat bordered">
+                <div class="chat-area" scroll-glue>
+                    <strong ng-show="vm.data.chat.length == 0">No hay mensajes</strong>
+                    <div class="chat-msg" ng-repeat="msg in vm.data.chat">
+                        <div class="font-mini parent-msg" ng-show="msg.parent != null">
+                            <div class="anon-badge margin-left-n8" ng-if="!vm.isAnon">{{vm.data.users[msg.parent.uid].name}}</div>
+                            <div class="anon-badge margin-left-n8" ng-if="vm.isAnon">{{vm.data.anonNames[msg.parent.uid]}}</div>
+                            <span class="content">{{msg.parent.content | limitTo:100}}</span>
+                        </div>
+                        <i class="fa fa-reply" ng-show="msg.parent != null"></i>
+                        <div class="anon-badge" ng-if="vm.isAnon" ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">
+                            {{vm.data.anonNames[msg.uid]}}
+                        </div>
+                        <div class="anon-badge" ng-if="!vm.isAnon" ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">
+                            {{vm.data.users[msg.uid].name}}
+                        </div>
+                        <span class="pull-right font-mini text-right">
+                            <span class="text-muted">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
+                        </span>
+                        <span class="content">{{msg.content}}</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!--<strong>Promedio: {{getAvg() | number:2}} / 4</strong>-->

@@ -226,6 +226,14 @@ router.post("/get-chat-msgs", rpg.multiSQL({
     sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "ses"), rpg.param("ses","uid")]
 }));
 
+router.post("/get-team-chat", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select s.id, s.did, s.uid, s.content, s.stime, s.parent_id from differential_chat as s inner join differential as d on d.id = s.did " +
+        "where d.sesid = $1 and s.uid in (select tu.uid from teamusers as tu where tu.tmid = $2) and d.orden = $3 order by s.stime asc",
+    postReqData: ["sesid", "tmid", "orden"],
+    sqlParams: [rpg.param("post", "sesid"), rpg.param("post","tmid"), rpg.param("post","orden")]
+}));
+
 router.post("/add-chat-msg", rpg.execSQL({
     dbcon: pass.dbcon,
     sql: "insert into differential_chat(uid,did,content,parent_id) values ($1,$2,$3,$4)",
