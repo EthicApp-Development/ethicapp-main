@@ -831,6 +831,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.currentTimer = null;
     self.showCf = false;
     self.dataDF = [];
+    self.dataChatCount = {};
 
     self.shared.resetGraphs = () => {
         if (self.selectedSes != null && self.selectedSes.type == "L") {
@@ -1051,6 +1052,14 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                          });
                      }
                      self.dataDF[i][mapAt[d.iteration]].push(d);
+                 });
+                 $http.post("get-chat-count", postdata).success(datachat => {
+                     self.dataChatCount = {};
+                     datachat.forEach(ch => {
+                         if(!self.dataChatCount[ch.tmid])
+                             self.dataChatCount[ch.tmid] = {};
+                         self.dataChatCount[ch.tmid][ch.orden] = ch.count;
+                     });
                  });
                  console.log(self.dataDF);
             });

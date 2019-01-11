@@ -897,16 +897,19 @@
                             <td>{{$index + 1}}</td>
                             <td>{{'teamWork' | lang}}</td>
                             <td ng-click="openDFDetails(teamDF.tmid,1)">
+                                Chat: <span class="badge bg-red">{{dataChatCount[teamDF.tmid][1] || 0}}</span><br>
                                 <span class="dfc" ng-repeat="s in DFAll(teamDF.team,1) track by $index">{{s}}</span>
                                 <br>
                                 <span class="dfc">{{DFAvg(teamDF.team,1) | number:1}}</span><span class="dfc inv" ng-class="DFColor(teamDF.team,1)">.</span><span class="dfc">{{DFMinMax(teamDF.team,1) | number:1}}</span>
                             </td>
                             <td ng-click="openDFDetails(teamDF.tmid,2)">
+                                Chat: <span class="badge bg-red">{{dataChatCount[teamDF.tmid][2] || 0}}</span><br>
                                 <span class="dfc" ng-repeat="s in DFAll(teamDF.team,2) track by $index">{{s}}</span>
                                 <br>
                                 <span class="dfc">{{DFAvg(teamDF.team,2) | number:1}}</span><span class="dfc inv" ng-class="DFColor(teamDF.team,2)">.</span><span class="dfc">{{DFMinMax(teamDF.team,2) | number:1}}</span>
                             </td>
                             <td ng-click="openDFDetails(teamDF.tmid,3)">
+                                Chat: <span class="badge bg-red">{{dataChatCount[teamDF.tmid][3] || 0}}</span><br>
                                 <span class="dfc" ng-repeat="s in DFAll(teamDF.team,3) track by $index">{{s}}</span>
                                 <br>
                                 <span class="dfc">{{DFAvg(teamDF.team,3) | number:1}}</span><span class="dfc inv" ng-class="DFColor(teamDF.team,3)">.</span><span class="dfc">{{DFMinMax(teamDF.team,3) | number:1}}</span>
