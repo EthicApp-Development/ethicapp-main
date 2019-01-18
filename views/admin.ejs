@@ -321,7 +321,7 @@
                     <hr>
                     <br>
                 </div>
-                <button class="btn btn-primary pull-right" ng-disabled="selectedSes.status!=1" ng-click="sendDFS()">{{'saveChanges' | lang}}</button>
+                <button class="btn btn-primary pull-right" ng-disabled="selectedSes.status!=1 || misc.dfSending" ng-click="sendDFS()">{{'saveChanges' | lang}}</button>
             </div>
             <div ng-if="selectedSes.type == 'S'" ng-controller="QuestionsController">
                 <h4>{{'texts' | lang}}</h4>

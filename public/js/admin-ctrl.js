@@ -360,14 +360,17 @@ adpp.controller("DocumentsController", function ($scope, $http, Notification, $t
 
     self.sendDFS = () => {
         let k = 0;
+        self.misc.dfSending = true;
         self.dfs.forEach((df,i) => {
             let url = df.id ? "update-differential" : "add-differential";
             df.orden = i;
             df.sesid = self.selectedSes.id;
             $http.post(url, df).success(data => {
                 k += 1;
-                if(k == 3)
+                if(k == 3) {
                     Notification.success("Diferenciales guardados correctamente");
+                    self.misc.dfSending = false;
+                }
             });
         });
     };
@@ -613,6 +616,10 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
         }
         if (self.newQuestion.alternatives[0] == "" || self.newQuestion.alternatives[1] == "") {
             Notification.error("Debe ingresar al menos 2 alternativas");
+            return;
+        }
+        if (self.newQuestion.alternatives.some((e,i) => self.newQuestion.alternatives.indexOf(e) != i)){
+            Notification.error("Hay alternativas duplicadas");
             return;
         }
         if (self.newQuestion.comment == "") {
