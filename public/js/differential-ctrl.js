@@ -2,7 +2,7 @@
 
 let BASE_APP = "https://saduewa.dcc.uchile.cl:8888/Readings/";
 
-let app = angular.module("Differential", ["ui.bootstrap", 'ui.tree', 'btford.socket-io', "timer", "ui-notification", "luegg.directives"]);
+let app = angular.module("Differential", ["ngSanitize", "ui.bootstrap", 'ui.tree', 'btford.socket-io', "timer", "ui-notification", "luegg.directives"]);
 
 app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
@@ -338,3 +338,42 @@ app.filter('lang', function(){
 let indexById = (arr, id) => {
     return arr.findIndex(e => e.id == id);
 };
+
+app.directive('bindHtmlCompile', ['$compile', function ($compile) {
+    return {
+        restrict: 'A',
+        link: function (scope, element, attrs) {
+            scope.$watch(function () {
+                return scope.$eval(attrs.bindHtmlCompile);
+            }, function (value) {
+                element.html(value && value.toString());
+                let compileScope = scope;
+                if (attrs.bindHtmlScope) {
+                    compileScope = scope.$eval(attrs.bindHtmlScope);
+                }
+                $compile(element.contents())(compileScope);
+            });
+        }
+    };
+}]);
+
+app.filter('linkfy', function() {
+    let replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
+    let replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
+    let replacePattern3 = /(\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,6})/gim;
+
+    return function(text, target, otherProp) {
+        if(text == null) return text;
+        angular.forEach(text.match(replacePattern1), function(url) {
+            text = text.replace(replacePattern1, "<a href=\"$1\" target=\"_blank\">$1</a>");
+        });
+        angular.forEach(text.match(replacePattern2), function(url) {
+            text = text.replace(replacePattern2, "$1<a href=\"http://$2\" target=\"_blank\">$2</a>");
+        });
+        angular.forEach(text.match(replacePattern3), function(url) {
+            text = text.replace(replacePattern3, "<a href=\"mailto:$1\">$1</a>");
+        });
+        // console.log("HOLA");
+        return text;
+    };
+});

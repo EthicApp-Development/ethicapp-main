@@ -6,6 +6,7 @@
     <title>DocCollab</title>
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
     <script src="libs/angular.min.js"></script>
+    <script src="libs/angular-sanitize.min.js"></script>
     <script src="libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
     <script src="libs/angular-ui-tree.min.js"></script>
     <script src="libs/angular-timer.min.js"></script>
@@ -196,7 +197,7 @@
                         <div class="chat-msg" ng-repeat="msg in chatMsgs[dfs[selectedDF].id]" ng-class="{'bg-gray': chatmsgreply == msg.id}">
                             <div class="font-mini parent-msg" ng-show="msg.parent != null">
                                 <div class="anon-badge margin-left-n8">{{userAnon[msg.parent.uid]}}</div>
-                                <span class="content">{{msg.parent.content | limitTo:100}}</span>
+                                <span class="content" bind-html-compile="msg.parent.content | limitTo:100 | linkfy"></span>
                             </div>
                             <i class="fa fa-reply" ng-show="msg.parent != null"></i>
                             <div class="anon-badge" ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">{{userAnon[msg.uid]}}</div>
@@ -205,7 +206,7 @@
                                 <br>
                                 <a ng-click="setReply(msg)">{{'reply' | lang}}</a>
                             </span>
-                            <span class="content">{{msg.content}}</span>
+                            <span class="content" bind-html-compile="msg.content | linkfy"></span>
                         </div>
                     </div>
                     <div class="input-group">

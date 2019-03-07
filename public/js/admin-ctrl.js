@@ -1,42 +1,37 @@
 "use strict";
 
-let adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill", "ngMap"]);
+var adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill", "ngMap"]);
 
-const DASHBOARD_AUTOREALOD = true;
-const DASHBOARD_AUTOREALOD_TIME = 15;
+var DASHBOARD_AUTOREALOD = true;
+var DASHBOARD_AUTOREALOD_TIME = 15;
 
 window.DIC = null;
 window.warnDIC = {};
 
 adpp.config(['ngQuillConfigProvider', function (ngQuillConfigProvider) {
     ngQuillConfigProvider.set({
-        modules:{
+        modules: {
             formula: true,
             toolbar: {
-                container: [
-                    ['bold', 'italic', 'underline', 'strike'],        // toggled buttons
+                container: [['bold', 'italic', 'underline', 'strike'], // toggled buttons
 
-                    [{ 'color': [] }, { 'background': [] }],          // dropdown with defaults from theme
-                    [{ 'font': [] }],
-                    [{ 'align': [] }],
+                [{ 'color': [] }, { 'background': [] }], // dropdown with defaults from theme
+                [{ 'font': [] }], [{ 'align': [] }],
 
+                //[{ 'header': 1 }, { 'header': 2 }],               // custom button values
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }], [{ 'script': 'sub' }, { 'script': 'super' }], // superscript/subscript
 
-                    //[{ 'header': 1 }, { 'header': 2 }],               // custom button values
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                //[{ 'indent': '-1'}, { 'indent': '+1' }],          // outdent/indent
+                //[{ 'direction': 'rtl' }],                         // text direction
 
-                    [{ 'script': 'sub'}, { 'script': 'super' }],      // superscript/subscript
+                //['blockquote', 'code-block'],
+                [{ 'size': ['small', false, 'large', 'huge'] }], // custom dropdown
+                //[{ 'header': [1, 2, 3, 4, 5, 6, false] }],
 
-                    //[{ 'indent': '-1'}, { 'indent': '+1' }],          // outdent/indent
-                    //[{ 'direction': 'rtl' }],                         // text direction
-
-                    //['blockquote', 'code-block'],
-                    [{ 'size': ['small', false, 'large', 'huge'] }],  // custom dropdown
-                    //[{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-
-                    ['clean'],                                         // remove formatting button
-                    ['image','link','video'],                                      // remove formatting button
-                    ['formula']
-                    //['map']
+                ['clean'], // remove formatting button
+                ['image', 'link', 'video'], // remove formatting button
+                ['formula']
+                //['map']
                 ],
                 handlers: {
                     map: quillMapHandler
@@ -47,7 +42,7 @@ adpp.config(['ngQuillConfigProvider', function (ngQuillConfigProvider) {
 }]);
 
 adpp.controller("AdminController", function ($scope, $http, $uibModal, $location, $locale, $filter) {
-    let self = $scope;
+    var self = $scope;
 
     self.temp = "";
 
@@ -67,18 +62,18 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.iterationNames = [];
     self.showSeslist = true;
     self.lang = "english";
-    self.secIcons = {configuration: "cog", editor: "edit", dashboard: "bar-chart", users: "male",
-        rubrica: "check-square", groups: "users", options: "sliders"};
-    self.typeNames = {L: "readComp", S: "multSel", M: "semUnits", E: "ethics"};
+    self.secIcons = { configuration: "cog", editor: "edit", dashboard: "bar-chart", users: "male",
+        rubrica: "check-square", groups: "users", options: "sliders" };
+    self.typeNames = { L: "readComp", S: "multSel", M: "semUnits", E: "ethics" };
 
     self.misc = {};
 
-    self.init = () => {
+    self.init = function () {
         self.shared.updateSesData();
         self.updateLang(self.lang);
     };
 
-    self.selectSession = (ses,id) => {
+    self.selectSession = function (ses, id) {
         self.selectedId = id;
         self.selectedSes = ses;
         self.requestDocuments();
@@ -94,152 +89,151 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         $location.path(self.selectedSes.id);
     };
 
-    self.shared.updateSesData = () => {
-        $http({url: "get-session-list", method: "post"}).success((data) => {
+    self.shared.updateSesData = function () {
+        $http({ url: "get-session-list", method: "post" }).success(function (data) {
             console.log("Session data updated");
             self.sessions = data;
             if (self.selectedId != -1) {
-                let ses = self.sessions.find(e => e.id == self.selectedId);
-                if (ses != null)
-                    self.selectSession(ses, self.selectedId);
-            }
-            else {
+                var ses = self.sessions.find(function (e) {
+                    return e.id == self.selectedId;
+                });
+                if (ses != null) self.selectSession(ses, self.selectedId);
+            } else {
                 self.sesFromURL();
             }
         });
     };
 
-    self.sesFromURL = () => {
-        let sesid = +($location.path().substring(1));
-        let ses = self.sessions.find(e => e.id == sesid);
-        if (ses != null)
-            self.selectSession(ses,sesid);
+    self.sesFromURL = function () {
+        var sesid = +$location.path().substring(1);
+        var ses = self.sessions.find(function (e) {
+            return e.id == sesid;
+        });
+        if (ses != null) self.selectSession(ses, sesid);
     };
 
-    self.requestDocuments = () => {
-        let postdata = {sesid: self.selectedSes.id};
-        $http({url: "documents-session", method: "post", data: postdata}).success((data) => {
+    self.requestDocuments = function () {
+        var postdata = { sesid: self.selectedSes.id };
+        $http({ url: "documents-session", method: "post", data: postdata }).success(function (data) {
             self.documents = data;
         });
     };
 
     self.shared.updateDocuments = self.requestDocuments;
 
-    self.deleteDocument = (docid) => {
-        let postdata = {docid: docid};
-        $http({url: "delete-document", method: "post", data: postdata}).success((data) => {
+    self.deleteDocument = function (docid) {
+        var postdata = { docid: docid };
+        $http({ url: "delete-document", method: "post", data: postdata }).success(function (data) {
             self.requestDocuments();
         });
     };
 
-    self.requestQuestions = () => {
-        let postdata = {sesid: self.selectedSes.id};
-        $http({url: "questions-session", method: "post", data: postdata}).success((data) => {
-            self.questions = data.map(e => {
+    self.requestQuestions = function () {
+        var postdata = { sesid: self.selectedSes.id };
+        $http({ url: "questions-session", method: "post", data: postdata }).success(function (data) {
+            self.questions = data.map(function (e) {
                 e.options = e.options.split("\n");
                 return e;
             });
         });
-        $http({url: "get-question-text", method: "post", data: postdata}).success((data) => {
+        $http({ url: "get-question-text", method: "post", data: postdata }).success(function (data) {
             self.questionTexts = data;
         });
-
     };
 
-    self.requestSemDocuments = () => {
-        let postdata = {sesid: self.selectedSes.id};
-        $http({url: "semantic-documents", method: "post", data: postdata}).success((data) => {
+    self.requestSemDocuments = function () {
+        var postdata = { sesid: self.selectedSes.id };
+        $http({ url: "semantic-documents", method: "post", data: postdata }).success(function (data) {
             self.semDocs = data;
         });
     };
 
-    self.getNewUsers = () => {
-        let postdata = {sesid: self.selectedSes.id};
-        $http({url: "get-new-users", method: "post", data: postdata}).success((data) => {
+    self.getNewUsers = function () {
+        var postdata = { sesid: self.selectedSes.id };
+        $http({ url: "get-new-users", method: "post", data: postdata }).success(function (data) {
             self.newUsers = data;
         });
     };
 
-    self.getMembers = () => {
-        let postdata = {sesid: self.selectedSes.id};
-        $http({url: "get-ses-users", method: "post", data: postdata}).success((data) => {
+    self.getMembers = function () {
+        var postdata = { sesid: self.selectedSes.id };
+        $http({ url: "get-ses-users", method: "post", data: postdata }).success(function (data) {
             self.usersArr = data;
             self.users = {};
-            data.forEach((d) => {
+            data.forEach(function (d) {
                 self.users[d.id] = d;
             });
         });
     };
 
-    self.openNewSes = () => {
+    self.openNewSes = function () {
         $uibModal.open({
             templateUrl: "templ/new-ses.html"
         });
     };
 
-    self.openDuplicateSes = () => {
-        if(self.selectedSes == null) return;
-        let ses = angular.copy(self.selectedSes);
+    self.openDuplicateSes = function () {
+        if (self.selectedSes == null) return;
+        var ses = angular.copy(self.selectedSes);
         $uibModal.open({
             templateUrl: "templ/duplicate-ses.html",
             controller: "DuplicateSesModalController",
             controllerAs: "vm",
             scope: self,
             resolve: {
-                data: function () {
+                data: function data() {
                     return ses;
-                },
+                }
             }
         });
     };
 
-    self.openDuplicateSesSpec = (sesr, $event) => {
+    self.openDuplicateSesSpec = function (sesr, $event) {
         $event.stopPropagation();
-        let ses = angular.copy(sesr);
+        var ses = angular.copy(sesr);
         $uibModal.open({
             templateUrl: "templ/duplicate-ses.html",
             controller: "DuplicateSesModalController",
             controllerAs: "vm",
             scope: self,
             resolve: {
-                data: function () {
+                data: function data() {
                     return ses;
-                },
+                }
             }
         });
     };
 
-    self.toggleSidebar = () => {
+    self.toggleSidebar = function () {
         self.openSidebar = !self.openSidebar;
-        self.shared.updateState()
+        self.shared.updateState();
     };
 
-    self.updateLang = (lang) => {
-        $http.get("data/" + lang + ".json").success((data) => {
+    self.updateLang = function (lang) {
+        $http.get("data/" + lang + ".json").success(function (data) {
             window.DIC = data;
         });
     };
 
-    self.shared.resetSesId = () => {
+    self.shared.resetSesId = function () {
         self.selectedId = -1;
     };
 
-    self.changeLang = () => {
-        self.lang = (self.lang == "english") ? "spanish" : "english";
+    self.changeLang = function () {
+        self.lang = self.lang == "english" ? "spanish" : "english";
         self.updateLang(self.lang);
     };
 
-    self.generateCode = () => {
-        let postdata = {
+    self.generateCode = function () {
+        var postdata = {
             id: self.selectedSes.id
         };
-        $http.post("generate-session-code", postdata).success((data) => {
-            if(data.code != null)
-                self.selectedSes.code = data.code;
+        $http.post("generate-session-code", postdata).success(function (data) {
+            if (data.code != null) self.selectedSes.code = data.code;
         });
     };
 
-    self.flang = (key) => {
+    self.flang = function (key) {
         return $filter("lang")(key);
     };
 
@@ -247,12 +241,12 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
 });
 
 adpp.controller("TabsController", function ($scope, $http) {
-    let self = $scope;
+    var self = $scope;
     self.tabOptions = [];
     self.tabConfig = ["users", "groups"];
     self.selectedTab = '';
 
-    self.shared.resetTab = () => {
+    self.shared.resetTab = function () {
         self.selectedTab = "editor";
         if (self.selectedSes != null && self.selectedSes.status > 1) {
             self.selectedTab = "dashboard";
@@ -263,35 +257,27 @@ adpp.controller("TabsController", function ($scope, $http) {
         }
     };
 
-    self.shared.verifyTabs = () => {
+    self.shared.verifyTabs = function () {
         if (self.selectedSes.type == "L") {
-            self.iterationNames = [{name: "reading", val: 0}, {name: "individual", val: 1},
-                {name: "anon", val: 2}, {name: "teamWork", val: 3}, {name: "report", val: 4},
-                {name: "rubricCalib", val: 5}, {name: "pairEval", val: 6}];
+            self.iterationNames = [{ name: "reading", val: 0 }, { name: "individual", val: 1 }, { name: "anon", val: 2 }, { name: "teamWork", val: 3 }, { name: "report", val: 4 }, { name: "rubricCalib", val: 5 }, { name: "pairEval", val: 6 }];
             self.tabOptions = ["editor", "users", "groups", "rubrica", "dashboard"];
             self.sesStatusses = ["configuration", "reading", "individual", "anon", "teamWork", "report", "rubricCalib", "pairEval", "finished"];
             self.shared.getRubrica();
             self.shared.getExampleReports();
             self.shared.getReports();
-        }
-        else if(self.selectedSes.type == "S"){
-            self.iterationNames = [{name: "individual", val: 1}, {name: "anon", val: 2},
-                {name: "teamWork", val: 3}];
+        } else if (self.selectedSes.type == "S") {
+            self.iterationNames = [{ name: "individual", val: 1 }, { name: "anon", val: 2 }, { name: "teamWork", val: 3 }];
             self.tabOptions = ["editor", "users", "groups", "dashboard"];
             self.sesStatusses = ["configuration", "individual", "anon", "teamWork", "finished"];
-        }
-        else if(self.selectedSes.type == "M"){
-            self.iterationNames = [{name: "individual", val: 1}, {name: "teamWork", val: 3}, {name: "report", val:4}, {name: "pairEval", val: 6}];
+        } else if (self.selectedSes.type == "M") {
+            self.iterationNames = [{ name: "individual", val: 1 }, { name: "teamWork", val: 3 }, { name: "report", val: 4 }, { name: "pairEval", val: 6 }];
             self.tabOptions = ["editor", "users", "groups", "rubrica", "dashboard"];
-            self.sesStatusses = [{i:-1, name: "configuration"}, {i: 1, name: "individual"}, {i: 3, name: "teamWork"}, {i: 4, name: "report"},
-                {i: 6, name: "pairEval"}, {i: 7, name: "finished"}];
+            self.sesStatusses = [{ i: -1, name: "configuration" }, { i: 1, name: "individual" }, { i: 3, name: "teamWork" }, { i: 4, name: "report" }, { i: 6, name: "pairEval" }, { i: 7, name: "finished" }];
             self.shared.getRubrica();
             self.shared.getExampleReports();
             self.shared.getReports();
-        }
-        else if(self.selectedSes.type == "E"){
-            self.iterationNames = [{name: "individual", val: 1}, {name: "anon", val: 2},
-                {name: "teamWork", val: 3}];
+        } else if (self.selectedSes.type == "E") {
+            self.iterationNames = [{ name: "individual", val: 1 }, { name: "anon", val: 2 }, { name: "teamWork", val: 3 }];
             self.tabOptions = ["editor", "users", "groups", "dashboard"];
             self.sesStatusses = ["configuration", "individual", "anon", "teamWork", "finished"];
         }
@@ -300,55 +286,54 @@ adpp.controller("TabsController", function ($scope, $http) {
         }
     };
 
-    self.setTab = (idx) => {
+    self.setTab = function (idx) {
         self.selectedTab = idx;
     };
 
-    self.setTabConfig = (idx) => {
+    self.setTabConfig = function (idx) {
         self.selectedTabConfig = idx;
     };
 
-    self.backToList = () => {
+    self.backToList = function () {
         self.shared.resetSesId();
         self.tabOptions = [];
         self.selectedTab = "";
     };
 
-    self.shared.gotoGrupos = () => {
+    self.shared.gotoGrupos = function () {
         self.selectedTab = "groups";
     };
 
-    self.shared.gotoRubrica = () => {
+    self.shared.gotoRubrica = function () {
         self.selectedTab = "rubrica";
     };
-
 });
 
 adpp.controller("DocumentsController", function ($scope, $http, Notification, $timeout) {
-    let self = $scope;
+    var self = $scope;
 
     self.busy = false;
     self.dfs = [];
     self.shared.dfs = self.dfs;
 
-    self.getDifferentials = () => {
-        $http.post("differentials", {sesid: self.selectedSes.id}).success(data => {
-            data.forEach(df => {
+    self.getDifferentials = function () {
+        $http.post("differentials", { sesid: self.selectedSes.id }).success(function (data) {
+            data.forEach(function (df) {
                 df.name = df.title;
                 self.dfs[df.orden] = df;
             });
         });
     };
 
-    self.uploadDocument = (event) => {
+    self.uploadDocument = function (event) {
         self.busy = true;
-        let fd = new FormData(event.target);
+        var fd = new FormData(event.target);
         $http.post("upload-file", fd, {
             transformRequest: angular.identity,
-            headers: {'Content-Type': undefined}
-        }).success((data) => {
+            headers: { 'Content-Type': undefined }
+        }).success(function (data) {
             if (data.status == "ok") {
-                $timeout(() => {
+                $timeout(function () {
                     Notification.success("Documento cargado correctamente");
                     event.target.reset();
                     self.busy = false;
@@ -358,16 +343,16 @@ adpp.controller("DocumentsController", function ($scope, $http, Notification, $t
         });
     };
 
-    self.sendDFS = () => {
-        let k = 0;
+    self.sendDFS = function () {
+        var k = 0;
         self.misc.dfSending = true;
-        self.dfs.forEach((df,i) => {
-            let url = df.id ? "update-differential" : "add-differential";
+        self.dfs.forEach(function (df, i) {
+            var url = df.id ? "update-differential" : "add-differential";
             df.orden = i;
             df.sesid = self.selectedSes.id;
-            $http.post(url, df).success(data => {
+            $http.post(url, df).success(function (data) {
                 k += 1;
-                if(k == 3) {
+                if (k == 3) {
                     Notification.success("Diferenciales guardados correctamente");
                     self.misc.dfSending = false;
                 }
@@ -375,45 +360,45 @@ adpp.controller("DocumentsController", function ($scope, $http, Notification, $t
         });
     };
 
-    self.getDifferentials();
+    self.shared.sendDFS = self.sendDFS;
 
+    self.getDifferentials();
 });
 
 adpp.controller("SesEditorController", function ($scope, $http, Notification) {
-    let self = $scope;
+    var self = $scope;
 
-    self.mTransition = {1: 3, 3: 5, 5: 6, 6: 8, 8: 9};
+    self.mTransition = { 1: 3, 3: 5, 5: 6, 6: 8, 8: 9 };
 
     self.splitDescr = false;
     self.splDes1 = "";
     self.splDes2 = "";
 
-    self.toggleSplit = () => {
+    self.toggleSplit = function () {
         self.splitDescr = !self.splitDescr;
-        if(self.splitDescr){
+        if (self.splitDescr) {
             self.splDes1 = self.selectedSes.descr.split("\n")[0];
             self.splDes2 = self.selectedSes.descr.split("\n")[1] || "";
-        }
-        else{
+        } else {
             self.selectedSes.descr = self.splDes1 + "\n" + self.splDes2;
         }
     };
 
-    self.updateSession = () => {
-        if(self.splitDescr){
+    self.updateSession = function () {
+        if (self.splitDescr) {
             self.selectedSes.descr = self.splDes1 + "\n" + self.splDes2;
         }
         if (self.selectedSes.name.length < 3 || self.selectedSes.descr.length < 5) {
             Notification.error("Datos de la sesión incorrectos o incompletos");
             return;
         }
-        let postdata = {name: self.selectedSes.name, descr: self.selectedSes.descr, id: self.selectedSes.id};
-        $http({url: "update-session", method: "post", data: postdata}).success((data) => {
+        var postdata = { name: self.selectedSes.name, descr: self.selectedSes.descr, id: self.selectedSes.id };
+        $http({ url: "update-session", method: "post", data: postdata }).success(function (data) {
             console.log("Session updated");
         });
     };
 
-    self.shared.changeState = () => {
+    self.shared.changeState = function () {
         if (self.selectedSes.type != "M" && self.selectedSes.status >= self.sesStatusses.length) {
             Notification.error("La sesión está finalizada");
             return;
@@ -422,43 +407,40 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
             Notification.error("La sesión está finalizada");
             return;
         }
-        if (self.selectedSes.type == "L" && self.selectedSes.status >= 3 && !self.selectedSes.grouped
-            || self.selectedSes.type == "M" && self.selectedSes.status >= 3 && !self.selectedSes.grouped
-            || self.selectedSes.type == "E" && self.selectedSes.status >= 1 && !self.selectedSes.grouped
-            || self.selectedSes.type == "S" && self.selectedSes.status >= 2 && !self.selectedSes.grouped) {
+        if (self.selectedSes.type == "L" && self.selectedSes.status >= 3 && !self.selectedSes.grouped || self.selectedSes.type == "M" && self.selectedSes.status >= 3 && !self.selectedSes.grouped || self.selectedSes.type == "E" && self.selectedSes.status >= 1 && !self.selectedSes.grouped || self.selectedSes.type == "S" && self.selectedSes.status >= 2 && !self.selectedSes.grouped) {
             self.shared.gotoGrupos();
             Notification.error("Los grupos no han sido generados");
             return;
         }
-        if (self.selectedSes.type == "L" && self.selectedSes.status >= 6 && self.shared.isRubricaSet && !self.shared.isRubricaSet()
-            || self.selectedSes.type == "M" && self.selectedSes.status >= 5 && self.shared.isRubricaSet && !self.shared.isRubricaSet()) {
+        if (self.selectedSes.type == "L" && self.selectedSes.status >= 6 && self.shared.isRubricaSet && !self.shared.isRubricaSet() || self.selectedSes.type == "M" && self.selectedSes.status >= 5 && self.shared.isRubricaSet && !self.shared.isRubricaSet()) {
             self.shared.gotoRubrica();
             Notification.error("La rúbrica no ha sido asignada");
             return;
         }
-        if (self.selectedSes.type == "L" && self.selectedSes.status >= 7 && (self.selectedSes.paired == null || self.selectedSes.paired == 0)
-            || self.selectedSes.type == "M" && self.selectedSes.status >= 6 && (self.selectedSes.paired == null || self.selectedSes.paired == 0)) {
+        if (self.selectedSes.type == "L" && self.selectedSes.status >= 7 && (self.selectedSes.paired == null || self.selectedSes.paired == 0) || self.selectedSes.type == "M" && self.selectedSes.status >= 6 && (self.selectedSes.paired == null || self.selectedSes.paired == 0)) {
             self.shared.gotoRubrica();
             Notification.error("Los pares para la evaluación de pares no han sido asignados");
             return;
         }
-        let confirm = window.confirm("¿Esta seguro que quiere ir al siguiente estado?");
+        if(self.selectedSes.type == "E" && self.selectedSes.status == 0){
+            self.shared.sendDFS();
+        }
+        var confirm = window.confirm("¿Esta seguro que quiere ir al siguiente estado?");
         if (confirm) {
-            if(self.selectedSes.type == "M"){
-                let postdata = {sesid: self.selectedSes.id, state: self.mTransition[self.selectedSes.status] || self.selectedSes.status};
-                $http({url: "force-state-session", method: "post", data: postdata}).success((data) => {
+            if (self.selectedSes.type == "M") {
+                var postdata = { sesid: self.selectedSes.id, state: self.mTransition[self.selectedSes.status] || self.selectedSes.status };
+                $http({ url: "force-state-session", method: "post", data: postdata }).success(function (data) {
                     self.shared.updateSesData();
                 });
-            }
-            else {
-                if(self.selectedSes.status == 1){
+            } else {
+                if (self.selectedSes.status == 1) {
                     self.updateSession();
-                    if(self.selectedSes.type == "S"){
+                    if (self.selectedSes.type == "S") {
                         self.shared.saveConfs();
                     }
                 }
-                let postdata = {sesid: self.selectedSes.id};
-                $http({url: "change-state-session", method: "post", data: postdata}).success((data) => {
+                var _postdata = { sesid: self.selectedSes.id };
+                $http({ url: "change-state-session", method: "post", data: _postdata }).success(function (data) {
                     self.shared.updateSesData();
                 });
             }
@@ -476,33 +458,34 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
             })[0].click();
         });
     }*/
-
 });
 
 adpp.controller("NewUsersController", function ($scope, $http, Notification) {
-    let self = $scope;
-    let newMembs = [];
+    var self = $scope;
+    var newMembs = [];
 
-    self.addToSession = () => {
+    self.addToSession = function () {
         if (self.newMembs.length == 0) {
             Notification.error("No hay usuarios seleccionados para agregar");
             return;
         }
-        let postdata = {
-            users: self.newMembs.map(e => e.id),
+        var postdata = {
+            users: self.newMembs.map(function (e) {
+                return e.id;
+            }),
             sesid: self.selectedSes.id
         };
-        $http({url: "add-ses-users", method: "post", data: postdata}).success((data) => {
+        $http({ url: "add-ses-users", method: "post", data: postdata }).success(function (data) {
             if (data.status == "ok") {
                 self.refreshUsers();
             }
         });
     };
 
-    self.removeUser = (uid) => {
+    self.removeUser = function (uid) {
         if (self.selectedSes.status <= 2) {
-            let postdata = {uid: uid, sesid: self.selectedSes.id};
-            $http({url: "delete-ses-user", method: "post", data: postdata}).success((data) => {
+            var postdata = { uid: uid, sesid: self.selectedSes.id };
+            $http({ url: "delete-ses-user", method: "post", data: postdata }).success(function (data) {
                 if (data.status == "ok") {
                     self.refreshUsers();
                 }
@@ -510,65 +493,63 @@ adpp.controller("NewUsersController", function ($scope, $http, Notification) {
         }
     };
 
-    self.refreshUsers = () => {
+    self.refreshUsers = function () {
         self.getNewUsers();
         self.getMembers();
     };
 
     self.shared.refreshUsers = self.refreshUsers;
-
 });
 
 adpp.controller("SemDocController", function ($scope, $http, Notification) {
-    let self = $scope;
+    var self = $scope;
 
-    self.newSDoc = {id:null, title: "", content: ""};
+    self.newSDoc = { id: null, title: "", content: "" };
 
-    self.addSemDoc = () => {
-        let postdata = {sesid: self.selectedSes.id, title: self.newSDoc.title, content: self.newSDoc.content};
-        $http({url: "add-semantic-document", method: "post", data: postdata}).success((data) => {
+    self.addSemDoc = function () {
+        var postdata = { sesid: self.selectedSes.id, title: self.newSDoc.title, content: self.newSDoc.content };
+        $http({ url: "add-semantic-document", method: "post", data: postdata }).success(function (data) {
             if (data.status == "ok") {
                 self.requestSemDocuments();
                 Notification.success("Texto agregado correctamente");
-                self.newSDoc = {id:null, title: "", content: ""};
+                self.newSDoc = { id: null, title: "", content: "" };
             }
         });
     };
 
-    self.deleteText = (id) => {
-        let postdata = {id: id};
-        $http.post("delete-semantic-document", postdata).success((data) => {
-            if(data.status == "ok"){
+    self.deleteText = function (id) {
+        var postdata = { id: id };
+        $http.post("delete-semantic-document", postdata).success(function (data) {
+            if (data.status == "ok") {
                 self.requestSemDocuments();
                 Notification.success("Texto eliminado correctamente");
             }
         });
     };
 
-    self.startEditText = (tx) => {
-        self.newSDoc = {id:tx.id, title: tx.title, content: tx.content};
+    self.startEditText = function (tx) {
+        self.newSDoc = { id: tx.id, title: tx.title, content: tx.content };
         Notification.info("Edite el texto en el formulario");
     };
 
-    self.updateSemDoc = () => {
-        if(self.newSDoc.id == null){
+    self.updateSemDoc = function () {
+        if (self.newSDoc.id == null) {
             Notification.error("No hay texto a editar.");
             return;
         }
-        let postdata = {id: self.newSDoc.id, sesid: self.selectedSes.id, title: self.newSDoc.title, content: self.newSDoc.content};
-        $http({url: "update-semantic-document", method: "post", data: postdata}).success((data) => {
+        var postdata = { id: self.newSDoc.id, sesid: self.selectedSes.id, title: self.newSDoc.title, content: self.newSDoc.content };
+        $http({ url: "update-semantic-document", method: "post", data: postdata }).success(function (data) {
             if (data.status == "ok") {
                 self.requestSemDocuments();
                 Notification.success("Texto editado correctamente.");
-                self.newSDoc = {id: null, title: "", content: ""};
+                self.newSDoc = { id: null, title: "", content: "" };
             }
         });
-    }
-
+    };
 });
 
 adpp.controller("QuestionsController", function ($scope, $http, Notification, $uibModal, NgMap, $timeout) {
-    let self = $scope;
+    var self = $scope;
 
     self.qsLabels = ['A', 'B', 'C', 'D', 'E'];
 
@@ -582,11 +563,11 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
         answer: -1
     };
 
-    self.newText = {id: null, title: "", content: ""};
+    self.newText = { id: null, title: "", content: "" };
 
     self.newQsExp = false;
 
-    self.startNewQuestion = () => {
+    self.startNewQuestion = function () {
         self.newQuestion = {
             id: null,
             content: "",
@@ -605,11 +586,11 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
         self.map = map;
     });*/
 
-    self.selectAnswer = (i) => {
+    self.selectAnswer = function (i) {
         self.newQuestion.answer = i;
     };
 
-    self.addQuestion = () => {
+    self.addQuestion = function () {
         if (self.newQuestion.answer == -1) {
             Notification.error("Debe indicar la respuesta correcta a la pregunta");
             return;
@@ -618,7 +599,9 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
             Notification.error("Debe ingresar al menos 2 alternativas");
             return;
         }
-        if (self.newQuestion.alternatives.some((e,i) => self.newQuestion.alternatives.indexOf(e) != i)){
+        if (self.newQuestion.alternatives.some(function (e, i) {
+            return self.newQuestion.alternatives.indexOf(e) != i;
+        })) {
             Notification.error("Hay alternativas duplicadas");
             return;
         }
@@ -626,10 +609,10 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
             Notification.error("Debe ingresar un comentario para la pregunta");
             return;
         }
-        if(self.newQuestion.includesMap){
+        if (self.newQuestion.includesMap) {
             encodeMapPlugin();
         }
-        let postdata = {
+        var postdata = {
             content: self.newQuestion.content,
             options: self.newQuestion.alternatives.join("\n"),
             comment: self.newQuestion.comment,
@@ -639,7 +622,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
             other: self.newQuestion.other,
             pluginData: self.newQuestion.pluginData
         };
-        $http({url: "add-question", method: "post", data: postdata}).success((data) => {
+        $http({ url: "add-question", method: "post", data: postdata }).success(function (data) {
             if (data.status == "ok") {
                 self.requestQuestions();
                 Notification.success("Pregunta agrgada correctamente");
@@ -652,15 +635,14 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
                     textid: null,
                     answer: -1
                 };
-                if(self.shared.sendOverlayBuffer)
-                    self.shared.sendOverlayBuffer(data.id);
+                if (self.shared.sendOverlayBuffer) self.shared.sendOverlayBuffer(data.id);
                 self.newQsExp = false;
             }
         });
     };
 
-    self.updateQuestion = () => {
-        if(self.newQuestion.id == null){
+    self.updateQuestion = function () {
+        if (self.newQuestion.id == null) {
             Notification.error("No hay pregunta para editar");
             return;
         }
@@ -668,10 +650,10 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
             Notification.error("Debe indicar la respuesta correcta a la pregunta");
             return;
         }
-        if(self.newQuestion.includesMap){
+        if (self.newQuestion.includesMap) {
             encodeMapPlugin();
         }
-        let postdata = {
+        var postdata = {
             id: self.newQuestion.id,
             content: self.newQuestion.content,
             options: self.newQuestion.alternatives.join("\n"),
@@ -682,7 +664,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
             other: self.newQuestion.other,
             pluginData: self.newQuestion.pluginData
         };
-        $http({url: "update-question", method: "post", data: postdata}).success((data) => {
+        $http({ url: "update-question", method: "post", data: postdata }).success(function (data) {
             if (data.status == "ok") {
                 self.requestQuestions();
                 Notification.success("Pregunta editada correctamente");
@@ -695,15 +677,16 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
                     textid: null,
                     answer: -1
                 };
-                if(self.shared.sendOverlayBuffer)
-                    self.shared.sendOverlayBuffer(postdata.id);
+                if (self.shared.sendOverlayBuffer) self.shared.sendOverlayBuffer(postdata.id);
                 self.newQsExp = false;
             }
         });
     };
 
-    self.startEditQuestion = (qs) => {
-        self.questions.forEach(qs => qs.expanded = false);
+    self.startEditQuestion = function (qs) {
+        self.questions.forEach(function (qs) {
+            return qs.expanded = false;
+        });
         self.newQuestion = {
             id: qs.id,
             content: qs.content,
@@ -715,16 +698,15 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
             includesMap: qs.plugin_data && qs.plugin_data.startsWith("MAP")
         };
         Notification.info("Edite la pregunta en el formulario.");
-        if(self.newQuestion.includesMap){
-            if(self.shared.clearOverlayBuffer)
-                self.shared.clearOverlayBuffer();
+        if (self.newQuestion.includesMap) {
+            if (self.shared.clearOverlayBuffer) self.shared.clearOverlayBuffer();
             self.shared.processMapData(qs.plugin_data, qs.id);
             futureRefreshMap();
         }
         self.newQsExp = true;
     };
 
-    self.startEditText = (tx) => {
+    self.startEditText = function (tx) {
         self.newText = {
             id: tx.id,
             title: tx.title,
@@ -734,84 +716,94 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
         self.newTextExp = true;
     };
 
-    self.addQuestionText = () => {
-        let postdata = {sesid: self.selectedSes.id, title: self.newText.title, content: self.newText.content};
-        $http({url: "add-question-text", method: "post", data: postdata}).success((data) => {
+    self.addQuestionText = function () {
+        var postdata = { sesid: self.selectedSes.id, title: self.newText.title, content: self.newText.content };
+        $http({ url: "add-question-text", method: "post", data: postdata }).success(function (data) {
             if (data.status == "ok") {
                 self.requestQuestions();
-                self.newText = {id: null, title: "", content: ""};
+                self.newText = { id: null, title: "", content: "" };
                 self.newTextExp = false;
             }
         });
     };
 
-    self.updateQuestionText = () => {
-        if(self.newText.id == null){
+    self.updateQuestionText = function () {
+        if (self.newText.id == null) {
             Notification.error("No hay texto para editar");
             return;
         }
-        let postdata = {id: self.newText.id, sesid: self.selectedSes.id, title: self.newText.title, content: self.newText.content};
-        $http({url: "update-question-text", method: "post", data: postdata}).success((data) => {
+        var postdata = { id: self.newText.id, sesid: self.selectedSes.id, title: self.newText.title, content: self.newText.content };
+        $http({ url: "update-question-text", method: "post", data: postdata }).success(function (data) {
             if (data.status == "ok") {
                 self.requestQuestions();
-                self.newText = {title: "", content: ""};
+                self.newText = { title: "", content: "" };
                 self.newTextExp = false;
             }
         });
     };
 
-    self.deleteQuestion = (id) => {
-        let postdata = {id: id};
-        $http.post("delete-question", postdata).success((data) => {
+    self.deleteQuestion = function (id) {
+        var postdata = { id: id };
+        $http.post("delete-question", postdata).success(function (data) {
             self.requestQuestions();
+            self.newQuestion = {
+                id: null,
+                content: "",
+                alternatives: ["", "", "", "", ""],
+                comment: "",
+                other: "",
+                textid: null,
+                answer: -1
+            };
             Notification.success("Pregunta eliminada correctamente");
         });
     };
 
-    self.deleteQuestionText = (id) => {
-        let postdata = {id: id};
-        $http.post("delete-question-text", postdata).success((data) => {
+    self.deleteQuestionText = function (id) {
+        var postdata = { id: id };
+        $http.post("delete-question-text", postdata).success(function (data) {
             self.requestQuestions();
             Notification.success("Texto eliminado correctamente");
         });
     };
 
-    self.configQuillExtra = (editor) => {
+    self.configQuillExtra = function (editor) {
         self.editor = editor;
     };
 
-    self.toggleMapPlugin = () => {
+    self.toggleMapPlugin = function () {
         self.newQuestion.includesMap = !self.newQuestion.includesMap;
-        if(self.newQuestion.includesMap){
+        if (self.newQuestion.includesMap) {
             futureRefreshMap();
         }
     };
 
-    self.expandQuestion = (qs) => {
-        if(qs.expanded){
+    self.expandQuestion = function (qs) {
+        if (qs.expanded) {
             qs.expanded = false;
             self.shared.closePrevMapData();
-        }
-        else{
-            self.questions.forEach(qs => qs.expanded = false);
+        } else {
+            self.questions.forEach(function (qs) {
+                return qs.expanded = false;
+            });
             qs.expanded = true;
-            if(qs.plugin_data && qs.plugin_data.startsWith("MAP")) {
+            if (qs.plugin_data && qs.plugin_data.startsWith("MAP")) {
                 self.shared.processPrevMapData(qs.plugin_data, qs.id);
             }
         }
     };
 
-    let futureRefreshMap = () => {
-        $timeout(() => {
-            let map = self.shared.getActiveMap();
+    var futureRefreshMap = function futureRefreshMap() {
+        $timeout(function () {
+            var map = self.shared.getActiveMap();
             google.maps.event.trigger(map, "resize");
         }, 1000);
     };
 
-    let encodeMapPlugin = () => {
-        let r = self.shared.getPluginMapOptions();
-        let map = self.shared.getActiveMap();
-        if(map == null){
+    var encodeMapPlugin = function encodeMapPlugin() {
+        var r = self.shared.getPluginMapOptions();
+        var map = self.shared.getActiveMap();
+        if (map == null) {
             /*NgMap.getMap().then((map) => {
                 console.log("MAP correctly loaded");
                 self.map = map;
@@ -820,34 +812,31 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
                 let zoom = self.map.getZoom();
                 self.newQuestion.pluginData = "MAP " + lat + " " + lng + " " + zoom + (r.nav ? " NAV" : "") + (r.edit ? " EDIT" : "");
             }, (err) => {*/
-                Notification.error("Ocurrio un error al cargar los datos del mapa, intente nuevamente.");
+            Notification.error("Ocurrio un error al cargar los datos del mapa, intente nuevamente.");
             //});
             return;
         }
-        let lat = map.getCenter().lat();
-        let lng = map.getCenter().lng();
-        let zoom = map.getZoom();
+        var lat = map.getCenter().lat();
+        var lng = map.getCenter().lng();
+        var zoom = map.getZoom();
         self.newQuestion.pluginData = "MAP " + lat + " " + lng + " " + zoom + (r.nav ? " NAV" : "") + (r.edit ? " EDIT" : "");
     };
-
 });
 
 adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibModal, Notification) {
-    let self = $scope;
+    var self = $scope;
     self.iterationIndicator = 1;
     self.currentTimer = null;
     self.showCf = false;
     self.dataDF = [];
     self.dataChatCount = {};
 
-    self.shared.resetGraphs = () => {
+    self.shared.resetGraphs = function () {
         if (self.selectedSes != null && self.selectedSes.type == "L") {
             self.iterationIndicator = Math.max(Math.min(6, self.selectedSes.status - 2), 0);
-        }
-        else if (self.selectedSes.type == "S") {
+        } else if (self.selectedSes.type == "S") {
             self.iterationIndicator = Math.max(Math.min(3, self.selectedSes.status - 1), 1);
-        }
-        else if (self.selectedSes.type == "M") {
+        } else if (self.selectedSes.type == "M") {
             self.iterationIndicator = Math.max(Math.min(6, self.selectedSes.status - 2), 0);
         }
         self.alumState = null;
@@ -855,8 +844,12 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             chart: {
                 type: 'multiBarChart',
                 height: 320,
-                x: d => d.label,
-                y: d => d.value,
+                x: function x(d) {
+                    return d.label;
+                },
+                y: function y(d) {
+                    return d.value;
+                },
                 showControls: false,
                 showValues: false,
                 duration: 500,
@@ -868,14 +861,14 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 }
             }
         };
-        self.barData = [{key: self.flang('students'), color: "#0077c1", values: []}];
+        self.barData = [{ key: self.flang('students'), color: "#0077c1", values: [] }];
         self.updateState();
         if (DASHBOARD_AUTOREALOD && self.selectedSes.status < 9) {
             self.reload(true);
         }
     };
 
-    self.reload = (k) => {
+    self.reload = function (k) {
         if (!k) {
             self.updateState();
         }
@@ -885,34 +878,28 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         self.currentTimer = $timeout(self.reload, DASHBOARD_AUTOREALOD_TIME * 1000);
     };
 
-    self.updateState = () => {
-        if(self.selectedSes.status == 1){
+    self.updateState = function () {
+        if (self.selectedSes.status == 1) {
             self.shared.refreshUsers();
-        }
-        else if (self.iterationIndicator <= 4)
-            self.updateStateIni();
-        else
-            self.updateStateRub();
+        } else if (self.iterationIndicator <= 4) self.updateStateIni();else self.updateStateRub();
     };
 
     self.shared.updateState = self.updateState;
 
-    self.updateStateIni = () => {
+    self.updateStateIni = function () {
         self.alumTime = {};
-        let postdata = {sesid: self.selectedSes.id, iteration: self.iterationIndicator};
+        var postdata = { sesid: self.selectedSes.id, iteration: self.iterationIndicator };
         if (self.selectedSes.type == "S") {
-            $http({url: "get-alum-full-state-sel", method: "post", data: postdata}).success((data) => {
+            $http({ url: "get-alum-full-state-sel", method: "post", data: postdata }).success(function (data) {
                 self.alumState = {};
-                for (let uid in self.users) {
-                    if (self.users[uid].role == "A")
-                        self.alumState[uid] = {};
+                for (var uid in self.users) {
+                    if (self.users[uid].role == "A") self.alumState[uid] = {};
                 }
-                data.forEach((d) => {
+                data.forEach(function (d) {
                     if (self.alumState[d.uid] == null) {
                         self.alumState[d.uid] = {};
                         self.alumState[d.uid][d.qid] = d.correct;
-                    }
-                    else {
+                    } else {
                         self.alumState[d.uid][d.qid] = d.correct;
                     }
                 });
@@ -920,107 +907,107 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     $http({
                         url: "get-original-leaders",
                         method: "post",
-                        data: {sesid: self.selectedSes.id}
-                    }).success((data) => {
-                        let temp = angular.copy(self.alumState);
+                        data: { sesid: self.selectedSes.id }
+                    }).success(function (data) {
+                        var temp = angular.copy(self.alumState);
                         self.alumState = {};
                         self.leaderTeamStr = {};
                         self.leaderTeamId = {};
-                        data.forEach((r) => {
+                        data.forEach(function (r) {
                             self.alumState[r.leader] = temp[r.leader];
-                            self.leaderTeamStr[r.leader] = r.team.map(u => (self.users[u]) ? self.users[u].name : "- ").join(", ");
+                            self.leaderTeamStr[r.leader] = r.team.map(function (u) {
+                                return self.users[u] ? self.users[u].name : "- ";
+                            }).join(", ");
                             self.leaderTeamId[r.leader] = r.id;
                         });
                     });
                 }
                 self.shared.alumState = self.alumState;
             });
-            $http({url: "get-alum-state-sel", method: "post", data: postdata}).success((data) => {
-                let dataNorm = data.map(d => {
+            $http({ url: "get-alum-state-sel", method: "post", data: postdata }).success(function (data) {
+                var dataNorm = data.map(function (d) {
                     d.score /= self.questions.length;
                     return d;
                 });
                 self.buildBarData(dataNorm);
             });
-            $http({url: "get-alum-confidence", method: "post", data: postdata}).success((data) => {
-                 self.confidence = {};
-                 data.forEach(r => {
-                     if(!self.confidence[r.qid])
-                         self.confidence[r.qid] = {};
-                     self.confidence[r.qid][r.conf] = r.freq;
-                 });
+            $http({ url: "get-alum-confidence", method: "post", data: postdata }).success(function (data) {
+                self.confidence = {};
+                data.forEach(function (r) {
+                    if (!self.confidence[r.qid]) self.confidence[r.qid] = {};
+                    self.confidence[r.qid][r.conf] = r.freq;
+                });
             });
-        }
-        else if (self.selectedSes.type == "L") {
-            $http({url: "get-alum-state-lect", method: "post", data: postdata}).success((data) => {
+        } else if (self.selectedSes.type == "L") {
+            $http({ url: "get-alum-state-lect", method: "post", data: postdata }).success(function (data) {
                 self.alumState = {};
-                for (let uid in self.users) {
-                    if (self.users[uid].role == "A")
-                        self.alumState[uid] = {};
+                for (var uid in self.users) {
+                    if (self.users[uid].role == "A") self.alumState[uid] = {};
                 }
-                data.forEach((d) => {
+                data.forEach(function (d) {
                     if (self.alumState[d.uid] == null) {
                         self.alumState[d.uid] = d;
-                    }
-                    else {
+                    } else {
                         self.alumState[d.uid] = d;
                     }
                 });
                 self.buildBarData(data);
                 self.getAlumDoneTime(postdata);
                 if (self.iterationIndicator == 3) {
-                    $http({url: "get-original-leaders", method: "post", data: {sesid: self.selectedSes.id}}).success((data) => {
-                        let temp = angular.copy(self.alumState);
+                    $http({ url: "get-original-leaders", method: "post", data: { sesid: self.selectedSes.id } }).success(function (data) {
+                        var temp = angular.copy(self.alumState);
                         self.alumState = {};
                         self.leaderTeamStr = {};
-                        data.forEach((r) => {
+                        data.forEach(function (r) {
                             self.alumState[r.leader] = temp[r.leader];
-                            self.leaderTeamStr[r.leader] = r.team.map(u => (self.users[u]) ? self.users[u].name : "- ").join(", ");
+                            self.leaderTeamStr[r.leader] = r.team.map(function (u) {
+                                return self.users[u] ? self.users[u].name : "- ";
+                            }).join(", ");
                         });
                     });
                 }
                 self.shared.alumState = self.alumState;
             });
-            $http({url: "get-ideas-progress", method: "post", data: postdata}).success((data) => {
+            $http({ url: "get-ideas-progress", method: "post", data: postdata }).success(function (data) {
                 self.numProgress = 0;
                 self.numUsers = Object.keys(self.users).length - 1;
-                let n = self.documents.length * 3;
+                var n = self.documents.length * 3;
                 if (n != 0) {
-                    data.forEach((d) => {
+                    data.forEach(function (d) {
                         self.numProgress += d.count / n;
                     });
                     self.numProgress *= 100 / self.numUsers;
                 }
             });
-        }
-        else if (self.selectedSes.type == "M") {
-            $http({url: "get-alum-state-semantic", method: "post", data: postdata}).success((data) => {
+        } else if (self.selectedSes.type == "M") {
+            $http({ url: "get-alum-state-semantic", method: "post", data: postdata }).success(function (data) {
                 self.alumState = {};
                 self.numUsers = 0;
-                for (let uid in self.users) {
+                for (var uid in self.users) {
                     if (self.users[uid].role == "A") {
                         self.alumState[uid] = {};
                         self.numUsers++;
                     }
                 }
-                data.forEach((d) => {
+                data.forEach(function (d) {
                     if (self.alumState[d.uid] == null) {
                         self.alumState[d.uid] = d;
-                    }
-                    else {
+                    } else {
                         self.alumState[d.uid] = d;
                     }
                 });
                 self.buildBarData(data);
                 self.getAlumDoneTime(postdata);
                 if (self.iterationIndicator == 3) {
-                    $http({url: "get-original-leaders", method: "post", data: {sesid: self.selectedSes.id}}).success((data) => {
-                        let temp = angular.copy(self.alumState);
+                    $http({ url: "get-original-leaders", method: "post", data: { sesid: self.selectedSes.id } }).success(function (data) {
+                        var temp = angular.copy(self.alumState);
                         self.alumState = {};
                         self.leaderTeamStr = {};
-                        data.forEach((r) => {
+                        data.forEach(function (r) {
                             self.alumState[r.leader] = temp[r.leader];
-                            self.leaderTeamStr[r.leader] = r.team.map(u => (self.users[u]) ? self.users[u].name : "- ").join(", ");
+                            self.leaderTeamStr[r.leader] = r.team.map(function (u) {
+                                return self.users[u] ? self.users[u].name : "- ";
+                            }).join(", ");
                         });
                     });
                 }
@@ -1037,93 +1024,87 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     self.numProgress *= 100 / self.numUsers;
                 }
             });*/
-        }
-        else if(self.selectedSes.type == "E"){
-            let postdata = {
+        } else if (self.selectedSes.type == "E") {
+            var _postdata2 = {
                 sesid: self.selectedSes.id
             };
-            $http.post("get-differential-all", postdata).success(data => {
-                 self.dataDF = [];
-                 let tmid = -1;
-                 let i = -1;
-                 let mapAt = ["", "ind", "anon", "team"];
-                 data.forEach(d => {
-                     if(d.tmid != tmid){
-                         i += 1;
-                         tmid = d.tmid;
-                         self.dataDF.push({
-                             tmid: tmid,
-                             ind: [],
-                             anon: [],
-                             team: []
-                         });
-                     }
-                     self.dataDF[i][mapAt[d.iteration]].push(d);
-                 });
-                 $http.post("get-chat-count", postdata).success(datachat => {
-                     self.dataChatCount = {};
-                     datachat.forEach(ch => {
-                         if(!self.dataChatCount[ch.tmid])
-                             self.dataChatCount[ch.tmid] = {};
-                         self.dataChatCount[ch.tmid][ch.orden] = ch.count;
-                     });
-                 });
-                 console.log(self.dataDF);
+            $http.post("get-differential-all", _postdata2).success(function (data) {
+                self.dataDF = [];
+                var tmid = -1;
+                var i = -1;
+                var mapAt = ["", "ind", "anon", "team"];
+                data.forEach(function (d) {
+                    if (d.tmid != tmid) {
+                        i += 1;
+                        tmid = d.tmid;
+                        self.dataDF.push({
+                            tmid: tmid,
+                            ind: [],
+                            anon: [],
+                            team: []
+                        });
+                    }
+                    self.dataDF[i][mapAt[d.iteration]].push(d);
+                });
+                $http.post("get-chat-count", _postdata2).success(function (datachat) {
+                    self.dataChatCount = {};
+                    datachat.forEach(function (ch) {
+                        if (!self.dataChatCount[ch.tmid]) self.dataChatCount[ch.tmid] = {};
+                        self.dataChatCount[ch.tmid][ch.orden] = ch.count;
+                    });
+                });
+                console.log(self.dataDF);
             });
         }
     };
 
-    self.avgAlum = (uid) => {
+    self.avgAlum = function (uid) {
         if (self.alumState != null && self.alumState[uid] != null) {
-            let t = 0;
-            let c = 0;
-            for (let k in self.alumState[uid]) {
-                if (self.alumState[uid][k])
-                    c++;
+            var t = 0;
+            var c = 0;
+            for (var k in self.alumState[uid]) {
+                if (self.alumState[uid][k]) c++;
                 t++;
             }
-            return (t > 0) ? 100 * c / t : 0;
+            return t > 0 ? 100 * c / t : 0;
         }
         return 0;
     };
 
-
-    self.avgPreg = (pid) => {
+    self.avgPreg = function (pid) {
         if (self.alumState != null) {
-            let t = 0;
-            let c = 0;
-            for (let k in self.alumState) {
+            var t = 0;
+            var c = 0;
+            for (var k in self.alumState) {
                 if (self.alumState[k] != null && self.alumState[k][pid] != null) {
-                    if (self.alumState[k][pid])
-                        c++;
+                    if (self.alumState[k][pid]) c++;
                     t++;
                 }
             }
-            return (t > 0) ? 100 * c / t : 0;
+            return t > 0 ? 100 * c / t : 0;
         }
         return 0;
     };
 
-    self.avgAll = () => {
-        let t = 0;
-        let c = 0;
+    self.avgAll = function () {
+        var t = 0;
+        var c = 0;
         if (self.alumState != null) {
-            for (let u in self.alumState) {
-                for (let k in self.alumState[u]) {
-                    if (self.alumState[u][k])
-                        c++;
+            for (var u in self.alumState) {
+                for (var k in self.alumState[u]) {
+                    if (self.alumState[u][k]) c++;
                     t++;
                 }
             }
         }
-        return (t > 0) ? 100 * c / t : 0;
+        return t > 0 ? 100 * c / t : 0;
     };
 
-    self.progress = () => {
-        let t = 0;
+    self.progress = function () {
+        var t = 0;
         if (self.alumState != null) {
-            for (let u in self.alumState) {
-                for (let k in self.alumState[u]) {
+            for (var u in self.alumState) {
+                for (var k in self.alumState[u]) {
                     t++;
                 }
             }
@@ -1132,187 +1113,195 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         return 0;
     };
 
-    self.progressAlum = (uid) => {
-        let t = 0;
+    self.progressAlum = function (uid) {
+        var t = 0;
         if (self.alumState != null && self.alumState[uid] != null) {
-            for (let k in self.alumState[uid]) {
+            for (var k in self.alumState[uid]) {
                 t++;
             }
-            return 100 * t / (self.questions.length);
+            return 100 * t / self.questions.length;
         }
         return 0;
     };
 
-    self.progressPreg = (pid) => {
-        let t = 0;
+    self.progressPreg = function (pid) {
+        var t = 0;
         if (self.alumState != null) {
-            for (let u in self.alumState) {
+            for (var u in self.alumState) {
                 if (self.alumState[u][pid] != null) {
                     t++;
                 }
             }
-            return 100 * t / (Object.keys(self.alumState).length);
+            return 100 * t / Object.keys(self.alumState).length;
         }
         return 0;
     };
 
-    self.lectPerformance = () => {
-        let t = 0;
-        let c = 0;
+    self.lectPerformance = function () {
+        var t = 0;
+        var c = 0;
         if (self.alumState != null) {
-            for (let u in self.alumState) {
+            for (var u in self.alumState) {
                 var a = self.alumState[u];
                 t++;
                 c += a.score;
             }
-            return 100 * c/t;
+            return 100 * c / t;
         }
         return 0;
     };
 
-    self.DFAll = (ans, orden) => {
-        return ans.filter(e => e.orden == orden).map(e => e.sel);
+    self.DFAll = function (ans, orden) {
+        return ans.filter(function (e) {
+            return e.orden == orden;
+        }).map(function (e) {
+            return e.sel;
+        });
     };
 
-    self.DFAvg = (ans, orden) => {
-        let a = ans.filter(e => e.orden == orden).map(e => e.sel);
-        return (a.length > 0) ? a.reduce((v,e) => v + e, 0) / a.length : 0;
+    self.DFAvg = function (ans, orden) {
+        var a = ans.filter(function (e) {
+            return e.orden == orden;
+        }).map(function (e) {
+            return e.sel;
+        });
+        return a.length > 0 ? a.reduce(function (v, e) {
+            return v + e;
+        }, 0) / a.length : 0;
     };
 
-    self.DFMinMax = (ans, orden) => {
-        let a = ans.filter(e => e.orden == orden).map(e => e.sel);
+    self.DFMinMax = function (ans, orden) {
+        var a = ans.filter(function (e) {
+            return e.orden == orden;
+        }).map(function (e) {
+            return e.sel;
+        });
         a.sort();
-        let n = a.length - 1;
+        var n = a.length - 1;
         return a[n] - a[0];
     };
 
-    self.DFColor = (ans, orden) => {
-        let avg = self.DFAvg(ans, orden);
-        let sd = 0;
-        let arr = ans.filter(e => e.orden == orden).map(e => e.sel);
-        arr.forEach(a => {
+    self.DFColor = function (ans, orden) {
+        var avg = self.DFAvg(ans, orden);
+        var sd = 0;
+        var arr = ans.filter(function (e) {
+            return e.orden == orden;
+        }).map(function (e) {
+            return e.sel;
+        });
+        arr.forEach(function (a) {
             sd += (a - avg) * (a - avg);
         });
-        let dif = Math.sqrt(sd/arr.length);
+        var dif = Math.sqrt(sd / arr.length);
 
-        if(dif <= 1)
-            return "bg-darkgreen";
-        else if(dif > 2.8)
-            return "bg-red";
-        else
-            return "bg-yellow";
+        if (dif <= 1) return "bg-darkgreen";else if (dif > 2.8) return "bg-red";else return "bg-yellow";
     };
 
-    self.getAlumDoneTime = (postdata) => {
-        $http({url: "get-alum-done-time", method: "post", data: postdata}).success((data) => {
+    self.getAlumDoneTime = function (postdata) {
+        $http({ url: "get-alum-done-time", method: "post", data: postdata }).success(function (data) {
             self.numComplete = 0;
-            data.forEach((row) => {
+            data.forEach(function (row) {
                 self.numComplete += 1;
-                if (self.alumState[row.uid] == null)
-                    self.alumState[row.uid] = row;
-                else
-                    self.alumState[row.uid].dtime = ~~(row.dtime);
+                if (self.alumState[row.uid] == null) self.alumState[row.uid] = row;else self.alumState[row.uid].dtime = ~~row.dtime;
             });
         });
     };
 
-    self.buildBarData = (data) => {
-        const N = 5;
+    self.buildBarData = function (data) {
+        var N = 5;
         self.barData[0].values = [];
-        for (let i = 0; i < N; i++) {
-            let lbl = (i * 20) + "% - " + ((i + 1) * 20) + "%";
-            self.barData[0].values.push({label: lbl, value: 0});
+        for (var i = 0; i < N; i++) {
+            var lbl = i * 20 + "% - " + (i + 1) * 20 + "%";
+            self.barData[0].values.push({ label: lbl, value: 0 });
         }
-        data.forEach((d) => {
-            let rank = Math.min(Math.floor(N * d.score), N - 1);
+        data.forEach(function (d) {
+            var rank = Math.min(Math.floor(N * d.score), N - 1);
             self.barData[0].values[rank].value += 1;
         });
         self.barOpts.chart.xAxis.axisLabel = self.flang("performance");
     };
 
-    self.updateStateRub = () => {
-        if (self.iterationIndicator == 5)
-            self.computeDif();
-        else if (self.iterationIndicator == 6)
-            self.getAllReportResult();
+    self.updateStateRub = function () {
+        if (self.iterationIndicator == 5) self.computeDif();else if (self.iterationIndicator == 6) self.getAllReportResult();
     };
 
-    self.showName = (report) => {
-        if (report.example)
-            return report.title + " - " + self.flang("exampleReport");
-        else
-            return report.id + " - " + self.flang("reportOf") + " " + self.users[report.uid].name;
+    self.showName = function (report) {
+        if (report.example) return report.title + " - " + self.flang("exampleReport");else return report.id + " - " + self.flang("reportOf") + " " + self.users[report.uid].name;
     };
 
-    self.shared.getReports = () => {
-        let postdata = {sesid: self.selectedSes.id};
-        $http({url: "get-report-list", method: "post", data: postdata}).success((data) => {
+    self.shared.getReports = function () {
+        var postdata = { sesid: self.selectedSes.id };
+        $http({ url: "get-report-list", method: "post", data: postdata }).success(function (data) {
             self.reports = data;
-            self.exampleReports = data.filter(e => e.example);
+            self.exampleReports = data.filter(function (e) {
+                return e.example;
+            });
         });
     };
 
-    self.getReportResult = () => {
-        let postdata = {repid: self.selectedReport.id};
-        $http({url: "get-report-result", method: "post", data: postdata}).success((data) => {
+    self.getReportResult = function () {
+        var postdata = { repid: self.selectedReport.id };
+        $http({ url: "get-report-result", method: "post", data: postdata }).success(function (data) {
             self.result = data;
             self.updateState();
         });
     };
 
-    self.getAllReportResult = () => {
-        let postdata = {sesid: self.selectedSes.id};
-        $http({url: "get-report-result-all", method: "post", data: postdata}).success((data) => {
+    self.getAllReportResult = function () {
+        var postdata = { sesid: self.selectedSes.id };
+        $http({ url: "get-report-result-all", method: "post", data: postdata }).success(function (data) {
             self.resultAll = {};
-            let n = data.length;
-            for (let uid in self.users) {
-                if (self.users[uid].role == "A")
-                    self.resultAll[uid] = {reviews: 0, data: []};
+            var n = data.length;
+            for (var uid in self.users) {
+                if (self.users[uid].role == "A") self.resultAll[uid] = { reviews: 0, data: [] };
             }
-            data.forEach((d) => {
-                if(d!=null && d.length > 0) {
-                    let uid = self.getReportAuthor(d[0].rid);
-                    if (uid != -1 && self.resultAll[uid].data == null) {
-                        self.resultAll[uid].data = d;
+            data.forEach(function (d) {
+                if (d != null && d.length > 0) {
+                    var _uid = self.getReportAuthor(d[0].rid);
+                    if (_uid != -1 && self.resultAll[_uid].data == null) {
+                        self.resultAll[_uid].data = d;
+                    } else if (_uid != -1) {
+                        self.resultAll[_uid].data = d;
                     }
-                    else if(uid != -1) {
-                        self.resultAll[uid].data = d;
-                    }
-                    d.forEach(ev => {
+                    d.forEach(function (ev) {
                         self.resultAll[ev.uid].reviews += n;
                     });
                 }
             });
-            self.pairArr = (data[0]) ? new Array(data[0].length) : [];
+            self.pairArr = data[0] ? new Array(data[0].length) : [];
             //console.log(self.resul);
             self.buildRubricaBarData(data);
         });
     };
 
-    self.buildRubricaBarData = (data) => {
-        const N = 3;
+    self.buildRubricaBarData = function (data) {
+        var N = 3;
         //let rubnms = [self.flang("") + "-" + self.flang(""), "Proceso-Competente", "Competente-Avanzado"];
-        let rubnms = ["1 - 2", "2 - 3", "3 - 4"];
+        var rubnms = ["1 - 2", "2 - 3", "3 - 4"];
         self.barData[0].values = [];
-        for (let i = 0; i < N; i++) {
-            let lbl = (i + 1) + " - " + (i + 2) + " (" + rubnms[i] + ")";
-            self.barData[0].values.push({label: lbl, value: 0});
+        for (var i = 0; i < N; i++) {
+            var lbl = i + 1 + " - " + (i + 2) + " (" + rubnms[i] + ")";
+            self.barData[0].values.push({ label: lbl, value: 0 });
         }
-        data.forEach((d) => {
-            let score = d.reduce((e, v) => e + v.val, 0) / d.length;
-            let rank = Math.min(Math.floor(score - 1), N - 1);
+        data.forEach(function (d) {
+            var score = d.reduce(function (e, v) {
+                return e + v.val;
+            }, 0) / d.length;
+            var rank = Math.min(Math.floor(score - 1), N - 1);
             self.barData[0].values[rank].value += 1;
         });
         self.barOpts.chart.xAxis.axisLabel = self.flang("scoreDist");
     };
 
-    self.computeDif = () => {
+    self.computeDif = function () {
         if (self.result) {
-            let pi = self.result.findIndex(e => self.users[e.uid].role == 'P');
+            var pi = self.result.findIndex(function (e) {
+                return self.users[e.uid].role == 'P';
+            });
             if (pi != -1) {
-                let pval = self.result[pi].val;
-                let difs = [];
-                self.result.forEach((e, i) => {
+                var pval = self.result[pi].val;
+                var difs = [];
+                self.result.forEach(function (e, i) {
                     if (i != pi) {
                         difs.push(Math.abs(pval - e.val));
                     }
@@ -1322,67 +1311,69 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         }
     };
 
-    self.buildRubricaDiffData = (difs) => {
+    self.buildRubricaDiffData = function (difs) {
         console.log("difs", difs);
-        const N = 5;
-        let lblnms = self.flang("high2lowScale").split(",");
+        var N = 5;
+        var lblnms = self.flang("high2lowScale").split(",");
         self.barData[0].values = [];
-        for (let i = 0; i < N; i++) {
+        for (var i = 0; i < N; i++) {
             // let lbl = (i * 0.5) + " - " + (i + 1) * 0.5;
-            self.barData[0].values.push({label: lblnms[i], value: 0});
+            self.barData[0].values.push({ label: lblnms[i], value: 0 });
         }
-        difs.forEach((d) => {
-            let rank = Math.min(Math.floor(d * 2), N - 1);
+        difs.forEach(function (d) {
+            var rank = Math.min(Math.floor(d * 2), N - 1);
             self.barData[0].values[rank].value += 1;
         });
         self.barOpts.chart.xAxis.axisLabel = self.flang("correctDistance");
     };
 
-    self.getReportAuthor = (rid) => {
+    self.getReportAuthor = function (rid) {
         if (self.reports) {
-            let rep = self.reports.find(e => e.id == rid);
-            return (rep) ? rep.uid : -1;
+            var rep = self.reports.find(function (e) {
+                return e.id == rid;
+            });
+            return rep ? rep.uid : -1;
         }
         return -1;
     };
 
-    self.getAvg = (row) => {
+    self.getAvg = function (row) {
         if (row == null || row.length == 0) return "";
-        let s = row.reduce((v, e) => v + e.val, 0);
+        var s = row.reduce(function (v, e) {
+            return v + e.val;
+        }, 0);
         return s / row.length;
     };
 
-    self.getInMax = (res) => {
+    self.getInMax = function (res) {
         if (res == null) return [];
-        let n = 0;
-        for(let u in res){
+        var n = 0;
+        for (var u in res) {
             n = Math.max(n, res[u].data.length);
         }
         return new Array(n);
     };
 
-    self.showReport = (rid) => {
-        let postdata = {rid: rid};
-        $http({url: "get-report", method: "post", data: postdata}).success((data) => {
-            let modalData = {report: data, criterios: self.shared.obtainCriterios()};
+    self.showReport = function (rid) {
+        var postdata = { rid: rid };
+        $http({ url: "get-report", method: "post", data: postdata }).success(function (data) {
+            var modalData = { report: data, criterios: self.shared.obtainCriterios() };
             modalData.report.author = self.users[data.uid];
-            let postdata = {repid: data.id};
-            $http({url: "get-report-result", method: "post", data: postdata}).success((data) => {
+            var postdata = { repid: data.id };
+            $http({ url: "get-report-result", method: "post", data: postdata }).success(function (data) {
                 modalData.answers = data;
-                $http.post("get-criteria-selection-by-report", postdata).success((data) => {
+                $http.post("get-criteria-selection-by-report", postdata).success(function (data) {
                     modalData.answersRubrica = {};
-                    data.forEach((row) => {
-                        if (modalData.answersRubrica[row.uid] == null)
-                            modalData.answersRubrica[row.uid] = {};
+                    data.forEach(function (row) {
+                        if (modalData.answersRubrica[row.uid] == null) modalData.answersRubrica[row.uid] = {};
                         modalData.answersRubrica[row.uid][row.cid] = row.selection;
                     });
-                    $http.post("get-report-evaluators", postdata).success((data) => {
-                        data.forEach(row => {
-                            let i = modalData.answers.findIndex(e => e.uid == row.uid);
-                            if(i == -1)
-                                modalData.answers.push({uid: row.uid, evaluatorName: self.users[row.uid].name});
-                            else
-                                modalData.answers[i].evaluatorName = self.users[row.uid].name;
+                    $http.post("get-report-evaluators", postdata).success(function (data) {
+                        data.forEach(function (row) {
+                            var i = modalData.answers.findIndex(function (e) {
+                                return e.uid == row.uid;
+                            });
+                            if (i == -1) modalData.answers.push({ uid: row.uid, evaluatorName: self.users[row.uid].name });else modalData.answers[i].evaluatorName = self.users[row.uid].name;
                         });
                         $uibModal.open({
                             templateUrl: "templ/report-details.html",
@@ -1391,9 +1382,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                             size: "lg",
                             scope: self,
                             resolve: {
-                                data: function () {
+                                data: function data() {
                                     return modalData;
-                                },
+                                }
                             }
                         });
                     });
@@ -1402,11 +1393,11 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         });
     };
 
-    self.showReportByUid = (uid) => {
+    self.showReportByUid = function (uid) {
         console.log(uid);
-        let postdata = {uid: uid, sesid: self.selectedSes.id};
-        $http({url: "get-report-uid", method: "post", data: postdata}).success((data) => {
-            let modalData = {report: data};
+        var postdata = { uid: uid, sesid: self.selectedSes.id };
+        $http({ url: "get-report-uid", method: "post", data: postdata }).success(function (data) {
+            var modalData = { report: data };
             modalData.report.author = self.users[uid];
             $uibModal.open({
                 templateUrl: "templ/report-details.html",
@@ -1414,72 +1405,73 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 controllerAs: "vm",
                 scope: self,
                 resolve: {
-                    data: function () {
+                    data: function data() {
                         return modalData;
-                    },
+                    }
                 }
             });
         });
     };
 
-    self.broadcastReport = (rid) => {
-        let postdata = {sesid: self.selectedSes.id, rid: rid};
-        $http({url: "set-eval-report", method: "post", data: postdata}).success((data) => {
+    self.broadcastReport = function (rid) {
+        var postdata = { sesid: self.selectedSes.id, rid: rid };
+        $http({ url: "set-eval-report", method: "post", data: postdata }).success(function (data) {
             Notification.success("Reporte enviado a alumnos");
         });
     };
 
-    self.showDetailAnswer = (qid, uid, it) => {
-        let opts = ["A", "B", "C", "D", "E"];
-        let postdata = {uid: uid, qid: qid, iteration: it};
-        let qs = self.questions.reduce((e, v) => (v.id == qid) ? v : e, null);
-        if(it < 3) {
-            $http({url: "get-selection-comment", method: "post", data: postdata}).success((data) => {
-                if(data == null || data.answer == null){
+    self.showDetailAnswer = function (qid, uid, it) {
+        var opts = ["A", "B", "C", "D", "E"];
+        var postdata = { uid: uid, qid: qid, iteration: it };
+        var qs = self.questions.reduce(function (e, v) {
+            return v.id == qid ? v : e;
+        }, null);
+        if (it < 3) {
+            $http({ url: "get-selection-comment", method: "post", data: postdata }).success(function (_data) {
+                if (_data == null || _data.answer == null) {
                     Notification.warning("No hay respuesta registrada para el alumno");
                     return;
                 }
-                let alt = opts[data.answer] + ". " + qs.options[data.answer];
-                let qstxt = qs.content;
+                var alt = opts[_data.answer] + ". " + qs.options[_data.answer];
+                var qstxt = qs.content;
                 $uibModal.open({
                     templateUrl: "templ/content-dialog.html",
                     controller: "ContentModalController",
                     controllerAs: "vm",
                     scope: self,
                     resolve: {
-                        data: function () {
-                            data.title = self.flang("answerOf") + " " + self.users[uid].name;
-                            data.content = self.flang("question") + ":\n" + qstxt + "\n\n" + self.flang("answer") + ":\n" + alt + "\n\n" + self.flang("comment") + ":\n" + ((data.comment) ? data.comment : "");
-                            if (data.confidence) {
-                                data.content += "\n\n" + self.flang("confidenceLevel") + ": " + data.confidence + "%";
+                        data: function data() {
+                            _data.title = self.flang("answerOf") + " " + self.users[uid].name;
+                            _data.content = self.flang("question") + ":\n" + qstxt + "\n\n" + self.flang("answer") + ":\n" + alt + "\n\n" + self.flang("comment") + ":\n" + (_data.comment ? _data.comment : "");
+                            if (_data.confidence) {
+                                _data.content += "\n\n" + self.flang("confidenceLevel") + ": " + _data.confidence + "%";
                             }
-                            return data;
-                        },
+                            return _data;
+                        }
                     }
                 });
             });
-        }
-        else{
+        } else {
             postdata.tmid = self.leaderTeamId[uid];
-            $http({url: "get-selection-team-comment", method: "post", data: postdata}).success((res) => {
-                if(res == null || res.length == 0){
+            $http({ url: "get-selection-team-comment", method: "post", data: postdata }).success(function (res) {
+                if (res == null || res.length == 0) {
                     Notification.warning("No hay respuesta registrada para el grupo");
                     return;
                 }
-                let alt = opts[res[0].answer] + ". " + qs.options[res[0].answer];
-                let qstxt = qs.content;
+                var alt = opts[res[0].answer] + ". " + qs.options[res[0].answer];
+                var qstxt = qs.content;
                 $uibModal.open({
                     templateUrl: "templ/content-dialog.html",
                     controller: "ContentModalController",
                     controllerAs: "vm",
                     scope: self,
                     resolve: {
-                        data: function () {
-                            let data = {};
+                        data: function data() {
+                            var data = {};
                             data.title = self.flang("answerOf") + " " + self.leaderTeamStr[uid];
                             data.content = self.flang("question") + ":\n" + qstxt + "\n\n" + self.flang("answer") + ":\n" + alt + "\n\n";
-                            res.forEach(r => {
-                                data.content += self.flang("comment") + " " + r.uname + ":\n" + ((r.comment != null) ? r.comment : "") + "\n";
+                            res.forEach(function (r) {
+                                data.content += self.flang("comment") + " " + r.uname + ":\n" + (r.comment != null ? r.comment : "") + "\n";
                                 if (r.confidence != null) {
                                     data.content += self.flang("confidenceLevel") + ": " + r.confidence + "%\n";
                                 }
@@ -1487,131 +1479,141 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                             });
 
                             return data;
-                        },
+                        }
                     }
                 });
             });
         }
     };
 
-    self.openDFDetails = (group, orden) => {
-        let postdata = {
+    self.openDFDetails = function (group, orden) {
+        var postdata = {
             sesid: self.selectedSes.id,
             tmid: group,
             orden: orden
         };
-        $http.post("get-team-chat", postdata).success(res => {
+        $http.post("get-team-chat", postdata).success(function (res) {
             $uibModal.open({
                 templateUrl: "templ/differential-group.html",
                 controller: "EthicsModalController",
                 controllerAs: "vm",
                 scope: self,
                 resolve: {
-                    data: function () {
-                        let data = {};
+                    data: function data() {
+                        var data = {};
                         data.names = [self.flang("individual"), self.flang("anon"), self.flang("teamWork")];
                         data.orden = orden;
                         data.group = group;
                         data.users = self.users;
-                        let dfgr = self.dataDF.find(e => e.tmid == group);
+                        var dfgr = self.dataDF.find(function (e) {
+                            return e.tmid == group;
+                        });
                         // console.log(self.shared);
-                        if (dfgr.ind.some(e => e.orden == orden)) {
-                            let dfgri = dfgr.ind.find(e => e.orden == orden);
-                            data.master = self.shared.dfs.filter(e => e.id).find(e => e.id == dfgri.did);
+                        if (dfgr.ind.some(function (e) {
+                            return e.orden == orden;
+                        })) {
+                            var dfgri = dfgr.ind.find(function (e) {
+                                return e.orden == orden;
+                            });
+                            data.master = self.shared.dfs.filter(function (e) {
+                                return e.id;
+                            }).find(function (e) {
+                                return e.id == dfgri.did;
+                            });
                         }
                         data.dfIters = [];
-                        data.dfIters.push(dfgr.ind.filter(e => e.orden == orden));
-                        data.dfIters.push(dfgr.anon.filter(e => e.orden == orden));
-                        data.dfIters.push(dfgr.team.filter(e => e.orden == orden));
+                        data.dfIters.push(dfgr.ind.filter(function (e) {
+                            return e.orden == orden;
+                        }));
+                        data.dfIters.push(dfgr.anon.filter(function (e) {
+                            return e.orden == orden;
+                        }));
+                        data.dfIters.push(dfgr.team.filter(function (e) {
+                            return e.orden == orden;
+                        }));
                         data.anonNames = {};
                         data.sesid = self.selectedSes.id;
-                        let abcd = "ABCD";
-                        let c = 0;
-                        data.dfIters.flat().forEach(e => {
+                        var abcd = "ABCD";
+                        var c = 0;
+                        data.dfIters.flat().forEach(function (e) {
                             if (!data.anonNames[e.uid]) {
                                 data.anonNames[e.uid] = abcd[c];
                                 c++;
                             }
                         });
                         data.chat = res;
-                        data.chat.forEach(msg => {
-                            if(msg.parent_id)
-                                msg.parent = data.chat.find(e => e.id == msg.parent_id);
+                        data.chat.forEach(function (msg) {
+                            if (msg.parent_id) msg.parent = data.chat.find(function (e) {
+                                return e.id == msg.parent_id;
+                            });
                         });
                         console.log(data);
                         return data;
-                    },
+                    }
                 }
             });
         });
     };
-
-
 });
 
-adpp.controller("MapSelectionModalController", function($scope, $uibModalInstance){
+adpp.controller("MapSelectionModalController", function ($scope, $uibModalInstance) {
     var vm = this;
 
     vm.nav = true;
     vm.edit = false;
 
-    vm.cancel = () => {
+    vm.cancel = function () {
         $uibModalInstance.dismiss('cancel');
     };
 
-    vm.resolve = () => {
+    vm.resolve = function () {
         $uibModalInstance.close({
-            nav : vm.nav,
+            nav: vm.nav,
             edit: vm.edit
         });
     };
-
 });
 
 adpp.controller("ReportModalController", function ($scope, $uibModalInstance, data) {
     var vm = this;
     vm.data = data;
 
-    vm.cancel = () => {
+    vm.cancel = function () {
         $uibModalInstance.dismiss('cancel');
     };
-
 });
 
 adpp.controller("ContentModalController", function ($scope, $uibModalInstance, data) {
     var vm = this;
     vm.data = data;
 
-    vm.cancel = () => {
+    vm.cancel = function () {
         $uibModalInstance.dismiss('cancel');
     };
-
 });
 
 adpp.controller("EthicsModalController", function ($scope, $http, $uibModalInstance, Notification, data) {
     var vm = this;
     vm.data = data;
 
-
-    vm.cancel = () => {
+    vm.cancel = function () {
         $uibModalInstance.dismiss('cancel');
     };
 
-    vm.shareDetails = () => {
-        if(!vm.isAnon){
+    vm.shareDetails = function () {
+        if (!vm.isAnon) {
             Notification.error("Sólo se pueden enviar diferenciales en forma anónima");
             return;
         }
-        let content = document.getElementById("details-modal").innerHTML.replace(/<\!--.*?-->/g, "");
-        let postdata = {
+        var content = document.getElementById("details-modal").innerHTML.replace(/<\!--.*?-->/g, "");
+        var postdata = {
             sesid: vm.data.sesid,
             content: content
         };
-        $http({url: "broadcast-diff", method: "post", data: postdata}).success((data) => {
+        $http({ url: "broadcast-diff", method: "post", data: postdata }).success(function (data) {
             Notification.success("Diferencial enviado exitosamente");
         });
     };
-
 });
 
 adpp.controller("DuplicateSesModalController", function ($scope, $http, $uibModalInstance, data) {
@@ -1632,31 +1634,28 @@ adpp.controller("DuplicateSesModalController", function ($scope, $http, $uibModa
         copyDifferentials: false
     };
 
-    vm.cancel = () => {
+    vm.cancel = function () {
         $uibModalInstance.dismiss('cancel');
     };
 
-    vm.sendDuplicate = () => {
+    vm.sendDuplicate = function () {
         console.log(vm.nses);
-        $http({url: "duplicate-session", method: "post", data: vm.nses}).success((data) => {
+        $http({ url: "duplicate-session", method: "post", data: vm.nses }).success(function (data) {
             console.log(data);
             window.location.replace("admin");
         });
     };
-
 });
 
 adpp.controller("GroupController", function ($scope, $http, Notification) {
-    let self = $scope;
+    var self = $scope;
     self.methods = [];
     self.lastI = -1;
     self.lastJ = -1;
     self.groupMet = "random";
 
-    self.shared.verifyGroups = () => {
-        self.methods = [klg("random"),
-            klg("performance", "homog"), klg("performance", "heterg"),
-            klg("knowledgeType", "homog"), klg("knowledgeType", "heterg")];
+    self.shared.verifyGroups = function () {
+        self.methods = [klg("random"), klg("performance", "homog"), klg("performance", "heterg"), klg("knowledgeType", "homog"), klg("knowledgeType", "heterg")];
         self.groupNum = 3;
         self.groupMet = self.methods[0].key;
         self.groups = [];
@@ -1668,16 +1667,16 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
         }
     };
 
-    let klg = (k1, k2) => {
+    var klg = function klg(k1, k2) {
         return {
             key: k1 + (k2 == null ? "" : " " + k2),
-            name: self.flang(k1) + (k2 == null ? "" : " " + self.flang(k2)),
-        }
+            name: self.flang(k1) + (k2 == null ? "" : " " + self.flang(k2))
+        };
     };
 
-    self.generateGroups = (key) => {
+    self.generateGroups = function (key) {
         if (self.selectedSes.grouped) {
-            $http({url: "group-proposal-sel", method: "post", data: {sesid: self.selectedSes.id}}).success((data) => {
+            $http({ url: "group-proposal-sel", method: "post", data: { sesid: self.selectedSes.id } }).success(function (data) {
                 self.groups = data;
                 //self.groupsProp = angular.copy(self.groups);
                 console.log(data);
@@ -1690,7 +1689,7 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
             return;
         }
 
-        let postdata = {
+        var postdata = {
             sesid: self.selectedSes.id,
             gnum: self.groupNum,
             method: self.groupMet
@@ -1699,35 +1698,40 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
         console.log(postdata);
 
         console.log(self.shared.alumState);
-        let users = Object.values(self.users).filter(e => e.role == "A");
+        var users = Object.values(self.users).filter(function (e) {
+            return e.role == "A";
+        });
         console.log(users);
 
         if (self.groupMet == "knowledgeType homog" || self.groupMet == "knowledgeType heterg") {
             self.groups = generateTeams(users, habMetric, self.groupNum, isDifferent(self.groupMet));
-        }
-        else if (self.groupMet == "random") {
-            let arr = users.map(e => {
+        } else if (self.groupMet == "random") {
+            var arr = users.map(function (e) {
                 e.rnd = Math.random();
                 return e;
             });
-            self.groups = generateTeams(arr, s => s.rnd, self.groupNum, false);
-        }
-        else if (self.selectedSes.type == "S" || self.selectedSes.type == "M") {
-            let arr = [];
-            for(let uid in self.shared.alumState){
-                let s = 0;
-                for(let q in self.shared.alumState[uid]){
+            self.groups = generateTeams(arr, function (s) {
+                return s.rnd;
+            }, self.groupNum, false);
+        } else if (self.selectedSes.type == "S" || self.selectedSes.type == "M") {
+            var _arr = [];
+            for (var uid in self.shared.alumState) {
+                var s = 0;
+                for (var q in self.shared.alumState[uid]) {
                     s += +q;
                 }
-                arr.push({uid: uid, score: s});
+                _arr.push({ uid: uid, score: s });
             }
-            self.groups = generateTeams(arr, s => s.score, self.groupNum, isDifferent(self.groupMet));
-        }
-        else if (self.selectedSes.type == "L") {
-            self.groups = generateTeams(self.shared.alumState, s => s.score, self.groupNum, isDifferent(self.groupMet));
+            self.groups = generateTeams(_arr, function (s) {
+                return s.score;
+            }, self.groupNum, isDifferent(self.groupMet));
+        } else if (self.selectedSes.type == "L") {
+            self.groups = generateTeams(self.shared.alumState, function (s) {
+                return s.score;
+            }, self.groupNum, isDifferent(self.groupMet));
         }
 
-        if(self.groups != null) {
+        if (self.groups != null) {
             self.groupsProp = angular.copy(self.groups);
             self.groupNames = [];
         }
@@ -1745,17 +1749,21 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
         }*/
     };
 
-    self.acceptGroups = () => {
+    self.acceptGroups = function () {
         if (self.groupsProp == null) {
             Notification.error("No hay propuesta de grupos para fijar");
             return;
         }
-        let postdata = {
+        var postdata = {
             sesid: self.selectedSes.id,
-            groups: JSON.stringify(self.groups.map(e => e.map(f => f.uid || f.id)))
+            groups: JSON.stringify(self.groups.map(function (e) {
+                return e.map(function (f) {
+                    return f.uid || f.id;
+                });
+            }))
         };
         console.log(postdata);
-        $http({url: "set-groups", method: "post", data: postdata}).success((data) => {
+        $http({ url: "set-groups", method: "post", data: postdata }).success(function (data) {
             if (data.status == "ok") {
                 console.log("Groups accepted");
                 self.selectedSes.grouped = true;
@@ -1764,7 +1772,7 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
         });
     };
 
-    self.swapTable = (i, j) => {
+    self.swapTable = function (i, j) {
         console.log(i, j, self.groups);
         if (self.lastI == -1 && self.lastJ == -1) {
             self.lastI = i;
@@ -1772,18 +1780,17 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
             return;
         }
         if (!(self.lastI == i && self.lastJ == j)) {
-            let temp = angular.copy(self.groupsProp[i][j]);
+            var temp = angular.copy(self.groupsProp[i][j]);
             self.groupsProp[i][j] = angular.copy(self.groupsProp[self.lastI][self.lastJ]);
             self.groupsProp[self.lastI][self.lastJ] = temp;
         }
         self.lastI = -1;
         self.lastJ = -1;
     };
-
 });
 
 adpp.controller("RubricaController", function ($scope, $http) {
-    let self = $scope;
+    var self = $scope;
     self.criterios = [];
     self.newCriterio = {};
     self.editable = false;
@@ -1792,51 +1799,52 @@ adpp.controller("RubricaController", function ($scope, $http) {
     self.pairNum = 3;
     self.rid = -1;
 
-    self.addCriterio = () => {
+    self.addCriterio = function () {
         self.criterios.push({});
     };
 
-    self.removeCriterio = (idx) => {
+    self.removeCriterio = function (idx) {
         self.criterios.splice(idx, 1);
     };
 
-    self.checkSum = () => {
-        return self.criterios.reduce((e, p) => e + p.pond, 0) == 100;
+    self.checkSum = function () {
+        return self.criterios.reduce(function (e, p) {
+            return e + p.pond;
+        }, 0) == 100;
     };
 
-    self.shared.getRubrica = () => {
+    self.shared.getRubrica = function () {
         self.criterios = [];
         self.newCriterio = {};
         self.editable = false;
-        let postdata = {sesid: self.selectedSes.id};
-        $http({url: "get-admin-rubrica", method: "post", data: postdata}).success((data) => {
+        var postdata = { sesid: self.selectedSes.id };
+        $http({ url: "get-admin-rubrica", method: "post", data: postdata }).success(function (data) {
             if (data.length == 0) {
                 self.editable = true;
-            }
-            else {
+            } else {
                 self.criterios = data;
                 self.rid = data[0].rid;
             }
         });
     };
 
-    self.startEditing = () => {
+    self.startEditing = function () {
         self.editable = true;
     };
 
-    self.saveRubrica = () => {
-        if(self.rid != -1){
+    self.saveRubrica = function () {
+        if (self.rid != -1) {
             self.saveEditRubrica();
             return;
         }
-        let postdata = {sesid: self.selectedSes.id};
-        $http({url: "send-rubrica", method: "post", data: postdata}).success((data) => {
+        var postdata = { sesid: self.selectedSes.id };
+        $http({ url: "send-rubrica", method: "post", data: postdata }).success(function (data) {
             if (data.status == "ok") {
-                let rid = data.id;
-                self.criterios.forEach((criterio) => {
-                    let postdata = angular.copy(criterio);
+                var rid = data.id;
+                self.criterios.forEach(function (criterio) {
+                    var postdata = angular.copy(criterio);
                     postdata.rid = rid;
-                    $http({url: "send-criteria", method: "post", data: postdata}).success((data) => {
+                    $http({ url: "send-criteria", method: "post", data: postdata }).success(function (data) {
                         if (data.status == "ok") console.log("Ok");
                     });
                 });
@@ -1845,16 +1853,16 @@ adpp.controller("RubricaController", function ($scope, $http) {
         });
     };
 
-    self.saveEditRubrica = () => {
-        if(self.rid == -1) return;
-        let postdata = {rid: self.rid};
-        $http({url: "delete-criterias", method: "post", data: postdata}).success((data) => {
+    self.saveEditRubrica = function () {
+        if (self.rid == -1) return;
+        var postdata = { rid: self.rid };
+        $http({ url: "delete-criterias", method: "post", data: postdata }).success(function (data) {
             if (data.status == "ok") {
-                let rid = self.rid;
-                self.criterios.forEach((criterio) => {
-                    let postdata = angular.copy(criterio);
+                var rid = self.rid;
+                self.criterios.forEach(function (criterio) {
+                    var postdata = angular.copy(criterio);
                     postdata.rid = rid;
-                    $http({url: "send-criteria", method: "post", data: postdata}).success((data) => {
+                    $http({ url: "send-criteria", method: "post", data: postdata }).success(function (data) {
                         if (data.status == "ok") console.log("Ok");
                     });
                 });
@@ -1863,31 +1871,31 @@ adpp.controller("RubricaController", function ($scope, $http) {
         });
     };
 
-    self.shared.getExampleReports = () => {
+    self.shared.getExampleReports = function () {
         self.exampleReports = [];
-        let postdata = {sesid: self.selectedSes.id};
-        $http({url: "get-example-reports", method: "post", data: postdata}).success((data) => {
+        var postdata = { sesid: self.selectedSes.id };
+        $http({ url: "get-example-reports", method: "post", data: postdata }).success(function (data) {
             self.exampleReports = data;
         });
     };
 
-    self.sendExampleReport = () => {
-        let postdata = {
+    self.sendExampleReport = function () {
+        var postdata = {
             sesid: self.selectedSes.id,
             content: self.newExampleReport.text,
             title: self.newExampleReport.title
         };
-        $http({url: "send-example-report", method: "post", data: postdata}).success((data) => {
+        $http({ url: "send-example-report", method: "post", data: postdata }).success(function (data) {
             self.newExampleReport = "";
             self.shared.getExampleReports();
         });
     };
 
-    self.setActiveExampleReport = (rep) => {
-        let postdata = {sesid: self.selectedSes.id, rid: rep.id};
-        $http({url: "set-active-example-report", method: "post", data: postdata}).success((data) => {
+    self.setActiveExampleReport = function (rep) {
+        var postdata = { sesid: self.selectedSes.id, rid: rep.id };
+        $http({ url: "set-active-example-report", method: "post", data: postdata }).success(function (data) {
             if (data.status == 'ok') {
-                self.exampleReports.forEach(r => {
+                self.exampleReports.forEach(function (r) {
                     r.active = false;
                 });
                 rep.active = true;
@@ -1895,48 +1903,46 @@ adpp.controller("RubricaController", function ($scope, $http) {
         });
     };
 
-    self.goToReport = (rep) => {
+    self.goToReport = function (rep) {
         self.setActiveExampleReport(rep);
         window.location.href = "to-rubrica?sesid=" + self.selectedSes.id;
     };
 
-    self.pairAssign = () => {
-        let postdata = {sesid: self.selectedSes.id, rnum: +self.pairNum || 3};
-        $http({url: "assign-pairs", method: "post", data: postdata}).success((data) => {
+    self.pairAssign = function () {
+        var postdata = { sesid: self.selectedSes.id, rnum: +self.pairNum || 3 };
+        $http({ url: "assign-pairs", method: "post", data: postdata }).success(function (data) {
             if (data.status == "ok") {
                 // self.shared.updateSesData();
                 self.selectedSes.paired = self.pairNum;
                 self.errPairMsg = "";
-            }
-            else {
+            } else {
                 self.errPairMsg = data.msg;
             }
         });
     };
 
-    self.shared.obtainCriterios = () => {
+    self.shared.obtainCriterios = function () {
         return self.criterios;
     };
 
-    self.shared.isRubricaSet = () => {
+    self.shared.isRubricaSet = function () {
         return !self.editable;
     };
-
 });
 
 adpp.controller("OptionsController", function ($scope, $http, Notification) {
-    let self = $scope;
+    var self = $scope;
     self.conf = {};
     self.sesidConfig = -1;
-    self.options = [{name: "optCom", code:"J"}, {name: "optConfLv", code:"C"}, {name: "optHint", code:"H"}];
+    self.options = [{ name: "optCom", code: "J" }, { name: "optConfLv", code: "C" }, { name: "optHint", code: "H" }];
 
-    self.saveConfs = () => {
-        let postdata = {
+    self.saveConfs = function () {
+        var postdata = {
             sesid: self.selectedSes.id,
             options: self.buildConfStr()
         };
-        $http.post("update-ses-options", postdata).success((data) => {
-            if(data.status == "ok") {
+        $http.post("update-ses-options", postdata).success(function (data) {
+            if (data.status == "ok") {
                 Notification.success("Opciones actualizadas");
                 self.selectedSes.options = postdata.options;
                 self.selectedSes.conf = null;
@@ -1947,11 +1953,11 @@ adpp.controller("OptionsController", function ($scope, $http, Notification) {
 
     self.shared.saveConfs = self.saveConfs;
 
-    self.shared.updateConf = () => {
-        if(self.selectedSes.conf == null) {
+    self.shared.updateConf = function () {
+        if (self.selectedSes.conf == null) {
             self.selectedSes.conf = {};
-            let op = self.selectedSes.options || "";
-            for (let i = 0; i < op.length; i++) {
+            var op = self.selectedSes.options || "";
+            for (var i = 0; i < op.length; i++) {
                 self.selectedSes.conf[op[i]] = true;
             }
             console.log(self.selectedSes);
@@ -1959,31 +1965,33 @@ adpp.controller("OptionsController", function ($scope, $http, Notification) {
         return true;
     };
 
-    self.buildConfStr = () => {
-        let s = "";
-        for(let key in self.selectedSes.conf){
-            if(self.selectedSes.conf[key])
-                s += key;
+    self.buildConfStr = function () {
+        var s = "";
+        for (var key in self.selectedSes.conf) {
+            if (self.selectedSes.conf[key]) s += key;
         }
         return s;
     };
-
 });
 
 adpp.controller("DashboardRubricaController", function ($scope, $http) {
-    let self = $scope;
+    var self = $scope;
     self.reports = [];
     self.result = [];
     self.selectedReport = null;
 
-    self.shared.resetRubricaGraphs = () => {
+    self.shared.resetRubricaGraphs = function () {
         self.alumState = null;
         self.barOpts = {
             chart: {
                 type: 'multiBarChart',
                 height: 320,
-                x: d => d.label,
-                y: d => d.value,
+                x: function x(d) {
+                    return d.label;
+                },
+                y: function y(d) {
+                    return d.value;
+                },
                 showControls: false,
                 showValues: false,
                 duration: 500,
@@ -1995,17 +2003,16 @@ adpp.controller("DashboardRubricaController", function ($scope, $http) {
                 }
             }
         };
-        self.barData = [{key: "Alumnos", color: "#ef6c00", values: []}];
+        self.barData = [{ key: "Alumnos", color: "#ef6c00", values: [] }];
         //self.updateGraph();
     };
 
     self.shared.resetRubricaGraphs();
-
 });
 
 adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($scope, $http, NgMap) {
 
-    let self = $scope;
+    var self = $scope;
 
     self.openRight = false;
     self.rightTab = "";
@@ -2017,19 +2024,19 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
 
     self.overlayBuffer = [];
 
-    let init = () => {
+    var init = function init() {
         self.updateOverlayList();
         self.clearOverlay();
-        NgMap.getMap().then((map) => {
+        NgMap.getMap().then(function (map) {
             console.log("MAP cargado correctamente");
             self.map = map;
-            self.map.streetView.setOptions({addressControlOptions: {position: google.maps.ControlPosition.TOP_CENTER}});
+            self.map.streetView.setOptions({ addressControlOptions: { position: google.maps.ControlPosition.TOP_CENTER } });
             self.map.infoWindows.iw.close();
         });
         self.misc.mapHasVisData = false;
     };
 
-    let toOverlay = (data) => {
+    var toOverlay = function toOverlay(data) {
         return {
             id: data.id,
             name: data.name,
@@ -2041,23 +2048,23 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
         };
     };
 
-    let getColor = (data) => {
+    var getColor = function getColor(data) {
         return "blue";
     };
 
-    let packOverlay = (overlay) => {
+    var packOverlay = function packOverlay(overlay) {
         return {
             name: overlay.name,
             description: overlay.description,
             iteration: 0,
-            qid: (self.questions[self.selectedQs] != null) ? self.questions[self.selectedQs].id : -1,
+            qid: self.questions[self.selectedQs] != null ? self.questions[self.selectedQs].id : -1,
             type: overlay.type,
             geom: JSON.stringify(overlay.geom)
         };
     };
 
-    let getFullType = (t) => {
-        switch (t){
+    var getFullType = function getFullType(t) {
+        switch (t) {
             case "M":
                 return "marker";
             case "P":
@@ -2073,16 +2080,16 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
         }
     };
 
-    self.shared.processPrevMapData = (data, qid) => {
+    self.shared.processPrevMapData = function (data, qid) {
         self.shared.closePrevMapData();
         self.shared.processMapData(data, qid);
         self.misc.mapHasVisData = true;
         console.log(self.misc);
     };
 
-    self.shared.processMapData = (data, qid) => {
+    self.shared.processMapData = function (data, qid) {
         self.shared.closePrevMapData();
-        let comps = data.split(" ");
+        var comps = data.split(" ");
         console.log(comps);
         self.map.setCenter(new google.maps.LatLng(+comps[1], +comps[2]));
         self.map.setZoom(+comps[3]);
@@ -2093,20 +2100,24 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
         self.misc.mapHasVisData = false;
     };
 
-    self.shared.closePrevMapData = () => {
+    self.shared.closePrevMapData = function () {
         self.shared.clearOverlayBuffer();
         self.misc.mapHasVisData = false;
     };
 
-    let getPrevOverlays = (qid) => {
-        $http.post("list-default-overlay", {qid: qid}).success((data) => {
-            let overlays = data.map(toOverlay);
-            self.mOverlays = self.mOverlays.concat(overlays.filter(e => e.type == "M"));
-            self.sOverlays = self.sOverlays.concat(overlays.filter(e => e.type != "M"));
+    var getPrevOverlays = function getPrevOverlays(qid) {
+        $http.post("list-default-overlay", { qid: qid }).success(function (data) {
+            var overlays = data.map(toOverlay);
+            self.mOverlays = self.mOverlays.concat(overlays.filter(function (e) {
+                return e.type == "M";
+            }));
+            self.sOverlays = self.sOverlays.concat(overlays.filter(function (e) {
+                return e.type != "M";
+            }));
         });
     };
 
-    self.clearOverlay = () => {
+    self.clearOverlay = function () {
         self.newOverlay = {
             name: "",
             description: "",
@@ -2123,24 +2134,28 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
         };
     };
 
-    self.updateOverlayList = () => {
-        let postdata = {
-            qid: (self.questions[self.selectedQs] != null) ? self.questions[self.selectedQs].id : -1
+    self.updateOverlayList = function () {
+        var postdata = {
+            qid: self.questions[self.selectedQs] != null ? self.questions[self.selectedQs].id : -1
         };
-        $http.post("list-overlay", postdata).success((data) => {
-            let overlays = data.map(toOverlay);
-            self.mOverlays = overlays.filter(e => e.type == "M");
-            self.sOverlays = overlays.filter(e => e.type != "M");
+        $http.post("list-overlay", postdata).success(function (data) {
+            var overlays = data.map(toOverlay);
+            self.mOverlays = overlays.filter(function (e) {
+                return e.type == "M";
+            });
+            self.sOverlays = overlays.filter(function (e) {
+                return e.type != "M";
+            });
         });
     };
 
     self.shared.updateOverlayList = self.updateOverlayList;
 
-    self.onMapOverlayCompleted = (ev) => {
+    self.onMapOverlayCompleted = function (ev) {
         self.map.mapDrawingManager[0].setDrawingMode(null);
 
         self.newOverlay.fullType = ev.type;
-        self.newOverlay.type = (ev.type == "polyline") ? "L" : ev.type[0].toUpperCase();
+        self.newOverlay.type = ev.type == "polyline" ? "L" : ev.type[0].toUpperCase();
         self.newOverlay.geom.position = ev.overlay.getPosition ? positionToArray(ev.overlay.getPosition()) : null;
         self.newOverlay.geom.radius = ev.overlay.radius;
         self.newOverlay.geom.center = positionToArray(ev.overlay.center);
@@ -2153,20 +2168,20 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
         ev.overlay.setMap(null);
     };
 
-    self.colorizeShape = (col) => {
-        if(self.map.shapes && self.map.shapes.nshp) {
+    self.colorizeShape = function (col) {
+        if (self.map.shapes && self.map.shapes.nshp) {
             self.map.shapes.nshp.set("fillColor", col);
-            self.map.shapes.nshp.set("strokeColor", "dark"+col);
+            self.map.shapes.nshp.set("strokeColor", "dark" + col);
         }
     };
 
-    self.closeOverlay = () => {
+    self.closeOverlay = function () {
         self.clearOverlay();
         self.map.infoWindows.iw2.close();
     };
 
-    let updateOverlay =  () => {
-        let ov = (self.newOverlay.type == "M")? self.map.markers.nmkr : self.map.shapes.nshp;
+    var updateOverlay = function updateOverlay() {
+        var ov = self.newOverlay.type == "M" ? self.map.markers.nmkr : self.map.shapes.nshp;
         self.newOverlay.geom.position = ov.getPosition ? positionToArray(ov.getPosition()) : null;
         self.newOverlay.geom.radius = ov.radius;
         self.newOverlay.geom.center = positionToArray(ov.center);
@@ -2176,52 +2191,53 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
         //self.map.showInfoWindow("iw2");
     };
 
-    self.sendOverlay = () => {
+    self.sendOverlay = function () {
         updateOverlay();
         self.overlayBuffer.push(packOverlay(self.newOverlay));
         console.log(self.overlayBuffer);
-        if(self.newOverlay.type == "M") {
+        if (self.newOverlay.type == "M") {
             self.mOverlays.push(self.newOverlay);
-        }
-        else {
+        } else {
             self.sOverlays.push(self.newOverlay);
         }
         self.closeOverlay();
     };
 
-    self.shared.clearOverlayBuffer = () => {
+    self.shared.clearOverlayBuffer = function () {
         self.mOverlays = [];
         self.sOverlays = [];
         self.overlayBuffer = [];
     };
 
-    self.shared.sendOverlayBuffer = (id) => {
+    self.shared.sendOverlayBuffer = function (id) {
         console.log(id, self.overlayBuffer);
-        self.overlayBuffer.forEach((ov) => {
+        self.overlayBuffer.forEach(function (ov) {
             ov.qid = id;
-            $http.post("add-overlay", ov).success((data) => {
+            $http.post("add-overlay", ov).success(function (data) {
                 console.log("OK");
             });
         });
         self.shared.closePrevMapData();
-
     };
 
-    self.clickOverlay = function(event){
+    self.clickOverlay = function (event) {
         self.selectOverlay(this.id);
     };
 
-    self.selectOverlay = (id) => {
-        self.selectedOverlay = self.mOverlays.find(e => e.id == id) || self.sOverlays.find(e => e.id == id);
+    self.selectOverlay = function (id) {
+        self.selectedOverlay = self.mOverlays.find(function (e) {
+            return e.id == id;
+        }) || self.sOverlays.find(function (e) {
+            return e.id == id;
+        });
         self.selectedOverlay.centroid = centroidAsLatLng(self.selectedOverlay.type, self.selectedOverlay.geom);
         self.map.panTo(self.selectedOverlay.centroid);
         self.map.showInfoWindow("iw");
     };
 
-    self.googleSearch = function(){
-        let p = this.getPlace();
-        if(p == null || p.geometry == null || p.geometry.location == null)
-            return;
+    self.googleSearch = function () {
+        var p = this.getPlace();
+        if (p == null || p.geometry == null || p.geometry.location == null) return;
 
         self.map.mapDrawingManager[0].setDrawingMode(null);
         self.newOverlay.fullType = "marker";
@@ -2233,44 +2249,40 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
         self.map.panTo(p.geometry.location);
     };
 
-
-    self.shared.getPluginMapOptions = () => {
+    self.shared.getPluginMapOptions = function () {
         return {
             nav: self.misc.mapNav,
             edit: self.misc.mapEdit
         };
     };
 
-    self.shared.getActiveMap = () => {
+    self.shared.getActiveMap = function () {
         return self.map;
     };
 
     init();
-
 }]);
 
-adpp.filter('htmlExtractText', function() {
-    return function(text) {
-        return  text ? String(text).replace(/<[^>]+>/gm, '') : '';
+adpp.filter('htmlExtractText', function () {
+    return function (text) {
+        return text ? String(text).replace(/<[^>]+>/gm, '') : '';
     };
 });
 
-adpp.filter("trustHtml", ["$sce", function($sce){
-    return function(html){
-        return $sce.trustAsHtml(html)
+adpp.filter("trustHtml", ["$sce", function ($sce) {
+    return function (html) {
+        return $sce.trustAsHtml(html);
     };
 }]);
 
-adpp.filter('lang', function(){
+adpp.filter('lang', function () {
     filt.$stateful = true;
     return filt;
 
-    function filt(label){
-        if(window.DIC == null)
-            return;
-        if(window.DIC[label])
-            return window.DIC[label];
-        if(!window.warnDIC[label]) {
+    function filt(label) {
+        if (window.DIC == null) return;
+        if (window.DIC[label]) return window.DIC[label];
+        if (!window.warnDIC[label]) {
             console.warn("Cannot find translation for ", label);
             window.warnDIC[label] = true;
         }
@@ -2278,42 +2290,51 @@ adpp.filter('lang', function(){
     }
 });
 
-let generateTeams = (alumArr, scFun, n, different) => {
-    if(n == null || n == 0) return [];
+var generateTeams = function generateTeams(alumArr, scFun, n, different) {
+    if (n == null || n == 0) return [];
     console.log(alumArr);
-    let arr = alumArr;
-    arr.sort((a, b) => scFun(b) - scFun(a));
-    let groups = [];
-    let numGroups = alumArr.length / n;
-    for (let i = 0; i < numGroups; i++) {
+    var arr = alumArr;
+    arr.sort(function (a, b) {
+        return scFun(b) - scFun(a);
+    });
+    var groups = [];
+    var numGroups = alumArr.length / n;
+    for (var i = 0; i < numGroups; i++) {
         if (different) {
-            let rnd = [];
-            let offset = arr.length / n;
-            for (let j = 0; j < n; j++)
-                rnd.push(~~(Math.random() * offset + offset * j));
-            groups.push(arr.filter((a, i) => rnd.includes(i)));
-            arr = arr.filter((a, i) => !rnd.includes(i));
-        }
-        else{
-            groups.push(arr.filter((a, i) => i < n));
-            arr = arr.filter((a, i) => i >= n);
+            (function () {
+                var rnd = [];
+                var offset = arr.length / n;
+                for (var j = 0; j < n; j++) {
+                    rnd.push(~~(Math.random() * offset + offset * j));
+                }groups.push(arr.filter(function (a, i) {
+                    return rnd.includes(i);
+                }));
+                arr = arr.filter(function (a, i) {
+                    return !rnd.includes(i);
+                });
+            })();
+        } else {
+            groups.push(arr.filter(function (a, i) {
+                return i < n;
+            }));
+            arr = arr.filter(function (a, i) {
+                return i >= n;
+            });
         }
     }
-    let final_groups = [];
-    let ov = 0;
-    for(let i = 0; i < groups.length; i++){
-        if(groups[i].length > 1 || final_groups.length == 0)
-            final_groups.push(groups[i]);
-        else {
-            final_groups[ov % final_groups.length].push(groups[i][0]);
+    var final_groups = [];
+    var ov = 0;
+    for (var _i = 0; _i < groups.length; _i++) {
+        if (groups[_i].length > 1 || final_groups.length == 0) final_groups.push(groups[_i]);else {
+            final_groups[ov % final_groups.length].push(groups[_i][0]);
             ov++;
         }
     }
     return final_groups;
 };
 
-let isDifferent = (type) => {
-    switch (type){
+var isDifferent = function isDifferent(type) {
+    switch (type) {
         case "performance homog":
             return false;
         case "performance heterg":
@@ -2326,8 +2347,8 @@ let isDifferent = (type) => {
     return false;
 };
 
-let habMetric = (u) => {
-    switch (u.aprendizaje){
+var habMetric = function habMetric(u) {
+    switch (u.aprendizaje) {
         case "Teorico":
             return -2;
         case "Reflexivo":
@@ -2340,52 +2361,47 @@ let habMetric = (u) => {
     return 0;
 };
 
-let quillMapHandler = function(){
+var quillMapHandler = function quillMapHandler() {
     alert("Mapa sólo disponible para preguntas");
 };
 
-let positionToArray = (pos) => {
-    if (pos == null)
-        return null;
+var positionToArray = function positionToArray(pos) {
+    if (pos == null) return null;
     return [pos.lat(), pos.lng()];
 };
 
-let mutiplePositionToArray = (mpos) => {
-    let r = [];
-    for (let i = 0; i < mpos.getLength(); i++) {
-        let pos = mpos.getAt(i);
+var mutiplePositionToArray = function mutiplePositionToArray(mpos) {
+    var r = [];
+    for (var i = 0; i < mpos.getLength(); i++) {
+        var pos = mpos.getAt(i);
         r.push(positionToArray(pos));
     }
     return r;
 };
 
-let boundsToArray = (bounds) => {
+var boundsToArray = function boundsToArray(bounds) {
     return [positionToArray(bounds.getSouthWest()), positionToArray(bounds.getNorthEast())];
 };
 
-let avgCoord = (arr) => {
-    let slat = 0;
-    let slng = 0;
-    for (let i = 0; i < arr.length; i++) {
+var avgCoord = function avgCoord(arr) {
+    var slat = 0;
+    var slng = 0;
+    for (var i = 0; i < arr.length; i++) {
         slat += arr[i][0];
         slng += arr[i][1];
     }
-    return [slat/arr.length, slng/arr.length];
+    return [slat / arr.length, slng / arr.length];
 };
 
-let centroidAsLatLng = (type, geom) => {
-    let c = centroid(type, geom);
+var centroidAsLatLng = function centroidAsLatLng(type, geom) {
+    var c = centroid(type, geom);
     return new google.maps.LatLng(c[0], c[1]);
 };
 
-let centroid = (type, geom) => {
-    if(type == "M")
-        return geom.position;
-    if(type == "C")
-        return geom.center;
-    if(type == "R")
-        return avgCoord(geom.bounds);
-    if(type == "P" || type == "L")
-        return avgCoord(geom.path);
+var centroid = function centroid(type, geom) {
+    if (type == "M") return geom.position;
+    if (type == "C") return geom.center;
+    if (type == "R") return avgCoord(geom.bounds);
+    if (type == "P" || type == "L") return avgCoord(geom.path);
     return null;
 };
