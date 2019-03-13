@@ -343,11 +343,12 @@ router.post("/get-differentials", rpg.multiSQL({
 
 router.post("/add-differential", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "insert into differential(title, tleft, tright, orden, creator, sesid) values ($1, $2, $3, $4, $5, $6)",
+    sql: "insert into differential(title, tleft, tright, orden, creator, sesid) select $1, $2, $3, $4, $5, $6 " +
+        "where not exists (select id from differential where orden = $7 and sesid = $8)",
     postReqData: ["orden", "tleft", "tright", "name", "sesid"],
     sesReqData: ["uid"],
     sqlParams: [rpg.param("post", "name"), rpg.param("post", "tleft"), rpg.param("post", "tright"), rpg.param("post", "orden"),
-        rpg.param("ses", "uid"), rpg.param("post", "sesid")]
+        rpg.param("ses", "uid"), rpg.param("post", "sesid"), rpg.param("post", "orden"), rpg.param("post", "sesid")]
 }));
 
 router.post("/update-differential", rpg.execSQL({

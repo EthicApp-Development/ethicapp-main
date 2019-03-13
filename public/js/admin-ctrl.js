@@ -344,17 +344,18 @@ adpp.controller("DocumentsController", function ($scope, $http, Notification, $t
     };
 
     self.sendDFS = function () {
-        var k = 0;
+        let k = 0;
         self.misc.dfSending = true;
         self.dfs.forEach(function (df, i) {
-            var url = df.id ? "update-differential" : "add-differential";
+            let url = df.id ? "update-differential" : "add-differential";
             df.orden = i;
             df.sesid = self.selectedSes.id;
             $http.post(url, df).success(function (data) {
                 k += 1;
-                if (k == 3) {
+                if (k == self.dfs.length - 1) {
                     Notification.success("Diferenciales guardados correctamente");
                     self.misc.dfSending = false;
+                    self.getDifferentials();
                 }
             });
         });
