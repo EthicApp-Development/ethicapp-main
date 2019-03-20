@@ -26,13 +26,67 @@
     <script src="libs/angular-ui-notification.min.js"></script>
     <script src="js/admin-ctrl.js"></script>
 </head>
-<body class="bg-white" ng-controller="AdminController">
+<body class="blue" ng-controller="AdminController">
 
 <div ng-controller="TabsController">
 
-    <div class="top-bar">
+    <div class="top-bar-mini cflex">
+        <div class="cf1 simple-padding-top">
+            <a ng-click="backToList()" class="simple-margin-left text-white">
+                <i class="fa fa-list fa-2x"></i>
+            </a>
+        </div>
+        <div class="cf3 grow text-center simple-padding-top hscroll" ng-show="selectedId != -1">
+            <span ng-repeat="st in sesStatusses">
+                <span ng-if="selectedSes.type != 'M'" class="label label-primary bg-black-alpha margin-right-8"
+                      ng-class="{'bg-yellow': $index==selectedSes.status-1}">
+                    {{st | lang}}
+                </span>
+                <span ng-if="selectedSes.type == 'M'" class="label label-primary bg-black-alpha margin-right-8"
+                      ng-class="{'bg-yellow': st.i == selectedSes.status-2}">
+                    {{st.name | lang}}
+                </span>
+                <!-- <span ng-hide="$last">→</span> -->
+            </span>
+            <i class="fa fa-angle-right"></i>
+            <!-- <span class="pull-right margin-right-24" ng-show="sesSTime != null">
+                <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
+            </span> -->
+        </div>
+        <div class="cf1 simple-padding-top">
+            <button class="btn btn-xs btn-default simple-margin-left" ng-if="selectedId != -1" ng-click="shared.changeState()">
+                {{'gotoNext' | lang}}
+            </button>
+        </div>
+        <div class="cf1 text-right margin-right-8 simple-padding-top">
+            <a href="logout" class="text-white">
+                <i class="fa fa-sign-out fa-2x"></i>
+            </a>
+        </div>
+    </div>
 
-        <div class="top-bar-second" ng-show="selectedId != -1">
+    <div class="top-bar top-bar-tabs">
+        <div class="qs-tabs">
+            <div class="tab tab-text tab-text-lg" ng-repeat="tab in tabOptions" ng-class="{active: tab == selectedTab}"
+                 ng-click="setTab(tab)">
+                <i class="fa fa-{{secIcons[tab]}}"></i> {{tab | lang}}
+            </div>
+            <div class="tab tab-text tab-text-lg active" ng-if="tabOptions.length == 0">
+                {{'sessionList' | lang}}
+            </div>
+            <div class="btab"></div>
+            <div class="rtab">
+                <button class="btn btn-default btn-sm" ng-click="changeLang()">
+                    {{'langOther' | lang}}
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- <div class="top-bar"> -->
+
+        <!-- <div class="top-bar-second" ng-show="selectedId != -1">
             <span ng-repeat="st in sesStatusses">
                 <span ng-if="selectedSes.type != 'M'" class="label label-default bg-black-alpha" ng-class="{'bg-yellow': $index==selectedSes.status-1}">
                     {{st | lang}}
@@ -46,27 +100,27 @@
                 <timer start-time="selectedSes.stime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
             </span>
             <button class="btn btn-xs btn-default simple-margin-left" ng-click="shared.changeState()">{{'gotoNext' | lang}}</button>
-        </div>
+        </div> -->
 
-        <div class="chip" ng-show="selectedId == -1">
+        <!-- <div class="chip" ng-show="selectedId == -1">
             <i class="fa fa-list"></i> {{'selectSes' | lang}}
         </div>
 
         <div class="chip hoverable" ng-show="selectedId != -1" ng-click="backToList()">
             <i class="fa fa-caret-left"></i> {{selectedSes.name}}
-        </div>
+        </div> -->
 
-        <div class="chip white hoverable" ng-repeat="tab in tabOptions" ng-class="{active: tab == selectedTab}" ng-click="setTab(tab)">
+        <!-- <div class="chip white hoverable" ng-repeat="tab in tabOptions" ng-class="{active: tab == selectedTab}" ng-click="setTab(tab)">
             <i class="fa fa-{{secIcons[tab]}}"></i> {{tab | lang}}
-        </div>
+        </div> -->
 
-        <a class="chip hoverable pull-right" href="logout">
+        <!-- <a class="chip hoverable pull-right" href="logout">
             {{'logout' | lang}}
-        </a>
+        </a> -->
 
-        <span class="chip hoverable pull-right" ng-click="changeLang()">
+        <!-- <span class="chip hoverable pull-right" ng-click="changeLang()">
             {{'langOther' | lang}}
-        </span>
+        </span> -->
 
         <!--<div class="col-sm-1">
             <button class="btn btn-default" ng-click="toggleSidebar()">
@@ -79,13 +133,14 @@
         <div class="col-sm-1">
             <a class="btn btn-default pull-right margin-right-24" href="logout"><i class="fa fa-close"></i></a>
         </div>-->
-    </div>
+    <!-- </div> -->
 
-    <div class="container-fluid full-height-topbar admin-container">
+    <!-- <div class="container-fluid full-height-topbar admin-container"> -->
+    <div class="scrollable-container blue">
+        <div class="mid-container qs-content simple-pad scrollable-container bg-white">
 
         <div ng-show="selectedId == -1">
             <button class="btn btn-sm btn-primary pull-right" ng-click="openNewSes()">{{'new' | lang}}</button>
-            <h4>{{'sessionList' | lang}}:</h4>
             <input placeholder="Buscar..." class="form-control" ng-model="sesSearch">
             <div class="list-group">
                 <a class="list-group-item" ng-repeat="ses in sessions | filter:sesSearch" ng-click="selectSession(ses,ses.id)"
@@ -717,14 +772,14 @@
                     {{'performance' | lang}}: <strong>{{lectPerformance() | number:0 }}%</strong>
                 </div>
             </div>
-            <div class="row" ng-show="selectedSes.type == 'S'">
-                <div class="col-sm-3 col-sm-offset-1">
+            <div class="row row-min-padding" ng-show="selectedSes.type == 'S'">
+                <div class="col-xs-4 col-sm-offset-1">
                     {{'progress' | lang}}: <strong>{{progress() | number:0}}%</strong>
                 </div>
-                <div class="col-sm-4">
+                <div class="col-xs-4">
                     {{'corrects' | lang}}: <strong>{{avgAll() | number:0 }}%</strong>
                 </div>
-                <div class="col-sm-4">
+                <div class="col-xs-4 col-sm-3">
                     {{'incorrects' | lang}}: <strong>{{100 - avgAll() | number:0 }}%</strong>
                 </div>
             </div>
@@ -930,6 +985,7 @@
         </div>
         <!-- / DASHBOARDS RUBRICA -->
 
+    </div>
     </div>
 
 </div>
