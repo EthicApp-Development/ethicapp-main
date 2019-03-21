@@ -70,7 +70,8 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             }
             self.sesName = data.name;
             self.sesId = data.id;
-            self.sesDescr = (self.iteration < 4) ? (data.descr.split("\n")[0] || data.descr) : (data.descr.split("\n")[1] || data.descr);
+            if(data.descr)
+                self.sesDescr = (self.iteration < 4) ? (data.descr.split("\n")[0] || data.descr) : (data.descr.split("\n")[1] || data.descr);
             self.sesSTime = (data.stime != null) ? new Date(data.stime) : null;
             self.getDocuments();
             /*$http({url: "data/instructions.json", method: "get"}).success((data) => {
