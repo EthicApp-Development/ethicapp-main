@@ -52,7 +52,8 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
             self.sesId = data.id;
             self.myUid = data.uid;
             self.sesSTime = (data.stime != null) ? new Date(data.stime) : null;
-            self.sesDescr = (self.iteration < 4) ? (data.descr.split("\n")[0] || data.descr) : (data.descr.split("\n")[1] || data.descr);
+            if(data.descr)
+                self.sesDescr = (self.iteration < 4) ? (data.descr.split("\n")[0] || data.descr) : (data.descr.split("\n")[1] || data.descr);
             $http({url: "get-finished", method: "post", data: {status: self.iteration + 2}}).success((data) => {
                 if (data.finished) {
                     self.finished = true;
