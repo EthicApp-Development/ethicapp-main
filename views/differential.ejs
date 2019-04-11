@@ -139,12 +139,12 @@
                 </div>
                 <div class="input-group margin-top-28">
                     <span class="input-group-addon deep-blue">{{userAnon[myUid]}}</span>
-                    <input type="text" class="form-control" placeholder="{{'comment' | lang}}" ng-model="dfs[selectedDF].comment" ng-change="dfs[selectedDF].dirty = true" ng-disabled="finished">
-                    <span class="input-group-btn">
-                        <button class="btn btn-default" ng-disabled="finished || !dfs[selectedDF].dirty" ng-click="sendDFSel()">
-                            <i class="fa fa-check" ng-show="!dfs[selectedDF].dirty"></i>
-                            <i class="fa fa-send" ng-show="dfs[selectedDF].dirty"></i>
-                        </button>
+                    <textarea type="text" class="form-control" placeholder="{{'comment' | lang}}" ng-model="dfs[selectedDF].comment"
+                              ng-change="dfs[selectedDF].dirty = true" ng-disabled="finished">
+                    </textarea>
+                    <span class="input-group-addon hoverable" ng-disabled="finished || !dfs[selectedDF].dirty" ng-click="sendDFSel()">
+                        <i class="fa fa-check" ng-show="!dfs[selectedDF].dirty"></i>
+                        <i class="fa fa-send" ng-show="dfs[selectedDF].dirty"></i>
                     </span>
                 </div>
             </div>

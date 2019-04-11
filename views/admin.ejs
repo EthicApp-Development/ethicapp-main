@@ -591,6 +591,7 @@
                 <hr>
                 <br>
                 <button class="btn btn-default pull-right" ng-click="refreshUsers()">{{'update' | lang}}</button>
+                <span class="margin-right-24 margin-top-8 pull-right"><strong>Total: </strong> {{ usersArr.length }}</span>
                 <h4>{{'users' | lang}}</h4>
                 <table class="table table-bordered">
                     <tr><th>{{'user' | lang}}</th><th>Email</th><th>{{'knowledgeType' | lang}}</th><th></th></tr>
@@ -919,7 +920,7 @@
                         <tr ng-show="teamDF.ind.length > 0">
                             <td>{{$index + 1}}</td>
                             <td>{{'individual' | lang}}</td>
-                            <td ng-click="openDFDetails(teamDF.tmid,1)">
+                            <td ng-click="openDFDetails(teamDF.tmid,1)" ng-class="{'bg-lightorange': }">
                                 <span class="dfc" ng-repeat="s in DFAll(teamDF.ind,1) track by $index">{{s}}</span>
                             </td>
                             <td ng-click="openDFDetails(teamDF.tmid,2)">

@@ -1596,6 +1596,7 @@ adpp.controller("ContentModalController", function ($scope, $uibModalInstance, d
 adpp.controller("EthicsModalController", function ($scope, $http, $uibModalInstance, Notification, data) {
     var vm = this;
     vm.data = data;
+    vm.isAnon = true;
 
     vm.cancel = function () {
         $uibModalInstance.dismiss('cancel');
