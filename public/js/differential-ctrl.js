@@ -28,6 +28,8 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
     self.sesId = -1;
     self.finished = false;
 
+    self.chatExp = true;
+
     self.userAnon = {};
 
     self.sesStatusses = ["individual", "anon", "discussion", "finished"];

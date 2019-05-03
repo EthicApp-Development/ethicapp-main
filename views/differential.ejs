@@ -192,7 +192,7 @@
             <div class="chat-container">
                 <!-- <h4>Chat</h4> -->
                 <div class="chat bordered">
-                    <div class="chat-area" scroll-glue>
+                    <div class="chat-area" scroll-glue ng-show="chatExp">
                         <strong ng-show="chatMsgs[dfs[selectedDF].id] == null || chatMsgs[dfs[selectedDF].id].length == 0">Chat</strong>
                         <div class="chat-msg" ng-repeat="msg in chatMsgs[dfs[selectedDF].id]" ng-class="{'bg-gray': chatmsgreply == msg.id}">
                             <div class="font-mini parent-msg" ng-show="msg.parent != null">
@@ -210,8 +210,12 @@
                         </div>
                     </div>
                     <div class="input-group">
-                        <span class="input-group-btn" ng-show="chatmsgreply != null">
-                            <button class="btn btn-primary" ng-disabled="finished" ng-click="setReply(null)">
+                        <span class="input-group-btn">
+                            <button class="btn btn-default" ng-click="chatExp = !chatExp">
+                                <i class="fa fa-arrow-up" ng-show="!chatExp"></i>
+                                <i class="fa fa-arrow-down" ng-show="chatExp"></i>
+                            </button>
+                            <button class="btn btn-primary" ng-show="chatmsgreply != null" ng-disabled="finished" ng-click="setReply(null)">
                                 <i class="fa fa-reply"></i>
                             </button>
                         </span>

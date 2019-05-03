@@ -408,7 +408,7 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
             Notification.error("La sesión está finalizada");
             return;
         }
-        if (self.selectedSes.type == "L" && self.selectedSes.status >= 3 && !self.selectedSes.grouped || self.selectedSes.type == "M" && self.selectedSes.status >= 3 && !self.selectedSes.grouped || self.selectedSes.type == "E" && self.selectedSes.status >= 1 && !self.selectedSes.grouped || self.selectedSes.type == "S" && self.selectedSes.status >= 2 && !self.selectedSes.grouped) {
+        if (self.selectedSes.type == "L" && self.selectedSes.status >= 3 && !self.selectedSes.grouped || self.selectedSes.type == "M" && self.selectedSes.status >= 3 && !self.selectedSes.grouped || self.selectedSes.type == "E" && self.selectedSes.status >= 2 && !self.selectedSes.grouped || self.selectedSes.type == "S" && self.selectedSes.status >= 2 && !self.selectedSes.grouped) {
             self.shared.gotoGrupos();
             Notification.error("Los grupos no han sido generados");
             return;
@@ -1029,8 +1029,11 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             var _postdata2 = {
                 sesid: self.selectedSes.id
             };
-            $http.post("get-differential-all", _postdata2).success(function (data) {
+            let url = self.selectedSes.grouped ? "get-differential-all" : "get-differential-indv";
+            $http.post(url, _postdata2).success(function (data) {
                 self.dataDF = [];
+                console.log("SELF");
+                console.log(self);
                 var tmid = -1;
                 var i = -1;
                 var mapAt = ["", "ind", "anon", "team"];
@@ -1038,11 +1041,18 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     if (d.tmid != tmid) {
                         i += 1;
                         tmid = d.tmid;
+                        let u = d.uid;
+                        let glen = 1;
+                        if(self.shared.groups) {
+                            let g = self.shared.groups.find(e => e.some(f => f.uid == u));
+                            glen = g ? g.length : 1;
+                        }
                         self.dataDF.push({
                             tmid: tmid,
                             ind: [],
                             anon: [],
-                            team: []
+                            team: [],
+                            glen: glen
                         });
                     }
                     self.dataDF[i][mapAt[d.iteration]].push(d);
@@ -1054,7 +1064,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                         self.dataChatCount[ch.tmid][ch.orden] = ch.count;
                     });
                 });
-                console.log(self.dataDF);
+                self.shared.dataDF = self.dataDF;
             });
         }
     };
@@ -1160,6 +1170,12 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         });
     };
 
+    self.DFL = function (ans, orden) {
+        return ans.filter(function (e) {
+            return e.orden == orden;
+        }).length;
+    };
+
     self.DFAvg = function (ans, orden) {
         var a = ans.filter(function (e) {
             return e.orden == orden;
@@ -1195,7 +1211,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         });
         var dif = Math.sqrt(sd / arr.length);
 
-        if (dif <= 1) return "bg-darkgreen";else if (dif > 2.8) return "bg-red";else return "bg-yellow";
+        if (dif <= 1) return "bg-darkgreen";
+        else if (dif > 2.8) return "bg-red";
+        else return "bg-yellow";
     };
 
     self.getAlumDoneTime = function (postdata) {
@@ -1680,8 +1698,9 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
         if (self.selectedSes.grouped) {
             $http({ url: "group-proposal-sel", method: "post", data: { sesid: self.selectedSes.id } }).success(function (data) {
                 self.groups = data;
+                self.shared.groups = self.groups;
                 //self.groupsProp = angular.copy(self.groups);
-                console.log(data);
+                console.log("G", data);
                 //self.groupNames = [];
             });
             return;
@@ -1716,6 +1735,7 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
                 return s.rnd;
             }, self.groupNum, false);
         } else if (self.selectedSes.type == "S" || self.selectedSes.type == "M") {
+            console.log(self.shared.alumState);
             var _arr = [];
             for (var uid in self.shared.alumState) {
                 var s = 0;
@@ -1729,6 +1749,22 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
             }, self.groupNum, isDifferent(self.groupMet));
         } else if (self.selectedSes.type == "L") {
             self.groups = generateTeams(self.shared.alumState, function (s) {
+                return s.score;
+            }, self.groupNum, isDifferent(self.groupMet));
+        }
+        else if (self.selectedSes.type == "E"){
+            console.log("AAAAA");
+            let dfd = users.map(e => {
+                let d = (self.shared.dataDF || []);
+                let r = d.find(f => f.tmid == e.id);
+                console.log(r);
+                return {
+                    uid: e.id,
+                    score: (r && r.ind && r.ind.length > 0) ? (r.ind.reduce((v,p) => v + p.sel, 0) / r.ind.length) : 0
+                }
+            });
+            console.log(dfd);
+            self.groups = generateTeams(dfd, function (s) {
                 return s.score;
             }, self.groupNum, isDifferent(self.groupMet));
         }
@@ -2292,13 +2328,18 @@ adpp.filter('lang', function () {
     }
 });
 
-var generateTeams = function generateTeams(alumArr, scFun, n, different) {
+var generateTeams = function generateTeams(alumArr, scFun, n, different, double) {
     if (n == null || n == 0) return [];
     console.log(alumArr);
     var arr = alumArr;
-    arr.sort(function (a, b) {
-        return scFun(b) - scFun(a);
-    });
+    if(!double) {
+        arr.sort(function (a, b) {
+            return scFun(b) - scFun(a);
+        });
+    }
+    else{
+        arr.sort(scFun);
+    }
     var groups = [];
     var numGroups = alumArr.length / n;
     for (var i = 0; i < numGroups; i++) {

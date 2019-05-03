@@ -230,15 +230,19 @@ canvas{
 }
 
 .bg-darkgreen{
-    background: #44973f;
+    background: #44973f !important;
 }
 
 .bg-lightorange, .bg-lightorange:focus, .bg-lightorange:hover, .bg-lightorange:active{
     background: #f5d376;
 }
 
+.bg-lightblue, .bg-lightblue:focus, .bg-lightblue:hover, .bg-lightblue:active{
+    background: #dfebff;
+}
+
 .bg-red{
-     background: #d54744;
+     background: #d54744 !important;
  }
 
 .border-right-sep{
@@ -757,7 +761,7 @@ ng-quill-editor.large .ql-editor{
 }
 
 .bg-yellow{
-    background: #dab347;
+    background: #dab347 !important;
 }
 
 .logo{
@@ -1071,12 +1075,13 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 
 .dfc{
     display: inline-block;
-    border: 1px solid #999;
+    border: 1px solid #666;
     padding: 2px 8px;
     margin: 2px 4px;
     width: 36px;
     height: 28px;
     text-align: center;
+    background: #fff;
 }
 
 .dfc.inv{

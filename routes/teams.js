@@ -171,6 +171,15 @@ router.post("/get-differential-all", rpg.multiSQL({
     sqlParams: [rpg.param("post", "sesid")]
 }));
 
+router.post("/get-differential-indv", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select s.uid as tmid, iteration, orden, s.uid, s.did, sel, comment " +
+        "from differential_selection as s inner join differential d on s.did = d.id " +
+        "where d.sesid = $1 and iteration = 1 order by tmid, orden",
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "sesid")]
+}));
+
 router.post("/get-chat-count", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select c.did, u.tmid, d.orden, count(*) from differential_chat as c inner join teamusers as u on u.uid = c.uid inner join" +
