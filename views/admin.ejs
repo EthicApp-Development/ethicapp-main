@@ -24,12 +24,14 @@
     <script type="text/javascript" src="libs/ng-quill.min.js"></script>
     <script src="libs/angular-timer.min.js"></script>
     <script src="libs/angular-ui-notification.min.js"></script>
+    <script src="libs/save-csv.min.js"></script>
     <script src="js/admin-ctrl.js"></script>
 </head>
 <body class="blue" ng-controller="AdminController">
 
 <div ng-controller="TabsController">
 
+    <!-- STATUSES -->
     <div class="top-bar-mini cflex">
         <div class="cf1 simple-padding-top">
             <a ng-click="backToList()" class="simple-margin-left text-white">
@@ -65,6 +67,7 @@
         </div>
     </div>
 
+    <!-- TABS -->
     <div class="top-bar top-bar-tabs">
         <div class="qs-tabs">
             <div class="tab tab-text tab-text-lg" ng-repeat="tab in tabOptions" ng-class="{active: tab == selectedTab}"
@@ -82,58 +85,6 @@
             </div>
         </div>
     </div>
-
-
-    <!-- <div class="top-bar"> -->
-
-        <!-- <div class="top-bar-second" ng-show="selectedId != -1">
-            <span ng-repeat="st in sesStatusses">
-                <span ng-if="selectedSes.type != 'M'" class="label label-default bg-black-alpha" ng-class="{'bg-yellow': $index==selectedSes.status-1}">
-                    {{st | lang}}
-                </span>
-                <span ng-if="selectedSes.type == 'M'" class="label label-default bg-black-alpha" ng-class="{'bg-yellow': st.i == selectedSes.status-2}">
-                    {{st.name | lang}}
-                </span>
-                <span ng-hide="$last">→</span>
-            </span>
-            <span class="simple-margin-left" ng-show="selectedSes != null && selectedSes.stime != null">
-                <timer start-time="selectedSes.stime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
-            </span>
-            <button class="btn btn-xs btn-default simple-margin-left" ng-click="shared.changeState()">{{'gotoNext' | lang}}</button>
-        </div> -->
-
-        <!-- <div class="chip" ng-show="selectedId == -1">
-            <i class="fa fa-list"></i> {{'selectSes' | lang}}
-        </div>
-
-        <div class="chip hoverable" ng-show="selectedId != -1" ng-click="backToList()">
-            <i class="fa fa-caret-left"></i> {{selectedSes.name}}
-        </div> -->
-
-        <!-- <div class="chip white hoverable" ng-repeat="tab in tabOptions" ng-class="{active: tab == selectedTab}" ng-click="setTab(tab)">
-            <i class="fa fa-{{secIcons[tab]}}"></i> {{tab | lang}}
-        </div> -->
-
-        <!-- <a class="chip hoverable pull-right" href="logout">
-            {{'logout' | lang}}
-        </a> -->
-
-        <!-- <span class="chip hoverable pull-right" ng-click="changeLang()">
-            {{'langOther' | lang}}
-        </span> -->
-
-        <!--<div class="col-sm-1">
-            <button class="btn btn-default" ng-click="toggleSidebar()">
-                <i class="fa fa-bars"></i>
-            </button>
-        </div>
-        <div class="col-sm-10">
-            <h5>{{'adminPanel' | lang}}</h5>
-        </div>
-        <div class="col-sm-1">
-            <a class="btn btn-default pull-right margin-right-24" href="logout"><i class="fa fa-close"></i></a>
-        </div>-->
-    <!-- </div> -->
 
     <!-- <div class="container-fluid full-height-topbar admin-container"> -->
     <div class="scrollable-container blue">
@@ -542,213 +493,212 @@
 
             </div>
         </div>
-            <!--<br>
+        <!--<br>
+        <hr>
+        <br>
+        <h4>{{'configuration' | lang}}</h4>
+        </div>--
+        <a class="pull-right btn btn-default" ng-click="setTabConfig(-1)"><i class="fa fa-close"></i></a>
+        <div class="row">
+        <div class="btn-group center-block w500">
+            <button class="btn btn-default" ng-repeat="x in tabConfig" ng-bind="x" ng-show="x != null"
+                    ng-class="{active: $index==selectedTabConfig}" ng-click="setTabConfig($index)">
+            </button>
+        </div>
+        </div>-->
+        <!-- / CONFIGURACION -->
+
+        <!-- USUARIOS -->
+        <div class="pad-content" ng-show="selectedTab == 'users'" ng-controller="NewUsersController">
+            <h4>{{'invitationCode' | lang}}</h4>
+            <div ng-show="selectedSes.code == null">
+                <strong>{{'invitationCodeNotActived' | lang}}</strong>
+                <br>
+                <button class="btn btn-primary" ng-click="generateCode()">{{'generateCode' | lang}}</button>
+            </div>
+            <div ng-show="selectedSes.code != null">
+                <span class="invitation-code">{{selectedSes.code}}</span>
+            </div>
+            <br>
             <hr>
             <br>
-            <h4>{{'configuration' | lang}}</h4>
-            </div>--
-            <a class="pull-right btn btn-default" ng-click="setTabConfig(-1)"><i class="fa fa-close"></i></a>
+            <h4>{{'users' | lang}}</h4>
+            <label>{{'bySpecificUsers' | lang}}</label>
             <div class="row">
-            <div class="btn-group center-block w500">
-                <button class="btn btn-default" ng-repeat="x in tabConfig" ng-bind="x" ng-show="x != null"
-                        ng-class="{active: $index==selectedTabConfig}" ng-click="setTabConfig($index)">
-                </button>
-            </div>
-            </div>-->
-
-            <!-- USUARIOS -->
-            <div class="pad-content" ng-show="selectedTab == 'users'" ng-controller="NewUsersController">
-                <h4>{{'invitationCode' | lang}}</h4>
-                <div ng-show="selectedSes.code == null">
-                    <strong>{{'invitationCodeNotActived' | lang}}</strong>
-                    <br>
-                    <button class="btn btn-primary" ng-click="generateCode()">{{'generateCode' | lang}}</button>
+                <div class="col-xs-6">
+                    <multiselect ms-header="Seleccionar Usuarios" multiple="true" options="x.name for x in newUsers"
+                                 ng-model="newMembs" show-search="true" ng-disabled="selectedSes.status > 2">
+                    </multiselect>
                 </div>
-                <div ng-show="selectedSes.code != null">
-                    <span class="invitation-code">{{selectedSes.code}}</span>
+                <div class="col-xs-3">
+                    <button class="btn btn-default form-control" ng-click="newMembs = newUsers" ng-disabled="selectedSes.status > 2">
+                        <i class="fa fa-check-square-o"></i> {{'selectAll' | lang}}</button>
                 </div>
-                <br>
-                <hr>
-                <br>
-                <h4>{{'users' | lang}}</h4>
-                <label>{{'bySpecificUsers' | lang}}</label>
-                <div class="row">
-                    <div class="col-xs-6">
-                        <multiselect ms-header="Seleccionar Usuarios" multiple="true" options="x.name for x in newUsers"
-                                     ng-model="newMembs" show-search="true" ng-disabled="selectedSes.status > 2">
-                        </multiselect>
-                    </div>
-                    <div class="col-xs-3">
-                        <button class="btn btn-default form-control" ng-click="newMembs = newUsers" ng-disabled="selectedSes.status > 2">
-                            <i class="fa fa-check-square-o"></i> {{'selectAll' | lang}}</button>
-                    </div>
-                    <div class="col-xs-3">
-                        <button class="btn btn-default form-control" ng-click="addToSession()" ng-disabled="selectedSes.status > 2">
-                            <i class="fa fa-plus"></i> {{'addToSession' | lang}}</button>
-                    </div>
-                </div>
-                <br>
-                <hr>
-                <br>
-                <button class="btn btn-default pull-right" ng-click="refreshUsers()">{{'update' | lang}}</button>
-                <span class="margin-right-24 margin-top-8 pull-right"><strong>Total: </strong> {{ usersArr.length }}</span>
-                <h4>{{'users' | lang}}</h4>
-                <table class="table table-bordered">
-                    <tr><th>{{'user' | lang}}</th><th>Email</th><th>{{'knowledgeType' | lang}}</th><th></th></tr>
-                    <tr ng-repeat="alum in usersArr" ng-class="{'bg-info': alum.role == 'P'}">
-                        <td ng-bind="alum.name"></td>
-                        <td ng-bind="alum.mail"></td>
-                        <td ng-bind="alum.aprendizaje"></td>
-                        <td><button class="btn btn-default btn-sm" ng-click="removeUser(alum.id)" ng-disabled="selectedSes.status > 2"><i class="fa fa-trash"></i></button></td>
-                    </tr>
-                </table>
-                <br/>
-                <hr/>
-                <br>
-                <label>{{'uploadStudentList' | lang}}</label>
-                <div class="input-group">
-                    <input type="file" class="form-control" disabled>
-                    <span class="input-group-btn">
-                    <button class="btn btn-default" disabled>{{'add' | lang}}</button>
-                </span>
+                <div class="col-xs-3">
+                    <button class="btn btn-default form-control" ng-click="addToSession()" ng-disabled="selectedSes.status > 2">
+                        <i class="fa fa-plus"></i> {{'addToSession' | lang}}</button>
                 </div>
             </div>
-            <!-- / USUARIOS -->
-
-            <!-- GRUPOS -->
-            <div class="pad-content" ng-show="selectedTab == 'groups'" ng-controller="GroupController">
-                <h4>{{'groups' | lang}}</h4>
-                <!--<p>Las propuestas de grupo intentan agrupar alumnos con distintos tipos de puntaje</p>-->
-                <br>
-                <label>{{'studentsPerGroup' | lang}}: </label>
-                <input class="form-control form-inline-mini" ng-model="groupNum" type="number" min="2" ng-disabled="selectedSes.grouped">
-                <select class="form-control form-inline-med" ng-options="x.key as x.name for x in methods" ng-disabled="selectedSes.grouped" ng-model="groupMet"></select>
-                <button class="btn btn-default" ng-click="generateGroups()" ng-disabled="selectedSes.grouped">Generar</button>
-                <span ng-show="selectedSes.grouped"> - {{'groupsAreSet' | lang}}</span>
-                <button class="btn btn-default pull-right" ng-click="acceptGroups()" ng-disabled="selectedSes.grouped">{{'setGroups' | lang}}</button>
-                <br>
-                <hr>
-                <br>
-                <h4><span ng-show="!self.selectedSes.grouped">{{'proposeOf' | lang}} </span>{{'groups' | lang}}:</h4>
-                <table class="table table-bordered">
-                    <tr ng-repeat="group in groups">
-                        <td ng-bind="$index + 1"></td>
-                        <td ng-repeat="alum in group">
-                            <strong ng-bind="users[alum.uid || alum.id].name"></strong>
-                            <span class="label label-success" ng-show="alum.score!=null">
-                                {{(selectedSes.type == "L" || selectedSes.type == "M") ? alum.score * 100 : alum.score | number:0}}
-                            </span>
-                            <span class="label label-info" ng-bind="alum.aprendizaje"></span>
-                        </td>
-                    </tr>
-                </table>
-                <hr>
-                <!--<h4 ng-if="!selectedSes.grouped" ng-show="false">Editor de Propuesta de Grupos:</h4>
-                <table class="table table-bordered table-hover" ng-if="!selectedSes.grouped">
-                    <tr ng-repeat="group in groupsProp">
-                        <td ng-bind="$index + 1"></td>
-                        <td ng-repeat="alum in group" class="pointable" ng-click="swapTable($parent.$index,$index)"
-                            ng-class="{'bg-lightgreen': $parent.$index == lastI && $index == lastJ}">
-                            <strong ng-bind="users[alum.uid].name"></strong>
-                            <span class="label label-success">
-                                {{(alum.score!=null)? ((selectedSes.type == "L") ? alum.score * 100 : alum.score) : null | number:0}}
-                            </span>
-                            <span class="label label-info" ng-bind="alum.aprendizaje"></span>
-                        </td>
-                    </tr>
-                </table>-->
+            <br>
+            <hr>
+            <br>
+            <button class="btn btn-default pull-right" ng-click="refreshUsers()">{{'update' | lang}}</button>
+            <span class="margin-right-24 margin-top-8 pull-right"><strong>Total: </strong> {{ usersArr.length }}</span>
+            <h4>{{'users' | lang}}</h4>
+            <table class="table table-bordered">
+                <tr><th>{{'user' | lang}}</th><th>Email</th><th>{{'knowledgeType' | lang}}</th><th></th></tr>
+                <tr ng-repeat="alum in usersArr" ng-class="{'bg-info': alum.role == 'P'}">
+                    <td ng-bind="alum.name"></td>
+                    <td ng-bind="alum.mail"></td>
+                    <td ng-bind="alum.aprendizaje"></td>
+                    <td><button class="btn btn-default btn-sm" ng-click="removeUser(alum.id)" ng-disabled="selectedSes.status > 2"><i class="fa fa-trash"></i></button></td>
+                </tr>
+            </table>
+            <br/>
+<!--                <hr/>-->
+<!--                <br>-->
+<!--                <label>{{'uploadStudentList' | lang}}</label>-->
+<!--                <div class="input-group">-->
+<!--                    <input type="file" class="form-control" disabled>-->
+<!--                    <span class="input-group-btn">-->
+<!--                    <button class="btn btn-default" disabled>{{'add' | lang}}</button>-->
+<!--                </span>-->
             </div>
-            <!-- / GRUPOS -->
+        <!-- / USUARIOS -->
 
-            <!-- RUBRICA -->
-            <div class="pad-content" ng-show="selectedTab == 'rubrica'" ng-controller="RubricaController">
-                <h4>{{'rubricaSpec' | lang}}</h4>
-                <!--<h5>Definir esquema de rúbrica:</h5>-->
-                <table class="table table-bordered">
-                    <tr>
-                        <th>{{'criteria' | lang}}</th>
-                        <th>% {{'pond' | lang}}</th>
-                        <th>{{'notAccomplished' | lang}} (1p)</th>
-                        <th>{{'inProcess' | lang}} (2p)</th>
-                        <th>{{'toAccomplish' | lang}} (3p)</th>
-                        <th>{{'accomplished' | lang}} (4p)</th>
-                        <th ng-if="editable"></th>
-                    </tr>
-                    <tr ng-repeat="criterio in criterios" ng-if="!editable">
-                        <td ng-bind="criterio.name"></td>
-                        <td ng-bind="criterio.pond"></td>
-                        <td ng-bind="criterio.inicio"></td>
-                        <td ng-bind="criterio.proceso"></td>
-                        <td ng-bind="criterio.competente"></td>
-                        <td ng-bind="criterio.avanzado"></td>
-                    </tr>
-                    <tr ng-repeat="criterio in criterios" ng-if="editable">
-                        <td><input ng-model="criterio.name" class="w150"></td>
-                        <td><input ng-model="criterio.pond" class="w50" type="number"></td>
-                        <td><input ng-model="criterio.inicio" class="w150"></td>
-                        <td><input ng-model="criterio.proceso" class="w150"></td>
-                        <td><input ng-model="criterio.competente" class="w150"></td>
-                        <td><input ng-model="criterio.avanzado" class="w150"></td>
-                        <td><button class="btn btn-default btn-sm" ng-if="editable" ng-click="removeCriterio($index)"><i class="fa fa-times"></i></button></td>
-                    </tr>
-                </table>
-                <div class="row">
-                    <div class="col-sm-3 col-sm-offset-6">
-                        <span ng-show="!checkSum()" class="red">{{'sumOfCritnot100p' | lang}}</span>
-                    </div>
-                    <div class="col-sm-3">
-                        <button class="btn btn-default" ng-if="editable" ng-click="addCriterio()" ng-disabled="checkSum()"><i class="fa fa-plus"></i> {{'add' | lang}}</button>
-                        <button class="btn btn-default" ng-disabled="!checkSum() || !editable" ng-click="saveRubrica()">{{'save' | lang}}</button>
-                        <button class="btn btn-default" ng-if="!editable && selectedSes.status == 1" ng-click="startEditing()">{{'edit' | lang}}</button>
-                    </div>
+        <!-- GRUPOS -->
+        <div class="pad-content" ng-show="selectedTab == 'groups'" ng-controller="GroupController">
+            <h4>{{'groups' | lang}}</h4>
+            <!--<p>Las propuestas de grupo intentan agrupar alumnos con distintos tipos de puntaje</p>-->
+            <br>
+            <label>{{'studentsPerGroup' | lang}}: </label>
+            <input class="form-control form-inline-mini" ng-model="groupNum" type="number" min="2" ng-disabled="selectedSes.grouped">
+            <select class="form-control form-inline-med" ng-options="x.key as x.name for x in methods" ng-disabled="selectedSes.grouped" ng-model="groupMet"></select>
+            <button class="btn btn-default" ng-click="generateGroups()" ng-disabled="selectedSes.grouped">Generar</button>
+            <span ng-show="selectedSes.grouped"> - {{'groupsAreSet' | lang}}</span>
+            <button class="btn btn-default pull-right" ng-click="acceptGroups()" ng-disabled="selectedSes.grouped">{{'setGroups' | lang}}</button>
+            <br>
+            <hr>
+            <br>
+            <h4><span ng-show="!self.selectedSes.grouped">{{'proposeOf' | lang}} </span>{{'groups' | lang}}:</h4>
+            <table class="table table-bordered">
+                <tr ng-repeat="group in groups">
+                    <td ng-bind="$index + 1"></td>
+                    <td ng-repeat="alum in group">
+                        <strong ng-bind="users[alum.uid || alum.id].name"></strong>
+                        <span class="label label-success" ng-show="alum.score!=null">
+                            {{(selectedSes.type == "L" || selectedSes.type == "M") ? alum.score * 100 : alum.score | number:0}}
+                        </span>
+                        <span class="label label-info" ng-bind="alum.aprendizaje"></span>
+                    </td>
+                </tr>
+            </table>
+            <hr>
+            <!--<h4 ng-if="!selectedSes.grouped" ng-show="false">Editor de Propuesta de Grupos:</h4>
+            <table class="table table-bordered table-hover" ng-if="!selectedSes.grouped">
+                <tr ng-repeat="group in groupsProp">
+                    <td ng-bind="$index + 1"></td>
+                    <td ng-repeat="alum in group" class="pointable" ng-click="swapTable($parent.$index,$index)"
+                        ng-class="{'bg-lightgreen': $parent.$index == lastI && $index == lastJ}">
+                        <strong ng-bind="users[alum.uid].name"></strong>
+                        <span class="label label-success">
+                            {{(alum.score!=null)? ((selectedSes.type == "L") ? alum.score * 100 : alum.score) : null | number:0}}
+                        </span>
+                        <span class="label label-info" ng-bind="alum.aprendizaje"></span>
+                    </td>
+                </tr>
+            </table>-->
+        </div>
+        <!-- / GRUPOS -->
+
+        <!-- RUBRICA -->
+        <div class="pad-content" ng-show="selectedTab == 'rubrica'" ng-controller="RubricaController">
+            <h4>{{'rubricaSpec' | lang}}</h4>
+            <!--<h5>Definir esquema de rúbrica:</h5>-->
+            <table class="table table-bordered">
+                <tr>
+                    <th>{{'criteria' | lang}}</th>
+                    <th>% {{'pond' | lang}}</th>
+                    <th>{{'notAccomplished' | lang}} (1p)</th>
+                    <th>{{'inProcess' | lang}} (2p)</th>
+                    <th>{{'toAccomplish' | lang}} (3p)</th>
+                    <th>{{'accomplished' | lang}} (4p)</th>
+                    <th ng-if="editable"></th>
+                </tr>
+                <tr ng-repeat="criterio in criterios" ng-if="!editable">
+                    <td ng-bind="criterio.name"></td>
+                    <td ng-bind="criterio.pond"></td>
+                    <td ng-bind="criterio.inicio"></td>
+                    <td ng-bind="criterio.proceso"></td>
+                    <td ng-bind="criterio.competente"></td>
+                    <td ng-bind="criterio.avanzado"></td>
+                </tr>
+                <tr ng-repeat="criterio in criterios" ng-if="editable">
+                    <td><input ng-model="criterio.name" class="w150"></td>
+                    <td><input ng-model="criterio.pond" class="w50" type="number"></td>
+                    <td><input ng-model="criterio.inicio" class="w150"></td>
+                    <td><input ng-model="criterio.proceso" class="w150"></td>
+                    <td><input ng-model="criterio.competente" class="w150"></td>
+                    <td><input ng-model="criterio.avanzado" class="w150"></td>
+                    <td><button class="btn btn-default btn-sm" ng-if="editable" ng-click="removeCriterio($index)"><i class="fa fa-times"></i></button></td>
+                </tr>
+            </table>
+            <div class="row">
+                <div class="col-sm-3 col-sm-offset-6">
+                    <span ng-show="!checkSum()" class="red">{{'sumOfCritnot100p' | lang}}</span>
                 </div>
-                <br><br>
-                <hr>
-                <div ng-show="selectedSes.type == 'L'">
-                <h4>{{'exampleReport' | lang}}</h4>
-                <ul class="list-group">
-                    <li class="list-group-item" ng-repeat="text in exampleReports">
-                        <div class="row">
-                            <div class="col-sm-11 text-justify">
-                                <strong ng-bind="text.title"></strong><br>
-                                <span ng-bind="text.content | limitTo:500"></span>
-                                <span ng-show="text.content.length > 500">...</span>
-                            </div>
-                            <div class="col-sm-1">
-                                <button class="btn btn-default" ng-click="goToReport(text)"><i class="fa fa-edit"></i></button>
-                                <button class="btn btn-default" ng-click="setActiveExampleReport(text)" ng-class="{'btn-success':text.active}">
-                                    <i class="fa fa-share"></i></button>
-                            </div>
+                <div class="col-sm-3">
+                    <button class="btn btn-default" ng-if="editable" ng-click="addCriterio()" ng-disabled="checkSum()"><i class="fa fa-plus"></i> {{'add' | lang}}</button>
+                    <button class="btn btn-default" ng-disabled="!checkSum() || !editable" ng-click="saveRubrica()">{{'save' | lang}}</button>
+                    <button class="btn btn-default" ng-if="!editable && selectedSes.status == 1" ng-click="startEditing()">{{'edit' | lang}}</button>
+                </div>
+            </div>
+            <br><br>
+            <hr>
+            <div ng-show="selectedSes.type == 'L'">
+            <h4>{{'exampleReport' | lang}}</h4>
+            <ul class="list-group">
+                <li class="list-group-item" ng-repeat="text in exampleReports">
+                    <div class="row">
+                        <div class="col-sm-11 text-justify">
+                            <strong ng-bind="text.title"></strong><br>
+                            <span ng-bind="text.content | limitTo:500"></span>
+                            <span ng-show="text.content.length > 500">...</span>
                         </div>
-                    </li>
-                </ul>
-                <h5>{{'add' | lang}} {{'exampleReport' | lang}}:</h5>
-                <input class="form-control" ng-model="newExampleReport.title" placeholder="Titulo" maxlength="20">
-                <textarea rows="5" class="form-control" ng-model="newExampleReport.text" placeholder="Contenido"></textarea>
-                <button class="btn btn-default pull-right" ng-disabled="newExampleReport.text.length==0" ng-click="sendExampleReport()">{{'save' | lang}}</button>
-                <br><br>
-                <hr>
-                </div>
-                <div ng-show="selectedSes.status >= 6">
-                <h4>{{'pairEval' | lang}}</h4>
-                <span ng-show="selectedSes.paired > 0">{{'pairAlreadyAssigned' | lang}}</span>
-                <div ng-hide="selectedSes.paired > 0">
-                    <strong>{{'numOfPairs' | lang}}:</strong>
-                    <input type="number" class="form-control form-inline-mini" min="2" max="8" step="1" ng-model="pairNum">
-                    <button class="btn btn-default" ng-click="pairAssign()">{{'assignPairs' | lang}}</button>
-                </div>
-                <span class="red" ng-bind="errPairMsg"></span>
-                </div>
+                        <div class="col-sm-1">
+                            <button class="btn btn-default" ng-click="goToReport(text)"><i class="fa fa-edit"></i></button>
+                            <button class="btn btn-default" ng-click="setActiveExampleReport(text)" ng-class="{'btn-success':text.active}">
+                                <i class="fa fa-share"></i></button>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+            <h5>{{'add' | lang}} {{'exampleReport' | lang}}:</h5>
+            <input class="form-control" ng-model="newExampleReport.title" placeholder="Titulo" maxlength="20">
+            <textarea rows="5" class="form-control" ng-model="newExampleReport.text" placeholder="Contenido"></textarea>
+            <button class="btn btn-default pull-right" ng-disabled="newExampleReport.text.length==0" ng-click="sendExampleReport()">{{'save' | lang}}</button>
+            <br><br>
+            <hr>
             </div>
-            <!-- / RUBRICA -->
-
-            <!-- OPTIONS --
-            <div class="pad-content" ng-show="selectedTabConfig == 'options' && updateConf()" ng-controller="OptionsController">
-
+            <div ng-show="selectedSes.status >= 6">
+            <h4>{{'pairEval' | lang}}</h4>
+            <span ng-show="selectedSes.paired > 0">{{'pairAlreadyAssigned' | lang}}</span>
+            <div ng-hide="selectedSes.paired > 0">
+                <strong>{{'numOfPairs' | lang}}:</strong>
+                <input type="number" class="form-control form-inline-mini" min="2" max="8" step="1" ng-model="pairNum">
+                <button class="btn btn-default" ng-click="pairAssign()">{{'assignPairs' | lang}}</button>
             </div>
-            <!-- /OPTIONS -->
+            <span class="red" ng-bind="errPairMsg"></span>
+            </div>
+        </div>
+        <!-- / RUBRICA -->
 
-        <!-- / CONFIGURACION -->
+        <!-- OPTIONS -->
+<!--            <div class="pad-content" ng-show="selectedTabConfig == 'options' && updateConf()" ng-controller="OptionsController">-->
+
+<!--            </div>-->
+        <!-- /OPTIONS -->
+
 
         <!-- DASHBOARDS -->
         <div class="pad-content" ng-show="selectedTab == 'dashboard'" ng-controller="DashboardController">
@@ -763,6 +713,7 @@
                 <nvd3 options="barOpts" data="barData" ng-hide="iterationIndicator == 0 || iterationIndicator == 4"></nvd3>
             </div>
             <div class="pull-right margin-ver-8" ng-show="selectedSes.type == 'E'">
+                <button class="btn btn-success" ng-click="exportCSV()">{{ 'export' | lang }} CSV</button>
                 <button class="btn btn-default" ng-click="updateState()">{{'update' | lang}}</button>
             </div>
             <div class="row" ng-show="iterationIndicator < 5 && (selectedSes.type == 'L' || selectedSes.type == 'M')">
@@ -800,7 +751,6 @@
                     <td></td>
                 </tr>
             </table>
-
             <br>
             <table class="table table-bordered" ng-if="selectedSes.type == 'S'">
                 <tr>
@@ -975,16 +925,18 @@
                     </tbody>
                 </table>
             </div>
+            <!-- ROLEPLAYING DASHBOARD -->
+
         </div>
         <!-- / DASHBOARDS -->
 
-        <!-- DASHBOARDS RUBRICA --
-        <div class="pad-content" ng-show="selectedTab == 2" ng-controller="DashboardRubricaController">
-            <h4>{{'results' | lang}} {{'rubrica' | lang}}</h4>
-            <button class="pull-right btn btn-default" ng-click="getAllReportResult()">{{'update' | lang}}</button>
-            <nvd3 options="barOpts" data="barData"></nvd3>
-            <hr>
-        </div>
+        <!-- DASHBOARDS RUBRICA -->
+<!--        <div class="pad-content" ng-show="selectedTab == 2" ng-controller="DashboardRubricaController">-->
+<!--            <h4>{{'results' | lang}} {{'rubrica' | lang}}</h4>-->
+<!--            <button class="pull-right btn btn-default" ng-click="getAllReportResult()">{{'update' | lang}}</button>-->
+<!--            <nvd3 options="barOpts" data="barData"></nvd3>-->
+<!--            <hr>-->
+<!--        </div>-->
         <!-- / DASHBOARDS RUBRICA -->
 
     </div>

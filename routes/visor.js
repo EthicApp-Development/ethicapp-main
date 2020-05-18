@@ -373,4 +373,36 @@ router.post("/delete-idea", rpg.execSQL({
     sqlParams: [rpg.param("ses", "uid"), rpg.param("post", "id")]
 }));
 
+router.post("/get-chat-data-csv", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select c.id, d.orden as df, d.title, d.tleft as opt_left, d.tright as opt_right, u.id as user_id, u.name, " +
+        "t.id as team, c.content as message, c.stime as time, c.parent_id as reply_to from differential as d, " +
+        "differential_chat as c, users as u, teams as t, teamusers as tu where c.did = d.id and d.sesid = $1 and " +
+        "u.id = c.uid and t.sesid = $2 and tu.tmid = t.id and tu.uid = u.id order by t.id, c.stime",
+    onStart: (ses, data, calc) => {
+        if (ses.role != "P") {
+            console.log("ERR: Solo profesor puede ver datos de sesiones.");
+            return "select $1, $2";
+        }
+    },
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "sesid"), rpg.param("post", "sesid")]
+}));
+
+router.post("/get-sel-data-csv", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select s.id, d.orden as df, d.title, d.tleft as opt_left, d.tright as opt_right, u.id as user_id, u.name, " +
+        "t.id as team, s.sel, s.comment, s.stime as time, s.iteration from differential as d, differential_selection " +
+        "as s, users as u, teams as t, teamusers as tu where s.did = d.id and d.sesid = $1 and u.id = s.uid and " +
+        "t.sesid = $2 and tu.tmid = t.id and tu.uid = u.id order by s.iteration, s.stime",
+    onStart: (ses, data, calc) => {
+        if (ses.role != "P") {
+            console.log("ERR: Solo profesor puede ver datos de sesiones.");
+            return "select $1, $2";
+        }
+    },
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "sesid"), rpg.param("post", "sesid")]
+}));
+
 module.exports = router;

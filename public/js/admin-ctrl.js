@@ -280,6 +280,10 @@ adpp.controller("TabsController", function ($scope, $http) {
             self.iterationNames = [{ name: "individual", val: 1 }, { name: "anon", val: 2 }, { name: "teamWork", val: 3 }];
             self.tabOptions = ["editor", "users", "groups", "dashboard"];
             self.sesStatusses = ["configuration", "individual", "anon", "teamWork", "finished"];
+        } else if (self.selectedSes.type == "R") {
+            self.iterationNames = [];
+            self.tabOptions = ["editor", "users", "dashboard"];
+            self.sesStatusses = ["configuration"];
         }
         if (self.selectedSes.status > 1) {
             self.selectedTab = "dashboard";
@@ -1573,6 +1577,34 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             });
         });
     };
+
+    self.exportCSV = function(){
+        console.log("Exporting CSV");
+        var postdata = {
+            sesid: self.selectedSes.id
+        };
+        $http.post("get-sel-data-csv", postdata).success(function (res) {
+            if(res != null && res.length > 0) {
+                saveCsv(res, {
+                    filename: "seleccion_" + self.selectedSes.id + ".csv",
+                    formatter: function(v){
+                        return v == null ? "" : "" + v;
+                    }
+                });
+            }
+        });
+        $http.post("get-chat-data-csv", postdata).success(function (res) {
+            if(res != null && res.length > 0) {
+                saveCsv(res, {
+                    filename: "chat_" + self.selectedSes.id + ".csv",
+                    formatter: function(v){
+                        return v == null ? "" : "" + v;
+                    }
+                });
+            }
+        });
+    }
+
 });
 
 adpp.controller("MapSelectionModalController", function ($scope, $uibModalInstance) {

@@ -1,21 +1,22 @@
 <div>
     <div class="modal-header">
-        <h4>Nueva Sesión</h4>
+        <h4>{{ 'new' | lang }} {{ 'session' | lang }}</h4>
     </div>
     <form action="add-session" method="post" class="modal-body">
-        <label>Titulo:</label>
+        <label>{{ 'title' | lang }}:</label>
         <input type="text" class="form-control" name="name">
-        <label>Tipo de actividad:</label>
+        <label>{{ 'activityType' | lang }}:</label>
         <select name="type" class="form-control">
-            <!-- <option value="L">Lectura - Ideas Fuerza</option> -->
-            <option value="M">Lectura - Unidades Semánticas</option>
-            <option value="S">Selección Múltiple</option>
-            <option value="E">Diferenciales Éticos</option>
+            <!-- <option value="L">Lectura - Ideas Fuerza</option>-->
+            <option value="M">{{ 'semUnits' | lang }}</option>
+            <option value="S">{{ 'multSel' | lang }}</option>
+            <option value="E">{{ 'ethics' | lang }}</option>
+            <option value="R">{{ 'rolePlaying' | lang }}</option>
         </select>
         <!--<label>Factor detonante:</label>
         <textarea name="descr" class="form-control" rows="3"></textarea>-->
         <hr>
         <br>
-        <button class="btn btn-primary" type="submit">Agregar</button>
+        <button class="btn btn-primary" type="submit">{{ 'add' | lang}}</button>
     </form>
 </div>
