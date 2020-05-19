@@ -806,7 +806,7 @@ ng-quill-editor.large .ql-editor{
     padding: 4px 2px;
     border-top: 8px solid #eee;
     border-bottom: 1px solid #ddd;
-    opacity: 0.8;
+    opacity: 0.7;
 }
 
 .qs-tabs .tab.wide {
@@ -1118,4 +1118,21 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 .chat-inv{
     display: block;
     height: 30vh;
+}
+
+.sub-tab-content{
+    padding: 16px;
+    border: 8px solid #eee;
+    border-top: none;
+}
+
+.top-tab-content{
+    border-top: 8px solid #eee;
+    max-height: 44px;
+}
+
+.row-border{
+    margin: 4px 0;
+    padding: 4px 0;
+    border-bottom: 1px solid #eee;
 }

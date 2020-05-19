@@ -18,7 +18,7 @@ router.get("/seslist", (req, res) => {
 
 router.post("/get-session-list", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select * from (select distinct s.id, s.name, s.descr, s.status, s.type, s.time, s.code, s.options, (s.id in (select sesid from teams)) as grouped, (select count(*) from report_pair where sesid = s.id) as paired, sr.stime from sessions as s left outer join status_record as sr on sr.sesid = s.id and s.status = sr.status, " +
+    sql: "select * from (select distinct s.id, s.name, s.descr, s.status, s.type, s.time, s.code, s.options, s.archived, (s.id in (select sesid from teams)) as grouped, (select count(*) from report_pair where sesid = s.id) as paired, sr.stime from sessions as s left outer join status_record as sr on sr.sesid = s.id and s.status = sr.status, " +
         "sesusers as su, users as u where su.uid = $1 and (options like 'X%') is not true and u.id = su.uid and su.sesid = s.id) as v order by v.time desc",
     sesReqData: ["uid"],
     sqlParams: [rpg.param("ses", "uid")]
@@ -509,6 +509,13 @@ router.post("/generate-session-code", rpg.singleSQL({
     onStart: (ses, data, calc) => {
         calc.code = generateCode(data.id);
     }
+}));
+
+router.post("/archive-session", rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: "update sessions set archived = $1 where id = $2",
+    postReqData: ["sesid", "val"],
+    sqlParams: [rpg.param("post", "val"), rpg.param("post", "sesid")],
 }));
 
 router.post("/enter-session-code", rpg.singleSQL({

@@ -240,11 +240,12 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.init();
 });
 
-adpp.controller("TabsController", function ($scope, $http) {
+adpp.controller("TabsController", function ($scope, $http, Notification) {
     var self = $scope;
     self.tabOptions = [];
     self.tabConfig = ["users", "groups"];
     self.selectedTab = '';
+    self.archivedTab = false;
 
     self.shared.resetTab = function () {
         self.selectedTab = "editor";
@@ -311,6 +312,33 @@ adpp.controller("TabsController", function ($scope, $http) {
     self.shared.gotoRubrica = function () {
         self.selectedTab = "rubrica";
     };
+
+    self.archTab = function(v){
+        self.archivedTab = v;
+    };
+
+    self.currentSessions = function(){
+        return self.sessions.filter(e => !!e.archived == self.archivedTab);
+    };
+
+    self.archiveSes = function(ses, $event){
+        $event.stopPropagation();
+        var postdata = { sesid: ses.id, val: true };
+        $http({ url: "archive-session", method: "post", data: postdata }).success(function (data) {
+            Notification.info("Sesión archivada");
+            ses.archived = true;
+        });
+    };
+
+    self.restoreSes = function(ses, $event){
+        $event.stopPropagation();
+        var postdata = { sesid: ses.id, val: false };
+        $http({ url: "archive-session", method: "post", data: postdata }).success(function (data) {
+            Notification.info("Sesión restaurada");
+            ses.archived = false;
+        });
+    };
+
 });
 
 adpp.controller("DocumentsController", function ($scope, $http, Notification, $timeout) {
@@ -1579,7 +1607,6 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     };
 
     self.exportCSV = function(){
-        console.log("Exporting CSV");
         var postdata = {
             sesid: self.selectedSes.id
         };
@@ -1592,6 +1619,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     }
                 });
             }
+            else {
+                Notification.error("No hay datos de selección para exportar");
+            }
         });
         $http.post("get-chat-data-csv", postdata).success(function (res) {
             if(res != null && res.length > 0) {
@@ -1601,6 +1631,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                         return v == null ? "" : "" + v;
                     }
                 });
+            }
+            else {
+                Notification.error("No hay datos de chat para exportar");
             }
         });
     }
@@ -2332,6 +2365,8 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
 
     init();
 }]);
+
+adpp.controller("StagesController", ["$scope", "$http", "Notification", window.StagesController]);
 
 adpp.filter('htmlExtractText', function () {
     return function (text) {
