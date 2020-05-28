@@ -1122,17 +1122,30 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 
 .sub-tab-content{
     padding: 16px;
-    border: 8px solid #eee;
+    border: 8px solid #bbb;
     border-top: none;
 }
 
 .top-tab-content{
-    border-top: 8px solid #eee;
+    border-top: 8px solid #bbb;
     max-height: 44px;
 }
 
 .row-border{
     margin: 4px 0;
     padding: 4px 0;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #bbb;
+}
+
+.bg-darkgray{
+    background: #bbb;
+}
+
+.drag-item{
+    padding: 8px;
+}
+
+.h30{
+    height: 30px;
+    padding: 5px;
 }

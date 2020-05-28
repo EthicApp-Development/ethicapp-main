@@ -146,6 +146,22 @@ router.get("/differential", (req, res) => {
         res.redirect(".");
 });
 
+router.get("/to-role", (req, res) => {
+    if (req.session.uid) {
+        req.session.ses = req.query.sesid;
+        res.redirect("role-playing");
+    }
+    else
+        res.redirect(".");
+});
+
+router.get("/role-playing", (req, res) => {
+    if (req.session.uid && req.session.ses)
+        res.render("roles");
+    else
+        res.redirect(".");
+});
+
 router.post("/get-documents", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select id, title, path from documents where sesid = $1 and active = true",

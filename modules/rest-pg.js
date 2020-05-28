@@ -23,6 +23,21 @@ function smartArrayConvert(sqlParams, ses, data, calc) {
     return arr;
 }
 
+var DB = null;
+
+function getDBInstance(dbcon){
+    if(DB == null) {
+        DB = new pg.Client(dbcon);
+        DB.connect();
+        DB.on("error", function(err){
+            console.error(err);
+            DB = null;
+        });
+        return DB;
+    }
+    return DB;
+}
+
 /**
  * Returns a sql statement parameter
  * @param t type of parameter (plain, post or ses)
@@ -92,8 +107,7 @@ module.exports.execSQL = function (params) {
                     }
                 }
             }
-            var db = new pg.Client(params.dbcon);
-            db.connect();
+            var db = getDBInstance(params.dbcon);
             var sql = "";
             if (params.onStart != null)
                 sql = params.onStart(ses, data, calc) || params.sql;
@@ -114,7 +128,7 @@ module.exports.execSQL = function (params) {
                     res.send('{"status":"ok"}');
                 if (!params.preventResEnd)
                     res.end();
-                db.end();
+                // db.end();
             });
             qry.on("error", function(err){
                 console.error("[DB Error]: ", err);
@@ -165,8 +179,7 @@ module.exports.nExecSQL = function (params) {
                 }
             }
         }
-        var db = new pg.Client(params.dbcon);
-        db.connect();
+        var db = getDBInstance(params.dbcon);
         for(var i = 0; i < total; i++){
             var sql = "";
             if (params.onStart != null)
@@ -189,7 +202,7 @@ module.exports.nExecSQL = function (params) {
                     else
                         res.send('{"status":"ok"}');
                     res.end();
-                    db.end();
+                    // db.end();
                 }
             });
         }
@@ -247,8 +260,7 @@ module.exports.singleSQL = function (params) {
                 }
             }
         }
-        var db = new pg.Client(params.dbcon);
-        db.connect();
+        var db = getDBInstance(params.dbcon);
         if (params.onStart != null)
             params.onStart(ses, data, calc);
         var sql = params.sql;
@@ -278,7 +290,7 @@ module.exports.singleSQL = function (params) {
             }
             if (!params.preventResEnd)
                 res.end();
-            db.end();
+            // db.end();
         });
         qry.on("error", function(err){
             console.error("[DB Error]: ", err);
@@ -341,8 +353,7 @@ module.exports.multiSQL = function (params) {
                 }
             }
         }
-        var db = new pg.Client(params.dbcon);
-        db.connect();
+        var db = getDBInstance(params.dbcon);
         if (params.onStart != null)
             params.onStart(ses, data, calc);
         var sql = params.sql;
@@ -371,7 +382,7 @@ module.exports.multiSQL = function (params) {
                 res.send(JSON.stringify(arr));
             if (!params.preventResEnd)
                 res.end();
-            db.end();
+            // db.end();
         });
         qry.on("error", function(err){
             console.error("[DB Error]: ", err);

@@ -74,11 +74,11 @@
         <div class="qs-tabs" ng-show="iteration > 0 || myRole == 'P'">
             <div class="tab tab-text" ng-repeat="doc in documents" ng-class="{active: selectedDocument == $index && showDoc}"
                  ng-click="selectDocument($index)">
-                {{doc.title | limitTo:10}}
+                <i class="fa fa-book"></i> {{doc.title | limitTo:10}}
             </div>
             <div class="tab tab-text" ng-repeat="df in dfs" ng-class="{active: selectedDF + 1 == df.orden && !showDoc, 'green': !df.dirty && df.select != null}"
                  ng-click="selectDF($index)">
-                DS{{df.orden}} <span class="badge bg-red" ng-show="df.c != null && df.c > df.cr">{{df.c - df.cr}}</span>
+                <i class="fa fa-question-circle"></i> Pregunta {{df.orden}} <span class="badge bg-red" ng-show="df.c != null && df.c > df.cr">{{df.c - df.cr}}</span>
             </div>
             <!--<div class="btab"></div>
             <div class="rtab">
@@ -123,18 +123,18 @@
             <!--<h4>DF{{dfs[selectedDF].orden}}</h4>-->
             <div class="differential margin-top-n12">
                 <h5 class="text-center">
-                    <strong>{{dfs[selectedDF].title}}</strong>
+                    <span>{{dfs[selectedDF].title}}</span>
                 </h5>
                 <div class="row row-min-padding">
                     <div class="col-xs-3 text-right">
-                        <span class="break-words">{{dfs[selectedDF].tleft}}</span>
+                        <strong class="break-words">{{dfs[selectedDF].tleft}}</strong>
                     </div>
                     <div class="dopts col-xs-6">
                         <div class="option eq-space hoverable" ng-repeat="i in [1,2,3,4,5,6,7]" ng-click="dfSelect(i)"
                              ng-class="{selected: dfs[selectedDF].select == i}">{{i}}</div>
                     </div>
                     <div class="col-xs-3">
-                        <span class="break-words">{{dfs[selectedDF].tright}}</span>
+                        <strong class="break-words">{{dfs[selectedDF].tright}}</strong>
                     </div>
                 </div>
                 <div class="input-group margin-top-28">

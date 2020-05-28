@@ -130,5 +130,14 @@
   "discussion": "Discusión",
   "actGenDesc": "Descripción General de la Actividad",
   "stages": "Etapas",
+  "stage": "Etapa",
+  "role": "Rol",
+  "roles": "Roles",
+  "order": "órden",
+  "orders": "órdenes",
+  "justify": "Justificar",
+  "justifyAll": "Justificar todos los",
+  "viewPastSes": "Ver respuestas de etapas anteriores",
+  "startStage": "Comenzar etapa",
   "archived": "Archivadas"
 }
