@@ -98,6 +98,7 @@
   "invitationCode": "Código de Invitación",
   "invitationCodeNotActived": "El código de invitación no está activo en esta sesión",
   "generateCode": "Generar código",
+  "generate": "Generar",
   "editor": "Editor",
   "rubricCalib": "Calibración de Rúbrica",
   "reportOf": "Reporte de",
@@ -139,5 +140,8 @@
   "justifyAll": "Justificar todos los",
   "viewPastSes": "Ver respuestas de etapas anteriores",
   "startStage": "Comenzar etapa",
+  "type": "Tipo",
+  "listOf": "Lista de",
+  "actors": "Actores",
   "archived": "Archivadas"
 }

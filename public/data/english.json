@@ -97,6 +97,7 @@
   "invitationCode": "Invitation code",
   "invitationCodeNotActived": "Invitation code is not actived in this session",
   "generateCode": "Generate code",
+  "generate": "Generate",
   "editor": "Editor",
   "rubricCalib": "Rubric Calibration",
   "reportOf": "Report of",
@@ -138,5 +139,8 @@
   "justifyAll": "Justify all",
   "viewPastSes": "Show answers from previous stages",
   "startStage": "Start stage",
+  "type": "Type",
+  "listOf": "List of",
+  "actors": "Actors",
   "archived": "Archived"
 }

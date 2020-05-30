@@ -529,130 +529,145 @@
                 </form>
                 <br>
                 <hr>
-                <div ng-controller="StagesController">
-                    <h4>{{ 'stages' | lang }}</h4>
-                    <div class="qs-tabs bg-darkgray pad-content top-tab-content">
-                        <div class="tab tab-text tab-text-lg green" ng-repeat="stage in stages" ng-click="setCurrentStage($index)"
-                             ng-class="{'active': currentStage == $index}">
-                            {{ 'stage' | lang }} {{ stage.number }}
-                        </div>
-                        <div class="tab tab-text tab-text-lg yellow" ng-click="setCurrentStage(-1)"
-                             ng-class="{'active': currentStage == -1}">
-                            {{ 'add' | lang }} {{ 'stage' | lang }}
-                        </div>
+            </div>
+            <div ng-controller="StagesController" ng-if="selectedSes.type == 'R'">
+                <h4>{{ 'stages' | lang }}</h4>
+                <div class="qs-tabs bg-darkgray pad-content top-tab-content">
+                    <div class="tab tab-text tab-text-lg green" ng-repeat="stage in stages" ng-click="setCurrentStage($index)"
+                         ng-class="{'active': currentStage == $index}">
+                        {{ 'stage' | lang }} {{ stage.number }}
                     </div>
-                    <div class="sub-tab-content">
-                        <div class="row row-border">
-                            <div class="col-sm-5">
-                                <h4>{{ 'roles' | lang }}</h4>
-                            </div>
-                            <div class="col-sm-3 text-center">
-                                <button class="btn btn-default" ng-click="setAllRolesType('role')">
-                                    {{ 'justifyAll' | lang }} {{ 'roles' | lang }}
-                                </button>
-                            </div>
-                            <div class="col-sm-3 text-center">
-                                <button class="btn btn-default" ng-click="setAllRolesType('order')">
-                                    {{ 'justifyAll' | lang }} {{ 'orders' | lang }}
-                                </button>
-                            </div>
-                            <div class="col-sm-1">
-
-                            </div>
-                        </div>
-                        <div class="row row-border" ng-repeat="role in roles">
-                            <div class="col-sm-5">
-                                <input class="form-control" ng-model="role.name">
-                            </div>
-                            <div class="col-sm-3 text-center">
-                                <button class="btn btn-default" ng-class="{'btn-primary': role.type == 'role'}"
-                                    ng-click="role.type = 'role'">
-                                    {{ 'justify' | lang }} {{ 'role' | lang }}
-                                </button>
-                            </div>
-                            <div class="col-sm-3 text-center">
-                                <button class="btn btn-default" ng-class="{'btn-primary': role.type == 'order'}"
-                                        ng-click="role.type = 'order'">
-                                    {{ 'justify' | lang }} {{ 'order' | lang }}
-                                </button>
-                            </div>
-                            <div class="col-sm-1">
-                                <button class="btn btn-default">
-                                    <i class="fa fa-trash" ng-click="removeRole($index)"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-sm-12 text-center">
-                                <button class="btn btn-default" ng-click="addRole()">
-                                    <i class="fa fa-plus"></i> {{ 'add' | lang }} {{ 'role' | lang }}
-                                </button>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-sm-12">
-                                <h4>{{ 'stage' | lang }} {{ 'configuration' | lang }}</h4>
-                            </div>
-                            <div class="col-sm-4">
-                                <label>Tipo:</label>
-                                <button class="btn btn-default" ng-class="{'btn-primary': stage.type == 'individual'}"
-                                        ng-click="stage.type = 'individual'">
-                                    {{ 'individual' | lang }}
-                                </button>
-                                <button class="btn btn-default" ng-class="{'btn-primary': stage.type == 'team'}"
-                                        ng-click="stage.type = 'team'">
-                                    {{ 'teamWork' | lang }}
-                                </button>
-                            </div>
-                            <div class="col-sm-4" ng-if="stage.type == 'team'">
-                                <label>Chat:</label>
-                                <button class="btn btn-default" ng-class="{'btn-success': stage.chat}"
-                                        ng-click="stage.chat = true">
-                                    <i class="fa fa-check"></i>
-                                </button>
-                                <button class="btn btn-default" ng-class="{'btn-danger': !stage.chat}"
-                                        ng-click="stage.chat = false">
-                                    <i class="fa fa-remove"></i>
-                                </button>
-                            </div>
-                            <div class="col-sm-4" ng-if="stage.type == 'team'">
-                                <label>{{ 'anon' | lang }}:</label>
-                                <button class="btn btn-default" ng-class="{'btn-success': stage.anon}"
-                                        ng-click="stage.anon = true">
-                                    <i class="fa fa-check"></i>
-                                </button>
-                                <button class="btn btn-default" ng-class="{'btn-danger': !stage.anon}"
-                                        ng-click="stage.anon = false">
-                                    <i class="fa fa-remove"></i>
-                                </button>
-                            </div>
-                            <div class="col-sm-12" ng-if="stage.type == 'team'">
-                                <label>{{ 'viewPastSes' | lang }}:</label>
-                                <br>
-                                <select multiple ng-model="stage.prevResponses"
-                                        ng-options="s.id as 'Stage ' + ($index + 1) for s in stages"></select>
-                            </div>
-                        </div>
-                        <div class="row" ng-if="stage.type == 'team'">
-                            <div class="col-sm-12">
-                                <label>{{'studentsPerGroup' | lang}}: </label>
-                                <input class="form-control form-inline-mini" ng-model="groupNum" type="number" min="2" ng-disabled="selectedSes.grouped">
-                                <select class="form-control form-inline-med" ng-options="x.key as x.name for x in methods" ng-disabled="selectedSes.grouped" ng-model="groupMet"></select>
-                                <button class="btn btn-default" ng-click="generateGroups()" ng-disabled="selectedSes.grouped">Generar</button>
-                                <span ng-show="selectedSes.grouped"> - {{'groupsAreSet' | lang}}</span>
-                                <button class="btn btn-default pull-right" ng-click="acceptGroups()" ng-disabled="selectedSes.grouped">{{'setGroups' | lang}}</button>
-                            </div>
-                        </div>
-                        <div class="row margin-top-24">
-                            <div class="col-sm-12">
-                                <button class="btn btn-primary pull-right margin-right-8" ng-click="sendStage()">
-                                    {{ 'startStage' | lang }}
-                                </button>
-                            </div>
-                        </div>
+                    <div class="tab tab-text tab-text-lg yellow" ng-click="setCurrentStage(-1)"
+                         ng-class="{'active': currentStage == -1}">
+                        {{ 'add' | lang }} {{ 'stage' | lang }}
                     </div>
-                    <div style="height: 80px"></div>
                 </div>
+                <div class="sub-tab-content">
+                    <div class="row row-border">
+                        <div class="col-sm-5">
+                            <h4>{{ 'listOf' | lang }} {{ 'roles' | lang }}/{{ 'actors' | lang }}</h4>
+                        </div>
+                        <div class="col-sm-3 text-center">
+                            <button class="btn btn-default" ng-click="setAllRolesType('role')" ng-disabled="readonly">
+                                {{ 'justifyAll' | lang }} {{ 'roles' | lang }}
+                            </button>
+                        </div>
+                        <div class="col-sm-3 text-center">
+                            <button class="btn btn-default" ng-click="setAllRolesType('order')" ng-disabled="readonly">
+                                {{ 'justifyAll' | lang }} {{ 'orders' | lang }}
+                            </button>
+                        </div>
+                        <div class="col-sm-1">
+
+                        </div>
+                    </div>
+                    <div class="row row-border" ng-repeat="role in roles">
+                        <div class="col-sm-5">
+                            <input class="form-control" ng-model="role.name" ng-disabled="readonly">
+                        </div>
+                        <div class="col-sm-3 text-center">
+                            <button class="btn btn-default" ng-class="{'btn-primary': role.type == 'role'}"
+                                ng-click="role.type = 'role'" ng-disabled="readonly">
+                                {{ 'justify' | lang }} {{ 'role' | lang }}
+                            </button>
+                        </div>
+                        <div class="col-sm-3 text-center">
+                            <button class="btn btn-default" ng-class="{'btn-primary': role.type == 'order'}"
+                                    ng-click="role.type = 'order'" ng-disabled="readonly">
+                                {{ 'justify' | lang }} {{ 'order' | lang }}
+                            </button>
+                        </div>
+                        <div class="col-sm-1">
+                            <button class="btn btn-default">
+                                <i class="fa fa-trash" ng-click="removeRole($index)" ng-disabled="readonly"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-12 text-center">
+                            <button class="btn btn-default" ng-click="addRole()" ng-disabled="readonly">
+                                <i class="fa fa-plus"></i> {{ 'add' | lang }} {{ 'role' | lang }}
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <h4>{{ 'stage' | lang }} {{ 'configuration' | lang }}</h4>
+                        </div>
+                        <div class="col-sm-4">
+                            <label>{{ 'type' | lang }}:</label>
+                            <button class="btn btn-default" ng-class="{'btn-primary': stage.type == 'individual'}"
+                                    ng-click="stage.type = 'individual'" ng-disabled="readonly">
+                                {{ 'individual' | lang }}
+                            </button>
+                            <button class="btn btn-default" ng-class="{'btn-primary': stage.type == 'team'}"
+                                    ng-click="setGroupal()" ng-disabled="readonly">
+                                {{ 'teamWork' | lang }}
+                            </button>
+                        </div>
+                        <div class="col-sm-4" ng-if="stage.type == 'team'">
+                            <label>Chat:</label>
+                            <button class="btn btn-default" ng-class="{'btn-success': stage.chat}"
+                                    ng-click="stage.chat = true" ng-disabled="readonly">
+                                <i class="fa fa-check"></i>
+                            </button>
+                            <button class="btn btn-default" ng-class="{'btn-danger': !stage.chat}"
+                                    ng-click="stage.chat = false" ng-disabled="readonly">
+                                <i class="fa fa-remove"></i>
+                            </button>
+                        </div>
+                        <div class="col-sm-4" ng-if="stage.type == 'team'">
+                            <label>{{ 'anon' | lang }}:</label>
+                            <button class="btn btn-default" ng-class="{'btn-success': stage.anon}"
+                                    ng-click="stage.anon = true" ng-disabled="readonly">
+                                <i class="fa fa-check"></i>
+                            </button>
+                            <button class="btn btn-default" ng-class="{'btn-danger': !stage.anon}"
+                                    ng-click="stage.anon = false" ng-disabled="readonly">
+                                <i class="fa fa-remove"></i>
+                            </button>
+                        </div>
+                        <div class="col-sm-12 margin-top-8" ng-if="stage.type == 'team'">
+                            <label>{{ 'viewPastSes' | lang }}:</label>
+                            <multiselect multiple="true" options="s.id as ('Stage ' + s.number) for s in stages"
+                                         ng-model="stage.prevResponses" show-search="true" ng-disabled="readonly"
+                                         style="width: 50vw !important; display: inline-block;">
+                            </multiselect>
+                        </div>
+                    </div>
+                    <div class="row margin-top-8" ng-if="stage.type == 'team'">
+                        <div class="col-sm-12">
+                            <label>{{'studentsPerGroup' | lang}}: </label>
+                            <input class="form-control form-inline-mini" ng-model="groupopt.num" type="number" min="2" ng-disabled="selectedSes.grouped">
+                            <select class="form-control form-inline-med" ng-options="x.key as x.name for x in methods" ng-disabled="selectedSes.grouped" ng-model="groupopt.met"></select>
+                            <button class="btn btn-default" ng-click="generateGroups()" ng-disabled="selectedSes.grouped">{{ 'generate' | lang }}</button>
+                            <span ng-show="selectedSes.grouped"> - {{'groupsAreSet' | lang}}</span>
+                            <button class="btn btn-default pull-right" ng-click="acceptGroups()" ng-disabled="selectedSes.grouped">{{'setGroups' | lang}}</button>
+                        </div>
+                        <div class="col-sm-12">
+                            <table class="table table-bordered">
+                                <tr ng-repeat="group in groups">
+                                    <td ng-bind="$index + 1"></td>
+                                    <td ng-repeat="alum in group">
+                                        <strong ng-bind="users[alum.uid || alum.id].name"></strong>
+                                        <span class="label label-success" ng-show="alum.score!=null">
+                                            {{(selectedSes.type == "L" || selectedSes.type == "M") ? alum.score * 100 : alum.score | number:0}}
+                                        </span>
+                                        <span class="label label-info" ng-bind="alum.aprendizaje"></span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="row margin-top-24">
+                        <div class="col-sm-12">
+                            <button class="btn btn-primary pull-right margin-right-8" ng-click="sendStage()">
+                                {{ 'startStage' | lang }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div style="height: 80px"></div>
             </div>
         </div>
         <!--<br>

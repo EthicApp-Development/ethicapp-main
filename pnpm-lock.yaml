@@ -11,15 +11,15 @@ dependencies:
   nodemailer: 6.1.0
   pg: 6.4.2
   serve-favicon: 2.3.2
+  session-file-store: 1.4.0
   simple-stats-server: 0.0.5
   socket.io: 2.2.0
 devDependencies:
   babel-minify: 0.5.0
   babel-preset-babili: 1.0.0
   babel-preset-es2015: 6.24.1
-  heapdump: 0.3.12
   supertest: 2.0.1
-lockfileVersion: 5
+lockfileVersion: 5.1
 packages:
   /@babel/code-frame/7.0.0:
     dependencies:
@@ -713,6 +713,10 @@ packages:
     dev: false
     resolution:
       integrity: sha1-MasayLEpNjRj41s+u2n038+6eUc=
+  /bagpipe/0.3.5:
+    dev: false
+    resolution:
+      integrity: sha1-40HRZPyyTN8E6n4Ft2XsEMiupqE=
   /base64-arraybuffer/0.1.5:
     dev: false
     engines:
@@ -1178,6 +1182,16 @@ packages:
       node: '>= 0.6'
     resolution:
       integrity: sha1-ZR+DjiJCTnVm3hYdg1jKoZn4PU8=
+  /fs-extra/8.1.0:
+    dependencies:
+      graceful-fs: 4.2.4
+      jsonfile: 4.0.0
+      universalify: 0.1.2
+    dev: false
+    engines:
+      node: '>=6 <7 || >=8'
+    resolution:
+      integrity: sha512-yhlQgA6mnOJUKOsRUFsgJdQCvkKhcz8tlZG5HBQfReYZy46OwLcY+Zia0mtdHsOo9y/hP+CxMN0TU9QxoOtG4g==
   /fs-readdir-recursive/1.1.0:
     dev: true
     resolution:
@@ -1204,6 +1218,10 @@ packages:
       node: '>=0.10.0'
     resolution:
       integrity: sha512-S0nG3CLEQiY/ILxqtztTWH/3iRRdyBLw6KMDxnKMchrtbj2OFmehVh0WUCfW3DUrIgx/qFrJPICrq4Z4sTR9UQ==
+  /graceful-fs/4.2.4:
+    dev: false
+    resolution:
+      integrity: sha512-WjKPNJF79dtJAVniUlGGWHYGz2jWxT6VhN/4m1NdkbZ2nOsEF+cI1Edgql5zCRhs/VsQYRvrXctxktVXZUkixw==
   /has-ansi/2.0.0:
     dependencies:
       ansi-regex: 2.1.1
@@ -1242,15 +1260,6 @@ packages:
       node: '>= 0.4.0'
     resolution:
       integrity: sha512-f2dvO0VU6Oej7RkWJGrehjbzMAjFp5/VKPp5tTpWIV4JHHZK1/BxbFRtf/siA2SWTe09caDmVtYYzWEIbBS4zw==
-  /heapdump/0.3.12:
-    dependencies:
-      nan: 2.13.2
-    dev: true
-    engines:
-      node: '>=0.10.0'
-    requiresBuild: true
-    resolution:
-      integrity: sha512-OSVdkxGd9xAJNEP0RA/ZvKEzGTEjCnkvmMEGF1ScR/87tH92v5Dpv6g/Fs8GvZA9UxdMpxU1G9NEC2D0OxZjJQ==
   /http-errors/1.5.1:
     dependencies:
       inherits: 2.0.3
@@ -1267,6 +1276,12 @@ packages:
       node: '>=0.8.0'
     resolution:
       integrity: sha1-H4irpKsLFQjoMSrMOTRfNumS4vI=
+  /imurmurhash/0.1.4:
+    dev: false
+    engines:
+      node: '>=0.8.19'
+    resolution:
+      integrity: sha1-khi5srkoojixPcT7a21XbyMUU+o=
   /indexof/0.0.1:
     dev: false
     resolution:
@@ -1363,12 +1378,24 @@ packages:
     hasBin: true
     resolution:
       integrity: sha512-8Mh9h6xViijj36g7Dxi+Y4S6hNGV96vcJZr/SrlHh1LR/pEn/8j/+qIBbs44YKl69Lrfctp4QD+AdWLTMqEZAQ==
+  /jsonfile/4.0.0:
+    dev: false
+    optionalDependencies:
+      graceful-fs: 4.2.4
+    resolution:
+      integrity: sha1-h3Gq4HmbZAdrdmQPygWPnBDjPss=
   /jszip/2.5.0:
     dependencies:
       pako: 0.2.9
     dev: false
     resolution:
       integrity: sha1-dET9hVHd8+XacZj+oMkbyDCMwnQ=
+  /kruptein/2.0.10:
+    dev: false
+    engines:
+      node: '>6'
+    resolution:
+      integrity: sha512-sgbG46PciVP3vFtEcvsjbWdUas150jo5D5uSWmXKAuqibgWbd60BR9SQRhve7haJMClet313i/GkNg7rGob+IQ==
   /lodash.isplainobject/4.0.6:
     dev: true
     resolution:
@@ -1469,10 +1496,6 @@ packages:
   /ms/2.1.1:
     resolution:
       integrity: sha512-tgp+dl5cGk28utYktBsrFqA7HKgrhgPsg6Z/EfhWI4gl1Hwq8B/GmY/0oXZ6nF8hDVesS/FpnYaD/kOWhYQvyg==
-  /nan/2.13.2:
-    dev: true
-    resolution:
-      integrity: sha512-TghvYc72wlMGMVMluVo9WRJc0mB8KxxF/gZ4YYFy7V2ZQX9l7rgbPg7vjS9mt6U5HXODVFVI2bOduCzwOMv/lw==
   /negotiator/0.6.1:
     dev: false
     engines:
@@ -1498,6 +1521,12 @@ packages:
       node: '>=0.10.0'
     resolution:
       integrity: sha1-ejs9DpgGPUP0wD8uiubNUahog6A=
+  /object-assign/4.1.1:
+    dev: false
+    engines:
+      node: '>=0.10.0'
+    resolution:
+      integrity: sha1-IQmtx5ZYh8/AXLvUQsrIv7s2CGM=
   /object-component/0.0.3:
     dev: false
     resolution:
@@ -1768,6 +1797,12 @@ packages:
     dev: true
     resolution:
       integrity: sha512-3sUr9aq5OfSg2S9pNtPA9hL1FVEAjvfOC4leW0SNf/mpnaakz2a9femSd6LqAww2RaFctwyf1lCqnTHuF1rxDg==
+  /retry/0.12.0:
+    dev: false
+    engines:
+      node: '>= 4'
+    resolution:
+      integrity: sha1-G0KmJmoh8HQh0bC1S33BZ7AcATs=
   /safe-buffer/5.1.2:
     dev: true
     resolution:
@@ -1828,6 +1863,19 @@ packages:
       node: '>= 0.8.0'
     resolution:
       integrity: sha1-LPmIm9RDWjIMw2iVyapXvWYuasc=
+  /session-file-store/1.4.0:
+    dependencies:
+      bagpipe: 0.3.5
+      fs-extra: 8.1.0
+      kruptein: 2.0.10
+      object-assign: 4.1.1
+      retry: 0.12.0
+      write-file-atomic: 1.3.1
+    dev: false
+    engines:
+      node: '>= 6'
+    resolution:
+      integrity: sha512-jBeQwoHoHMOBoELxf+f/IDtMI94PqkFrwCP6O3DlvJlsCU6gY6pgWJGxUOtLWxauIdvAqmgoAbpJi7vJih9bvA==
   /setprototypeof/1.0.2:
     dev: false
     resolution:
@@ -1839,6 +1887,10 @@ packages:
     dev: false
     resolution:
       integrity: sha1-0uHtzdUexBl9T6vVFIAkf5VyyM4=
+  /slide/1.1.6:
+    dev: false
+    resolution:
+      integrity: sha1-VusCfWW00tzmyy4tMsTUr8nh1wc=
   /socket.io-adapter/1.1.1:
     dev: false
     resolution:
@@ -2020,6 +2072,12 @@ packages:
       node: '>= 0.8'
     resolution:
       integrity: sha512-KPHm4VL5dDXKz01UuEd88Df+KzynaohSL9fBh096KWAxSKZQDI2uBrVqtvRM4rwrIrRRKsdLNML/lnaaVSRioA==
+  /universalify/0.1.2:
+    dev: false
+    engines:
+      node: '>= 4.0.0'
+    resolution:
+      integrity: sha512-rBJeI5CXAlmy1pV+617WB9J63U6XcazHHF2f2dbJix4XzpUF0RS3Zbj0FGIOCAva5P/d/GBOYaACQ1w+0azUkg==
   /unpipe/1.0.0:
     dev: false
     engines:
@@ -2059,6 +2117,14 @@ packages:
       node: '>= 0.8'
     resolution:
       integrity: sha1-IpnwLG3tMNSllhsLn3RSShj2NPw=
+  /write-file-atomic/1.3.1:
+    dependencies:
+      graceful-fs: 4.2.4
+      imurmurhash: 0.1.4
+      slide: 1.1.6
+    dev: false
+    resolution:
+      integrity: sha1-fUW6MjFjKN0ex9kPYOvA2EW7dZo=
   /ws/6.1.4:
     dependencies:
       async-limiter: 1.0.0
@@ -2098,12 +2164,12 @@ specifiers:
   express: ~4.14.0
   express-busboy: ^4.0.0
   express-session: ^1.14.2
-  heapdump: latest
   json2xls: ^0.1.2
   morgan: ~1.7.0
   nodemailer: ^6.1.0
   pg: ^6.1.0
   serve-favicon: ~2.3.0
+  session-file-store: ^1.4.0
   simple-stats-server: 0.0.5
-  socket.io: latest
+  socket.io: 2.2.0
   supertest: ^2.0.1

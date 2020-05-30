@@ -6,6 +6,7 @@ let path = require('path');
 let favicon = require('serve-favicon');
 let logger = require('morgan');
 let cookieParser = require('cookie-parser');
+let FileStore = require('session-file-store')(session);
 let busboy = require('express-busboy');
 let sss = require('simple-stats-server');
 let json2xls = require('json2xls');
@@ -39,7 +40,12 @@ busboy.extend(app, {
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use("/uploads",express.static(path.join(__dirname, 'uploads')));
-app.use(session({secret: 'ssshhh', saveUninitialized: false, resave: false}));
+app.use(session({
+    secret: 'ssshhh',
+    saveUninitialized: false,
+    resave: false,
+    store: new FileStore()
+}));
 app.use("/stats",sss());
 app.use(json2xls.middleware);
 

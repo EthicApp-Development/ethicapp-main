@@ -449,6 +449,28 @@ router.post("/set-groups", (req, res) => {
      })(req,res);*/
 });
 
+router.post("/set-groups-stage", (req, res) => {
+    if (req.session.role != "P" || req.body.stageid == null || req.body.groups == null) {
+        res.end('{"status":"err"}');
+        return;
+    }
+    let sql = "delete from teamusers as tu using teams as t where tu.tmid = t.id and t.stageid = " + req.body.stageid + "; "
+        + "delete from teams where stageid = " + req.body.stageid + "; ";
+    let grupos = JSON.parse(req.body.groups);
+    grupos.forEach((team) => {
+        sql += "with rows as (insert into teams(sesid,leader,original_leader) values (" + req.body.stageid + "," + team[0] + "," + team[0] + ") returning id) " +
+            "insert into teamusers(tmid,uid) select id, unnest('{" + team.join(",") + "}'::int[]) from rows; ";
+    });
+    console.log(sql);
+    rpg.execSQL({
+        dbcon: pass.dbcon,
+        sql: sql,
+        onEnd: () => {
+            res.end('{"status":"ok"}');
+        }
+    })(req, res);
+});
+
 let generateTeams = (alumArr, scFun, n, different) => {
     if(n == null || n == 0) return [];
     let arr = alumArr;
