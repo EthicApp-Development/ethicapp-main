@@ -1149,3 +1149,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     height: 30px;
     padding: 5px;
 }
+
+.text-black{
+    color: black !important;
+}

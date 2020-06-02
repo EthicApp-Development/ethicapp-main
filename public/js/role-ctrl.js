@@ -29,6 +29,9 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     self.actors = [];
     self.sel = [];
 
+    self.actorsPrev = [];
+    self.selPrev = [];
+
     self.selections = [];
 
     self.ansIter1 = {};
@@ -43,6 +46,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
 
     self.lang = "spanish";
     self.selectedActor = null;
+    self.selectedActorPrev = null;
 
     self.init = () => {
         self.getSesInfo();
@@ -141,10 +145,14 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
         self.selectedActor = i;
     };
 
+    self.selectActorView = (i) => {
+        self.selectedActorPrev = i;
+    };
+
     self.getPlaceholder = () => {
         let a = self.actors[self.selectedActor];
         if(self.selectedActor == null || a == null){
-            return "Seleccione un rol a justificar"
+            return "Seleccione un rol"
         }
         else if(a.jorder){
             return "Escribe tu justificación para el ORDEN EN QUE HAS UBICADO a " + a.name;
@@ -154,14 +162,6 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
         }
     };
 
-    self.sendActorSel = () => {
-        let a = self.actors[self.selectedActor];
-        if(self.selectedActor == null || a == null){
-            return;
-        }
-        a.sent = true;
-        self.selectedActor = null;
-    };
 
     /*self.updateTeam = () => {
         $http({url: "get-team", method: "post"}).success((data) => {
@@ -193,11 +193,39 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
         if(self.currentStageId != null){
             $http.post("get-actors", {stageid: self.currentStageId}).success(data => {
                 self.actors = data;
+                if(self.sel.length == self.actors.length){
+                    self.populateActors();
+                }
             });
             $http.post("get-my-actor-sel", {stageid: self.currentStageId}).success(data => {
                 self.sel = data;
+                if(self.sel.length == self.actors.length){
+                    self.populateActors();
+                }
             });
         }
+    };
+
+    self.populateActors = () => {
+        let acts = [];
+        self.sel.forEach(s => {
+            let a = self.actors.find(e => e.id == s.actorid);
+            a.comment = s.description;
+            a.sent = s.description != "" && s.description != null;
+            acts.push(a);
+        });
+        self.actors = acts;
+    };
+
+    self.populateActorsPrev = () => {
+        let acts = [];
+        self.selPrev.forEach(s => {
+            let a = self.actorsPrev.find(e => e.id == s.actorid);
+            a.comment = s.description;
+            a.sent = s.description != "" && s.description != null;
+            acts.push(a);
+        });
+        self.actorsPrev = acts;
     };
 
     // self.loadDifferentials = () => {
@@ -236,25 +264,37 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
         self.stages[self.selectedStage].cr = self.stages[self.selectedStage].c;
         self.showDoc = false;
         self.chatmsg = "";
+        $http.post("get-actors", {stageid: self.stages[self.selectedStage].id}).success(data => {
+            self.actorsPrev = data;
+            if(self.selPrev.length == self.actorsPrev.length){
+                self.populateActorsPrev();
+            }
+        });
+        $http.post("get-my-actor-sel", {stageid: self.stages[self.selectedStage].id}).success(data => {
+            self.selPrev = data;
+            if(self.selPrev.length == self.actorsPrev.length){
+                self.populateActorsPrev();
+            }
+        });
     };
-    //
-    // self.sendDFSel = () => {
-    //     let df = self.dfs[self.selectedDF];
-    //     if(df.select == null || df.select == -1 || df.comment == null || df.comment == ""){
-    //         notify("Error", "El diferencial no está completo");
-    //         return;
-    //     }
-    //     let postdata = {
-    //         sel: df.select,
-    //         comment: df.comment,
-    //         did: df.id,
-    //         iteration: self.iteration
-    //     };
-    //     $http.post("send-diff-selection", postdata).success((data) => {
-    //         df.dirty = false;
-    //     });
-    // };
-    //
+
+    self.sendActorSel = () => {
+        self.actors.forEach((a,i) => {
+            let postdata = {
+                orden: i + 1,
+                description: a.comment || "",
+                actorid: a.id,
+                stageid: self.currentStageId
+            };
+            console.log(postdata);
+            $http.post("send-actor-selection", postdata).success((data) => {
+                a.dirty = false;
+                a.sent = !a.justified || (a.comment != null && a.comment != "");
+            });
+        });
+        self.selectedActor = null;
+    };
+
     // self.finishState = () => {
     //     if(self.finished){
     //         return;

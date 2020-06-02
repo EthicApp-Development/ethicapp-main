@@ -17,7 +17,8 @@ window.StagesController = function($scope, $http, Notification){
         type: null,
         anon: false,
         chat: false,
-        prevResponses: []
+        prevResponses: [],
+        question: "",
     };
 
     self.stageRoles = [];
@@ -49,6 +50,7 @@ window.StagesController = function($scope, $http, Notification){
                 type: null,
                 anon: false,
                 chat: false,
+                question: self.stage.question,
                 prevResponses: []
             };
         }
@@ -61,6 +63,7 @@ window.StagesController = function($scope, $http, Notification){
         };
         $http({ url: "get-admin-stages", method: "post", data: postdata }).success(function (data) {
             self.stages = data;
+            self.stage.question = self.stages.length > 0 ? self.stages[self.stages.length - 1].question : "";
             var postdata = {
                 stageid: self.selectedSes.current_stage
             };
@@ -93,12 +96,14 @@ window.StagesController = function($scope, $http, Notification){
 
     self.sendStage = function(){
         var s = self.stage;
-        if(s.type == null || self.roles.length == 0){
+        if(s.type == null || self.roles.length == 0 || s.type == "team" && !self.groups){
             Notification.error("Hay datos faltantes");
             return;
         }
         var postdata = {
             number: self.stages.length + 1,
+            question: s.question,
+            grouping: s.type == "team" ? self.groupopt.num + ":" + self.groupopt.met : null,
             type: s.type,
             anon: s.anon,
             chat: s.chat,
@@ -114,6 +119,7 @@ window.StagesController = function($scope, $http, Notification){
                     let p = {
                         name: role.name,
                         jorder: role.type == "order",
+                        justified: role.type != null,
                         stageid: stageid,
                     };
                     $http({ url: "add-actor", method: "post", data: p }).success(function (data) {
@@ -240,22 +246,114 @@ window.StagesController = function($scope, $http, Notification){
         });
     };
 
-    self.swapTable = function (i, j) {
-        console.log(i, j, self.groups);
-        if (self.lastI == -1 && self.lastJ == -1) {
-            self.lastI = i;
-            self.lastJ = j;
-            return;
-        }
-        if (!(self.lastI == i && self.lastJ == j)) {
-            var temp = angular.copy(self.groupsProp[i][j]);
-            self.groupsProp[i][j] = angular.copy(self.groupsProp[self.lastI][self.lastJ]);
-            self.groupsProp[self.lastI][self.lastJ] = temp;
-        }
-        self.lastI = -1;
-        self.lastJ = -1;
-    };
+    // self.swapTable = function (i, j) {
+    //     console.log(i, j, self.groups);
+    //     if (self.lastI == -1 && self.lastJ == -1) {
+    //         self.lastI = i;
+    //         self.lastJ = j;
+    //         return;
+    //     }
+    //     if (!(self.lastI == i && self.lastJ == j)) {
+    //         var temp = angular.copy(self.groupsProp[i][j]);
+    //         self.groupsProp[i][j] = angular.copy(self.groupsProp[self.lastI][self.lastJ]);
+    //         self.groupsProp[self.lastI][self.lastJ] = temp;
+    //     }
+    //     self.lastI = -1;
+    //     self.lastJ = -1;
+    // };
 
     self.getStages();
 
+};
+
+function groupByUser(data){
+    let u = {};
+    data.forEach(d => {
+        if(!u[d.uid]){
+            u[d.uid] = { arr: [] };
+        }
+        u[d.uid].arr.push(d.actorid);
+    });
+    return u;
+}
+
+window.computePosFreqTable = function(data, actors){
+    if(data == null || actors == null || data.length == 0 || actors.length == 0){
+        return;
+    }
+    let countMap = {};
+    actors.forEach(a => {
+        countMap[a.id] = {};
+    });
+
+    data.forEach(d => {
+        countMap[d.actorid][d.orden] = countMap[d.actorid][d.orden] ? countMap[d.actorid][d.orden] + 1 : 1;
+    });
+
+    // console.log(countMap);
+    return countMap;
+};
+
+
+function lehmerCode(arr, acts){
+    let p = acts.map(e => e.id);
+    let perm = arr.map(e => e);
+
+    let n = p.length;
+    let pos_map = {};
+    p.forEach((e,i) => {
+        pos_map[e] = i;
+    });
+
+    let w = [];
+    for (let i = 0; i < n; i++) {
+        let d = pos_map[perm[i]] - i;
+        w.push(d);
+        if(d == 0)
+            continue;
+        let t = pos_map[perm[i]];
+
+        let tmp = pos_map[p[t]];
+        pos_map[p[t]] = pos_map[p[i]];
+        pos_map[p[i]] = tmp;
+
+        tmp = p[t];
+        p[t] = p[i];
+        p[i] = tmp;
+    }
+
+    return w
+}
+
+function lehmerNum(code){
+    let n = 0;
+    for (let i = 0; i < code.length; i++) {
+        let v = code[code.length - i - 1];
+        n *= i;
+        n += v;
+    }
+    return n;
+}
+
+function simpleNum(code){
+    let n = 0;
+    for (let i = 0; i < code.length; i++) {
+        let v = code[code.length - i - 1];
+        n *= code.length;
+        n += v;
+    }
+    return n;
+}
+
+
+window.computeIndTable = function(data, actors){
+    let udata = groupByUser(data);
+    Object.values(udata).forEach(u => {
+        u.code = lehmerCode(u.arr, actors);
+        u.lnum = lehmerNum(u.code);
+
+        u.perm = actors.map(e => u.arr.findIndex(s => s == e.id));
+        u.pnum = simpleNum(u.perm);
+    });
+    return udata;
 };

@@ -2,7 +2,7 @@
 
 var adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill", "ngMap"]);
 
-var DASHBOARD_AUTOREALOD = true;
+var DASHBOARD_AUTOREALOD = false;
 var DASHBOARD_AUTOREALOD_TIME = 15;
 
 window.DIC = null;
@@ -246,6 +246,7 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
     self.tabConfig = ["users", "groups"];
     self.selectedTab = '';
     self.archivedTab = false;
+    self.stages = [];
 
     self.shared.resetTab = function () {
         self.selectedTab = "editor";
@@ -284,7 +285,17 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
         } else if (self.selectedSes.type == "R") {
             self.iterationNames = [];
             self.tabOptions = ["editor", "users", "dashboard"];
-            self.sesStatusses = ["configuration"];
+            // self.sesStatusses = ["configuration"];
+            var pd = {
+                sesid: self.selectedSes.id
+            };
+            $http({ url: "get-admin-stages", method: "post", data: pd }).success(function (data) {
+                self.stages = data;
+                data.forEach(st => {
+                    self.iterationNames.push({name: "Stage " + st.number, val: st.id});
+                });
+                console.log(self.iterationNames);
+            });
         }
         if (self.selectedSes.status > 1) {
             self.selectedTab = "dashboard";
@@ -914,7 +925,13 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.updateState = function () {
         if (self.selectedSes.status == 1) {
             self.shared.refreshUsers();
-        } else if (self.iterationIndicator <= 4) self.updateStateIni();else self.updateStateRub();
+        }
+        else if (self.iterationIndicator <= 4 || self.selectedSes.type == "R") {
+            self.updateStateIni();
+        }
+        else {
+            self.updateStateRub();
+        }
     };
 
     self.shared.updateState = self.updateState;
@@ -971,7 +988,8 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     self.confidence[r.qid][r.conf] = r.freq;
                 });
             });
-        } else if (self.selectedSes.type == "L") {
+        }
+        else if (self.selectedSes.type == "L") {
             $http({ url: "get-alum-state-lect", method: "post", data: postdata }).success(function (data) {
                 self.alumState = {};
                 for (var uid in self.users) {
@@ -1012,7 +1030,8 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     self.numProgress *= 100 / self.numUsers;
                 }
             });
-        } else if (self.selectedSes.type == "M") {
+        }
+        else if (self.selectedSes.type == "M") {
             $http({ url: "get-alum-state-semantic", method: "post", data: postdata }).success(function (data) {
                 self.alumState = {};
                 self.numUsers = 0;
@@ -1057,7 +1076,8 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     self.numProgress *= 100 / self.numUsers;
                 }
             });*/
-        } else if (self.selectedSes.type == "E") {
+        }
+        else if (self.selectedSes.type == "E") {
             var _postdata2 = {
                 sesid: self.selectedSes.id
             };
@@ -1098,6 +1118,38 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 });
                 self.shared.dataDF = self.dataDF;
             });
+        }
+        else if (self.selectedSes.type == "R") {
+            var _postdata2 = {
+                stageid: self.iterationIndicator
+            };
+            $http.post("get-actors", _postdata2).success(function(data){
+                self.rawActors = data;
+                self.actorMap = {};
+                data.forEach(a => {
+                    self.actorMap[a.id] = a;
+                });
+                $http.post("get-role-sel-all", _postdata2).success(function (data) {
+                    self.rawRoleData = data;
+                    self.posFreqTable = window.computePosFreqTable(data, self.rawActors);
+                    if(self.posFreqTable != null) {
+                        self.freqMax = Object.values(self.posFreqTable)
+                            .reduce((v, e) => Math.max(v, Object.values(e).reduce((v2, e2) => Math.max(e2, v2), 0)), 0);
+                    }
+                    self.indvTable = window.computeIndTable(data, self.rawActors);
+                });
+            });
+        }
+    };
+
+    self.getFreqColor = function(aid, pos){
+        if(self.posFreqTable && self.posFreqTable[aid]) {
+            let val = self.posFreqTable[aid][pos] || 0;
+            let p = val / self.freqMax;
+
+            return {
+                "background": "rgba(0, 184, 166, " + p + ")"
+            }
         }
     };
 
@@ -2416,7 +2468,8 @@ var generateTeams = function generateTeams(alumArr, scFun, n, different, double)
                 var offset = arr.length / n;
                 for (var j = 0; j < n; j++) {
                     rnd.push(~~(Math.random() * offset + offset * j));
-                }groups.push(arr.filter(function (a, i) {
+                }
+                groups.push(arr.filter(function (a, i) {
                     return rnd.includes(i);
                 }));
                 arr = arr.filter(function (a, i) {
@@ -2435,7 +2488,10 @@ var generateTeams = function generateTeams(alumArr, scFun, n, different, double)
     var final_groups = [];
     var ov = 0;
     for (var _i = 0; _i < groups.length; _i++) {
-        if (groups[_i].length > 1 || final_groups.length == 0) final_groups.push(groups[_i]);else {
+        if (groups[_i].length > 1 || final_groups.length == 0) {
+            final_groups.push(groups[_i]);
+        }
+        else {
             final_groups[ov % final_groups.length].push(groups[_i][0]);
             ov++;
         }

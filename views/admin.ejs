@@ -40,7 +40,7 @@
             </a>
         </div>
         <div class="cf3 grow text-center simple-padding-top hscroll" ng-show="selectedId != -1">
-            <span ng-repeat="st in sesStatusses">
+            <span ng-repeat="st in sesStatusses" ng-if="selectedSes.type != 'R'">
                 <span ng-if="selectedSes.type != 'M'" class="label label-primary bg-black-alpha margin-right-8"
                       ng-class="{'bg-yellow': $index==selectedSes.status-1}">
                     {{st | lang}}
@@ -50,6 +50,16 @@
                     {{st.name | lang}}
                 </span>
                 <!-- <span ng-hide="$last">→</span> -->
+            </span>
+            <span ng-if="selectedSes.type == 'R'">
+                <span class="label label-primary bg-black-alpha margin-right-8"
+                      ng-class="{'bg-yellow': selectedSes.current_stage == null}">
+                    {{'configuration' | lang}}
+                </span>
+                <span class="label label-primary bg-black-alpha margin-right-8"
+                      ng-class="{'bg-yellow': st.id==selectedSes.current_stage}" ng-repeat="st in stages">
+                    {{'stage' | lang}} {{ st.number }}
+                </span>
             </span>
             <i class="fa fa-angle-right"></i>
             <!-- <span class="pull-right margin-right-24" ng-show="sesSTime != null">
@@ -544,15 +554,19 @@
                 </div>
                 <div class="sub-tab-content">
                     <div class="row row-border">
+                        <div class="col-sm-12">
+                            <label>{{ 'question' | lang }}</label>
+                            <textarea rows="2" class="form-control" ng-model="stage.question" ng-disabled="readonly"></textarea>
+                        </div>
                         <div class="col-sm-5">
                             <h4>{{ 'listOf' | lang }} {{ 'roles' | lang }}/{{ 'actors' | lang }}</h4>
                         </div>
-                        <div class="col-sm-3 text-center">
+                        <div class="col-sm-3 text-center margin-top-8">
                             <button class="btn btn-default" ng-click="setAllRolesType('role')" ng-disabled="readonly">
                                 {{ 'justifyAll' | lang }} {{ 'roles' | lang }}
                             </button>
                         </div>
-                        <div class="col-sm-3 text-center">
+                        <div class="col-sm-3 text-center margin-top-8">
                             <button class="btn btn-default" ng-click="setAllRolesType('order')" ng-disabled="readonly">
                                 {{ 'justifyAll' | lang }} {{ 'orders' | lang }}
                             </button>
@@ -567,13 +581,13 @@
                         </div>
                         <div class="col-sm-3 text-center">
                             <button class="btn btn-default" ng-class="{'btn-primary': role.type == 'role'}"
-                                ng-click="role.type = 'role'" ng-disabled="readonly">
+                                ng-click="role.type = role.type == 'role' ? null : 'role'" ng-disabled="readonly">
                                 {{ 'justify' | lang }} {{ 'role' | lang }}
                             </button>
                         </div>
                         <div class="col-sm-3 text-center">
                             <button class="btn btn-default" ng-class="{'btn-primary': role.type == 'order'}"
-                                    ng-click="role.type = 'order'" ng-disabled="readonly">
+                                    ng-click="role.type = role.type == 'order' ? null : 'order'" ng-disabled="readonly">
                                 {{ 'justify' | lang }} {{ 'order' | lang }}
                             </button>
                         </div>
@@ -879,7 +893,7 @@
 
         <!-- DASHBOARDS -->
         <div class="pad-content" ng-show="selectedTab == 'dashboard'" ng-controller="DashboardController">
-            <div ng-show="selectedSes.type != 'E'">
+            <div ng-show="selectedSes.type != 'E' && selectedSes.type != 'R'">
                 <div class="pull-right">
                     <label>{{'iteration' | lang}}:</label>
                     <select class="" ng-options="x.val as flang(x.name) for x in iterationNames" ng-model="iterationIndicator" ng-change="updateState()"></select>
@@ -891,6 +905,11 @@
             </div>
             <div class="pull-right margin-ver-8" ng-show="selectedSes.type == 'E'">
                 <button class="btn btn-success" ng-click="exportCSV()">{{ 'export' | lang }} CSV</button>
+                <button class="btn btn-default" ng-click="updateState()">{{'update' | lang}}</button>
+            </div>
+            <div class="pull-right margin-ver-8" ng-show="selectedSes.type == 'R'">
+<!--                <button class="btn btn-success" ng-click="exportCSV()">{{ 'export' | lang }} CSV</button>-->
+                <select class="" ng-options="x.val as flang(x.name) for x in iterationNames" ng-model="iterationIndicator" ng-change="updateState()"></select>
                 <button class="btn btn-default" ng-click="updateState()">{{'update' | lang}}</button>
             </div>
             <div class="row" ng-show="iterationIndicator < 5 && (selectedSes.type == 'L' || selectedSes.type == 'M')">
@@ -981,7 +1000,7 @@
                 </tr>
             </table>
             <!-- RUBRICA DASHBOARD -->
-            <div ng-show="iterationIndicator == 5">
+            <div ng-show="iterationIndicator == 5 && selectedSes.type!='R'">
             <h4>{{'details' | lang}}:</h4>
             <div class="row">
                 <div class="col-sm-2">{{'report' | lang}}: </div>
@@ -1008,7 +1027,7 @@
                 </tr>
             </table>
             </div>
-            <div ng-show="iterationIndicator == 6">
+            <div ng-show="iterationIndicator == 6 && selectedSes.type!='R'">
                 <h4>{{'details' | lang}} {{'report' | lang}}:</h4>
                 <table class="table table-bordered">
                     <tr>
@@ -1103,6 +1122,37 @@
                 </table>
             </div>
             <!-- ROLEPLAYING DASHBOARD -->
+            <div ng-show="selectedSes.type == 'R'" class="margin-top-8">
+                <span>{{ selectedSes.descr }}</span>
+                <table class="table table-bordered">
+                    <tr>
+                        <th>Posición</th>
+                        <th ng-repeat="actor in rawActors" class="text-center">{{ actor.name }}</th>
+                    </tr>
+                    <tr ng-repeat="(p, aa) in rawActors track by p">
+                        <td class="text-center">{{ p + 1 }}</td>
+                        <td ng-repeat="(i, actor) in rawActors track by i" ng-style="getFreqColor(actor.id, p+1)"
+                            class="text-center text-black">
+                            <strong>{{ posFreqTable[actor.id][p + 1] || 0 }}</strong>
+                        </td>
+                    </tr>
+                </table>
+
+                <br>
+                <strong>Respuestas individuales y agrupadas</strong>
+                <table class="table table-bordered">
+                    <tr>
+                        <th>Cantidad Iguales</th>
+                        <th>Autor</th>
+                        <th ng-repeat="(p, aa) in rawActors track by p">Pos {{ p + 1 }}</th>
+                    </tr>
+                    <tr ng-repeat="(uid, udata) in indvTable track by uid">
+                        <td>{{ udata.perm }} : {{ udata.pnum }} / {{ udata.code }} : {{ udata.lnum }}</td>
+                        <td>{{ users[uid].name }}</td>
+                        <td ng-repeat="aid in udata.arr track by $index">{{ actorMap[aid].name }}</td>
+                    </tr>
+                </table>
+            </div>
 
         </div>
         <!-- / DASHBOARDS -->
