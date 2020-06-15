@@ -549,7 +549,7 @@
                     </div>
                     <div class="tab tab-text tab-text-lg yellow" ng-click="setCurrentStage(-1)"
                          ng-class="{'active': currentStage == -1}">
-                        {{ 'add' | lang }} {{ 'stage' | lang }}
+                        {{ 'add' | lang }} {{ 'stage' | lang }} {{ stages.length + 1 }}
                     </div>
                 </div>
                 <div class="sub-tab-content">
@@ -644,30 +644,34 @@
                         <div class="col-sm-12 margin-top-8" ng-if="stage.type == 'team'">
                             <label>{{ 'viewPastSes' | lang }}:</label>
                             <multiselect multiple="true" options="s.id as ('Stage ' + s.number) for s in stages"
-                                         ng-model="stage.prevResponses" show-search="true" ng-disabled="readonly"
+                                         ng-model="stage.prevResponses" show-search="true" ng-if="!readonly"
                                          style="width: 50vw !important; display: inline-block;">
                             </multiselect>
+                            <span ng-if="readonly">{{ formatStageNames(stage.prev_ans) }}</span>
                         </div>
                     </div>
                     <div class="row margin-top-8" ng-if="stage.type == 'team'">
-                        <div class="col-sm-12">
+                        <div class="col-sm-12" ng-if="!readonly">
                             <label>{{'studentsPerGroup' | lang}}: </label>
                             <input class="form-control form-inline-mini" ng-model="groupopt.num" type="number" min="2" ng-disabled="selectedSes.grouped">
                             <select class="form-control form-inline-med" ng-options="x.key as x.name for x in methods" ng-disabled="selectedSes.grouped" ng-model="groupopt.met"></select>
                             <button class="btn btn-default" ng-click="generateGroups()" ng-disabled="selectedSes.grouped">{{ 'generate' | lang }}</button>
                             <span ng-show="selectedSes.grouped"> - {{'groupsAreSet' | lang}}</span>
-                            <button class="btn btn-default pull-right" ng-click="acceptGroups()" ng-disabled="selectedSes.grouped">{{'setGroups' | lang}}</button>
+<!--                            <button class="btn btn-default pull-right" ng-click="acceptGroups()" ng-disabled="selectedSes.grouped">{{'setGroups' | lang}}</button>-->
                         </div>
-                        <div class="col-sm-12">
+                        <div class="col-sm-12" ng-if="readonly">
+                            <strong>{{ 'groups' | lang }}</strong> ({{ stage.grouping.replace(":", ", ") }})
+                        </div>
+                        <div class="col-sm-12 margin-top-8">
                             <table class="table table-bordered">
                                 <tr ng-repeat="group in groups">
                                     <td ng-bind="$index + 1"></td>
                                     <td ng-repeat="alum in group">
                                         <strong ng-bind="users[alum.uid || alum.id].name"></strong>
-                                        <span class="label label-success" ng-show="alum.score!=null">
-                                            {{(selectedSes.type == "L" || selectedSes.type == "M") ? alum.score * 100 : alum.score | number:0}}
-                                        </span>
-                                        <span class="label label-info" ng-bind="alum.aprendizaje"></span>
+<!--                                        <span class="label label-success" ng-show="alum.score!=null">-->
+<!--                                            {{(selectedSes.type == "L" || selectedSes.type == "M") ? alum.score * 100 : alum.score | number:0}}-->
+<!--                                        </span>-->
+<!--                                        <span class="label label-info" ng-bind="alum.aprendizaje"></span>-->
                                     </td>
                                 </tr>
                             </table>
@@ -1146,9 +1150,9 @@
                         <th>Autor</th>
                         <th ng-repeat="(p, aa) in rawActors track by p">Pos {{ p + 1 }}</th>
                     </tr>
-                    <tr ng-repeat="(uid, udata) in indvTable track by uid">
-                        <td>{{ udata.perm }} : {{ udata.pnum }} / {{ udata.code }} : {{ udata.lnum }}</td>
-                        <td>{{ users[uid].name }}</td>
+                    <tr ng-repeat="udata in indvTableSorted track by udata.uid">
+                        <td>{{ udata.ceq }}</td>
+                        <td>{{ users[udata.uid].name }}</td>
                         <td ng-repeat="aid in udata.arr track by $index">{{ actorMap[aid].name }}</td>
                     </tr>
                 </table>

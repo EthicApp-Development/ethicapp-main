@@ -13,6 +13,8 @@
     <script src="libs/socket.min.js"></script>
     <script src="libs/angular-ui-notification.min.js"></script>
     <script src="libs/angular-glue.min.js"></script>
+    <script src="libs/intro.min.js"></script>
+    <script src="libs/angular-intro.min.js"></script>
     <script src="js/role-ctrl.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
@@ -20,6 +22,7 @@
     <link rel="stylesheet" href="css/minimal.css">
     <link rel="stylesheet" href="css/angular-ui-tree.min.css">
     <link rel="stylesheet" href="css/angular-ui-notification.min.css">
+    <link rel="stylesheet" href="css/introjs.css">
     <link rel="stylesheet" href="css/main.css"/>
 </head>
 <body>
@@ -28,7 +31,7 @@
 
     <div class="top-bar-mini cflex">
         <div class="cf1">
-            <a href="seslist" class="simple-margin-left">
+            <a href="seslist" class="simple-margin-left" id="seslistbtn">
                 <img src="img/logo.png" class="logo-bar">
             </a>
         </div>
@@ -43,6 +46,9 @@
             </span> -->
         </div>
         <div class="cf1 text-right margin-right-8 simple-padding-top">
+            <a href="#" class="text-white margin-right-8" ng-click="startTour()">
+                <i class="fa fa-info-circle fa-2x"></i>
+            </a>
             <a href="logout" class="text-white">
                 <i class="fa fa-sign-out fa-2x"></i>
             </a>
@@ -73,11 +79,11 @@
     <div class="top-bar top-bar-tabs">
         <div class="qs-tabs" ng-show="iteration > 0 || myRole == 'P'">
             <div class="tab tab-text" ng-repeat="doc in documents" ng-class="{active: selectedDocument == $index && showDoc}"
-                 ng-click="selectDocument($index)">
+                 ng-click="selectDocument($index)" ng-attr-id="{{ 'tabd' + $index }}">
                 <i class="fa fa-book"></i> {{doc.title | limitTo:10}}
             </div>
             <div class="tab tab-text" ng-repeat="st in stages" ng-class="{active: selectedStage == $index && !showDoc, 'green': !df.dirty && st.select != null}"
-                 ng-click="selectStage($index)">
+                 ng-click="selectStage($index)" ng-attr-id="{{ 'tabq' + $index }}">
                 <i class="fa fa-question-circle"></i> {{ 'stage' | lang }} {{st.number}} <span class="badge bg-red" ng-show="st.c != null && st.c > st.cr">{{st.c - st.cr}}</span>
             </div>
             <!--<div class="btab"></div>
@@ -161,8 +167,8 @@
                             <!--                            <span class="text-gray center-block text-center" ng-show="selections.length > 0">Más importante</span>-->
                             <div class="list-group-item drag-item" ng-repeat="actor in actorsPrev" ng-class="{'deep-blue': selectedActorPrev == $index}">
                                 <div class="row">
-                                    <div class="col-xs-2 col-sm-1">
-
+                                    <div class="col-xs-2 col-sm-1 h30 text-center">
+                                        {{$index + 1}}.
                                     </div>
                                     <div class="col-xs-6 col-sm-7 h30">
                                         <strong>{{ actor.name }}</strong>
@@ -203,24 +209,42 @@
             </div>
         </div>
         <br>
-        <div ng-show="iteration > 1">
-            <hr>
-            <h4>{{'individual' | lang}}</h4>
-            <div class="differential margin-top-8" ng-repeat="df in ansIter1[dfs[selectedDF].id]">
-                <div class="row">
-                    <div class="col-xs-3 text-right">
-
+        <div ng-if="stages[selectedStage].id == currentStageId && prevRes != null">
+            <div ng-repeat="res in prevRes">
+                <hr>
+                <h3>{{ 'stage' | lang }} {{ stagesMap[prevStages[$index]].number }}</h3>
+                <div ng-repeat="(uid, arr) in res">
+                    <h4 class="anon-badge">{{ teamMap[uid] }}</h4>
+                    <div class="row">
+                        <div class="col-sm-10 col-sm-offset-1 col-xs-12">
+                            <div>
+                                <div class="list-group">
+                                    <div class="list-group-item drag-item" ng-repeat="actor in arr">
+                                        <div class="row">
+                                            <div class="col-xs-2 col-sm-1 h30 text-center">
+                                                {{$index + 1}}.
+                                            </div>
+                                            <div class="col-xs-6 col-sm-7 h30">
+                                                <strong>{{ actor.name }}</strong>
+                                            </div>
+                                            <div class="col-xs-4 text-right">
+                                                <button class="btn btn-default btn-sm" ng-click="actor.expanded = !actor.expanded" ng-if="actor.description">
+                                                    <i class="fa fa-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="row" ng-show="actor.expanded">
+                                            <div class="col-xs-12">
+                                                {{ actor.description }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="dopts col-xs-6">
-                        <div class="option eq-space" ng-repeat="i in [1,2,3,4,5,6,7]"
-                             ng-class="{selected: df.select == i}">{{i}}</div>
-                        <br>
-                    </div>
-                    <div class="col-xs-3"></div>
                 </div>
-                <div class="margin-top-28 bordered pad-content"><div class="anon-badge margin-left-n8">{{userAnon[df.uid]}}</div> <span>{{df.comment}}</span></div>
-                <br>
-                </div>
+            </div>
         </div>
         <br>
         <div ng-show="iteration > 2">

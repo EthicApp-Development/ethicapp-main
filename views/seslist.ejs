@@ -8,10 +8,13 @@
     <script src="libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
     <!--<script src="js/ses-ctrl.js"></script>-->
     <script src="libs/socket.min.js"></script>
+    <script src="libs/intro.min.js"></script>
+    <script src="libs/angular-intro.min.js"></script>
     <script src="js/ses-ctrl.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
     <link rel="stylesheet" href="css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/introjs.css">
     <link rel="stylesheet" href="css/main.css"/>
 </head>
 <body>
@@ -27,16 +30,20 @@
         </div>
         <div class="cf3 grow text-center">
             <div>
-                <input type="text" class="form-control form-inline-med flat" ng-model="invCode"
+                <input type="text" class="form-control form-inline-med flat" ng-model="invCode" id="codebox"
                        ng-keydown="$event.keyCode === 13 && enterCode()" placeholder="Ingresar Código">
                 <span>
-                    <button class="btn btn-default flat btn-padding-min" ng-disabled="invCode == ''" ng-click="enterCode()">
+                    <button class="btn btn-default flat btn-padding-min" ng-disabled="invCode == ''" ng-click="enterCode()"
+                        id="codeboxbtn">
                         <i class="fa fa-external-link-square fa-2x"></i>
                     </button>
                 </span>
             </div>
         </div>
-        <div class="cf1 text-right margin-right-8 simple-padding-top">
+        <div class="cf1 text-right margin-right-8 simple-padding-top" id="topbtnlist">
+            <a href="#" class="text-white margin-right-8" ng-click="startTour()">
+                <i class="fa fa-info-circle fa-2x"></i>
+            </a>
             <a href="logout" class="text-white">
                 <i class="fa fa-sign-out fa-2x"></i>
             </a>
@@ -45,19 +52,19 @@
 
     <div class="top-bar top-bar-tabs">
         <div class="qs-tabs">
-            <div class="tab wide active">
+            <div class="tab wide active" id="seslistdiv">
                 Sesiones
             </div>
             <div class="pull-right text-white">
                 <strong class="margin-right-8">{{ username }}</strong>
-                <button class="btn btn-sm btn-default flat" ng-click="changeLang()">
+                <button class="btn btn-sm btn-default flat" ng-click="changeLang()" id="changelang">
                     {{ mylang }}
                 </button>
             </div>
         </div>
     </div>
 
-    <div class="scrollable-container blue">
+    <div class="scrollable-container blue" >
         <div class="list-group pad-content">
             <a class="list-group-item" ng-repeat="ses in sessions"
                href="{{routes[ses.type]}}?sesid={{ses.id}}">

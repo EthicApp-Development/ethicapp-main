@@ -42,6 +42,9 @@ window.StagesController = function($scope, $http, Notification){
             $http({ url: "get-actors", method: "post", data: postdata }).success(function (data) {
                 self.roles = data;
             });
+            $http({ url: "group-proposal-stage", method: "post", data: postdata }).success(function (data) {
+                self.groups = data;
+            });
             self.stage = self.stages[i];
         }
         else {
@@ -70,6 +73,10 @@ window.StagesController = function($scope, $http, Notification){
             $http({ url: "get-actors", method: "post", data: postdata }).success(function (data) {
                 self.roles = data;
             });
+            $http({ url: "group-proposal-stage", method: "post", data: postdata }).success(function (data) {
+                self.groups = data;
+                self.shared.groups = self.groups;
+            });
         });
     };
 
@@ -96,8 +103,13 @@ window.StagesController = function($scope, $http, Notification){
 
     self.sendStage = function(){
         var s = self.stage;
-        if(s.type == null || self.roles.length == 0 || s.type == "team" && !self.groups){
+        console.log(s, self.roles, self.groups);
+        if(s.type == null || self.roles.length == 0 || s.type == "team" && (self.groups == null || self.groups.length == 0)){
             Notification.error("Hay datos faltantes");
+            return;
+        }
+        var confirm = window.confirm("¿Esta seguro que quiere ir a la siguiente etapa?");
+        if (!confirm) {
             return;
         }
         var postdata = {
@@ -114,6 +126,7 @@ window.StagesController = function($scope, $http, Notification){
             let stageid = data.id;
             if(stageid != null) {
                 let c = self.roles.length;
+                self.acceptGroups(stageid);
                 for (let i = 0; i < self.roles.length; i++) {
                     const role = self.roles[i];
                     let p = {
@@ -129,7 +142,7 @@ window.StagesController = function($scope, $http, Notification){
                             let pp = {sesid: self.selectedSes.id, stageid: stageid};
                             $http({ url: "session-start-stage", method: "post", data: pp }).success(function (data) {
                                 Notification.success("Etapa creada correctamente");
-                                self.getStages();
+                                window.location.reload()
                             });
                         }
                     });
@@ -171,7 +184,6 @@ window.StagesController = function($scope, $http, Notification){
 
         console.log(postdata);
 
-        console.log(self.shared.alumState);
         var users = Object.values(self.users).filter(function (e) {
             return e.role == "A";
         });
@@ -204,6 +216,18 @@ window.StagesController = function($scope, $http, Notification){
                 return s.score;
             }, self.groupopt.num, isDifferent(self.groupopt.met));
         }
+        else if (self.selectedSes.type == "R"){
+            let dfd = users.map(e => {
+                return {
+                    uid: e.id,
+                    score: self.shared.roleIndTable[e.id] ? self.shared.roleIndTable[e.id].lnum : -1,
+                    aprendizaje: e.aprendizaje
+                }
+            });
+            self.groups = generateTeams(dfd, function (s) {
+                return s.score;
+            }, self.groupopt.num, isDifferent(self.groupopt.met));
+        }
 
         if (self.groups != null) {
             self.groupsProp = angular.copy(self.groups);
@@ -229,7 +253,7 @@ window.StagesController = function($scope, $http, Notification){
             return;
         }
         var postdata = {
-            stageid: self.selectedSes.stid,
+            stageid: stid,
             groups: JSON.stringify(self.groups.map(function (e) {
                 return e.map(function (f) {
                     return f.uid || f.id;
@@ -244,6 +268,16 @@ window.StagesController = function($scope, $http, Notification){
                 // self.shared.verifyGroups();
             }
         });
+    };
+
+    self.formatStageNames = (idstr) => {
+        if(idstr == null || idstr == "")
+            return;
+        let ids = idstr.split(",").map(e => +e);
+        return ids.map(i => {
+            let s = self.stages.find(s => s.id == i);
+            return self.flang("stage") + " " + s.number;
+        }).join(", ");
     };
 
     // self.swapTable = function (i, j) {
@@ -355,5 +389,36 @@ window.computeIndTable = function(data, actors){
         u.perm = actors.map(e => u.arr.findIndex(s => s == e.id));
         u.pnum = simpleNum(u.perm);
     });
+
+    let uarr = Object.values(udata);
+    uarr.forEach(u => {
+        u.ceq = uarr.filter(e => e.lnum == u.lnum).length;
+    });
+
     return udata;
+};
+
+
+window.sortIndTable = function(table, users){
+    var us = Object.values(users).filter(function (e) {
+        return e.role == "A";
+    });
+    us.forEach(u => {
+        if(!table[u.id]){
+            table[u.id] = {
+                arr: [],
+                ceq: 0,
+                lnum: -1
+            };
+        }
+    });
+    let arr = Object.entries(table).map(([uid, e]) => {
+        e.uid = uid;
+        return e;
+    });
+    arr.sort(function (a, b) {
+        return b.ceq - a.ceq || b.lnum - a.lnum;
+    });
+    console.log(arr);
+    return arr;
 };

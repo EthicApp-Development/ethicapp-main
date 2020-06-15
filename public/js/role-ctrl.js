@@ -2,13 +2,13 @@
 
 let BASE_APP = "https://saduewa.dcc.uchile.cl:8888/Readings/";
 
-let app = angular.module("Role", ["ngSanitize", "ui.bootstrap", 'ui.tree', 'btford.socket-io', "timer", "ui-notification", "luegg.directives"]);
+let app = angular.module("Role", ["ngSanitize", "ui.bootstrap", 'ui.tree', 'btford.socket-io', "angular-intro", "ui-notification", "luegg.directives"]);
 
 app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
 
-app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Notification", "$sce", "$uibModal", function ($scope, $http, $timeout, $socket, Notification, $sce, $uibModal) {
+app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Notification", "$sce", "$uibModal", "ngIntroService", function ($scope, $http, $timeout, $socket, Notification, $sce, $uibModal, ngIntroService) {
     let self = $scope;
 
     self.iteration = 1;
@@ -23,6 +23,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     self.stages = [];
     self.currentStageId = 0;
     self.currentStage = null;
+    self.stagesMap = {};
 
     self.selectedStage = null;
 
@@ -42,7 +43,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     self.chatmsgreply = null;
 
     self.tmId = -1;
-    self.userAnon = {};
+    self.teamMap = {};
 
     self.lang = "spanish";
     self.selectedActor = null;
@@ -189,17 +190,43 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
         $http.post("get-stages", {}).success(data => {
             self.stages = data;
             self.currentStage = self.stages.find(e => e.id == self.currentStageId);
+            self.stagesMap = {};
+            data.forEach(s => {
+                self.stagesMap[s.id] = s;
+            });
+
+            if(self.currentStage.type == "team"){
+                $http.post("get-team-stage", {stageid: self.currentStageId}).success(data => {
+                    self.team = data;
+                    self.teamMap = {};
+                    let alph = ["A", "B", "C", "D", "E"];
+                    data.forEach((u,i) => {
+                        self.teamMap[u.id] = self.currentStage.anon ? alph[i] : u.name;
+                        self.tmId = u.tmid;
+                    });
+                });
+                if(self.currentStage.prev_ans != "" && self.currentStage.prev_ans != null) {
+                    let p = {
+                        stageid: self.currentStageId,
+                        prevstages: self.currentStage.prev_ans
+                    };
+                    $http.post("get-team-actor-selection", p).success(data => {
+                        self.teamSel = data;
+                        self.structureSelData();
+                    });
+                }
+            }
         });
         if(self.currentStageId != null){
             $http.post("get-actors", {stageid: self.currentStageId}).success(data => {
                 self.actors = data;
-                if(self.sel.length == self.actors.length){
+                if(self.sel.length == self.actors.length && self.sel.length > 0){
                     self.populateActors();
                 }
             });
             $http.post("get-my-actor-sel", {stageid: self.currentStageId}).success(data => {
                 self.sel = data;
-                if(self.sel.length == self.actors.length){
+                if(self.sel.length == self.actors.length && self.sel.length > 0){
                     self.populateActors();
                 }
             });
@@ -221,11 +248,37 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
         let acts = [];
         self.selPrev.forEach(s => {
             let a = self.actorsPrev.find(e => e.id == s.actorid);
-            a.comment = s.description;
-            a.sent = s.description != "" && s.description != null;
-            acts.push(a);
+            if(a) {
+                a.comment = s.description;
+                a.sent = s.description != "" && s.description != null;
+                acts.push(a);
+            }
         });
         self.actorsPrev = acts;
+    };
+
+    self.structureSelData = () => {
+        let byStage = {};
+        self.teamSel.forEach(e => {
+            if(!byStage[e.stageid]){
+                byStage[e.stageid] = [];
+            }
+            byStage[e.stageid].push(e);
+        });
+        self.prevStages = Object.keys(byStage);
+        byStage = Object.values(byStage);
+        byStage = byStage.map(arr => {
+            let byUser = {};
+            arr.forEach(e => {
+                if(!byUser[e.uid]){
+                    byUser[e.uid] = [];
+                }
+                byUser[e.uid].push(e);
+            });
+            return byUser;
+        });
+        console.log(byStage);
+        self.prevRes = byStage;
     };
 
     // self.loadDifferentials = () => {
@@ -264,15 +317,18 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
         self.stages[self.selectedStage].cr = self.stages[self.selectedStage].c;
         self.showDoc = false;
         self.chatmsg = "";
+        self.selPrev = [];
+        self.actorsPrev = [];
+
         $http.post("get-actors", {stageid: self.stages[self.selectedStage].id}).success(data => {
             self.actorsPrev = data;
-            if(self.selPrev.length == self.actorsPrev.length){
+            if(self.selPrev.length == self.actorsPrev.length && self.selPrev.length > 0){
                 self.populateActorsPrev();
             }
         });
         $http.post("get-my-actor-sel", {stageid: self.stages[self.selectedStage].id}).success(data => {
             self.selPrev = data;
-            if(self.selPrev.length == self.actorsPrev.length){
+            if(self.selPrev.length == self.actorsPrev.length && self.actorsPrev.length > 0){
                 self.populateActorsPrev();
             }
         });
@@ -385,6 +441,38 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     self.setReply = (msg) => {
         self.chatmsgreply = msg == null ? null : msg.id;
         document.getElementById("chat-input").focus();
+    };
+
+    let introOptions = {
+        steps:[
+            {
+                element: '#tabd0',
+                intro: 'En esta pestaña encontrarás el caso a leer',
+            },
+            {
+                element: "#tabq0",
+                intro: "En esta pestaña se encuentra la lista de roles que debes ordenar y justificar"
+            },
+            {
+                element: "#seslistbtn",
+                intro: "Usando este botón puedes volver a la lista de sesiones",
+            },
+        ],
+        showStepNumbers: false,
+        showBullets: false,
+        exitOnOverlayClick: true,
+        exitOnEsc: true,
+        tooltipPosition: "auto",
+        nextLabel: 'Siguiente',
+        prevLabel: 'Anterior',
+        skipLabel: 'Salir',
+        doneLabel: 'Listo'
+    };
+
+    ngIntroService.setOptions(introOptions);
+
+    self.startTour = () => {
+        ngIntroService.start();
     };
 
     self.init();

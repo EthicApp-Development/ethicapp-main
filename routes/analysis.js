@@ -80,6 +80,32 @@ router.post("/group-proposal-sel", (req, res) => {
     })(req,res);
 });
 
+router.post("/group-proposal-stage", (req, res) => {
+    if (req.session.role != "P") {
+        res.end("[]");
+        return;
+    }
+    rpg.multiSQL({
+        dbcon: pass.dbcon,
+        sql: "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
+            "u.id = tu.uid and t.stageid = " + req.body.stageid,
+        preventResEnd: true,
+        onEnd: (req,res,arr) => {
+            let t = {};
+            let groups = [];
+            arr.forEach((row) => {
+                if(t[row.team] == null) {
+                    t[row.team] = groups.length;
+                    groups.push([{uid: row.uid}]);
+                }
+                else
+                    groups[t[row.team]].push({uid: row.uid});
+            });
+            res.end(JSON.stringify(groups));
+        }
+    })(req,res);
+});
+
 router.post("/get-alum-state-lect", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select distinct a.uid, a.orden, a.serial, a.content, a.docid, p.serial as serial_ans, p.content as content_ans, p.docid as docid_ans" +
@@ -458,7 +484,7 @@ router.post("/set-groups-stage", (req, res) => {
         + "delete from teams where stageid = " + req.body.stageid + "; ";
     let grupos = JSON.parse(req.body.groups);
     grupos.forEach((team) => {
-        sql += "with rows as (insert into teams(sesid,leader,original_leader) values (" + req.body.stageid + "," + team[0] + "," + team[0] + ") returning id) " +
+        sql += "with rows as (insert into teams(stageid,leader,original_leader) values (" + req.body.stageid + "," + team[0] + "," + team[0] + ") returning id) " +
             "insert into teamusers(tmid,uid) select id, unnest('{" + team.join(",") + "}'::int[]) from rows; ";
     });
     console.log(sql);

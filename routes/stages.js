@@ -9,7 +9,7 @@ let socket = require("../modules/socket.config");
 
 router.post("/get-stages", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select id, number, type, anon, chat, question from stages where sesid = $1",
+    sql: "select id, number, type, anon, chat, question, prev_ans from stages where sesid = $1",
     sesReqData: ["uid", "ses"],
     sqlParams: [rpg.param("ses", "ses")]
 }));

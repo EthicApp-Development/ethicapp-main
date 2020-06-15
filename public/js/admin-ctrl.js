@@ -883,6 +883,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         } else if (self.selectedSes.type == "M") {
             self.iterationIndicator = Math.max(Math.min(6, self.selectedSes.status - 2), 0);
         }
+        else if (self.selectedSes.type == "R") {
+            self.iterationIndicator = self.selectedSes.current_stage;
+        }
         self.alumState = null;
         self.barOpts = {
             chart: {
@@ -1137,6 +1140,8 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                             .reduce((v, e) => Math.max(v, Object.values(e).reduce((v2, e2) => Math.max(e2, v2), 0)), 0);
                     }
                     self.indvTable = window.computeIndTable(data, self.rawActors);
+                    self.shared.roleIndTable = self.indvTable;
+                    self.indvTableSorted = window.sortIndTable(self.indvTable, self.users);
                 });
             });
         }

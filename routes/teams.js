@@ -46,6 +46,19 @@ router.post("/get-team-diff-selection",rpg.multiSQL({
     sqlParams: [rpg.param("ses","ses"),rpg.param("ses","ses"),rpg.param("ses","uid"),rpg.param("post","iteration")]
 }));
 
+router.post("/get-team-actor-selection",rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select distinct s.orden, s.uid, s.actorid, s.description, s.stageid, a.name from actor_selection as s, actors as a where s.stageid = ANY ($1) and " +
+        "s.uid in (select tu.uid from teamusers as tu where tu.tmid = (select t.id from teamusers as tu, teams as t where " +
+        "t.stageid = $2 and tu.tmid = t.id and tu.uid = $3)) and s.actorid = a.id order by s.stageid, s.uid, s.orden",
+    sesReqData: ["ses","uid"],
+    postReqData: ["prevstages", "stageid"],
+    onStart: (ses, data, calc) => {
+        calc.prevarr = data.prevstages.split(",").map(e => +e);
+    },
+    sqlParams: [rpg.param("calc","prevarr"),rpg.param("post","stageid"),rpg.param("ses","uid")]
+}));
+
 router.post("/get-ses-info",rpg.singleSQL({
     dbcon: pass.dbcon,
     sql: "select greatest(-1,least(7,s.status-2)) as iteration, $1::int as uid, s.name, s.id, s.descr, s.options, s.type, sr.stime, s.current_stage from sessions as s " +
@@ -114,6 +127,15 @@ router.post("/get-team", rpg.multiSQL({
         "(select tmid from teamusers where uid = $3) order by u.id",
     sesReqData: ["uid", "ses"],
     sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "ses"), rpg.param("ses", "uid")]
+}));
+
+router.post("/get-team-stage", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select u.name, u.id, t.progress, t.id as tmid from " +
+        "users as u, teams as t, teamusers as tu where tu.uid = u.id and t.id = tu.tmid and t.stageid = $1 and t.id in " +
+        "(select tmid from teamusers where uid = $2) order by u.id",
+    sesReqData: ["uid", "ses"],
+    sqlParams: [rpg.param("post", "stageid"), rpg.param("ses", "uid")]
 }));
 
 router.post("/get-anon-team", rpg.multiSQL({
