@@ -1107,7 +1107,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     background: white;
     margin-right: 16px;
     margin-left: -12px;
-    border-top: 3px solid #004093;
+    border-top: 8px solid #1b5986;
 }
 
 .chat-area{

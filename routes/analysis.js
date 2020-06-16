@@ -96,10 +96,10 @@ router.post("/group-proposal-stage", (req, res) => {
             arr.forEach((row) => {
                 if(t[row.team] == null) {
                     t[row.team] = groups.length;
-                    groups.push([{uid: row.uid}]);
+                    groups.push([{uid: row.uid, tmid: row.team}]);
                 }
                 else
-                    groups[t[row.team]].push({uid: row.uid});
+                    groups[t[row.team]].push({uid: row.uid, tmid: row.team});
             });
             res.end(JSON.stringify(groups));
         }

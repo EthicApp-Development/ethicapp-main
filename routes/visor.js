@@ -242,12 +242,30 @@ router.post("/get-chat-msgs", rpg.multiSQL({
     sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "ses"), rpg.param("ses","uid")]
 }));
 
+router.post("/get-chat-stage", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select s.id, s.uid, s.content, s.stime, s.parent_id, s.stageid from chat as s where " +
+        "s.stageid = $1 and s.uid in (select tu.uid from teamusers as tu where tu.tmid = (select t.id from teamusers " +
+        "as tu, teams as t where t.stageid = $2 and tu.tmid = t.id and tu.uid = $3)) order by s.stime asc",
+    sesReqData: ["uid", "ses"],
+    postReqData: ["stageid"],
+    sqlParams: [rpg.param("post", "stageid"), rpg.param("post","stageid"), rpg.param("ses", "uid")]
+}));
+
 router.post("/get-team-chat", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select s.id, s.did, s.uid, s.content, s.stime, s.parent_id from differential_chat as s inner join differential as d on d.id = s.did " +
         "where d.sesid = $1 and s.uid in (select tu.uid from teamusers as tu where tu.tmid = $2) and d.orden = $3 order by s.stime asc",
     postReqData: ["sesid", "tmid", "orden"],
     sqlParams: [rpg.param("post", "sesid"), rpg.param("post","tmid"), rpg.param("post","orden")]
+}));
+
+router.post("/get-team-chat-stage", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select s.id, s.uid, s.content, s.stime, s.parent_id from chat as s " +
+        "where s.stageid = $1 and s.uid in (select tu.uid from teamusers as tu where tu.tmid = $2) order by s.stime asc",
+    postReqData: ["stageid", "tmid"],
+    sqlParams: [rpg.param("post", "stageid"), rpg.param("post","tmid")]
 }));
 
 router.post("/add-chat-msg", rpg.execSQL({
@@ -258,6 +276,17 @@ router.post("/add-chat-msg", rpg.execSQL({
     sqlParams: [rpg.param("ses", "uid"), rpg.param("post", "did"), rpg.param("post","content"), rpg.param("post","parent_id")],
     onEnd: (req,res) => {
         socket.chatMsg(req.session.ses, req.body.tmid);
+    }
+}));
+
+router.post("/add-chat-msg-stage", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "insert into chat(uid, stageid, content, parent_id) values ($1,$2,$3,$4)",
+    sesReqData: ["uid", "ses"],
+    postReqData: ["stageid", "content", "tmid"],
+    sqlParams: [rpg.param("ses", "uid"), rpg.param("post", "stageid"), rpg.param("post","content"), rpg.param("post","parent_id")],
+    onEnd: (req,res) => {
+        socket.chatMsgStage(req.body.stageid, req.body.tmid);
     }
 }));
 

@@ -1,4 +1,4 @@
-window.StagesController = function($scope, $http, Notification){
+window.StagesController = function($scope, $http, Notification, $uibModal){
     var self = $scope;
 
     self.stages = [];
@@ -66,6 +66,10 @@ window.StagesController = function($scope, $http, Notification){
         };
         $http({ url: "get-admin-stages", method: "post", data: postdata }).success(function (data) {
             self.stages = data;
+            self.shared.stagesMap = {};
+            data.forEach(function (s) {
+                self.shared.stagesMap[s.id] = s;
+            });
             self.stage.question = self.stages.length > 0 ? self.stages[self.stages.length - 1].question : "";
             var postdata = {
                 stageid: self.selectedSes.current_stage
@@ -75,8 +79,20 @@ window.StagesController = function($scope, $http, Notification){
             });
             $http({ url: "group-proposal-stage", method: "post", data: postdata }).success(function (data) {
                 self.groups = data;
+                console.log(data);
                 self.shared.groups = self.groups;
+                self.shared.groupByUid = {};
+                data.forEach(function (s, i) {
+                    s.forEach(u => {
+                        self.shared.groupByUid[u.uid] = {index: i + 1, tmid: u.tmid};
+                    });
+                });
+                console.log(self.shared.groupByUid);
             });
+            if(self.selectedSes.status >= 3){
+                self.setCurrentStage(data.length - 1);
+                self.iterationIndicator = data[data.length - 1].id;
+            }
         });
     };
 
@@ -120,7 +136,7 @@ window.StagesController = function($scope, $http, Notification){
             anon: s.anon,
             chat: s.chat,
             sesid: self.selectedSes.id,
-            prev_ans: s.prevResponses.join(",")
+            prev_ans: s.prevResponses.map(e => e.id).join(",")
         };
         $http({ url: "add-stage", method: "post", data: postdata }).success(function (data) {
             let stageid = data.id;
@@ -280,6 +296,41 @@ window.StagesController = function($scope, $http, Notification){
         }).join(", ");
     };
 
+    self.shared.openNextModal = () => {
+        $uibModal.open({
+            templateUrl: "templ/next-dialog.html",
+            controller: function ($scope, $http, $uibModalInstance, Notification, data) {
+                var vm = this;
+                vm.data = data;
+                vm.radioval = null;
+
+                vm.cancel = function () {
+                    $uibModalInstance.dismiss('cancel');
+                };
+
+                vm.accept = function (){
+                    if(vm.radioval == "F"){
+                        $http.post("session-finish-stages", {sesid: self.selectedSes.id}).success((data) => {
+                            console.log("AAA");
+                            console.log(data);
+                        });
+                    }
+                    else if(vm.radioval == "N"){
+                        self.setTab("editor");
+                        $uibModalInstance.dismiss('cancel');
+                    }
+                }
+            },
+            controllerAs: "vm",
+            scope: self,
+            resolve: {
+                data: function data() {
+                    return {};
+                }
+            }
+        });
+    };
+
     // self.swapTable = function (i, j) {
     //     console.log(i, j, self.groups);
     //     if (self.lastI == -1 && self.lastJ == -1) {
@@ -297,16 +348,18 @@ window.StagesController = function($scope, $http, Notification){
     // };
 
     self.getStages();
-
 };
+
+
 
 function groupByUser(data){
     let u = {};
     data.forEach(d => {
         if(!u[d.uid]){
-            u[d.uid] = { arr: [] };
+            u[d.uid] = { arr: [], com: [] };
         }
         u[d.uid].arr.push(d.actorid);
+        u[d.uid].com.push(d.description);
     });
     return u;
 }

@@ -142,5 +142,8 @@
   "type": "Type",
   "listOf": "List of",
   "actors": "Actors",
+  "createSameStage": "Create a new stage using the same configuration",
+  "createNewStage": "Crear a new stage changing the configuration",
+  "finishSes": "Finish the session",
   "archived": "Archived"
 }

@@ -282,7 +282,7 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
             self.iterationNames = [{ name: "individual", val: 1 }, { name: "anon", val: 2 }, { name: "teamWork", val: 3 }];
             self.tabOptions = ["editor", "users", "groups", "dashboard"];
             self.sesStatusses = ["configuration", "individual", "anon", "teamWork", "finished"];
-        } else if (self.selectedSes.type == "R") {
+        } else if (self.selectedSes.type == "R" || self.selectedSes.type == "T") {
             self.iterationNames = [];
             self.tabOptions = ["editor", "users", "dashboard"];
             // self.sesStatusses = ["configuration"];
@@ -294,7 +294,6 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
                 data.forEach(st => {
                     self.iterationNames.push({name: "Stage " + st.number, val: st.id});
                 });
-                console.log(self.iterationNames);
             });
         }
         if (self.selectedSes.status > 1) {
@@ -883,7 +882,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         } else if (self.selectedSes.type == "M") {
             self.iterationIndicator = Math.max(Math.min(6, self.selectedSes.status - 2), 0);
         }
-        else if (self.selectedSes.type == "R") {
+        else if (self.selectedSes.type == "R" || self.selectedSes.type == "T") {
             self.iterationIndicator = self.selectedSes.current_stage;
         }
         self.alumState = null;
@@ -929,7 +928,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         if (self.selectedSes.status == 1) {
             self.shared.refreshUsers();
         }
-        else if (self.iterationIndicator <= 4 || self.selectedSes.type == "R") {
+        else if (self.iterationIndicator <= 4 || self.selectedSes.type == "R" || self.selectedSes.type == "T") {
             self.updateStateIni();
         }
         else {
@@ -1143,7 +1142,18 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     self.shared.roleIndTable = self.indvTable;
                     self.indvTableSorted = window.sortIndTable(self.indvTable, self.users);
                 });
+                $http({ url: "group-proposal-stage", method: "post", data: _postdata2 }).success(function (data) {
+                    self.shared.groupByUid = {};
+                    data.forEach(function (s, i) {
+                        s.forEach(function (u) {
+                            self.shared.groupByUid[u.uid] = { index: i + 1, tmid: u.tmid };
+                        });
+                    });
+                });
             });
+        }
+        else if (self.selectedSes.type == "T"){
+
         }
     };
 
@@ -1655,6 +1665,52 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                                 return e.id == msg.parent_id;
                             });
                         });
+                        console.log(data);
+                        return data;
+                    }
+                }
+            });
+        });
+    };
+
+    self.openActorDetails = function  (uid, stageid) {
+        let group = self.shared.groupByUid ? self.shared.groupByUid[uid] ? self.shared.groupByUid[uid].tmid : null : null;
+        var postdata = {
+            stageid: stageid,
+            tmid: group
+        };
+        $http.post("get-team-chat-stage", postdata).success(function (res) {
+            $uibModal.open({
+                templateUrl: "templ/actor-dialog.html",
+                controller: "EthicsModalController",
+                controllerAs: "vm",
+                scope: self,
+                resolve: {
+                    data: function data() {
+                        var data = {};
+                        data.group = group;
+                        data.users = self.users;
+                        data.actorMap = self.actorMap;
+
+                        data.anonNames = {};
+                        data.sesid = self.selectedSes.id;
+
+                        data.chat = res;
+                        data.chat.forEach(function (msg) {
+                            if (msg.parent_id) msg.parent = data.chat.find(function (e) {
+                                return e.id == msg.parent_id;
+                            });
+                        });
+
+                        data.stage = self.shared.stagesMap[stageid];
+
+                        if(data.stage.type == "team"){
+                            data.sel = self.indvTableSorted.filter(e => self.shared.groupByUid[e.uid].index == self.shared.groupByUid[uid].index);
+                        }
+                        else {
+                            data.sel = self.indvTableSorted.filter(e => e.uid == uid);
+                        }
+
                         console.log(data);
                         return data;
                     }
@@ -2423,7 +2479,7 @@ adpp.controller("GeoAdminController", ["$scope", "$http", "NgMap", function ($sc
     init();
 }]);
 
-adpp.controller("StagesController", ["$scope", "$http", "Notification", window.StagesController]);
+adpp.controller("StagesController", ["$scope", "$http", "Notification", "$uibModal", window.StagesController]);
 
 adpp.filter('htmlExtractText', function () {
     return function (text) {

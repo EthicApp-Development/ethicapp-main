@@ -40,7 +40,8 @@
                 <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': st.id==currentStageId}">{{ 'stage' | lang}} {{ st.number }}</span>
                 <!-- <span ng-hide="$last">→</span> -->
             </span>
-            <i class="fa fa-angle-right"></i>
+            <span class="label label-primary bg-black-alpha bg-yellow" ng-if="finished">{{ 'finished' | lang}}</span>
+            <i class="fa fa-angle-right" ng-if="!finished"></i>
             <!-- <span class="pull-right margin-right-24" ng-show="sesSTime != null">
                 <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
             </span> -->
@@ -174,9 +175,14 @@
                                         <strong>{{ actor.name }}</strong>
                                     </div>
                                     <div class="col-xs-4 text-right">
-                                        <button class="btn btn-default btn-sm" ng-click="selectActorView($index)" ng-if="actor.justified">
+                                        <button class="btn btn-default btn-sm" ng-click="actor.expanded = !actor.expanded" ng-if="actor.justified && actor.comment != ''">
                                             <i class="fa fa-eye"></i>
                                         </button>
+                                    </div>
+                                </div>
+                                <div class="row" ng-show="actor.expanded">
+                                    <div class="col-xs-12">
+                                        {{ actor.comment }}
                                     </div>
                                 </div>
                             </div>
@@ -195,12 +201,6 @@
                     <i class="fa fa-check" ng-show="!actors[selectedActor].dirty"></i>
                     <i class="fa fa-send" ng-show="actors[selectedActor].dirty"></i>
                 </span>
-            </div>
-            <div class="input-group margin-top-28" ng-if="stages[selectedStage].id != currentStageId">
-                <span class="input-group-addon deep-blue">{{userAnon[myUid]}}</span>
-                <textarea type="text" class="form-control" placeholder="{{getPlaceholder()}}" ng-model="actorsPrev[selectedActorPrev].comment"
-                          ng-disabled>
-                </textarea>
             </div>
             <div class="row margin-top-24" ng-if="stages[selectedStage].id == currentStageId">
                 <div class="col-xs-12 text-center">
@@ -246,39 +246,58 @@
                 </div>
             </div>
         </div>
-        <br>
-        <div ng-show="iteration > 2">
-        <hr>
-        <h4>{{'anon' | lang}}</h4>
-        <div class="differential margin-top-8" ng-repeat="df in ansIter2[dfs[selectedDF].id]">
-            <div class="row">
-                <div class="col-xs-3 text-right">
-
+        <div ng-if="stages[selectedStage].id != currentStageId && stages[selectedStage].type == 'team' && prevResPrev != null">
+            <div ng-repeat="res in prevResPrev">
+                <hr>
+                <h3>{{ 'stage' | lang }} {{ stagesMap[prevStagesPrev[$index]].number }}</h3>
+                <div ng-repeat="(uid, arr) in res">
+                    <h4 class="anon-badge">{{ teamMapPrev[uid] }}</h4>
+                    <div class="row">
+                        <div class="col-sm-10 col-sm-offset-1 col-xs-12">
+                            <div>
+                                <div class="list-group">
+                                    <div class="list-group-item drag-item" ng-repeat="actor in arr">
+                                        <div class="row">
+                                            <div class="col-xs-2 col-sm-1 h30 text-center">
+                                                {{$index + 1}}.
+                                            </div>
+                                            <div class="col-xs-6 col-sm-7 h30">
+                                                <strong>{{ actor.name }}</strong>
+                                            </div>
+                                            <div class="col-xs-4 text-right">
+                                                <button class="btn btn-default btn-sm" ng-click="actor.expanded = !actor.expanded" ng-if="actor.description">
+                                                    <i class="fa fa-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="row" ng-show="actor.expanded">
+                                            <div class="col-xs-12">
+                                                {{ actor.description }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="dopts col-xs-6">
-                    <div class="option eq-space" ng-repeat="i in [1,2,3,4,5,6,7]"
-                         ng-class="{selected: df.select == i}">{{i}}</div>
-                    <br>
-                </div>
-                <div class="col-xs-3"></div>
             </div>
-            <div class="margin-top-28 bordered pad-content"><div class="anon-badge margin-left-n8">{{userAnon[df.uid]}}</div> <span>{{df.comment}}</span></div>
-            <br>
         </div>
-        <hr>
+        <br>
+        <div ng-show="stages[selectedStage].id == currentStageId && stages[selectedStage].chat">
         <div class="chat-inv"></div>
         <div class="chat-container">
             <!-- <h4>Chat</h4> -->
             <div class="chat bordered">
                 <div class="chat-area" scroll-glue ng-show="chatExp">
-                    <strong ng-show="chatMsgs[dfs[selectedDF].id] == null || chatMsgs[dfs[selectedDF].id].length == 0">Chat</strong>
-                    <div class="chat-msg" ng-repeat="msg in chatMsgs[dfs[selectedDF].id]" ng-class="{'bg-gray': chatmsgreply == msg.id}">
+                    <strong ng-show="chatMsgs[currentStageId].length == 0">Chat</strong>
+                    <div class="chat-msg" ng-repeat="msg in chatMsgs[currentStageId]" ng-class="{'bg-gray': chatmsgreply == msg.id}">
                         <div class="font-mini parent-msg" ng-show="msg.parent != null">
-                            <div class="anon-badge margin-left-n8">{{userAnon[msg.parent.uid]}}</div>
+                            <div class="anon-badge margin-left-n8">{{ teamMap[msg.parent.uid] }}</div>
                             <span class="content" bind-html-compile="msg.parent.content | limitTo:100 | linkfy"></span>
                         </div>
                         <i class="fa fa-reply" ng-show="msg.parent != null"></i>
-                        <div class="anon-badge" ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">{{userAnon[msg.uid]}}</div>
+                        <div class="anon-badge" ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">{{ teamMap[msg.uid] }}</div>
                         <span class="pull-right font-mini text-right">
                             <span class="text-muted">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
                             <br>

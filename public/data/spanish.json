@@ -143,5 +143,8 @@
   "type": "Tipo",
   "listOf": "Lista de",
   "actors": "Actores",
+  "createSameStage": "Crear una nueva etapa usando la misma configuración",
+  "createNewStage": "Crear una nueva etapa cambiando la configuración",
+  "finishSes": "Terminar la sesión",
   "archived": "Archivadas"
 }

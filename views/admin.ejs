@@ -40,7 +40,7 @@
             </a>
         </div>
         <div class="cf3 grow text-center simple-padding-top hscroll" ng-show="selectedId != -1">
-            <span ng-repeat="st in sesStatusses" ng-if="selectedSes.type != 'R'">
+            <span ng-repeat="st in sesStatusses" ng-if="selectedSes.type != 'R' && selectedSes.type != 'T'">
                 <span ng-if="selectedSes.type != 'M'" class="label label-primary bg-black-alpha margin-right-8"
                       ng-class="{'bg-yellow': $index==selectedSes.status-1}">
                     {{st | lang}}
@@ -51,14 +51,17 @@
                 </span>
                 <!-- <span ng-hide="$last">→</span> -->
             </span>
-            <span ng-if="selectedSes.type == 'R'">
+            <span ng-if="selectedSes.type == 'R' || selectedSes.type == 'T'">
                 <span class="label label-primary bg-black-alpha margin-right-8"
-                      ng-class="{'bg-yellow': selectedSes.current_stage == null}">
+                      ng-class="{'bg-yellow': selectedSes.current_stage == null && selectedSes.status < 3}">
                     {{'configuration' | lang}}
                 </span>
                 <span class="label label-primary bg-black-alpha margin-right-8"
                       ng-class="{'bg-yellow': st.id==selectedSes.current_stage}" ng-repeat="st in stages">
                     {{'stage' | lang}} {{ st.number }}
+                </span>
+                <span class="label label-primary bg-black-alpha margin-right-8 bg-yellow" ng-if="selectedSes.status >= 3">
+                    {{'finished' | lang}}
                 </span>
             </span>
             <i class="fa fa-angle-right"></i>
@@ -67,7 +70,12 @@
             </span> -->
         </div>
         <div class="cf1 simple-padding-top">
-            <button class="btn btn-xs btn-default simple-margin-left" ng-if="selectedId != -1" ng-click="shared.changeState()">
+            <button class="btn btn-xs btn-default simple-margin-left" ng-if="selectedId != -1 && selectedSes.type != 'R' && selectedSes.type != 'T'"
+                    ng-click="shared.changeState()">
+                {{'gotoNext' | lang}}
+            </button>
+            <button class="btn btn-xs btn-default simple-margin-left" ng-if="selectedId != -1 && (selectedSes.type == 'R' || selectedSes.type == 'T') && selectedSes.status < 3"
+                    ng-click="shared.openNextModal()">
                 {{'gotoNext' | lang}}
             </button>
         </div>
@@ -514,7 +522,7 @@
                 <br>
 
             </div>
-            <div ng-if="selectedSes.type == 'R'" ng-controller="DocumentsController">
+            <div ng-if="selectedSes.type == 'R' || selectedSes.type == 'T'" ng-controller="DocumentsController">
                 <h4>{{'documents' | lang}}</h4>
                 <div class="list-group">
                     <div class="list-group-item" ng-repeat="doc in documents">
@@ -540,7 +548,7 @@
                 <br>
                 <hr>
             </div>
-            <div ng-controller="StagesController" ng-if="selectedSes.type == 'R'">
+            <div ng-controller="StagesController" ng-if="selectedSes.type == 'R' || selectedSes.type == 'T'">
                 <h4>{{ 'stages' | lang }}</h4>
                 <div class="qs-tabs bg-darkgray pad-content top-tab-content">
                     <div class="tab tab-text tab-text-lg green" ng-repeat="stage in stages" ng-click="setCurrentStage($index)"
@@ -548,7 +556,7 @@
                         {{ 'stage' | lang }} {{ stage.number }}
                     </div>
                     <div class="tab tab-text tab-text-lg yellow" ng-click="setCurrentStage(-1)"
-                         ng-class="{'active': currentStage == -1}">
+                         ng-if="selectedSes.status < 3" ng-class="{'active': currentStage == -1}">
                         {{ 'add' | lang }} {{ 'stage' | lang }} {{ stages.length + 1 }}
                     </div>
                 </div>
@@ -643,7 +651,7 @@
                         </div>
                         <div class="col-sm-12 margin-top-8" ng-if="stage.type == 'team'">
                             <label>{{ 'viewPastSes' | lang }}:</label>
-                            <multiselect multiple="true" options="s.id as ('Stage ' + s.number) for s in stages"
+                            <multiselect multiple="true" options="('Stage ' + s.number) for s in stages"
                                          ng-model="stage.prevResponses" show-search="true" ng-if="!readonly"
                                          style="width: 50vw !important; display: inline-block;">
                             </multiselect>
@@ -677,7 +685,7 @@
                             </table>
                         </div>
                     </div>
-                    <div class="row margin-top-24">
+                    <div class="row margin-top-24" ng-if="!readonly">
                         <div class="col-sm-12">
                             <button class="btn btn-primary pull-right margin-right-8" ng-click="sendStage()">
                                 {{ 'startStage' | lang }}
@@ -897,7 +905,7 @@
 
         <!-- DASHBOARDS -->
         <div class="pad-content" ng-show="selectedTab == 'dashboard'" ng-controller="DashboardController">
-            <div ng-show="selectedSes.type != 'E' && selectedSes.type != 'R'">
+            <div ng-show="selectedSes.type != 'E' && selectedSes.type != 'R' && selectedSes.type != 'T'">
                 <div class="pull-right">
                     <label>{{'iteration' | lang}}:</label>
                     <select class="" ng-options="x.val as flang(x.name) for x in iterationNames" ng-model="iterationIndicator" ng-change="updateState()"></select>
@@ -911,7 +919,7 @@
                 <button class="btn btn-success" ng-click="exportCSV()">{{ 'export' | lang }} CSV</button>
                 <button class="btn btn-default" ng-click="updateState()">{{'update' | lang}}</button>
             </div>
-            <div class="pull-right margin-ver-8" ng-show="selectedSes.type == 'R'">
+            <div class="pull-right margin-ver-8" ng-show="selectedSes.type == 'R' || selectedSes.type == 'T'">
 <!--                <button class="btn btn-success" ng-click="exportCSV()">{{ 'export' | lang }} CSV</button>-->
                 <select class="" ng-options="x.val as flang(x.name) for x in iterationNames" ng-model="iterationIndicator" ng-change="updateState()"></select>
                 <button class="btn btn-default" ng-click="updateState()">{{'update' | lang}}</button>
@@ -1004,7 +1012,7 @@
                 </tr>
             </table>
             <!-- RUBRICA DASHBOARD -->
-            <div ng-show="iterationIndicator == 5 && selectedSes.type!='R'">
+            <div ng-show="iterationIndicator == 5 && selectedSes.type!='R' && selectedSes.type != 'T'">
             <h4>{{'details' | lang}}:</h4>
             <div class="row">
                 <div class="col-sm-2">{{'report' | lang}}: </div>
@@ -1031,7 +1039,7 @@
                 </tr>
             </table>
             </div>
-            <div ng-show="iterationIndicator == 6 && selectedSes.type!='R'">
+            <div ng-show="iterationIndicator == 6 && selectedSes.type!='R' && selectedSes.type != 'T'">
                 <h4>{{'details' | lang}} {{'report' | lang}}:</h4>
                 <table class="table table-bordered">
                     <tr>
@@ -1127,7 +1135,7 @@
             </div>
             <!-- ROLEPLAYING DASHBOARD -->
             <div ng-show="selectedSes.type == 'R'" class="margin-top-8">
-                <span>{{ selectedSes.descr }}</span>
+                <span>{{ shared.stagesMap[iterationIndicator].question }}</span>
                 <table class="table table-bordered">
                     <tr>
                         <th>Posición</th>
@@ -1148,12 +1156,18 @@
                     <tr>
                         <th>Cantidad Iguales</th>
                         <th>Autor</th>
+                        <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'">Grupo</th>
                         <th ng-repeat="(p, aa) in rawActors track by p">Pos {{ p + 1 }}</th>
                     </tr>
-                    <tr ng-repeat="udata in indvTableSorted track by udata.uid">
+                    <tr ng-repeat="udata in indvTableSorted track by udata.uid"
+                        ng-click="openActorDetails(udata.uid, iterationIndicator)">
                         <td>{{ udata.ceq }}</td>
                         <td>{{ users[udata.uid].name }}</td>
-                        <td ng-repeat="aid in udata.arr track by $index">{{ actorMap[aid].name }}</td>
+                        <td ng-if="shared.stagesMap[iterationIndicator].type == 'team'">{{ shared.groupByUid[udata.uid].index }}</td>
+                        <td ng-repeat="aid in udata.arr track by $index">
+                            {{ actorMap[aid].name }}
+                            <i class="fa fa-check" ng-if="udata.com[$index]"></i>
+                        </td>
                     </tr>
                 </table>
             </div>
