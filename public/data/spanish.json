@@ -146,5 +146,7 @@
   "createSameStage": "Crear una nueva etapa usando la misma configuración",
   "createNewStage": "Crear una nueva etapa cambiando la configuración",
   "finishSes": "Terminar la sesión",
+  "groupingMethod": "Método de Agrupación",
+  "prevGroups": "Usando grupos de etapa anterior",
   "archived": "Archivadas"
 }

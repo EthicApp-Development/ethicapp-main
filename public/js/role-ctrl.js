@@ -39,6 +39,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     self.ansIter2 = {};
 
     self.chatMsgs = {};
+    self.chatMsgsPrev = {};
     self.chatmsg = "";
     self.chatmsgreply = null;
 
@@ -82,7 +83,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             self.sesDescr = data.descr;
             self.currentStageId = data.current_stage;
             if (self.iteration >= 1) {
-                self.finished = true;
+                // self.finished = true;
             }
             if(self.currentStageId != null || self.iteration >= 1) {
                 self.loadDocuments();
@@ -276,6 +277,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
         self.chatmsg = "";
         self.selPrev = [];
         self.actorsPrev = [];
+        self.chatMsgsPrev = {};
 
         $http.post("get-actors", {stageid: self.stages[self.selectedStage].id}).success(data => {
             self.actorsPrev = data;
@@ -316,6 +318,19 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
                     self.structureSelDataPrev();
                 });
             }
+        }
+        if(st.chat){
+            $http.post("get-chat-stage", {
+                stageid: st.id
+            }).success((data) => {
+                self.chatMsgsPrev = {};
+                data.forEach(msg => {
+                    if(msg.parent_id)
+                        msg.parent = data.find(e => e.id == msg.parent_id);
+                    self.chatMsgsPrev[msg.stageid] = self.chatMsgsPrev[msg.stageid] || [];
+                    self.chatMsgsPrev[msg.stageid].push(msg);
+                });
+            });
         }
 
     };
@@ -430,6 +445,10 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
 
     self.startTour = () => {
         ngIntroService.start();
+    };
+
+    self.wordCount = (s) => {
+        return s.split(" ").filter(e => e != "").length;
     };
 
     self.init();

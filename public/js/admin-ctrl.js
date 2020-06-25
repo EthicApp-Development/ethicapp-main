@@ -1150,6 +1150,17 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                         });
                     });
                 });
+                $http({ url: "get-chat-count-stage", method: "post", data: _postdata2 }).success(function (data) {
+                    self.shared.chatByUid = {};
+                    self.shared.chatByTeam = {};
+                    data.forEach(function(c) {
+                        self.shared.chatByUid[c.uid] = +c.count;
+                        if(!self.shared.chatByTeam[c.tmid]){
+                            self.shared.chatByTeam[c.tmid] = 0;
+                        }
+                        self.shared.chatByTeam[c.tmid] += +c.count;
+                    });
+                });
             });
         }
         else if (self.selectedSes.type == "T"){

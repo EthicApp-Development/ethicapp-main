@@ -211,5 +211,13 @@ router.post("/get-chat-count", rpg.multiSQL({
     sqlParams: [rpg.param("post", "sesid"), rpg.param("post", "sesid")]
 }));
 
+router.post("/get-chat-count-stage", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select u.uid, u.tmid, count(*) as count from chat as c inner join teamusers as u on u.uid = c.uid inner join" +
+        " teams as tm on tm.id = u.tmid where c.stageid = $1 and tm.stageid = $2 group by u.uid, u.tmid",
+    postReqData: ["stageid"],
+    sqlParams: [rpg.param("post", "stageid"), rpg.param("post", "stageid")]
+}));
+
 
 module.exports = router;

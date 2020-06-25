@@ -1153,3 +1153,17 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 .text-black{
     color: black !important;
 }
+
+.word-count{
+    position: absolute;
+    left: 5px;
+    z-index: 99;
+    color: white;
+    background: #004093;
+    top: 4px;
+}
+
+.tlabel{
+    display: inline-block;
+    width: calc(100% - 42px);
+}

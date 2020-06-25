@@ -36,12 +36,12 @@
             </a>
         </div>
         <div class="cf3 grow text-center simple-padding-top hscroll" ng-show="iteration > 0">
-            <span ng-repeat="st in stages">
-                <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': st.id==currentStageId}">{{ 'stage' | lang}} {{ st.number }}</span>
-                <!-- <span ng-hide="$last">→</span> -->
-            </span>
-            <span class="label label-primary bg-black-alpha bg-yellow" ng-if="finished">{{ 'finished' | lang}}</span>
-            <i class="fa fa-angle-right" ng-if="!finished"></i>
+<!--            <span ng-repeat="st in stages">-->
+<!--                <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': st.id==currentStageId}">{{ 'stage' | lang}} {{ st.number }}</span>-->
+<!--                &lt;!&ndash; <span ng-hide="$last">→</span> &ndash;&gt;-->
+<!--            </span>-->
+<!--            <span class="label label-primary bg-black-alpha bg-yellow" ng-if="finished">{{ 'finished' | lang}}</span>-->
+<!--            <i class="fa fa-angle-right" ng-if="!finished"></i>-->
             <!-- <span class="pull-right margin-right-24" ng-show="sesSTime != null">
                 <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
             </span> -->
@@ -83,7 +83,7 @@
                  ng-click="selectDocument($index)" ng-attr-id="{{ 'tabd' + $index }}">
                 <i class="fa fa-book"></i> {{doc.title | limitTo:10}}
             </div>
-            <div class="tab tab-text" ng-repeat="st in stages" ng-class="{active: selectedStage == $index && !showDoc, 'green': !df.dirty && st.select != null}"
+            <div class="tab tab-text" ng-repeat="st in stages" ng-class="{active: selectedStage == $index && !showDoc, 'green': st.id != currentStageId, 'yellow': st.id == currentStageId}"
                  ng-click="selectStage($index)" ng-attr-id="{{ 'tabq' + $index }}">
                 <i class="fa fa-question-circle"></i> {{ 'stage' | lang }} {{st.number}} <span class="badge bg-red" ng-show="st.c != null && st.c > st.cr">{{st.c - st.cr}}</span>
             </div>
@@ -136,8 +136,7 @@
                     <div ui-tree data-max-depth="1">
                         <div class="list-group" ui-tree-nodes="" ng-model="actors">
 <!--                            <span class="text-gray center-block text-center" ng-show="selections.length > 0">Más importante</span>-->
-                            <div class="list-group-item drag-item" ng-repeat="actor in actors" ui-tree-node
-                                ng-class="{'deep-blue': selectedActor == $index}">
+                            <div class="list-group-item drag-item" ng-repeat="actor in actors" ui-tree-node>
                                 <div class="row">
                                     <div class="col-xs-2 col-sm-1 text-center h30" ui-tree-handle ng-if="selectedActor == null">
                                         <span class="font-large">:::</span>
@@ -150,9 +149,23 @@
                                     </div>
                                     <div class="col-xs-4 text-right">
                                         <i class="fa fa-check margin-right-8" ng-if="actor.sent"></i>
-                                        <button class="btn btn-default btn-sm" ng-click="selectActor($index)" ng-if="actor.justified">
+                                        <button class="btn btn-default btn-sm" ng-click="selectActor($index)" ng-if="actor.justified && selectedActor == null">
                                             <i class="fa fa-edit"></i>
                                         </button>
+                                    </div>
+                                    <div class="col-xs-12" ng-if="selectedActor == $index && stages[selectedStage].id == currentStageId">
+                                        <div class="input-group">
+                                            <span class="input-group-addon deep-blue">{{userAnon[myUid]}}</span>
+                                            <textarea type="text" class="form-control" placeholder="{{getPlaceholder()}}" ng-model="actors[selectedActor].comment"
+                                                      ng-change="actors[selectedActor].dirty = true" ng-disabled="selectedActor == null">
+                                            </textarea>
+                                            <span class="word-count" ng-class="{'bg-green': wordCount(actors[selectedActor].comment) >= 100}">{{ wordCount(actors[selectedActor].comment) }}</span>
+                                            <span class="input-group-addon hoverable" ng-disabled="finished || !actors[selectedActor].dirty || selectedActor == null"
+                                                  ng-click="sendActorSel()">
+                                            <i class="fa fa-check" ng-show="!actors[selectedActor].dirty"></i>
+                                            <i class="fa fa-send" ng-show="actors[selectedActor].dirty"></i>
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -190,17 +203,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="input-group margin-top-28" ng-if="stages[selectedStage].id == currentStageId">
-                <span class="input-group-addon deep-blue">{{userAnon[myUid]}}</span>
-                <textarea type="text" class="form-control" placeholder="{{getPlaceholder()}}" ng-model="actors[selectedActor].comment"
-                          ng-change="actors[selectedActor].dirty = true" ng-disabled="finished || selectedActor == null">
-                </textarea>
-                <span class="input-group-addon hoverable" ng-disabled="finished || !actors[selectedActor].dirty || selectedActor == null"
-                      ng-click="sendActorSel()">
-                    <i class="fa fa-check" ng-show="!actors[selectedActor].dirty"></i>
-                    <i class="fa fa-send" ng-show="actors[selectedActor].dirty"></i>
-                </span>
             </div>
             <div class="row margin-top-24" ng-if="stages[selectedStage].id == currentStageId">
                 <div class="col-xs-12 text-center">
@@ -284,12 +286,12 @@
             </div>
         </div>
         <br>
-        <div ng-show="stages[selectedStage].id == currentStageId && stages[selectedStage].chat">
+        <div ng-show="stages[selectedStage].chat">
         <div class="chat-inv"></div>
         <div class="chat-container">
             <!-- <h4>Chat</h4> -->
             <div class="chat bordered">
-                <div class="chat-area" scroll-glue ng-show="chatExp">
+                <div class="chat-area" scroll-glue ng-show="chatExp" ng-if="stages[selectedStage].id == currentStageId">
                     <strong ng-show="chatMsgs[currentStageId].length == 0">Chat</strong>
                     <div class="chat-msg" ng-repeat="msg in chatMsgs[currentStageId]" ng-class="{'bg-gray': chatmsgreply == msg.id}">
                         <div class="font-mini parent-msg" ng-show="msg.parent != null">
@@ -306,20 +308,35 @@
                         <span class="content" bind-html-compile="msg.content | linkfy"></span>
                     </div>
                 </div>
+                <div class="chat-area" scroll-glue ng-show="chatExp" ng-if="stages[selectedStage].id != currentStageId">
+                    <strong ng-show="chatMsgsPrev[currentStageId].length == 0">Chat</strong>
+                    <div class="chat-msg" ng-repeat="msg in chatMsgsPrev[stages[selectedStage].id]">
+                        <div class="font-mini parent-msg" ng-show="msg.parent != null">
+                            <div class="anon-badge margin-left-n8">{{ teamMapPrev[msg.parent.uid] }}</div>
+                            <span class="content" bind-html-compile="msg.parent.content | limitTo:100 | linkfy"></span>
+                        </div>
+                        <i class="fa fa-reply" ng-show="msg.parent != null"></i>
+                        <div class="anon-badge" ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">{{ teamMapPrev[msg.uid] }}</div>
+                        <span class="pull-right font-mini text-right">
+                            <span class="text-muted">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
+                        </span>
+                        <span class="content" bind-html-compile="msg.content | linkfy"></span>
+                    </div>
+                </div>
                 <div class="input-group">
                     <span class="input-group-btn">
                         <button class="btn btn-default" ng-click="chatExp = !chatExp">
                             <i class="fa fa-arrow-up" ng-show="!chatExp"></i>
                             <i class="fa fa-arrow-down" ng-show="chatExp"></i>
                         </button>
-                        <button class="btn btn-primary" ng-show="chatmsgreply != null" ng-disabled="finished" ng-click="setReply(null)">
+                        <button class="btn btn-primary" ng-show="chatmsgreply != null" ng-disabled="finished || stages[selectedStage].id != currentStageId" ng-click="setReply(null)">
                             <i class="fa fa-reply"></i>
                         </button>
                     </span>
-                    <input type="text" class="form-control" ng-model="chatmsg" ng-disabled="finished" id="chat-input"
+                    <input type="text" class="form-control" ng-model="chatmsg" ng-disabled="finished || stages[selectedStage].id != currentStageId" id="chat-input"
                            ng-keydown="$event.keyCode === 13 && sendChatMsg()">
                     <span class="input-group-btn">
-                        <button class="btn btn-default" ng-disabled="finished" ng-click="sendChatMsg()">
+                        <button class="btn btn-default" ng-disabled="finished || stages[selectedStage].id != currentStageId" ng-click="sendChatMsg()">
                             <i class="fa fa-send"></i>
                         </button>
                     </span>

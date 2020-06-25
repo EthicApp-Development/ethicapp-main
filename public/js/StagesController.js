@@ -24,6 +24,7 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
     self.stageRoles = [];
 
     self.roles = [];
+    self.dfs = [];
 
     self.groups = [];
     self.groupopt = {
@@ -264,7 +265,7 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
     };
 
     self.acceptGroups = function (stid) {
-        if (self.groupsProp == null) {
+        if (self.groups == null) {
             Notification.error("No hay propuesta de grupos para fijar");
             return;
         }
@@ -346,6 +347,35 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
     //     self.lastI = -1;
     //     self.lastJ = -1;
     // };
+
+    self.getGrouping = (gstr) => {
+        if(gstr == null || gstr == ""){
+            return self.flang("prevGroups");
+        }
+        let cmps = gstr.split(":");
+        let meths = cmps[1].split(" ");
+        return self.flang("studentsPerGroup") + ": " + cmps[0] + ", " + self.flang("groupingMethod")
+            + ": " + klg(meths[0], meths[1]).name;
+    };
+
+    self.addDF = () => {
+        self.dfs.push({
+            name: "",
+            tleft: "",
+            tright: "",
+            num: 7,
+            orden: self.dfs.length + 1,
+            justify: true
+        });
+    };
+
+    self.buildArray = (n) => {
+        let a = [];
+        for (let i = 1; i <= n; i++) {
+            a.push(i);
+        }
+        return a;
+    };
 
     self.getStages();
 };

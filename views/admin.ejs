@@ -561,7 +561,8 @@
                     </div>
                 </div>
                 <div class="sub-tab-content">
-                    <div class="row row-border">
+                    <div ng-if="selectedSes.type == 'R'">
+                    <div class="row">
                         <div class="col-sm-12">
                             <label>{{ 'question' | lang }}</label>
                             <textarea rows="2" class="form-control" ng-model="stage.question" ng-disabled="readonly"></textarea>
@@ -610,6 +611,53 @@
                             <button class="btn btn-default" ng-click="addRole()" ng-disabled="readonly">
                                 <i class="fa fa-plus"></i> {{ 'add' | lang }} {{ 'role' | lang }}
                             </button>
+                        </div>
+                    </div>
+                    </div>
+                    <div ng-if="selectedSes.type == 'T'">
+                        <h4>{{ 'ethics' | lang }}</h4>
+                        <div class="differential" ng-repeat="df in dfs">
+                            <div class="row">
+                                <div class="col-xs-2 text-center">
+                                    <h4>DS{{df.orden}}</h4>
+                                </div>
+                                <div class="col-xs-8">
+                                    <input type="text" class="form-control text-center" ng-disabled="selectedSes.status!=1" placeholder="Titulo" ng-model="df.name">
+                                </div>
+                                <div class="col-xs-2 text-center">
+                                    <button class="btn btn-default" ng-class="{'btn-primary': df.justify}"
+                                            ng-click="df.justify = !df.justify" ng-disabled="readonly">
+                                        {{ 'justify' | lang }} {{ 'answer' | lang }}
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="row margin-top-8">
+                                <div class="col-xs-3 text-right">
+                                    <div class="tlabel">
+                                        <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" placeholder="Left" ng-model="df.tleft">
+                                    </div>
+                                    <button class="btn btn-default" ng-click="df.num = df.num > 2 ? df.num - 1 : 2">-</button>
+                                </div>
+                                <div class="dopts col-xs-6">
+                                    <div class="option eq-space" ng-repeat="i in buildArray(df.num)">{{i}}</div>
+                                </div>
+                                <div class="col-xs-3">
+                                    <button class="btn btn-default" ng-click="df.num = df.num < 9 ? df.num + 1 : 10">+</button>
+                                    <div class="tlabel">
+                                        <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" placeholder="Right" ng-model="df.tright">
+                                    </div>
+                                </div>
+                            </div>
+                            <br>
+                            <hr>
+                            <br>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-12 text-center">
+                                <button class="btn btn-default" ng-click="addDF()" ng-disabled="readonly">
+                                    <i class="fa fa-plus"></i> {{ 'add' | lang }} {{ 'question' | lang }}
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="row">
@@ -662,13 +710,14 @@
                         <div class="col-sm-12" ng-if="!readonly">
                             <label>{{'studentsPerGroup' | lang}}: </label>
                             <input class="form-control form-inline-mini" ng-model="groupopt.num" type="number" min="2" ng-disabled="selectedSes.grouped">
+                            <label class="simple-margin-left">{{'groupingMethod' | lang}}: </label>
                             <select class="form-control form-inline-med" ng-options="x.key as x.name for x in methods" ng-disabled="selectedSes.grouped" ng-model="groupopt.met"></select>
-                            <button class="btn btn-default" ng-click="generateGroups()" ng-disabled="selectedSes.grouped">{{ 'generate' | lang }}</button>
+                            <button class="btn btn-default simple-margin-left" ng-click="generateGroups()" ng-disabled="selectedSes.grouped">{{ 'generate' | lang }}</button>
                             <span ng-show="selectedSes.grouped"> - {{'groupsAreSet' | lang}}</span>
 <!--                            <button class="btn btn-default pull-right" ng-click="acceptGroups()" ng-disabled="selectedSes.grouped">{{'setGroups' | lang}}</button>-->
                         </div>
                         <div class="col-sm-12" ng-if="readonly">
-                            <strong>{{ 'groups' | lang }}</strong> ({{ stage.grouping.replace(":", ", ") }})
+                            <strong>{{ 'groups' | lang }}</strong> ({{ getGrouping(stage.grouping) }})
                         </div>
                         <div class="col-sm-12 margin-top-8">
                             <table class="table table-bordered">
@@ -1162,8 +1211,14 @@
                     <tr ng-repeat="udata in indvTableSorted track by udata.uid"
                         ng-click="openActorDetails(udata.uid, iterationIndicator)">
                         <td>{{ udata.ceq }}</td>
-                        <td>{{ users[udata.uid].name }}</td>
-                        <td ng-if="shared.stagesMap[iterationIndicator].type == 'team'">{{ shared.groupByUid[udata.uid].index }}</td>
+                        <td>
+                            {{ users[udata.uid].name }}
+                            <span class="badge bg-red">{{ shared.chatByUid[udata.uid] }}</span>
+                        </td>
+                        <td ng-if="shared.stagesMap[iterationIndicator].type == 'team'">
+                            {{ shared.groupByUid[udata.uid].index }}
+                            <span class="badge bg-red">{{ shared.chatByTeam[shared.groupByUid[udata.uid].tmid] }}</span>
+                        </td>
                         <td ng-repeat="aid in udata.arr track by $index">
                             {{ actorMap[aid].name }}
                             <i class="fa fa-check" ng-if="udata.com[$index]"></i>
