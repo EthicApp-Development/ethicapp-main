@@ -18,6 +18,7 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", "$uibModal",
         S: "to-select",
         E: "to-differential",
         R: "to-role",
+        T: "to-diff",
     };
 
     self.init = () => {

@@ -344,6 +344,14 @@ router.post("/get-differentials", rpg.multiSQL({
     sqlParams: [rpg.param("ses", "ses")]
 }));
 
+router.post("/get-differentials-stage", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select * from differential where stageid = $1 order by orden",
+    postReqData: ["stageid"],
+    sesReqData: ["uid"],
+    sqlParams: [rpg.param("post", "stageid")]
+}));
+
 router.post("/add-differential", rpg.execSQL({
     dbcon: pass.dbcon,
     sql: "insert into differential(title, tleft, tright, orden, creator, sesid) select $1, $2, $3, $4, $5, $6 " +
@@ -352,6 +360,17 @@ router.post("/add-differential", rpg.execSQL({
     sesReqData: ["uid"],
     sqlParams: [rpg.param("post", "name"), rpg.param("post", "tleft"), rpg.param("post", "tright"), rpg.param("post", "orden"),
         rpg.param("ses", "uid"), rpg.param("post", "sesid"), rpg.param("post", "orden"), rpg.param("post", "sesid")]
+}));
+
+router.post("/add-differential-stage", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "insert into differential(title, tleft, tright, orden, creator, stageid, num, justify, sesid) values " +
+        "($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+    postReqData: ["orden", "tleft", "tright", "name", "stageid", "num", "justify", "sesid"],
+    sesReqData: ["uid"],
+    sqlParams: [rpg.param("post", "name"), rpg.param("post", "tleft"), rpg.param("post", "tright"), rpg.param("post", "orden"),
+        rpg.param("ses", "uid"), rpg.param("post", "stageid"), rpg.param("post", "num"), rpg.param("post", "justify"),
+        rpg.param("post", "sesid")]
 }));
 
 router.post("/update-differential", rpg.execSQL({

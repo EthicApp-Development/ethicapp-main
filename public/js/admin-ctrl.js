@@ -1,6 +1,7 @@
 "use strict";
 
-var adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill", "ngMap"]);
+var adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill",
+    "ngMap", "tableSort"]);
 
 var DASHBOARD_AUTOREALOD = false;
 var DASHBOARD_AUTOREALOD_TIME = 15;
@@ -1164,7 +1165,16 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             });
         }
         else if (self.selectedSes.type == "T"){
-
+            var _postdata2 = {
+                stageid: self.iterationIndicator
+            };
+            self.dfsStage = [];
+            $http.post("get-differentials-stage", _postdata2).success(function(data) {
+                self.dfsStage = data;
+                $http.post("get-differential-all-stage", _postdata2).success(function (data) {
+                    self.shared.difTable = window.buildDifTable(data, self.users, self.stages);
+                });
+            });
         }
     };
 
@@ -1760,7 +1770,15 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 Notification.error("No hay datos de chat para exportar");
             }
         });
-    }
+    };
+
+    self.sortByAutorName = (a, b) => {
+        return self.users[a].name < self.users[b].name ? -1 : 1;
+    };
+
+    self.sortByAutorGroup = (a, b) => {
+        return self.shared.groupByUid[a].index - self.shared.groupByUid[b].index;
+    };
 
 });
 

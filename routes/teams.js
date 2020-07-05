@@ -193,6 +193,15 @@ router.post("/get-differential-all", rpg.multiSQL({
     sqlParams: [rpg.param("post", "sesid")]
 }));
 
+router.post("/get-differential-all-stage", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select d.stageid, d.orden, s.uid, r.tmid, s.did, s.sel, s.comment from differential_selection as s inner join " +
+        "differential as d on s.did = d.id left join (select tu.* from teamusers as tu inner join teams as t on " +
+        "tu.tmid = t.id and t.stageid = $1) as r on r.uid = s.uid where d.stageid = $2 order by stageid, uid, orden",
+    postReqData: ["stageid"],
+    sqlParams: [rpg.param("post", "stageid"), rpg.param("post", "stageid")]
+}));
+
 router.post("/get-differential-indv", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select s.uid as tmid, iteration, orden, s.uid, s.did, sel, comment " +

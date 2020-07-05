@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="css/angular-ui-notification.min.css">
     <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css">
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.9.0-alpha2/katex.min.css">
+    <link rel="stylesheet" href="css/tablesort.min.css">
     <link rel="stylesheet" href="css/main.css"/>
     <script src="libs/angular.min.js"></script>
     <script src="libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
@@ -25,6 +26,7 @@
     <script src="libs/angular-timer.min.js"></script>
     <script src="libs/angular-ui-notification.min.js"></script>
     <script src="libs/save-csv.min.js"></script>
+    <script src="libs/angular-tablesort.min.js"></script>
     <script src="js/StagesController.js"></script>
     <script src="js/admin-ctrl.js"></script>
 </head>
@@ -619,10 +621,11 @@
                         <div class="differential" ng-repeat="df in dfs">
                             <div class="row">
                                 <div class="col-xs-2 text-center">
-                                    <h4>DS{{df.orden}}</h4>
+                                    <h4>Item {{df.orden}}</h4>
                                 </div>
                                 <div class="col-xs-8">
-                                    <input type="text" class="form-control text-center" ng-disabled="selectedSes.status!=1" placeholder="Titulo" ng-model="df.name">
+                                    <input type="text" class="form-control text-center" ng-disabled="readonly"
+                                           placeholder="Titulo" ng-model="df.name">
                                 </div>
                                 <div class="col-xs-2 text-center">
                                     <button class="btn btn-default" ng-class="{'btn-primary': df.justify}"
@@ -634,17 +637,17 @@
                             <div class="row margin-top-8">
                                 <div class="col-xs-3 text-right">
                                     <div class="tlabel">
-                                        <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" placeholder="Left" ng-model="df.tleft">
+                                        <input type="text" class="form-control" ng-disabled="readonly" placeholder="Left" ng-model="df.tleft">
                                     </div>
-                                    <button class="btn btn-default" ng-click="df.num = df.num > 2 ? df.num - 1 : 2">-</button>
+                                    <button class="btn btn-default" ng-click="df.num = df.num > 2 ? df.num - 1 : 2" ng-disabled="readonly">-</button>
                                 </div>
                                 <div class="dopts col-xs-6">
                                     <div class="option eq-space" ng-repeat="i in buildArray(df.num)">{{i}}</div>
                                 </div>
                                 <div class="col-xs-3">
-                                    <button class="btn btn-default" ng-click="df.num = df.num < 9 ? df.num + 1 : 10">+</button>
+                                    <button class="btn btn-default" ng-click="df.num = df.num < 9 ? df.num + 1 : 10" ng-disabled="readonly">+</button>
                                     <div class="tlabel">
-                                        <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" placeholder="Right" ng-model="df.tright">
+                                        <input type="text" class="form-control" ng-disabled="readonly" placeholder="Right" ng-model="df.tright">
                                     </div>
                                 </div>
                             </div>
@@ -1201,14 +1204,15 @@
 
                 <br>
                 <strong>Respuestas individuales y agrupadas</strong>
-                <table class="table table-bordered">
+                <table class="table table-bordered" ts-wrapper>
                     <tr>
-                        <th>Cantidad Iguales</th>
-                        <th>Autor</th>
-                        <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'">Grupo</th>
+                        <th ts-criteria="ceqlnum | parseFloat" ts-default="descending">Cantidad Iguales</th>
+                        <th ts-criteria="uid" ts-order-by="sortByAutorName">Autor</th>
+                        <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'" ts-criteria="uid2"
+                            ts-order-by="sortByAutorGroup">Grupo</th>
                         <th ng-repeat="(p, aa) in rawActors track by p">Pos {{ p + 1 }}</th>
                     </tr>
-                    <tr ng-repeat="udata in indvTableSorted track by udata.uid"
+                    <tr ng-repeat="udata in indvTableSorted track by udata.uid" ts-repeat
                         ng-click="openActorDetails(udata.uid, iterationIndicator)">
                         <td>{{ udata.ceq }}</td>
                         <td>
@@ -1222,6 +1226,31 @@
                         <td ng-repeat="aid in udata.arr track by $index">
                             {{ actorMap[aid].name }}
                             <i class="fa fa-check" ng-if="udata.com[$index]"></i>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div ng-show="selectedSes.type == 'T'" class="margin-top-8">
+                <strong>Respuestas individuales y agrupadas</strong>
+                <table class="table table-bordered" ts-wrapper>
+                    <tr>
+                        <th ts-criteria="uid" ts-order-by="sortByAutorName">Autor</th>
+                        <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'" ts-criteria="uid2"
+                            ts-order-by="sortByAutorGroup">Grupo</th>
+                        <th ng-repeat="df in dfsStage">Item {{ df.orden }}</th>
+                    </tr>
+                    <tr ng-repeat="udata in shared.difTable track by udata.uid" ts-repeat ng-click="openDFDetails(udata.tmid,1)">
+                        <td>
+                            {{ users[udata.uid].name }}
+                            <span class="badge bg-red">{{ shared.chatByUid[udata.uid] }}</span>
+                        </td>
+                        <td ng-if="shared.stagesMap[iterationIndicator].type == 'team'">
+                            {{ shared.groupByUid[udata.uid].index }}
+                            <span class="badge bg-red">{{ shared.chatByTeam[shared.groupByUid[udata.uid].tmid] }}</span>
+                        </td>
+                        <td ng-repeat="aid in udata.arr track by $index">
+                            {{ aid.sel }}
+                            <i class="fa fa-check" ng-if="aid.comment"></i>
                         </td>
                     </tr>
                 </table>

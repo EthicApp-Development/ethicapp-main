@@ -162,6 +162,22 @@ router.get("/role-playing", (req, res) => {
         res.redirect(".");
 });
 
+router.get("/to-diff", (req, res) => {
+    if (req.session.uid) {
+        req.session.ses = req.query.sesid;
+        res.redirect("ethics");
+    }
+    else
+        res.redirect(".");
+});
+
+router.get("/ethics", (req, res) => {
+    if (req.session.uid && req.session.ses)
+        res.render("ethics");
+    else
+        res.redirect(".");
+});
+
 router.post("/get-documents", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select id, title, path from documents where sesid = $1 and active = true",
@@ -231,6 +247,15 @@ router.post("/get-diff-selection", rpg.multiSQL({
     sesReqData: ["uid", "ses"],
     postReqData: ["iteration"],
     sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "uid"), rpg.param("post","iteration")]
+}));
+
+router.post("/get-diff-selection-stage", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select s.did, s.sel, s.comment from differential_selection as s inner join differential as d on d.id = s.did " +
+        "where d.stageid = $1 and s.uid = $2",
+    sesReqData: ["uid", "ses"],
+    postReqData: ["stageid"],
+    sqlParams: [rpg.param("post", "stageid"), rpg.param("ses", "uid")]
 }));
 
 router.post("/get-chat-msgs", rpg.multiSQL({

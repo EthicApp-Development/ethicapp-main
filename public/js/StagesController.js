@@ -40,9 +40,19 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
             var postdata = {
                 stageid: self.stages[i].id
             };
-            $http({ url: "get-actors", method: "post", data: postdata }).success(function (data) {
-                self.roles = data;
-            });
+            if(self.selectedSes.type == "R") {
+                $http({url: "get-actors", method: "post", data: postdata}).success(function (data) {
+                    self.roles = data;
+                });
+            }
+            else if(self.selectedSes.type == "T"){
+                $http({url: "get-differentials-stage", method: "post", data: postdata}).success(function (data) {
+                    self.dfs = data;
+                    self.dfs.forEach(df => {
+                        df.name = df.title;
+                    });
+                });
+            }
             $http({ url: "group-proposal-stage", method: "post", data: postdata }).success(function (data) {
                 self.groups = data;
             });
@@ -75,9 +85,19 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
             var postdata = {
                 stageid: self.selectedSes.current_stage
             };
-            $http({ url: "get-actors", method: "post", data: postdata }).success(function (data) {
-                self.roles = data;
-            });
+            if(self.selectedSes.type == "R") {
+                $http({url: "get-actors", method: "post", data: postdata}).success(function (data) {
+                    self.roles = data;
+                });
+            }
+            else if(self.selectedSes.type == "T"){
+                $http({url: "get-differentials-stage", method: "post", data: postdata}).success(function (data) {
+                    self.dfs = data;
+                    self.dfs.forEach(df => {
+                        df.name = df.title;
+                    });
+                });
+            }
             $http({ url: "group-proposal-stage", method: "post", data: postdata }).success(function (data) {
                 self.groups = data;
                 console.log(data);
@@ -120,8 +140,8 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
 
     self.sendStage = function(){
         var s = self.stage;
-        console.log(s, self.roles, self.groups);
-        if(s.type == null || self.roles.length == 0 || s.type == "team" && (self.groups == null || self.groups.length == 0)){
+        let arr = self.selectedSes.type == "R" ? self.roles : self.dfs;
+        if(s.type == null || arr.length == 0 || s.type == "team" && (self.groups == null || self.groups.length == 0)){
             Notification.error("Hay datos faltantes");
             return;
         }
@@ -142,27 +162,57 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
         $http({ url: "add-stage", method: "post", data: postdata }).success(function (data) {
             let stageid = data.id;
             if(stageid != null) {
-                let c = self.roles.length;
-                self.acceptGroups(stageid);
-                for (let i = 0; i < self.roles.length; i++) {
-                    const role = self.roles[i];
-                    let p = {
-                        name: role.name,
-                        jorder: role.type == "order",
-                        justified: role.type != null,
-                        stageid: stageid,
-                    };
-                    $http({ url: "add-actor", method: "post", data: p }).success(function (data) {
-                        console.log("Actor added");
-                        c -= 1;
-                        if(c == 0){
-                            let pp = {sesid: self.selectedSes.id, stageid: stageid};
-                            $http({ url: "session-start-stage", method: "post", data: pp }).success(function (data) {
-                                Notification.success("Etapa creada correctamente");
-                                window.location.reload()
-                            });
-                        }
-                    });
+                if(postdata.type == "team") {
+                    self.acceptGroups(stageid);
+                }
+                if(self.selectedSes.type == "R") {
+                    let c = self.roles.length;
+                    for (let i = 0; i < self.roles.length; i++) {
+                        const role = self.roles[i];
+                        let p = {
+                            name: role.name,
+                            jorder: role.type == "order",
+                            justified: role.type != null,
+                            stageid: stageid,
+                        };
+                        $http({url: "add-actor", method: "post", data: p}).success(function (data) {
+                            console.log("Actor added");
+                            c -= 1;
+                            if (c == 0) {
+                                let pp = {sesid: self.selectedSes.id, stageid: stageid};
+                                $http({url: "session-start-stage", method: "post", data: pp}).success(function (data) {
+                                    Notification.success("Etapa creada correctamente");
+                                    window.location.reload()
+                                });
+                            }
+                        });
+                    }
+                }
+                else if(self.selectedSes.type == "T") {
+                    let c = self.dfs.length;
+                    for (let i = 0; i < self.dfs.length; i++) {
+                        const df = self.dfs[i];
+                        let p = {
+                            name: df.name,
+                            tleft: df.tleft,
+                            tright: df.tright,
+                            num: df.num,
+                            orden: df.orden,
+                            justify: df.justify,
+                            stageid: stageid,
+                            sesid: self.selectedSes.id
+                        };
+                        $http({url: "add-differential-stage", method: "post", data: p}).success(function (data) {
+                            c -= 1;
+                            if (c == 0) {
+                                let pp = {sesid: self.selectedSes.id, stageid: stageid};
+                                $http({url: "session-start-stage", method: "post", data: pp}).success(function (data) {
+                                    Notification.success("Etapa creada correctamente");
+                                    window.location.reload()
+                                });
+                            }
+                        });
+                    }
                 }
             }
             else {
@@ -497,11 +547,34 @@ window.sortIndTable = function(table, users){
     });
     let arr = Object.entries(table).map(([uid, e]) => {
         e.uid = uid;
+        e.uid2 = uid;
+        e.ceqlnum = e.ceq + e.lnum / 4e6;
         return e;
-    });
-    arr.sort(function (a, b) {
-        return b.ceq - a.ceq || b.lnum - a.lnum;
     });
     console.log(arr);
     return arr;
+};
+
+
+window.buildDifTable = function(data, users, stages){
+    console.log("DATA");
+    console.log(data);
+    console.log(users);
+    // console.log(stages);
+
+    let res = [];
+    var us = Object.values(users).filter(function (e) {
+        return e.role == "A";
+    });
+    for (let i = 0; i < us.length; i++) {
+        const u = us[i];
+        let row = {
+            uid: u.id,
+            uid2: u.id,
+            arr: data.filter(e => e.uid == u.id)
+        };
+        row.tmid = row.arr.length > 0 ? row.arr[0].tmid : null;
+        res.push(row);
+    }
+    return res;
 };
