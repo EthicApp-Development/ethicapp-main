@@ -277,6 +277,16 @@ router.post("/get-chat-stage", rpg.multiSQL({
     sqlParams: [rpg.param("post", "stageid"), rpg.param("post","stageid"), rpg.param("ses", "uid")]
 }));
 
+router.post("/get-diff-chat-stage", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select s.id, s.did, s.uid, s.content, s.stime, s.parent_id from differential_chat as s inner join differential as d on d.id = s.did " +
+        "where d.stageid = $1 and s.uid in (select tu.uid from teamusers as tu where tu.tmid = (select t.id from teamusers " +
+        "as tu, teams as t where t.stageid = $2 and tu.tmid = t.id and tu.uid = $3)) order by s.stime asc",
+    sesReqData: ["uid", "ses"],
+    postReqData: ["stageid"],
+    sqlParams: [rpg.param("post", "stageid"), rpg.param("post","stageid"), rpg.param("ses", "uid")]
+}));
+
 router.post("/get-team-chat", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select s.id, s.did, s.uid, s.content, s.stime, s.parent_id from differential_chat as s inner join differential as d on d.id = s.did " +

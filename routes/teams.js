@@ -59,6 +59,20 @@ router.post("/get-team-actor-selection",rpg.multiSQL({
     sqlParams: [rpg.param("calc","prevarr"),rpg.param("post","stageid"),rpg.param("ses","uid")]
 }));
 
+router.post("/get-team-differential-selection",rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select distinct s.sel, s.uid, s.did, s.comment, d.stageid, d.orden, d.title, d.tleft, d.tright, d.num " +
+        "from differential_selection as s, differential as d where d.stageid = ANY ($1) and " +
+        "s.uid in (select tu.uid from teamusers as tu where tu.tmid = (select t.id from teamusers as tu, teams as t where " +
+        "t.stageid = $2 and tu.tmid = t.id and tu.uid = $3)) and s.did = d.id order by d.stageid, s.uid, d.orden",
+    sesReqData: ["ses","uid"],
+    postReqData: ["prevstages", "stageid"],
+    onStart: (ses, data, calc) => {
+        calc.prevarr = data.prevstages.split(",").map(e => +e);
+    },
+    sqlParams: [rpg.param("calc","prevarr"),rpg.param("post","stageid"),rpg.param("ses","uid")]
+}));
+
 router.post("/get-ses-info",rpg.singleSQL({
     dbcon: pass.dbcon,
     sql: "select greatest(-1,least(7,s.status-2)) as iteration, $1::int as uid, s.name, s.id, s.descr, s.options, s.type, sr.stime, s.current_stage from sessions as s " +

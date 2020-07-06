@@ -134,9 +134,17 @@
             <div class="row" ng-if="stages[selectedStage].id == currentStageId">
                 <div class="col-sm-10 col-sm-offset-1 col-xs-12">
                     <div class="differential" ng-repeat="df in dfs">
-                        <h5 class="text-center">
-                            <span>Item {{df.orden}}: {{df.title}}</span>
-                        </h5>
+                        <div class="row">
+                            <div class="text-center col-xs-10 col-xs-offset-1">
+                                <h5>Item {{df.orden}}: {{df.title}}</h5>
+                            </div>
+                            <div class="col-xs-1 text-right">
+                                <button class="btn btn-default pull-right" ng-click="openChat(df)">
+                                    <i class="fa fa-comments"></i>
+                                    <span class="badge bg-red" ng-show="df.c != null && df.c > df.cr">{{df.c - df.cr}}</span>
+                                </button>
+                            </div>
+                        </div>
                         <div class="row row-min-padding">
                             <div class="col-xs-3 text-right">
                                 <strong class="break-words">{{df.tleft}}</strong>
@@ -166,31 +174,28 @@
             </div>
             <div class="row" ng-if="stages[selectedStage].id != currentStageId">
                 <div class="col-sm-10 col-sm-offset-1 col-xs-12">
-                    <div>
-                        <div class="list-group" ng-model="actors">
-                            <!--                            <span class="text-gray center-block text-center" ng-show="selections.length > 0">Más importante</span>-->
-                            <div class="list-group-item drag-item" ng-repeat="actor in actorsPrev" ng-class="{'deep-blue': selectedActorPrev == $index}">
-                                <div class="row">
-                                    <div class="col-xs-2 col-sm-1 h30 text-center">
-                                        {{$index + 1}}.
-                                    </div>
-                                    <div class="col-xs-6 col-sm-7 h30">
-                                        <strong>{{ actor.name }}</strong>
-                                    </div>
-                                    <div class="col-xs-4 text-right">
-                                        <button class="btn btn-default btn-sm" ng-click="actor.expanded = !actor.expanded" ng-if="actor.justified && actor.comment != ''">
-                                            <i class="fa fa-eye"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="row" ng-show="actor.expanded">
-                                    <div class="col-xs-12">
-                                        {{ actor.comment }}
-                                    </div>
-                                </div>
+                    <div class="differential" ng-repeat="df in dfsPrev">
+                        <h5 class="text-center">
+                            <span>Item {{df.orden}}: {{df.title}}</span>
+                        </h5>
+                        <div class="row row-min-padding">
+                            <div class="col-xs-3 text-right">
+                                <strong class="break-words">{{df.tleft}}</strong>
                             </div>
-                            <!--                            <span class="text-gray center-block text-center" ng-show="selections.length > 0">Menos importante</span>-->
+                            <div class="dopts col-xs-6">
+                                <div class="option eq-space" ng-repeat="i in buildArray(df.num)"
+                                     ng-class="{selected: df.select == i}">{{i}}</div>
+                            </div>
+                            <div class="col-xs-3">
+                                <strong class="break-words">{{df.tright}}</strong>
+                            </div>
                         </div>
+                        <div class="row margin-top-28">
+                            <div class="col-xs-12">
+                                <strong>{{ 'answer' | lang }}:</strong> {{ df.comment }}
+                            </div>
+                        </div>
+                        <hr class="margin-ver-8">
                     </div>
                 </div>
             </div>
@@ -201,7 +206,7 @@
             </div>
         </div>
         <br>
-        <div ng-if="stages[selectedStage].id == currentStageId && prevRes != null">
+        <div ng-if="prevRes != null && stages[selectedStage].id == currentStageId">
             <div ng-repeat="res in prevRes">
                 <hr>
                 <h3>{{ 'stage' | lang }} {{ stagesMap[prevStages[$index]].number }}</h3>
@@ -209,66 +214,64 @@
                     <h4 class="anon-badge">{{ teamMap[uid] }}</h4>
                     <div class="row">
                         <div class="col-sm-10 col-sm-offset-1 col-xs-12">
-                            <div>
-                                <div class="list-group">
-                                    <div class="list-group-item drag-item" ng-repeat="actor in arr">
-                                        <div class="row">
-                                            <div class="col-xs-2 col-sm-1 h30 text-center">
-                                                {{$index + 1}}.
-                                            </div>
-                                            <div class="col-xs-6 col-sm-7 h30">
-                                                <strong>{{ actor.name }}</strong>
-                                            </div>
-                                            <div class="col-xs-4 text-right">
-                                                <button class="btn btn-default btn-sm" ng-click="actor.expanded = !actor.expanded" ng-if="actor.description">
-                                                    <i class="fa fa-eye"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div class="row" ng-show="actor.expanded">
-                                            <div class="col-xs-12">
-                                                {{ actor.description }}
-                                            </div>
-                                        </div>
+                            <div class="differential" ng-repeat="df in arr">
+                                <h5 class="text-center">
+                                    <span>Item {{df.orden}}: {{df.title}}</span>
+                                </h5>
+                                <div class="row row-min-padding">
+                                    <div class="col-xs-3 text-right">
+                                        <strong class="break-words">{{df.tleft}}</strong>
+                                    </div>
+                                    <div class="dopts col-xs-6">
+                                        <div class="option eq-space" ng-repeat="i in buildArray(df.num)"
+                                             ng-class="{selected: df.sel == i}">{{i}}</div>
+                                    </div>
+                                    <div class="col-xs-3">
+                                        <strong class="break-words">{{df.tright}}</strong>
                                     </div>
                                 </div>
+                                <div class="row margin-top-28">
+                                    <div class="col-xs-12">
+                                        <strong>{{ 'answer' | lang }}:</strong> {{ df.comment }}
+                                    </div>
+                                </div>
+                                <hr class="margin-ver-8">
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div ng-if="stages[selectedStage].id != currentStageId && stages[selectedStage].type == 'team' && prevResPrev != null">
+        <div ng-if="prevResPrev != null && stages[selectedStage].id != currentStageId">
             <div ng-repeat="res in prevResPrev">
                 <hr>
-                <h3>{{ 'stage' | lang }} {{ stagesMap[prevStagesPrev[$index]].number }}</h3>
+                <h3>{{ 'stage' | lang }} {{ stagesMap[prevStages[$index]].number }}</h3>
                 <div ng-repeat="(uid, arr) in res">
                     <h4 class="anon-badge">{{ teamMapPrev[uid] }}</h4>
                     <div class="row">
                         <div class="col-sm-10 col-sm-offset-1 col-xs-12">
-                            <div>
-                                <div class="list-group">
-                                    <div class="list-group-item drag-item" ng-repeat="actor in arr">
-                                        <div class="row">
-                                            <div class="col-xs-2 col-sm-1 h30 text-center">
-                                                {{$index + 1}}.
-                                            </div>
-                                            <div class="col-xs-6 col-sm-7 h30">
-                                                <strong>{{ actor.name }}</strong>
-                                            </div>
-                                            <div class="col-xs-4 text-right">
-                                                <button class="btn btn-default btn-sm" ng-click="actor.expanded = !actor.expanded" ng-if="actor.description">
-                                                    <i class="fa fa-eye"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div class="row" ng-show="actor.expanded">
-                                            <div class="col-xs-12">
-                                                {{ actor.description }}
-                                            </div>
-                                        </div>
+                            <div class="differential" ng-repeat="df in arr">
+                                <h5 class="text-center">
+                                    <span>Item {{df.orden}}: {{df.title}}</span>
+                                </h5>
+                                <div class="row row-min-padding">
+                                    <div class="col-xs-3 text-right">
+                                        <strong class="break-words">{{df.tleft}}</strong>
+                                    </div>
+                                    <div class="dopts col-xs-6">
+                                        <div class="option eq-space" ng-repeat="i in buildArray(df.num)"
+                                             ng-class="{selected: df.sel == i}">{{i}}</div>
+                                    </div>
+                                    <div class="col-xs-3">
+                                        <strong class="break-words">{{df.tright}}</strong>
                                     </div>
                                 </div>
+                                <div class="row margin-top-28">
+                                    <div class="col-xs-12">
+                                        <strong>{{ 'answer' | lang }}:</strong> {{ df.comment }}
+                                    </div>
+                                </div>
+                                <hr class="margin-ver-8">
                             </div>
                         </div>
                     </div>
@@ -281,9 +284,9 @@
         <div class="chat-container">
             <!-- <h4>Chat</h4> -->
             <div class="chat bordered">
-                <div class="chat-area" scroll-glue ng-show="chatExp" ng-if="stages[selectedStage].id == currentStageId">
-                    <strong ng-show="chatMsgs[currentStageId].length == 0">Chat</strong>
-                    <div class="chat-msg" ng-repeat="msg in chatMsgs[currentStageId]" ng-class="{'bg-gray': chatmsgreply == msg.id}">
+                <div class="chat-area" scroll-glue ng-show="chatExp && selectedDF != null" ng-if="stages[selectedStage].id == currentStageId">
+                    <strong ng-show="chatMsgs[selectedDF].length == 0">Chat</strong>
+                    <div class="chat-msg" ng-repeat="msg in chatMsgs[selectedDF]" ng-class="{'bg-gray': chatmsgreply == msg.id}">
                         <div class="font-mini parent-msg" ng-show="msg.parent != null">
                             <div class="anon-badge margin-left-n8">{{ teamMap[msg.parent.uid] }}</div>
                             <span class="content" bind-html-compile="msg.parent.content | limitTo:100 | linkfy"></span>
@@ -298,7 +301,7 @@
                         <span class="content" bind-html-compile="msg.content | linkfy"></span>
                     </div>
                 </div>
-                <div class="chat-area" scroll-glue ng-show="chatExp" ng-if="stages[selectedStage].id != currentStageId">
+                <div class="chat-area" scroll-glue ng-show="chatExp && selectedDF != null" ng-if="stages[selectedStage].id != currentStageId">
                     <strong ng-show="chatMsgsPrev[currentStageId].length == 0">Chat</strong>
                     <div class="chat-msg" ng-repeat="msg in chatMsgsPrev[stages[selectedStage].id]">
                         <div class="font-mini parent-msg" ng-show="msg.parent != null">

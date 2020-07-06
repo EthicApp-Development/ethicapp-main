@@ -18,7 +18,7 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
     self.selectedDocument = 0;
     self.finished = false;
     self.sesId = -1;
-    self.chatExp = true;
+    self.chatExp = false;
 
     self.stages = [];
     self.currentStageId = 0;
@@ -55,9 +55,9 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
                 window.location.reload();
             }
         });
-        $socket.on("chatMsgStage", (data) => {
+        $socket.on("chatMsg", (data) => {
             console.log("SOCKET.IO", data);
-            if (data.stageid == self.currentStageId && data.tmid == self.tmId && self.currentStage.chat) {
+            if (data.tmid == self.tmId && self.currentStage.chat) {
                 updateChat();
             }
         });
@@ -90,18 +90,32 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
     };
 
     let updateChat = (count) => {
-        $http.post("get-chat-stage", {
-            stageid: self.currentStageId
-        }).success((data) => {
+        $http.post("get-diff-chat-stage", {stageid: self.currentStageId}).success((data) => {
             self.chatMsgs = {};
+            self.dfs.forEach(e => {
+                e.c = 0;
+            });
             data.forEach(msg => {
+                let df = self.dfs.find(e => e.id == msg.did);
+                df.c = df.c ? df.c + 1 : 1;
+                if(count || df.id == self.selectedDF)
+                    df.cr = df.c;
                 if(msg.parent_id)
                     msg.parent = data.find(e => e.id == msg.parent_id);
-                self.chatMsgs[msg.stageid] = self.chatMsgs[msg.stageid] || [];
-                self.chatMsgs[msg.stageid].push(msg);
+                self.chatMsgs[msg.did] = self.chatMsgs[msg.did] || [];
+                self.chatMsgs[msg.did].push(msg);
             });
-            console.log(self.chatMsgs);
+            self.dfs.forEach(e => {
+                e.cr = e.cr == null ? e.c : e.cr;
+            });
+            // console.log(self.dfs);
         });
+    };
+
+    self.openChat = (df) => {
+        self.selectedDF = df.id;
+        self.chatExp = true;
+        df.cr = df.c;
     };
 
     self.getMe = () => {
@@ -111,13 +125,13 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
         });
     };
 
-    self.selectDF = (i) => {
-        self.selectedDF = i;
-    };
-
-    self.selectDFView = (i) => {
-        self.selectedDFPrev = i;
-    };
+    // self.selectDF = (i) => {
+    //     self.selectedDF = i;
+    // };
+    //
+    // self.selectDFView = (i) => {
+    //     self.selectedDFPrev = i;
+    // };
 
     self.loadDocuments = () => {
         $http({url: "get-documents", method: "post"}).success((data) => {
@@ -274,12 +288,13 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
         });
 
         let st = self.stages[self.selectedStage];
+        self.teamPrev = [];
+        self.teamMapPrev = {};
+        self.teamSelPrev = [];
+        self.prevResPrev = {};
+        self.prevStagesPrev = {};
+
         if(st.type == "team"){
-            self.teamPrev = [];
-            self.teamMapPrev = {};
-            self.teamSelPrev = [];
-            self.prevResPrev = {};
-            self.prevStagesPrev = {};
             $http.post("get-team-stage", {stageid: st.id}).success(data => {
                 self.teamPrev = data;
                 self.teamMapPrev = {};
@@ -294,8 +309,7 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
                     stageid: st.id,
                     prevstages: st.prev_ans
                 };
-                // TODO : Change to DF
-                $http.post("get-team-differental-selection", p).success(data => {
+                $http.post("get-team-differential-selection", p).success(data => {
                     self.teamSelPrev = data;
                     self.structureSelDataPrev();
                 });
@@ -337,13 +351,12 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
 
     self.sendChatMsg = () => {
         let postdata = {
-            stageid: self.currentStageId,
+            did: self.selectedDF,
             content: self.chatmsg,
             tmid: self.tmId,
             parent_id: self.chatmsgreply
         };
-        // console.log(postdata);
-        $http.post("add-chat-msg-stage", postdata).success(data => {
+        $http.post("add-chat-msg", postdata).success(data => {
             self.chatmsg = "";
             self.chatmsgreply = null;
         });
