@@ -1236,7 +1236,7 @@
                     <tr>
                         <th ts-criteria="uid" ts-order-by="sortByAutorName">Autor</th>
                         <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'" ts-criteria="tmid" ts-default>Grupo</th>
-                        <th ng-repeat="df in dfsStage">Item {{ df.orden }}</th>
+                        <th ng-repeat="df in dfsStage">Item {{ df.orden }} ({{ df.num }})</th>
                     </tr>
                     <tr ng-repeat="udata in shared.difTable track by $index" ts-repeat
                         ng-class="{'bg-gray': udata.group}">

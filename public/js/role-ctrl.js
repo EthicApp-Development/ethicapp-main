@@ -50,6 +50,9 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     self.selectedActor = null;
     self.selectedActorPrev = null;
 
+    self.posToJustify = {};
+    self.justifyPosition = false;
+
     self.init = () => {
         self.getSesInfo();
         $socket.on("stateChange", (data) => {
@@ -200,6 +203,15 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             acts.push(a);
         });
         self.actors = acts;
+
+        self.posToJustify = {};
+        self.justifyPosition = false;
+        self.actors.forEach((a,i) => {
+             if(a.jorder){
+                 self.posToJustify[i] = true;
+                 self.justifyPosition = true;
+             }
+        });
     };
 
     self.populateActorsPrev = () => {
