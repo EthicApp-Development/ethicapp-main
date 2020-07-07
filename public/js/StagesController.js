@@ -427,6 +427,8 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
         return a;
     };
 
+    self.shared.buildArray = self.buildArray;
+
     self.getStages();
 };
 
@@ -556,13 +558,14 @@ window.sortIndTable = function(table, users){
 };
 
 
-window.buildDifTable = function(data, users, stages){
-    console.log("DATA");
-    console.log(data);
-    console.log(users);
-    // console.log(stages);
+window.buildDifTable = function(data, users, dfs, gbu){
+    // console.log("DATA");
+    // console.log(data);
+    // console.log(users);
+    // console.log(dfs);
 
     let res = [];
+    let tmids = {};
     var us = Object.values(users).filter(function (e) {
         return e.role == "A";
     });
@@ -570,11 +573,47 @@ window.buildDifTable = function(data, users, stages){
         const u = us[i];
         let row = {
             uid: u.id,
-            uid2: u.id,
-            arr: data.filter(e => e.uid == u.id)
+            arr: dfs.map(d => data.find(e => e.uid == u.id && d.id == e.did))
         };
-        row.tmid = row.arr.length > 0 ? row.arr[0].tmid : null;
+        row.tmid = row.arr.find(e => e && e.tmid != null) ? row.arr.find(e => e && e.tmid != null).tmid :
+            (gbu && gbu[u.id] ? gbu[u.id].tmid : null);
+        if(row.tmid != null)
+            tmids[row.tmid] = true;
         res.push(row);
     }
+
+    let tres = [];
+    let avg = (arr) => arr.length > 0 ? arr.reduce((v,e) => v + e, 0) / arr.length : 0;
+    let sdf = (arr) => {
+        if(arr.length <= 1)
+            return 0;
+        let av = avg(arr);
+        let sd = 0;
+        arr.forEach(function (a) {
+            sd += (a - av) * (a - av);
+        });
+        return Math.sqrt(sd / (arr.length - 1));
+    };
+    Object.keys(tmids).forEach(t => {
+        let r = res.filter(e => e.tmid == t);
+        let row = {
+            uid: -t,
+            tmid: +t,
+            group: true,
+            arr: dfs.map((e,i) => ({
+                sel: avg(r.map(e => e.arr[i] ? e.arr[i].sel : null).filter(e => e)),
+                sd: sdf(r.map(e => e.arr[i] ? e.arr[i].sel : null).filter(e => e))
+            }))
+        };
+        users[-t] = {
+            name: `•G${t}`,
+            type: "G"
+        };
+        tres.push(row);
+    });
+
+    res = res.concat(tres);
+    // console.log(res);
+
     return res;
 };

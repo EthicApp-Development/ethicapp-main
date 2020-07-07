@@ -1172,7 +1172,17 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             $http.post("get-differentials-stage", _postdata2).success(function(data) {
                 self.dfsStage = data;
                 $http.post("get-differential-all-stage", _postdata2).success(function (data) {
-                    self.shared.difTable = window.buildDifTable(data, self.users, self.stages);
+                    self.shared.difTable = window.buildDifTable(data, self.users, self.dfsStage, self.shared.groupByUid);
+                });
+            });
+            $http({ url: "group-proposal-stage", method: "post", data: _postdata2 }).success(function (data) {
+                self.shared.groupByUid = {};
+                self.shared.groupByTmid = {};
+                data.forEach(function (s, i) {
+                    s.forEach(function (u) {
+                        self.shared.groupByUid[u.uid] = { index: i + 1, tmid: u.tmid };
+                        self.shared.groupByTmid[u.tmid] = { index: i + 1, tmid: u.tmid };
+                    });
                 });
             });
         }
@@ -1329,7 +1339,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         arr.forEach(function (a) {
             sd += (a - avg) * (a - avg);
         });
-        var dif = Math.sqrt(sd / arr.length);
+        var dif = Math.sqrt(sd / (arr.length - 1));
 
         if (dif <= 1) return "bg-darkgreen";
         else if (dif > 2.8) return "bg-red";
@@ -1694,6 +1704,72 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         });
     };
 
+    self.openDF2Details = function (group, did) {
+        var postdata = {
+            stageid: self.iterationIndicator,
+            tmid: group,
+            did: did
+        };
+        $http.post("get-team-chat-stage-df", postdata).success(function (res) {
+            $uibModal.open({
+                templateUrl: "templ/differential-group-2.html",
+                controller: "EthicsModalController",
+                controllerAs: "vm",
+                scope: self,
+                resolve: {
+                    data: function data() {
+                        var data = {};
+                        data.names = [self.flang("answer")];
+                        data.group = group;
+                        data.users = self.users;
+
+                        data.df = self.dfsStage.find(e => e.id == did);
+
+                        data.anonNames = {};
+                        data.sesid = self.selectedSes.id;
+
+                        data.chat = res;
+                        let i = 0;
+                        let abc = "ABCDE";
+                        data.chat.forEach(function (msg) {
+                            if (msg.parent_id) msg.parent = data.chat.find(function (e) {
+                                return e.id == msg.parent_id;
+                            });
+                            if(!data.anonNames[msg.uid]){
+                                data.anonNames[msg.uid] = abc[i];
+                                i += 1;
+                            }
+                        });
+
+                        data.stage = self.shared.stagesMap[self.iterationIndicator];
+
+                        if(data.stage.type == "team"){
+                            data.arr = self.shared.difTable.filter(e => e.tmid == group && !e.group);
+                        }
+                        else {
+                            data.arr = self.shared.difTable.filter(e => e.uid == uid && !e.group);
+                        }
+
+                        data.arr.forEach(e => {
+                            let el = e.arr.find(e => e && e.did == did);
+                            e.sel = el ? el.sel : null;
+                            e.comment = el ? el.comment : null;
+                            if(!data.anonNames[e.uid]){
+                                data.anonNames[e.uid] = abc[i];
+                                i += 1;
+                            }
+                        });
+
+                        data.dfarr = self.shared.buildArray(data.df.num);
+
+                        console.log(data);
+                        return data;
+                    }
+                }
+            });
+        });
+    };
+
     self.openActorDetails = function  (uid, stageid) {
         let group = self.shared.groupByUid ? self.shared.groupByUid[uid] ? self.shared.groupByUid[uid].tmid : null : null;
         var postdata = {
@@ -1740,6 +1816,8 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         });
     };
 
+
+
     self.exportCSV = function(){
         var postdata = {
             sesid: self.selectedSes.id
@@ -1773,7 +1851,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     };
 
     self.sortByAutorName = (a, b) => {
-        return self.users[a].name < self.users[b].name ? -1 : 1;
+        let ua = self.users[a] ? self.users[a].name : a;
+        let ub = self.users[b] ? self.users[b].name : b;
+        return ua < ub ? -1 : 1;
     };
 
     self.sortByAutorGroup = (a, b) => {

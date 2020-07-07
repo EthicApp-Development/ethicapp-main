@@ -1235,22 +1235,28 @@
                 <table class="table table-bordered" ts-wrapper>
                     <tr>
                         <th ts-criteria="uid" ts-order-by="sortByAutorName">Autor</th>
-                        <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'" ts-criteria="uid2"
-                            ts-order-by="sortByAutorGroup">Grupo</th>
+                        <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'" ts-criteria="tmid" ts-default>Grupo</th>
                         <th ng-repeat="df in dfsStage">Item {{ df.orden }}</th>
                     </tr>
-                    <tr ng-repeat="udata in shared.difTable track by udata.uid" ts-repeat ng-click="openDFDetails(udata.tmid,1)">
+                    <tr ng-repeat="udata in shared.difTable track by $index" ts-repeat
+                        ng-class="{'bg-gray': udata.group}">
                         <td>
-                            {{ users[udata.uid].name }}
+                            <span ng-show="!udata.group">{{ users[udata.uid].name }}</span>
+                            <strong ng-show="udata.group">{{ 'group' | lang }} {{ shared.groupByTmid[udata.tmid].index }}</strong>
                             <span class="badge bg-red">{{ shared.chatByUid[udata.uid] }}</span>
                         </td>
                         <td ng-if="shared.stagesMap[iterationIndicator].type == 'team'">
-                            {{ shared.groupByUid[udata.uid].index }}
-                            <span class="badge bg-red">{{ shared.chatByTeam[shared.groupByUid[udata.uid].tmid] }}</span>
+                            <span ng-show="udata.group">{{ shared.groupByTmid[udata.tmid].index }}</span>
+                            <span ng-show="!udata.group">{{ shared.groupByUid[udata.uid].index }}</span>
+                            <span class="badge bg-red">{{ shared.chatByTeam[udata.tmid] }}</span>
                         </td>
-                        <td ng-repeat="aid in udata.arr track by $index">
+                        <td ng-repeat="aid in udata.arr track by $index" ng-click="openDF2Details(udata.tmid, aid.did)">
                             {{ aid.sel }}
                             <i class="fa fa-check" ng-if="aid.comment"></i>
+                            <span class="badge bg-darkgreen simple-margin-left" ng-show="aid.sd != null"
+                                  ng-class="{'bg-red': aid.sd >= 2.8, 'bg-yellow': aid.sd < 2.8 && aid.sd > 1}">
+                                {{ aid.sd | number:2 }}
+                            </span>
                         </td>
                     </tr>
                 </table>
