@@ -1217,11 +1217,15 @@
                         <td>{{ udata.ceq }}</td>
                         <td>
                             {{ users[udata.uid].name }}
-                            <span class="badge bg-red">{{ shared.chatByUid[udata.uid] }}</span>
+                            <span class="badge bg-red">
+                                <i class="fa fa-comments"></i> {{ shared.chatByUid[udata.uid] }}
+                            </span>
                         </td>
                         <td ng-if="shared.stagesMap[iterationIndicator].type == 'team'">
                             {{ shared.groupByUid[udata.uid].index }}
-                            <span class="badge bg-red">{{ shared.chatByTeam[shared.groupByUid[udata.uid].tmid] }}</span>
+                            <span class="badge bg-red">
+                                <i class="fa fa-comments"></i> {{ shared.chatByTeam[shared.groupByUid[udata.uid].tmid] }}
+                            </span>
                         </td>
                         <td ng-repeat="aid in udata.arr track by $index">
                             {{ actorMap[aid].name }}
@@ -1243,16 +1247,19 @@
                         <td>
                             <span ng-show="!udata.group">{{ users[udata.uid].name }}</span>
                             <strong ng-show="udata.group">{{ 'group' | lang }} {{ shared.groupByTmid[udata.tmid].index }}</strong>
-                            <span class="badge bg-red">{{ shared.chatByUid[udata.uid] }}</span>
                         </td>
                         <td ng-if="shared.stagesMap[iterationIndicator].type == 'team'">
                             <span ng-show="udata.group">{{ shared.groupByTmid[udata.tmid].index }}</span>
                             <span ng-show="!udata.group">{{ shared.groupByUid[udata.uid].index }}</span>
-                            <span class="badge bg-red">{{ shared.chatByTeam[udata.tmid] }}</span>
                         </td>
                         <td ng-repeat="aid in udata.arr track by $index" ng-click="openDF2Details(udata.tmid, aid.did)">
-                            {{ aid.sel }}
-                            <i class="fa fa-check" ng-if="aid.comment"></i>
+                            <span class="mini-inline">{{ aid.sel || "--" }}<i class="fa fa-check" ng-if="aid.comment"></i></span>
+                            <span class="badge bg-red" ng-show="shared.stagesMap[iterationIndicator].chat && !udata.group">
+                                <i class="fa fa-comments"></i> {{ shared.chatByUid[aid.did][udata.uid] || 0 }}
+                            </span>
+                            <span class="badge bg-red" ng-show="shared.stagesMap[iterationIndicator].chat && udata.group">
+                                <i class="fa fa-comments"></i> {{ shared.chatByTeam[aid.did][udata.tmid] || 0 }}
+                            </span>
                             <span class="badge bg-darkgreen simple-margin-left" ng-show="aid.sd != null"
                                   ng-class="{'bg-red': aid.sd >= 2.8, 'bg-yellow': aid.sd < 2.8 && aid.sd > 1}">
                                 {{ aid.sd | number:2 }}

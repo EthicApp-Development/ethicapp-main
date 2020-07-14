@@ -1168,3 +1168,8 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     display: inline-block;
     width: calc(100% - 42px);
 }
+
+.mini-inline{
+    width: 32px;
+    display: inline-block;
+}

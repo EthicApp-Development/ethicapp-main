@@ -1185,6 +1185,21 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     });
                 });
             });
+            $http({ url: "get-dif-chat-count", method: "post", data: _postdata2 }).success(function (data) {
+                self.shared.chatByUid = {};
+                self.shared.chatByTeam = {};
+                data.forEach(function(c) {
+                    if(!self.shared.chatByUid[c.did])
+                        self.shared.chatByUid[c.did] = {};
+                    self.shared.chatByUid[c.did][c.uid] = +c.count;
+                    if(!self.shared.chatByTeam[c.did])
+                        self.shared.chatByTeam[c.did] = {};
+                    if(!self.shared.chatByTeam[c.did][c.tmid]){
+                        self.shared.chatByTeam[c.did][c.tmid] = 0;
+                    }
+                    self.shared.chatByTeam[c.did][c.tmid] += +c.count;
+                });
+            });
         }
     };
 

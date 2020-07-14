@@ -234,6 +234,15 @@ router.post("/get-chat-count", rpg.multiSQL({
     sqlParams: [rpg.param("post", "sesid"), rpg.param("post", "sesid")]
 }));
 
+router.post("/get-dif-chat-count", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select c.did, u.uid, u.tmid, count(*) from differential_chat as c inner join teamusers as u on u.uid = c.uid inner join" +
+        " differential as d on d.id = c.did inner join teams as tm on tm.id = u.tmid where d.stageid = $1 and tm.stageid = $2" +
+        " group by c.did, u.uid, u.tmid",
+    postReqData: ["stageid"],
+    sqlParams: [rpg.param("post", "stageid"), rpg.param("post", "stageid")]
+}));
+
 router.post("/get-chat-count-stage", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select u.uid, u.tmid, count(*) as count from chat as c inner join teamusers as u on u.uid = c.uid inner join" +
