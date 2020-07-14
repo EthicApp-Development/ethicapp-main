@@ -592,7 +592,7 @@ window.buildDifTable = function(data, users, dfs, gbu){
         arr.forEach(function (a) {
             sd += (a - av) * (a - av);
         });
-        return Math.sqrt(sd / (arr.length - 1));
+        return Math.sqrt(sd / (arr.length - 1)) / av;
     };
     Object.keys(tmids).forEach(t => {
         let r = res.filter(e => e.tmid == t);
@@ -602,7 +602,8 @@ window.buildDifTable = function(data, users, dfs, gbu){
             group: true,
             arr: dfs.map((e,i) => ({
                 sel: avg(r.map(e => e.arr[i] ? e.arr[i].sel : null).filter(e => e)),
-                sd: sdf(r.map(e => e.arr[i] ? e.arr[i].sel : null).filter(e => e))
+                sd: sdf(r.map(e => e.arr[i] ? e.arr[i].sel : null).filter(e => e)),
+                did: e.id
             }))
         };
         users[-t] = {

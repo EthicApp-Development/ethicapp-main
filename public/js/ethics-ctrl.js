@@ -113,6 +113,7 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
     };
 
     self.openChat = (df) => {
+        self.selDF = df;
         self.selectedDF = df.id;
         self.chatExp = true;
         df.cr = df.c;

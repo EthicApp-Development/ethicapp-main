@@ -1035,7 +1035,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 .anon-badge{
     display: inline-block;
     border: 1px solid #eee;
-    background: #004093;
+    background: #0077C2;
     color: white;
     font-weight: 700;
     padding: 2px 6px;
@@ -1108,6 +1108,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     margin-right: 16px;
     margin-left: -12px;
     border-top: 8px solid #1b5986;
+    z-index: 99999;
 }
 
 .chat-area{

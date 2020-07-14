@@ -195,6 +195,16 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     };
 
     self.populateActors = () => {
+        self.posToJustify = {};
+        self.justifyPosition = false;
+        self.actors.forEach((a,i) => {
+            if(a.jorder){
+                self.posToJustify[i] = true;
+                self.justifyPosition = true;
+            }
+        });
+        console.log(self.justifyPosition, self.posToJustify);
+
         let acts = [];
         self.sel.forEach(s => {
             let a = self.actors.find(e => e.id == s.actorid);
@@ -203,15 +213,6 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             acts.push(a);
         });
         self.actors = acts;
-
-        self.posToJustify = {};
-        self.justifyPosition = false;
-        self.actors.forEach((a,i) => {
-             if(a.jorder){
-                 self.posToJustify[i] = true;
-                 self.justifyPosition = true;
-             }
-        });
     };
 
     self.populateActorsPrev = () => {
@@ -358,7 +359,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             console.log(postdata);
             $http.post("send-actor-selection", postdata).success((data) => {
                 a.dirty = false;
-                a.sent = !a.justified || (a.comment != null && a.comment != "");
+                a.sent = (a.comment != null && a.comment != "");
             });
         });
         self.selectedActor = null;
@@ -460,7 +461,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     };
 
     self.wordCount = (s) => {
-        return s.split(" ").filter(e => e != "").length;
+        return s ? s.split(" ").filter(e => e != "").length : 0;
     };
 
     self.init();

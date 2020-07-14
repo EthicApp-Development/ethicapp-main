@@ -148,7 +148,7 @@
                                        <strong>{{ actor.name }}</strong>
                                     </div>
                                     <div class="col-xs-4 text-right">
-                                        <i class="fa fa-check margin-right-8" ng-if="actor.sent"></i>
+                                        <i class="fa fa-check margin-right-8" ng-if="actor.sent && ((!justifyPosition && actor.justified) || (justifyPosition && posToJustify[$index]))"></i>
                                         <button class="btn btn-default btn-sm" ng-click="selectActor($index)"
                                                 ng-if="((!justifyPosition && actor.justified) || (justifyPosition && posToJustify[$index])) && selectedActor == null">
                                             <i class="fa fa-edit"></i>

@@ -1705,6 +1705,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     };
 
     self.openDF2Details = function (group, did) {
+        console.log("AA");
         var postdata = {
             stageid: self.iterationIndicator,
             tmid: group,
