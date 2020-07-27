@@ -148,5 +148,9 @@
   "groupingMethod": "Grouping method",
   "prevGroups": "Using groups from previous phase",
   "author": "Author",
+  "avgs": "A",
+  "cvs": "CV",
+  "cvdesc": "Coefficient of Variation",
+  "chatMessages": "Chat Messages",
   "archived": "Archived"
 }

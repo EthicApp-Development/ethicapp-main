@@ -61,12 +61,13 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
                 updateChat();
             }
         });
-        // $socket.on("diffReceived", (data) => {
-        //     console.log("SOCKET.IO", data);
-        //     if(data.ses == self.sesId){
-        //         self.openDetails(data);
-        //     }
-        // });
+        $socket.on("diffReceived", (data) => {
+            console.log("SOCKET.IO", data);
+            if(data.ses == self.sesId){
+                console.log("Open");
+                self.openDetails(data);
+            }
+        });
         self.getMe();
     };
 
@@ -317,15 +318,15 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
             }
         }
         if(st.chat){
-            $http.post("get-chat-stage", {
+            $http.post("get-diff-chat-stage", {
                 stageid: st.id
             }).success((data) => {
                 self.chatMsgsPrev = {};
                 data.forEach(msg => {
                     if(msg.parent_id)
                         msg.parent = data.find(e => e.id == msg.parent_id);
-                    self.chatMsgsPrev[msg.stageid] = self.chatMsgsPrev[msg.stageid] || [];
-                    self.chatMsgsPrev[msg.stageid].push(msg);
+                    self.chatMsgsPrev[msg.did] = self.chatMsgsPrev[msg.did] || [];
+                    self.chatMsgsPrev[msg.did].push(msg);
                 });
             });
         }
@@ -445,7 +446,7 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
     };
 
     self.wordCount = (s) => {
-        return s.split(" ").filter(e => e != "").length;
+        return s ? s.split(" ").filter(e => e != "").length : 0;
     };
 
     self.buildArray = (n) => {

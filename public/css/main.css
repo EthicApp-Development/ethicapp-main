@@ -1164,12 +1164,31 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     top: 4px;
 }
 
+.word-count-r{
+    /*position: absolute;*/
+    /*right: 40px;*/
+    z-index: 99;
+    color: white;
+    /*bottom: 4px;*/
+    background: #0077C2 !important;
+}
+
+.word-count-r.bg-red{
+    background: #d74448 !important;
+}
+
 .tlabel{
     display: inline-block;
     width: calc(100% - 42px);
 }
 
 .mini-inline{
-    width: 32px;
+    min-width: 32px;
     display: inline-block;
+}
+
+.as-textfield{
+    border: 1px solid rgb(231, 231, 231);
+    padding: 8px;
+    border-radius: 4px;
 }

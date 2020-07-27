@@ -623,15 +623,17 @@
                                 <div class="col-xs-2 text-center">
                                     <h4>Item {{df.orden}}</h4>
                                 </div>
-                                <div class="col-xs-8">
+                                <div class="col-xs-7">
                                     <input type="text" class="form-control text-center" ng-disabled="readonly"
                                            placeholder="Titulo" ng-model="df.name">
                                 </div>
-                                <div class="col-xs-2 text-center">
+                                <div class="col-xs-3 text-center">
                                     <button class="btn btn-default" ng-class="{'btn-primary': df.justify}"
                                             ng-click="df.justify = !df.justify" ng-disabled="readonly">
-                                        {{ 'justify' | lang }} {{ 'answer' | lang }}
+                                        {{ 'justify' | lang }}
                                     </button>
+                                    <input class="form-control form-inline-mini" placeholder="Word Count" type="number"
+                                           ng-model="df.wc " ng-disabled="readonly">
                                 </div>
                             </div>
                             <div class="row margin-top-8">
@@ -1204,6 +1206,7 @@
 
                 <br>
                 <strong>Respuestas individuales y agrupadas</strong>
+                <span class="pull-right"><span style="color: red;">*</span> Se requiere comentar</span>
                 <table class="table table-bordered" ts-wrapper>
                     <tr>
                         <th ts-criteria="ceqlnum | parseFloat" ts-default="descending">Cantidad Iguales</th>
@@ -1228,11 +1231,16 @@
                             </span>
                         </td>
                         <td ng-repeat="aid in udata.arr track by $index">
+                            <span style="color: red;" ng-if="actorMap[aid].justified">*</span>
                             {{ actorMap[aid].name }}
                             <i class="fa fa-check" ng-if="udata.com[$index]"></i>
                         </td>
                     </tr>
                 </table>
+                <div>
+                    <span class="badge bg-red"><i class="fa fa-comments"></i> N</span> N mensajes de chat.
+                    <i class="fa fa-check simple-margin-left"></i> Comentado.
+                </div>
             </div>
             <div ng-show="selectedSes.type == 'T'" class="margin-top-8">
                 <strong>Respuestas individuales y agrupadas</strong>
@@ -1240,7 +1248,7 @@
                     <tr>
                         <th ts-criteria="uid" ts-order-by="sortByAutorName">Autor</th>
                         <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'" ts-criteria="tmid" ts-default>Grupo</th>
-                        <th ng-repeat="df in dfsStage">Item {{ df.orden }} ({{ df.num }})</th>
+                        <th ng-repeat="df in dfsStage">Item {{ df.orden }} (1-{{ df.num }})</th>
                     </tr>
                     <tr ng-repeat="udata in shared.difTable track by $index" ts-repeat
                         ng-class="{'bg-gray': udata.group}">
@@ -1253,20 +1261,26 @@
                             <span ng-show="!udata.group">{{ shared.groupByUid[udata.uid].index }}</span>
                         </td>
                         <td ng-repeat="aid in udata.arr track by $index" ng-click="openDF2Details(udata.tmid, aid.did)">
-                            <span class="mini-inline">{{ aid.sel || "--" }}<i class="fa fa-check" ng-if="aid.comment"></i></span>
+                            <span class="mini-inline"><span ng-show="udata.group">{{ 'avgs' | lang }}: </span>{{ aid.sel || "--" }}<i class="fa fa-check" ng-if="aid.comment"></i></span>
                             <span class="badge bg-red" ng-show="shared.stagesMap[iterationIndicator].chat && !udata.group">
                                 <i class="fa fa-comments"></i> {{ shared.chatByUid[aid.did][udata.uid] || 0 }}
                             </span>
-                            <span class="badge bg-red" ng-show="shared.stagesMap[iterationIndicator].chat && udata.group">
-                                <i class="fa fa-comments"></i> {{ shared.chatByTeam[aid.did][udata.tmid] || 0 }}
-                            </span>
                             <span class="badge bg-darkgreen simple-margin-left" ng-show="aid.sd != null"
-                                  ng-class="{'bg-red': aid.sd >= 2.8, 'bg-yellow': aid.sd < 2.8 && aid.sd > 1}">
+                                  ng-class="{'bg-red': aid.sd >= 1, 'bg-yellow': aid.sd < 1 && aid.sd > 0.5}">
+                                {{ 'cvs' | lang }}:
                                 {{ aid.sd | number:2 }}
+                            </span>
+                            <span class="badge bg-red simple-margin-left" ng-show="shared.stagesMap[iterationIndicator].chat && udata.group">
+                                <i class="fa fa-comments"></i> {{ shared.chatByTeam[aid.did][udata.tmid] || 0 }}
                             </span>
                         </td>
                     </tr>
                 </table>
+                <div>
+                    <strong>{{ 'avgs' | lang }}: </strong> {{ 'average' | lang }}.
+                    <strong class="simple-margin-left">{{ 'cvs' | lang }}: </strong> {{ 'cvdesc' | lang }}.
+                    <span class="badge bg-red simple-margin-left"><i class="fa fa-comments"></i> N</span> N {{ 'chatMessages' | lang }}.
+                </div>
             </div>
 
         </div>

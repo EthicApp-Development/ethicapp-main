@@ -364,13 +364,13 @@ router.post("/add-differential", rpg.execSQL({
 
 router.post("/add-differential-stage", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "insert into differential(title, tleft, tright, orden, creator, stageid, num, justify, sesid) values " +
-        "($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+    sql: "insert into differential(title, tleft, tright, orden, creator, stageid, num, justify, sesid, word_count) values " +
+        "($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
     postReqData: ["orden", "tleft", "tright", "name", "stageid", "num", "justify", "sesid"],
     sesReqData: ["uid"],
     sqlParams: [rpg.param("post", "name"), rpg.param("post", "tleft"), rpg.param("post", "tright"), rpg.param("post", "orden"),
         rpg.param("ses", "uid"), rpg.param("post", "stageid"), rpg.param("post", "num"), rpg.param("post", "justify"),
-        rpg.param("post", "sesid")]
+        rpg.param("post", "sesid"), rpg.param("post", "word_count")]
 }));
 
 router.post("/update-differential", rpg.execSQL({
