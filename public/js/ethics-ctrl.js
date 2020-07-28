@@ -334,7 +334,7 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
     };
 
     self.sendDFSel = (df) => {
-        if(df.select == null || df.select == -1 || df.comment == null || df.comment == ""){
+        if(df.select == null || df.select == -1){
             notify("Error", "El diferencial no está completo");
             return;
         }

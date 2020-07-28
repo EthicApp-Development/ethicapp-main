@@ -172,7 +172,7 @@
                             </textarea>
                             <span class="input-group-addon hoverable" ng-disabled="finished || !df.dirty" ng-click="sendDFSel(df)">
                             <i class="fa fa-check" ng-show="!df.dirty && df.sent"></i>
-                            <i class="fa fa-send" ng-show="df.dirty"></i>
+                            <i class="fa fa-send" ng-show="df.dirty || !df.justify"></i>
                             <i class="fa fa-question-circle" ng-show="!df.dirty && !df.sent" style="opacity: 0"></i>
                             </span>
                         </div>
