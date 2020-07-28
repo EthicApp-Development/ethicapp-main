@@ -1261,7 +1261,7 @@
                             <span ng-show="!udata.group">{{ shared.groupByUid[udata.uid].index }}</span>
                         </td>
                         <td ng-repeat="aid in udata.arr track by $index" ng-click="openDF2Details(udata.tmid, aid.did)">
-                            <span class="mini-inline"><span ng-show="udata.group">{{ 'avgs' | lang }}: </span>{{ aid.sel || "--" }}<i class="fa fa-check" ng-if="aid.comment"></i></span>
+                            <span class="mini-inline"><span ng-show="udata.group">{{ 'avgs' | lang }}: </span>{{ aid.sel | number:2 }}<i class="fa fa-check" ng-if="aid.comment"></i></span>
                             <span class="badge bg-red" ng-show="shared.stagesMap[iterationIndicator].chat && !udata.group">
                                 <i class="fa fa-comments"></i> {{ shared.chatByUid[aid.did][udata.uid] || 0 }}
                             </span>
