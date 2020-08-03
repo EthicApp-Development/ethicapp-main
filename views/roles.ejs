@@ -150,17 +150,24 @@
                                     <div class="col-xs-4 text-right">
                                         <i class="fa fa-check margin-right-8" ng-if="actor.sent && ((!justifyPosition && actor.justified) || (justifyPosition && posToJustify[$index]))"></i>
                                         <button class="btn btn-default btn-sm" ng-click="selectActor($index)"
-                                                ng-if="((!justifyPosition && actor.justified) || (justifyPosition && posToJustify[$index])) && selectedActor == null">
+                                                ng-if="((!justifyPosition && actor.justified) || (justifyPosition &&
+                                                [$index])) && selectedActor == null">
                                             <i class="fa fa-edit"></i>
                                         </button>
                                     </div>
                                     <div class="col-xs-12" ng-if="selectedActor == $index && stages[selectedStage].id == currentStageId">
                                         <div class="input-group">
-                                            <span class="input-group-addon deep-blue">{{userAnon[myUid]}}</span>
+                                            <span class="input-group-addon word-count-r"
+                                                  ng-class="{'bg-red': wordCount(actors[selectedActor].comment) < actors[selectedActor].word_count }">
+                                                <span>{{ wordCount(actors[selectedActor].comment) }}</span>
+                                                <br ng-if="actors[selectedActor].word_count">
+                                                <span style="font-size: 80%" ng-if="actors[selectedActor].word_count">de</span>
+                                                <br ng-if="actors[selectedActor].word_count">
+                                                <span ng-if="actors[selectedActor].word_count">{{ actors[selectedActor].word_count }}</span>
+                                            </span>
                                             <textarea type="text" class="form-control" placeholder="{{getPlaceholder()}}" ng-model="actors[selectedActor].comment"
                                                       ng-change="actors[selectedActor].dirty = true" ng-disabled="selectedActor == null">
                                             </textarea>
-                                            <span class="word-count" ng-class="{'bg-green': wordCount(actors[selectedActor].comment) >= 100}">{{ wordCount(actors[selectedActor].comment) }}</span>
                                             <span class="input-group-addon hoverable" ng-disabled="finished || !actors[selectedActor].dirty || selectedActor == null"
                                                   ng-click="sendActorSel()">
                                             <i class="fa fa-check" ng-show="!actors[selectedActor].dirty"></i>

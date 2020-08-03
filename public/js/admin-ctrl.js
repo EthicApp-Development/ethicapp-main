@@ -65,7 +65,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.lang = "english";
     self.secIcons = { configuration: "cog", editor: "edit", dashboard: "bar-chart", users: "male",
         rubrica: "check-square", groups: "users", options: "sliders" };
-    self.typeNames = { L: "readComp", S: "multSel", M: "semUnits", E: "ethics" };
+    self.typeNames = { L: "readComp", S: "multSel", M: "semUnits", E: "ethics", R: "rolePlaying", T: "ethics" };
 
     self.misc = {};
 
@@ -293,7 +293,7 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
             $http({ url: "get-admin-stages", method: "post", data: pd }).success(function (data) {
                 self.stages = data;
                 data.forEach(st => {
-                    self.iterationNames.push({name: "Stage " + st.number, val: st.id});
+                    self.iterationNames.push({name: self.flang("stage") + " " + st.number, val: st.id});
                 });
             });
         }
@@ -1719,8 +1719,8 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         });
     };
 
-    self.openDF2Details = function (group, did) {
-        console.log("AA");
+    self.openDF2Details = function (group, did, uid) {
+        console.log(group, did, uid);
         var postdata = {
             stageid: self.iterationIndicator,
             tmid: group,
@@ -1809,10 +1809,16 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                         data.sesid = self.selectedSes.id;
 
                         data.chat = res;
+                        let i = 0;
+                        let abc = "ABCDE";
                         data.chat.forEach(function (msg) {
                             if (msg.parent_id) msg.parent = data.chat.find(function (e) {
                                 return e.id == msg.parent_id;
                             });
+                            if(!data.anonNames[msg.uid]){
+                                data.anonNames[msg.uid] = abc[i];
+                                i += 1;
+                            }
                         });
 
                         data.stage = self.shared.stagesMap[stageid];
@@ -1823,6 +1829,13 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                         else {
                             data.sel = self.indvTableSorted.filter(e => e.uid == uid);
                         }
+
+                        data.sel.forEach(e => {
+                            if(!data.anonNames[e.uid]){
+                                data.anonNames[e.uid] = abc[i];
+                                i += 1;
+                            }
+                        });
 
                         console.log(data);
                         return data;

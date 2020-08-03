@@ -1,4 +1,4 @@
-window.StagesController = function($scope, $http, Notification, $uibModal){
+window.StagesController = function ($scope, $http, Notification, $uibModal) {
     var self = $scope;
 
     self.stages = [];
@@ -28,32 +28,42 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
 
     self.groups = [];
     self.groupopt = {
-        met: null,
+        met: "previous",
         num: null
     };
 
     self.currentStage = -1;
 
-    self.setCurrentStage = function(i){
-        if(i != -1){
+    self.setCurrentStage = function (i) {
+        if (i != -1) {
             self.readonly = true;
             var postdata = {
                 stageid: self.stages[i].id
             };
-            if(self.selectedSes.type == "R") {
+            if (self.selectedSes.type == "R") {
                 $http({url: "get-actors", method: "post", data: postdata}).success(function (data) {
                     self.roles = data;
+                    self.roles.forEach(r => {
+                        if(r.justified && r.jorder){
+                            r.type = "order";
+                        }
+                        else if(r.justified){
+                            r.type = "role";
+                        }
+                        r.wc = r.word_count;
+                    });
                 });
             }
-            else if(self.selectedSes.type == "T"){
+            else if (self.selectedSes.type == "T") {
                 $http({url: "get-differentials-stage", method: "post", data: postdata}).success(function (data) {
                     self.dfs = data;
                     self.dfs.forEach(df => {
+                        df.wc = df.word_count;
                         df.name = df.title;
                     });
                 });
             }
-            $http({ url: "group-proposal-stage", method: "post", data: postdata }).success(function (data) {
+            $http({url: "group-proposal-stage", method: "post", data: postdata}).success(function (data) {
                 self.groups = data;
             });
             self.stage = self.stages[i];
@@ -71,11 +81,11 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
         self.currentStage = i;
     };
 
-    self.getStages = function(){
+    self.getStages = function () {
         var postdata = {
             sesid: self.selectedSes.id
         };
-        $http({ url: "get-admin-stages", method: "post", data: postdata }).success(function (data) {
+        $http({url: "get-admin-stages", method: "post", data: postdata}).success(function (data) {
             self.stages = data;
             self.shared.stagesMap = {};
             data.forEach(function (s) {
@@ -85,22 +95,34 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
             var postdata = {
                 stageid: self.selectedSes.current_stage
             };
-            if(self.selectedSes.type == "R") {
+            if (self.selectedSes.type == "R") {
                 $http({url: "get-actors", method: "post", data: postdata}).success(function (data) {
                     self.roles = data;
+                    self.roles.forEach(r => {
+                        if(r.justified && r.jorder){
+                            r.type = "order";
+                        }
+                        else if(r.justified){
+                            r.type = "role";
+                        }
+                        r.wc = r.word_count;
+                    });
                 });
             }
-            else if(self.selectedSes.type == "T"){
+            else if (self.selectedSes.type == "T") {
                 $http({url: "get-differentials-stage", method: "post", data: postdata}).success(function (data) {
                     self.dfs = data;
                     self.dfs.forEach(df => {
+                        df.wc = df.word_count;
                         df.name = df.title;
                     });
                 });
             }
-            $http({ url: "group-proposal-stage", method: "post", data: postdata }).success(function (data) {
+            $http({url: "group-proposal-stage", method: "post", data: postdata}).success(function (data) {
                 self.groups = data;
-                console.log(data);
+                if (data.length > 0) {
+                    self.groupopt.num = self.groups[0].length;
+                }
                 self.shared.groups = self.groups;
                 self.shared.groupByUid = {};
                 data.forEach(function (s, i) {
@@ -110,38 +132,58 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
                 });
                 console.log(self.shared.groupByUid);
             });
-            if(self.selectedSes.status >= 3){
+            if (self.selectedSes.status >= 3) {
                 self.setCurrentStage(data.length - 1);
                 self.iterationIndicator = data[data.length - 1].id;
             }
         });
     };
 
-    self.changeStage = function(i){
+    self.changeStage = function (i) {
         self.currentStage = i;
     };
 
-    self.addRole = function(){
+    self.addRole = function () {
         self.roles.push({
             name: "",
-            type: "order"
+            type: "role"
         });
     };
 
-    self.setAllRolesType = function(type){
+    self.setRoleType = function (role, type) {
+        if(role.type == type){
+            role.type = null;
+            return;
+        }
+        if(self.roles.find(e => e.type != null && e.type != type)){
+            self.setAllRolesType(null);
+        }
+
+        role.type = type;
+    };
+
+    self.setAllRolesType = function (type) {
         for (let i = 0; i < self.roles.length; i++) {
             self.roles[i].type = type;
         }
     };
 
     self.removeRole = function (index) {
-        self.roles.splice(index, 1);
+        if (window.confirm("¿Esta seguro de eliminar este rol?")) {
+            self.roles.splice(index, 1);
+        }
     };
 
-    self.sendStage = function(){
+    self.removeDF = function (index) {
+        if (window.confirm("¿Esta seguro de eliminar esta pregunta?")) {
+            self.dfs.splice(index, 1);
+        }
+    };
+
+    self.sendStage = function () {
         var s = self.stage;
         let arr = self.selectedSes.type == "R" ? self.roles : self.dfs;
-        if(s.type == null || arr.length == 0 || s.type == "team" && (self.groups == null || self.groups.length == 0)){
+        if (s.type == null || arr.length == 0 || s.type == "team" && (self.groups == null || self.groups.length == 0)) {
             Notification.error("Hay datos faltantes");
             return;
         }
@@ -159,13 +201,13 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
             sesid: self.selectedSes.id,
             prev_ans: s.prevResponses.map(e => e.id).join(",")
         };
-        $http({ url: "add-stage", method: "post", data: postdata }).success(function (data) {
+        $http({url: "add-stage", method: "post", data: postdata}).success(function (data) {
             let stageid = data.id;
-            if(stageid != null) {
-                if(postdata.type == "team") {
+            if (stageid != null) {
+                if (postdata.type == "team") {
                     self.acceptGroups(stageid);
                 }
-                if(self.selectedSes.type == "R") {
+                if (self.selectedSes.type == "R") {
                     let c = self.roles.length;
                     for (let i = 0; i < self.roles.length; i++) {
                         const role = self.roles[i];
@@ -173,6 +215,7 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
                             name: role.name,
                             jorder: role.type == "order",
                             justified: role.type != null,
+                            word_count: role.wc,
                             stageid: stageid,
                         };
                         $http({url: "add-actor", method: "post", data: p}).success(function (data) {
@@ -188,7 +231,7 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
                         });
                     }
                 }
-                else if(self.selectedSes.type == "T") {
+                else if (self.selectedSes.type == "T") {
                     let c = self.dfs.length;
                     for (let i = 0; i < self.dfs.length; i++) {
                         const df = self.dfs[i];
@@ -222,15 +265,22 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
         });
     };
 
-    self.setGroupal = function(){
+    self.setGroupal = function () {
         self.stage.type = 'team';
         self.methods = [klg("random"), klg("performance", "homog"), klg("performance", "heterg"), klg("knowledgeType", "homog"), klg("knowledgeType", "heterg")];
+        if (self.groups.length > 0) {
+            self.methods.unshift(klg("previous"));
+        }
     };
 
     self.generateGroups = function (key) {
         console.log(self.groupopt.num, self.groupopt.met);
         if (self.selectedSes.grouped) {
-            $http({ url: "group-proposal-sel", method: "post", data: { sesid: self.selectedSes.id } }).success(function (data) {
+            $http({
+                url: "group-proposal-sel",
+                method: "post",
+                data: {sesid: self.selectedSes.id}
+            }).success(function (data) {
                 self.groups = data;
                 self.shared.groups = self.groups;
                 //self.groupsProp = angular.copy(self.groups);
@@ -241,6 +291,9 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
         }
         if (key == null && (self.groupopt.num < 1 || self.groupopt.num > self.users.length)) {
             Notification.error("Error en los parámetros de formación de grupos");
+            return;
+        }
+        if (self.groupopt.met == "previous") {
             return;
         }
 
@@ -269,14 +322,14 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
                 return s.rnd;
             }, self.groupopt.num, false);
         }
-        else if (self.selectedSes.type == "E"){
+        else if (self.selectedSes.type == "E") {
             let dfd = users.map(e => {
                 let d = (self.shared.dataDF || []);
                 let r = d.find(f => f.tmid == e.id);
                 console.log(r);
                 return {
                     uid: e.id,
-                    score: (r && r.ind && r.ind.length > 0) ? (r.ind.reduce((v,p) => v + p.sel, 0) / r.ind.length) : 0
+                    score: (r && r.ind && r.ind.length > 0) ? (r.ind.reduce((v, p) => v + p.sel, 0) / r.ind.length) : 0
                 }
             });
             console.log(dfd);
@@ -284,7 +337,7 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
                 return s.score;
             }, self.groupopt.num, isDifferent(self.groupopt.met));
         }
-        else if (self.selectedSes.type == "R"){
+        else if (self.selectedSes.type == "R") {
             let dfd = users.map(e => {
                 return {
                     uid: e.id,
@@ -329,7 +382,7 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
             }))
         };
         console.log(postdata);
-        $http({ url: "set-groups-stage", method: "post", data: postdata }).success(function (data) {
+        $http({url: "set-groups-stage", method: "post", data: postdata}).success(function (data) {
             if (data.status == "ok") {
                 console.log("Groups accepted");
                 self.selectedSes.grouped = true;
@@ -339,7 +392,7 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
     };
 
     self.formatStageNames = (idstr) => {
-        if(idstr == null || idstr == "")
+        if (idstr == null || idstr == "")
             return;
         let ids = idstr.split(",").map(e => +e);
         return ids.map(i => {
@@ -360,14 +413,14 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
                     $uibModalInstance.dismiss('cancel');
                 };
 
-                vm.accept = function (){
-                    if(vm.radioval == "F"){
+                vm.accept = function () {
+                    if (vm.radioval == "F") {
                         $http.post("session-finish-stages", {sesid: self.selectedSes.id}).success((data) => {
                             console.log("AAA");
                             console.log(data);
                         });
                     }
-                    else if(vm.radioval == "N"){
+                    else if (vm.radioval == "N") {
                         self.setTab("editor");
                         $uibModalInstance.dismiss('cancel');
                     }
@@ -400,7 +453,7 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
     // };
 
     self.getGrouping = (gstr) => {
-        if(gstr == null || gstr == ""){
+        if (gstr == null || gstr == "") {
             return self.flang("prevGroups");
         }
         let cmps = gstr.split(":");
@@ -434,12 +487,11 @@ window.StagesController = function($scope, $http, Notification, $uibModal){
 };
 
 
-
-function groupByUser(data){
+function groupByUser(data) {
     let u = {};
     data.forEach(d => {
-        if(!u[d.uid]){
-            u[d.uid] = { arr: [], com: [] };
+        if (!u[d.uid]) {
+            u[d.uid] = {arr: [], com: []};
         }
         u[d.uid].arr.push(d.actorid);
         u[d.uid].com.push(d.description);
@@ -447,8 +499,8 @@ function groupByUser(data){
     return u;
 }
 
-window.computePosFreqTable = function(data, actors){
-    if(data == null || actors == null || data.length == 0 || actors.length == 0){
+window.computePosFreqTable = function (data, actors) {
+    if (data == null || actors == null || data.length == 0 || actors.length == 0) {
         return;
     }
     let countMap = {};
@@ -465,13 +517,13 @@ window.computePosFreqTable = function(data, actors){
 };
 
 
-function lehmerCode(arr, acts){
+function lehmerCode(arr, acts) {
     let p = acts.map(e => e.id);
     let perm = arr.map(e => e);
 
     let n = p.length;
     let pos_map = {};
-    p.forEach((e,i) => {
+    p.forEach((e, i) => {
         pos_map[e] = i;
     });
 
@@ -479,7 +531,7 @@ function lehmerCode(arr, acts){
     for (let i = 0; i < n; i++) {
         let d = pos_map[perm[i]] - i;
         w.push(d);
-        if(d == 0)
+        if (d == 0)
             continue;
         let t = pos_map[perm[i]];
 
@@ -495,7 +547,7 @@ function lehmerCode(arr, acts){
     return w
 }
 
-function lehmerNum(code){
+function lehmerNum(code) {
     let n = 0;
     for (let i = 0; i < code.length; i++) {
         let v = code[code.length - i - 1];
@@ -505,7 +557,7 @@ function lehmerNum(code){
     return n;
 }
 
-function simpleNum(code){
+function simpleNum(code) {
     let n = 0;
     for (let i = 0; i < code.length; i++) {
         let v = code[code.length - i - 1];
@@ -516,7 +568,7 @@ function simpleNum(code){
 }
 
 
-window.computeIndTable = function(data, actors){
+window.computeIndTable = function (data, actors) {
     let udata = groupByUser(data);
     Object.values(udata).forEach(u => {
         u.code = lehmerCode(u.arr, actors);
@@ -535,12 +587,12 @@ window.computeIndTable = function(data, actors){
 };
 
 
-window.sortIndTable = function(table, users){
+window.sortIndTable = function (table, users) {
     var us = Object.values(users).filter(function (e) {
         return e.role == "A";
     });
     us.forEach(u => {
-        if(!table[u.id]){
+        if (!table[u.id]) {
             table[u.id] = {
                 arr: [],
                 ceq: 0,
@@ -559,7 +611,7 @@ window.sortIndTable = function(table, users){
 };
 
 
-window.buildDifTable = function(data, users, dfs, gbu){
+window.buildDifTable = function (data, users, dfs, gbu) {
     // console.log("DATA");
     // console.log(data);
     // console.log(users);
@@ -574,19 +626,19 @@ window.buildDifTable = function(data, users, dfs, gbu){
         const u = us[i];
         let row = {
             uid: u.id,
-            arr: dfs.map(d => data.find(e => e.uid == u.id && d.id == e.did))
+            arr: dfs.map(d => data.find(e => e.uid == u.id && d.id == e.did) || { did: d.id })
         };
         row.tmid = row.arr.find(e => e && e.tmid != null) ? row.arr.find(e => e && e.tmid != null).tmid :
             (gbu && gbu[u.id] ? gbu[u.id].tmid : null);
-        if(row.tmid != null)
+        if (row.tmid != null)
             tmids[row.tmid] = true;
         res.push(row);
     }
 
     let tres = [];
-    let avg = (arr) => arr.length > 0 ? arr.reduce((v,e) => v + e, 0) / arr.length : 0;
+    let avg = (arr) => arr.length > 0 ? arr.reduce((v, e) => v + e, 0) / arr.length : 0;
     let sdf = (arr) => {
-        if(arr.length <= 1)
+        if (arr.length <= 1)
             return 0;
         let av = avg(arr);
         let sd = 0;
@@ -601,7 +653,7 @@ window.buildDifTable = function(data, users, dfs, gbu){
             uid: -t,
             tmid: +t,
             group: true,
-            arr: dfs.map((e,i) => ({
+            arr: dfs.map((e, i) => ({
                 sel: avg(r.map(e => e.arr[i] ? e.arr[i].sel : null).filter(e => e)),
                 sd: sdf(r.map(e => e.arr[i] ? e.arr[i].sel : null).filter(e => e)),
                 did: e.id
@@ -615,6 +667,7 @@ window.buildDifTable = function(data, users, dfs, gbu){
     });
 
     res = res.concat(tres);
+    // console.log("DIF TABLE");
     // console.log(res);
 
     return res;

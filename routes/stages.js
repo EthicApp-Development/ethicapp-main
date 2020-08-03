@@ -39,14 +39,15 @@ router.post("/add-stage", rpg.singleSQL({
 
 router.post("/add-actor", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "insert into actors (name, jorder, stageid, justified) values ($1, $2, $3, $4)",
+    sql: "insert into actors (name, jorder, stageid, justified, word_count) values ($1, $2, $3, $4, $5)",
     postReqData: ["name", "jorder", "stageid", "justified"],
-    sqlParams: [rpg.param("post", "name"), rpg.param("post", "jorder"), rpg.param("post", "stageid"), rpg.param("post", "justified")]
+    sqlParams: [rpg.param("post", "name"), rpg.param("post", "jorder"), rpg.param("post", "stageid"),
+        rpg.param("post", "justified"), rpg.param("post", "word_count")]
 }));
 
 router.post("/get-actors", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select id, name, jorder, justified from actors where stageid = $1",
+    sql: "select id, name, jorder, justified, word_count from actors where stageid = $1",
     postReqData: ["stageid"],
     sqlParams: [rpg.param("post", "stageid")]
 }));

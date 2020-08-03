@@ -567,7 +567,8 @@ router.post("/enter-session-code", rpg.singleSQL({
                     }
                     else{
                         req.session.ses = id;
-                        let urlr = (type == "L") ? "editor" : (type == "M") ? "semantic" : (type == "E") ? "differential" : "select";
+                        let urlr = (type == "L") ? "editor" : (type == "M") ? "semantic" : (type == "E") ? "differential" :
+                        (type == "R") ? "role-playing" : (type == "T") ? "ethics" : "select";
                         res.end(JSON.stringify({status: "ok", redirect: urlr}));
                     }
                 }

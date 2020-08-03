@@ -67,12 +67,12 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
                 updateChat();
             }
         });
-        // $socket.on("diffReceived", (data) => {
-        //     console.log("SOCKET.IO", data);
-        //     if(data.ses == self.sesId){
-        //         self.openDetails(data);
-        //     }
-        // });
+        $socket.on("diffReceived", (data) => {
+            console.log("SOCKET.IO", data);
+            if(data.ses == self.sesId){
+                self.openDetails(data);
+            }
+        });
         self.getMe();
     };
 
@@ -181,6 +181,14 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
         if(self.currentStageId != null){
             $http.post("get-actors", {stageid: self.currentStageId}).success(data => {
                 self.actors = data;
+                self.posToJustify = {};
+                self.justifyPosition = false;
+                self.actors.forEach((a,i) => {
+                    if(a.jorder){
+                        self.posToJustify[i] = true;
+                        self.justifyPosition = true;
+                    }
+                });
                 if(self.sel.length == self.actors.length && self.sel.length > 0){
                     self.populateActors();
                 }
@@ -195,16 +203,6 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     };
 
     self.populateActors = () => {
-        self.posToJustify = {};
-        self.justifyPosition = false;
-        self.actors.forEach((a,i) => {
-            if(a.jorder){
-                self.posToJustify[i] = true;
-                self.justifyPosition = true;
-            }
-        });
-        console.log(self.justifyPosition, self.posToJustify);
-
         let acts = [];
         self.sel.forEach(s => {
             let a = self.actors.find(e => e.id == s.actorid);
@@ -471,7 +469,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
 app.controller("DirectContentController", ["$scope", "$uibModalInstance", "data", function ($scope, $uibModalInstance, data) {
     var vm = this;
     vm.data = data;
-    vm.data.title = "Diferencial recibido";
+    vm.data.title = "Respuesta recibida";
 
     setTimeout(() => {
         console.log(vm);

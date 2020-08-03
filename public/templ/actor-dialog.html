@@ -1,13 +1,15 @@
 <div>
     <div class="modal-header">
-        <button class="btn btn-default pull-right" ng-click="vm.cancel()"><i class="fa fa-close"></i></button>
-<!--        <button class="btn btn-default pull-right" ng-click="vm.shareDetails()"><i class="fa fa-share"></i></button>-->
+<!--        <button class="btn btn-default pull-right" ng-click="vm.cancel()"><i class="fa fa-close"></i></button>-->
+      <button class="btn btn-default pull-right" ng-click="vm.isAnon = !vm.isAnon"><i class="fa fa-eye"></i></button>
+      <button class="btn btn-default pull-right" ng-click="vm.shareDetails()"><i class="fa fa-share"></i></button>
         <h4>{{ vm.data.stage.question }}</h4>
     </div>
     <div class="modal-body">
         <div id="details-modal">
             <div ng-repeat="sel in vm.data.sel">
-                <h4 class="anon-badge">{{ vm.data.users[sel.uid].name }}</h4>
+                <h4 class="anon-badge" ng-if="!vm.isAnon">{{ vm.data.users[sel.uid].name }}</h4>
+              <div class="anon-badge margin-left-n8" ng-if="vm.isAnon">{{vm.data.anonNames[sel.uid]}}</div>
                 <div class="row">
                     <div class="col-sm-10 col-sm-offset-1 col-xs-12">
                         <div>
@@ -48,7 +50,10 @@
                                 <span class="content">{{msg.parent.content | limitTo:100}}</span>
                             </div>
                             <i class="fa fa-reply" ng-show="msg.parent != null"></i>
-                            <div class="anon-badge" ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">
+                          <div class="anon-badge" ng-if="vm.isAnon" ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">
+                            {{vm.data.anonNames[msg.uid]}}
+                          </div>
+                            <div class="anon-badge" ng-if="!vm.isAnon" ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">
                                 {{vm.data.users[msg.uid].name}}
                             </div>
                             <span class="pull-right font-mini text-right">

@@ -153,5 +153,9 @@
   "avgs": "P",
   "cvdesc": "Coeficiente de Variación",
   "chatMessages": "Mensajes de Chat",
+  "previous": "Usar anterior",
+  "indAggAns": "Respuestas individuales y agrupadas",
+  "commentReq": "Se requiere comentar",
+  "numEqual": "Cantidad Iguales",
   "cvs": "CV"
 }

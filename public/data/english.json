@@ -152,5 +152,9 @@
   "cvs": "CV",
   "cvdesc": "Coefficient of Variation",
   "chatMessages": "Chat Messages",
+  "previous": "Use previous",
+  "indAggAns": "Individual and grouped answers",
+  "commentReq": "Comment required",
+  "numEqual": "Number of Equal",
   "archived": "Archived"
 }

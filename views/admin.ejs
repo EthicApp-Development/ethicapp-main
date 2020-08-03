@@ -572,17 +572,17 @@
                         <div class="col-sm-5">
                             <h4>{{ 'listOf' | lang }} {{ 'roles' | lang }}/{{ 'actors' | lang }}</h4>
                         </div>
-                        <div class="col-sm-3 text-center margin-top-8">
+                        <div class="col-sm-2 text-center margin-top-8">
                             <button class="btn btn-default" ng-click="setAllRolesType('role')" ng-disabled="readonly">
                                 {{ 'justifyAll' | lang }} {{ 'roles' | lang }}
                             </button>
                         </div>
-                        <div class="col-sm-3 text-center margin-top-8">
+                        <div class="col-sm-2 text-center margin-top-8">
                             <button class="btn btn-default" ng-click="setAllRolesType('order')" ng-disabled="readonly">
                                 {{ 'justifyAll' | lang }} {{ 'orders' | lang }}
                             </button>
                         </div>
-                        <div class="col-sm-1">
+                        <div class="col-sm-2">
 
                         </div>
                     </div>
@@ -590,17 +590,21 @@
                         <div class="col-sm-5">
                             <input class="form-control" ng-model="role.name" ng-disabled="readonly">
                         </div>
-                        <div class="col-sm-3 text-center">
+                        <div class="col-sm-2 text-center">
                             <button class="btn btn-default" ng-class="{'btn-primary': role.type == 'role'}"
-                                ng-click="role.type = role.type == 'role' ? null : 'role'" ng-disabled="readonly">
+                                ng-click="setRoleType(role, 'role')" ng-disabled="readonly">
                                 {{ 'justify' | lang }} {{ 'role' | lang }}
                             </button>
                         </div>
-                        <div class="col-sm-3 text-center">
+                        <div class="col-sm-2 text-center">
                             <button class="btn btn-default" ng-class="{'btn-primary': role.type == 'order'}"
-                                    ng-click="role.type = role.type == 'order' ? null : 'order'" ng-disabled="readonly">
+                                    ng-click="setRoleType(role, 'order')" ng-disabled="readonly">
                                 {{ 'justify' | lang }} {{ 'order' | lang }}
                             </button>
+                        </div>
+                        <div class="col-sm-2 text-right">
+                            <input class="form-control form-inline-mini" placeholder="Word Count" type="number"
+                                   ng-model="role.wc" ng-disabled="readonly || role.type == null">
                         </div>
                         <div class="col-sm-1">
                             <button class="btn btn-default">
@@ -633,7 +637,10 @@
                                         {{ 'justify' | lang }}
                                     </button>
                                     <input class="form-control form-inline-mini" placeholder="Word Count" type="number"
-                                           ng-model="df.wc " ng-disabled="readonly">
+                                           ng-model="df.wc" ng-disabled="readonly || !df.justify">
+                                    <button class="btn btn-default" ng-click="removeDF($index)" ng-disabled="readonly">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
                                 </div>
                             </div>
                             <div class="row margin-top-8">
@@ -676,7 +683,7 @@
                                 {{ 'individual' | lang }}
                             </button>
                             <button class="btn btn-default" ng-class="{'btn-primary': stage.type == 'team'}"
-                                    ng-click="setGroupal()" ng-disabled="readonly">
+                                    ng-click="setGroupal()" ng-disabled="readonly || stages.length == 0">
                                 {{ 'teamWork' | lang }}
                             </button>
                         </div>
@@ -1192,7 +1199,7 @@
                 <span>{{ shared.stagesMap[iterationIndicator].question }}</span>
                 <table class="table table-bordered">
                     <tr>
-                        <th>Posición</th>
+                        <th>{{'order' | lang}}</th>
                         <th ng-repeat="actor in rawActors" class="text-center">{{ actor.name }}</th>
                     </tr>
                     <tr ng-repeat="(p, aa) in rawActors track by p">
@@ -1205,14 +1212,14 @@
                 </table>
 
                 <br>
-                <strong>Respuestas individuales y agrupadas</strong>
-                <span class="pull-right"><span style="color: red;">*</span> Se requiere comentar</span>
+                <strong>{{ 'indAggAns' | lang }}</strong>
+                <span class="pull-right"><span style="color: red;">*</span> {{ 'commentReq' | lang }}</span>
                 <table class="table table-bordered" ts-wrapper>
                     <tr>
-                        <th ts-criteria="ceqlnum | parseFloat" ts-default="descending">Cantidad Iguales</th>
-                        <th ts-criteria="uid" ts-order-by="sortByAutorName">Autor</th>
+                        <th ts-criteria="ceqlnum | parseFloat" ts-default="descending">{{ 'numEqual' | lang }}</th>
+                        <th ts-criteria="uid" ts-order-by="sortByAutorName">{{ 'author' | lang }}</th>
                         <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'" ts-criteria="uid2"
-                            ts-order-by="sortByAutorGroup">Grupo</th>
+                            ts-order-by="sortByAutorGroup">{{ 'group' | lang }}</th>
                         <th ng-repeat="(p, aa) in rawActors track by p">Pos {{ p + 1 }}</th>
                     </tr>
                     <tr ng-repeat="udata in indvTableSorted track by udata.uid" ts-repeat
@@ -1220,7 +1227,7 @@
                         <td>{{ udata.ceq }}</td>
                         <td>
                             {{ users[udata.uid].name }}
-                            <span class="badge bg-red">
+                            <span class="badge bg-red" ng-show="shared.stagesMap[iterationIndicator].chat">
                                 <i class="fa fa-comments"></i> {{ shared.chatByUid[udata.uid] }}
                             </span>
                         </td>
@@ -1238,17 +1245,21 @@
                     </tr>
                 </table>
                 <div>
-                    <span class="badge bg-red"><i class="fa fa-comments"></i> N</span> N mensajes de chat.
-                    <i class="fa fa-check simple-margin-left"></i> Comentado.
+                    <span class="badge bg-red"><i class="fa fa-comments"></i> N</span> N {{ 'chatMessages' | lang }}.
+                    <i class="fa fa-check simple-margin-left"></i> {{ 'commented' | lang }}.
                 </div>
             </div>
             <div ng-show="selectedSes.type == 'T'" class="margin-top-8">
-                <strong>Respuestas individuales y agrupadas</strong>
+                <strong>{{ 'indAggAns' | lang }}</strong>
+                <span class="pull-right"><span style="color: red;">*</span> {{ 'commentReq' | lang }}</span>
                 <table class="table table-bordered" ts-wrapper>
                     <tr>
-                        <th ts-criteria="uid" ts-order-by="sortByAutorName">Autor</th>
-                        <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'" ts-criteria="tmid" ts-default>Grupo</th>
-                        <th ng-repeat="df in dfsStage">Item {{ df.orden }} (1-{{ df.num }})</th>
+                        <th ts-criteria="uid" ts-order-by="sortByAutorName">{{ 'author' | lang }}</th>
+                        <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'" ts-criteria="tmid" ts-default>{{ 'group' | lang }}</th>
+                        <th ng-repeat="df in dfsStage">
+                            Item {{ df.orden }} (1-{{ df.num }})
+                            <span style="color: red;" ng-if="df.justify">*</span>
+                        </th>
                     </tr>
                     <tr ng-repeat="udata in shared.difTable track by $index" ts-repeat
                         ng-class="{'bg-gray': udata.group}">
@@ -1260,8 +1271,13 @@
                             <span ng-show="udata.group">{{ shared.groupByTmid[udata.tmid].index }}</span>
                             <span ng-show="!udata.group">{{ shared.groupByUid[udata.uid].index }}</span>
                         </td>
-                        <td ng-repeat="aid in udata.arr track by $index" ng-click="openDF2Details(udata.tmid, aid.did)">
-                            <span class="mini-inline"><span ng-show="udata.group">{{ 'avgs' | lang }}: </span>{{ aid.sel | number:2 }}<i class="fa fa-check" ng-if="aid.comment"></i></span>
+                        <td ng-repeat="aid in udata.arr track by $index" ng-click="openDF2Details(udata.tmid, aid.did, udata.uid)">
+                            <span class="mini-inline">
+                                <span ng-show="udata.group">{{ 'avgs' | lang }}: </span>
+                                <span ng-if="udata.group">{{ aid.sel | number:1 }}</span>
+                                <span ng-if="!udata.group">{{ aid.sel }}</span>
+                                <i class="fa fa-check" ng-if="aid.comment"></i>
+                            </span>
                             <span class="badge bg-red" ng-show="shared.stagesMap[iterationIndicator].chat && !udata.group">
                                 <i class="fa fa-comments"></i> {{ shared.chatByUid[aid.did][udata.uid] || 0 }}
                             </span>
