@@ -1,6 +1,6 @@
 "use strict";
 
-let BASE_APP = "https://saduewa.dcc.uchile.cl:8888/Readings/";
+let BASE_APP = window.location.href.replace("ethics", "");
 
 let app = angular.module("Ethics", ["ngSanitize", "ui.bootstrap", 'ui.tree', 'btford.socket-io', "angular-intro", "ui-notification", "luegg.directives"]);
 

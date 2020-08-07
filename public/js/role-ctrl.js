@@ -1,6 +1,6 @@
 "use strict";
 
-let BASE_APP = "https://saduewa.dcc.uchile.cl:8888/Readings/";
+let BASE_APP = window.location.href.replace("role-playing", "");
 
 let app = angular.module("Role", ["ngSanitize", "ui.bootstrap", 'ui.tree', 'btford.socket-io', "angular-intro", "ui-notification", "luegg.directives"]);
 

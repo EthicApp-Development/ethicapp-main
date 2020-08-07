@@ -1,6 +1,6 @@
 "use strict";
 
-let BASE_APP = "https://saduewa.dcc.uchile.cl:8888/Readings/";
+let BASE_APP = window.location.href.replace("differential", "");
 
 let app = angular.module("Differential", ["ngSanitize", "ui.bootstrap", 'ui.tree', 'btford.socket-io', "timer", "ui-notification", "luegg.directives"]);
 
