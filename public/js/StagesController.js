@@ -482,19 +482,23 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
     };
 
     self.shared.buildArray = self.buildArray;
+    self.shared.getStages = self.getStages;
 
     self.getStages();
 };
 
 
-function groupByUser(data) {
+function groupByUser(data, acts) {
     let u = {};
+    let jusOrder = acts.some(e => e.jorder);
     data.forEach(d => {
         if (!u[d.uid]) {
-            u[d.uid] = {arr: [], com: []};
+            u[d.uid] = {arr: [], com: [], just: []};
         }
+        let a = jusOrder ? acts[u[d.uid].arr.length] : acts.find(e => e.id == d.actorid);
         u[d.uid].arr.push(d.actorid);
         u[d.uid].com.push(d.description);
+        u[d.uid].just.push(a.justified);
     });
     return u;
 }
@@ -569,7 +573,7 @@ function simpleNum(code) {
 
 
 window.computeIndTable = function (data, actors) {
-    let udata = groupByUser(data);
+    let udata = groupByUser(data, actors);
     Object.values(udata).forEach(u => {
         u.code = lehmerCode(u.arr, actors);
         u.lnum = lehmerNum(u.code);

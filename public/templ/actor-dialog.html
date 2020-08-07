@@ -22,13 +22,14 @@
                                         </div>
                                         <div class="col-xs-6 col-sm-7 h30">
                                             <strong>{{ actorMap[aid].name }}</strong>
+                                            <span style="color: red;" ng-if="sel.just[$index]">*</span>
                                         </div>
                                         <div class="col-xs-4 text-right">
 
                                         </div>
                                     </div>
                                     <div class="row">
-                                        <div class="col-xs-12">
+                                        <div class="col-xs-12" ng-show="sel.just[$index]">
                                             {{ sel.com[$index] }}
                                         </div>
                                     </div>

@@ -1240,9 +1240,9 @@
                             </span>
                         </td>
                         <td ng-repeat="aid in udata.arr track by $index">
-                            <span style="color: red;" ng-if="actorMap[aid].justified">*</span>
+                            <span style="color: red;" ng-if="udata.just[$index]">*</span>
                             {{ actorMap[aid].name }}
-                            <i class="fa fa-check" ng-if="udata.com[$index]"></i>
+                            <i class="fa fa-check" ng-if="udata.com[$index] && udata.just[$index]"></i>
                         </td>
                     </tr>
                 </table>

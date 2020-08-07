@@ -97,7 +97,8 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         self.shared.verifyTabs();
         self.shared.resetTab();
         self.shared.updateConf();
-        $location.path(self.selectedSes.id);
+        if(self.shared.getStages)
+            self.shared.getStages();
     };
 
     self.shared.updateSesData = function () {

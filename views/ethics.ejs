@@ -259,7 +259,7 @@
         </div>
         <div ng-if="prevResPrev != null && stages[selectedStage].id != currentStageId">
             <div ng-repeat="res in prevResPrev">
-                <h3 class="text-center">{{'answerOf' | lang }} {{ 'stage' | lang }} {{ stagesMap[prevStages[$index]].number }}</h3>
+                <h3 class="text-center">{{'answerOf' | lang }} {{ 'stage' | lang }} {{ stagesMap[prevStagesPrev[$index]].number }}</h3>
                 <div ng-repeat="(uid, arr) in res">
                     <h5><strong>{{'author' | lang}}: {{ teamMapPrev[uid] }}</strong></h5>
                     <div class="row">
@@ -329,7 +329,7 @@
                     <div class="chat-msg" ng-repeat="msg in chatMsgsPrev[selectedDF]" ng-class="{'bg-gray': chatmsgreply == msg.id}">
                         <div class="font-mini parent-msg" ng-show="msg.parent != null">
                             <!--                            <div class="anon-badge margin-left-n8">{{ teamMap[msg.parent.uid] }}</div>-->
-                            <strong>{{ teamMap[msg.parent.uid] }}:</strong>
+                            <strong>{{ teamMapPrev[msg.parent.uid] }}:</strong>
                             <span class="content" ng-bind-html="msg.parent.content | limitTo:100 | linkfy"></span>
                         </div>
                         <i class="fa fa-reply" ng-show="msg.parent != null"></i>
@@ -339,7 +339,7 @@
                             <br>
                             <a ng-click="setReply(msg)">{{'reply' | lang}}</a>
                         </span>
-                        <div ><strong ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">{{ teamMap[msg.uid] }}:</strong></div>
+                        <div ><strong ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">{{ teamMapPrev[msg.uid] }}:</strong></div>
                         <span class="content" ng-bind-html="msg.content | linkfy"></span>
                     </div>
                 </div>
