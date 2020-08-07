@@ -213,7 +213,9 @@
             </div>
             <div class="row margin-top-24" ng-if="stages[selectedStage].id == currentStageId">
                 <div class="col-xs-12 text-center">
-                    <button class="btn btn-default" ng-click="sendActorSel()">Listo</button>
+                    <button class="btn btn-default" ng-click="sendActorSel(true)">
+                        <i class="fa fa-check" ng-show="verified"></i> Listo
+                    </button>
                 </div>
             </div>
         </div>
@@ -303,7 +305,7 @@
                     <div class="chat-msg" ng-repeat="msg in chatMsgs[currentStageId]" ng-class="{'bg-gray': chatmsgreply == msg.id}">
                         <div class="font-mini parent-msg" ng-show="msg.parent != null">
                             <div class="anon-badge margin-left-n8">{{ teamMap[msg.parent.uid] }}</div>
-                            <span class="content" bind-html-compile="msg.parent.content | limitTo:100 | linkfy"></span>
+                            <span class="content" ng-bind-html="msg.parent.content | limitTo:100 | linkfy"></span>
                         </div>
                         <i class="fa fa-reply" ng-show="msg.parent != null"></i>
                         <div class="anon-badge" ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">{{ teamMap[msg.uid] }}</div>
@@ -312,7 +314,7 @@
                             <br>
                             <a ng-click="setReply(msg)">{{'reply' | lang}}</a>
                         </span>
-                        <span class="content" bind-html-compile="msg.content | linkfy"></span>
+                        <span class="content" ng-bind-html="msg.content | linkfy"></span>
                     </div>
                 </div>
                 <div class="chat-area" scroll-glue ng-show="chatExp" ng-if="stages[selectedStage].id != currentStageId">
@@ -320,14 +322,14 @@
                     <div class="chat-msg" ng-repeat="msg in chatMsgsPrev[stages[selectedStage].id]">
                         <div class="font-mini parent-msg" ng-show="msg.parent != null">
                             <div class="anon-badge margin-left-n8">{{ teamMapPrev[msg.parent.uid] }}</div>
-                            <span class="content" bind-html-compile="msg.parent.content | limitTo:100 | linkfy"></span>
+                            <span class="content" ng-bind-html="msg.parent.content | limitTo:100 | linkfy"></span>
                         </div>
                         <i class="fa fa-reply" ng-show="msg.parent != null"></i>
                         <div class="anon-badge" ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">{{ teamMapPrev[msg.uid] }}</div>
                         <span class="pull-right font-mini text-right">
                             <span class="text-muted">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
                         </span>
-                        <span class="content" bind-html-compile="msg.content | linkfy"></span>
+                        <span class="content" ng-bind-html="msg.content | linkfy"></span>
                     </div>
                 </div>
                 <div class="input-group">

@@ -23,12 +23,14 @@
     <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&key=AIzaSyAx05l8YIv_oB8f5AMBGIcWmgnqFou0VJI&libraries=drawing,geometry,places"></script>
     <script type="text/javascript" src="libs/quill.min.js"></script>
     <script type="text/javascript" src="libs/ng-quill.min.js"></script>
+    <script src="libs/socket.min.js"></script>
     <script src="libs/angular-timer.min.js"></script>
     <script src="libs/angular-ui-notification.min.js"></script>
     <script src="libs/save-csv.min.js"></script>
     <script src="libs/angular-tablesort.min.js"></script>
     <script src="js/StagesController.js"></script>
     <script src="js/admin-ctrl.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body class="blue" ng-controller="AdminController">
 
@@ -1224,7 +1226,7 @@
                     </tr>
                     <tr ng-repeat="udata in indvTableSorted track by udata.uid" ts-repeat
                         ng-click="openActorDetails(udata.uid, iterationIndicator)">
-                        <td>{{ udata.ceq }}</td>
+                        <td>{{ udata.ceq }} (C{{ udata.lnum }}) </td>
                         <td>
                             {{ users[udata.uid].name }}
                             <span class="badge bg-red" ng-show="shared.stagesMap[iterationIndicator].chat">
@@ -1244,8 +1246,9 @@
                         </td>
                     </tr>
                 </table>
-                <div>
-                    <span class="badge bg-red"><i class="fa fa-comments"></i> N</span> N {{ 'chatMessages' | lang }}.
+                <div class="simple-padding-bottom">
+                    <span>{{ 'students' | lang }}: {{indvTableSorted.length}}</span>
+                    <span class="badge bg-red simple-margin-left"><i class="fa fa-comments"></i> N</span> N {{ 'chatMessages' | lang }}.
                     <i class="fa fa-check simple-margin-left"></i> {{ 'commented' | lang }}.
                 </div>
             </div>
@@ -1292,8 +1295,9 @@
                         </td>
                     </tr>
                 </table>
-                <div>
-                    <strong>{{ 'avgs' | lang }}: </strong> {{ 'average' | lang }}.
+                <div class="simple-padding-bottom">
+                    <span>{{ 'students' | lang }}: {{shared.difTableUsers}}</span>
+                    <strong class="simple-margin-left">{{ 'avgs' | lang }}: </strong> {{ 'average' | lang }}.
                     <strong class="simple-margin-left">{{ 'cvs' | lang }}: </strong> {{ 'cvdesc' | lang }}.
                     <span class="badge bg-red simple-margin-left"><i class="fa fa-comments"></i> N</span> N {{ 'chatMessages' | lang }}.
                 </div>

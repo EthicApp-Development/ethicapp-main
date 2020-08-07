@@ -1,13 +1,17 @@
 "use strict";
 
 var adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill",
-    "ngMap", "tableSort"]);
+    "ngMap", "tableSort", 'btford.socket-io']);
 
 var DASHBOARD_AUTOREALOD = false;
 var DASHBOARD_AUTOREALOD_TIME = 15;
 
 window.DIC = null;
 window.warnDIC = {};
+
+app.factory("$socket", ["socketFactory", function (socketFactory) {
+    return socketFactory();
+}]);
 
 adpp.config(['ngQuillConfigProvider', function (ngQuillConfigProvider) {
     ngQuillConfigProvider.set({
@@ -42,7 +46,7 @@ adpp.config(['ngQuillConfigProvider', function (ngQuillConfigProvider) {
     });
 }]);
 
-adpp.controller("AdminController", function ($scope, $http, $uibModal, $location, $locale, $filter) {
+adpp.controller("AdminController", function ($scope, $http, $uibModal, $location, $locale, $filter, $socket) {
     var self = $scope;
 
     self.temp = "";
@@ -72,6 +76,12 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.init = function () {
         self.shared.updateSesData();
         self.updateLang(self.lang);
+        $socket.on("stateChange", (data) => {
+            console.log("SOCKET.IO", data);
+            if (data.ses == self.selectedSes.id) {
+                window.location.reload();
+            }
+        });
     };
 
     self.selectSession = function (ses, id) {
@@ -1173,6 +1183,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 self.dfsStage = data;
                 $http.post("get-differential-all-stage", _postdata2).success(function (data) {
                     self.shared.difTable = window.buildDifTable(data, self.users, self.dfsStage, self.shared.groupByUid);
+                    self.shared.difTableUsers = self.shared.difTable.filter(e => !e.group).length;
                 });
             });
             $http({ url: "group-proposal-stage", method: "post", data: _postdata2 }).success(function (data) {

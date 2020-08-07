@@ -53,6 +53,8 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     self.posToJustify = {};
     self.justifyPosition = false;
 
+    self.verified = false;
+
     self.init = () => {
         self.getSesInfo();
         $socket.on("stateChange", (data) => {
@@ -346,7 +348,15 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
 
     };
 
-    self.sendActorSel = () => {
+    self.sendActorSel = (verify) => {
+        if(verify){
+            if(self.actors.some((a,i) => ((!self.justifyPosition && a.justified) ||
+                (self.justifyPosition && self.posToJustify[i])) &&
+                (a.comment == null || a.comment == ""))) {
+                notify("Datos Faltantes", "Falta completar la justificación de algunos actores");
+                return;
+            }
+        }
         self.actors.forEach((a,i) => {
             let postdata = {
                 orden: i + 1,
@@ -361,6 +371,9 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             });
         });
         self.selectedActor = null;
+        if(verify){
+            self.verified = true;
+        }
     };
 
     self.sendChatMsg = () => {

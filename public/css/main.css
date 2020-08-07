@@ -1109,6 +1109,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     margin-left: -12px;
     border-top: 8px solid #1b5986;
     z-index: 99999;
+    width: 98%;
 }
 
 .chat-area{
