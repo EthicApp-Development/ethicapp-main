@@ -1226,7 +1226,7 @@
                     </tr>
                     <tr ng-repeat="udata in indvTableSorted track by udata.uid" ts-repeat
                         ng-click="openActorDetails(udata.uid, iterationIndicator)">
-                        <td>{{ udata.ceq }} (C{{ udata.pnum }}) </td>
+                        <td>{{ udata.ceq }}</td>
                         <td>
                             {{ users[udata.uid].name }}
                             <span class="badge bg-red" ng-show="shared.stagesMap[iterationIndicator].chat">

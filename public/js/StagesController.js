@@ -584,7 +584,7 @@ window.computeIndTable = function (data, actors) {
 
     let uarr = Object.values(udata);
     uarr.forEach(u => {
-        u.ceq = uarr.filter(e => e.lnum == u.lnum).length;
+        u.ceq = uarr.filter(e => e.pnum == u.pnum).length;
     });
 
     return udata;
@@ -607,7 +607,7 @@ window.sortIndTable = function (table, users) {
     let arr = Object.entries(table).map(([uid, e]) => {
         e.uid = uid;
         e.uid2 = uid;
-        e.ceqlnum = e.ceq + e.lnum / 4e6;
+        e.ceqlnum = e.ceq + e.pnum / 1e7;
         return e;
     });
     console.log(arr);
