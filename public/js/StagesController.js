@@ -498,7 +498,7 @@ function groupByUser(data, acts) {
         let a = jusOrder ? acts[u[d.uid].arr.length] : acts.find(e => e.id == d.actorid);
         u[d.uid].arr.push(d.actorid);
         u[d.uid].com.push(d.description);
-        u[d.uid].just.push(a.justified);
+        u[d.uid].just.push(a && a.justified);
     });
     return u;
 }
