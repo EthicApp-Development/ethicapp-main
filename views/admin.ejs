@@ -555,8 +555,8 @@
             <div ng-controller="StagesController" ng-if="selectedSes.type == 'R' || selectedSes.type == 'T'">
                 <h4>{{ 'stages' | lang }}</h4>
                 <div class="qs-tabs bg-darkgray pad-content top-tab-content">
-                    <div class="tab tab-text tab-text-lg green" ng-repeat="stage in stages" ng-click="setCurrentStage($index)"
-                         ng-class="{'active': currentStage == $index}">
+                    <div class="tab tab-text tab-text-lg" ng-repeat="stage in stages" ng-click="setCurrentStage($index)"
+                         ng-class="{'active': currentStage == $index, 'green': stage.id==selectedSes.current_stage}">
                         {{ 'stage' | lang }} {{ stage.number }}
                     </div>
                     <div class="tab tab-text tab-text-lg yellow" ng-click="setCurrentStage(-1)"
@@ -669,7 +669,7 @@
                         <div class="row">
                             <div class="col-sm-12 text-center">
                                 <button class="btn btn-default" ng-click="addDF()" ng-disabled="readonly">
-                                    <i class="fa fa-plus"></i> {{ 'add' | lang }} {{ 'question' | lang }}
+                                    <i class="fa fa-plus"></i> {{ 'add' | lang }} Item
                                 </button>
                             </div>
                         </div>

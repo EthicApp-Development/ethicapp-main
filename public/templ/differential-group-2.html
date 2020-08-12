@@ -27,9 +27,9 @@
                 </div>
                 <br>
             </div>
-            <hr class="bordered black" ng-if="stage.chat">
+            <hr class="bordered black" ng-if="vm.data.stage.chat">
             <h4 ng-if="stage.chat"><strong>Chat</strong></h4>
-            <div class="chat bordered" ng-if="stage.chat">
+            <div class="chat bordered" ng-if="vm.data.stage.chat">
                 <div class="chat-area" scroll-glue>
                     <strong ng-show="vm.data.chat.length == 0">No hay mensajes</strong>
                     <div class="chat-msg" ng-repeat="msg in vm.data.chat">
