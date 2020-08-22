@@ -24,6 +24,7 @@ router.get("/logout", (req, res) => {
     req.session.uid = null;
     req.session.role = null;
     req.session.ses = null;
+    req.session.prevUid = null;
     res.redirect("login");
 });
 
@@ -144,5 +145,40 @@ router.post("/newpassword", rpg.execSQL({
         res.redirect("login?rc=4");
     }
 }));
+
+router.post("/super-login-as", (req, res) => {
+    if(req.session.role != "S" || req.body.uid == null){
+        res.send({status: "error"});
+    }
+    else {
+        req.session.prevUid = req.session.uid;
+        req.session.uid = req.body.uid;
+        req.session.role = "P";
+        req.session.ses = null;
+        res.send({status: "ok"});
+    }
+});
+
+router.get("/super-logout", (req, res) => {
+    if(req.session.prevUid == null){
+        res.end();
+    }
+    else {
+        req.session.uid = req.session.prevUid;
+        req.session.role = "S";
+        req.session.ses = null;
+        req.session.prevUid = null;
+        res.redirect("/");
+    }
+});
+
+router.get("/is-super", (req, res) => {
+    if(req.session.role == "S" || req.session.prevUid != null){
+        res.send({status: "ok"});
+    }
+    else {
+        res.send({status: "error"});
+    }
+});
 
 module.exports = router;

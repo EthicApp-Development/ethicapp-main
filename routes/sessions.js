@@ -119,6 +119,35 @@ router.post("/add-ses-users", (req, res) => {
     })(req, res);
 });
 
+router.post("/get-all-users", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select u.id, u.name, u.mail, u.rut, u.role from users as u",
+    sqlParams: [],
+    onStart: (ses, data, calc) => {
+        if (ses.role != "S") return "select 1";
+    },
+}));
+
+router.post("/convert-prof", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "update users set role = 'P' where id = $1" ,
+    postReqData: ["uid"],
+    sqlParams: [rpg.param("post", "uid")],
+    onStart: (ses, data, calc) => {
+        if (ses.role != "S") return "select $1";
+    },
+}));
+
+router.post("/remove-prof", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "update users set role = 'R' where id = $1" ,
+    postReqData: ["uid"],
+    sqlParams: [rpg.param("post", "uid")],
+    onStart: (ses, data, calc) => {
+        if (ses.role != "S") return "select $1";
+    },
+}));
+
 router.post("/add-question", rpg.singleSQL({
     dbcon: pass.dbcon,
     sql: "insert into questions(content,options,answer,comment,other,sesid,textid,plugin_data) values ($1,$2,$3,$4,$5,$6,$7,$8) returning id",

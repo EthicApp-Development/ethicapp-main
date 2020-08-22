@@ -6,6 +6,7 @@
     <title>DocCollab</title>
     <script src="libs/angular.min.js"></script>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/font-awesome.min.css">
     <link rel="stylesheet" href="css/main.css"/>
     <style type="text/css">
         body {
@@ -35,6 +36,7 @@
         <div class="col-sm-4 border-right-sep">
             <button class="btn btn-default form-control" ng-click="setSec(0)" ng-class="{'active': sec == 0}">Monitor de Estado</button>
             <button class="btn btn-default form-control" ng-click="setSec(1)" ng-class="{'active': sec == 1}">Crear usuario Profesor</button>
+            <button class="btn btn-default form-control" ng-click="setSec(2)" ng-class="{'active': sec == 2}">Profesores</button>
             <br>
             <br>
             <a class="btn btn-default form-control" href="logout">Salir</a>
@@ -55,8 +57,18 @@
                 </div>
             </div>
             <div ng-show="sec == 1">
-                <h4>Crear usuario profesor</h4>
-                <form action="register-prof" method="POST">
+<!--                <h4>Crear usuario profesor</h4>-->
+
+                <div class="btn-group simple-padding-bottom">
+                    <button class="btn btn-default" ng-class="{'active': newProfAc}" ng-click="newProfAc = true">
+                        Crear nueva cuenta
+                    </button>
+                    <button class="btn btn-default" ng-class="{'active': !newProfAc}" ng-click="newProfAc = false">
+                        Convertir cuenta a profesor
+                    </button>
+                </div>
+
+                <form action="register-prof" method="POST" ng-show="newProfAc">
                     <label>Nombre:</label>
                     <input type="text" class="form-control" name="name" required autofocus><br>
                     <label>Apellido:</label>
@@ -75,6 +87,43 @@
 
                     <button type="submit" class="btn btn-primary form-control">Registrar</button>
                 </form>
+
+                <div ng-show="!newProfAc">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Buscar..." ng-model="search">
+                        <span class="input-group-btn">
+                            <button class="btn btn-default" ng-click="convertUser()">Convertir</button>
+                        </span>
+                    </div>
+                    <div class="list-group">
+                        <div class="list-group-item hoverable" ng-repeat="user in alumUsers | filter:search"
+                         ng-class="{'active': selectedUser == user.id}" ng-click="selectUser(user.id)">
+                            <strong>{{user.name}}</strong><br>
+                            <span>{{user.rut}} / {{ user.mail }}</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div ng-show="sec == 2">
+                <h4>Lista de Profesores</h4>
+                <div>
+                    <input type="text" class="form-control" placeholder="Buscar..." ng-model="search">
+                </div>
+                <div class="list-group">
+                    <div class="list-group-item" ng-repeat="user in profUsers | filter:search">
+                        <div class="pull-right">
+                            <button class="btn btn-default" ng-click="removeProf(user.id)">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                            <button class="btn btn-default" ng-click="superLogin(user.id)">
+                                <i class="fa fa-sign-in"></i>
+                            </button>
+                        </div>
+                        <strong>{{user.name}}</strong><br>
+                        <span>{{user.rut}} / {{ user.mail }}</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

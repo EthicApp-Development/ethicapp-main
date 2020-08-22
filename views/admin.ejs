@@ -34,6 +34,13 @@
 </head>
 <body class="blue" ng-controller="AdminController">
 
+<div class="super-bar" ng-if="superBar">
+    <div class="pull-right">
+        <a href="/super-logout" class="href">Volver a administrador</a>
+    </div>
+    <strong>Administrador</strong>
+</div>
+
 <div ng-controller="TabsController">
 
     <!-- STATUSES -->

@@ -1193,3 +1193,10 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     padding: 8px;
     border-radius: 4px;
 }
+
+.super-bar{
+    height: 32px;
+    background: #ccc;
+    padding: 6px 12px;
+    border-bottom: 2px solid #888;
+}
