@@ -83,6 +83,9 @@
                  ng-click="selectDocument($index)" ng-attr-id="{{ 'tabd' + $index }}">
                 <i class="fa fa-book"></i> {{doc.title | limitTo:10}}
             </div>
+            <div class="tab tab-text" ng-if="isJigsaw" ng-click="selectRoleDescr()" ng-class="{active: showRole}">
+                <i class="fa fa-user"></i> {{ 'role' | lang }}
+            </div>
             <div class="tab tab-text" ng-repeat="st in stages" ng-class="{active: selectedStage == $index && !showDoc, 'green': st.id != currentStageId, 'yellow': st.id == currentStageId}"
                  ng-click="selectStage($index)" ng-attr-id="{{ 'tabq' + $index }}">
                 <i class="fa fa-question-circle"></i> {{ 'stage' | lang }} {{st.number}} <span class="badge bg-red" ng-show="st.c != null && st.c > st.cr">{{st.c - st.cr}}</span>
@@ -125,7 +128,15 @@
             </div>
         </div>
     </div>
-    <div ng-show="iteration > 0 && !showDoc">
+    <div ng-show="showRole">
+        <h4>{{ 'roleAssigned' | lang }}: {{ jroles[0].name }}</h4>
+        <div class="bordered role-box">
+            {{ jroles[0].description }}
+        </div>
+        <strong>{{ 'others' | lang }} {{ 'roles' | lang }}: </strong>
+        <span ng-repeat="j in jroles">{{ j.name }} - </span>
+    </div>
+    <div ng-show="iteration > 0 && !showDoc && !showRole">
         <!--<h4>DF{{dfs[selectedDF].orden}}</h4>-->
         <div class="differential margin-top-n12">
             <h5>

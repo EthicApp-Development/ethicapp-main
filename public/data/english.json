@@ -157,5 +157,8 @@
   "commentReq": "Comment required",
   "numEqual": "Number of Equal",
   "commented": "Commented",
+  "jigsaw": "Role Playing (Jigsaw)",
+  "actions": "Actions",
+  "roleAssigned": "Assigned Role",
   "archived": "Archived"
 }

@@ -15,10 +15,12 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     self.myUid = -1;
     self.documents = [];
     self.showDoc = true;
+    self.showRole = false;
     self.selectedDocument = 0;
     self.finished = false;
     self.sesId = -1;
     self.chatExp = true;
+    self.isJigsaw = false;
 
     self.stages = [];
     self.currentStageId = 0;
@@ -28,6 +30,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     self.selectedStage = null;
 
     self.actors = [];
+    self.jroles = [];
     self.sel = [];
 
     self.actorsPrev = [];
@@ -87,12 +90,16 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             self.sesSTime = data.stime;
             self.sesDescr = data.descr;
             self.currentStageId = data.current_stage;
+            self.isJigsaw = data.type == "J";
             if (self.iteration >= 1) {
                 // self.finished = true;
             }
             if(self.currentStageId != null || self.iteration >= 1) {
                 self.loadDocuments();
                 self.loadStageData();
+            }
+            if(self.isJigsaw){
+                self.getJigsawRoles();
             }
         });
     };
@@ -143,6 +150,12 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     self.loadDocuments = () => {
         $http({url: "get-documents", method: "post"}).success((data) => {
             self.documents = data;
+        });
+    };
+
+    self.getJigsawRoles = () => {
+        $http.post("get-my-jigsaw-roles").success((data) => {
+            self.jroles = data;
         });
     };
 
@@ -277,6 +290,13 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     self.selectDocument = (i) => {
         self.selectedDocument = i;
         self.showDoc = true;
+        self.showRole = false;
+    };
+
+    self.selectRoleDescr = () => {
+        self.showRole = true;
+        self.showDoc = false;
+        self.selectedStage = null;
     };
 
     self.selectStage = (i) => {
@@ -287,6 +307,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
         self.selectedStage = i;
         self.stages[self.selectedStage].cr = self.stages[self.selectedStage].c;
         self.showDoc = false;
+        self.showRole = false;
         self.chatmsg = "";
         self.selPrev = [];
         self.actorsPrev = [];

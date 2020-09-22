@@ -114,6 +114,36 @@ router.post("/send-actor-selection", rpg.execSQL({
 //     sqlParams: [rpg.param("ses","ses"),rpg.param("ses","ses"),rpg.param("ses","uid"),rpg.param("post","iteration")]
 // }));
 
+router.post("/add-jigsaw-role", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "insert into jigsaw_role (name, description, sesid) values ($1, $2, $3)",
+    postReqData: ["name", "description", "sesid"],
+    sqlParams: [rpg.param("post", "name"), rpg.param("post", "description"),
+        rpg.param("post", "sesid")]
+}));
+
+router.post("/get-jigsaw-roles", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select id, name, description from jigsaw_role where sesid = $1 order by id",
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "sesid")]
+}));
+
+router.post("/get-my-jigsaw-roles", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select id, name, description from jigsaw_role where sesid = $1 order by id",
+    sesReqData: ["ses"],
+    sqlParams: [rpg.param("ses", "ses")]
+}));
+
+router.post("/assign-jigsaw-role", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "insert into jigsaw_users (stageid, userid, roleid) values ($1, $2, $3)",
+    postReqData: ["stageid", "userid", "roleid"],
+    sqlParams: [rpg.param("post", "stageid"), rpg.param("post", "userid"),
+        rpg.param("post", "roleid")]
+}));
+
 module.exports = router;
 
 

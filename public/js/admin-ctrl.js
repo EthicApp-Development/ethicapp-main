@@ -70,7 +70,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.lang = "english";
     self.secIcons = { configuration: "cog", editor: "edit", dashboard: "bar-chart", users: "male",
         rubrica: "check-square", groups: "users", options: "sliders" };
-    self.typeNames = { L: "readComp", S: "multSel", M: "semUnits", E: "ethics", R: "rolePlaying", T: "ethics" };
+    self.typeNames = { L: "readComp", S: "multSel", M: "semUnits", E: "ethics", R: "rolePlaying", T: "ethics", J: "jigsaw" };
 
     self.misc = {};
 
@@ -305,7 +305,7 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
             self.iterationNames = [{ name: "individual", val: 1 }, { name: "anon", val: 2 }, { name: "teamWork", val: 3 }];
             self.tabOptions = ["editor", "users", "groups", "dashboard"];
             self.sesStatusses = ["configuration", "individual", "anon", "teamWork", "finished"];
-        } else if (self.selectedSes.type == "R" || self.selectedSes.type == "T") {
+        } else if (self.selectedSes.type == "R" || self.selectedSes.type == "T" || self.selectedSes.type == "J") {
             self.iterationNames = [];
             self.tabOptions = ["editor", "users", "dashboard"];
             // self.sesStatusses = ["configuration"];
@@ -905,7 +905,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         } else if (self.selectedSes.type == "M") {
             self.iterationIndicator = Math.max(Math.min(6, self.selectedSes.status - 2), 0);
         }
-        else if (self.selectedSes.type == "R" || self.selectedSes.type == "T") {
+        else if (self.selectedSes.type == "R" || self.selectedSes.type == "T" || self.selectedSes.type == "J") {
             self.iterationIndicator = self.selectedSes.current_stage;
         }
         self.alumState = null;
@@ -951,7 +951,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         if (self.selectedSes.status == 1) {
             self.shared.refreshUsers();
         }
-        else if (self.iterationIndicator <= 4 || self.selectedSes.type == "R" || self.selectedSes.type == "T") {
+        else if (self.iterationIndicator <= 4 || self.selectedSes.type == "R" || self.selectedSes.type == "T" || self.selectedSes.type == "J") {
             self.updateStateIni();
         }
         else {
@@ -1223,6 +1223,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     self.shared.chatByTeam[c.did][c.tmid] += +c.count;
                 });
             });
+        }
+        else if (self.selectedSes.type == "J"){
+            // TODO: Implement this
         }
     };
 

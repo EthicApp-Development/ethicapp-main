@@ -1200,3 +1200,17 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     padding: 6px 12px;
     border-bottom: 2px solid #888;
 }
+
+.bg-qblue{
+    background: #3f97d4;
+}
+
+.bg-purple{
+    background: #843eb3;
+}
+
+.role-box{
+    padding: 16px 28px;
+    margin: 8px 0;
+    text-align: justify;
+}

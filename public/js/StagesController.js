@@ -24,6 +24,8 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
     self.stageRoles = [];
 
     self.roles = [];
+    self.jroles = [];
+    self.colors = ["bg-qblue", "bg-red", "bg-green", "bg-yellow", "bg-purple", "bg-white"];
     self.dfs = [];
 
     self.groups = [];
@@ -118,6 +120,25 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                     });
                 });
             }
+            else if (self.selectedSes.type == "J") {
+                $http({url: "get-actors", method: "post", data: postdata}).success(function (data) {
+                    self.roles = data;
+                    self.roles.forEach(r => {
+                        if(r.justified && r.jorder){
+                            r.type = "order";
+                        }
+                        else if(r.justified){
+                            r.type = "role";
+                        }
+                        r.wc = r.word_count;
+                    });
+                });
+                $http({url: "get-jigsaw-roles", method: "post", data: {
+                    sesid: self.selectedSes.id
+                }}).success(function (data) {
+                    self.jroles = data;
+                });
+            }
             $http({url: "group-proposal-stage", method: "post", data: postdata}).success(function (data) {
                 self.groups = data;
                 if (data.length > 0) {
@@ -150,6 +171,14 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
         });
     };
 
+    self.addJRole = function () {
+        self.jroles.push({
+            name: "",
+            description: "",
+            edit: true
+        });
+    };
+
     self.setRoleType = function (role, type) {
         if(role.type == type){
             role.type = null;
@@ -174,6 +203,12 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
         }
     };
 
+    self.removeJRole = function (index) {
+        if (window.confirm("¿Esta seguro de eliminar este rol?")) {
+            self.jroles.splice(index, 1);
+        }
+    };
+
     self.removeDF = function (index) {
         if (window.confirm("¿Esta seguro de eliminar esta pregunta?")) {
             self.dfs.splice(index, 1);
@@ -182,7 +217,9 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
 
     self.sendStage = function () {
         var s = self.stage;
-        let arr = self.selectedSes.type == "R" ? self.roles : self.dfs;
+        let arr = self.selectedSes.type == "R" || self.selectedSes.type == "J" ? self.roles : self.dfs;
+        let isFirst = self.stages.length == 0;
+        console.log(isFirst);
         if (s.type == null || arr.length == 0 || s.type == "team" && (self.groups == null || self.groups.length == 0)) {
             Notification.error("Hay datos faltantes");
             return;
@@ -256,6 +293,57 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                                 });
                             }
                         });
+                    }
+                }
+                else if (self.selectedSes.type == "J") {
+                    let c = self.roles.length + (isFirst ? self.jroles.length : 0);
+                    for (let i = 0; i < self.roles.length; i++) {
+                        const role = self.roles[i];
+                        let p = {
+                            name: role.name,
+                            jorder: role.type == "order",
+                            justified: role.type != null,
+                            word_count: role.wc,
+                            stageid: stageid,
+                        };
+                        console.log("Add Actor " + p.name);
+                        $http({url: "add-actor", method: "post", data: p}).success(function (data) {
+                            console.log("Actor added");
+                            c -= 1;
+                            if (c == 0) {
+                                let pp = {sesid: self.selectedSes.id, stageid: stageid};
+                                $http({url: "session-start-stage", method: "post", data: pp}).success(function (data) {
+                                    Notification.success("Etapa creada correctamente");
+                                    // window.location.reload()
+                                });
+                            }
+                        });
+                    }
+                    if(isFirst){
+                        for (let i = 0; i < self.jroles.length; i++) {
+                            const jrole = self.jroles[i];
+                            let p = {
+                                name: jrole.name,
+                                sesid: self.selectedSes.id,
+                                description: jrole.description
+                            };
+                            console.log("Add JRole " + p.name);
+                            $http({url: "add-jigsaw-role", method: "post", data: p}).success(function (data) {
+                                console.log("JRole added");
+                                c -= 1;
+                                if (c == 0) {
+                                    let pp = {sesid: self.selectedSes.id, stageid: stageid};
+                                    $http({
+                                        url: "session-start-stage",
+                                        method: "post",
+                                        data: pp
+                                    }).success(function (data) {
+                                        Notification.success("Etapa creada correctamente");
+                                        // window.location.reload()
+                                    });
+                                }
+                            });
+                        }
                     }
                 }
             }

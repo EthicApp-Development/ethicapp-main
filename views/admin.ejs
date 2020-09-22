@@ -51,7 +51,7 @@
             </a>
         </div>
         <div class="cf3 grow text-center simple-padding-top hscroll" ng-show="selectedId != -1">
-            <span ng-repeat="st in sesStatusses" ng-if="selectedSes.type != 'R' && selectedSes.type != 'T'">
+            <span ng-repeat="st in sesStatusses" ng-if="selectedSes.type != 'R' && selectedSes.type != 'T' && selectedSes.type != 'J'">
                 <span ng-if="selectedSes.type != 'M'" class="label label-primary bg-black-alpha margin-right-8"
                       ng-class="{'bg-yellow': $index==selectedSes.status-1}">
                     {{st | lang}}
@@ -62,7 +62,7 @@
                 </span>
                 <!-- <span ng-hide="$last">→</span> -->
             </span>
-            <span ng-if="selectedSes.type == 'R' || selectedSes.type == 'T'">
+            <span ng-if="selectedSes.type == 'R' || selectedSes.type == 'T' || selectedSes.type == 'J'">
                 <span class="label label-primary bg-black-alpha margin-right-8"
                       ng-class="{'bg-yellow': selectedSes.current_stage == null && selectedSes.status < 3}">
                     {{'configuration' | lang}}
@@ -81,11 +81,11 @@
             </span> -->
         </div>
         <div class="cf1 simple-padding-top">
-            <button class="btn btn-xs btn-default simple-margin-left" ng-if="selectedId != -1 && selectedSes.type != 'R' && selectedSes.type != 'T'"
+            <button class="btn btn-xs btn-default simple-margin-left" ng-if="selectedId != -1 && selectedSes.type != 'R' && selectedSes.type != 'T' && selectedSes.type != 'J'"
                     ng-click="shared.changeState()">
                 {{'gotoNext' | lang}}
             </button>
-            <button class="btn btn-xs btn-default simple-margin-left" ng-if="selectedId != -1 && (selectedSes.type == 'R' || selectedSes.type == 'T') && selectedSes.status < 3"
+            <button class="btn btn-xs btn-default simple-margin-left" ng-if="selectedId != -1 && (selectedSes.type == 'R' || selectedSes.type == 'T' || selectedSes.type == 'J') && selectedSes.status < 3"
                     ng-click="shared.openNextModal()">
                 {{'gotoNext' | lang}}
             </button>
@@ -314,7 +314,6 @@
                     <div class="col-sm-1">
                         <button class="form-control btn btn-default" ng-disabled="selectedSes.status!=1 || busy">{{'upload' | lang}} <i ng-show="busy" class="fa fa-spinner fa-pulse"></i></button>
                     </div>
-                </span>
                 </form>
                 <br>
                 <hr>
@@ -533,7 +532,7 @@
                 <br>
 
             </div>
-            <div ng-if="selectedSes.type == 'R' || selectedSes.type == 'T'" ng-controller="DocumentsController">
+            <div ng-if="selectedSes.type == 'R' || selectedSes.type == 'T' || selectedSes.type == 'J'" ng-controller="DocumentsController">
                 <h4>{{'documents' | lang}}</h4>
                 <div class="list-group">
                     <div class="list-group-item" ng-repeat="doc in documents">
@@ -559,7 +558,7 @@
                 <br>
                 <hr>
             </div>
-            <div ng-controller="StagesController" ng-if="selectedSes.type == 'R' || selectedSes.type == 'T'">
+            <div ng-controller="StagesController" ng-if="selectedSes.type == 'R' || selectedSes.type == 'T' || selectedSes.type == 'J'">
                 <h4>{{ 'stages' | lang }}</h4>
                 <div class="qs-tabs bg-darkgray pad-content top-tab-content">
                     <div class="tab tab-text tab-text-lg" ng-repeat="stage in stages" ng-click="setCurrentStage($index)"
@@ -572,14 +571,54 @@
                     </div>
                 </div>
                 <div class="sub-tab-content">
-                    <div ng-if="selectedSes.type == 'R'">
+                    <div ng-if="selectedSes.type == 'J'">
+                        <h4>{{ 'listOf' | lang }} {{ 'roles' | lang }}</h4>
+                        <div class="row row-border" ng-repeat="jrole in jroles">
+                            <div class="col-sm-2 text-right">
+                                <strong class="font-large">{{$index + 1}}.</strong>
+                                <div class="quad" style="vertical-align: bottom;"
+                                ng-class="colors[$index]"></div>
+                            </div>
+                            <div class="col-sm-8">
+                                <input ng-show="jrole.edit" class="form-control" ng-model="jrole.name"
+                                       ng-disabled="readonly" placeholder="Name">
+                                <strong class="font-large" ng-show="!jrole.edit" >{{ jrole.name }}</strong>
+                            </div>
+                            <div class="col-sm-2">
+                                <button class="btn btn-default" ng-class="{active: jrole.edit}"
+                                        ng-click="jrole.edit = !jrole.edit" ng-disabled="readonly">
+                                    <i class="fa fa-edit"></i>
+                                </button>
+                                <button class="btn btn-default" ng-click="removeJRole($index)"
+                                        ng-disabled="readonly" ng-show="stages.length == 0">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            </div>
+                            <div class="col-sm-12" ng-show="jrole.edit">
+                                <textarea rows="3" class="form-control" ng-model="jrole.description"
+                                          ng-disabled="readonly" placeholder="Description"></textarea>
+                            </div>
+                        </div>
+                        <div class="row" ng-show="stages.length == 0">
+                            <div class="col-sm-12 text-center">
+                                <button class="btn btn-default" ng-click="addJRole()" ng-disabled="readonly">
+                                    <i class="fa fa-plus"></i> {{ 'add' | lang }} {{ 'role' | lang }}
+                                </button>
+                            </div>
+                        </div>
+                        <br>
+                        <hr>
+                        <br>
+                    </div>
+                    <div ng-if="selectedSes.type == 'R' || selectedSes.type == 'J'">
                     <div class="row">
                         <div class="col-sm-12">
                             <label>{{ 'question' | lang }}</label>
                             <textarea rows="2" class="form-control" ng-model="stage.question" ng-disabled="readonly"></textarea>
                         </div>
                         <div class="col-sm-5">
-                            <h4>{{ 'listOf' | lang }} {{ 'roles' | lang }}/{{ 'actors' | lang }}</h4>
+                            <h4 ng-show="selectedSes.type == 'R'">{{ 'listOf' | lang }} {{ 'roles' | lang }}/{{ 'actors' | lang }}</h4>
+                            <h4 ng-show="selectedSes.type == 'J'">{{ 'listOf' | lang }} {{ 'actions' | lang }}</h4>
                         </div>
                         <div class="col-sm-2 text-center margin-top-8">
                             <button class="btn btn-default" ng-click="setAllRolesType('role')" ng-disabled="readonly">
@@ -975,7 +1014,7 @@
 
         <!-- DASHBOARDS -->
         <div class="pad-content" ng-show="selectedTab == 'dashboard'" ng-controller="DashboardController">
-            <div ng-show="selectedSes.type != 'E' && selectedSes.type != 'R' && selectedSes.type != 'T'">
+            <div ng-show="selectedSes.type != 'E' && selectedSes.type != 'R' && selectedSes.type != 'T' && selectedSes.type != 'J'">
                 <div class="pull-right">
                     <label>{{'iteration' | lang}}:</label>
                     <select class="" ng-options="x.val as flang(x.name) for x in iterationNames" ng-model="iterationIndicator" ng-change="updateState()"></select>
@@ -989,7 +1028,7 @@
                 <button class="btn btn-success" ng-click="exportCSV()">{{ 'export' | lang }} CSV</button>
                 <button class="btn btn-default" ng-click="updateState()">{{'update' | lang}}</button>
             </div>
-            <div class="pull-right margin-ver-8" ng-show="selectedSes.type == 'R' || selectedSes.type == 'T'">
+            <div class="pull-right margin-ver-8" ng-show="selectedSes.type == 'R' || selectedSes.type == 'T' || selectedSes.type == 'J'">
 <!--                <button class="btn btn-success" ng-click="exportCSV()">{{ 'export' | lang }} CSV</button>-->
                 <select class="" ng-options="x.val as flang(x.name) for x in iterationNames" ng-model="iterationIndicator" ng-change="updateState()"></select>
                 <button class="btn btn-default" ng-click="updateState()">{{'update' | lang}}</button>
@@ -1082,7 +1121,7 @@
                 </tr>
             </table>
             <!-- RUBRICA DASHBOARD -->
-            <div ng-show="iterationIndicator == 5 && selectedSes.type!='R' && selectedSes.type != 'T'">
+            <div ng-show="iterationIndicator == 5 && selectedSes.type!='R' && selectedSes.type != 'T' && selectedSes.type != 'J'">
             <h4>{{'details' | lang}}:</h4>
             <div class="row">
                 <div class="col-sm-2">{{'report' | lang}}: </div>
@@ -1109,7 +1148,7 @@
                 </tr>
             </table>
             </div>
-            <div ng-show="iterationIndicator == 6 && selectedSes.type!='R' && selectedSes.type != 'T'">
+            <div ng-show="iterationIndicator == 6 && selectedSes.type!='R' && selectedSes.type != 'T' && selectedSes.type != 'J'">
                 <h4>{{'details' | lang}} {{'report' | lang}}:</h4>
                 <table class="table table-bordered">
                     <tr>
@@ -1204,7 +1243,7 @@
                 </table>
             </div>
             <!-- ROLEPLAYING DASHBOARD -->
-            <div ng-show="selectedSes.type == 'R'" class="margin-top-8">
+            <div ng-show="selectedSes.type == 'R' || selectedSes.type == 'J'" class="margin-top-8">
                 <span>{{ shared.stagesMap[iterationIndicator].question }}</span>
                 <table class="table table-bordered">
                     <tr>
