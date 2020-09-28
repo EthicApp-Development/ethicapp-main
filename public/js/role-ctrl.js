@@ -31,6 +31,8 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
 
     self.actors = [];
     self.jroles = [];
+    self.jigsawMap = {};
+    self.myJigsaw = null;
     self.sel = [];
 
     self.actorsPrev = [];
@@ -156,6 +158,27 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     self.getJigsawRoles = () => {
         $http.post("get-my-jigsaw-roles").success((data) => {
             self.jroles = data;
+            self.jigsawMap = {};
+            data.forEach(j => {
+                self.jigsawMap[j.id] = j;
+            });
+            self.getAssignedJigsawRole();
+        });
+    };
+
+    self.getAssignedJigsawRole = () => {
+        $http.post("get-assigned-jigsaw-role").success((data) => {
+             if(data.length > 0){
+                 self.myJigsaw = data[0].roleid;
+             }
+             else if(self.jroles.length > 0){
+                 $http.post("assign-cyclic-jigsaw-role", {
+                     cycle: self.jroles.length,
+                     stageid: self.currentStageId
+                 }).success((data) => {
+                     self.getAssignedJigsawRole();
+                 });
+             }
         });
     };
 

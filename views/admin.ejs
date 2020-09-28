@@ -767,7 +767,7 @@
                         </div>
                     </div>
                     <div class="row margin-top-8" ng-if="stage.type == 'team'">
-                        <div class="col-sm-12" ng-if="!readonly">
+                        <div class="col-sm-12" ng-if="!readonly && selectedSes.type != 'J'">
                             <label>{{'studentsPerGroup' | lang}}: </label>
                             <input class="form-control form-inline-mini" ng-model="groupopt.num" type="number" min="2" ng-disabled="selectedSes.grouped">
                             <label class="simple-margin-left">{{'groupingMethod' | lang}}: </label>
@@ -775,6 +775,18 @@
                             <button class="btn btn-default simple-margin-left" ng-click="generateGroups()" ng-disabled="selectedSes.grouped">{{ 'generate' | lang }}</button>
                             <span ng-show="selectedSes.grouped"> - {{'groupsAreSet' | lang}}</span>
 <!--                            <button class="btn btn-default pull-right" ng-click="acceptGroups()" ng-disabled="selectedSes.grouped">{{'setGroups' | lang}}</button>-->
+                        </div>
+                        <div class="col-sm-12" ng-if="selectedSes.type == 'J'">
+                            <label>{{ 'groupingMethod' | lang }}:</label>
+                            <button class="btn btn-default" ng-class="{'btn-primary': groupopt.met == 'expert'}"
+                                    ng-click="groupopt.met = 'expert'" ng-disabled="readonly">
+                                {{ 'expert' | lang }}
+                            </button>
+                            <button class="btn btn-default" ng-class="{'btn-primary': groupopt.met == 'wjigsaw'}"
+                                    ng-click="groupopt.met = 'wjigsaw'" ng-disabled="readonly">
+                                {{ 'wjigsaw' | lang }}
+                            </button>
+                            <button class="btn btn-default simple-margin-left" ng-click="generateGroups(true)" ng-disabled="selectedSes.grouped">{{ 'generate' | lang }}</button>
                         </div>
                         <div class="col-sm-12" ng-if="readonly">
                             <strong>{{ 'groups' | lang }}</strong> ({{ getGrouping(stage.grouping) }})
@@ -1266,6 +1278,7 @@
                     <tr>
                         <th ts-criteria="ceqlnum | parseFloat" ts-default="descending">{{ 'numEqual' | lang }}</th>
                         <th ts-criteria="uid" ts-order-by="sortByAutorName">{{ 'author' | lang }}</th>
+                        <th ts-criteria="jigsawId">{{ 'role' | lang }}</th>
                         <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'" ts-criteria="uid2"
                             ts-order-by="sortByAutorGroup">{{ 'group' | lang }}</th>
                         <th ng-repeat="(p, aa) in rawActors track by p">Pos {{ p + 1 }}</th>
@@ -1279,6 +1292,7 @@
                                 <i class="fa fa-comments"></i> {{ shared.chatByUid[udata.uid] }}
                             </span>
                         </td>
+                        <td>{{ users[udata.uid].jigsaw.name }}</td>
                         <td ng-if="shared.stagesMap[iterationIndicator].type == 'team'">
                             {{ shared.groupByUid[udata.uid].index }}
                             <span class="badge bg-red">

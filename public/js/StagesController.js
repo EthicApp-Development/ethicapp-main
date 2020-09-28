@@ -137,6 +137,7 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                     sesid: self.selectedSes.id
                 }}).success(function (data) {
                     self.jroles = data;
+                    self.inputAssignedRoles();
                 });
             }
             $http({url: "group-proposal-stage", method: "post", data: postdata}).success(function (data) {
@@ -437,6 +438,40 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                 return s.score;
             }, self.groupopt.num, isDifferent(self.groupopt.met));
         }
+        else if(self.groupopt.met == "expert"){
+            let s = {};
+            users.forEach(u => {
+               if(!s[u.jigsawId])
+                   s[u.jigsawId] = [];
+                s[u.jigsawId].push(u);
+            });
+            self.groups = Object.values(s);
+        }
+        else if(self.groupopt.met == "wjigsaw"){
+            let s = {};
+            users.forEach(u => {
+                if(!s[u.jigsawId])
+                    s[u.jigsawId] = [];
+                s[u.jigsawId].push(u);
+            });
+            let roles = Object.keys(s);
+            let gs = [];
+            let hasData = true;
+            for (let i = 0; hasData; i++) {
+                hasData = false;
+                let g = [];
+                roles.forEach(r => {
+                    if(s[r][i]){
+                        hasData = true;
+                        g.push(s[r][i]);
+                    }
+                });
+                if(hasData){
+                    gs.push(g);
+                }
+            }
+            self.groups = gs;
+        }
 
         if (self.groups != null) {
             self.groupsProp = angular.copy(self.groups);
@@ -546,6 +581,9 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
         }
         let cmps = gstr.split(":");
         let meths = cmps[1].split(" ");
+        if(meths[0] == "jigsaw" || meths[0] == "expert"){
+            return self.flang("groupingMethod") + ": " + klg(meths[0], meths[1]).name;
+        }
         return self.flang("studentsPerGroup") + ": " + cmps[0] + ", " + self.flang("groupingMethod")
             + ": " + klg(meths[0], meths[1]).name;
     };
@@ -569,6 +607,22 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
         return a;
     };
 
+    self.inputAssignedRoles = () => {
+        $http.post("get-assigned-jigsaw-roles", {
+            sesid: self.selectedSes.id
+        }).success((data) => {
+            data.forEach(d => {
+                let u = self.users[d.userid];
+                if(u){
+                    u.jigsaw = self.jroles.find(e => e.id == d.roleid);
+                    u.jigsawId = d.roleid;
+                }
+            });
+            console.log(self.users);
+        });
+    };
+
+    self.shared.inputAssignedRoles = self.inputAssignedRoles;
     self.shared.buildArray = self.buildArray;
     self.shared.getStages = self.getStages;
 

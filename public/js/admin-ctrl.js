@@ -1225,7 +1225,49 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             });
         }
         else if (self.selectedSes.type == "J"){
-            // TODO: Implement this
+            var _postdata2 = {
+                stageid: self.iterationIndicator
+            };
+            if(self.shared.inputAssignedRoles) {
+                self.shared.inputAssignedRoles();
+            }
+            $http.post("get-actors", _postdata2).success(function(data){
+                self.rawActors = data;
+                self.actorMap = {};
+                data.forEach(a => {
+                    self.actorMap[a.id] = a;
+                });
+                $http.post("get-role-sel-all", _postdata2).success(function (data) {
+                    self.rawRoleData = data;
+                    self.posFreqTable = window.computePosFreqTable(data, self.rawActors);
+                    if(self.posFreqTable != null) {
+                        self.freqMax = Object.values(self.posFreqTable)
+                            .reduce((v, e) => Math.max(v, Object.values(e).reduce((v2, e2) => Math.max(e2, v2), 0)), 0);
+                    }
+                    self.indvTable = window.computeIndTable(data, self.rawActors);
+                    self.shared.roleIndTable = self.indvTable;
+                    self.indvTableSorted = window.sortIndTable(self.indvTable, self.users);
+                });
+                $http({ url: "group-proposal-stage", method: "post", data: _postdata2 }).success(function (data) {
+                    self.shared.groupByUid = {};
+                    data.forEach(function (s, i) {
+                        s.forEach(function (u) {
+                            self.shared.groupByUid[u.uid] = { index: i + 1, tmid: u.tmid };
+                        });
+                    });
+                });
+                $http({ url: "get-chat-count-stage", method: "post", data: _postdata2 }).success(function (data) {
+                    self.shared.chatByUid = {};
+                    self.shared.chatByTeam = {};
+                    data.forEach(function(c) {
+                        self.shared.chatByUid[c.uid] = +c.count;
+                        if(!self.shared.chatByTeam[c.tmid]){
+                            self.shared.chatByTeam[c.tmid] = 0;
+                        }
+                        self.shared.chatByTeam[c.tmid] += +c.count;
+                    });
+                });
+            });
         }
     };
 

@@ -129,9 +129,9 @@
         </div>
     </div>
     <div ng-show="showRole">
-        <h4>{{ 'roleAssigned' | lang }}: {{ jroles[0].name }}</h4>
+        <h4>{{ 'roleAssigned' | lang }}: {{ jigsawMap[myJigsaw].name }}</h4>
         <div class="bordered role-box">
-            {{ jroles[0].description }}
+            {{ jigsawMap[myJigsaw].description }}
         </div>
         <strong>{{ 'others' | lang }} {{ 'roles' | lang }}: </strong>
         <span ng-repeat="j in jroles">{{ j.name }} - </span>

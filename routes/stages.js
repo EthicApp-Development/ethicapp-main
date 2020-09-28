@@ -144,6 +144,36 @@ router.post("/assign-jigsaw-role", rpg.execSQL({
         rpg.param("post", "roleid")]
 }));
 
+router.post("/get-assigned-jigsaw-role", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select ju.roleid, ju.stageid from jigsaw_users as ju, jigsaw_role as j " +
+        "where ju.roleid = j.id and j.sesid = $1 and ju.userid = $2 order by ju.stageid desc",
+    sesReqData: ["ses", "uid"],
+    sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "uid")]
+}));
+
+router.post("/assign-cyclic-jigsaw-role", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "with rows as (select row_number() over () as n, " +
+        "(select count(*) % $1 + 1 as cnum from jigsaw_users where stageid = $2) as cnum, " +
+        "id from jigsaw_role where sesid = $3) insert into jigsaw_users (stageid, userid, roleid)" +
+        "select $4, $5, id from rows where n = cnum",
+    postReqData: ["cycle", "stageid"],
+    sesReqData: ["ses", "uid"],
+    sqlParams: [rpg.param("post", "cycle"), rpg.param("post", "stageid"),
+        rpg.param("ses", "ses"), rpg.param("post", "stageid"), rpg.param("ses", "uid")]
+}));
+
+router.post("/get-assigned-jigsaw-roles", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select ju.userid, ju.roleid from jigsaw_users as ju, jigsaw_role as j " +
+        "where ju.roleid = j.id and j.sesid = $1 order by ju.stageid asc",
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "sesid")]
+}));
+
+
+
 module.exports = router;
 
 
