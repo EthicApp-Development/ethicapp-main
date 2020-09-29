@@ -179,6 +179,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
                      self.getAssignedJigsawRole();
                  });
              }
+            // self.inputAssignedRoles();
         });
     };
 
@@ -200,6 +201,9 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
                         self.teamMap[u.id] = self.currentStage.anon ? alph[i] : u.name;
                         self.tmId = u.tmid;
                     });
+                    if(self.isJigsaw){
+                        self.inputAssignedRoles();
+                    }
                 });
                 if(self.currentStage.prev_ans != "" && self.currentStage.prev_ans != null) {
                     let p = {
@@ -364,6 +368,9 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
                     self.teamMapPrev[u.id] = st.anon ? alph[i] : u.name;
                     self.tmId = u.tmid;
                 });
+                if(self.isJigsaw){
+                    self.inputAssignedRoles();
+                }
             });
             if(st.prev_ans != "" && st.prev_ans != null) {
                 let p = {
@@ -517,6 +524,27 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
 
     self.wordCount = (s) => {
         return s ? s.split(" ").filter(e => e != "").length : 0;
+    };
+
+    self.inputAssignedRoles = () => {
+        $http.post("get-assigned-jigsaw-roles", {
+            sesid: self.sesId
+        }).success((data) => {
+            data.forEach(d => {
+                if(self.teamMap[d.userid]){
+                    let j = self.jroles.find(e => e.id == d.roleid);
+                    if(j && j.name){
+                        self.teamMap[d.userid] = self.teamMap[d.userid] + " - " + j.name;
+                    }
+                }
+                if(self.teamMapPrev[d.userid]){
+                    let j = self.jroles.find(e => e.id == d.roleid);
+                    if(j && j.name){
+                        self.teamMapPrev[d.userid] = self.teamMapPrev[d.userid] + " - " + j.name;
+                    }
+                }
+            });
+        });
     };
 
     self.init();
