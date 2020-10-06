@@ -1214,3 +1214,8 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     margin: 8px 0;
     text-align: justify;
 }
+
+.mh30 {
+    min-height: 30px;
+    padding: 5px;
+}

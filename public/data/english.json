@@ -161,6 +161,7 @@
   "actions": "Actions",
   "roleAssigned": "Assigned Role",
   "wjigsaw": "Jigsaw",
+  "wjigsawrep": "Jigsaw with Repetition",
   "expert": "Expert",
   "archived": "Archived"
 }

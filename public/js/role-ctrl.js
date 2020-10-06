@@ -50,6 +50,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
 
     self.tmId = -1;
     self.teamMap = {};
+    self.teamMapPrev = {};
 
     self.lang = "spanish";
     self.selectedActor = null;
@@ -533,13 +534,13 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             data.forEach(d => {
                 if(self.teamMap[d.userid]){
                     let j = self.jroles.find(e => e.id == d.roleid);
-                    if(j && j.name){
+                    if(j && j.name && self.teamMap[d.userid].indexOf(" - ") == -1){
                         self.teamMap[d.userid] = self.teamMap[d.userid] + " - " + j.name;
                     }
                 }
                 if(self.teamMapPrev[d.userid]){
                     let j = self.jroles.find(e => e.id == d.roleid);
-                    if(j && j.name){
+                    if(j && j.name && self.teamMapPrev[d.userid].indexOf(" - ") == -1){
                         self.teamMapPrev[d.userid] = self.teamMapPrev[d.userid] + " - " + j.name;
                     }
                 }

@@ -776,7 +776,7 @@
                             <span ng-show="selectedSes.grouped"> - {{'groupsAreSet' | lang}}</span>
 <!--                            <button class="btn btn-default pull-right" ng-click="acceptGroups()" ng-disabled="selectedSes.grouped">{{'setGroups' | lang}}</button>-->
                         </div>
-                        <div class="col-sm-12" ng-if="selectedSes.type == 'J'">
+                        <div class="col-sm-12" ng-if="!readonly && selectedSes.type == 'J'">
                             <label>{{ 'groupingMethod' | lang }}:</label>
                             <button class="btn btn-default" ng-class="{'btn-primary': groupopt.met == 'expert'}"
                                     ng-click="groupopt.met = 'expert'" ng-disabled="readonly">
@@ -785,6 +785,10 @@
                             <button class="btn btn-default" ng-class="{'btn-primary': groupopt.met == 'wjigsaw'}"
                                     ng-click="groupopt.met = 'wjigsaw'" ng-disabled="readonly">
                                 {{ 'wjigsaw' | lang }}
+                            </button>
+                            <button class="btn btn-default" ng-class="{'btn-primary': groupopt.met == 'wjigsawrep'}"
+                                    ng-click="groupopt.met = 'wjigsawrep'" ng-disabled="readonly">
+                                {{ 'wjigsawrep' | lang }}
                             </button>
                             <button class="btn btn-default simple-margin-left" ng-click="generateGroups(true)" ng-disabled="selectedSes.grouped">{{ 'generate' | lang }}</button>
                         </div>
@@ -797,6 +801,7 @@
                                     <td ng-bind="$index + 1"></td>
                                     <td ng-repeat="alum in group">
                                         <strong ng-bind="users[alum.uid || alum.id].name"></strong>
+                                        <span ng-if="users[alum.uid || alum.id].jigsaw">- {{ users[alum.uid || alum.id].jigsaw.name }}</span>
 <!--                                        <span class="label label-success" ng-show="alum.score!=null">-->
 <!--                                            {{(selectedSes.type == "L" || selectedSes.type == "M") ? alum.score * 100 : alum.score | number:0}}-->
 <!--                                        </span>-->
@@ -844,35 +849,37 @@
                 <span class="invitation-code">{{selectedSes.code}}</span>
             </div>
             <br>
-            <hr>
-            <br>
-            <h4>{{'users' | lang}}</h4>
-            <label>{{'bySpecificUsers' | lang}}</label>
-            <div class="row">
-                <div class="col-xs-6">
-                    <multiselect ms-header="Seleccionar Usuarios" multiple="true" options="x.name for x in newUsers"
-                                 ng-model="newMembs" show-search="true" ng-disabled="selectedSes.status > 2">
-                    </multiselect>
-                </div>
-                <div class="col-xs-3">
-                    <button class="btn btn-default form-control" ng-click="newMembs = newUsers" ng-disabled="selectedSes.status > 2">
-                        <i class="fa fa-check-square-o"></i> {{'selectAll' | lang}}</button>
-                </div>
-                <div class="col-xs-3">
-                    <button class="btn btn-default form-control" ng-click="addToSession()" ng-disabled="selectedSes.status > 2">
-                        <i class="fa fa-plus"></i> {{'addToSession' | lang}}</button>
-                </div>
-            </div>
-            <br>
+<!--            <hr>-->
+<!--            <br>-->
+<!--            <h4>{{'users' | lang}}</h4>-->
+<!--            <label>{{'bySpecificUsers' | lang}}</label>-->
+<!--            <div class="row">-->
+<!--                <div class="col-xs-6">-->
+<!--                    <multiselect ms-header="Seleccionar Usuarios" multiple="true" options="x.name for x in newUsers"-->
+<!--                                 ng-model="newMembs" show-search="true" ng-disabled="selectedSes.status > 2">-->
+<!--                    </multiselect>-->
+<!--                </div>-->
+<!--                <div class="col-xs-3">-->
+<!--                    <button class="btn btn-default form-control" ng-click="newMembs = newUsers" ng-disabled="selectedSes.status > 2">-->
+<!--                        <i class="fa fa-check-square-o"></i> {{'selectAll' | lang}}</button>-->
+<!--                </div>-->
+<!--                <div class="col-xs-3">-->
+<!--                    <button class="btn btn-default form-control" ng-click="addToSession()" ng-disabled="selectedSes.status > 2">-->
+<!--                        <i class="fa fa-plus"></i> {{'addToSession' | lang}}</button>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--            <br>-->
             <hr>
             <br>
             <button class="btn btn-default pull-right" ng-click="refreshUsers()">{{'update' | lang}}</button>
             <span class="margin-right-24 margin-top-8 pull-right"><strong>Total: </strong> {{ usersArr.length }}</span>
             <h4>{{'users' | lang}}</h4>
             <table class="table table-bordered">
-                <tr><th>{{'user' | lang}}</th><th>Email</th><th>{{'knowledgeType' | lang}}</th><th></th></tr>
+                <tr><th></th><th>{{'user' | lang}}</th><th ng-if="selectedSes.type == 'J'">{{ 'role' | lang }}</th><th>Email</th><th>{{'knowledgeType' | lang}}</th><th></th></tr>
                 <tr ng-repeat="alum in usersArr" ng-class="{'bg-info': alum.role == 'P'}">
+                    <td>{{ $index  + 1 }}</td>
                     <td ng-bind="alum.name"></td>
+                    <td>{{ alum.jigsaw.name }}</td>
                     <td ng-bind="alum.mail"></td>
                     <td ng-bind="alum.aprendizaje"></td>
                     <td><button class="btn btn-default btn-sm" ng-click="removeUser(alum.id)" ng-disabled="selectedSes.status > 2"><i class="fa fa-trash"></i></button></td>

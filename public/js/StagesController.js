@@ -472,6 +472,38 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
             }
             self.groups = gs;
         }
+        else if(self.groupopt.met == "wjigsawrep"){
+            let s = {};
+            users.forEach(u => {
+                if(!s[u.jigsawId])
+                    s[u.jigsawId] = [];
+                s[u.jigsawId].push(u);
+            });
+            let roles = Object.keys(s);
+            let gs = [];
+            let hasData = true;
+            for (let i = 0; hasData; i++) {
+                hasData = false;
+                let g = [];
+                roles.forEach(r => {
+                    if(s[r][i]){
+                        hasData = true;
+                        g.push(s[r][i]);
+                    }
+                });
+                if(hasData){
+                    gs.push(g);
+                }
+            }
+            // CHECK MISSING ROLES IN LAST GROUP
+            if(gs[0].length != gs[gs.length - 1].length){
+                let lastgroup = gs.pop();
+                for (let i = 0; i < lastgroup.length; i++) {
+                    gs[i % gs.length].push(lastgroup[i]);
+                }
+            }
+            self.groups = gs;
+        }
 
         if (self.groups != null) {
             self.groupsProp = angular.copy(self.groups);
