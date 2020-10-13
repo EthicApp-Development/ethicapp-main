@@ -17,15 +17,12 @@
                             <div class="list-group">
                                 <div class="list-group-item drag-item" ng-repeat="aid in sel.arr track by $index">
                                     <div class="row">
-                                        <div class="col-xs-2 col-sm-1 h30 text-center">
+                                        <div class="col-xs-2 col-sm-1 mh30 text-center">
                                             {{$index + 1}}.
                                         </div>
-                                        <div class="col-xs-6 col-sm-7 h30">
+                                        <div class="col-xs-10 col-sm-11 mh30">
                                             <strong>{{ actorMap[aid].name }}</strong>
                                             <span style="color: red;" ng-if="sel.just[$index]">*</span>
-                                        </div>
-                                        <div class="col-xs-4 text-right">
-
                                         </div>
                                     </div>
                                     <div class="row">

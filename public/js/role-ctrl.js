@@ -220,6 +220,9 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
                     updateChat();
                 }
             }
+            if(self.stages.length > 1){
+                self.selectStage(self.stages.length - 1);
+            }
         });
         if(self.currentStageId != null){
             $http.post("get-actors", {stageid: self.currentStageId}).success(data => {
@@ -443,7 +446,8 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     };
 
     self.getDocURL = () => {
-        return $sce.trustAsResourceUrl("https://docs.google.com/viewer?url=" + BASE_APP + self.documents[self.selectedDocument].path + "&embedded=true");
+        // return $sce.trustAsResourceUrl("https://docs.google.com/viewer?url=" + BASE_APP + self.documents[self.selectedDocument].path + "&embedded=true");
+        return $sce.trustAsResourceUrl(self.documents[self.selectedDocument].path);
     };
 
     let notify = (title, message, closable) => {
