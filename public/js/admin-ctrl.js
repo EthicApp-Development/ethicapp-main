@@ -1977,7 +1977,8 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             sesid: self.selectedSes.id
         };
         let url = self.selectedSes.type == "T" ? "get-sel-data-csv-ethics" :
-            self.selectedSes.type == "R" ? "get-sel-data-csv-role" : null;
+            self.selectedSes.type == "R" ? "get-sel-data-csv-role" :
+            self.selectedSes.type == "J" ? "get-sel-data-csv-jigsaw" : null;
         console.log(self.selectedSes);
         if(url == null){
             Notification.error("No se puede exportar los datos");
