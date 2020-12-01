@@ -493,4 +493,56 @@ router.post("/get-sel-data-csv", rpg.multiSQL({
     sqlParams: [rpg.param("post", "sesid"), rpg.param("post", "sesid")]
 }));
 
+router.post("/get-sel-data-csv-ethics", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "SELECT DISTINCT s.id,u.id AS user_id,r.tmid AS team_id,u.\"name\",u.rut,u.sex as\"gender\",a.orden as\"df\",a.title,a.tleft as\"opt_left\",a.tright as\"opt_right\",a.num as\"max_num\",s.sel as\"sel\",s.\"comment\" AS\"comment\",st.\"number\" AS\"phase\",s.stime as\"time\" FROM differential_selection AS s INNER JOIN differential AS a ON a.id=s.did INNER JOIN stages AS st ON st.id=a.stageid INNER JOIN users AS u ON u.id=s.uid INNER JOIN sessions AS ses ON ses.id=st.sesid LEFT JOIN(SELECT*from teams AS t INNER JOIN teamusers AS tu ON t.id=tu.tmid)as r ON r.stageid=st.id AND r.uid=u.id WHERE ses.id=$1 ORDER BY st.\"number\",s.stime",
+    onStart: (ses, data, calc) => {
+        if (ses.role != "P") {
+            console.log("ERR: Solo profesor puede ver datos de sesiones.");
+            return "select $1, $2";
+        }
+    },
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "sesid")]
+}));
+
+router.post("/get-chat-data-csv-ethics", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "SELECT DISTINCT s.id,u.id AS user_id,r.tmid AS team_id,u.\"name\",u.rut,u.sex as\"gender\",a.orden as\"df\",a.title,a.tleft as\"opt_left\",a.tright as\"opt_right\",s.\"content\" as\"message\",st.\"number\" AS\"phase\",s.stime as\"time\",s.parent_id as\"reply_to\" FROM differential_chat AS s INNER JOIN differential AS a ON a.id=s.did INNER JOIN stages AS st ON st.id=a.stageid INNER JOIN users AS u ON u.id=s.uid INNER JOIN sessions AS ses ON ses.id=st.sesid LEFT JOIN(SELECT*from teams AS t INNER JOIN teamusers AS tu ON t.id=tu.tmid)as r ON r.stageid=st.id AND r.uid=u.id WHERE ses.id=$1 ORDER BY st.\"number\",s.stime",
+    onStart: (ses, data, calc) => {
+        if (ses.role != "P") {
+            console.log("ERR: Solo profesor puede ver datos de sesiones.");
+            return "select $1, $2";
+        }
+    },
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "sesid")]
+}));
+
+router.post("/get-sel-data-csv-role", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "SELECT DISTINCT s.id,u.id AS user_id,r.tmid AS team_id,u.\"name\",u.rut,u.sex as\"gender\",j.\"name\" as\"role\",a.\"name\" AS action,s.orden as\"rank\",s.description AS\"comment\",st.\"number\" AS\"phase\",s.stime FROM actor_selection AS s INNER JOIN actors AS a ON a.id=s.actorid INNER JOIN stages AS st ON st.id=a.stageid INNER JOIN users AS u ON u.id=s.uid INNER JOIN sessions AS ses ON ses.id=st.sesid INNER JOIN jigsaw_users AS ju ON u.id=ju.userid INNER JOIN jigsaw_role AS j ON j.id=ju.roleid LEFT JOIN(SELECT*from teams AS t INNER JOIN teamusers AS tu ON t.id=tu.tmid)as r ON r.stageid=st.id AND r.uid=u.id WHERE ses.id=$1 ORDER BY st.\"number\",s.stime;",
+    onStart: (ses, data, calc) => {
+        if (ses.role != "P") {
+            console.log("ERR: Solo profesor puede ver datos de sesiones.");
+            return "select $1, $2";
+        }
+    },
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "sesid")]
+}));
+
+router.post("/get-chat-data-csv-role", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "SELECT DISTINCT s.id,u.id AS user_id,r.tmid AS team_id,u.\"name\",u.rut,u.sex as\"gender\",j.\"name\" as\"role\",s.\"content\" as\"message\",st.\"number\" AS\"phase\",s.stime as\"time\",s.parent_id as\"reply_to\" FROM chat AS s INNER JOIN stages AS st ON st.id=s.stageid INNER JOIN users AS u ON u.id=s.uid INNER JOIN sessions AS ses ON ses.id=st.sesid INNER JOIN jigsaw_users AS ju ON u.id=ju.userid INNER JOIN jigsaw_role AS j ON j.id=ju.roleid LEFT JOIN(SELECT*from teams AS t INNER JOIN teamusers AS tu ON t.id=tu.tmid)as r ON r.stageid=st.id AND r.uid=u.id WHERE ses.id=$1 ORDER BY st.\"number\",s.stime;",
+    onStart: (ses, data, calc) => {
+        if (ses.role != "P") {
+            console.log("ERR: Solo profesor puede ver datos de sesiones.");
+            return "select $1, $2";
+        }
+    },
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "sesid")]
+}));
+
 module.exports = router;

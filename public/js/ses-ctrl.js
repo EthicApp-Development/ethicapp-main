@@ -58,7 +58,7 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", "$uibModal",
                 else {
                     $uibModal.open({
                         template: '<div><div class="modal-header"><h4>Error</h4></div><div class="modal-body">' +
-                            '<p>El código ingresado no es válido</p></div></div>'
+                            '<p>El código ingresado no es válido o la sesión no admite nuevos usuarios</p></div></div>'
                     });
                 }
             });

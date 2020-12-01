@@ -235,6 +235,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
                         self.justifyPosition = true;
                     }
                 });
+                self.shuffleActors();
                 if(self.sel.length == self.actors.length && self.sel.length > 0){
                     self.populateActors();
                 }
@@ -257,6 +258,12 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             acts.push(a);
         });
         self.actors = acts;
+    };
+
+    self.shuffleActors = () => {
+        self.actors = self.actors.map(a => [Math.random(), a])
+            .sort((a, b) => a[0] - b[0])
+            .map(a => a[1]);
     };
 
     self.populateActorsPrev = () => {

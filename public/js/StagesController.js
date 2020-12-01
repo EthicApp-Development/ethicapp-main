@@ -426,6 +426,18 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                 return s.score;
             }, self.groupopt.num, isDifferent(self.groupopt.met));
         }
+        else if (self.selectedSes.type == "T"){
+            let d = self.shared.difTable.filter(e => !e.group);
+            let dfd = users.map(e => {
+                let r = d.find(dd => dd.uid == e.id);
+                return {
+                    uid: e.id,
+                    score: (r && r.arr && r.arr.length > 0) ? (r.arr.reduce((v, p) => v + (p.sel != null ? p.sel : -1), 0) / r.arr.length) : -1,
+                    aprendizaje: e.aprendizaje
+                }
+            });
+            self.groups = generateTeams(dfd, s => s.score, self.groupopt.num, isDifferent(self.groupopt.met));
+        }
         else if (self.selectedSes.type == "R") {
             let dfd = users.map(e => {
                 return {
