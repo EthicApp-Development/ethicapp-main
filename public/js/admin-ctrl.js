@@ -1923,9 +1923,15 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             if(res != null && res.length > 0) {
                 saveCsv(res, {
                     filename: "seleccion_" + self.selectedSes.id + ".csv",
-                    quote: "\"",
                     formatter: function(v){
-                        return v == null ? "" : "" + v;
+                        if(v == null){
+                            return "";
+                        }
+                        if(typeof(v) == "string"){
+                            v = v.replace('"', '\\"');
+                            return '"' + v + '"';
+                        }
+                        return "" + v;
                     }
                 });
             }
@@ -1937,9 +1943,15 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             if(res != null && res.length > 0) {
                 saveCsv(res, {
                     filename: "chat_" + self.selectedSes.id + ".csv",
-                    quote: "\"",
                     formatter: function(v){
-                        return v == null ? "" : "" + v;
+                        if(v == null){
+                            return "";
+                        }
+                        if(typeof(v) == "string"){
+                            v = v.replace('"', '\\"');
+                            return '"' + v + '"';
+                        }
+                        return "" + v;
                     }
                 });
             }
@@ -1963,9 +1975,15 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             if(res != null && res.length > 0) {
                 saveCsv(res, {
                     filename: "chat_" + self.selectedSes.id + ".csv",
-                    quote: "\"",
                     formatter: function(v){
-                        return v == null ? "" : "" + v;
+                        if(v == null){
+                            return "";
+                        }
+                        if(typeof(v) == "string"){
+                            v = v.replace('"', '\\"');
+                            return '"' + v + '"';
+                        }
+                        return "" + v;
                     }
                 });
             }
@@ -1991,9 +2009,15 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             if(res != null && res.length > 0) {
                 saveCsv(res, {
                     filename: "sel_" + self.selectedSes.id + ".csv",
-                    quote: "\"",
                     formatter: function(v){
-                        return v == null ? "" : "" + v;
+                        if(v == null){
+                            return "";
+                        }
+                        if(typeof(v) == "string"){
+                            v = v.replace('"', '\\"');
+                            return '"' + v + '"';
+                        }
+                        return "" + v;
                     }
                 });
             }
