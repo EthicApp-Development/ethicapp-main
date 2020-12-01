@@ -1928,7 +1928,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                             return "";
                         }
                         if(typeof(v) == "string"){
-                            v = v.replace('"', "'");
+                            v = v.replace('"', "'").replace("\n", "");
                             return '"' + v + '"';
                         }
                         return "" + v;
@@ -1948,7 +1948,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                             return "";
                         }
                         if(typeof(v) == "string"){
-                            v = v.replace('"', "'");
+                            v = v.replace('"', "'").replace("\n", "");
                             return '"' + v + '"';
                         }
                         return "" + v;
@@ -1980,7 +1980,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                             return "";
                         }
                         if(typeof(v) == "string"){
-                            v = v.replace('"', "'");
+                            v = v.replace('"', "'").replace("\n", "");
                             return '"' + v + '"';
                         }
                         return "" + v;
@@ -2014,7 +2014,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                             return "";
                         }
                         if(typeof(v) == "string"){
-                            v = v.replace('"', "'");
+                            v = v.replace('"', "'").replace("\n", "");
                             return '"' + v + '"';
                         }
                         return "" + v;
