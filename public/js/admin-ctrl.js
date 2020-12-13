@@ -906,7 +906,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             self.iterationIndicator = Math.max(Math.min(6, self.selectedSes.status - 2), 0);
         }
         else if (self.selectedSes.type == "R" || self.selectedSes.type == "T" || self.selectedSes.type == "J") {
-            self.iterationIndicator = self.selectedSes.current_stage;
+            self.iterationIndicator = self.selectedSes.current_stage || -1;
         }
         self.alumState = null;
         self.barOpts = {
@@ -961,7 +961,13 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
 
     self.shared.updateState = self.updateState;
 
+    self.shared.setIterationIndicator = function(i){
+        self.iterationIndicator = i;
+        self.updateState();
+    };
+
     self.updateStateIni = function () {
+        console.log(self.iterationIndicator);
         self.alumTime = {};
         var postdata = { sesid: self.selectedSes.id, iteration: self.iterationIndicator };
         if (self.selectedSes.type == "S") {
@@ -1765,7 +1771,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                         }));
                         data.anonNames = {};
                         data.sesid = self.selectedSes.id;
-                        var abcd = "ABCD";
+                        var abcd = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
                         var c = 0;
                         data.dfIters.flat().forEach(function (e) {
                             if (!data.anonNames[e.uid]) {
@@ -1814,7 +1820,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
 
                         data.chat = res;
                         let i = 0;
-                        let abc = "ABCDE";
+                        let abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
                         data.chat.forEach(function (msg) {
                             if (msg.parent_id) msg.parent = data.chat.find(function (e) {
                                 return e.id == msg.parent_id;
@@ -1878,7 +1884,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
 
                         data.chat = res;
                         let i = 0;
-                        let abc = "ABCDE";
+                        let abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
                         data.chat.forEach(function (msg) {
                             if (msg.parent_id) msg.parent = data.chat.find(function (e) {
                                 return e.id == msg.parent_id;

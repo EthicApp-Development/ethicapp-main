@@ -91,7 +91,7 @@ app.controller("DifferentialController", ["$scope", "$http", "$timeout", "$socke
                 self.loadDocuments();
                 self.loadDifferentials();
                 $http.post("get-anon-team").success((data) => {
-                    let alph = ["A", "B", "C", "D", "E"];
+                    let alph = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
                     data.forEach((u,i) => {
                         self.userAnon[u.id] = alph[i];
                         self.tmId = u.tmid;

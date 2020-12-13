@@ -65,6 +65,20 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                     });
                 });
             }
+            else if (self.selectedSes.type == "J") {
+                $http({url: "get-actors", method: "post", data: postdata}).success(function (data) {
+                    self.roles = data;
+                    self.roles.forEach(r => {
+                        if(r.justified && r.jorder){
+                            r.type = "order";
+                        }
+                        else if(r.justified){
+                            r.type = "role";
+                        }
+                        r.wc = r.word_count;
+                    });
+                });
+            }
             $http({url: "group-proposal-stage", method: "post", data: postdata}).success(function (data) {
                 self.groups = data;
             });
@@ -154,9 +168,10 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                 });
                 console.log(self.shared.groupByUid);
             });
+            console.log(self.selectedSes, data);
             if (self.selectedSes.status >= 3) {
+                self.shared.setIterationIndicator(data[data.length - 1].id);
                 self.setCurrentStage(data.length - 1);
-                self.iterationIndicator = data[data.length - 1].id;
             }
         });
     };
@@ -216,16 +231,43 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
         }
     };
 
+    self.checkStage = function(){
+        if(self.selectedSes.type == "T"){
+            if(self.dfs.some(e => e.name == "" || e.tleft == "" || e.tright == "")){
+                return "Hay diferenciales con datos faltantes";
+            }
+        }
+        if(self.selectedSes.type == "R" || self.selectedSes.type == "J"){
+            if(self.roles.some(e => e.name == "")){
+                return "Hay roles o lineas de acción con datos faltantes";
+            }
+        }
+        if(self.selectedSes.type == "J"){
+            if(self.jroles.some(e => e.name == "" || e.description == "")){
+                return "Hay roles con datos faltantes";
+            }
+        }
+        // let a = (Date.now() - +new Date(self.selectedSes.time))/1000/60;
+        // if(a < 2){
+        //     return "La etapa lleva menos de dos minutos activa";
+        // }
+    };
+
     self.sendStage = function () {
         var s = self.stage;
         let arr = self.selectedSes.type == "R" || self.selectedSes.type == "J" ? self.roles : self.dfs;
         let isFirst = self.stages.length == 0;
         console.log(isFirst);
         if (s.type == null || arr.length == 0 || s.type == "team" && (self.groups == null || self.groups.length == 0)) {
-            Notification.error("Hay datos faltantes");
+            Notification.error("Hay datos de configuración faltantes");
             return;
         }
-        var confirm = window.confirm("¿Esta seguro que quiere ir a la siguiente etapa?");
+        let a = self.checkStage();
+        if(a){
+            Notification.error(a);
+            return;
+        }
+        var confirm = window.confirm("¿Esta seguro que quiere ir a la siguiente etapa? (Etapa "+ (self.stages.length + 1) + ")");
         if (!confirm) {
             return;
         }

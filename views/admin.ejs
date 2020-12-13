@@ -875,13 +875,22 @@
             <span class="margin-right-24 margin-top-8 pull-right"><strong>Total: </strong> {{ usersArr.length }}</span>
             <h4>{{'users' | lang}}</h4>
             <table class="table table-bordered">
-                <tr><th></th><th>{{'user' | lang}}</th><th ng-if="selectedSes.type == 'J'">{{ 'role' | lang }}</th><th>Email</th><th>{{'knowledgeType' | lang}}</th><th></th></tr>
+                <tr>
+                    <th></th>
+                    <th>{{'user' | lang}}</th>
+                    <th ng-if="selectedSes.type == 'J'">{{ 'role' | lang }}</th>
+                    <th>Email</th>
+                    <th>{{'knowledgeType' | lang}}</th>
+                    <th>{{'device' | lang}}</th>
+                    <th></th>
+                </tr>
                 <tr ng-repeat="alum in usersArr" ng-class="{'bg-info': alum.role == 'P'}">
                     <td>{{ $index  + 1 }}</td>
                     <td ng-bind="alum.name"></td>
-                    <td>{{ alum.jigsaw.name }}</td>
+                    <td ng-if="selectedSes.type == 'J'">{{ alum.jigsaw.name }}</td>
                     <td ng-bind="alum.mail"></td>
                     <td ng-bind="alum.aprendizaje"></td>
+                    <td ng-bind="alum.device"></td>
                     <td><button class="btn btn-default btn-sm" ng-click="removeUser(alum.id)" ng-disabled="selectedSes.status > 2"><i class="fa fa-trash"></i></button></td>
                 </tr>
             </table>

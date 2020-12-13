@@ -50,7 +50,10 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", "$uibModal",
 
     self.enterCode = () => {
         if(self.checkCode(self.invCode.toLowerCase())) {
-            let postdata = {code: self.invCode.toLowerCase()};
+            let postdata = {
+                code: self.invCode.toLowerCase(),
+                device: self.getDeviceInfo()
+            };
             $http.post("enter-session-code", postdata).success((data) => {
                 if (data.status == "ok") {
                     window.location.replace(data.redirect);
@@ -124,6 +127,11 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", "$uibModal",
 
     self.startTour = () => {
         ngIntroService.start();
+    };
+
+    self.getDeviceInfo = () => {
+        let p = new UAParser();
+        return `${p.getDevice().type || "Desktop"} / ${p.getOS().name} / ${p.getBrowser().name}`;
     };
 
     self.init();

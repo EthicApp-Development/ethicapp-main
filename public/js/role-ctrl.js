@@ -197,7 +197,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
                 $http.post("get-team-stage", {stageid: self.currentStageId}).success(data => {
                     self.team = data;
                     self.teamMap = {};
-                    let alph = ["A", "B", "C", "D", "E"];
+                    let alph = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
                     data.forEach((u,i) => {
                         self.teamMap[u.id] = self.currentStage.anon ? alph[i] : u.name;
                         self.tmId = u.tmid;
@@ -374,7 +374,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             $http.post("get-team-stage", {stageid: st.id}).success(data => {
                 self.teamPrev = data;
                 self.teamMapPrev = {};
-                let alph = ["A", "B", "C", "D", "E"];
+                let alph = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
                 data.forEach((u,i) => {
                     self.teamMapPrev[u.id] = st.anon ? alph[i] : u.name;
                     self.tmId = u.tmid;
