@@ -111,7 +111,18 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
             var postdata = {
                 stageid: self.selectedSes.current_stage
             };
-            if (self.selectedSes.type == "R") {
+            if(self.stages.length == 0){
+                let postdata = {
+                    sesid: self.selectedSes.id
+                };
+                $http.post("get-draft", postdata).success((data) => {
+                    let d = JSON.parse(data.data);
+                    self.dfs = d.dfs;
+                    self.roles = d.roles;
+                    self.jroles = d.jroles;
+                });
+            }
+            else if (self.selectedSes.type == "R") {
                 $http({url: "get-actors", method: "post", data: postdata}).success(function (data) {
                     self.roles = data;
                     self.roles.forEach(r => {
@@ -705,6 +716,21 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                 }
             });
             console.log(self.users);
+        });
+    };
+
+    self.saveDraft = () => {
+        let data = {
+            dfs: self.dfs,
+            roles: self.roles,
+            jroles: self.jroles,
+        };
+        let postdata = {
+            sesid: self.selectedSes.id,
+            data: JSON.stringify(data),
+        };
+        $http.post("save-draft", postdata).success((data) => {
+           Notification.success("Datos guardados");
         });
     };
 

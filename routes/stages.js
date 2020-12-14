@@ -173,6 +173,21 @@ router.post("/get-assigned-jigsaw-roles", rpg.multiSQL({
 }));
 
 
+router.post("/get-draft", rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: "select id, data from drafts where sesid = $1",
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "sesid")]
+}));
+
+router.post("/save-draft", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "with rows as (update drafts set data = $1 where sesid = $2 returning 1) " +
+        "insert into drafts(data, sesid) select $3, $4 where 1 not in (select * from rows)",
+    postReqData: ["sesid", "data"],
+    sqlParams: [rpg.param("post", "data"), rpg.param("post", "sesid"), rpg.param("post", "data"), rpg.param("post", "sesid")]
+}));
+
 
 module.exports = router;
 

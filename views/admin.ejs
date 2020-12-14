@@ -816,6 +816,9 @@
                             <button class="btn btn-primary pull-right margin-right-8" ng-click="sendStage()">
                                 {{ 'startStage' | lang }}
                             </button>
+                            <button class="btn btn-defualt pull-right margin-right-8" ng-if="stages.length == 0" ng-click="saveDraft()">
+                                {{ 'saveDraft' | lang }}
+                            </button>
                         </div>
                     </div>
                 </div>
