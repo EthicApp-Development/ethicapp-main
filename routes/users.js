@@ -110,11 +110,11 @@ router.post("/resetpassword", rpg.execSQL({
         let n = ~~(Math.random()*32768);
         calc.token = "" + n + crypto.createHash('md5').update(data.user).digest('hex');
         let mailopts = {
-            from: "noreply@saduewa.dcc.uchile.cl",
+            from: "noreply@ethicapp.fen.uchile.cl",
             to: data.user,
             subject: "Readings: Recuperación de Contraseña",
-            text: "Puedes recuperar y cambiar la contraseña de tu cuenta en Readings en el siguiente link: \n " +
-                "https://saduewa.dcc.uchile.cl:8888/readings/new-pass/" + calc.token + "\n\nReadings."
+            text: "Puedes recuperar y cambiar la contraseña de tu cuenta en EthicApp en el siguiente link: \n " +
+                "https://ethicapp.fen.uchile.cl/new-pass/" + calc.token + "\n\nEthicApp."
         };
         mailserv.sendMail(mailopts, function(err,info){
             if(!err){
