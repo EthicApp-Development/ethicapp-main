@@ -33,7 +33,7 @@
         </div>
         <div class="cf3 grow text-center simple-padding-top hscroll" ng-show="iteration > 0">
             <span ng-repeat="st in sesStatusses">
-                <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': $index==iteration-1}">{{st | lang}}</span>
+                <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': $index==iteration}">{{st | lang}}</span>
                 <!-- <span ng-hide="$last">→</span> -->
             </span>
             <i class="fa fa-angle-right"></i>
@@ -180,9 +180,11 @@
                 <div class="input-group">
                     <input type="text" class="form-control" placeholder="{{'comment' | lang}}" ng-model="comments[qs.id]" ng-change="qs.dirty = true" ng-disabled="finished || !useComments">
                     <span class="input-group-btn">
-                        <button class="btn btn-default" ng-disabled="finished || !qs.dirty" ng-click="sendAnswer(qs)">
-                            <i class="fa fa-check" ng-show="!qs.dirty"></i>
+                        <button class="btn btn-default" ng-disabled="finished || !qs.dirty )" ng-click="sendAnswer(qs)">
+                            <i class="fa fa-check" ng-show="!qs.dirty "></i>
+                            <span ng-show="!qs.dirty ">Enviado</span>
                             <i class="fa fa-send" ng-show="qs.dirty"></i>
+                            <span ng-show="qs.dirty ">Por Enviar</span>
                         </button>
                     </span>
                 </div>

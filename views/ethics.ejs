@@ -80,10 +80,10 @@
     <div class="top-bar top-bar-tabs">
         <div class="qs-tabs" ng-show="iteration > 0 || myRole == 'P'">
             <div class="tab tab-text" ng-repeat="doc in documents" ng-class="{active: selectedDocument == $index && showDoc}"
-                 ng-click="selectDocument($index)" ng-attr-id="{{ 'tabd' + $index }}">
+                 ng-click="selectDocument($index)" ng-attr-id="{{ 'tabd' + $index }} ">
                 <i class="fa fa-book"></i> {{doc.title | limitTo:10}}
             </div>
-            <div class="tab tab-text" ng-repeat="st in stages" ng-class="{active: selectedStage == $index && !showDoc, 'green': st.id != currentStageId, 'yellow': st.id == currentStageId}"
+            <div class="tab tab-text" ng-repeat="st in stages" ng-class="{active: selectedStage == $index && (!showDoc||documents.length==0), 'green': st.id != currentStageId, 'yellow': st.id == currentStageId}"
                  ng-click="selectStage($index)" ng-attr-id="{{ 'tabq' + $index }}">
                 <i class="fa fa-question-circle"></i> {{ 'stage' | lang }} {{st.number}} <span class="badge bg-red" ng-show="st.c != null && st.c > st.cr">{{st.c - st.cr}}</span>
             </div>
@@ -114,9 +114,9 @@
         </div>
     </div>-->
 
-    <div class="scrollable-container blue">
-    <div class="mid-container qs-content simple-pad">
-    <div class="boxed" ng-show="iteration > 0 && showDoc">
+    <div class="scrollable-container blue" >
+    <div class="mid-container qs-content simple-pad" >
+    <div class="boxed" ng-show="iteration > 0 && showDoc" ng-if="documents.length>0" >
         <div>
             <h3>{{documents[selectedDocument].title}}</h3>
             <div ng-if="documents[selectedDocument].path != null">
@@ -125,7 +125,7 @@
             </div>
         </div>
     </div>
-    <div ng-show="iteration > 0 && !showDoc">
+    <div ng-show="iteration > 0 && (!showDoc || documents.length==0)">
         <!--<h4>DF{{dfs[selectedDF].orden}}</h4>-->
         <div class="differential margin-top-n12">
             <h5>
@@ -136,8 +136,9 @@
                     <div class="differential" ng-repeat="df in dfs">
                         <div class="row">
                             <div class="col-xs-12">
+
                                 <button class="btn btn-default" ng-class="{'btn-primary': selDF.id == df.id}" ng-click="openChat(df)"
-                                        style="padding: 2px 8px;" ng-show="stages[selectedStage].chat">
+                                        style="padding: 2px 8px;" ng-show="stages[selectedStage].chat" ng-if="dfs.length>1">
                                     <i class="fa fa-comments"></i>
                                     Chat
                                     <span class="badge bg-red" ng-show="df.c != null && df.c > df.cr">{{df.c - df.cr}}</span>
@@ -173,6 +174,9 @@
                             <span class="input-group-addon hoverable" ng-disabled="finished || !df.dirty" ng-click="sendDFSel(df)">
                             <i class="fa fa-check" ng-show="!df.dirty && df.sent"></i>
                             <i class="fa fa-send" ng-show="df.dirty || !df.justify && !df.sent"></i>
+                            <span ng-show="misc.reportDirty">Por Enviar</span>
+                            <span ng-show="df.dirty || !df.justify && !df.sent">Por Enviar</span>
+                            <span ng-show="!df.dirty && df.sent">Enviado</span>
                             <i class="fa fa-question-circle" ng-show="!df.dirty && !df.sent && df.justify" style="opacity: 0"></i>
                             </span>
                         </div>
@@ -186,7 +190,7 @@
                         <div class="row">
                             <div class="col-xs-12">
                                 <button class="btn btn-default" ng-class="{'btn-primary': selDF.id == df.id}" ng-click="openChat(df)"
-                                        style="padding: 2px 8px;" ng-show="stages[selectedStage].chat">
+                                        style="padding: 2px 8px;" ng-show="stages[selectedStage].chat" ng-if="dfs.length>1"> 
                                     <i class="fa fa-comments"></i>
                                     Chat
                                     <span class="badge bg-red" ng-show="df.c != null && df.c > df.cr">{{df.c - df.cr}}</span>
@@ -301,7 +305,7 @@
         <div class="chat-container">
             <!-- <h4>Chat</h4> -->
             <div class="chat bordered">
-                <div ng-show="chatExp && selectedDF != null && stages[selectedStage].chat"
+                <div ng-show="(chatExp && selectedDF != null && stages[selectedStage].chat) || dfs.length==1 "
                     class="text-center font-large">
                     <strong>Chat Item {{ selDF.orden }}</strong>
                 </div>
@@ -355,6 +359,8 @@
                     </span>
                     <input type="text" class="form-control" ng-model="chatmsg" ng-disabled="finished || stages[selectedStage].id != currentStageId" id="chat-input"
                            ng-keydown="$event.keyCode === 13 && sendChatMsg()">
+                    <!--  <ng-quill-editor ng-model="newText.content" class="large" ng-class="{'quill-disabled': selectedSes.status!=1}"></ng-quill-editor>-->
+
                     <span class="input-group-btn">
                         <button class="btn btn-default" ng-disabled="finished || stages[selectedStage].id != currentStageId" ng-click="sendChatMsg()">
                             <i class="fa fa-send"></i>

@@ -384,6 +384,7 @@
                     <label ng-show="newText.id == null">{{'add' | lang}} {{'text' | lang}}</label>
                     <label ng-show="newText.id != null">{{'edit' | lang}} {{'text' | lang}}</label>
                     <input type="text" ng-model="newText.title" placeholder="Titulo" class="form-control" ng-disabled="selectedSes.status!=1">
+                    <!--Rich text editor-->
                     <ng-quill-editor ng-model="newText.content" class="large" ng-class="{'quill-disabled': selectedSes.status!=1}"></ng-quill-editor>
                     <button class="btn btn-default pull-right" ng-show="newText.id == null" ng-click="addQuestionText()" ng-disabled="selectedSes.status!=1">{{'add' | lang}}</button>
                     <button class="btn btn-default pull-right" ng-show="newText.id != null" ng-click="updateQuestionText()" ng-disabled="selectedSes.status!=1">{{'update' | lang}}</button>

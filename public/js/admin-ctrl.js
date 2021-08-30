@@ -13,6 +13,7 @@ app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
 
+//Rich text editor
 adpp.config(['ngQuillConfigProvider', function (ngQuillConfigProvider) {
     ngQuillConfigProvider.set({
         modules: {

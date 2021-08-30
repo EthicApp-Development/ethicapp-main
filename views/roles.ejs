@@ -86,7 +86,7 @@
             <div class="tab tab-text" ng-if="isJigsaw" ng-click="selectRoleDescr()" ng-class="{active: showRole}">
                 <i class="fa fa-user"></i> {{ 'role' | lang }}
             </div>
-            <div class="tab tab-text" ng-repeat="st in stages" ng-class="{active: selectedStage == $index && !showDoc, 'green': st.id != currentStageId, 'yellow': st.id == currentStageId}"
+            <div class="tab tab-text" ng-repeat="st in stages" ng-class="{active: selectedStage == $index && (!showDoc || documents.length==0) , 'green': st.id != currentStageId, 'yellow': st.id == currentStageId}"
                  ng-click="selectStage($index)" ng-attr-id="{{ 'tabq' + $index }}">
                 <i class="fa fa-question-circle"></i> {{ 'stage' | lang }} {{st.number}} <span class="badge bg-red" ng-show="st.c != null && st.c > st.cr">{{st.c - st.cr}}</span>
             </div>
@@ -119,7 +119,7 @@
 
     <div class="scrollable-container blue">
     <div class="mid-container qs-content simple-pad">
-    <div class="boxed" ng-show="iteration > 0 && showDoc">
+    <div class="boxed" ng-show="iteration > 0 && showDoc" ng-if="documents.length>0">
         <div>
             <h3>{{documents[selectedDocument].title}}</h3>
             <div ng-if="documents[selectedDocument].path != null">
@@ -136,7 +136,7 @@
         <strong>{{ 'roles' | lang }}: </strong>
         <span ng-repeat="j in jroles">{{ j.name }} - </span>
     </div>
-    <div ng-show="iteration > 0 && !showDoc && !showRole">
+    <div ng-show="iteration > 0 && (!showDoc || documents.length==0) && !showRole">
         <!--<h4>DF{{dfs[selectedDF].orden}}</h4>-->
         <div class="differential margin-top-n12">
             <h5>
@@ -181,7 +181,9 @@
                                             <span class="input-group-addon hoverable" ng-disabled="finished || !actors[selectedActor].dirty || selectedActor == null"
                                                   ng-click="sendActorSel()">
                                             <i class="fa fa-check" ng-show="!actors[selectedActor].dirty"></i>
+                                            <span ng-show="!actors[selectedActor].dirty">Enviado</span>
                                             <i class="fa fa-send" ng-show="actors[selectedActor].dirty"></i>
+                                            <span ng-show="actors[selectedActor].dirty">Por Enviar</span>
                                             </span>
                                         </div>
                                     </div>
@@ -226,6 +228,7 @@
                 <div class="col-xs-12 text-center">
                     <button class="btn btn-default" ng-click="sendActorSel(true)">
                         <i class="fa fa-check" ng-show="verified"></i>
+                        <i class="fa fa-send" ng-show="!verified"></i>
                         <span ng-show="!verified">Por Enviar</span>
                         <span ng-show="verified">Enviado</span>
                     </button>
@@ -357,6 +360,7 @@
                     </span>
                     <input type="text" class="form-control" ng-model="chatmsg" ng-disabled="finished || stages[selectedStage].id != currentStageId" id="chat-input"
                            ng-keydown="$event.keyCode === 13 && sendChatMsg()" placeholder="Enviar mensaje...">
+                        <!--  <ng-quill-editor ng-model="newText.content" class="large" ng-class="{'quill-disabled': selectedSes.status!=1}"></ng-quill-editor>-->
                     <span class="input-group-btn">
                         <button class="btn btn-default" ng-disabled="finished || stages[selectedStage].id != currentStageId" ng-click="sendChatMsg()">
                             <i class="fa fa-send"></i>

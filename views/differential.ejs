@@ -76,7 +76,7 @@
                  ng-click="selectDocument($index)">
                 <i class="fa fa-book"></i> {{doc.title | limitTo:10}}
             </div>
-            <div class="tab tab-text" ng-repeat="df in dfs" ng-class="{active: selectedDF + 1 == df.orden && !showDoc, 'green': !df.dirty && df.select != null}"
+            <div class="tab tab-text" ng-repeat="df in dfs" ng-class="{active: selectedDF + 1 == df.orden && (!showDoc ||documents.length==0), 'green': !df.dirty && df.select != null}"
                  ng-click="selectDF($index)">
                 <i class="fa fa-question-circle"></i> Pregunta {{df.orden}} <span class="badge bg-red" ng-show="df.c != null && df.c > df.cr">{{df.c - df.cr}}</span>
             </div>
@@ -109,7 +109,7 @@
 
     <div class="scrollable-container blue">
     <div class="mid-container qs-content simple-pad">
-    <div class="boxed" ng-show="iteration > 0 && showDoc">
+    <div class="boxed" ng-show="iteration > 0 && showDoc" ng-if="documents.length>0">
         <div>
             <h3>{{documents[selectedDocument].title}}</h3>
             <div ng-if="documents[selectedDocument].path != null">
@@ -119,7 +119,7 @@
         </div>
     </div>
 
-        <div ng-show="iteration > 0 && !showDoc">
+        <div ng-show="iteration > 0 && (!showDoc|| documents.length==0)">
             <!--<h4>DF{{dfs[selectedDF].orden}}</h4>-->
             <div class="differential margin-top-n12">
                 <h5 class="text-center">
@@ -221,6 +221,7 @@
                         </span>
                         <input type="text" class="form-control" ng-model="chatmsg" ng-disabled="finished" id="chat-input"
                                ng-keydown="$event.keyCode === 13 && sendChatMsg()">
+                        <!--  <ng-quill-editor ng-model="newText.content" class="large" ng-class="{'quill-disabled': selectedSes.status!=1}"></ng-quill-editor>-->
                         <span class="input-group-btn">
                             <button class="btn btn-default" ng-disabled="finished" ng-click="sendChatMsg()">
                                 <i class="fa fa-send"></i>
