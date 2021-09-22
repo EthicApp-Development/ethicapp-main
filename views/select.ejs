@@ -181,10 +181,11 @@
                     <input type="text" class="form-control" placeholder="{{'comment' | lang}}" ng-model="comments[qs.id]" ng-change="qs.dirty = true" ng-disabled="finished || !useComments">
                     <span class="input-group-btn">
                         <button class="btn btn-default" ng-disabled="finished || !qs.dirty )" ng-click="sendAnswer(qs)">
-                            <i class="fa fa-check" ng-show="!qs.dirty "></i>
-                            <span ng-show="!qs.dirty ">Enviado</span>
-                            <i class="fa fa-send" ng-show="qs.dirty"></i>
-                            <span ng-show="qs.dirty ">Por Enviar</span>
+                            <i class="fa fa-check" ng-show="qs.dirty ==false"></i>
+                            <span ng-show="qs.dirty ==false">Enviado</span>
+                            <i class="fa fa-send" ng-show="qs.dirty ||qs.dirty==null"></i>
+                            <span ng-show="qs.dirty || qs.dirty==null ">Por Enviar</span>
+                            
                         </button>
                     </span>
                 </div>
