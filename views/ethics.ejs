@@ -83,7 +83,7 @@
                  ng-click="selectDocument($index)" ng-attr-id="{{ 'tabd' + $index }} ">
                 <i class="fa fa-book"></i> {{doc.title | limitTo:10}}
             </div>
-            <div class="tab tab-text" ng-repeat="st in stages" ng-class="{active: selectedStage == $index && (!showDoc||documents.length==0), 'green': st.id != currentStageId, 'yellow': st.id == currentStageId}"
+            <div class="tab tab-text" ng-repeat="st in stages" ng-class="{active: (selectedStage == $index && (!showDoc||documents.length==0))||(st.id == currentStageId && selectedStage==null), 'green': st.id != currentStageId, 'yellow': st.id == currentStageId}"
                  ng-click="selectStage($index)" ng-attr-id="{{ 'tabq' + $index }}">
                 <i class="fa fa-question-circle"></i> {{ 'stage' | lang }} {{st.number}} <span class="badge bg-red" ng-show="st.c != null && st.c > st.cr">{{st.c - st.cr}}</span>
             </div>
