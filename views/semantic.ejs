@@ -74,7 +74,7 @@
 
     <div class="top-bar top-bar-tabs">
         <div class="qs-tabs" ng-show="iteration > 0 || myRole == 'P'">
-            <div class="tab tab-text" ng-repeat="doc in documents" ng-class="{active: selectedDocument == $index, yellow: hgDocs[$index]}"
+            <div class="tab tab-text" ng-repeat="doc in documents" ng-class="{active: selectedDocument == $index, yellow: documents[selectedDocument].id ==doc.id}"
                  ng-click="selectDocument($index)">
                 {{doc.title | limitTo:10}}
             </div>
@@ -113,7 +113,8 @@
     <div class="vh50 boxed" ng-show="iteration > 0 || myRole == 'P'">
         <div>
             <h3>{{documents[selectedDocument].title}}</h3>
-            <p class="text-justify"><span ng-repeat="sent in sentences track by $index" ng-class="{'bg-lightorange': highlight[selectedDocument][$index] && !views[$index], 'bg-lightgreen': views[$index]}"> <input type="checkbox" ng-model="highlight[selectedDocument][$index]" ng-disabled="disabledSents[selectedDocument][$index]">{{sent}}</span></p>
+            <p class="text-justify"><span ng-repeat="sent in sentences track by $index" ng-class="{'bg-lightorange': highlight[selectedDocument][$index] && !views[$index], 'bg-lightgreen': views[$index]}"> 
+                <input type="checkbox" ng-model="highlight[selectedDocument][$index]" ng-disabled="disabledSents[selectedDocument][$index]">{{sent}}</span></p>
         </div>
     </div>
 
@@ -140,11 +141,10 @@
                             <span class="input-group-btn">
                                 <button class="btn btn-default" ng-disabled="finished || !unit.dirty || followLeader || (myRole == 'P' && iteration > 0)" ng-click="addSemUnit(unit)">
                                     <i class="fa fa-check" ng-show="!unit.dirty"></i>
+                                    <span ng-show="!unit.dirty">Enviado</span>
                                     <i class="fa fa-send" ng-show="unit.dirty"></i>
+                                    <span ng-show="unit.dirty">Por Enviar</span>
                                 </button>
-                                <!--<button class="btn btn-default" ng-disabled="finished || followLeader || (myRole == 'P' && iteration > 0)" ng-click="addSemUnit(unit)" ng-class="{'btn-success': sent[unit.id], 'btn-warning': unit.dirty && !(myRole == 'P' && iteration > 0)}">
-                                    <i class="fa fa-send"></i>
-                                </button>-->
                                 <button class="btn btn-default" ng-disabled="finished || followLeader || (myRole == 'P' && iteration > 0)" ng-click="deleteUnit($index,unit)">
                                     <i class="fa fa-trash"></i>
                                 </button>
@@ -190,8 +190,10 @@
                 <span ng-show="lastSent != null && isFull">Enviado {{lastSent | date:'HH:mm'}}</span>
                 <button class="btn btn-sm btn-primary" ng-click="sendReport()" ng-show="isFull && !finished"
                         ng-disabled="!misc.reportDirty">
-                    <i class="fa fa-check" ng-show="!misc.reportDirty"></i>
-                    <i class="fa fa-send" ng-show="misc.reportDirty"></i>
+                        <i class="fa fa-check " ng-show="!misc.reportDirty && lastSent != null"></i>
+                        <span ng-show="!misc.reportDirty && lastSent != null">Enviado</span>
+                        <i class="fa fa-send" ng-show="misc.reportDirty || (!misc.reportDirty && lastSent == null) "></i>
+                        <span ng-show="(!misc.reportDirty && lastSent == null) || misc.reportDirty ">Por Enviar</span>
                 </button>
                 <button class="btn btn-sm btn-primary" ng-click="toggleFull()">
                     <i class="fa fa-caret-down" ng-show="isFull"></i>
