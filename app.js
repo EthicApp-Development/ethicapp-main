@@ -10,10 +10,10 @@ let FileStore = require('session-file-store')(session);
 let busboy = require('express-busboy');
 let sss = require('simple-stats-server');
 let json2xls = require('json2xls');
-
+let sessions = require("./routes/sessions");
 let index = require('./routes/index');
 let users = require('./routes/users');
-let sessions = require("./routes/sessions");
+let api = require('./routes/api');
 let visor = require("./routes/visor");
 let analysis = require("./routes/analysis");
 let teams = require("./routes/teams");
@@ -58,6 +58,7 @@ app.use("/", teams);
 app.use("/", rubrica);
 app.use("/", geo);
 app.use("/", stages);
+app.use("/api", api);
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {

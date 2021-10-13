@@ -5,6 +5,7 @@ let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 let socket = require("../modules/socket.config");
+let client = require("../modules/client");
 
 let sesStatusCache = {};
 
@@ -237,8 +238,20 @@ router.post("/send-diff-selection", rpg.execSQL({
     sesReqData: ["uid", "ses"],
     postReqData: ["did", "sel", "comment", "iteration"],
     sqlParams: [rpg.param("post", "sel"), rpg.param("post", "comment"), rpg.param("post", "did"), rpg.param("ses", "uid"), rpg.param("post", "iteration"),
-        rpg.param("ses", "uid"), rpg.param("post", "did"), rpg.param("post", "sel"), rpg.param("post", "comment"), rpg.param("post", "iteration")]
-}));
+        rpg.param("ses", "uid"), rpg.param("post", "did"), rpg.param("post", "sel"), rpg.param("post", "comment"), rpg.param("post", "iteration")],
+    onEnd: (req,res) => {
+        let diff_selection_info = {
+            comment: req.body.comment,
+            user_id: req.session.uid, 
+            stage_id: req.session.ses,
+            differential: req.body.did, 
+            iteration: req.body.iteration, 
+        }
+        client.sendDiffSelection(diff_selection_info)
+        }
+    })
+
+);
 
 router.post("/get-diff-selection", rpg.multiSQL({
     dbcon: pass.dbcon,

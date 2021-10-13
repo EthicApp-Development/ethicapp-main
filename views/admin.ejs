@@ -1047,7 +1047,7 @@
         <div class="pad-content" ng-show="selectedTab == 'dashboard'" ng-controller="DashboardController">
             <div ng-show="selectedSes.type != 'E' && selectedSes.type != 'R' && selectedSes.type != 'T' && selectedSes.type != 'J'">
                 <div class="pull-right">
-                    <label>{{'iteration' | lang}}:</label>
+                    <label>{{'iteration' | lang}}: </label>
                     <select class="" ng-options="x.val as flang(x.name) for x in iterationNames" ng-model="iterationIndicator" ng-change="updateState()"></select>
                     <button class="btn btn-default" ng-click="updateState()">{{'update' | lang}}</button>
                 </div>
@@ -1058,12 +1058,20 @@
             <div class="pull-right margin-ver-8" ng-show="selectedSes.type == 'E'">
                 <button class="btn btn-success" ng-click="exportCSV()">{{ 'export' | lang }} CSV</button>
                 <button class="btn btn-default" ng-click="updateState()">{{'update' | lang}}</button>
+                
             </div>
             <div class="pull-right margin-ver-8" ng-show="selectedSes.type == 'R' || selectedSes.type == 'T' || selectedSes.type == 'J'">
                 <button class="btn btn-sm btn-success" ng-click="exportChatCSV()" ng-show="selectedSes.status >= 3">{{ 'export' | lang }} Chat CSV</button>
                 <button class="btn btn-sm btn-success" ng-click="exportSelCSV()" ng-show="selectedSes.status >= 3">{{ 'export' | lang }} {{ 'answer' | lang }} CSV</button>
                 <select class="" ng-options="x.val as flang(x.name) for x in iterationNames" ng-model="iterationIndicator" ng-change="updateState()"></select>
                 <button class="btn btn-default" ng-click="updateState()">{{'update' | lang}}</button>
+                <div class="onoffswitch pull-right" ng-show="selectedSes.type == 'T'">
+                    <input type="checkbox"  id="dashboard-1" class="onoffswitch-checkbox" ng-model="dashboard" >
+                    <label class="onoffswitch-label" for="dashboard-1">
+                        <span class="onoffswitch-inner-icon"></span>
+                        <span class="onoffswitch-switch"></span>
+                    </label>
+                </div>
             </div>
             <div class="row" ng-show="iterationIndicator < 5 && (selectedSes.type == 'L' || selectedSes.type == 'M')">
                 <div class="col-sm-4 col-sm-offset-2">
@@ -1332,7 +1340,54 @@
                     <i class="fa fa-check simple-margin-left"></i> {{ 'commented' | lang }}.
                 </div>
             </div>
-            <div ng-show="selectedSes.type == 'T'" class="margin-top-8">
+            <!-- Ethic cluster DASHBOARD  -->
+            <div ng-show="selectedSes.type == 'T' && dashboard == false" class="margin-top-8">
+                <div>
+                    <h3>Pregunta: {{dfsStage[iterationQs].title}}</h3>
+                    <select class="form-control" ng-options="x.orden as flang(x.title) for x in dfsStage track by x.id" ng-model="iterationQs" ng-change="updateState()"></select>
+                </div>
+                    <div class="col-md-2" style="max-height: 500px !important; overflow: auto; display: inline-block;border: cornflowerblue">
+                            <table class="table table-bordered" ts-wrapper >
+                                    <tr>
+                                        <th>Mas representativo</th>
+                                    </tr>
+                                    <tr ng-repeat="comment in bestComments" ts-repeat>
+                                        <td ng-style="getColorComment(comment)">{{comment.comment}}</td>
+                                    </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-10">
+                                <h3>Cluster</h3>
+                            <nvd3 options="chartOption" data="cluster"></nvd3>
+                        </div>
+                        <div class="col-md-2 float-left" style="max-height: 500px !important; overflow: auto; display: inline-block;">
+                            <table class="table table-bordered" ts-wrapper>
+                                    <tr>
+                                        <th>Menos representativo</th>
+                                    </tr>
+                                    <tr ng-repeat="comment in worstComments" ts-repeat>
+                                        <td ng-style="getColorComment(comment)">{{comment.comment}}</td>
+                                    </tr>
+                            </table>
+                        </div>
+                
+
+                
+                <div class="col-md-10">
+                    <h3>Topicos</h3>
+                    <table class="table table-bordered " ts-wrapper>
+                            <tr >
+                                <th ng-repeat="h in topicHeader" ts-repeat>{{h}}</th>  
+                            </tr>
+                            <tr  ng-repeat="(key, value) in topicBody">
+                                <td ng-style="getColorTopic(value.cluster)" ng-repeat="h in topicHeader" ts-repeat >{{value[h]}}</td>
+                            </tr>
+                            
+                            
+                    </table>
+                </div>
+            </div>
+            <div ng-show="selectedSes.type == 'T' && dashboard == true" class="margin-top-8">
                 <strong>{{ 'indAggAns' | lang }}</strong>
                 <span class="pull-right"><span style="color: red;">*</span> {{ 'commentReq' | lang }}</span>
                 <table class="table table-bordered" ts-wrapper>
@@ -1375,6 +1430,8 @@
                         </td>
                     </tr>
                 </table>
+
+
                 <div class="simple-padding-bottom">
                     <span>{{ 'students' | lang }}: {{shared.difTableUsers}}</span>
                     <strong class="simple-margin-left">{{ 'avgs' | lang }}: </strong> {{ 'average' | lang }}.

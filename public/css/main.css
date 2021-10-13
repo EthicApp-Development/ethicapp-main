@@ -560,6 +560,57 @@ p{
 }
 /* /SLIDER */
 
+
+
+/* SLIDER icon */
+
+
+.onoffswitch-inner-icon {
+    display: block; width: 200%; margin-left: -100%;
+    transition: margin 0.3s ease-in 0s;
+}
+.onoffswitch-inner-icon:before, .onoffswitch-inner-icon:after {
+    display: block; float: left; width: 50%; height: 27px; padding: 0; line-height: 27px;
+    font-size: 14px; color: white; font-family: Trebuchet, Arial, sans-serif; font-weight: bold;
+    box-sizing: border-box;
+}
+.onoffswitch-inner-icon:before {
+    font-family: FontAwesome;
+    content: "\f00a";
+    padding-left: 10px;
+    background-color: #42A5F5; color: #FFFFFF;
+}
+.onoffswitch-inner-icon:after {
+    font-family: FontAwesome;
+    content: "\f080";
+    padding-right: 6px;
+    background-color: #9E9E9E; color: #FFFFFF;
+    text-align: right;
+}
+.onoffswitch-switch {
+    display: block;
+    width: 30px;
+    margin: 0;
+    background: #1B4370;
+    position: absolute;
+    top: 0;
+    bottom: -2px;
+    right: 34px;
+    border: 2px solid #FFFFFF;
+    border-radius: 28px;
+    transition: all 0.3s ease-in 0s;
+}
+.onoffswitch-checkbox:checked + .onoffswitch-label .onoffswitch-inner-icon {
+    margin-left: 0;
+}
+.onoffswitch-checkbox:checked + .onoffswitch-label .onoffswitch-switch {
+    right: 0px;
+}
+.sliders strong{
+    font-size: 125%;
+}
+/* /SLIDER */
+
 .font-mini{
     font-size: 80%;
 }

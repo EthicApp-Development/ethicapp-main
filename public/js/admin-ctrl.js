@@ -54,7 +54,6 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     $locale.NUMBER_FORMATS.GROUP_SEP = '';
     self.shared = {};
     self.sessions = [];
-
     self.selectedSes = null;
     self.documents = [];
     self.questions = [];
@@ -71,8 +70,66 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.secIcons = { configuration: "cog", editor: "edit", dashboard: "bar-chart", users: "male",
         rubrica: "check-square", groups: "users", options: "sliders" };
     self.typeNames = { L: "readComp", S: "multSel", M: "semUnits", E: "ethics", R: "rolePlaying", T: "ethics", J: "jigsaw" };
-
     self.misc = {};
+    //new dasboard parameters
+    self.dashboard = false;
+
+    self.bestComments = [];
+    self.worstComments = [];
+    self.cluster = [];
+    self.topicBody = [];
+    self.topicHeader = [];
+    self.chartOption = {
+        chart: {
+            type: 'scatterChart',
+            height: 500,
+            color: d3.scale.category10().range(),
+            scatter: {
+                onlyCircles: true
+            },
+            showDistX: true,
+            showDistY: true,
+          //tooltipContent: function(d) {
+          //    return d.series && '<h3>' + d.series[0].key + '</h3>';
+          //},
+            duration: 500,
+            xAxis: {
+                axisLabel: 'X Axis',
+                tickFormat: function(d){
+                    return d3.format('.02f')(d);
+                },
+                showMaxMin: true
+            },
+            yAxis: {
+                axisLabel: 'Y Axis',
+                tickFormat: function(d){
+                    return d3.format('.02f')(d);
+                },
+
+                axisLabelDistance: -5,
+                showMaxMin: true
+            },
+            tooltip: {
+                contentGenerator: function (key, x, y, e, graph) { 
+                    let values  = Object.values(key)[0];
+                    let clusterLabel = values.cluster_label
+                    let comment = values.comment
+                  return '<div><h5>Commentario: '+comment +'</h5><h5>Cluster: '+clusterLabel +'</h5></div>';
+                }
+            },
+            zoom: {
+                //NOTE: All attributes below are optional
+                enabled: false,
+                useFixedDomain: false,
+                useNiceScale: true,
+                horizontalOff: false,
+                verticalOff: false,
+                unzoomEventType: 'dblclick.zoom'
+            }
+
+        }
+    }
+
 
     self.init = function () {
         self.getMe();
@@ -84,6 +141,57 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
                 window.location.reload();
             }
         });
+        $socket.on("dashboard", (data) => {
+            console.log("SOCKET.IO-Dashboard");
+            if (data.data.status == "OK"){
+                let topics = Object.values(JSON.parse(data.data.topics[0].json));
+                let labels = data.data.cluster.map(point => {
+                    return {key:'cluster ' + point.cluster_label, values :[point]}
+                })
+                let clusterData = labels.filter((label, index ,a)=> {
+                    return a.findIndex(t=>(t.key === label.key )) === index;
+                })
+               
+                labels.map(point =>{
+                     let label  = clusterData.filter(cluster => {
+                         return cluster.key ===point.key
+                     })[0]
+                    let index = clusterData.findIndex(c => c.key === label.key )
+                    let npoint = point.values[0]
+                    clusterData[index].values.push(npoint)
+                })
+                self.cluster =clusterData
+                self.bestComments = data.data.best_comments;
+                self.worstComments = data.data.worst_comments;
+                self.topicBody = topics;
+                self.topicHeader = Object.keys(topics[0]);
+            }   
+        })
+    };
+
+    self.getColorTopic = function(cluster) {
+        let string = cluster.replace('_',' ')
+        let key = self.cluster.filter(c => {
+           return  c.key === string
+        })[0]
+        return {backgroundColor: key.color, color: 'white'}
+    };
+
+    self.getColorComment = function(comment) {
+        let cluster = self.cluster.map(c => {
+               return  c.values.filter(v => {
+                   return v.comment ===comment.comment
+               })
+        }).filter(array => {
+           return  array.length > 0
+        })[0]
+        if(cluster === undefined) {
+            return {backgroundColor: 'black', color: 'white'}
+        }
+        let color = self.cluster.filter( c => {
+            return c.key === 'cluster ' + cluster[0].cluster_label 
+        })[0]
+        return {backgroundColor: color.color, color: 'white'}
     };
 
     self.getMe = function(){
@@ -231,6 +339,13 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         self.openSidebar = !self.openSidebar;
         self.shared.updateState();
     };
+
+    self.changeDashboard = function () {
+        self.dashboard = !self.dashboard;
+        self.shared.updateState();
+    };
+
+
 
     self.updateLang = function (lang) {
         $http.get("data/" + lang + ".json").success(function (data) {
@@ -691,7 +806,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
         $http({ url: "add-question", method: "post", data: postdata }).success(function (data) {
             if (data.status == "ok") {
                 self.requestQuestions();
-                Notification.success("Pregunta agrgada correctamente");
+                Notification.success("Pregunta agregada correctamente");
                 self.newQuestion = {
                     id: null,
                     content: "",
@@ -892,6 +1007,7 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
 adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibModal, Notification) {
     var self = $scope;
     self.iterationIndicator = 1;
+    self.iterationQs = -1;
     self.currentTimer = null;
     self.showCf = false;
     self.dataDF = [];
@@ -965,6 +1081,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         self.iterationIndicator = i;
         self.updateState();
     };
+
 
     self.updateStateIni = function () {
         console.log(self.iterationIndicator);
@@ -1199,6 +1316,15 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             self.dfsStage = [];
             $http.post("get-differentials-stage", _postdata2).success(function(data) {
                 self.dfsStage = data;
+                console.log(self.iterationQs);
+                console.log(self.dfsStage);
+                
+                if (self.iterationQs != -1)   {
+                    self.iterationQs = self.dfsStage[self.iterationQs -1];
+                }    else {
+                    self.iterationQs =  self.dfsStage[self.iterationQs];
+                } 
+               
                 $http.post("get-differential-all-stage", _postdata2).success(function (data) {
                     self.shared.difTable = window.buildDifTable(data, self.users, self.dfsStage, self.shared.groupByUid);
                     self.shared.difTableUsers = self.shared.difTable.filter(e => !e.group).length;

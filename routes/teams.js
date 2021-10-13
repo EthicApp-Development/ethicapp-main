@@ -5,6 +5,7 @@ let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 let socket = require("../modules/socket.config");
+let client = require("../modules/client");
 
 router.post("/get-team-selection",rpg.multiSQL({
     dbcon: pass.dbcon,
@@ -204,7 +205,12 @@ router.post("/get-differential-all", rpg.multiSQL({
         "where tu.tmid = t.id and tu.uid = s.uid and t.sesid = d.sesid and d.sesid = $1 " +
         "order by tmid, iteration, orden",
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "sesid")]
+    sqlParams: [rpg.param("post", "sesid")],
+    onEnd: (req, res, arr) => {
+        client.sendAllDiffselection(arr);
+        res.send(JSON.stringify(arr));
+    }
+
 }));
 
 router.post("/get-differential-all-stage", rpg.multiSQL({
@@ -213,7 +219,12 @@ router.post("/get-differential-all-stage", rpg.multiSQL({
         "differential as d on s.did = d.id left join (select tu.* from teamusers as tu inner join teams as t on " +
         "tu.tmid = t.id and t.stageid = $1) as r on r.uid = s.uid where d.stageid = $2 order by stageid, uid, orden",
     postReqData: ["stageid"],
-    sqlParams: [rpg.param("post", "stageid"), rpg.param("post", "stageid")]
+    sqlParams: [rpg.param("post", "stageid"), rpg.param("post", "stageid")],
+    onEnd: (req, res, arr) => {
+        client.sendAllDiffselection(arr);
+        res.send(JSON.stringify(arr));
+        
+    }
 }));
 
 router.post("/get-differential-indv", rpg.multiSQL({

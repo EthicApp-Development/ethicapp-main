@@ -7,7 +7,9 @@
     "test": "mocha tests"
   },
   "dependencies": {
+    "amqplib": "^0.8.0",
     "body-parser": "~1.15.2",
+    "celery-node": "^0.5.5",
     "cookie-parser": "~1.4.3",
     "debug": "~2.2.0",
     "ejs": "~2.5.2",

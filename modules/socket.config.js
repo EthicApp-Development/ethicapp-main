@@ -2,6 +2,9 @@ module.exports.configSocket = function(io){
     module.exports.stateChange = function(sesid){
         io.of("/").emit("stateChange", {ses: sesid});
     };
+    module.exports.dashboard = function(data){
+        io.of("/").emit("dashboard", {data: data});
+    };
     module.exports.updateTeam = function(tmid){
         io.of("/").emit("updateTeam", {tmid: tmid});
     };
