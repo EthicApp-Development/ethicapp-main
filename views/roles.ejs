@@ -87,7 +87,7 @@
                 <i class="fa fa-user"></i> {{ 'role' | lang }}
             </div>
             <div class="tab tab-text" ng-repeat="st in stages" ng-class="{active: (selectedStage == $index && (!showDoc || documents.length==0))||(st.id==currentStageId && selectedStage==null) , 'green': st.id != currentStageId, 'yellow': st.id == currentStageId}"
-                 ng-click="selectStage($index)" ng-attr-id="{{ 'tabq' + $index }}">
+                 ng-click="selectStage($index, true)" ng-attr-id="{{ 'tabq' + $index }}">
                 <i class="fa fa-question-circle"></i> {{ 'stage' | lang }} {{st.number}} <span class="badge bg-red" ng-show="st.c != null && st.c > st.cr">{{st.c - st.cr}}</span>
             </div>
             <!--<div class="btab"></div>
