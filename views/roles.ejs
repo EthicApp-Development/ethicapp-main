@@ -34,6 +34,9 @@
             <a href="seslist" class="simple-margin-left" id="seslistbtn">
                 <img src="img/logo.png" class="logo-bar">
             </a>
+            <span class="text-white">
+                {{username}}
+            </span>
         </div>
         <div class="cf3 grow text-center simple-padding-top hscroll" ng-show="iteration > 0">
 <!--            <span ng-repeat="st in stages">-->
@@ -315,12 +318,18 @@
         <div class="chat-inv"></div>
         <div class="chat-container">
             <div class="chat bordered">
-                <div class="text-center">Chat</div>
+                <div class="text-center"> 
+                    <strong > Chat</strong>
+                    <strong ng-if="anonimName!=undefined"> ({{anonimName}})</strong>
+                </div>
                 <div class="chat-area" scroll-glue ng-show="chatExp" ng-if="stages[selectedStage].id == currentStageId">
+                    <div ng-show="chatMsgs[currentStageId].length == 0" class="text-center"> 
                     <strong ng-show="chatMsgs[currentStageId].length == 0">Chat</strong>
+                    <strong ng-if="anonimName!=undefined"> ({{anonimName}})</strong>
+                    </div>
                     <div class="chat-msg" ng-repeat="msg in chatMsgs[currentStageId]" ng-class="{'bg-gray': chatmsgreply == msg.id}">
                         <div class="font-mini parent-msg" ng-show="msg.parent != null">
-                            <div class="anon-badge margin-left-n8">{{ teamMap[msg.parent.uid] }}</div>
+                            <div class="anon-badge margin-left-n8"> {{ teamMap[msg.parent.uid] }}</div>
                             <span class="content" ng-bind-html="msg.parent.content | limitTo:100 | linkfy"></span>
                         </div>
                         <i class="fa fa-reply" ng-show="msg.parent != null"></i>
