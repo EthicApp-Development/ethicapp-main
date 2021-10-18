@@ -72,8 +72,8 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.typeNames = { L: "readComp", S: "multSel", M: "semUnits", E: "ethics", R: "rolePlaying", T: "ethics", J: "jigsaw" };
     self.misc = {};
     //new dasboard parameters
+    self.iterationQs = -1;
     self.dashboard = false;
-
     self.bestComments = [];
     self.worstComments = [];
     self.cluster = [];
@@ -114,7 +114,8 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
                     let values  = Object.values(key)[0];
                     let clusterLabel = values.cluster_label
                     let comment = values.comment
-                  return '<div><h5>Commentario: '+comment +'</h5><h5>Cluster: '+clusterLabel +'</h5></div>';
+                  return '<div style="max-width: 300px!important; overflow: auto; display: inline-block"><span>Commentario: '+
+                  comment +'</span><h5>Cluster: '+clusterLabel +'</h5></div>';
                 }
             },
             zoom: {
@@ -205,6 +206,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.selectSession = function (ses, id) {
         self.selectedId = id;
         self.selectedSes = ses;
+        self.selectedQs = -1;
         self.requestDocuments();
         self.requestSemDocuments();
         self.requestQuestions();
@@ -1008,6 +1010,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     var self = $scope;
     self.iterationIndicator = 1;
     self.iterationQs = -1;
+
     self.currentTimer = null;
     self.showCf = false;
     self.dataDF = [];
@@ -1317,12 +1320,12 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             $http.post("get-differentials-stage", _postdata2).success(function(data) {
                 self.dfsStage = data;
                 console.log(self.iterationQs);
-                console.log(self.dfsStage);
+                console.log(self.dfsStage[ -1]);
                 
                 if (self.iterationQs != -1)   {
-                    self.iterationQs = self.dfsStage[self.iterationQs -1];
+                    self.iterationQs = self.dfsStage.indexOf(data[self.iterationQs -1]);
                 }    else {
-                    self.iterationQs =  self.dfsStage[self.iterationQs];
+                    self.iterationQs =  self.dfsStage.indexOf(data[self.iterationQs]);
                 } 
                
                 $http.post("get-differential-all-stage", _postdata2).success(function (data) {
