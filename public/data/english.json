@@ -165,5 +165,7 @@
   "expert": "Expert",
   "device": "Device",
   "saveDraft": "Save draft",
-  "archived": "Archived"
+  "archived": "Archived",
+  "toSend": "To Send",
+  "sent": "Sent"
 }

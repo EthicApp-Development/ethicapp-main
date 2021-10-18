@@ -181,9 +181,9 @@
                                             <span class="input-group-addon hoverable" ng-disabled="finished || !actors[selectedActor].dirty || selectedActor == null"
                                                   ng-click="sendActorSel()">
                                             <i class="fa fa-check" ng-show="!actors[selectedActor].dirty"></i>
-                                            <span ng-show="!actors[selectedActor].dirty">Enviado</span>
+                                            <span ng-show="!actors[selectedActor].dirty">{{ 'toSend' | lang }}</span>
                                             <i class="fa fa-send" ng-show="actors[selectedActor].dirty"></i>
-                                            <span ng-show="actors[selectedActor].dirty">Por Enviar</span>
+                                            <span ng-show="actors[selectedActor].dirty">{{ 'sent' | lang }}</span>
                                             </span>
                                         </div>
                                     </div>
@@ -229,8 +229,8 @@
                     <button class="btn btn-default" ng-click="sendActorSel(true)">
                         <i class="fa fa-check" ng-show="verified"></i>
                         <i class="fa fa-send" ng-show="!verified"></i>
-                        <span ng-show="!verified">Por Enviar</span>
-                        <span ng-show="verified">Enviado</span>
+                        <span ng-show="!verified">{{ 'toSend' | lang }}</span>
+                        <span ng-show="verified">{{ 'sent' | lang }}</span>
                     </button>
                 </div>
             </div>

@@ -174,8 +174,8 @@
                             <span class="input-group-addon hoverable" ng-disabled="finished || !df.dirty" ng-click="sendDFSel(df)">
                             <i class="fa fa-check" ng-show="!df.dirty && df.sent"></i>
                             <i class="fa fa-send" ng-show="df.dirty || !df.justify || !df.sent||misc.reportDirty"></i>
-                            <span ng-show="df.dirty || !df.justify || !df.sent||misc.reportDirty">Por Enviar</span>
-                            <span ng-show="!df.dirty && df.sent">Enviado</span>
+                            <span ng-show="df.dirty || !df.justify || !df.sent||misc.reportDirty">{{ 'toSend' | lang }}</span>
+                            <span ng-show="!df.dirty && df.sent">{{ 'sent' | lang }}</span>
                             <i class="fa fa-question-circle" ng-show="!df.dirty && !df.sent && df.justify" style="opacity: 0"></i>
                             </span>
                         </div>

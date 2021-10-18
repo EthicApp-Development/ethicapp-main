@@ -141,9 +141,9 @@
                             <span class="input-group-btn">
                                 <button class="btn btn-default" ng-disabled="finished || !unit.dirty || followLeader || (myRole == 'P' && iteration > 0)" ng-click="addSemUnit(unit)">
                                     <i class="fa fa-check" ng-show="!unit.dirty"></i>
-                                    <span ng-show="!unit.dirty">Enviado</span>
+                                    <span ng-show="!unit.dirty">{{ 'sent' | lang }}</span>
                                     <i class="fa fa-send" ng-show="unit.dirty"></i>
-                                    <span ng-show="unit.dirty">Por Enviar</span>
+                                    <span ng-show="unit.dirty">{{ 'toSend' | lang }}</span>
                                 </button>
                                 <button class="btn btn-default" ng-disabled="finished || followLeader || (myRole == 'P' && iteration > 0)" ng-click="deleteUnit($index,unit)">
                                     <i class="fa fa-trash"></i>
@@ -187,13 +187,13 @@
         <div class="bar">
             <span>Reporte</span>
             <div class="pull-right">
-                <span ng-show="lastSent != null && isFull">Enviado {{lastSent | date:'HH:mm'}}</span>
+                <span ng-show="lastSent != null && isFull">{{ 'sent' | lang }} {{lastSent | date:'HH:mm'}}</span>
                 <button class="btn btn-sm btn-primary" ng-click="sendReport()" ng-show="isFull && !finished"
                         ng-disabled="!misc.reportDirty">
                         <i class="fa fa-check " ng-show="!misc.reportDirty && lastSent != null"></i>
-                        <span ng-show="!misc.reportDirty && lastSent != null">Enviado</span>
+                        <span ng-show="!misc.reportDirty && lastSent != null">{{ 'sent' | lang }}</span>
                         <i class="fa fa-send" ng-show="misc.reportDirty || (!misc.reportDirty && lastSent == null) "></i>
-                        <span ng-show="(!misc.reportDirty && lastSent == null) || misc.reportDirty ">Por Enviar</span>
+                        <span ng-show="(!misc.reportDirty && lastSent == null) || misc.reportDirty ">{{ 'toSend' | lang }}</span>
                 </button>
                 <button class="btn btn-sm btn-primary" ng-click="toggleFull()">
                     <i class="fa fa-caret-down" ng-show="isFull"></i>

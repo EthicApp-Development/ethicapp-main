@@ -157,7 +157,7 @@
         <div class="bar">
             <span>Respuesta al factor detonante</span>
             <div class="pull-right">
-                <span ng-show="lastSent != null && isFull">Enviado {{lastSent | date:'HH:mm'}}</span>
+                <span ng-show="lastSent != null && isFull">{{ 'sent' | lang }} {{lastSent | date:'HH:mm'}}</span>
                 <button class="btn btn-sm btn-primary" ng-click="sendReport()" ng-show="isFull"><i class="fa fa-send"></i></button>
                 <button class="btn btn-sm btn-primary" ng-click="toggleFull()"><i class="fa fa-minus"></i></button>
             </div>
