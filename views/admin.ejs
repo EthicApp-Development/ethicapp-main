@@ -622,7 +622,10 @@
                             <h4 ng-show="selectedSes.type == 'J'">{{ 'listOf' | lang }} {{ 'actions' | lang }}</h4>
                         </div>
                         <div class="col-sm-2 text-center margin-top-8">
-                            <button class="btn btn-default" ng-click="setAllRolesType('role')" ng-disabled="readonly">
+                            <button class="btn btn-default" ng-click="setAllRolesType('role')" ng-disabled="readonly" ng-show="selectedSes.type == 'R'">
+                                {{ 'justifyAllM' | lang }} {{ 'roles' | lang }}
+                            </button>
+                            <button class="btn btn-default" ng-click="setAllRolesType('role')" ng-disabled="readonly" ng-show="selectedSes.type == 'J'">
                                 {{ 'justifyAll' | lang }} {{ 'actions' | lang }}
                             </button>
                         </div>
@@ -641,7 +644,11 @@
                         </div>
                         <div class="col-sm-2 text-center">
                             <button class="btn btn-default" ng-class="{'btn-primary': role.type == 'role'}"
-                                ng-click="setRoleType(role, 'role')" ng-disabled="readonly">
+                                ng-click="setRoleType(role, 'role')" ng-disabled="readonly" ng-show="selectedSes.type == 'J'">
+                                {{ 'justify' | lang }} {{ 'action' | lang }}
+                            </button>
+                            <button class="btn btn-default" ng-class="{'btn-primary': role.type == 'role'}"
+                                ng-click="setRoleType(role, 'role')" ng-disabled="readonly" ng-show="selectedSes.type == 'R'">
                                 {{ 'justify' | lang }} {{ 'role' | lang }}
                             </button>
                         </div>
@@ -663,8 +670,11 @@
                     </div>
                     <div class="row">
                         <div class="col-sm-12 text-center">
-                            <button class="btn btn-default" ng-click="addRole()" ng-disabled="readonly">
-                                <i class="fa fa-plus"></i> {{ 'add' | lang }} {{ 'actions' | lang }}
+                            <button class="btn btn-default" ng-click="addRole()" ng-disabled="readonly" ng-show="selectedSes.type == 'R'">
+                                <i class="fa fa-plus"></i> {{ 'add' | lang }} {{ 'role' | lang }}
+                            </button>
+                            <button class="btn btn-default" ng-click="addRole()" ng-disabled="readonly" ng-show="selectedSes.type == 'J'">
+                                <i class="fa fa-plus"></i> {{ 'add' | lang }} {{ 'action' | lang }}
                             </button>
                         </div>
                     </div>

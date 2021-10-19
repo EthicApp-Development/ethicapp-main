@@ -183,10 +183,10 @@
                                             </textarea>
                                             <span class="input-group-addon hoverable" ng-disabled="finished || !actors[selectedActor].dirty || selectedActor == null"
                                                   ng-click="sendActorSel()">
-                                            <i class="fa fa-check" ng-show="!actors[selectedActor].dirty"></i>
-                                            <span ng-show="!actors[selectedActor].dirty">{{ 'toSend' | lang }}</span>
-                                            <i class="fa fa-send" ng-show="actors[selectedActor].dirty"></i>
-                                            <span ng-show="actors[selectedActor].dirty">{{ 'sent' | lang }}</span>
+                                            <i class="fa fa-send" ng-show="!actors[selectedActor].dirty"></i>
+                                            <span ng-show="!actors[selectedActor].dirty">{{ 'sent' | lang }}</span>
+                                            <i class="fa fa-check" ng-show="actors[selectedActor].dirty"></i>
+                                            <span ng-show="actors[selectedActor].dirty">{{ 'toSend' | lang }}</span>
                                             </span>
                                         </div>
                                     </div>
