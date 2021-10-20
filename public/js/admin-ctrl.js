@@ -71,66 +71,10 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         rubrica: "check-square", groups: "users", options: "sliders" };
     self.typeNames = { L: "readComp", S: "multSel", M: "semUnits", E: "ethics", R: "rolePlaying", T: "ethics", J: "jigsaw" };
     self.misc = {};
-    //new dasboard parameters
-    self.iterationQs = -1;
     self.dashboard = false;
-    self.bestComments = [];
-    self.worstComments = [];
-    self.cluster = [];
-    self.topicBody = [];
-    self.topicHeader = [];
-    self.chartOption = {
-        chart: {
-            type: 'scatterChart',
-            height: 500,
-            color: d3.scale.category10().range(),
-            scatter: {
-                onlyCircles: true
-            },
-            showDistX: true,
-            showDistY: true,
-          //tooltipContent: function(d) {
-          //    return d.series && '<h3>' + d.series[0].key + '</h3>';
-          //},
-            duration: 500,
-            xAxis: {
-                axisLabel: 'X Axis',
-                tickFormat: function(d){
-                    return d3.format('.02f')(d);
-                },
-                showMaxMin: true
-            },
-            yAxis: {
-                axisLabel: 'Y Axis',
-                tickFormat: function(d){
-                    return d3.format('.02f')(d);
-                },
+    
 
-                axisLabelDistance: -5,
-                showMaxMin: true
-            },
-            tooltip: {
-                contentGenerator: function (key, x, y, e, graph) { 
-                    let values  = Object.values(key)[0];
-                    let clusterLabel = values.cluster_label
-                    let comment = values.comment
-                  return '<div style="max-width: 300px!important; overflow: auto; display: inline-block"><span>Commentario: '+
-                  comment +'</span><h5>Cluster: '+clusterLabel +'</h5></div>';
-                }
-            },
-            zoom: {
-                //NOTE: All attributes below are optional
-                enabled: false,
-                useFixedDomain: false,
-                useNiceScale: true,
-                horizontalOff: false,
-                verticalOff: false,
-                unzoomEventType: 'dblclick.zoom'
-            }
-
-        }
-    }
-
+               
 
     self.init = function () {
         self.getMe();
@@ -142,59 +86,9 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
                 window.location.reload();
             }
         });
-        $socket.on("dashboard", (data) => {
-            console.log("SOCKET.IO-Dashboard");
-            if (data.data.status == "OK"){
-                let topics = Object.values(JSON.parse(data.data.topics[0].json));
-                let labels = data.data.cluster.map(point => {
-                    return {key:'cluster ' + point.cluster_label, values :[point]}
-                })
-                let clusterData = labels.filter((label, index ,a)=> {
-                    return a.findIndex(t=>(t.key === label.key )) === index;
-                })
-               
-                labels.map(point =>{
-                     let label  = clusterData.filter(cluster => {
-                         return cluster.key ===point.key
-                     })[0]
-                    let index = clusterData.findIndex(c => c.key === label.key )
-                    let npoint = point.values[0]
-                    clusterData[index].values.push(npoint)
-                })
-                self.cluster =clusterData
-                self.bestComments = data.data.best_comments;
-                self.worstComments = data.data.worst_comments;
-                self.topicBody = topics;
-                self.topicHeader = Object.keys(topics[0]);
-            }   
-        })
     };
 
-    self.getColorTopic = function(cluster) {
-        let string = cluster.replace('_',' ')
-        let key = self.cluster.filter(c => {
-           return  c.key === string
-        })[0]
-        return {backgroundColor: key.color, color: 'white'}
-    };
-
-    self.getColorComment = function(comment) {
-        let cluster = self.cluster.map(c => {
-               return  c.values.filter(v => {
-                   return v.comment ===comment.comment
-               })
-        }).filter(array => {
-           return  array.length > 0
-        })[0]
-        if(cluster === undefined) {
-            return {backgroundColor: 'black', color: 'white'}
-        }
-        let color = self.cluster.filter( c => {
-            return c.key === 'cluster ' + cluster[0].cluster_label 
-        })[0]
-        return {backgroundColor: color.color, color: 'white'}
-    };
-
+   
     self.getMe = function(){
         $http.get("is-super").success(data => {
             if(data.status == "ok"){
@@ -206,7 +100,6 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.selectSession = function (ses, id) {
         self.selectedId = id;
         self.selectedSes = ses;
-        self.selectedQs = -1;
         self.requestDocuments();
         self.requestSemDocuments();
         self.requestQuestions();
@@ -272,7 +165,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         $http({ url: "get-question-text", method: "post", data: postdata }).success(function (data) {
             self.questionTexts = data;
         });
-    };
+    };                                                                                                                                                                  
 
     self.requestSemDocuments = function () {
         var postdata = { sesid: self.selectedSes.id };
@@ -286,7 +179,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         $http({ url: "get-new-users", method: "post", data: postdata }).success(function (data) {
             self.newUsers = data;
         });
-    };
+    };      
 
     self.getMembers = function () {
         var postdata = { sesid: self.selectedSes.id };
@@ -1006,15 +899,131 @@ adpp.controller("QuestionsController", function ($scope, $http, Notification, $u
     };
 });
 
-adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibModal, Notification) {
+adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibModal, Notification, $socket) {
     var self = $scope;
     self.iterationIndicator = 1;
-    self.iterationQs = -1;
-
     self.currentTimer = null;
     self.showCf = false;
     self.dataDF = [];
+    self.dataCA = {};
     self.dataChatCount = {};
+    //new dasboard parameters
+    self.iterationQs = null;
+    self.bestComments = [];
+    self.worstComments = [];
+    self.cluster = [];
+    self.topicBody = [];
+    self.topicHeader = [];
+    self.chartOption = {
+        chart: {
+            type: 'scatterChart',
+            height: 500,
+            color: d3.scale.category10().range(),
+            scatter: {
+                onlyCircles: true
+            },
+            showDistX: true,
+            showDistY: true,
+          //tooltipContent: function(d) {
+          //    return d.series && '<h3>' + d.series[0].key + '</h3>';
+          //},
+            duration: 500,
+            xAxis: {
+                axisLabel: 'X Axis',
+                tickFormat: function(d){
+                    return d3.format('.02f')(d);
+                },
+                showMaxMin: true
+            },
+            yAxis: {
+                axisLabel: 'Y Axis',
+                tickFormat: function(d){
+                    return d3.format('.02f')(d);
+                },
+
+                axisLabelDistance: -5,
+                showMaxMin: true
+            },
+            tooltip: {
+                contentGenerator: function (key, x, y, e, graph) { 
+                    let values  = Object.values(key)[0];
+                    let clusterLabel = values.cluster_label
+                    let comment = values.comment
+                  return '<div style="max-width: 300px!important; overflow: auto; white-space: pre-wrap">Commentario: '+
+                  comment +'<h5>Cluster: '+clusterLabel +'</h5></div>';
+                }
+            },
+            zoom: {
+                //NOTE: All attributes below are optional
+                enabled: false,
+                useFixedDomain: false,
+                useNiceScale: true,
+                horizontalOff: false,
+                verticalOff: false,
+                unzoomEventType: 'dblclick.zoom'
+            }
+
+        }
+    }
+
+    self.getColorTopic = function(cluster) {
+        let string = cluster.replace('_',' ')
+        let key = self.cluster.filter(c => {
+           return  c.key === string
+        })[0]
+        var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(key.color);
+        var r = parseInt(result[1], 16);
+        var g = parseInt(result[2], 16);
+        var b = parseInt(result[3], 16);
+        r /= 255, g /= 255, b /= 255;
+        var max = Math.max(r, g, b), min = Math.min(r, g, b);
+        var h, s, l = (max + min) / 2;
+
+        if(max == min){
+            h = s = 0; // achromatic
+        } else {
+            var d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch(max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+        }
+
+        s = s*100;
+        s = Math.round(s);
+        l = l*100;
+        l = Math.round(l);
+        h = Math.round(360*h);
+
+        var colorInHSL = 'hsl(' + h + ', ' + s + '%, ' + 67 + '%)';
+        return {borderColor: key.color,backgroundColor: colorInHSL, color: 'black', borderWidth: "2px",}
+    };
+
+    self.getColorComment = function(comment) {
+        let cluster = self.cluster.map(c => {
+               return  c.values.filter(v => {
+                   return v.comment ===comment.comment
+               })
+        }).filter(array => {
+           return  array.length > 0
+        })[0]
+        if(cluster === undefined) {
+            return {backgroundColor: 'black', color: 'white'}
+        }
+        let color = self.cluster.filter( c => {
+            return c.key === 'cluster ' + cluster[0].cluster_label 
+        })[0]
+        return {borderLeftColor: color.color,borderLeftWidth: "5px", color: 'black', borderColor: color.color}
+    };
+
+    self.changeQuestion = function () {
+        console.log(self.iterationQs)
+        self.updateCluster() 
+    }
+
 
     self.shared.resetGraphs = function () {
         if (self.selectedSes != null && self.selectedSes.type == "L") {
@@ -1076,7 +1085,49 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         else {
             self.updateStateRub();
         }
+        $socket.on("dashboard", (data) => {
+            console.log("SOCKET.IO-Dashboard");
+            if (data.data.status == "OK"){
+                self.dataCA = data.data;
+                self.updateCluster() 
+                
+            }   
+        })
     };
+
+    self.updateCluster = function () {
+        let labels = self.dataCA.cluster
+        let topics = Object.values(JSON.parse(self.dataCA.topics[0].json));
+        self.topicBody = topics;
+        self.topicHeader = Object.keys(topics[0]);
+        self.bestComments = self.dataCA.best_comments;
+        self.worstComments = self.dataCA.worst_comments;
+        if (self.iterationQs){
+            let qId = self.iterationQs.id;
+            labels = labels.filter(p => p.differential === qId);
+            self.bestComments = self.dataCA.best_comments.filter(c => c.differential === qId);
+            self.worstComments = self.dataCA.worst_comments.filter(c => c.differential === qId);
+        }
+        labels = labels.map(point => {
+            return {key:'cluster ' + point.cluster_label, values :[point]}
+        })
+        let clusterData = labels.filter((label, index ,a)=> {
+            return a.findIndex(t=>(t.key === label.key )) === index;
+        })
+        labels.map(point =>{
+                let label  = clusterData.filter(cluster => {
+                    return cluster.key ===point.key
+                })[0]
+            let index = clusterData.findIndex(c => c.key === label.key )
+            let npoint = point.values[0]
+            clusterData[index].values.push(npoint)
+        })
+        self.cluster = clusterData;                                                                                                 
+        self.api.refresh();
+        
+
+
+    }
 
     self.shared.updateState = self.updateState;
 
@@ -1319,15 +1370,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             self.dfsStage = [];
             $http.post("get-differentials-stage", _postdata2).success(function(data) {
                 self.dfsStage = data;
-                console.log(self.iterationQs);
-                console.log(self.dfsStage[ -1]);
-                
-                if (self.iterationQs != -1)   {
-                    self.iterationQs = self.dfsStage.indexOf(data[self.iterationQs -1]);
-                }    else {
-                    self.iterationQs =  self.dfsStage.indexOf(data[self.iterationQs]);
-                } 
-               
+                if (data.length > 0) {
+                    self.iterationQs = data[data.length-1];
+                }
                 $http.post("get-differential-all-stage", _postdata2).success(function (data) {
                     self.shared.difTable = window.buildDifTable(data, self.users, self.dfsStage, self.shared.groupByUid);
                     self.shared.difTableUsers = self.shared.difTable.filter(e => !e.group).length;
@@ -1941,9 +1986,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                         data.names = [self.flang("answer")];
                         data.group = group;
                         data.users = self.users;
-
                         data.df = self.dfsStage.find(e => e.id == did);
-
                         data.anonNames = {};
                         data.sesid = self.selectedSes.id;
 
