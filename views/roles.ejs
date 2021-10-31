@@ -319,13 +319,13 @@
         <div class="chat-container">
             <div class="chat bordered">
                 <div class="text-center"> 
-                    <strong > Chat</strong>
-                    <strong ng-if="anonimName!=undefined"> ({{anonimName}})</strong>
+                    <strong >Chat</strong>
+                    <strong ng-if="anonimName!=undefined"> - Nombre Alumno ({{anonimName}})</strong>
                 </div>
                 <div class="chat-area" scroll-glue ng-show="chatExp" ng-if="stages[selectedStage].id == currentStageId">
                     <div ng-show="chatMsgs[currentStageId].length == 0" class="text-center"> 
                     <strong ng-show="chatMsgs[currentStageId].length == 0">Chat</strong>
-                    <strong ng-if="anonimName!=undefined"> ({{anonimName}})</strong>
+                    <strong ng-if="anonimName!=undefined"> - Nombre Alumno ({{anonimName}})</strong>
                     </div>
                     <div class="chat-msg" ng-repeat="msg in chatMsgs[currentStageId]" ng-class="{'bg-gray': chatmsgreply == msg.id}">
                         <div class="font-mini parent-msg" ng-show="msg.parent != null">
