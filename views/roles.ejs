@@ -211,8 +211,11 @@
                                         <strong>{{ actor.name }}</strong>
                                     </div>
                                     <div class="col-xs-4 text-right">
-                                        <button class="btn btn-default btn-sm" ng-click="actor.expanded = !actor.expanded" ng-if="actor.justified && actor.comment != ''">
+                                        <button class="btn btn-default btn-sm" ng-click="actor.expanded = !actor.expanded" ng-if="actor.justified && actor.comment != '' && !actor.expanded">
                                             <i class="fa fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-default btn-sm" ng-click="actor.expanded = !actor.expanded" ng-if="actor.justified && actor.comment != '' && actor.expanded">
+                                            <i class="fa fa-eye-slash"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -258,8 +261,11 @@
                                                 <strong>{{ actor.name }}</strong>
                                             </div>
                                             <div class="col-xs-4 text-right">
-                                                <button class="btn btn-default btn-sm" ng-click="actor.expanded = !actor.expanded" ng-if="actor.description">
+                                                <button class="btn btn-default btn-sm" ng-click="actor.expanded = !actor.expanded" ng-if="actor.description && !actor.expanded">
                                                     <i class="fa fa-eye"></i>
+                                                </button>
+                                                <button class="btn btn-default btn-sm" ng-click="actor.expanded = !actor.expanded" ng-if="actor.description && actor.expanded">
+                                                    <i class="fa fa-eye-slash"></i>
                                                 </button>
                                             </div>
                                         </div>
@@ -295,8 +301,11 @@
                                                 <strong>{{ actor.name }}</strong>
                                             </div>
                                             <div class="col-xs-4 text-right">
-                                                <button class="btn btn-default btn-sm" ng-click="actor.expanded = !actor.expanded" ng-if="actor.description">
+                                                <button class="btn btn-default btn-sm" ng-click="actor.expanded = !actor.expanded" ng-if="actor.description&& !actor.expanded">
                                                     <i class="fa fa-eye"></i>
+                                                </button>
+                                                <button class="btn btn-default btn-sm" ng-click="actor.expanded = !actor.expanded" ng-if="actor.description && actor.expanded">
+                                                    <i class="fa fa-eye-slash"></i>
                                                 </button>
                                             </div>
                                         </div>
