@@ -154,7 +154,7 @@
                                 <strong class="break-words">{{df.tleft}}</strong>
                             </div>
                             <div class="dopts col-xs-6">
-                                <div class="option eq-space hoverable" ng-repeat="i in buildArray(df.num)" ng-click="df.select = i"
+                                <div class="option eq-space hoverable" ng-repeat="i in buildArray(df.num)" ng-click="selectDfSel(df,i)"
                                      ng-class="{selected: df.select == i}">{{i}}</div>
                             </div>
                             <div class="col-xs-3">
@@ -175,10 +175,10 @@
                                       ng-change="df.dirty = true" ng-disabled="finished || !df.justify">
                             </textarea>
                             <span class="input-group-addon hoverable" ng-disabled="finished || !df.dirty" ng-click="sendDFSel(df)">
-                            <i class="fa fa-check" ng-show="!df.dirty && df.sent"></i>
-                            <i class="fa fa-send" ng-show="df.dirty || !df.justify || !df.sent||misc.reportDirty"></i>
-                            <span ng-show="df.dirty || !df.justify || !df.sent||misc.reportDirty">{{ 'toSend' | lang }}</span>
-                            <span ng-show="!df.dirty && df.sent">{{ 'sent' | lang }}</span>
+                            <i class="fa fa-check" ng-show="!df.dirty && df.sent && !df.changeDF"></i>
+                            <i class="fa fa-send" ng-show="df.dirty || !df.justify || !df.sent||misc.reportDirty||df.changeDF"></i>
+                            <span ng-show="df.dirty || !df.justify || !df.sent||misc.reportDirty ||df.changeDF">{{ 'toSend' | lang }}</span>
+                            <span ng-show="!df.dirty && df.sent && !df.changeDF">{{ 'sent' | lang }}</span>
                             <i class="fa fa-question-circle" ng-show="!df.dirty && !df.sent && df.justify" style="opacity: 0"></i>
                             </span>
                         </div>
