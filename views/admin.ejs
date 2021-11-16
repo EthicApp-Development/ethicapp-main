@@ -1058,7 +1058,6 @@
             <div class="pull-right margin-ver-8" ng-show="selectedSes.type == 'E'">
                 <button class="btn btn-success" ng-click="exportCSV()">{{ 'export' | lang }} CSV</button>
                 <button class="btn btn-default" ng-click="updateState()">{{'update' | lang}}</button>
-                
             </div>
             <div class="pull-right margin-ver-8" ng-show="selectedSes.type == 'R' || selectedSes.type == 'T' || selectedSes.type == 'J'">
                 <button class="btn btn-sm btn-success" ng-click="exportChatCSV()" ng-show="selectedSes.status >= 3">{{ 'export' | lang }} Chat CSV</button>
@@ -1340,18 +1339,23 @@
                     <i class="fa fa-check simple-margin-left"></i> {{ 'commented' | lang }}.
                 </div>
             </div>
-            <!-- Ethic cluster DASHBOARD  -->
-
-
-            <div ng-show="selectedSes.type == 'T' && dashboard == false" class="margin-top-8">
-                <div>
-                    <h3>Pregunta: {{iterationQs.title}}</h3>
-                    <select class="form-control" ng-options="x as flang(x.title) for x in dfsStage track by x.id" ng-model="iterationQs" ng-change="changeQuestion()" >
-                        <option value="">Seleccione una pregunta </option> 
-                    </select>
-
+            <!-- ETHIC CLUSTER DASHBOARD  -->
+            <div ng-show="loading == true">
+                <div class="spinner" >
                 </div>
-                    <div class="col-md-2" style="max-height: 500px !important; overflow: auto; display: inline-block;border: cornflowerblue">
+            </div>
+
+            <div ng-show="selectedSes.type == 'T' && dashboard == false && loading == false" class="margin-top-8">
+                <div>
+                    <div>
+                        <h4>Pregunta: {{iterationQs.title}}</h4>
+                        <select class="form-control" ng-options="x as flang(x.title) for x in dfsStage track by x.id" ng-model="iterationQs" ng-change="changeQuestion()" >
+                            <option value="">Seleccione una pregunta </option> 
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <div class="col-md-2" style="max-height: 450px !important; overflow: auto; display: inline-block;border: cornflowerblue">
                             <table class="table table-bordered" ts-wrapper >
                                     <tr style="border-style: solid; border-color:grey">
                                         <th>Mas representativo</th>
@@ -1360,12 +1364,12 @@
                                         <td ng-style="getColorComment(comment)">{{comment.comment}}</td>
                                     </tr>
                             </table>
-                        </div>
-                        <div class="col-md-10">
+                    </div>
+                    <div class="col-md-10">
                                 <h3>Cluster</h3>
                             <nvd3 options="chartOption" data="cluster" api="api" config="{refreshDataOnly: true, deepWatchData: true}" ></nvd3>
-                        </div>
-                        <div class="col-md-2 float-left" style="max-height: 500px !important;overflow: auto; display: inline-block;">
+                    </div>
+                    <div class="col-md-2 float-left" style="max-height: 450px !important;overflow: auto; display: inline-block;">
                             <table class="table table-bordered" ts-wrapper>
                                     <tr style="border-style: solid; border-color:grey">
                                         <th>Menos representativo</th>
@@ -1374,11 +1378,8 @@
                                         <td ng-style="getColorComment(comment)">{{comment.comment}}</td>
                                     </tr>
                             </table>
-                        </div>
-                
-
-                
-                <div class="col-md-10">
+                    </div>
+                    <div class="col-md-10">
                     <h3>Topicos</h3>
                     <table class="table table-bordered " ts-wrapper>
                             <tr >
@@ -1386,12 +1387,12 @@
                             </tr>
                             <tr  ng-repeat="(key, value) in topicBody">
                                 <td ng-style="getColorTopic(value.cluster)" ng-repeat="h in topicHeader" ts-repeat >{{value[h]}}</td>
-                            </tr>
-                            
-                            
+                            </tr>      
                     </table>
+                    </div>
                 </div>
             </div>
+            
             <div ng-show="selectedSes.type == 'T' && dashboard == true" class="margin-top-8">
                 <strong>{{ 'indAggAns' | lang }}</strong>
                 <span class="pull-right"><span style="color: red;">*</span> {{ 'commentReq' | lang }}</span>

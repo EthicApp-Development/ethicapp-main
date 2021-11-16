@@ -1270,3 +1270,26 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     min-height: 30px;
     padding: 5px;
 }
+.spinner {
+    border: 4px solid rgba(0, 0, 0, .1);
+    border-color: #3f97d4;
+    width: 36px;
+    height: 36px;
+    margin: auto;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+  
+    100% {
+      transform: rotate(360deg);
+    }
+  }

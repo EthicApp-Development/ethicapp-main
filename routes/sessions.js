@@ -4,6 +4,7 @@ let express = require('express');
 let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
+let client = require("../modules/client");
 
 router.get("/seslist", (req, res) => {
     if (req.session.uid) {
@@ -84,6 +85,8 @@ router.post("/documents-session", rpg.multiSQL({
     postReqData: ["sesid"],
     sqlParams: [rpg.param("post", "sesid")]
 }));
+
+
 
 router.post("/questions-session", rpg.multiSQL({
     dbcon: pass.dbcon,

@@ -904,8 +904,10 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.iterationIndicator = 1;
     self.currentTimer = null;
     self.showCf = false;
+    self.loading = false;
     self.dataDF = [];
     self.dataCA = {};
+    self.dataPh = {};
     self.dataChatCount = {};
     //new dasboard parameters
     self.iterationQs = null;
@@ -917,7 +919,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.chartOption = {
         chart: {
             type: 'scatterChart',
-            height: 500,
+            height: 400,
             color: d3.scale.category10().range(),
             scatter: {
                 onlyCircles: true
@@ -1020,10 +1022,10 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     };
 
     self.changeQuestion = function () {
-        console.log(self.iterationQs)
-        self.updateCluster() 
+        if (self.iterationQs) {
+            self.updateCluster()    
+        }
     }
-
 
     self.shared.resetGraphs = function () {
         if (self.selectedSes != null && self.selectedSes.type == "L") {
@@ -1089,17 +1091,15 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             console.log("SOCKET.IO-Dashboard");
             if (data.data.status == "OK"){
                 self.dataCA = data.data;
+                console.log(data.data)
                 self.updateCluster() 
-                
+                self.loading = false;
             }   
         })
     };
 
     self.updateCluster = function () {
         let labels = self.dataCA.cluster
-        let topics = Object.values(JSON.parse(self.dataCA.topics[0].json));
-        self.topicBody = topics;
-        self.topicHeader = Object.keys(topics[0]);
         self.bestComments = self.dataCA.best_comments;
         self.worstComments = self.dataCA.worst_comments;
         if (self.iterationQs){
@@ -1107,6 +1107,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             labels = labels.filter(p => p.differential === qId);
             self.bestComments = self.dataCA.best_comments.filter(c => c.differential === qId);
             self.worstComments = self.dataCA.worst_comments.filter(c => c.differential === qId);
+            let topics = Object.values(JSON.parse(self.dataCA.topics.filter(t => t.differential === qId)[0].json));
+            self.topicBody = topics;
+            self.topicHeader = Object.keys(topics[0]);
         }
         labels = labels.map(point => {
             return {key:'cluster ' + point.cluster_label, values :[point]}
@@ -1124,9 +1127,6 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         })
         self.cluster = clusterData;                                                                                                 
         self.api.refresh();
-        
-
-
     }
 
     self.shared.updateState = self.updateState;
@@ -1139,6 +1139,8 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
 
     self.updateStateIni = function () {
         console.log(self.iterationIndicator);
+        console.log("selectedses", self.selectedSes);
+        self.loading = true;
         self.alumTime = {};
         var postdata = { sesid: self.selectedSes.id, iteration: self.iterationIndicator };
         if (self.selectedSes.type == "S") {
@@ -1372,6 +1374,10 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 self.dfsStage = data;
                 if (data.length > 0) {
                     self.iterationQs = data[data.length-1];
+                    if (self.dataCA.length > 1) {
+                        self.updateCluster();
+                    }
+      
                 }
                 $http.post("get-differential-all-stage", _postdata2).success(function (data) {
                     self.shared.difTable = window.buildDifTable(data, self.users, self.dfsStage, self.shared.groupByUid);

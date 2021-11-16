@@ -221,9 +221,9 @@ router.post("/get-differential-all-stage", rpg.multiSQL({
     postReqData: ["stageid"],
     sqlParams: [rpg.param("post", "stageid"), rpg.param("post", "stageid")],
     onEnd: (req, res, arr) => {
+        console.log(arr);
         client.sendAllDiffselection(arr);
         res.send(JSON.stringify(arr));
-        
     }
 }));
 
