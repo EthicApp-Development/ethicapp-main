@@ -924,8 +924,8 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             scatter: {
                 onlyCircles: true
             },
-            showDistX: true,
-            showDistY: true,
+            showDistX: false,
+            showDistY: false,
           //tooltipContent: function(d) {
           //    return d.series && '<h3>' + d.series[0].key + '</h3>';
           //},
@@ -936,7 +936,10 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     return d3.format('.02f')(d);
                 },
                 showMaxMin: true
+                
             },
+            showXAxis: false,
+            showYAxis: false,
             yAxis: {
                 axisLabel: 'Y Axis',
                 tickFormat: function(d){
