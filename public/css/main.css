@@ -1282,7 +1282,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     left: 0;
     right: 0;
     
-    animation: spin 1s linear infinite;
+    animation: spin 2s linear infinite;
 }
 @keyframes spin {
     0% {
