@@ -2484,9 +2484,8 @@ adpp.controller("RubricaController", function ($scope, $http) {
 
 adpp.controller("StagesEditController", function ($scope) {
     var self = $scope;
-    self.stageSelected = null; //index of stage
-    self.currentStage = null; //object of current stage --> change it to index
-    self.selectedQuestion = null; //index of current question
+    self.currentStage = null; //index of stage
+    self.currentQuestion = null; //index of current question
     self.num = null;
     self.design = { //DUMMY DATA
         "metainfo":{
@@ -2559,6 +2558,12 @@ adpp.controller("StagesEditController", function ($scope) {
 
     }
 
+    /*
+
+        MOVER CONTENIDO A CONTROLADORES CORRESPONDIENTES!
+
+    */
+
     self.buildArray = function (n) {
         var a = [];
         for (var i = 1; i <= n; i++) {
@@ -2568,29 +2573,54 @@ adpp.controller("StagesEditController", function ($scope) {
     };
     
     self.selectQuestion = function(id){
-        self.selectedQuestion = id;
+        self.currentQuestion = id; 
+        self.num = self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values
+    }
+
+    self.addQuestion = function(){
+        self.design.phases[self.currentStage].questions.push(
+            {
+            "q_text":"",
+            "ans_format":{
+                "values":5,
+                "l_pole":"",
+                "r_pole":"",
+                "just_required": false,
+                "min_just_length": 10
+        }})
+        self.selectQuestion(self.design.phases[self.currentStage].questions.length-1) //send to new question
+    }
+
+    self.deleteQuestion = function(index){
+        if(self.currentQuestion != null && self.design.phases[self.currentStage].questions.length != 1){
+            //change question index
+            if(index == 0) self.currentQuestion = 0;
+            else if(index < self.design.phases[self.currentStage].questions.length-1) self.currentQuestion = self.currentQuestion;
+            else self.currentQuestion = self.currentQuestion -1;
+            self.design.phases[self.currentStage].questions.splice(index, 1);
+            self.selectQuestion(self.currentQuestion );
+        }
     }
 
     self.selectStage = function(id){
-        if(self.stageSelected != id){
-            self.stageSelected = id;
-            self.currentStage = self.design.phases[id]
-            self.num = self.currentStage.questions[0].ans_format.values
-            console.log(self.currentStage)
+        if(self.currentStage != id){
+            self.currentStage = id;
+            self.currentQuestion = 0 //reset question index
+            self.num = self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values
         }
         else {
-            self.stageSelected = null; //unselect current stage
+            self.currentStage = null; //unselect current stage
             self.num = null;
         }
     }
 
     self.deleteStage = function(){
-        if(self.stageSelected != null && self.design.phases.length != 1){
-            var index = self.stageSelected
+        if(self.currentStage != null && self.design.phases.length != 1){
+            var index = self.currentStage
             self.design.phases.splice(index, 1);
-            self.currentStage = null
+            self.currentQuestion = 0 //reset question index
             self.num = null;
-            self.stageSelected = null;
+            self.currentStage = null;
         }
     }
 
@@ -2625,7 +2655,17 @@ adpp.controller("StagesEditController", function ($scope) {
         return self.design.phases
     }
 
-    
+    self.amountOptions = function(type){
+        self.num = self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values
+        if(type == "+"){
+            self.num = self.num < 9 ? self.num + 1 : 10
+        }
+        else{
+            self.num = self.num > 2 ? self.num - 1 : 2
+        }
+        self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values = self.num
+    }
+
 
 });
 
