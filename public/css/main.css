@@ -12,7 +12,7 @@ body{
     padding: 0;
     margin: 0;
     height: 100%;
-    background-color: #0077c1;
+    background-color: #fff;
 }
 
 hr{
@@ -853,6 +853,10 @@ ng-quill-editor.large .ql-editor{
 
 .scrollable-container.blue{
     background: #0075c3;
+}
+
+.scrollable-container.white{
+    background: #fff;
 }
 
 .text-white{

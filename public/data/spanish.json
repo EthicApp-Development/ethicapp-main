@@ -166,5 +166,7 @@
   "expert": "Expertos",
   "device": "Dispositivo",
   "saveDraft": "Guardar borrador",
-  "cvs": "CV"
+  "cvs": "CV",
+  "mode": "Modo",
+  "modeType":"Interaction Mode"
 }

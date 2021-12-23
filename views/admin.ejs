@@ -28,6 +28,7 @@
     <script src="libs/angular-ui-notification.min.js"></script>
     <script src="libs/save-csv.min.js"></script>
     <script src="libs/angular-tablesort.min.js"></script>
+    <script src="libs/angular-route.js"></script> <!--Agregado recientemente-->
     <script src="js/StagesController.js"></script>
     <script src="js/admin-ctrl.js"></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -98,6 +99,7 @@
     </div>
 
     <!-- TABS -->
+    
     <div class="top-bar top-bar-tabs">
         <div class="qs-tabs">
             <div class="tab tab-text tab-text-lg" ng-repeat="tab in tabOptions" ng-class="{active: tab == selectedTab}"
@@ -120,14 +122,24 @@
             </div>
         </div>
     </div>
-
+    <!--
+    <div class="sidenav">
+        <div style = "margin-top: 10em;">
+            <a href="/admin">Inicio</a>
+            <a href="/test">Lanzar Actividad</a>
+            <a href="#clients">Actividades</a>
+            <a href="#contact">Diseño</a>
+        </div>
+      </div>
+    -->
     <!-- <div class="container-fluid full-height-topbar admin-container"> -->
-    <div class="scrollable-container blue">
+    <div class="scrollable-container blue"> <!--main class makes it go right-->
         <div class="mid-container qs-content simple-pad scrollable-container bg-white">
 
         <div ng-show="selectedId == -1">
             <button class="btn btn-sm btn-primary pull-right" ng-click="openNewSes()">{{'new' | lang}}</button>
             <input placeholder="Buscar..." class="form-control" ng-model="sesSearch">
+            
             <div class="list-group">
                 <a class="list-group-item" ng-repeat="ses in currentSessions() | filter:sesSearch" ng-click="selectSession(ses,ses.id)"
                    ng-class="{'active':ses.id==selectedId}">

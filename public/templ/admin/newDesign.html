@@ -1,0 +1,32 @@
+<br>
+<br>
+<a ng-click="selectView('')" >Atras</a>
+<br>
+<h2>Crear Diseño de Actividad</h2>
+<div>
+    <div class="modal-header">
+        <h4>Escoge el tipo de actividad e ingresa un título que permita identificar el diseño.<h4>
+    </div>
+    <form action="add-session-home" method="post" class="modal-body">
+        <div class="form-group" style="display: flex;">
+            <label class="line-labels">Tipo de actividad: </label>
+            <select name="type" class="form-control line-input">
+                <option value="M">{{ 'semUnits' | lang }}</option>
+                <option value="S">{{ 'multSel' | lang }}</option>
+                <option value="R">{{ 'rolePlaying' | lang }}</option>
+                <option value="T">{{ 'ethics' | lang }} 2</option>
+                <option value="J">{{ 'jigsaw' | lang }}</option>
+            </select>
+        </div>
+        <div class="form-group" style="display: flex;">
+            <label class="line-labels">Título:</label>
+            <input type="text" class="form-control line-input" name="name">
+        </div>
+        <br>
+        <hr>
+        <br>
+        
+        <button class="btn btn-primary" type="submit">Siguiente</button>
+    </form>
+    <button class="btn btn-primary" ng-click="selectView('newDesignExt')">TESTING</button>
+</div>

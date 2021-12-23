@@ -1,0 +1,26 @@
+<h2>Inicio</h2>
+<h4>Diseña una nueva actividad para realizar con tu curso, o lanza una actividad basada en algún diseño. También puedes compartir una actividad con colegas y buscar actividades compartidas por otros.</h4>
+
+<!--Choices-->
+<div class="flex-container">
+    <div ng-click="selectView('newDesign')">Diseñar una Actividad</div>
+    <div>Lanzar una Actividad</div>
+    <div>Compartir un Diseño de Actividad</div>
+    <div>Buscar Diseños Compartidos</div>
+</div>
+
+<!--Activities-->
+<h2>Actividades Recientes</h2>
+<div ng-show="selectedId == -1">
+<div class="list-group pad-content">
+    <div class="list-group-item" ng-repeat="ses in currentSessions() | limitTo: 3">
+        <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
+        <p class="list-group-item-text" ng-bind="ses.descr"></p>
+        <p class="list-group-item-text">Lanzada {{ses.time | date}}</p>
+        <p class="list-group-item-text">Código {{ses.code}}</p>
+        <div class="text-right">
+            <a href="{{routes[ses.type]}}?sesid={{ses.id}}"><button class="btn btn-primary ">Ir a la actividad</button></a> 
+        </div>
+    </div>
+</div>
+</div>

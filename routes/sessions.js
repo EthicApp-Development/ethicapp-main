@@ -46,9 +46,37 @@ router.post("/add-session", rpg.execSQL({
     }
 }));
 
+//TEST ROUTE DELETE LATER
+router.post("/add-session-home", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "with rows as (insert into sessions(name,descr,creator,time,status,type) values ($1,$2,$3,now(),1,$4) returning id)" +
+        " insert into sesusers(sesid,uid) select id, $5 from rows",
+    sesReqData: ["uid"],
+    postReqData: ["name","type"],
+    sqlParams: [rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("ses", "uid"), rpg.param("post","type"), rpg.param("ses", "uid")],
+    onStart: (ses, data, calc) => {
+        if (ses.role != "P") {
+            console.log("ERR: Solo profesor puede crear sesiones.");
+            console.log(ses);
+            return "select $1, $2, $3, $4, $5"
+        }
+    },
+    onEnd: (req, res) => {
+        res.redirect("home");
+    }
+}));
+
 router.get("/admin", (req, res) => {
     if (req.session.role == "P")
         res.render("admin");
+    else
+        res.redirect(".");
+});
+
+//TEST ROUTE DELETE LATER
+router.get("/home", function(req,res){
+    if (req.session.role == "P")
+        res.render("home");
     else
         res.redirect(".");
 });

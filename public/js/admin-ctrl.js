@@ -1,7 +1,7 @@
 "use strict";
 
 var adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill",
-    "ngMap", "tableSort", 'btford.socket-io']);
+    "ngMap", "tableSort", 'btford.socket-io', 'ngRoute']); //ngRoute was newly added
 
 var DASHBOARD_AUTOREALOD = window.location.hostname.indexOf("fen") != -1;
 var DASHBOARD_AUTOREALOD_TIME = 15;
@@ -47,6 +47,34 @@ adpp.config(['ngQuillConfigProvider', function (ngQuillConfigProvider) {
     });
 }]);
 
+//ROUTING
+
+adpp.config(function ($routeProvider, $locationProvider) {
+    $routeProvider
+    // set route for the index page
+    .when('/',
+    {
+        controller: 'RouteCtrl',
+        templateUrl: '/templ/admin/uirouter.html'
+    })
+
+ 
+});
+ 
+adpp.controller('RouteCtrl', function($scope) {
+   
+
+    $scope.template={
+      
+      "home":"/templ/admin/home.html",
+      "newDesign":"/templ/admin/newDesign.html",
+      "newDesignExt":"/templ/admin/newDesignExt.html",
+    }
+     
+   });
+
+//#############################################
+
 adpp.controller("AdminController", function ($scope, $http, $uibModal, $location, $locale, $filter, $socket) {
     var self = $scope;
 
@@ -55,7 +83,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     $locale.NUMBER_FORMATS.GROUP_SEP = '';
     self.shared = {};
     self.sessions = [];
-
+    self.selectedView = '' //current view
     self.selectedSes = null;
     self.documents = [];
     self.questions = [];
@@ -112,6 +140,12 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         if(self.shared.getStages)
             self.shared.getStages();
     };
+
+    self.selectView = function(tab){
+        self.selectedView = tab;
+
+        console.log(self.selectedView);
+    }
 
     self.shared.updateSesData = function () {
         $http({ url: "get-session-list", method: "post" }).success(function (data) {
@@ -194,6 +228,15 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         $uibModal.open({
             templateUrl: "templ/new-ses.html"
         });
+    };
+
+    self.openViewSelected = function () { //Displays View Selected
+        if(self.selectedView == "TEST"){
+            $uibModal.open({
+                templateUrl: "templ/home.html"
+            });
+
+        }
     };
 
     self.openDuplicateSes = function () {
@@ -2438,6 +2481,154 @@ adpp.controller("RubricaController", function ($scope, $http) {
         return !self.editable;
     };
 });
+
+adpp.controller("StagesEditController", function ($scope) {
+    var self = $scope;
+    self.stageSelected = null; //index of stage
+    self.currentStage = null; //object of current stage --> change it to index
+    self.selectedQuestion = null; //index of current question
+    self.num = null;
+    self.design = { //DUMMY DATA
+        "metainfo":{
+            "title":" Test Design",
+            "author": "Claudio Alvarez",
+            "creation_date": "",
+            "id":"HsLKs92M",
+            "file":""
+        },
+        "roles":[],
+        "type":"semantic_differential",
+        "phases":[
+            {
+                "phase":1,
+                "mode":"individual",
+                "chat":null,
+                "anonymous":null,
+                "questions":[
+                    {
+                    "q_text":"Te gusta como esta quedando el formato?",
+                    "ans_format":{
+                        "values":7,
+                        "l_pole":"Me carga",
+                        "r_pole":"Me encanta",
+                        "just_required": true,
+                        "min_just_length": 5
+                    }
+                    },
+                    {
+                    "q_text":"Testing",
+                    "ans_format":{
+                        "values":9,
+                        "l_pole":"Me carga",
+                        "r_pole":"Me encanta",
+                        "just_required": false,
+                        "min_just_length": 8
+                    }
+                    }
+                ]
+            },
+                {
+                "phase":2,
+                "mode":"team",
+                "chat":true,
+                "anonymous":false,
+                "questions":[
+                    {
+                        "q_text":"Pregunta de prueba",
+                        "ans_format":{
+                            "values":10,
+                            "l_pole":"En contra",
+                            "r_pole":"A favor",
+                            "just_required": false,
+                            "min_just_length": 8
+                    }
+                    },
+                    {
+                    "q_text":"Te gusta como esta quedando el formato?",
+                    "ans_format":{
+                        "values":7,
+                        "l_pole":"Me carga",
+                        "r_pole":"Me encanta",
+                        "just_required": true,
+                        "min_just_length": 5
+                    }
+                    }
+                ]
+            }
+        ]
+
+    }
+
+    self.buildArray = function (n) {
+        var a = [];
+        for (var i = 1; i <= n; i++) {
+            a.push(i);
+        }
+        return a;
+    };
+    
+    self.selectQuestion = function(id){
+        self.selectedQuestion = id;
+    }
+
+    self.selectStage = function(id){
+        if(self.stageSelected != id){
+            self.stageSelected = id;
+            self.currentStage = self.design.phases[id]
+            self.num = self.currentStage.questions[0].ans_format.values
+            console.log(self.currentStage)
+        }
+        else {
+            self.stageSelected = null; //unselect current stage
+            self.num = null;
+        }
+    }
+
+    self.deleteStage = function(){
+        if(self.stageSelected != null && self.design.phases.length != 1){
+            var index = self.stageSelected
+            self.design.phases.splice(index, 1);
+            self.currentStage = null
+            self.num = null;
+            self.stageSelected = null;
+        }
+    }
+
+    self.templateStage = function(type, phase_num){
+        return {
+            "phase":phase_num,
+            "mode":"individual",
+            "chat":false,
+            "anonymous":false,
+            "questions":[
+                {
+                    "q_text":"",
+                    "ans_format":{
+                        "values":5,
+                        "l_pole":"",
+                        "r_pole":"",
+                        "just_required": false,
+                        "min_just_length": 8
+                }
+                }
+            ]
+        }
+    }    
+
+    self.addStage = function(){
+        var index = self.design.phases.length -1
+        var stage_num = self.design.phases[index].phase + 1
+        self.design.phases.push(self.templateStage("semantic_differential", stage_num))
+    }
+
+    self.getStages = function(){
+        return self.design.phases
+    }
+
+    
+
+});
+
 
 adpp.controller("OptionsController", function ($scope, $http, Notification) {
     var self = $scope;

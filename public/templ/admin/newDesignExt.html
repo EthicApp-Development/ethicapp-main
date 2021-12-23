@@ -1,0 +1,109 @@
+
+<div class="container" ng-controller="StagesEditController">
+    <h2>Crear Diseño de Actividad</h2>
+    <h3>{{design.metainfo.title}}</h3>
+    <div> <!--ng-controller="DocumentsController"-->
+        <div class="list-group">
+            <div class="list-group-item" ng-repeat="doc in documents" > 
+                <i class="fa fa-file-text-o"></i> <strong ng-bind="doc.title"></strong>
+                <a href="{{doc.path}}" class="discrete"> - {{'view' | lang}}</a>
+                <button class="btn btn-xs btn-default pull-right" ng-disabled="selectedSes.status!=1" 
+                ng-click="deleteDocument(doc.id)">{{'delete' | lang}}</button>
+            </div>
+        </div>
+        <br>
+        <label>{{'add' | lang}} {{'document' | lang}}:</label>
+        <form id="doc-form" class="row" ng-submit="uploadDocument($event)" enctype="multipart/form-data">
+
+        
+            <div class="col-sm-4">
+                <input type="file" class="form-control" name="pdf" ng-disabled="selectedSes.status!=1" required>
+                <input type="text" ng-value="selectedSes.id" name="sesid" hidden>
+            </div>
+            <div class="col-sm-2">
+                <button class="form-control btn btn-default" 
+                ng-disabled="selectedSes.status!=1 || busy">Agregar<i ng-show="busy" class="fa fa-spinner fa-pulse"></i></button>
+            </div>
+        </form>
+    </div>
+    <br>
+    <hr>
+
+   <div>
+       
+        <div class="container phase_container">
+            <div class = "row">
+                <div class="col-xs-1 phase_element"  ng-repeat="item in getStages()" ng-init="current" 
+                ng-class='{phase_selected:stageSelected==$index}' ng-click='selectStage($index)'>
+                    {{'stage' | lang}} {{$index+ 1}}
+                    {{'mode' | lang}}: {{item.mode}}
+                </div>
+            </div>
+        </div>
+    
+        <button class="btn btn-primary" ng-click="addStage()">+ Agregar etapa</button>
+        <button class="btn btn-danger" ng-click="deleteStage()" ng-show="design.phases.length > 1 && stageSelected != null">Eliminar etapa</button>
+    
+
+        <div class="container stage_container"> <!--ng-controller="StagesController"-->
+            <div ng-show="stageSelected != null">
+                <h4><strong>{{'stage' | lang}} #{{stageSelected+1}} {{'modeType' | lang}}:</strong>  {{currentStage.mode}} </h4>
+                <!--TABS QUESTIONS-->
+                <div class="qs-tabs"> <!--CHANGE TABS CLASSES TO CUSTOM MADE-->
+                    <div ng-repeat="i in buildArray(currentStage.questions.length)" class="tab tab-text tab-text-lg" id="seslistdiv" ng-click= "changeTab(true)" ng-class="{'active': !currTab}">
+                        Pregunta {{i}} -> {{$index}}
+                    </div>
+                    <div class="tab tab-text tab-text-lg" id="seslistdiv" ng-click = "changeTab(false)" ng-class="{'active': currTab}">
+                        + Agregar pregunta
+                    </div>
+                </div>
+                <form> <!--ADD FORMS ACTIONS, MIGHT NOT BE NEEDED. CHECK LATER-->
+                    <div class="container-fluid stage_container">
+                        <div> <!--ADD CSS RULES-->
+                            <p>Texto de pregunta</p>
+                            <input type="text" class="form-control text-center" ng-disabled="readonly"
+                            placeholder="Titulo" ng-model="currentStage.questions[0].q_text"> 
+                        </div>
+                        <p>Escala de respuesta de diferencial semántico</p>
+                        <div class="row margin-top-8">
+                            <div class="col-xs-3 text-right">
+                                <div class="tlabel">
+                                    <input type="text" class="form-control" ng-disabled="readonly" 
+                                    placeholder="Left" ng-model="currentStage.questions[0].ans_format.l_pole">
+                                </div>
+                                <button class="btn btn-default" ng-click="num = num > 2 ? num - 1 : 2" ng-disabled="readonly">-</button>
+                            </div>
+                            <div class="dopts col-xs-6">
+                                <div class="option eq-space" ng-repeat="i in buildArray(num)">{{i}}</div>
+                            </div>
+                            <div class="col-xs-3">
+                                <button class="btn btn-default" ng-click="num = num < 9 ? num + 1 : 10" ng-disabled="readonly">+</button>
+                                <div class="tlabel">
+                                    <input type="text" class="form-control" ng-disabled="readonly"
+                                     placeholder="Right" ng-model="currentStage.questions[0].ans_format.r_pole">
+                                </div>
+                            </div>
+                        </div>
+                        <div> <!--ADD CSS RULES-->
+                            <p>Comentario obligatorio</p>
+                            <input type="radio" name="comment" value=1>
+                            <label>Si</label>
+                            <input type="radio" name="comment" value=0>
+                            <label>No</label>
+                        </div>
+                    
+                    
+                </form>
+            </div>
+        </div>
+    </div>
+    <br>
+    <br>
+
+    <div class = "row" style="padding-left: 45%;">
+        <div class="col-xs-12">
+            <button class="btn btn-primary" ng-click="">Guardar</button>
+            <button class="btn btn-primary" ng-click="">Lanzar Actividad</button>
+        </div>
+    </div>
+</div>
