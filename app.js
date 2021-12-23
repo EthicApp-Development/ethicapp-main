@@ -21,8 +21,10 @@ let rubrica = require("./routes/rubrica");
 let geo = require("./routes/geo");
 let stages = require("./routes/stages");
 let pass = require("./modules/passwords");
+require("./routes/passport-setup")
 
 let app = express();
+
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));

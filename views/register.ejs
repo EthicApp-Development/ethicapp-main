@@ -4,18 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>DocCollab</title>
+    <script src="libs/angular.min.js"></script>
+    <script src="libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
+    <!--<script src="js/ses-ctrl.js"></script>-->
+    <script src="libs/socket.min.js"></script>
+    <script src="libs/intro.min.js"></script>
+    <script src="libs/angular-intro.min.js"></script>
+    <script src="libs/ua-parser.min.js"></script>
+    <script src="js/ses-ctrl.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit"
+    async defer>
+</script>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
     <link rel="stylesheet" href="css/main.css"/>
 </head>
 <body>
 
-<div class="middle-box">
+<div class="middle-box" >
 
-    <h2>Registro Alumnos</h2>
+    <h2 class="app-title">EthicApp</h2>
     <hr/>
     <br/>
-    <form action="register" method="POST">
-        <label>Nombre:</label>
+    <h5>¿Quieres una cuenta personal o institucional?</h5>
+
+    <form action="/action_page.php">
+        <label class="form-controll line-labels" style="height: fit-content;">
+            
+         <input type="radio" id="rad1" class="radio-btn" onchange="hideB(this)" name="fav_language" value="Personal" checked >
+        <label for="rad1">Personal</label>
+      
+          <input type="radio" id="rad2"  class="radio-btn" onchange="hideA(this)"  name="fav_language" value="Institucional" >
+        <label for="rad2">Institucional</label>
+    </label>
+    </form>
+
+
+    <form action="register" method="POST" id="form_user">
+        <label class="left">Nombre:</label>
         <input type="text" class="form-control" name="name" required autofocus><br>
         <label>Apellido:</label>
         <input type="text" class="form-control" name="lastname"><br>
@@ -31,19 +57,109 @@
         </select><br/>
         <label>Contraseña:</label>
         <input type="password" class="form-control" name="pass"><br>
+        <label>Confirmar Contraseña:</label>
+        <input type="password" class="form-control" name="conf-pass"><br>
 
-        <button type="submit" class="btn btn-primary form-control">Registrar</button>
+
+        <div class="g-recaptcha" id="captcha" data-sitekey="6LcGAKUdAAAAAAw_3EmC7ViIPclVDON_Gc5o4Uay" data-type="image"></div>
+
+  
+        <button type="submit" class="btn btn-primary form-control" id="register-btn">Registrar</button>
     </form>
 
-    <br><br>
+
+    <form action="register" method="POST" id="form_institucion" style="display: none;">
+        <label class="left">Nombre de la Institucion:</label>
+        <input type="text" class="form-control" name="name" required autofocus><br>
+        <label>Numero de estudiantes que podrian usar EthicApp:</label>
+        <select name="Numero_estudiantes" class="form-control">
+            <option value="1000">1-1000</option>
+            <option value="2000">1001-2000</option>
+            <option value="3000">2001-3000</option>
+        </select><br/>
+        <label>Pais:</label>
+        <select name="Pais" class="form-control">
+            <option value="Chile">Chile</option>
+            <option value="Estados Unidos">Estados Unidos</option>
+            <option value="Argentina">Argentina</option>
+        </select><br/>
+
+        <label>Dominios de correo electronico Institucionales:</label>
+        <input type="text" class="form-control" name="lastname" placeholder="mit.edu,harvard.edu,stanford.edu">
+        <h5 style="font-size: 10px;" class="form-controll">ingresar separados por coma</h5><br>
+        
+        <label class="left">Nombre:</label>
+        <input type="text" class="form-control" name="name" required autofocus><br>
+        <label class="left">Apellido:</label>
+        <input type="text" class="form-control" name="lastname" required autofocus><br>
+        <label class="left">Correo electronico institucional:</label>
+        <input type="text" class="form-control" name="email" required autofocus><br>
+        <label>Cargo:</label>
+        <select name="Cargo" class="form-control">
+            <option value="Academico">Academico</option>
+            <option value="Rector">Rector</option>
+            <option value="Director">Director</option>
+        </select><br/>
+        <label>Contraseña:</label>
+        <input type="password" class="form-control" name="pass"><br>
+        <label>Confirmar Contraseña:</label>
+        <input type="password_conf" class="form-control" name="conf-pass"><br>
+        <label>Ingresa el codigo captcha a continuacion:</label>
+
+        <div id="captcha" class="g-recaptcha" data-sitekey="6LcGAKUdAAAAAAw_3EmC7ViIPclVDON_Gc5o4Uay"></div>
+
+        <button type="submit" class="btn btn-primary form-control">Solicitar cuenta institucional</button>
+    </form>
+
+
+    <br>
 
     <!--<small>Do have a FEN account?</small>
     <a href="login-fen">Login with FEN</a><br>-->
     <small>Ya tiene una cuenta?</small>
     <br/>
-    <a href="login">Login</a>
+
+    <a href="login" class="line-input col-md-3" style="margin-top: 8px;">Login</a>
+    
+    
+    <div class="line-input">
+          <a class="btn btn-outline-dark" href="/auth-google" role="button" style="text-transform:none">
+            <img width="20px" style="margin-bottom:3px; margin-right:5px" alt="Google sign-in" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png" />
+            Login with Google
+          </a>
+      </div>
+
 
 </div>
 
 </body>
 </html>
+
+
+<script>
+function hideA(x) {
+   if (x.checked) {
+     document.getElementById("form_user").style.display = "none";
+     document.getElementById("form_institucion").style.display = "initial";
+   }
+ }
+
+ function hideB(x) {
+   if (x.checked) {
+     document.getElementById("form_institucion").style.display = "none";
+     document.getElementById("form_user").style.display = "initial";
+   }
+ }
+ window.onload = function() {
+    document.getElementById("rad1").checked = true;
+    document.getElementById("rad2").checked = false;
+};
+</script>
+
+<script type="text/javascript">
+  var onloadCallback = function() {
+    grecaptcha.render('captcha', {
+          'sitekey' : '6LcGAKUdAAAAAAw_3EmC7ViIPclVDON_Gc5o4Uay'
+        });
+  };
+</script>

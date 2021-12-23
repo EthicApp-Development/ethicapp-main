@@ -9,13 +9,16 @@
 </head>
 <body>
 
-<div class="middle-box">
+<div class="middle-box large-box">
 
     <div class="logo">
         <img src="img/logo.png" alt="logo">
     </div>
 
-    <h2>Login</h2>
+    <h2 class="app-title">
+        EthicApp
+    </h2>
+
     <hr/>
     <% if(rc == 1) {%>
     <div class="alert alert-info">
@@ -40,25 +43,42 @@
     <% } %>
     <br/>
     <form action="login" method="POST">
-        <label>RUT o E-mail:</label>
-        <input type="text" class="form-control" name="user" required autofocus><br>
-        <label>Contraseña:</label>
-        <input type="password" class="form-control" name="pass" required><br>
-        <button type="submit" class="btn btn-primary form-control">Ingresar</button>
+        <label class=" line-labels">
+            Correo:
+            <input class="grid-item line-input form-controll" type="text"  name="user" required autofocus>
+            <br>
+        </label>
+
+        <label class="line-labels">
+            Contraseña:
+            <input class="grid-item line-input form-controll" type="password"  name="pass" required>
+            <br>
+        </label>
+        <button type="submit" class="btn btn-primary" style="width: 200px;">
+            Ingresar
+        </button>
     </form>
+    <br>
+  
+    <a href="register">Registrarse </a>|
     <a href="forgot-pass">Olvidó su contraseña?</a>
 
-    <br><br>
+    <div class="row ">
+        <div class="col-md-3  line-labels">
+          <a class="btn btn-outline-dark" href="/google" role="button" style="text-transform:none">
+            <img width="20px" style="margin-bottom:3px; margin-right:5px" alt="Google sign-in" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png" />
+            Login with Google
+          </a>
+        </div>
+      </div>
 
-    <!--<small>Do have a FEN account?</small>
+</div>
+<!--<small>Do have a FEN account?</small>
     <a href="login-fen">Login with FEN</a><br>-->
     <!--<small>Registro:</small>-->
-    <br/>
-    <a href="register">Crear nueva cuenta</a>
     <!--<br>
     <a href="#">Nueva cuenta de profesor</a>-->
 
-</div>
 
 </body>
 </html>
