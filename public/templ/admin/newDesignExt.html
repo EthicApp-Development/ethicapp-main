@@ -94,15 +94,19 @@
                 <input type="radio" name="comment" value=0>
                 <label>{{'no'|lang}}</label>
             </div>
+            <div style="display: flex;">  <!--ADD CSS RULES-->
+                <p>{{'minComment'|lang}}</p>
+                <input type="number" id="points" name="length" step="1"  min=5 
+                ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.min_just_length"
+                style="width: 3.1em; text-align: center;">
+                <label for="length">{{'words'|lang}}</label>
+            </div>
             <button class="btn btn-danger" ng-click="deleteQuestion(currentQuestion)" 
             ng-show="design.phases[currentStage].questions.length > 1">{{'delete'|lang}} {{'question'|lang}}</button>
         </div>
         
     </div>
-    <br>
-    <br>
-
-    <div class = "row" style="padding-left: 45%;">
+    <div class = "row" style="padding-left: 80%;">
         <div class="col-xs-12">
             <button class="btn btn-primary" ng-click="">{{'save'|lang}}</button>
             <button class="btn btn-primary" ng-click="">{{'launchActivity'|lang}}</button>

@@ -192,5 +192,7 @@
   "right":"Right",
   "yes":"Yes",
   "no":"No",
-  "team":"Team"
+  "team":"Team",
+  "words":"Words",
+  "minComment":"Minimum length of comment"
 }

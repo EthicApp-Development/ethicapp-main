@@ -2624,9 +2624,9 @@ adpp.controller("StagesEditController", function ($scope) {
         }
     }
 
-    self.templateStage = function(type, phase_num){
+    self.templateStage = function(type){ 
+        // UNUSED
         return {
-            "phase":phase_num,
             "mode":"individual",
             "chat":false,
             "anonymous":false,
@@ -2643,12 +2643,23 @@ adpp.controller("StagesEditController", function ($scope) {
                 }
             ]
         }
-    }    
+    }
+    
+    self.copyPrevStage = function(type, prevphase){
+        var phase = JSON.parse(JSON.stringify(prevphase)); //removes reference from previous object
+        return {
+            "mode":phase.mode,
+            "chat":phase.chat,
+            "anonymous":phase.anonymous,
+            "questions":phase.questions
+        }
+    }
 
     self.addStage = function(){
         var index = self.design.phases.length -1
-        var stage_num = self.design.phases[index].phase + 1
-        self.design.phases.push(self.templateStage("semantic_differential", stage_num))
+        var prev_phase = self.design.phases[index]
+        self.design.phases.push(self.copyPrevStage("semantic_differential", prev_phase))
+        console.log(self.design.phases)
     }
 
     self.getStages = function(){
