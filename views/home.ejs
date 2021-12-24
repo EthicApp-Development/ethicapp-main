@@ -58,16 +58,16 @@
 
         <div class="sidenav" > <!--Left side NAV BAR-->
             <div style = "margin-top: 5em;">
-                <a ng-click="selectView('')">Inicio</a>
-                <a >Lanzar Actividad</a>
-                <a >Actividades</a>
-                <a >Diseños</a>
+                <a ng-click="selectView('')">{{'home' | lang}}</a>
+                <a >{{'launchActivity' | lang}}</a>
+                <a >{{'activities' | lang}}</a>
+                <a >{{'designs' | lang}}</a>
             </div>
         </div>
         <div class="main-body vl"   > <!--Right side--> 
 
-        
        <div ng-view=""></div> <!--Ng view templates-->
+       
     </div>
     </div>  
 </body>

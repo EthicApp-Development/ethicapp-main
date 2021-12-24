@@ -1,6 +1,6 @@
 
 <div class="container" ng-controller="StagesEditController">
-    <h2>Crear Diseño de Actividad</h2>
+    <h2>{{'designMsg'|lang}}</h2>
     <h3>{{design.metainfo.title}}</h3>
     <div> <!--ng-controller="DocumentsController"-->
         <div class="list-group">
@@ -22,88 +22,90 @@
             </div>
             <div class="col-sm-2">
                 <button class="form-control btn btn-default" 
-                ng-disabled="selectedSes.status!=1 || busy">Agregar<i ng-show="busy" class="fa fa-spinner fa-pulse"></i></button>
+                ng-disabled="selectedSes.status!=1 || busy">{{'add'|lang}}<i ng-show="busy" class="fa fa-spinner fa-pulse"></i></button>
             </div>
         </form>
     </div>
     <br>
     <hr>
 
-   <div>
-       
-        <div class="container phase_container">
-            <div class = "row">
-                <div class="col-xs-1 phase_element"  ng-repeat="item in getStages()" ng-init="current" 
-                ng-class='{phase_selected:currentStage==$index}' ng-click='selectStage($index)'>
-                    {{'stage' | lang}} {{$index+ 1}}
-                    {{'mode' | lang}}: {{item.mode}}
-                </div>
+   
+    <!--Phases selections-->
+    <div class="container phase_container">
+        <div class = "row">
+            <div class="col-xs-1 phase_element"  ng-repeat="item in getStages()" ng-init="current" 
+            ng-class='{phase_selected:currentStage==$index}' ng-click='selectStage($index)'>
+                {{'stage' | lang}} {{$index+ 1}}
+                {{'mode' | lang}}: {{item.mode|lang}}
             </div>
         </div>
-    
-        <button class="btn btn-primary" ng-click="addStage()">+ Agregar etapa</button>
-        <button class="btn btn-danger" ng-click="deleteStage()" ng-show="design.phases.length > 1 && currentStage != null">Eliminar etapa</button>
+    </div>
+
+    <button class="btn btn-primary" ng-click="addStage()">+ {{'add'|lang}} {{'stage'|lang}}</button>
+    <button class="btn btn-danger" ng-click="deleteStage()" 
+    ng-show="design.phases.length > 1 && currentStage != null && currentStage != 0">{{'delete'|lang}} {{'stage'|lang}}</button>
     
 
-        <div class="container stage_container"> <!--ng-controller="StagesController"-->
-            <div ng-show="currentStage != null">
-                <h4><strong>{{'stage' | lang}} #{{currentStage+1}} {{'modeType' | lang}}:</strong>  {{design.phases[currentStage].mode}} </h4>
-                <!--TABS QUESTIONS-->
-                <div class="qs-tabs"> <!--CHANGE TABS IDS & CLASSES TO CUSTOM MADE-->
-                    <div ng-repeat="i in buildArray(design.phases[currentStage].questions.length)" 
-                    class="tab tab-text tab-text-lg" id="seslistdiv" ng-click= 'selectQuestion($index)' ng-class="{'active': !currTab}">
-                        Pregunta {{i}}
+    <div class="container stage_container" ng-show="currentStage != null"> <!--ng-controller="StagesController"-->
+            
+        <h4><strong>{{'stage' | lang}} #{{currentStage+1}} {{'modeType' | lang}}:</strong>  {{design.phases[currentStage].mode|lang}} </h4>
+        <!--TABS QUESTIONS-->
+        <div class="tab-cs">
+            <button ng-repeat="i in buildArray(design.phases[currentStage].questions.length)" 
+            class="tab-cs" ng-click= 'selectQuestion($index)' ng-class="{'btn-selected': currentQuestion == $index}">
+            {{'question'|lang}} {{i}}
+            </button>
+            <button class="tab-cs" ng-click = "addQuestion()">
+                + {{'add'|lang}}
+            </button>
+        </div>
+        
+        <div class="question_container">
+            <div style="display: flex;"> <!--ADD CSS RULES-->
+                <p>{{'questionText'|lang}}</p>
+                <input type="text" class="form-control text-center" ng-disabled="readonly"
+                placeholder="{{'title'|lang}}" ng-model="design.phases[currentStage].questions[currentQuestion].q_text"> 
+            </div>
+            <p>{{'semanticDiffEscale'|lang}}</p>
+            <div class="row margin-top-8">
+                <div class="col-xs-3 text-right">
+                    <div class="tlabel">
+                        <input type="text" class="form-control" ng-disabled="readonly" 
+                        placeholder="{{'left'|lang}}" ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.l_pole">
                     </div>
-                    <div class="tab tab-text tab-text-lg" id="seslistdiv" ng-click = "addQuestion()" ng-class="{'active': currTab}">
-                        + Agregar pregunta
+                    <button class="btn btn-default" ng-click="amountOptions('-')" ng-disabled="readonly">-</button>
+                </div>
+                <div class="dopts col-xs-6">
+                    <div class="option eq-space" ng-repeat="i in buildArray(num)">{{i}}</div>
+                </div>
+                <div class="col-xs-3">
+                    <button class="btn btn-default" ng-click="amountOptions('+')" ng-disabled="readonly">+</button>
+                    <div class="tlabel">
+                        <input type="text" class="form-control" ng-disabled="readonly"
+                            placeholder="{{'right'|lang}}" ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.r_pole">
                     </div>
                 </div>
                 
-                <div class="container-fluid stage_container">
-                    <div> <!--ADD CSS RULES-->
-                        <p>Texto de pregunta</p>
-                        <input type="text" class="form-control text-center" ng-disabled="readonly"
-                        placeholder="Titulo" ng-model="design.phases[currentStage].questions[currentQuestion].q_text"> 
-                    </div>
-                    <p>Escala de respuesta de diferencial semántico</p>
-                    <div class="row margin-top-8">
-                        <div class="col-xs-3 text-right">
-                            <div class="tlabel">
-                                <input type="text" class="form-control" ng-disabled="readonly" 
-                                placeholder="Left" ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.l_pole">
-                            </div>
-                            <button class="btn btn-default" ng-click="amountOptions('-')" ng-disabled="readonly">-</button>
-                        </div>
-                        <div class="dopts col-xs-6">
-                            <div class="option eq-space" ng-repeat="i in buildArray(num)">{{i}}</div>
-                        </div>
-                        <div class="col-xs-3">
-                            <button class="btn btn-default" ng-click="amountOptions('+')" ng-disabled="readonly">+</button>
-                            <div class="tlabel">
-                                <input type="text" class="form-control" ng-disabled="readonly"
-                                    placeholder="Right" ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.r_pole">
-                            </div>
-                        </div>
-                    </div>
-                    <div> <!--ADD CSS RULES-->
-                        <p>Comentario obligatorio</p>
-                        <input type="radio" name="comment" value=1>
-                        <label>Si</label>
-                        <input type="radio" name="comment" value=0>
-                        <label>No</label>
-                    </div>
-                    <button class="btn btn-danger" ng-click="deleteQuestion(currentQuestion)" 
-                    ng-show="design.phases[currentStage].questions.length > 1">Eliminar pregunta</button>
             </div>
+            <div style="display: flex;">  <!--ADD CSS RULES-->
+                <p>{{'mandatoryComment'|lang}}</p>
+                <input type="radio" name="comment" value=1>
+                <label>{{'yes'|lang}}</label>
+                <input type="radio" name="comment" value=0>
+                <label>{{'no'|lang}}</label>
+            </div>
+            <button class="btn btn-danger" ng-click="deleteQuestion(currentQuestion)" 
+            ng-show="design.phases[currentStage].questions.length > 1">{{'delete'|lang}} {{'question'|lang}}</button>
         </div>
+        
     </div>
     <br>
     <br>
 
     <div class = "row" style="padding-left: 45%;">
         <div class="col-xs-12">
-            <button class="btn btn-primary" ng-click="">Guardar</button>
-            <button class="btn btn-primary" ng-click="">Lanzar Actividad</button>
+            <button class="btn btn-primary" ng-click="">{{'save'|lang}}</button>
+            <button class="btn btn-primary" ng-click="">{{'launchActivity'|lang}}</button>
         </div>
     </div>
-</div>
+</div>  
