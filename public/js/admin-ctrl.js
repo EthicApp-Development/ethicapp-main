@@ -2659,7 +2659,6 @@ adpp.controller("StagesEditController", function ($scope) {
         var index = self.design.phases.length -1
         var prev_phase = self.design.phases[index]
         self.design.phases.push(self.copyPrevStage("semantic_differential", prev_phase))
-        console.log(self.design.phases)
     }
 
     self.getStages = function(){
