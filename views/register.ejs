@@ -62,15 +62,13 @@
 
 
         <div class="g-recaptcha" id="captcha" data-sitekey="6LcGAKUdAAAAAAw_3EmC7ViIPclVDON_Gc5o4Uay" data-type="image"></div>
-
-  
         <button type="submit" class="btn btn-primary form-control" id="register-btn">Registrar</button>
     </form>
 
 
-    <form action="register" method="POST" id="form_institucion" style="display: none;">
+    <form action="register_institucion" method="POST" id="form_institucion" style="display: none;">
         <label class="left">Nombre de la Institucion:</label>
-        <input type="text" class="form-control" name="name" required autofocus><br>
+        <input type="text" class="form-control" name="name_ins" required autofocus><br>
         <label>Numero de estudiantes que podrian usar EthicApp:</label>
         <select name="Numero_estudiantes" class="form-control">
             <option value="1000">1-1000</option>
@@ -85,7 +83,7 @@
         </select><br/>
 
         <label>Dominios de correo electronico Institucionales:</label>
-        <input type="text" class="form-control" name="lastname" placeholder="mit.edu,harvard.edu,stanford.edu">
+        <input type="text" class="form-control" name="domains" placeholder="mit.edu,harvard.edu,stanford.edu">
         <h5 style="font-size: 10px;" class="form-controll">ingresar separados por coma</h5><br>
         
         <label class="left">Nombre:</label>
@@ -103,12 +101,11 @@
         <label>Contraseña:</label>
         <input type="password" class="form-control" name="pass"><br>
         <label>Confirmar Contraseña:</label>
-        <input type="password_conf" class="form-control" name="conf-pass"><br>
-        <label>Ingresa el codigo captcha a continuacion:</label>
+        <input type="password" class="form-control" name="conf-pass"><br>
+      
+        <div class="g-recaptcha" id="captcha2" data-sitekey="6LcGAKUdAAAAAAw_3EmC7ViIPclVDON_Gc5o4Uay" data-type="image"></div><br>
 
-        <div id="captcha" class="g-recaptcha" data-sitekey="6LcGAKUdAAAAAAw_3EmC7ViIPclVDON_Gc5o4Uay"></div>
-
-        <button type="submit" class="btn btn-primary form-control">Solicitar cuenta institucional</button>
+        <button type="submit" class="btn btn-primary form-controll">Solicitar cuenta institucional</button>
     </form>
 
 
@@ -141,6 +138,8 @@ function hideA(x) {
    if (x.checked) {
      document.getElementById("form_user").style.display = "none";
      document.getElementById("form_institucion").style.display = "initial";
+
+
    }
  }
 
@@ -148,6 +147,7 @@ function hideA(x) {
    if (x.checked) {
      document.getElementById("form_institucion").style.display = "none";
      document.getElementById("form_user").style.display = "initial";
+
    }
  }
  window.onload = function() {
@@ -159,6 +159,9 @@ function hideA(x) {
 <script type="text/javascript">
   var onloadCallback = function() {
     grecaptcha.render('captcha', {
+          'sitekey' : '6LcGAKUdAAAAAAw_3EmC7ViIPclVDON_Gc5o4Uay'
+        });
+    grecaptcha.render('captcha2', {
           'sitekey' : '6LcGAKUdAAAAAAw_3EmC7ViIPclVDON_Gc5o4Uay'
         });
   };
