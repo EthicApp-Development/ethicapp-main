@@ -4,11 +4,11 @@
 <!--Choices-->
 <div class="flex-container">
     <div ng-click="selectView('newDesign')">{{'designActivity' | lang}}</div>
-    <div>{{'launchAnActivity' | lang}}</div>
+    <div ng-click="selectView('launchActivity')">{{'launchAnActivity' | lang}}</div>
     <div>{{'shareActivityDesign' | lang}}</div>
     <div>{{'searchSharedDesign' | lang}}</div>
-    <div style="background-color: rgb(226, 95, 95); color: white;">{{'adminInstUsers'|lang}} (Work in Progress)</div>
-    <div style="background-color: rgb(226, 95, 95); color: white;">{{'adminInstData'|lang}} (Work in Progress)</div>
+    <div ng-click="selectView('users')" style="background-color: rgb(226, 95, 95); color: white;">{{'adminInstUsers'|lang}} (Work in Progress)</div>
+    <div ng-click="selectView('institution')" style="background-color: rgb(226, 95, 95); color: white;">{{'adminInstData'|lang}} (Work in Progress)</div>
 </div>
 
 <!--Activities-->
