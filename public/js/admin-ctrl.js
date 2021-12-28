@@ -69,6 +69,11 @@ adpp.controller('RouteCtrl', function($scope) {
       "home":"/templ/admin/home.html",
       "newDesign":"/templ/admin/newDesign.html",
       "newDesignExt":"/templ/admin/newDesignExt.html",
+      "designs":"/templ/admin/designs.html",
+      "users":"/templ/admin/users.html",
+      "institution":"/templ/admin/institution.html",
+      "activities":"/templ/admin/activities.html",
+      "launchActivity":"/templ/admin/launchActivity.html",
     }
      
    });
