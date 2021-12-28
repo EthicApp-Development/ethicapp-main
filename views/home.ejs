@@ -36,8 +36,9 @@
     <script src="libs/angular-route.js"></script> <!--Agregado recientemente-->
 </head>
 <body ng-controller="AdminController">
-    <!--
-      <div class="top-bar-mini cflex">
+    
+    <!--TOP BAR-->
+    <div class="top-bar-mini cflex" ng-hide="true"> <!--WORK IN PROGRESS-->
         <div class="cf1">
             <a href="seslist" class="simple-margin-left">
                 <h3 class="logo-bar app-title">EthicApp</h3>
@@ -53,7 +54,7 @@
         </div>
       </div>
     </div>
-    -->
+    
     <div ng-controller= "TabsController" >
 
         <div class="sidenav" > <!--Left side NAV BAR-->
@@ -62,11 +63,15 @@
                 <a >{{'launchActivity' | lang}}</a>
                 <a >{{'activities' | lang}}</a>
                 <a >{{'designs' | lang}}</a>
+                <a class="debug-wip">{{'users' | lang}} WIP</a>
+                <a class="debug-wip"> {{'institution'|lang}} WIP</a>
             </div>
         </div>
         <div class="main-body vl"   > <!--Right side--> 
-
-       <div ng-view=""></div> <!--Ng view templates-->
+            <div class="container" style="margin-top: 3em;">
+                <div ng-view=""></div> <!--Ng view templates-->
+            </div>
+       
        
     </div>
     </div>  

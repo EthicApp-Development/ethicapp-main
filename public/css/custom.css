@@ -2,9 +2,17 @@ body {
     font-family: "Helvetica Neue", sans-serif;
 }
   
+.navmenu{
+    position: fixed;
+    z-index: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+}
+
 .sidenav {
     height: 100%;
-    width: 240px;
+    width: 12%;
     position: fixed;
     z-index: 1;
     top: 0;
@@ -23,10 +31,11 @@ body {
 }
 .vl {
     border-left: 1px solid #bbbbbb;
-    height: 100%;
+    height:100%;
     position: absolute;
     margin-left: -3px;
-    top: 0;
+    /*margin-top: 3.5em;*/
+    /*top: 3.5em;*/
     }
 
 .sidenav a:hover {
@@ -34,7 +43,7 @@ body {
 }
 
 .main-body {
-    margin-left: 240px; /* Same as the width of the sidenav */
+    margin-left: 12%; /* Same as the width of the sidenav */
     padding: 0px 10px;
 }
 
@@ -44,23 +53,28 @@ body {
     flex-wrap: wrap;
     background-color: #fff;
     align-items: center;
-    gap: 30px;
+    gap: 30px;  
 }
 
 .flex-container > div {
     background-color: #fff;
-    width: 160px;
-    height: 110px;
-    margin: 10px;
+    width: 12em;
+    height: 9em;
+    margin: 0.625em;
     text-align: center;
-    line-height: 34px;
-    font-size: 14px;
-    border:1px solid #bbbbbb;
+    line-height: 2.135em;
+    font-size: 1em;
+    border:2px solid #bbbbbb;
     align-items: center;
     justify-content: center;
     display: flex;
     cursor: pointer;
 }
+
+.flex-container > div:hover {
+    border:2px solid #67aed6;
+}
+
 
 .circle {
     width: 100px;
@@ -95,6 +109,10 @@ body {
 .line-input{
     margin-left: 10px;
 }
+.activities_container{
+    width: 80em;
+}
+
 /* Phase item */
 .phase_element{
     border:4px solid #bbbbbb;
@@ -112,6 +130,9 @@ body {
     margin: 2em;
     border:1px solid #bbbbbb;
 }
+.margin_container{
+    margin: 2em;
+}
 .phase_selected{
     border:4px solid #f39316;
 }
@@ -124,6 +145,7 @@ body {
 /*Current phase container*/
 .stage_container{
     margin: 2em;
+    max-width: 80em;
     border:1px solid #bbbbbb;
 }
 
@@ -162,4 +184,21 @@ body {
 .btn-selected{
     background-color: #bbbbbb;
     font-weight: bolder;
+}
+.margin-left-low{
+    margin-left: 2em;
+}
+
+.debug-wip{
+    background-color: rgb(226, 95, 95); color: white;
+}
+
+.stack-top{
+    z-index: 9;
+    margin: 20px;
+}
+
+.div-debug{ /*USE TO CHECK DIV SIZES*/
+    border: 1px solid rgb(245, 0, 0);
+    background-color: #99f8ff;
 }

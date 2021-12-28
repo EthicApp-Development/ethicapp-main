@@ -195,5 +195,11 @@
   "no":"No",
   "team":"Equipo",
   "words":"Palabras",
-  "minComment":"Largo mínimo de comentario"
+  "minComment":"Largo mínimo de comentario",
+  "institution":"Institución",
+  "adminInstUsers":"Administrar Usuarios Institucionales",
+  "adminInstData":"Administrar datos de Institución",
+  "activeChat":"Activar chat",
+  "studentAnon":"Anonimato de estudiantes",
+  "advOpts":"Opciones avanzadas de interacción"
 }

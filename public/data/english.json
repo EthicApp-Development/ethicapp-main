@@ -194,5 +194,11 @@
   "no":"No",
   "team":"Team",
   "words":"Words",
-  "minComment":"Minimum length of comment"
+  "minComment":"Minimum length of comment",
+  "institution":"Institution",
+  "adminInstUsers":"Manage Institutional Users",
+  "adminInstData":"Manage Institution Data",
+  "activeChat":"Activate chat",
+  "studentAnon":"Students anonimity",
+  "advOpts":"Advanced interaction options"
 }

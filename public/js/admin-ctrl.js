@@ -2482,11 +2482,28 @@ adpp.controller("RubricaController", function ($scope, $http) {
     };
 });
 
-adpp.controller("StagesEditController", function ($scope) {
+adpp.controller("StagesEditController", function ($scope, $filter) {
     var self = $scope;
+    self.flang = function (key) {
+        return $filter("lang")(key);
+    };
+
+
+    self.keyGroups = function (k1, k2) {
+        return {
+            key: k1 + (k2 == null ? "" : " " + k2),
+            name: self.flang(k1) + (k2 == null ? "" : " " + self.flang(k2))
+        };
+    };
+
     self.currentStage = null; //index of stage
     self.currentQuestion = null; //index of current question
+    self.stageType = null;
+    self.methods = [self.keyGroups("random"), self.keyGroups("performance", "homog"), self.keyGroups("performance", "heterg"), 
+                    self.keyGroups("knowledgeType", "homog"), self.keyGroups("knowledgeType", "heterg")];
     self.num = null;
+    self.extraOpts = false;
+    self.prevStages = false;
     self.design = { //DUMMY DATA
         "metainfo":{
             "title":" Test Design",
@@ -2563,6 +2580,12 @@ adpp.controller("StagesEditController", function ($scope) {
         MOVER CONTENIDO A CONTROLADORES CORRESPONDIENTES!
 
     */
+    
+    self.toggleOpts = function(opt){
+        if(opt == 1)self.extraOpts = !self.extraOpts;
+        else if(opt == 2) self.prevStages = !self.prevStages;
+        
+    }
 
     self.buildArray = function (n) {
         var a = [];
@@ -2605,13 +2628,17 @@ adpp.controller("StagesEditController", function ($scope) {
     self.selectStage = function(id){
         if(self.currentStage != id){
             self.currentStage = id;
+            self.stageType = self.design.type;
             self.currentQuestion = 0 //reset question index
-            self.num = self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values
+            self.num = self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values;
         }
         else {
             self.currentStage = null; //unselect current stage
             self.num = null;
+            self.stageType  = null;
         }
+        self.extraOpts = false;
+        self.prevStages = false;
     }
 
     self.deleteStage = function(){
@@ -2621,6 +2648,8 @@ adpp.controller("StagesEditController", function ($scope) {
             self.currentQuestion = 0 //reset question index
             self.num = null;
             self.currentStage = null;
+            self.extraOpts = false;
+            self.prevStages = false;
         }
     }
 
