@@ -18,12 +18,12 @@
 
             
                 <div class="col-sm-4">
-                    <input type="file" class="form-control" name="pdf" ng-disabled="selectedSes.status!=1" required>
+                    <input type="file" class="form-control" name="pdf" ng-disabled="busy" required>
                     <input type="text" ng-value="selectedSes.id" name="sesid" hidden>
                 </div>
                 <div class="col-sm-2">
                     <button class="form-control btn btn-default" 
-                    ng-disabled="selectedSes.status!=1 || busy">{{'add'|lang}}<i ng-show="busy" class="fa fa-spinner fa-pulse"></i></button>
+                    ng-disabled="busy">{{'add'|lang}}<i ng-show="busy" class="fa fa-spinner fa-pulse"></i></button>
                 </div>
             </form>
         </div>
@@ -94,13 +94,18 @@
                         <input type="radio" name="anon" value=0>
                         <label>{{'no'|lang}}</label>
                     </div>
-                    <div ng-click="toggleOpts(2)" class= "col-lg-3 div-debug" style="cursor: pointer;">{{'viewPastSes'|lang}}: <!--FIX TOGGLE OPTION-->
-                        <div class="stack-top stage_container" ng-show="prevStages">
+                    <div class= "col-lg-3 "> 
+                        <div ng-click="toggleOpts(2)"  style="cursor: pointer;">
+                            {{'viewPastSes'|lang}}: <!--FIX TOGGLE OPTION-->
+                        </div>
+                        <div class="stack-top stage_container" ng-show="prevStages"
+                        style="z-index: 2; position:absolute; background:#fff; border: 2px #bbb solid; width:10em;">
                             <div ng-repeat="n in buildArray(currentStage)">
                                 <input type="checkbox" name="prevStage" value="S{{n-1}}" >
                                 <label for="S{{n}}">{{'stage'|lang}}: {{n}}</label>
                             </div>
                         </div>
+
                     </div>
                 </div>
                 <div class="row margin-top-8"> 
@@ -189,10 +194,8 @@
         </div>
         
     </div>
-    <div class = "row" style="padding-left: 80%; margin-bottom: 5em;">
-        <div class="col-xs-12">
-            <button class="btn btn-primary" ng-click="">{{'save'|lang}}</button>
-            <button class="btn btn-primary" ng-click="">{{'launchActivity'|lang}}</button>
-        </div>
+    <div class = "row" style="padding-left: 70%; margin-bottom: 5em;">
+        <button class="btn btn-primary col-xs-3" ng-click="uploadDesign()">{{'save'|lang}}</button>
+        <button class="btn btn-primary col-xs-6" ng-click="" style="margin-left: 1em;">{{'launchActivity'|lang}}</button>
     </div>
 </div>  

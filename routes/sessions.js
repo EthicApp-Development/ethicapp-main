@@ -5,6 +5,21 @@ let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 
+var DB = null;
+function getDBInstance(dbcon){
+    if(DB == null) {
+        DB = new pg.Client(dbcon);
+        DB.connect();
+        DB.on("error", function(err){
+            console.error(err);
+            DB = null;
+        });
+        return DB;
+    }
+    return DB;
+}
+
+
 router.get("/seslist", (req, res) => {
     if (req.session.uid) {
         if (req.session.role == "P")
@@ -106,6 +121,46 @@ router.post("/upload-file", (req, res) => {
     res.end('{"status":"err"}');
 });
 
+//DOCUMENT DESIGN WORK IN PROGRESS
+
+router.post("/upload-design-file", (req, res) => {
+    if (req.session.uid != null  && req.body.title != "" && req.files.pdf != null && req.files.pdf.mimetype == "application/pdf" ) {
+        rpg.execSQL({
+            dbcon: pass.dbcon,
+            sql: "insert into documents(title,path,sesid,uploader) values ($1,$2,$3,$4)", //agregarlo al design de alguna manera
+            sqlParams: [rpg.param("post", "title"), rpg.param("calc", "path"), rpg.param("post", "sesid"), rpg.param("ses", "uid")],
+            onStart: (ses, data, calc) => {
+                calc.path = "uploads" + req.files.pdf.file.split("uploads")[1];
+            },
+            onEnd: () => {
+            }
+        })(req, res);
+        res.end('{"status":"ok"}');
+    }
+    res.end('{"status":"err"}');
+});
+
+router.post("/upload-design", (req, res) => {
+    console.log("DATA IN ========================================");
+    console.log(req.body);
+    console.log("DATA IN ========================================");
+    res.end('{"status":"err"}'); //TEMP END EARLY
+    var sql = "INSERT INTO DESIGNS(creator, design) VALUES(id, jsonBody)"
+    var db = getDBInstance(pass.dbcon);
+    var qry;
+    qry = db.query(sql);
+    qry.on("end", function () {
+        res.end('{"status":"ok"}');
+    });
+    qry.on("error", function(err){
+        res.end('{"status":"err"}');
+    });
+});
+
+router.post("/update-design", (req, res) => {
+    res.end('{"status":"err"}'); //TEMP
+});
+//############################################
 router.post("/documents-session", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select id, title, path from documents where sesid = $1 and active = true",

@@ -2487,7 +2487,7 @@ adpp.controller("RubricaController", function ($scope, $http) {
     };
 });
 
-adpp.controller("StagesEditController", function ($scope, $filter) {
+adpp.controller("StagesEditController", function ($scope, $filter, $http) {
     var self = $scope;
     self.flang = function (key) {
         return $filter("lang")(key);
@@ -2507,6 +2507,7 @@ adpp.controller("StagesEditController", function ($scope, $filter) {
     self.methods = [self.keyGroups("random"), self.keyGroups("performance", "homog"), self.keyGroups("performance", "heterg"), 
                     self.keyGroups("knowledgeType", "homog"), self.keyGroups("knowledgeType", "heterg")];
     self.num = null;
+    self.busy = false; //upload file
     self.extraOpts = false;
     self.prevStages = false;
     self.design = { //DUMMY DATA
@@ -2521,10 +2522,11 @@ adpp.controller("StagesEditController", function ($scope, $filter) {
         "type":"semantic_differential",
         "phases":[
             {
-                "phase":1,
                 "mode":"individual",
-                "chat":null,
-                "anonymous":null,
+                "chat":true,
+                "anonymous":true,
+                "grouping_algorithm" : "random",
+                "prevPhasesResponse" : [ ],
                 "questions":[
                     {
                     "q_text":"Te gusta como esta quedando el formato?",
@@ -2548,34 +2550,64 @@ adpp.controller("StagesEditController", function ($scope, $filter) {
                     }
                 ]
             },
+            {
+            "mode":"team",
+            "chat":true,
+            "anonymous":true,
+            "grouping_algorithm" : "heterogeneous_groups",
+            "prevPhaseResponse" : [ 0 ],
+            "questions":[
                 {
-                "phase":2,
-                "mode":"team",
-                "chat":true,
-                "anonymous":false,
-                "questions":[
-                    {
-                        "q_text":"Pregunta de prueba",
-                        "ans_format":{
-                            "values":10,
-                            "l_pole":"En contra",
-                            "r_pole":"A favor",
-                            "just_required": false,
-                            "min_just_length": 8
-                    }
-                    },
-                    {
-                    "q_text":"Te gusta como esta quedando el formato?",
+                    "q_text":"Pregunta de prueba",
                     "ans_format":{
-                        "values":7,
-                        "l_pole":"Me carga",
-                        "r_pole":"Me encanta",
-                        "just_required": true,
-                        "min_just_length": 5
-                    }
-                    }
-                ]
-            }
+                        "values":10,
+                        "l_pole":"En contra",
+                        "r_pole":"A favor",
+                        "just_required": false,
+                        "min_just_length": 8
+                }
+                },
+                {
+                "q_text":"Te gusta como esta quedando el formato?",
+                "ans_format":{
+                    "values":7,
+                    "l_pole":"Me carga",
+                    "r_pole":"Me encanta",
+                    "just_required": true,
+                    "min_just_length": 5
+                }
+                }
+            ]
+        },
+        {
+            "mode":"team",
+            "chat":false,
+            "anonymous":false,
+            "grouping_algorithm" : "heterogeneous_groups",
+            "prevPhaseResponse" : [ 0 ,1],
+            "questions":[
+                {
+                    "q_text":"Tercera fase",
+                    "ans_format":{
+                        "values":4,
+                        "l_pole":"En contra",
+                        "r_pole":"A favor",
+                        "just_required": false,
+                        "min_just_length": 8
+                }
+                },
+                {
+                "q_text":"Te gusta como esta quedando el formato?",
+                "ans_format":{
+                    "values":9,
+                    "l_pole":"Me carga",
+                    "r_pole":"Me encanta",
+                    "just_required": true,
+                    "min_just_length": 5
+                }
+                }
+            ]
+        }
         ]
 
     }
@@ -2585,7 +2617,38 @@ adpp.controller("StagesEditController", function ($scope, $filter) {
         MOVER CONTENIDO A CONTROLADORES CORRESPONDIENTES!
 
     */
+
+    self.uploadDocument = function (event) {
+        self.busy = true;
+        var fd = new FormData(event.target);
+        $http.post("upload-file", fd, {
+            transformRequest: angular.identity,
+            headers: { 'Content-Type': undefined }
+        }).success(function (data) {
+            if (data.status == "ok") {
+                $timeout(function () {
+                    Notification.success("Documento cargado correctamente");
+                    event.target.reset();
+                    self.busy = false;
+                    self.shared.updateDocuments();
+                }, 2000);
+            }
+        });
+    };
     
+    self.uploadDesign = function () {
+        var postdata = self.design;
+        $http.post("upload-design", postdata).success(function (data) {
+            /*
+            if (data.status == "ok") {
+                self.requestSemDocuments();
+                Notification.success("Texto eliminado correctamente");
+            }
+            */
+        });
+    };
+
+
     self.toggleOpts = function(opt){
         if(opt == 1)self.extraOpts = !self.extraOpts;
         else if(opt == 2) self.prevStages = !self.prevStages;
