@@ -2506,6 +2506,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
     self.stageType = null;
     self.methods = [self.keyGroups("random"), self.keyGroups("performance", "homog"), self.keyGroups("performance", "heterg"), 
                     self.keyGroups("knowledgeType", "homog"), self.keyGroups("knowledgeType", "heterg")];
+    self.groupType = [self.keyGroups("individual"), self.keyGroups("team")];
     self.num = null;
     self.busy = false; //upload file
     self.extraOpts = false;
@@ -2515,8 +2516,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
             "title":" Test Design",
             "author": "Claudio Alvarez",
             "creation_date": "",
-            "id":"HsLKs92M",
-            "file":""
+            "id":"HsLKs92M"
         },
         "roles":[],
         "type":"semantic_differential",
@@ -2527,6 +2527,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
                 "anonymous":true,
                 "grouping_algorithm" : "random",
                 "prevPhasesResponse" : [ ],
+                "stdntAmount":3,
                 "questions":[
                     {
                     "q_text":"Te gusta como esta quedando el formato?",
@@ -2552,10 +2553,11 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
             },
             {
             "mode":"team",
-            "chat":true,
+            "chat":false,
             "anonymous":true,
-            "grouping_algorithm" : "heterogeneous_groups",
+            "grouping_algorithm" : "knowledgeType homog",
             "prevPhaseResponse" : [ 0 ],
+            "stdntAmount":4,
             "questions":[
                 {
                     "q_text":"Pregunta de prueba",
@@ -2583,8 +2585,9 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
             "mode":"team",
             "chat":false,
             "anonymous":false,
-            "grouping_algorithm" : "heterogeneous_groups",
+            "grouping_algorithm" : "performance homog",
             "prevPhaseResponse" : [ 0 ,1],
+            "stdntAmount":7,
             "questions":[
                 {
                     "q_text":"Tercera fase",
@@ -2676,7 +2679,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
                 "values":5,
                 "l_pole":"",
                 "r_pole":"",
-                "just_required": false,
+                "just_required": true,
                 "min_just_length": 10
         }})
         self.selectQuestion(self.design.phases[self.currentStage].questions.length-1) //send to new question
@@ -2748,7 +2751,10 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
             "mode":phase.mode,
             "chat":phase.chat,
             "anonymous":phase.anonymous,
-            "questions":phase.questions
+            "questions":phase.questions,
+            "grouping_algorithm": phase.grouping_algorithm,
+            "prevPhaseResponse": phase.prevPhaseResponse,
+            "stdntAmount": phase.stdntAmount
         }
     }
 

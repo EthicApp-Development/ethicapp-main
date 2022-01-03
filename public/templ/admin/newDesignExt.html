@@ -62,36 +62,45 @@
             <div class="row margin-top-8">
                 <label class="col-lg-2">{{'modeType' | lang}}:</label>
                 <div class="col-lg-3">
-                    <select class="form-control form-inline-med" ng-options="x.key as x.name for x in methods" 
-                    ng-model="groupopt.met"></select> <!--EDIT LATER-->
+                    <select class="form-control form-inline-med" 
+                    ng-options="x.key as x.name for x in groupType"
+                    ng-model="design.phases[currentStage].mode"></select>
                 </div>
             </div>
-            <div class="row margin-top-8">
-                <label class="col-lg-2">{{'groupingMethod' | lang}}:</label>
-                <div class="col-lg-3">
-                    <select class="form-control form-inline-med" ng-options="x.key as x.name for x in methods" 
-                    ng-model="groupopt.met"></select> <!--EDIT LATER-->
+            <div ng-if="design.phases[currentStage].mode == 'team'">
+                <div class="row margin-top-8">
+                    <label class="col-lg-2">{{'groupingMethod' | lang}}:</label>
+                    <div class="col-lg-3">
+                        <select class="form-control form-inline-med" 
+                        ng-init="design.phases[currentStage].grouping_algorithm"
+                        ng-options="x.key as x.name for x in methods" 
+                        ng-model="design.phases[currentStage].grouping_algorithm"></select> <!--EDIT LATER-->
+                    </div>
                 </div>
+                <div class="row margin-top-8" > 
+                    <label class="col-lg-2">{{'studentsPerGroup' | lang}}:</label>
+                    <div class = "col-lg-2">
+                        <input type="number" id="points" name="length" step="1"  min=2 class="form-control"
+                        ng-model="design.phases[currentStage].stdntAmount"
+                        style="width: 6em; text-align: center; height: 2em;"> <!--EDIT LATER-->
+                    </div>
+                </div> 
             </div>
-            <div class="row margin-top-8" > 
-                <label class="col-lg-2">{{'studentsPerGroup' | lang}}:</label>
-                <div class = "col-lg-2">
-                    <input type="number" id="points" name="length" step="1"  min=5 class="form-control"
-                    ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.min_just_length"
-                    style="width: 6em; text-align: center; height: 2em;"> <!--EDIT LATER-->
-                </div>
-            </div> 
             <!--EXTRA OPTIONS-->
             <a ng-click="toggleOpts(1)">{{'advOpts'|lang}}</a>
             <div ng-show="extraOpts" class="question_container">
                 <div class="row margin-top-8" > 
                     <label class="col-lg-2">{{'studentAnon'|lang}}:</label>
                     <div class="col-lg-1">
-                        <input type="radio" name="anon" value=1>
+                        <input type="radio" name="anon" 
+                        ng-value="true" 
+                        ng-model="design.phases[currentStage].anonymous">
                         <label>{{'yes'|lang}}</label>
                     </div>
                     <div class="col-lg-1">
-                        <input type="radio" name="anon" value=0>
+                        <input type="radio" name="anon" 
+                        ng-value="false" 
+                        ng-model="design.phases[currentStage].anonymous">
                         <label>{{'no'|lang}}</label>
                     </div>
                     <div class= "col-lg-3 "> 
@@ -111,11 +120,15 @@
                 <div class="row margin-top-8"> 
                     <label class="col-lg-2">{{'activeChat'|lang}}:</label>
                     <div class="col-lg-1">
-                        <input type="radio" name="chat" value=1>
+                        <input type="radio" name="chat" 
+                        ng-value="true" 
+                        ng-model="design.phases[currentStage].chat">
                         <label>{{'yes'|lang}}</label>
                     </div>
                     <div class="col-lg-1">
-                        <input type="radio" name="chat" value=0>
+                        <input type="radio" name="chat" 
+                        ng-value="false" 
+                        ng-model="design.phases[currentStage].chat">
                         <label>{{'no'|lang}}</label>
                     </div>
                 </div>
@@ -167,11 +180,15 @@
                 <div class="row margin-top-24"> 
                     <label class="col-lg-2">{{'mandatoryComment'|lang}}</label>
                     <div class="col-lg-1">
-                        <input type="radio" name="comment" value=1>
+                        <input type="radio" name="comment" 
+                        ng-value="true" 
+                        ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.just_required">
                         <label>{{'yes'|lang}}</label>
                     </div>
                     <div class="col-lg-1">
-                        <input type="radio" name="comment" value=0>
+                        <input type="radio" name="comment" 
+                        ng-value="false" 
+                        ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.just_required">
                         <label>{{'no'|lang}}</label>
                     </div>
                 </div>
