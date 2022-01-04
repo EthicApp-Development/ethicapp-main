@@ -4,6 +4,7 @@ let express = require('express');
 let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
+let pg = require('pg');
 
 var DB = null;
 function getDBInstance(dbcon){
@@ -141,18 +142,44 @@ router.post("/upload-design-file", (req, res) => {
 });
 
 router.post("/upload-design", (req, res) => {
-    console.log("DATA IN ========================================");
-    console.log(req.body);
-    console.log("DATA IN ========================================");
-    res.end('{"status":"err"}'); //TEMP END EARLY
-    var sql = "INSERT INTO DESIGNS(creator, design) VALUES(id, jsonBody)"
+    var jsonBody = "'"+JSON.stringify(req.body)+"'";
+    var id = 1234; //TESTING
+    var sql = "INSERT INTO DESIGNS(creator, design) VALUES("+id+","+ jsonBody+")";
     var db = getDBInstance(pass.dbcon);
+    /*problema con pg*/
     var qry;
     qry = db.query(sql);
     qry.on("end", function () {
+        console.log("SQL QUERY WAS INSERTED CORRECTLY");
         res.end('{"status":"ok"}');
     });
     qry.on("error", function(err){
+        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
+        console.log(err);
+        res.end('{"status":"err"}');
+    });
+});
+
+router.get("/get-design", (req, res) => {
+    var sql = "SELECT * FROM DESIGNS WHERE creator = 1234 LIMIT 1";
+    var db = getDBInstance(pass.dbcon);
+    /*problema con pg*/
+    var qry;
+    var result;
+    qry = db.query(sql,(err,res) =>{
+        if(res.rows[0] != null){
+            result = JSON.stringify(res.rows[0].design);   
+        }
+        });
+    qry.on("end", function () {
+        console.log("SQL QUERY WAS OK");
+        //res.end('{"status":"ok"}');
+        //console.log(result);
+        res.end('{"status":"ok", "result":'+result+'}');
+    });
+    qry.on("error", function(err){
+        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
+        console.log(err);
         res.end('{"status":"err"}');
     });
 });

@@ -2511,6 +2511,8 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
     self.busy = false; //upload file
     self.extraOpts = false;
     self.prevStages = false;
+    self.design = {};
+    /*
     self.design = { //DUMMY DATA
         "metainfo":{
             "title":" Test Design",
@@ -2556,7 +2558,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
             "chat":false,
             "anonymous":true,
             "grouping_algorithm" : "knowledgeType homog",
-            "prevPhaseResponse" : [ 0 ],
+            "prevPhaseResponse" : [ 0],
             "stdntAmount":4,
             "questions":[
                 {
@@ -2614,7 +2616,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
         ]
 
     }
-
+    */
     /*
 
         MOVER CONTENIDO A CONTROLADORES CORRESPONDIENTES!
@@ -2650,6 +2652,18 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
             */
         });
     };
+
+    self.getDesign = function () {
+        var postdata = self.design;
+        $http.get("get-design", postdata).success(function (data) {
+            
+            if (data.status == "ok") {
+                self.design = data.result;
+            }
+            
+        });
+    };
+
 
 
     self.toggleOpts = function(opt){
