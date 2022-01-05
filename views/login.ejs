@@ -1,13 +1,38 @@
 <!DOCTYPE html>
-<html lang="es">
+<html  ng-app="Admin">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
     <title>DocCollab</title>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="css/nv.d3.min.css">
+    <link rel="stylesheet" href="css/angular-ui-notification.min.css">
+    <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.9.0-alpha2/katex.min.css">
+    <link rel="stylesheet" href="css/tablesort.min.css">
     <link rel="stylesheet" href="css/main.css"/>
+    <script src="libs/angular.min.js"></script>
+    <script src="libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
+    <script src="libs/katex.min.js"></script>
+    <script src="libs/angular-bootstrap-multiselect.js"></script>
+    <script src="libs/d3.min.js"></script>
+    <script src="libs/nv.d3.min.js"></script>
+    <script src="libs/angular-nvd3.min.js"></script>
+    <script src="libs/ng-map.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&key=AIzaSyAx05l8YIv_oB8f5AMBGIcWmgnqFou0VJI&libraries=drawing,geometry,places"></script>
+    <script type="text/javascript" src="libs/quill.min.js"></script>
+    <script type="text/javascript" src="libs/ng-quill.min.js"></script>
+    <script src="libs/socket.min.js"></script>
+    <script src="libs/angular-timer.min.js"></script>
+    <script src="libs/angular-ui-notification.min.js"></script>
+    <script src="libs/save-csv.min.js"></script>
+    <script src="libs/angular-tablesort.min.js"></script>
+    <script src="js/StagesController.js"></script>
+    <script src="js/admin-ctrl.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
-<body>
+<body ng-controller="instituciones">
 
 <div class="middle-box large-box">
 
@@ -22,52 +47,57 @@
     <hr/>
     <% if(rc == 1) {%>
     <div class="alert alert-info">
-        Registro Completo. Ingrese con sus datos
+        {{'log1' | lang}}
     </div>
     <% } %>
     <% if(rc == 2) {%>
     <div class="alert alert-danger">
-        Login o Password Incorrectos
+        {{'log2' | lang}}
     </div>
     <% } %>
     <% if(rc == 3) {%>
         <div class="alert alert-info">
-            Se ha enviado un correo con la información para recuperar la contraseña.
-            Este correo podría haber llegado a spam.
+            {{'log3' | lang}}
         </div>
     <% } %>
     <% if(rc == 4) {%>
         <div class="alert alert-info">
-            Contraseña cambiada correctamente. Ingrese con sus datos.
+            {{'log4' | lang}}
         </div>
     <% } %>
     <br/>
     <form action="login" method="POST">
         <label class=" line-labels">
-            Correo:
+            {{'email' | lang}}
             <input class="grid-item line-input form-controll" type="text"  name="user" required autofocus>
             <br>
         </label>
 
         <label class="line-labels">
-            Contraseña:
+            {{'password' | lang}}
             <input class="grid-item line-input form-controll" type="password"  name="pass" required>
             <br>
         </label>
         <button type="submit" class="btn btn-primary" style="width: 200px;">
-            Ingresar
+            {{'login' | lang}}
         </button>
     </form>
     <br>
-  
-    <a href="register">Registrarse </a>|
-    <a href="forgot-pass">Olvidó su contraseña?</a>
+    <div> 
+            <button  ng-click="changeLang()">
+                {{'langOther' | lang}}
+            </button>
+
+    </div>
+   
+    <a href="register">{{'register' | lang}} </a>|
+    <a href="forgot-pass">{{'forgot_pass' | lang}}</a>
 
     <div class="row ">
         <div class="col-md-3  line-labels">
           <a class="btn btn-outline-dark" href="/google" role="button" style="text-transform:none">
             <img width="20px" style="margin-bottom:3px; margin-right:5px" alt="Google sign-in" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png" />
-            Login with Google
+            {{'glogin' | lang}}
           </a>
         </div>
       </div>

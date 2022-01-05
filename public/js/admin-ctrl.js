@@ -9,7 +9,7 @@ var DASHBOARD_AUTOREALOD_TIME = 15;
 window.DIC = null;
 window.warnDIC = {};
 
-app.factory("$socket", ["socketFactory", function (socketFactory) {
+adpp.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
 
@@ -2925,3 +2925,35 @@ var centroid = function centroid(type, geom) {
     if (type == "P" || type == "L") return avgCoord(geom.path);
     return null;
 };
+
+
+
+adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
+    var self = $scope;
+    self.lang = "spanish";
+
+    window.DIC = "data/" + self.lang + ".json";
+
+
+    self.init = function () {
+        self.updateLang(self.lang);
+    };
+
+
+
+    self.updateLang = function (lang) {
+        $http.get("data/" + lang + ".json").success(function (data) {
+            window.DIC = data;
+        });
+    };
+
+    self.changeLang = function () {
+        self.lang = self.lang == "english" ? "spanish" : "english";
+        self.updateLang(self.lang);
+    };
+
+
+
+    self.init();
+
+}])

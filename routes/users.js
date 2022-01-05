@@ -351,6 +351,45 @@ router.post("/changepassword",(req,res)=> {
     }
 });
 
+router.post("/create-multicounts",(req,res)=> {
+    console.log(req.body.data.split('\r\n'))
+    var accounts = req.body.data.split('\r\n')
+    var db = getDBInstance(pass.dbcon);
+    for(var i = 0;i< accounts.length;i++){
+        var account_data = accounts[i].split(',')
+        var sql = "SELECT * FROM users WHERE mail ='"+account_data[0] +"' LIMIT 1";
+        var qry;
+        qry = db.query(sql,(err,res) =>{
+            if(res.rows[0] != null){
+                console.log("el mail ya esta usado")
+                }
+            else{
+                var sql = "insert into users(rut, pass, name, mail, sex, role) values ($1,$2,$3,$4,$5,'A')";
+                var qry;
+                var passcr = crypto.createHash('md5').update(account_data[1]).digest('hex');
+                var name = account_data[1];
+                if(account_data.length == 3){
+                    name = account_data[2] 
+                }
+                if(account_data.length == 4){
+                    name = account_data[2] + " "+ account_data[3]
+                }
+                 
+                var sqlParams = ["11111111-1", passcr, account_data[2], account_data[0], 'O']
+                var sqlarr = smartArrayConvert(sqlParams);
+                qry = db.query(sql, sqlarr);
+                qry.on("end", function () {
+                    console.log("creacion exitosa")
+                });
+                qry.on("error", function(err){
+                });
+            }
+            });
+    }
+    
+
+});
+
 
 router.post("/deleteacc",(req,res)=> {
     var db = getDBInstance(pass.dbcon);

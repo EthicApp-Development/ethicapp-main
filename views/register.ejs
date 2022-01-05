@@ -1,111 +1,132 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" ng-app="Admin">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>DocCollab</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="css/nv.d3.min.css">
+    <link rel="stylesheet" href="css/angular-ui-notification.min.css">
+    <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.9.0-alpha2/katex.min.css">
+    <link rel="stylesheet" href="css/tablesort.min.css">
+    <link rel="stylesheet" href="css/main.css"/>
     <script src="libs/angular.min.js"></script>
     <script src="libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
-    <!--<script src="js/ses-ctrl.js"></script>-->
+    <script src="libs/katex.min.js"></script>
+    <script src="libs/angular-bootstrap-multiselect.js"></script>
+    <script src="libs/d3.min.js"></script>
+    <script src="libs/nv.d3.min.js"></script>
+    <script src="libs/angular-nvd3.min.js"></script>
+    <script src="libs/ng-map.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&key=AIzaSyAx05l8YIv_oB8f5AMBGIcWmgnqFou0VJI&libraries=drawing,geometry,places"></script>
+    <script type="text/javascript" src="libs/quill.min.js"></script>
+    <script type="text/javascript" src="libs/ng-quill.min.js"></script>
     <script src="libs/socket.min.js"></script>
-    <script src="libs/intro.min.js"></script>
-    <script src="libs/angular-intro.min.js"></script>
-    <script src="libs/ua-parser.min.js"></script>
-    <script src="js/ses-ctrl.min.js"></script>
+    <script src="libs/angular-timer.min.js"></script>
+    <script src="libs/angular-ui-notification.min.js"></script>
+    <script src="libs/save-csv.min.js"></script>
+    <script src="libs/angular-tablesort.min.js"></script>
+    <script src="js/StagesController.js"></script>
+    <script src="js/admin-ctrl.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit"
-    async defer>
-</script>
-    <link rel="stylesheet" href="css/bootstrap.min.css"/>
-    <link rel="stylesheet" href="css/main.css"/>
+    async defer></script>
+
 </head>
-<body>
+<body ng-controller="instituciones">
+  <div class="rtab-nb">
+    <button class="btn btn-default btn-sm" ng-click="changeLang()">
+        {{'langOther' | lang}}
+    </button>
+</div>
 
 <div class="middle-box" >
 
     <h2 class="app-title">EthicApp</h2>
     <hr/>
     <br/>
-    <h5>¿Quieres una cuenta personal o institucional?</h5>
+    <h5>{{'accounttype' | lang}}</h5>
 
     <form action="/action_page.php">
         <label class="form-controll line-labels" style="height: fit-content;">
             
-         <input type="radio" id="rad1" class="radio-btn" onchange="hideB(this)" name="fav_language" value="Personal" checked >
-        <label for="rad1">Personal</label>
+         <input type="radio" id="rad1" class="radio-btn" onchange="hideB(this)" name="rad" value="Personal" checked >
+        <label for="rad1">{{'personal' | lang}}</label>
       
-          <input type="radio" id="rad2"  class="radio-btn" onchange="hideA(this)"  name="fav_language" value="Institucional" >
-        <label for="rad2">Institucional</label>
+          <input type="radio" id="rad2"  class="radio-btn" onchange="hideA(this)" name="rad" value="Institucional" >
+        <label for="rad2">{{'Institutional' | lang}}</label>
     </label>
     </form>
 
 
     <form action="register" method="POST" id="form_user">
-        <label class="left">Nombre:</label>
+        <label class="left">{{'name' | lang}}:</label>
         <input type="text" class="form-control" name="name" required autofocus><br>
-        <label>Apellido:</label>
+        <label>{{'lastname' | lang}}:</label>
         <input type="text" class="form-control" name="lastname"><br>
         <label>RUT:</label>
         <input type="text" class="form-control" name="rut" pattern="[P]?[0-9]{7,8}-[0-9kK]" placeholder="sin puntos, con guión" required><br>
-        <label>E-mail:</label>
+        <label>{{'email' | lang}}</label>
         <input type="email" class="form-control" name="mail" required><br>
-        <label>Género:</label>
+        <label>{{'gender' | lang}}:</label>
         <select name="sex" class="form-control">
             <option value="F">Femenino</option>
             <option value="M">Masculino</option>
             <option value="O">Otro</option>
         </select><br/>
-        <label>Contraseña:</label>
+        <label>{{'password' | lang}}</label>
         <input type="password" class="form-control" name="pass"><br>
-        <label>Confirmar Contraseña:</label>
+        <label>{{'cpassword' | lang}}:</label>
         <input type="password" class="form-control" name="conf-pass"><br>
 
 
         <div class="g-recaptcha" id="captcha" data-sitekey="6LcGAKUdAAAAAAw_3EmC7ViIPclVDON_Gc5o4Uay" data-type="image"></div>
-        <button type="submit" class="btn btn-primary form-control" id="register-btn">Registrar</button>
+        <button type="submit" class="btn btn-primary form-control" id="register-btn">{{'register' | lang}}</button>
     </form>
 
 
     <form action="register_institucion" method="POST" id="form_institucion" style="display: none;">
-        <label class="left">Nombre de la Institucion:</label>
+        <label class="left">{{'inst_name' | lang}}:</label>
         <input type="text" class="form-control" name="name_ins" required autofocus><br>
-        <label>Numero de estudiantes que podrian usar EthicApp:</label>
+        <label>{{'num_est' | lang}}:</label>
         <select name="Numero_estudiantes" class="form-control">
             <option value="1000">1-1000</option>
             <option value="2000">1001-2000</option>
             <option value="3000">2001-3000</option>
         </select><br/>
-        <label>Pais:</label>
+        <label>{{'country' | lang}}:</label>
         <select name="Pais" class="form-control">
             <option value="Chile">Chile</option>
-            <option value="Estados Unidos">Estados Unidos</option>
+            <option value="Estados Unidos">{{'eeuu' | lang}}</option>
             <option value="Argentina">Argentina</option>
         </select><br/>
 
-        <label>Dominios de correo electronico Institucionales:</label>
+        <label>{{'ints_mail' | lang}}:</label>
         <input type="text" class="form-control" name="domains" placeholder="mit.edu,harvard.edu,stanford.edu">
-        <h5 style="font-size: 10px;" class="form-controll">ingresar separados por coma</h5><br>
+        <h5 style="font-size: 10px;" class="form-controll">{{'sep_data' | lang}}</h5><br>
         
-        <label class="left">Nombre:</label>
+        <label class="left">{{'name' | lang}}:</label>
         <input type="text" class="form-control" name="name" required autofocus><br>
-        <label class="left">Apellido:</label>
+        <label class="left">{{'lastname' | lang}}:</label>
         <input type="text" class="form-control" name="lastname" required autofocus><br>
-        <label class="left">Correo electronico institucional:</label>
+        <label class="left">{{'ints_mail' | lang}}:</label>
         <input type="text" class="form-control" name="email" required autofocus><br>
-        <label>Cargo:</label>
+        <label>{{'position' | lang}}:</label>
         <select name="Cargo" class="form-control">
-            <option value="Academico">Academico</option>
-            <option value="Rector">Rector</option>
-            <option value="Director">Director</option>
+            <option value="Academico">{{'academic' | lang}}</option>
+            <option value="Rector">{{'rector' | lang}}</option>
+            <option value="Director">{{'director' | lang}}</option>
         </select><br/>
-        <label>Contraseña:</label>
+        <label>{{'password' | lang}}</label>
         <input type="password" class="form-control" name="pass"><br>
-        <label>Confirmar Contraseña:</label>
+        <label>{{'cpassword' | lang}}:</label>
         <input type="password" class="form-control" name="conf-pass"><br>
       
         <div class="g-recaptcha" id="captcha2" data-sitekey="6LcGAKUdAAAAAAw_3EmC7ViIPclVDON_Gc5o4Uay" data-type="image"></div><br>
 
-        <button type="submit" class="btn btn-primary form-controll">Solicitar cuenta institucional</button>
+        <button type="submit" class="btn btn-primary form-controll">{{'sol_acc'| lang}}</button>
     </form>
 
 
@@ -113,16 +134,16 @@
 
     <!--<small>Do have a FEN account?</small>
     <a href="login-fen">Login with FEN</a><br>-->
-    <small>Ya tiene una cuenta?</small>
+    <small>{{'alredy_acc'| lang}}</small>
     <br/>
 
-    <a href="login" class="line-input col-md-3" style="margin-top: 8px;">Login</a>
+    <a href="login" class="line-input col-md-3" style="margin-top: 8px;">{{'login' | lang}}</a>
     
     
     <div class="line-input">
           <a class="btn btn-outline-dark" href="/auth-google" role="button" style="text-transform:none">
             <img width="20px" style="margin-bottom:3px; margin-right:5px" alt="Google sign-in" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png" />
-            Login with Google
+            {{'glogin' | lang}}
           </a>
       </div>
 
