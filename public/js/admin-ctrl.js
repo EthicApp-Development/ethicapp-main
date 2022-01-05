@@ -1162,7 +1162,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 sesid: self.selectedSes.id
             };
             let url = self.selectedSes.grouped ? "get-differential-all" : "get-differential-indv";
-            (url, _postdata2).success(function (data) {
+            $http.post(url, _postdata2).success(function (data) {
                 self.dataDF = [];
                 console.log("SELF");
                 console.log(self);
