@@ -143,27 +143,37 @@ router.post("/upload-design-file", (req, res) => {
 
 router.post("/upload-design", (req, res) => {
     var jsonBody = "'"+JSON.stringify(req.body)+"'";
-    var id = 1234; //TESTING
+    var id = req.session.uid;
     var sql = "INSERT INTO DESIGNS(creator, design) VALUES("+id+","+ jsonBody+")";
+    var sql2 = "SELECT max(id) FROM DESIGNS WHERE creator = "+id;
     var db = getDBInstance(pass.dbcon);
-    /*problema con pg*/
     var qry;
+    var qry2;
+    var result;
     qry = db.query(sql);
     qry.on("end", function () {
-        console.log("SQL QUERY WAS INSERTED CORRECTLY");
-        res.end('{"status":"ok"}');
+        qry2 = db.query(sql2,(err,res) =>{
+            if(res.rows[0] != null){
+                result = res.rows[0].max;
+            }
+            });
+            qry2.on("end", function () {
+                res.end('{"status":"ok", "id":'+result+'}');   
+            });
+            
     });
     qry.on("error", function(err){
-        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
+        //console.log("THERE WAS AN ERROR ON THE SQL QUERY");
         console.log(err);
         res.end('{"status":"err"}');
     });
 });
 
-router.get("/get-design", (req, res) => {
-    var sql = "SELECT * FROM DESIGNS WHERE creator = 1234 LIMIT 1";
+router.post("/get-design", (req, res) => {
+    var uid = req.session.uid;
+    var id = req.body;
+    var sql = "SELECT * FROM DESIGNS WHERE creator = "+uid+" AND id = "+id;
     var db = getDBInstance(pass.dbcon);
-    /*problema con pg*/
     var qry;
     var result;
     qry = db.query(sql,(err,res) =>{
@@ -172,9 +182,7 @@ router.get("/get-design", (req, res) => {
         }
         });
     qry.on("end", function () {
-        console.log("SQL QUERY WAS OK");
-        //res.end('{"status":"ok"}');
-        //console.log(result);
+        //console.log("SQL QUERY WAS OK");
         res.end('{"status":"ok", "result":'+result+'}');
     });
     qry.on("error", function(err){
@@ -184,8 +192,52 @@ router.get("/get-design", (req, res) => {
     });
 });
 
+router.get("/get-user-designs", (req, res) => {
+    var uid = req.session.uid;
+    var sql = "SELECT * FROM DESIGNS WHERE creator = "+uid;
+    var db = getDBInstance(pass.dbcon);
+    var qry;
+    var result = []
+    qry = db.query(sql,(err,res) =>{
+        if(res.rows[0] != null){
+            //result = JSON.stringify(res.rows[0].design);
+            //ADD ID OF DESIGN
+            for (var i=0; i<res.rows.length;i++) result.push(JSON.parse(JSON.stringify(res.rows[i].design)));
+        }
+        });
+    qry.on("end", function () {
+        //console.log("SQL QUERY WAS OK");
+        console.log('{"status":"ok", "result":'+result+'}')
+        res.json({"status":"ok", "result":result});
+    });
+    qry.on("error", function(err){
+        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
+        console.log(err);
+        res.end('{"status":"err"}');
+    });
+});
+
+
 router.post("/update-design", (req, res) => {
-    res.end('{"status":"err"}'); //TEMP
+    console.log(req)
+    var jsonBody = "'"+JSON.stringify(req.body.design)+"'";
+    var uid = req.session.uid;
+    var id = req.body.id;
+    console.log("DESIGN ID:",id)
+    var sql = "UPDATE DESIGNS SET design ="+jsonBody+ " WHERE creator ="+uid+" AND id ="+id+"";
+    console.log(sql)
+    var db = getDBInstance(pass.dbcon);
+    var qry;
+    qry = db.query(sql);
+    qry.on("end", function () {
+        console.log("UPDATED CORRECTLY");
+        res.end('{"status":"ok"}');
+    });
+    qry.on("error", function(err){
+        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
+        console.log(err);
+        res.end('{"status":"err"}');
+    });
 });
 //############################################
 router.post("/documents-session", rpg.multiSQL({

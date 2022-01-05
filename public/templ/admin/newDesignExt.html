@@ -1,5 +1,5 @@
 
-<div class="" ng-controller="StagesEditController">
+<div class="" >
     <div class="container">
         <h2>{{'designMsg'|lang}}</h2>
         <h3>{{design.metainfo.title}}</h3>
@@ -87,54 +87,56 @@
                 </div> 
             </div>
             <!--EXTRA OPTIONS-->
-            <a ng-click="toggleOpts(1)">{{'advOpts'|lang}}</a>
-            <div ng-show="extraOpts" class="question_container">
-                <div class="row margin-top-8" > 
-                    <label class="col-lg-2">{{'studentAnon'|lang}}:</label>
-                    <div class="col-lg-1">
-                        <input type="radio" name="anon" 
-                        ng-value="true" 
-                        ng-model="design.phases[currentStage].anonymous">
-                        <label>{{'yes'|lang}}</label>
-                    </div>
-                    <div class="col-lg-1">
-                        <input type="radio" name="anon" 
-                        ng-value="false" 
-                        ng-model="design.phases[currentStage].anonymous">
-                        <label>{{'no'|lang}}</label>
-                    </div>
-                    <div class= "col-lg-3 "> 
-                        <div ng-click="toggleOpts(2)"  style="cursor: pointer;">
-                            {{'viewPastSes'|lang}}:
+            <div ng-if="design.phases[currentStage].mode == 'team'">
+                <a ng-click="toggleOpts(1)">{{'advOpts'|lang}}</a>
+                <div ng-show="extraOpts" class="question_container">
+                    <div class="row margin-top-8" > 
+                        <label class="col-lg-2">{{'studentAnon'|lang}}:</label>
+                        <div class="col-lg-1">
+                            <input type="radio" name="anon" 
+                            ng-value="true" 
+                            ng-model="design.phases[currentStage].anonymous">
+                            <label>{{'yes'|lang}}</label>
                         </div>
-                        <div class="stack-top stage_container" ng-show="prevStages"
-                        style="z-index: 2; position:absolute; background:#fff; border: 2px #bbb solid; width:10em;">
-                            <div ng-repeat="n in buildArray(currentStage)">
-                                <input type="checkbox" name="prevStage" 
-                                checklist-value="{{n-1}}" 
-                                checklist-model="design.phases[currentStage].prevPhasesResponse[n-1]">
-                                <label for="S{{n}}">{{'stage'|lang}}: {{n}}</label> <!--FIX TOGGLE OPTION-->
+                        <div class="col-lg-1">
+                            <input type="radio" name="anon" 
+                            ng-value="false" 
+                            ng-model="design.phases[currentStage].anonymous">
+                            <label>{{'no'|lang}}</label>
+                        </div>
+                        <div class= "col-lg-3 "> 
+                            <div ng-click="toggleOpts(2)"  style="cursor: pointer;">
+                                {{'viewPastSes'|lang}}:
                             </div>
-                        </div>
+                            <div class="stack-top stage_container" ng-show="prevStages"
+                            style="z-index: 2; position:absolute; background:#fff; border: 2px #bbb solid; width:10em;">
+                                <div ng-repeat="n in buildArray(currentStage)">
+                                    <input type="checkbox" name="prevStage" 
+                                    checklist-value="{{n-1}}" 
+                                    checklist-model="design.phases[currentStage].prevPhasesResponse[n-1]">
+                                    <label for="S{{n}}">{{'stage'|lang}}: {{n}}</label> <!--FIX TOGGLE OPTION-->
+                                </div>
+                            </div>
 
+                        </div>
                     </div>
+                    <div class="row margin-top-8"> 
+                        <label class="col-lg-2">{{'activeChat'|lang}}:</label>
+                        <div class="col-lg-1">
+                            <input type="radio" name="chat" 
+                            ng-value="true" 
+                            ng-model="design.phases[currentStage].chat">
+                            <label>{{'yes'|lang}}</label>
+                        </div>
+                        <div class="col-lg-1">
+                            <input type="radio" name="chat" 
+                            ng-value="false" 
+                            ng-model="design.phases[currentStage].chat">
+                            <label>{{'no'|lang}}</label>
+                        </div>
+                    </div>
+                    
                 </div>
-                <div class="row margin-top-8"> 
-                    <label class="col-lg-2">{{'activeChat'|lang}}:</label>
-                    <div class="col-lg-1">
-                        <input type="radio" name="chat" 
-                        ng-value="true" 
-                        ng-model="design.phases[currentStage].chat">
-                        <label>{{'yes'|lang}}</label>
-                    </div>
-                    <div class="col-lg-1">
-                        <input type="radio" name="chat" 
-                        ng-value="false" 
-                        ng-model="design.phases[currentStage].chat">
-                        <label>{{'no'|lang}}</label>
-                    </div>
-                </div>
-                
             </div>
         </div>
         <!--TABS QUESTIONS-->
@@ -214,7 +216,7 @@
         
     </div>
     <div class = "row" style="padding-left: 70%; margin-bottom: 5em;">
-        <button class="btn btn-primary col-xs-3" ng-click="uploadDesign()">{{'save'|lang}}</button>
-        <button class="btn btn-primary col-xs-6" ng-click="getDesign()" style="margin-left: 1em;">{{'launchActivity'|lang}}</button>
+        <button class="btn btn-primary col-xs-3" ng-click="updateDesign()">{{'save'|lang}}</button>
+        <button class="btn btn-primary col-xs-6" ng-click="" style="margin-left: 1em;">{{'launchActivity'|lang}}</button>
     </div>
 </div>  

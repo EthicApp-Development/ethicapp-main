@@ -1162,7 +1162,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 sesid: self.selectedSes.id
             };
             let url = self.selectedSes.grouped ? "get-differential-all" : "get-differential-indv";
-            $http.post(url, _postdata2).success(function (data) {
+            (url, _postdata2).success(function (data) {
                 self.dataDF = [];
                 console.log("SELF");
                 console.log(self);
@@ -2272,7 +2272,6 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
             }, self.groupNum, isDifferent(self.groupMet));
         }
         else if (self.selectedSes.type == "E"){
-            console.log("AAAAA");
             let dfd = users.map(e => {
                 let d = (self.shared.dataDF || []);
                 let r = d.find(f => f.tmid == e.id);
@@ -2488,16 +2487,22 @@ adpp.controller("RubricaController", function ($scope, $http) {
 });
 
 adpp.controller("StagesEditController", function ($scope, $filter, $http) {
+
+    /*
+        LANG FUNCTIONS
+    */
+
     var self = $scope;
+
     self.flang = function (key) {
         return $filter("lang")(key);
     };
 
-
     self.keyGroups = function (k1, k2) {
         return {
             key: k1 + (k2 == null ? "" : " " + k2),
-            name: self.flang(k1) + (k2 == null ? "" : " " + self.flang(k2))
+            name: k1 + (k2 == null ? "" : " " + k2)
+            //name: self.flang(k1) + (k2 == null ? "" : " " + self.flang(k2)) FIX TRANSLATION BUG
         };
     };
 
@@ -2508,6 +2513,8 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
                     self.keyGroups("knowledgeType", "homog"), self.keyGroups("knowledgeType", "heterg")];
     self.groupType = [self.keyGroups("individual"), self.keyGroups("team")];
     self.num = null;
+    self.designId = null;
+    self.designs = null;
     self.busy = false; //upload file
     self.extraOpts = false;
     self.prevStages = false;
@@ -2623,7 +2630,22 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
 
     */
 
-    self.uploadDocument = function (event) {
+    /*
+        BACKEND FUNCTIONS
+    */
+
+    self.getDesigns = function(){
+        $http.get("get-user-designs").success(function (data) {
+            
+            if (data.status == "ok") {
+                self.designs = data.result;
+                console.log(self.designs)
+            }
+            
+        });
+    };
+
+    self.uploadDocument = function (event) { //Work in progress
         self.busy = true;
         var fd = new FormData(event.target);
         $http.post("upload-file", fd, {
@@ -2641,30 +2663,81 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
         });
     };
     
-    self.uploadDesign = function () {
-        var postdata = self.design;
+    self.uploadDesign = function (title, author) {
+        var postdata = { 
+            "metainfo":{
+                "title":title,
+                "author": author,
+                "creation_date": Date.now()
+            },
+            "roles":[],
+            "type":"semantic_differential",
+            "phases":[
+                {
+                    "mode":"individual",
+                    "chat":true,
+                    "anonymous":true,
+                    "grouping_algorithm" : "random",
+                    "prevPhasesResponse" : [ ],
+                    "stdntAmount":3,
+                    "questions":[
+                        {
+                        "q_text":"",
+                        "ans_format":{
+                            "values":7,
+                            "l_pole":"",
+                            "r_pole":"",
+                            "just_required": true,
+                            "min_just_length": 5
+                        }
+                    }
+                    ]
+                }
+            ]
+            }
         $http.post("upload-design", postdata).success(function (data) {
+            
+            if (data.status == "ok") {
+                self.getDesign(data.id);
+                self.designId = data.id;
+                self.selectView("newDesignExt");
+                // RESET VALUES
+                self.currentStage = null; 
+                self.currentQuestion = null; 
+                self.stageType = null;
+                self.num = null;
+                self.busy = false; 
+                self.extraOpts = false;
+                self.prevStages = false;
+            }
+        });
+        
+    };
+
+    self.updateDesign = function () {
+        console.log(self.design)
+        var postdata = {"design":self.design,"id": self.designId};
+        $http.post("update-design", postdata).success(function (data) {
             /*
             if (data.status == "ok") {
-                self.requestSemDocuments();
-                Notification.success("Texto eliminado correctamente");
+                console.log(data)
             }
             */
         });
-    };
 
-    self.getDesign = function () {
-        var postdata = self.design;
-        $http.get("get-design", postdata).success(function (data) {
-            
+    }
+
+    self.getDesign = function (designId) {
+        $http.post("get-design", designId).success(function (data) {
             if (data.status == "ok") {
                 self.design = data.result;
             }
-            
         });
     };
 
-
+    /*
+        FRONTEND FUNCTIONS
+    */
 
     self.toggleOpts = function(opt){
         if(opt == 1)self.extraOpts = !self.extraOpts;
@@ -2724,6 +2797,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
         }
         self.extraOpts = false;
         self.prevStages = false;
+        console.log(self.methods);
     }
 
     self.deleteStage = function(){
@@ -2793,6 +2867,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
         self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values = self.num
     }
 
+    self.getDesigns();
 
 });
 

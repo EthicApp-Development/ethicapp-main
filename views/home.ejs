@@ -62,14 +62,14 @@
                 <a ng-click="selectView('')">{{'home' | lang}}</a>
                 <a ng-click="selectView('launchActivity')">{{'launchActivity' | lang}}</a>
                 <a ng-click="selectView('activities')">{{'activities' | lang}}</a>
-                <a ng-click="selectView('designs')">{{'designs' | lang}}</a>
+                <a ng-click="selectView('designs') && getDesigns()">{{'designs' | lang}}</a>
                 <a class="debug-wip"ng-click="selectView('users')">{{'users' | lang}} WIP</a>
                 <a class="debug-wip" ng-click="selectView('institution')"> {{'institution'|lang}} WIP</a>
             </div>
         </div>
         <div class="main-body vl"   > <!--Right side--> 
             <div class="container" style="margin-top: 3em;">
-                <div ng-view=""></div> <!--Ng view templates-->
+                <div ng-view="" ng-controller="StagesEditController" ></div> <!--Ng view templates-->
             </div>
        
        
