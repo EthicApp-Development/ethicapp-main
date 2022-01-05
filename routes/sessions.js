@@ -207,7 +207,7 @@ router.get("/get-user-designs", (req, res) => {
         });
     qry.on("end", function () {
         //console.log("SQL QUERY WAS OK");
-        console.log('{"status":"ok", "result":'+result+'}')
+        //console.log('{"status":"ok", "result":'+result+'}')
         res.json({"status":"ok", "result":result});
     });
     qry.on("error", function(err){
@@ -219,13 +219,13 @@ router.get("/get-user-designs", (req, res) => {
 
 
 router.post("/update-design", (req, res) => {
-    console.log(req)
+    //console.log(req)
     var jsonBody = "'"+JSON.stringify(req.body.design)+"'";
     var uid = req.session.uid;
     var id = req.body.id;
-    console.log("DESIGN ID:",id)
+    //console.log("DESIGN ID:",id)
     var sql = "UPDATE DESIGNS SET design ="+jsonBody+ " WHERE creator ="+uid+" AND id ="+id+"";
-    console.log(sql)
+    //console.log(sql)
     var db = getDBInstance(pass.dbcon);
     var qry;
     qry = db.query(sql);

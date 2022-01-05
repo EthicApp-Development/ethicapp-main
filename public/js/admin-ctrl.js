@@ -80,7 +80,7 @@ adpp.controller('RouteCtrl', function($scope) {
 
 //#############################################
 
-adpp.controller("AdminController", function ($scope, $http, $uibModal, $location, $locale, $filter, $socket) {
+adpp.controller("AdminController", function ($scope, $http, $uibModal, $location, $locale, $filter, $socket, $route) {
     var self = $scope;
 
     self.temp = "";
@@ -148,7 +148,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
 
     self.selectView = function(tab){
         self.selectedView = tab;
-
+        $route.reload();
         console.log(self.selectedView);
     }
 
@@ -2518,8 +2518,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
     self.busy = false; //upload file
     self.extraOpts = false;
     self.prevStages = false;
-    self.design = {};
-    /*
+    //self.design = {};
     self.design = { //DUMMY DATA
         "metainfo":{
             "title":" Test Design",
@@ -2623,7 +2622,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
         ]
 
     }
-    */
+    
     /*
 
         MOVER CONTENIDO A CONTROLADORES CORRESPONDIENTES!
@@ -2867,7 +2866,6 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
         self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values = self.num
     }
 
-    self.getDesigns();
 
 });
 
