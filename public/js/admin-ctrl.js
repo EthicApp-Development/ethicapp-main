@@ -74,6 +74,7 @@ adpp.controller('RouteCtrl', function($scope) {
       "institution":"/templ/admin/institution.html",
       "activities":"/templ/admin/activities.html",
       "launchActivity":"/templ/admin/launchActivity.html",
+      "viewDesign":"/templ/admin/viewDesign.html"
     }
      
    });
@@ -2515,6 +2516,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
     self.num = null;
     self.designId = null;
     self.designs = null;
+    self.public = null;
     self.busy = false; //upload file
     self.extraOpts = false;
     self.prevStages = false;
@@ -2633,12 +2635,28 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
         BACKEND FUNCTIONS
     */
 
+    self.init = function(){
+        self.getDesigns()
+        self.getPublicDesigns()
+    }
+
     self.getDesigns = function(){
         $http.get("get-user-designs").success(function (data) {
             
             if (data.status == "ok") {
                 self.designs = data.result;
-                console.log(self.designs)
+                //console.log(self.designs)
+            }
+            
+        });
+    };
+
+    self.getPublicDesigns = function(){
+        $http.get("get-public-designs").success(function (data) {
+            
+            if (data.status == "ok") {
+                self.public = data.result;
+                //console.log(self.designs)
             }
             
         });
@@ -2700,31 +2718,38 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
                 self.getDesign(data.id);
                 self.designId = data.id;
                 self.selectView("newDesignExt");
-                // RESET VALUES
-                self.currentStage = null; 
-                self.currentQuestion = null; 
-                self.stageType = null;
-                self.num = null;
-                self.busy = false; 
-                self.extraOpts = false;
-                self.prevStages = false;
+                self.getDesigns()
+                resetValues()
             }
         });
         
     };
 
     self.updateDesign = function () {
-        console.log(self.design)
         var postdata = {"design":self.design,"id": self.designId};
         $http.post("update-design", postdata).success(function (data) {
-            /*
+            
             if (data.status == "ok") {
-                console.log(data)
+                //console.log(data)
+                self.getDesigns()
             }
-            */
+            
         });
 
     }
+
+    self.deleteDesign = function (designId) {
+        var postdata = {"id": designId};
+        $http.post("delete-design", postdata).success(function (data) {
+            
+            if (data.status == "ok") {
+                self.getDesigns(); //get current Designs 
+            }
+            
+        });
+
+    }
+
 
     self.getDesign = function (designId) {
         $http.post("get-design", designId).success(function (data) {
@@ -2733,6 +2758,25 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
             }
         });
     };
+
+    self.goToDesign = function(designId, type){
+        self.getDesign(designId);
+        if(type=="E") self.selectView("newDesignExt")
+        else self.selectView("viewDesign")
+        self.designId = designId;
+        resetValues()
+    }
+
+    var resetValues = function(){
+        // RESET VALUES
+        self.currentStage = null; 
+        self.currentQuestion = null; 
+        self.stageType = null;
+        self.num = null;
+        self.busy = false; 
+        self.extraOpts = false;
+        self.prevStages = false;
+    }
 
     /*
         FRONTEND FUNCTIONS
@@ -2866,6 +2910,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
         self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values = self.num
     }
 
+    self.init() //init
 
 });
 

@@ -172,7 +172,7 @@ router.post("/upload-design", (req, res) => {
 router.post("/get-design", (req, res) => {
     var uid = req.session.uid;
     var id = req.body;
-    var sql = "SELECT * FROM DESIGNS WHERE creator = "+uid+" AND id = "+id;
+    var sql = "SELECT * FROM DESIGNS WHERE id = "+id;
     var db = getDBInstance(pass.dbcon);
     var qry;
     var result;
@@ -200,9 +200,32 @@ router.get("/get-user-designs", (req, res) => {
     var result = []
     qry = db.query(sql,(err,res) =>{
         if(res.rows[0] != null){
-            //result = JSON.stringify(res.rows[0].design);
-            //ADD ID OF DESIGN
-            for (var i=0; i<res.rows.length;i++) result.push(JSON.parse(JSON.stringify(res.rows[i].design)));
+            for (var i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
+            for (var i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
+        }
+        });
+    qry.on("end", function () {
+        //console.log("SQL QUERY WAS OK");
+        //console.log('{"status":"ok", "result":'+result+'}')
+        res.json({"status":"ok", "result":result});
+    });
+    qry.on("error", function(err){
+        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
+        console.log(err);
+        res.end('{"status":"err"}');
+    });
+});
+
+router.get("/get-public-designs", (req, res) => {
+    var uid = req.session.uid;
+    var sql = "SELECT * FROM DESIGNS WHERE creator != "+uid;
+    var db = getDBInstance(pass.dbcon);
+    var qry;
+    var result = []
+    qry = db.query(sql,(err,res) =>{
+        if(res.rows[0] != null){
+            for (var i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
+            for (var i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
         }
         });
     qry.on("end", function () {
@@ -239,6 +262,27 @@ router.post("/update-design", (req, res) => {
         res.end('{"status":"err"}');
     });
 });
+
+router.post("/delete-design", (req, res) => {
+    var uid = req.session.uid;
+    var id = req.body.id;
+    //console.log("DESIGN ID:",id)
+    var sql = "DELETE FROM DESIGNS WHERE creator ="+uid+" AND id ="+id+"";
+    //console.log(sql)
+    var db = getDBInstance(pass.dbcon);
+    var qry;
+    qry = db.query(sql);
+    qry.on("end", function () {
+        console.log("DELETED CORRECTLY");
+        res.end('{"status":"ok"}');
+    });
+    qry.on("error", function(err){
+        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
+        console.log(err);
+        res.end('{"status":"err"}');
+    });
+});
+
 //############################################
 router.post("/documents-session", rpg.multiSQL({
     dbcon: pass.dbcon,

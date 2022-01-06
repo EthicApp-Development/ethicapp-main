@@ -200,5 +200,8 @@
   "adminInstData":"Manage Institution Data",
   "activeChat":"Activate chat",
   "studentAnon":"Students anonimity",
-  "advOpts":"Advanced interaction options"
+  "advOpts":"Advanced interaction options",
+  "actDesigns":"Activities Designs",
+  "yours":"Yours",
+  "created":"Created"
 }
