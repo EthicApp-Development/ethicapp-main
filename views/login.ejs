@@ -31,18 +31,16 @@
     <script src="js/StagesController.js"></script>
     <script src="js/admin-ctrl.js"></script>
     <script src="/socket.io/socket.io.js"></script>
+    <script src="libs/angular-route.js"></script>
 </head>
 <body ng-controller="no_account">
 
 <div class="middle-box large-box">
 
     <div class="logo">
-        <img src="img/logo.png" alt="logo">
+        <img src="/img/EthicApp-Logo-Iconset/EthicApp-Logo-Iconset/ethicapp-logo.png" alt="logo">
     </div>
 
-    <h2 class="app-title">
-        EthicApp
-    </h2>
 
     <hr/>
     <% if(rc == 1) {%>
@@ -96,7 +94,7 @@
     <div class="row ">
         <div class="col-md-3  line-labels">
           <a class="btn btn-outline-dark" href="/google" role="button" style="text-transform:none">
-            <img width="20px" style="margin-bottom:3px; margin-right:5px" alt="Google sign-in" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png" />
+            <img width="20px" style="margin-bottom:3px; margin-right:5px" alt="Google sign-in" src="/img/google.png" />
             {{'glogin' | lang}}
           </a>
         </div>

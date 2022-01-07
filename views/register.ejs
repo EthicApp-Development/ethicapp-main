@@ -31,6 +31,7 @@
     <script src="js/StagesController.js"></script>
     <script src="js/admin-ctrl.js"></script>
     <script src="/socket.io/socket.io.js"></script>
+    <script src="libs/angular-route.js"></script>
     <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit"
     async defer></script>
 
@@ -44,7 +45,9 @@
 
 <div class="middle-box" >
 
-    <h2 class="app-title">EthicApp</h2>
+  <div class="logo">
+    <img src="/img/EthicApp-Logo-Iconset/EthicApp-Logo-Iconset/ethicapp-logo.png" style="width: 100%;" alt="logo">
+</div>
     <hr/>
     <br/>
     <h5>{{'accounttype' | lang}}</h5>
@@ -103,7 +106,7 @@
             <option value="Argentina">Argentina</option>
         </select><br/>
 
-        <label>{{'ints_mail' | lang}}:</label>
+        <label>{{'inst_mail' | lang}}:</label>
         <input type="text" class="form-control" name="domains" placeholder="mit.edu,harvard.edu,stanford.edu">
         <h5 style="font-size: 10px;" class="form-controll">{{'sep_data' | lang}}</h5><br>
         

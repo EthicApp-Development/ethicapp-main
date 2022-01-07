@@ -9,6 +9,7 @@ let mailer = require("nodemailer");
 const passport = require('passport');
 require('./passport-setup');
 
+
 var pg = require('pg');
 const app = require('../app');
 router.use(passport.initialize())
@@ -239,7 +240,11 @@ router.post("/update-lang", rpg.singleSQL({
 var AWS = require('@aws-sdk/client-ses');
 router.post("/resetpassword", (req, res) => {
 
+    //var cred = new AWS.Credentials(pass.accessKeyId,pass.secretAccessKey)
+    //AWS.config.credentials = cred;
     async function mail() {
+
+
         const params ={
             Source:'no-reply@iccuandes.org',
             Destination:{
@@ -256,8 +261,8 @@ router.post("/resetpassword", (req, res) => {
                         'Data': '<div>Hola<br>¿Has perdido tu contraseña? Puedes restablecerla a continuación:<br><a href="http://localhost:8501/passreset"> <button class="btn-primary"> Restablecer contraseña</button> </a> <br>Recibe un cordial saludo,<br>Creadores de EthicApp</div>'} }
                 } 
         };
-        
-        var sendPromise = new AWS.SES({apiVersion: '2010-12-01'}).sendEmail(params);
+
+        var sendPromise = new AWS.SES({apiVersion: '2010-12-01', credentials:{accessKeyId: pass.accessKeyId, secretAccessKey: pass.secretAccessKey}}).sendEmail(params);
         sendPromise.then(
           function(data) {
             res.redirect("login?rc=3");
