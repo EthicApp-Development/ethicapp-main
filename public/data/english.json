@@ -124,7 +124,7 @@
 	"lastname": "Last Name",
 	"launchActivity": "Launch Activity",
 	"launchAnActivity": "Launch an Activity",
-	"launched": "Launched",
+	"launched": "Launched on",
 	"left": "Left",
 	"listOf": "List of",
 	"log1": "Register Finished. log in in your account.",
@@ -241,5 +241,8 @@
 	"words": "Words",
 	"workflow": "Workflow",
 	"yes": "Yes",
-	"yours": "Yours"
+	"yours": "Yours",
+	"byOthers":"By Others",
+	"semDiff":"Semantic Differentials",
+	"search":"Search"
 }

@@ -325,6 +325,15 @@ router.get("/is-super", (req, res) => {
     }
 });
 
+router.get("/is-institution", (req, res) => {
+    if(req.session.role == "I" || req.session.prevUid != null){
+        res.send({status: true});
+    }
+    else {
+        res.send({status: false});
+    }
+});
+
 module.exports = router;
 
 

@@ -102,6 +102,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.iterationNames = [];
     self.showSeslist = true;
     self.superBar = false;
+    self.institution = false;
     self.lang = "english";
     self.secIcons = { configuration: "cog", editor: "edit", dashboard: "bar-chart", users: "male",
         rubrica: "check-square", groups: "users", options: "sliders" };
@@ -126,6 +127,9 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
             if(data.status == "ok"){
                 self.superBar = true;
             }
+        });
+        $http.get("is-institution").success(data => {
+            self.institution = data.status;
         });
     };
 
@@ -2507,9 +2511,8 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
         };
     };
 
-    self.currentStage = null; //index of stage
-    self.currentQuestion = null; //index of current question
-    self.stageType = null;
+    self.currentStage = 0; //index of stage
+    self.currentQuestion = 0; //index of current question
     self.methods = [self.keyGroups("random"), self.keyGroups("performance", "homog"), self.keyGroups("performance", "heterg"), 
                     self.keyGroups("knowledgeType", "homog"), self.keyGroups("knowledgeType", "heterg")];
     self.groupType = [self.keyGroups("individual"), self.keyGroups("team")];
@@ -2624,6 +2627,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
         ]
 
     }
+    self.stageType = self.design.type;
     
     /*
 
@@ -2638,6 +2642,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
     self.init = function(){
         self.getDesigns()
         self.getPublicDesigns()
+        resetValues();
     }
 
     self.getDesigns = function(){
@@ -2764,14 +2769,14 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
         if(type=="E") self.selectView("newDesignExt")
         else self.selectView("viewDesign")
         self.designId = designId;
-        resetValues()
+        resetValues();
     }
 
     var resetValues = function(){
         // RESET VALUES
-        self.currentStage = null; 
-        self.currentQuestion = null; 
-        self.stageType = null;
+        self.currentStage = 0; 
+        self.currentQuestion = 0; 
+        self.stageType = self.design.type;
         self.num = null;
         self.busy = false; 
         self.extraOpts = false;
@@ -2840,7 +2845,8 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
         }
         self.extraOpts = false;
         self.prevStages = false;
-        console.log(self.methods);
+        //console.log(self.methods);
+        console.log(self.design)
     }
 
     self.deleteStage = function(){

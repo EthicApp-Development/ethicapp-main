@@ -3,28 +3,47 @@
 
 <!--Choices-->
 <div class="flex-container">
-    <div ng-click="selectView('newDesign')">{{'designActivity' | lang}}</div>
-    <div ng-click="selectView('launchActivity')">{{'launchAnActivity' | lang}}</div>
-    <div ng-click="selectView('designs')">{{'shareActivityDesign' | lang}}</div>
-    <div ng-click="selectView('designs')">{{'searchSharedDesign' | lang}}</div>
-    <div ng-click="selectView('users')" style="background-color: rgb(226, 95, 95); color: white;">{{'adminInstUsers'|lang}} (Work in Progress)</div>
-    <div ng-click="selectView('institution')" style="background-color: rgb(226, 95, 95); color: white;">{{'adminInstData'|lang}} (Work in Progress)</div>
+    <div ng-click="selectView('newDesign')">
+        <p>{{'designActivity' | lang}}</p>
+        <img src="img/designs/design-activity.svg" alt="No Carga" class="thumbnail-image">
+    </div>
+    <div ng-click="selectView('launchActivity')">
+        <p>{{'launchAnActivity' | lang}}</p>
+        <img src="img/designs/launch.svg" alt="No Carga" class="thumbnail-image">
+    </div>
+    <div ng-click="selectView('designs')">
+        <p>{{'shareActivityDesign' | lang}}</p>
+        <img src="img/designs/design-share.svg" alt="No Carga" class="thumbnail-image">
+    </div>
+    <div ng-click="selectView('designs')">
+        <p>{{'searchSharedDesign' | lang}}</p>
+        <img src="img/designs/design-search.svg" alt="No Carga" class="thumbnail-image">
+    </div>
+    <div ng-click="selectView('users')" ng-if="institution">
+        <p>{{'adminInstUsers' | lang}}</p>
+        <img src="img/designs/manage-users.svg" alt="No Carga" class="thumbnail-image"></div>
+    <div ng-click="selectView('institution')" ng-if="institution">
+        <p>{{'adminInstData' | lang}}</p>
+        <img src="img/designs/institution.svg" alt="No Carga" class="thumbnail-image">
+    </div>
 </div>
 
 <!--Activities-->
 <h2>{{'recentActivity'|lang}}</h2>
-<div class="activities_container">
+<div class="activities_container" ng-controller= "TabsController">
     <div class="list-group pad-content">
         <div class="list-group-item" ng-repeat="ses in currentSessions() | limitTo: 3">
-            <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
+            <a href="admin#/{{ses.id}}"><h4 class="list-group-item-heading" ng-bind="ses.name"></h4></a>
             <p class="list-group-item-text" ng-bind="ses.descr"></p>
             <p class="list-group-item-text">{{'launched' | lang}} {{ses.time | date}}</p>
-            <p class="list-group-item-text">{{'code' | lang}} {{ses.code}}</p>
+            <p class="list-group-item-text">{{'code' | lang}}: {{ses.code}}</p>
             <div class="text-right">
-                <a href="{{routes[ses.type]}}?sesid={{ses.id}}"><button class="btn btn-primary ">{{'gotoActivity' | lang}}</button></a> 
+                <a href="admin#/{{ses.id}}"><button class="btn btn-primary ">{{'gotoActivity' | lang}}</button></a> 
+                <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
             </div>
         </div>
     </div>
 </div>
 
 <button class="btn btn-info " ng-click="changeLang()">{{'langOther' | lang}}</button>
+<button class="btn btn-info " ng-click="institution = !institution">Institution</button>

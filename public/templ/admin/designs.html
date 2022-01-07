@@ -9,10 +9,10 @@
         {{'yours'|lang}}
         </button>
         <button class="tab-cs" ng-click = "dsgnMode=1" ng-class="{'btn-selected': dsgnMode == 1}">
-        {{'others'|lang}}
+        {{'byOthers'|lang}}
         </button>
         <div style="float: left;display: flex;justify-content: left;align-items: center;"> 
-            <input class="form-control text-center" type="text" placeholder="Search" ng-model="userSearch" style="height: 2em;">
+            <input class="form-control text-center" type="text" placeholder="{{'search'|lang}}" ng-model="userSearch" style="height: 2em;">
         </div>
         
     </div>
@@ -23,9 +23,7 @@
             <!--OWN-->
             <div class="list-group-item" ng-repeat="ses in designs | filter:userSearch" ng-if="dsgnMode==0"> <!--UPDATE IT CORRECTLY-->
                 <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
-                <p class="list-group-item-text" ng-bind="ses.descr"></p>
                 <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
-                <p class="list-group-item-text">{{'code' | lang}} {{ses.code}}</p>
                 <div class="text-right">
                     <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'E')">{{'edit' | lang}}</button>
                     <button class="btn btn-danger " ng-click="deleteDesign(ses.id)">{{'delete' | lang}}</button>
@@ -34,9 +32,7 @@
             <!--PUBLIC-->
             <div class="list-group-item" ng-repeat="ses in public | filter:userSearch" ng-if="dsgnMode==1"> <!--UPDATE IT CORRECTLY-->
                 <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
-                <p class="list-group-item-text" ng-bind="ses.descr"></p>
                 <p class="list-group-item-text">{{'launched' | lang}} {{ses.metainfo.creation_date | date}}</p>
-                <p class="list-group-item-text">{{'code' | lang}} {{ses.code}}</p>
                 <div class="text-right">
                     <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'Vf')">{{'view' | lang}}</button>
                 </div>

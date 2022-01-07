@@ -218,7 +218,7 @@
 	"gotoActivity": "Ir a la Actividad",
 	"recentActivity": "Actividades Recientes",
 	"code": "Código",
-	"launched": "Lanzada",
+	"launched": "Lanzada en",
 	"homeMsg": "Diseña una nueva actividad para realizar con tu curso, o lanza una actividad basada en algún diseño. También puedes compartir una actividad con colegas y buscar actividades compartidas por otros.",
 	"back": "Atrás",
 	"designMsg": "Crear Diseño de Actividad",
@@ -241,6 +241,9 @@
 	"studentAnon": "Anonimato de estudiantes",
 	"advOpts": "Opciones avanzadas de interacción",
 	"actDesigns": "Diseños de Actividades",
-	"yours": "Tuyos",
-	"created": "Creado"
+	"yours": "Mios",
+	"byOthers":"De otros",
+	"created": "Creado",
+	"semDiff":"Diferenciales Semánticos",
+	"search":"Buscar"
 }

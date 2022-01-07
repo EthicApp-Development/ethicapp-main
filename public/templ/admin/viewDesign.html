@@ -86,13 +86,13 @@
                     <div class="row margin-top-8" > 
                         <label class="col-lg-2">{{'studentAnon'|lang}}:</label>
                         <div class="col-lg-1">
-                            <input type="radio" name="anon" 
+                            <input type="radio" name="anon2" 
                             ng-value="true" ng-disabled="true"
                             ng-model="design.phases[currentStage].anonymous">
                             <label>{{'yes'|lang}}</label>
                         </div>
                         <div class="col-lg-1">
-                            <input type="radio" name="anon" 
+                            <input type="radio" name="anon2" 
                             ng-value="false" ng-disabled="true"
                             ng-model="design.phases[currentStage].anonymous">
                             <label>{{'no'|lang}}</label>
@@ -116,13 +116,13 @@
                     <div class="row margin-top-8"> 
                         <label class="col-lg-2">{{'activeChat'|lang}}:</label>
                         <div class="col-lg-1">
-                            <input type="radio" name="chat" 
+                            <input type="radio" name="chat2" 
                             ng-value="true" ng-disabled="true"
                             ng-model="design.phases[currentStage].chat">
                             <label>{{'yes'|lang}}</label>
                         </div>
                         <div class="col-lg-1">
-                            <input type="radio" name="chat" readonly 
+                            <input type="radio" name="chat2" readonly 
                             ng-value="false" ng-disabled="true"
                             ng-model="design.phases[currentStage].chat">
                             <label>{{'no'|lang}}</label>
@@ -174,13 +174,13 @@
                 <div class="row margin-top-24"> 
                     <label class="col-lg-2">{{'mandatoryComment'|lang}}</label>
                     <div class="col-lg-1">
-                        <input type="radio" name="comment"
+                        <input type="radio" name="comment2"
                         ng-value="true" ng-disabled="true"
                         ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.just_required">
                         <label>{{'yes'|lang}}</label>
                     </div>
                     <div class="col-lg-1">
-                        <input type="radio" name="comment" 
+                        <input type="radio" name="comment2" 
                         ng-value="false" ng-disabled="true"
                         ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.just_required">
                         <label>{{'no'|lang}}</label>

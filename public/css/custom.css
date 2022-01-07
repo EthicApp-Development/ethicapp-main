@@ -12,7 +12,7 @@ body {
 
 .sidenav {
     height: 100%;
-    width: 12%;
+    width: 14em;
     position: fixed;
     z-index: 1;
     top: 0;
@@ -43,10 +43,14 @@ body {
 }
 
 .main-body {
-    margin-left: 12%; /* Same as the width of the sidenav */
+    margin-left: 14em; /* Same as the width of the sidenav */
     padding: 0px 10px;
 }
 
+.thumbnail-image{
+    width:60px;
+    height:60px;
+}
 
 .flex-container {
     display: flex;
@@ -58,21 +62,23 @@ body {
 
 .flex-container > div {
     background-color: #fff;
-    width: 12em;
-    height: 9em;
+    width: 13em;
+    height: 6.8em;
     margin: 0.625em;
     text-align: center;
     line-height: 2.135em;
     font-size: 1em;
-    border:2px solid #bbbbbb;
+    border:1px solid #bbbbbb;
     align-items: center;
     justify-content: center;
     display: flex;
     cursor: pointer;
+    border-radius: 2px;
+    padding: 10px;
 }
 
 .flex-container > div:hover {
-    border:2px solid #67aed6;
+    border:1px solid #67aed6;
 }
 
 
