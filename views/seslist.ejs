@@ -29,18 +29,7 @@
                 <img src="img/logo.png" class="logo-bar">
             </a>
         </div>
-        <div class="cf3 grow text-center">
-            <div>
-                <input type="text" class="form-control form-inline-med flat" ng-model="invCode" id="codebox"
-                       ng-keydown="$event.keyCode === 13 && enterCode()" placeholder="Ingresar Código">
-                <span>
-                    <button class="btn btn-default flat btn-padding-min" ng-disabled="invCode == ''" ng-click="enterCode()"
-                        id="codeboxbtn">
-                        <i class="fa fa-external-link-square fa-2x"></i>
-                    </button>
-                </span>
-            </div>
-        </div>
+
         <div class="cf1 text-right margin-right-8 simple-padding-top" id="topbtnlist">
             <a href="#" class="text-white margin-right-8" ng-click="startTour()">
                 <i class="fa fa-info-circle fa-2x"></i>
@@ -50,11 +39,16 @@
             </a>
         </div>
     </div>
-
+    <!--
+        TABS & Lang
+    -->
     <div class="top-bar top-bar-tabs">
         <div class="qs-tabs">
-            <div class="tab wide active" id="seslistdiv">
-                Sesiones
+            <div class="tab tab-text tab-text-lg" id="seslistdiv" ng-click= "changeTab(true)" ng-class="{'active': !currTab}">
+                Ingresa Código
+            </div>
+            <div class="tab tab-text tab-text-lg" id="seslistdiv" ng-click = "changeTab(false)" ng-class="{'active': currTab}">
+                Mis Actividades
             </div>
             <div class="pull-right text-white">
                 <strong class="margin-right-8">{{ username }}</strong>
@@ -64,42 +58,61 @@
             </div>
         </div>
     </div>
+ 
+    <!--
+        TAB Join Code
+    -->
+    <div ng-show = "!currTab" style= "display: flex;justify-content: center; align-items: center;" > 
+        <div class="container" style ="border-style: ridge; ">
+            <div class="row">
+                <div class="col text-center">
+                    <br>
+                    <p>Ingresa código para unirte a una actividad</p>
+                    <br>
+                    <input type = "text" ng-model="invCode" id="codebox"
+                    ng-keydown="$event.keyCode === 13 && enterCode()" placeholder="Ingresar Código" style="height:85px; width:240px; font-size: 27px; text-align: center;">
+                    <span>
+                        <br>
+                        <br>
 
-    <div class="scrollable-container blue" >
+                        <button class="btn btn-primary" ng-disabled="invCode == ''" ng-click="enterCode()" style="width:17em"
+                            id="codeboxbtn">
+                            Ingresar
+                        </button>
+                        <br>
+                        <br>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--
+        TAB My activities
+    -->
+    <div class="scrollable-container white" style="border-style: ridge;" ng-show="currTab">
+        <div class="qs-tabs">
+            <div class="tab tab-text tab-text-lg" id="seslistdiv" ng-click= "changeTypeTab(true)" ng-class="{'active': !sesTypeTab}">
+                Vigentes
+            </div>
+            <div class="tab tab-text tab-text-lg" id="seslistdiv" ng-click = "changeTypeTab(false)" ng-class="{'active': sesTypeTab}">
+                Finalizadas
+            </div>
+        </div>
         <div class="list-group pad-content">
-            <a class="list-group-item" ng-repeat="ses in sessions"
-               href="{{routes[ses.type]}}?sesid={{ses.id}}">
-                <h4 class="list-group-item-heading" ng-bind="ses.name">
-                </h4>
+            <div class="list-group-item" ng-repeat="ses in currentSessions()">
+                <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
                 <p class="list-group-item-text" ng-bind="ses.descr"></p>
-            </a>
+                <p class="list-group-item-text">Lanzada {{ses.time | date}}</p>
+                <p class="list-group-item-text">Código {{ses.code}}</p>
+                <div class="text-right">
+                    <a href="{{routes[ses.type]}}?sesid={{ses.id}}"><button class="btn btn-primary ">Ir a la actividad</button></a> 
+                </div>
+            </div>
+            
         </div>
     </div>
 
-    <!--
 
-    <strong>{{username}}</strong>
-    <input type="text" class="form-control form-inline-med simple-margin-left" ng-model="invCode"
-           ng-keydown="$event.keyCode === 13 && enterCode()">
-    <button class="btn btn-primary" ng-disabled="invCode == ''" ng-click="enterCode()"><i class="fa fa-external-link-square"></i></button>
-
-
-    <div class="pull-right">
-        <a href="logout" class="btn btn-default top-right">Salir</a>
-    </div>
-
-    <h3>Lista de Sesiones</h3>
-
-    <div class="list-group">
-        <a class="list-group-item" ng-repeat="ses in sessions"
-           href="to-{{(ses.type=='L')?'visor':((ses.type=='S')?'select':'semantic')}}?sesid={{ses.id}}">
-            <h4 class="list-group-item-heading" ng-bind="ses.name">
-            </h4>
-            <p class="list-group-item-text" ng-bind="ses.descr"></p>
-        </a>
-    </div>
-
-    -->
 
 </div>
 

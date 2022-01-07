@@ -1,0 +1,48 @@
+<br>
+<br>
+<a ng-click="selectView('')" >{{'back'|lang}}</a>
+<br>
+<h2>{{'actDesigns'|lang}}</h2>
+<div>
+    <div class="tab-cs" ng-init="dsgnMode=0">
+        <button class="tab-cs" ng-click= 'dsgnMode=0' ng-class="{'btn-selected': dsgnMode == 0}">
+        {{'yours'|lang}}
+        </button>
+        <button class="tab-cs" ng-click = "dsgnMode=1" ng-class="{'btn-selected': dsgnMode == 1}">
+        {{'others'|lang}}
+        </button>
+        <div style="float: left;display: flex;justify-content: left;align-items: center;"> 
+            <input class="form-control text-center" type="text" placeholder="Search" ng-model="userSearch" style="height: 2em;">
+        </div>
+        
+    </div>
+</div>
+<div class="container" style ="border: #bbb 1px solid;">
+    <div class="activities_container" style="margin-top: 2em;">
+        <div class="list-group pad-content">
+            <!--OWN-->
+            <div class="list-group-item" ng-repeat="ses in designs | filter:userSearch" ng-if="dsgnMode==0"> <!--UPDATE IT CORRECTLY-->
+                <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
+                <p class="list-group-item-text" ng-bind="ses.descr"></p>
+                <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
+                <p class="list-group-item-text">{{'code' | lang}} {{ses.code}}</p>
+                <div class="text-right">
+                    <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'E')">{{'edit' | lang}}</button>
+                    <button class="btn btn-danger " ng-click="deleteDesign(ses.id)">{{'delete' | lang}}</button>
+                </div>
+            </div>
+            <!--PUBLIC-->
+            <div class="list-group-item" ng-repeat="ses in public | filter:userSearch" ng-if="dsgnMode==1"> <!--UPDATE IT CORRECTLY-->
+                <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
+                <p class="list-group-item-text" ng-bind="ses.descr"></p>
+                <p class="list-group-item-text">{{'launched' | lang}} {{ses.metainfo.creation_date | date}}</p>
+                <p class="list-group-item-text">{{'code' | lang}} {{ses.code}}</p>
+                <div class="text-right">
+                    <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'Vf')">{{'view' | lang}}</button>
+                </div>
+            </div>
+        </div>
+    
+    </div>
+
+</div>
