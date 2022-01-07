@@ -1,0 +1,30 @@
+<h2>{{'home' | lang}}</h2>
+<h4 class="margin-top-24" style="width: 60em;">{{'homeMsg' | lang}}</h4>
+
+<!--Choices-->
+<div class="flex-container">
+    <div ng-click="selectView('newDesign')">{{'designActivity' | lang}}</div>
+    <div ng-click="selectView('launchActivity')">{{'launchAnActivity' | lang}}</div>
+    <div ng-click="selectView('designs')">{{'shareActivityDesign' | lang}}</div>
+    <div ng-click="selectView('designs')">{{'searchSharedDesign' | lang}}</div>
+    <div ng-click="selectView('users')" style="background-color: rgb(226, 95, 95); color: white;">{{'adminInstUsers'|lang}} (Work in Progress)</div>
+    <div ng-click="selectView('institution')" style="background-color: rgb(226, 95, 95); color: white;">{{'adminInstData'|lang}} (Work in Progress)</div>
+</div>
+
+<!--Activities-->
+<h2>{{'recentActivity'|lang}}</h2>
+<div class="activities_container">
+    <div class="list-group pad-content">
+        <div class="list-group-item" ng-repeat="ses in currentSessions() | limitTo: 3">
+            <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
+            <p class="list-group-item-text" ng-bind="ses.descr"></p>
+            <p class="list-group-item-text">{{'launched' | lang}} {{ses.time | date}}</p>
+            <p class="list-group-item-text">{{'code' | lang}} {{ses.code}}</p>
+            <div class="text-right">
+                <a href="{{routes[ses.type]}}?sesid={{ses.id}}"><button class="btn btn-primary ">{{'gotoActivity' | lang}}</button></a> 
+            </div>
+        </div>
+    </div>
+</div>
+
+<button class="btn btn-info " ng-click="changeLang()">{{'langOther' | lang}}</button>
