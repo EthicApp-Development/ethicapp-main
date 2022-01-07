@@ -2931,6 +2931,80 @@ var centroid = function centroid(type, geom) {
 adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
     var self = $scope;
     self.lang = "spanish";
+    window.DIC = "data/" + self.lang + ".json";
+    self.uid = []
+    self.domains =[]
+    self.role = ""
+    self.id = 0
+    self.mail = ""
+    self.nominst = ""
+    self.users = []
+    self.init = function () {
+        self.getuserinfo();
+        self.getdomains();
+
+        self.updateLang(self.lang);
+        //self.get_users();
+
+        
+    };
+    self.updateLang = function (lang) {
+        $http.get("data/" + lang + ".json").success(function (data) {
+            window.DIC = data;
+        });
+    };
+    self.changeLang = function () {
+        self.lang = self.lang == "english" ? "spanish" : "english";
+        self.updateLang(self.lang);
+    };
+
+    self.get_users = function() {
+        $http({ url: "get_same_users", method: "post", data: postdata }).success(function (data) {
+            self.users = data.data;
+            
+        });
+    }
+
+    self.getuserinfo = function() {
+        var postdata = 500
+        $http({ url: "getuserinfo", method: "post",data:postdata }).success(function (data) {
+            self.uid = data.data[0].id;
+            self.lang = data.data[0].lang;
+            self.mail = data.data[0].mail;
+            self.role = data.data[0].role
+        });
+    }
+
+    self.getdomains = function() {
+        var postdata = 404;
+        $http({ url: "getdomains", method: "post",data:postdata }).success(function (data) {
+            self.domains = data.data[0].dominionscorreo;
+            self.nominst = data.data[0].nombreinstitucion;
+            var postdata2 = self.domains
+            $http({ url: "get_same_users", method: "post", data: {postdata2} }).success(function (data) {
+                var res = []
+                data.data.forEach(element =>{
+                    element.forEach(element2 =>{
+                        res.push(element2)
+
+                    })
+                })
+                self.users = res;
+                
+
+            });
+        });
+    }
+    
+
+    self.init();
+}])
+
+
+adpp.controller("no_account",["$scope",'$http',function($scope,$http,Admin){
+    var self = $scope;
+    self.lang = "spanish";
+
 
     window.DIC = "data/" + self.lang + ".json";
 

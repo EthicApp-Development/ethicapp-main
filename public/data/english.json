@@ -203,5 +203,8 @@
   "rector":"Rector",
   "director":"Director",
   "sol_acc":"Request Institutional Account",
-  "alredy_acc":"Already have an account?"
+  "alredy_acc":"Already have an account?",
+  "res_pass":"Reset Password",
+  "make_t":"Make Teacher",
+  "make_s":"Make Student"
 }

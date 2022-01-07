@@ -1028,6 +1028,13 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     padding-left: 8px;
 }
 
+.rtab-nb2{
+    float: right;
+    padding: auto;
+    margin-left: 10px;
+    
+}
+
 .btab{
     display: inline-block;
     width: 90px;

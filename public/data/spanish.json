@@ -204,7 +204,10 @@
   "rector":"Rector",
   "director":"Director",
   "sol_acc":"Solicitar cuenta institucional",
-  "alredy_acc":"Ya tiene una cuenta?"
+  "alredy_acc":"Ya tiene una cuenta?",
+  "res_pass":"Restablecer Contraseña",
+  "make_t":"Convertir en profesor",
+  "make_s":"Convertir en estudiante"
 
 
 }
