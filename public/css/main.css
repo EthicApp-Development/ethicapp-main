@@ -868,6 +868,10 @@ ng-quill-editor.large .ql-editor{
     background: #fff;
 }
 
+.scrollable-container.white{
+    background: #fff;
+}
+
 .text-white{
     color: #ffffff !important;
 }

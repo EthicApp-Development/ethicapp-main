@@ -1,7 +1,7 @@
 "use strict";
 
 var adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill",
-    "ngMap", "tableSort", 'btford.socket-io']);
+    "ngMap", "tableSort", 'btford.socket-io', 'ngRoute']); //ngRoute was newly added
 
 var DASHBOARD_AUTOREALOD = window.location.hostname.indexOf("fen") != -1;
 var DASHBOARD_AUTOREALOD_TIME = 15;
@@ -47,7 +47,41 @@ adpp.config(['ngQuillConfigProvider', function (ngQuillConfigProvider) {
     });
 }]);
 
-adpp.controller("AdminController", function ($scope, $http, $uibModal, $location, $locale, $filter, $socket) {
+//ROUTING
+
+adpp.config(function ($routeProvider, $locationProvider) {
+    $routeProvider
+    // set route for the index page
+    .when('/',
+    {
+        controller: 'RouteCtrl',
+        templateUrl: '/templ/admin/uirouter.html'
+    })
+
+ 
+});
+ 
+adpp.controller('RouteCtrl', function($scope) {
+   
+
+    $scope.template={
+      
+      "home":"/templ/admin/home.html",
+      "newDesign":"/templ/admin/newDesign.html",
+      "newDesignExt":"/templ/admin/newDesignExt.html",
+      "designs":"/templ/admin/designs.html",
+      "users":"/templ/admin/users.html",
+      "institution":"/templ/admin/institution.html",
+      "activities":"/templ/admin/activities.html",
+      "launchActivity":"/templ/admin/launchActivity.html",
+      "viewDesign":"/templ/admin/viewDesign.html"
+    }
+     
+   });
+
+//#############################################
+
+adpp.controller("AdminController", function ($scope, $http, $uibModal, $location, $locale, $filter, $socket, $route) {
     var self = $scope;
 
     self.temp = "";
@@ -55,7 +89,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     $locale.NUMBER_FORMATS.GROUP_SEP = '';
     self.shared = {};
     self.sessions = [];
-
+    self.selectedView = '' //current view
     self.selectedSes = null;
     self.documents = [];
     self.questions = [];
@@ -112,6 +146,12 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         if(self.shared.getStages)
             self.shared.getStages();
     };
+
+    self.selectView = function(tab){
+        self.selectedView = tab;
+        $route.reload();
+        console.log(self.selectedView);
+    }
 
     self.shared.updateSesData = function () {
         $http({ url: "get-session-list", method: "post" }).success(function (data) {
@@ -194,6 +234,15 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         $uibModal.open({
             templateUrl: "templ/new-ses.html"
         });
+    };
+
+    self.openViewSelected = function () { //Displays View Selected
+        if(self.selectedView == "TEST"){
+            $uibModal.open({
+                templateUrl: "templ/home.html"
+            });
+
+        }
     };
 
     self.openDuplicateSes = function () {
@@ -2224,7 +2273,6 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
             }, self.groupNum, isDifferent(self.groupMet));
         }
         else if (self.selectedSes.type == "E"){
-            console.log("AAAAA");
             let dfd = users.map(e => {
                 let d = (self.shared.dataDF || []);
                 let r = d.find(f => f.tmid == e.id);
@@ -2438,6 +2486,434 @@ adpp.controller("RubricaController", function ($scope, $http) {
         return !self.editable;
     };
 });
+
+adpp.controller("StagesEditController", function ($scope, $filter, $http) {
+
+    /*
+        LANG FUNCTIONS
+    */
+
+    var self = $scope;
+
+    self.flang = function (key) {
+        return $filter("lang")(key);
+    };
+
+    self.keyGroups = function (k1, k2) {
+        return {
+            key: k1 + (k2 == null ? "" : " " + k2),
+            name: k1 + (k2 == null ? "" : " " + k2)
+            //name: self.flang(k1) + (k2 == null ? "" : " " + self.flang(k2)) FIX TRANSLATION BUG
+        };
+    };
+
+    self.currentStage = null; //index of stage
+    self.currentQuestion = null; //index of current question
+    self.stageType = null;
+    self.methods = [self.keyGroups("random"), self.keyGroups("performance", "homog"), self.keyGroups("performance", "heterg"), 
+                    self.keyGroups("knowledgeType", "homog"), self.keyGroups("knowledgeType", "heterg")];
+    self.groupType = [self.keyGroups("individual"), self.keyGroups("team")];
+    self.num = null;
+    self.designId = null;
+    self.designs = null;
+    self.public = null;
+    self.busy = false; //upload file
+    self.extraOpts = false;
+    self.prevStages = false;
+    //self.design = {};
+    self.design = { //DUMMY DATA
+        "metainfo":{
+            "title":" Test Design",
+            "author": "Claudio Alvarez",
+            "creation_date": "",
+            "id":"HsLKs92M"
+        },
+        "roles":[],
+        "type":"semantic_differential",
+        "phases":[
+            {
+                "mode":"individual",
+                "chat":true,
+                "anonymous":true,
+                "grouping_algorithm" : "random",
+                "prevPhasesResponse" : [ ],
+                "stdntAmount":3,
+                "questions":[
+                    {
+                    "q_text":"Te gusta como esta quedando el formato?",
+                    "ans_format":{
+                        "values":7,
+                        "l_pole":"Me carga",
+                        "r_pole":"Me encanta",
+                        "just_required": true,
+                        "min_just_length": 5
+                    }
+                    },
+                    {
+                    "q_text":"Testing",
+                    "ans_format":{
+                        "values":9,
+                        "l_pole":"Me carga",
+                        "r_pole":"Me encanta",
+                        "just_required": false,
+                        "min_just_length": 8
+                    }
+                    }
+                ]
+            },
+            {
+            "mode":"team",
+            "chat":false,
+            "anonymous":true,
+            "grouping_algorithm" : "knowledgeType homog",
+            "prevPhaseResponse" : [ 0],
+            "stdntAmount":4,
+            "questions":[
+                {
+                    "q_text":"Pregunta de prueba",
+                    "ans_format":{
+                        "values":10,
+                        "l_pole":"En contra",
+                        "r_pole":"A favor",
+                        "just_required": false,
+                        "min_just_length": 8
+                }
+                },
+                {
+                "q_text":"Te gusta como esta quedando el formato?",
+                "ans_format":{
+                    "values":7,
+                    "l_pole":"Me carga",
+                    "r_pole":"Me encanta",
+                    "just_required": true,
+                    "min_just_length": 5
+                }
+                }
+            ]
+        },
+        {
+            "mode":"team",
+            "chat":false,
+            "anonymous":false,
+            "grouping_algorithm" : "performance homog",
+            "prevPhaseResponse" : [ 0 ,1],
+            "stdntAmount":7,
+            "questions":[
+                {
+                    "q_text":"Tercera fase",
+                    "ans_format":{
+                        "values":4,
+                        "l_pole":"En contra",
+                        "r_pole":"A favor",
+                        "just_required": false,
+                        "min_just_length": 8
+                }
+                },
+                {
+                "q_text":"Te gusta como esta quedando el formato?",
+                "ans_format":{
+                    "values":9,
+                    "l_pole":"Me carga",
+                    "r_pole":"Me encanta",
+                    "just_required": true,
+                    "min_just_length": 5
+                }
+                }
+            ]
+        }
+        ]
+
+    }
+    
+    /*
+
+        MOVER CONTENIDO A CONTROLADORES CORRESPONDIENTES!
+
+    */
+
+    /*
+        BACKEND FUNCTIONS
+    */
+
+    self.init = function(){
+        self.getDesigns()
+        self.getPublicDesigns()
+    }
+
+    self.getDesigns = function(){
+        $http.get("get-user-designs").success(function (data) {
+            
+            if (data.status == "ok") {
+                self.designs = data.result;
+                //console.log(self.designs)
+            }
+            
+        });
+    };
+
+    self.getPublicDesigns = function(){
+        $http.get("get-public-designs").success(function (data) {
+            
+            if (data.status == "ok") {
+                self.public = data.result;
+                //console.log(self.designs)
+            }
+            
+        });
+    };
+
+    self.uploadDocument = function (event) { //Work in progress
+        self.busy = true;
+        var fd = new FormData(event.target);
+        $http.post("upload-file", fd, {
+            transformRequest: angular.identity,
+            headers: { 'Content-Type': undefined }
+        }).success(function (data) {
+            if (data.status == "ok") {
+                $timeout(function () {
+                    Notification.success("Documento cargado correctamente");
+                    event.target.reset();
+                    self.busy = false;
+                    self.shared.updateDocuments();
+                }, 2000);
+            }
+        });
+    };
+    
+    self.uploadDesign = function (title, author) {
+        var postdata = { 
+            "metainfo":{
+                "title":title,
+                "author": author,
+                "creation_date": Date.now()
+            },
+            "roles":[],
+            "type":"semantic_differential",
+            "phases":[
+                {
+                    "mode":"individual",
+                    "chat":true,
+                    "anonymous":true,
+                    "grouping_algorithm" : "random",
+                    "prevPhasesResponse" : [ ],
+                    "stdntAmount":3,
+                    "questions":[
+                        {
+                        "q_text":"",
+                        "ans_format":{
+                            "values":7,
+                            "l_pole":"",
+                            "r_pole":"",
+                            "just_required": true,
+                            "min_just_length": 5
+                        }
+                    }
+                    ]
+                }
+            ]
+            }
+        $http.post("upload-design", postdata).success(function (data) {
+            
+            if (data.status == "ok") {
+                self.getDesign(data.id);
+                self.designId = data.id;
+                self.selectView("newDesignExt");
+                self.getDesigns()
+                resetValues()
+            }
+        });
+        
+    };
+
+    self.updateDesign = function () {
+        var postdata = {"design":self.design,"id": self.designId};
+        $http.post("update-design", postdata).success(function (data) {
+            
+            if (data.status == "ok") {
+                //console.log(data)
+                self.getDesigns()
+            }
+            
+        });
+
+    }
+
+    self.deleteDesign = function (designId) {
+        var postdata = {"id": designId};
+        $http.post("delete-design", postdata).success(function (data) {
+            
+            if (data.status == "ok") {
+                self.getDesigns(); //get current Designs 
+            }
+            
+        });
+
+    }
+
+
+    self.getDesign = function (designId) {
+        $http.post("get-design", designId).success(function (data) {
+            if (data.status == "ok") {
+                self.design = data.result;
+            }
+        });
+    };
+
+    self.goToDesign = function(designId, type){
+        self.getDesign(designId);
+        if(type=="E") self.selectView("newDesignExt")
+        else self.selectView("viewDesign")
+        self.designId = designId;
+        resetValues()
+    }
+
+    var resetValues = function(){
+        // RESET VALUES
+        self.currentStage = null; 
+        self.currentQuestion = null; 
+        self.stageType = null;
+        self.num = null;
+        self.busy = false; 
+        self.extraOpts = false;
+        self.prevStages = false;
+    }
+
+    /*
+        FRONTEND FUNCTIONS
+    */
+
+    self.toggleOpts = function(opt){
+        if(opt == 1)self.extraOpts = !self.extraOpts;
+        else if(opt == 2) self.prevStages = !self.prevStages;
+        
+    }
+
+    self.buildArray = function (n) {
+        var a = [];
+        for (var i = 1; i <= n; i++) {
+            a.push(i);
+        }
+        return a;
+    };
+    
+    self.selectQuestion = function(id){
+        self.currentQuestion = id; 
+        self.num = self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values
+    }
+
+    self.addQuestion = function(){
+        self.design.phases[self.currentStage].questions.push(
+            {
+            "q_text":"",
+            "ans_format":{
+                "values":5,
+                "l_pole":"",
+                "r_pole":"",
+                "just_required": true,
+                "min_just_length": 10
+        }})
+        self.selectQuestion(self.design.phases[self.currentStage].questions.length-1) //send to new question
+    }
+
+    self.deleteQuestion = function(index){
+        if(self.currentQuestion != null && self.design.phases[self.currentStage].questions.length != 1){
+            //change question index
+            if(index == 0) self.currentQuestion = 0;
+            else if(index < self.design.phases[self.currentStage].questions.length-1) self.currentQuestion = self.currentQuestion;
+            else self.currentQuestion = self.currentQuestion -1;
+            self.design.phases[self.currentStage].questions.splice(index, 1);
+            self.selectQuestion(self.currentQuestion );
+        }
+    }
+
+    self.selectStage = function(id){
+        if(self.currentStage != id){
+            self.currentStage = id;
+            self.stageType = self.design.type;
+            self.currentQuestion = 0 //reset question index
+            self.num = self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values;
+        }
+        else {
+            self.currentStage = null; //unselect current stage
+            self.num = null;
+            self.stageType  = null;
+        }
+        self.extraOpts = false;
+        self.prevStages = false;
+        console.log(self.methods);
+    }
+
+    self.deleteStage = function(){
+        if(self.currentStage != null && self.design.phases.length != 1){
+            var index = self.currentStage
+            self.design.phases.splice(index, 1);
+            self.currentQuestion = 0 //reset question index
+            self.num = null;
+            self.currentStage = null;
+            self.extraOpts = false;
+            self.prevStages = false;
+        }
+    }
+
+    self.templateStage = function(type){ 
+        // UNUSED
+        return {
+            "mode":"individual",
+            "chat":false,
+            "anonymous":false,
+            "questions":[
+                {
+                    "q_text":"",
+                    "ans_format":{
+                        "values":5,
+                        "l_pole":"",
+                        "r_pole":"",
+                        "just_required": false,
+                        "min_just_length": 8
+                }
+                }
+            ]
+        }
+    }
+    
+    self.copyPrevStage = function(type, prevphase){
+        var phase = JSON.parse(JSON.stringify(prevphase)); //removes reference from previous object
+        return {
+            "mode":phase.mode,
+            "chat":phase.chat,
+            "anonymous":phase.anonymous,
+            "questions":phase.questions,
+            "grouping_algorithm": phase.grouping_algorithm,
+            "prevPhaseResponse": phase.prevPhaseResponse,
+            "stdntAmount": phase.stdntAmount
+        }
+    }
+
+    self.addStage = function(){
+        var index = self.design.phases.length -1
+        var prev_phase = self.design.phases[index]
+        self.design.phases.push(self.copyPrevStage("semantic_differential", prev_phase))
+    }
+
+    self.getStages = function(){
+        return self.design.phases
+    }
+
+    self.amountOptions = function(type){
+        self.num = self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values
+        if(type == "+"){
+            self.num = self.num < 9 ? self.num + 1 : 10
+        }
+        else{
+            self.num = self.num > 2 ? self.num - 1 : 2
+        }
+        self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values = self.num
+    }
+
+    self.init() //init
+
+});
+
 
 adpp.controller("OptionsController", function ($scope, $http, Notification) {
     var self = $scope;

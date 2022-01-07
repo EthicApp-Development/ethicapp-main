@@ -4,6 +4,22 @@ let express = require('express');
 let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
+let pg = require('pg');
+
+var DB = null;
+function getDBInstance(dbcon){
+    if(DB == null) {
+        DB = new pg.Client(dbcon);
+        DB.connect();
+        DB.on("error", function(err){
+            console.error(err);
+            DB = null;
+        });
+        return DB;
+    }
+    return DB;
+}
+
 
 router.get("/seslist", (req, res) => {
     if (req.session.uid) {
@@ -46,9 +62,37 @@ router.post("/add-session", rpg.execSQL({
     }
 }));
 
+//TEST ROUTE DELETE LATER
+router.post("/add-session-home", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "with rows as (insert into sessions(name,descr,creator,time,status,type) values ($1,$2,$3,now(),1,$4) returning id)" +
+        " insert into sesusers(sesid,uid) select id, $5 from rows",
+    sesReqData: ["uid"],
+    postReqData: ["name","type"],
+    sqlParams: [rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("ses", "uid"), rpg.param("post","type"), rpg.param("ses", "uid")],
+    onStart: (ses, data, calc) => {
+        if (ses.role != "P") {
+            console.log("ERR: Solo profesor puede crear sesiones.");
+            console.log(ses);
+            return "select $1, $2, $3, $4, $5"
+        }
+    },
+    onEnd: (req, res) => {
+        res.redirect("home");
+    }
+}));
+
 router.get("/admin", (req, res) => {
     if (req.session.role == "P")
         res.render("admin");
+    else
+        res.redirect(".");
+});
+
+//TEST ROUTE DELETE LATER
+router.get("/home", function(req,res){
+    if (req.session.role == "P")
+        res.render("home");
     else
         res.redirect(".");
 });
@@ -78,6 +122,168 @@ router.post("/upload-file", (req, res) => {
     res.end('{"status":"err"}');
 });
 
+//DOCUMENT DESIGN WORK IN PROGRESS
+
+router.post("/upload-design-file", (req, res) => {
+    if (req.session.uid != null  && req.body.title != "" && req.files.pdf != null && req.files.pdf.mimetype == "application/pdf" ) {
+        rpg.execSQL({
+            dbcon: pass.dbcon,
+            sql: "insert into documents(title,path,sesid,uploader) values ($1,$2,$3,$4)", //agregarlo al design de alguna manera
+            sqlParams: [rpg.param("post", "title"), rpg.param("calc", "path"), rpg.param("post", "sesid"), rpg.param("ses", "uid")],
+            onStart: (ses, data, calc) => {
+                calc.path = "uploads" + req.files.pdf.file.split("uploads")[1];
+            },
+            onEnd: () => {
+            }
+        })(req, res);
+        res.end('{"status":"ok"}');
+    }
+    res.end('{"status":"err"}');
+});
+
+router.post("/upload-design", (req, res) => {
+    var jsonBody = "'"+JSON.stringify(req.body)+"'";
+    var id = req.session.uid;
+    var sql = "INSERT INTO DESIGNS(creator, design) VALUES("+id+","+ jsonBody+")";
+    var sql2 = "SELECT max(id) FROM DESIGNS WHERE creator = "+id;
+    var db = getDBInstance(pass.dbcon);
+    var qry;
+    var qry2;
+    var result;
+    qry = db.query(sql);
+    qry.on("end", function () {
+        qry2 = db.query(sql2,(err,res) =>{
+            if(res.rows[0] != null){
+                result = res.rows[0].max;
+            }
+            });
+            qry2.on("end", function () {
+                res.end('{"status":"ok", "id":'+result+'}');   
+            });
+            
+    });
+    qry.on("error", function(err){
+        //console.log("THERE WAS AN ERROR ON THE SQL QUERY");
+        console.log(err);
+        res.end('{"status":"err"}');
+    });
+});
+
+router.post("/get-design", (req, res) => {
+    var uid = req.session.uid;
+    var id = req.body;
+    var sql = "SELECT * FROM DESIGNS WHERE id = "+id;
+    var db = getDBInstance(pass.dbcon);
+    var qry;
+    var result;
+    qry = db.query(sql,(err,res) =>{
+        if(res.rows[0] != null){
+            result = JSON.stringify(res.rows[0].design);   
+        }
+        });
+    qry.on("end", function () {
+        //console.log("SQL QUERY WAS OK");
+        res.end('{"status":"ok", "result":'+result+'}');
+    });
+    qry.on("error", function(err){
+        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
+        console.log(err);
+        res.end('{"status":"err"}');
+    });
+});
+
+router.get("/get-user-designs", (req, res) => {
+    var uid = req.session.uid;
+    var sql = "SELECT * FROM DESIGNS WHERE creator = "+uid;
+    var db = getDBInstance(pass.dbcon);
+    var qry;
+    var result = []
+    qry = db.query(sql,(err,res) =>{
+        if(res.rows[0] != null){
+            for (var i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
+            for (var i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
+        }
+        });
+    qry.on("end", function () {
+        //console.log("SQL QUERY WAS OK");
+        //console.log('{"status":"ok", "result":'+result+'}')
+        res.json({"status":"ok", "result":result});
+    });
+    qry.on("error", function(err){
+        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
+        console.log(err);
+        res.end('{"status":"err"}');
+    });
+});
+
+router.get("/get-public-designs", (req, res) => {
+    var uid = req.session.uid;
+    var sql = "SELECT * FROM DESIGNS WHERE creator != "+uid;
+    var db = getDBInstance(pass.dbcon);
+    var qry;
+    var result = []
+    qry = db.query(sql,(err,res) =>{
+        if(res.rows[0] != null){
+            for (var i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
+            for (var i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
+        }
+        });
+    qry.on("end", function () {
+        //console.log("SQL QUERY WAS OK");
+        //console.log('{"status":"ok", "result":'+result+'}')
+        res.json({"status":"ok", "result":result});
+    });
+    qry.on("error", function(err){
+        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
+        console.log(err);
+        res.end('{"status":"err"}');
+    });
+});
+
+
+router.post("/update-design", (req, res) => {
+    //console.log(req)
+    var jsonBody = "'"+JSON.stringify(req.body.design)+"'";
+    var uid = req.session.uid;
+    var id = req.body.id;
+    //console.log("DESIGN ID:",id)
+    var sql = "UPDATE DESIGNS SET design ="+jsonBody+ " WHERE creator ="+uid+" AND id ="+id+"";
+    //console.log(sql)
+    var db = getDBInstance(pass.dbcon);
+    var qry;
+    qry = db.query(sql);
+    qry.on("end", function () {
+        console.log("UPDATED CORRECTLY");
+        res.end('{"status":"ok"}');
+    });
+    qry.on("error", function(err){
+        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
+        console.log(err);
+        res.end('{"status":"err"}');
+    });
+});
+
+router.post("/delete-design", (req, res) => {
+    var uid = req.session.uid;
+    var id = req.body.id;
+    //console.log("DESIGN ID:",id)
+    var sql = "DELETE FROM DESIGNS WHERE creator ="+uid+" AND id ="+id+"";
+    //console.log(sql)
+    var db = getDBInstance(pass.dbcon);
+    var qry;
+    qry = db.query(sql);
+    qry.on("end", function () {
+        console.log("DELETED CORRECTLY");
+        res.end('{"status":"ok"}');
+    });
+    qry.on("error", function(err){
+        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
+        console.log(err);
+        res.end('{"status":"err"}');
+    });
+});
+
+//############################################
 router.post("/documents-session", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select id, title, path from documents where sesid = $1 and active = true",
