@@ -3,28 +3,47 @@
 
 <!--Choices-->
 <div class="flex-container">
-    <div ng-click="selectView('newDesign')">
-        <p>{{'designActivity' | lang}}</p>
-        <img src="img/designs/design-activity.svg" alt="No Carga" class="thumbnail-image">
+    <div ng-click="selectView('newDesign')" 
+        ng-init="design = 'img/designs/design-activity.svg'"
+        ng-mouseover="design = 'img/designs/design-activity-active.svg'"
+        ng-mouseout="design = 'img/designs/design-activity.svg'">
+        <p class="box-text">{{'designActivity' | lang}}</p>
+        <div class="thumbnail-image" ng-style="{ 'background-image': 'url(' + design + ')' }"></div>
     </div>
-    <div ng-click="selectView('launchActivity')">
-        <p>{{'launchAnActivity' | lang}}</p>
-        <img src="img/designs/launch.svg" alt="No Carga" class="thumbnail-image">
+    <div ng-click="selectView('launchActivity')"
+        ng-init="launch = 'img/designs/launch.svg'"
+        ng-mouseover="launch = 'img/designs/launch-active.svg'"
+        ng-mouseout="launch = 'img/designs/launch.svg'">
+        <p class="box-text">{{'launchAnActivity' | lang}}</p>
+        <div class="thumbnail-image" ng-style="{ 'background-image': 'url(' + launch + ')' }"></div>
     </div>
-    <div ng-click="selectView('designs')">
-        <p>{{'shareActivityDesign' | lang}}</p>
-        <img src="img/designs/design-share.svg" alt="No Carga" class="thumbnail-image">
+    <div ng-click="selectView('designs')"
+        ng-init="designShare = 'img/designs/design-share.svg'"
+        ng-mouseover="designShare = 'img/designs/design-share-active.svg'"
+        ng-mouseout="designShare = 'img/designs/design-share.svg'">
+        <p class="box-text">{{'shareActivityDesign' | lang}}</p>
+        <div class="thumbnail-image" ng-style="{ 'background-image': 'url(' + designShare + ')' }"></div>
     </div>
-    <div ng-click="selectView('designs')">
-        <p>{{'searchSharedDesign' | lang}}</p>
-        <img src="img/designs/design-search.svg" alt="No Carga" class="thumbnail-image">
+    <div ng-click="selectView('designs')"
+        ng-init="designSearch = 'img/designs/design-search.svg'"
+        ng-mouseover="designSearch = 'img/designs/design-search-active.svg'"
+        ng-mouseout="designSearch = 'img/designs/design-search.svg'">
+        <p class="box-text">{{'searchSharedDesign' | lang}}</p>
+        <div class="thumbnail-image" ng-style="{ 'background-image': 'url(' + designSearch + ')' }"></div>
     </div>
-    <div ng-click="selectView('users')" ng-if="institution">
-        <p>{{'adminInstUsers' | lang}}</p>
-        <img src="img/designs/manage-users.svg" alt="No Carga" class="thumbnail-image"></div>
-    <div ng-click="selectView('institution')" ng-if="institution">
-        <p>{{'adminInstData' | lang}}</p>
-        <img src="img/designs/institution.svg" alt="No Carga" class="thumbnail-image">
+    <div ng-click="selectView('users')" ng-if="institution"
+        ng-init="manageUsers = 'img/designs/manage-users.svg'"
+        ng-mouseover="manageUsers = 'img/designs/manage-users-active.svg'"
+        ng-mouseout="manageUsers = 'img/designs/manage-users.svg'">
+        <p class="box-text">{{'adminInstUsers' | lang}}</p>
+        <div class="thumbnail-image" ng-style="{ 'background-image': 'url(' + manageUsers + ')' }"></div>
+    </div>
+    <div ng-click="selectView('institution')" ng-if="institution"
+        ng-init="institution2 = 'img/designs/institution.svg'"
+        ng-mouseover="institution2 = 'img/designs/institution-active.svg'"
+        ng-mouseout="institution2 = 'img/designs/institution.svg'">
+        <p class="box-text">{{'adminInstData' | lang}}</p>
+        <div class="thumbnail-image" ng-style="{ 'background-image': 'url(' + institution2 + ')' }"></div>
     </div>
 </div>
 

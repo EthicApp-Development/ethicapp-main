@@ -1,7 +1,7 @@
 body {
     font-family: "Helvetica Neue", sans-serif;
 }
-  
+ 
 .navmenu{
     position: fixed;
     z-index: 0;
@@ -48,9 +48,13 @@ body {
 }
 
 .thumbnail-image{
-    width:60px;
-    height:60px;
+    min-width:60px;
+    min-height:60px;
+    max-width:60px;
+    max-height:60px;
+    background-repeat: no-repeat;
 }
+
 
 .flex-container {
     display: flex;
@@ -116,7 +120,8 @@ body {
     margin-left: 10px;
 }
 .activities_container{
-    width: 80em;
+    min-width: 20em;
+    max-width: 80em;
 }
 
 /* Phase item */
@@ -207,4 +212,11 @@ body {
 .div-debug{ /*USE TO CHECK DIV SIZES*/
     border: 1px solid rgb(245, 0, 0);
     background-color: #99f8ff;
+}
+
+.box-text{
+    line-height: 1.25em;
+    text-align: left;
+    margin-left: 0.25em;
+    margin-top: 0.25m;
 }

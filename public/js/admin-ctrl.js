@@ -2516,7 +2516,6 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
     self.methods = [self.keyGroups("random"), self.keyGroups("performance", "homog"), self.keyGroups("performance", "heterg"), 
                     self.keyGroups("knowledgeType", "homog"), self.keyGroups("knowledgeType", "heterg")];
     self.groupType = [self.keyGroups("individual"), self.keyGroups("team")];
-    self.num = null;
     self.designId = null;
     self.designs = null;
     self.public = null;
@@ -2628,7 +2627,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
 
     }
     self.stageType = self.design.type;
-    
+    self.num = self.design.phases[0].questions[0].ans_format.values
     /*
 
         MOVER CONTENIDO A CONTROLADORES CORRESPONDIENTES!
@@ -2777,7 +2776,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
         self.currentStage = 0; 
         self.currentQuestion = 0; 
         self.stageType = self.design.type;
-        self.num = null;
+        self.design.phases[0].questions[0].ans_format.values
         self.busy = false; 
         self.extraOpts = false;
         self.prevStages = false;
