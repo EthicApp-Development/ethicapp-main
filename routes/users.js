@@ -237,11 +237,16 @@ router.post("/update-lang", rpg.singleSQL({
 }));
 
 
-var AWS = require('@aws-sdk/client-ses');
+var AWS = require('aws-sdk');
 router.post("/resetpassword", (req, res) => {
 
-    //var cred = new AWS.Credentials(pass.accessKeyId,pass.secretAccessKey)
-    //AWS.config.credentials = cred;
+    const SES_CONFIG = {
+        accessKeyId: pass.accessKeyId,
+        secretAccessKey: pass.secretAccessKey,
+        region: "us-east-1",
+    };
+    const AWS_SES = new AWS.SES(SES_CONFIG);
+
     async function mail() {
 
 
@@ -262,13 +267,13 @@ router.post("/resetpassword", (req, res) => {
                 } 
         };
 
-        var sendPromise = new AWS.SES({apiVersion: '2010-12-01', credentials:{accessKeyId: pass.accessKeyId, secretAccessKey: pass.secretAccessKey}}).sendEmail(params);
-        sendPromise.then(
-          function(data) {
-            res.redirect("login?rc=3");
-          }).catch(
-            function(err) {
-          });
+
+          AWS_SES.sendEmail(params).promise().then(
+             function(data) {
+                res.redirect("login?rc=3");
+              }).catch(
+                function(err) {
+              });;
         }
         mail()
 
