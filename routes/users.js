@@ -175,7 +175,7 @@ fetch("https://www.google.com/recaptcha/api/siteverify?secret="+secret_key+"&res
                 var qry2;
                 qry2 = db.query(sql2,(err,rest) =>{
                     if(rest.rows[0] != null){
-                        var sql3 = "insert into institucion(userid, nombreinstitucion, numestudiantes, pais, dominionscorreo, cargo) values ($1,$2,$3,$4,$5,$6)";
+                        var sql3 = "insert into institucion(userid, institutionName, numEstudents, country, mailDomains, position) values ($1,$2,$3,$4,$5,$6)";
                         var qry3;
                         var sqlParams3 = [rest.rows[0].id, req.body.name_ins, parseInt(req.body.Numero_estudiantes,10),req.body.Pais,req.body.domains,req.body.Cargo ]
                         qry3 = db.query(sql3, sqlParams3);
@@ -435,7 +435,6 @@ router.post("/deleteacc",(req,res)=> {
 
 
 router.post("/get_same_users", (req, res) => {
-    
     var domains = req.body.postdata2.split(",")
     var db = getDBInstance(pass.dbcon);
     var resultados = [];
@@ -452,8 +451,7 @@ router.post("/get_same_users", (req, res) => {
             });
             
 
-    }
-    
+    }  
     qry.on('end',function(){
         console.log(resultados)
         res.json({"data": resultados})
@@ -479,7 +477,7 @@ qry.on('end',function(){
 
 router.post("/getdomains", (req, res) => {
     var db = getDBInstance(pass.dbcon);
-    var sql = "SELECT * FROM institucion WHERE userid ='"+req.session.uid +"'";
+    var sql = "SELECT * FROM institution WHERE userid ='"+req.session.uid +"'";
     var qry;
     var result;
     qry = db.query(sql,(err,res) =>{

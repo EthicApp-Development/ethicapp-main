@@ -3418,9 +3418,7 @@ adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
     self.init = function () {
         self.getuserinfo();
         self.getdomains();
-
         self.updateLang(self.lang);
-        //self.get_users();
 
         
     };
@@ -3433,13 +3431,6 @@ adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
         self.lang = self.lang == "english" ? "spanish" : "english";
         self.updateLang(self.lang);
     };
-
-    self.get_users = function() {
-        $http({ url: "get_same_users", method: "post", data: postdata }).success(function (data) {
-            self.users = data.data;
-            
-        });
-    }
 
     self.getuserinfo = function() {
         var postdata = 500
@@ -3454,8 +3445,8 @@ adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
     self.getdomains = function() {
         var postdata = 404;
         $http({ url: "getdomains", method: "post",data:postdata }).success(function (data) {
-            self.domains = data.data[0].dominionscorreo;
-            self.nominst = data.data[0].nombreinstitucion;
+            self.domains = data.data[0].mailDomains;
+            self.nominst = data.data[0].institutionName;
             var postdata2 = self.domains
             $http({ url: "get_same_users", method: "post", data: {postdata2} }).success(function (data) {
                 var res = []

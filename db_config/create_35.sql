@@ -1,4 +1,4 @@
-create table if not exists institucion(
+create table if not exists institution(
     id serial,
     userid integer references users(id),
     institutionName text,
