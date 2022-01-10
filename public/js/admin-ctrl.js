@@ -2491,7 +2491,61 @@ adpp.controller("RubricaController", function ($scope, $http) {
     };
 });
 
-adpp.controller("StagesEditController", function ($scope, $filter, $http) {
+adpp.controller("DesignsDocController", function ($scope, $http, Notification, $timeout) { 
+    var self = $scope;
+    self.busy = false;
+    self.documents = [];
+
+    self.init = function(){
+        self.requestDesignDocuments();
+    }
+
+    self.uploadDesignDocument = function (event) { //Work in progress
+        self.busy = true;
+        var fd = new FormData(event.target);
+        $http.post("upload-design-file", fd, {
+            transformRequest: angular.identity,
+            headers: { 'Content-Type': undefined }
+        }).success(function (data) {
+            if (data.status == "ok") {
+                $timeout(function () {
+                    //Notification.success("Documento cargado correctamente");
+                    event.target.reset();
+                    self.busy = false;
+                    console.log("FILE UPLOADED CORRECTLY!")
+                    //self.shared.updateDocuments();
+                    self.requestDesignDocuments();
+                }, 2000);
+            }
+        });
+    };
+    
+    self.requestDesignDocuments = function ( ) {
+        var postdata = { dsgnid: self.designId };
+        $http({ url: "designs-documents", method: "post", data: postdata }).success(function (data) {
+            self.documents = data;
+        });
+    };
+
+
+    self.deleteDesignDocument = function (dsgnid) {
+        var postdata = { dsgnid: dsgnid };
+        $http({ url: "delete-design-document", method: "post", data: postdata }).success(function (data) {
+            self.requestDesignDocuments();
+        });
+    };
+
+    self.getPathname = function(path){
+        var split = path.split("/")
+        return split[split.length - 1]
+    }
+
+    self.init()
+
+});
+
+
+adpp.controller("StagesEditController", function ($scope, $filter, $http, Notification, $timeout) {
 
     /*
         LANG FUNCTIONS
@@ -2521,6 +2575,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
     self.public = null;
     self.busy = false; //upload file
     self.extraOpts = false;
+    self.documents = null;
     self.prevStages = false;
     //self.design = {};
     self.design = { //DUMMY DATA
@@ -2638,16 +2693,33 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
         BACKEND FUNCTIONS
     */
 
+    
+
     self.init = function(){
         self.getDesigns()
         self.getPublicDesigns()
         resetValues();
     }
 
+    self.designPublic = function (dsgnid) {
+        var postdata = { dsgnid: dsgnid };
+        $http({ url: "design-public", method: "post", data: postdata }).success(function (data) {
+            self.getDesigns()
+        });
+    };
+
+    self.designLock = function (dsgnid) {
+        var postdata = { dsgnid: dsgnid };
+        $http({ url: "design-lock", method: "post", data: postdata }).success(function (data) {
+            self.getDesigns()
+        });
+    };
+
     self.getDesigns = function(){
         $http.get("get-user-designs").success(function (data) {
             
             if (data.status == "ok") {
+                self.designs = {}
                 self.designs = data.result;
                 //console.log(self.designs)
             }
@@ -2666,23 +2738,6 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
         });
     };
 
-    self.uploadDocument = function (event) { //Work in progress
-        self.busy = true;
-        var fd = new FormData(event.target);
-        $http.post("upload-file", fd, {
-            transformRequest: angular.identity,
-            headers: { 'Content-Type': undefined }
-        }).success(function (data) {
-            if (data.status == "ok") {
-                $timeout(function () {
-                    Notification.success("Documento cargado correctamente");
-                    event.target.reset();
-                    self.busy = false;
-                    self.shared.updateDocuments();
-                }, 2000);
-            }
-        });
-    };
     
     self.uploadDesign = function (title, author) {
         var postdata = { 

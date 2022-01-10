@@ -236,10 +236,19 @@ router.post("/update-lang", rpg.singleSQL({
 }));
 
 
-var AWS = require('@aws-sdk/client-ses');
+var AWS = require('aws-sdk');
 router.post("/resetpassword", (req, res) => {
 
+    const SES_CONFIG = {
+        accessKeyId: pass.accessKeyId,
+        secretAccessKey: pass.secretAccessKey,
+        region: "us-east-1",
+    };
+    const AWS_SES = new AWS.SES(SES_CONFIG);
+
     async function mail() {
+
+
         const params ={
             Source:'no-reply@iccuandes.org',
             Destination:{
@@ -256,19 +265,20 @@ router.post("/resetpassword", (req, res) => {
                         'Data': '<div>Hola<br>¿Has perdido tu contraseña? Puedes restablecerla a continuación:<br><a href="http://localhost:8501/passreset"> <button class="btn-primary"> Restablecer contraseña</button> </a> <br>Recibe un cordial saludo,<br>Creadores de EthicApp</div>'} }
                 } 
         };
-        
-        var sendPromise = new AWS.SES({apiVersion: '2010-12-01'}).sendEmail(params);
-        sendPromise.then(
-          function(data) {
-            res.redirect("login?rc=3");
-          }).catch(
-            function(err) {
-          });
+
+        //var sendPromise = new AWS.SES({apiVersion: '2010-12-01', credentials:{accessKeyId: pass.accessKeyId, secretAccessKey: pass.secretAccessKey}}).sendEmail(params);
+        //sendPromise.then(
+        //  function(data) {
+        //    res.redirect("login?rc=3");
+        //  }).catch(
+        //    function(err) {
+        //  });
+          AWS_SES.sendEmail(params).promise();
         }
         mail()
 
     
-});
+})
 
 
 

@@ -122,14 +122,13 @@ router.post("/upload-file", (req, res) => {
     res.end('{"status":"err"}');
 });
 
-//DOCUMENT DESIGN WORK IN PROGRESS
 
 router.post("/upload-design-file", (req, res) => {
-    if (req.session.uid != null  && req.body.title != "" && req.files.pdf != null && req.files.pdf.mimetype == "application/pdf" ) {
+    if (req.session.uid != null  && req.files.pdf != null && req.files.pdf.mimetype == "application/pdf" ) {
         rpg.execSQL({
             dbcon: pass.dbcon,
-            sql: "insert into documents(title,path,sesid,uploader) values ($1,$2,$3,$4)", //agregarlo al design de alguna manera
-            sqlParams: [rpg.param("post", "title"), rpg.param("calc", "path"), rpg.param("post", "sesid"), rpg.param("ses", "uid")],
+            sql: "insert into designs_documents(path,dsgnid,uploader) values ($1,$2,$3)",
+            sqlParams: [rpg.param("calc", "path"), rpg.param("post", "dsgnid"), rpg.param("ses", "uid")],
             onStart: (ses, data, calc) => {
                 calc.path = "uploads" + req.files.pdf.file.split("uploads")[1];
             },
@@ -140,6 +139,15 @@ router.post("/upload-design-file", (req, res) => {
     }
     res.end('{"status":"err"}');
 });
+
+
+router.post("/delete-design-document", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql: "update designs_documents set active = false where id = $1",
+    postReqData: ["dsgnid"],
+    sqlParams: [rpg.param("post", "dsgnid")]
+}));
+
 
 router.post("/upload-design", (req, res) => {
     var jsonBody = "'"+JSON.stringify(req.body)+"'";
@@ -202,11 +210,10 @@ router.get("/get-user-designs", (req, res) => {
         if(res.rows[0] != null){
             for (var i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
             for (var i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
+            for (var i=0; i<result.length;i++) result[i].public= res.rows[i].public; //add id to to design
         }
         });
     qry.on("end", function () {
-        //console.log("SQL QUERY WAS OK");
-        //console.log('{"status":"ok", "result":'+result+'}')
         res.json({"status":"ok", "result":result});
     });
     qry.on("error", function(err){
@@ -218,7 +225,7 @@ router.get("/get-user-designs", (req, res) => {
 
 router.get("/get-public-designs", (req, res) => {
     var uid = req.session.uid;
-    var sql = "SELECT * FROM DESIGNS WHERE creator != "+uid;
+    var sql = "SELECT * FROM DESIGNS WHERE public = true and creator != "+uid;
     var db = getDBInstance(pass.dbcon);
     var qry;
     var result = []
@@ -229,8 +236,6 @@ router.get("/get-public-designs", (req, res) => {
         }
         });
     qry.on("end", function () {
-        //console.log("SQL QUERY WAS OK");
-        //console.log('{"status":"ok", "result":'+result+'}')
         res.json({"status":"ok", "result":result});
     });
     qry.on("error", function(err){
@@ -240,15 +245,26 @@ router.get("/get-public-designs", (req, res) => {
     });
 });
 
+router.post("/design-public", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "UPDATE DESIGNS SET public = NOT public WHERE id = $1;",
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "dsgnid")]
+}));
+
+router.post("/design-lock", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "UPDATE DESIGNS SET locked = NOT locked WHERE id = $1;",
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "dsgnid")]
+}));
+
 
 router.post("/update-design", (req, res) => {
-    //console.log(req)
     var jsonBody = "'"+JSON.stringify(req.body.design)+"'";
     var uid = req.session.uid;
     var id = req.body.id;
-    //console.log("DESIGN ID:",id)
     var sql = "UPDATE DESIGNS SET design ="+jsonBody+ " WHERE creator ="+uid+" AND id ="+id+"";
-    //console.log(sql)
     var db = getDBInstance(pass.dbcon);
     var qry;
     qry = db.query(sql);
@@ -282,6 +298,14 @@ router.post("/delete-design", (req, res) => {
         res.end('{"status":"err"}');
     });
 });
+
+router.post("/designs-documents", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select id, path from designs_documents where dsgnid = $1 and active = true",
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "dsgnid")]
+}));
+
 
 //############################################
 router.post("/documents-session", rpg.multiSQL({
