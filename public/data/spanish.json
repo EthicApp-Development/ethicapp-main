@@ -173,7 +173,7 @@
 	"filter": "Filtrar por usuario",
 	"Back": "Atras",
 	"Enter_the_users": "Ingresa los usuarios a importar a continuacion",
-	"Import_number": "Numero de Usuarios a Importar:",
+	"Import_number": "Numero de Usuarios a Importar",
 	"import_phrase1": "Cada usuario debe ir en una línea: primero el correo electrónico (obligatorio), luego la contraseña (obligatorio),",
 	"import_phrase2": "despues nombre (opcional), y apellido (opcional). Los campos deben ir separados por coma",
 	"register": "Registrarse",

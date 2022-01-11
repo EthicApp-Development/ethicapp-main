@@ -362,7 +362,6 @@ router.post("/changepassword",(req,res)=> {
 });
 
 router.post("/create-multicounts",(req,res)=> {
-    console.log(req.body.data.split('\r\n'))
     var accounts = req.body.data.split('\r\n')
     var db = getDBInstance(pass.dbcon);
     for(var i = 0;i< accounts.length;i++){
@@ -453,7 +452,6 @@ router.post("/get_same_users", (req, res) => {
 
     }  
     qry.on('end',function(){
-        console.log(resultados)
         res.json({"data": resultados})
     })
 
@@ -493,9 +491,14 @@ router.post("/make_prof", (req, res) => {
     var db = getDBInstance(pass.dbcon);
     var sql = "UPDATE users SET role = 'P' WHERE mail ='"+req.body.mail +"'";
     var qry;
+    var result;
     qry = db.query(sql,(err,rest) =>{
-        res.redirect("institucion")
+        console.log("data uploaded")
+        result = rest
         });
+        qry.on('end',function(){
+            
+        })
 
 });
 
@@ -503,9 +506,14 @@ router.post("/make_alum", (req, res) => {
     var db = getDBInstance(pass.dbcon);
     var sql = "UPDATE users SET role = 'A' WHERE mail ='"+req.body.mail +"'";
     var qry;
+    var result;
     qry = db.query(sql,(err,rest) =>{
-        res.redirect("institucion")
+        console.log("data uploaded")
+        result = rest
 
         });
+        qry.on('end',function(){
+            
+        })
 
 });

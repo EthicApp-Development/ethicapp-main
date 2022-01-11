@@ -38,14 +38,19 @@
 <body ng-controller="AdminController">
     
     <!--TOP BAR-->
-    <div class="top-bar-mini cflex" ng-hide="true"> <!--WORK IN PROGRESS-->
+    <div class="top-bar-mini cflex" ng-hide="false"> <!--WORK IN PROGRESS-->
         <div class="cf1">
             <a href="seslist" class="simple-margin-left">
                 <h3 class="logo-bar app-title">EthicApp</h3>
             </a>
+
         </div>
+
         
         <div class="cf1 text-right margin-right-8 simple-padding-top" id="topbtnlist">
+            <button class="btn btn-default btn-sm " ng-click="changeLang()">
+                {{'langOther' | lang}}
+            </button>
             <img src="img/blanco.jpg" alt="No Carga" class="circle_profile cf1 text-right margin-right-8 simple-padding-top">
             <strong class="margin-right-8"><a href="profile" style="color: white;">{{ username }}</a></strong>
             <a href="logout" class="text-white">
@@ -77,3 +82,37 @@
     </div>  
 </body>
 </html>
+
+<script>
+    function hideA(x) {
+       if (x.value == "0") {
+         document.getElementById("btn-profesores").value = "1";
+         document.getElementById("btn-alumnos").value = "0";
+         document.getElementById("btn-profesores").style.backgroundColor = "#fff"
+         document.getElementById("btn-alumnos").style.backgroundColor = "#ddd"
+        document.getElementById("box_profesor").style.display = "block"
+        document.getElementById("box_alumnos").style.display = "none"
+    
+    
+       }
+     }
+    
+     function hideB(x) {
+       if (x.value == "0") {
+         document.getElementById("btn-alumnos").value = "1";
+         document.getElementById("btn-profesores").value = "0";
+         document.getElementById("btn-alumnos").style.backgroundColor = "#fff"
+         document.getElementById("btn-profesores").style.backgroundColor = "#ddd"
+         document.getElementById("box_profesor").style.display = "none"
+        document.getElementById("box_alumnos").style.display = "block"
+    
+    
+       }
+     }
+    
+    window.onload = function() {
+        document.getElementById("btn-alumnos").value = "1";
+        document.getElementById("btn-profesores").value = "0";
+    
+    };
+    </script>

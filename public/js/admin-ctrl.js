@@ -3408,19 +3408,20 @@ adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
     var self = $scope;
     self.lang = "spanish";
     window.DIC = "data/" + self.lang + ".json";
-    self.uid = []
-    self.domains =[]
-    self.role = ""
-    self.id = 0
-    self.mail = ""
-    self.nominst = ""
-    self.users = []
+    self.uid = [];
+    self.domains =[];
+    self.role = "";
+    self.id = 0;
+    self.mail = "";
+    self.nominst = "";
+    self.users = [];
+    self.textarea = "";
     self.init = function () {
         self.getuserinfo();
         self.getdomains();
         self.updateLang(self.lang);
 
-        
+    
     };
     self.updateLang = function (lang) {
         $http.get("data/" + lang + ".json").success(function (data) {
@@ -3430,6 +3431,23 @@ adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
     self.changeLang = function () {
         self.lang = self.lang == "english" ? "spanish" : "english";
         self.updateLang(self.lang);
+    };
+
+    self.user_amount = function () {
+        if(self.textarea.split("\n").length == 1){
+            if(self.textarea.length == 0){
+                console.log(self.textarea.length)
+                return 0
+            }
+            else{
+                return 1
+            }
+            
+        }
+        else{
+            return self.textarea.split("\n").length
+        }
+        
     };
 
     self.getuserinfo = function() {
@@ -3456,13 +3474,35 @@ adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
 
                     })
                 })
+                self.users = [];
                 self.users = res;
                 
 
             });
         });
     }
-    
+
+
+    self.refreshUsers = function () {
+        var postdata2 = self.domains
+
+        $http({ url: "get_same_users", method: "post", data: {postdata2} }).success(function (data) {
+            self.users = [];
+            var res = []
+            data.data.forEach(element =>{
+                element.forEach(element2 =>{
+                    res.push(element2)
+
+                })
+            })
+            self.users = [];
+            self.users = res;            
+
+        });
+        
+    };
+
+
 
     self.init();
 }])
