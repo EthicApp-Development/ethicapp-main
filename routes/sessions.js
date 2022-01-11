@@ -62,14 +62,37 @@ router.post("/add-session", rpg.execSQL({
     }
 }));
 
-//TEST ROUTE DELETE LATER
-router.post("/add-session-home", rpg.execSQL({
+router.post("/add-session-activity", (req, res) => {
+    var uid = req.session.uid;
+    var name =req.body.name;
+    var descr = req.body.descr;
+    var type = req.body.type;
+    var values = `'${name}','${descr}',${uid}, now(), 1,'${type}'`
+    var sql = "WITH rows as (INSERT INTO sessions(name, descr, creator, time, status, type) VALUES("+values+") "+
+                `returning id) insert into sesusers(sesid,uid) select id, ${uid} from rows; SELECT max(id) FROM sessions WHERE creator = ${uid}`;
+    var db = getDBInstance(pass.dbcon);
+    var qry;
+    var result;
+    qry = db.query(sql,(err,res) =>{
+        result = res.rows[0].max;
+        });
+    qry.on("end", function () {
+        res.json({status:200, id:result});
+    });
+    qry.on("error", function(err){
+        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
+        console.log(err);
+        res.json({status:400, });
+
+    });
+});
+
+router.post("/add-activity", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "with rows as (insert into sessions(name,descr,creator,time,status,type) values ($1,$2,$3,now(),1,$4) returning id)" +
-        " insert into sesusers(sesid,uid) select id, $5 from rows",
+    sql: "insert into activity (design,session) values ($1,$2)",
     sesReqData: ["uid"],
-    postReqData: ["name","type"],
-    sqlParams: [rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("ses", "uid"), rpg.param("post","type"), rpg.param("ses", "uid")],
+    postReqData: ["dsgnid","sesid"],
+    sqlParams: [rpg.param("post", "dsgnid"), rpg.param("post", "sesid")],
     onStart: (ses, data, calc) => {
         if (ses.role != "P") {
             console.log("ERR: Solo profesor puede crear sesiones.");
@@ -78,9 +101,14 @@ router.post("/add-session-home", rpg.execSQL({
         }
     },
     onEnd: (req, res) => {
+        //console.log(res);
         res.redirect("home");
+    },
+    onError:(req, res)=>{
+        console.log(res)
     }
 }));
+
 
 router.get("/admin", (req, res) => {
     if (req.session.role == "P")

@@ -6,6 +6,9 @@ var adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "t
 var DASHBOARD_AUTOREALOD = window.location.hostname.indexOf("fen") != -1;
 var DASHBOARD_AUTOREALOD_TIME = 15;
 
+var designId = {id:null}
+var prevTab = "";
+
 window.DIC = null;
 window.warnDIC = {};
 
@@ -154,6 +157,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.selectView = function(tab){
         self.selectedView = tab;
         $route.reload();
+        if(tab != "newDesignExt" && tab != "viewDesign") designId.id = null; //avoids making designs-documents request
         console.log(self.selectedView);
     }
 
@@ -2512,7 +2516,6 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
                     //Notification.success("Documento cargado correctamente");
                     event.target.reset();
                     self.busy = false;
-                    console.log("FILE UPLOADED CORRECTLY!")
                     //self.shared.updateDocuments();
                     self.requestDesignDocuments();
                 }, 2000);
@@ -2521,7 +2524,7 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
     };
     
     self.requestDesignDocuments = function ( ) {
-        var postdata = { dsgnid: self.designId };
+        var postdata = { dsgnid: designId.id};
         $http({ url: "designs-documents", method: "post", data: postdata }).success(function (data) {
             self.documents = data;
         });
@@ -2544,6 +2547,33 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
 
 });
 
+adpp.controller("ActivityController", function ($scope, $filter, $http, Notification, $timeout) {
+    var self = $scope;
+
+
+    self.createSession = function(dsgnName, dsgndescr, dsgntype, dsgnid){
+        var postdata = { name: dsgnName, descr: dsgndescr, type:dsgntype};
+        console.log(postdata)
+        $http({ url: "add-session-activity", method: "post", data: postdata }).success(function (data) {
+            console.log("SESSION CREATED");
+            var id = data.id;
+            self.createActivity(id, dsgnid);
+            //console.log(data);
+        });
+    }
+
+    self.createActivity = function(sesID, dsgnID){
+        var postdata = { sesid: sesID, dsgnid: dsgnID};
+        console.log(postdata)
+        $http({ url: "add-activity", method: "post", data: postdata }).success(function (data) {
+            console.log("ACTIVITY CREATED");
+            //console.log(data);
+        });
+    }
+
+
+});
+
 
 adpp.controller("StagesEditController", function ($scope, $filter, $http, Notification, $timeout) {
 
@@ -2553,9 +2583,6 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
 
     var self = $scope;
 
-    self.flang = function (key) {
-        return $filter("lang")(key);
-    };
 
     self.keyGroups = function (k1, k2) {
         return {
@@ -2570,7 +2597,6 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     self.methods = [self.keyGroups("random"), self.keyGroups("performance", "homog"), self.keyGroups("performance", "heterg"), 
                     self.keyGroups("knowledgeType", "homog"), self.keyGroups("knowledgeType", "heterg")];
     self.groupType = [self.keyGroups("individual"), self.keyGroups("team")];
-    self.designId = null;
     self.designs = null;
     self.public = null;
     self.busy = false; //upload file
@@ -2704,14 +2730,14 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     self.designPublic = function (dsgnid) {
         var postdata = { dsgnid: dsgnid };
         $http({ url: "design-public", method: "post", data: postdata }).success(function (data) {
-            self.getDesigns()
+
         });
     };
 
     self.designLock = function (dsgnid) {
         var postdata = { dsgnid: dsgnid };
         $http({ url: "design-lock", method: "post", data: postdata }).success(function (data) {
-            self.getDesigns()
+  
         });
     };
 
@@ -2775,7 +2801,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
             
             if (data.status == "ok") {
                 self.getDesign(data.id);
-                self.designId = data.id;
+                designId.id = data.id;
                 self.selectView("newDesignExt");
                 self.getDesigns()
                 resetValues()
@@ -2785,7 +2811,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     };
 
     self.updateDesign = function () {
-        var postdata = {"design":self.design,"id": self.designId};
+        var postdata = {"design":self.design,"id": designId.id};
         $http.post("update-design", postdata).success(function (data) {
             
             if (data.status == "ok") {
@@ -2797,8 +2823,8 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
 
     }
 
-    self.deleteDesign = function (designId) {
-        var postdata = {"id": designId};
+    self.deleteDesign = function (ID) {
+        var postdata = {"id": ID};
         $http.post("delete-design", postdata).success(function (data) {
             
             if (data.status == "ok") {
@@ -2810,20 +2836,24 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     }
 
 
-    self.getDesign = function (designId) {
-        $http.post("get-design", designId).success(function (data) {
+    self.getDesign = function (ID) {
+        $http.post("get-design", ID).success(function (data) {
             if (data.status == "ok") {
                 self.design = data.result;
             }
         });
     };
 
-    self.goToDesign = function(designId, type){
-        self.getDesign(designId);
+    self.goToDesign = function(ID, type){
+        self.getDesign(ID);
         if(type=="E") self.selectView("newDesignExt")
         else self.selectView("viewDesign")
-        self.designId = designId;
+        designId.id = ID;
         resetValues();
+    }
+
+    self.getID = function(){
+        return designId.id;
     }
 
     var resetValues = function(){

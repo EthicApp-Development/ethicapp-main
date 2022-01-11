@@ -1,7 +1,6 @@
 <br>
 <br>
 <a ng-click="selectView('')" >{{'back'|lang}}</a>
-<!--MERGE VIEW WITH EXT VERSION-->
 <br>
 <h2>{{'actDesigns'|lang}}</h2>
 <div>
@@ -18,7 +17,7 @@
         
     </div>
 </div>
-<div class="container" style ="border: #bbb 1px solid;">
+<div class="container" style="overflow: scroll; max-height: 40em; min-height: 10em; border: #bbb 1px solid;">
     <div class="activities_container" style="margin-top: 2em;">
         <div class="list-group pad-content">
             <!--OWN-->
@@ -27,10 +26,13 @@
                 <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
                 <div class="text-right">
                     <button class="btn btn-primary " ng-click="designLock(ses.id)">{{'launchActivity' | lang}}</button>
-                    <button class="btn btn-primary " ng-click="designLock(ses.id)">LOCK</button>
-                    <button class="btn " ng-class="{'btn-success': ses.public, 'btn-danger': !ses.public}" ng-click="designPublic(ses.id)">PUBLIC</button>
+                    <label class="switch">
+                        <input type="checkbox" ng-checked="ses.public" ng-click="designPublic(ses.id)">
+                        <span class="slider round"></span>
+                        
+                    </label>{{'share'|lang}}                    
                     <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'E')">{{'edit' | lang}}</button>
-                    <button class="btn btn-danger " ng-click="deleteDesign(ses.id)">{{'delete' | lang}}</button>
+                    <button class="btn btn-danger " ng-click="deleteDesign(ses.id)" disabled>{{'delete' | lang}} TEMP</button>
                 </div>
             </div>
             <!--PUBLIC-->

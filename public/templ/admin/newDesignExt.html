@@ -1,5 +1,5 @@
 
-<div class="" >
+<div class="" ng-if="getID() != null">
     <div class="container">
         <h2>{{'designMsg'|lang}}</h2>
         <h3>{{design.metainfo.title}}</h3>
@@ -19,7 +19,7 @@
                 <form id="doc-form" class="row" ng-submit="uploadDesignDocument($event)" enctype="multipart/form-data">
                     <div class="col-sm-4">
                         <input type="file" class="form-control" name="pdf" ng-disabled="busy" required>
-                        <input type="text" ng-value="designId" name="dsgnid" hidden> <!--DESIGN ID-->
+                        <input type="text" ng-value="getID()" name="dsgnid" hidden> <!--DESIGN ID-->
                     </div>
                     <div class="col-sm-2">
                         <button class="form-control btn btn-default" 

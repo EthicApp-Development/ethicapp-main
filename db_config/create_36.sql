@@ -37,3 +37,15 @@ alter table designs_documents
 
 
 GRANT SELECT ON TABLE designs_documents TO app;
+
+create table if not exists activity (
+    id serial,
+    design integer,
+    session integer,
+    foreign key(design) references designs(id),
+    foreign key(session) references sessions(id)
+);
+
+GRANT SELECT ON TABLE activity TO app;
+GRANT ALL PRIVILEGES ON TABLE activity TO app;
+GRANT USAGE, SELECT ON SEQUENCE activity_id_seq TO app;
