@@ -2,23 +2,31 @@
 <br>
 <p>Escoge el diseño de actividad que desees lanzar.</p>
 <br>
-
-<div ng-init="dgsnSel={'dsgn':''}">
-    <div clas="col-lg-1">
-        <input class="form-control text-center" type="text" placeholder="{{'search'|lang}}" ng-model="userSearch" style="height: 2em;">
-    </div>
-    <div class="container" style="overflow: scroll; max-height: 20em; min-height: 10em;">
-        <div class="list-group-item dsgn" ng-repeat="ses in designs | filter:userSearch" 
-        ng-click="dgsnSel.dsgn = ses" ng-class="{'dsgn-sel': dgsnSel.dsgn.id == ses.id}"> <!--UPDATE IT CORRECTLY-->
-            <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
-            <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
+<div ng-controller="ActivityController">
+    <div ng-init="dgsnSel={'dsgn':''}" ng-show="designSelected() == null">
+        <div clas="col-lg-1">
+            <input class="form-control text-center" type="text" placeholder="{{'search'|lang}}" ng-model="userSearch" style="height: 2em;">
+        </div>
+        <div class="container" style="overflow: scroll; max-height: 20em; min-height: 10em;">
+            <div class="list-group-item dsgn" ng-repeat="ses in designs | filter:userSearch " 
+            ng-click="dgsnSel.dsgn = ses" ng-class="{'dsgn-sel': dgsnSel.dsgn.id == ses.id}"> <!--UPDATE IT CORRECTLY-->
+                <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
+                <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
+            </div>
         </div>
     </div>
-</div>
-<p><strong>[DEBUG] Design selected: {{dgsnSel.dsgn.id}}</strong>->{{dgsnSel.dsgn.metainfo.title}}</p>
-<br>
-<p>Dale una descripcion a la actividad</p>
-<div ng-controller="ActivityController">
+    <div ng-show="designSelected() != null">
+        <div class="container" style="overflow: scroll; max-height: 20em; min-height: 10em;">
+            <div class="list-group-item dsgn" ng-repeat="ses in designs | filter:designSelected()" 
+            ng-click="dgsnSel.dsgn = ses" ng-class="{'dsgn-sel': dgsnSel.dsgn.id == ses.id}"> <!--UPDATE IT CORRECTLY-->
+                <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
+                <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
+            </div>
+        </div>
+    </div>
+    <p><strong>[DEBUG] Design selected: {{dgsnSel.dsgn.id}}</strong>->{{dgsnSel.dsgn.metainfo.title}}</p>
+    <br>
+    <p>Dale una descripcion a la actividad</p>
     <form ng-submit="createSession(dgsnSel.dsgn.metainfo.title,descr, 'M', dgsnSel.dsgn.id)">
         <div class="row">
             <div class="col-lg-6">
@@ -31,4 +39,9 @@
             </div>
         </div>
     </form>
+    <div ng-if="selectedSes.code != null">
+        <div style="background-color: gray; height: 15em; width: 30em;">
+            <strong>{{selectedSes.code}}</strong>
+        </div>
+    </div>
 </div>

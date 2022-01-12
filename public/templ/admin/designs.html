@@ -25,14 +25,15 @@
                 <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
                 <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
                 <div class="text-right">
-                    <button class="btn btn-primary " ng-click="designLock(ses.id)">{{'launchActivity' | lang}}</button>
+                    <strong ng-show="ses.locked">LOCKED</strong>
+                    <button class="btn btn-primary " ng-click="launchDesign(ses.id)">{{'launchActivity' | lang}}</button>
                     <label class="switch">
                         <input type="checkbox" ng-checked="ses.public" ng-click="designPublic(ses.id)">
                         <span class="slider round"></span>
                         
                     </label>{{'share'|lang}}                    
-                    <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'E')">{{'edit' | lang}}</button>
-                    <button class="btn btn-danger " ng-click="deleteDesign(ses.id)" disabled>{{'delete' | lang}} TEMP</button>
+                    <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'E')" ng-disabled = "ses.locked">{{'edit' | lang}}</button>
+                    <button class="btn btn-danger " ng-click="deleteDesign(ses.id)" ng-hide="ses.locked">{{'delete' | lang}}</button>
                 </div>
             </div>
             <!--PUBLIC-->

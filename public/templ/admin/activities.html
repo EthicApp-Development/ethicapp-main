@@ -1,1 +1,17 @@
 <h1>ACTIVITIES</h1>
+<div ng-controller= "ActivityController">
+    <input class="form-control text-center" type="text" placeholder="{{'search'|lang}}" ng-model="userSearch" style="height: 2em;">
+    <div class="container" style="overflow: scroll; max-height: 40em; min-height: 10em;">
+        <div class="list-group-item" ng-repeat="ses in currentActivities() | filter:userSearch | orderBy : '-time'">
+            <a href="admin#/{{ses.id}}"><h4 class="list-group-item-heading" ng-bind="ses.name"></h4></a>
+            <p class="list-group-item-text" ng-bind="ses.descr"></p>
+            <p class="list-group-item-text">{{'launched' | lang}} {{ses.time | date}}</p>
+            <p class="list-group-item-text">{{'code' | lang}}: {{ses.code}}</p>
+            <div class="text-right">
+                <a href="admin#/{{ses.id}}"><button class="btn btn-primary ">{{'gotoActivity' | lang}}</button></a> 
+                <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
+            </div>
+        </div>
+    </div>
+    <!--CHANGE IT TO SEARCH FOR ACTIVITIES NOT SESSIONS-->
+</div>

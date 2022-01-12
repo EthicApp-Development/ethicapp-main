@@ -87,27 +87,48 @@ router.post("/add-session-activity", (req, res) => {
     });
 });
 
-router.post("/add-activity", rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql: "insert into activity (design,session) values ($1,$2)",
-    sesReqData: ["uid"],
-    postReqData: ["dsgnid","sesid"],
-    sqlParams: [rpg.param("post", "dsgnid"), rpg.param("post", "sesid")],
-    onStart: (ses, data, calc) => {
-        if (ses.role != "P") {
-            console.log("ERR: Solo profesor puede crear sesiones.");
-            console.log(ses);
-            return "select $1, $2, $3, $4, $5"
-        }
-    },
-    onEnd: (req, res) => {
-        //console.log(res);
-        res.redirect("home");
-    },
-    onError:(req, res)=>{
-        console.log(res)
-    }
-}));
+router.post("/add-activity", (req, res) => {
+var sesid =req.body.sesid;
+var dsgnid = req.body.dsgnid;
+var sql = `INSERT INTO ACTIVITY (design, session) VALUES (${dsgnid}, ${sesid}); UPDATE designs set locked = true WHERE id = ${dsgnid} `
+var db = getDBInstance(pass.dbcon);
+var qry;
+var result;
+qry = db.query(sql,(err,res) =>{
+    });
+qry.on("end", function () {
+    res.json({status:200});
+    });
+qry.on("error", function(err){
+    console.log("THERE WAS AN ERROR ON THE SQL QUERY");
+    console.log(err);
+    res.json({status:400, });
+
+    });
+});
+
+router.post("/get-activities", (req, res) => {
+    var uid = req.session.uid;
+    var sql = `select activity.id, activity.design, activity.session, sessions.creator, 
+    sessions.name,sessions.descr, sessions.time, sessions.code, sessions.archived
+    from activity join sessions on activity.session = sessions.id WHERE sessions.creator =${uid};`
+    var db = getDBInstance(pass.dbcon);
+    var qry;
+    var result;
+    qry = db.query(sql,(err,res) =>{
+        result = res.rows;
+        });
+    qry.on("end", function () {
+        res.json({status:200, activities: result});
+        });
+    qry.on("error", function(err){
+        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
+        console.log(err);
+        res.json({status:400, });
+    
+        });
+    });
+
 
 
 router.get("/admin", (req, res) => {
@@ -239,6 +260,7 @@ router.get("/get-user-designs", (req, res) => {
             for (var i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
             for (var i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
             for (var i=0; i<result.length;i++) result[i].public= res.rows[i].public; //add id to to design
+            for (var i=0; i<result.length;i++) result[i].locked= res.rows[i].locked; //add id to to design
         }
         });
     qry.on("end", function () {

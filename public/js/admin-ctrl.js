@@ -7,6 +7,7 @@ var DASHBOARD_AUTOREALOD = window.location.hostname.indexOf("fen") != -1;
 var DASHBOARD_AUTOREALOD_TIME = 15;
 
 var designId = {id:null}
+var launchId = {id:null}
 var prevTab = "";
 
 window.DIC = null;
@@ -93,6 +94,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.shared = {};
     self.sessions = [];
     self.selectedView = '' //current view
+    self.activities = [] //activities
     self.selectedSes = null;
     self.documents = [];
     self.questions = [];
@@ -116,6 +118,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.init = function () {
         self.getMe();
         self.shared.updateSesData();
+        self.shared.getActivities();
         self.updateLang(self.lang);
         $socket.on("stateChange", (data) => {
             console.log("SOCKET.IO", data);
@@ -158,6 +161,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         self.selectedView = tab;
         $route.reload();
         if(tab != "newDesignExt" && tab != "viewDesign") designId.id = null; //avoids making designs-documents request
+        if(tab != "launchActivity") launchId.id = null;
         console.log(self.selectedView);
     }
 
@@ -175,6 +179,14 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
             }
         });
     };
+
+    self.shared.getActivities = function(){
+        var postdata = { };
+        $http({ url: "get-activities", method: "post", data: postdata }).success(function (data) {
+            self.activities = data.activities;
+            //console.log(self.activities)
+        });
+    }
 
     self.sesFromURL = function () {
         var sesid = +$location.path().substring(1);
@@ -2549,27 +2561,52 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
 
 adpp.controller("ActivityController", function ($scope, $filter, $http, Notification, $timeout) {
     var self = $scope;
+    self.selectedSes = {};
+
+    self.init =function(){
+        self.selectedSes = {};
+    }
 
 
     self.createSession = function(dsgnName, dsgndescr, dsgntype, dsgnid){
         var postdata = { name: dsgnName, descr: dsgndescr, type:dsgntype};
-        console.log(postdata)
         $http({ url: "add-session-activity", method: "post", data: postdata }).success(function (data) {
             console.log("SESSION CREATED");
             var id = data.id;
             self.createActivity(id, dsgnid);
+            self.generateCodeActivity(id)
             //console.log(data);
         });
     }
 
     self.createActivity = function(sesID, dsgnID){
         var postdata = { sesid: sesID, dsgnid: dsgnID};
-        console.log(postdata)
         $http({ url: "add-activity", method: "post", data: postdata }).success(function (data) {
             console.log("ACTIVITY CREATED");
+            self.shared.getActivities();
+            //get current DESIGNS UPDATED
             //console.log(data);
         });
     }
+
+    self.generateCodeActivity = function (ID) { //use it to generate the code
+        var postdata = {
+            id: ID
+        };
+        $http.post("generate-session-code", postdata).success(function (data) {
+            if (data.code != null) self.selectedSes.code = data.code;
+        });
+    };
+
+    self.currentActivities = function(){
+        return self.activities
+    }
+
+    self.designSelected = function(){
+        return launchId.id
+    }
+
+    self.init();
 
 
 });
@@ -2850,6 +2887,16 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         else self.selectView("viewDesign")
         designId.id = ID;
         resetValues();
+    }
+
+    self.launchDesignEdit = function(){
+        launchId.id = designId.id;
+        self.selectView("launchActivity");
+    }
+
+    self.launchDesign = function(ID){
+        launchId.id = ID;
+        self.selectView("launchActivity");
     }
 
     self.getID = function(){

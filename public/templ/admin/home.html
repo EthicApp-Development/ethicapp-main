@@ -55,9 +55,9 @@
 
 <!--Activities-->
 <h2>{{'recentActivity'|lang}}</h2>
-<div class="activities_container" ng-controller= "TabsController">
+<div class="activities_container" ng-controller= "ActivityController">
     <div class="list-group pad-content">
-        <div class="list-group-item" ng-repeat="ses in currentSessions() | limitTo: 3">
+        <div class="list-group-item" ng-repeat="ses in currentActivities() | limitTo: 3 | orderBy : '-time'">
             <a href="admin#/{{ses.id}}"><h4 class="list-group-item-heading" ng-bind="ses.name"></h4></a>
             <p class="list-group-item-text" ng-bind="ses.descr"></p>
             <p class="list-group-item-text">{{'launched' | lang}} {{ses.time | date}}</p>
