@@ -63,7 +63,7 @@
             <p class="list-group-item-text">{{'launched' | lang}} {{ses.time | date}}</p>
             <p class="list-group-item-text">{{'code' | lang}}: {{ses.code}}</p>
             <div class="text-right">
-                <a href="admin#/{{ses.id}}"><button class="btn btn-primary ">{{'gotoActivity' | lang}}</button></a> 
+                <button class="btn btn-primary " ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
                 <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
             </div>
         </div>

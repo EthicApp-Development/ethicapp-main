@@ -109,14 +109,15 @@ qry.on("error", function(err){
 
 router.post("/get-activities", (req, res) => {
     var uid = req.session.uid;
-    var sql = `select activity.id, activity.design, activity.session, sessions.creator, 
-    sessions.name,sessions.descr, sessions.time, sessions.code, sessions.archived
-    from activity join sessions on activity.session = sessions.id WHERE sessions.creator =${uid};`
+    var sql = `select activity.id, activity.session, sessions.creator,
+    sessions.name,sessions.descr, sessions.time, sessions.code, sessions.archived, designs.design
+    FROM activity inner join sessions on activity.session = sessions.id inner join designs on activity.design = designs.id WHERE sessions.creator = ${uid};`
     var db = getDBInstance(pass.dbcon);
     var qry;
     var result;
     qry = db.query(sql,(err,res) =>{
-        result = res.rows;
+        if(res.rows != null)
+            result = res.rows;
         });
     qry.on("end", function () {
         res.json({status:200, activities: result});
@@ -127,7 +128,7 @@ router.post("/get-activities", (req, res) => {
         res.json({status:400, });
     
         });
-    });
+});
 
 
 

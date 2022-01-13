@@ -78,7 +78,8 @@ adpp.controller('RouteCtrl', function($scope) {
       "institution":"/templ/admin/institution.html",
       "activities":"/templ/admin/activities.html",
       "launchActivity":"/templ/admin/launchActivity.html",
-      "viewDesign":"/templ/admin/viewDesign.html"
+      "viewDesign":"/templ/admin/viewDesign.html",
+      "activity":"templ/admin/activity.html"
     }
      
    });
@@ -95,6 +96,8 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.sessions = [];
     self.selectedView = '' //current view
     self.activities = [] //activities
+    self.currentActivity = null; //current Activity
+    self.activityDesign = null;
     self.selectedSes = null;
     self.documents = [];
     self.questions = [];
@@ -157,12 +160,26 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
             self.shared.getStages();
     };
 
+    self.selectActivity = function(activityId, sesId, design){
+        self.selectView("activity");
+        self.currentActivity = activityId;
+        self.selectedId = sesId;
+        self.activityDesign = design;
+        //get TEACHER USERNAME also make debug delete activity button 
+        //to avoid bloat which deletes the activity, later sesusers in session and finally deletes the session
+        console.log("Activity ID:",activityId);
+        console.log("Session ID:",sesId);
+        console.log("Design:",design); 
+    };
+
     self.selectView = function(tab){
-        self.selectedView = tab;
-        $route.reload();
-        if(tab != "newDesignExt" && tab != "viewDesign") designId.id = null; //avoids making designs-documents request
-        if(tab != "launchActivity") launchId.id = null;
-        console.log(self.selectedView);
+        if(tab != self.selectedView){
+            self.selectedView = tab;
+            $route.reload();
+            if(tab != "newDesignExt" && tab != "viewDesign") designId.id = null; //avoids making designs-documents request
+            if(tab != "launchActivity") launchId.id = null;
+            console.log(self.selectedView);
+        }
     }
 
     self.shared.updateSesData = function () {
@@ -2608,6 +2625,13 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
 
     self.init();
 
+
+});
+
+adpp.controller("MonitorActivityController", function ($scope, $filter, $http, Notification, $timeout) {
+    var self = $scope;
+
+    //TRY TO MAKE STAGESEDITCONTROLLER MORE GENERIC IN ORDER TU USE IT ON MONITOR
 
 });
 
