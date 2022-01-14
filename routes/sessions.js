@@ -24,7 +24,8 @@ function getDBInstance(dbcon){
 router.get("/seslist", (req, res) => {
     if (req.session.uid) {
         if (req.session.role == "P")
-            res.redirect("admin");
+            //res.redirect("admin");
+            res.redirect("home");
         else
             res.render("seslist");
     }
@@ -110,7 +111,7 @@ qry.on("error", function(err){
 router.post("/get-activities", (req, res) => {
     var uid = req.session.uid;
     var sql = `select activity.id, activity.session, sessions.creator,
-    sessions.name,sessions.descr, sessions.time, sessions.code, sessions.archived, designs.design
+    sessions.name,sessions.descr, sessions.time, sessions.code, sessions.archived, designs.design, sessions.status
     FROM activity inner join sessions on activity.session = sessions.id inner join designs on activity.design = designs.id WHERE sessions.creator = ${uid};`
     var db = getDBInstance(pass.dbcon);
     var qry;
@@ -211,7 +212,7 @@ router.post("/upload-design", (req, res) => {
     qry = db.query(sql);
     qry.on("end", function () {
         qry2 = db.query(sql2,(err,res) =>{
-            if(res.rows[0] != null){
+            if(res!= null){
                 result = res.rows[0].max;
             }
             });
@@ -235,7 +236,7 @@ router.post("/get-design", (req, res) => {
     var qry;
     var result;
     qry = db.query(sql,(err,res) =>{
-        if(res.rows[0] != null){
+        if(res != null){
             result = JSON.stringify(res.rows[0].design);   
         }
         });
@@ -257,7 +258,7 @@ router.get("/get-user-designs", (req, res) => {
     var qry;
     var result = []
     qry = db.query(sql,(err,res) =>{
-        if(res.rows[0] != null){
+        if(res.rows != null){
             for (var i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
             for (var i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
             for (var i=0; i<result.length;i++) result[i].public= res.rows[i].public; //add id to to design
@@ -281,7 +282,7 @@ router.get("/get-public-designs", (req, res) => {
     var qry;
     var result = []
     qry = db.query(sql,(err,res) =>{
-        if(res.rows[0] != null){
+        if(res != null){
             for (var i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
             for (var i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
         }

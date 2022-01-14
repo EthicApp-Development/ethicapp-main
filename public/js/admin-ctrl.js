@@ -97,7 +97,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.selectedView = '' //current view
     self.activities = [] //activities
     self.currentActivity = null; //current Activity
-    self.activityDesign = null;
+    self.design = null;
     self.selectedSes = null;
     self.documents = [];
     self.questions = [];
@@ -164,12 +164,12 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         self.selectView("activity");
         self.currentActivity = activityId;
         self.selectedId = sesId;
-        self.activityDesign = design;
+        self.design = design;
         //get TEACHER USERNAME also make debug delete activity button 
         //to avoid bloat which deletes the activity, later sesusers in session and finally deletes the session
-        console.log("Activity ID:",activityId);
-        console.log("Session ID:",sesId);
-        console.log("Design:",design); 
+        console.log("Activity ID:",self.currentActivity);
+        console.log("Session ID:",self.selectedId);
+        console.log("Design:",self.design); 
     };
 
     self.selectView = function(tab){
@@ -197,9 +197,14 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         });
     };
 
+    self.changeDesign = function(selectedDesign){
+        self.design = selectedDesign;
+    }
+
     self.shared.getActivities = function(){
         var postdata = { };
         $http({ url: "get-activities", method: "post", data: postdata }).success(function (data) {
+            for(var index = 0; index<data.activities.length; index++) data.activities[index].title= data.activities[index].design.metainfo.title
             self.activities = data.activities;
             //console.log(self.activities)
         });
@@ -2556,6 +2561,7 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
         var postdata = { dsgnid: designId.id};
         $http({ url: "designs-documents", method: "post", data: postdata }).success(function (data) {
             self.documents = data;
+            console.log("DESIGNS DOCUMENT:", self.documents )
         });
     };
 
@@ -2615,8 +2621,10 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
         });
     };
 
-    self.currentActivities = function(){
-        return self.activities
+    self.currentActivities = function(type){
+        if(type == 0) return self.activities.filter(function(activity) {return activity.status != 3 && activity.archived ==false;});
+        if(type == 1) return self.activities.filter(function(activity) {return activity.status == 3 && activity.archived ==false;;});
+        if(type == 2) return self.activities.filter(function(activity) {return activity.archived;});
     }
 
     self.designSelected = function(){
@@ -2635,12 +2643,101 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
 
 });
 
+adpp.controller("BrowseDesignsController", function ($scope, $filter, $http, Notification, $timeout) {
+    var self = $scope;
+    self.designs = null;
+    self.public = null;
+
+    self.init = function(){
+        if(self.selectedView == "launchActivity") {self.getDesigns(); } //make request when on launchActivity view only
+        else if(self.selectedView == "designs") {self.getDesigns();} 
+        if(self.selectedView == "designs") {self.getPublicDesigns(); } 
+    }
+
+    self.designPublic = function (dsgnid) {
+        var postdata = { dsgnid: dsgnid };
+        $http({ url: "design-public", method: "post", data: postdata }).success(function (data) {
+
+        });
+    };
+
+    self.designLock = function (dsgnid) {
+        var postdata = { dsgnid: dsgnid };
+        $http({ url: "design-lock", method: "post", data: postdata }).success(function (data) {
+  
+        });
+    };
+
+    self.getDesigns = function(){
+        $http.get("get-user-designs").success(function (data) {
+            
+            if (data.status == "ok") {
+                self.designs = data.result;
+            }
+            
+        });
+    };
+
+    self.getPublicDesigns = function(){
+        $http.get("get-public-designs").success(function (data) {
+            
+            if (data.status == "ok") {
+                self.public = data.result;
+            }
+            
+        });
+    };
+
+    self.deleteDesign = function (ID) {
+        var postdata = {"id": ID};
+        $http.post("delete-design", postdata).success(function (data) {
+            
+            if (data.status == "ok") {
+                self.getDesigns(); //get current Designs 
+            }
+            
+        });
+
+    }
+
+
+    self.getDesign = function (ID) {
+        $http.post("get-design", ID).success(function (data) {
+            if (data.status == "ok") {
+                self.changeDesign(data.result)
+
+            }
+        });
+    };
+
+    self.goToDesign = function(ID, type){
+        $http.post("get-design", ID).success(function (data) {
+            if (data.status == "ok") {
+                self.changeDesign(data.result)
+                if(type=="E") self.selectView("newDesignExt")
+                else self.selectView("viewDesign")
+                designId.id = ID;
+
+            }
+        });        
+    }
+
+    self.launchDesignEdit = function(){
+        launchId.id = designId.id;
+        self.selectView("launchActivity");
+    }
+
+    self.launchDesign = function(ID){
+        launchId.id = ID;
+        self.selectView("launchActivity");
+    }
+
+    self.init();
+
+});
+
 
 adpp.controller("StagesEditController", function ($scope, $filter, $http, Notification, $timeout) {
-
-    /*
-        LANG FUNCTIONS
-    */
 
     var self = $scope;
 
@@ -2658,13 +2755,12 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     self.methods = [self.keyGroups("random"), self.keyGroups("performance", "homog"), self.keyGroups("performance", "heterg"), 
                     self.keyGroups("knowledgeType", "homog"), self.keyGroups("knowledgeType", "heterg")];
     self.groupType = [self.keyGroups("individual"), self.keyGroups("team")];
-    self.designs = null;
-    self.public = null;
     self.busy = false; //upload file
     self.extraOpts = false;
     self.documents = null;
     self.prevStages = false;
     //self.design = {};
+    /*
     self.design = { //DUMMY DATA
         "metainfo":{
             "title":" Test Design",
@@ -2768,8 +2864,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         ]
 
     }
-    self.stageType = self.design.type;
-    self.num = self.design.phases[0].questions[0].ans_format.values
+    */
     /*
 
         MOVER CONTENIDO A CONTROLADORES CORRESPONDIENTES!
@@ -2783,49 +2878,16 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     
 
     self.init = function(){
-        self.getDesigns()
-        self.getPublicDesigns()
-        resetValues();
+        console.log(self.design)
+        //resetValues();
+        if(self.selectedView == "newDesign") self.changeDesign(null)
+        if(self.design != null){
+            self.stageType = self.design.type;
+            self.num = self.design.phases[0].questions[0].ans_format.values
+            resetValues();
+        }
     }
-
-    self.designPublic = function (dsgnid) {
-        var postdata = { dsgnid: dsgnid };
-        $http({ url: "design-public", method: "post", data: postdata }).success(function (data) {
-
-        });
-    };
-
-    self.designLock = function (dsgnid) {
-        var postdata = { dsgnid: dsgnid };
-        $http({ url: "design-lock", method: "post", data: postdata }).success(function (data) {
   
-        });
-    };
-
-    self.getDesigns = function(){
-        $http.get("get-user-designs").success(function (data) {
-            
-            if (data.status == "ok") {
-                self.designs = {}
-                self.designs = data.result;
-                //console.log(self.designs)
-            }
-            
-        });
-    };
-
-    self.getPublicDesigns = function(){
-        $http.get("get-public-designs").success(function (data) {
-            
-            if (data.status == "ok") {
-                self.public = data.result;
-                //console.log(self.designs)
-            }
-            
-        });
-    };
-
-    
     self.uploadDesign = function (title, author) {
         var postdata = { 
             "metainfo":{
@@ -2862,10 +2924,8 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
             
             if (data.status == "ok") {
                 self.getDesign(data.id);
-                designId.id = data.id;
+                designId.id = data.id; //use variable from admin later
                 self.selectView("newDesignExt");
-                self.getDesigns()
-                resetValues()
             }
         });
         
@@ -2877,19 +2937,6 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
             
             if (data.status == "ok") {
                 //console.log(data)
-                self.getDesigns()
-            }
-            
-        });
-
-    }
-
-    self.deleteDesign = function (ID) {
-        var postdata = {"id": ID};
-        $http.post("delete-design", postdata).success(function (data) {
-            
-            if (data.status == "ok") {
-                self.getDesigns(); //get current Designs 
             }
             
         });
@@ -2900,28 +2947,11 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     self.getDesign = function (ID) {
         $http.post("get-design", ID).success(function (data) {
             if (data.status == "ok") {
-                self.design = data.result;
+                self.changeDesign(data.result)
             }
         });
     };
 
-    self.goToDesign = function(ID, type){
-        self.getDesign(ID);
-        if(type=="E") self.selectView("newDesignExt")
-        else self.selectView("viewDesign")
-        designId.id = ID;
-        resetValues();
-    }
-
-    self.launchDesignEdit = function(){
-        launchId.id = designId.id;
-        self.selectView("launchActivity");
-    }
-
-    self.launchDesign = function(ID){
-        launchId.id = ID;
-        self.selectView("launchActivity");
-    }
 
     self.getID = function(){
         return designId.id;
@@ -2994,14 +3024,15 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
             self.num = self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values;
         }
         else {
+            /*
             self.currentStage = null; //unselect current stage
             self.num = null;
             self.stageType  = null;
+            */
         }
         self.extraOpts = false;
         self.prevStages = false;
         //console.log(self.methods);
-        console.log(self.design)
     }
 
     self.deleteStage = function(){
@@ -3054,6 +3085,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         var index = self.design.phases.length -1
         var prev_phase = self.design.phases[index]
         self.design.phases.push(self.copyPrevStage("semantic_differential", prev_phase))
+        console.log(self.design.phases)
     }
 
     self.getStages = function(){

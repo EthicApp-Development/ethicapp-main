@@ -7,7 +7,7 @@
     <div class="modal-header">
         <h4>{{'designMsgInfo'|lang}}<h4>
     </div>
-    <form class="modal-body" name="formDesign">
+    <form class="modal-body" name="formDesign" ng-controller="StagesEditController" ng-if="selectedView == 'newDesign'">
         <div class="form-group" style="display: flex;">
             <label class="line-labels">{{'activityType' | lang}}: </label>
             <select name="type" class="form-control line-input">

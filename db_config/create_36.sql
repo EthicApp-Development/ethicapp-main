@@ -46,6 +46,12 @@ create table if not exists activity (
     foreign key(session) references sessions(id)
 );
 
+GRANT SELECT ON TABLE designs TO app;
+GRANT ALL PRIVILEGES ON TABLE designs TO app;
+GRANT USAGE, SELECT ON SEQUENCE designs_id_seq TO app;
+
 GRANT SELECT ON TABLE activity TO app;
 GRANT ALL PRIVILEGES ON TABLE activity TO app;
 GRANT USAGE, SELECT ON SEQUENCE activity_id_seq TO app;
+GRANT ALL PRIVILEGES ON TABLE designs_documents TO app;
+GRANT USAGE, SELECT ON SEQUENCE designs_documents_id_seq TO app;

@@ -17,7 +17,8 @@
         
     </div>
 </div>
-<div class="container" style="overflow: scroll; max-height: 40em; min-height: 10em; border: #bbb 1px solid;">
+<div class="container" style="overflow: scroll; max-height: 40em; min-height: 10em; border: #bbb 1px solid;" 
+ng-controller ="BrowseDesignsController" ng-if="selectedView=='designs'">
     <div class="activities_container" style="margin-top: 2em;">
         <div class="list-group pad-content">
             <!--OWN-->
@@ -32,7 +33,8 @@
                         <span class="slider round"></span>
                         
                     </label>{{'share'|lang}}                    
-                    <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'E')" ng-disabled = "ses.locked">{{'edit' | lang}}</button>
+                    <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'E')" ng-hide = "ses.locked">{{'edit' | lang}}</button>
+                    <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'V')">{{'view' | lang}}</button>
                     <button class="btn btn-danger " ng-click="deleteDesign(ses.id)" ng-hide="ses.locked">{{'delete' | lang}}</button>
                 </div>
             </div>
