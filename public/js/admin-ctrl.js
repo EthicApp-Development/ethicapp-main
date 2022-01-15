@@ -62,10 +62,7 @@ adpp.config(function ($routeProvider, $locationProvider) {
 });
  
 adpp.controller('RouteCtrl', function($scope) {
-   
-
-    $scope.template={
-      
+    $scope.template={      
       "home":"/templ/admin/home.html",
       "newDesign":"/templ/admin/newDesign.html",
       "newDesignExt":"/templ/admin/newDesignExt.html",
@@ -76,7 +73,6 @@ adpp.controller('RouteCtrl', function($scope) {
       "launchActivity":"/templ/admin/launchActivity.html",
       "viewDesign":"/templ/admin/viewDesign.html"
     }
-     
    });
 
 //#############################################
