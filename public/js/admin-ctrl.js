@@ -3592,8 +3592,6 @@ var centroid = function centroid(type, geom) {
 
 adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
     var self = $scope;
-    self.lang = "spanish";
-    window.DIC = "data/" + self.lang + ".json";
     self.uid = [];
     self.domains =[];
     self.role = "";
@@ -3604,19 +3602,7 @@ adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
     self.textarea = "";
     self.init = function () {
         self.getuserinfo();
-        self.getdomains();
-        self.updateLang(self.lang);
-
-    
-    };
-    self.updateLang = function (lang) {
-        $http.get("data/" + lang + ".json").success(function (data) {
-            window.DIC = data;
-        });
-    };
-    self.changeLang = function () {
-        self.lang = self.lang == "english" ? "spanish" : "english";
-        self.updateLang(self.lang);
+        self.getdomains(); 
     };
 
     self.user_amount = function () {

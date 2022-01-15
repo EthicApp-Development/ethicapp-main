@@ -488,7 +488,7 @@ router.post("/getdomains", (req, res) => {
     var qry;
     var result;
     qry = db.query(sql,(err,res) =>{
-        result = res.rows
+        if(res != null) result = res.rows
         });
 qry.on('end',function(){
     res.json({"data": result})

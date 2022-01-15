@@ -75,7 +75,7 @@ router.post("/add-session-activity", (req, res) => {
     var qry;
     var result;
     qry = db.query(sql,(err,res) =>{
-        result = res.rows[0].max;
+        if(res != null) result = res.rows[0].max;
         });
     qry.on("end", function () {
         res.json({status:200, id:result});
@@ -117,7 +117,7 @@ router.post("/get-activities", (req, res) => {
     var qry;
     var result;
     qry = db.query(sql,(err,res) =>{
-        if(res.rows != null)
+        if(res != null)
             result = res.rows;
         });
     qry.on("end", function () {
@@ -258,7 +258,7 @@ router.get("/get-user-designs", (req, res) => {
     var qry;
     var result = []
     qry = db.query(sql,(err,res) =>{
-        if(res.rows != null){
+        if(res != null){
             for (var i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
             for (var i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
             for (var i=0; i<result.length;i++) result[i].public= res.rows[i].public; //add id to to design
