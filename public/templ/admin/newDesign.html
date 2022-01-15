@@ -1,21 +1,17 @@
 <br>
 <br>
-<a ng-click="selectView('')" >{{'back'|lang}}</a>
+<a ng-click="selectView('')" >{{'back'|lang}}</a> <!--MERGE VIEW WITH EXT VERSION-->
 <br>
 <h2>{{'designMsg'|lang}}</h2>
 <div >
     <div class="modal-header">
         <h4>{{'designMsgInfo'|lang}}<h4>
     </div>
-    <form class="modal-body" name="formDesign">
+    <form class="modal-body" name="formDesign" ng-controller="StagesEditController" ng-if="selectedView == 'newDesign'">
         <div class="form-group" style="display: flex;">
             <label class="line-labels">{{'activityType' | lang}}: </label>
             <select name="type" class="form-control line-input">
-                <option value="M">{{ 'semUnits' | lang }}</option>
-                <option value="S">{{ 'multSel' | lang }}</option>
-                <option value="R">{{ 'rolePlaying' | lang }}</option>
-                <option value="T">{{ 'ethics' | lang }} 2</option>
-                <option value="J">{{ 'jigsaw' | lang }}</option>
+                <option value="M">{{ 'semDiff' | lang }}</option>
             </select>
         </div>
         <div class="form-group" style="display: flex;">

@@ -6,6 +6,10 @@ var adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "t
 var DASHBOARD_AUTOREALOD = window.location.hostname.indexOf("fen") != -1;
 var DASHBOARD_AUTOREALOD_TIME = 15;
 
+var designId = {id:null}
+var launchId = {id:null}
+var prevTab = "";
+
 window.DIC = null;
 window.warnDIC = {};
 
@@ -62,10 +66,7 @@ adpp.config(function ($routeProvider, $locationProvider) {
 });
  
 adpp.controller('RouteCtrl', function($scope) {
-   
-
-    $scope.template={
-      
+    $scope.template={      
       "home":"/templ/admin/home.html",
       "newDesign":"/templ/admin/newDesign.html",
       "newDesignExt":"/templ/admin/newDesignExt.html",
@@ -74,9 +75,9 @@ adpp.controller('RouteCtrl', function($scope) {
       "institution":"/templ/admin/institution.html",
       "activities":"/templ/admin/activities.html",
       "launchActivity":"/templ/admin/launchActivity.html",
-      "viewDesign":"/templ/admin/viewDesign.html"
+      "viewDesign":"/templ/admin/viewDesign.html",
+      "activity":"templ/admin/activity.html"
     }
-     
    });
 
 //#############################################
@@ -90,6 +91,9 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.shared = {};
     self.sessions = [];
     self.selectedView = '' //current view
+    self.activities = [] //activities
+    self.currentActivity = null; //current Activity
+    self.design = null;
     self.selectedSes = null;
     self.documents = [];
     self.questions = [];
@@ -102,6 +106,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.iterationNames = [];
     self.showSeslist = true;
     self.superBar = false;
+    self.institution = false;
     self.lang = "english";
     self.secIcons = { configuration: "cog", editor: "edit", dashboard: "bar-chart", users: "male",
         rubrica: "check-square", groups: "users", options: "sliders" };
@@ -112,6 +117,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.init = function () {
         self.getMe();
         self.shared.updateSesData();
+        self.shared.getActivities();
         self.updateLang(self.lang);
         $socket.on("stateChange", (data) => {
             console.log("SOCKET.IO", data);
@@ -126,6 +132,9 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
             if(data.status == "ok"){
                 self.superBar = true;
             }
+        });
+        $http.get("is-institution").success(data => {
+            self.institution = data.status;
         });
     };
 
@@ -147,10 +156,26 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
             self.shared.getStages();
     };
 
+    self.selectActivity = function(activityId, sesId, design){
+        self.selectView("activity");
+        self.currentActivity = activityId;
+        self.selectedId = sesId;
+        self.design = design;
+        //get TEACHER USERNAME also make debug delete activity button 
+        //to avoid bloat which deletes the activity, later sesusers in session and finally deletes the session
+        console.log("Activity ID:",self.currentActivity);
+        console.log("Session ID:",self.selectedId);
+        console.log("Design:",self.design); 
+    };
+
     self.selectView = function(tab){
-        self.selectedView = tab;
-        $route.reload();
-        console.log(self.selectedView);
+        if(tab != self.selectedView){
+            self.selectedView = tab;
+            $route.reload();
+            if(tab != "newDesignExt" && tab != "viewDesign") designId.id = null; //avoids making designs-documents request
+            if(tab != "launchActivity") launchId.id = null;
+            console.log(self.selectedView);
+        }
     }
 
     self.shared.updateSesData = function () {
@@ -167,6 +192,19 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
             }
         });
     };
+
+    self.changeDesign = function(selectedDesign){
+        self.design = selectedDesign;
+    }
+
+    self.shared.getActivities = function(){
+        var postdata = { };
+        $http({ url: "get-activities", method: "post", data: postdata }).success(function (data) {
+            for(var index = 0; index<data.activities.length; index++) data.activities[index].title= data.activities[index].design.metainfo.title
+            self.activities = data.activities;
+            //console.log(self.activities)
+        });
+    }
 
     self.sesFromURL = function () {
         var sesid = +$location.path().substring(1);
@@ -2487,17 +2525,217 @@ adpp.controller("RubricaController", function ($scope, $http) {
     };
 });
 
-adpp.controller("StagesEditController", function ($scope, $filter, $http) {
+adpp.controller("DesignsDocController", function ($scope, $http, Notification, $timeout) { 
+    var self = $scope;
+    self.busy = false;
+    self.documents = [];
 
-    /*
-        LANG FUNCTIONS
-    */
+    self.init = function(){
+        self.requestDesignDocuments();
+    }
+
+    self.uploadDesignDocument = function (event) { //Work in progress
+        self.busy = true;
+        var fd = new FormData(event.target);
+        $http.post("upload-design-file", fd, {
+            transformRequest: angular.identity,
+            headers: { 'Content-Type': undefined }
+        }).success(function (data) {
+            if (data.status == "ok") {
+                $timeout(function () {
+                    //Notification.success("Documento cargado correctamente");
+                    event.target.reset();
+                    self.busy = false;
+                    //self.shared.updateDocuments();
+                    self.requestDesignDocuments();
+                }, 2000);
+            }
+        });
+    };
+    
+    self.requestDesignDocuments = function ( ) {
+        var postdata = { dsgnid: designId.id};
+        $http({ url: "designs-documents", method: "post", data: postdata }).success(function (data) {
+            self.documents = data;
+        });
+    };
+
+
+    self.deleteDesignDocument = function (dsgnid) {
+        var postdata = { dsgnid: dsgnid };
+        $http({ url: "delete-design-document", method: "post", data: postdata }).success(function (data) {
+            self.requestDesignDocuments();
+        });
+    };
+
+    self.getPathname = function(path){
+        var split = path.split("/")
+        return split[split.length - 1]
+    }
+
+    self.init()
+
+});
+
+adpp.controller("ActivityController", function ($scope, $filter, $http, Notification, $timeout) {
+    var self = $scope;
+    self.selectedSes = {};
+
+    self.init =function(){
+        self.selectedSes = {};
+    }
+
+
+    self.createSession = function(dsgnName, dsgndescr, dsgntype, dsgnid){
+        var postdata = { name: dsgnName, descr: dsgndescr, type:dsgntype};
+        $http({ url: "add-session-activity", method: "post", data: postdata }).success(function (data) {
+            console.log("SESSION CREATED");
+            var id = data.id;
+            self.createActivity(id, dsgnid);
+            self.generateCodeActivity(id)
+            //console.log(data);
+        });
+    }
+
+    self.createActivity = function(sesID, dsgnID){
+        var postdata = { sesid: sesID, dsgnid: dsgnID};
+        $http({ url: "add-activity", method: "post", data: postdata }).success(function (data) {
+            console.log("ACTIVITY CREATED");
+            self.shared.getActivities();
+            //get current DESIGNS UPDATED
+            //console.log(data);
+        });
+    }
+
+    self.generateCodeActivity = function (ID) { //use it to generate the code
+        var postdata = {
+            id: ID
+        };
+        $http.post("generate-session-code", postdata).success(function (data) {
+            if (data.code != null) self.selectedSes.code = data.code;
+        });
+    };
+
+    self.currentActivities = function(type){
+        if(type == 0) return self.activities.filter(function(activity) {return activity.status != 3 && activity.archived ==false;});
+        if(type == 1) return self.activities.filter(function(activity) {return activity.status == 3 && activity.archived ==false;;});
+        if(type == 2) return self.activities.filter(function(activity) {return activity.archived;});
+    }
+
+    self.designSelected = function(){
+        return launchId.id
+    }
+
+    self.init();
+
+
+});
+
+adpp.controller("MonitorActivityController", function ($scope, $filter, $http, Notification, $timeout) {
+    var self = $scope;
+
+    //TRY TO MAKE STAGESEDITCONTROLLER MORE GENERIC IN ORDER TU USE IT ON MONITOR
+
+});
+
+adpp.controller("BrowseDesignsController", function ($scope, $filter, $http, Notification, $timeout) {
+    var self = $scope;
+    self.designs = null;
+    self.public = null;
+
+    self.init = function(){
+        if(self.selectedView == "launchActivity") {self.getDesigns(); } //make request when on launchActivity view only
+        else if(self.selectedView == "designs") {self.getDesigns();} 
+        if(self.selectedView == "designs") {self.getPublicDesigns(); } 
+    }
+
+    self.designPublic = function (dsgnid) {
+        var postdata = { dsgnid: dsgnid };
+        $http({ url: "design-public", method: "post", data: postdata }).success(function (data) {
+
+        });
+    };
+
+    self.designLock = function (dsgnid) {
+        var postdata = { dsgnid: dsgnid };
+        $http({ url: "design-lock", method: "post", data: postdata }).success(function (data) {
+  
+        });
+    };
+
+    self.getDesigns = function(){
+        $http.get("get-user-designs").success(function (data) {
+            
+            if (data.status == "ok") {
+                self.designs = data.result;
+            }
+            
+        });
+    };
+
+    self.getPublicDesigns = function(){
+        $http.get("get-public-designs").success(function (data) {
+            
+            if (data.status == "ok") {
+                self.public = data.result;
+            }
+            
+        });
+    };
+
+    self.deleteDesign = function (ID) {
+        var postdata = {"id": ID};
+        $http.post("delete-design", postdata).success(function (data) {
+            
+            if (data.status == "ok") {
+                self.getDesigns(); //get current Designs 
+            }
+            
+        });
+
+    }
+
+
+    self.getDesign = function (ID) {
+        $http.post("get-design", ID).success(function (data) {
+            if (data.status == "ok") {
+                self.changeDesign(data.result)
+
+            }
+        });
+    };
+
+    self.goToDesign = function(ID, type){
+        $http.post("get-design", ID).success(function (data) {
+            if (data.status == "ok") {
+                self.changeDesign(data.result)
+                if(type=="E") self.selectView("newDesignExt")
+                else self.selectView("viewDesign")
+                designId.id = ID;
+
+            }
+        });        
+    }
+
+    self.launchDesignEdit = function(){
+        launchId.id = designId.id;
+        self.selectView("launchActivity");
+    }
+
+    self.launchDesign = function(ID){
+        launchId.id = ID;
+        self.selectView("launchActivity");
+    }
+
+    self.init();
+
+});
+
+
+adpp.controller("StagesEditController", function ($scope, $filter, $http, Notification, $timeout) {
 
     var self = $scope;
 
-    self.flang = function (key) {
-        return $filter("lang")(key);
-    };
 
     self.keyGroups = function (k1, k2) {
         return {
@@ -2507,20 +2745,17 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
         };
     };
 
-    self.currentStage = null; //index of stage
-    self.currentQuestion = null; //index of current question
-    self.stageType = null;
+    self.currentStage = 0; //index of stage
+    self.currentQuestion = 0; //index of current question
     self.methods = [self.keyGroups("random"), self.keyGroups("performance", "homog"), self.keyGroups("performance", "heterg"), 
                     self.keyGroups("knowledgeType", "homog"), self.keyGroups("knowledgeType", "heterg")];
     self.groupType = [self.keyGroups("individual"), self.keyGroups("team")];
-    self.num = null;
-    self.designId = null;
-    self.designs = null;
-    self.public = null;
     self.busy = false; //upload file
     self.extraOpts = false;
+    self.documents = null;
     self.prevStages = false;
     //self.design = {};
+    /*
     self.design = { //DUMMY DATA
         "metainfo":{
             "title":" Test Design",
@@ -2624,7 +2859,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
         ]
 
     }
-    
+    */
     /*
 
         MOVER CONTENIDO A CONTROLADORES CORRESPONDIENTES!
@@ -2635,51 +2870,18 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
         BACKEND FUNCTIONS
     */
 
-    self.init = function(){
-        self.getDesigns()
-        self.getPublicDesigns()
-    }
-
-    self.getDesigns = function(){
-        $http.get("get-user-designs").success(function (data) {
-            
-            if (data.status == "ok") {
-                self.designs = data.result;
-                //console.log(self.designs)
-            }
-            
-        });
-    };
-
-    self.getPublicDesigns = function(){
-        $http.get("get-public-designs").success(function (data) {
-            
-            if (data.status == "ok") {
-                self.public = data.result;
-                //console.log(self.designs)
-            }
-            
-        });
-    };
-
-    self.uploadDocument = function (event) { //Work in progress
-        self.busy = true;
-        var fd = new FormData(event.target);
-        $http.post("upload-file", fd, {
-            transformRequest: angular.identity,
-            headers: { 'Content-Type': undefined }
-        }).success(function (data) {
-            if (data.status == "ok") {
-                $timeout(function () {
-                    Notification.success("Documento cargado correctamente");
-                    event.target.reset();
-                    self.busy = false;
-                    self.shared.updateDocuments();
-                }, 2000);
-            }
-        });
-    };
     
+
+    self.init = function(){
+        //resetValues();
+        if(self.selectedView == "newDesign") self.changeDesign(null)
+        if(self.design != null){
+            self.stageType = self.design.type;
+            self.num = self.design.phases[0].questions[0].ans_format.values
+            resetValues();
+        }
+    }
+  
     self.uploadDesign = function (title, author) {
         var postdata = { 
             "metainfo":{
@@ -2716,34 +2918,17 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
             
             if (data.status == "ok") {
                 self.getDesign(data.id);
-                self.designId = data.id;
-                self.selectView("newDesignExt");
-                self.getDesigns()
-                resetValues()
             }
         });
         
     };
 
     self.updateDesign = function () {
-        var postdata = {"design":self.design,"id": self.designId};
+        var postdata = {"design":self.design,"id": designId.id};
         $http.post("update-design", postdata).success(function (data) {
             
             if (data.status == "ok") {
                 //console.log(data)
-                self.getDesigns()
-            }
-            
-        });
-
-    }
-
-    self.deleteDesign = function (designId) {
-        var postdata = {"id": designId};
-        $http.post("delete-design", postdata).success(function (data) {
-            
-            if (data.status == "ok") {
-                self.getDesigns(); //get current Designs 
             }
             
         });
@@ -2751,28 +2936,27 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
     }
 
 
-    self.getDesign = function (designId) {
-        $http.post("get-design", designId).success(function (data) {
+    self.getDesign = function (ID) {
+        $http.post("get-design", ID).success(function (data) {
             if (data.status == "ok") {
-                self.design = data.result;
+                self.changeDesign(data.result)
+                designId.id = ID; //use variable from admin later
+                self.selectView("newDesignExt");
             }
         });
     };
 
-    self.goToDesign = function(designId, type){
-        self.getDesign(designId);
-        if(type=="E") self.selectView("newDesignExt")
-        else self.selectView("viewDesign")
-        self.designId = designId;
-        resetValues()
+
+    self.getID = function(){
+        return designId.id;
     }
 
     var resetValues = function(){
         // RESET VALUES
-        self.currentStage = null; 
-        self.currentQuestion = null; 
-        self.stageType = null;
-        self.num = null;
+        self.currentStage = 0; 
+        self.currentQuestion = 0; 
+        self.stageType = self.design.type;
+        self.design.phases[0].questions[0].ans_format.values
         self.busy = false; 
         self.extraOpts = false;
         self.prevStages = false;
@@ -2834,13 +3018,15 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http) {
             self.num = self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values;
         }
         else {
+            /*
             self.currentStage = null; //unselect current stage
             self.num = null;
             self.stageType  = null;
+            */
         }
         self.extraOpts = false;
         self.prevStages = false;
-        console.log(self.methods);
+        //console.log(self.methods);
     }
 
     self.deleteStage = function(){
@@ -3406,8 +3592,6 @@ var centroid = function centroid(type, geom) {
 
 adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
     var self = $scope;
-    self.lang = "spanish";
-    window.DIC = "data/" + self.lang + ".json";
     self.uid = [];
     self.domains =[];
     self.role = "";
@@ -3419,24 +3603,12 @@ adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
     self.init = function () {
         self.getuserinfo();
         self.getdomains();
-        self.updateLang(self.lang);
+    };
 
-    
-    };
-    self.updateLang = function (lang) {
-        $http.get("data/" + lang + ".json").success(function (data) {
-            window.DIC = data;
-        });
-    };
-    self.changeLang = function () {
-        self.lang = self.lang == "english" ? "spanish" : "english";
-        self.updateLang(self.lang);
-    };
 
     self.user_amount = function () {
         if(self.textarea.split("\n").length == 1){
             if(self.textarea.length == 0){
-                console.log(self.textarea.length)
                 return 0
             }
             else{

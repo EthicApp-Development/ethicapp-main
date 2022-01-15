@@ -8,7 +8,7 @@ html{
 }
 
 body{
-    font-family: Helvetica, Verdana, sans-serif;
+    font-family: "Helvetica-Neue", Helvetica, Verdana, sans-serif;
     padding: 0;
     margin: 0;
     height: 100%;
@@ -57,6 +57,39 @@ hr{
     border-bottom: 4px solid #aaaaaa;
     background: #f3f3f3;
     margin: 20px auto;
+}
+
+.form-signin, .form-register {
+    background: #f3f3f3;
+    max-width: 460px;
+    padding: 15px;
+    margin: 0 auto;
+    margin-top: 4em;
+    margin-bottom: 4em;
+    border-radius: 4px;
+    border: 1px solid #eee;
+}
+
+.btn-primary {
+    background-color: #2649EC;
+    border-color: #102AA0;
+}
+
+.btn-primary:hover {
+    background-color: #102AA0;
+    border-color: #102AA0;
+}
+
+a {
+    color: #2649EC;
+}
+
+a:hover, a:active {
+    color: #102AA0;
+}
+
+label {
+    font-weight: 500;
 }
 
 .large-box h1, .large-box h2, .large-box h4{
@@ -662,6 +695,10 @@ ng-quill-editor.large .ql-editor{
     padding-right: 4px !important;
 }
 
+.g-recaptcha {
+    display: inline-block;
+}
+
 .gsearch{
     position: absolute;
     display: block;
@@ -711,6 +748,18 @@ ng-quill-editor.large .ql-editor{
 
 .top-bar .chip.white.active{
     opacity: 1;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.text-left {
+    text-align: left;
 }
 
 .invitation-code{
@@ -779,13 +828,12 @@ ng-quill-editor.large .ql-editor{
 
 .logo{
     text-align: center;
-    width: 100%;
-    margin-bottom: -12px;
-    margin-top: 4px;
+    margin-bottom: 2em;
+    margin-top: 2em;
 }
 
 .logo img{
-    height: 120px;
+    height: 50px;
 }
 
 .top-bar-tabs{
@@ -1299,8 +1347,6 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     width: 30px;
     background: #fff;
 }
-
-
 
 
 .tab-cs2 {

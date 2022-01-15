@@ -311,7 +311,7 @@ router.post("/resetpassword", (req, res) => {
         mail()
 
     
-});
+})
 
 
 
@@ -368,6 +368,15 @@ router.get("/is-super", (req, res) => {
     }
 });
 
+router.get("/is-institution", (req, res) => {
+    if(req.session.role == "I" || req.session.prevUid != null){
+        res.send({status: true});
+    }
+    else {
+        res.send({status: false});
+    }
+});
+
 module.exports = router;
 
 
@@ -402,6 +411,7 @@ router.post("/create-multicounts",(req,res)=> {
         var sql = "SELECT * FROM users WHERE mail ='"+account_data[0] +"' LIMIT 1";
         var qry;
         qry = db.query(sql,(err,res) =>{
+            if(res != null){
             if(res.rows[0] != null){
                 }
             else{
@@ -424,6 +434,7 @@ router.post("/create-multicounts",(req,res)=> {
                 qry.on("error", function(err){
                 });
             }
+        }
             });
     }
     
@@ -474,7 +485,7 @@ router.post("/get_same_users", (req, res) => {
         var qry;
         var result;
         qry = db.query(sql,(err,res) =>{
-            if(res.rows != null)
+            if(res != null)
             {
             result = res.rows
             resultados.push(result)
@@ -497,7 +508,7 @@ router.post("/getuserinfo", (req, res) => {
     var qry;
     var result;
     qry = db.query(sql,(err,res) =>{
-        if(res.rows != null)
+        if(res != null)
         result = res.rows
         });
 qry.on('end',function(){
@@ -513,7 +524,7 @@ router.post("/getdomains", (req, res) => {
     var qry;
     var result;
     qry = db.query(sql,(err,res) =>{
-        if(res.rows != null){
+        if(res != null){
         result = res.rows
         }
         });
