@@ -87,10 +87,6 @@ a:hover, a:active {
     color: #102AA0;
 }
 
-label {
-    font-weight: 500;
-}
-
 .large-box h1, .large-box h2, .large-box h4{
     text-align: center;
 }
