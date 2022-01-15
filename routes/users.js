@@ -267,16 +267,6 @@ router.post("/resetpassword", (req, res) => {
                 } 
         };
 
-<<<<<<< HEAD
-        //var sendPromise = new AWS.SES({apiVersion: '2010-12-01', credentials:{accessKeyId: pass.accessKeyId, secretAccessKey: pass.secretAccessKey}}).sendEmail(params);
-        //sendPromise.then(
-        //  function(data) {
-        //    res.redirect("login?rc=3");
-        //  }).catch(
-        //    function(err) {
-        //  });
-          AWS_SES.sendEmail(params).promise();
-=======
 
           AWS_SES.sendEmail(params).promise().then(
              function(data) {
@@ -284,7 +274,6 @@ router.post("/resetpassword", (req, res) => {
               }).catch(
                 function(err) {
               });;
->>>>>>> overhaul-2122
         }
         mail()
 

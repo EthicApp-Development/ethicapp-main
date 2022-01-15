@@ -245,15 +245,8 @@
 	"workflow": "Workflow",
 	"yes": "Yes",
 	"yours": "Yours",
-<<<<<<< HEAD
-	"byOthers":"By Others",
-	"semDiff":"Semantic Differentials",
-	"search":"Search"
-}
-=======
 	"res_pass":"Reset Password",
 	"make_t":"Make Teacher",
 	"make_s":"Make Student"
 }
 
->>>>>>> overhaul-2122
