@@ -14,7 +14,7 @@ router.get('/', (req, res) => {
                 //res.redirect("admin");
                 res.redirect("home");
             else if (req.session.role == "I")
-                res.redirect("institucion");
+                res.redirect("home");
             else if (req.session.role == "S")
                 res.redirect("super");
             else

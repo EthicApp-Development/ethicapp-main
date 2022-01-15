@@ -1,17 +1,17 @@
 <!DOCTYPE html>
-<html  ng-app="Admin">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-    <title>DocCollab</title>
-    <link rel="stylesheet" href="css/bootstrap.min.css"/>
-    <link rel="stylesheet" href="css/font-awesome.min.css"/>
-    <link rel="stylesheet" href="css/nv.d3.min.css">
-    <link rel="stylesheet" href="css/angular-ui-notification.min.css">
-    <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css">
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.9.0-alpha2/katex.min.css">
-    <link rel="stylesheet" href="css/tablesort.min.css">
-    <link rel="stylesheet" href="css/main.css"/>
+<html ng-app="Admin">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>EthicApp</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/font-awesome.min.css" />
+    <link rel="stylesheet" href="css/nv.d3.min.css" />
+    <link rel="stylesheet" href="css/angular-ui-notification.min.css" />
+    <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.9.0-alpha2/katex.min.css" />
+    <link rel="stylesheet" href="css/tablesort.min.css" />
+    <link rel="stylesheet" href="css/main.css" />
     <script src="libs/angular.min.js"></script>
     <script src="libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
     <script src="libs/katex.min.js"></script>
@@ -31,85 +31,66 @@
     <script src="js/StagesController.js"></script>
     <script src="js/admin-ctrl.js"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="libs/angular-route.js"></script> <!--Agregado recientemente-->
-</head>
-<body ng-controller="instituciones">
-
-<div class="middle-box large-box">
-
-    <div class="logo">
-        <img src="img/logo.png" alt="logo">
-    </div>
-
-    <h2 class="app-title">
-        EthicApp
-    </h2>
-
-    <hr/>
-    <% if(rc == 1) {%>
-    <div class="alert alert-info">
-        {{'log1' | lang}}
-    </div>
-    <% } %>
-    <% if(rc == 2) {%>
-    <div class="alert alert-danger">
-        {{'log2' | lang}}
-    </div>
-    <% } %>
-    <% if(rc == 3) {%>
-        <div class="alert alert-info">
-            {{'log3' | lang}}
+    <script src="libs/angular-route.js"></script>
+  </head>
+  <body ng-controller="no_account">
+    <div class="form-signin panel panel-default">
+      <div class="panel-body">
+        <div class="logo">
+          <img src="/img/ethicapp-logo.svg" alt="EthicApp" />
         </div>
-    <% } %>
-    <% if(rc == 4) {%>
-        <div class="alert alert-info">
-            {{'log4' | lang}}
-        </div>
-    <% } %>
-    <br/>
-    <form action="login" method="POST">
-        <label class=" line-labels">
-            {{'email' | lang}}
-            <input class="grid-item line-input form-controll" type="text"  name="user" required autofocus>
-            <br>
-        </label>
-
-        <label class="line-labels">
-            {{'password' | lang}}
-            <input class="grid-item line-input form-controll" type="password"  name="pass" required>
-            <br>
-        </label>
-        <button type="submit" class="btn btn-primary" style="width: 200px;">
-            {{'login' | lang}}
-        </button>
-    </form>
-    <br>
-    <div> 
-            <button  ng-click="changeLang()">
-                {{'langOther' | lang}}
-            </button>
-
-    </div>
-   
-    <a href="register">{{'register' | lang}} </a>|
-    <a href="forgot-pass">{{'forgot_pass' | lang}}</a>
-
-    <div class="row ">
-        <div class="col-md-3  line-labels">
-          <a class="btn btn-outline-dark" href="/google" role="button" style="text-transform:none">
-            <img width="20px" style="margin-bottom:3px; margin-right:5px" alt="Google sign-in" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png" />
-            {{'glogin' | lang}}
-          </a>
+        <div class="row">
+          <% if(rc == 1) {%>
+            <div class="alert alert-info">
+              {{ "log1" | lang }}
+            </div>
+            <% } %> <% if(rc == 2) {%>
+            <div class="alert alert-danger">
+              {{ "log2" | lang }}
+            </div>
+            <% } %> <% if(rc == 3) {%>
+            <div class="alert alert-info">
+              {{ "log3" | lang }}
+            </div>
+            <% } %> <% if(rc == 4) {%>
+            <div class="alert alert-info">
+              {{ "log4" | lang }}
+            </div>
+            <% } %>
+            <br />
+            <form class="form-horizontal" action="login" method="POST">
+              <div class="form-group">
+                <label for="user" class="col-sm-3 control-label">{{ "email" | lang }}</label>
+                <div class="col-sm-8">
+                  <input class="form-control" type="text" name="user" required autofocus />
+                </div>
+                <div class="col-sm-1">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="user" class="col-sm-3 control-label">{{ "password" | lang }}</label>
+                <div class="col-sm-8">
+                  <input class="form-control" type="password" name="pass" required />
+                </div>
+                <div class="col-sm-1">
+                </div>
+              </div>
+              <div class="form-group text-center">
+                <button type="submit" class="btn btn-primary" style="margin: 0 auto; width:140px;">{{ "login" | lang }}</button>
+              </div>
+            </form>
+            <br />
+            <div class="row text-center">
+              <a href="register">{{ "register" | lang }} </a>|
+              <a href="forgot-pass">{{ "forgot_pass" | lang }}</a><br>
+              <a href="/google" role="button" class="btn btn-default" style="margin-top:1em;">
+                <img style="width: 20px" style="margin-bottom: 3px; margin-right: 5px" alt="Google sign-in" src="/img/google.png" />
+                {{ "glogin" | lang }}
+              </a>                
+            </div>
+          </div>
         </div>
       </div>
-
-</div>
-<!--<small>Do have a FEN account?</small>
-    <a href="login-fen">Login with FEN</a><br>-->
-    <!--<small>Registro:</small>-->
-    <!--<br>
-    <a href="#">Nueva cuenta de profesor</a>-->
-
-
-</body>
+    </div>
+  </body>
 </html>

@@ -9,6 +9,7 @@ let mailer = require("nodemailer");
 const passport = require('passport');
 require('./passport-setup');
 
+
 var pg = require('pg');
 const app = require('../app');
 router.use(passport.initialize())
@@ -174,9 +175,9 @@ fetch("https://www.google.com/recaptcha/api/siteverify?secret="+secret_key+"&res
                 var qry2;
                 qry2 = db.query(sql2,(err,rest) =>{
                     if(rest.rows[0] != null){
-                        var sql3 = "insert into institucion(userid, nombreinstitucion, numestudiantes, pais, dominionscorreo, cargo) values ($1,$2,$3,$4,$5,$6)";
+                        var sql3 = "insert into institucion(userid, institutionName, numEstudents, country, mailDomains, position) values ($1,$2,$3,$4,$5,$6)";
                         var qry3;
-                        var sqlParams3 = [rest.rows[0].uid, req.body.name_ins, parseInt(req.body.Numero_estudiantes,10),req.body.Pais,req.body.domains,req.body.Cargo ]
+                        var sqlParams3 = [rest.rows[0].id, req.body.name_ins, parseInt(req.body.Numero_estudiantes,10),req.body.Pais,req.body.domains,req.body.Cargo ]
                         qry3 = db.query(sql3, sqlParams3);
                         qry3.on("end", function () {
 
@@ -266,6 +267,7 @@ router.post("/resetpassword", (req, res) => {
                 } 
         };
 
+<<<<<<< HEAD
         //var sendPromise = new AWS.SES({apiVersion: '2010-12-01', credentials:{accessKeyId: pass.accessKeyId, secretAccessKey: pass.secretAccessKey}}).sendEmail(params);
         //sendPromise.then(
         //  function(data) {
@@ -274,6 +276,15 @@ router.post("/resetpassword", (req, res) => {
         //    function(err) {
         //  });
           AWS_SES.sendEmail(params).promise();
+=======
+
+          AWS_SES.sendEmail(params).promise().then(
+             function(data) {
+                res.redirect("login?rc=3");
+              }).catch(
+                function(err) {
+              });;
+>>>>>>> overhaul-2122
         }
         mail()
 
@@ -371,7 +382,6 @@ router.post("/changepassword",(req,res)=> {
 });
 
 router.post("/create-multicounts",(req,res)=> {
-    console.log(req.body.data.split('\r\n'))
     var accounts = req.body.data.split('\r\n')
     var db = getDBInstance(pass.dbcon);
     for(var i = 0;i< accounts.length;i++){
@@ -438,5 +448,92 @@ router.post("/deleteacc",(req,res)=> {
         res.redirect("login")
     }
 
+
+});
+
+
+
+router.post("/get_same_users", (req, res) => {
+    var domains = req.body.postdata2.split(",")
+    var db = getDBInstance(pass.dbcon);
+    var resultados = [];
+    for(var i =0;i<domains.length;i++){
+        
+        var sql = "SELECT * FROM users WHERE mail LIKE'%"+domains[i] +"%'";
+        var qry;
+        var result;
+        qry = db.query(sql,(err,res) =>{
+            result = res.rows
+            
+            resultados.push(result)
+            
+            });
+            
+
+    }  
+    qry.on('end',function(){
+        res.json({"data": resultados})
+    })
+
+
+});
+
+router.post("/getuserinfo", (req, res) => {
+    var db = getDBInstance(pass.dbcon);
+    var sql = "SELECT * FROM users WHERE id ='"+req.session.uid +"' LIMIT 1";
+    var qry;
+    var result;
+    qry = db.query(sql,(err,res) =>{
+        result = res.rows
+        });
+qry.on('end',function(){
+    res.json({"data": result})
+
+})
+});
+
+
+router.post("/getdomains", (req, res) => {
+    var db = getDBInstance(pass.dbcon);
+    var sql = "SELECT * FROM institution WHERE userid ='"+req.session.uid +"'";
+    var qry;
+    var result;
+    qry = db.query(sql,(err,res) =>{
+        result = res.rows
+        });
+qry.on('end',function(){
+    res.json({"data": result})
+})
+});
+
+
+router.post("/make_prof", (req, res) => {
+    var db = getDBInstance(pass.dbcon);
+    var sql = "UPDATE users SET role = 'P' WHERE mail ='"+req.body.mail +"'";
+    var qry;
+    var result;
+    qry = db.query(sql,(err,rest) =>{
+        console.log("data uploaded")
+        result = rest
+        });
+        qry.on('end',function(){
+            
+        })
+
+});
+
+router.post("/make_alum", (req, res) => {
+    var db = getDBInstance(pass.dbcon);
+    var sql = "UPDATE users SET role = 'A' WHERE mail ='"+req.body.mail +"'";
+    var qry;
+    var result;
+    qry = db.query(sql,(err,rest) =>{
+        console.log("data uploaded")
+        result = rest
+
+        });
+        qry.on('end',function(){
+            
+        })
 
 });

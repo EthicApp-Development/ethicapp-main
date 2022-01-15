@@ -25,6 +25,7 @@
 	"mapPlugin": "Plugin de Mapa",
 	"options": "Alternativas",
 	"option": "Alternativa",
+	"optional_parent": "(Opcional)",
 	"comment": "Comentario",
 	"solution": "Solución",
 	"others": "Otros",
@@ -174,17 +175,18 @@
 	"filter": "Filtrar por usuario",
 	"Back": "Atras",
 	"Enter_the_users": "Ingresa los usuarios a importar a continuacion",
-	"Import_number": "Numero de Usuarios a Importar:",
+	"Import_number": "Numero de Usuarios a Importar",
 	"import_phrase1": "Cada usuario debe ir en una línea: primero el correo electrónico (obligatorio), luego la contraseña (obligatorio),",
 	"import_phrase2": "despues nombre (opcional), y apellido (opcional). Los campos deben ir separados por coma",
-	"register": "Registrarse",
-	"forgot_pass": " Olvidó su contraseña?",
-	"glogin": "Inicio con Google",
-	"login": "Ingresar",
-	"password": "Constraseña:",
+	"register": "Regístrate",
+	"forgot_pass": "¿Olvidaste tu contraseña?",
+	"glogin": "Ingresa con Google",
+	"login": "Ingresa",
+	"login_w_account": "Ingresa con tu cuenta",
+	"password": "Contraseña:",
 	"email": "Correo:",
-	"log1": "Registro Completo. Ingrese con sus datos",
-	"log2": "Login o Password Incorrectos",
+	"log1": "Registro Completo. Ingresa con tus datos",
+	"log2": "Email o contraseña incorrecta",
 	"log3": "Se ha enviado un correo con la información para recuperar la contraseña.\n Este correo podría haber llegado a spam.",
 	"log4": "Contraseña cambiada correctamente. Ingrese con sus datos.",
 	"accounttype": "¿Quieres una cuenta personal o institucional?",
@@ -205,7 +207,10 @@
 	"rector": "Rector",
 	"director": "Director",
 	"sol_acc": "Solicitar cuenta institucional",
-	"alredy_acc": "Ya tiene una cuenta?",
+	"alredy_acc": "¿Ya tienes una cuenta?",
+	"res_pass":"Restablecer Contraseña",
+	"make_t":"Convertir en profesor",
+	"make_s":"Convertir en estudiante",
 	"mode": "Modo",
 	"modeType": "Modo de interacción",
 	"designs": "Diseños",
@@ -242,9 +247,16 @@
 	"studentAnon": "Anonimato de estudiantes",
 	"advOpts": "Opciones avanzadas de interacción",
 	"actDesigns": "Diseños de Actividades",
+<<<<<<< HEAD
 	"yours": "Mios",
 	"byOthers":"De otros",
 	"created": "Creado",
 	"semDiff":"Diferenciales Semánticos",
 	"search":"Buscar"
 }
+=======
+	"yours": "Tuyos",
+	"created": "Creado"
+}
+
+>>>>>>> overhaul-2122

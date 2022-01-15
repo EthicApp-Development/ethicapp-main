@@ -3,7 +3,7 @@
 	"Back": "Back",
 	"Enter_the_users": "Enter the users data",
 	"Import_Users": "Import Users",
-	"Import_number": "Import Number:",
+	"Import_number": "Import Number",
 	"Institucional_Users": "Institucional Users",
 	"Institutional": "Institutional",
 	"Pr": "Pr",
@@ -132,6 +132,7 @@
 	"log3": "An email has been send with the information to recover your password. This mail could be in the spam box.",
 	"log4": "Password change succesfully. log in in your account.",
 	"login": "Login",
+	"login_w_account": "Login",
 	"logout": "Logout",
 	"mandatoryComment": "Mandatory comment",
 	"mapInstr": "Move the map to desired zoom and location.",
@@ -157,6 +158,7 @@
 	"optHint": "Include extra attempt in team work using comment",
 	"option": "Option",
 	"options": "Options",
+	"optional_parent": "(Optional)",
 	"optionsConfig": "Configuration options",
 	"order": "position",
 	"orders": "positions",
@@ -243,7 +245,15 @@
 	"workflow": "Workflow",
 	"yes": "Yes",
 	"yours": "Yours",
+<<<<<<< HEAD
 	"byOthers":"By Others",
 	"semDiff":"Semantic Differentials",
 	"search":"Search"
 }
+=======
+	"res_pass":"Reset Password",
+	"make_t":"Make Teacher",
+	"make_s":"Make Student"
+}
+
+>>>>>>> overhaul-2122

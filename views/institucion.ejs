@@ -31,11 +31,12 @@
     <script src="js/StagesController.js"></script>
     <script src="js/admin-ctrl.js"></script>
     <script src="/socket.io/socket.io.js"></script>
+    <script src="libs/angular-route.js"></script>
     
 </head>
 <body ng-controller="instituciones">
     <div class="rtab-nb">
-        <button class="btn btn-default btn-sm" ng-click="changeLang()">
+        <button class="btn btn-default btn-sm " ng-click="changeLang()">
             {{'langOther' | lang}}
         </button>
         <a href="logout" class="text-white">
@@ -63,23 +64,40 @@
 
 
 <button class="btn btn-primary inst" >{{'Import_Users' | lang}}</button><br><br>
-<div  ng-controller="instituciones">
+<div >
     <div class="inst">
         <div class="tab-cs2">
-            <button class="tab-cs2" value="1" id="btn-alumnos" onclick="hideB(this)" >
+            <button class="tab-cs2" value="1" id="btn-alumnos" onclick="hideB(this)"  >
                 {{ 'students' | lang}}
             </button>
             <button class="tab-cs2" value="0" id="btn-profesores" onclick="hideA(this)" style="background-color: #ddd;">
                 {{ 'teachers' | lang}}
             </button>
             
-            <input placeholder="{{ 'filter' | lang}}" class="input-inst"></input>
+            <input placeholder="{{ 'filter' | lang}}" class="input-inst" ng-model="UserSearch"></input>
         </div>
     </div>
 
-    <div class="scrollable-container blue" style="width: 100%;" >
-        <div class="mid-container-inst  small-scrollable-container inst" id="container">
-
+    <div class="scrollable-container blue" style="width: 100%;" id="box_alumnos">
+        <div class="mid-container-inst  small-scrollable-container inst" id="container" >
+        <div ng-repeat="user in users | filter:UserSearch" ng-if="user.role == 'A'" class="mid-container-inst">
+            <strong>{{user.name}}</strong><br>
+            <a ng-bind="user.mail"></a>
+            <form action="make_prof" method="POST"><input style="display: none;" value="{{user.mail}}" type="text"  name="mail"><button class=" btn-primary rtab-nb2">{{ 'make_t' | lang}}</button></form>
+            <button class=" btn-primary rtab-nb2" >{{ 'res_pass' | lang}}</button>
+            {{user.role}}
+        </div>
+        </div> 
+    </div> 
+    <div class="scrollable-container blue" style="width: 100%; display: none;" id="box_profesor">
+        <div class="mid-container-inst  small-scrollable-container inst" id="container" >
+        <div ng-repeat="user in users | filter:UserSearch" ng-if="user.role == 'P'" class="mid-container-inst">
+            <strong>{{user.name}}</strong><br>
+            <a ng-bind="user.mail"></a>
+            <form action="make_alum" method="POST"><input style="display: none;" value="{{user.mail}}" type="text"  name="mail"> <button class=" btn-primary rtab-nb2">{{ 'make_s' | lang}}</button></form>
+            <button class=" btn-primary rtab-nb2" >{{ 'res_pass' | lang}}</button>
+            {{user.role}}
+        </div>
         </div> 
     </div> 
  
@@ -94,8 +112,8 @@ function hideA(x) {
      document.getElementById("btn-alumnos").value = "0";
      document.getElementById("btn-profesores").style.backgroundColor = "#fff"
      document.getElementById("btn-alumnos").style.backgroundColor = "#ddd"
-     console.log(document.getElementById("btn-alumnos").value)
-     console.log(document.getElementById("btn-profesores").value)
+    document.getElementById("box_profesor").style.display = "block"
+    document.getElementById("box_alumnos").style.display = "none"
 
 
    }
@@ -107,8 +125,9 @@ function hideA(x) {
      document.getElementById("btn-profesores").value = "0";
      document.getElementById("btn-alumnos").style.backgroundColor = "#fff"
      document.getElementById("btn-profesores").style.backgroundColor = "#ddd"
-     console.log(document.getElementById("btn-alumnos").value)
-     console.log(document.getElementById("btn-profesores").value)
+     document.getElementById("box_profesor").style.display = "none"
+    document.getElementById("box_alumnos").style.display = "block"
+
 
    }
  }

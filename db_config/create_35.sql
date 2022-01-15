@@ -1,9 +1,9 @@
-create table if not exists institucion(
+create table if not exists institution(
     id serial,
     userid integer references users(id),
-    nombreinstitucion text,
-    numestudiantes int,
-    pais text,
-    dominionscorreo text,
-    cargo text
+    institutionName text,
+    numEstudents int,
+    country text,
+    mailDomains text,
+    position text
 );
