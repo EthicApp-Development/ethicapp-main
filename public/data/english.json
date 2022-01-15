@@ -244,6 +244,9 @@
 	"yours": "Yours",
 	"res_pass":"Reset Password",
 	"make_t":"Make Teacher",
-	"make_s":"Make Student"
+	"make_s":"Make Student",
+	"pass_reset":"Reset Password",
+	"user_mail":"Insert your user Mail",
+	"":""
 }
 

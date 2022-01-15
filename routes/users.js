@@ -246,34 +246,67 @@ router.post("/resetpassword", (req, res) => {
         region: "us-east-1",
     };
     const AWS_SES = new AWS.SES(SES_CONFIG);
+    console.log(req.body)
 
     async function mail() {
+            const params ={
+                Source:'no-reply@iccuandes.org',
+                Destination:{
+                    'ToAddresses': [
+                        req.body.user,
+                    ]},
+                Message:{
+                    'Subject': {
+                        'Data': 'Test'},
+                    'Body': {
+                        'Text': {
+                            'Data': 'Mail de prueba'},
+                        'Html': {
+                            'Data': '<div>Hola<br>¿Has perdido tu contraseña? Puedes restablecerla a continuación:<br><a href="http://localhost:8501/passreset"> <button class="btn-primary"> Restablecer contraseña</button> </a> <br>Recibe un cordial saludo,<br>Creadores de EthicApp</div>'} }
+                    } 
+            };
+        
+
+            const params2 ={
+                Source:'no-reply@iccuandes.org',
+                Destination:{
+                    'ToAddresses': [
+                        req.body.user,
+                    ]},
+                Message:{
+                    'Subject': {
+                        'Data': 'Test'},
+                    'Body': {
+                        'Text': {
+                            'Data': 'Mail de prueba'},
+                        'Html': {
+                            'Data': '<div>Hi<br>Have you lost your password? You can restore it in the following link:<br><a href="http://localhost:8501/passreset"> <button class="btn-primary"> Restore Password</button> </a> <br>greetings<br>Creators of EthicApp</div>'} }
+                    } 
+            };
 
 
-        const params ={
-            Source:'no-reply@iccuandes.org',
-            Destination:{
-                'ToAddresses': [
-                    req.body.user,
-                ]},
-            Message:{
-                'Subject': {
-                    'Data': 'Test'},
-                'Body': {
-                    'Text': {
-                        'Data': 'Mail de prueba'},
-                    'Html': {
-                        'Data': '<div>Hola<br>¿Has perdido tu contraseña? Puedes restablecerla a continuación:<br><a href="http://localhost:8501/passreset"> <button class="btn-primary"> Restablecer contraseña</button> </a> <br>Recibe un cordial saludo,<br>Creadores de EthicApp</div>'} }
-                } 
-        };
+        
+
+            if (req.body.lenguaje == 'Español'){
+                AWS_SES.sendEmail(params).promise().then(
+                    function(data) {
+                       res.redirect("login?rc=3");
+                     }).catch(
+                       function(err) {
+                     });
+
+            }
+            else{
+                AWS_SES.sendEmail(params2).promise().then(
+                    function(data) {
+                       res.redirect("login?rc=3");
+                     }).catch(
+                       function(err) {
+                     });
+            }
 
 
-          AWS_SES.sendEmail(params).promise().then(
-             function(data) {
-                res.redirect("login?rc=3");
-              }).catch(
-                function(err) {
-              });;
+
         }
         mail()
 
@@ -370,7 +403,6 @@ router.post("/create-multicounts",(req,res)=> {
         var qry;
         qry = db.query(sql,(err,res) =>{
             if(res.rows[0] != null){
-                console.log("el mail ya esta usado")
                 }
             else{
                 var sql = "insert into users(rut, pass, name, mail, sex, role) values ($1,$2,$3,$4,$5,'A')";
@@ -388,7 +420,6 @@ router.post("/create-multicounts",(req,res)=> {
                 var sqlarr = smartArrayConvert(sqlParams);
                 qry = db.query(sql, sqlarr);
                 qry.on("end", function () {
-                    console.log("creacion exitosa")
                 });
                 qry.on("error", function(err){
                 });
@@ -443,9 +474,11 @@ router.post("/get_same_users", (req, res) => {
         var qry;
         var result;
         qry = db.query(sql,(err,res) =>{
+            if(res.rows != null)
+            {
             result = res.rows
-            
             resultados.push(result)
+            }
             
             });
             
@@ -464,6 +497,7 @@ router.post("/getuserinfo", (req, res) => {
     var qry;
     var result;
     qry = db.query(sql,(err,res) =>{
+        if(res.rows != null)
         result = res.rows
         });
 qry.on('end',function(){
@@ -479,7 +513,9 @@ router.post("/getdomains", (req, res) => {
     var qry;
     var result;
     qry = db.query(sql,(err,res) =>{
+        if(res.rows != null){
         result = res.rows
+        }
         });
 qry.on('end',function(){
     res.json({"data": result})
@@ -493,8 +529,9 @@ router.post("/make_prof", (req, res) => {
     var qry;
     var result;
     qry = db.query(sql,(err,rest) =>{
-        console.log("data uploaded")
-        result = rest
+        if(rest != null){
+            result = rest
+        }
         });
         qry.on('end',function(){
             
@@ -508,8 +545,9 @@ router.post("/make_alum", (req, res) => {
     var qry;
     var result;
     qry = db.query(sql,(err,rest) =>{
-        console.log("data uploaded")
-        result = rest
+        if(rest != null){
+            result = rest
+        }
 
         });
         qry.on('end',function(){

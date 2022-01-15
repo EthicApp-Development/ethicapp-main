@@ -245,6 +245,8 @@
 	"advOpts": "Opciones avanzadas de interacción",
 	"actDesigns": "Diseños de Actividades",
 	"yours": "Tuyos",
-	"created": "Creado"
+	"created": "Creado",
+	"pass_reset":"Recuperar Contraseña",
+	"user_mail":"Correo usuario"
 }
 
