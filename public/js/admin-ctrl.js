@@ -2561,7 +2561,6 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
         var postdata = { dsgnid: designId.id};
         $http({ url: "designs-documents", method: "post", data: postdata }).success(function (data) {
             self.documents = data;
-            console.log("DESIGNS DOCUMENT:", self.documents )
         });
     };
 
@@ -2878,7 +2877,6 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     
 
     self.init = function(){
-        console.log(self.design)
         //resetValues();
         if(self.selectedView == "newDesign") self.changeDesign(null)
         if(self.design != null){
@@ -2924,8 +2922,6 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
             
             if (data.status == "ok") {
                 self.getDesign(data.id);
-                designId.id = data.id; //use variable from admin later
-                self.selectView("newDesignExt");
             }
         });
         
@@ -2948,6 +2944,8 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         $http.post("get-design", ID).success(function (data) {
             if (data.status == "ok") {
                 self.changeDesign(data.result)
+                designId.id = ID; //use variable from admin later
+                self.selectView("newDesignExt");
             }
         });
     };
@@ -3085,7 +3083,6 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         var index = self.design.phases.length -1
         var prev_phase = self.design.phases[index]
         self.design.phases.push(self.copyPrevStage("semantic_differential", prev_phase))
-        console.log(self.design.phases)
     }
 
     self.getStages = function(){
