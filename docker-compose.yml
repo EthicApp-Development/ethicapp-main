@@ -1,0 +1,28 @@
+version: "3.8"
+services:
+  node:
+    container_name: "ethicapp"
+    build: .
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - postgres
+    volumes:
+      - .:/home/app
+    ports:
+      - "8501:8501"
+    networks:
+      - default
+  postgres:
+    container_name: "postgres-ethicapp"
+    image: "postgres:10.19-bullseye"
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: app2020
+      POSTGRES_DB: postgres
+    networks:
+      - default
+networks:
+  default:
