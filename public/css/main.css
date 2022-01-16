@@ -136,7 +136,7 @@ a:hover{
 
 .top-bar-mini{
     /*height: 24px;*/
-    background: lightgray;
+    background: #ddd;
     color: white;
 }
 
@@ -830,6 +830,13 @@ ng-quill-editor.large .ql-editor{
     text-align: center;
     margin-bottom: 2em;
     margin-top: 2em;
+}
+
+.logo-small {
+    height: 1.5em;
+    margin-left: .5em;
+    margin-top: .70em;
+    margin-bottom: .25em;
 }
 
 .logo img{
