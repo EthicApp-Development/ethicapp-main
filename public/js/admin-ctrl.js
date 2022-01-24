@@ -160,13 +160,36 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         self.selectView("activity");
         self.currentActivity = activityId;
         self.selectedId = sesId;
+        self.selectedSes = getSession(sesId)[0]
+        console.log(self.selectedSes)
         self.design = design;
+        //------------------------
+        self.requestDocuments();
+        //self.shared.updateState();
+        self.requestSemDocuments();
+        self.requestQuestions();
+        self.getNewUsers();
+        self.getMembers();
+        //self.shared.verifyGroups(); //GroupController
+        self.shared.verifyTabs(); //TabsController
+        self.shared.resetTab(); //TabsController
+        //self.shared.updateConf(); //OptionsController
+        //$location.path(self.selectedSes.id);
+        if(self.shared.getStages)
+            self.shared.getStages();
+        //------------------------------
         //get TEACHER USERNAME also make debug delete activity button 
         //to avoid bloat which deletes the activity, later sesusers in session and finally deletes the session
         console.log("Activity ID:",self.currentActivity);
         console.log("Session ID:",self.selectedId);
         console.log("Design:",self.design); 
     };
+
+    function getSession(id) {
+        return self.sessions.filter(
+            function(sessions){ return sessions.id == id }
+        );
+      }
 
     self.selectView = function(tab){
         if(tab != self.selectedView){
@@ -358,6 +381,7 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
     self.selectedTab = '';
     self.archivedTab = false;
     self.stages = [];
+    self.iterationNames = [];
 
     self.shared.resetTab = function () {
         self.selectedTab = "editor";
@@ -400,10 +424,12 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
             var pd = {
                 sesid: self.selectedSes.id
             };
+            console.log("POSTDATA:", pd) //ESTO DEBERIA APARECER
             $http({ url: "get-admin-stages", method: "post", data: pd }).success(function (data) {
                 self.stages = data;
                 data.forEach(st => {
                     self.iterationNames.push({name: self.flang("stage") + " " + st.number, val: st.id});
+                    console.log("iteration NAMES:",self.iterationNames)
                 });
             });
         }
@@ -454,6 +480,24 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
     self.restoreSes = function(ses, $event){
         $event.stopPropagation();
         var postdata = { sesid: ses.id, val: false };
+        $http({ url: "archive-session", method: "post", data: postdata }).success(function (data) {
+            Notification.info("Sesión restaurada");
+            ses.archived = false;
+        });
+    };
+
+    self.archiveActivity = function(ses, $event){
+        $event.stopPropagation();
+        var postdata = { sesid: ses.session, val: true };
+        $http({ url: "archive-session", method: "post", data: postdata }).success(function (data) {
+            Notification.info("Sesión archivada");
+            ses.archived = true;
+        });
+    };
+
+    self.restoreActivity = function(ses, $event){
+        $event.stopPropagation();
+        var postdata = { sesid: ses.session, val: false };
         $http({ url: "archive-session", method: "post", data: postdata }).success(function (data) {
             Notification.info("Sesión restaurada");
             ses.archived = false;
@@ -985,7 +1029,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.dataDF = [];
     self.dataChatCount = {};
 
-    self.shared.resetGraphs = function () {
+    self.shared.resetGraphs = function () { //THIS HAS TO BE CALLED ON ADMIN
         if (self.selectedSes != null && self.selectedSes.type == "L") {
             self.iterationIndicator = Math.max(Math.min(6, self.selectedSes.status - 2), 0);
         } else if (self.selectedSes.type == "S") {
@@ -1050,6 +1094,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.shared.updateState = self.updateState;
 
     self.shared.setIterationIndicator = function(i){
+        console.log("Set iteration Indicatior:",i)
         self.iterationIndicator = i;
         self.updateState();
     };
@@ -1287,6 +1332,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             self.dfsStage = [];
             $http.post("get-differentials-stage", _postdata2).success(function(data) {
                 self.dfsStage = data;
+                console.log("DIFFERENTIAL DEBUG DATA:",data)
                 $http.post("get-differential-all-stage", _postdata2).success(function (data) {
                     self.shared.difTable = window.buildDifTable(data, self.users, self.dfsStage, self.shared.groupByUid);
                     self.shared.difTableUsers = self.shared.difTable.filter(e => !e.group).length;
@@ -2223,6 +2269,7 @@ adpp.controller("DuplicateSesModalController", function ($scope, $http, $uibModa
             window.location.replace("admin");
         });
     };
+
 });
 
 adpp.controller("GroupController", function ($scope, $http, Notification) {
@@ -2601,11 +2648,81 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
         var postdata = { sesid: sesID, dsgnid: dsgnID};
         $http({ url: "add-activity", method: "post", data: postdata }).success(function (data) {
             console.log("ACTIVITY CREATED");
+            var dsng = data.result
+            //self.startActivityDesign(dsng, sesID)
             self.shared.getActivities();
             //get current DESIGNS UPDATED
             //console.log(data);
         });
     }
+
+    self.startActivityDesign = function (design, sesid) {
+        //change it to do it for the first stage or a selected stage?
+        var stageCounter = 0
+        for(var phase of design.phases){
+        
+        var postdata = {
+            number: stageCounter + 1,
+            question: "",
+            grouping: null,
+            type: phase.mode,
+            anon: phase.anonymous,
+            chat: phase.chat,
+            sesid: sesid,
+            prev_ans: ""
+        };
+        console.log(postdata)
+
+        $http({url: "add-stage", method: "post", data: postdata}).success(function (data) {
+            let stageid = data.id;
+            if (stageid != null) {
+                /*
+                if (postdata.type == "team") {
+                    self.acceptGroups(stageid);
+                }
+                */
+                if (self.selectedSes.type == "T") {
+                    var counter = 1;
+                    for(var question of phase.questions){
+                        var content = question.ans_format
+                        let p = {
+                            name: question.q_text,
+                            tleft: content.l_pole,
+                            tright: content.r_pole,
+                            num: content.values,
+                            orden: counter,
+                            justify: content.just_required,
+                            stageid: stageid,
+                            sesid: sesid,
+                            word_count: content.min_just_length
+                        };
+                        console.log(p)
+                        $http({url: "add-differential-stage", method: "post", data: p}).success(function (data) {
+                            c -= 1;
+                            if (c == 0) {
+                                let pp = {sesid: sesid, stageid: stageid};
+                                $http({url: "session-start-stage", method: "post", data: pp}).success(function (data) {
+                                    Notification.success("Etapa creada correctamente");
+                                    window.location.reload()
+                                });
+                            }
+                        });
+                        counter++;
+                    }
+                }
+
+                
+            }
+            else {
+                Notification.error("Error al crear la etapa");
+            }
+        });
+    
+        stageCounter++;
+        //break;
+        }
+    };
+
 
     self.generateCodeActivity = function (ID) { //use it to generate the code
         var postdata = {
@@ -2626,6 +2743,12 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
         return launchId.id
     }
 
+    self.createCopy = function(ses){
+        self.createSession(ses.name, ses.descr, ses.type, ses.dsgnid)
+        self.shared.getActivities();
+        Notification.success("Actividad copiada!");
+    }
+
     self.init();
 
 
@@ -2633,6 +2756,13 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
 
 adpp.controller("MonitorActivityController", function ($scope, $filter, $http, Notification, $timeout) {
     var self = $scope;
+
+    self.init = function(){
+        if(self.selectedView == "activity") {
+            self.shared.resetGraphs(); // self.iterationIndicator  fix this id
+            }
+    }
+    self.init();
 
     //TRY TO MAKE STAGESEDITCONTROLLER MORE GENERIC IN ORDER TU USE IT ON MONITOR
 

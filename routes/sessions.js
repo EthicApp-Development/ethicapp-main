@@ -91,14 +91,16 @@ router.post("/add-session-activity", (req, res) => {
 router.post("/add-activity", (req, res) => {
 var sesid =req.body.sesid;
 var dsgnid = req.body.dsgnid;
-var sql = `INSERT INTO ACTIVITY (design, session) VALUES (${dsgnid}, ${sesid}); UPDATE designs set locked = true WHERE id = ${dsgnid} `
+var sql = `INSERT INTO ACTIVITY (design, session) VALUES (${dsgnid}, ${sesid}); UPDATE designs set locked = true WHERE id = ${dsgnid}; 
+SELECT design FROM DESIGNS WHERE id = ${dsgnid};`
 var db = getDBInstance(pass.dbcon);
 var qry;
 var result;
 qry = db.query(sql,(err,res) =>{
+    if(res!= null) result = res.rows[0].design
     });
 qry.on("end", function () {
-    res.json({status:200});
+    res.json({status:200, "result":result});
     });
 qry.on("error", function(err){
     console.log("THERE WAS AN ERROR ON THE SQL QUERY");
@@ -111,7 +113,7 @@ qry.on("error", function(err){
 router.post("/get-activities", (req, res) => {
     var uid = req.session.uid;
     var sql = `select activity.id, activity.session, sessions.creator,
-    sessions.name,sessions.descr, sessions.time, sessions.code, sessions.archived, designs.design, sessions.status
+    sessions.name,sessions.descr, sessions.time, sessions.code, sessions.archived, designs.design, sessions.status, sessions.type, designs.id as dsgnid
     FROM activity inner join sessions on activity.session = sessions.id inner join designs on activity.design = designs.id WHERE sessions.creator = ${uid};`
     var db = getDBInstance(pass.dbcon);
     var qry;

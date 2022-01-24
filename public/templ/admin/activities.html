@@ -25,6 +25,8 @@
                 <p class="list-group-item-text">{{'launched' | lang}} {{ses.time | date}}</p>
                 <p class="list-group-item-text">{{'code' | lang}}: {{ses.code}}</p>
                 <div class="text-right">
+                    <button class="btn btn-default" ng-click="createCopy(ses)">
+                        <i class="fa fa-copy"></i>
                     <button class="btn btn-primary " ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
                     <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
                 </div>
@@ -36,6 +38,9 @@
                 <p class="list-group-item-text">{{'launched' | lang}} {{ses.time | date}}</p>
                 <p class="list-group-item-text">{{'code' | lang}}: {{ses.code}}</p>
                 <div class="text-right">
+                    <button class="btn btn-primary " ng-click="archiveActivity(ses, $event)"><i class="fa fa-inbox"></i></button>
+                    <button class="btn btn-default" ng-click="createCopy(ses)">
+                        <i class="fa fa-copy"></i>
                     <button class="btn btn-primary " ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
                     <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
                 </div>
@@ -47,6 +52,7 @@
                 <p class="list-group-item-text">{{'launched' | lang}} {{ses.time | date}}</p>
                 <p class="list-group-item-text">{{'code' | lang}}: {{ses.code}}</p>
                 <div class="text-right">
+                    <button class="btn btn-primary " ng-click="restoreActivity(ses, $event)"><i class="fa fa-undo"></i></button>
                     <button class="btn btn-primary " ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
                     <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
                 </div>

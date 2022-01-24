@@ -187,7 +187,7 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
         });
     };
 
-    self.changeStage = function (i) {
+    self.changeStage = function (i) { 
         self.currentStage = i;
     };
 
@@ -278,10 +278,6 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
             Notification.error(a);
             return;
         }
-        var confirm = window.confirm("¿Esta seguro que quiere ir a la siguiente etapa? (Etapa "+ (self.stages.length + 1) + ")");
-        if (!confirm) {
-            return;
-        }
         var postdata = {
             number: self.stages.length + 1,
             question: s.question,
@@ -292,6 +288,13 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
             sesid: self.selectedSes.id,
             prev_ans: s.prevResponses.map(e => e.id).join(",")
         };
+        console.log(postdata)
+
+        var confirm = window.confirm("¿Esta seguro que quiere ir a la siguiente etapa? (Etapa "+ (self.stages.length + 1) + ")");
+        if (!confirm) {
+            return;
+        }
+
         $http({url: "add-stage", method: "post", data: postdata}).success(function (data) {
             let stageid = data.id;
             if (stageid != null) {
