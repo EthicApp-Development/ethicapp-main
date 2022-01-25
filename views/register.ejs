@@ -78,6 +78,11 @@
             <label for="rad2 control-label">{{ "Institutional" | lang }}</label>
             </div>
           </div>
+          <% if(rc == 1) {%>
+            <div class="alert alert-info">
+              {{ "domains_message" | lang }}
+            </div>
+            <% } %>
         </form>
       </div>
       <div class="row" style="padding:16px">
@@ -185,11 +190,9 @@
           </div>
           <div class="form-group">
             <label for="Pais">{{ "country" | lang }}:</label>
-            <select name="Pais" class="form-control">
-              <option value="Chile">Chile</option>
-              <option value="Estados Unidos">{{ "eeuu" | lang }}</option>
-              <option value="Argentina">Argentina</option>
-            </select>
+            <select [(ngModel)]="selectedValue" name="Pais" class="form-control">
+              <option ng-repeat="x in countries" value="{{x}}">{{x}}</option>
+           </select>`
           </div>
           <div class="form-group">
             <label for="domains">{{ "inst_mail" | lang }}:</label>
@@ -320,3 +323,4 @@
     });
   };
 </script>
+

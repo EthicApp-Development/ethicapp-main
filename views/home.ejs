@@ -34,6 +34,9 @@
     <script src="js/admin-ctrl.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script src="libs/angular-route.js"></script> <!--Agregado recientemente-->
+
+
+    
 </head>
 <body ng-controller="AdminController">
     
@@ -48,11 +51,9 @@
 
         
         <div class="cf1 text-right margin-right-8 simple-padding-top" id="topbtnlist">
-            <button class="btn btn-default btn-sm " ng-click="changeLang()">
-                {{'langOther' | lang}}
-            </button>
-            <img src="img/blanco.jpg" alt="No Carga" class="circle_profile cf1 text-right margin-right-8 simple-padding-top">
-            <strong class="margin-right-8"><a href="profile" style="color: white;">{{ username }}</a></strong>
+            <button class="btn btn-default btn-sm " ng-click="changeLang()">{{'langOther' | lang}}</button>
+            <img src="img/blanco.jpg" alt="No Carga" class="circle_profile cf1 text-right margin-right-8 simple-padding-top" ng-click="selectView('profile')">
+            <strong class="margin-right-8"><a ng-click="selectView('profile')" style="color: white;"> {{'profile' | lang}} </a></strong>
             <a href="logout" class="text-white">
                 <i class="fa fa-sign-out fa-2x"></i>
             </a>
@@ -70,6 +71,9 @@
                 <a ng-click="selectView('designs')">{{'designs' | lang}}</a>
                 <a ng-click="selectView('users')" ng-if="institution">{{'users' | lang}}</a>
                 <a ng-click="selectView('institution')" ng-if="institution"> {{'institution'|lang}}</a>
+                <a ng-click="selectView('institution_admin')" ng-if="super"> {{'institution'|lang}}</a>
+                <a ng-click="selectView('users_admin')" ng-if="super">{{'users' | lang}}</a>
+                <a href="super" ng-if="super"> {{'Administración'|lang}}</a>
             </div>
         </div>
         <div class="main-body vl"   > <!--Right side--> 
@@ -82,3 +86,4 @@
     </div>  
 </body>
 </html>
+

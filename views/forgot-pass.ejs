@@ -37,21 +37,21 @@
 </head>
 <body ng-controller="no_account">
 
+
 <div class="middle-box">
-    <div class="rtab-nb">
-        <button class="btn btn-default btn-sm" ng-click="changeLang()">
-            {{'langOther' | lang}}
-        </button>
-    </div>
+    <div class="logo">
+        <img src="/img/ethicapp-logo.svg" alt="EthicApp" />
+      </div>
+
 
     <h2>{{'pass_reset' | lang}}</h2>
     <hr/>
     <br/>
     <form action="resetpassword" method="POST">
         <label>{{'user_mail' | lang}}:</label>
-        <input type="text" class="form-control" name="user" required autofocus><br>
+        <input type="text" class="form-control" name="user" required autofocus>
         <input type="hidden" class="form-control" name="lenguaje" value="{{'langName' | lang}}">
-        <button type="submit" class="btn btn-primary form-control">{{'pass_reset' | lang}}</button>
+        <button type="submit" class="btn btn-primary form-control" style="margin-top: 20px;">{{'pass_reset' | lang}}</button>
     </form>
 
     <br><br>

@@ -19,6 +19,7 @@
 	"actors": "Actors",
 	"add": "Add",
 	"addToSession": "Add to session",
+	"Administration":"Administration",
 	"adminInstData": "Manage Institution Data",
 	"adminInstUsers": "Manage Institutional Users",
 	"adminPanel": "Administration Page",
@@ -176,6 +177,7 @@
 	"position": "Position",
 	"prevGroups": "Using groups from previous phase",
 	"previous": "Use previous",
+	"profile":"Profile",
 	"progress": "Progress",
 	"proposeOf": "Propose of",
 	"question": "Question",
@@ -252,7 +254,8 @@
 	"words": "Words",
 	"workflow": "Workflow",
 	"yes": "Yes",
-	"yours": "Yours"
+	"yours": "Yours",
+	"domains_message":"The domain you try to use for your institution is already in Ethiccapp"
 
 }
 

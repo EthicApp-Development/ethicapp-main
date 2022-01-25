@@ -1,0 +1,38 @@
+
+<div ng-controller="super_admin" ng-if="selectedView == 'institution_admin'">
+    <h3 style="margin-left: 12%;">Usuarios Institucionales</h3> <br>
+
+    <div >
+        <div class="inst">
+            <div class="tab-cs" ng-init="tab_view=0">
+                <button class="tab-cs" ng-click= 'tab_view=0' ng-class="{'btn-selected': tab_view == 0}">
+                    Pendientes
+                    </button>
+                    <button class="tab-cs" ng-click = "tab_view=1" ng-class="{'btn-selected': tab_view == 1}">
+                    Aceptadas
+                    </button>
+                
+                <input type="text" placeholder="filter" class="input-inst" style="width: auto;" ng-model="UserSearch"></input>
+            </div>
+        </div>
+    
+    
+        <div class="scrollable-container blue" style="width: 100%;" id="box_alumnos" >
+            <div class="mid-container-inst  small-scrollable-container inst" id="container" >
+            <div ng-repeat="inst in institutions | filter:UserSearch" ng-show="tab_view == 0" ng-if="inst.acepted == false"  class="mid-container-inst">
+                <strong>{{inst.institution_name}}</strong><br>
+                <a ng-bind="inst.mail"></a>
+
+                <input style="display: none;" value="{{inst.id}}" type="text"  name="mail"><button  ng-click="set_id(inst.id);selectView('institution_data');get_admin_data()" class=" btn-primary rtab-nb2" >Ver Solicitud</button>
+                {{inst.country}}
+            </div>
+            <div ng-repeat="inst in accepted_institutions | filter:UserSearch" ng-show="tab_view == 1"  class="mid-container-inst">
+                <strong>{{inst.institution_name}}</strong><br>
+                <form action="make_alum" method="POST" ><input style="display: none;" value="{{inst.id}}" type="text"  name="mail"> <button ng-click="set_id(inst.id);selectView('accepted_institutions')" class=" btn-primary rtab-nb2" ng-click="refreshUser()">Ver Informacion</button></form>
+
+
+            </div>
+            </div> 
+        </div> 
+    </div>
+</div>

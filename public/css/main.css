@@ -1390,3 +1390,8 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     margin-left: 12%;
 
 }
+
+.modal-buttons{
+    right: 10px;
+    position:absolute;
+}

@@ -9,6 +9,7 @@
 	"saveChanges": "Guardar Cambios",
 	"semanticUnitPauta": "Pauta de Unidades Semánticas",
 	"configuration": "Configuración",
+	"Administration":"Administración",
 	"documents": "Documentos",
 	"add": "Agregar",
 	"document": "Documento",
@@ -253,6 +254,8 @@
 	"user_mail":"Correo usuario",
 	"byOthers":"De otros",
 	"semDiff":"Diferenciales Semánticos",
-	"search":"Buscar"
+	"search":"Buscar",
+	"profile":"Profile",
+	"domains_message":"El dominio que ingreso ya existe en Ethicapp"
 }
 

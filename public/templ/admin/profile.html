@@ -1,0 +1,43 @@
+
+<div ng-controller="instituciones" ng-if="selectedView == 'profile'">
+
+    
+            
+    
+            <div >
+                <img src="img/blanco.jpg" alt="No Carga" class="" style="border: 5px solid #555; max-width: 100px; max-height: 100px;">
+                   <strong  style="font-size: 25px;">{{ username }}  </strong>
+                   <h3 ng-if="role == 'A'">Alumno </h3>
+                   <h3 ng-if="role == 'P'">Profesor </h3>
+                   <h3 ng-if="role == 'I'">Institucion </h3>
+                
+                <br><br>
+            </div>
+            <div>
+                <form action="changepassword" method="post">
+                <input  name="mail" type="hidden" value="{{mail}}" class="form-control profile-input">
+                <label class="left">Cambiar Contraseña:</label>
+                <input type="text" class="form-control profile-input" name="pass" required autofocus><br>
+                <label>Confirmar contraseña:</label>
+                <input type="text" class="form-control profile-input" name="pass-conf"><br>
+                <button type="submit" class="btn btn-primary" style="width: 200px;">
+                    Cambiar Contraseña
+                </button>
+    
+            </form>
+            </div>
+            <br>
+            <div >
+                <form action="deleteacc" method="post">
+                    Terminar Cuenta<br>
+                    <input  name="mail" type="hidden" value="{{mail}}" class="form-control profile-input">
+                    <button type="submit" class="btn btn-primary" style="width: 200px;">
+                        Dar Cuenta de Baja
+                    </button>
+                </form>
+            </div>
+    
+        </div>
+
+    </div>
+    

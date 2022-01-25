@@ -13,6 +13,7 @@ app.controller("SuperAdminController", function ($scope, $http) {
     self.selectedUser = null;
     self.search = "";
 
+
     self.setSec = (idx) => {
         self.sec = idx;
         if(idx == 0) self.getStats();
@@ -76,3 +77,33 @@ app.controller("SuperAdminController", function ($scope, $http) {
     self.getUsers();
 
 });
+
+app.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
+    var self = $scope;
+    self.accepted = [];
+    self.pending = [];
+    self.institutions = [];
+
+    self.init = function () {
+        self.get_temporary_institutions();
+    };
+
+
+
+    self.get_temporary_institutions = function() {
+        var postdata = 500
+        $http({ url: "get_temporary_institutions", method: "post",data:postdata }).success(function (data) {
+            var inst = [];
+            if(data != null){
+                for(var i = 0;i < data.data.rows.length ;i++){
+                    inst.push(data.data.rows[i])
+                }
+                self.institutions = inst;
+                console.log(data.data.rows[0])
+            }
+        });
+    }
+
+
+    self.init();
+}])

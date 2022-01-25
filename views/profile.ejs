@@ -39,11 +39,19 @@
             </div>
         </div>
 
-        <div>
-            <strong class="margin-right-8">{{ username }} {{last-name}} </strong><br><br>
+        <div class="inst">
+            <div>
+            <img src="img/blanco.jpg" alt="No Carga" class="" style="border: 5px solid #555; max-width: 100px; max-height: 100px;">
+
+               <strong  style="font-size: 25px;">{{ username }}  </strong>
+               <h3 ng-if="rol == 'A'">Alumno </h3>
+               <h3 ng-if="rol == 'P'">Profesor </h3>
+               <h3 ng-if="rol == 'I'">Institucion </h3>
+            
+            <br><br>
+        </div>
             <form action="changepassword" method="post">
-            <label class="left">Ingrese su mail:</label>
-            <input  name="mail" type="text" class="form-control profile-input" required><br>
+            <input  name="mail" type="hidden" value="{{mail}}" class="form-control profile-input">
             <label class="left">Cambiar Contraseña:</label>
             <input type="text" class="form-control profile-input" name="pass" required autofocus><br>
             <label>Confirmar contraseña:</label>
@@ -51,17 +59,19 @@
             <button type="submit" class="btn btn-primary" style="width: 200px;">
                 Cambiar Contraseña
             </button>
+
         </form>
         </div>
         <br>
-    <form action="deleteacc" method="post">
-        Terminar Cuenta<br><br>
-        <label class="left">Ingrese su mail:</label>
-        <input  name="mail" type="text" class="form-control profile-input" required><br>
-        <button type="submit" class="btn btn-primary" style="width: 200px;">
-            Dar Cuenta de Baja
-        </button>
-    </form>
+        <div class="inst">
+            <form action="deleteacc" method="post">
+                Terminar Cuenta<br><br>
+                <input  name="mail" type="hidden" value="{{mail}}" class="form-control profile-input">
+                <button type="submit" class="btn btn-primary" style="width: 200px;">
+                    Dar Cuenta de Baja
+                </button>
+            </form>
+        </div>
 
     </div>
 </body>
