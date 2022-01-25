@@ -9,7 +9,7 @@
                 <div class="container phase_container">
                     <div class = "row">
                         <div class="col-xs-1 phase_element"  ng-repeat="item in getStages()" ng-init="current" 
-                        ng-class='{phase_selected:currentStage==$index}' ng-click='selectStage($index)'>
+                        ng-class='{phase_current: currentActivity.stage == $index, phase_selected:currentStage==$index}' ng-click='selectStage($index)'>
                             {{'stage' | lang}} {{$index+ 1}}
                             {{'mode' | lang}}: {{item.mode|lang}}
                         </div>
@@ -180,14 +180,13 @@
             <!--MONITOR-->
 
             <ul>
-                <li><strong>Activity: {{currentActivity}}</strong></li>
-                <li><strong>SessionID: {{selectedId}}</strong></li>
+                <li><strong>Activity: {{currentActivity.id}}</strong></li>
+                <li><strong>SessionID: {{selectedId}}</strong> -> Current Stage: {{ selectedSes.current_stage }} -> Num: {{ currentActivity.stage }}</li>
                 <li><strong>Design Name: {{design.metainfo.title}}</strong></li>
             </ul>
             <button class="btn btn-primary" ng-click="showDesign = !showDesign">Show design</button>
-            <button class="btn btn-xs btn-default simple-margin-left ng-binding ng-scope" ng-if="selectedId != -1 &amp;&amp; (selectedSes.type == 'R' || selectedSes.type == 'T' || selectedSes.type == 'J') &amp;&amp; selectedSes.status < 3" ng-click="shared.openNextModal()">
-                Go to Next
-            </button>
+            <button class="btn btn-primary" ng-click="nextActivityDesign(design,selectedId)" ng-disabled = "design.phases.length-1 == currentActivity.stage ">Next</button>
+            <button class="btn btn-primary" ng-click="finishActivity()">End</button>
             <!-- DASHBOARDS -->
             <div class="pad-content">
                 <div class="pull-right margin-ver-8" ng-show="selectedSes.type == 'R' || selectedSes.type == 'T' || selectedSes.type == 'J'">
@@ -253,7 +252,7 @@
 
                 <div ng-show="selectedSes.type == 'T' || true" class="margin-top-8">
                     <strong>{{ 'indAggAns' | lang }}</strong>
-                    <h5><strong>Test {{iterationIndicator}} -- {{shared.stagesMap[iterationIndicator].type}}</strong></h5>
+                    <h5><strong>Stage {{iterationIndicator}} -- {{shared.stagesMap[iterationIndicator].type}}</strong></h5> <!--DELETE-->
                     <span class="pull-right"><span style="color: red;">*</span> {{ 'commentReq' | lang }}</span>
                     <table class="table table-bordered" ts-wrapper>
                         <tr>

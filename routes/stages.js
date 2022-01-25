@@ -21,6 +21,13 @@ router.post("/get-admin-stages", rpg.multiSQL({
     sqlParams: [rpg.param("post", "sesid")]
 }));
 
+router.post("/get-current-stage", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql: "select number from stages inner join sessions on stages.id = sessions.current_stage where sessions.id = $1",
+    postReqData: ["sesid"],
+    sqlParams: [rpg.param("post", "sesid")]
+}));
+
 // router.post("/get-admin-stages", rpg.multiSQL({
 //     dbcon: pass.dbcon,
 //     sql: "select id, number, type, anon, chat, prev_ans from stages where sesid = $1",
