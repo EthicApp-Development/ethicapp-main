@@ -190,6 +190,7 @@
 	"log2": "Email o contraseña incorrecta",
 	"log3": "Se ha enviado un correo con la información para recuperar la contraseña.\n Este correo podría haber llegado a spam.",
 	"log4": "Contraseña cambiada correctamente. Ingrese con sus datos.",
+	"log5":"Tu cuenta ha sido activada",
 	"accounttype": "¿Quieres una cuenta personal o institucional?",
 	"Institutional": "Institucional",
 	"name": "Nombre",

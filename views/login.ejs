@@ -56,6 +56,12 @@
             <div class="alert alert-info">
               {{ "log4" | lang }}
             </div>
+            <% } %><% if(rc == 5) {%>
+              <div class="alert alert-info">
+                {{ "log5" | lang }}
+              <div ng-init="activate_user()"></div>
+              </div>
+
             <% } %>
             <br />
             <form class="form-horizontal" action="login" method="POST"> 
@@ -94,3 +100,14 @@
     </div>
   </body>
 </html>
+
+<script>
+var url_string = window.location;
+var url = new URL(url_string);
+var rc = url.searchParams.get("rc");
+var token = url.searchParams.get("tok");
+if(rc == 5){
+
+}
+
+</script>

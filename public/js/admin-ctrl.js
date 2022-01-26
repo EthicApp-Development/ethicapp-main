@@ -3745,6 +3745,16 @@ adpp.controller("no_account",["$scope",'$http',function($scope,$http,Admin){
         self.getcountries();
     };
 
+    self.activate_user = function(){
+        var url_string = window.location;
+        var url = new URL(url_string);
+        var rc = url.searchParams.get("rc");
+        var token = url.searchParams.get("tok");
+        console.log(token)
+        $http({ url: "activate_user", method: "post",data:{token} }).success(function (data) {
+        });
+    }
+
     self.getcountries = function(){
         $http.get("https://restcountries.com/v3.1/all").success(function (data) {
             var list = []

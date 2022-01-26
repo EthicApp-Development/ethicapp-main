@@ -23,7 +23,7 @@ let mailserv = mailer.createTransport({
 });
 
 router.get('/login', (req, res) => {
-    res.render('login', {rc: req.query.rc});
+    res.render('login', {rc: req.query.rc, tok:req.query.rc});
 });
 
 router.get('/institucion', (req, res) => {
@@ -497,19 +497,18 @@ router.post("/changepassword",(req,res)=> {
 });
 
 router.post("/create-multicounts",(req,res)=> {
-
     if(req.body.data != ''){
-        console.log("se llama a la funcion saddddddddddddd")
         var accounts = req.body.data.split('\r\n')
         var db = getDBInstance(pass.dbcon);
+        var email_list
         for(var i = 0;i< accounts.length;i++){
-            console.log("se llama a la funcion saddddddddddddd")
+            console.log(accounts[i])
             var account_data = accounts[i].split(',')
             var sql = "SELECT * FROM users WHERE mail ='"+account_data[0] +"' LIMIT 1";
             var qry;
-            qry = db.query(sql,(err,res) =>{
-                if(res.rows != []){
-                    
+            qry = db.query(sql,(err,resu) =>{
+                if(resu.rowCount != 0){
+                    console.log(resu.rowCount)
            
             }
             else{
@@ -523,12 +522,15 @@ router.post("/create-multicounts",(req,res)=> {
                 if(account_data.length == 4){
                     name = account_data[2] + " "+ account_data[3]
                 }
-                var token = "10"
-                var sqlParams = ["11111111-1", passcr, account_data[2], account_data[0], 'O',token]
+                var token = crypto.createHash('md5').update(account_data[0]).digest('hex');
+                var user_mail = account_data[0]
+                var sqlParams = ["11111111-1", passcr, name, account_data[0], 'O',token]
                 var sqlarr = smartArrayConvert(sqlParams);
                 qry = db.query(sql, sqlarr);
+                
+                console.log("realiza el query")
                 qry.on("end", function () {
-
+                    console.log("entra al end")
                     var SES_CONFIG = {
                         accessKeyId: pass.accessKeyId,
                         secretAccessKey: pass.secretAccessKey,
@@ -549,13 +551,15 @@ router.post("/create-multicounts",(req,res)=> {
                                         'Text': {
                                             'Data': ''},
                                         'Html': {
-                                            'Data': '<div>Hola '+'!<br><br> Bienvenido a EthicApp. Tu cuenta institucional está aprobada. Puedes ingresar a EthicApp y comenzar invitando a profesores a utilizarla, e incluso creando tu primera actividad. <br>'+
-                                            +'<button class="btn-primary">Activar cuenta!</button>'+
-                                            'Te recordamos que en EthicApp usamos los datos generados por los usuarios con fines de investigación. Garantizamos la absoluta confidencialidad de los datos, y que los datos no los entregamos a terceras partes. En nuestras investigaciones reportamos los datos siempre a nivel agregado y nunca a nivel individual, ni revelando la identidad de los participantes.<br>'+
-                                            'Las actividades basadas en EthicApp no presentan ningún riesgo a docentes ni estudiantes. EthicApp se entrega como servicio a los usuarios “tal cual”. Los desarrolladores de EthicApp quedan exentos de cualquier responsabilidad… [tenemos que ver si lo expresamos en forma similar a las licencias permisivas tipo BSD, MIT o Apache].<br>'+
-                                            'EthicApp se reserva el derecho de suspender o terminar cuentas de usuario en caso que se detecte uso indebido del servicio.<br>'+
-                                            'Deseamos a ti y a tus colegas el mayor éxito utilizando EthicApp en la enseñanza.<br>'+
-                                            'Creadores de EthicApp'+
+                                            'Data': '<div>Hola '+name  +'<br>Bienvenido a EthicApp. Has sido invitado a incorporarte a EthicApp por [nombre usuario institucional]'+ 
+                                            'de [institución]. Para aceptar la invitación, pincha el siguiente botón:<br><br><a href="http://localhost:8501/login?rc=5&&tok='+token+'">'+ 
+                                            '<button class="btn-primary"> Activar tu Cuenta</button> </a> <br><br>'+
+                                            'Te recordamos que en EthicApp usamos los datos generados por los usuarios con fines de investigación. <br>'+
+                                            'Garantizamos la absoluta confidencialidad de los datos, y que los datos no los entregamos a terceras partes. En nuestras investigaciones reportamos los datos siempre a nivel agregado y nunca a nivel individual, ni revelando la identidad de los participantes. Las actividades basadas en EthicApp no presentan ningún riesgo físico o psicológico a docentes o a estudiantes. '+
+                                            'EthicApp se reserva el derecho de suspender o terminar cuentas de usuario en caso que se detecte uso indebido del servicio.'+
+                                            '<strong>Activando tu cuenta a través del botón de arriba manifiestas tu aceptación de las condiciones antes descritas.</strong>'+
+                                            'Te deseamos el mayor éxito en tus actividades con EthicApp.<br>Creadores de EthicApp'+
+                                            'ESTE SOFTWARE SE SUMINISTRA POR LA UNIVERSIDAD DE CHILE, CHILE Y LA UNIVERSIDAD DE LOS ANDES, CHILE. EN NINGÚN CASO LAS INSTITUCIONES MENCIONADAS SERÁN RESPONSABLES POR NINGÚN DAÑO DIRECTO, INDIRECTO, INCIDENTAL, ESPECIAL, EJEMPLAR O CONSECUENTE (INCLUYENDO,PERO NO LIMITADO A, LA ADQUISICIÓN DE BIENES O SERVICIOS; LA PÉRDIDA DE USO, DE DATOS O DE BENEFICIOS; O INTERRUPCIÓN DE LA ACTIVIDAD EMPRESARIAL) O POR CUALQUIER TEORÍA DE RESPONSABILIDAD, YA SEA POR CONTRATO, RESPONSABILIDAD ESTRICTA O AGRAVIO (INCLUYENDO NEGLIGENCIA O CUALQUIER OTRA CAUSA) QUE SURJA DE CUALQUIER MANERA DEL USO DE ESTE SOFTWARE, INCLUSO SI SE HA ADVERTIDO DE LA POSIBILIDAD DE TALES DAÑOS.'+
                                             '</div>'} }
                                     } 
                             };
@@ -565,19 +569,47 @@ router.post("/create-multicounts",(req,res)=> {
                                      }).catch(
                                        function(err) {
                                      });
-                
-        
                         }
                         mail()
                 });
                 qry.on("error", function(err){
+                    res.end(err);
                 });
             }
-
                 });
         }
+        res.redirect("home")
     }
     
+
+});
+
+router.post("/activate_user", (req, res) => {
+    var db = getDBInstance(pass.dbcon);
+    console.log(req.body)
+    var sql = "SELECT * FROM temporary_users WHERE token = '"+req.body.token +"' LIMIT 1";
+    var qry;
+    var result;
+    qry = db.query(sql,(err,rest) =>{
+        if(rest != null){
+            result = rest.rows[0]
+            var sql = "insert into users(rut, pass, name, mail, sex, role) values ($1,$2,$3,$4,$5,'A')";
+            var qry;
+            var sqlParams = [result.rut, result.pass, result.name, result.mail, result.sex]
+            var sqlarr = smartArrayConvert(sqlParams);
+            qry = db.query(sql, sqlarr);
+            qry.on("end", function () {
+                var sql = "delete from temporary_users WHERE token = '"+req.body.token +"'";
+                var qry;
+                qry = db.query(sql,(err,rest) =>{
+                })
+            })
+        }
+        });
+        qry.on('end',function(){
+            
+        })
+
 
 });
 
