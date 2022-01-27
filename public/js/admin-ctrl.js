@@ -78,7 +78,7 @@ adpp.controller('RouteCtrl', function($scope) {
       "viewDesign":"/templ/admin/viewDesign.html",
       "activity":"templ/admin/activity.html",
       "profile":"templ/admin/profile.html",
-      "users_admin":"/templ/admin/users_admin.html",
+      "user_admin":"/templ/admin/user_admin.html",
       "institution_admin":"/templ/admin/institution_admin.html",
       "institution_data":"/templ/admin/institution_data.html",
       "accepted_institutions":"/templ/admin/accepted_institutions.html"
@@ -3801,6 +3801,7 @@ adpp.controller("super_admin",["$scope",'$http',"$uibModal",function($scope,$htt
     self.pending = [];
     self.institutions = [];
     self.accepted_institutions = [];
+    self.users = [];
 
     self.temp_intitution_name = "";
     self.temp_intitution_country = "";
@@ -3824,7 +3825,7 @@ adpp.controller("super_admin",["$scope",'$http',"$uibModal",function($scope,$htt
         self.get_temporary_institutions();
         self.get_institutions();
         self.get_institution_info();
-
+        self.getdomains()
     };
 
     self.get_temporary_institutions = function() {
@@ -3953,8 +3954,39 @@ adpp.controller("super_admin",["$scope",'$http',"$uibModal",function($scope,$htt
         });
     }
 
-    self.Accept_institution = function () {
-        console.log("guena perro")
+    self.getdomains = function() {
+        var postdata = 404;
+        $http({ url: "get_all_users", method: "post",data:postdata }).success(function (data) {
+            var res = []
+            data.data.rows.forEach(element =>{       
+                res.push(element)
+            })
+            self.users = [];
+            self.users = res;
+            
+
+        });
     }
+    self.refreshUsers = function () {
+        var postdata2 = self.domains
+
+        $http({ url: "get_all_users", method: "post",data:postdata }).success(function (data) {
+            var res = []
+            data.data.forEach(element =>{       
+                res.push(element)
+            })
+            self.users = [];
+            self.users = res;
+            
+
+        });
+        
+    };
+
+
+
+
+
+
     self.init();
 }])

@@ -1124,3 +1124,22 @@ router.post("/reject_institution", (req, res) => {
     
 
 });
+
+router.post("/get_all_users", (req, res) => {
+    var db = getDBInstance(pass.dbcon);
+    var sql = "SELECT * FROM users ";
+    var qry;
+    var result;
+    qry = db.query(sql,(err,rest) =>{
+        if(rest != null){
+            result = rest
+
+        }
+
+        });
+        qry.on('end',function(){
+            res.json({"data": result})
+        })
+
+
+});
