@@ -1,18 +1,18 @@
 <div ng-controller="super_admin" ng-if="selectedView == 'institution_data'">
-    <a ng-click="selectView('institution_admin');reset_inst_id()"><strong>Atras</strong></a>
-    <h2><strong>Solicitud de Incorporación</strong></h2>
+    <a ng-click="selectView('institution_admin');reset_inst_id()"><strong>{{'Back' | lang}}</strong></a>
+    <h2><strong>{{'incorporation_solicitude' | lang}}</strong></h2>
     {{temp_intitution_name}},{{temp_intitution_country}}
-    <h4>Dominios de correo electrónico permitidos:</h4>
+    <h4>{{'institution_mail_domains' | lang}}:</h4>
     <textarea readonly  style="resize: none; height: 10em; width: 50em;" >{{temp_inst_domains}}</textarea>
 
     
-    <h4><strong>Administrador Institucional</strong></h4>
-    <h4>Nombre: {{temp_admin_name}}</h4>
-    <h4>Correo electrónico institucional: {{temp_admin_mail}}</h4>
-    <h4>Cargo: {{temp_admin_position}}</h4>
+    <h4><strong>{{'institutional_admin' | lang}}</strong></h4>
+    <h4>{{'name' | lang}}: {{temp_admin_name}}</h4>
+    <h4>{{'email' | lang}}: {{temp_admin_mail}}</h4>
+    <h4>{{'position' | lang}}: {{temp_admin_position}}</h4>
     <div> 
-        <button class="btn btn-primary" ng-click="acceptmodal()" >Aceptar Solicitud</button>
-        <button class="btn btn-primary" ng-click="rejectmodal()"> Rechazar Solicitud</button>
+        <button class="btn btn-primary" ng-click="acceptmodal()" >{{'accept_request' | lang}}</button>
+        <button class="btn btn-primary" ng-click="rejectmodal()"> {{'reject_Request' | lang}}</button>
     </div>
 
 </div>

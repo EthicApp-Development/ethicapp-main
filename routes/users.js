@@ -169,7 +169,7 @@ fetch("https://www.google.com/recaptcha/api/siteverify?secret="+secret_key+"&res
   .then(response => response.json())
   .then(data => {
       if(data.success == true){
-          if (req.body.pass == req.body["conf-pass"]){
+          if (req.body.pass == req.body["conf-pass"] && req.body.Pais != "Elige un Pais" && req.body.Pais != "Choose Country"){
             var db = getDBInstance(pass.dbcon);
             var long = req.body.domains.split(",")
             var exist = true;
@@ -500,7 +500,6 @@ router.post("/create-multicounts",(req,res)=> {
     if(req.body.data != ''){
         var accounts = req.body.data.split('\r\n')
         var db = getDBInstance(pass.dbcon);
-        var email_list
         for(var i = 0;i< accounts.length;i++){
             console.log(accounts[i])
             var account_data = accounts[i].split(',')
@@ -512,69 +511,72 @@ router.post("/create-multicounts",(req,res)=> {
            
             }
             else{
-                var sql = "insert into temporary_users(rut, pass, name, mail, sex, role, token) values ($1,$2,$3,$4,$5,'A',$6)";
-                var qry;
-                var passcr = crypto.createHash('md5').update(account_data[1]).digest('hex');
-                var name = account_data[1];
-                if(account_data.length == 3){
-                    name = account_data[2] 
+                if(account_data.length > 1){
+                    var sql = "insert into temporary_users(rut, pass, name, mail, sex, role, token) values ($1,$2,$3,$4,$5,'A',$6)";
+                    var qry;
+                    var passcr = crypto.createHash('md5').update(account_data[1]).digest('hex');
+                    var name = account_data[1];
+                    if(account_data.length == 3){
+                        name = account_data[2] 
+                    }
+                    if(account_data.length == 4){
+                        name = account_data[2] + " "+ account_data[3]
+                    }
+                    var token = crypto.createHash('md5').update(account_data[0]).digest('hex');
+                    var user_mail = account_data[0]
+                    var sqlParams = ["11111111-1", passcr, name, account_data[0], 'O',token]
+                    var sqlarr = smartArrayConvert(sqlParams);
+                    qry = db.query(sql, sqlarr);
+                    
+                    console.log("realiza el query")
+                    qry.on("end", function () {
+                        console.log("entra al end")
+                        var SES_CONFIG = {
+                            accessKeyId: pass.accessKeyId,
+                            secretAccessKey: pass.secretAccessKey,
+                            region: "us-east-1",
+                        };
+                        var AWS_SES = new AWS.SES(SES_CONFIG);
+                        async function mail() {
+                            var params ={
+                                    Source:'no-reply@iccuandes.org',
+                                    Destination:{
+                                        'ToAddresses': [
+                                            user_mail,
+                                        ]},
+                                    Message:{
+                                        'Subject': {
+                                            'Data': 'Resolucion de cuenta Institucional'},
+                                        'Body': {
+                                            'Text': {
+                                                'Data': ''},
+                                            'Html': {
+                                                'Data': '<div>Hola '+name  +'<br>Bienvenido a EthicApp. Has sido invitado a incorporarte a EthicApp por [nombre usuario institucional]'+ 
+                                                'de [institución]. Para aceptar la invitación, pincha el siguiente botón:<br><br><a href="http://localhost:8501/login?rc=5&&tok='+token+'">'+ 
+                                                '<button class="btn-primary"> Activar tu Cuenta</button> </a> <br><br>'+
+                                                'Te recordamos que en EthicApp usamos los datos generados por los usuarios con fines de investigación. <br>'+
+                                                'Garantizamos la absoluta confidencialidad de los datos, y que los datos no los entregamos a terceras partes. En nuestras investigaciones reportamos los datos siempre a nivel agregado y nunca a nivel individual, ni revelando la identidad de los participantes. Las actividades basadas en EthicApp no presentan ningún riesgo físico o psicológico a docentes o a estudiantes. '+
+                                                'EthicApp se reserva el derecho de suspender o terminar cuentas de usuario en caso que se detecte uso indebido del servicio.'+
+                                                '<strong>Activando tu cuenta a través del botón de arriba manifiestas tu aceptación de las condiciones antes descritas.</strong>'+
+                                                'Te deseamos el mayor éxito en tus actividades con EthicApp.<br>Creadores de EthicApp'+
+                                                'ESTE SOFTWARE SE SUMINISTRA POR LA UNIVERSIDAD DE CHILE, CHILE Y LA UNIVERSIDAD DE LOS ANDES, CHILE. EN NINGÚN CASO LAS INSTITUCIONES MENCIONADAS SERÁN RESPONSABLES POR NINGÚN DAÑO DIRECTO, INDIRECTO, INCIDENTAL, ESPECIAL, EJEMPLAR O CONSECUENTE (INCLUYENDO,PERO NO LIMITADO A, LA ADQUISICIÓN DE BIENES O SERVICIOS; LA PÉRDIDA DE USO, DE DATOS O DE BENEFICIOS; O INTERRUPCIÓN DE LA ACTIVIDAD EMPRESARIAL) O POR CUALQUIER TEORÍA DE RESPONSABILIDAD, YA SEA POR CONTRATO, RESPONSABILIDAD ESTRICTA O AGRAVIO (INCLUYENDO NEGLIGENCIA O CUALQUIER OTRA CAUSA) QUE SURJA DE CUALQUIER MANERA DEL USO DE ESTE SOFTWARE, INCLUSO SI SE HA ADVERTIDO DE LA POSIBILIDAD DE TALES DAÑOS.'+
+                                                '</div>'} }
+                                        } 
+                                };
+                                console.log(user_mail)
+                                    AWS_SES.sendEmail(params).promise().then(
+                                        function(data) {
+                                         }).catch(
+                                           function(err) {
+                                         });
+                            }
+                            mail()
+                    });
+                    qry.on("error", function(err){
+                        res.end(err);
+                    });
                 }
-                if(account_data.length == 4){
-                    name = account_data[2] + " "+ account_data[3]
-                }
-                var token = crypto.createHash('md5').update(account_data[0]).digest('hex');
-                var user_mail = account_data[0]
-                var sqlParams = ["11111111-1", passcr, name, account_data[0], 'O',token]
-                var sqlarr = smartArrayConvert(sqlParams);
-                qry = db.query(sql, sqlarr);
-                
-                console.log("realiza el query")
-                qry.on("end", function () {
-                    console.log("entra al end")
-                    var SES_CONFIG = {
-                        accessKeyId: pass.accessKeyId,
-                        secretAccessKey: pass.secretAccessKey,
-                        region: "us-east-1",
-                    };
-                    var AWS_SES = new AWS.SES(SES_CONFIG);
-                    async function mail() {
-                        var params ={
-                                Source:'no-reply@iccuandes.org',
-                                Destination:{
-                                    'ToAddresses': [
-                                        user_mail,
-                                    ]},
-                                Message:{
-                                    'Subject': {
-                                        'Data': 'Resolucion de cuenta Institucional'},
-                                    'Body': {
-                                        'Text': {
-                                            'Data': ''},
-                                        'Html': {
-                                            'Data': '<div>Hola '+name  +'<br>Bienvenido a EthicApp. Has sido invitado a incorporarte a EthicApp por [nombre usuario institucional]'+ 
-                                            'de [institución]. Para aceptar la invitación, pincha el siguiente botón:<br><br><a href="http://localhost:8501/login?rc=5&&tok='+token+'">'+ 
-                                            '<button class="btn-primary"> Activar tu Cuenta</button> </a> <br><br>'+
-                                            'Te recordamos que en EthicApp usamos los datos generados por los usuarios con fines de investigación. <br>'+
-                                            'Garantizamos la absoluta confidencialidad de los datos, y que los datos no los entregamos a terceras partes. En nuestras investigaciones reportamos los datos siempre a nivel agregado y nunca a nivel individual, ni revelando la identidad de los participantes. Las actividades basadas en EthicApp no presentan ningún riesgo físico o psicológico a docentes o a estudiantes. '+
-                                            'EthicApp se reserva el derecho de suspender o terminar cuentas de usuario en caso que se detecte uso indebido del servicio.'+
-                                            '<strong>Activando tu cuenta a través del botón de arriba manifiestas tu aceptación de las condiciones antes descritas.</strong>'+
-                                            'Te deseamos el mayor éxito en tus actividades con EthicApp.<br>Creadores de EthicApp'+
-                                            'ESTE SOFTWARE SE SUMINISTRA POR LA UNIVERSIDAD DE CHILE, CHILE Y LA UNIVERSIDAD DE LOS ANDES, CHILE. EN NINGÚN CASO LAS INSTITUCIONES MENCIONADAS SERÁN RESPONSABLES POR NINGÚN DAÑO DIRECTO, INDIRECTO, INCIDENTAL, ESPECIAL, EJEMPLAR O CONSECUENTE (INCLUYENDO,PERO NO LIMITADO A, LA ADQUISICIÓN DE BIENES O SERVICIOS; LA PÉRDIDA DE USO, DE DATOS O DE BENEFICIOS; O INTERRUPCIÓN DE LA ACTIVIDAD EMPRESARIAL) O POR CUALQUIER TEORÍA DE RESPONSABILIDAD, YA SEA POR CONTRATO, RESPONSABILIDAD ESTRICTA O AGRAVIO (INCLUYENDO NEGLIGENCIA O CUALQUIER OTRA CAUSA) QUE SURJA DE CUALQUIER MANERA DEL USO DE ESTE SOFTWARE, INCLUSO SI SE HA ADVERTIDO DE LA POSIBILIDAD DE TALES DAÑOS.'+
-                                            '</div>'} }
-                                    } 
-                            };
-                            console.log(user_mail)
-                                AWS_SES.sendEmail(params).promise().then(
-                                    function(data) {
-                                     }).catch(
-                                       function(err) {
-                                     });
-                        }
-                        mail()
-                });
-                qry.on("error", function(err){
-                    res.end(err);
-                });
+
             }
                 });
         }

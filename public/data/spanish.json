@@ -170,6 +170,7 @@
 	"device": "Dispositivo",
 	"saveDraft": "Guardar borrador",
 	"cvs": "CV",
+	"teacher": "Profesor",
 	"teachers": "Profesores",
 	"Institucional_Users": "Usuarios Institucionales",
 	"Import_Users": "Importar Usuarios",
@@ -257,6 +258,22 @@
 	"semDiff":"Diferenciales Semánticos",
 	"search":"Buscar",
 	"profile":"Profile",
-	"domains_message":"El dominio que ingreso ya existe en Ethicapp"
+	"domains_message":"El dominio que ingreso ya existe en Ethicapp",
+	"incorporation_solicitude":"Solicitud de Incorporación",
+	"institution_mail_domains":"Dominios de correo electrónico permitidos",
+	"institutional_admin":"Administrador Institucional",
+	"accept_request":"Aceptar Solicitud",
+	"reject_Request":"Rechazar Solicitud",
+	"accepted":"Aceptadas",
+	"pending":"Pendientes",
+	"see_solicitude":"Ver Solicitud",
+	"see_information":"Ver Informacion",
+	"change_passwors":"Cambiar Contraseña",
+	"confirm_password":"Confirmar contraseña",
+	"terminate_account":"Terminar Cuenta",
+	"unsubscribe_account":"Dar Cuenta de Baja",
+	"female":"Femenino",
+	"male":"Masculino",
+	"other":"Otro"
 }
 

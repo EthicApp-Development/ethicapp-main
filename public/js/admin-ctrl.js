@@ -3758,10 +3758,18 @@ adpp.controller("no_account",["$scope",'$http',function($scope,$http,Admin){
     self.getcountries = function(){
         $http.get("https://restcountries.com/v3.1/all").success(function (data) {
             var list = []
+            
             for(var i = 0;i< data.length;i++){ 
                 list.push(data[i].name.common)
             }
             list.sort()
+            if(lang[0] == 'e' && lang[1] == 's'){
+                list.unshift("Elige un Pais")
+            }
+            else{
+                list.unshift("Choose Country")
+            }
+            
             self.countries = list;
             
         });

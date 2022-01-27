@@ -1,15 +1,15 @@
 <div ng-controller="super_admin" ng-if="selectedView == 'accepted_institutions'">
-    <a ng-click="selectView('institution_admin');reset_inst_id()"><strong>Atras</strong></a>
-    <h2><strong>Solicitud de Incorporación</strong></h2>
+    <a ng-click="selectView('institution_admin');reset_inst_id()"><strong>{{'Back' | lang}}</strong></a>
+    <h2><strong>{{'incorporation_solicitude' | lang}}</strong></h2>
     {{intitution_name}},{{intitution_country}}
-    <h4>Dominios de correo electrónico permitidos:</h4>
+    <h4>{{'institution_mail_domains' | lang}}:</h4>
     <textarea readonly  style="resize: none; height: 10em; width: 50em;" >{{inst_domains}}</textarea>
 
     
-    <h4><strong>Administrador Institucional</strong></h4>
-    <h4>Nombre: {{admin_name}}</h4>
-    <h4>Correo electrónico institucional: {{admin_mail}}</h4>
-    <h4>Cargo: {{admin_position}}</h4>
+    <h4><strong>{{'institutional_admin' | lang}}</strong></h4>
+    <h4>{{'name' | lang}}: {{admin_name}}</h4>
+    <h4>{{'email' | lang}}: {{admin_mail}}</h4>
+    <h4>{{'position' | lang}}: {{admin_position}}</h4>
 
 
 </div>
