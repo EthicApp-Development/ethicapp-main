@@ -238,7 +238,7 @@ fetch("https://www.google.com/recaptcha/api/siteverify?secret="+secret_key+"&res
                                                 'Text': {
                                                     'Data': ''},
                                                 'Html': {
-                                                    'Data': '<div>En un plazo de 24 a 48 horas hábiles quedará habilitada tu cuenta.<br>Te enviaremos un correo con los pasos a seguir.</div>'} }
+                                                    'Data': '<div style="max-width: 640px;display: block;padding: 4px 24px 20px 24px;border-color: gray;border-width: 10px;border-width: 5px;border-style: solid;margin: 20px auto;"> <div style="text-align: center;margin-bottom: 2em;margin-top: 2em;"><img src="/img/ethicapp-logo.svg" alt="Ethicapp"> </div>En un plazo de 24 a 48 horas hábiles quedará habilitada tu cuenta.<br>Te enviaremos un correo con los pasos a seguir.</div>'} }
                                             } 
                                     };
                                     var params2 ={
@@ -254,7 +254,7 @@ fetch("https://www.google.com/recaptcha/api/siteverify?secret="+secret_key+"&res
                                                 'Text': {
                                                     'Data': 'Mail de prueba'},
                                                 'Html': {
-                                                    'Data': '<div>Within 24 to 48 business hours your account will be enabled.<br> We will send you an email with the steps to follow.</div>'} }
+                                                    'Data': '<div style="max-width: 640px;display: block;padding: 4px 24px 20px 24px;border-color: gray;border-width: 10px;border-width: 5px;border-style: solid;margin: 20px auto;"> <div style="text-align: center;margin-bottom: 2em;margin-top: 2em;"><img src="/img/ethicapp-logo.svg" alt="Ethicapp"> </div>Within 24 to 48 business hours your account will be enabled.<br> We will send you an email with the steps to follow.</div>'} }
                                             } 
                                     };
                                     if (country == 'Chile'){// ver como decidir en que idioma se manda el mail
@@ -359,7 +359,7 @@ router.post("/resetpassword", (req, res) => {
                         'Text': {
                             'Data': 'Mail de prueba'},
                         'Html': {
-                            'Data': '<div>Hola<br>¿Has perdido tu contraseña? Puedes restablecerla a continuación:<br><a href="http://localhost:8501/passreset"> <button class="btn-primary"> Restablecer contraseña</button> </a> <br>Recibe un cordial saludo,<br>Creadores de EthicApp</div>'} }
+                            'Data': '<div style="max-width: 640px;display: block;padding: 4px 24px 20px 24px;border-color: gray;border-width: 10px;border-width: 5px;border-style: solid;margin: 20px auto;"> <div style="text-align: center;margin-bottom: 2em;margin-top: 2em;"><img src="/img/ethicapp-logo.svg" alt="Ethicapp"> </div>Hola<br><br>¿Has perdido tu contraseña? Puedes restablecerla a continuación:<br><br> <div style="text-align: center;"> <a href="http://localhost:8501/passreset"> <button style="background-color: #2649EC;border-color: #102AA0;color: white;"> Restablecer contraseña</button> </a></div> <br><br>Recibe un cordial saludo,<br><br>Creadores de EthicApp</div>'} }
                     } 
             };
         
@@ -377,7 +377,7 @@ router.post("/resetpassword", (req, res) => {
                         'Text': {
                             'Data': 'Mail de prueba'},
                         'Html': {
-                            'Data': '<div>Hi<br>Have you lost your password? You can restore it in the following link:<br><a href="http://localhost:8501/passreset"> <button class="btn-primary"> Restore Password</button> </a> <br>greetings<br>Creators of EthicApp</div>'} }
+                            'Data': '<div style="max-width: 640px;display: block;padding: 4px 24px 20px 24px;border-color: gray;border-width: 10px;border-width: 5px;border-style: solid;margin: 20px auto;"> <div style="text-align: center;margin-bottom: 2em;margin-top: 2em;"><img src="/img/ethicapp-logo.svg" alt="Ethicapp"> </div>Hi<br><br>Have you lost your password? You can restore it in the following link:<br><br> <div style="text-align: center;"> <a href="http://localhost:8501/passreset"> <button style="background-color: #2649EC;border-color: #102AA0;color: white;"> Restore Password</button> </a></div> <br><br>greetings<br><br>Creators of EthicApp</div>'} }
                     } 
             };
             if (req.body.lenguaje == 'Español'){
@@ -551,14 +551,14 @@ router.post("/create-multicounts",(req,res)=> {
                                             'Text': {
                                                 'Data': ''},
                                             'Html': {
-                                                'Data': '<div>Hola '+name  +'<br>Bienvenido a EthicApp. Has sido invitado a incorporarte a EthicApp por [nombre usuario institucional]'+ 
-                                                'de [institución]. Para aceptar la invitación, pincha el siguiente botón:<br><br><a href="http://localhost:8501/login?rc=5&&tok='+token+'">'+ 
-                                                '<button class="btn-primary"> Activar tu Cuenta</button> </a> <br><br>'+
-                                                'Te recordamos que en EthicApp usamos los datos generados por los usuarios con fines de investigación. <br>'+
-                                                'Garantizamos la absoluta confidencialidad de los datos, y que los datos no los entregamos a terceras partes. En nuestras investigaciones reportamos los datos siempre a nivel agregado y nunca a nivel individual, ni revelando la identidad de los participantes. Las actividades basadas en EthicApp no presentan ningún riesgo físico o psicológico a docentes o a estudiantes. '+
-                                                'EthicApp se reserva el derecho de suspender o terminar cuentas de usuario en caso que se detecte uso indebido del servicio.'+
-                                                '<strong>Activando tu cuenta a través del botón de arriba manifiestas tu aceptación de las condiciones antes descritas.</strong>'+
-                                                'Te deseamos el mayor éxito en tus actividades con EthicApp.<br>Creadores de EthicApp'+
+                                                'Data': '<div style="max-width: 640px;display: block;padding: 4px 24px 20px 24px;border-color: gray;border-width: 10px;border-width: 5px;border-style: solid;margin: 20px auto;"><div style="text-align: center;margin-bottom: 2em;margin-top: 2em;"><img src="/img/ethicapp-logo.svg" alt="Ethicapp"> </div>Hola '+name  +'<br>Bienvenido a EthicApp. Has sido invitado a incorporarte a EthicApp por [nombre usuario institucional]'+ 
+                                                'de [institución]. Para aceptar la invitación, pincha el siguiente botón:<br><br><div style="text-align: center;"><a href="http://localhost:8501/login?rc=5&&tok='+token+'">'+ 
+                                                '<button style="background-color: #2649EC;border-color: #102AA0;color: white;"> Activar tu Cuenta</button> </a></div> <br><br>'+
+                                                'Te recordamos que en EthicApp usamos los datos generados por los usuarios con fines de investigación. <br><br>'+
+                                                'Garantizamos la absoluta confidencialidad de los datos, y que los datos no los entregamos a terceras partes. En nuestras investigaciones reportamos los datos siempre a nivel agregado y nunca a nivel individual, ni revelando la identidad de los participantes. Las actividades basadas en EthicApp no presentan ningún riesgo físico o psicológico a docentes o a estudiantes. <br><br>'+
+                                                'EthicApp se reserva el derecho de suspender o terminar cuentas de usuario en caso que se detecte uso indebido del servicio. <br><br>'+
+                                                '<strong>Activando tu cuenta a través del botón de arriba manifiestas tu aceptación de las condiciones antes descritas.</strong> <br><br>'+
+                                                'Te deseamos el mayor éxito en tus actividades con EthicApp.<br><br>Creadores de EthicApp <br><br>'+
                                                 'ESTE SOFTWARE SE SUMINISTRA POR LA UNIVERSIDAD DE CHILE, CHILE Y LA UNIVERSIDAD DE LOS ANDES, CHILE. EN NINGÚN CASO LAS INSTITUCIONES MENCIONADAS SERÁN RESPONSABLES POR NINGÚN DAÑO DIRECTO, INDIRECTO, INCIDENTAL, ESPECIAL, EJEMPLAR O CONSECUENTE (INCLUYENDO,PERO NO LIMITADO A, LA ADQUISICIÓN DE BIENES O SERVICIOS; LA PÉRDIDA DE USO, DE DATOS O DE BENEFICIOS; O INTERRUPCIÓN DE LA ACTIVIDAD EMPRESARIAL) O POR CUALQUIER TEORÍA DE RESPONSABILIDAD, YA SEA POR CONTRATO, RESPONSABILIDAD ESTRICTA O AGRAVIO (INCLUYENDO NEGLIGENCIA O CUALQUIER OTRA CAUSA) QUE SURJA DE CUALQUIER MANERA DEL USO DE ESTE SOFTWARE, INCLUSO SI SE HA ADVERTIDO DE LA POSIBILIDAD DE TALES DAÑOS.'+
                                                 '</div>'} }
                                         } 
@@ -1002,12 +1002,12 @@ router.post("/accept_institution", (req, res) => {
                                                                                 'Text': {
                                                                                     'Data': ''},
                                                                                 'Html': {
-                                                                                    'Data': '<div>Hola '+ fullname+'!<br><br> Bienvenido a EthicApp. Tu cuenta institucional está aprobada. Puedes ingresar a EthicApp y comenzar invitando a profesores a utilizarla, e incluso creando tu primera actividad. <br>'+
-                                                                                    +'<button class="btn-primary">¡Comenzar!</button>'+
-                                                                                    'Te recordamos que en EthicApp usamos los datos generados por los usuarios con fines de investigación. Garantizamos la absoluta confidencialidad de los datos, y que los datos no los entregamos a terceras partes. En nuestras investigaciones reportamos los datos siempre a nivel agregado y nunca a nivel individual, ni revelando la identidad de los participantes.<br>'+
-                                                                                    'Las actividades basadas en EthicApp no presentan ningún riesgo a docentes ni estudiantes. EthicApp se entrega como servicio a los usuarios “tal cual”. Los desarrolladores de EthicApp quedan exentos de cualquier responsabilidad… [tenemos que ver si lo expresamos en forma similar a las licencias permisivas tipo BSD, MIT o Apache].<br>'+
-                                                                                    'EthicApp se reserva el derecho de suspender o terminar cuentas de usuario en caso que se detecte uso indebido del servicio.<br>'+
-                                                                                    'Deseamos a ti y a tus colegas el mayor éxito utilizando EthicApp en la enseñanza.<br>'+
+                                                                                    'Data': '<div style="max-width: 640px;display: block;padding: 4px 24px 20px 24px;border-color: gray;border-width: 10px;border-width: 5px;border-style: solid;margin: 20px auto;"><div style="text-align: center;margin-bottom: 2em;margin-top: 2em;"><img src="/img/ethicapp-logo.svg" alt="Ethicapp"> </div>Hola '+ fullname+'!<br><br> Bienvenido a EthicApp. Tu cuenta institucional está aprobada. Puedes ingresar a EthicApp y comenzar invitando a profesores a utilizarla, e incluso creando tu primera actividad. <br><br>'+
+                                                                                    +'<div style="text-align: center;"><a href="http://localhost:8501/login"><button style="background-color: #2649EC;border-color: #102AA0;color: white;">¡Comenzar!</button></a></div><br>'+
+                                                                                    'Te recordamos que en EthicApp usamos los datos generados por los usuarios con fines de investigación. Garantizamos la absoluta confidencialidad de los datos, y que los datos no los entregamos a terceras partes. En nuestras investigaciones reportamos los datos siempre a nivel agregado y nunca a nivel individual, ni revelando la identidad de los participantes.<br><br>'+
+                                                                                    'Las actividades basadas en EthicApp no presentan ningún riesgo a docentes ni estudiantes. EthicApp se entrega como servicio a los usuarios “tal cual”. Los desarrolladores de EthicApp quedan exentos de cualquier responsabilidad… [tenemos que ver si lo expresamos en forma similar a las licencias permisivas tipo BSD, MIT o Apache].<br><br>'+
+                                                                                    'EthicApp se reserva el derecho de suspender o terminar cuentas de usuario en caso que se detecte uso indebido del servicio.<br><br>'+
+                                                                                    'Deseamos a ti y a tus colegas el mayor éxito utilizando EthicApp en la enseñanza.<br><br>'+
                                                                                     'Creadores de EthicApp'+
                                                                                     '</div>'} }
                                                                             } 
@@ -1102,9 +1102,9 @@ router.post("/reject_institution", (req, res) => {
                                         'Text': {
                                             'Data': ''},
                                         'Html': {
-                                            'Data': '<div>Hola '+ fullname+'!<br><br> Lamentamos que tu solicitud de creación de cuenta institucional fue rechazada. Esto pudo deberse a que tu institución ya se encuentra registrada en EthicApp, o a información faltante en el proceso de registro.<br>'+
-                                            'Puedes contactarnos a estudios-icc (at) miuandes.cl para buscar solución al problema.<br>'+
-                                            'Un cordial saludo,<br>'+
+                                            'Data': '<div style="max-width: 640px;display: block;padding: 4px 24px 20px 24px;border-color: gray;border-width: 10px;border-width: 5px;border-style: solid;margin: 20px auto;"><div style="text-align: center;margin-bottom: 2em;margin-top: 2em;"><img src="/img/ethicapp-logo.svg" alt="Ethicapp"> </div>Hola '+ fullname+'!<br><br> Lamentamos que tu solicitud de creación de cuenta institucional fue rechazada. Esto pudo deberse a que tu institución ya se encuentra registrada en EthicApp, o a información faltante en el proceso de registro.<br><br>'+
+                                            'Puedes contactarnos a estudios-icc (at) miuandes.cl para buscar solución al problema.<br><br>'+
+                                            'Un cordial saludo,<br><br>'+
                                             'Creadores de EthicApp'+
                                             '</div>'} }
                                     } 

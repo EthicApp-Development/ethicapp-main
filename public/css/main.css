@@ -50,6 +50,10 @@ hr{
     text-align: center;
 }
 
+.middle-box-mail{
+    max-width: 640px;display: block;padding: 4px 24px 20px 24px;border-color: gray;border-width: 10px;border-width: 5px;border-style: solid;margin: 20px auto;
+}
+
 .large-box{
     max-width: 640px;
     display: block;

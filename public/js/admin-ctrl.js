@@ -106,6 +106,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.newUsers = [];
     self.users = {};
     self.selectedId = -1;
+    self.role = "A";
     self.sesStatusses = ["notPublicada", "reading", "personal", "anon", "teamWork", "finished"];
     self.optConfidence = [0, 25, 50, 75, 100];
     self.iterationNames = [];
