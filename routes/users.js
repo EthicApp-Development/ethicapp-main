@@ -27,15 +27,15 @@ router.get('/login', (req, res) => {
 });
 
 router.get('/institucion', (req, res) => {
-    res.render('institucion', {rc: req.query.rc});
+    res.render('institucion', { rc: req.query.rc });
 });
 
 
 router.get('/passreset', (req, res) => {
-    res.render('passreset', {rc: req.query.rc});
+    res.render('passreset', { rc: req.query.rc });
 });
 
-router.get("/forgot-pass", function(req,res){
+router.get("/forgot-pass", function (req, res) {
     res.render("forgot-pass");
 });
 
@@ -59,15 +59,15 @@ router.post("/login", rpg.singleSQL({
         calc.user = data.user.trim();
         calc.passcr = crypto.createHash('md5').update(data.pass).digest('hex');
     },
-    sqlParams: [rpg.param("calc","user"),rpg.param("calc","passcr"),rpg.param("calc","user"),rpg.param("calc","passcr")],
+    sqlParams: [rpg.param("calc", "user"), rpg.param("calc", "passcr"), rpg.param("calc", "user"), rpg.param("calc", "passcr")],
     onEnd: (req, res, result) => {
-        if(result.id != null) {
+        if (result.id != null) {
             req.session.uid = result.id;
             req.session.role = result.role;
             req.session.ses = null;
             res.redirect(".");
         }
-        else{
+        else {
             res.redirect("login?rc=2");
         }
     }
@@ -78,37 +78,40 @@ router.get("/register", (req, res) => {
 });
 
 router.get('/google',
-  passport.authenticate('google', { scope:
-      [ 'email', 'profile' ] }
-));
+    passport.authenticate('google', {
+        scope:
+            ['email', 'profile']
+    }
+    ));
 
-router.get( '/google/callback',
-        passport.authenticate( 'google', {
-            failureRedirect: '/register'}),
-            function(req, res) {
-                var db = getDBInstance(pass.dbcon);
-                var sql = "SELECT * FROM users WHERE mail ='"+req.user.email +"' LIMIT 1";
-                var qry;
-                qry = db.query(sql,(err,res) =>{
-                    if(res.rows[0] != null){
-                        req.session.uid = res.rows[0].id;
-                        req.session.role = 'A';
-                        req.session.ses = null;
-                        }
-                }).then(t => res.redirect("/seslist") )
-                
-
-              }
+router.get('/google/callback',
+    passport.authenticate('google', {
+        failureRedirect: '/register'
+    }),
+    function (req, res) {
+        var db = getDBInstance(pass.dbcon);
+        var sql = "SELECT * FROM users WHERE mail ='" + req.user.email + "' LIMIT 1";
+        var qry;
+        qry = db.query(sql, (err, res) => {
+            if (res.rows[0] != null) {
+                req.session.uid = res.rows[0].id;
+                req.session.role = 'A';
+                req.session.ses = null;
+            }
+        }).then(t => res.redirect("/seslist"))
 
 
-     );
+    }
+
+
+);
 
 var DB = null;
-function getDBInstance(dbcon){
-    if(DB == null) {
+function getDBInstance(dbcon) {
+    if (DB == null) {
         DB = new pg.Client(dbcon);
         DB.connect();
-        DB.on("error", function(err){
+        DB.on("error", function (err) {
             console.error(err);
             DB = null;
         });
@@ -129,34 +132,34 @@ function smartArrayConvert(sqlParams) {
 router.post("/register", (req, res) => {
     const response_key = req.body["g-recaptcha-response"];
     const secret_key = pass.Captcha_Secret;
-fetch("https://www.google.com/recaptcha/api/siteverify?secret="+secret_key+"&response="+response_key)
-  .then(response => response.json())
-  .then(data => {
-      if(data.success == true){
-          if (req.body.pass == req.body["conf-pass"]){
-            var db = getDBInstance(pass.dbcon);
-            var sql = "insert into users(rut, pass, name, mail, sex, role) values ($1,$2,$3,$4,$5,'A')";
-            var qry;
-            var passcr = crypto.createHash('md5').update(req.body.pass).digest('hex');
-            var fullname = (req.body.name + " " + req.body.lastname);
-            var sqlParams = [req.body.rut, passcr, fullname, req.body.mail, req.body.sex]
-            var sqlarr = smartArrayConvert(sqlParams);
-            qry = db.query(sql, sqlarr);
-            qry.on("end", function () {
-                res.redirect("login?rc=1");
-            });
-            qry.on("error", function(err){
-                res.end('{"status":"err"}');
-            });
-          }else{
-            res.redirect("register");
-          }
-      }
-      else{
-        res.redirect("register");
-      }
-}).catch(function(e) {
-  });
+    fetch("https://www.google.com/recaptcha/api/siteverify?secret=" + secret_key + "&response=" + response_key)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success == true) {
+                if (req.body.pass == req.body["conf-pass"]) {
+                    var db = getDBInstance(pass.dbcon);
+                    var sql = "insert into users(rut, pass, name, mail, sex, role) values ($1,$2,$3,$4,$5,'A')";
+                    var qry;
+                    var passcr = crypto.createHash('md5').update(req.body.pass).digest('hex');
+                    var fullname = (req.body.name + " " + req.body.lastname);
+                    var sqlParams = [req.body.rut, passcr, fullname, req.body.mail, req.body.sex]
+                    var sqlarr = smartArrayConvert(sqlParams);
+                    qry = db.query(sql, sqlarr);
+                    qry.on("end", function () {
+                        res.redirect("login?rc=1");
+                    });
+                    qry.on("error", function (err) {
+                        res.end('{"status":"err"}');
+                    });
+                } else {
+                    res.redirect("register");
+                }
+            }
+            else {
+                res.redirect("register");
+            }
+        }).catch(function (e) {
+        });
 });
 
 
@@ -165,27 +168,27 @@ router.post("/register_institucion", (req, res) => {
     const secret_key = pass.Captcha_Secret;
     var user_mail;
     var country;
-fetch("https://www.google.com/recaptcha/api/siteverify?secret="+secret_key+"&response="+response_key)
-  .then(response => response.json())
-  .then(data => {
-      if(data.success == true){
-          if (req.body.pass == req.body["conf-pass"] && req.body.Pais != "Elige un Pais" && req.body.Pais != "Choose Country"){
-            var db = getDBInstance(pass.dbcon);
-            var long = req.body.domains.split(",")
-            var exist = true;
-            for(var i = 0;i < long.length ;i++){
-                var sql = "SELECT * FROM mail_domain WHERE domain_name ='"+long[i] +"'";
-                var qry;
-                
-                qry = db.query(sql,(err,res) =>{
-                    if(res != null){
-                        console.log("lo que quiero ver")
-                        console.log(res)
-                        exist = false
-
-                    }
+    fetch("https://www.google.com/recaptcha/api/siteverify?secret="+secret_key+"&response="+response_key)
+    .then(response => response.json())
+    .then(data => {
+        if(data.success == true){
+            if (req.body.pass == req.body["conf-pass"] && req.body.Pais != "Elige un Pais" && req.body.Pais != "Choose Country"){
+                var db = getDBInstance(pass.dbcon);
+                var long = req.body.domains.split(",")
+                var exist = true;
+                for(var i = 0;i < long.length ;i++){
+                    var sql = "SELECT * FROM mail_domain WHERE domain_name ='"+long[i] +"'";
+                    var qry;
                     
-                    });
+                    qry = db.query(sql,(err,res) =>{
+                        if(res != null){
+                            console.log("lo que quiero ver")
+                            console.log(res)
+                            exist = false
+
+                        }
+                        
+                        });
 
 
             }
@@ -315,7 +318,7 @@ router.post("/register-prof", rpg.execSQL({
         calc.fullname = (data.name + " " + data.lastname);
     },
     sqlParams: [rpg.param("post", "rut"), rpg.param("calc", "passcr"), rpg.param("calc", "fullname"),
-        rpg.param("post", "mail"), rpg.param("post", "sex")],
+    rpg.param("post", "mail"), rpg.param("post", "sex")],
     onEnd: (req, res) => {
         res.redirect("login?rc=1");
     }
@@ -335,8 +338,6 @@ router.post("/update-lang", rpg.singleSQL({
     postReqData: ["lang"],
     sqlParams: [rpg.param("post", "lang"), rpg.param("ses", "uid")]
 }));
-
-
 
 router.post("/resetpassword", (req, res) => {
     var SES_CONFIG = {
@@ -397,19 +398,12 @@ router.post("/resetpassword", (req, res) => {
                        function(err) {
                      });
             }
-
-
-
         }
-        mail()
-
-    
+    mail()
 })
 
-
-
 router.get("/new-pass/:token", (req, res) => {
-    res.render("newpass", {token: req.params.token});
+    res.render("newpass", { token: req.params.token });
 });
 
 router.post("/newpassword", rpg.execSQL({
@@ -427,20 +421,20 @@ router.post("/newpassword", rpg.execSQL({
 }));
 
 router.post("/super-login-as", (req, res) => {
-    if(req.session.role != "S" || req.body.uid == null){
-        res.send({status: "error"});
+    if (req.session.role != "S" || req.body.uid == null) {
+        res.send({ status: "error" });
     }
     else {
         req.session.prevUid = req.session.uid;
         req.session.uid = req.body.uid;
         req.session.role = "P";
         req.session.ses = null;
-        res.send({status: "ok"});
+        res.send({ status: "ok" });
     }
 });
 
 router.get("/super-logout", (req, res) => {
-    if(req.session.prevUid == null){
+    if (req.session.prevUid == null) {
         res.end();
     }
     else {
@@ -453,46 +447,46 @@ router.get("/super-logout", (req, res) => {
 });
 
 router.get("/is-super", (req, res) => {
-    if(req.session.role == "S" || req.session.prevUid != null){
-        res.send({status: "ok"});
+    if (req.session.role == "S" || req.session.prevUid != null) {
+        res.send({ status: "ok" });
     }
     else {
-        res.send({status: "error"});
+        res.send({ status: "error" });
     }
 });
 
 router.get("/is-institution", (req, res) => {
-    if(req.session.role == "I" || req.session.prevUid != null){
-        res.send({status: true});
+    if (req.session.role == "I" || req.session.prevUid != null) {
+        res.send({ status: true });
     }
     else {
-        res.send({status: false});
+        res.send({ status: false });
     }
 });
 
 module.exports = router;
 
 
-router.get("/profile",(req,res)=> {
+router.get("/profile", (req, res) => {
 
     res.render("profile");
 });
 
 
-router.post("/changepassword",(req,res)=> {
-    if (req.body.pass == req.body["pass-conf"]){
-            var db = getDBInstance(pass.dbcon);
-            var passcr = crypto.createHash('md5').update(req.body.pass).digest('hex');
-            var sql = "UPDATE users SET pass = '"+passcr+"' WHERE mail = '"+req.body.mail+"'";
-            var qry;
-            var sqlParams = [passcr,req.body.mail]
-            qry = db.query(sql);
-            qry.on("end", function () {
-                res.redirect("login?rc=4");
-            });
-            qry.on("error", function(err){
-                res.end('{"status":"err"}');
-            });
+router.post("/changepassword", (req, res) => {
+    if (req.body.pass == req.body["pass-conf"]) {
+        var db = getDBInstance(pass.dbcon);
+        var passcr = crypto.createHash('md5').update(req.body.pass).digest('hex');
+        var sql = "UPDATE users SET pass = '" + passcr + "' WHERE mail = '" + req.body.mail + "'";
+        var qry;
+        var sqlParams = [passcr, req.body.mail]
+        qry = db.query(sql);
+        qry.on("end", function () {
+            res.redirect("login?rc=4");
+        });
+        qry.on("error", function (err) {
+            res.end('{"status":"err"}');
+        });
     }
 });
 
@@ -582,8 +576,6 @@ router.post("/create-multicounts",(req,res)=> {
         }
         res.redirect("home")
     }
-    
-
 });
 
 router.post("/activate_user", (req, res) => {
@@ -611,36 +603,34 @@ router.post("/activate_user", (req, res) => {
         qry.on('end',function(){
             
         })
-
-
 });
 
 
-router.post("/deleteacc",(req,res)=> {
+router.post("/deleteacc", (req, res) => {
     var db = getDBInstance(pass.dbcon);
-    var sql = "UPDATE users SET disabled = true WHERE id ='"+req.session.uid +"'";
+    var sql = "UPDATE users SET disabled = true WHERE id ='" + req.session.uid + "'";
     var qry;
-    qry = db.query(sql,(err,res) =>{
-        })
-    try{
+    qry = db.query(sql, (err, res) => {
+    })
+    try {
         var newmail;
         newmail = Date.now().toString() + req.session.passport.user.email
-        var sql2 = "UPDATE users SET mail = '"+newmail+"' WHERE id ='"+req.session.uid +"'";
+        var sql2 = "UPDATE users SET mail = '" + newmail + "' WHERE id ='" + req.session.uid + "'";
         var qry2;
-        qry2 = db.query(sql2,(err,res) =>{
+        qry2 = db.query(sql2, (err, res) => {
 
-            })
+        })
     }
-    catch{
+    catch {
         var newmail;
         newmail = Date.now().toString() + req.body.mail
-        var sql2 = "UPDATE users SET mail = '"+newmail+"' WHERE id ='"+req.session.uid +"'";
+        var sql2 = "UPDATE users SET mail = '" + newmail + "' WHERE id ='" + req.session.uid + "'";
         var qry2;
-        qry2 = db.query(sql2,(err,res) =>{
-            })
+        qry2 = db.query(sql2, (err, res) => {
+        })
 
     }
-    finally{
+    finally {
         res.redirect("login")
     }
 
@@ -709,23 +699,21 @@ qry.on('end',function(){
 
 router.post("/getuserinfo", (req, res) => {
     var db = getDBInstance(pass.dbcon);
-    var sql = "SELECT * FROM users WHERE id ='"+req.session.uid +"' LIMIT 1";
+    var sql = "SELECT * FROM users WHERE id ='" + req.session.uid + "' LIMIT 1";
     var qry;
     var result;
     qry = db.query(sql,(err,res) =>{
         if(res != null)
         result = res.rows
-        });
-qry.on('end',function(){
-    res.json({"data": result})
-
-})
+    });
+    qry.on('end', function () {
+        res.json({ "data": result })
+    })
 });
-
 
 router.post("/getdomains", (req, res) => {
     var db = getDBInstance(pass.dbcon);
-    var sql = "SELECT * FROM institution WHERE userid ='"+req.session.uid +"'";
+    var sql = "SELECT * FROM institution WHERE userid ='" + req.session.uid + "'";
     var qry;
     var result;
     qry = db.query(sql,(err,res) =>{
@@ -738,10 +726,9 @@ qry.on('end',function(){
 })
 });
 
-
 router.post("/make_prof", (req, res) => {
     var db = getDBInstance(pass.dbcon);
-    var sql = "UPDATE users SET role = 'P' WHERE mail ='"+req.body.mail +"'";
+    var sql = "UPDATE users SET role = 'P' WHERE mail ='" + req.body.mail + "'";
     var qry;
     var result;
     qry = db.query(sql,(err,rest) =>{
@@ -757,7 +744,7 @@ router.post("/make_prof", (req, res) => {
 
 router.post("/make_alum", (req, res) => {
     var db = getDBInstance(pass.dbcon);
-    var sql = "UPDATE users SET role = 'A' WHERE mail ='"+req.body.mail +"'";
+    var sql = "UPDATE users SET role = 'A' WHERE mail ='" + req.body.mail + "'";
     var qry;
     var result;
     qry = db.query(sql,(err,rest) =>{
@@ -807,8 +794,6 @@ router.post("/get_institutions", (req, res) => {
 
 });
 
-
-
 router.post("/get_temp_institution_info", (req, res) => {
     var db = getDBInstance(pass.dbcon);
     var sql = "SELECT * FROM temporary_institution WHERE id = '"+req.body.inst_id +"'";
@@ -823,8 +808,6 @@ router.post("/get_temp_institution_info", (req, res) => {
         qry.on('end',function(){
             res.json({"data": result})
         })
-
-
 });
 
 router.post("/get_temp_admin_info", (req, res) => {
@@ -896,8 +879,6 @@ router.post("/get_institution_domains", (req, res) => {
         qry.on('end',function(){
             res.json({"data": result})
         })
-
-
 });
 
 
@@ -1043,9 +1024,6 @@ router.post("/accept_institution", (req, res) => {
 
 });
 
-
-
-
 router.post("/reject_institution", (req, res) => {
     var db = getDBInstance(pass.dbcon);
     var sql = "delete from temporary_institution WHERE id = '"+req.body.institutionid +"'";
@@ -1140,6 +1118,4 @@ router.post("/get_all_users", (req, res) => {
         qry.on('end',function(){
             res.json({"data": result})
         })
-
-
 });
