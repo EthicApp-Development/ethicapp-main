@@ -31,12 +31,15 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", "$uibModal",
         self.showName();
     };
 
-    self.showName = () => {
+    self.showName  = function() {
         $http.post("get-my-name").success((data) => {
+            self.info = data
             self.username = data.name;
             self.mylang = data.lang;
         });
     };
+
+
 
     self.updateSessions = () => {
         $http({url: "get-session-list", method: "post"}).success((data) => {

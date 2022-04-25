@@ -76,7 +76,12 @@ adpp.controller('RouteCtrl', function($scope) {
       "activities":"/templ/admin/activities.html",
       "launchActivity":"/templ/admin/launchActivity.html",
       "viewDesign":"/templ/admin/viewDesign.html",
-      "activity":"templ/admin/activity.html"
+      "activity":"templ/admin/activity.html",
+      "profile":"templ/admin/profile.html",
+      "user_admin":"/templ/admin/user_admin.html",
+      "institution_admin":"/templ/admin/institution_admin.html",
+      "institution_data":"/templ/admin/institution_data.html",
+      "accepted_institutions":"/templ/admin/accepted_institutions.html"
     }
    });
 
@@ -86,7 +91,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     var self = $scope;
 
     self.temp = "";
-
+    const lang = navigator.language
     $locale.NUMBER_FORMATS.GROUP_SEP = '';
     self.shared = {};
     self.sessions = [];
@@ -101,13 +106,21 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.newUsers = [];
     self.users = {};
     self.selectedId = -1;
+    self.role = "A";
     self.sesStatusses = ["notPublicada", "reading", "personal", "anon", "teamWork", "finished"];
     self.optConfidence = [0, 25, 50, 75, 100];
     self.iterationNames = [];
     self.showSeslist = true;
     self.superBar = false;
     self.institution = false;
-    self.lang = "english";
+    self.inst_id = 0;
+    if(lang[0] == 'e' && lang[1] == 's'){
+        self.lang = "spanish";
+    }
+    else{
+        self.lang = "english";
+    }
+    
     self.secIcons = { configuration: "cog", editor: "edit", dashboard: "bar-chart", users: "male",
         rubrica: "check-square", groups: "users", options: "sliders" };
     self.typeNames = { L: "readComp", S: "multSel", M: "semUnits", E: "ethics", R: "rolePlaying", T: "ethics", J: "jigsaw" };
@@ -115,10 +128,13 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.misc = {};
 
     self.init = function () {
+        //self.updatelangdata();
         self.getMe();
+        
         self.shared.updateSesData();
         self.shared.getActivities();
         self.updateLang(self.lang);
+        
         $socket.on("stateChange", (data) => {
             console.log("SOCKET.IO", data);
             if (data.ses == self.selectedSes.id) {
@@ -127,15 +143,33 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         });
     };
 
+    self.updatelangdata = function() {
+        var postdata2 = self.uid
+        $http({ url: "updatelangdata", method: "post", data: {lang} }).success(function (data) {
+            console.log(data)
+
+        });
+    };
+
+    self.set_id = function(id) {
+        self.inst_id = id
+    };
+    self.reset_inst_id = function() {
+        self.inst_id = 0;
+        self.selectView("institution_admin");
+    }
+
     self.getMe = function(){
         $http.get("is-super").success(data => {
             if(data.status == "ok"){
                 self.superBar = true;
+                self.super = true;
             }
         });
         $http.get("is-institution").success(data => {
             self.institution = data.status;
         });
+
     };
 
     self.selectSession = function (ses, id) {
@@ -3822,15 +3856,20 @@ adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
     self.nominst = "";
     self.users = [];
     self.textarea = "";
+    self.institutionid = "";
     self.init = function () {
         self.getuserinfo();
+<<<<<<< HEAD
         self.getdomains(); 
+=======
+        self.getdomains();
+>>>>>>> overhaul-2122
     };
+
 
     self.user_amount = function () {
         if(self.textarea.split("\n").length == 1){
             if(self.textarea.length == 0){
-                console.log(self.textarea.length)
                 return 0
             }
             else{
@@ -3851,6 +3890,7 @@ adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
             self.lang = data.data[0].lang;
             self.mail = data.data[0].mail;
             self.role = data.data[0].role
+            self.username = data.data[0].name
         });
     }
 
@@ -3858,21 +3898,27 @@ adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
         var postdata = 404;
         $http({ url: "getdomains", method: "post",data:postdata }).success(function (data) {
             self.domains = data.data[0].mailDomains;
+            self.institutionid = data.data[0].id
             self.nominst = data.data[0].institutionName;
-            var postdata2 = self.domains
-            $http({ url: "get_same_users", method: "post", data: {postdata2} }).success(function (data) {
-                var res = []
-                data.data.forEach(element =>{
-                    element.forEach(element2 =>{
-                        res.push(element2)
+            $http({ url: "get_mail_domains", method: "post",data:self.institutionid }).success(function (data) {
+                var postdata2 = data.data
+                $http({ url: "get_same_users", method: "post", data: {postdata2} }).success(function (data) {
+                    var res = []
+                    data.data.forEach(element =>{
+                        
+                            res.push(element)
+    
+                        })
+                    
+                    self.users = [];
+                    self.users = res;
+                    
+    
+                });
 
-                    })
-                })
-                self.users = [];
-                self.users = res;
-                
+            })
+            
 
-            });
         });
     }
 
@@ -3880,31 +3926,42 @@ adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
     self.refreshUsers = function () {
         var postdata2 = self.domains
 
-        $http({ url: "get_same_users", method: "post", data: {postdata2} }).success(function (data) {
-            self.users = [];
-            var res = []
-            data.data.forEach(element =>{
-                element.forEach(element2 =>{
-                    res.push(element2)
+        $http({ url: "get_mail_domains", method: "post",data:self.institutionid }).success(function (data) {
+            var postdata2 = data.data
+            $http({ url: "get_same_users", method: "post", data: {postdata2} }).success(function (data) {
+                var res = []
+                data.data.forEach(element =>{
+                    
+                        res.push(element)
 
-                })
-            })
-            self.users = [];
-            self.users = res;            
+                    })
+                
+                self.users = [];
+                self.users = res;
+                
 
-        });
+            });
+
+        })
         
     };
 
 
-
+    
     self.init();
 }])
 
 
 adpp.controller("no_account",["$scope",'$http',function($scope,$http,Admin){
     var self = $scope;
-    self.lang = "spanish";
+    const lang = navigator.language
+    if(lang[0] == 'e' && lang[1] == 's'){
+        self.lang = "spanish";
+    }
+    else{
+        self.lang = "english";
+    }
+
 
 
     window.DIC = "data/" + self.lang + ".json";
@@ -3912,7 +3969,38 @@ adpp.controller("no_account",["$scope",'$http',function($scope,$http,Admin){
 
     self.init = function () {
         self.updateLang(self.lang);
+        self.getcountries();
     };
+
+    self.activate_user = function(){
+        var url_string = window.location;
+        var url = new URL(url_string);
+        var rc = url.searchParams.get("rc");
+        var token = url.searchParams.get("tok");
+        console.log(token)
+        $http({ url: "activate_user", method: "post",data:{token} }).success(function (data) {
+        });
+    }
+
+    self.getcountries = function(){
+        $http.get("https://restcountries.com/v3.1/all").success(function (data) {
+            var list = []
+            
+            for(var i = 0;i< data.length;i++){ 
+                list.push(data[i].name.common)
+            }
+            list.sort()
+            if(lang[0] == 'e' && lang[1] == 's'){
+                list.unshift("Elige un Pais")
+            }
+            else{
+                list.unshift("Choose Country")
+            }
+            
+            self.countries = list;
+            
+        });
+    }
 
 
 
@@ -3931,4 +4019,201 @@ adpp.controller("no_account",["$scope",'$http',function($scope,$http,Admin){
 
     self.init();
 
+}])
+
+
+adpp.controller("super_admin",["$scope",'$http',"$uibModal",function($scope,$http,$uibModal,Admin){
+    var self = $scope;
+    self.accepted = [];
+    self.pending = [];
+    self.institutions = [];
+    self.accepted_institutions = [];
+    self.users = [];
+
+    self.temp_intitution_name = "";
+    self.temp_intitution_country = "";
+    self.temp_admin_name = "";
+    self.temp_admin_mail = "";
+    self.temp_admin_position = "";
+    self.temp_inst_domains = "";
+    self.temp_admin_id = "";
+    self.temp_instutionid ="";
+
+    self.intitution_name = "";
+    self.intitution_country = "";
+    self.admin_name = "";
+    self.admin_mail = "";
+    self.admin_position = "";
+    self.inst_domains = "";
+    self.admin_id = "";
+    self.instutionid ="";
+
+    self.init = function () {
+        self.get_temporary_institutions();
+        self.get_institutions();
+        self.get_institution_info();
+        self.getdomains()
+    };
+
+    self.get_temporary_institutions = function() {
+        var postdata = 500
+        $http({ url: "get_temporary_institutions", method: "post",data:postdata }).success(function (data) {
+            var inst = [];
+            if(data != null && data != undefined){
+                for(var i = 0;i < data.data.rows.length ;i++){
+                    inst.push(data.data.rows[i])
+                }
+                self.institutions = inst;
+            }
+
+        });
+    }
+
+    self.get_institutions = function() {
+        var postdata = 500
+        $http({ url: "get_institutions", method: "post",data:postdata }).success(function (data) {
+            var inst = [];
+            if(data != null && data != undefined){
+                for(var i = 0;i < data.data.rows.length ;i++){
+                    inst.push(data.data.rows[i])
+                }
+                self.accepted_institutions = inst;
+            }
+
+        });
+    }
+
+
+
+
+
+    self.get_institution_info = function () {
+        var inst_id = self.inst_id
+        
+        if(self.inst_id != 0){
+            $http({ url: "get_institution_info", method: "post", data: {inst_id} }).success(function (data) {
+
+                if(data != null && data != undefined && data.data.rows.length > 0){
+
+                    self.intitution_name = data.data.rows[0].institution_name;
+                    self.intitution_country = data.data.rows[0].country;
+                    self.admin_id = data.data.rows[0].userid;
+                    self.admin_position = data.data.rows[0].position;
+
+
+                    self.instutionid = data.data.rows[0].id
+                    var userid = self.admin_id;
+                    $http({ url: "get_admin_info", method: "post", data: {userid} }).success(function (data) {
+                        if(data != null && data != undefined && data.data.rows.length > 0){
+                            self.admin_name = data.data.rows[0].name;
+                            self.admin_mail = data.data.rows[0].mail;
+        
+                        }
+
+
+                    });
+                    var institutuinid = self.instutionid;
+                    $http({ url: "get_institution_domains", method: "post", data: {institutuinid} }).success(function (data) {
+                        if(data != null && data != undefined && data.data.rows.length > 0){
+                            
+                            var lista = ""
+
+                            for(var i = 0;i < data.data.rows.length;i++){
+                                lista += data.data.rows[i].domain_name+"\n"
+                            }
+                            self.inst_domains = lista;        
+                        }
+
+
+                    });
+                }
+                if(self.inst_id != 0){
+                    $http({ url: "get_temp_institution_info", method: "post", data: {inst_id} }).success(function (data) {
+        
+                        if(data != null && data != undefined && data.data.rows.length > 0){
+                            self.temp_intitution_name = data.data.rows[0].institution_name;
+                            self.temp_intitution_country = data.data.rows[0].country;
+                            self.temp_admin_id = data.data.rows[0].userid;
+                            self.temp_admin_position = data.data.rows[0].position;
+                            var domains = data.data.rows[0].mail_domains.split(",");
+                            var lista = "";
+                            for (var i = 0; i < domains.length;i++){
+                                lista+=domains[i]+"\n"
+            
+                            }
+                            self.temp_inst_domains = lista;
+                            self.temp_instutionid = data.data.rows[0].id
+                            var userid = self.temp_admin_id;
+                            $http({ url: "get_temp_admin_info", method: "post", data: {userid} }).success(function (data) {
+                                if(data != null){
+                                    self.temp_admin_name = data.data.rows[0].name;
+                                    self.temp_admin_mail = data.data.rows[0].mail;
+                
+                                }
+                            });
+                        }
+                    });
+                } 
+            });
+        }   
+ 
+    };
+
+
+    self.acceptmodal = function () {
+        $uibModal.open({
+            template: '<div style="height: fit-content;"><div class="modal-header"><h4>Alerta</h4></div><div style="height: 75px; class="modal-body">' +
+                '<p>\tEsta seguro que desea aceptar a esta institucion?</p>' +
+                '<form action="accept_institution" method="POST">'+
+                '<input  name="userid" type="hidden" value="'+self.temp_admin_id+'" class="form-control profile-input"> <input  name="institutionid" type="hidden" value="'+self.temp_instutionid+'" class="form-control profile-input">'+
+                '<button class="btn-primary btn modal-buttons"> Aceptar</button> </form></div> </div>'
+        });
+
+    }
+
+    self.rejectmodal= function () {
+        $uibModal.open({
+            template: '<div style="height: fit-content;"><div class="modal-header"><h4>Alerta</h4></div><div style="height: 75px; class="modal-body">' +
+                '<p>\tEsta seguro que desea rechazar a esta institucion?</p>'+
+                '<form action="reject_institution" method="POST"> '+
+                '<input  name="userid" type="hidden" value="'+self.temp_admin_id+'" class="form-control profile-input"> <input  name="institutionid" type="hidden" value="'+self.temp_instutionid+'" class="form-control profile-input">'+
+                '<button class="btn-primary btn modal-buttons" style="background-color: red;"> Rechazar</button> </form> </div> </div>'
+        });
+    }
+
+    self.getdomains = function() {
+        var postdata = 404;
+        $http({ url: "get_all_users", method: "post",data:postdata }).success(function (data) {
+            var res = []
+            data.data.rows.forEach(element =>{       
+                res.push(element)
+            })
+            self.users = [];
+            self.users = res;
+            
+
+        });
+    }
+    self.refreshUsers = function () {
+        var postdata2 = self.domains
+
+        $http({ url: "get_all_users", method: "post",data:postdata }).success(function (data) {
+            var res = []
+            data.data.forEach(element =>{       
+                res.push(element)
+            })
+            self.users = [];
+            self.users = res;
+            
+
+        });
+        
+    };
+
+
+
+
+
+
+    self.init();
 }])

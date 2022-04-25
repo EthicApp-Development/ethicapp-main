@@ -35,106 +35,35 @@
     
 </head>
 <body ng-controller="instituciones">
-    <div class="rtab-nb">
-        <button class="btn btn-default btn-sm " ng-click="changeLang()">
-            {{'langOther' | lang}}
-        </button>
-        <a href="logout" class="text-white">
-            <i class="fa fa-sign-out fa-2x" style="background-color: #ddd;"></i>
-        </a>
-    </div>
 
+    <div style="max-width: 640px;display: block;padding: 4px 24px 20px 24px;border-color: gray;border-width: 10px;border-width: 5px;border-style: solid;margin: 20px auto;"> <div style="text-align: center;margin-bottom: 2em;margin-top: 2em;"><img src="/img/ethicapp-logo.svg" alt="Ethicapp"> </div>Hi<br><br>Have you lost your password? You can restore it in the following link:<br><br> <div style="text-align: center;"> <a href="http://localhost:8501/passreset"> <button style="background-color: #2649EC;border-color: #102AA0;color: white;"> Restore Password</button> </a></div> <br><br>greetings<br><br>Creators of EthicApp</div>
 
-    
-<h3 style="margin-left: 12%;">{{'Institucional_Users' | lang}}</h3> <br>
+    <div style="max-width: 640px;display: block;padding: 4px 24px 20px 24px;border-color: gray;border-width: 10px;border-width: 5px;border-style: solid;margin: 20px auto;"> <div style="text-align: center;margin-bottom: 2em;margin-top: 2em;"><img src="/img/ethicapp-logo.svg" alt="Ethicapp"> </div>En un plazo de 24 a 48 horas hábiles quedará habilitada tu cuenta.<br>Te enviaremos un correo con los pasos a seguir.</div>
 
+    <div style="max-width: 640px;display: block;padding: 4px 24px 20px 24px;border-color: gray;border-width: 10px;border-width: 5px;border-style: solid;margin: 20px auto;"><div style="text-align: center;margin-bottom: 2em;margin-top: 2em;"><img src="/img/ethicapp-logo.svg" alt="Ethicapp"> </div>Hola '+name  +'<br>Bienvenido a EthicApp. Has sido invitado a incorporarte a EthicApp por [nombre usuario institucional]'+ 
+        'de [institución]. Para aceptar la invitación, pincha el siguiente botón:<br><br><div style="text-align: center;"><a href="http://localhost:8501/login?rc=5&&tok='+token+'">'+ 
+        '<button style="background-color: #2649EC;border-color: #102AA0;color: white;"> Activar tu Cuenta</button> </a></div> <br><br>'+
+        'Te recordamos que en EthicApp usamos los datos generados por los usuarios con fines de investigación. <br><br>'+
+        'Garantizamos la absoluta confidencialidad de los datos, y que los datos no los entregamos a terceras partes. En nuestras investigaciones reportamos los datos siempre a nivel agregado y nunca a nivel individual, ni revelando la identidad de los participantes. Las actividades basadas en EthicApp no presentan ningún riesgo físico o psicológico a docentes o a estudiantes. <br><br>'+
+        'EthicApp se reserva el derecho de suspender o terminar cuentas de usuario en caso que se detecte uso indebido del servicio. <br><br>'+
+        '<strong>Activando tu cuenta a través del botón de arriba manifiestas tu aceptación de las condiciones antes descritas.</strong> <br><br>'+
+        'Te deseamos el mayor éxito en tus actividades con EthicApp.<br><br>Creadores de EthicApp <br><br>'+
+        'ESTE SOFTWARE SE SUMINISTRA POR LA UNIVERSIDAD DE CHILE, CHILE Y LA UNIVERSIDAD DE LOS ANDES, CHILE. EN NINGÚN CASO LAS INSTITUCIONES MENCIONADAS SERÁN RESPONSABLES POR NINGÚN DAÑO DIRECTO, INDIRECTO, INCIDENTAL, ESPECIAL, EJEMPLAR O CONSECUENTE (INCLUYENDO,PERO NO LIMITADO A, LA ADQUISICIÓN DE BIENES O SERVICIOS; LA PÉRDIDA DE USO, DE DATOS O DE BENEFICIOS; O INTERRUPCIÓN DE LA ACTIVIDAD EMPRESARIAL) O POR CUALQUIER TEORÍA DE RESPONSABILIDAD, YA SEA POR CONTRATO, RESPONSABILIDAD ESTRICTA O AGRAVIO (INCLUYENDO NEGLIGENCIA O CUALQUIER OTRA CAUSA) QUE SURJA DE CUALQUIER MANERA DEL USO DE ESTE SOFTWARE, INCLUSO SI SE HA ADVERTIDO DE LA POSIBILIDAD DE TALES DAÑOS.'+
+        '</div>
 
-<!-- 
+        <div style="max-width: 640px;display: block;padding: 4px 24px 20px 24px;border-color: gray;border-width: 10px;border-width: 5px;border-style: solid;margin: 20px auto;"><div style="text-align: center;margin-bottom: 2em;margin-top: 2em;"><img src="/img/ethicapp-logo.svg" alt="Ethicapp"> </div>Hola '+ fullname+'!<br><br> Bienvenido a EthicApp. Tu cuenta institucional está aprobada. Puedes ingresar a EthicApp y comenzar invitando a profesores a utilizarla, e incluso creando tu primera actividad. <br><br>'+
+            +'<div style="text-align: center;"><a href="http://localhost:8501/login"><button style="background-color: #2649EC;border-color: #102AA0;color: white;">¡Comenzar!</button></a></div><br>'+
+            'Te recordamos que en EthicApp usamos los datos generados por los usuarios con fines de investigación. Garantizamos la absoluta confidencialidad de los datos, y que los datos no los entregamos a terceras partes. En nuestras investigaciones reportamos los datos siempre a nivel agregado y nunca a nivel individual, ni revelando la identidad de los participantes.<br><br>'+
+            'Las actividades basadas en EthicApp no presentan ningún riesgo a docentes ni estudiantes. EthicApp se entrega como servicio a los usuarios “tal cual”. Los desarrolladores de EthicApp quedan exentos de cualquier responsabilidad… [tenemos que ver si lo expresamos en forma similar a las licencias permisivas tipo BSD, MIT o Apache].<br><br>'+
+            'EthicApp se reserva el derecho de suspender o terminar cuentas de usuario en caso que se detecte uso indebido del servicio.<br><br>'+
+            'Deseamos a ti y a tus colegas el mayor éxito utilizando EthicApp en la enseñanza.<br><br>'+
+            'Creadores de EthicApp'+
+            '</div>
 
-<a class="inst"> <Strong>{{'Back' | lang}}</Strong></a> <br><br>
-<h2 class="inst" style="font: bold;"><strong>{{'Import_Users' | lang}}</strong> </h2>
-<h5 class="inst">{{'Enter_the_users' | lang}}</h5>
-<form method="post" action="create-multicounts">
-<textarea class="inst mid-container-inst S input-inst" style="resize: none; height: 10em; width: 50em;" name="data"> </textarea> <br>
-<h10 class="inst">{{'import_phrase1' | lang}}</h10><br>
-<h10 class="inst"> {{'import_phrase2' | lang}}</h10> <br>
-
-    <h3 class="inst" style="font: bold;" id="num-usuaios"><strong>{{'Import_number' | lang}}</strong> </h3>
-    <button class="btn btn-primary inst" style="margin-left: 50%;" >{{'Import_Users' | lang}}</button> </form>-->
-
-
-<button class="btn btn-primary inst" >{{'Import_Users' | lang}}</button><br><br>
-<div >
-    <div class="inst">
-        <div class="tab-cs2">
-            <button class="tab-cs2" value="1" id="btn-alumnos" onclick="hideB(this)"  >
-                {{ 'students' | lang}}
-            </button>
-            <button class="tab-cs2" value="0" id="btn-profesores" onclick="hideA(this)" style="background-color: #ddd;">
-                {{ 'teachers' | lang}}
-            </button>
-            
-            <input placeholder="{{ 'filter' | lang}}" class="input-inst" ng-model="UserSearch"></input>
-        </div>
-    </div>
-
-    <div class="scrollable-container blue" style="width: 100%;" id="box_alumnos">
-        <div class="mid-container-inst  small-scrollable-container inst" id="container" >
-        <div ng-repeat="user in users | filter:UserSearch" ng-if="user.role == 'A'" class="mid-container-inst">
-            <strong>{{user.name}}</strong><br>
-            <a ng-bind="user.mail"></a>
-            <form action="make_prof" method="POST"><input style="display: none;" value="{{user.mail}}" type="text"  name="mail"><button class=" btn-primary rtab-nb2">{{ 'make_t' | lang}}</button></form>
-            <button class=" btn-primary rtab-nb2" >{{ 'res_pass' | lang}}</button>
-            {{user.role}}
-        </div>
-        </div> 
-    </div> 
-    <div class="scrollable-container blue" style="width: 100%; display: none;" id="box_profesor">
-        <div class="mid-container-inst  small-scrollable-container inst" id="container" >
-        <div ng-repeat="user in users | filter:UserSearch" ng-if="user.role == 'P'" class="mid-container-inst">
-            <strong>{{user.name}}</strong><br>
-            <a ng-bind="user.mail"></a>
-            <form action="make_alum" method="POST"><input style="display: none;" value="{{user.mail}}" type="text"  name="mail"> <button class=" btn-primary rtab-nb2">{{ 'make_s' | lang}}</button></form>
-            <button class=" btn-primary rtab-nb2" >{{ 'res_pass' | lang}}</button>
-            {{user.role}}
-        </div>
-        </div> 
-    </div> 
- 
-
-</div>
+            <div style="max-width: 640px;display: block;padding: 4px 24px 20px 24px;border-color: gray;border-width: 10px;border-width: 5px;border-style: solid;margin: 20px auto;"><div style="text-align: center;margin-bottom: 2em;margin-top: 2em;"><img src="/img/ethicapp-logo.svg" alt="Ethicapp"> </div>Hola '+ fullname+'!<br><br> Lamentamos que tu solicitud de creación de cuenta institucional fue rechazada. Esto pudo deberse a que tu institución ya se encuentra registrada en EthicApp, o a información faltante en el proceso de registro.<br><br>'+
+                'Puedes contactarnos a estudios-icc (at) miuandes.cl para buscar solución al problema.<br><br>'+
+                'Un cordial saludo,<br><br>'+
+                'Creadores de EthicApp'+
+                '</div>
 </body>
 </html>
-<script>
-function hideA(x) {
-   if (x.value == "0") {
-     document.getElementById("btn-profesores").value = "1";
-     document.getElementById("btn-alumnos").value = "0";
-     document.getElementById("btn-profesores").style.backgroundColor = "#fff"
-     document.getElementById("btn-alumnos").style.backgroundColor = "#ddd"
-    document.getElementById("box_profesor").style.display = "block"
-    document.getElementById("box_alumnos").style.display = "none"
-
-
-   }
- }
-
- function hideB(x) {
-   if (x.value == "0") {
-     document.getElementById("btn-alumnos").value = "1";
-     document.getElementById("btn-profesores").value = "0";
-     document.getElementById("btn-alumnos").style.backgroundColor = "#fff"
-     document.getElementById("btn-profesores").style.backgroundColor = "#ddd"
-     document.getElementById("box_profesor").style.display = "none"
-    document.getElementById("box_alumnos").style.display = "block"
-
-
-   }
- }
-
-window.onload = function() {
-    document.getElementById("btn-alumnos").value = "1";
-    document.getElementById("btn-profesores").value = "0";
-
-};
-</script>

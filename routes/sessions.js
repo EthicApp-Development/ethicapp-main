@@ -144,7 +144,7 @@ router.get("/admin", (req, res) => {
 
 //TEST ROUTE DELETE LATER
 router.get("/home", function(req,res){
-    if (req.session.role == "P" || req.session.role == "I")
+    if (req.session.role == "P" || req.session.role == "I" || req.session.role == "S")
         res.render("home");
     else
         res.redirect(".");

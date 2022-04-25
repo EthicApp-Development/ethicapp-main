@@ -50,6 +50,10 @@ hr{
     text-align: center;
 }
 
+.middle-box-mail{
+    max-width: 640px;display: block;padding: 4px 24px 20px 24px;border-color: gray;border-width: 10px;border-width: 5px;border-style: solid;margin: 20px auto;
+}
+
 .large-box{
     max-width: 640px;
     display: block;
@@ -136,7 +140,7 @@ a:hover{
 
 .top-bar-mini{
     /*height: 24px;*/
-    background: lightgray;
+    background: #ddd;
     color: white;
 }
 
@@ -832,6 +836,13 @@ ng-quill-editor.large .ql-editor{
     margin-top: 2em;
 }
 
+.logo-small {
+    height: 1.5em;
+    margin-left: .5em;
+    margin-top: .70em;
+    margin-bottom: .25em;
+}
+
 .logo img{
     height: 50px;
 }
@@ -1389,4 +1400,9 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 .inst{
     margin-left: 12%;
 
+}
+
+.modal-buttons{
+    right: 10px;
+    position:absolute;
 }
