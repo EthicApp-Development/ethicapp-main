@@ -3859,11 +3859,7 @@ adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
     self.institutionid = "";
     self.init = function () {
         self.getuserinfo();
-<<<<<<< HEAD
         self.getdomains(); 
-=======
-        self.getdomains();
->>>>>>> overhaul-2122
     };
 
 
