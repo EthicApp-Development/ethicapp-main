@@ -911,6 +911,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.dataChatCount = {};
     //new dasboard parameters
     self.iterationQs = null;
+    self.pending = false;
     self.bestComments = [];
     self.worstComments = [];
     self.cluster = [];
@@ -1097,7 +1098,11 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 console.log(data.data)
                 self.updateCluster() 
                 self.loading = false;
-            }   
+            }  
+            if (data.data.status == "PENDING"){
+                self.pending = true;
+            }
+                
         })
     };
 
@@ -1105,7 +1110,11 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         let labels = self.dataCA.cluster
         self.bestComments = self.dataCA.best_comments;
         self.worstComments = self.dataCA.worst_comments;
+       
         if (self.iterationQs){
+            let difs = self.dataCA.topics.map(t => t.differential);
+            self.dfsStage = self.dfsStage.filter(q => difs.includes(q.id));
+            console.log(self.dfsStage);
             let qId = self.iterationQs.id;
             labels = labels.filter(p => p.differential === qId);
             self.bestComments = self.dataCA.best_comments.filter(c => c.differential === qId);
@@ -1377,6 +1386,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 self.dfsStage = data;
                 if (data.length > 0) {
                     self.iterationQs = data[data.length-1];
+                    console.log(data);
                     if (self.dataCA.length > 1) {
                         self.updateCluster();
                     }
