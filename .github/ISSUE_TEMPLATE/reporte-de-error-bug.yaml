@@ -1,8 +1,9 @@
-name: Reporte de error/bug
-about: "Un error es un problema demostrable causado por el código en el repositorio.
+name: "🪲 Reporte de error/bug"
+description: "Un error es un problema demostrable causado por el código en el repositorio.
   Buenos reportes de error son muy importantes para mejorar nuestro proyecto, ¡gracias! "
-title: "[Componente] Título breve del reporte de error"
-labels: bug
+# title: "[Componente] Título breve del reporte de error"
+labels:
+  - bug
 assignees: ""
 body:
   - type: textarea
