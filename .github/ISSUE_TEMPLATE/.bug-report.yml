@@ -1,3 +1,5 @@
+# "Issue form templates are not supported on private repositories."
+
 name: "🪲 Reporte de error/bug"
 description: "Un error es un problema demostrable causado por el código en el repositorio.
   Buenos reportes de error son muy importantes para mejorar nuestro proyecto, ¡gracias! "
