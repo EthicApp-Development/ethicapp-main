@@ -1,0 +1,19 @@
+{
+    // Global IDE settings
+    "editor.rulers": [
+        100
+    ],
+
+    // JavaScript
+    "[javascript]": {
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4,
+        "javascript.preferences.importModuleSpecifier": "non-relative",
+        "javascript.preferences.quoteStyle": "double"
+    },
+
+    // GitLens extension
+    "gitlens.currentLine.enabled": false,
+    "gitlens.hovers.currentLine.over": "line",
+    "gitlens.codeLens.enabled": false
+}
