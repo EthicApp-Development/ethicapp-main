@@ -1,19 +1,22 @@
 {
-    // Global IDE settings
-    "editor.rulers": [
-        100
-    ],
-
     // JavaScript
     "[javascript]": {
+        "editor.rulers": [
+            100
+        ],
         "editor.insertSpaces": true,
         "editor.tabSize": 4,
         "javascript.preferences.importModuleSpecifier": "non-relative",
         "javascript.preferences.quoteStyle": "double"
+        //TODO: explicit linter, other linter-related settings
     },
 
+    // HTML
+    //TODO
+
     // GitLens extension
-    "gitlens.currentLine.enabled": false,
-    "gitlens.hovers.currentLine.over": "line",
-    "gitlens.codeLens.enabled": false
+    /* It is very recommended to uncomment the following lines if you have GitLens freshly installed */
+    // "gitlens.currentLine.enabled": false,
+    // "gitlens.hovers.currentLine.over": "line",
+    // "gitlens.codeLens.enabled": false
 }
