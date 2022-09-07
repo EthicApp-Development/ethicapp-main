@@ -433,10 +433,6 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
             self.shared.getRubrica();
             self.shared.getExampleReports();
             self.shared.getReports();
-        } else if (self.selectedSes.type == "S") {
-            self.iterationNames = [{ name: "individual", val: 1 }, { name: "anon", val: 2 }, { name: "teamWork", val: 3 }];
-            self.tabOptions = ["editor", "users", "groups", "dashboard"];
-            self.sesStatusses = ["configuration", "individual", "anon", "teamWork", "finished"];
         } else if (self.selectedSes.type == "M") {
             self.iterationNames = [{ name: "individual", val: 1 }, { name: "teamWork", val: 3 }, { name: "report", val: 4 }, { name: "pairEval", val: 6 }];
             self.tabOptions = ["editor", "users", "groups", "rubrica", "dashboard"];
@@ -636,7 +632,10 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
             Notification.error("La sesión está finalizada");
             return;
         }
-        if (self.selectedSes.type == "L" && self.selectedSes.status >= 3 && !self.selectedSes.grouped || self.selectedSes.type == "M" && self.selectedSes.status >= 3 && !self.selectedSes.grouped || self.selectedSes.type == "E" && self.selectedSes.status >= 2 && !self.selectedSes.grouped || self.selectedSes.type == "S" && self.selectedSes.status >= 2 && !self.selectedSes.grouped) {
+        if (self.selectedSes.type == "L" && self.selectedSes.status >= 3 && !self.selectedSes.grouped || 
+            self.selectedSes.type == "M" && self.selectedSes.status >= 3 && !self.selectedSes.grouped || 
+            self.selectedSes.type == "E" && self.selectedSes.status >= 2 && !self.selectedSes.grouped
+            ) {
             self.shared.gotoGrupos();
             Notification.error("Los grupos no han sido generados");
             return;
@@ -664,9 +663,6 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
             } else {
                 if (self.selectedSes.status == 1) {
                     self.updateSession();
-                    if (self.selectedSes.type == "S") {
-                        self.shared.saveConfs();
-                    }
                 }
                 var _postdata = { sesid: self.selectedSes.id };
                 $http({ url: "change-state-session", method: "post", data: _postdata }).success(function (data) {
@@ -1063,8 +1059,6 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.shared.resetGraphs = function () { //THIS HAS TO BE CALLED ON ADMIN
         if (self.selectedSes != null && self.selectedSes.type == "L") {
             self.iterationIndicator = Math.max(Math.min(6, self.selectedSes.status - 2), 0);
-        } else if (self.selectedSes.type == "S") {
-            self.iterationIndicator = Math.max(Math.min(3, self.selectedSes.status - 1), 1);
         } else if (self.selectedSes.type == "M") {
             self.iterationIndicator = Math.max(Math.min(6, self.selectedSes.status - 2), 0);
         }
@@ -1134,57 +1128,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         console.log(self.iterationIndicator);
         self.alumTime = {};
         var postdata = { sesid: self.selectedSes.id, iteration: self.iterationIndicator };
-        if (self.selectedSes.type == "S") {
-            $http({ url: "get-alum-full-state-sel", method: "post", data: postdata }).success(function (data) {
-                self.alumState = {};
-                for (var uid in self.users) {
-                    if (self.users[uid].role == "A") self.alumState[uid] = {};
-                }
-                data.forEach(function (d) {
-                    if (self.alumState[d.uid] == null) {
-                        self.alumState[d.uid] = {};
-                        self.alumState[d.uid][d.qid] = d.correct;
-                    } else {
-                        self.alumState[d.uid][d.qid] = d.correct;
-                    }
-                });
-                if (self.iterationIndicator == 3) {
-                    $http({
-                        url: "get-original-leaders",
-                        method: "post",
-                        data: { sesid: self.selectedSes.id }
-                    }).success(function (data) {
-                        var temp = angular.copy(self.alumState);
-                        self.alumState = {};
-                        self.leaderTeamStr = {};
-                        self.leaderTeamId = {};
-                        data.forEach(function (r) {
-                            self.alumState[r.leader] = temp[r.leader];
-                            self.leaderTeamStr[r.leader] = r.team.map(function (u) {
-                                return self.users[u] ? self.users[u].name : "- ";
-                            }).join(", ");
-                            self.leaderTeamId[r.leader] = r.id;
-                        });
-                    });
-                }
-                self.shared.alumState = self.alumState;
-            });
-            $http({ url: "get-alum-state-sel", method: "post", data: postdata }).success(function (data) {
-                var dataNorm = data.map(function (d) {
-                    d.score /= self.questions.length;
-                    return d;
-                });
-                self.buildBarData(dataNorm);
-            });
-            $http({ url: "get-alum-confidence", method: "post", data: postdata }).success(function (data) {
-                self.confidence = {};
-                data.forEach(function (r) {
-                    if (!self.confidence[r.qid]) self.confidence[r.qid] = {};
-                    self.confidence[r.qid][r.conf] = r.freq;
-                });
-            });
-        }
-        else if (self.selectedSes.type == "L") {
+        if (self.selectedSes.type == "L") {
             $http({ url: "get-alum-state-lect", method: "post", data: postdata }).success(function (data) {
                 self.alumState = {};
                 for (var uid in self.users) {
@@ -2370,7 +2314,7 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
             self.groups = generateTeams(arr, function (s) {
                 return s.rnd;
             }, self.groupNum, false);
-        } else if (self.selectedSes.type == "S" || self.selectedSes.type == "M") {
+        } else if (self.selectedSes.type == "M") {
             console.log(self.shared.alumState);
             var _arr = [];
             for (var uid in self.shared.alumState) {

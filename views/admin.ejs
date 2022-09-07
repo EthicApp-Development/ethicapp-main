@@ -145,7 +145,7 @@
                 <a class="list-group-item" ng-repeat="ses in currentSessions() | filter:sesSearch" ng-click="selectSession(ses,ses.id)"
                    ng-class="{'active':ses.id==selectedId}">
                     <button class="btn btn-default pull-right" ng-click="openDuplicateSesSpec(ses,$event)"
-                            ng-disabled="ses.type != 'S' && ses.type != 'M' && ses.type != 'E'" ng-if="!ses.archived">
+                            ng-disabled="ses.type != 'M' && ses.type != 'E'" ng-if="!ses.archived">
                         <i class="fa fa-copy"></i>
                     </button>
                     <button class="btn btn-default pull-right margin-right-8" ng-click="archiveSes(ses,$event)" ng-if="!ses.archived">
@@ -190,45 +190,19 @@
             <input type="text" class="form-control" ng-model="selectedSes.name" ng-disabled="selectedSes.status!=1">
             <br>
             <button class="btn btn-default btn-sm pull-right" ng-class="{'active': splitDescr}" ng-click="toggleSplit()" ng-show="selectedSes.type == 'M'" ng-disabled="selectedSes.status!=1">Dividir Factor Detonante</button>
-            <label ng-if="selectedSes.type != 'S'">{{'detFactor' | lang}}:</label>
-            <label ng-if="selectedSes.type == 'S'">{{'generalInst' | lang}}:</label>
+            <label>{{'detFactor' | lang}}:</label>
             <textarea class="form-control" ng-model="selectedSes.descr" ng-disabled="selectedSes.status!=1" ng-show="!splitDescr"></textarea>
             <div ng-show="splitDescr">
                 <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" ng-model="splDes1" placeholder="Selección de unidades">
                 <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" ng-model="splDes2" placeholder="Reporte">
             </div>
-            <!-- <button class="btn btn-xs btn-default" ng-click="openDuplicateSes()" ng-disabled="selectedSes.type != 'S' && selectedSes.type != 'M'">{{'duplicateSes' | lang}}</button> --
-            <a class="btn btn-xs btn-default" href="export-session-data-sel?id={{selectedSes.id}}" ng-if="selectedSes.type == 'S' && selectedSes.status == 5">{{'exportSesData' | lang}}</a>
+            <!-- <button class="btn btn-xs btn-default" ng-click="openDuplicateSes()" ng-disabled="selectedSes.type != 'M'">{{'duplicateSes' | lang}}</button> --
+            
             <br>
             <button class="btn btn-default pull-right" ng-click="updateSession()" ng-disabled="selectedSes.status!=1">
                 {{'saveChanges' | lang}}
             </button>
             <br>
-            <br>
-            <hr>
-            <hr>
-            <br>
-            <!-- OPTIONS --
-            <div ng-controller="OptionsController" ng-show="selectedSes.type == 'S'">
-                <h4>{{'optionsConfig' | lang}}</h4>
-                <div class="row sliders" ng-class="{'bg-gray': selectedSes.status!=1}">
-                    <div ng-repeat="opt in options">
-                        <div class="col-sm-6 col-sm-offset-2"><span class="slider-label">{{opt.name | lang}}</span></div>
-                        <div class="col-sm-4">
-                            <div class="onoffswitch">
-                                <input type="checkbox" id="sl{{$index}}" class="onoffswitch-checkbox" ng-model="conf[opt.code]" ng-disabled="selectedSes.status!=1">
-                                <label class="onoffswitch-label" for="sl{{$index}}">
-                                    <span class="onoffswitch-inner"></span>
-                                    <span class="onoffswitch-switch"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <br>
-                <br>
-                <button class="btn btn-default pull-right" ng-click="saveConfs()" ng-disabled="selectedSes.status!=1">{{'saveChanges' | lang}}</button>
-            </div>
         </div>-->
 
         <!-- CONFIGURACION -->
@@ -239,47 +213,18 @@
                 <br>
                 <button class="btn btn-default btn-sm pull-right" ng-class="{'active': splitDescr}" ng-click="toggleSplit()" ng-show="selectedSes.type == 'M'" ng-disabled="selectedSes.status!=1">Dividir Factor Detonante</button>
                 <label>{{'actGenDesc' | lang}}:</label>
-                <!--<label ng-if="selectedSes.type == 'S'">{{'generalInst' | lang}}:</label>-->
                 <textarea class="form-control" ng-model="selectedSes.descr" ng-disabled="selectedSes.status!=1" ng-show="!splitDescr"></textarea>
                 <div ng-show="splitDescr">
                     <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" ng-model="splDes1" placeholder="Selección de unidades">
                     <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" ng-model="splDes2" placeholder="Reporte">
                 </div>
-                <!-- <button class="btn btn-xs btn-default" ng-click="openDuplicateSes()" ng-disabled="selectedSes.type != 'S' && selectedSes.type != 'M'">{{'duplicateSes' | lang}}</button> -->
-<!--                <a class="btn btn-xs btn-default" href="export-session-data-sel?id={{selectedSes.id}}" ng-if="selectedSes.type == 'S' && selectedSes.status == 5">{{'exportSesData' | lang}}</a>-->
+                <!-- <button class="btn btn-xs btn-default" ng-click="openDuplicateSes()" ng-disabled="selectedSes.type != 'M'">{{'duplicateSes' | lang}}</button> -->
 <!--                <br>-->
                 <button class="btn btn-default pull-right" ng-click="updateSession()" ng-disabled="selectedSes.status!=1">
                     {{'saveChanges' | lang}}
                 </button>
 <!--                <br>-->
-<!--                <br>-->
-<!--                <hr>-->
-<!--                <hr>-->
-<!--                <br>-->
                 <!-- OPTIONS -->
-                <div ng-controller="OptionsController" ng-show="selectedSes.type == 'S'">
-                    <h4>{{'optionsConfig' | lang}}</h4>
-                    <div class="row sliders" ng-class="{'bg-gray': selectedSes.status!=1}">
-                        <div ng-repeat="opt in options">
-                            <div class="col-sm-6 col-sm-offset-2"><span class="slider-label">{{opt.name | lang}}</span></div>
-                            <div class="col-sm-4">
-                                <div class="onoffswitch">
-                                    <input type="checkbox" id="sl{{$index}}" class="onoffswitch-checkbox" ng-model="selectedSes.conf[opt.code]" ng-disabled="selectedSes.status!=1">
-                                    <label class="onoffswitch-label" for="sl{{$index}}">
-                                        <span class="onoffswitch-inner"></span>
-                                        <span class="onoffswitch-switch"></span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <br>
-                    <br>
-                    <button class="btn btn-default pull-right" ng-click="saveConfs()" ng-disabled="selectedSes.status!=1">{{'saveChanges' | lang}}</button>
-                    <br>
-                    <hr>
-                    <hr>
-                </div>
             </div>
             <!--<div ng-show="selectedTabConfig == -1">-->
             <div ng-if="selectedSes.type == 'M'" ng-controller="SemDocController">
@@ -381,170 +326,6 @@
                     <br>
                 </div>
                 <button class="btn btn-primary pull-right" ng-disabled="selectedSes.status!=1 || misc.dfSending" ng-click="sendDFS()">{{'saveChanges' | lang}}</button>
-            </div>
-            <div ng-if="selectedSes.type == 'S'" ng-controller="QuestionsController">
-                <h4>{{'texts' | lang}}</h4>
-                <div class="list-group-item" ng-repeat="text in questionTexts">
-                    <strong ng-bind="text.title"></strong>
-                    <button class="btn btn-xs btn-default pull-right" ng-disabled="selectedSes.status!=1" ng-click="deleteQuestionText(text.id)">{{'delete' | lang}}</button>
-                    <button class="btn btn-xs btn-default pull-right margin-right-8" ng-disabled="selectedSes.status!=1" ng-click="startEditText(text)">{{'edit' | lang}}</button>
-                    <button class="btn btn-xs btn-default pull-right margin-right-8" ng-click="text.expanded = !text.expanded">{{'view' | lang}}</button>
-                    <p ng-show="!text.expanded">{{text.content | htmlExtractText | limitTo:360}}</p>
-                    <div ng-show="text.expanded" ng-bind-html="text.content | trustHtml"></div>
-                </div>
-                <button class="btn btn-default form-control" ng-click="newTextExp = true" ng-hide="newTextExp"><i class="fa fa-plus"></i> {{'add' | lang}} {{'text' | lang}}</button>
-                <div ng-show="newTextExp">
-                    <label ng-show="newText.id == null">{{'add' | lang}} {{'text' | lang}}</label>
-                    <label ng-show="newText.id != null">{{'edit' | lang}} {{'text' | lang}}</label>
-                    <input type="text" ng-model="newText.title" placeholder="Titulo" class="form-control" ng-disabled="selectedSes.status!=1">
-                    <!--Rich text editor-->
-                    <ng-quill-editor ng-model="newText.content" class="large" ng-class="{'quill-disabled': selectedSes.status!=1}"></ng-quill-editor>
-                    <button class="btn btn-default pull-right" ng-show="newText.id == null" ng-click="addQuestionText()" ng-disabled="selectedSes.status!=1">{{'add' | lang}}</button>
-                    <button class="btn btn-default pull-right" ng-show="newText.id != null" ng-click="updateQuestionText()" ng-disabled="selectedSes.status!=1">{{'update' | lang}}</button>
-                </div>
-
-                <hr>
-                <br>
-
-                <h4>{{'questions' | lang}}</h4>
-                <div class="list-group-item" ng-repeat="qs in questions">
-                    <strong>{{$index+1}}. </strong>
-                    <strong ng-show="!qs.expanded">{{ qs.content | htmlExtractText | limitTo:80}}</strong>
-                    <!-- <strong ng-show="qs.expanded">{{($index+1) + ". " + qs.content | htmlExtractText}}</strong> -->
-                    <button class="btn btn-xs btn-default pull-right" ng-disabled="selectedSes.status!=1" ng-click="deleteQuestion(qs.id)">{{'delete' | lang}}</button>
-                    <button class="btn btn-xs btn-default pull-right margin-right-8" ng-disabled="selectedSes.status!=1" ng-click="startEditQuestion(qs)">{{'edit' | lang}}</button>
-                    <button class="btn btn-xs btn-default pull-right margin-right-8" ng-click="expandQuestion(qs)">{{'view' | lang}}</button>
-                    <div ng-show="qs.expanded">
-                        <div ng-bind-html="qs.content | trustHtml"></div>
-                        <div ng-repeat="x in qs.options" ng-class="{'bg-lightgreen': $index == qs.answer}">
-                            {{qsLabels[$index]}}. {{x}}
-                        </div>
-                        <br>
-                        <strong>{{'comment' | lang}}:</strong>
-                        <p ng-bind="qs.comment"></p>
-                        <strong>{{'others' | lang}}:</strong>
-                        <span ng-bind="qs.other"></span>
-                    </div>
-                </div>
-                <br>
-
-                <div class="plugin-content" ng-show="newQuestion.includesMap || misc.mapHasVisData" ng-controller="GeoAdminController">
-                    <strong ng-show="newQuestion.includesMap">{{'mapInstr' | lang}}</strong>
-                    <div class="row-no-padding">
-                        <div class="col-sm-2">
-                            <div class="map-sidebar">
-                                <h4>{{'elements' | lang}}</h4>
-                                <div class="list-group">
-                                    <a ng-repeat="overlay in mOverlays" class="list-group-item" ng-click="selectOverlay(overlay.id)">
-                                        {{overlay.name}}
-                                    </a>
-                                    <a ng-repeat="overlay in sOverlays" class="list-group-item" ng-click="selectOverlay(overlay.id)">
-                                        {{overlay.name}}
-                                    </a>
-                                    <span ng-show="mOverlays.length == 0 && sOverlays.length == 0">{{'mapWoElements' | lang}}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-sm-10">
-                            <input class="gsearch" places-auto-complete on-place-changed="googleSearch()" ng-if="newQuestion.includesMap">
-                            <ng-map class="map-block map-tbl" center="[-33.45, -70.65]" zoom="12" trigger-resize="true">
-
-                                <!-- DRAW MANAGER -->
-                                <drawing-manager
-                                        ng-if="newQuestion.includesMap"
-                                        on-overlaycomplete="onMapOverlayCompleted()"
-                                        drawing-control-options="{position: 'TOP_CENTER'}"
-                                        drawingControl="true"
-                                        drawingMode="null"
-                                        markerOptions="{draggable: true}"
-                                        polylineOptions="{strokeColor:'darkred', editable: true, draggable: true}"
-                                        rectangleOptions="{fillColor: 'red', strokeColor:'darkred', editable: true, draggable: true}"
-                                        polygonOptions="{fillColor: 'red', strokeColor:'darkred', editable: true, draggable: true}"
-                                        circleOptions="{fillColor: 'red', strokeColor:'darkred', editable: true, draggable: true}">
-                                </drawing-manager>
-
-                                <!-- NEW OVERLAYS -->
-                                <marker ng-if="newOverlay.type == 'M' && newOverlay.geom.position != null" id="nmkr" draggable="true"
-                                        position="{{newOverlay.geom.position}}" icon="img/marker-{{newOverlay.color}}.png"></marker>
-                                <shape ng-if="newOverlay.type != 'M'" id="nshp" name="{{newOverlay.fullType}}" path="{{newOverlay.geom.path}}"
-                                       bounds="{{newOverlay.geom.bounds}}" center="{{newOverlay.geom.center}}"
-                                       radius="{{newOverlay.geom.radius}}"
-                                       fill-color="{{newOverlay.color}}" stroke-color="dark{{newOverlay.color}}" editable="true"
-                                       draggable="true"></shape>
-
-                                <!-- SESSION OVERLAYS -->
-                                <marker ng-repeat="overlay in mOverlays" id="{{overlay.id}}" position="{{overlay.geom.position}}"
-                                        icon="img/marker-{{overlay.color}}.png" on-click="clickOverlay($event)"></marker>
-                                <shape ng-repeat="overlay in sOverlays" id="{{overlay.id}}" name="{{overlay.fullType}}"
-                                       path="{{overlay.geom.path}}" bounds="{{overlay.geom.bounds}}" center="{{overlay.geom.center}}"
-                                       radius="{{overlay.geom.radius}}" fill-color="{{overlay.color}}" on-click="clickOverlay($event)"
-                                       stroke-color="dark{{overlay.color}}" stroke-width="1"></shape>
-
-                                <!-- INFO WINDOW -->
-                                <info-window id="iw" position="{{selectedOverlay.centroid}}">
-                                    <div ng-non-bindable>
-                                        <strong>{{selectedOverlay.name}}</strong>
-                                        <p>{{selectedOverlay.description}}</p>
-                                    </div>
-                                </info-window>
-
-                                <info-window id="iw2" position="{{newOverlay.centroid}}">
-                                    <div ng-non-bindable>
-                                        <input class="form-control" type="text" ng-model="newOverlay.name" placeholder="Nombre">
-                                        <textarea class="form-control" ng-model="newOverlay.description" placeholder="Descripción"></textarea>
-                                        <button class="btn btn-primary btn-sm" ng-click="sendOverlay()">{{'send' | lang}}</button>
-                                        <button class="btn btn-danger btn-sm" ng-click="closeOverlay()">{{'cancel' | lang}}</button>
-                                    </div>
-                                </info-window>
-
-                            </ng-map>
-                        </div>
-                    </div>
-                    <hr>
-                    <br>
-                </div>
-
-                <button class="btn btn-default form-control" ng-click="startNewQuestion()" ng-hide="newQsExp"><i class="fa fa-plus"></i> {{'add' | lang}} {{'question' | lang}}</button>
-
-                <div ng-show="newQsExp">
-                    <label ng-show="newQuestion.id == null">{{'add' | lang}} {{'question' | lang}}:</label>
-                    <label ng-show="newQuestion.id != null">{{'edit' | lang}} {{'question' | lang}} {{newQuestion.order}}:</label>
-                    <span class="text-muted">({{'dontIncludeNumbering' | lang}})</span>
-                    <ng-quill-editor ng-model="newQuestion.content" ng-class="{'quill-disabled': selectedSes.status!=1}" on-editor-created="configQuillExtra(editor)"></ng-quill-editor>
-                    <!--<textarea rows="2" class="form-control" ng-model="newQuestion.content" ng-disabled="selectedSes.status!=1"></textarea>-->
-
-                    <!-- MAP -->
-                    <button class="btn btn-default btn-sm" ng-click="toggleMapPlugin()" ng-class="{active: newQuestion.includesMap}" ng-disabled="selectedSes.status!=1">
-                        <i class="fa fa-map"></i> {{'mapPlugin' | lang}}
-                    </button>
-                    <div ng-show="newQuestion.includesMap">
-                        <h4>{{'studentOptions' | lang}}</h4>
-                        <label><input type="checkbox" ng-model="misc.mapNav"> {{'allow' | lang}} {{'navigation' | lang}}</label>
-                        <br>
-                        <label><input type="checkbox" ng-model="misc.mapEdit"> {{'allow' | lang}} {{'editting' | lang}}</label>
-                    </div>
-                    <br>
-                    <!-- /MAP -->
-
-                    <label>{{'options' | lang}}:</label>
-                    <div class="input-group" ng-repeat=" x in qsLabels">
-                        <a class="input-group-addon" ng-bind="x" ng-click="selectAnswer($index)"
-                           ng-class="{'bg-green': $index == newQuestion.answer}" ng-disabled="selectedSes.status!=1"></a>
-                        <input type="text" class="form-control" ng-model="newQuestion.alternatives[$index]" ng-disabled="selectedSes.status!=1">
-                    </div>
-                    <label>{{'text' | lang}}</label>
-                    <select ng-model="newQuestion.textid" ng-disabled="selectedSes.status!=1" ng-options="text.id as text.title for text in questionTexts" class="form-control"></select>
-                    <label>{{'comment' | lang}} ({{'solution' | lang}}):</label>
-                    <textarea rows="2" class="form-control" ng-model="newQuestion.comment" ng-disabled="selectedSes.status!=1"></textarea>
-                    <label>{{'others' | lang}}:</label>
-                    <input type="text" class="form-control" ng-model="newQuestion.other" ng-disabled="selectedSes.status!=1">
-                    <button class="btn btn-default pull-right" ng-click="addQuestion()" ng-show="newQuestion.id == null" ng-disabled="selectedSes.status!=1">{{'add' | lang}}</button>
-                    <button class="btn btn-default pull-right" ng-click="updateQuestion()" ng-show="newQuestion.id != null" ng-disabled="selectedSes.status!=1">{{'update' | lang}}</button>
-                </div>
-
-                <br>
-                <br>
-
             </div>
             <div ng-if="selectedSes.type == 'R' || selectedSes.type == 'T' || selectedSes.type == 'J'" ng-controller="DocumentsController">
                 <h4>{{'documents' | lang}}</h4>
@@ -1087,64 +868,7 @@
                     {{'performance' | lang}}: <strong>{{lectPerformance() | number:0 }}%</strong>
                 </div>
             </div>
-            <div class="row row-min-padding" ng-show="selectedSes.type == 'S'">
-                <div class="col-xs-4 col-sm-offset-1">
-                    {{'progress' | lang}}: <strong>{{progress() | number:0}}%</strong>
-                </div>
-                <div class="col-xs-4">
-                    {{'corrects' | lang}}: <strong>{{avgAll() | number:0 }}%</strong>
-                </div>
-                <div class="col-xs-4 col-sm-3">
-                    {{'incorrects' | lang}}: <strong>{{100 - avgAll() | number:0 }}%</strong>
-                </div>
-            </div>
             <hr>
-            <button class="btn btn-default btn-sm pull-right" ng-click="showCf = !showCf" ng-show="selectedSes.type == 'S'">{{'show' | lang}} {{'confidenceLevel' | lang}}</button>
-            <table class="table table-bordered" ng-show="showCf">
-                <tr>
-                    <th>{{'confidenceLevel' | lang}}</th>
-                    <th>{{'Pr' | lang}}.</th>
-                    <th ng-repeat="qs in questions" ng-bind="$index + 1"></th>
-                    <th>{{'Av' | lang}}.</th>
-                </tr>
-                <tr ng-repeat="conf in optConfidence">
-                    <td>{{conf}}%</td>
-                    <td></td>
-                    <td ng-repeat="qs in questions" ng-bind="confidence[qs.id][conf] || 0"></td>
-                    <td></td>
-                </tr>
-            </table>
-            <br>
-            <table class="table table-bordered" ng-if="selectedSes.type == 'S'">
-                <tr>
-                    <th ng-if="iterationIndicator != 3">{{'student' | lang}}</th>
-                    <th ng-if="iterationIndicator == 3">{{'group' | lang}}</th>
-                    <th>{{'Pr' | lang}}.</th>
-                    <th ng-repeat="qs in questions" ng-bind="$index + 1"></th>
-                    <th>{{'Av' | lang}}.</th>
-                </tr>
-                <tr>
-                    <td>{{'progress' | lang}}</td>
-                    <td>{{progress() | number:0}}%</td>
-                    <td ng-repeat="qs in questions">{{progressPreg(qs.id) | number:0}}%</td>
-                    <td class="bg-gray"></td>
-                </tr>
-                <tr ng-repeat="(alum, data) in alumState">
-                    <td ng-if="iterationIndicator != 3" ng-bind="users[alum].name"></td>
-                    <td ng-if="iterationIndicator == 3" ng-bind="leaderTeamStr[alum]"></td>
-                    <td>{{progressAlum(alum) | number:0}}%</td>
-                    <td ng-repeat="qs in questions"
-                        ng-class="{'bg-darkgreen': data[qs.id], 'bg-darkred': data[qs.id]!=null && !data[qs.id]}"
-                        ng-click="showDetailAnswer(qs.id, alum, iterationIndicator)"></td>
-                    <td>{{avgAlum(alum) | number:0}}%</td>
-                </tr>
-                <tr>
-                    <td>{{'average' | lang}} {{'corrects' | lang}}</td>
-                    <td class="bg-gray"></td>
-                    <td ng-repeat="qs in questions">{{avgPreg(qs.id) | number:0}}%</td>
-                    <td>{{avgAll() | number:0}}%</td>
-                </tr>
-            </table>
             <table class="table table-bordered" ng-if="(selectedSes.type == 'L' || selectedSes.type == 'M') && alumState!={} && iterationIndicator <= 4">
                 <tr>
                     <th ng-if="iterationIndicator != 3">{{'student' | lang}}</th>
