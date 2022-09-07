@@ -251,34 +251,6 @@
                     {{'semanticUnitPauta' | lang}}
                 </a>
             </div>
-            <div ng-if="selectedSes.type == 'L'" ng-controller="DocumentsController">
-                <h4>{{'documents' | lang}}</h4>
-                <div class="list-group" style="margin-bottom: 0">
-                    <div class="list-group-item" ng-repeat="doc in documents">
-                        <i class="fa fa-file-text-o"></i> <strong ng-bind="doc.title"></strong>
-                        <a href="{{doc.path}}" class="discrete"> - {{'viewOriginalDoc'}}</a>
-                        <button class="btn btn-xs btn-default pull-right" ng-disabled="selectedSes.status!=1" ng-click="deleteDocument(doc.id)">{{'delete' | lang}}</button>
-                    </div>
-                </div>
-                <label>{{'add' | lang}} {{'document' | lang}}:</label>
-                <form id="doc-form" class="row" ng-submit="uploadDocument($event)" enctype="multipart/form-data">
-                    <div class="col-sm-4">
-                        <input type="text" class="form-control" name="title" placeholder="Titulo" required ng-disabled="selectedSes.status!=1" maxlength="20">
-                    </div>
-                    <div class="col-sm-7">
-                        <input type="file" class="form-control" name="pdf" ng-disabled="selectedSes.status!=1" required>
-                        <input type="text" ng-value="selectedSes.id" name="sesid" hidden>
-                    </div>
-                    <div class="col-sm-1">
-                        <button class="form-control btn btn-default" ng-disabled="selectedSes.status!=1 || busy">{{'upload' | lang}} <i ng-show="busy" class="fa fa-spinner fa-pulse"></i></button>
-                    </div>
-                </form>
-                <br>
-                <hr>
-                <a href="to-pauta?sesid={{selectedSes.id}}" class="btn btn-primary btn" ng-show="selectedSes.type=='L'">
-                    {{'keywordPauta' | lang}}
-                </a>
-            </div>
             <div ng-if="selectedSes.type == 'E'" ng-controller="DocumentsController">
                 <h4>{{'documents' | lang}}</h4>
                 <div class="list-group">
@@ -597,9 +569,6 @@
                                     <td ng-repeat="alum in group">
                                         <strong ng-bind="users[alum.uid || alum.id].name"></strong>
                                         <span ng-if="users[alum.uid || alum.id].jigsaw">- {{ users[alum.uid || alum.id].jigsaw.name }}</span>
-<!--                                        <span class="label label-success" ng-show="alum.score!=null">-->
-<!--                                            {{(selectedSes.type == "L" || selectedSes.type == "M") ? alum.score * 100 : alum.score | number:0}}-->
-<!--                                        </span>-->
 <!--                                        <span class="label label-info" ng-bind="alum.aprendizaje"></span>-->
                                     </td>
                                 </tr>
@@ -725,7 +694,7 @@
                     <td ng-repeat="alum in group">
                         <strong ng-bind="users[alum.uid || alum.id].name"></strong>
                         <span class="label label-success" ng-show="alum.score!=null">
-                            {{(selectedSes.type == "L" || selectedSes.type == "M") ? alum.score * 100 : alum.score | number:0}}
+                            {{(selectedSes.type == "M") ? alum.score * 100 : alum.score | number:0}}
                         </span>
                         <span class="label label-info" ng-bind="alum.aprendizaje"></span>
                     </td>
@@ -740,7 +709,7 @@
                         ng-class="{'bg-lightgreen': $parent.$index == lastI && $index == lastJ}">
                         <strong ng-bind="users[alum.uid].name"></strong>
                         <span class="label label-success">
-                            {{(alum.score!=null)? ((selectedSes.type == "L") ? alum.score * 100 : alum.score) : null | number:0}}
+                            {{(alum.score!=null)? (alum.score) : null | number:0}}
                         </span>
                         <span class="label label-info" ng-bind="alum.aprendizaje"></span>
                     </td>
@@ -793,31 +762,6 @@
             </div>
             <br><br>
             <hr>
-            <div ng-show="selectedSes.type == 'L'">
-            <h4>{{'exampleReport' | lang}}</h4>
-            <ul class="list-group">
-                <li class="list-group-item" ng-repeat="text in exampleReports">
-                    <div class="row">
-                        <div class="col-sm-11 text-justify">
-                            <strong ng-bind="text.title"></strong><br>
-                            <span ng-bind="text.content | limitTo:500"></span>
-                            <span ng-show="text.content.length > 500">...</span>
-                        </div>
-                        <div class="col-sm-1">
-                            <button class="btn btn-default" ng-click="goToReport(text)"><i class="fa fa-edit"></i></button>
-                            <button class="btn btn-default" ng-click="setActiveExampleReport(text)" ng-class="{'btn-success':text.active}">
-                                <i class="fa fa-share"></i></button>
-                        </div>
-                    </div>
-                </li>
-            </ul>
-            <h5>{{'add' | lang}} {{'exampleReport' | lang}}:</h5>
-            <input class="form-control" ng-model="newExampleReport.title" placeholder="Titulo" maxlength="20">
-            <textarea rows="5" class="form-control" ng-model="newExampleReport.text" placeholder="Contenido"></textarea>
-            <button class="btn btn-default pull-right" ng-disabled="newExampleReport.text.length==0" ng-click="sendExampleReport()">{{'save' | lang}}</button>
-            <br><br>
-            <hr>
-            </div>
             <div ng-show="selectedSes.status >= 6">
             <h4>{{'pairEval' | lang}}</h4>
             <span ng-show="selectedSes.paired > 0">{{'pairAlreadyAssigned' | lang}}</span>
@@ -860,7 +804,7 @@
                 <select class="" ng-options="x.val as flang(x.name) for x in iterationNames" ng-model="iterationIndicator" ng-change="updateState()"></select>
                 <button class="btn btn-default" ng-click="updateState()">{{'update' | lang}}</button>
             </div>
-            <div class="row" ng-show="iterationIndicator < 5 && (selectedSes.type == 'L' || selectedSes.type == 'M')">
+            <div class="row" ng-show="iterationIndicator < 5 && (selectedSes.type == 'M')">
                 <div class="col-sm-4 col-sm-offset-2">
                     {{'finished' | lang}}: <strong>{{numComplete}} / {{numUsers}}</strong>
                 </div>
@@ -869,7 +813,7 @@
                 </div>
             </div>
             <hr>
-            <table class="table table-bordered" ng-if="(selectedSes.type == 'L' || selectedSes.type == 'M') && alumState!={} && iterationIndicator <= 4">
+            <table class="table table-bordered" ng-if="(selectedSes.type == 'M') && alumState!={} && iterationIndicator <= 4">
                 <tr>
                     <th ng-if="iterationIndicator != 3">{{'student' | lang}}</th>
                     <th ng-if="iterationIndicator == 3">{{'group' | lang}}</th>
