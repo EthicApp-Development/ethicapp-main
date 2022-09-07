@@ -426,14 +426,7 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
     };
 
     self.shared.verifyTabs = function () {
-        if (self.selectedSes.type == "M") {
-            self.iterationNames = [{ name: "individual", val: 1 }, { name: "teamWork", val: 3 }, { name: "report", val: 4 }, { name: "pairEval", val: 6 }];
-            self.tabOptions = ["editor", "users", "groups", "rubrica", "dashboard"];
-            self.sesStatusses = [{ i: -1, name: "configuration" }, { i: 1, name: "individual" }, { i: 3, name: "teamWork" }, { i: 4, name: "report" }, { i: 6, name: "pairEval" }, { i: 7, name: "finished" }];
-            self.shared.getRubrica();
-            self.shared.getExampleReports();
-            self.shared.getReports();
-        } else if (self.selectedSes.type == "E") {
+        if (self.selectedSes.type == "E") {
             self.iterationNames = [{ name: "individual", val: 1 }, { name: "anon", val: 2 }, { name: "teamWork", val: 3 }];
             self.tabOptions = ["editor", "users", "groups", "dashboard"];
             self.sesStatusses = ["configuration", "individual", "anon", "teamWork", "finished"];
@@ -617,24 +610,9 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
     };
 
     self.shared.changeState = function () {
-        if (self.selectedSes.type != "M" && self.selectedSes.status >= self.sesStatusses.length) {
-            Notification.error("La sesión está finalizada");
-            return;
-        }
-        if (self.selectedSes.type == "M" && self.selectedSes.status >= 9) {
-            Notification.error("La sesión está finalizada");
-            return;
-        }
-        if (self.selectedSes.type == "M" && self.selectedSes.status >= 3 && !self.selectedSes.grouped || 
-            self.selectedSes.type == "E" && self.selectedSes.status >= 2 && !self.selectedSes.grouped
-            ) {
+         if (self.selectedSes.type == "E" && self.selectedSes.status >= 2 && !self.selectedSes.grouped) {
             self.shared.gotoGrupos();
             Notification.error("Los grupos no han sido generados");
-            return;
-        }
-        if (self.selectedSes.type == "M" && self.selectedSes.status >= 6 && (self.selectedSes.paired == null || self.selectedSes.paired == 0)) {
-            self.shared.gotoRubrica();
-            Notification.error("Los pares para la evaluación de pares no han sido asignados");
             return;
         }
         if(self.selectedSes.type == "E" && self.selectedSes.status == 0){
@@ -642,20 +620,13 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
         }
         var confirm = window.confirm("¿Esta seguro que quiere ir al siguiente estado?");
         if (confirm) {
-            if (self.selectedSes.type == "M") {
-                var postdata = { sesid: self.selectedSes.id, state: self.mTransition[self.selectedSes.status] || self.selectedSes.status };
-                $http({ url: "force-state-session", method: "post", data: postdata }).success(function (data) {
-                    self.shared.updateSesData();
-                });
-            } else {
-                if (self.selectedSes.status == 1) {
-                    self.updateSession();
-                }
-                var _postdata = { sesid: self.selectedSes.id };
-                $http({ url: "change-state-session", method: "post", data: _postdata }).success(function (data) {
-                    self.shared.updateSesData();
-                });
+            if (self.selectedSes.status == 1) {
+                self.updateSession();
             }
+            var _postdata = { sesid: self.selectedSes.id };
+            $http({ url: "change-state-session", method: "post", data: _postdata }).success(function (data) {
+                self.shared.updateSesData();
+            });
         }
     };
 
@@ -1044,10 +1015,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.dataChatCount = {};
 
     self.shared.resetGraphs = function () { //THIS HAS TO BE CALLED ON ADMIN
-        if (self.selectedSes.type == "M") {
-            self.iterationIndicator = Math.max(Math.min(6, self.selectedSes.status - 2), 0);
-        }
-        else if (self.selectedSes.type == "R" || self.selectedSes.type == "T" || self.selectedSes.type == "J") {
+        if (self.selectedSes.type == "R" || self.selectedSes.type == "T" || self.selectedSes.type == "J") {
             self.iterationIndicator = self.selectedSes.current_stage || -1;
         }
         self.alumState = null;
@@ -1113,53 +1081,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         console.log(self.iterationIndicator);
         self.alumTime = {};
         var postdata = { sesid: self.selectedSes.id, iteration: self.iterationIndicator };
-        if (self.selectedSes.type == "M") {
-            $http({ url: "get-alum-state-semantic", method: "post", data: postdata }).success(function (data) {
-                self.alumState = {};
-                self.numUsers = 0;
-                for (var uid in self.users) {
-                    if (self.users[uid].role == "A") {
-                        self.alumState[uid] = {};
-                        self.numUsers++;
-                    }
-                }
-                data.forEach(function (d) {
-                    if (self.alumState[d.uid] == null) {
-                        self.alumState[d.uid] = d;
-                    } else {
-                        self.alumState[d.uid] = d;
-                    }
-                });
-                self.buildBarData(data);
-                self.getAlumDoneTime(postdata);
-                if (self.iterationIndicator == 3) {
-                    $http({ url: "get-original-leaders", method: "post", data: { sesid: self.selectedSes.id } }).success(function (data) {
-                        var temp = angular.copy(self.alumState);
-                        self.alumState = {};
-                        self.leaderTeamStr = {};
-                        data.forEach(function (r) {
-                            self.alumState[r.leader] = temp[r.leader];
-                            self.leaderTeamStr[r.leader] = r.team.map(function (u) {
-                                return self.users[u] ? self.users[u].name : "- ";
-                            }).join(", ");
-                        });
-                    });
-                }
-                self.shared.alumState = self.alumState;
-            });
-            /*$http({url: "get-ideas-progress", method: "post", data: postdata}).success((data) => {
-                self.numProgress = 0;
-                self.numUsers = Object.keys(self.users).length - 1;
-                let n = self.documents.length * 3;
-                if (n != 0) {
-                    data.forEach((d) => {
-                        self.numProgress += d.count / n;
-                    });
-                    self.numProgress *= 100 / self.numUsers;
-                }
-            });*/
-        }
-        else if (self.selectedSes.type == "E") {
+        if (self.selectedSes.type == "E") {
             var _postdata2 = {
                 sesid: self.selectedSes.id
             };
@@ -2257,19 +2179,6 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
             self.groups = generateTeams(arr, function (s) {
                 return s.rnd;
             }, self.groupNum, false);
-        } else if (self.selectedSes.type == "M") {
-            console.log(self.shared.alumState);
-            var _arr = [];
-            for (var uid in self.shared.alumState) {
-                var s = 0;
-                for (var q in self.shared.alumState[uid]) {
-                    s += +q;
-                }
-                _arr.push({ uid: uid, score: s });
-            }
-            self.groups = generateTeams(_arr, function (s) {
-                return s.score;
-            }, self.groupNum, isDifferent(self.groupMet));
         } else if (self.selectedSes.type == "E"){
             let dfd = users.map(e => {
                 let d = (self.shared.dataDF || []);

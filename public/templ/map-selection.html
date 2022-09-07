@@ -35,15 +35,6 @@
                             circleOptions="{fillColor: 'red', strokeColor:'darkred', editable: true, draggable: true}">
                     </drawing-manager>
 
-                    <!-- NEW OVERLAYS -->
-                    <marker ng-if="newOverlay.type == 'M' && newOverlay.geom.position != null" id="nmkr" draggable="true"
-                            position="{{newOverlay.geom.position}}" icon="img/marker-{{newOverlay.color}}.png"></marker>
-                    <shape ng-if="newOverlay.type != 'M'" id="nshp" name="{{newOverlay.fullType}}" path="{{newOverlay.geom.path}}"
-                           bounds="{{newOverlay.geom.bounds}}" center="{{newOverlay.geom.center}}"
-                           radius="{{newOverlay.geom.radius}}"
-                           fill-color="{{newOverlay.color}}" stroke-color="dark{{newOverlay.color}}" editable="true"
-                           draggable="true"></shape>
-
                     <!-- SESSION OVERLAYS -->
                     <marker ng-repeat="overlay in mOverlays" id="{{overlay.id}}" position="{{overlay.geom.position}}"
                             icon="img/marker-{{overlay.color}}.png" on-click="clickOverlay($event)"></marker>

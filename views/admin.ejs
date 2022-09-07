@@ -53,13 +53,9 @@
         </div>
         <div class="cf3 grow text-center simple-padding-top hscroll" ng-show="selectedId != -1">
             <span ng-repeat="st in sesStatusses" ng-if="selectedSes.type != 'R' && selectedSes.type != 'T' && selectedSes.type != 'J'">
-                <span ng-if="selectedSes.type != 'M'" class="label label-primary bg-black-alpha margin-right-8"
+                <span class="label label-primary bg-black-alpha margin-right-8"
                       ng-class="{'bg-yellow': $index==selectedSes.status-1}">
                     {{st | lang}}
-                </span>
-                <span ng-if="selectedSes.type == 'M'" class="label label-primary bg-black-alpha margin-right-8"
-                      ng-class="{'bg-yellow': st.i == selectedSes.status-2}">
-                    {{st.name | lang}}
                 </span>
                 <!-- <span ng-hide="$last">→</span> -->
             </span>
@@ -145,7 +141,7 @@
                 <a class="list-group-item" ng-repeat="ses in currentSessions() | filter:sesSearch" ng-click="selectSession(ses,ses.id)"
                    ng-class="{'active':ses.id==selectedId}">
                     <button class="btn btn-default pull-right" ng-click="openDuplicateSesSpec(ses,$event)"
-                            ng-disabled="ses.type != 'M' && ses.type != 'E'" ng-if="!ses.archived">
+                            ng-disabled="ses.type != 'E'" ng-if="!ses.archived">
                         <i class="fa fa-copy"></i>
                     </button>
                     <button class="btn btn-default pull-right margin-right-8" ng-click="archiveSes(ses,$event)" ng-if="!ses.archived">
@@ -169,11 +165,8 @@
             <div class="center-block font-large">
                 <button class="btn btn-sm btn-default pull-right" ng-click="shared.changeState()">{{'gotoNext' | lang}}</button>
                 <span ng-repeat="st in sesStatusses">
-                    <span ng-if="selectedSes.type != 'M'" class="label label-default" ng-class="{'label-info': $index==selectedSes.status-1}">
+                    <span class="label label-default" ng-class="{'label-info': $index==selectedSes.status-1}">
                         {{st | lang}}
-                    </span>
-                    <span ng-if="selectedSes.type == 'M'" class="label label-default" ng-class="{'label-info': st.i == selectedSes.status-2}">
-                        {{st.name | lang}}
                     </span>
                     <span ng-hide="$last">→</span>
                 </span>
@@ -189,14 +182,12 @@
             <label>{{'title' | lang}}:</label>
             <input type="text" class="form-control" ng-model="selectedSes.name" ng-disabled="selectedSes.status!=1">
             <br>
-            <button class="btn btn-default btn-sm pull-right" ng-class="{'active': splitDescr}" ng-click="toggleSplit()" ng-show="selectedSes.type == 'M'" ng-disabled="selectedSes.status!=1">Dividir Factor Detonante</button>
             <label>{{'detFactor' | lang}}:</label>
             <textarea class="form-control" ng-model="selectedSes.descr" ng-disabled="selectedSes.status!=1" ng-show="!splitDescr"></textarea>
             <div ng-show="splitDescr">
                 <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" ng-model="splDes1" placeholder="Selección de unidades">
                 <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" ng-model="splDes2" placeholder="Reporte">
             </div>
-            <!-- <button class="btn btn-xs btn-default" ng-click="openDuplicateSes()" ng-disabled="selectedSes.type != 'M'">{{'duplicateSes' | lang}}</button> --
             
             <br>
             <button class="btn btn-default pull-right" ng-click="updateSession()" ng-disabled="selectedSes.status!=1">
@@ -211,15 +202,13 @@
                 <label>{{'title' | lang}}:</label>
                 <input type="text" class="form-control" ng-model="selectedSes.name" ng-disabled="selectedSes.status!=1">
                 <br>
-                <button class="btn btn-default btn-sm pull-right" ng-class="{'active': splitDescr}" ng-click="toggleSplit()" ng-show="selectedSes.type == 'M'" ng-disabled="selectedSes.status!=1">Dividir Factor Detonante</button>
                 <label>{{'actGenDesc' | lang}}:</label>
                 <textarea class="form-control" ng-model="selectedSes.descr" ng-disabled="selectedSes.status!=1" ng-show="!splitDescr"></textarea>
                 <div ng-show="splitDescr">
                     <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" ng-model="splDes1" placeholder="Selección de unidades">
                     <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" ng-model="splDes2" placeholder="Reporte">
                 </div>
-                <!-- <button class="btn btn-xs btn-default" ng-click="openDuplicateSes()" ng-disabled="selectedSes.type != 'M'">{{'duplicateSes' | lang}}</button> -->
-<!--                <br>-->
+                
                 <button class="btn btn-default pull-right" ng-click="updateSession()" ng-disabled="selectedSes.status!=1">
                     {{'saveChanges' | lang}}
                 </button>
@@ -227,30 +216,6 @@
                 <!-- OPTIONS -->
             </div>
             <!--<div ng-show="selectedTabConfig == -1">-->
-            <div ng-if="selectedSes.type == 'M'" ng-controller="SemDocController">
-                <h4>{{'documents' | lang}}</h4>
-                <div class="list-group-item" ng-repeat="doc in semDocs">
-                    <strong ng-bind="doc.title"></strong>
-                    <button class="btn btn-xs btn-default pull-right" ng-disabled="selectedSes.status!=1" ng-click="deleteText(doc.id)">{{'delete' | lang}}</button>
-                    <button class="btn btn-xs btn-default pull-right margin-right-8" ng-disabled="selectedSes.status!=1" ng-click="startEditText(doc)">{{'edit' | lang}}</button>
-                    <button class="btn btn-xs btn-default pull-right margin-right-8" ng-click="doc.expanded = !doc.expanded">{{'view' | lang}}</button>
-                    <p ng-show="!doc.expanded">{{doc.content | limitTo:360}}</p>
-                    <p ng-show="doc.expanded">{{doc.content}}</p>
-                </div>
-                <div>
-                    <label ng-show="newSDoc.id == null">{{'add' | lang}} {{'document' | lang}}</label>
-                    <label ng-show="newSDoc.id != null">{{'edit' | lang}} {{'document' | lang}}</label>
-                    <input type="text" ng-model="newSDoc.title" placeholder="Titulo" class="form-control" ng-disabled="selectedSes.status!=1">
-                    <textarea class="form-control" rows="5" ng-model="newSDoc.content" ng-disabled="selectedSes.status!=1"></textarea>
-                    <button class="btn btn-default pull-right" ng-show="newSDoc.id == null" ng-click="addSemDoc()" ng-disabled="selectedSes.status!=1">{{'add' | lang}}</button>
-                    <button class="btn btn-default pull-right" ng-show="newSDoc.id != null" ng-click="updateSemDoc()" ng-disabled="selectedSes.status!=1">{{'update' | lang}}</button>
-                    <br>
-                    <br>
-                </div>
-                <a href="to-semantic?sesid={{selectedSes.id}}" class="btn btn-primary btn">
-                    {{'semanticUnitPauta' | lang}}
-                </a>
-            </div>
             <div ng-if="selectedSes.type == 'E'" ng-controller="DocumentsController">
                 <h4>{{'documents' | lang}}</h4>
                 <div class="list-group">
@@ -694,7 +659,7 @@
                     <td ng-repeat="alum in group">
                         <strong ng-bind="users[alum.uid || alum.id].name"></strong>
                         <span class="label label-success" ng-show="alum.score!=null">
-                            {{(selectedSes.type == "M") ? alum.score * 100 : alum.score | number:0}}
+                            {{ alum.score | number:0}}
                         </span>
                         <span class="label label-info" ng-bind="alum.aprendizaje"></span>
                     </td>
@@ -804,36 +769,8 @@
                 <select class="" ng-options="x.val as flang(x.name) for x in iterationNames" ng-model="iterationIndicator" ng-change="updateState()"></select>
                 <button class="btn btn-default" ng-click="updateState()">{{'update' | lang}}</button>
             </div>
-            <div class="row" ng-show="iterationIndicator < 5 && (selectedSes.type == 'M')">
-                <div class="col-sm-4 col-sm-offset-2">
-                    {{'finished' | lang}}: <strong>{{numComplete}} / {{numUsers}}</strong>
-                </div>
-                <div class="col-sm-6" ng-hide="iterationIndicator == 0 || iterationIndicator == 4">
-                    {{'performance' | lang}}: <strong>{{lectPerformance() | number:0 }}%</strong>
-                </div>
-            </div>
             <hr>
-            <table class="table table-bordered" ng-if="(selectedSes.type == 'M') && alumState!={} && iterationIndicator <= 4">
-                <tr>
-                    <th ng-if="iterationIndicator != 3">{{'student' | lang}}</th>
-                    <th ng-if="iterationIndicator == 3">{{'group' | lang}}</th>
-                    <th style="width: 420px" ng-if="iterationIndicator != 0 && iterationIndicator != 4">{{'score' | lang}}</th>
-                    <th>{{'finishTime' | lang}}</th>
-                </tr>
-                <tr ng-repeat="(alum, dato) in alumState">
-                    <td ng-if="iterationIndicator != 3">
-                        {{users[alum].name}}
-                        <button class="btn btn-default btn-sm pull-right" ng-click="showReportByUid(alum)" ng-show="iterationIndicator==4"><i class="fa fa-eye"></i></button>
-                    </td>
-                    <td ng-if="iterationIndicator == 3" ng-bind="leaderTeamStr[alum]"></td>
-                    <td ng-if="iterationIndicator != 0 && iterationIndicator != 4">
-                        <div class="bg-darkgreen table-green-bar" ng-show="dato.score != null" style="width: {{400*dato.score}}px;">
-                            {{100*dato.score | number:0}}%
-                        </div>
-                    </td>
-                    <td><span ng-show="dato.dtime != null">{{dato.dtime/60 | number:0}}m {{dato.dtime%60 | number:0}}s</span></td>
-                </tr>
-            </table>
+            
             <!-- RUBRICA DASHBOARD -->
             <div ng-show="iterationIndicator == 5 && selectedSes.type!='R' && selectedSes.type != 'T' && selectedSes.type != 'J'">
             <h4>{{'details' | lang}}:</h4>
