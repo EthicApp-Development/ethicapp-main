@@ -117,7 +117,7 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", "$uibModal",
         ],
         showStepNumbers: false,
         showBullets: false,
-        exitOnOverlayClick: true,
+        exitOnOverlayClick: true, //TODO: Review for delete
         exitOnEsc: true,
         tooltipPosition: "auto",
         nextLabel: 'Siguiente',

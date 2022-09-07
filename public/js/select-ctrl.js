@@ -1,12 +1,12 @@
 "use strict";
 
-let app = angular.module("Select", ["ui.bootstrap", "timer", 'btford.socket-io', "ui-notification", "ngSanitize", "ngMap"]);
+let app = angular.module("Select", ["ui.bootstrap", "timer", 'btford.socket-io', "ui-notification", "ngSanitize"]);
 
 app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
 
-app.controller("SelectController", ["$scope", "$http", "$socket", "Notification", "$uibModal", "NgMap", function ($scope, $http, $socket, Notification, $uibModal, NgMap) {
+app.controller("SelectController", ["$scope", "$http", "$socket", "Notification", "$uibModal", function ($scope, $http, $socket, Notification, $uibModal) {
     let self = $scope;
 
     self.selectedQs = 0;
@@ -49,15 +49,6 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                 self.updateTeam();
             }
         });
-        $socket.on("updateOverlay", (data) => {
-            console.log("SOCKET.IO", data);
-            if(data.qid == self.questions[self.selectedQs].id && self.iteration == 3){
-                self.shared.updateOverlayList();
-            }
-        });
-        NgMap.getMap().then((map) => {
-            self.map = map;
-        });
         self.getMe();
     };
 
@@ -81,7 +72,6 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                         set.add(ans.uid);
                     });
                     self.teamUids = Array.from(set);
-                    self.shared.updateOverlayList();
                 });
             }
             if (self.iteration > 2) {
@@ -94,7 +84,6 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
                     self.teamUids = Array.from(set);
                 });
                 self.updateTeam();
-                self.shared.updateOverlayList();
             }
             if (self.iteration >= 4) {
                 self.finished = true;
@@ -135,27 +124,8 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             self.questions = data;
             self.questions.forEach((qs) => {
                 qs.options = qs.options.split("\n");
-                qs.map = processMap(qs);
             });
-            self.shared.updateOverlayList();
         });
-    };
-
-    let processMap = (qs) => {
-        if(qs.plugin_data && qs.plugin_data.startsWith("MAP")){
-            let comps = qs.plugin_data.split(" ");
-            console.log(comps);
-            //qs.content = qs.content.substring(0,ini) + qs.content.substring(end+6);
-            //console.log(qs.content);
-            //qs.content = qs.content.replace(/<p><br><\/p>/g, "");
-            return {
-                center: "[" + comps[1] + ", " + comps[2]  + "]",
-                zoom: comps[3],
-                nav: comps[4] == "NAV",
-                edit: comps[4] == "EDIT" || comps[5] == "EDIT"
-            }
-        }
-        return null;
     };
 
     self.loadAnskey = () => {
@@ -185,8 +155,6 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
 
     self.selectQuestion = (idx) => {
         self.selectedQs = idx;
-        if(self.questions[idx].plugin_data)
-            self.shared.updateOverlayList();
     };
 
     self.selectQuestionTab = (idx) => {

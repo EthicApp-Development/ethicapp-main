@@ -1,7 +1,7 @@
 "use strict";
 
 var adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill",
-    "ngMap", "tableSort", 'btford.socket-io', 'ngRoute']); //ngRoute was newly added
+    "tableSort", 'btford.socket-io', 'ngRoute']); //ngRoute was newly added
 
 var DASHBOARD_AUTOREALOD = window.location.hostname.indexOf("fen") != -1;
 var DASHBOARD_AUTOREALOD_TIME = 15;
