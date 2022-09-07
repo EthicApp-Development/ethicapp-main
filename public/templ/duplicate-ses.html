@@ -19,10 +19,6 @@
         <div class="simple-margin-left">
             <label><input type="checkbox" ng-model="vm.nses.copyUsers"> Copiar Usuarios</label>
         </div>
-        <div class="simple-margin-left" ng-if="vm.data.type == 'E'">
-            <label><input type="checkbox" ng-model="vm.nses.copyDocuments"> Copiar Documentos</label><br>
-            <label><input type="checkbox" ng-model="vm.nses.copyDifferentials"> Copiar Diferenciales</label>
-        </div>
         <hr>
         <br>
         <button class="btn btn-primary pull-right" ng-click="vm.sendDuplicate()">Duplicar</button>

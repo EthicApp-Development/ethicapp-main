@@ -426,11 +426,7 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
     };
 
     self.shared.verifyTabs = function () {
-        if (self.selectedSes.type == "E") {
-            self.iterationNames = [{ name: "individual", val: 1 }, { name: "anon", val: 2 }, { name: "teamWork", val: 3 }];
-            self.tabOptions = ["editor", "users", "groups", "dashboard"];
-            self.sesStatusses = ["configuration", "individual", "anon", "teamWork", "finished"];
-        } else if (self.selectedSes.type == "R" || self.selectedSes.type == "T" || self.selectedSes.type == "J") {
+        if (self.selectedSes.type == "R" || self.selectedSes.type == "T" || self.selectedSes.type == "J") {
             self.iterationNames = [];
             self.tabOptions = ["editor", "users", "dashboard"];
             // self.sesStatusses = ["configuration"];
@@ -610,14 +606,6 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
     };
 
     self.shared.changeState = function () {
-         if (self.selectedSes.type == "E" && self.selectedSes.status >= 2 && !self.selectedSes.grouped) {
-            self.shared.gotoGrupos();
-            Notification.error("Los grupos no han sido generados");
-            return;
-        }
-        if(self.selectedSes.type == "E" && self.selectedSes.status == 0){
-            self.shared.sendDFS();
-        }
         var confirm = window.confirm("¿Esta seguro que quiere ir al siguiente estado?");
         if (confirm) {
             if (self.selectedSes.status == 1) {
@@ -1081,49 +1069,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         console.log(self.iterationIndicator);
         self.alumTime = {};
         var postdata = { sesid: self.selectedSes.id, iteration: self.iterationIndicator };
-        if (self.selectedSes.type == "E") {
-            var _postdata2 = {
-                sesid: self.selectedSes.id
-            };
-            let url = self.selectedSes.grouped ? "get-differential-all" : "get-differential-indv";
-            $http.post(url, _postdata2).success(function (data) {
-                self.dataDF = [];
-                console.log("SELF");
-                console.log(self);
-                var tmid = -1;
-                var i = -1;
-                var mapAt = ["", "ind", "anon", "team"];
-                data.forEach(function (d) {
-                    if (d.tmid != tmid) {
-                        i += 1;
-                        tmid = d.tmid;
-                        let u = d.uid;
-                        let glen = 1;
-                        if(self.shared.groups) {
-                            let g = self.shared.groups.find(e => e.some(f => f.uid == u));
-                            glen = g ? g.length : 1;
-                        }
-                        self.dataDF.push({
-                            tmid: tmid,
-                            ind: [],
-                            anon: [],
-                            team: [],
-                            glen: glen
-                        });
-                    }
-                    self.dataDF[i][mapAt[d.iteration]].push(d);
-                });
-                $http.post("get-chat-count", _postdata2).success(function (datachat) {
-                    self.dataChatCount = {};
-                    datachat.forEach(function (ch) {
-                        if (!self.dataChatCount[ch.tmid]) self.dataChatCount[ch.tmid] = {};
-                        self.dataChatCount[ch.tmid][ch.orden] = ch.count;
-                    });
-                });
-                self.shared.dataDF = self.dataDF;
-            });
-        }
-        else if (self.selectedSes.type == "R") {
+        if (self.selectedSes.type == "R") {
             var _postdata2 = {
                 stageid: self.iterationIndicator
             };
@@ -2179,22 +2125,7 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
             self.groups = generateTeams(arr, function (s) {
                 return s.rnd;
             }, self.groupNum, false);
-        } else if (self.selectedSes.type == "E"){
-            let dfd = users.map(e => {
-                let d = (self.shared.dataDF || []);
-                let r = d.find(f => f.tmid == e.id);
-                console.log(r);
-                return {
-                    uid: e.id,
-                    score: (r && r.ind && r.ind.length > 0) ? (r.ind.reduce((v,p) => v + p.sel, 0) / r.ind.length) : 0
-                }
-            });
-            console.log(dfd);
-            self.groups = generateTeams(dfd, function (s) {
-                return s.score;
-            }, self.groupNum, isDifferent(self.groupMet));
-        }
-
+        } 
         if (self.groups != null) {
             self.groupsProp = angular.copy(self.groups);
             self.groupNames = [];

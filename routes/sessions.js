@@ -882,8 +882,7 @@ router.post("/enter-session-code", rpg.singleSQL({
                     }
                     else{
                         req.session.ses = id;
-                        let urlr = (type == "E") ? "differential" :
-                        (type == "R" || type == "J") ? "role-playing" : (type == "T") ? "ethics" : "select";
+                        let urlr = (type == "R" || type == "J") ? "role-playing" : (type == "T") ? "ethics" : "select";
                         res.end(JSON.stringify({status: "ok", redirect: urlr}));
                     }
                 }
