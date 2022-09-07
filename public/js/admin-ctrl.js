@@ -668,53 +668,6 @@ adpp.controller("NewUsersController", function ($scope, $http, Notification) {
     self.shared.refreshUsers = self.refreshUsers;
 });
 
-adpp.controller("SemDocController", function ($scope, $http, Notification) {
-    var self = $scope;
-
-    self.newSDoc = { id: null, title: "", content: "" };
-
-    self.addSemDoc = function () {
-        var postdata = { sesid: self.selectedSes.id, title: self.newSDoc.title, content: self.newSDoc.content };
-        $http({ url: "add-semantic-document", method: "post", data: postdata }).success(function (data) {
-            if (data.status == "ok") {
-                self.requestSemDocuments();
-                Notification.success("Texto agregado correctamente");
-                self.newSDoc = { id: null, title: "", content: "" };
-            }
-        });
-    };
-
-    self.deleteText = function (id) {
-        var postdata = { id: id };
-        $http.post("delete-semantic-document", postdata).success(function (data) {
-            if (data.status == "ok") {
-                self.requestSemDocuments();
-                Notification.success("Texto eliminado correctamente");
-            }
-        });
-    };
-
-    self.startEditText = function (tx) {
-        self.newSDoc = { id: tx.id, title: tx.title, content: tx.content };
-        Notification.info("Edite el texto en el formulario");
-    };
-
-    self.updateSemDoc = function () {
-        if (self.newSDoc.id == null) {
-            Notification.error("No hay texto a editar.");
-            return;
-        }
-        var postdata = { id: self.newSDoc.id, sesid: self.selectedSes.id, title: self.newSDoc.title, content: self.newSDoc.content };
-        $http({ url: "update-semantic-document", method: "post", data: postdata }).success(function (data) {
-            if (data.status == "ok") {
-                self.requestSemDocuments();
-                Notification.success("Texto editado correctamente.");
-                self.newSDoc = { id: null, title: "", content: "" };
-            }
-        });
-    };
-});
-
 adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibModal, Notification) {
     var self = $scope;
     self.iterationIndicator = 1;
