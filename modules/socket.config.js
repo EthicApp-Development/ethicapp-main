@@ -17,9 +17,6 @@ module.exports.configSocket = function(io){
     module.exports.teamProgress = function(sesid, tmid){
         io.of("/").emit("teamProgress", {ses: sesid, tmid: tmid});
     };
-    module.exports.updateOverlay = function(qid){
-        io.of("/").emit("updateOverlay", {qid: qid});
-    };
     module.exports.chatMsg = function(sesid, tmid){
         io.of("/").emit("chatMsg", {ses: sesid, tmid: tmid});
     };

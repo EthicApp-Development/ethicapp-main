@@ -399,7 +399,7 @@ let isDifferent = (type) => {
             return true;
         case "Tipo Aprendizaje Homogeneo":
             return false;
-        case "Tipo Aprendizaje Heterogeoneo":
+        case "Tipo Aprendizaje Heterogeneo":
             return true;
     }
     return false;

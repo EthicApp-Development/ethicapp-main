@@ -59,10 +59,6 @@ app.controller("RubricaController", ["$scope", "$http", "$socket", "$uibModal", 
                     self.finished = true;
                 }
             });
-            if(data.type == "M"){
-                self.sesStatusses = ["Individual", "Grupal", "Reporte", "Evaluación de Pares", "Finalizada"];
-                self.miters = 1;
-            }
             if(self.iteration <= 5) {
                 $http({url: "get-active-example-report", method: "post"}).success((data) => {
                     self.reports = [data];

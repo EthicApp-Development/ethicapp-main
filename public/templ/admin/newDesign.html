@@ -9,12 +9,6 @@
     </div>
     <form class="modal-body" name="formDesign" ng-controller="StagesEditController" ng-if="selectedView == 'newDesign'">
         <div class="form-group" style="display: flex;">
-            <label class="line-labels">{{'activityType' | lang}}: </label>
-            <select name="type" class="form-control line-input">
-                <option value="M">{{ 'semDiff' | lang }}</option>
-            </select>
-        </div>
-        <div class="form-group" style="display: flex;">
             <label class="line-labels">{{'title'|lang}}:</label>
             <input type="text" class="form-control line-input" name="name" ng-model="title" ng-required="true">
         </div>

@@ -430,7 +430,7 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
         ],
         showStepNumbers: false,
         showBullets: false,
-        exitOnOverlayClick: true,
+        exitOnOverlayClick: true, //TODO: Review for delete
         exitOnEsc: true,
         tooltipPosition: "auto",
         nextLabel: 'Siguiente',

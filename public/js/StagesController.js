@@ -467,21 +467,6 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                 return s.rnd;
             }, self.groupopt.num, false);
         }
-        else if (self.selectedSes.type == "E") {
-            let dfd = users.map(e => {
-                let d = (self.shared.dataDF || []);
-                let r = d.find(f => f.tmid == e.id);
-                console.log(r);
-                return {
-                    uid: e.id,
-                    score: (r && r.ind && r.ind.length > 0) ? (r.ind.reduce((v, p) => v + p.sel, 0) / r.ind.length) : 0
-                }
-            });
-            console.log(dfd);
-            self.groups = generateTeams(dfd, function (s) {
-                return s.score;
-            }, self.groupopt.num, isDifferent(self.groupopt.met));
-        }
         else if (self.selectedSes.type == "T"){
             let d = self.shared.difTable.filter(e => !e.group);
             let dfd = users.map(e => {

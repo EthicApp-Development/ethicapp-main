@@ -11,7 +11,6 @@
     <script src="libs/socket.min.js"></script>
     <script src="libs/angular-ui-notification.min.js"></script>
     <script src="libs/ng-map.min.js"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&key=AIzaSyAx05l8YIv_oB8f5AMBGIcWmgnqFou0VJI&libraries=geometry,drawing,places"></script>
     <script src="js/select-ctrl.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
@@ -83,79 +82,6 @@
                 <strong>{{'text' | lang}}:</strong>
                 <p class="question-block" ng-bind-html="questions[selectedQs].text_content | trustHtml"></p>
                 <br>
-            </div>
-
-            <!-- MAP AREA -->
-            <div ng-show="questions[selectedQs].map" class="row row-no-padding" ng-controller="GeoController">
-                <div class="col-xs-2">
-                <div class="map-sidebar">
-                    <h4>{{'elements' | lang}}</h4>
-                    <div class="list-group">
-                        <a ng-repeat="overlay in mOverlays" class="list-group-item" ng-click="selectOverlay(overlay.id)"
-                            ng-class="{'active': overlay.id==selectedOverlay.id}">
-                            {{overlay.name}}
-                        </a>
-                        <a ng-repeat="overlay in sOverlays" class="list-group-item" ng-click="selectOverlay(overlay.id)"
-                           ng-class="{'active': overlay.id==selectedOverlay.id}">
-                            {{overlay.name}}
-                        </a>
-                        <span ng-show="mOverlays.length == 0 && sOverlays.length == 0">{{'mapWoElements' | lang}}</span>
-                    </div>
-                </div>
-                </div>
-                <div class="col-xs-10">
-                    <input class="gsearch" places-auto-complete on-place-changed="googleSearch()" ng-if="questions[selectedQs].map.edit && iteration <=3">
-                <ng-map class="map-block map-tbl" center="{{questions[selectedQs].map.center}}" zoom="{{questions[selectedQs].map.zoom}}">
-                    <!-- DRAW MANAGER -->
-                    <drawing-manager
-                            ng-if="questions[selectedQs].map.edit && iteration <=3"
-                            on-overlaycomplete="onMapOverlayCompleted()"
-                            drawing-control-options="{position: 'TOP_CENTER'}"
-                            drawingControl="true"
-                            drawingMode="null"
-                            markerOptions="{draggable: true}"
-                            polylineOptions="{strokeColor:'darkred', editable: true, draggable: true}"
-                            rectangleOptions="{fillColor: 'red', strokeColor:'darkred', editable: true, draggable: true}"
-                            polygonOptions="{fillColor: 'red', strokeColor:'darkred', editable: true, draggable: true}"
-                            circleOptions="{fillColor: 'red', strokeColor:'darkred', editable: true, draggable: true}">
-                    </drawing-manager>
-
-                    <!-- NEW OVERLAYS -->
-                    <marker ng-if="newOverlay.type == 'M' && newOverlay.geom.position != null" id="nmkr" draggable="true"
-                            position="{{newOverlay.geom.position}}" icon="img/marker-{{newOverlay.color}}.png"></marker>
-                    <shape ng-if="newOverlay.type != 'M'" id="nshp" name="{{newOverlay.fullType}}" path="{{newOverlay.geom.path}}"
-                           bounds="{{newOverlay.geom.bounds}}" center="{{newOverlay.geom.center}}"
-                           radius="{{newOverlay.geom.radius}}"
-                           fill-color="{{newOverlay.color}}" stroke-color="dark{{newOverlay.color}}" editable="true"
-                           draggable="true"></shape>
-
-                    <!-- SESSION OVERLAYS -->
-                    <marker ng-repeat="overlay in mOverlays" id="{{overlay.id}}" position="{{overlay.geom.position}}"
-                            icon="img/marker-{{overlay.color}}.png" on-click="clickOverlay($event)"></marker>
-                    <shape ng-repeat="overlay in sOverlays" id="{{overlay.id}}" name="{{overlay.fullType}}"
-                           path="{{overlay.geom.path}}" bounds="{{overlay.geom.bounds}}" center="{{overlay.geom.center}}"
-                           radius="{{overlay.geom.radius}}" fill-color="{{overlay.color}}" on-click="clickOverlay($event)"
-                           stroke-color="dark{{overlay.color}}" stroke-width="1"></shape>
-
-                    <!-- INFO WINDOW -->
-                    <info-window id="iw" position="{{selectedOverlay.centroid}}">
-                        <div ng-non-bindable>
-                            <strong>{{selectedOverlay.name}}</strong>
-                            <p>{{selectedOverlay.description}}</p>
-                        </div>
-                    </info-window>
-
-                    <info-window id="iw2" position="{{newOverlay.centroid}}" visible="{{editing}}">
-                        <div ng-non-bindable>
-                            <input class="form-control" type="text" ng-model="newOverlay.name" placeholder="Nombre">
-                            <textarea class="form-control" ng-model="newOverlay.description" placeholder="Descripción"></textarea>
-                            <button class="btn btn-primary btn-sm" ng-click="sendOverlay()">{{'save' | lang}}</button>
-                            <button class="btn btn-danger btn-sm" ng-click="closeOverlay()">{{'cancel' | lang}}</button>
-                        </div>
-                    </info-window>
-
-                </ng-map>
-                </div>
             </div>
 
             <div ng-repeat="qs in questions" ng-show="selectedQs == $index">

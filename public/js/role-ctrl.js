@@ -519,7 +519,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
         ],
         showStepNumbers: false,
         showBullets: false,
-        exitOnOverlayClick: true,
+        exitOnOverlayClick: true, //TODO: Review for delete
         exitOnEsc: true,
         tooltipPosition: "auto",
         nextLabel: 'Siguiente',

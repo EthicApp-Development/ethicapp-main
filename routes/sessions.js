@@ -432,76 +432,6 @@ router.post("/remove-prof", rpg.execSQL({
     },
 }));
 
-router.post("/add-question", rpg.singleSQL({
-    dbcon: pass.dbcon,
-    sql: "insert into questions(content,options,answer,comment,other,sesid,textid,plugin_data) values ($1,$2,$3,$4,$5,$6,$7,$8) returning id",
-    sesReqData: ["uid"],
-    postReqData: ["content","options","answer","comment","sesid"],
-    sqlParams: [rpg.param("post", "content"),rpg.param("post", "options"),rpg.param("post", "answer"),
-        rpg.param("post", "comment"),rpg.param("post", "other"),rpg.param("post", "sesid"),rpg.param("post", "textid"),
-        rpg.param("post", "pluginData")],
-    onStart: (ses,data,calc) => {
-        if (ses.role != "P") {
-            return "select $1, $2, $3, $4, $5, $6, $7, $8"
-        }
-    }
-}));
-
-router.post("/update-question", rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql: "update questions set (content,options,answer,comment,other,textid,plugin_data) = ($1,$2,$3,$4,$5,$6,$7) where id = $8",
-    sesReqData: ["uid"],
-    postReqData: ["content","options","answer","comment","id"],
-    sqlParams: [rpg.param("post", "content"),rpg.param("post", "options"),rpg.param("post", "answer"),
-        rpg.param("post", "comment"),rpg.param("post", "other"),rpg.param("post", "textid"),rpg.param("post", "pluginData"),
-        rpg.param("post", "id")],
-    onStart: (ses,data,calc) => {
-        if (ses.role != "P") {
-            return "select $1, $2, $3, $4, $5, $6, $7, $8"
-        }
-    }
-}));
-
-router.post("/delete-question", rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql: "delete from questions where id = $1",
-    sesReqData: ["uid"],
-    postReqData: ["id"],
-    sqlParams: [rpg.param("post", "id")],
-    onStart: (ses,data,calc) => {
-        if (ses.role != "P") {
-            return "select $1"
-        }
-    }
-}));
-
-router.post("/add-question-text", rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql: "insert into question_text(title,content,sesid) values ($1,$2,$3)",
-    postReqData: ["sesid", "title", "content"],
-    sqlParams: [rpg.param("post", "title"), rpg.param("post", "content"), rpg.param("post", "sesid")]
-}));
-
-router.post("/update-question-text", rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql: "update question_text set (title,content) = ($1,$2) where id = $3",
-    postReqData: ["id", "title", "content"],
-    sqlParams: [rpg.param("post", "title"), rpg.param("post", "content"), rpg.param("post", "id")]
-}));
-
-router.post("/delete-question-text", rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql: "delete from question_text where id = $1",
-    sesReqData: ["uid"],
-    postReqData: ["id"],
-    sqlParams: [rpg.param("post", "id")],
-    onStart: (ses,data,calc) => {
-        if (ses.role != "P") {
-            return "select $1"
-        }
-    }
-}));
-
 router.post("/get-question-text", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select id, title, content from question_text where sesid = $1",
@@ -531,40 +461,6 @@ router.post("/get-selection-team-comment", rpg.multiSQL({
         "inner join users as u on u.id = s.uid where tu.tmid = $1 and s.qid = $2 and iteration = 3",
     postReqData: ["qid", "tmid"],
     sqlParams: [rpg.param("post", "tmid"), rpg.param("post", "qid")]
-}));
-
-
-router.post("/add-semantic-document", rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql: "insert into semantic_document(title,content,sesid,orden) values ($1,$2,$3,$4)",
-    postReqData: ["sesid", "title", "content", "orden"],
-    sqlParams: [rpg.param("post", "title"), rpg.param("post", "content"), rpg.param("post", "sesid"), rpg.param("post", "orden")]
-}));
-
-router.post("/update-semantic-document", rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql: "update semantic_document set (title,content) = ($1,$2) where id = $3",
-    sesReqData: ["uid"],
-    postReqData: ["title", "content", "id"],
-    sqlParams: [rpg.param("post", "title"), rpg.param("post", "content"), rpg.param("post", "id")],
-    onStart: (ses,data,calc) => {
-        if (ses.role != "P") {
-            return "select $1, $2, $3"
-        }
-    }
-}));
-
-router.post("/delete-semantic-document", rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql: "delete from semantic_document where id = $1",
-    sesReqData: ["uid"],
-    postReqData: ["id"],
-    sqlParams: [rpg.param("post", "id")],
-    onStart: (ses,data,calc) => {
-        if (ses.role != "P") {
-            return "select $1"
-        }
-    }
 }));
 
 router.post("/semantic-documents", rpg.multiSQL({
@@ -765,20 +661,7 @@ router.post("/duplicate-session", (req, res) => {
                          sql: "insert into questions(sesid,content,options,answer,comment,other,textid,plugin_data,cpid) select " + sesid +
                             " as sesid, content,options,answer,comment,other,textid,plugin_data,id as cpid" +
                             " from questions where sesid = " + oldsesid + " order by id asc",
-                         preventResEnd: true,
-                         onEnd: () => {
-                             if(req.body.tipo == "S"){
-                                 rpg.execSQL({
-                                     dbcon: pass.dbcon,
-                                     sql: "insert into overlays (uid, qid, type, iteration, geom, name, description) " +
-                                     "select o.uid, q.id as qid, o.type, 0 as iteration, o.geom, o.name, o.description " +
-                                     "from overlays as o inner join questions as q on o.qid = q.cpid " +
-                                     "where q.sesid = " + sesid + " and o.iteration = 0",
-                                     preventResEnd: true,
-                                     onEnd: () => {}
-                                 })(req,res);
-                             }
-                         }
+                         preventResEnd: true
                      })(req,res);
                      rpg.execSQL({
                          dbcon: pass.dbcon,
@@ -882,8 +765,7 @@ router.post("/enter-session-code", rpg.singleSQL({
                     }
                     else{
                         req.session.ses = id;
-                        let urlr = (type == "L") ? "editor" : (type == "M") ? "semantic" : (type == "E") ? "differential" :
-                        (type == "R" || type == "J") ? "role-playing" : (type == "T") ? "ethics" : "select";
+                        let urlr = (type == "R" || type == "J") ? "role-playing" : (type == "T") ? "ethics" : "select";
                         res.end(JSON.stringify({status: "ok", redirect: urlr}));
                     }
                 }
