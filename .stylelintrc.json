@@ -3,6 +3,12 @@
         "stylelint-config-standard",
         "stylelint-config-prettier"
     ],
+    "ignoreFiles": [
+        "**/*.js",
+        "./node_modules/*",
+        "**/*.min.css",
+        "bootstrap*.css"
+    ],
     "rules": {
         "color-function-notation": null,
         "no-duplicate-selectors": true,
