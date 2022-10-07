@@ -42,7 +42,7 @@ When opening the project with `vscode` and its required extensions for this proj
 | `public`    | Backend source code (JavaScript).                                                               |
 | `routes`    | Web routing JS scripts.                                                                         |
 | `tests`     | Automated tests.                                                                                |
-| `views`     | Frontend source code (React).                                                                   |
+| `views`     | Frontend source code (Angular.JS).                                                              |
 
 ## 3. Required skills
 

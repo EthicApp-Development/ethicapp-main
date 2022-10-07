@@ -3,12 +3,18 @@
 // -------------------------------------------------------------------------------------------------
 {
     "doctype-first": false,
-    "head-script-disabled": true, // avoiding bare <script> tags
+    "title-require": true,
     "tagname-lowercase": true,
     "attr-no-duplication": true,
     "attr-lowercase": false, // note: attibutes can be in camelCase, so this rule is disabled
     "attr-value-double-quotes": true,
-    "tag-pair": true // consistent tag pairing: https://htmlhint.com/docs/user-guide/rules/tag-pair
-    //"tag-self-close": true, //*
-    // "id-unique": true //*
+    "tag-pair": true, // consistent tag pairing: https://htmlhint.com/docs/user-guide/rules/tag-pair
+    "space-tab-mixed-disabled": true,
+    //"tag-self-close": true //! has to be discussed with Frontend team
+
+    // Disabling bare JavaScript or CSS in head or inline for an element
+    "head-script-disabled": true,
+    "style-disabled": true,
+    "inline-script-disabled": true
+    // "inline-style-disabled": true //* I would like to set this to warn only
 }

@@ -1,6 +1,6 @@
 # EthicApp
 
-This repository contains the main project for EthicApp: a web application (developed in JavaScript and React) for supporting teaching Ethics in high education environments. Please review the [organization README document](https://github.com/EthicApp-Development/organization#readme) for a detailed description of this project and its goals.
+This repository contains the main project for EthicApp: a web application (developed in JavaScript and Angular.JS) for supporting teaching Ethics in high education environments. Please review the [organization README document](https://github.com/EthicApp-Development/organization#readme) for a detailed description of this project and its goals.
 
 ## 1. Developing
 

@@ -7,15 +7,18 @@ env:
   browser: true
   es2021: true
   node: true
+  jquery: true
+  #mocha: true
 extends:
   - eslint:recommended
-  - plugin:react/recommended
 overrides: []
 parserOptions:
   ecmaVersion: latest
   sourceType: module
 plugins:
-  - react
+  - angular
+globals:
+  angular: true
 rules:
   # Strings in double quotes
   quotes:
@@ -31,12 +34,8 @@ rules:
   # Word wrap at 100 characters
   max-len:
     - error
-    - code: 100
-    - tabWidth: 4
-    - ignoreTrailingComments: true
-    - ignoreUrls: true
-    - ignoreTemplateLiterals: true
-    - ignoreRegExpLiterals: true
+    - 100
+    - ignoreTrailingComments: false
 
   # Semicolons
   semi:
@@ -63,3 +62,8 @@ rules:
   # Redeclaration of variables
   no-redeclare:
     - warn # default: "error"
+
+  no-unused-vars:
+    - warn # default: "error"
+
+  no-useless-escape: 0
