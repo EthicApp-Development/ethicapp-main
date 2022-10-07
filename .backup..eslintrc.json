@@ -1,0 +1,59 @@
+// TEMPORAL TRASH FILE, DELETE AFTER ENSURING THE YAML VERSION IS ALRIGHT
+{
+    "env": {
+        "browser": true,
+        "es2021": true,
+        "node": true
+    },
+    "extends": [
+        "eslint:recommended",
+        "plugin:react/recommended"
+    ],
+    "overrides": [],
+    "parserOptions": {
+        "ecmaVersion": "latest",
+        "sourceType": "module"
+    },
+    "plugins": [
+        "react"
+    ],
+    "rules": {
+        // Strings in double quotes
+        "quotes": [
+            "error",
+            "double",
+            {
+                "avoidEscape": true
+            }
+        ],
+        // Indentation
+        "indent": [
+            "error",
+            4
+        ],
+        // Semicolons
+        "semi": [
+            "error",
+            "always"
+        ],
+        "space-after-keywords": [ //! does not seem to work...
+            "error",
+            "never"
+        ],
+        "no-trailing-spaces": "error", //!
+        "no-multi-spaces": "error", //!
+        // "no-irregular-whitespace": "error", // ?
+        
+        // Key-value spacing
+        "key-spacing": [
+            "error",
+            {
+                "align": "value",
+                "beforeColon": false
+            }
+        ],
+
+        // Function style
+        "func-style": ["error", "expression"]
+    }
+}

@@ -1,0 +1,65 @@
+# --------------------------------------------------------------------------------------------------
+# Project configuration file for ESLint.
+# --------------------------------------------------------------------------------------------------
+
+---
+env:
+  browser: true
+  es2021: true
+  node: true
+extends:
+  - eslint:recommended
+  - plugin:react/recommended
+overrides: []
+parserOptions:
+  ecmaVersion: latest
+  sourceType: module
+plugins:
+  - react
+rules:
+  # Strings in double quotes
+  quotes:
+    - error
+    - double
+    - avoidEscape: true
+
+  # Indentation
+  indent:
+    - error
+    - 4
+
+  # Word wrap at 100 characters
+  max-len:
+    - error
+    - code: 100
+    - tabWidth: 4
+    - ignoreTrailingComments: true
+    - ignoreUrls: true
+    - ignoreTemplateLiterals: true
+    - ignoreRegExpLiterals: true
+
+  # Semicolons
+  semi:
+    - error
+    - always
+  # space-after-keywords: #! does not seem to work...
+  #   - error
+  #   - never
+  # no-trailing-spaces: error #! does not seem to work...
+  # no-multi-spaces: error #! does not seem to work...
+  # no-irregular-whitespace: error #?
+
+  # Key-value spacing
+  key-spacing:
+    - error
+    - align: value
+      beforeColon: false
+
+  # Function style
+  func-style:
+    - warn
+    - expression
+
+  # Redeclaration of variables
+  no-redeclare:
+    - warn # default: "error"

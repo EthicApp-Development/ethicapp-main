@@ -1,0 +1,14 @@
+// -------------------------------------------------------------------------------------------------
+// Project configuration file for HTMLHint.
+// -------------------------------------------------------------------------------------------------
+{
+    "doctype-first": false,
+    "head-script-disabled": true, // avoiding bare <script> tags
+    "tagname-lowercase": true,
+    "attr-no-duplication": true,
+    "attr-lowercase": false, // note: attibutes can be in camelCase, so this rule is disabled
+    "attr-value-double-quotes": true,
+    "tag-pair": true // consistent tag pairing: https://htmlhint.com/docs/user-guide/rules/tag-pair
+    //"tag-self-close": true, //*
+    // "id-unique": true //*
+}
