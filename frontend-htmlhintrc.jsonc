@@ -1,0 +1,13 @@
+// -------------------------------------------------------------------------------------------------
+// Project configuration file for HTMLHint.
+// -------------------------------------------------------------------------------------------------
+{
+    "doctype-first": true,
+    "title-require": true,
+    "tagname-lowercase": true,
+    "attr-no-duplication": true,
+    "attr-lowercase": false, // note: attibutes can be in camelCase, so this rule is disabled
+    "attr-value-double-quotes": true,
+    "tag-pair": true, // consistent tag pairing: https://htmlhint.com/docs/user-guide/rules/tag-pair
+    "space-tab-mixed-disabled": true
+}

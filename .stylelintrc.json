@@ -4,6 +4,8 @@
         "stylelint-config-prettier"
     ],
     "rules": {
-        "color-function-notation": null
+        "color-function-notation": null,
+        "no-duplicate-selectors": true,
+        "selector-class-pattern": null
     }
 }

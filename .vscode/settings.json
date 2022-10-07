@@ -54,12 +54,4 @@
         "editor.tabSize": 4,
         //"editor.formatOnSave": true //! requires 
     }
-
-    // GitLens extension
-    //* It is very recommended to uncomment the following lines if you have GitLens freshly
-    //* installed, as it disables extra verbosity for that useful extension. If you are unfamiliar
-    //* with GitLens, please consider checking them.
-    // "gitlens.currentLine.enabled": false,
-    // "gitlens.hovers.currentLine.over": "line",
-    // "gitlens.codeLens.enabled": false
 }

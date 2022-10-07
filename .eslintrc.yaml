@@ -33,9 +33,13 @@ rules:
 
   # Word wrap at 100 characters
   max-len:
-    - error
+    - warn
     - 100
     - ignoreTrailingComments: false
+
+  linebreak-style:
+    - error
+    - unix
 
   # Semicolons
   semi:

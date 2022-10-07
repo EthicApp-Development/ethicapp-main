@@ -4,9 +4,18 @@
 # Intended for CI.
 # --------------------------------------------------------------------------------------------------
 
-#TODO: SQL linter
+set -eu
 
-#TODO: CSS linter
+echo ">>> Running SQL linter"
+sqlfluff lint ./db_config/ --dialect postgres
+echo "[OK] SQLFluff pass"
+
+# Run the following for auto-fixing linting violations (in case you don't want to do it with vscode)
+#    sqlfluff fix ./db_config/ --dialect postgres # --force
+
+echo ">>> Running CSS linter"
+exit 1 #TODO
+echo "[OK] StyleLint pass"
 
 echo ">>> Running HTML linter"
 npx htmlhint "./**/*.html"
