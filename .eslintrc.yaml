@@ -8,7 +8,7 @@ env:
   es2021: true
   node: true
   jquery: true
-  #mocha: true
+  # mocha: true #* for when tests are implemented
 extends:
   - eslint:recommended
 overrides: []
@@ -26,6 +26,9 @@ rules:
     - double
     - avoidEscape: true
 
+  no-duplicate-imports:
+    - error
+
   # Indentation
   indent:
     - error
@@ -35,7 +38,8 @@ rules:
   max-len:
     - warn
     - 100
-    - ignoreTrailingComments: false
+    - ignoreComments: false # doc comments should be correctly wrapped
+    - ignoreTrailingComments: true # flexibility for trailing inline comments
 
   linebreak-style:
     - error
@@ -44,13 +48,15 @@ rules:
   # Semicolons
   semi:
     - error
-    - always
   # space-after-keywords: #! does not seem to work...
   #   - error
   #   - never
   # no-trailing-spaces: error #! does not seem to work...
   # no-multi-spaces: error #! does not seem to work...
   # no-irregular-whitespace: error #?
+
+  no-extra-semi:
+    - error
 
   # Key-value spacing
   key-spacing:
