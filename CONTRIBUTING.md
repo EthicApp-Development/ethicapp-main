@@ -1,7 +1,5 @@
 # Contributing to EthicApp
 
-The IDE for this project is [Visual Studio Code](https://code.visualstudio.com/).
-
 - [Contributing to EthicApp](#contributing-to-ethicapp)
   - [1. Getting started](#1-getting-started)
   - [2. Architecture overview](#2-architecture-overview)
@@ -28,10 +26,6 @@ The IDE for this project is [Visual Studio Code](https://code.visualstudio.com/)
 If you intent to contribute (thank you), after reviewing this file, please check the [organization repo](https://github.com/EthicApp-Development/organization) for detailed information about coding styles, git guidelines and governance, as well as a more detailed description of the project and its goals. Head for issues labeled `good-first-issue` to start your first contributions.
 
 When opening the project with `vscode` and its required extensions for this project (see [section 5](#6-required-software)), the [workspace settings](./.vscode/settings.json) will load and your IDE will be ready for development.
-
-<!-- TODO: document process of "making changes": pull request, QA, mention roles -->
-<!-- ? IN WHICH FILE? -->
-<!-- TODO: documentar proceso de planificación y seguimiento, para que un posible nuevo maintainer lo conozca con antelación y quede documentado y más ordenado. -->
 
 ## 2. Architecture overview
 
@@ -72,12 +66,11 @@ When opening the project with `vscode` and its required extensions for this proj
 
 ## 5. Communication channels
 
-- GitHub: for codebase and merging.
-- Discord: general discussion. <!-- TODO: create discord server, with proper channels. Insert invitation link here. -->
+Please read [this document](https://github.com/EthicApp-Development/organization/blob/master/CONTRIBUTING.md).
 
 ## 6. Required software
 
-The intended IDE for this project is [Visual Studio Code](https://code.visualstudio.com/) (AKA `vscode`). Other mandatory developing tools are listed bellow in this section.
+The official IDE for this project is [Visual Studio Code](https://code.visualstudio.com/) (AKA `vscode`). Other mandatory developing tools are listed bellow in this section.
 
 ### 6.1. Basic dependencies
 
