@@ -1,5 +1,5 @@
 {
-    // Schema IDE asociation for IDE with config file(s)
+    // Schema IDE association for IDE with config file(s)
     "files.associations": {
         ".eslintrc.json": "jsonc" //* redundant setting for current vscode versions
     },

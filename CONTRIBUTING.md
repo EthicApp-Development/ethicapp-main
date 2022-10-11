@@ -21,13 +21,13 @@ The IDE for this project is [Visual Studio Code](https://code.visualstudio.com/)
       - [7.1.2. Markdown](#712-markdown)
     - [7.2. Recommended extensions](#72-recommended-extensions)
   - [8. Appendixes](#8-appendixes)
-    - [8.1. Tip for GitLens](#81-tip-for-gitlens)
+    - [8.1. Recommendation for GitLens](#81-recommendation-for-gitlens)
 
 ## 1. Getting started
 
 If you intent to contribute (thank you), after reviewing this file, please check the [organization repo](https://github.com/EthicApp-Development/organization) for detailed information about coding styles, git guidelines and governance, as well as a more detailed description of the project and its goals. Head for issues labeled `good-first-issue` to start your first contributions.
 
-When opening the project with `vscode` and its required extensions for this project (see [section 5](#5-required-software)), the [workspace settings](./.vscode/settings.json) will load and your IDE will be ready for development.
+When opening the project with `vscode` and its required extensions for this project (see [section 5](#6-required-software)), the [workspace settings](./.vscode/settings.json) will load and your IDE will be ready for development.
 
 <!-- TODO: document process of "making changes": pull request, QA, mention roles -->
 <!-- ? IN WHICH FILE? -->
@@ -116,15 +116,15 @@ For ensuring the codebase fulfills the linting settings, you execute `./lint-che
 
 ### 7.2. Recommended extensions
 
-- [GitLens](https://marketplace.visualstudio.com/items?itemName=eamodio.gitlens): for advanced usage of Git. Highly recommended, as it is specially helpful for merging commits and branches, comparing commits, as well as keeping track of history of a selected line of code. If you are new to this extension, please go to [appendix 8.1](#81-tip-for-gitlens).
+- [GitLens](https://marketplace.visualstudio.com/items?itemName=eamodio.gitlens): for advanced usage of Git. Highly recommended, as it is specially helpful for merging commits and branches, comparing commits, as well as keeping track of history of a selected line of code. If you are new to this extension, please go to [appendix 8.1](#81-recommendation-for-gitlens).
 - [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker): for `Dockerfile` and `docker-compose` intellisense.
 - [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml): validation and formatting of YAML files (e.g. for when editing linter config files in YAML).
 
 ## 8. Appendixes
 
-### 8.1. Tip for GitLens
+### 8.1. Recommendation for GitLens
 
-In case you are unfamiliar with GitLens, you may want to append the following configuration to your personal settings (at vscode's user `settings.json`), for suppressing extra verbosity for this extension:
+In case you are unfamiliar with GitLens, you may want to append the following configuration to your personal settings (at vscode's user `settings.json`), for suppressing additional verbosity for this extension:
 
 ```jsonc
 {
