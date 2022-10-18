@@ -5,6 +5,14 @@
         ".sqlfluff": "properties"
     },
 
+    // Configuration files
+    "[yaml]": {
+        "editor.tabSize": 2
+    },
+    "[json]": {
+        "editor.tabSize": 4
+    },
+
     // JavaScript
     "javascript.preferences.importModuleSpecifier": "non-relative",
     "[javascript]": {

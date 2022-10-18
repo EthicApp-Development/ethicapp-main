@@ -9,7 +9,7 @@
 set -eu
 
 echo ">>> Running SQL linter"
-sqlfluff lint ./db_config/ --dialect postgres
+sqlfluff lint ./db_config/
 # sqlfluff fix ./db_config/ --dialect postgres --force
 echo "[OK] SQLFluff pass"
 
