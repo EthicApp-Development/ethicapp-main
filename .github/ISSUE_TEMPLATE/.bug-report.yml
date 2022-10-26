@@ -1,4 +1,5 @@
 # "Issue form templates are not supported on private repositories."
+#TODO: rename this file to `bug-report.yaml` when the repo goes public.
 
 name: "🪲 Reporte de error/bug"
 description: "Un error es un problema demostrable causado por el código en el repositorio.
@@ -6,7 +7,6 @@ description: "Un error es un problema demostrable causado por el código en el r
 # title: "[Componente] Título breve del reporte de error"
 labels:
   - bug
-assignees: ""
 body:
   - type: textarea
     attributes:
