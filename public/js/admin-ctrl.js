@@ -1760,6 +1760,7 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
     };
 
     self.generateGroups = function (key) {
+        console.log("Generate groups AdminController");
         if (self.selectedSes.grouped) {
             $http({ url: "group-proposal-sel", method: "post", data: { sesid: self.selectedSes.id } }).success(function (data) {
                 self.groups = data;

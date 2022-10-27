@@ -288,7 +288,10 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
             sesid: self.selectedSes.id,
             prev_ans: s.prevResponses.map(e => e.id).join(",")
         };
-        console.log(postdata)
+        console.log("DEBUG");
+        console.log(arr);
+        console.log(postdata);
+        console.log(s);
 
         var confirm = window.confirm("¿Esta seguro que quiere ir a la siguiente etapa? (Etapa "+ (self.stages.length + 1) + ")");
         if (!confirm) {
@@ -419,6 +422,7 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
     };
 
     self.generateGroups = function (key) {
+        console.log("Generate groups StageController");
         console.log(self.groupopt.num, self.groupopt.met);
         if (self.selectedSes.grouped) {
             $http({
