@@ -134,7 +134,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         $socket.on("stateChange", (data) => {
             console.log("SOCKET.IO", data);
             if (data.ses == self.selectedSes.id) {
-                window.location.reload();
+                //window.location.reload(); <--------
             }
         });
     };
@@ -2089,11 +2089,13 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
         //change it to do it for the first stage or a selected stage?
         var stageCounter = 0
         for(var phase of design.phases){
-        
+        console.log(phase);
         var postdata = {
             number: stageCounter + 1,
             question: "",
-            grouping: null,
+            //grouping: null, // grouping: s.type == "team" ? self.groupopt.num + ":" + self.groupopt.met : null, 
+            //ver si es equipo, si lo es, igualar a numero de integrantes + el tipo, sino es nulo
+            grouping: phase.mode == "team" ? phase.stdntAmount + ":" + phase.grouping_algorithm : null,
             type: phase.mode,
             anon: phase.anonymous,
             chat: phase.chat,
@@ -2212,7 +2214,7 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
         var postdata = {
             number: stageCounter + 1,
             question: "",
-            grouping: null,
+            grouping: current_phase.mode == "team" ? current_phase.stdntAmount + ":" + current_phase.grouping_algorithm : null,
             type: current_phase.mode,
             anon: current_phase.anonymous,
             chat: current_phase.chat,
@@ -2220,6 +2222,14 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
             prev_ans: ""
         };
         console.log(postdata)
+
+        if(current_phase.mode == "team"){
+            self.selectedSes.grouped = true;
+            self.generateGroups(true);
+        }
+        else{
+            self.selectedSes.grouped = false;
+        }
         
         $http({url: "add-stage", method: "post", data: postdata}).success(function (data) {
             let stageid = data.id;
@@ -2256,7 +2266,7 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
                 $http({url: "session-start-stage", method: "post", data: pp}).success(function (data) {
                     Notification.success("Etapa creada correctamente");
                     //window.location.reload()
-
+                    self.currentStage(); // <--------Actualiza la data del current stage
                     //call request to change activity currentstage <-----------------------------------------
                 });
                 
@@ -2577,6 +2587,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
 
     self.updateDesign = function () {
         var postdata = {"design":self.design,"id": designId.id};
+        console.log(self.design);
         $http.post("update-design", postdata).success(function (data) {
             
             if (data.status == "ok") {
