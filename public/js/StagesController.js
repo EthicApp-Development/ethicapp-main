@@ -421,9 +421,16 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
         }
     };
 
-    self.generateGroups = function (key) {
+    self.generateGroups = function (key, stage) {
         console.log("Generate groups StageController");
+        //works only in home
+        if(stage != null){
+            self.groupopt.num = self.design.phases[2].stdntAmount;
+            self.groupopt.met = self.design.phases[2].grouping_algorithm;
+        }
+        
         console.log(self.groupopt.num, self.groupopt.met);
+        // 1 ignore
         if (self.selectedSes.grouped) {
             $http({
                 url: "group-proposal-sel",
@@ -445,7 +452,7 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
         if (self.groupopt.met == "previous") {
             return;
         }
-
+        // *1 ignore
         var postdata = {
             sesid: self.selectedSes.id,
             gnum: self.groupopt.num,
@@ -470,6 +477,7 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
             self.groups = generateTeams(arr, function (s) {
                 return s.rnd;
             }, self.groupopt.num, false);
+            console.log(self.groups); // print groups made
         }
         else if (self.selectedSes.type == "T"){
             let d = self.shared.difTable.filter(e => !e.group);
@@ -564,6 +572,7 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
 
         if (self.groups != null) {
             self.groupsProp = angular.copy(self.groups);
+            console.log(self.groupsProp);
             self.groupNames = [];
         }
 
@@ -581,6 +590,9 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
     };
 
     self.acceptGroups = function (stid) {
+        console.log("Accept Groups")
+        console.log(self.groups);
+        console.log(stid);
         if (self.groups == null) {
             Notification.error("No hay propuesta de grupos para fijar");
             return;

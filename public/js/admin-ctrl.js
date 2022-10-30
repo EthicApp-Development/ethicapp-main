@@ -2196,12 +2196,12 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
 
     self.init = function(){
         if(self.selectedView == "activity") {
-            self.shared.resetGraphs(); // self.iterationIndicator  fix this id
+            //self.shared.resetGraphs(); // self.iterationIndicator  fix this id
             self.currentStage();
             }
     }
 
-    self.nextActivityDesign = function () {
+    self.nextActivityDesign = function () {//check for race condition
         var stageCounter = self.currentActivity.stage + 1
         var sesid = self.selectedSes.id
         console.log("Current design:",self.design)
@@ -2225,11 +2225,8 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
         console.log(postdata)
 
         if(current_phase.mode == "team"){
-            self.selectedSes.grouped = true;
-            self.generateGroups(true);
-        }
-        else{
-            self.selectedSes.grouped = false;
+            //self.generateGroups(true);
+            self.generateGroups(null,self.selectedSes.current_stage );
         }
         
         $http({url: "add-stage", method: "post", data: postdata}).success(function (data) {
@@ -2268,6 +2265,7 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
                     Notification.success("Etapa creada correctamente");
                     //window.location.reload()
                     self.currentStage(); // <--------Actualiza la data del current stage
+                    self.shared.verifyTabs();
                     //call request to change activity currentstage <-----------------------------------------
                 });
                 
@@ -2278,6 +2276,10 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
         });
    
     };
+
+    self.TestGroups = function(){
+        self.generateGroups(null,self.selectedSes.current_stage );
+    }
 
     self.currentStage = function () {
         var pd = {
