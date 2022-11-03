@@ -2201,6 +2201,20 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
             }
     }
 
+    self.getPrevAns = function(current_phase){
+        if(current_phase.prevPhasesResponse.length == 0){
+            return "";
+        }
+        var temp = [];
+        let answers = current_phase.prevPhasesResponse;
+        for(let i=0; i < current_phase.prevPhasesResponse.length; i++){
+            let answerIndex = answers[i];
+            temp.push(self.stages[answerIndex]);
+        }
+        console.log(temp);
+        return temp.map(e => e.id).join(",");
+    }
+
     self.nextActivityDesign = function () {//check for race condition
         var stageCounter = self.currentActivity.stage + 1
         var sesid = self.selectedSes.id
@@ -2210,8 +2224,11 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
        
         var current_phase = self.design.phases[stageCounter]
         console.log("NEXT PHASE:", current_phase)
+        console.log(self.getPrevAns(current_phase));
+       
 
-
+        //match phase.prevPhasesResponse index con self.stages index
+        //prev_ans: s.prevResponses.map(e => e.id).join(",")
         var postdata = {
             number: stageCounter + 1,
             question: "",
@@ -2220,13 +2237,14 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
             anon: current_phase.anonymous,
             chat: current_phase.chat,
             sesid: sesid,
-            prev_ans: ""
+            prev_ans: self.getPrevAns(current_phase)
         };
         console.log(postdata)
+        console.log(self.selectedSes)
 
         if(current_phase.mode == "team"){
             //self.generateGroups(true);
-            self.generateGroups(null,self.selectedSes.current_stage );
+            self.generateGroups(null,self.selectedSes.current_stage ); //<-------------update value
         }
         
         $http({url: "add-stage", method: "post", data: postdata}).success(function (data) {
@@ -2266,6 +2284,8 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
                     //window.location.reload()
                     self.currentStage(); // <--------Actualiza la data del current stage
                     self.shared.verifyTabs();
+                    self.getStages();
+                    self.selectedSes.current_stage = stageid;
                     //call request to change activity currentstage <-----------------------------------------
                 });
                 
@@ -2277,8 +2297,17 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
    
     };
 
-    self.TestGroups = function(){
-        self.generateGroups(null,self.selectedSes.current_stage );
+    self.Test = function(){
+        var stageCounter = self.currentActivity.stage + 1
+        var current_phase = self.design.phases[stageCounter]
+        console.log(stageCounter);
+        var temp = [];
+        for(let i = 0; i <stageCounter; i++){
+            temp.push(i);
+            
+        }
+        current_phase.prevPhasesResponse= temp;
+        console.log(self.design.phases[stageCounter]);
     }
 
     self.currentStage = function () {
@@ -2736,7 +2765,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
             "anonymous":phase.anonymous,
             "questions":phase.questions,
             "grouping_algorithm": phase.grouping_algorithm,
-            "prevPhaseResponse": phase.prevPhaseResponse,
+            "prevPhasesResponse": phase.prevPhasesResponse,
             "stdntAmount": phase.stdntAmount
         }
     }
@@ -2745,6 +2774,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         var index = self.design.phases.length -1
         var prev_phase = self.design.phases[index]
         self.design.phases.push(self.copyPrevStage("semantic_differential", prev_phase))
+        console.log(self.design.phases)
     }
 
     self.getStages = function(){
