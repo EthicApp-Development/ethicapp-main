@@ -31,3 +31,7 @@ In order to run the project natively in your computer, the following software is
 Execute the `start` Node task with `npm run-script start` for starting the web server.
 
 <!-- TODO: document logging (if complex logging exists) and testing (after it gets implemented) -->
+
+## 3. Getting started
+
+Please go to the [CONTRIBUTING](./CONTRIBUTING.md) document and review our [communication channels](https://github.com/EthicApp-Development/organization/blob/master/CONTRIBUTING.md) for the project.
