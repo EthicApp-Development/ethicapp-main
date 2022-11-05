@@ -11,7 +11,7 @@ labels: bug
 
 # Detalles
 ## ¿Cuándo ocurrió?
-(De ser posible, ingresar fecha, idealmente junto con la hora estimada)
+(De ser posible, ingresar fecha, idealmente junto con la hora estimada. De lo contrario, se asume fecha de creación del issue.)
 
 ## ¿En qué dispositivo fue?
 (Indicar si el error se produjo al usar el sistema por celular o por medio de un computador)
