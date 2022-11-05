@@ -1,10 +1,8 @@
 ---
 name: Nueva característica
-about: Sugiera una idea para este proyecto
-title: ''
+about: Sugerir una idea para este proyecto
+title: ""
 labels: enhancement
-assignees: ''
-
 ---
 
 # Descripción general 
