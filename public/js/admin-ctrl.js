@@ -1,13 +1,14 @@
 "use strict";
 
 var adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill",
-    "tableSort", 'btford.socket-io', 'ngRoute']); //ngRoute was newly added
+    "tableSort", 'btford.socket-io', 'ngRoute', 'checklist-model']); //ngRoute was newly added
 
 var DASHBOARD_AUTOREALOD = window.location.hostname.indexOf("fen") != -1;
 var DASHBOARD_AUTOREALOD_TIME = 15;
 
 var designId = {id:null}
-var launchId = {id:null}
+var launchId = {id:null,title:null, type:null}
+var tabSel = {type: 0}
 var prevTab = "";
 
 window.DIC = null;
@@ -133,9 +134,9 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         
         $socket.on("stateChange", (data) => {
             console.log("SOCKET.IO", data);
-            if (data.ses == self.selectedSes.id) {
+            //if (data.ses == self.selectedSes.id) {
                 //window.location.reload(); <--------
-            }
+            //}
         });
     };
 
@@ -218,12 +219,16 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         );
       }
 
-    self.selectView = function(tab){
+    self.selectView = function(tab, type){
         if(tab != self.selectedView){
             self.selectedView = tab;
             $route.reload();
             if(tab != "newDesignExt" && tab != "viewDesign") designId.id = null; //avoids making designs-documents request
-            if(tab != "launchActivity") launchId.id = null;
+            if(tab != "launchActivity") {launchId.id = null; launchId.title = null; launchId.type = null}
+            if(tab == "designs") {
+                if(type != null) tabSel.type = type;
+                else tabSel.type = 0;
+            }
             console.log(self.selectedView);
         }
     }
@@ -2058,6 +2063,7 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
 
     self.init =function(){
         self.selectedSes = {};
+        self.launchDesignId = launchId.id;
     }
 
 
@@ -2297,19 +2303,6 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
    
     };
 
-    self.Test = function(){
-        var stageCounter = self.currentActivity.stage + 1
-        var current_phase = self.design.phases[stageCounter]
-        console.log(stageCounter);
-        var temp = [];
-        for(let i = 0; i <stageCounter; i++){
-            temp.push(i);
-            
-        }
-        current_phase.prevPhasesResponse= temp;
-        console.log(self.design.phases[stageCounter]);
-    }
-
     self.currentStage = function () {
         var pd = {
             sesid: self.selectedSes.id
@@ -2334,13 +2327,32 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
 
 adpp.controller("BrowseDesignsController", function ($scope, $filter, $http, Notification, $timeout) {
     var self = $scope;
-    self.designs = null;
+    self.designs = [];
     self.public = null;
+    self.dsgnid = null;
+    self.dsgntitle = null;
+    self.dsgntype = null;
+    self.tab = null;
 
     self.init = function(){
-        if(self.selectedView == "launchActivity") {self.getDesigns(); } //make request when on launchActivity view only
-        else if(self.selectedView == "designs") {self.getDesigns();} 
-        if(self.selectedView == "designs") {self.getPublicDesigns(); } 
+        if(self.selectedView == "launchActivity") {self.getDesigns(); self.setValues();} //make request when on launchActivity view only
+        else if(self.selectedView == "designs") {
+            self.tab = tabSel.type
+            self.getDesigns();
+            self.getPublicDesigns();
+            } 
+    }
+
+    self.setValues = function(){
+        self.dsgnid = launchId.id;
+        self.dsgntitle = launchId.title;
+        self.dsgntype = launchId.type;
+    }
+
+    self.designValues = function(id, title, type){
+        self.dsgnid = id;
+        self.dsgntitle = title;
+        self.dsgntype = type;
     }
 
     self.designPublic = function (dsgnid) {
@@ -2411,14 +2423,13 @@ adpp.controller("BrowseDesignsController", function ($scope, $filter, $http, Not
         });        
     }
 
-    self.launchDesignEdit = function(){
-        launchId.id = designId.id;
-        self.selectView("launchActivity");
-    }
-
-    self.launchDesign = function(ID){
+    self.launchDesign = function(ID, Title, Type){
         launchId.id = ID;
+        launchId.title = Title;
+        launchId.type = Type;
+        //set title and type
         self.selectView("launchActivity");
+        console.log(launchId)
     }
 
     self.init();
@@ -2575,6 +2586,13 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
             resetValues();
         }
     }
+
+    self.launchDesignEdit = function(){
+        launchId.id = designId.id;
+        launchId.title = self.design.metainfo.title;
+        launchId.type = self.design.type;
+        self.selectView("launchActivity");
+    }
   
     self.uploadDesign = function (title, author) {
         var postdata = { 
@@ -2588,8 +2606,8 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
             "phases":[
                 {
                     "mode":"individual",
-                    "chat":true,
-                    "anonymous":true,
+                    "chat":false,
+                    "anonymous":false,
                     "grouping_algorithm" : "random",
                     "prevPhasesResponse" : [ ],
                     "stdntAmount":3,
@@ -2623,7 +2641,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         $http.post("update-design", postdata).success(function (data) {
             
             if (data.status == "ok") {
-                //console.log(data)
+                console.log(data)
             }
             
         });

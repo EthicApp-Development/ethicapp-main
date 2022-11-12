@@ -272,6 +272,11 @@
 	"female":"Femenino",
 	"male":"Masculino",
 	"other":"Otro",
-	"enter_code":"Ingresar codigo"
+	"enter_code":"Ingresar codigo",
+	"enterCodeAct":"Ingresa código para unirte a una actividad",
+	"enter":"Ingresar",
+	"myActivities": "Mis Actividades",
+	"current": "Vigentes",
+	"completed": "Finalizadas"
 }
 

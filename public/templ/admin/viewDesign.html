@@ -90,7 +90,7 @@
                             style="z-index: 2; position:absolute; background:#fff; border: 2px #bbb solid; width:10em;">
                                 <div ng-repeat="n in buildArray(currentStage)">
                                     <input type="checkbox" name="prevStage" ng-disabled="true"
-                                    checklist-value="{{n-1}}" 
+                                    checklist-value="n-1" 
                                     checklist-model="design.phases[currentStage].prevPhasesResponse[n-1]">
                                     <label for="S{{n}}">{{'stage'|lang}}: {{n}}</label> <!--FIX TOGGLE OPTION-->
                                 </div>

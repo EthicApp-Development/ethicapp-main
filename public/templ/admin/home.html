@@ -19,7 +19,7 @@
         <div class="thumbnail-image" ng-show="launch" style="background-image: url('{{path}}launch.svg');"></div>
         <div class="thumbnail-image" ng-show="!launch" style="background-image: url('{{path}}launch-active.svg');"></div>
     </div>
-    <div ng-click="selectView('designs')"
+    <div ng-click="selectView('designs', 0);"
         ng-init="designShare = true"
         ng-mouseover="designShare = false"
         ng-mouseout="designShare = true">
@@ -27,7 +27,7 @@
         <div class="thumbnail-image" ng-show="designShare" style="background-image: url('{{path}}design-share.svg');"></div>
         <div class="thumbnail-image" ng-show="!designShare" style="background-image: url('{{path}}design-share-active.svg');"></div>
     </div>
-    <div ng-click="selectView('designs')"
+    <div ng-click="selectView('designs', 1);"
         ng-init="designSearch = true"
         ng-mouseover="designSearch = false"
         ng-mouseout="designSearch = true">

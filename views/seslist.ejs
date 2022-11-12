@@ -40,15 +40,15 @@
         </div>
     </div>
     <!--
-        TABS & Lang
+        TABS & Lang  {{'Enter'|mylang}}
     -->
     <div class="top-bar top-bar-tabs">
         <div class="qs-tabs">
             <div class="tab tab-text tab-text-lg" id="seslistdiv" ng-click= "changeTab(true)" ng-class="{'active': !currTab}">
-                Ingresa Código
+                {{'enter_code'|mylang}}
             </div>
             <div class="tab tab-text tab-text-lg" id="seslistdiv" ng-click = "changeTab(false)" ng-class="{'active': currTab}">
-                Mis Actividades
+                {{'myActivities'|mylang}}
             </div>
             <div class="pull-right text-white">
                 <strong class="margin-right-8"><a href="profile" style="color: white;">{{ username }}</a></strong>
@@ -67,17 +67,17 @@
             <div class="row">
                 <div class="col text-center">
                     <br>
-                    <p>Ingresa código para unirte a una actividad</p>
+                    <p>{{'enterCodeAct'|mylang}}</p>
                     <br>
                     <input type = "text" ng-model="invCode" id="codebox"
-                    ng-keydown="$event.keyCode === 13 && enterCode()" placeholder="Ingresar Código" style="height:85px; width:240px; font-size: 27px; text-align: center;">
+                    ng-keydown="$event.keyCode === 13 && enterCode()" placeholder="{{'enter_code'|mylang}}" style="height:85px; width:240px; font-size: 27px; text-align: center;">
                     <span>
                         <br>
                         <br>
 
                         <button class="btn btn-primary" ng-disabled="invCode == ''" ng-click="enterCode()" style="width:17em"
                             id="codeboxbtn">
-                            Ingresar
+                            {{'enter'|mylang}}
                         </button>
                         <br>
                         <br>
@@ -92,20 +92,20 @@
     <div class="scrollable-container white" style="border-style: ridge;" ng-show="currTab">
         <div class="qs-tabs">
             <div class="tab tab-text tab-text-lg" id="seslistdiv" ng-click= "changeTypeTab(true)" ng-class="{'active': !sesTypeTab}">
-                Vigentes
+                {{'current'|mylang}}
             </div>
             <div class="tab tab-text tab-text-lg" id="seslistdiv" ng-click = "changeTypeTab(false)" ng-class="{'active': sesTypeTab}">
-                Finalizadas
+                {{'completed'|mylang}}
             </div>
         </div>
         <div class="list-group pad-content">
             <div class="list-group-item" ng-repeat="ses in currentSessions()">
                 <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
                 <p class="list-group-item-text" ng-bind="ses.descr"></p>
-                <p class="list-group-item-text">Lanzada {{ses.time | date}}</p>
-                <p class="list-group-item-text">Código {{ses.code}}</p>
+                <p class="list-group-item-text">{{'launched'|mylang}} {{ses.time | date}}</p>
+                <p class="list-group-item-text">{{'code'|mylang}} {{ses.code}}</p>
                 <div class="text-right">
-                    <a href="{{routes[ses.type]}}?sesid={{ses.id}}"><button class="btn btn-primary ">Ir a la actividad</button></a> 
+                    <a href="{{routes[ses.type]}}?sesid={{ses.id}}"><button class="btn btn-primary ">{{'gotoActivity'|mylang}}</button></a>
                 </div>
             </div>
             

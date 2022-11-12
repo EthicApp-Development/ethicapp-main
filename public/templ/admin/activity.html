@@ -79,7 +79,7 @@
                                         style="z-index: 2; position:absolute; background:#fff; border: 2px #bbb solid; width:10em;">
                                             <div ng-repeat="n in buildArray(currentStage)">
                                                 <input type="checkbox" name="prevStage" ng-disabled="true"
-                                                checklist-value="{{n-1}}" 
+                                                checklist-value="n-1" 
                                                 checklist-model="design.phases[currentStage].prevPhasesResponse[n-1]">
                                                 <label for="S{{n}}">{{'stage'|lang}}: {{n}}</label> <!--FIX TOGGLE OPTION-->
                                             </div>
@@ -187,7 +187,6 @@
             <button class="btn btn-info" ng-click="showDesign = !showDesign">Show design</button>
             <button class="btn btn-success" ng-click="nextActivityDesign(design,selectedId)" ng-disabled = "design.phases.length-1 == currentActivity.stage ">Next</button>
             <button class="btn btn-danger" ng-click="finishActivity()">End</button>
-            <button class="btn btn-warning" ng-click="Test()">{{'add' | lang}} {{'answers' | lang}}</button>
             <!-- DASHBOARDS -->
             <div class="pad-content" ng-controller="DashboardController">
                 <div class="pull-right margin-ver-8" ng-show="selectedSes.type == 'R' || selectedSes.type == 'T' || selectedSes.type == 'J'">

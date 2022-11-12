@@ -3,8 +3,8 @@
 <a ng-click="selectView('')" >{{'back'|lang}}</a>
 <br>
 <h2>{{'actDesigns'|lang}}</h2>
-<div>
-    <div class="tab-cs" ng-init="dsgnMode=0">
+<div ng-controller ="BrowseDesignsController">
+    <div class="tab-cs" ng-init="dsgnMode= tab">
         <button class="tab-cs" ng-click= 'dsgnMode=0' ng-class="{'btn-selected': dsgnMode == 0}">
         {{'yours'|lang}}
         </button>
@@ -16,38 +16,38 @@
         </div>
         
     </div>
-</div>
-<div class="container" style="overflow: scroll; max-height: 40em; min-height: 10em; border: #bbb 1px solid;" 
-ng-controller ="BrowseDesignsController" ng-if="selectedView=='designs'">
-    <div class="activities_container" style="margin-top: 2em;">
-        <div class="list-group pad-content">
-            <!--OWN-->
-            <div class="list-group-item" ng-repeat="ses in designs | filter:userSearch" ng-if="dsgnMode==0"> <!--UPDATE IT CORRECTLY-->
-                <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
-                <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
-                <div class="text-right">
-                    <strong ng-show="ses.locked">LOCKED</strong>
-                    <button class="btn btn-primary " ng-click="launchDesign(ses.id)">{{'launchActivity' | lang}}</button>
-                    <label class="switch">
-                        <input type="checkbox" ng-checked="ses.public" ng-click="designPublic(ses.id)">
-                        <span class="slider round"></span>
-                        
-                    </label>{{'share'|lang}}                    
-                    <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'E')" ng-hide = "ses.locked">{{'edit' | lang}}</button>
-                    <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'V')">{{'view' | lang}}</button>
-                    <button class="btn btn-danger " ng-click="deleteDesign(ses.id)" ng-hide="ses.locked">{{'delete' | lang}}</button>
+    <div class="container" style="overflow: scroll; max-height: 40em; min-height: 10em; border: #bbb 1px solid;" 
+     ng-if="selectedView=='designs'">
+        <div class="activities_container" style="margin-top: 2em;">
+            <div class="list-group pad-content">
+                <!--OWN-->
+                <div class="list-group-item" ng-repeat="ses in designs | filter:userSearch" ng-if="dsgnMode==0"> <!--UPDATE IT CORRECTLY-->
+                    <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
+                    <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
+                    <div class="text-right">
+                        <strong ng-show="ses.locked">LOCKED</strong>
+                        <button class="btn btn-primary " ng-click="launchDesign(ses.id, ses.metainfo.title, ses.type)">{{'launchActivity' | lang}}</button>
+                        <label class="switch">
+                            <input type="checkbox" ng-checked="ses.public" ng-click="designPublic(ses.id)">
+                            <span class="slider round"></span>
+                            
+                        </label>{{'share'|lang}}                    
+                        <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'E')" ng-hide = "ses.locked">{{'edit' | lang}}</button>
+                        <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'V')">{{'view' | lang}}</button>
+                        <button class="btn btn-danger " ng-click="deleteDesign(ses.id)" ng-hide="ses.locked">{{'delete' | lang}}</button>
+                    </div>
+                </div>
+                <!--PUBLIC-->
+                <div class="list-group-item" ng-repeat="ses in public | filter:userSearch" ng-if="dsgnMode==1"> <!--UPDATE IT CORRECTLY-->
+                    <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
+                    <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
+                    <div class="text-right">
+                        <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'V')">{{'view' | lang}}</button>
+                    </div>
                 </div>
             </div>
-            <!--PUBLIC-->
-            <div class="list-group-item" ng-repeat="ses in public | filter:userSearch" ng-if="dsgnMode==1"> <!--UPDATE IT CORRECTLY-->
-                <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
-                <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
-                <div class="text-right">
-                    <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'V')">{{'view' | lang}}</button>
-                </div>
-            </div>
+        
         </div>
-    
-    </div>
 
+    </div>
 </div>

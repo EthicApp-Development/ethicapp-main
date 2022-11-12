@@ -113,7 +113,7 @@
                             style="z-index: 2; position:absolute; background:#fff; border: 2px #bbb solid; width:10em;">
                                 <div ng-repeat="n in buildArray(currentStage)">
                                     <input type="checkbox" name="prevStage" 
-                                    checklist-value="{{n-1}}" 
+                                    checklist-value="n-1" 
                                     checklist-model="design.phases[currentStage].prevPhasesResponse[n-1]">
                                     <label for="S{{n}}">{{'stage'|lang}}: {{n}}</label> <!--FIX TOGGLE OPTION-->
                                 </div>
@@ -218,6 +218,6 @@
     </div>
     <div class = "row" style="padding-left: 70%; margin-bottom: 5em;">
         <button class="btn btn-primary col-xs-3" ng-click="updateDesign()">{{'save'|lang}}</button>
-        <button class="btn btn-primary col-xs-6" ng-click="launchDesignEdit()" style="margin-left: 1em;">{{'launchActivity'|lang}}</button>
+        <button class="btn btn-primary col-xs-6" ng-click="launchDesignEdit(ses.id, ses.metainfo.title, ses.type)" style="margin-left: 1em;">{{'launchActivity'|lang}}</button>
     </div>
 </div>  
