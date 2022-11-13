@@ -277,6 +277,8 @@
 	"enter":"Ingresar",
 	"myActivities": "Mis Actividades",
 	"current": "Vigentes",
-	"completed": "Finalizadas"
+	"completed": "Finalizadas",
+	"sessionFinish":"Sesión finalizada",
+	"sessionCode": "Código de la sesión"
 }
 

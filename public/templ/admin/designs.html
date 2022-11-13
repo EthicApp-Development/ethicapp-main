@@ -5,10 +5,10 @@
 <h2>{{'actDesigns'|lang}}</h2>
 <div ng-controller ="BrowseDesignsController">
     <div class="tab-cs" ng-init="dsgnMode= tab">
-        <button class="tab-cs" ng-click= 'dsgnMode=0' ng-class="{'btn-selected': dsgnMode == 0}">
+        <button class="tab-cs" ng-click= 'dsgnMode=0;getDesigns()' ng-class="{'btn-selected': dsgnMode == 0}">
         {{'yours'|lang}}
         </button>
-        <button class="tab-cs" ng-click = "dsgnMode=1" ng-class="{'btn-selected': dsgnMode == 1}">
+        <button class="tab-cs" ng-click = "dsgnMode=1;getPublicDesigns()" ng-class="{'btn-selected': dsgnMode == 1}">
         {{'byOthers'|lang}}
         </button>
         <div style="float: left;display: flex;justify-content: left;align-items: center;"> 

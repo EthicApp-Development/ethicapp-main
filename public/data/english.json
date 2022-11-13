@@ -234,6 +234,8 @@
 	"semanticUnitPauta": "Semantic units guideline",
 	"sep_data": "enter data separated by comma",
 	"session": "Session",
+	"sessionCode": "Session code",
+	"sessionFinish":"Session finished",
 	"sessionList": "List of Sessions",
 	"setGroups": "Set Groups",
 	"share": "Share",

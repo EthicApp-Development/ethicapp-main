@@ -178,12 +178,15 @@
             </div>  
 
             <!--MONITOR-->
-
+            <!--
             <ul>
                 <li><strong>Activity: {{currentActivity.id}}</strong></li>
                 <li><strong>SessionID: {{selectedId}}</strong> -> Current Stage: {{ selectedSes.current_stage }} -> Num: {{ currentActivity.stage }}</li>
                 <li><strong>Design Name: {{design.metainfo.title}}</strong></li>
             </ul>
+            -->
+            <p><strong>{{'sessionCode'|lang}}: {{selectedSes.code}}</strong></p>
+            <br>
             <button class="btn btn-info" ng-click="showDesign = !showDesign">Show design</button>
             <button class="btn btn-success" ng-click="nextActivityDesign(design,selectedId)" ng-disabled = "design.phases.length-1 == currentActivity.stage ">Next</button>
             <button class="btn btn-danger" ng-click="finishActivity()">End</button>
@@ -252,7 +255,6 @@
 
                 <div ng-show="selectedSes.type == 'T' || true" class="margin-top-8">
                     <strong>{{ 'indAggAns' | lang }}</strong>
-                    <h5><strong>Stage {{iterationIndicator}} -- {{shared.stagesMap[iterationIndicator].type}}</strong></h5> <!--DELETE-->
                     <span class="pull-right"><span style="color: red;">*</span> {{ 'commentReq' | lang }}</span>
                     <table class="table table-bordered" ts-wrapper>
                         <tr>

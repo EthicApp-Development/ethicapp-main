@@ -2459,117 +2459,8 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     self.extraOpts = false;
     self.documents = null;
     self.prevStages = false;
-    //self.design = {};
-    /*
-    self.design = { //DUMMY DATA
-        "metainfo":{
-            "title":" Test Design",
-            "author": "Claudio Alvarez",
-            "creation_date": "",
-            "id":"HsLKs92M"
-        },
-        "roles":[],
-        "type":"semantic_differential",
-        "phases":[
-            {
-                "mode":"individual",
-                "chat":true,
-                "anonymous":true,
-                "grouping_algorithm" : "random",
-                "prevPhasesResponse" : [ ],
-                "stdntAmount":3,
-                "questions":[
-                    {
-                    "q_text":"Te gusta como esta quedando el formato?",
-                    "ans_format":{
-                        "values":7,
-                        "l_pole":"Me carga",
-                        "r_pole":"Me encanta",
-                        "just_required": true,
-                        "min_just_length": 5
-                    }
-                    },
-                    {
-                    "q_text":"Testing",
-                    "ans_format":{
-                        "values":9,
-                        "l_pole":"Me carga",
-                        "r_pole":"Me encanta",
-                        "just_required": false,
-                        "min_just_length": 8
-                    }
-                    }
-                ]
-            },
-            {
-            "mode":"team",
-            "chat":false,
-            "anonymous":true,
-            "grouping_algorithm" : "knowledgeType homog",
-            "prevPhaseResponse" : [ 0],
-            "stdntAmount":4,
-            "questions":[
-                {
-                    "q_text":"Pregunta de prueba",
-                    "ans_format":{
-                        "values":10,
-                        "l_pole":"En contra",
-                        "r_pole":"A favor",
-                        "just_required": false,
-                        "min_just_length": 8
-                }
-                },
-                {
-                "q_text":"Te gusta como esta quedando el formato?",
-                "ans_format":{
-                    "values":7,
-                    "l_pole":"Me carga",
-                    "r_pole":"Me encanta",
-                    "just_required": true,
-                    "min_just_length": 5
-                }
-                }
-            ]
-        },
-        {
-            "mode":"team",
-            "chat":false,
-            "anonymous":false,
-            "grouping_algorithm" : "performance homog",
-            "prevPhaseResponse" : [ 0 ,1],
-            "stdntAmount":7,
-            "questions":[
-                {
-                    "q_text":"Tercera fase",
-                    "ans_format":{
-                        "values":4,
-                        "l_pole":"En contra",
-                        "r_pole":"A favor",
-                        "just_required": false,
-                        "min_just_length": 8
-                }
-                },
-                {
-                "q_text":"Te gusta como esta quedando el formato?",
-                "ans_format":{
-                    "values":9,
-                    "l_pole":"Me carga",
-                    "r_pole":"Me encanta",
-                    "just_required": true,
-                    "min_just_length": 5
-                }
-                }
-            ]
-        }
-        ]
-
-    }
-    */
-    /*
-
-        MOVER CONTENIDO A CONTROLADORES CORRESPONDIENTES!
-
-    */
+    self.error = false;
+    self.saved = false;
 
     /*
         BACKEND FUNCTIONS
@@ -2636,17 +2527,46 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     };
 
     self.updateDesign = function () {
-        var postdata = {"design":self.design,"id": designId.id};
-        console.log(self.design);
-        $http.post("update-design", postdata).success(function (data) {
-            
-            if (data.status == "ok") {
-                console.log(data)
-            }
-            
-        });
-
+        self.error = self.checkDesign();
+        if(!self.error){
+            var postdata = {"design":self.design,"id": designId.id};
+            $http.post("update-design", postdata).success(function (data) {
+                
+                if (data.status == "ok") {
+                    self.saved = true;
+                //    console.log(data)
+                }
+                
+            });
+        }
+        else{
+            self.saved = false;;
+        }
     }
+
+    self.checkDesign = function(){ 
+        var error = false;
+        var phases = self.design.phases
+        for(let i =0; i< phases.length; i++){
+            var phase = self.design.phases[i];
+            var questions = phase.questions;
+
+            if(phase.mode == "individual"){
+                phase.chat = false;
+                phase.anonymous = false;
+            }
+
+            for(let j=0; j<questions.length; j++){
+                var question = questions[j];
+                if(question.q_text == "") error = true;
+                if(question.ans_format.l_pole == "") error = true;
+                if(question.ans_format.r_pole =="") error = true;
+                if(question.ans_format.min_just_length < 0 ) error = true;
+            }
+
+        }
+        return error;
+    };
 
 
     self.getDesign = function (ID) {
