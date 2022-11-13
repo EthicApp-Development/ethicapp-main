@@ -217,10 +217,10 @@
         
     </div>
     <div ng-show="saved">
-        <h4 style="color:rgb(33, 121, 15); text-align: center; "><strong>Guardado con éxito.</strong></h4>
+        <h4 style="color:rgb(33, 121, 15); text-align: center; "><strong>{{'savedSuccess'|lang}}</strong></h4>
     </div>
     <div ng-show="error">
-        <h4 style="color:red; text-align: center; "><strong>Error: Hay preguntas con valores incorrectos.</strong></h4>
+        <h4 style="color:red; text-align: center; "><strong>{{'errorSave'|lang}}</strong></h4>
     </div>
     <div class = "row" style="padding-left: 70%; margin-bottom: 5em;">
         <button class="btn btn-primary col-xs-3" ng-click="updateDesign()">{{'save'|lang}}</button>

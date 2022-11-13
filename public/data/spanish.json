@@ -279,6 +279,8 @@
 	"current": "Vigentes",
 	"completed": "Finalizadas",
 	"sessionFinish":"Sesión finalizada",
-	"sessionCode": "Código de la sesión"
+	"sessionCode": "Código de la sesión",
+	"errorSave": "Error: Hay preguntas con valores incorrectos.",
+	"savedSuccess":"Guardado con éxito."
 }
 
