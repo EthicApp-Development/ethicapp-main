@@ -2208,6 +2208,7 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
     }
 
     self.getPrevAns = function(current_phase){
+        return "";
         if(current_phase.prevPhasesResponse.length == 0){
             return "";
         }
