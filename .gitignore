@@ -7,3 +7,4 @@ uploads
 public/fonts/*
 sessions
 postgres
+package-lock.json
