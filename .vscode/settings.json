@@ -1,0 +1,70 @@
+{
+    // Schema IDE association for IDE with config file(s)
+    "files.associations": {
+        ".eslintrc.json": "jsonc", //* redundant setting for current vscode versions
+        ".sqlfluff": "properties"
+    },
+
+    // Configuration files
+    "[yaml]": {
+        "editor.tabSize": 2
+    },
+    "[json]": {
+        "editor.tabSize": 4
+    },
+
+    // JavaScript
+    "javascript.preferences.importModuleSpecifier": "non-relative",
+    "[javascript]": {
+        "editor.rulers": [
+            100
+        ],
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4,
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+    },
+
+    // ESLint (Javascript)
+    "eslint.format.enable": true,
+    "eslint.lintTask.enable": true,
+    "eslint.validate": [
+        "javascript",
+        "javascriptreact",
+        "html"
+    ],
+
+    // HTML
+    "[html]": {
+        "editor.rulers": [
+            100
+        ],
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4,
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "vscode.html-language-features"
+    },
+    "htmlhint.enable": true,
+    "htmlhint.documentSelector": [
+        "html",
+        "htm"
+    ],
+
+    // CSS
+    "[css]": {
+        "editor.defaultFormatter": "stylelint.vscode-stylelint",
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4
+    },
+
+    // SQL
+    "sqlfluff.linter.run": "onSave",
+    "[sql]": {
+        "editor.rulers": [
+            100
+        ],
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4,
+        "editor.formatOnSave": true
+    }
+}

@@ -1,0 +1,18 @@
+---
+extends:
+  - stylelint-config-standard
+  - stylelint-config-prettier
+ignoreFiles:
+  - "**/*.js"
+  - "./node_modules/*"
+  - "**/*.min.css"
+  - bootstrap*.css
+rules:
+  indentation: 4
+  linebreaks: unix
+  max-empty-lines: 3
+  color-no-invalid-hex: true
+  color-function-notation: modern
+  no-duplicate-selectors: true
+  font-family-name-quotes: "always-where-required"
+  length-zero-no-unit: true
