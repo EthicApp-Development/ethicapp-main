@@ -1,7 +1,7 @@
-create table pass_reset(
+CREATE TABLE pass_reset(
     id serial,
-    mail varchar(32) not null,
-    token varchar(64) not null,
+    mail varchar(32) NOT NULL,
+    token varchar(64) NOT NULL,
     ctime timestamp,
-    primary key(id)
+    PRIMARY KEY(id)
 );

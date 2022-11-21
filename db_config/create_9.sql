@@ -1,1 +1,1 @@
-alter table teams add column progress integer default 0;
+ALTER TABLE teams ADD COLUMN progress integer DEFAULT 0;

@@ -1,1 +1,1 @@
-alter table sessions add column current_stage integer references stages(id);
+ALTER TABLE sessions ADD COLUMN current_stage integer REFERENCES stages(id);

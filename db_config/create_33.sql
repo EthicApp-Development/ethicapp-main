@@ -1,7 +1,7 @@
-alter table sesusers add column device varchar(255);
+ALTER TABLE sesusers ADD COLUMN device varchar(255);
 
-create table if not exists drafts(
+CREATE TABLE IF NOT EXISTS drafts(
     id serial,
-    sesid integer references sessions(id),
+    sesid integer REFERENCES sessions(id),
     data text
 );

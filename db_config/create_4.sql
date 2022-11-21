@@ -1,7 +1,7 @@
-create table report_comment(
-    uid integer references users(id),
-    repid integer references reports(id),
+CREATE TABLE report_comment(
+    uid integer REFERENCES users(id),
+    repid integer REFERENCES reports(id),
     comment text
 );
 
-alter table reports add column title text;
+ALTER TABLE reports ADD COLUMN title text;

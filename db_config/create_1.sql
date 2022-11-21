@@ -1,65 +1,65 @@
 -- 1. Postgres script for create database
 
-create table if not exists users (
+CREATE TABLE IF NOT EXISTS users (
     id serial,
-    name text not null,
-    rut text not null,
-    pass text not null,
-    mail text not null,
+    name text NOT NULL,
+    rut text NOT NULL,
+    pass text NOT NULL,
+    mail text NOT NULL,
     sex char(1),
     role char(1),
-    primary key(id)
+    PRIMARY KEY(id)
 );
 
 
-create table if not exists sessions (
+CREATE TABLE IF NOT EXISTS sessions (
     id serial,
-    name text not null,
+    name text NOT NULL,
     descr text,
     status integer,
     time timestamp with time zone,
     creator integer,
     code char(6),
     type char(1),
-    primary key (id),
-    foreign key(creator) references users(id)
+    PRIMARY KEY (id),
+    FOREIGN KEY(creator) REFERENCES users(id)
 );
 
 
-create table if not exists sesusers (
+CREATE TABLE IF NOT EXISTS sesusers (
     sesid integer,
     uid integer,
-    foreign key(sesid) references sessions(id),
-    foreign key(uid) references users(id)
+    FOREIGN KEY(sesid) REFERENCES sessions(id),
+    FOREIGN KEY(uid) REFERENCES users(id)
 );
 
 
-create table if not exists documents (
+CREATE TABLE IF NOT EXISTS documents (
     id serial,
-    title text not null,
-    path text not null,
+    title text NOT NULL,
+    path text NOT NULL,
     sesid integer,
     uploader integer,
-    primary key(id),
-    foreign key(sesid) references sessions(id),
-    foreign key(uploader) references users(id)
+    PRIMARY KEY(id),
+    FOREIGN KEY(sesid) REFERENCES sessions(id),
+    FOREIGN KEY(uploader) REFERENCES users(id)
 );
 
 
-create table if not exists ideas (
+CREATE TABLE IF NOT EXISTS ideas (
     id serial,
     content text,
     descr text,
     serial varchar(255),
-    iteration integer default 1,
+    iteration integer DEFAULT 1,
     uid integer,
     docid integer,
-    primary key(id),
-    foreign key(uid) references users(id),
-    foreign key(docid) references documents(id)
+    PRIMARY KEY(id),
+    FOREIGN KEY(uid) REFERENCES users(id),
+    FOREIGN KEY(docid) REFERENCES documents(id)
 );
 
-create table if not exists questions (
+CREATE TABLE IF NOT EXISTS questions (
     id serial,
     content text,
     options text,
@@ -67,31 +67,31 @@ create table if not exists questions (
     comment text,
     other text,
     sesid integer,
-    primary key(id),
-    foreign key(sesid) references sessions(id)
+    PRIMARY KEY(id),
+    FOREIGN KEY(sesid) REFERENCES sessions(id)
 );
 
-create table if not exists selection (
+CREATE TABLE IF NOT EXISTS selection (
     answer integer,
     uid integer,
-    iteration integer default 1,
+    iteration integer DEFAULT 1,
     comment text,
     qid integer,
-    primary key(uid,qid),
-    foreign key(uid) references users(id),
-    foreign key(qid) references questions(id)
+    PRIMARY KEY(uid, qid),
+    FOREIGN KEY(uid) REFERENCES users(id),
+    FOREIGN KEY(qid) REFERENCES questions(id)
 );
 
-create table if not exists teams (
+CREATE TABLE IF NOT EXISTS teams (
     id serial,
     sesid integer,
-    primary key(id),
-    foreign key(sesid) references sessions(id)
+    PRIMARY KEY(id),
+    FOREIGN KEY(sesid) REFERENCES sessions(id)
 );
 
-create table if not exists teamusers (
+CREATE TABLE IF NOT EXISTS teamusers (
     tmid integer,
     uid integer,
-    foreign key(tmid) references teams(id),
-    foreign key(uid) references users(id)
+    FOREIGN KEY(tmid) REFERENCES teams(id),
+    FOREIGN KEY(uid) REFERENCES users(id)
 );

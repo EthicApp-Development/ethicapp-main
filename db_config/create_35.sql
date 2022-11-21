@@ -1,31 +1,27 @@
 /* DROP TABLE institution; */
-create table if not exists institution(
+CREATE TABLE IF NOT EXISTS institution(
     id serial,
-    userid integer references users(id),
+    userid integer REFERENCES users(id),
     institution_name text,
     num_students int,
     country text,
     position text,
-    primary key(id)
+    PRIMARY KEY(id)
 );
 
 
-ALTER TABLE institution RENAME COLUMN numEstudents TO num_students;
+ALTER TABLE institution RENAME COLUMN numestudents TO num_students;
 
-ALTER TABLE institution 
-RENAME COLUMN institutionName TO institution_name;
+ALTER TABLE institution RENAME COLUMN institutionname TO institution_name;
 
-ALTER TABLE institution.
-DROP COLUMN mailDomains;
+ALTER TABLE institution DROP COLUMN maildomains;
 
 
-
-create table if not exists mail_domain(
+CREATE TABLE IF NOT EXISTS mail_domain(
     id serial,
-    institutionid integer references institution(id),
+    institutionid integer REFERENCES institution(id),
     domain_name text,
-    primary key(id)
-    
+    PRIMARY KEY(id)
 );
 
 ALTER TABLE mail_domain ADD CONSTRAINT domain_name UNIQUE(domain_name);
@@ -46,32 +42,31 @@ GRANT USAGE, SELECT ON SEQUENCE mail_domain_id_seq TO app;
 
 ALTER TABLE users ALTER COLUMN rut DROP NOT NULL;
 
-create table if not exists temporary_users(
+CREATE TABLE IF NOT EXISTS temporary_users(
     id serial,
-    name text not null,
-    rut text null,
-    pass text not null,
-    mail text not null,
+    name text NOT NULL,
+    rut text NULL,
+    pass text NOT NULL,
+    mail text NOT NULL,
     sex char(1),
     role char(1),
-    primary key(id)
+    PRIMARY KEY(id)
 );
 
 
-
-create table if not exists temporary_institution(
+CREATE TABLE IF NOT EXISTS temporary_institution(
     id serial,
-    userid integer references temporary_users(id),
+    userid integer REFERENCES temporary_users(id),
     institution_name text,
     num_students int,
     country text,
     mail_domains text,
     position text,
-    acepted boolean not null,
-    primary key(id)
+    acepted boolean NOT NULL,
+    PRIMARY KEY(id)
 );
 
-ALTER TABLE temporary_users ADD COLUMN token text null;
+ALTER TABLE temporary_users ADD COLUMN token text NULL;
 
 /*
 GRANT SELECT ON temporary_users TO app;

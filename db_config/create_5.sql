@@ -1,1 +1,1 @@
-alter table teams add column original_leader integer references users(id);
+ALTER TABLE teams ADD COLUMN original_leader integer REFERENCES users(id);

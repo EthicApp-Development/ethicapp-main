@@ -1,1 +1,1 @@
-alter table differential add column word_count integer default 0;
+ALTER TABLE differential ADD COLUMN word_count integer DEFAULT 0;

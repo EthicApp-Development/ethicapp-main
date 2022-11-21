@@ -1,1 +1,1 @@
-alter table selection add column confidence integer;
+ALTER TABLE selection ADD COLUMN confidence integer;

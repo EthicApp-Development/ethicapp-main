@@ -1,5 +1,5 @@
-alter table semantic_unit add column docs integer[];
-alter table semantic_unit drop column docid;
-alter table semantic_unit add column sesid integer references sessions(id);
+ALTER TABLE semantic_unit ADD COLUMN docs integer[];
+ALTER TABLE semantic_unit DROP COLUMN docid;
+ALTER TABLE semantic_unit ADD COLUMN sesid integer REFERENCES sessions(id);
 
-alter table semantic_document add column orden integer;
+ALTER TABLE semantic_document ADD COLUMN orden integer;

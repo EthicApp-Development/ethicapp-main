@@ -1,14 +1,14 @@
-create table semantic_document(
-    id serial primary key,
+CREATE TABLE semantic_document(
+    id serial PRIMARY KEY,
     title text,
     content text,
-    sesid integer references sessions(id)
+    sesid integer REFERENCES sessions(id)
 );
 
-create table semantic_unit(
-    id serial primary key,
+CREATE TABLE semantic_unit(
+    id serial PRIMARY KEY,
     sentences integer[],
     comment text,
-    uid integer references users(id),
-    docid integer references semantic_document(id)
+    uid integer REFERENCES users(id),
+    docid integer REFERENCES semantic_document(id)
 );

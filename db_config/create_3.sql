@@ -1,15 +1,15 @@
-create table status_record(
-    sesid integer references sessions(id),
+CREATE TABLE status_record(
+    sesid integer REFERENCES sessions(id),
     status integer,
     stime timestamp
 );
 
-create table finish_session(
-    uid integer references users(id),
-    sesid integer references sessions(id),
+CREATE TABLE finish_session(
+    uid integer REFERENCES users(id),
+    sesid integer REFERENCES sessions(id),
     status integer,
     stime timestamp
 );
 
-alter table ideas add column stime timestamp;
-alter table selection add column stime timestamp;
+ALTER TABLE ideas ADD COLUMN stime timestamp;
+ALTER TABLE selection ADD COLUMN stime timestamp;

@@ -1,4 +1,4 @@
-alter table differential add column stageid integer references stages(id);
-alter table differential add column justify boolean default true;
-alter table differential add column num integer default 7;
-alter table stages add column options text;
+ALTER TABLE differential ADD COLUMN stageid integer REFERENCES stages(id);
+ALTER TABLE differential ADD COLUMN justify boolean DEFAULT true;
+ALTER TABLE differential ADD COLUMN num integer DEFAULT 7;
+ALTER TABLE stages ADD COLUMN options text;

@@ -1,1 +1,1 @@
-alter table sessions add column archived boolean default false;
+ALTER TABLE sessions ADD COLUMN archived boolean DEFAULT false;

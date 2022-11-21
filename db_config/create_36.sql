@@ -1,48 +1,48 @@
-create table if not exists designs (
+CREATE TABLE IF NOT EXISTS designs (
     id serial,
     creator integer,
     design jsonb,
-    foreign key(creator) references users(id)
+    FOREIGN KEY(creator) REFERENCES users(id)
 );
 
-alter table designs
-    add public boolean default false;
+ALTER TABLE designs
+ADD public boolean DEFAULT false;
 
-alter table designs
-    add locked boolean default false;
+ALTER TABLE designs
+ADD locked boolean DEFAULT false;
 
-alter table designs
-    add constraint designs_pk
-        primary key (id);
+ALTER TABLE designs
+ADD CONSTRAINT designs_pk
+PRIMARY KEY (id);
 
-create table if not exists designs_documents (
+CREATE TABLE IF NOT EXISTS designs_documents (
     id serial,
-    path text not null,
+    path text NOT NULL,
     dsgnid integer,
     uploader integer,
-    primary key(id),
-    foreign key(dsgnid) references designs(id),
-    foreign key(uploader) references users(id)
+    PRIMARY KEY(id),
+    FOREIGN KEY(dsgnid) REFERENCES designs(id),
+    FOREIGN KEY(uploader) REFERENCES users(id)
 );
 
-alter table designs_documents
-    add active boolean default true;
+ALTER TABLE designs_documents
+ADD active boolean DEFAULT true;
 
-alter table designs_documents
-    drop constraint designs_documents_dsgnid_fkey;
+ALTER TABLE designs_documents
+DROP CONSTRAINT designs_documents_dsgnid_fkey;
 
-alter table designs_documents
-    add foreign key (dsgnid) references designs
-        on delete cascade;
+ALTER TABLE designs_documents
+ADD FOREIGN KEY (dsgnid) REFERENCES designs
+ON DELETE CASCADE;
 
 --GRANT SELECT ON TABLE designs_documents TO app;
 
-create table if not exists activity (
+CREATE TABLE IF NOT EXISTS activity (
     id serial,
     design integer,
     session integer,
-    foreign key(design) references designs(id),
-    foreign key(session) references sessions(id)
+    FOREIGN KEY(design) REFERENCES designs(id),
+    FOREIGN KEY(session) REFERENCES sessions(id)
 );
 
 /*

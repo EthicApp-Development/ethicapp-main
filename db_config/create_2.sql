@@ -1,61 +1,61 @@
 -- 2. Postgres script for create database
 
-create table if not exists rubricas (
+CREATE TABLE IF NOT EXISTS rubricas (
     id serial,
     sesid integer,
-    primary key(id),
-    foreign key(sesid) references sessions(id)
+    PRIMARY KEY(id),
+    FOREIGN KEY(sesid) REFERENCES sessions(id)
 );
 
-create table if not exists reports (
+CREATE TABLE IF NOT EXISTS reports (
     id serial,
     content text,
-    example boolean default false,
+    example boolean DEFAULT false,
     rid integer,
     uid integer,
-    primary key(id),
-    foreign key(rid) references rubricas(id),
-    foreign key(uid) references users(id)
+    PRIMARY KEY(id),
+    FOREIGN KEY(rid) REFERENCES rubricas(id),
+    FOREIGN KEY(uid) REFERENCES users(id)
 );
 
-create table if not exists criteria (
+CREATE TABLE IF NOT EXISTS criteria (
     id serial,
-    name text not null,
-    pond integer not null,
+    name text NOT NULL,
+    pond integer NOT NULL,
     inicio text,
     proceso text,
     competente text,
     avanzado text,
     rid integer,
-    primary key(id),
-    foreign key(rid) references rubricas(id)
+    PRIMARY KEY(id),
+    FOREIGN KEY(rid) REFERENCES rubricas(id)
 );
 
-create table if not exists criteria_selection (
+CREATE TABLE IF NOT EXISTS criteria_selection (
     id serial,
     selection integer,
     cid integer,
     uid integer,
     repid integer,
-    primary key(id),
-    foreign key(cid) references criteria(id),
-    foreign key(uid) references users(id),
-    foreign key(repid) references reports(id)
+    PRIMARY KEY(id),
+    FOREIGN KEY(cid) REFERENCES criteria(id),
+    FOREIGN KEY(uid) REFERENCES users(id),
+    FOREIGN KEY(repid) REFERENCES reports(id)
 );
 
-create table report_pair (
+CREATE TABLE report_pair (
     id serial,
     uid integer,
     sesid integer,
     repid integer,
-    primary key(id),
-    foreign key(uid) references users(id),
-    foreign key(sesid) references sessions(id),
-    foreign key(repid) references reports(id)
+    PRIMARY KEY(id),
+    FOREIGN KEY(uid) REFERENCES users(id),
+    FOREIGN KEY(sesid) REFERENCES sessions(id),
+    FOREIGN KEY(repid) REFERENCES reports(id)
 );
 
-create type tipo_aprendizaje as enum('Reflexivo','Activo','Teorico','Pragmatico');
-alter table users add column aprendizaje tipo_aprendizaje;
+CREATE TYPE tipo_aprendizaje AS ENUM('Reflexivo', 'Activo', 'Teorico', 'Pragmatico');
+ALTER TABLE users ADD COLUMN aprendizaje tipo_aprendizaje;
 
-alter table teams add column leader integer;
-alter table teams add constraint fk_leader foreign key(leader) references users(id);
+ALTER TABLE teams ADD COLUMN leader integer;
+ALTER TABLE teams ADD CONSTRAINT fk_leader FOREIGN KEY(leader) REFERENCES users(id);

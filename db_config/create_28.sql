@@ -1,10 +1,10 @@
-create table if not exists chat(
-    id          serial,
-    sesid       integer references sessions(id),
-    stageid     integer references stages(id),
-    uid         integer references users(id),
-    content     text,
-    stime       timestamp default now(),
-    parent_id   integer references chat(id),
-    primary key(id)
+CREATE TABLE IF NOT EXISTS chat(
+    id serial,
+    sesid integer REFERENCES sessions(id),
+    stageid integer REFERENCES stages(id),
+    uid integer REFERENCES users(id),
+    content text,
+    stime timestamp DEFAULT now(),
+    parent_id integer REFERENCES chat(id),
+    PRIMARY KEY(id)
 );

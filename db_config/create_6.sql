@@ -1,1 +1,1 @@
-alter table documents add column active boolean default true;
+ALTER TABLE documents ADD COLUMN active boolean DEFAULT true;

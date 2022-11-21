@@ -1,1 +1,1 @@
-alter table sesusers add constraint no_dup_users unique(uid,sesid);
+ALTER TABLE sesusers ADD CONSTRAINT no_dup_users UNIQUE(uid, sesid);

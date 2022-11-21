@@ -1,5 +1,5 @@
-alter table teams add column stageid integer references stages(id);
-alter table actor_selection add column stime timestamp default now();
-alter table actors add column justified boolean default true;
-alter table stages add column question text;
-alter table stages add column grouping varchar(63);
+ALTER TABLE teams ADD COLUMN stageid integer REFERENCES stages(id);
+ALTER TABLE actor_selection ADD COLUMN stime timestamp DEFAULT now();
+ALTER TABLE actors ADD COLUMN justified boolean DEFAULT true;
+ALTER TABLE stages ADD COLUMN question text;
+ALTER TABLE stages ADD COLUMN grouping varchar(63);

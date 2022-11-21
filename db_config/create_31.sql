@@ -1,1 +1,1 @@
-alter table actors add column word_count integer default 0;
+ALTER TABLE actors ADD COLUMN word_count integer DEFAULT 0;

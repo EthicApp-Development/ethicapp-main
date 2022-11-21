@@ -1,13 +1,14 @@
-create table if not exists overlays (
+CREATE TABLE IF NOT EXISTS overlays (
     id serial,
     uid integer,
     qid integer,
-    "type" varchar(1) not null, -- M: Marker, R: Rectangle, C: Circle, L: Polyline, P: Polygon, I: Image
+    -- M: Marker, R: Rectangle, C: Circle, L: Polyline, P: Polygon, I: Image
+    "type" varchar(1) NOT NULL,
     iteration integer,
-    geom text not null,
-    "name" varchar(255) not null,
+    geom text NOT NULL,
+    "name" varchar(255) NOT NULL,
     description text,
-    primary key(id),
-    foreign key(uid) references users(id),
-    foreign key(qid) references questions(id)
+    PRIMARY KEY(id),
+    FOREIGN KEY(uid) REFERENCES users(id),
+    FOREIGN KEY(qid) REFERENCES questions(id)
 );

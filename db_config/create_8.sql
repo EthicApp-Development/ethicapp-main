@@ -1,8 +1,8 @@
-create table question_text(
+CREATE TABLE question_text(
     id serial,
-    sesid integer references sessions(id),
+    sesid integer REFERENCES sessions(id),
     title text,
     content text
 );
 
-alter table questions add column textid integer default null;
+ALTER TABLE questions ADD COLUMN textid integer DEFAULT null;

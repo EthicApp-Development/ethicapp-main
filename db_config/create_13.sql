@@ -1,1 +1,1 @@
-alter table semantic_unit add column iteration integer;
+ALTER TABLE semantic_unit ADD COLUMN iteration integer;

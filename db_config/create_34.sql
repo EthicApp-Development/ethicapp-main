@@ -1,3 +1,1 @@
-alter table users add column disabled BOOLEAN;
-
-
+ALTER TABLE users ADD COLUMN disabled boolean;

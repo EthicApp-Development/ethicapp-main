@@ -1,1 +1,1 @@
-ALTER TABLE questions ADD COLUMN cpid integer references questions(id);
+ALTER TABLE questions ADD COLUMN cpid integer REFERENCES questions(id);

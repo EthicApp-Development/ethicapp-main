@@ -1,1 +1,1 @@
-alter table sessions add column options varchar(16);
+ALTER TABLE sessions ADD COLUMN options varchar(16);

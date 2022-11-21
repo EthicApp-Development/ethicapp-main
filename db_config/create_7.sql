@@ -1,4 +1,4 @@
-create table report_ideas(
-    rid integer references reports(id),
-    idea_id integer references ideas(id)
+CREATE TABLE report_ideas(
+    rid integer REFERENCES reports(id),
+    idea_id integer REFERENCES ideas(id)
 );

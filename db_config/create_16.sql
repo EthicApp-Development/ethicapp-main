@@ -1,1 +1,1 @@
-alter table questions add column plugin_data varchar(255);
+ALTER TABLE questions ADD COLUMN plugin_data varchar(255);
