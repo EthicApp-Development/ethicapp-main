@@ -71,9 +71,12 @@ rules:
 
   # Redeclaration of variables
   no-redeclare:
-    - warn # default: "error"
+    - warn # default: error
 
   no-unused-vars:
-    - warn # default: "error"
+    - warn # default: error
+
+  no-undef:
+    - warn # default: error
 
   no-useless-escape: 0
