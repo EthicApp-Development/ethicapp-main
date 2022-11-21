@@ -20,7 +20,7 @@ router.use(passport.initialize())
 router.use(passport.session())
 
 // TODO: Retrieve rsa key from server secrets
-const RSA_PRIVATE_KEY = fs.readFileSync('../secrets/secret-private.pem');
+const RSA_PRIVATE_KEY = 'secret'; // fs.readFileSync('../secrets/secret-private.pem');
 
 
 let mailserv = mailer.createTransport({
@@ -74,13 +74,15 @@ router.post("/login", rpg.singleSQL({
             req.session.ses = null;
             //TODO: Add jwtBearerToken
             // Set bearer token once user is verified
-            // const jwtBearerToken = jwt.sign(
-            //  {}, RSA_PRIVATE_KEY, {
-            //      algorithm: 'RS256',
-            //      expiresIn: 120,
-            //      suject: result.id // The user id
-            //  }
-            // );
+            const jwtBearerToken = jwt.sign(
+             {data: 'foobar'}, 
+             RSA_PRIVATE_KEY, 
+             {
+                 algorithm: 'RS256',
+                 expiresIn: '3h', // Set expiration date in 3 hours
+                 subject: 'user-id' // The user id
+             }
+            );
 
             // Next: send the token to the client (Cookie, res.body, etc)
             
