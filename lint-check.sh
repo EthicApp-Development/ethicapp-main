@@ -20,6 +20,7 @@ echo "[OK] StyleLint pass"
 
 echo ">>> Running HTML linter"
 npx htmlhint "public/**/*.html"
+npx htmlhint "views/**/*.ejs"
 echo "[OK] HTMLHint pass"
 
 echo ">>> Running JavaScript linter"
