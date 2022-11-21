@@ -2,6 +2,7 @@
     // Schema IDE association for IDE with config file(s)
     "files.associations": {
         ".eslintrc.json": "jsonc", //* redundant setting for current vscode versions
+        ".htmlhintrc": "jsonc",
         ".sqlfluff": "properties"
     },
 
@@ -64,7 +65,6 @@
             100
         ],
         "editor.insertSpaces": true,
-        "editor.tabSize": 4,
-        "editor.formatOnSave": true
+        "editor.tabSize": 4
     }
 }

@@ -19,7 +19,7 @@ npx stylelint public/css/*.css
 echo "[OK] StyleLint pass"
 
 echo ">>> Running HTML linter"
-npx htmlhint "./**/*.html"
+npx htmlhint "public/**/*.html"
 echo "[OK] HTMLHint pass"
 
 echo ">>> Running JavaScript linter"
