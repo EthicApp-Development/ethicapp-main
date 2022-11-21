@@ -9,12 +9,18 @@ let mailer = require("nodemailer");
 const passport = require('passport');
 require('./passport-setup');
 var AWS = require('aws-sdk');
-
+// TODO: Import JWT
+// import * as jwt from 'jsonwebtoken';
+let jwt = require("jsonwebtoken");
+let fs = require("fs");
 
 var pg = require('pg');
 const app = require('../app');
 router.use(passport.initialize())
 router.use(passport.session())
+
+// TODO: Retrieve rsa key from server secrets
+const RSA_PRIVATE_KEY = fs.readFileSync('../secrets/secret-private.pem');
 
 
 let mailserv = mailer.createTransport({
@@ -51,6 +57,7 @@ router.get("/logout", (req, res) => {
     res.redirect("login");
 });
 
+//TODO: Implement jwtBearerToken
 router.post("/login", rpg.singleSQL({
     dbcon: pass.dbcon,
     sql: "select id, role from users where (rut = $1 and pass = $2) or (mail = $3 and pass=$4)",
@@ -65,6 +72,27 @@ router.post("/login", rpg.singleSQL({
             req.session.uid = result.id;
             req.session.role = result.role;
             req.session.ses = null;
+            //TODO: Add jwtBearerToken
+            // Set bearer token once user is verified
+            // const jwtBearerToken = jwt.sign(
+            //  {}, RSA_PRIVATE_KEY, {
+            //      algorithm: 'RS256',
+            //      expiresIn: 120,
+            //      suject: result.id // The user id
+            //  }
+            // );
+
+            // Next: send the token to the client (Cookie, res.body, etc)
+            
+            // Send a cookie to the client storing the token for future requests:
+            res.cookie("SESSIONID", jwtBearerToken, {httpOnly:true, secure:true}) ;
+            
+            // Send the token in the response body:
+            // res.status(200).json({
+            //  idToken: jwtBearerToken,
+            //  expiresIn: ...
+            // });
+            
             res.redirect(".");
         }
         else {
