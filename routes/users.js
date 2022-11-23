@@ -19,7 +19,7 @@ router.use(passport.initialize())
 router.use(passport.session())
 
 // TODO: Retrieve rsa key from server secrets
-const RSA_PRIVATE_KEY = proces.env.SECRET_JWT;
+const RSA_PRIVATE_KEY = "secret key";//process.env.JWT_SECTRET;
 
 
 let mailserv = mailer.createTransport({
@@ -74,12 +74,12 @@ router.post("/login", rpg.singleSQL({
             //TODO: Add jwtBearerToken
             // Set bearer token once user is verified
             const jwtBearerToken = jwt.sign(
-             {userId: result.id}, 
+             {userId: result.id}, // TODO: Get the real user id
              RSA_PRIVATE_KEY, 
              {
                  algorithm: 'RS256',
                  expiresIn: '3h', // Set expiration date in 3 hours
-                 subject: 'user-id' // The user id
+                //  subject: 'user-id' // The user id
              }
             );
 
@@ -91,7 +91,7 @@ router.post("/login", rpg.singleSQL({
             // Send the token in the response body:
             // res.status(200).json({
             //  idToken: jwtBearerToken,
-            //  expiresIn: ...
+            //  expiresIn: '3h'
             // });
             
             res.redirect(".");
