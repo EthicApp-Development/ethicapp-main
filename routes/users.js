@@ -12,7 +12,6 @@ var AWS = require('aws-sdk');
 // TODO: Import JWT
 // import * as jwt from 'jsonwebtoken';
 let jwt = require("jsonwebtoken");
-let fs = require("fs");
 
 var pg = require('pg');
 const app = require('../app');
@@ -20,7 +19,7 @@ router.use(passport.initialize())
 router.use(passport.session())
 
 // TODO: Retrieve rsa key from server secrets
-const RSA_PRIVATE_KEY = 'secret'; // fs.readFileSync('../secrets/secret-private.pem');
+const RSA_PRIVATE_KEY = proces.env.SECRET_JWT;
 
 
 let mailserv = mailer.createTransport({
@@ -75,7 +74,7 @@ router.post("/login", rpg.singleSQL({
             //TODO: Add jwtBearerToken
             // Set bearer token once user is verified
             const jwtBearerToken = jwt.sign(
-             {data: 'foobar'}, 
+             {userId: result.id}, 
              RSA_PRIVATE_KEY, 
              {
                  algorithm: 'RS256',
