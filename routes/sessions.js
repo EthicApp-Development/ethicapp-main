@@ -254,7 +254,7 @@ router.post("/get-design", (req, res) => {
     });
 });
 
-router.get("/get-user-designs", middleware.verifySession, (req, res) => {
+router.get("/get-user-designs", (req, res) => {
     var uid = req.session.uid;
     var sql = "SELECT * FROM DESIGNS WHERE creator = "+uid;
     var db = getDBInstance(pass.dbcon);
