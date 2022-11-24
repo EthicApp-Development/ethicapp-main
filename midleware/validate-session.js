@@ -1,7 +1,11 @@
 // TODO: Testing
 module.exports.verifySession = (req, res, next) => {
-    if (req.session.uid && req.session.ses){
+    console.log(req.session.uid != null)
+    if (req.session.uid != null){
         next()
+    } else {
+        res.redirect("login");
     }
-    res.status(401).json({ error: 'Acceso denegado' })
 }
+
+// TODO: Extend to verify user.type (S, P or A)

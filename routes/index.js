@@ -1,6 +1,7 @@
 "use strict";
 
 let express = require('express');
+let middleware = require("../midleware/validate-session");
 let router = express.Router();
 
 router.get('/', (req, res) => {
@@ -27,7 +28,7 @@ router.get('/', (req, res) => {
 });
 
 
-router.get("/super", (req,res) => {
+router.get("/super", middleware.verifySession ,(req,res) => {
     if(req.session.uid && req.session.role == "S"){
         res.render("super");
     }

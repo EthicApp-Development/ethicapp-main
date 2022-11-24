@@ -5,6 +5,7 @@ let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 let pg = require('pg');
+let middleware = require("../midleware/validate-session");
 
 var DB = null;
 function getDBInstance(dbcon){
@@ -253,7 +254,7 @@ router.post("/get-design", (req, res) => {
     });
 });
 
-router.get("/get-user-designs", (req, res) => {
+router.get("/get-user-designs", middleware.verifySession, (req, res) => {
     var uid = req.session.uid;
     var sql = "SELECT * FROM DESIGNS WHERE creator = "+uid;
     var db = getDBInstance(pass.dbcon);
