@@ -5,6 +5,7 @@ let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 let pg = require('pg');
+let middleware = require("../midleware/validate-session");
 
 var DB = null;
 function getDBInstance(dbcon){

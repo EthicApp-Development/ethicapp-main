@@ -1,9 +1,11 @@
 "use strict";
 
 let express = require('express');
+let middleware = require("../midleware/validate-session");
 let router = express.Router();
 
 router.get('/', (req, res) => {
+    console.log(req.session)
     if (req.session.uid) {
         if (req.session.ses && req.session.role != "P")
             res.redirect("seslist");
@@ -26,7 +28,7 @@ router.get('/', (req, res) => {
 });
 
 
-router.get("/super", (req,res) => {
+router.get("/super", middleware.verifySession ,(req,res) => {
     if(req.session.uid && req.session.role == "S"){
         res.render("super");
     }

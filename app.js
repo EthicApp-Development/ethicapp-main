@@ -20,6 +20,7 @@ let teams = require("./routes/teams");
 let rubrica = require("./routes/rubrica");
 let stages = require("./routes/stages");
 let pass = require("./modules/passwords");
+let middleware = require("./midleware/validate-session");
 require("./routes/passport-setup")
 
 let app = express();
@@ -52,12 +53,12 @@ app.use(json2xls.middleware);
 
 app.use('/', index);
 app.use('/', users);
-app.use("/", sessions);
-app.use("/", visor);
-app.use("/", analysis);
-app.use("/", teams);
-app.use("/", rubrica);
-app.use("/", stages);
+app.use("/", middleware.verifySession, sessions);
+app.use("/", middleware.verifySession, visor);
+app.use("/", middleware.verifySession, analysis);
+app.use("/", middleware.verifySession, teams);
+app.use("/", middleware.verifySession, rubrica);
+app.use("/", middleware.verifySession, stages);
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {

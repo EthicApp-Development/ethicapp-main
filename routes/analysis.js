@@ -4,8 +4,9 @@ let express = require('express');
 let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
+let middleware = require("../midleware/validate-session");
 
-router.post("/get-alum-state-sel", rpg.multiSQL({
+router.post("/get-alum-state-sel", middleware.verifySession, rpg.multiSQL({
     dbcon: pass.dbcon,
     sql: "select uid, sum(correct) as score, count(correct) as answered from (select s.uid, (s.answer = q.answer)::int " +
         "as correct from selection as s inner join questions as q on s.qid = q.id where q.sesid = $1 and s.iteration = $2) as r group by uid",

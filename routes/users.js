@@ -10,12 +10,10 @@ const passport = require('passport');
 require('./passport-setup');
 var AWS = require('aws-sdk');
 
-
 var pg = require('pg');
 const app = require('../app');
 router.use(passport.initialize())
 router.use(passport.session())
-
 
 let mailserv = mailer.createTransport({
     sendmail: true,
@@ -29,7 +27,6 @@ router.get('/login', (req, res) => {
 router.get('/institucion', (req, res) => {
     res.render('institucion', { rc: req.query.rc });
 });
-
 
 router.get('/passreset', (req, res) => {
     res.render('passreset', { rc: req.query.rc });
@@ -65,6 +62,7 @@ router.post("/login", rpg.singleSQL({
             req.session.uid = result.id;
             req.session.role = result.role;
             req.session.ses = null;
+            
             res.redirect(".");
         }
         else {
