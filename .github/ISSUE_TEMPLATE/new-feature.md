@@ -2,7 +2,7 @@
 name: Nueva característica
 about: Sugerir una idea para este proyecto
 title: ""
-labels: new-feature
+labels: new feature
 ---
 
 # Descripción general
