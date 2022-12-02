@@ -28,7 +28,7 @@
     <script src="libs/save-csv.min.js"></script>
     <script src="libs/angular-tablesort.min.js"></script>
     <script src="js/StagesController.js"></script>
-    <script src='libs/checklist-model.js'></script>
+    <script src="libs/checklist-model.js"></script>
     <script src="js/admin-ctrl.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script src="libs/angular-route.js"></script>
@@ -40,74 +40,67 @@
           <img src="/img/ethicapp-logo.svg" alt="EthicApp" />
         </div>
         <div class="row">
-          <% if(rc == 1) {%>
+          <% if(rc == 1) { %>
             <div class="alert alert-info">
               {{ "log1" | lang }}
             </div>
-            <% } %> <% if(rc == 2) {%>
+          <% } %>
+          <% if(rc == 2) { %>
             <div class="alert alert-danger">
               {{ "log2" | lang }}
             </div>
-            <% } %> <% if(rc == 3) {%>
+          <% } %>
+          <% if(rc == 3) { %>
             <div class="alert alert-info">
               {{ "log3" | lang }}
             </div>
-            <% } %> <% if(rc == 4) {%>
+          <% } %>
+          <% if(rc == 4) { %>
             <div class="alert alert-info">
               {{ "log4" | lang }}
             </div>
-            <% } %><% if(rc == 5) {%>
-              <div class="alert alert-info">
-                {{ "log5" | lang }}
-              <div ng-init="activate_user()"></div>
+          <% } %>
+          <% if(rc == 5) { %>
+            <div class="alert alert-info">
+              {{ "log5" | lang }}
+              <div ng-init="activate_user()">
               </div>
-
-            <% } %>
-            <br />
-            <form class="form-horizontal" action="login" method="POST"> 
-              <div class="form-group">
-                <label for="user" class="col-sm-3 control-label">{{ "email" | lang }}</label>
-                <div class="col-sm-8">
-                  <input class="form-control" type="text" name="user" required autofocus />
-                </div>
-                <div class="col-sm-1">
-                </div>
-              </div>
-              <div class="form-group">
-                <label for="user" class="col-sm-3 control-label">{{ "password" | lang }}</label>
-                <div class="col-sm-8">
-                  <input class="form-control" type="password" name="pass" required />
-                </div>
-                <div class="col-sm-1">
-                </div>
-              </div>
-              <div class="form-group text-center">
-                <button type="submit" class="btn btn-primary" style="margin: 0 auto; width:140px;">{{ "login" | lang }}</button>
-              </div>
-            </form>
-            <br />
-            <div class="row text-center">
-              <a href="register">{{ "register" | lang }} </a>|
-              <a href="forgot-pass">{{ "forgot_pass" | lang }}</a><br>
-              <a href="/google" role="button" class="btn btn-default" style="margin-top:1em;">
-                <img style="width: 20px" style="margin-bottom: 3px; margin-right: 5px" alt="Google sign-in" src="/img/google.png" />
-                {{ "glogin" | lang }}
-              </a>                
             </div>
+          <% } %>
+          <br />
+          <form class="form-horizontal" action="login" method="POST"> 
+            <div class="form-group">
+              <label for="user" class="col-sm-3 control-label">{{ "email" | lang }}</label>
+              <div class="col-sm-8">
+                <input class="form-control" type="text" name="user" required autofocus />
+              </div>
+              <div class="col-sm-1">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="user" class="col-sm-3 control-label">{{ "password" | lang }}</label>
+              <div class="col-sm-8">
+                <input class="form-control" type="password" name="pass" required />
+              </div>
+              <div class="col-sm-1">
+              </div>
+            </div>
+            <div class="form-group text-center">
+              <button type="submit" class="btn btn-primary" style="margin: 0 auto; width:140px;">{{ "login" | lang }}</button>
+            </div>
+          </form>
+          <br />
+          <div class="row text-center">
+            <a href="register">{{ "register" | lang }} </a>|
+            <a href="forgot-pass">{{ "forgot_pass" | lang }}</a>
+            <br />
+            <a href="/google" role="button" class="btn btn-default" style="margin-top:1em;">
+              <img style="margin-bottom: 3px; margin-right: 5px" alt="Google sign-in" src="/img/google.png" />
+              {{ "glogin" | lang }}
+            </a>                
           </div>
         </div>
       </div>
     </div>
   </body>
 </html>
-
-<script>
-var url_string = window.location;
-var url = new URL(url_string);
-var rc = url.searchParams.get("rc");
-var token = url.searchParams.get("tok");
-if(rc == 5){
-
-}
-
-</script>
