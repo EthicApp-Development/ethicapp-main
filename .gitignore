@@ -1,3 +1,4 @@
+*.min.js
 .idea/*
 dev_other/*
 modules/passwords.js
