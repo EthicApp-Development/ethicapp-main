@@ -1,6 +1,6 @@
 "use strict";
 
-let express = require('express');
+let express = require("express");
 let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
@@ -19,7 +19,7 @@ router.get("/to-visor", (req, res) => {
         if(sesStatusCache[req.query.sesid] == null) {
             rpg.singleSQL({
                 dbcon: pass.dbcon,
-                sql: "select status from sessions where id = " + req.query.sesid,
+                sql:   "select status from sessions where id = " + req.query.sesid,
                 onEnd: (req, res, result) => {
                     sesStatusCache[req.query.sesid] = result.status;
                     doRedirect(result.status);
@@ -44,7 +44,7 @@ router.get("/to-pauta", (req, res) => {
         if(sesStatusCache[req.query.sesid] == null) {
             rpg.singleSQL({
                 dbcon: pass.dbcon,
-                sql: "select status from sessions where id = " + req.query.sesid,
+                sql:   "select status from sessions where id = " + req.query.sesid,
                 onEnd: (req, res, result) => {
                     sesStatusCache[req.query.sesid] = result.status;
                     doRedirect(result.status);
@@ -69,7 +69,7 @@ router.get("/to-rubrica", (req, res) => {
         if(sesStatusCache[req.query.sesid] == null) {
             rpg.singleSQL({
                 dbcon: pass.dbcon,
-                sql: "select status from sessions where id = " + req.query.sesid,
+                sql:   "select status from sessions where id = " + req.query.sesid,
                 onEnd: (req, res, result) => {
                     sesStatusCache[req.query.sesid] = result.status;
                     doRedirect(result.status);
@@ -179,214 +179,214 @@ router.get("/ethics", (req, res) => {
 });
 
 router.post("/get-documents", rpg.multiSQL({
-    dbcon: pass.dbcon,
-    sql: "select id, title, path from documents where sesid = $1 and active = true",
+    dbcon:      pass.dbcon,
+    sql:        "select id, title, path from documents where sesid = $1 and active = true",
     sesReqData: ["uid", "ses"],
-    sqlParams: [rpg.param("ses", "ses")]
+    sqlParams:  [rpg.param("ses", "ses")]
 }));
 
 router.post("/delete-document", rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql: "update documents set active = false where id = $1",
+    dbcon:       pass.dbcon,
+    sql:         "update documents set active = false where id = $1",
     postReqData: ["docid"],
-    sqlParams: [rpg.param("post", "docid")]
+    sqlParams:   [rpg.param("post", "docid")]
 }));
 
 router.post("/get-questions", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select q.id, q.content, q.options, qt.content as text_content, q.plugin_data from questions as q left outer join question_text as qt on " +
+    sql:   "select q.id, q.content, q.options, qt.content as text_content, q.plugin_data from questions as q left outer join question_text as qt on " +
         "q.textid = qt.id where q.sesid = $1 order by q.id asc",
     sesReqData: ["uid", "ses"],
-    sqlParams: [rpg.param("ses", "ses")]
+    sqlParams:  [rpg.param("ses", "ses")]
 }));
 
 router.post("/get-anskey", rpg.multiSQL({
-    dbcon: pass.dbcon,
-    sql: "select id, comment, answer from questions where sesid = $1",
+    dbcon:      pass.dbcon,
+    sql:        "select id, comment, answer from questions where sesid = $1",
     sesReqData: ["uid", "ses"],
-    sqlParams: [rpg.param("ses", "ses")]
+    sqlParams:  [rpg.param("ses", "ses")]
 }));
 
 router.post("/send-answer", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "with rows as (update selection set answer = $1, comment = $2, stime = now(), confidence = $3 where qid = $4 and uid = $5 and iteration = $6 returning 1) " +
+    sql:   "with rows as (update selection set answer = $1, comment = $2, stime = now(), confidence = $3 where qid = $4 and uid = $5 and iteration = $6 returning 1) " +
     "insert into selection(uid,qid,answer,comment,iteration,confidence,stime) select $7,$8,$9,$10,$11,$12, now() where 1 not in (select * from rows)",
     /*sql: "insert into selection(uid,qid,answer,comment) values ($1,$2,$3,$4) on conflict (uid,qid) do update " +
      "set answer = excluded.answer, comment = excluded.comment",*/
-    sesReqData: ["uid", "ses"],
+    sesReqData:  ["uid", "ses"],
     postReqData: ["qid", "answer", "comment", "iteration"],
-    sqlParams: [rpg.param("post", "answer"), rpg.param("post", "comment"), rpg.param("post", "confidence"), rpg.param("post", "qid"), rpg.param("ses", "uid"), rpg.param("post", "iteration"),
+    sqlParams:   [rpg.param("post", "answer"), rpg.param("post", "comment"), rpg.param("post", "confidence"), rpg.param("post", "qid"), rpg.param("ses", "uid"), rpg.param("post", "iteration"),
         rpg.param("ses", "uid"), rpg.param("post", "qid"), rpg.param("post", "answer"), rpg.param("post", "comment"), rpg.param("post", "iteration"), rpg.param("post", "confidence")]
 }));
 
 router.post("/get-answers", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select s.qid, s.answer, s.comment, s.confidence from selection as s inner join questions as q on q.id = s.qid " +
+    sql:   "select s.qid, s.answer, s.comment, s.confidence from selection as s inner join questions as q on q.id = s.qid " +
     "where q.sesid = $1 and s.uid = $2 and s.iteration = $3",
-    sesReqData: ["uid", "ses"],
+    sesReqData:  ["uid", "ses"],
     postReqData: ["iteration"],
-    sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "uid"), rpg.param("post","iteration")]
+    sqlParams:   [rpg.param("ses", "ses"), rpg.param("ses", "uid"), rpg.param("post","iteration")]
 }));
 
 router.post("/send-diff-selection", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "with rows as (update differential_selection set sel = $1, comment = $2, stime = now() where did = $3 and uid = $4 and iteration = $5 returning 1) " +
+    sql:   "with rows as (update differential_selection set sel = $1, comment = $2, stime = now() where did = $3 and uid = $4 and iteration = $5 returning 1) " +
         "insert into differential_selection(uid,did,sel,comment,iteration,stime) select $6,$7,$8,$9,$10, now() where 1 not in (select * from rows)",
     /*sql: "insert into selection(uid,qid,answer,comment) values ($1,$2,$3,$4) on conflict (uid,qid) do update " +
      "set answer = excluded.answer, comment = excluded.comment",*/
-    sesReqData: ["uid", "ses"],
+    sesReqData:  ["uid", "ses"],
     postReqData: ["did", "sel", "comment", "iteration"],
-    sqlParams: [rpg.param("post", "sel"), rpg.param("post", "comment"), rpg.param("post", "did"), rpg.param("ses", "uid"), rpg.param("post", "iteration"),
+    sqlParams:   [rpg.param("post", "sel"), rpg.param("post", "comment"), rpg.param("post", "did"), rpg.param("ses", "uid"), rpg.param("post", "iteration"),
         rpg.param("ses", "uid"), rpg.param("post", "did"), rpg.param("post", "sel"), rpg.param("post", "comment"), rpg.param("post", "iteration")]
 }));
 
 router.post("/get-diff-selection", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select s.did, s.sel, s.comment from differential_selection as s inner join differential as d on d.id = s.did " +
+    sql:   "select s.did, s.sel, s.comment from differential_selection as s inner join differential as d on d.id = s.did " +
         "where d.sesid = $1 and s.uid = $2 and s.iteration = $3",
-    sesReqData: ["uid", "ses"],
+    sesReqData:  ["uid", "ses"],
     postReqData: ["iteration"],
-    sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "uid"), rpg.param("post","iteration")]
+    sqlParams:   [rpg.param("ses", "ses"), rpg.param("ses", "uid"), rpg.param("post","iteration")]
 }));
 
 router.post("/get-diff-selection-stage", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select s.did, s.sel, s.comment from differential_selection as s inner join differential as d on d.id = s.did " +
+    sql:   "select s.did, s.sel, s.comment from differential_selection as s inner join differential as d on d.id = s.did " +
         "where d.stageid = $1 and s.uid = $2",
-    sesReqData: ["uid", "ses"],
+    sesReqData:  ["uid", "ses"],
     postReqData: ["stageid"],
-    sqlParams: [rpg.param("post", "stageid"), rpg.param("ses", "uid")]
+    sqlParams:   [rpg.param("post", "stageid"), rpg.param("ses", "uid")]
 }));
 
 router.post("/get-chat-msgs", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select s.id, s.did, s.uid, s.content, s.stime, s.parent_id from differential_chat as s inner join differential as d on d.id = s.did " +
+    sql:   "select s.id, s.did, s.uid, s.content, s.stime, s.parent_id from differential_chat as s inner join differential as d on d.id = s.did " +
         "where d.sesid = $1 and s.uid in (select tu.uid from teamusers as tu where tu.tmid = (select t.id from teamusers " +
         "as tu, teams as t where t.sesid = $2 and tu.tmid = t.id and tu.uid = $3)) order by s.stime asc",
     sesReqData: ["uid", "ses"],
-    sqlParams: [rpg.param("ses", "ses"), rpg.param("ses", "ses"), rpg.param("ses","uid")]
+    sqlParams:  [rpg.param("ses", "ses"), rpg.param("ses", "ses"), rpg.param("ses","uid")]
 }));
 
 router.post("/get-chat-stage", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select s.id, s.uid, s.content, s.stime, s.parent_id, s.stageid from chat as s where " +
+    sql:   "select s.id, s.uid, s.content, s.stime, s.parent_id, s.stageid from chat as s where " +
         "s.stageid = $1 and s.uid in (select tu.uid from teamusers as tu where tu.tmid = (select t.id from teamusers " +
         "as tu, teams as t where t.stageid = $2 and tu.tmid = t.id and tu.uid = $3)) order by s.stime asc",
-    sesReqData: ["uid", "ses"],
+    sesReqData:  ["uid", "ses"],
     postReqData: ["stageid"],
-    sqlParams: [rpg.param("post", "stageid"), rpg.param("post","stageid"), rpg.param("ses", "uid")]
+    sqlParams:   [rpg.param("post", "stageid"), rpg.param("post","stageid"), rpg.param("ses", "uid")]
 }));
 
 router.post("/get-diff-chat-stage", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select s.id, s.did, s.uid, s.content, s.stime, s.parent_id from differential_chat as s inner join differential as d on d.id = s.did " +
+    sql:   "select s.id, s.did, s.uid, s.content, s.stime, s.parent_id from differential_chat as s inner join differential as d on d.id = s.did " +
         "where d.stageid = $1 and s.uid in (select tu.uid from teamusers as tu where tu.tmid = (select t.id from teamusers " +
         "as tu, teams as t where t.stageid = $2 and tu.tmid = t.id and tu.uid = $3)) order by s.stime asc",
-    sesReqData: ["uid", "ses"],
+    sesReqData:  ["uid", "ses"],
     postReqData: ["stageid"],
-    sqlParams: [rpg.param("post", "stageid"), rpg.param("post","stageid"), rpg.param("ses", "uid")]
+    sqlParams:   [rpg.param("post", "stageid"), rpg.param("post","stageid"), rpg.param("ses", "uid")]
 }));
 
 router.post("/get-team-chat", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select s.id, s.did, s.uid, s.content, s.stime, s.parent_id from differential_chat as s inner join differential as d on d.id = s.did " +
+    sql:   "select s.id, s.did, s.uid, s.content, s.stime, s.parent_id from differential_chat as s inner join differential as d on d.id = s.did " +
         "where d.sesid = $1 and s.uid in (select tu.uid from teamusers as tu where tu.tmid = $2) and d.orden = $3 order by s.stime asc",
     postReqData: ["sesid", "tmid", "orden"],
-    sqlParams: [rpg.param("post", "sesid"), rpg.param("post","tmid"), rpg.param("post","orden")]
+    sqlParams:   [rpg.param("post", "sesid"), rpg.param("post","tmid"), rpg.param("post","orden")]
 }));
 
 router.post("/get-team-chat-stage-df", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select s.id, s.did, s.uid, s.content, s.stime, s.parent_id from differential_chat as s inner join differential as d on d.id = s.did " +
+    sql:   "select s.id, s.did, s.uid, s.content, s.stime, s.parent_id from differential_chat as s inner join differential as d on d.id = s.did " +
         "where d.stageid = $1 and s.uid in (select tu.uid from teamusers as tu where tu.tmid = $2) and d.id = $3 order by s.stime asc",
     postReqData: ["stageid", "tmid", "did"],
-    sqlParams: [rpg.param("post", "stageid"), rpg.param("post","tmid"), rpg.param("post","did")]
+    sqlParams:   [rpg.param("post", "stageid"), rpg.param("post","tmid"), rpg.param("post","did")]
 }));
 
 router.post("/get-team-chat-stage", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select s.id, s.uid, s.content, s.stime, s.parent_id from chat as s " +
+    sql:   "select s.id, s.uid, s.content, s.stime, s.parent_id from chat as s " +
         "where s.stageid = $1 and s.uid in (select tu.uid from teamusers as tu where tu.tmid = $2) order by s.stime asc",
     postReqData: ["stageid", "tmid"],
-    sqlParams: [rpg.param("post", "stageid"), rpg.param("post","tmid")]
+    sqlParams:   [rpg.param("post", "stageid"), rpg.param("post","tmid")]
 }));
 
 router.post("/add-chat-msg", rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql: "insert into differential_chat(uid,did,content,parent_id) values ($1,$2,$3,$4)",
-    sesReqData: ["uid", "ses"],
+    dbcon:       pass.dbcon,
+    sql:         "insert into differential_chat(uid,did,content,parent_id) values ($1,$2,$3,$4)",
+    sesReqData:  ["uid", "ses"],
     postReqData: ["did", "content", "tmid"],
-    sqlParams: [rpg.param("ses", "uid"), rpg.param("post", "did"), rpg.param("post","content"), rpg.param("post","parent_id")],
-    onEnd: (req,res) => {
+    sqlParams:   [rpg.param("ses", "uid"), rpg.param("post", "did"), rpg.param("post","content"), rpg.param("post","parent_id")],
+    onEnd:       (req,res) => {
         socket.chatMsg(req.session.ses, req.body.tmid);
     }
 }));
 
 router.post("/add-chat-msg-stage", rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql: "insert into chat(uid, stageid, content, parent_id) values ($1,$2,$3,$4)",
-    sesReqData: ["uid", "ses"],
+    dbcon:       pass.dbcon,
+    sql:         "insert into chat(uid, stageid, content, parent_id) values ($1,$2,$3,$4)",
+    sesReqData:  ["uid", "ses"],
     postReqData: ["stageid", "content", "tmid"],
-    sqlParams: [rpg.param("ses", "uid"), rpg.param("post", "stageid"), rpg.param("post","content"), rpg.param("post","parent_id")],
-    onEnd: (req,res) => {
+    sqlParams:   [rpg.param("ses", "uid"), rpg.param("post", "stageid"), rpg.param("post","content"), rpg.param("post","parent_id")],
+    onEnd:       (req,res) => {
         socket.chatMsgStage(req.body.stageid, req.body.tmid);
     }
 }));
 
 router.post("/send-idea", rpg.singleSQL({
-    dbcon: pass.dbcon,
-    sql: "insert into ideas(content,descr,serial,docid,uid,iteration,stime) values ($1,$2,$3,$4,$5,$6,now()) returning id",
-    sesReqData: ["uid", "ses"],
+    dbcon:       pass.dbcon,
+    sql:         "insert into ideas(content,descr,serial,docid,uid,iteration,stime) values ($1,$2,$3,$4,$5,$6,now()) returning id",
+    sesReqData:  ["uid", "ses"],
     postReqData: ["docid", "text", "comment", "serial", "iteration"],
-    sqlParams: [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "docid"), rpg.param("ses", "uid"), rpg.param("post", "iteration")]
+    sqlParams:   [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "docid"), rpg.param("ses", "uid"), rpg.param("post", "iteration")]
 }));
 
 router.post("/send-team-idea", rpg.singleSQL({
-    dbcon: pass.dbcon,
-    sql: "insert into ideas(content,descr,serial,docid,uid,iteration,stime) values ($1,$2,$3,$4,$5,$6,now()) returning id",
-    sesReqData: ["uid", "ses"],
+    dbcon:       pass.dbcon,
+    sql:         "insert into ideas(content,descr,serial,docid,uid,iteration,stime) values ($1,$2,$3,$4,$5,$6,now()) returning id",
+    sesReqData:  ["uid", "ses"],
     postReqData: ["docid", "text", "comment", "serial", "iteration", "uidoriginal"],
-    sqlParams: [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "docid"), rpg.param("post", "uidoriginal"), rpg.param("post", "iteration")]
+    sqlParams:   [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "docid"), rpg.param("post", "uidoriginal"), rpg.param("post", "iteration")]
 }));
 
 router.post("/send-pauta-idea", rpg.singleSQL({
-    dbcon: pass.dbcon,
-    sql: "insert into ideas(content,descr,serial,docid,uid,iteration,orden) values ($1,$2,$3,$4,$5,$6,$7) returning id",
-    sesReqData: ["uid", "ses"],
+    dbcon:       pass.dbcon,
+    sql:         "insert into ideas(content,descr,serial,docid,uid,iteration,orden) values ($1,$2,$3,$4,$5,$6,$7) returning id",
+    sesReqData:  ["uid", "ses"],
     postReqData: ["docid", "text", "comment", "serial", "iteration", "order"],
-    sqlParams: [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "docid"), rpg.param("ses", "uid"), rpg.param("post", "iteration"), rpg.param("post", "order")]
+    sqlParams:   [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "docid"), rpg.param("ses", "uid"), rpg.param("post", "iteration"), rpg.param("post", "order")]
 }));
 
 router.post("/update-idea", rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql: "update ideas set content = $1, descr = $2, serial = $3, stime = now() where id = $4",
-    sesReqData: ["uid", "ses"],
+    dbcon:       pass.dbcon,
+    sql:         "update ideas set content = $1, descr = $2, serial = $3, stime = now() where id = $4",
+    sesReqData:  ["uid", "ses"],
     postReqData: ["docid", "text", "comment", "serial", "id"],
-    sqlParams: [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "id")]
+    sqlParams:   [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "id")]
 }));
 
 router.post("/update-pauta-idea", rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql: "update ideas set content = $1, descr = $2, serial = $3, orden = $4 where id = $5",
-    sesReqData: ["uid", "ses"],
+    dbcon:       pass.dbcon,
+    sql:         "update ideas set content = $1, descr = $2, serial = $3, orden = $4 where id = $5",
+    sesReqData:  ["uid", "ses"],
     postReqData: ["docid", "text", "comment", "serial", "id", "order"],
-    sqlParams: [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "order"), rpg.param("post", "id")]
+    sqlParams:   [rpg.param("post", "text"), rpg.param("post", "comment"), rpg.param("post", "serial"), rpg.param("post", "order"), rpg.param("post", "id")]
 }));
 
 router.post("/pauta-editable", rpg.singleSQL({
-    dbcon: pass.dbcon,
-    sql: "select status = 1 as editable from sessions where id = $1",
+    dbcon:      pass.dbcon,
+    sql:        "select status = 1 as editable from sessions where id = $1",
     sesReqData: ["uid", "ses"],
-    sqlParams: [rpg.param("ses","ses")]
+    sqlParams:  [rpg.param("ses","ses")]
 }));
 
 router.post("/get-ideas", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select i.id, i.content, i.descr, i.serial, i.docid, i.orden from ideas as i inner join documents as d on i.docid = d.id where " +
+    sql:   "select i.id, i.content, i.descr, i.serial, i.docid, i.orden from ideas as i inner join documents as d on i.docid = d.id where " +
     "i.uid = $1 and d.sesid = $2 and i.iteration = $3 order by i.orden asc",
-    sesReqData: ["uid", "ses"],
+    sesReqData:  ["uid", "ses"],
     postReqData: ["iteration"],
-    sqlParams: [rpg.param("ses", "uid"), rpg.param("ses", "ses"), rpg.param("post", "iteration")]
+    sqlParams:   [rpg.param("ses", "uid"), rpg.param("ses", "ses"), rpg.param("post", "iteration")]
 }));
 
 router.post("/set-ideas-orden", (req, res) => {
@@ -401,7 +401,7 @@ router.post("/set-ideas-orden", (req, res) => {
         if (!isNaN(ideaId)) {
             rpg.execSQL({
                 dbcon: pass.dbcon,
-                sql: "update ideas set orden = " + i + " where id = " + ideaId,
+                sql:   "update ideas set orden = " + i + " where id = " + ideaId,
                 onEnd: () => {}
             })(req, res);
         }
@@ -411,11 +411,11 @@ router.post("/set-ideas-orden", (req, res) => {
 
 router.post("/change-state-session", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "with rows as (update sessions set status = status + 1 where id = $1 returning id, status) insert into " +
+    sql:   "with rows as (update sessions set status = status + 1 where id = $1 returning id, status) insert into " +
             "status_record(sesid,status,stime) select id, status, now() from rows",
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "sesid")],
-    onEnd: (req,res) => {
+    sqlParams:   [rpg.param("post", "sesid")],
+    onEnd:       (req,res) => {
         if(req.body.sesid != null && sesStatusCache[req.body.sesid] != null)
             sesStatusCache[req.body.sesid] += 1;
         res.send('{"status":"ok"}');
@@ -425,11 +425,11 @@ router.post("/change-state-session", rpg.execSQL({
 
 router.post("/force-state-session", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "with rows as (update sessions set status = $1 where id = $2 returning id, status) insert into " +
+    sql:   "with rows as (update sessions set status = $1 where id = $2 returning id, status) insert into " +
     "status_record(sesid,status,stime) select id, status, now() from rows",
     postReqData: ["sesid", "state"],
-    sqlParams: [rpg.param("post", "state"), rpg.param("post", "sesid")],
-    onEnd: (req,res) => {
+    sqlParams:   [rpg.param("post", "state"), rpg.param("post", "sesid")],
+    onEnd:       (req,res) => {
         if(req.body.sesid != null && sesStatusCache[req.body.sesid] != null)
             sesStatusCache[req.body.sesid] = req.body.state;
         res.send('{"status":"ok"}');
@@ -439,31 +439,31 @@ router.post("/force-state-session", rpg.execSQL({
 
 router.post("/record-finish", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "with rows as (update finish_session set stime = now() where uid = $1 and sesid = $2 and status = $3 returning 1) " +
+    sql:   "with rows as (update finish_session set stime = now() where uid = $1 and sesid = $2 and status = $3 returning 1) " +
         "insert into finish_session(uid,sesid,status,stime) select $4,$5,$6,now() where 1 not in (select * from rows)",
-    sesReqData: ["uid","ses"],
+    sesReqData:  ["uid","ses"],
     postReqData: ["status"],
-    sqlParams: [rpg.param("ses", "uid"),rpg.param("ses", "ses"),rpg.param("post", "status"),rpg.param("ses", "uid"),rpg.param("ses", "ses"),rpg.param("post", "status")]
+    sqlParams:   [rpg.param("ses", "uid"),rpg.param("ses", "ses"),rpg.param("post", "status"),rpg.param("ses", "uid"),rpg.param("ses", "ses"),rpg.param("post", "status")]
 }));
 
 router.post("/get-finished", rpg.singleSQL({
-    dbcon: pass.dbcon,
-    sql: "select $1 in (select uid from finish_session where sesid = $2 and status = $3) as finished",
+    dbcon:      pass.dbcon,
+    sql:        "select $1 in (select uid from finish_session where sesid = $2 and status = $3) as finished",
     sesReqData: ["ses","uid"],
-    sqlParams: [rpg.param("ses","uid"),rpg.param("ses","ses"),rpg.param("post","status")]
+    sqlParams:  [rpg.param("ses","uid"),rpg.param("ses","ses"),rpg.param("post","status")]
 }));
 
 router.post("/delete-idea", rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql: "delete from ideas where uid = $1 and id = $2",
-    sesReqData: ["uid"],
+    dbcon:       pass.dbcon,
+    sql:         "delete from ideas where uid = $1 and id = $2",
+    sesReqData:  ["uid"],
     postReqData: ["id"],
-    sqlParams: [rpg.param("ses", "uid"), rpg.param("post", "id")]
+    sqlParams:   [rpg.param("ses", "uid"), rpg.param("post", "id")]
 }));
 
 router.post("/get-chat-data-csv", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select c.id, d.orden as df, d.title, d.tleft as opt_left, d.tright as opt_right, u.id as user_id, u.name, " +
+    sql:   "select c.id, d.orden as df, d.title, d.tleft as opt_left, d.tright as opt_right, u.id as user_id, u.name, " +
         "t.id as team, c.content as message, c.stime as time, c.parent_id as reply_to from differential as d, " +
         "differential_chat as c, users as u, teams as t, teamusers as tu where c.did = d.id and d.sesid = $1 and " +
         "u.id = c.uid and t.sesid = $2 and tu.tmid = t.id and tu.uid = u.id order by t.id, c.stime",
@@ -474,12 +474,12 @@ router.post("/get-chat-data-csv", rpg.multiSQL({
         }
     },
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "sesid"), rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "sesid"), rpg.param("post", "sesid")]
 }));
 
 router.post("/get-sel-data-csv", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select s.id, d.orden as df, d.title, d.tleft as opt_left, d.tright as opt_right, u.id as user_id, u.name, " +
+    sql:   "select s.id, d.orden as df, d.title, d.tleft as opt_left, d.tright as opt_right, u.id as user_id, u.name, " +
         "t.id as team, s.sel, s.comment, s.stime as time, s.iteration from differential as d, differential_selection " +
         "as s, users as u, teams as t, teamusers as tu where s.did = d.id and d.sesid = $1 and u.id = s.uid and " +
         "t.sesid = $2 and tu.tmid = t.id and tu.uid = u.id order by s.iteration, s.stime",
@@ -490,12 +490,12 @@ router.post("/get-sel-data-csv", rpg.multiSQL({
         }
     },
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "sesid"), rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "sesid"), rpg.param("post", "sesid")]
 }));
 
 router.post("/get-sel-data-csv-ethics", rpg.multiSQL({
-    dbcon: pass.dbcon,
-    sql: "SELECT DISTINCT s.id,u.id AS user_id,r.tmid AS team_id,u.\"name\",u.rut,u.sex as\"gender\",a.orden as\"df\",a.title,a.tleft as\"opt_left\",a.tright as\"opt_right\",a.num as\"max_num\",s.sel as\"sel\",s.\"comment\" AS\"comment\",st.\"number\" AS\"phase\",s.stime as\"time\" FROM differential_selection AS s INNER JOIN differential AS a ON a.id=s.did INNER JOIN stages AS st ON st.id=a.stageid INNER JOIN users AS u ON u.id=s.uid INNER JOIN sessions AS ses ON ses.id=st.sesid LEFT JOIN(SELECT*from teams AS t INNER JOIN teamusers AS tu ON t.id=tu.tmid)as r ON r.stageid=st.id AND r.uid=u.id WHERE ses.id=$1 ORDER BY st.\"number\",s.stime",
+    dbcon:   pass.dbcon,
+    sql:     "SELECT DISTINCT s.id,u.id AS user_id,r.tmid AS team_id,u.\"name\",u.rut,u.sex as\"gender\",a.orden as\"df\",a.title,a.tleft as\"opt_left\",a.tright as\"opt_right\",a.num as\"max_num\",s.sel as\"sel\",s.\"comment\" AS\"comment\",st.\"number\" AS\"phase\",s.stime as\"time\" FROM differential_selection AS s INNER JOIN differential AS a ON a.id=s.did INNER JOIN stages AS st ON st.id=a.stageid INNER JOIN users AS u ON u.id=s.uid INNER JOIN sessions AS ses ON ses.id=st.sesid LEFT JOIN(SELECT*from teams AS t INNER JOIN teamusers AS tu ON t.id=tu.tmid)as r ON r.stageid=st.id AND r.uid=u.id WHERE ses.id=$1 ORDER BY st.\"number\",s.stime",
     onStart: (ses, data, calc) => {
         if (ses.role != "P") {
             console.log("ERR: Solo profesor puede ver datos de sesiones.");
@@ -503,12 +503,12 @@ router.post("/get-sel-data-csv-ethics", rpg.multiSQL({
         }
     },
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "sesid")]
 }));
 
 router.post("/get-chat-data-csv-ethics", rpg.multiSQL({
-    dbcon: pass.dbcon,
-    sql: "SELECT DISTINCT s.id,u.id AS user_id,r.tmid AS team_id,u.\"name\",u.rut,u.sex as\"gender\",a.orden as\"df\",a.title,a.tleft as\"opt_left\",a.tright as\"opt_right\",s.\"content\" as\"message\",st.\"number\" AS\"phase\",s.stime as\"time\",s.parent_id as\"reply_to\" FROM differential_chat AS s INNER JOIN differential AS a ON a.id=s.did INNER JOIN stages AS st ON st.id=a.stageid INNER JOIN users AS u ON u.id=s.uid INNER JOIN sessions AS ses ON ses.id=st.sesid LEFT JOIN(SELECT*from teams AS t INNER JOIN teamusers AS tu ON t.id=tu.tmid)as r ON r.stageid=st.id AND r.uid=u.id WHERE ses.id=$1 ORDER BY st.\"number\",s.stime",
+    dbcon:   pass.dbcon,
+    sql:     "SELECT DISTINCT s.id,u.id AS user_id,r.tmid AS team_id,u.\"name\",u.rut,u.sex as\"gender\",a.orden as\"df\",a.title,a.tleft as\"opt_left\",a.tright as\"opt_right\",s.\"content\" as\"message\",st.\"number\" AS\"phase\",s.stime as\"time\",s.parent_id as\"reply_to\" FROM differential_chat AS s INNER JOIN differential AS a ON a.id=s.did INNER JOIN stages AS st ON st.id=a.stageid INNER JOIN users AS u ON u.id=s.uid INNER JOIN sessions AS ses ON ses.id=st.sesid LEFT JOIN(SELECT*from teams AS t INNER JOIN teamusers AS tu ON t.id=tu.tmid)as r ON r.stageid=st.id AND r.uid=u.id WHERE ses.id=$1 ORDER BY st.\"number\",s.stime",
     onStart: (ses, data, calc) => {
         if (ses.role != "P") {
             console.log("ERR: Solo profesor puede ver datos de sesiones.");
@@ -516,12 +516,12 @@ router.post("/get-chat-data-csv-ethics", rpg.multiSQL({
         }
     },
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "sesid")]
 }));
 
 router.post("/get-sel-data-csv-role", rpg.multiSQL({
-    dbcon: pass.dbcon,
-    sql: "SELECT DISTINCT s.id,u.id AS user_id,r.tmid AS team_id,u.\"name\",u.rut,u.sex AS\"gender\",a.\"name\" AS action,s.orden AS\"rank\",s.description AS\"comment\",st.\"number\" AS\"phase\",s.stime FROM actor_selection AS s INNER JOIN actors AS a ON a.id=s.actorid INNER JOIN stages AS st ON st.id=a.stageid INNER JOIN users AS u ON u.id=s.uid INNER JOIN sessions AS ses ON ses.id=st.sesid LEFT JOIN(SELECT*FROM teams AS t INNER JOIN teamusers AS tu ON t.id=tu.tmid)AS r ON r.stageid=st.id AND r.uid=u.id WHERE ses.id=$1 ORDER BY st.\"number\",s.stime",
+    dbcon:   pass.dbcon,
+    sql:     "SELECT DISTINCT s.id,u.id AS user_id,r.tmid AS team_id,u.\"name\",u.rut,u.sex AS\"gender\",a.\"name\" AS action,s.orden AS\"rank\",s.description AS\"comment\",st.\"number\" AS\"phase\",s.stime FROM actor_selection AS s INNER JOIN actors AS a ON a.id=s.actorid INNER JOIN stages AS st ON st.id=a.stageid INNER JOIN users AS u ON u.id=s.uid INNER JOIN sessions AS ses ON ses.id=st.sesid LEFT JOIN(SELECT*FROM teams AS t INNER JOIN teamusers AS tu ON t.id=tu.tmid)AS r ON r.stageid=st.id AND r.uid=u.id WHERE ses.id=$1 ORDER BY st.\"number\",s.stime",
     onStart: (ses, data, calc) => {
         if (ses.role != "P") {
             console.log("ERR: Solo profesor puede ver datos de sesiones.");
@@ -529,12 +529,12 @@ router.post("/get-sel-data-csv-role", rpg.multiSQL({
         }
     },
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "sesid")]
 }));
 
 router.post("/get-chat-data-csv-role", rpg.multiSQL({
-    dbcon: pass.dbcon,
-    sql: "SELECT DISTINCT s.id,u.id AS user_id,r.tmid AS team_id,u.\"name\",u.rut,u.sex AS\"gender\",s.\"content\" AS\"message\",st.\"number\" AS\"phase\",s.stime AS\"time\",s.parent_id AS\"reply_to\" FROM chat AS s INNER JOIN stages AS st ON st.id=s.stageid INNER JOIN users AS u ON u.id=s.uid INNER JOIN sessions AS ses ON ses.id=st.sesid LEFT JOIN(SELECT*FROM teams AS t INNER JOIN teamusers AS tu ON t.id=tu.tmid)AS r ON r.stageid=st.id AND r.uid=u.id WHERE ses.id=$1 ORDER BY st.\"number\",s.stime",
+    dbcon:   pass.dbcon,
+    sql:     "SELECT DISTINCT s.id,u.id AS user_id,r.tmid AS team_id,u.\"name\",u.rut,u.sex AS\"gender\",s.\"content\" AS\"message\",st.\"number\" AS\"phase\",s.stime AS\"time\",s.parent_id AS\"reply_to\" FROM chat AS s INNER JOIN stages AS st ON st.id=s.stageid INNER JOIN users AS u ON u.id=s.uid INNER JOIN sessions AS ses ON ses.id=st.sesid LEFT JOIN(SELECT*FROM teams AS t INNER JOIN teamusers AS tu ON t.id=tu.tmid)AS r ON r.stageid=st.id AND r.uid=u.id WHERE ses.id=$1 ORDER BY st.\"number\",s.stime",
     onStart: (ses, data, calc) => {
         if (ses.role != "P") {
             console.log("ERR: Solo profesor puede ver datos de sesiones.");
@@ -542,12 +542,12 @@ router.post("/get-chat-data-csv-role", rpg.multiSQL({
         }
     },
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "sesid")]
 }));
 
 router.post("/get-sel-data-csv-jigsaw", rpg.multiSQL({
-    dbcon: pass.dbcon,
-    sql: "SELECT DISTINCT s.id,u.id AS user_id,r.tmid AS team_id,u.\"name\",u.rut,u.sex as\"gender\",j.\"name\" as\"role\",a.\"name\" AS action,s.orden as\"rank\",s.description AS\"comment\",st.\"number\" AS\"phase\",s.stime FROM actor_selection AS s INNER JOIN actors AS a ON a.id=s.actorid INNER JOIN stages AS st ON st.id=a.stageid INNER JOIN users AS u ON u.id=s.uid INNER JOIN sessions AS ses ON ses.id=st.sesid INNER JOIN jigsaw_users AS ju ON u.id=ju.userid INNER JOIN jigsaw_role AS j ON j.id=ju.roleid LEFT JOIN(SELECT*from teams AS t INNER JOIN teamusers AS tu ON t.id=tu.tmid)as r ON r.stageid=st.id AND r.uid=u.id WHERE ses.id=$1 ORDER BY st.\"number\",s.stime;",
+    dbcon:   pass.dbcon,
+    sql:     "SELECT DISTINCT s.id,u.id AS user_id,r.tmid AS team_id,u.\"name\",u.rut,u.sex as\"gender\",j.\"name\" as\"role\",a.\"name\" AS action,s.orden as\"rank\",s.description AS\"comment\",st.\"number\" AS\"phase\",s.stime FROM actor_selection AS s INNER JOIN actors AS a ON a.id=s.actorid INNER JOIN stages AS st ON st.id=a.stageid INNER JOIN users AS u ON u.id=s.uid INNER JOIN sessions AS ses ON ses.id=st.sesid INNER JOIN jigsaw_users AS ju ON u.id=ju.userid INNER JOIN jigsaw_role AS j ON j.id=ju.roleid LEFT JOIN(SELECT*from teams AS t INNER JOIN teamusers AS tu ON t.id=tu.tmid)as r ON r.stageid=st.id AND r.uid=u.id WHERE ses.id=$1 ORDER BY st.\"number\",s.stime;",
     onStart: (ses, data, calc) => {
         if (ses.role != "P") {
             console.log("ERR: Solo profesor puede ver datos de sesiones.");
@@ -555,12 +555,12 @@ router.post("/get-sel-data-csv-jigsaw", rpg.multiSQL({
         }
     },
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "sesid")]
 }));
 
 router.post("/get-chat-data-csv-jigsaw", rpg.multiSQL({
-    dbcon: pass.dbcon,
-    sql: "SELECT DISTINCT s.id,u.id AS user_id,r.tmid AS team_id,u.\"name\",u.rut,u.sex as\"gender\",j.\"name\" as\"role\",s.\"content\" as\"message\",st.\"number\" AS\"phase\",s.stime as\"time\",s.parent_id as\"reply_to\" FROM chat AS s INNER JOIN stages AS st ON st.id=s.stageid INNER JOIN users AS u ON u.id=s.uid INNER JOIN sessions AS ses ON ses.id=st.sesid INNER JOIN jigsaw_users AS ju ON u.id=ju.userid INNER JOIN jigsaw_role AS j ON j.id=ju.roleid LEFT JOIN(SELECT*from teams AS t INNER JOIN teamusers AS tu ON t.id=tu.tmid)as r ON r.stageid=st.id AND r.uid=u.id WHERE ses.id=$1 ORDER BY st.\"number\",s.stime;",
+    dbcon:   pass.dbcon,
+    sql:     "SELECT DISTINCT s.id,u.id AS user_id,r.tmid AS team_id,u.\"name\",u.rut,u.sex as\"gender\",j.\"name\" as\"role\",s.\"content\" as\"message\",st.\"number\" AS\"phase\",s.stime as\"time\",s.parent_id as\"reply_to\" FROM chat AS s INNER JOIN stages AS st ON st.id=s.stageid INNER JOIN users AS u ON u.id=s.uid INNER JOIN sessions AS ses ON ses.id=st.sesid INNER JOIN jigsaw_users AS ju ON u.id=ju.userid INNER JOIN jigsaw_role AS j ON j.id=ju.roleid LEFT JOIN(SELECT*from teams AS t INNER JOIN teamusers AS tu ON t.id=tu.tmid)as r ON r.stageid=st.id AND r.uid=u.id WHERE ses.id=$1 ORDER BY st.\"number\",s.stime;",
     onStart: (ses, data, calc) => {
         if (ses.role != "P") {
             console.log("ERR: Solo profesor puede ver datos de sesiones.");
@@ -568,7 +568,7 @@ router.post("/get-chat-data-csv-jigsaw", rpg.multiSQL({
         }
     },
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "sesid")]
 }));
 
 module.exports = router;

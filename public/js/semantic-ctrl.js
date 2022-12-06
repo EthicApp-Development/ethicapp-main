@@ -1,6 +1,6 @@
 "use strict";
 
-let app = angular.module("Semantic", ['ui.tree', 'btford.socket-io', "timer", "ui-notification"]);
+let app = angular.module("Semantic", ["ui.tree", "btford.socket-io", "timer", "ui-notification"]);
 
 app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
@@ -202,22 +202,22 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             self.toggleEdit(-1,unit);
         }
         if(self.iteration == 3 && (unit.comment == null || unit.comment.length ==0)){
-            Notification.error("Debe ingresar un comentario.")
+            Notification.error("Debe ingresar un comentario.");
             return;
         }
         let url = (self.iteration == 3)? "add-sync-semantic-unit" : "add-semantic-unit";
         if(unit.id != null)
             url = "update-semantic-unit";
         let postdata = {
-            id: unit.id,
-            comment: unit.comment,
-            sentences: unit.sentences,
-            docs: unit.docs,
-            iteration: self.iteration,
+            id:          unit.id,
+            comment:     unit.comment,
+            sentences:   unit.sentences,
+            docs:        unit.docs,
+            iteration:   self.iteration,
             uidoriginal: self.originalLeader
         };
         console.log(postdata);
-        $http({method: "post", url: url, data:postdata}).success((data) => {
+        $http({method: "post", url: url, data: postdata}).success((data) => {
             unit.dirty = false;
             if(unit.id == null)
                 unit.id = data.id;
@@ -228,7 +228,7 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
     };
 
     self.updateSignal = () => {
-        $http({url: "update-my-team", method:"post"}).success((data) => {
+        $http({url: "update-my-team", method: "post"}).success((data) => {
             console.log("Team updated");
         });
     };
@@ -246,11 +246,11 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             return;
         }
         self.units.push({
-            id: null,
-            comment: "",
+            id:        null,
+            comment:   "",
             sentences: self.getHgSents(),
-            status: "unsaved",
-            docs: self.getHgDocs()
+            status:    "unsaved",
+            docs:      self.getHgDocs()
         });
         //console.log(self.units);
         let i = self.units.length -1;
@@ -302,7 +302,6 @@ app.controller("SemanticController", ["$scope", "$http", "$timeout", "$socket", 
             return;
         }
         if(!unit.edit) {
-            //self.selectDocument(indexById(self.documents, unit.docid));
             unit.edit = true;
             self.editing = idx;
             self.fillHighlightByUnit(unit);
@@ -452,7 +451,7 @@ app.controller("ReportController", ["$scope", "$http", function ($scope, $http) 
 
     self.sendReport = () => {
         let postdata = {content: self.content};
-        $http({url:"send-report", method:"post", data:postdata}).success((data) => {
+        $http({url: "send-report", method: "post", data: postdata}).success((data) => {
             if (data.status == "ok"){
                 self.lastSent = new Date();
                 self.misc.reportDirty = false;
@@ -464,7 +463,7 @@ app.controller("ReportController", ["$scope", "$http", function ($scope, $http) 
     self.shared.sendReport = self.sendReport;
 
     self.getReport = () => {
-        $http({url:"get-my-report", method:"post"}).success((data) => {
+        $http({url: "get-my-report", method: "post"}).success((data) => {
             if (data.status == "ok"){
                 self.content = data.content;
                 self.idReport = data.id;
@@ -476,7 +475,3 @@ app.controller("ReportController", ["$scope", "$http", function ($scope, $http) 
     self.getReport();
 
 }]);
-
-let indexById = (arr, id) => {
-    return arr.findIndex(e => e.id == id);
-};

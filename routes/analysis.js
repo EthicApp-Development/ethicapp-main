@@ -1,6 +1,6 @@
 "use strict";
 
-let express = require('express');
+let express = require("express");
 let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
@@ -8,13 +8,13 @@ let middleware = require("../midleware/validate-session");
 
 router.post("/get-alum-state-sel", middleware.verifySession, rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select uid, sum(correct) as score, count(correct) as answered from (select s.uid, (s.answer = q.answer)::int " +
+    sql:   "select uid, sum(correct) as score, count(correct) as answered from (select s.uid, (s.answer = q.answer)::int " +
         "as correct from selection as s inner join questions as q on s.qid = q.id where q.sesid = $1 and s.iteration = $2) as r group by uid",
     postReqData: ["sesid","iteration"],
-    onStart: (ses, data, calc) => {
+    onStart:     (ses, data, calc) => {
         if (ses.role != "P") {
             console.log("ERR: Solo profesor puede ver estado de alumnos.");
-            return "select $1"
+            return "select $1";
         }
     },
     sqlParams: [rpg.param("post", "sesid"),rpg.param("post", "iteration")]
@@ -22,13 +22,13 @@ router.post("/get-alum-state-sel", middleware.verifySession, rpg.multiSQL({
 
 router.post("/get-alum-full-state-sel", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select s.uid, q.id as qid, (s.answer = q.answer)::int as correct from selection as s inner join questions as q on " +
+    sql:   "select s.uid, q.id as qid, (s.answer = q.answer)::int as correct from selection as s inner join questions as q on " +
     "s.qid = q.id where q.sesid = $1 and s.iteration = $2",
     postReqData: ["sesid","iteration"],
-    onStart: (ses, data, calc) => {
+    onStart:     (ses, data, calc) => {
         if (ses.role != "P") {
             console.log("ERR: Solo profesor puede ver estado de alumnos.");
-            return "select $1"
+            return "select $1";
         }
     },
     sqlParams: [rpg.param("post", "sesid"),rpg.param("post", "iteration")]
@@ -41,24 +41,24 @@ router.post("/group-proposal-sel", (req, res) => {
     }
     rpg.multiSQL({
         dbcon: pass.dbcon,
-        sql: "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
+        sql:   "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
         "u.id = tu.uid and t.sesid = " + req.body.sesid,
         preventResEnd: true,
-        onEnd: (req,res,arr) => {
+        onEnd:         (req,res,arr) => {
             if(arr.length == 0) {
                 rpg.multiSQL({
                     dbcon: pass.dbcon,
-                    sql: "select uid, sum(correct) as score, count(correct) as answered from (select s.uid, (s.answer = q.answer)::int " +
+                    sql:   "select uid, sum(correct) as score, count(correct) as answered from (select s.uid, (s.answer = q.answer)::int " +
                         "as correct from selection as s inner join questions as q on s.qid = q.id where q.sesid = $1 and s.iteration = $2) as r group by uid",
                     onStart: (ses, data, calc) => {
                         if (ses.role != "P") {
                             console.log("ERR: Solo profesor puede ver estado de alumnos.");
-                            return "select $1"
+                            return "select $1";
                         }
                     },
                     preventResEnd: true,
-                    sqlParams: [rpg.param("post", "sesid")],
-                    onEnd: (req, res, arr) => {
+                    sqlParams:     [rpg.param("post", "sesid")],
+                    onEnd:         (req, res, arr) => {
                         let groups = generateTeams(arr, (s) => s.score, req.body.gnum, isDifferent(req.body.method));
                         res.end(JSON.stringify(groups));
                     }
@@ -88,10 +88,10 @@ router.post("/group-proposal-stage", (req, res) => {
     }
     rpg.multiSQL({
         dbcon: pass.dbcon,
-        sql: "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
+        sql:   "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
             "u.id = tu.uid and t.stageid = " + req.body.stageid,
         preventResEnd: true,
-        onEnd: (req,res,arr) => {
+        onEnd:         (req,res,arr) => {
             let t = {};
             let groups = [];
             arr.forEach((row) => {
@@ -109,23 +109,23 @@ router.post("/group-proposal-stage", (req, res) => {
 
 router.post("/get-alum-state-lect", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select distinct a.uid, a.orden, a.serial, a.content, a.docid, p.serial as serial_ans, p.content as content_ans, p.docid as docid_ans" +
+    sql:   "select distinct a.uid, a.orden, a.serial, a.content, a.docid, p.serial as serial_ans, p.content as content_ans, p.docid as docid_ans" +
             " from ideas as a, ideas as p, sessions as s where s.creator = p.uid and a.uid != s.creator and a.orden = p.orden and " +
             "s.id = $1 and a.docid in (select id from documents where sesid = s.id) and p.docid in (select id from documents where " +
             "sesid = s.id) and a.iteration = $2 order by uid, a.orden asc",
     postReqData: ["sesid","iteration"],
-    onStart: (ses, data, calc) => {
+    onStart:     (ses, data, calc) => {
         if (ses.role != "P") {
             console.log("ERR: Solo profesor puede ver estado de alumnos.");
-            return "select $1, $2"
+            return "select $1, $2";
         }
     },
     preventResEnd: true,
-    sqlParams: [rpg.param("post", "sesid"), rpg.param("post", "iteration")],
-    onEnd: (req,res,arr) => {
+    sqlParams:     [rpg.param("post", "sesid"), rpg.param("post", "iteration")],
+    onEnd:         (req,res,arr) => {
         rpg.singleSQL({
             dbcon: pass.dbcon,
-            sql: "select max(orden) as total from ideas as p, sessions as s, documents as d where p.docid = d.id and " +
+            sql:   "select max(orden) as total from ideas as p, sessions as s, documents as d where p.docid = d.id and " +
                 "d.sesid = s.id and s.creator = p.uid and s.id = " + req.body.sesid,
             onEnd: (reqin,res,rowin) => {
                 let scores = [];
@@ -134,7 +134,7 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
                 let total = rowin.total + 1;
                 let allAns = [];
                 arr.forEach((row) => {
-                     allAns.push(row.content_ans.trim().toLowerCase());
+                    allAns.push(row.content_ans.trim().toLowerCase());
                 });
                 var scoresUsed = {};
                 arr.forEach((row) => {
@@ -143,7 +143,7 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
                             scores[i].score /= total;
                         i++;
                         last_uid = row.uid;
-                        scores.push({uid: last_uid, score:0});
+                        scores.push({uid: last_uid, score: 0});
                         scoresUsed = {};
                     }
                     console.log(row.orden, "|", row.content, "|", row.content_ans);
@@ -171,18 +171,18 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
 
 router.post("/get-alum-state-semantic", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select a.uid, a.sentences, a.docs, a.uid = s.creator as is_ans from semantic_unit as a, sessions as s where " +
+    sql:   "select a.uid, a.sentences, a.docs, a.uid = s.creator as is_ans from semantic_unit as a, sessions as s where " +
         "s.id = $1 and a.sesid = s.id and (a.iteration = $2 or a.uid = s.creator) order by is_ans desc, a.uid, a.sentences",
     postReqData: ["sesid","iteration"],
-    onStart: (ses, data, calc) => {
+    onStart:     (ses, data, calc) => {
         if (ses.role != "P") {
             console.log("ERR: Solo profesor puede ver estado de alumnos.");
-            return "select $1, $2"
+            return "select $1, $2";
         }
     },
     preventResEnd: true,
-    sqlParams: [rpg.param("post", "sesid"), rpg.param("post", "iteration")],
-    onEnd: (req,res,arr) => {
+    sqlParams:     [rpg.param("post", "sesid"), rpg.param("post", "iteration")],
+    onEnd:         (req,res,arr) => {
         let scores = [];
         let i = 0;
         let pauta = [];
@@ -226,30 +226,30 @@ router.post("/group-proposal-lect", (req,res) => {
     }
     rpg.multiSQL({
         dbcon: pass.dbcon,
-        sql: "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
+        sql:   "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
         "u.id = tu.uid and t.sesid = " + req.body.sesid,
         preventResEnd: true,
-        onEnd: (req,res,arr) => {
+        onEnd:         (req,res,arr) => {
             if(arr.length == 0) {
                 rpg.multiSQL({
                     dbcon: pass.dbcon,
-                    sql: "select distinct a.uid, a.orden, a.serial, a.content, a.docid, p.serial as serial_ans, p.content as content_ans, p.docid as docid_ans" +
+                    sql:   "select distinct a.uid, a.orden, a.serial, a.content, a.docid, p.serial as serial_ans, p.content as content_ans, p.docid as docid_ans" +
                     " from ideas as a, ideas as p, sessions as s where s.creator = p.uid and a.uid != s.creator and a.orden = p.orden and " +
                     "s.id = $1 and a.docid in (select id from documents where sesid = s.id) and p.docid in (select id from documents where " +
                     "sesid = s.id) and a.iteration = 1 order by uid, a.orden asc",
                     postReqData: ["sesid"],
-                    onStart: (ses, data, calc) => {
+                    onStart:     (ses, data, calc) => {
                         if (ses.role != "P") {
                             console.log("ERR: Solo profesor puede ver estado de alumnos.");
-                            return "select $1"
+                            return "select $1";
                         }
                     },
                     preventResEnd: true,
-                    sqlParams: [rpg.param("post", "sesid")],
-                    onEnd: (req,res,arr) => {
+                    sqlParams:     [rpg.param("post", "sesid")],
+                    onEnd:         (req,res,arr) => {
                         rpg.singleSQL({
                             dbcon: pass.dbcon,
-                            sql: "select max(orden) as total from ideas as p, sessions as s, documents as d where p.docid = d.id and d.sesid = s.id and s.creator = p.uid and s.id = " + req.body.sesid,
+                            sql:   "select max(orden) as total from ideas as p, sessions as s, documents as d where p.docid = d.id and d.sesid = s.id and s.creator = p.uid and s.id = " + req.body.sesid,
                             onEnd: (reqin,res,rowin) => {
                                 let scores = [];
                                 let last_uid = -1;
@@ -266,7 +266,7 @@ router.post("/group-proposal-lect", (req,res) => {
                                             scores[i].score /= total;
                                         i++;
                                         last_uid = row.uid;
-                                        scores.push({uid: last_uid, score:0});
+                                        scores.push({uid: last_uid, score: 0});
                                         scoresUsed = {};
                                     }
                                     console.log(row.orden, "|", row.content, "|", row.content_ans);
@@ -317,14 +317,14 @@ router.post("/group-proposal-hab", (req, res) => {
     }
     rpg.multiSQL({
         dbcon: pass.dbcon,
-        sql: "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
+        sql:   "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
         "u.id = tu.uid and t.sesid = " + req.body.sesid,
         preventResEnd: true,
-        onEnd: (req,res,arr) => {
+        onEnd:         (req,res,arr) => {
             if(arr.length == 0) {
                 rpg.multiSQL({
                     dbcon: pass.dbcon,
-                    sql: "select u.id as uid, u.aprendizaje from users as u inner join sesusers as su on su.uid = u.id where su.sesid = "
+                    sql:   "select u.id as uid, u.aprendizaje from users as u inner join sesusers as su on su.uid = u.id where su.sesid = "
                         + req.body.sesid + " and u.role='A'",
                     onEnd: (req, res, arr) => {
                         let groups = generateTeams(arr, habMetric, req.body.gnum, isDifferent(req.body.method));
@@ -356,14 +356,14 @@ router.post("/group-proposal-rand", (req, res) => {
     }
     rpg.multiSQL({
         dbcon: pass.dbcon,
-        sql: "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
+        sql:   "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
         "u.id = tu.uid and t.sesid = " + req.body.sesid,
         preventResEnd: true,
-        onEnd: (req,res,arr) => {
+        onEnd:         (req,res,arr) => {
             if(arr.length == 0) {
                 rpg.multiSQL({
                     dbcon: pass.dbcon,
-                    sql: "select u.id as uid, random() as rnd from users as u inner join sesusers as su on su.uid = u.id where su.sesid = "
+                    sql:   "select u.id as uid, random() as rnd from users as u inner join sesusers as su on su.uid = u.id where su.sesid = "
                     + req.body.sesid + " and u.role='A'",
                     onEnd: (req, res, arr) => {
                         let groups = generateTeams(arr, (s) => s.rnd, req.body.gnum, false);
@@ -394,28 +394,28 @@ let ideasMatch = (row) => {
 
 let isDifferent = (type) => {
     switch (type){
-        case "Rendimiento Homogeneo":
-            return false;
-        case "Rendimiento Heterogeneo":
-            return true;
-        case "Tipo Aprendizaje Homogeneo":
-            return false;
-        case "Tipo Aprendizaje Heterogeneo":
-            return true;
+    case "Rendimiento Homogeneo":
+        return false;
+    case "Rendimiento Heterogeneo":
+        return true;
+    case "Tipo Aprendizaje Homogeneo":
+        return false;
+    case "Tipo Aprendizaje Heterogeneo":
+        return true;
     }
     return false;
 };
 
 let habMetric = (u) => {
     switch (u.aprendizaje){
-        case "Teorico":
-            return -2;
-        case "Reflexivo":
-            return -1;
-        case "Activo":
-            return 1;
-        case "Pragmatico":
-            return 2;
+    case "Teorico":
+        return -2;
+    case "Reflexivo":
+        return -1;
+    case "Activo":
+        return 1;
+    case "Pragmatico":
+        return 2;
     }
     return 0;
 };
@@ -435,7 +435,7 @@ router.post("/set-groups", (req, res) => {
     console.log(sql);
     rpg.execSQL({
         dbcon: pass.dbcon,
-        sql: sql,
+        sql:   sql,
         onEnd: () => {
             res.end('{"status":"ok"}');
         }
@@ -491,7 +491,7 @@ router.post("/set-groups-stage", (req, res) => {
     console.log(sql);
     rpg.execSQL({
         dbcon: pass.dbcon,
-        sql: sql,
+        sql:   sql,
         onEnd: () => {
             res.end('{"status":"ok"}');
         }
@@ -532,7 +532,7 @@ router.post("/assign-pairs", (req, res) => {
     let m = req.body.rnum;
     rpg.multiSQL({
         dbcon: pass.dbcon,
-        sql: "select r.id, r.uid from reports as r inner join rubricas as k on r.rid = k.id where r.example = false and k.sesid = " + ses,
+        sql:   "select r.id, r.uid from reports as r inner join rubricas as k on r.rid = k.id where r.example = false and k.sesid = " + ses,
         onEnd: (req, res, arr) => {
             let n = arr.length;
             if (m >= n) {
@@ -588,9 +588,9 @@ router.post("/assign-pairs", (req, res) => {
             let sql = "insert into report_pair(sesid,uid,repid) values ";
             sql += pairs.map(e => "("+ses+","+e.uid+","+e.rid+")").join(",");
             rpg.execSQL({
-                dbcon: pass.dbcon,
-                sql: sql,
-                onEnd: () => {},
+                dbcon:         pass.dbcon,
+                sql:           sql,
+                onEnd:         () => {},
                 preventResEnd: true
             })(req,res);
 
@@ -601,29 +601,29 @@ router.post("/assign-pairs", (req, res) => {
 
 router.post("/get-ideas-progress", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select i.uid, count(*) as count from ideas as i inner join users as u on i.uid = u.id where iteration = $1 and u.role = 'A' " +
+    sql:   "select i.uid, count(*) as count from ideas as i inner join users as u on i.uid = u.id where iteration = $1 and u.role = 'A' " +
         "and i.docid in (select id from documents where sesid = $2) group by uid",
     postReqData: ["iteration", "sesid"],
-    sqlParams: [rpg.param("post", "iteration"), rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "iteration"), rpg.param("post", "sesid")]
 }));
 
 router.post("/get-alum-done-time", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select f.uid, extract(epoch from f.stime - s.stime) as dtime from finish_session as f, status_record as s where s.status = f.status and " +
+    sql:   "select f.uid, extract(epoch from f.stime - s.stime) as dtime from finish_session as f, status_record as s where s.status = f.status and " +
         "s.sesid = f.sesid and f.status = ($1 + 2) and f.sesid = $2",
     postReqData: ["iteration", "sesid"],
-    sqlParams: [rpg.param("post", "iteration"), rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "iteration"), rpg.param("post", "sesid")]
 }));
 
 router.post("/get-alum-confidence", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select s.confidence as conf, q.id as qid, count(*) as freq from selection as s inner join questions as q on s.qid = q.id " +
+    sql:   "select s.confidence as conf, q.id as qid, count(*) as freq from selection as s inner join questions as q on s.qid = q.id " +
         "where q.sesid = $1 and s.iteration = $2 and s.confidence is not null group by s.confidence, q.id",
     postReqData: ["sesid","iteration"],
-    onStart: (ses, data, calc) => {
+    onStart:     (ses, data, calc) => {
         if (ses.role != "P") {
             console.log("ERR: Solo profesor puede ver estado de alumnos.");
-            return "select $1, $2"
+            return "select $1, $2";
         }
     },
     sqlParams: [rpg.param("post", "sesid"),rpg.param("post", "iteration")]

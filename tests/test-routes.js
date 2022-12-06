@@ -1,7 +1,7 @@
 "use strict";
 
-let request = require('supertest');
-let app = require('../app');
+let request = require("supertest");
+let app = require("../app");
 
 describe("Routes", () => {
     it("Main page redirects to login", (done) => {

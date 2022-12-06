@@ -1,6 +1,6 @@
 "use strict";
 
-let app = angular.module("Select", ["ui.bootstrap", "timer", 'btford.socket-io', "ui-notification", "ngSanitize"]);
+let app = angular.module("Select", ["ui.bootstrap", "timer", "btford.socket-io", "ui-notification", "ngSanitize"]);
 
 app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
@@ -283,11 +283,11 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
             return;
         }
         let postdata = {
-            qid: qs.id,
-            answer: self.answers[qs.id],
-            comment: self.comments[qs.id],
+            qid:        qs.id,
+            answer:     self.answers[qs.id],
+            comment:    self.comments[qs.id],
             confidence: self.confidences[qs.id],
-            iteration: self.iteration
+            iteration:  self.iteration
         };
         $http({url: "send-answer", method: "post", data: postdata}).success((data) => {
             if (data.status == "ok") {
@@ -300,7 +300,7 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
     let notify = (title, message, closable) => {
         $uibModal.open({
             template: '<div><div class="modal-header"><h4>' + title + '</h4></div><div class="modal-body"><p>' +
-                message + '</p></div></div>'
+                message + "</p></div></div>"
         });
     };
 
@@ -330,14 +330,14 @@ app.controller("SelectController", ["$scope", "$http", "$socket", "Notification"
 
 app.filter("trustHtml", ["$sce", function($sce){
     return function(html){
-        return $sce.trustAsHtml(html)
+        return $sce.trustAsHtml(html);
     };
 }]);
 
 window.DIC = null;
 window.warnDIC = {};
 
-app.filter('lang', function(){
+app.filter("lang", function(){
     filt.$stateful = true;
     return filt;
 
