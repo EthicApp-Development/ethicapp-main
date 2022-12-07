@@ -2,8 +2,7 @@
 
 let app = angular.module("SuperAdmin", []);
 
-app.controller("SuperAdminController", function ($scope, $http) {
-
+app.controller("SuperAdminController", function($scope, $http) {
     let self = $scope;
 
     self.sec = -1;
@@ -88,11 +87,11 @@ app.controller("instituciones",["$scope","$http",function($scope,$http,Admin){
         self.get_temporary_institutions();
     };
 
-
-
     self.get_temporary_institutions = function() {
         var postdata = 500;
-        $http({ url: "get_temporary_institutions", method: "post",data: postdata }).success(function (data) {
+        $http({
+            url: "get_temporary_institutions", method: "post", data: postdata
+        }).success(function (data) {
             var inst = [];
             if(data != null){
                 for(var i = 0;i < data.data.rows.length ;i++){
@@ -103,7 +102,6 @@ app.controller("instituciones",["$scope","$http",function($scope,$http,Admin){
             }
         });
     };
-
 
     self.init();
 }]);

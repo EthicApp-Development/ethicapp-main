@@ -1,5 +1,10 @@
 version: "3.8"
+
+networks:
+  default:
+
 services:
+  # ---------------------- Node.JS web app ---------------------- #
   node:
     container_name: "ethicapp"
     build: .
@@ -14,6 +19,8 @@ services:
       - "8501:8501"
     networks:
       - default
+
+  # ---------------------- Database ---------------------- #
   postgres:
     container_name: "postgres-ethicapp"
     image: "postgres:10.19-bullseye"
@@ -25,6 +32,8 @@ services:
       POSTGRES_DB: postgres
     networks:
       - default
+
+  # ---------------------- PgAdmin ---------------------- #
   pgadmin:
     image: dpage/pgadmin4
     depends_on:
@@ -35,5 +44,3 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
     restart: unless-stopped
-networks:
-  default:
