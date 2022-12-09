@@ -113,14 +113,20 @@ router.get("/google/callback",
     }),
     function (req, res) {
         var db = getDBInstance(pass.dbcon);
-        var sql = "SELECT * FROM users WHERE mail ='" + req.user.email + "' LIMIT 1";
+        var sql = `
+        SELECT *
+        FROM users
+        WHERE mail = '${req.user.email}'
+        LIMIT 1
+        `;
         var qry = db.query(sql, (err, res) => {
             if (res.rows[0] != null) {
                 req.session.uid = res.rows[0].id;
                 req.session.role = "A";
                 req.session.ses = null;
             }
-        }).then(t => res.redirect("/seslist"));
+        })
+            .then(t => res.redirect("/seslist"));
     }
 );
 
@@ -376,7 +382,7 @@ router.post("/register_institucion", (req, res) => {
                     });
 
                     qry.on("error", function(err){
-                        console.log(err);
+                        console.error(err);
                         res.end('{"status":"err"}');
                     });
                 } else {
@@ -387,7 +393,7 @@ router.post("/register_institucion", (req, res) => {
                 res.redirect("register");
             }
         }).catch(function(e) {
-            console.log(e); 
+            console.error(e); 
         });   
 });
 
@@ -852,7 +858,6 @@ router.post("/create-multicounts",(req,res)=> {
 
 router.post("/activate_user", (req, res) => {
     var db = getDBInstance(pass.dbcon);
-    console.log(req.body);
     var sql = `
     SELECT *
     FROM temporary_users

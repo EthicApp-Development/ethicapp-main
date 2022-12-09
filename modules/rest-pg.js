@@ -3,13 +3,12 @@
  */
 
 var pg = require("pg");
-//var qs = require('querystring');
+var DB = null;
 
-function smartArrayConvert(sqlParams, ses, data, calc) {
+var smartArrayConvert  = function(sqlParams, ses, data, calc) {
     var arr = [];
     for (var i = 0; i < sqlParams.length; i++) {
         var p = sqlParams[i];
-        //console.log(p);
         p = JSON.parse(p);
         if (p.type == "plain")
             arr.push(p.name);
@@ -21,11 +20,10 @@ function smartArrayConvert(sqlParams, ses, data, calc) {
             arr.push(data[p.name]);
     }
     return arr;
-}
+};
 
-var DB = null;
 
-function getDBInstance(dbcon){
+var getDBInstance = function(dbcon) {
     if(DB == null) {
         DB = new pg.Client(dbcon);
         DB.connect();
@@ -36,7 +34,8 @@ function getDBInstance(dbcon){
         return DB;
     }
     return DB;
-}
+};
+
 
 /**
  * Returns a sql statement parameter
@@ -46,6 +45,7 @@ function getDBInstance(dbcon){
 module.exports.param = function (t, n) {
     return JSON.stringify({name: n, type: t});
 };
+
 
 /**
  * Returns a list of sql statement parameters of the same type
@@ -70,7 +70,6 @@ module.exports.paramsOfType = (t, arr) => {
  * <li> onEnd: Function to be executed just before send end result.
  */
 module.exports.execSQL = function (params) {
-
     if (params.sql == null || params.sql == "" || params.dbcon == null || params.dbcon == "")
         return null;
 
@@ -81,28 +80,19 @@ module.exports.execSQL = function (params) {
         if (params.sesReqData != null) {
             for (var i = 0; i < params.sesReqData.length; i++) {
                 if (ses[params.sesReqData[i]] === null) {
-                    console.log("[Req Error] Falta dato de sesión: " + params.sesReqData[i]);
+                    console.error("[Req Error] Falta dato de sesión: " + params.sesReqData[i]);
                     res.end('{"status":"err"}');
-                    //console.log("No data provided");
                     return;
                 }
             }
         }
-        /*var postdata = "";
-             req.on("data",function(chunk){
-             postdata += chunk;
-             });
-             req.on("end",function(){*/
         var data = req.body;
         var calc = {};
-        /*if(postdata!="")
-             data = JSON.parse(postdata);*/
         if (params.postReqData != null) {
             for (var i = 0; i < params.postReqData.length; i++) {
                 if (data[params.postReqData[i]] === null || data[params.postReqData[i]] === "") {
-                    console.log("[Req Error] Falta dato de body: " + params.postReqData[i]);
+                    console.error("[Req Error] Falta dato de body: " + params.postReqData[i]);
                     res.end('{"status":"err"}');
-                    //console.log("No data provided");
                     return;
                 }
             }
@@ -134,9 +124,9 @@ module.exports.execSQL = function (params) {
             console.error("[DB Error]: ", err);
             res.end('{"status":"err"}');
         });
-        //});
     };
 };
+
 
 /**
  * Execute a n sql statements with ok / err response at the end of all.
@@ -150,7 +140,6 @@ module.exports.execSQL = function (params) {
  * <li> onEnd: Function to be executed just before send end result.
  */
 module.exports.nExecSQL = function (params) {
-
     if (params.nsql == null || params.dbcon == null || params.dbcon == "")
         return null;
 
@@ -162,7 +151,7 @@ module.exports.nExecSQL = function (params) {
         if (params.sesReqData != null) {
             for (var i = 0; i < params.sesReqData.length; i++) {
                 if (ses[params.sesReqData[i]] === null) {
-                    console.log("[Req Error] Falta dato de sesión: " + params.sesReqData[i]);
+                    console.error("[Req Error] Falta dato de sesión: " + params.sesReqData[i]);
                     res.end('{"status":"err"}');
                     return;
                 }
@@ -173,7 +162,7 @@ module.exports.nExecSQL = function (params) {
         if (params.postReqData != null) {
             for (var i = 0; i < params.postReqData.length; i++) {
                 if (data[params.postReqData[i]] === null || data[params.postReqData[i]] === "") {
-                    console.log("[Req Error] Falta dato de body: " + params.postReqData[i]);
+                    console.error("[Req Error] Falta dato de body: " + params.postReqData[i]);
                     res.end('{"status":"err"}');
                     return;
                 }
@@ -209,6 +198,7 @@ module.exports.nExecSQL = function (params) {
     };
 };
 
+
 /**
  * Execute a select single sql statement.
  * @param params Parameters including:
@@ -219,10 +209,10 @@ module.exports.nExecSQL = function (params) {
  * <li> sqlParams: List of sql statement $ parameters.
  * <li> onStart: Function to be executed just before sql execution.
  * <li> onEnd: Function to be executed just before send end result.
- * <li> onSelect: Function handled after sql statement is executed. It replaces the normal return behavior.
+ * <li> onSelect: Function handled after sql statement is executed. It replaces the normal return
+ * behavior.
  */
 module.exports.singleSQL = function (params) {
-
     if (params.sql == null || params.sql == "" || params.dbcon == null || params.dbcon == "")
         return null;
 
@@ -233,29 +223,19 @@ module.exports.singleSQL = function (params) {
         if (params.sesReqData != null) {
             for (var i = 0; i < params.sesReqData.length; i++) {
                 if (ses[params.sesReqData[i]] === null) {
-                    console.log("[Req Error] Falta dato de sesión: " + params.sesReqData[i]);
+                    console.error("[Req Error] Falta dato de sesión: " + params.sesReqData[i]);
                     res.end('{"status":"err"}');
-                    //console.log("No data provided");
                     return;
                 }
             }
         }
-        /* var postdata = "";
-         req.on("data",function(chunk){
-         postdata += chunk;
-         });
-         req.on("end",function(){
-         var data = {};
-         if(postdata!="")
-         data = JSON.parse(postdata);*/
         var data = req.body;
         var calc = {};
         if (params.postReqData != null) {
             for (var i = 0; i < params.postReqData.length; i++) {
                 if (data[params.postReqData[i]] === null || data[params.postReqData[i]] === "") {
-                    console.log("[Req Error] Falta dato de body: " + params.postReqData[i]);
+                    console.error("[Req Error] Falta dato de body: " + params.postReqData[i]);
                     res.end('{"status":"err"}');
-                    //console.log("No data provided");
                     return;
                 }
             }
@@ -296,9 +276,9 @@ module.exports.singleSQL = function (params) {
             console.error("[DB Error]: ", err);
             res.end('{"status":"err"}');
         });
-        //});
     };
 };
+
 
 /**
  * Execute a select multiple sql statement.
@@ -313,7 +293,6 @@ module.exports.singleSQL = function (params) {
  * <li> onRow: Function handled every fetched row. It replaces the normal row behavior.
  */
 module.exports.multiSQL = function (params) {
-
     if (params.sql == null || params.sql == "" || params.dbcon == null || params.dbcon == "")
         return null;
 
@@ -324,31 +303,19 @@ module.exports.multiSQL = function (params) {
         if (params.sesReqData != null) {
             for (var i = 0; i < params.sesReqData.length; i++) {
                 if (ses[params.sesReqData[i]] === null) {
-                    console.log("[Req Error] Falta dato de sesión: " + params.sesReqData[i]);
+                    console.error("[Req Error] Falta dato de sesión: " + params.sesReqData[i]);
                     res.end("[]");
-                    //console.log("No data provided");
                     return;
                 }
             }
         }
-        /*var postdata = "";
-         req.on("data",function(chunk){
-         postdata += chunk;
-         });
-         req.on("end",function(){
-         var data = {};
-         if(postdata!="")
-         data = JSON.parse(postdata);*/
-        //console.log(postdata);
-        //console.log(data);
         var data = req.body;
         var calc = {};
         if (params.postReqData != null) {
             for (var i = 0; i < params.postReqData.length; i++) {
                 if (data[params.postReqData[i]] === null || data[params.postReqData[i]] === "") {
-                    console.log("[Req Error] Falta dato de body: " + params.postReqData[i]);
+                    console.error("[Req Error] Falta dato de body: " + params.postReqData[i]);
                     res.end("[]");
-                    //console.log("No data provided");
                     return;
                 }
             }
@@ -388,6 +355,5 @@ module.exports.multiSQL = function (params) {
             console.error("[DB Error]: ", err);
             res.end("[]");
         });
-        //});
     };
 };
