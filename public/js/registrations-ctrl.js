@@ -1,1 +1,1 @@
-var regapp = angular.module("Admin", ["ui.bootstrap", 'ngRoute']);
+// var regapp = angular.module("Admin", ["ui.bootstrap", "ngRoute"]); //! Unused

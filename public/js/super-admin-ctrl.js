@@ -2,8 +2,7 @@
 
 let app = angular.module("SuperAdmin", []);
 
-app.controller("SuperAdminController", function ($scope, $http) {
-
+app.controller("SuperAdminController", function($scope, $http) {
     let self = $scope;
 
     self.sec = -1;
@@ -22,9 +21,9 @@ app.controller("SuperAdminController", function ($scope, $http) {
     self.getStats = () => {
         $http.get("stats").success((data) => {
             self.sts = {
-                alive: data.check.ping,
+                alive:  data.check.ping,
                 memory: data.memory.process.heapUsed / 1024 / 1024,
-                cpu: data.cpu["1m"][0],
+                cpu:    data.cpu["1m"][0],
                 uptime: data.uptime.process
             };
         });
@@ -78,7 +77,7 @@ app.controller("SuperAdminController", function ($scope, $http) {
 
 });
 
-app.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
+app.controller("instituciones",["$scope","$http",function($scope,$http,Admin){
     var self = $scope;
     self.accepted = [];
     self.pending = [];
@@ -88,22 +87,21 @@ app.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
         self.get_temporary_institutions();
     };
 
-
-
     self.get_temporary_institutions = function() {
-        var postdata = 500
-        $http({ url: "get_temporary_institutions", method: "post",data:postdata }).success(function (data) {
+        var postdata = 500;
+        $http({
+            url: "get_temporary_institutions", method: "post", data: postdata
+        }).success(function (data) {
             var inst = [];
             if(data != null){
                 for(var i = 0;i < data.data.rows.length ;i++){
-                    inst.push(data.data.rows[i])
+                    inst.push(data.data.rows[i]);
                 }
                 self.institutions = inst;
-                console.log(data.data.rows[0])
+                console.log(data.data.rows[0]);
             }
         });
-    }
-
+    };
 
     self.init();
-}])
+}]);

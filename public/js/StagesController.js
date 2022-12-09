@@ -2,11 +2,10 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
     var self = $scope;
 
     self.stages = [];
-    console.log(self.flang);
 
     var klg = function klg(k1, k2) {
         return {
-            key: k1 + (k2 == null ? "" : " " + k2),
+            key:  k1 + (k2 == null ? "" : " " + k2),
             name: self.flang(k1) + (k2 == null ? "" : " " + self.flang(k2))
         };
     };
@@ -14,11 +13,11 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
     self.readonly = false;
 
     self.stage = {
-        type: null,
-        anon: false,
-        chat: false,
+        type:          null,
+        anon:          false,
+        chat:          false,
         prevResponses: [],
-        question: "",
+        question:      "",
     };
 
     self.stageRoles = [];
@@ -57,7 +56,9 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                 });
             }
             else if (self.selectedSes.type == "T") {
-                $http({url: "get-differentials-stage", method: "post", data: postdata}).success(function (data) {
+                $http({
+                    url: "get-differentials-stage", method: "post", data: postdata
+                }).success(function (data) {
                     self.dfs = data;
                     self.dfs.forEach(df => {
                         df.wc = df.word_count;
@@ -66,7 +67,9 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                 });
             }
             else if (self.selectedSes.type == "J") {
-                $http({url: "get-actors", method: "post", data: postdata}).success(function (data) {
+                $http({
+                    url: "get-actors", method: "post", data: postdata
+                }).success(function (data) {
                     self.roles = data;
                     self.roles.forEach(r => {
                         if(r.justified && r.jorder){
@@ -79,7 +82,9 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                     });
                 });
             }
-            $http({url: "group-proposal-stage", method: "post", data: postdata}).success(function (data) {
+            $http({
+                url: "group-proposal-stage", method: "post", data: postdata
+            }).success(function (data) {
                 self.groups = data;
             });
             self.stage = self.stages[i];
@@ -87,10 +92,10 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
         else {
             self.readonly = false;
             self.stage = {
-                type: null,
-                anon: false,
-                chat: false,
-                question: self.stage.question,
+                type:          null,
+                anon:          false,
+                chat:          false,
+                question:      self.stage.question,
                 prevResponses: []
             };
         }
@@ -101,13 +106,17 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
         var postdata = {
             sesid: self.selectedSes.id
         };
-        $http({url: "get-admin-stages", method: "post", data: postdata}).success(function (data) {
+        $http({
+            url: "get-admin-stages", method: "post", data: postdata
+        }).success(function (data) {
             self.stages = data;
             self.shared.stagesMap = {};
             data.forEach(function (s) {
                 self.shared.stagesMap[s.id] = s;
             });
-            self.stage.question = self.stages.length > 0 ? self.stages[self.stages.length - 1].question : "";
+            self.stage.question = self.stages.length > 0 ?
+                self.stages[self.stages.length - 1].question :
+                "";
             var postdata = {
                 stageid: self.selectedSes.current_stage
             };
@@ -123,7 +132,9 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                 });
             }
             else if (self.selectedSes.type == "R") {
-                $http({url: "get-actors", method: "post", data: postdata}).success(function (data) {
+                $http({
+                    url: "get-actors", method: "post", data: postdata
+                }).success(function (data) {
                     self.roles = data;
                     self.roles.forEach(r => {
                         if(r.justified && r.jorder){
@@ -137,7 +148,9 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                 });
             }
             else if (self.selectedSes.type == "T") {
-                $http({url: "get-differentials-stage", method: "post", data: postdata}).success(function (data) {
+                $http({
+                    url: "get-differentials-stage", method: "post", data: postdata
+                }).success(function (data) {
                     self.dfs = data;
                     self.dfs.forEach(df => {
                         df.wc = df.word_count;
@@ -146,7 +159,9 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                 });
             }
             else if (self.selectedSes.type == "J") {
-                $http({url: "get-actors", method: "post", data: postdata}).success(function (data) {
+                $http({
+                    url: "get-actors", method: "post", data: postdata
+                }).success(function (data) {
                     self.roles = data;
                     self.roles.forEach(r => {
                         if(r.justified && r.jorder){
@@ -158,14 +173,16 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                         r.wc = r.word_count;
                     });
                 });
-                $http({url: "get-jigsaw-roles", method: "post", data: {
-                    sesid: self.selectedSes.id
-                }}).success(function (data) {
+                $http({
+                    url: "get-jigsaw-roles", method: "post", data: { sesid: self.selectedSes.id }
+                }).success(function (data) {
                     self.jroles = data;
                     self.inputAssignedRoles();
                 });
             }
-            $http({url: "group-proposal-stage", method: "post", data: postdata}).success(function (data) {
+            $http({
+                url: "group-proposal-stage", method: "post", data: postdata
+            }).success(function (data) {
                 self.groups = data;
                 if (data.length > 0) {
                     self.groupopt.num = self.groups[0].length;
@@ -177,9 +194,7 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                         self.shared.groupByUid[u.uid] = {index: i + 1, tmid: u.tmid};
                     });
                 });
-                console.log(self.shared.groupByUid);
             });
-            console.log(self.selectedSes, data);
             if (self.selectedSes.status >= 3) {
                 self.shared.setIterationIndicator(data[data.length - 1].id);
                 self.setCurrentStage(data.length - 1);
@@ -200,9 +215,9 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
 
     self.addJRole = function () {
         self.jroles.push({
-            name: "",
+            name:        "",
             description: "",
-            edit: true
+            edit:        true
         });
     };
 
@@ -258,18 +273,17 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                 return "Hay roles con datos faltantes";
             }
         }
-        // let a = (Date.now() - +new Date(self.selectedSes.time))/1000/60;
-        // if(a < 2){
-        //     return "La etapa lleva menos de dos minutos activa";
-        // }
     };
 
     self.sendStage = function () {
         var s = self.stage;
-        let arr = self.selectedSes.type == "R" || self.selectedSes.type == "J" ? self.roles : self.dfs;
+        let arr = self.selectedSes.type == "R" || self.selectedSes.type == "J" ?
+            self.roles : self.dfs;
         let isFirst = self.stages.length == 0;
         console.log(isFirst);
-        if (s.type == null || arr.length == 0 || s.type == "team" && (self.groups == null || self.groups.length == 0)) {
+        if (s.type == null || arr.length == 0 || s.type == "team" && (
+            self.groups == null || self.groups.length == 0
+        )) {
             Notification.error("Hay datos de configuración faltantes");
             return;
         }
@@ -279,13 +293,13 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
             return;
         }
         var postdata = {
-            number: self.stages.length + 1,
+            number:   self.stages.length + 1,
             question: s.question,
             grouping: s.type == "team" ? self.groupopt.num + ":" + self.groupopt.met : null,
-            type: s.type,
-            anon: s.anon,
-            chat: s.chat,
-            sesid: self.selectedSes.id,
+            type:     s.type,
+            anon:     s.anon,
+            chat:     s.chat,
+            sesid:    self.selectedSes.id,
             prev_ans: s.prevResponses.map(e => e.id).join(",")
         };
         console.log("DEBUG");
@@ -293,7 +307,10 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
         console.log(postdata);
         console.log(s);
 
-        var confirm = window.confirm("¿Esta seguro que quiere ir a la siguiente etapa? (Etapa "+ (self.stages.length + 1) + ")");
+        var confirm = window.confirm(
+            "¿Está seguro que quiere ir a la siguiente etapa? (Etapa " + (self.stages.length + 1) +
+            ")"
+        );
         if (!confirm) {
             return;
         }
@@ -309,20 +326,22 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                     for (let i = 0; i < self.roles.length; i++) {
                         const role = self.roles[i];
                         let p = {
-                            name: role.name,
-                            jorder: role.type == "order",
-                            justified: role.type != null,
+                            name:       role.name,
+                            jorder:     role.type == "order",
+                            justified:  role.type != null,
                             word_count: role.wc,
-                            stageid: stageid,
+                            stageid:    stageid,
                         };
                         $http({url: "add-actor", method: "post", data: p}).success(function (data) {
                             console.log("Actor added");
                             c -= 1;
                             if (c == 0) {
                                 let pp = {sesid: self.selectedSes.id, stageid: stageid};
-                                $http({url: "session-start-stage", method: "post", data: pp}).success(function (data) {
+                                $http({
+                                    url: "session-start-stage", method: "post", data: pp
+                                }).success(function (data) {
                                     Notification.success("Etapa creada correctamente");
-                                    window.location.reload()
+                                    window.location.reload();
                                 });
                             }
                         });
@@ -333,23 +352,27 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                     for (let i = 0; i < self.dfs.length; i++) {
                         const df = self.dfs[i];
                         let p = {
-                            name: df.name,
-                            tleft: df.tleft,
-                            tright: df.tright,
-                            num: df.num,
-                            orden: df.orden,
-                            justify: df.justify,
-                            stageid: stageid,
-                            sesid: self.selectedSes.id,
+                            name:       df.name,
+                            tleft:      df.tleft,
+                            tright:     df.tright,
+                            num:        df.num,
+                            orden:      df.orden,
+                            justify:    df.justify,
+                            stageid:    stageid,
+                            sesid:      self.selectedSes.id,
                             word_count: df.wc
                         };
-                        $http({url: "add-differential-stage", method: "post", data: p}).success(function (data) {
+                        $http({
+                            url: "add-differential-stage", method: "post", data: p
+                        }).success(function (data) {
                             c -= 1;
                             if (c == 0) {
                                 let pp = {sesid: self.selectedSes.id, stageid: stageid};
-                                $http({url: "session-start-stage", method: "post", data: pp}).success(function (data) {
+                                $http({
+                                    url: "session-start-stage", method: "post", data: pp
+                                }).success(function (data) {
                                     Notification.success("Etapa creada correctamente");
-                                    window.location.reload()
+                                    window.location.reload();
                                 });
                             }
                         });
@@ -360,11 +383,11 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                     for (let i = 0; i < self.roles.length; i++) {
                         const role = self.roles[i];
                         let p = {
-                            name: role.name,
-                            jorder: role.type == "order",
-                            justified: role.type != null,
+                            name:       role.name,
+                            jorder:     role.type == "order",
+                            justified:  role.type != null,
                             word_count: role.wc,
-                            stageid: stageid,
+                            stageid:    stageid,
                         };
                         console.log("Add Actor " + p.name);
                         $http({url: "add-actor", method: "post", data: p}).success(function (data) {
@@ -372,9 +395,10 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                             c -= 1;
                             if (c == 0) {
                                 let pp = {sesid: self.selectedSes.id, stageid: stageid};
-                                $http({url: "session-start-stage", method: "post", data: pp}).success(function (data) {
+                                $http({
+                                    url: "session-start-stage", method: "post", data: pp
+                                }).success(function (data) {
                                     Notification.success("Etapa creada correctamente");
-                                    // window.location.reload()
                                 });
                             }
                         });
@@ -383,23 +407,24 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                         for (let i = 0; i < self.jroles.length; i++) {
                             const jrole = self.jroles[i];
                             let p = {
-                                name: jrole.name,
-                                sesid: self.selectedSes.id,
+                                name:        jrole.name,
+                                sesid:       self.selectedSes.id,
                                 description: jrole.description
                             };
                             console.log("Add JRole " + p.name);
-                            $http({url: "add-jigsaw-role", method: "post", data: p}).success(function (data) {
+                            $http({
+                                url: "add-jigsaw-role", method: "post", data: p
+                            }).success(function (data) {
                                 console.log("JRole added");
                                 c -= 1;
                                 if (c == 0) {
                                     let pp = {sesid: self.selectedSes.id, stageid: stageid};
                                     $http({
-                                        url: "session-start-stage",
+                                        url:    "session-start-stage",
                                         method: "post",
-                                        data: pp
+                                        data:   pp
                                     }).success(function (data) {
                                         Notification.success("Etapa creada correctamente");
-                                        // window.location.reload()
                                     });
                                 }
                             });
@@ -414,8 +439,11 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
     };
 
     self.setGroupal = function () {
-        self.stage.type = 'team';
-        self.methods = [klg("random"), klg("performance", "homog"), klg("performance", "heterg"), klg("knowledgeType", "homog"), klg("knowledgeType", "heterg")];
+        self.stage.type = "team";
+        self.methods = [
+            klg("random"), klg("performance", "homog"), klg("performance", "heterg"),
+            klg("knowledgeType", "homog"), klg("knowledgeType", "heterg")
+        ];
         if (self.groups.length > 0) {
             self.methods.unshift(klg("previous"));
         }
@@ -423,19 +451,17 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
 
     self.generateGroups = function (key, stage) {
         console.log("Generate groups StageController");
-        //works only in home
         if(stage != null){
             self.groupopt.num = self.design.phases[2].stdntAmount;
             self.groupopt.met = self.design.phases[2].grouping_algorithm;
         }
         
-        console.log(self.groupopt.num, self.groupopt.met);
         // 1 ignore
         if (self.selectedSes.grouped) {
             $http({
-                url: "group-proposal-sel",
+                url:    "group-proposal-sel",
                 method: "post",
-                data: {sesid: self.selectedSes.id}
+                data:   {sesid: self.selectedSes.id}
             }).success(function (data) {
                 self.groups = data;
                 self.shared.groups = self.groups;
@@ -454,20 +480,22 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
         }
         // *1 ignore
         var postdata = {
-            sesid: self.selectedSes.id,
-            gnum: self.groupopt.num,
+            sesid:  self.selectedSes.id,
+            gnum:   self.groupopt.num,
             method: self.groupopt.met
         };
-
-        console.log(postdata);
 
         var users = Object.values(self.users).filter(function (e) {
             return e.role == "A";
         });
-        console.log(users);
 
-        if (self.groupopt.met == "knowledgeType homog" || self.groupopt.met == "knowledgeType heterg") {
-            self.groups = generateTeams(users, habMetric, self.groupopt.num, isDifferent(self.groupopt.met));
+        if (
+            self.groupopt.met == "knowledgeType homog" ||
+            self.groupopt.met == "knowledgeType heterg"
+        ) {
+            self.groups = generateTeams(
+                users, habMetric, self.groupopt.num, isDifferent(self.groupopt.met)
+            );
         }
         else if (self.groupopt.met == "random") {
             var arr = users.map(function (e) {
@@ -484,30 +512,39 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
             let dfd = users.map(e => {
                 let r = d.find(dd => dd.uid == e.id);
                 return {
-                    uid: e.id,
-                    score: (r && r.arr && r.arr.length > 0) ? (r.arr.reduce((v, p) => v + (p.sel != null ? p.sel : -1), 0) / r.arr.length) : -1,
+                    uid:   e.id,
+                    score: (r && r.arr && r.arr.length > 0) ? (
+                        r.arr.reduce((v, p) => v + (p.sel != null ? p.sel : -1), 0) / r.arr.length
+                    ) : -1,
                     aprendizaje: e.aprendizaje
-                }
+                };
             });
-            self.groups = generateTeams(dfd, s => s.score, self.groupopt.num, isDifferent(self.groupopt.met));
+            self.groups = generateTeams(
+                dfd, s => s.score, self.groupopt.num, isDifferent(self.groupopt.met)
+            );
         }
         else if (self.selectedSes.type == "R") {
             let dfd = users.map(e => {
                 return {
-                    uid: e.id,
-                    score: self.shared.roleIndTable[e.id] ? self.shared.roleIndTable[e.id].lnum : -1,
+                    uid:   e.id,
+                    score: self.shared.roleIndTable[e.id] ?
+                        self.shared.roleIndTable[e.id].lnum : -1,
                     aprendizaje: e.aprendizaje
-                }
+                };
             });
-            self.groups = generateTeams(dfd, function (s) {
-                return s.score;
-            }, self.groupopt.num, isDifferent(self.groupopt.met));
+            self.groups = generateTeams(
+                dfd, function (s) {
+                    return s.score;
+                },
+                self.groupopt.num,
+                isDifferent(self.groupopt.met)
+            );
         }
         else if(self.groupopt.met == "expert"){
             let s = {};
             users.forEach(u => {
-               if(!s[u.jigsawId])
-                   s[u.jigsawId] = [];
+                if(!s[u.jigsawId])
+                    s[u.jigsawId] = [];
                 s[u.jigsawId].push(u);
             });
             self.groups = Object.values(s);
@@ -575,22 +612,10 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
             console.log(self.groupsProp);
             self.groupNames = [];
         }
-
-        /*if (urlRequest != "") {
-            $http({url: urlRequest, method: "post", data: postdata}).success((data) => {
-                self.groups = data;
-                self.groupsProp = angular.copy(self.groups);
-                console.log(data);
-                self.groupNames = [];
-                /*data.forEach((d) => {
-                 self.groupNames.push(d.map(i => self.users[i.uid].name).join(", "));
-                 });*
-            });
-        }*/
     };
 
     self.acceptGroups = function (stid) {
-        console.log("Accept Groups")
+        console.log("Accept Groups");
         console.log(self.groups);
         console.log(stid);
         if (self.groups == null) {
@@ -599,7 +624,7 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
         }
         var postdata = {
             stageid: stid,
-            groups: JSON.stringify(self.groups.map(function (e) {
+            groups:  JSON.stringify(self.groups.map(function (e) {
                 return e.map(function (f) {
                     return f.uid || f.id;
                 });
@@ -628,53 +653,39 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
     self.shared.openNextModal = () => {
         $uibModal.open({
             templateUrl: "templ/next-dialog.html",
-            controller: function ($scope, $http, $uibModalInstance, Notification, data) {
+            controller:  function ($scope, $http, $uibModalInstance, Notification, data) {
                 var vm = this;
                 vm.data = data;
                 vm.radioval = null;
 
                 vm.cancel = function () {
-                    $uibModalInstance.dismiss('cancel');
+                    $uibModalInstance.dismiss("cancel");
                 };
 
                 vm.accept = function () {
                     if (vm.radioval == "F") {
-                        $http.post("session-finish-stages", {sesid: self.selectedSes.id}).success((data) => {
+                        $http.post(
+                            "session-finish-stages", { sesid: self.selectedSes.id }
+                        ).success((data) => {
                             console.log("AAA");
                             console.log(data);
                         });
                     }
                     else if (vm.radioval == "N") {
                         self.setTab("editor");
-                        $uibModalInstance.dismiss('cancel');
+                        $uibModalInstance.dismiss("cancel");
                     }
-                }
+                };
             },
             controllerAs: "vm",
-            scope: self,
-            resolve: {
+            scope:        self,
+            resolve:      {
                 data: function data() {
                     return {};
                 }
             }
         });
     };
-
-    // self.swapTable = function (i, j) {
-    //     console.log(i, j, self.groups);
-    //     if (self.lastI == -1 && self.lastJ == -1) {
-    //         self.lastI = i;
-    //         self.lastJ = j;
-    //         return;
-    //     }
-    //     if (!(self.lastI == i && self.lastJ == j)) {
-    //         var temp = angular.copy(self.groupsProp[i][j]);
-    //         self.groupsProp[i][j] = angular.copy(self.groupsProp[self.lastI][self.lastJ]);
-    //         self.groupsProp[self.lastI][self.lastJ] = temp;
-    //     }
-    //     self.lastI = -1;
-    //     self.lastJ = -1;
-    // };
 
     self.getGrouping = (gstr) => {
         if (gstr == null || gstr == "") {
@@ -691,11 +702,11 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
 
     self.addDF = () => {
         self.dfs.push({
-            name: "",
-            tleft: "",
-            tright: "",
-            num: 7,
-            orden: self.dfs.length + 1,
+            name:    "",
+            tleft:   "",
+            tright:  "",
+            num:     7,
+            orden:   self.dfs.length + 1,
             justify: true
         });
     };
@@ -725,16 +736,16 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
 
     self.saveDraft = () => {
         let data = {
-            dfs: self.dfs,
-            roles: self.roles,
+            dfs:    self.dfs,
+            roles:  self.roles,
             jroles: self.jroles,
         };
         let postdata = {
             sesid: self.selectedSes.id,
-            data: JSON.stringify(data),
+            data:  JSON.stringify(data),
         };
         $http.post("save-draft", postdata).success((data) => {
-           Notification.success("Datos guardados");
+            Notification.success("Datos guardados");
         });
     };
 
@@ -746,7 +757,7 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
 };
 
 
-function groupByUser(data, acts) {
+var groupByUser = function(data, acts) {
     let u = {};
     let jusOrder = acts.some(e => e.jorder);
     data.forEach(d => {
@@ -759,7 +770,7 @@ function groupByUser(data, acts) {
         u[d.uid].just.push(a && a.justified);
     });
     return u;
-}
+};
 
 window.computePosFreqTable = function (data, actors) {
     if (data == null || actors == null || data.length == 0 || actors.length == 0) {
@@ -771,15 +782,14 @@ window.computePosFreqTable = function (data, actors) {
     });
 
     data.forEach(d => {
-        countMap[d.actorid][d.orden] = countMap[d.actorid][d.orden] ? countMap[d.actorid][d.orden] + 1 : 1;
+        countMap[d.actorid][d.orden] = countMap[d.actorid][d.orden] ?
+            countMap[d.actorid][d.orden] + 1 : 1;
     });
-
-    // console.log(countMap);
     return countMap;
 };
 
 
-function lehmerCode(arr, acts) {
+var lehmerCode  = function(arr, acts) {
     let p = acts.map(e => e.id);
     let perm = arr.map(e => e);
 
@@ -806,10 +816,11 @@ function lehmerCode(arr, acts) {
         p[i] = tmp;
     }
 
-    return w
-}
+    return w;
+};
 
-function lehmerNum(code) {
+
+var lehmerNum = function(code) {
     let n = 0;
     for (let i = 0; i < code.length; i++) {
         let v = code[code.length - i - 1];
@@ -817,9 +828,10 @@ function lehmerNum(code) {
         n += v;
     }
     return n;
-}
+};
 
-function simpleNum(code) {
+
+var simpleNum = function(code) {
     let n = 0;
     for (let i = 0; i < code.length; i++) {
         let v = code[code.length - i - 1];
@@ -827,7 +839,7 @@ function simpleNum(code) {
         n += v;
     }
     return n;
-}
+};
 
 
 window.computeIndTable = function (data, actors) {
@@ -856,8 +868,8 @@ window.sortIndTable = function (table, users) {
     us.forEach(u => {
         if (!table[u.id]) {
             table[u.id] = {
-                arr: [],
-                ceq: 0,
+                arr:  [],
+                ceq:  0,
                 lnum: -1
             };
         }
@@ -873,12 +885,7 @@ window.sortIndTable = function (table, users) {
 };
 
 
-window.buildDifTable = function (data, users, dfs, gbu) {
-    // console.log("DATA");
-    // console.log(data);
-    // console.log(users);
-    // console.log(dfs);
-
+window.buildDifTable = function(data, users, dfs, gbu) {
     let res = [];
     let tmids = {};
     var us = Object.values(users).filter(function (e) {
@@ -890,7 +897,8 @@ window.buildDifTable = function (data, users, dfs, gbu) {
             uid: u.id,
             arr: dfs.map(d => data.find(e => e.uid == u.id && d.id == e.did) || { did: d.id })
         };
-        row.tmid = row.arr.find(e => e && e.tmid != null) ? row.arr.find(e => e && e.tmid != null).tmid :
+        row.tmid = row.arr.find(e => e && e.tmid != null) ?
+            row.arr.find(e => e && e.tmid != null).tmid :
             (gbu && gbu[u.id] ? gbu[u.id].tmid : null);
         if (row.tmid != null)
             tmids[row.tmid] = true;
@@ -912,12 +920,12 @@ window.buildDifTable = function (data, users, dfs, gbu) {
     Object.keys(tmids).forEach(t => {
         let r = res.filter(e => e.tmid == t);
         let row = {
-            uid: -t,
-            tmid: +t,
+            uid:   -t,
+            tmid:  +t,
             group: true,
-            arr: dfs.map((e, i) => ({
+            arr:   dfs.map((e, i) => ({
                 sel: avg(r.map(e => e.arr[i] ? e.arr[i].sel : null).filter(e => e)),
-                sd: sdf(r.map(e => e.arr[i] ? e.arr[i].sel : null).filter(e => e)),
+                sd:  sdf(r.map(e => e.arr[i] ? e.arr[i].sel : null).filter(e => e)),
                 did: e.id
             }))
         };
@@ -929,8 +937,6 @@ window.buildDifTable = function (data, users, dfs, gbu) {
     });
 
     res = res.concat(tres);
-    // console.log("DIF TABLE");
-    // console.log(res);
 
     return res;
 };

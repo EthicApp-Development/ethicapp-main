@@ -42,7 +42,7 @@
         ],
         "editor.insertSpaces": true,
         "editor.tabSize": 4,
-        "editor.formatOnSave": true,
+        //"editor.formatOnSave": true,
         "editor.defaultFormatter": "vscode.html-language-features"
     },
     "htmlhint.enable": true,

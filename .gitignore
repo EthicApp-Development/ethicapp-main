@@ -1,3 +1,4 @@
+*.min.js
 .idea/*
 dev_other/*
 modules/passwords.js
@@ -7,4 +8,7 @@ uploads
 public/fonts/*
 sessions
 postgres
+
 package-lock.json
+pnpm-lock.yaml
+*.log

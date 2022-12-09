@@ -1,15 +1,16 @@
 "use strict";
 
-var adpp = angular.module("Admin", ["ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill",
-    "tableSort", 'btford.socket-io', 'ngRoute', 'checklist-model']); //ngRoute was newly added
+var adpp = angular.module("Admin", [
+    "ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill", "tableSort",
+    "btford.socket-io", "ngRoute", "checklist-model"]
+);
 
 var DASHBOARD_AUTOREALOD = window.location.hostname.indexOf("fen") != -1;
 var DASHBOARD_AUTOREALOD_TIME = 15;
 
-var designId = {id:null}
-var launchId = {id:null,title:null, type:null}
-var tabSel = {type: 0}
-var prevTab = "";
+var designId = {id: null};
+var launchId = {id: null,title: null, type: null};
+var tabSel = {type: 0};
 
 window.DIC = null;
 window.warnDIC = {};
@@ -19,29 +20,30 @@ adpp.factory("$socket", ["socketFactory", function (socketFactory) {
 }]);
 
 //Rich text editor
-adpp.config(['ngQuillConfigProvider', function (ngQuillConfigProvider) {
+adpp.config(["ngQuillConfigProvider", function (ngQuillConfigProvider) {
     ngQuillConfigProvider.set({
         modules: {
             formula: true,
             toolbar: {
-                container: [['bold', 'italic', 'underline', 'strike'], // toggled buttons
+                container: [["bold", "italic", "underline", "strike"], // toggled buttons
 
-                [{ 'color': [] }, { 'background': [] }], // dropdown with defaults from theme
-                [{ 'font': [] }], [{ 'align': [] }],
+                    [{ "color": [] }, { "background": [] }], // dropdown with defaults from theme
+                    [{ "font": [] }], [{ "align": [] }],
 
-                //[{ 'header': 1 }, { 'header': 2 }],               // custom button values
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }], [{ 'script': 'sub' }, { 'script': 'super' }], // superscript/subscript
+                    //[{ 'header': 1 }, { 'header': 2 }],               // custom button values
+                    [{ "list": "ordered" }, { "list": "bullet" }],
+                    [{ "script": "sub" }, { "script": "super" }], // superscript/subscript
 
-                //[{ 'indent': '-1'}, { 'indent': '+1' }],          // outdent/indent
-                //[{ 'direction': 'rtl' }],                         // text direction
+                    //[{ 'indent': '-1'}, { 'indent': '+1' }],          // outdent/indent
+                    //[{ 'direction': 'rtl' }],                         // text direction
 
-                //['blockquote', 'code-block'],
-                [{ 'size': ['small', false, 'large', 'huge'] }], // custom dropdown
-                //[{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                    //['blockquote', 'code-block'],
+                    [{ "size": ["small", false, "large", "huge"] }], // custom dropdown
+                    //[{ 'header': [1, 2, 3, 4, 5, 6, false] }],
 
-                ['clean'], // remove formatting button
-                ['image', 'link', 'video'], // remove formatting button
-                ['formula']
+                    ["clean"], // remove formatting button
+                    ["image", "link", "video"], // remove formatting button
+                    ["formula"]
                 ]
             }
         }
@@ -53,47 +55,49 @@ adpp.config(['ngQuillConfigProvider', function (ngQuillConfigProvider) {
 adpp.config(function ($routeProvider, $locationProvider) {
     $routeProvider
     // set route for the index page
-    .when('/',
-    {
-        controller: 'RouteCtrl',
-        templateUrl: '/templ/admin/uirouter.html'
-    })
+        .when("/",
+            {
+                controller:  "RouteCtrl",
+                templateUrl: "/templ/admin/uirouter.html"
+            });
 
  
 });
  
-adpp.controller('RouteCtrl', function($scope) {
+adpp.controller("RouteCtrl", function($scope) {
     $scope.template={      
-      "home":"/templ/admin/home.html",
-      "newDesign":"/templ/admin/newDesign.html",
-      "newDesignExt":"/templ/admin/newDesignExt.html",
-      "designs":"/templ/admin/designs.html",
-      "users":"/templ/admin/users.html",
-      "institution":"/templ/admin/institution.html",
-      "activities":"/templ/admin/activities.html",
-      "launchActivity":"/templ/admin/launchActivity.html",
-      "viewDesign":"/templ/admin/viewDesign.html",
-      "activity":"templ/admin/activity.html",
-      "profile":"templ/admin/profile.html",
-      "user_admin":"/templ/admin/user_admin.html",
-      "institution_admin":"/templ/admin/institution_admin.html",
-      "institution_data":"/templ/admin/institution_data.html",
-      "accepted_institutions":"/templ/admin/accepted_institutions.html"
-    }
-   });
+        "home":                  "/templ/admin/home.html",
+        "newDesign":             "/templ/admin/newDesign.html",
+        "newDesignExt":          "/templ/admin/newDesignExt.html",
+        "designs":               "/templ/admin/designs.html",
+        "users":                 "/templ/admin/users.html",
+        "institution":           "/templ/admin/institution.html",
+        "activities":            "/templ/admin/activities.html",
+        "launchActivity":        "/templ/admin/launchActivity.html",
+        "viewDesign":            "/templ/admin/viewDesign.html",
+        "activity":              "templ/admin/activity.html",
+        "profile":               "templ/admin/profile.html",
+        "user_admin":            "/templ/admin/user_admin.html",
+        "institution_admin":     "/templ/admin/institution_admin.html",
+        "institution_data":      "/templ/admin/institution_data.html",
+        "accepted_institutions": "/templ/admin/accepted_institutions.html"
+    };
+});
 
 //#############################################
 
-adpp.controller("AdminController", function ($scope, $http, $uibModal, $location, $locale, $filter, $socket, $route) {
+adpp.controller("AdminController", function (
+    $scope, $http, $uibModal, $location, $locale, $filter, $socket, $route
+) {
     var self = $scope;
 
     self.temp = "";
-    const lang = navigator.language
-    $locale.NUMBER_FORMATS.GROUP_SEP = '';
+    const lang = navigator.language;
+    $locale.NUMBER_FORMATS.GROUP_SEP = "";
     self.shared = {};
     self.sessions = [];
-    self.selectedView = '' //current view
-    self.activities = [] //activities
+    self.selectedView = ""; //current view
+    self.activities = []; //activities
     self.currentActivity = {}; //current Activity
     self.design = null;
     self.selectedSes = null;
@@ -111,16 +115,26 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
     self.superBar = false;
     self.institution = false;
     self.inst_id = 0;
-    if(lang[0] == 'e' && lang[1] == 's'){
+    if(lang[0] == "e" && lang[1] == "s"){
         self.lang = "spanish";
     }
     else{
         self.lang = "english";
     }
     
-    self.secIcons = { configuration: "cog", editor: "edit", dashboard: "bar-chart", users: "male",
-        rubrica: "check-square", groups: "users", options: "sliders" };
-    self.typeNames = { L: "readComp", S: "multSel", M: "semUnits", E: "ethics", R: "rolePlaying", T: "ethics", J: "jigsaw" };
+    self.secIcons = {
+        configuration: "cog",
+        editor:        "edit",
+        dashboard:     "bar-chart",
+        users:         "male",
+        rubrica:       "check-square",
+        groups:        "users",
+        options:       "sliders"
+    };
+    self.typeNames = {
+        L: "readComp", S: "multSel", M: "semUnits", E: "ethics", R: "rolePlaying", T: "ethics",
+        J: "jigsaw"
+    };
 
     self.misc = {};
 
@@ -135,26 +149,26 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         $socket.on("stateChange", (data) => {
             console.log("SOCKET.IO", data);
             //if (data.ses == self.selectedSes.id) {
-                //window.location.reload(); <--------
+            //window.location.reload(); <--------
             //}
         });
     };
 
     self.updatelangdata = function() {
-        var postdata2 = self.uid
+        var postdata2 = self.uid;
         $http({ url: "updatelangdata", method: "post", data: {lang} }).success(function (data) {
-            console.log(data)
+            console.log(data);
 
         });
     };
 
     self.set_id = function(id) {
-        self.inst_id = id
+        self.inst_id = id;
     };
     self.reset_inst_id = function() {
         self.inst_id = 0;
         self.selectView("institution_admin");
-    }
+    };
 
     self.getMe = function(){
         $http.get("is-super").success(data => {
@@ -191,11 +205,19 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         self.selectView("activity");
         self.currentActivity.id = activityId;
         self.selectedId = sesId;
-        self.selectedSes = getSession(sesId)[0]
-        console.log(self.selectedSes)
+        self.selectedSes = getSession(sesId)[0];
+        console.log(self.selectedSes);
         self.design = design;
         console.log("Activity ID:",self.currentActivity);
         console.log("Session ID:",self.selectedId);
+        console.log("Design:",self.design); 
+        console.log("Design:",self.design); 
+        console.log("Design:",self.design); 
+        console.log("Design:",self.design); 
+        console.log("Design:",self.design); 
+        console.log("Design:",self.design); 
+        console.log("Design:",self.design); 
+        console.log("Design:",self.design); 
         console.log("Design:",self.design); 
         //------------------------
         self.requestDocuments();
@@ -213,25 +235,27 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
             self.shared.getStages();
     };
 
-    function getSession(id) {
+    var getSession = function(id) {
         return self.sessions.filter(
-            function(sessions){ return sessions.id == id }
+            function(sessions){ return sessions.id == id; }
         );
-      }
+    };
 
     self.selectView = function(tab, type){
         if(tab != self.selectedView){
             self.selectedView = tab;
             $route.reload();
-            if(tab != "newDesignExt" && tab != "viewDesign") designId.id = null; //avoids making designs-documents request
-            if(tab != "launchActivity") {launchId.id = null; launchId.title = null; launchId.type = null}
-            if(tab == "designs") {
+            if (tab != "newDesignExt" && tab != "viewDesign") designId.id = null; //avoids making designs-documents request
+            if (tab != "launchActivity") {
+                launchId.id = null; launchId.title = null; launchId.type = null;
+            }
+            if (tab == "designs") {
                 if(type != null) tabSel.type = type;
                 else tabSel.type = 0;
             }
             console.log(self.selectedView);
         }
-    }
+    };
 
     self.shared.updateSesData = function () {
         $http({ url: "get-session-list", method: "post" }).success(function (data) {
@@ -250,16 +274,16 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
 
     self.changeDesign = function(selectedDesign){
         self.design = selectedDesign;
-    }
+    };
 
     self.shared.getActivities = function(){
         var postdata = { };
         $http({ url: "get-activities", method: "post", data: postdata }).success(function (data) {
-            for(var index = 0; index<data.activities.length; index++) data.activities[index].title= data.activities[index].design.metainfo.title
+            for (var index = 0; index < data.activities.length; index++)
+                data.activities[index].title= data.activities[index].design.metainfo.title;
             self.activities = data.activities;
-            //console.log(self.activities)
         });
-    }
+    };
 
     self.sesFromURL = function () {
         var sesid = +$location.path().substring(1);
@@ -271,7 +295,9 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
 
     self.requestDocuments = function () {
         var postdata = { sesid: self.selectedSes.id };
-        $http({ url: "documents-session", method: "post", data: postdata }).success(function (data) {
+        $http({
+            url: "documents-session", method: "post", data: postdata
+        }).success(function (data) {
             self.documents = data;
         });
     };
@@ -287,20 +313,26 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
 
     self.requestQuestions = function () {
         var postdata = { sesid: self.selectedSes.id };
-        $http({ url: "questions-session", method: "post", data: postdata }).success(function (data) {
+        $http({
+            url: "questions-session", method: "post", data: postdata
+        }).success(function (data) {
             self.questions = data.map(function (e) {
                 e.options = e.options.split("\n");
                 return e;
             });
         });
-        $http({ url: "get-question-text", method: "post", data: postdata }).success(function (data) {
+        $http({
+            url: "get-question-text", method: "post", data: postdata
+        }).success(function (data) {
             self.questionTexts = data;
         });
     };
 
     self.requestSemDocuments = function () {
         var postdata = { sesid: self.selectedSes.id };
-        $http({ url: "semantic-documents", method: "post", data: postdata }).success(function (data) {
+        $http({
+            url: "semantic-documents", method: "post", data: postdata
+        }).success(function (data) {
             self.semDocs = data;
         });
     };
@@ -342,11 +374,11 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         if (self.selectedSes == null) return;
         var ses = angular.copy(self.selectedSes);
         $uibModal.open({
-            templateUrl: "templ/duplicate-ses.html",
-            controller: "DuplicateSesModalController",
+            templateUrl:  "templ/duplicate-ses.html",
+            controller:   "DuplicateSesModalController",
             controllerAs: "vm",
-            scope: self,
-            resolve: {
+            scope:        self,
+            resolve:      {
                 data: function data() {
                     return ses;
                 }
@@ -358,11 +390,11 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
         $event.stopPropagation();
         var ses = angular.copy(sesr);
         $uibModal.open({
-            templateUrl: "templ/duplicate-ses.html",
-            controller: "DuplicateSesModalController",
+            templateUrl:  "templ/duplicate-ses.html",
+            controller:   "DuplicateSesModalController",
             controllerAs: "vm",
-            scope: self,
-            resolve: {
+            scope:        self,
+            resolve:      {
                 data: function data() {
                     return ses;
                 }
@@ -410,7 +442,7 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
     var self = $scope;
     self.tabOptions = [];
     self.tabConfig = ["users", "groups"];
-    self.selectedTab = '';
+    self.selectedTab = "";
     self.archivedTab = false;
     self.stages = [];
     self.iterationNames = [];
@@ -427,19 +459,24 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
     };
 
     self.shared.verifyTabs = function () {
-        if (self.selectedSes.type == "R" || self.selectedSes.type == "T" || self.selectedSes.type == "J") {
+        if (
+            (self.selectedSes.type == "R") || (self.selectedSes.type == "T") ||
+            (self.selectedSes.type == "J")
+        ) {
             self.iterationNames = [];
             self.tabOptions = ["editor", "users", "dashboard"];
             // self.sesStatusses = ["configuration"];
             var pd = {
                 sesid: self.selectedSes.id
             };
-            console.log("POSTDATA:", pd) //ESTO DEBERIA APARECER
+            console.log("POSTDATA:", pd); //ESTO DEBERIA APARECER
             $http({ url: "get-admin-stages", method: "post", data: pd }).success(function (data) {
                 self.stages = data;
                 data.forEach(st => {
-                    self.iterationNames.push({name: self.flang("stage") + " " + st.number, val: st.id});
-                    console.log("iteration NAMES:",self.iterationNames)
+                    self.iterationNames.push({
+                        name: self.flang("stage") + " " + st.number, val: st.id
+                    });
+                    console.log("iteration NAMES:",self.iterationNames);
                 });
             });
         }
@@ -537,7 +574,7 @@ adpp.controller("DocumentsController", function ($scope, $http, Notification, $t
         var fd = new FormData(event.target);
         $http.post("upload-file", fd, {
             transformRequest: angular.identity,
-            headers: { 'Content-Type': undefined }
+            headers:          { "Content-Type": undefined }
         }).success(function (data) {
             if (data.status == "ok") {
                 $timeout(function () {
@@ -600,7 +637,9 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
             Notification.error("Datos de la sesión incorrectos o incompletos");
             return;
         }
-        var postdata = { name: self.selectedSes.name, descr: self.selectedSes.descr, id: self.selectedSes.id };
+        var postdata = {
+            name: self.selectedSes.name, descr: self.selectedSes.descr, id: self.selectedSes.id
+        };
         $http({ url: "update-session", method: "post", data: postdata }).success(function (data) {
             console.log("Session updated");
         });
@@ -613,7 +652,9 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
                 self.updateSession();
             }
             var _postdata = { sesid: self.selectedSes.id };
-            $http({ url: "change-state-session", method: "post", data: _postdata }).success(function (data) {
+            $http({
+                url: "change-state-session", method: "post", data: _postdata
+            }).success(function (data) {
                 self.shared.updateSesData();
             });
         }
@@ -657,7 +698,9 @@ adpp.controller("NewUsersController", function ($scope, $http, Notification) {
     self.removeUser = function (uid) {
         if (self.selectedSes.status <= 2) {
             var postdata = { uid: uid, sesid: self.selectedSes.id };
-            $http({ url: "delete-ses-user", method: "post", data: postdata }).success(function (data) {
+            $http({
+                url: "delete-ses-user", method: "post", data: postdata
+            }).success(function (data) {
                 if (data.status == "ok") {
                     self.refreshUsers();
                 }
@@ -682,32 +725,36 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.dataChatCount = {};
 
     self.shared.resetGraphs = function () { //THIS HAS TO BE CALLED ON ADMIN
-        if (self.selectedSes.type == "R" || self.selectedSes.type == "T" || self.selectedSes.type == "J") {
+        if (
+            (self.selectedSes.type == "R") ||
+            (self.selectedSes.type == "T") ||
+            (self.selectedSes.type == "J")
+        ) {
             self.iterationIndicator = self.selectedSes.current_stage || -1;
         }
         self.alumState = null;
         self.barOpts = {
             chart: {
-                type: 'multiBarChart',
+                type:   "multiBarChart",
                 height: 320,
-                x: function x(d) {
+                x:      function x(d) {
                     return d.label;
                 },
                 y: function y(d) {
                     return d.value;
                 },
                 showControls: false,
-                showValues: false,
-                duration: 500,
-                xAxis: {
+                showValues:   false,
+                duration:     500,
+                xAxis:        {
                     showMaxMin: false
                 },
                 yAxis: {
-                    axisLabel: self.flang('students')
+                    axisLabel: self.flang("students")
                 }
             }
         };
-        self.barData = [{ key: self.flang('students'), color: "#0077c1", values: [] }];
+        self.barData = [{ key: self.flang("students"), color: "#0077c1", values: [] }];
         self.updateState();
         if (DASHBOARD_AUTOREALOD && self.selectedSes.status < 9) {
             self.reload(true);
@@ -728,7 +775,12 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         if (self.selectedSes.status == 1) {
             self.shared.refreshUsers();
         }
-        else if (self.iterationIndicator <= 4 || self.selectedSes.type == "R" || self.selectedSes.type == "T" || self.selectedSes.type == "J") {
+        else if (
+            (self.iterationIndicator <= 4) ||
+            (self.selectedSes.type == "R") ||
+            (self.selectedSes.type == "T") ||
+            (self.selectedSes.type == "J")
+        ) {
             self.updateStateIni();
         }
         else {
@@ -739,7 +791,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.shared.updateState = self.updateState;
 
     self.shared.setIterationIndicator = function(i){
-        console.log("Set iteration Indicatior:",i)
+        console.log("Set iteration Indicatior:",i);
         self.iterationIndicator = i;
         self.updateState();
     };
@@ -763,13 +815,18 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     self.posFreqTable = window.computePosFreqTable(data, self.rawActors);
                     if(self.posFreqTable != null) {
                         self.freqMax = Object.values(self.posFreqTable)
-                            .reduce((v, e) => Math.max(v, Object.values(e).reduce((v2, e2) => Math.max(e2, v2), 0)), 0);
+                            .reduce(
+                                (v, e) => Math.max(v, Object.values(e)
+                                    .reduce((v2, e2) => Math.max(e2, v2), 0)), 0
+                            );
                     }
                     self.indvTable = window.computeIndTable(data, self.rawActors);
                     self.shared.roleIndTable = self.indvTable;
                     self.indvTableSorted = window.sortIndTable(self.indvTable, self.users);
                 });
-                $http({ url: "group-proposal-stage", method: "post", data: _postdata2 }).success(function (data) {
+                $http({
+                    url: "group-proposal-stage", method: "post", data: _postdata2
+                }).success(function (data) {
                     self.shared.groupByUid = {};
                     data.forEach(function (s, i) {
                         s.forEach(function (u) {
@@ -777,7 +834,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                         });
                     });
                 });
-                $http({ url: "get-chat-count-stage", method: "post", data: _postdata2 }).success(function (data) {
+                $http({
+                    url: "get-chat-count-stage", method: "post", data: _postdata2
+                }).success(function (data) {
                     self.shared.chatByUid = {};
                     self.shared.chatByTeam = {};
                     data.forEach(function(c) {
@@ -797,13 +856,17 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             self.dfsStage = [];
             $http.post("get-differentials-stage", _postdata2).success(function(data) {
                 self.dfsStage = data;
-                console.log("DIFFERENTIAL DEBUG DATA:",data)
+                console.log("DIFFERENTIAL DEBUG DATA:",data);
                 $http.post("get-differential-all-stage", _postdata2).success(function (data) {
-                    self.shared.difTable = window.buildDifTable(data, self.users, self.dfsStage, self.shared.groupByUid);
+                    self.shared.difTable = window.buildDifTable(
+                        data, self.users, self.dfsStage, self.shared.groupByUid
+                    );
                     self.shared.difTableUsers = self.shared.difTable.filter(e => !e.group).length;
                 });
             });
-            $http({ url: "group-proposal-stage", method: "post", data: _postdata2 }).success(function (data) {
+            $http({
+                url: "group-proposal-stage", method: "post", data: _postdata2
+            }).success(function (data) {
                 self.shared.groupByUid = {};
                 self.shared.groupByTmid = {};
                 data.forEach(function (s, i) {
@@ -813,7 +876,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     });
                 });
             });
-            $http({ url: "get-dif-chat-count", method: "post", data: _postdata2 }).success(function (data) {
+            $http({
+                url: "get-dif-chat-count", method: "post", data: _postdata2
+            }).success(function (data) {
                 self.shared.chatByUid = {};
                 self.shared.chatByTeam = {};
                 data.forEach(function(c) {
@@ -847,13 +912,19 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                     self.posFreqTable = window.computePosFreqTable(data, self.rawActors);
                     if(self.posFreqTable != null) {
                         self.freqMax = Object.values(self.posFreqTable)
-                            .reduce((v, e) => Math.max(v, Object.values(e).reduce((v2, e2) => Math.max(e2, v2), 0)), 0);
+                            .reduce(
+                                (v, e) => Math.max(v, Object.values(e)
+                                    .reduce((v2, e2) => Math.max(e2, v2), 0)),
+                                0
+                            );
                     }
                     self.indvTable = window.computeIndTable(data, self.rawActors);
                     self.shared.roleIndTable = self.indvTable;
                     self.indvTableSorted = window.sortIndTable(self.indvTable, self.users);
                 });
-                $http({ url: "group-proposal-stage", method: "post", data: _postdata2 }).success(function (data) {
+                $http({
+                    url: "group-proposal-stage", method: "post", data: _postdata2
+                }).success(function (data) {
                     self.shared.groupByUid = {};
                     data.forEach(function (s, i) {
                         s.forEach(function (u) {
@@ -861,7 +932,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                         });
                     });
                 });
-                $http({ url: "get-chat-count-stage", method: "post", data: _postdata2 }).success(function (data) {
+                $http({
+                    url: "get-chat-count-stage", method: "post", data: _postdata2
+                }).success(function (data) {
                     self.shared.chatByUid = {};
                     self.shared.chatByTeam = {};
                     data.forEach(function(c) {
@@ -883,7 +956,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
 
             return {
                 "background": "rgba(0, 184, 166, " + p + ")"
-            }
+            };
         }
     };
 
@@ -1035,11 +1108,14 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     };
 
     self.getAlumDoneTime = function (postdata) {
-        $http({ url: "get-alum-done-time", method: "post", data: postdata }).success(function (data) {
+        $http({
+            url: "get-alum-done-time", method: "post", data: postdata
+        }).success(function (data) {
             self.numComplete = 0;
             data.forEach(function (row) {
                 self.numComplete += 1;
-                if (self.alumState[row.uid] == null) self.alumState[row.uid] = row;else self.alumState[row.uid].dtime = ~~row.dtime;
+                if (self.alumState[row.uid] == null)
+                    self.alumState[row.uid] = row;else self.alumState[row.uid].dtime = ~~row.dtime;
             });
         });
     };
@@ -1059,11 +1135,14 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     };
 
     self.updateStateRub = function () {
-        if (self.iterationIndicator == 5) self.computeDif();else if (self.iterationIndicator == 6) self.getAllReportResult();
+        if (self.iterationIndicator == 5) self.computeDif();
+        else if (self.iterationIndicator == 6) self.getAllReportResult();
     };
 
     self.showName = function (report) {
-        if (report.example) return report.title + " - " + self.flang("exampleReport");else return report.id + " - " + self.flang("reportOf") + " " + self.users[report.uid].name;
+        if (report.example)
+            return report.title + " - " + self.flang("exampleReport");
+        else return report.id + " - " + self.flang("reportOf") + " " + self.users[report.uid].name;
     };
 
     self.shared.getReports = function () {
@@ -1078,7 +1157,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
 
     self.getReportResult = function () {
         var postdata = { repid: self.selectedReport.id };
-        $http({ url: "get-report-result", method: "post", data: postdata }).success(function (data) {
+        $http({
+            url: "get-report-result", method: "post", data: postdata
+        }).success(function (data) {
             self.result = data;
             self.updateState();
         });
@@ -1086,7 +1167,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
 
     self.getAllReportResult = function () {
         var postdata = { sesid: self.selectedSes.id };
-        $http({ url: "get-report-result-all", method: "post", data: postdata }).success(function (data) {
+        $http({
+            url: "get-report-result-all", method: "post", data: postdata
+        }).success(function (data) {
             self.resultAll = {};
             var n = data.length;
             for (var uid in self.users) {
@@ -1113,7 +1196,6 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
 
     self.buildRubricaBarData = function (data) {
         var N = 3;
-        //let rubnms = [self.flang("") + "-" + self.flang(""), "Proceso-Competente", "Competente-Avanzado"];
         var rubnms = ["1 - 2", "2 - 3", "3 - 4"];
         self.barData[0].values = [];
         for (var i = 0; i < N; i++) {
@@ -1133,7 +1215,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.computeDif = function () {
         if (self.result) {
             var pi = self.result.findIndex(function (e) {
-                return self.users[e.uid].role == 'P';
+                return self.users[e.uid].role == "P";
             });
             if (pi != -1) {
                 var pval = self.result[pi].val;
@@ -1197,12 +1279,15 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             var modalData = { report: data, criterios: self.shared.obtainCriterios() };
             modalData.report.author = self.users[data.uid];
             var postdata = { repid: data.id };
-            $http({ url: "get-report-result", method: "post", data: postdata }).success(function (data) {
+            $http({
+                url: "get-report-result", method: "post", data: postdata
+            }).success(function (data) {
                 modalData.answers = data;
                 $http.post("get-criteria-selection-by-report", postdata).success(function (data) {
                     modalData.answersRubrica = {};
                     data.forEach(function (row) {
-                        if (modalData.answersRubrica[row.uid] == null) modalData.answersRubrica[row.uid] = {};
+                        if (modalData.answersRubrica[row.uid] == null)
+                            modalData.answersRubrica[row.uid] = {};
                         modalData.answersRubrica[row.uid][row.cid] = row.selection;
                     });
                     $http.post("get-report-evaluators", postdata).success(function (data) {
@@ -1210,15 +1295,18 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                             var i = modalData.answers.findIndex(function (e) {
                                 return e.uid == row.uid;
                             });
-                            if (i == -1) modalData.answers.push({ uid: row.uid, evaluatorName: self.users[row.uid].name });else modalData.answers[i].evaluatorName = self.users[row.uid].name;
+                            if (i == -1) modalData.answers.push({
+                                uid: row.uid, evaluatorName: self.users[row.uid].name
+                            });
+                            else modalData.answers[i].evaluatorName = self.users[row.uid].name;
                         });
                         $uibModal.open({
-                            templateUrl: "templ/report-details.html",
-                            controller: "ReportModalController",
+                            templateUrl:  "templ/report-details.html",
+                            controller:   "ReportModalController",
                             controllerAs: "vm",
-                            size: "lg",
-                            scope: self,
-                            resolve: {
+                            size:         "lg",
+                            scope:        self,
+                            resolve:      {
                                 data: function data() {
                                     return modalData;
                                 }
@@ -1237,11 +1325,11 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             var modalData = { report: data };
             modalData.report.author = self.users[uid];
             $uibModal.open({
-                templateUrl: "templ/report-details.html",
-                controller: "ReportModalController",
+                templateUrl:  "templ/report-details.html",
+                controller:   "ReportModalController",
                 controllerAs: "vm",
-                scope: self,
-                resolve: {
+                scope:        self,
+                resolve:      {
                     data: function data() {
                         return modalData;
                     }
@@ -1264,7 +1352,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             return v.id == qid ? v : e;
         }, null);
         if (it < 3) {
-            $http({ url: "get-selection-comment", method: "post", data: postdata }).success(function (_data) {
+            $http({
+                url: "get-selection-comment", method: "post", data: postdata
+            }).success(function (_data) {
                 if (_data == null || _data.answer == null) {
                     Notification.warning("No hay respuesta registrada para el alumno");
                     return;
@@ -1272,16 +1362,19 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 var alt = opts[_data.answer] + ". " + qs.options[_data.answer];
                 var qstxt = qs.content;
                 $uibModal.open({
-                    templateUrl: "templ/content-dialog.html",
-                    controller: "ContentModalController",
+                    templateUrl:  "templ/content-dialog.html",
+                    controller:   "ContentModalController",
                     controllerAs: "vm",
-                    scope: self,
-                    resolve: {
+                    scope:        self,
+                    resolve:      {
                         data: function data() {
                             _data.title = self.flang("answerOf") + " " + self.users[uid].name;
-                            _data.content = self.flang("question") + ":\n" + qstxt + "\n\n" + self.flang("answer") + ":\n" + alt + "\n\n" + self.flang("comment") + ":\n" + (_data.comment ? _data.comment : "");
+                            _data.content = self.flang("question") + ":\n" + qstxt + "\n\n" +
+                                self.flang("answer") + ":\n" + alt + "\n\n" + self.flang("comment")
+                                + ":\n" + (_data.comment ? _data.comment : "");
                             if (_data.confidence) {
-                                _data.content += "\n\n" + self.flang("confidenceLevel") + ": " + _data.confidence + "%";
+                                _data.content += "\n\n" + self.flang("confidenceLevel") + ": " +
+                                    _data.confidence + "%";
                             }
                             return _data;
                         }
@@ -1290,7 +1383,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             });
         } else {
             postdata.tmid = self.leaderTeamId[uid];
-            $http({ url: "get-selection-team-comment", method: "post", data: postdata }).success(function (res) {
+            $http({
+                url: "get-selection-team-comment", method: "post", data: postdata
+            }).success(function (res) {
                 if (res == null || res.length == 0) {
                     Notification.warning("No hay respuesta registrada para el grupo");
                     return;
@@ -1298,19 +1393,22 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                 var alt = opts[res[0].answer] + ". " + qs.options[res[0].answer];
                 var qstxt = qs.content;
                 $uibModal.open({
-                    templateUrl: "templ/content-dialog.html",
-                    controller: "ContentModalController",
+                    templateUrl:  "templ/content-dialog.html",
+                    controller:   "ContentModalController",
                     controllerAs: "vm",
-                    scope: self,
-                    resolve: {
+                    scope:        self,
+                    resolve:      {
                         data: function data() {
                             var data = {};
                             data.title = self.flang("answerOf") + " " + self.leaderTeamStr[uid];
-                            data.content = self.flang("question") + ":\n" + qstxt + "\n\n" + self.flang("answer") + ":\n" + alt + "\n\n";
+                            data.content = self.flang("question") + ":\n" + qstxt + "\n\n" +
+                                self.flang("answer") + ":\n" + alt + "\n\n";
                             res.forEach(function (r) {
-                                data.content += self.flang("comment") + " " + r.uname + ":\n" + (r.comment != null ? r.comment : "") + "\n";
+                                data.content += self.flang("comment") + " " + r.uname + ":\n" +
+                                    (r.comment != null ? r.comment : "") + "\n";
                                 if (r.confidence != null) {
-                                    data.content += self.flang("confidenceLevel") + ": " + r.confidence + "%\n";
+                                    data.content += self.flang("confidenceLevel") + ": " +
+                                        r.confidence + "%\n";
                                 }
                                 data.content += "\n";
                             });
@@ -1326,19 +1424,21 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.openDFDetails = function (group, orden) {
         var postdata = {
             sesid: self.selectedSes.id,
-            tmid: group,
+            tmid:  group,
             orden: orden
         };
         $http.post("get-team-chat", postdata).success(function (res) {
             $uibModal.open({
-                templateUrl: "templ/differential-group.html",
-                controller: "EthicsModalController",
+                templateUrl:  "templ/differential-group.html",
+                controller:   "EthicsModalController",
                 controllerAs: "vm",
-                scope: self,
-                resolve: {
+                scope:        self,
+                resolve:      {
                     data: function data() {
                         var data = {};
-                        data.names = [self.flang("individual"), self.flang("anon"), self.flang("teamWork")];
+                        data.names = [
+                            self.flang("individual"), self.flang("anon"), self.flang("teamWork")
+                        ];
                         data.orden = orden;
                         data.group = group;
                         data.users = self.users;
@@ -1396,16 +1496,16 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         console.log(group, did, uid);
         var postdata = {
             stageid: self.iterationIndicator,
-            tmid: group,
-            did: did
+            tmid:    group,
+            did:     did
         };
         $http.post("get-team-chat-stage-df", postdata).success(function (res) {
             $uibModal.open({
-                templateUrl: "templ/differential-group-2.html",
-                controller: "EthicsModalController",
+                templateUrl:  "templ/differential-group-2.html",
+                controller:   "EthicsModalController",
                 controllerAs: "vm",
-                scope: self,
-                resolve: {
+                scope:        self,
+                resolve:      {
                     data: function data() {
                         var data = {};
                         data.names = [self.flang("answer")];
@@ -1433,7 +1533,9 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                         data.stage = self.shared.stagesMap[self.iterationIndicator];
 
                         if(data.stage.type == "team"){
-                            data.arr = self.shared.difTable.filter(e => e.tmid == group && !e.group);
+                            data.arr = self.shared.difTable.filter(e =>
+                                e.tmid == group && !e.group
+                            );
                         }
                         else {
                             data.arr = self.shared.difTable.filter(e => e.uid == uid && !e.group);
@@ -1460,18 +1562,19 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     };
 
     self.openActorDetails = function  (uid, stageid) {
-        let group = self.shared.groupByUid ? self.shared.groupByUid[uid] ? self.shared.groupByUid[uid].tmid : null : null;
+        let group = self.shared.groupByUid ? self.shared.groupByUid[uid] ?
+            self.shared.groupByUid[uid].tmid : null : null;
         var postdata = {
             stageid: stageid,
-            tmid: group
+            tmid:    group
         };
         $http.post("get-team-chat-stage", postdata).success(function (res) {
             $uibModal.open({
-                templateUrl: "templ/actor-dialog.html",
-                controller: "EthicsModalController",
+                templateUrl:  "templ/actor-dialog.html",
+                controller:   "EthicsModalController",
                 controllerAs: "vm",
-                scope: self,
-                resolve: {
+                scope:        self,
+                resolve:      {
                     data: function data() {
                         var data = {};
                         data.group = group;
@@ -1497,7 +1600,10 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
                         data.stage = self.shared.stagesMap[stageid];
 
                         if(data.stage.type == "team"){
-                            data.sel = self.indvTableSorted.filter(e => self.shared.groupByUid[e.uid].index == self.shared.groupByUid[uid].index);
+                            data.sel = self.indvTableSorted.filter(e =>
+                                self.shared.groupByUid[e.uid].index ==
+                                self.shared.groupByUid[uid].index
+                            );
                         }
                         else {
                             data.sel = self.indvTableSorted.filter(e => e.uid == uid);
@@ -1527,7 +1633,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         $http.post("get-sel-data-csv", postdata).success(function (res) {
             if(res != null && res.length > 0) {
                 saveCsv(res, {
-                    filename: "seleccion_" + self.selectedSes.id + ".csv",
+                    filename:  "seleccion_" + self.selectedSes.id + ".csv",
                     formatter: function(v){
                         if(v == null){
                             return "";
@@ -1547,7 +1653,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         $http.post("get-chat-data-csv", postdata).success(function (res) {
             if(res != null && res.length > 0) {
                 saveCsv(res, {
-                    filename: "chat_" + self.selectedSes.id + ".csv",
+                    filename:  "chat_" + self.selectedSes.id + ".csv",
                     formatter: function(v){
                         if(v == null){
                             return "";
@@ -1579,7 +1685,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         $http.post(url, postdata).success(function (res) {
             if(res != null && res.length > 0) {
                 saveCsv(res, {
-                    filename: "chat_" + self.selectedSes.id + ".csv",
+                    filename:  "chat_" + self.selectedSes.id + ".csv",
                     formatter: function(v){
                         if(v == null){
                             return "";
@@ -1604,7 +1710,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         };
         let url = self.selectedSes.type == "T" ? "get-sel-data-csv-ethics" :
             self.selectedSes.type == "R" ? "get-sel-data-csv-role" :
-            self.selectedSes.type == "J" ? "get-sel-data-csv-jigsaw" : null;
+                self.selectedSes.type == "J" ? "get-sel-data-csv-jigsaw" : null;
         console.log(self.selectedSes);
         if(url == null){
             Notification.error("No se puede exportar los datos");
@@ -1613,7 +1719,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         $http.post(url, postdata).success(function (res) {
             if(res != null && res.length > 0) {
                 saveCsv(res, {
-                    filename: "sel_" + self.selectedSes.id + ".csv",
+                    filename:  "sel_" + self.selectedSes.id + ".csv",
                     formatter: function(v){
                         if(v == null){
                             return "";
@@ -1651,12 +1757,12 @@ adpp.controller("MapSelectionModalController", function ($scope, $uibModalInstan
     vm.edit = false;
 
     vm.cancel = function () {
-        $uibModalInstance.dismiss('cancel');
+        $uibModalInstance.dismiss("cancel");
     };
 
     vm.resolve = function () {
         $uibModalInstance.close({
-            nav: vm.nav,
+            nav:  vm.nav,
             edit: vm.edit
         });
     };
@@ -1667,7 +1773,7 @@ adpp.controller("ReportModalController", function ($scope, $uibModalInstance, da
     vm.data = data;
 
     vm.cancel = function () {
-        $uibModalInstance.dismiss('cancel');
+        $uibModalInstance.dismiss("cancel");
     };
 });
 
@@ -1676,7 +1782,7 @@ adpp.controller("ContentModalController", function ($scope, $uibModalInstance, d
     vm.data = data;
 
     vm.cancel = function () {
-        $uibModalInstance.dismiss('cancel');
+        $uibModalInstance.dismiss("cancel");
     };
 });
 
@@ -1686,7 +1792,7 @@ adpp.controller("EthicsModalController", function ($scope, $http, $uibModalInsta
     vm.isAnon = true;
 
     vm.cancel = function () {
-        $uibModalInstance.dismiss('cancel');
+        $uibModalInstance.dismiss("cancel");
     };
 
     vm.shareDetails = function () {
@@ -1696,7 +1802,7 @@ adpp.controller("EthicsModalController", function ($scope, $http, $uibModalInsta
         }
         var content = document.getElementById("details-modal").innerHTML.replace(/<\!--.*?-->/g, "");
         var postdata = {
-            sesid: vm.data.sesid,
+            sesid:   vm.data.sesid,
             content: content
         };
         $http({ url: "broadcast-diff", method: "post", data: postdata }).success(function (data) {
@@ -1709,22 +1815,22 @@ adpp.controller("DuplicateSesModalController", function ($scope, $http, $uibModa
     var vm = this;
     vm.data = data;
     vm.nses = {
-        name: vm.data.name,
-        tipo: vm.data.type,
-        descr: vm.data.descr,
-        originalSesid: vm.data.id,
-        copyDocuments: false,
-        copyIdeas: false,
-        copyQuestions: false,
-        copyRubrica: false,
-        copyUsers: false,
-        copySemUnits: false,
-        copySemDocs: false,
+        name:              vm.data.name,
+        tipo:              vm.data.type,
+        descr:             vm.data.descr,
+        originalSesid:     vm.data.id,
+        copyDocuments:     false,
+        copyIdeas:         false,
+        copyQuestions:     false,
+        copyRubrica:       false,
+        copyUsers:         false,
+        copySemUnits:      false,
+        copySemDocs:       false,
         copyDifferentials: false
     };
 
     vm.cancel = function () {
-        $uibModalInstance.dismiss('cancel');
+        $uibModalInstance.dismiss("cancel");
     };
 
     vm.sendDuplicate = function () {
@@ -1745,7 +1851,10 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
     self.groupMet = "random";
 
     self.shared.verifyGroups = function () {
-        self.methods = [klg("random"), klg("performance", "homog"), klg("performance", "heterg"), klg("knowledgeType", "homog"), klg("knowledgeType", "heterg")];
+        self.methods = [
+            klg("random"), klg("performance", "homog"), klg("performance", "heterg"),
+            klg("knowledgeType", "homog"), klg("knowledgeType", "heterg")
+        ];
         self.groupNum = 3;
         self.groupMet = self.methods[0].key;
         self.groups = [];
@@ -1759,7 +1868,7 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
 
     var klg = function klg(k1, k2) {
         return {
-            key: k1 + (k2 == null ? "" : " " + k2),
+            key:  k1 + (k2 == null ? "" : " " + k2),
             name: self.flang(k1) + (k2 == null ? "" : " " + self.flang(k2))
         };
     };
@@ -1767,7 +1876,9 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
     self.generateGroups = function (key) {
         console.log("Generate groups AdminController");
         if (self.selectedSes.grouped) {
-            $http({ url: "group-proposal-sel", method: "post", data: { sesid: self.selectedSes.id } }).success(function (data) {
+            $http({
+                url: "group-proposal-sel", method: "post", data: { sesid: self.selectedSes.id }
+            }).success(function (data) {
                 self.groups = data;
                 self.shared.groups = self.groups;
                 //self.groupsProp = angular.copy(self.groups);
@@ -1782,8 +1893,8 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
         }
 
         var postdata = {
-            sesid: self.selectedSes.id,
-            gnum: self.groupNum,
+            sesid:  self.selectedSes.id,
+            gnum:   self.groupNum,
             method: self.groupMet
         };
 
@@ -1796,7 +1907,9 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
         console.log(users);
 
         if (self.groupMet == "knowledgeType homog" || self.groupMet == "knowledgeType heterg") {
-            self.groups = generateTeams(users, habMetric, self.groupNum, isDifferent(self.groupMet));
+            self.groups = generateTeams(
+                users, habMetric, self.groupNum, isDifferent(self.groupMet)
+            );
         } else if (self.groupMet == "random") {
             var arr = users.map(function (e) {
                 e.rnd = Math.random();
@@ -1830,7 +1943,7 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
             return;
         }
         var postdata = {
-            sesid: self.selectedSes.id,
+            sesid:  self.selectedSes.id,
             groups: JSON.stringify(self.groups.map(function (e) {
                 return e.map(function (f) {
                     return f.uid || f.id;
@@ -1893,7 +2006,9 @@ adpp.controller("RubricaController", function ($scope, $http) {
         self.newCriterio = {};
         self.editable = false;
         var postdata = { sesid: self.selectedSes.id };
-        $http({ url: "get-admin-rubrica", method: "post", data: postdata }).success(function (data) {
+        $http({
+            url: "get-admin-rubrica", method: "post", data: postdata
+        }).success(function (data) {
             if (data.length == 0) {
                 self.editable = true;
             } else {
@@ -1919,7 +2034,9 @@ adpp.controller("RubricaController", function ($scope, $http) {
                 self.criterios.forEach(function (criterio) {
                     var postdata = angular.copy(criterio);
                     postdata.rid = rid;
-                    $http({ url: "send-criteria", method: "post", data: postdata }).success(function (data) {
+                    $http({
+                        url: "send-criteria", method: "post", data: postdata
+                    }).success(function (data) {
                         if (data.status == "ok") console.log("Ok");
                     });
                 });
@@ -1937,7 +2054,9 @@ adpp.controller("RubricaController", function ($scope, $http) {
                 self.criterios.forEach(function (criterio) {
                     var postdata = angular.copy(criterio);
                     postdata.rid = rid;
-                    $http({ url: "send-criteria", method: "post", data: postdata }).success(function (data) {
+                    $http({
+                        url: "send-criteria", method: "post", data: postdata 
+                    }).success(function (data) {
                         if (data.status == "ok") console.log("Ok");
                     });
                 });
@@ -1949,18 +2068,22 @@ adpp.controller("RubricaController", function ($scope, $http) {
     self.shared.getExampleReports = function () {
         self.exampleReports = [];
         var postdata = { sesid: self.selectedSes.id };
-        $http({ url: "get-example-reports", method: "post", data: postdata }).success(function (data) {
+        $http({
+            url: "get-example-reports", method: "post", data: postdata
+        }).success(function (data) {
             self.exampleReports = data;
         });
     };
 
     self.sendExampleReport = function () {
         var postdata = {
-            sesid: self.selectedSes.id,
+            sesid:   self.selectedSes.id,
             content: self.newExampleReport.text,
-            title: self.newExampleReport.title
+            title:   self.newExampleReport.title
         };
-        $http({ url: "send-example-report", method: "post", data: postdata }).success(function (data) {
+        $http({
+            url: "send-example-report", method: "post", data: postdata
+        }).success(function (data) {
             self.newExampleReport = "";
             self.shared.getExampleReports();
         });
@@ -1968,8 +2091,10 @@ adpp.controller("RubricaController", function ($scope, $http) {
 
     self.setActiveExampleReport = function (rep) {
         var postdata = { sesid: self.selectedSes.id, rid: rep.id };
-        $http({ url: "set-active-example-report", method: "post", data: postdata }).success(function (data) {
-            if (data.status == 'ok') {
+        $http({
+            url: "set-active-example-report", method: "post", data: postdata
+        }).success(function (data) {
+            if (data.status == "ok") {
                 self.exampleReports.forEach(function (r) {
                     r.active = false;
                 });
@@ -2012,14 +2137,14 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
 
     self.init = function(){
         self.requestDesignDocuments();
-    }
+    };
 
     self.uploadDesignDocument = function (event) { //Work in progress
         self.busy = true;
         var fd = new FormData(event.target);
         $http.post("upload-design-file", fd, {
             transformRequest: angular.identity,
-            headers: { 'Content-Type': undefined }
+            headers:          { "Content-Type": undefined }
         }).success(function (data) {
             if (data.status == "ok") {
                 $timeout(function () {
@@ -2035,7 +2160,9 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
     
     self.requestDesignDocuments = function ( ) {
         var postdata = { dsgnid: designId.id};
-        $http({ url: "designs-documents", method: "post", data: postdata }).success(function (data) {
+        $http({
+            url: "designs-documents", method: "post", data: postdata
+        }).success(function (data) {
             self.documents = data;
         });
     };
@@ -2043,17 +2170,19 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
 
     self.deleteDesignDocument = function (dsgnid) {
         var postdata = { dsgnid: dsgnid };
-        $http({ url: "delete-design-document", method: "post", data: postdata }).success(function (data) {
+        $http({
+            url: "delete-design-document", method: "post", data: postdata
+        }).success(function (data) {
             self.requestDesignDocuments();
         });
     };
 
     self.getPathname = function(path){
-        var split = path.split("/")
-        return split[split.length - 1]
-    }
+        var split = path.split("/");
+        return split[split.length - 1];
+    };
 
-    self.init()
+    self.init();
 
 });
 
@@ -2064,12 +2193,14 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
     self.init =function(){
         self.selectedSes = {};
         self.launchDesignId = launchId.id;
-    }
+    };
 
 
     self.createSession = function(dsgnName, dsgndescr, dsgntype, dsgnid){
-        var postdata = { name: dsgnName, descr: dsgndescr, type:dsgntype};
-        $http({ url: "add-session-activity", method: "post", data: postdata }).success(function (data) {
+        var postdata = { name: dsgnName, descr: dsgndescr, type: dsgntype};
+        $http({
+            url: "add-session-activity", method: "post", data: postdata
+        }).success(function (data) {
             console.log("SESSION CREATED");
             var id = data.id;
             self.createActivity(id, dsgnid,);
@@ -2078,87 +2209,91 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
             self.shared.updateSesData();
             //console.log(data);
         });
-    }
+    };
 
     self.createActivity = function(sesID, dsgnID){
         var postdata = { sesid: sesID, dsgnid: dsgnID};
         $http({ url: "add-activity", method: "post", data: postdata }).success(function (data) {
             console.log("ACTIVITY CREATED");
-            var dsng = data.result
-            self.startActivityDesign(dsng, sesID)
+            var dsng = data.result;
+            self.startActivityDesign(dsng, sesID);
             self.shared.getActivities();
             //get current DESIGNS UPDATED
             //console.log(data);
         });
-    }
+    };
 
     self.startActivityDesign = function (design, sesid) {
         //change it to do it for the first stage or a selected stage?
-        var stageCounter = 0
+        var stageCounter = 0;
         for(var phase of design.phases){
-        console.log(phase);
-        var postdata = {
-            number: stageCounter + 1,
-            question: "",
-            //grouping: null, // grouping: s.type == "team" ? self.groupopt.num + ":" + self.groupopt.met : null, 
-            //ver si es equipo, si lo es, igualar a numero de integrantes + el tipo, sino es nulo
-            grouping: phase.mode == "team" ? phase.stdntAmount + ":" + phase.grouping_algorithm : null,
-            type: phase.mode,
-            anon: phase.anonymous,
-            chat: phase.chat,
-            sesid: sesid,
-            prev_ans: ""
-        };
-        console.log(postdata)
+            console.log(phase);
+            var postdata = {
+                number:   stageCounter + 1,
+                question: "",
 
-        $http({url: "add-stage", method: "post", data: postdata}).success(function (data) {
-            let stageid = data.id;
-            if (stageid != null) {
+                // ver si es equipo, si lo es, igualar a numero de integrantes + el tipo,
+                // sino es nulo
+                grouping: phase.mode == "team" ?
+                    phase.stdntAmount + ":" + phase.grouping_algorithm :
+                    null,
+                type:     phase.mode,
+                anon:     phase.anonymous,
+                chat:     phase.chat,
+                sesid:    sesid,
+                prev_ans: ""
+            };
+            console.log(postdata);
+
+            $http({url: "add-stage", method: "post", data: postdata}).success(function (data) {
+                let stageid = data.id;
+                if (stageid != null) {
                 /*
                 if (postdata.type == "team") {
                     self.acceptGroups(stageid);
                 }
                 */
-               console.log("TYPE:",self.selectedSes.type)
-                if (self.selectedSes.type == "T" || true) {
-                    var counter = 1;
-                    for(var question of phase.questions){
-                        var content = question.ans_format
-                        let p = {
-                            name: question.q_text,
-                            tleft: content.l_pole,
-                            tright: content.r_pole,
-                            num: content.values,
-                            orden: counter,
-                            justify: content.just_required,
-                            stageid: stageid,
-                            sesid: sesid,
-                            word_count: content.min_just_length
-                        };
-                        console.log(p)
-                        $http({url: "add-differential-stage", method: "post", data: p}).success(function (data) {
-
-                            let pp = {sesid: sesid, stageid: stageid};
-                            $http({url: "session-start-stage", method: "post", data: pp}).success(function (data) {
-                                //sql: "update sessions set status = 2, current_stage = $1 where id = $2",
-                                Notification.success("Etapa creada correctamente");
-                                //window.location.reload()
-                            });
+                    console.log("TYPE:",self.selectedSes.type);
+                    if (self.selectedSes.type == "T") {
+                        var counter = 1;
+                        for(var question of phase.questions){
+                            var content = question.ans_format;
+                            let p = {
+                                name:       question.q_text,
+                                tleft:      content.l_pole,
+                                tright:     content.r_pole,
+                                num:        content.values,
+                                orden:      counter,
+                                justify:    content.just_required,
+                                stageid:    stageid,
+                                sesid:      sesid,
+                                word_count: content.min_just_length
+                            };
+                            console.log(p);
+                            $http({url:
+                                "add-differential-stage", method: "post", data:   p
+                            }).success(function (data) {
+                                let pp = {sesid: sesid, stageid: stageid};
+                                $http({
+                                    url: "session-start-stage", method: "post", data: pp
+                                }).success(function (data) {
+                                    Notification.success("Etapa creada correctamente");
+                                });
                             
-                        });
-                        counter++;
+                            });
+                            counter++;
+                        }
                     }
-                }
 
                 
-            }
-            else {
-                Notification.error("Error al crear la etapa");
-            }
-        });
+                }
+                else {
+                    Notification.error("Error al crear la etapa");
+                }
+            });
     
-        stageCounter++;
-        break;
+            stageCounter++;
+            break;
         }
     };
 
@@ -2175,28 +2310,36 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
     };
 
     self.currentActivities = function(type){
-        if(type == 0) return self.activities.filter(function(activity) {return activity.status != 3 && activity.archived ==false;});
-        if(type == 1) return self.activities.filter(function(activity) {return activity.status == 3 && activity.archived ==false;;});
-        if(type == 2) return self.activities.filter(function(activity) {return activity.archived;});
-    }
+        if (type == 0) return self.activities.filter(function(activity) {
+            return activity.status != 3 && activity.archived == false;
+        });
+        if (type == 1) return self.activities.filter(function(activity) {
+            return activity.status == 3 && activity.archived == false;
+        });
+        if (type == 2) return self.activities.filter(function(activity) {
+            return activity.archived;
+        });
+    };
 
     self.designSelected = function(){
-        return launchId.id
-    }
+        return launchId.id;
+    };
 
     self.createCopy = function(ses){
-        self.createSession(ses.name, ses.descr, ses.type, ses.dsgnid)
+        self.createSession(ses.name, ses.descr, ses.type, ses.dsgnid);
         self.shared.getActivities();
         self.shared.updateSesData();
         Notification.success("Actividad copiada!");
-    }
+    };
 
     self.init();
 
 
 });
 
-adpp.controller("MonitorActivityController", function ($scope, $filter, $http, Notification, $timeout) {
+adpp.controller("MonitorActivityController", function (
+    $scope, $filter, $http, Notification, $timeout
+) {
     var self = $scope;
 
 
@@ -2204,50 +2347,52 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
         if(self.selectedView == "activity") {
             //self.shared.resetGraphs(); // self.iterationIndicator  fix this id
             self.currentStage();
-            }
-    }
+        }
+    };
 
     self.getPrevAns = function(current_phase){
         return "";
-        if(current_phase.prevPhasesResponse.length == 0){
-            return "";
-        }
-        var temp = [];
-        let answers = current_phase.prevPhasesResponse;
-        for(let i=0; i < current_phase.prevPhasesResponse.length; i++){
-            let answerIndex = answers[i];
-            temp.push(self.stages[answerIndex]);
-        }
-        console.log(temp);
-        return temp.map(e => e.id).join(",");
-    }
+        // if(current_phase.prevPhasesResponse.length == 0){ //! Unreachable code
+        //     return "";
+        // }
+        // var temp = [];
+        // let answers = current_phase.prevPhasesResponse;
+        // for(let i=0; i < current_phase.prevPhasesResponse.length; i++){
+        //     let answerIndex = answers[i];
+        //     temp.push(self.stages[answerIndex]);
+        // }
+        // console.log(temp);
+        // return temp.map(e => e.id).join(",");
+    };
 
     self.nextActivityDesign = function () {//check for race condition
-        var stageCounter = self.currentActivity.stage + 1
-        var sesid = self.selectedSes.id
-        console.log("Current design:",self.design)
-        console.log("Current stage:",stageCounter)
-        console.log("Current sesid:",sesid)
+        var stageCounter = self.currentActivity.stage + 1;
+        var sesid = self.selectedSes.id;
+        console.log("Current design:",self.design);
+        console.log("Current stage:",stageCounter);
+        console.log("Current sesid:",sesid);
        
-        var current_phase = self.design.phases[stageCounter]
-        console.log("NEXT PHASE:", current_phase)
+        var current_phase = self.design.phases[stageCounter];
+        console.log("NEXT PHASE:", current_phase);
         console.log(self.getPrevAns(current_phase));
        
 
         //match phase.prevPhasesResponse index con self.stages index
         //prev_ans: s.prevResponses.map(e => e.id).join(",")
         var postdata = {
-            number: stageCounter + 1,
+            number:   stageCounter + 1,
             question: "",
-            grouping: current_phase.mode == "team" ? current_phase.stdntAmount + ":" + current_phase.grouping_algorithm : null,
-            type: current_phase.mode,
-            anon: current_phase.anonymous,
-            chat: current_phase.chat,
-            sesid: sesid,
+            grouping: current_phase.mode == "team" ?
+                current_phase.stdntAmount + ":" + current_phase.grouping_algorithm :
+                null,
+            type:     current_phase.mode,
+            anon:     current_phase.anonymous,
+            chat:     current_phase.chat,
+            sesid:    sesid,
             prev_ans: self.getPrevAns(current_phase)
         };
-        console.log(postdata)
-        console.log(self.selectedSes)
+        console.log(postdata);
+        console.log(self.selectedSes);
 
         if(current_phase.mode == "team"){
             //self.generateGroups(true);
@@ -2262,38 +2407,40 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
                     self.acceptGroups(stageid);
                 }
 
-               console.log("TYPE:",self.selectedSes.type)
-                if (self.selectedSes.type == "T" || true) {
+                console.log("TYPE:",self.selectedSes.type);
+                if (self.selectedSes.type == "T") {
                     var counter = 1;
                     for(var question of current_phase.questions){
-                        var content = question.ans_format
+                        var content = question.ans_format;
                         let p = {
-                            name: question.q_text,
-                            tleft: content.l_pole,
-                            tright: content.r_pole,
-                            num: content.values,
-                            orden: counter,
-                            justify: content.just_required,
-                            stageid: stageid,
-                            sesid: sesid,
+                            name:       question.q_text,
+                            tleft:      content.l_pole,
+                            tright:     content.r_pole,
+                            num:        content.values,
+                            orden:      counter,
+                            justify:    content.just_required,
+                            stageid:    stageid,
+                            sesid:      sesid,
                             word_count: content.min_just_length
                         };
-                        console.log(p)
-                        $http({url: "add-differential-stage", method: "post", data: p}).success(function (data) {
-                            
-                        });
+                        console.log(p);
+                        $http({
+                            url: "add-differential-stage", method: "post", data: p
+                        }).success(function (data) {    });
                         counter++;
                     }
                 }
                 let pp = {sesid: sesid, stageid: stageid};
-                $http({url: "session-start-stage", method: "post", data: pp}).success(function (data) {
+                $http({
+                    url: "session-start-stage", method: "post", data: pp
+                }).success(function (data) {
                     Notification.success("Etapa creada correctamente");
                     //window.location.reload()
                     self.currentStage(); // <--------Actualiza la data del current stage
                     self.shared.verifyTabs();
                     self.getStages();
                     self.selectedSes.current_stage = stageid;
-                    //call request to change activity currentstage <-----------------------------------------
+                    //call request to change activity currentstage 
                 });
                 
             }
@@ -2309,7 +2456,7 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
             sesid: self.selectedSes.id
         };
         $http({ url: "get-current-stage", method: "post", data: pd }).success(function (data) {
-            console.log(data)
+            console.log(data);
             self.currentActivity.stage = data[0].number -1;
         });
     };
@@ -2319,14 +2466,16 @@ adpp.controller("MonitorActivityController", function ($scope, $filter, $http, N
             console.log(data);
             window.location.reload();
         });
-    }
+    };
 
     self.init();
 
 
 });
 
-adpp.controller("BrowseDesignsController", function ($scope, $filter, $http, Notification, $timeout) {
+adpp.controller("BrowseDesignsController", function (
+    $scope, $filter, $http, Notification, $timeout
+) {
     var self = $scope;
     self.designs = [];
     self.public = null;
@@ -2338,23 +2487,23 @@ adpp.controller("BrowseDesignsController", function ($scope, $filter, $http, Not
     self.init = function(){
         if(self.selectedView == "launchActivity") {self.getDesigns(); self.setValues();} //make request when on launchActivity view only
         else if(self.selectedView == "designs") {
-            self.tab = tabSel.type
+            self.tab = tabSel.type;
             self.getDesigns();
             self.getPublicDesigns();
-            } 
-    }
+        } 
+    };
 
     self.setValues = function(){
         self.dsgnid = launchId.id;
         self.dsgntitle = launchId.title;
         self.dsgntype = launchId.type;
-    }
+    };
 
     self.designValues = function(id, title, type){
         self.dsgnid = id;
         self.dsgntitle = title;
         self.dsgntype = type;
-    }
+    };
 
     self.designPublic = function (dsgnid) {
         var postdata = { dsgnid: dsgnid };
@@ -2400,13 +2549,13 @@ adpp.controller("BrowseDesignsController", function ($scope, $filter, $http, Not
             
         });
 
-    }
+    };
 
 
     self.getDesign = function (ID) {
         $http.post("get-design", ID).success(function (data) {
             if (data.status == "ok") {
-                self.changeDesign(data.result)
+                self.changeDesign(data.result);
 
             }
         });
@@ -2415,14 +2564,14 @@ adpp.controller("BrowseDesignsController", function ($scope, $filter, $http, Not
     self.goToDesign = function(ID, type){
         $http.post("get-design", ID).success(function (data) {
             if (data.status == "ok") {
-                self.changeDesign(data.result)
-                if(type=="E") self.selectView("newDesignExt")
-                else self.selectView("viewDesign")
+                self.changeDesign(data.result);
+                if(type=="E") self.selectView("newDesignExt");
+                else self.selectView("viewDesign");
                 designId.id = ID;
 
             }
         });        
-    }
+    };
 
     self.launchDesign = function(ID, Title, Type){
         launchId.id = ID;
@@ -2430,8 +2579,8 @@ adpp.controller("BrowseDesignsController", function ($scope, $filter, $http, Not
         launchId.type = Type;
         //set title and type
         self.selectView("launchActivity");
-        console.log(launchId)
-    }
+        console.log(launchId);
+    };
 
     self.init();
 
@@ -2445,7 +2594,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
 
     self.keyGroups = function (k1, k2) {
         return {
-            key: k1 + (k2 == null ? "" : " " + k2),
+            key:  k1 + (k2 == null ? "" : " " + k2),
             name: k1 + (k2 == null ? "" : " " + k2)
             //name: self.flang(k1) + (k2 == null ? "" : " " + self.flang(k2)) FIX TRANSLATION BUG
         };
@@ -2453,8 +2602,11 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
 
     self.currentStage = 0; //index of stage
     self.currentQuestion = 0; //index of current question
-    self.methods = [self.keyGroups("random"), self.keyGroups("performance", "homog"), self.keyGroups("performance", "heterg"), 
-                    self.keyGroups("knowledgeType", "homog"), self.keyGroups("knowledgeType", "heterg")];
+    self.methods = [
+        self.keyGroups("random"), self.keyGroups("performance", "homog"),
+        self.keyGroups("performance", "heterg"), 
+        self.keyGroups("knowledgeType", "homog"), self.keyGroups("knowledgeType", "heterg")
+    ];
     self.groupType = [self.keyGroups("individual"), self.keyGroups("team")];
     self.busy = false; //upload file
     self.extraOpts = false;
@@ -2471,53 +2623,53 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
 
     self.init = function(){
         //resetValues();
-        if(self.selectedView == "newDesign") self.changeDesign(null)
+        if(self.selectedView == "newDesign") self.changeDesign(null);
         if(self.design != null){
             self.stageType = self.design.type;
-            self.num = self.design.phases[0].questions[0].ans_format.values
+            self.num = self.design.phases[0].questions[0].ans_format.values;
             resetValues();
         }
-    }
+    };
 
     self.launchDesignEdit = function(){
         launchId.id = designId.id;
         launchId.title = self.design.metainfo.title;
         launchId.type = self.design.type;
         self.selectView("launchActivity");
-    }
+    };
   
     self.uploadDesign = function (title, author) {
         var postdata = { 
-            "metainfo":{
-                "title":title,
-                "author": author,
+            "metainfo": {
+                "title":         title,
+                "author":        author,
                 "creation_date": Date.now()
             },
-            "roles":[],
-            "type":"semantic_differential",
-            "phases":[
+            "roles":  [],
+            "type":   "semantic_differential",
+            "phases": [
                 {
-                    "mode":"individual",
-                    "chat":false,
-                    "anonymous":false,
-                    "grouping_algorithm" : "random",
-                    "prevPhasesResponse" : [ ],
-                    "stdntAmount":3,
-                    "questions":[
+                    "mode":               "individual",
+                    "chat":               false,
+                    "anonymous":          false,
+                    "grouping_algorithm": "random",
+                    "prevPhasesResponse": [ ],
+                    "stdntAmount":        3,
+                    "questions":          [
                         {
-                        "q_text":"",
-                        "ans_format":{
-                            "values":7,
-                            "l_pole":"",
-                            "r_pole":"",
-                            "just_required": true,
-                            "min_just_length": 5
+                            "q_text":     "",
+                            "ans_format": {
+                                "values":          7,
+                                "l_pole":          "",
+                                "r_pole":          "",
+                                "just_required":   true,
+                                "min_just_length": 5
+                            }
                         }
-                    }
                     ]
                 }
             ]
-            }
+        };
         $http.post("upload-design", postdata).success(function (data) {
             
             if (data.status == "ok") {
@@ -2530,7 +2682,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     self.updateDesign = function () {
         self.error = self.checkDesign();
         if(!self.error){
-            var postdata = {"design":self.design,"id": designId.id};
+            var postdata = {"design": self.design,"id": designId.id};
             $http.post("update-design", postdata).success(function (data) {
                 
                 if (data.status == "ok") {
@@ -2541,13 +2693,13 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
             });
         }
         else{
-            self.saved = false;;
+            self.saved = false;
         }
-    }
+    };
 
     self.checkDesign = function(){ 
         var error = false;
-        var phases = self.design.phases
+        var phases = self.design.phases;
         for(let i =0; i< phases.length; i++){
             var phase = self.design.phases[i];
             var questions = phase.questions;
@@ -2573,7 +2725,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     self.getDesign = function (ID) {
         $http.post("get-design", ID).success(function (data) {
             if (data.status == "ok") {
-                self.changeDesign(data.result)
+                self.changeDesign(data.result);
                 designId.id = ID; //use variable from admin later
                 self.selectView("newDesignExt");
             }
@@ -2583,18 +2735,18 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
 
     self.getID = function(){
         return designId.id;
-    }
+    };
 
     var resetValues = function(){
         // RESET VALUES
         self.currentStage = 0; 
         self.currentQuestion = 0; 
         self.stageType = self.design.type;
-        self.design.phases[0].questions[0].ans_format.values
+        self.design.phases[0].questions[0].ans_format.values;
         self.busy = false; 
         self.extraOpts = false;
         self.prevStages = false;
-    }
+    };
 
     /*
         FRONTEND FUNCTIONS
@@ -2604,7 +2756,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         if(opt == 1)self.extraOpts = !self.extraOpts;
         else if(opt == 2) self.prevStages = !self.prevStages;
         
-    }
+    };
 
     self.buildArray = function (n) {
         var a = [];
@@ -2616,40 +2768,46 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     
     self.selectQuestion = function(id){
         self.currentQuestion = id; 
-        self.num = self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values
-    }
+        self.num = self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format
+            .values;
+    };
 
     self.addQuestion = function(){
         self.design.phases[self.currentStage].questions.push(
             {
-            "q_text":"",
-            "ans_format":{
-                "values":5,
-                "l_pole":"",
-                "r_pole":"",
-                "just_required": true,
-                "min_just_length": 10
-        }})
-        self.selectQuestion(self.design.phases[self.currentStage].questions.length-1) //send to new question
-    }
+                "q_text":     "",
+                "ans_format": {
+                    "values":          5,
+                    "l_pole":          "",
+                    "r_pole":          "",
+                    "just_required":   true,
+                    "min_just_length": 10
+                }});
+        self.selectQuestion(self.design.phases[self.currentStage].questions.length-1); //send to new question
+    };
 
     self.deleteQuestion = function(index){
-        if(self.currentQuestion != null && self.design.phases[self.currentStage].questions.length != 1){
+        if (
+            (self.currentQuestion != null) &&
+            (self.design.phases[self.currentStage].questions.length != 1)
+        ){
             //change question index
             if(index == 0) self.currentQuestion = 0;
-            else if(index < self.design.phases[self.currentStage].questions.length-1) self.currentQuestion = self.currentQuestion;
+            // else if (index < self.design.phases[self.currentStage].questions.length-1)
+            //     self.currentQuestion = self.currentQuestion; //! self-assign makes no sense
             else self.currentQuestion = self.currentQuestion -1;
             self.design.phases[self.currentStage].questions.splice(index, 1);
-            self.selectQuestion(self.currentQuestion );
+            self.selectQuestion(self.currentQuestion);
         }
-    }
+    };
 
     self.selectStage = function(id){
         if(self.currentStage != id){
             self.currentStage = id;
             self.stageType = self.design.type;
-            self.currentQuestion = 0 //reset question index
-            self.num = self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values;
+            self.currentQuestion = 0; //reset question index
+            self.num = self.design.phases[self.currentStage].questions[self.currentQuestion]
+                .ans_format.values;
         }
         else {
             /*
@@ -2661,77 +2819,79 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         self.extraOpts = false;
         self.prevStages = false;
         //console.log(self.methods);
-    }
+    };
 
     self.deleteStage = function(){
         if(self.currentStage != null && self.design.phases.length != 1){
-            var index = self.currentStage
+            var index = self.currentStage;
             self.design.phases.splice(index, 1);
-            self.currentQuestion = 0 //reset question index
+            self.currentQuestion = 0; //reset question index
             self.num = null;
             self.currentStage = null;
             self.extraOpts = false;
             self.prevStages = false;
         }
-    }
+    };
 
     self.templateStage = function(type){ 
         // UNUSED
         return {
-            "mode":"individual",
-            "chat":false,
-            "anonymous":false,
-            "questions":[
+            "mode":      "individual",
+            "chat":      false,
+            "anonymous": false,
+            "questions": [
                 {
-                    "q_text":"",
-                    "ans_format":{
-                        "values":5,
-                        "l_pole":"",
-                        "r_pole":"",
-                        "just_required": false,
+                    "q_text":     "",
+                    "ans_format": {
+                        "values":          5,
+                        "l_pole":          "",
+                        "r_pole":          "",
+                        "just_required":   false,
                         "min_just_length": 8
-                }
+                    }
                 }
             ]
-        }
-    }
+        };
+    };
     
     self.copyPrevStage = function(type, prevphase){
         var phase = JSON.parse(JSON.stringify(prevphase)); //removes reference from previous object
         return {
-            "mode":phase.mode,
-            "chat":phase.chat,
-            "anonymous":phase.anonymous,
-            "questions":phase.questions,
+            "mode":               phase.mode,
+            "chat":               phase.chat,
+            "anonymous":          phase.anonymous,
+            "questions":          phase.questions,
             "grouping_algorithm": phase.grouping_algorithm,
             "prevPhasesResponse": phase.prevPhasesResponse,
-            "stdntAmount": phase.stdntAmount
-        }
-    }
+            "stdntAmount":        phase.stdntAmount
+        };
+    };
 
     self.addStage = function(){
-        var index = self.design.phases.length -1
-        var prev_phase = self.design.phases[index]
-        self.design.phases.push(self.copyPrevStage("semantic_differential", prev_phase))
-        console.log(self.design.phases)
-    }
+        var index = self.design.phases.length -1;
+        var prev_phase = self.design.phases[index];
+        self.design.phases.push(self.copyPrevStage("semantic_differential", prev_phase));
+        console.log(self.design.phases);
+    };
 
     self.getStages = function(){
-        return self.design.phases
-    }
+        return self.design.phases;
+    };
 
     self.amountOptions = function(type){
-        self.num = self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values
+        self.num = self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format
+            .values;
         if(type == "+"){
-            self.num = self.num < 9 ? self.num + 1 : 10
+            self.num = self.num < 9 ? self.num + 1 : 10;
         }
         else{
-            self.num = self.num > 2 ? self.num - 1 : 2
+            self.num = self.num > 2 ? self.num - 1 : 2;
         }
-        self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format.values = self.num
-    }
+        self.design.phases[self.currentStage].questions[self.currentQuestion].ans_format
+            .values = self.num;
+    };
 
-    self.init() //init
+    self.init(); //init
 
 });
 
@@ -2740,11 +2900,15 @@ adpp.controller("OptionsController", function ($scope, $http, Notification) {
     var self = $scope;
     self.conf = {};
     self.sesidConfig = -1;
-    self.options = [{ name: "optCom", code: "J" }, { name: "optConfLv", code: "C" }, { name: "optHint", code: "H" }];
+    self.options = [
+        { name: "optCom", code: "J" },
+        { name: "optConfLv", code: "C" },
+        { name: "optHint", code: "H" }
+    ];
 
     self.saveConfs = function () {
         var postdata = {
-            sesid: self.selectedSes.id,
+            sesid:   self.selectedSes.id,
             options: self.buildConfStr()
         };
         $http.post("update-ses-options", postdata).success(function (data) {
@@ -2790,22 +2954,22 @@ adpp.controller("DashboardRubricaController", function ($scope, $http) {
         self.alumState = null;
         self.barOpts = {
             chart: {
-                type: 'multiBarChart',
+                type:   "multiBarChart",
                 height: 320,
-                x: function x(d) {
+                x:      function x(d) {
                     return d.label;
                 },
                 y: function y(d) {
                     return d.value;
                 },
                 showControls: false,
-                showValues: false,
-                duration: 500,
-                xAxis: {
+                showValues:   false,
+                duration:     500,
+                xAxis:        {
                     showMaxMin: false
                 },
                 yAxis: {
-                    axisLabel: 'Cantidad Alumnos'
+                    axisLabel: "Cantidad Alumnos"
                 }
             }
         };
@@ -2817,11 +2981,13 @@ adpp.controller("DashboardRubricaController", function ($scope, $http) {
 });
 
 
-adpp.controller("StagesController", ["$scope", "$http", "Notification", "$uibModal", window.StagesController]);
+adpp.controller("StagesController", [
+    "$scope", "$http", "Notification", "$uibModal", window.StagesController
+]);
 
-adpp.filter('htmlExtractText', function () {
+adpp.filter("htmlExtractText", function () {
     return function (text) {
-        return text ? String(text).replace(/<[^>]+>/gm, '') : '';
+        return text ? String(text).replace(/<[^>]+>/gm, "") : "";
     };
 });
 
@@ -2831,11 +2997,8 @@ adpp.filter("trustHtml", ["$sce", function ($sce) {
     };
 }]);
 
-adpp.filter('lang', function () {
-    filt.$stateful = true;
-    return filt;
-
-    function filt(label) {
+adpp.filter("lang", function () {
+    var filt = function (label) {
         if (window.DIC == null) return;
         if (window.DIC[label]) return window.DIC[label];
         if (!window.warnDIC[label]) {
@@ -2843,7 +3006,10 @@ adpp.filter('lang', function () {
             window.warnDIC[label] = true;
         }
         return label;
-    }
+    };
+
+    filt.$stateful = true;
+    return filt;
 });
 
 var generateTeams = function generateTeams(alumArr, scFun, n, different, double) {
@@ -2900,38 +3066,34 @@ var generateTeams = function generateTeams(alumArr, scFun, n, different, double)
 
 var isDifferent = function isDifferent(type) {
     switch (type) {
-        case "performance homog":
-            return false;
-        case "performance heterg":
-            return true;
-        case "knowledgeType homog":
-            return false;
-        case "knowledgeType heterg":
-            return true;
+    case "performance homog":
+        return false;
+    case "performance heterg":
+        return true;
+    case "knowledgeType homog":
+        return false;
+    case "knowledgeType heterg":
+        return true;
     }
     return false;
 };
 
 var habMetric = function habMetric(u) {
     switch (u.aprendizaje) {
-        case "Teorico":
-            return -2;
-        case "Reflexivo":
-            return -1;
-        case "Activo":
-            return 1;
-        case "Pragmatico":
-            return 2;
+    case "Teorico":
+        return -2;
+    case "Reflexivo":
+        return -1;
+    case "Activo":
+        return 1;
+    case "Pragmatico":
+        return 2;
     }
     return 0;
 };
 
-var quillMapHandler = function quillMapHandler() {
-    alert("Mapa sólo disponible para preguntas");
-};
 
-
-adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
+adpp.controller("instituciones",["$scope","$http",function($scope,$http,Admin){
     var self = $scope;
     self.uid = [];
     self.domains =[];
@@ -2951,45 +3113,49 @@ adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
     self.user_amount = function () {
         if(self.textarea.split("\n").length == 1){
             if(self.textarea.length == 0){
-                return 0
+                return 0;
             }
             else{
-                return 1
+                return 1;
             }
             
         }
         else{
-            return self.textarea.split("\n").length
+            return self.textarea.split("\n").length;
         }
         
     };
 
     self.getuserinfo = function() {
-        var postdata = 500
-        $http({ url: "getuserinfo", method: "post",data:postdata }).success(function (data) {
+        var postdata = 500;
+        $http({ url: "getuserinfo", method: "post",data: postdata }).success(function (data) {
             self.uid = data.data[0].id;
             self.lang = data.data[0].lang;
             self.mail = data.data[0].mail;
-            self.role = data.data[0].role
-            self.username = data.data[0].name
+            self.role = data.data[0].role;
+            self.username = data.data[0].name;
         });
-    }
+    };
 
     self.getdomains = function() {
         var postdata = 404;
-        $http({ url: "getdomains", method: "post",data:postdata }).success(function (data) {
+        $http({ url: "getdomains", method: "post",data: postdata }).success(function (data) {
             self.domains = data.data[0].mailDomains;
-            self.institutionid = data.data[0].id
+            self.institutionid = data.data[0].id;
             self.nominst = data.data[0].institutionName;
-            $http({ url: "get_mail_domains", method: "post",data:self.institutionid }).success(function (data) {
-                var postdata2 = data.data
-                $http({ url: "get_same_users", method: "post", data: {postdata2} }).success(function (data) {
-                    var res = []
+            $http({
+                url: "get_mail_domains", method: "post",data: self.institutionid
+            }).success(function (data) {
+                var postdata2 = data.data;
+                $http({
+                    url: "get_same_users", method: "post", data: {postdata2}
+                }).success(function (data) {
+                    var res = [];
                     data.data.forEach(element =>{
                         
-                            res.push(element)
+                        res.push(element);
     
-                        })
+                    });
                     
                     self.users = [];
                     self.users = res;
@@ -2997,56 +3163,51 @@ adpp.controller("instituciones",["$scope",'$http',function($scope,$http,Admin){
     
                 });
 
-            })
+            });
             
 
         });
-    }
-
-
-    self.refreshUsers = function () {
-        var postdata2 = self.domains
-
-        $http({ url: "get_mail_domains", method: "post",data:self.institutionid }).success(function (data) {
-            var postdata2 = data.data
-            $http({ url: "get_same_users", method: "post", data: {postdata2} }).success(function (data) {
-                var res = []
-                data.data.forEach(element =>{
-                    
-                        res.push(element)
-
-                    })
-                
-                self.users = [];
-                self.users = res;
-                
-
-            });
-
-        })
-        
     };
 
 
+    self.refreshUsers = function () {
+        var postdata2 = self.domains;
+
+        $http({
+            url: "get_mail_domains", method: "post",data: self.institutionid
+        }).success(function (data) {
+            var postdata2 = data.data;
+            $http({
+                url: "get_same_users", method: "post", data: {postdata2}
+            }).success(function (data) {
+                var res = [];
+                data.data.forEach(element =>{
+                    
+                    res.push(element);
+
+                });
+                
+                self.users = [];
+                self.users = res;
+            });
+        });
+    };
     
     self.init();
-}])
+}]);
 
 
-adpp.controller("no_account",["$scope",'$http',function($scope,$http,Admin){
+adpp.controller("no_account",["$scope","$http",function($scope,$http,Admin){
     var self = $scope;
-    const lang = navigator.language
-    if(lang[0] == 'e' && lang[1] == 's'){
+    const lang = navigator.language;
+    if(lang[0] == "e" && lang[1] == "s"){
         self.lang = "spanish";
     }
     else{
         self.lang = "english";
     }
 
-
-
     window.DIC = "data/" + self.lang + ".json";
-
 
     self.init = function () {
         self.updateLang(self.lang);
@@ -3058,32 +3219,30 @@ adpp.controller("no_account",["$scope",'$http',function($scope,$http,Admin){
         var url = new URL(url_string);
         var rc = url.searchParams.get("rc");
         var token = url.searchParams.get("tok");
-        console.log(token)
-        $http({ url: "activate_user", method: "post",data:{token} }).success(function (data) {
+        console.log(token);
+        $http({ url: "activate_user", method: "post",data: {token} }).success(function (data) {
         });
-    }
+    };
 
     self.getcountries = function(){
         $http.get("https://restcountries.com/v3.1/all").success(function (data) {
-            var list = []
+            var list = [];
             
             for(var i = 0;i< data.length;i++){ 
-                list.push(data[i].name.common)
+                list.push(data[i].name.common);
             }
-            list.sort()
-            if(lang[0] == 'e' && lang[1] == 's'){
-                list.unshift("Elige un Pais")
+            list.sort();
+            if(lang[0] == "e" && lang[1] == "s"){
+                list.unshift("Elige un Pais");
             }
             else{
-                list.unshift("Choose Country")
+                list.unshift("Choose Country");
             }
             
             self.countries = list;
             
         });
-    }
-
-
+    };
 
     self.updateLang = function (lang) {
         $http.get("data/" + lang + ".json").success(function (data) {
@@ -3096,14 +3255,13 @@ adpp.controller("no_account",["$scope",'$http',function($scope,$http,Admin){
         self.updateLang(self.lang);
     };
 
-
-
     self.init();
+}]);
 
-}])
 
-
-adpp.controller("super_admin",["$scope",'$http',"$uibModal",function($scope,$http,$uibModal,Admin){
+adpp.controller("super_admin", ["$scope", "$http", "$uibModal", function(
+    $scope, $http, $uibModal, Admin
+){
     var self = $scope;
     self.accepted = [];
     self.pending = [];
@@ -3133,46 +3291,46 @@ adpp.controller("super_admin",["$scope",'$http',"$uibModal",function($scope,$htt
         self.get_temporary_institutions();
         self.get_institutions();
         self.get_institution_info();
-        self.getdomains()
+        self.getdomains();
     };
 
     self.get_temporary_institutions = function() {
-        var postdata = 500
-        $http({ url: "get_temporary_institutions", method: "post",data:postdata }).success(function (data) {
+        var postdata = 500;
+        $http({
+            url: "get_temporary_institutions", method: "post",data: postdata
+        }).success(function (data) {
             var inst = [];
             if(data != null && data != undefined){
                 for(var i = 0;i < data.data.rows.length ;i++){
-                    inst.push(data.data.rows[i])
+                    inst.push(data.data.rows[i]);
                 }
                 self.institutions = inst;
             }
 
         });
-    }
+    };
 
     self.get_institutions = function() {
-        var postdata = 500
-        $http({ url: "get_institutions", method: "post",data:postdata }).success(function (data) {
+        var postdata = 500;
+        $http({ url: "get_institutions", method: "post",data: postdata }).success(function (data) {
             var inst = [];
             if(data != null && data != undefined){
                 for(var i = 0;i < data.data.rows.length ;i++){
-                    inst.push(data.data.rows[i])
+                    inst.push(data.data.rows[i]);
                 }
                 self.accepted_institutions = inst;
             }
 
         });
-    }
-
-
-
-
+    };
 
     self.get_institution_info = function () {
-        var inst_id = self.inst_id
+        var inst_id = self.inst_id;
         
         if(self.inst_id != 0){
-            $http({ url: "get_institution_info", method: "post", data: {inst_id} }).success(function (data) {
+            $http({
+                url: "get_institution_info", method: "post", data: {inst_id}
+            }).success(function (data) {
 
                 if(data != null && data != undefined && data.data.rows.length > 0){
 
@@ -3182,25 +3340,26 @@ adpp.controller("super_admin",["$scope",'$http',"$uibModal",function($scope,$htt
                     self.admin_position = data.data.rows[0].position;
 
 
-                    self.instutionid = data.data.rows[0].id
+                    self.instutionid = data.data.rows[0].id;
                     var userid = self.admin_id;
-                    $http({ url: "get_admin_info", method: "post", data: {userid} }).success(function (data) {
-                        if(data != null && data != undefined && data.data.rows.length > 0){
+                    $http({
+                        url: "get_admin_info", method: "post", data: {userid}
+                    }).success(function (data) {
+                        if (data != null && data != undefined && data.data.rows.length > 0) {
                             self.admin_name = data.data.rows[0].name;
                             self.admin_mail = data.data.rows[0].mail;
-        
                         }
-
-
                     });
                     var institutuinid = self.instutionid;
-                    $http({ url: "get_institution_domains", method: "post", data: {institutuinid} }).success(function (data) {
+                    $http({
+                        url: "get_institution_domains", method: "post", data: {institutuinid}
+                    }).success(function (data) {
                         if(data != null && data != undefined && data.data.rows.length > 0){
                             
-                            var lista = ""
+                            var lista = "";
 
                             for(var i = 0;i < data.data.rows.length;i++){
-                                lista += data.data.rows[i].domain_name+"\n"
+                                lista += data.data.rows[i].domain_name+"\n";
                             }
                             self.inst_domains = lista;        
                         }
@@ -3209,8 +3368,9 @@ adpp.controller("super_admin",["$scope",'$http',"$uibModal",function($scope,$htt
                     });
                 }
                 if(self.inst_id != 0){
-                    $http({ url: "get_temp_institution_info", method: "post", data: {inst_id} }).success(function (data) {
-        
+                    $http({
+                        url: "get_temp_institution_info", method: "post", data: {inst_id}
+                    }).success(function (data) {
                         if(data != null && data != undefined && data.data.rows.length > 0){
                             self.temp_intitution_name = data.data.rows[0].institution_name;
                             self.temp_intitution_country = data.data.rows[0].country;
@@ -3219,14 +3379,15 @@ adpp.controller("super_admin",["$scope",'$http',"$uibModal",function($scope,$htt
                             var domains = data.data.rows[0].mail_domains.split(",");
                             var lista = "";
                             for (var i = 0; i < domains.length;i++){
-                                lista+=domains[i]+"\n"
-            
+                                lista += domains[i] + "\n";
                             }
                             self.temp_inst_domains = lista;
-                            self.temp_instutionid = data.data.rows[0].id
+                            self.temp_instutionid = data.data.rows[0].id;
                             var userid = self.temp_admin_id;
-                            $http({ url: "get_temp_admin_info", method: "post", data: {userid} }).success(function (data) {
-                                if(data != null){
+                            $http({
+                                url: "get_temp_admin_info", method: "post", data: {userid}
+                            }).success(function (data) {
+                                if (data != null) {
                                     self.temp_admin_name = data.data.rows[0].name;
                                     self.temp_admin_mail = data.data.rows[0].mail;
                 
@@ -3242,59 +3403,83 @@ adpp.controller("super_admin",["$scope",'$http',"$uibModal",function($scope,$htt
 
 
     self.acceptmodal = function () {
+        //! Avoid HTML in JS
         $uibModal.open({
-            template: '<div style="height: fit-content;"><div class="modal-header"><h4>Alerta</h4></div><div style="height: 75px; class="modal-body">' +
-                '<p>\tEsta seguro que desea aceptar a esta institucion?</p>' +
-                '<form action="accept_institution" method="POST">'+
-                '<input  name="userid" type="hidden" value="'+self.temp_admin_id+'" class="form-control profile-input"> <input  name="institutionid" type="hidden" value="'+self.temp_instutionid+'" class="form-control profile-input">'+
-                '<button class="btn-primary btn modal-buttons"> Aceptar</button> </form></div> </div>'
+            template: `
+            <div style="height: fit-content;">
+                <div class="modal-header">
+                    <h4>Alerta</h4>
+                </div>
+                <div style="height: 75px;" class="modal-body">
+                    <p>¿Está seguro que desea aceptar a esta institución?</p>
+                    <form action="accept_institution" method="POST">
+                        <input
+                            name="userid" type="hidden" value="${self.temp_admin_id}"
+                            class="form-control profile-input">
+                        <input name="institutionid" type="hidden" value="${self.temp_instutionid}
+                            class="form-control profile-input">
+                        <button class="btn-primary btn modal-buttons">
+                            Aceptar
+                        </button>
+                </form>
+                </div>
+            </div>
+            `
         });
 
-    }
+    };
 
     self.rejectmodal= function () {
+        //! Avoid HTML in JS
         $uibModal.open({
-            template: '<div style="height: fit-content;"><div class="modal-header"><h4>Alerta</h4></div><div style="height: 75px; class="modal-body">' +
-                '<p>\tEsta seguro que desea rechazar a esta institucion?</p>'+
-                '<form action="reject_institution" method="POST"> '+
-                '<input  name="userid" type="hidden" value="'+self.temp_admin_id+'" class="form-control profile-input"> <input  name="institutionid" type="hidden" value="'+self.temp_instutionid+'" class="form-control profile-input">'+
-                '<button class="btn-primary btn modal-buttons" style="background-color: red;"> Rechazar</button> </form> </div> </div>'
+            template: `
+            <div style="height: fit-content;">
+                <div class="modal-header">
+                    <h4>Alerta</h4>
+                </div>
+                    <div style="height: 75px;" class="modal-body">
+                    <p>¿Está seguro que desea rechazar a esta institución?</p>
+                    <form action="reject_institution" method="POST">
+                        <input name="userid" type="hidden" value="${self.temp_admin_id}"
+                            class="form-control profile-input">
+                        <input name="institutionid" type="hidden" value="${self.temp_instutionid}"
+                            class="form-control profile-input">
+                        <button class="btn-primary btn modal-buttons"
+                            style="background-color: red;">
+                            Rechazar
+                        </button>
+                    </form>
+                </div>
+            </div>
+            `
         });
-    }
+    };
 
     self.getdomains = function() {
         var postdata = 404;
-        $http({ url: "get_all_users", method: "post",data:postdata }).success(function (data) {
-            var res = []
+        $http({ url: "get_all_users", method: "post",data: postdata }).success(function (data) {
+            var res = [];
             data.data.rows.forEach(element =>{       
-                res.push(element)
-            })
+                res.push(element);
+            });
             self.users = [];
             self.users = res;
             
 
         });
-    }
+    };
     self.refreshUsers = function () {
-        var postdata2 = self.domains
+        var postdata2 = self.domains;
 
-        $http({ url: "get_all_users", method: "post",data:postdata }).success(function (data) {
-            var res = []
+        $http({ url: "get_all_users", method: "post",data: postdata }).success(function (data) {
+            var res = [];
             data.data.forEach(element =>{       
-                res.push(element)
-            })
+                res.push(element);
+            });
             self.users = [];
             self.users = res;
-            
-
         });
-        
     };
 
-
-
-
-
-
     self.init();
-}])
+}]);

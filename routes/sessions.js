@@ -1,15 +1,17 @@
 "use strict";
 
-let express = require('express');
+let express = require("express");
 let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
-let pg = require('pg');
+let pg = require("pg");
 let middleware = require("../midleware/validate-session");
 
 var DB = null;
-function getDBInstance(dbcon){
-    if(DB == null) {
+
+
+var getDBInstance = function(dbcon) {
+    if (DB == null) {
         DB = new pg.Client(dbcon);
         DB.connect();
         DB.on("error", function(err){
@@ -19,7 +21,7 @@ function getDBInstance(dbcon){
         return DB;
     }
     return DB;
-}
+};
 
 
 router.get("/seslist", (req, res) => {
@@ -34,29 +36,78 @@ router.get("/seslist", (req, res) => {
         res.redirect(".");
 });
 
+
 router.post("/get-session-list", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select * from (select distinct s.id, s.name, s.descr, s.status, s.type, s.time, s.code, s.options, s.archived, " +
-        "s.current_stage, (s.id in (select sesid from teams)) as grouped, (select count(*) from report_pair where sesid = s.id) " +
-        "as paired, sr.stime from sessions as s left outer join status_record as sr on sr.sesid = s.id and s.status = sr.status, " +
-        "sesusers as su, users as u where su.uid = $1 and (options like 'X%') is not true and u.id = su.uid and su.sesid = s.id) " +
-        "as v order by v.time desc",
+    sql:   `
+    SELECT *
+    FROM (
+        SELECT DISTINCT s.id,
+            s.name,
+            s.descr,
+            s.status,
+            s.type,
+            s.time,
+            s.code,
+            s.options,
+            s.archived,
+            s.current_stage,
+            (
+                s.id in (SELECT sesid FROM teams)
+            ) AS grouped,
+            (
+                SELECT count(*)
+                FROM report_pair
+                WHERE sesid = s.id
+            ) AS paired,
+            sr.stime
+        FROM sessions AS s
+        LEFT OUTER JOIN status_record AS sr
+        ON sr.sesid = s.id
+            AND s.status = sr.status,
+        sesusers AS su,
+        users AS u
+        WHERE su.uid = $1
+            AND (OPTIONS like 'X%') IS NOT TRUE
+            AND u.id = su.uid
+            AND su.sesid = s.id
+    ) AS v
+    ORDER BY v.time DESC
+    `,
     sesReqData: ["uid"],
-    sqlParams: [rpg.param("ses", "uid")]
+    sqlParams:  [rpg.param("ses", "uid")]
 }));
+
 
 router.post("/add-session", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "with rows as (insert into sessions(name,descr,creator,time,status,type) values ($1,$2,$3,now(),1,$4) returning id)" +
-        " insert into sesusers(sesid,uid) select id, $5 from rows",
-    sesReqData: ["uid"],
-    postReqData: ["name","type"],
-    sqlParams: [rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("ses", "uid"), rpg.param("post","type"), rpg.param("ses", "uid")],
+    sql:   `
+    WITH ROWS AS (
+        INSERT INTO sessions(name, descr, creator, TIME, status, TYPE)
+        VALUES ($1,
+            $2,
+            $3,
+            now(),
+            1,
+            $4
+        ) RETURNING id
+    )
+    INSERT INTO sesusers(sesid, UID)
+    SELECT id,
+        $5
+    FROM ROWS
+    `,
+    sesReqData:  ["uid"],
+    postReqData: ["name", "type"],
+    sqlParams:   [
+        rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("ses", "uid"),
+        rpg.param("post","type"), rpg.param("ses", "uid")
+    ],
     onStart: (ses, data, calc) => {
         if (ses.role != "P") {
-            console.log("ERR: Solo profesor puede crear sesiones.");
-            console.log(ses);
-            return "select $1, $2, $3, $4, $5"
+            console.warn("Sólo profesor puede crear sesiones");
+            console.warn(ses);
+            return "SELECT $1, $2, $3, $4, $5";
         }
     },
     onEnd: (req, res) => {
@@ -64,76 +115,116 @@ router.post("/add-session", rpg.execSQL({
     }
 }));
 
+
 router.post("/add-session-activity", (req, res) => {
     var uid = req.session.uid;
     var name =req.body.name;
     var descr = req.body.descr;
     var type = req.body.type;
-    var values = `'${name}','${descr}',${uid}, now(), 1,'${type}'`
-    var sql = "WITH rows as (INSERT INTO sessions(name, descr, creator, time, status, type) VALUES("+values+") "+
-                `returning id) insert into sesusers(sesid,uid) select id, ${uid} from rows; SELECT max(id) FROM sessions WHERE creator = ${uid}`;
+    var sql = `
+    WITH ROWS AS (
+        INSERT INTO sessions(name, descr, creator, TIME, status, TYPE)
+        VALUES (
+            '${name}', '${descr}', ${uid}, now(), 1, '${type}'
+        )
+        RETURNING id
+    )
+    INSERT INTO sesusers(sesid, UID)
+    SELECT id, ${uid}
+    FROM ROWS;
+    SELECT max(id)
+    FROM sessions
+    WHERE creator = ${uid}
+    `;
     var db = getDBInstance(pass.dbcon);
     var qry;
     var result;
     qry = db.query(sql,(err,res) =>{
         if(res != null) result = res.rows[0].max;
-        });
+    });
     qry.on("end", function () {
-        res.json({status:200, id:result});
+        res.json({status: 200, id: result});
     });
     qry.on("error", function(err){
-        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
-        console.log(err);
-        res.json({status:400, });
+        console.error(`Fatal error on the SQL query "${sql}"`);
+        console.error(err);
+        res.json({status: 400, });
 
     });
 });
+
 
 router.post("/add-activity", (req, res) => {
-var sesid =req.body.sesid;
-var dsgnid = req.body.dsgnid;
-var sql = `INSERT INTO ACTIVITY (design, session) VALUES (${dsgnid}, ${sesid}); UPDATE designs set locked = true WHERE id = ${dsgnid}; 
-SELECT design FROM DESIGNS WHERE id = ${dsgnid};`
-var db = getDBInstance(pass.dbcon);
-var qry;
-var result;
-qry = db.query(sql,(err,res) =>{
-    if(res!= null) result = res.rows[0].design
+    var sesid =req.body.sesid;
+    var dsgnid = req.body.dsgnid;
+    var sql = `
+    INSERT INTO ACTIVITY (design, SESSION)
+    VALUES (${dsgnid}, ${sesid});
+
+    UPDATE designs
+    SET locked = TRUE
+    WHERE id = ${dsgnid};
+
+    SELECT design
+    FROM DESIGNS
+    WHERE id = ${dsgnid};
+    `;
+    var db = getDBInstance(pass.dbcon);
+    var qry;
+    var result;
+    qry = db.query(sql, (err,res) =>{
+        if(res!= null) result = res.rows[0].design;
     });
-qry.on("end", function () {
-    res.json({status:200, "result":result});
+    qry.on("end", function () {
+        res.json({status: 200, "result": result});
     });
-qry.on("error", function(err){
-    console.log("THERE WAS AN ERROR ON THE SQL QUERY");
-    console.log(err);
-    res.json({status:400, });
+    qry.on("error", function(err){
+        console.error(`Fatal error on the SQL query "${sql}"`);
+        console.error(err);
+        res.json({status: 400, });
 
     });
 });
+
 
 router.post("/get-activities", (req, res) => {
     var uid = req.session.uid;
-    var sql = `select activity.id, activity.session, sessions.creator,
-    sessions.name,sessions.descr, sessions.time, sessions.code, sessions.archived, designs.design, sessions.status, sessions.type, designs.id as dsgnid
-    FROM activity inner join sessions on activity.session = sessions.id inner join designs on activity.design = designs.id WHERE sessions.creator = ${uid};`
+    var sql = `
+    SELECT activity.id,
+        activity.session,
+        sessions.creator,
+        sessions.name,
+        sessions.descr,
+        sessions.time,
+        sessions.code,
+        sessions.archived,
+        designs.design,
+        sessions.status,
+        sessions.type,
+        designs.id AS dsgnid
+    FROM activity
+    INNER JOIN sessions
+    ON activity.session = sessions.id
+    INNER JOIN designs
+    ON activity.design = designs.id
+    WHERE sessions.creator = ${uid};
+    `;
     var db = getDBInstance(pass.dbcon);
     var qry;
     var result;
     qry = db.query(sql,(err,res) =>{
-        if(res != null)
+        if (res != null)
             result = res.rows;
-        });
+    });
     qry.on("end", function () {
-        res.json({status:200, activities: result});
-        });
+        res.json({status: 200, activities: result});
+    });
     qry.on("error", function(err){
-        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
-        console.log(err);
-        res.json({status:400, });
-    
-        });
+        console.error(`Fatal error on the SQL query "${sql}"`);
+        console.error(err);
+        res.json({status: 400, });
+    });
 });
-
 
 
 router.get("/admin", (req, res) => {
@@ -143,6 +234,7 @@ router.get("/admin", (req, res) => {
         res.redirect(".");
 });
 
+
 //TEST ROUTE DELETE LATER
 router.get("/home", function(req,res){
     if (req.session.role == "P" || req.session.role == "I" || req.session.role == "S")
@@ -151,20 +243,38 @@ router.get("/home", function(req,res){
         res.redirect(".");
 });
 
+
 router.post("/update-session", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "update sessions set name = $1, descr = $2 where id = $3",
+    sql:   `
+    UPDATE sessions
+    SET name = $1,
+        descr = $2
+    WHERE id = $3
+    `,
     sesReqData: ["name", "descr", "id"],
-    sqlParams: [rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("post", "id")]
+    sqlParams:  [
+        rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("post", "id")
+    ]
 }));
 
+
 router.post("/upload-file", (req, res) => {
-    if (req.session.uid != null && req.body.title != null && req.body.title != "" && req.files.pdf != null && req.files.pdf.mimetype == "application/pdf" && req.body.sesid != null) {
-        // console.log(req.body);
+    if (
+        req.session.uid != null && req.body.title != null && req.body.title != "" &&
+        req.files.pdf != null && req.files.pdf.mimetype == "application/pdf" &&
+        req.body.sesid != null
+    ) {
         rpg.execSQL({
             dbcon: pass.dbcon,
-            sql: "insert into documents(title,path,sesid,uploader) values ($1,$2,$3,$4)",
-            sqlParams: [rpg.param("post", "title"), rpg.param("calc", "path"), rpg.param("post", "sesid"), rpg.param("ses", "uid")],
+            sql:   `
+            INSERT INTO documents(title, PATH, sesid, uploader)
+            VALUES ($1,$2,$3,$4)
+            `,
+            sqlParams: [
+                rpg.param("post", "title"), rpg.param("calc", "path"),
+                rpg.param("post", "sesid"), rpg.param("ses", "uid")
+            ],
             onStart: (ses, data, calc) => {
                 calc.path = "uploads" + req.files.pdf.file.split("uploads")[1];
             },
@@ -178,11 +288,19 @@ router.post("/upload-file", (req, res) => {
 
 
 router.post("/upload-design-file", (req, res) => {
-    if (req.session.uid != null  && req.files.pdf != null && req.files.pdf.mimetype == "application/pdf" ) {
+    if (
+        req.session.uid != null  && req.files.pdf != null
+        && req.files.pdf.mimetype == "application/pdf"
+    ) {
         rpg.execSQL({
             dbcon: pass.dbcon,
-            sql: "insert into designs_documents(path,dsgnid,uploader) values ($1,$2,$3)",
-            sqlParams: [rpg.param("calc", "path"), rpg.param("post", "dsgnid"), rpg.param("ses", "uid")],
+            sql:   `
+            INSERT INTO designs_documents(PATH, dsgnid, uploader)
+            VALUES ($1,$2,$3)
+            `,
+            sqlParams: [
+                rpg.param("calc", "path"), rpg.param("post", "dsgnid"), rpg.param("ses", "uid")
+            ],
             onStart: (ses, data, calc) => {
                 calc.path = "uploads" + req.files.pdf.file.split("uploads")[1];
             },
@@ -197,16 +315,22 @@ router.post("/upload-design-file", (req, res) => {
 
 router.post("/delete-design-document", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "update designs_documents set active = false where id = $1",
+    sql:   `
+    UPDATE designs_documents
+    SET active = FALSE
+    WHERE id = $1
+    `,
     postReqData: ["dsgnid"],
-    sqlParams: [rpg.param("post", "dsgnid")]
+    sqlParams:   [rpg.param("post", "dsgnid")]
 }));
 
 
 router.post("/upload-design", (req, res) => {
-    var jsonBody = "'"+JSON.stringify(req.body)+"'";
     var id = req.session.uid;
-    var sql = "INSERT INTO DESIGNS(creator, design) VALUES("+id+","+ jsonBody+")";
+    var sql = `
+    INSERT INTO DESIGNS(creator, design)
+    VALUES (${id}, '${JSON.stringify(req.body)}')
+    `;
     var sql2 = "SELECT max(id) FROM DESIGNS WHERE creator = "+id;
     var db = getDBInstance(pass.dbcon);
     var qry;
@@ -218,23 +342,27 @@ router.post("/upload-design", (req, res) => {
             if(res!= null){
                 result = res.rows[0].max;
             }
-            });
-            qry2.on("end", function () {
-                res.end('{"status":"ok", "id":'+result+'}');   
-            });
+        });
+        qry2.on("end", function () {
+            res.end('{"status":"ok", "id":'+result+"}");   
+        });
             
     });
     qry.on("error", function(err){
-        //console.log("THERE WAS AN ERROR ON THE SQL QUERY");
-        console.log(err);
+        console.error(err);
         res.end('{"status":"err"}');
     });
 });
 
+
 router.post("/get-design", (req, res) => {
-    var uid = req.session.uid;
+    // var uid = req.session.uid;
     var id = req.body;
-    var sql = "SELECT * FROM DESIGNS WHERE id = "+id;
+    var sql = `
+    SELECT *
+    FROM DESIGNS
+    WHERE id = ${id}
+    `;
     var db = getDBInstance(pass.dbcon);
     var qry;
     var result;
@@ -242,24 +370,28 @@ router.post("/get-design", (req, res) => {
         if(res != null){
             result = JSON.stringify(res.rows[0].design);   
         }
-        });
+    });
     qry.on("end", function () {
-        //console.log("SQL QUERY WAS OK");
-        res.end('{"status":"ok", "result":'+result+'}');
+        res.end('{"status":"ok", "result":'+result+"}");
     });
     qry.on("error", function(err){
-        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
-        console.log(err);
+        console.error(`Fatal error on the SQL query "${sql}"`);
+        console.error(err);
         res.end('{"status":"err"}');
     });
 });
 
+
 router.get("/get-user-designs", (req, res) => {
     var uid = req.session.uid;
-    var sql = "SELECT * FROM DESIGNS WHERE creator = "+uid;
+    var sql = `
+    SELECT *
+    FROM DESIGNS
+    WHERE creator = ${uid}
+    `;
     var db = getDBInstance(pass.dbcon);
     var qry;
-    var result = []
+    var result = [];
     qry = db.query(sql,(err,res) =>{
         if(res != null){
             for (var i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
@@ -267,448 +399,800 @@ router.get("/get-user-designs", (req, res) => {
             for (var i=0; i<result.length;i++) result[i].public= res.rows[i].public; //add id to to design
             for (var i=0; i<result.length;i++) result[i].locked= res.rows[i].locked; //add id to to design
         }
-        });
+    });
     qry.on("end", function () {
-        res.json({"status":"ok", "result":result});
+        res.json({"status": "ok", "result": result});
     });
     qry.on("error", function(err){
-        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
-        console.log(err);
+        console.error(`Fatal error on the SQL query "${sql}"`);
+        console.error(err);
         res.end('{"status":"err"}');
     });
 });
 
 router.get("/get-public-designs", (req, res) => {
     var uid = req.session.uid;
-    var sql = "SELECT * FROM DESIGNS WHERE public = true and creator != "+uid;
+    var sql = `
+    SELECT *
+    FROM DESIGNS
+    WHERE public = true
+        AND creator != ${uid}
+    `;
     var db = getDBInstance(pass.dbcon);
     var qry;
-    var result = []
+    var result = [];
     qry = db.query(sql,(err,res) =>{
         if(res != null){
             for (var i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
             for (var i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
         }
-        });
+    });
     qry.on("end", function () {
-        res.json({"status":"ok", "result":result});
+        res.json({"status": "ok", "result": result});
     });
     qry.on("error", function(err){
-        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
-        console.log(err);
+        console.error(`Fatal error on the SQL query "${sql}"`);
+        console.error(err);
         res.end('{"status":"err"}');
     });
 });
 
 router.post("/design-public", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "UPDATE DESIGNS SET public = NOT public WHERE id = $1;",
+    sql:   `
+    UPDATE DESIGNS
+    SET PUBLIC = NOT PUBLIC
+    WHERE id = $1;
+    `,
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "dsgnid")]
+    sqlParams:   [rpg.param("post", "dsgnid")]
 }));
 
 router.post("/design-lock", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "UPDATE DESIGNS SET locked = NOT locked WHERE id = $1;",
+    sql:   `
+    UPDATE DESIGNS
+    SET locked = NOT locked
+    WHERE id = $1;
+    `,
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "dsgnid")]
+    sqlParams:   [rpg.param("post", "dsgnid")]
 }));
 
 
 router.post("/update-design", (req, res) => {
-    var jsonBody = "'"+JSON.stringify(req.body.design)+"'";
     var uid = req.session.uid;
     var id = req.body.id;
-    var sql = "UPDATE DESIGNS SET design ="+jsonBody+ " WHERE creator ="+uid+" AND id ="+id+"";
+    var sql = `
+    UPDATE DESIGNS
+    SET design = '${JSON.stringify(req.body.design)}'
+    WHERE creator = ${uid}
+        AND id = ${id}
+    `;
     var db = getDBInstance(pass.dbcon);
     var qry;
     qry = db.query(sql);
     qry.on("end", function () {
-        console.log("UPDATED CORRECTLY");
         res.end('{"status":"ok"}');
     });
     qry.on("error", function(err){
-        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
-        console.log(err);
+        console.error(`Fatal error on the SQL query "${sql}"`);
+        console.error(err);
         res.end('{"status":"err"}');
     });
 });
 
+
 router.post("/delete-design", (req, res) => {
     var uid = req.session.uid;
     var id = req.body.id;
-    //console.log("DESIGN ID:",id)
-    var sql = "DELETE FROM DESIGNS WHERE creator ="+uid+" AND id ="+id+"";
-    //console.log(sql)
+    var sql = `
+    DELETE FROM DESIGNS
+    WHERE creator = ${uid}
+        AND id = ${id}
+    `;
     var db = getDBInstance(pass.dbcon);
     var qry;
     qry = db.query(sql);
     qry.on("end", function () {
-        console.log("DELETED CORRECTLY");
         res.end('{"status":"ok"}');
     });
     qry.on("error", function(err){
-        console.log("THERE WAS AN ERROR ON THE SQL QUERY");
-        console.log(err);
+        console.error(`Fatal error on the SQL query "${sql}"`);
+        console.error(err);
         res.end('{"status":"err"}');
     });
 });
 
 router.post("/designs-documents", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select id, path from designs_documents where dsgnid = $1 and active = true",
+    sql:   `
+    SELECT id,
+        PATH
+    FROM designs_documents
+    WHERE dsgnid = $1
+        AND active = TRUE
+    `,
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "dsgnid")]
+    sqlParams:   [rpg.param("post", "dsgnid")]
 }));
 
 
 //############################################
 router.post("/documents-session", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select id, title, path from documents where sesid = $1 and active = true",
+    sql:   `
+    SELECT id,
+        title,
+        PATH
+    FROM documents
+    WHERE sesid = $1
+        AND active = TRUE
+    `,
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "sesid")]
 }));
 
 router.post("/questions-session", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select id, content, options, answer, comment, other, textid, plugin_data from questions where sesid = $1 order by id asc",
+    sql:   `
+    SELECT id,
+        content,
+        OPTIONS,
+        answer,
+        COMMENT,
+        other,
+        textid,
+        plugin_data
+    FROM questions
+    WHERE sesid = $1
+    ORDER BY id ASC
+    `,
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "sesid")]
 }));
+
 
 router.post("/get-new-users", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select id, name, mail from users where id not in (select u.id from users as u, sesusers as su where u.id = su.uid and su.sesid = $1)",
+    sql:   `
+    SELECT id,
+        name,
+        mail
+    FROM users
+    WHERE id NOT IN (
+        SELECT u.id
+        FROM users AS u,
+            sesusers AS su
+        WHERE u.id = su.uid
+            AND su.sesid = $1
+    )
+    `,
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "sesid")]
 }));
 
 router.post("/get-ses-users", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select u.id, u.name, u.mail, u.aprendizaje, u.role, su.device from users as u, sesusers as su where u.id = su.uid and su.sesid = $1 order by u.role desc",
+    sql:   `
+    SELECT u.id,
+        u.name,
+        u.mail,
+        u.aprendizaje,
+        u.role,
+        su.device
+    FROM users AS u,
+        sesusers AS su
+    WHERE u.id = su.uid
+        AND su.sesid = $1
+    ORDER BY u.role DESC
+    `,
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "sesid")]
 }));
 
 router.post("/add-ses-users", (req, res) => {
-    let sql = "insert into sesusers(uid,sesid) values ";
+    let sql = `
+    INSERT INTO sesusers(UID, sesid)
+    VALUES
+    `;
     req.body.users.forEach((uid) => {
         if (!isNaN(uid))
-            sql += "(" + uid + "," + req.body.sesid + "), ";
+            sql += `(${uid},${req.body.sesid}), `;
     });
-    sql = sql.substring(0,sql.length-2);
+    sql = sql.substring(0, sql.length - 2); // removing trailing comma
     rpg.execSQL({
         dbcon: pass.dbcon,
-        sql: sql
+        sql:   sql
     })(req, res);
 });
 
 router.post("/get-all-users", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select u.id, u.name, u.mail, u.rut, u.role from users as u",
+    sql:   `
+    SELECT u.id,
+        u.name,
+        u.mail,
+        u.rut,
+        u.role
+    FROM users AS u
+    `,
     sqlParams: [],
-    onStart: (ses, data, calc) => {
-        if (ses.role != "S") return "select 1";
+    onStart:   (ses, data, calc) => {
+        if (ses.role != "S") return "SELECT 1";
     },
 }));
 
 router.post("/convert-prof", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "update users set role = 'P' where id = $1" ,
+    sql:   `
+    UPDATE users
+    SET ROLE = 'P'
+    WHERE id = $1
+    `,
     postReqData: ["uid"],
-    sqlParams: [rpg.param("post", "uid")],
-    onStart: (ses, data, calc) => {
-        if (ses.role != "S") return "select $1";
+    sqlParams:   [rpg.param("post", "uid")],
+    onStart:     (ses, data, calc) => {
+        if (ses.role != "S") return "SELECT $1";
     },
 }));
 
 router.post("/remove-prof", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "update users set role = 'R' where id = $1" ,
+    sql:   `
+    UPDATE users
+    SET ROLE = 'R'
+    WHERE id = $1
+    `,
     postReqData: ["uid"],
-    sqlParams: [rpg.param("post", "uid")],
-    onStart: (ses, data, calc) => {
-        if (ses.role != "S") return "select $1";
+    sqlParams:   [rpg.param("post", "uid")],
+    onStart:     (ses, data, calc) => {
+        if (ses.role != "S") return "SELECT $1";
     },
 }));
 
 router.post("/get-question-text", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select id, title, content from question_text where sesid = $1",
+    sql:   `
+    SELECT id,
+        title,
+        content
+    FROM question_text
+    WHERE sesid = $1
+    `,
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "sesid")]
 }));
 
 router.post("/delete-ses-user", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "delete from sesusers where sesid = $1 and uid = $2",
+    sql:   `
+    DELETE
+    FROM sesusers
+    WHERE sesid = $1
+        AND UID = $2
+    `,
     postReqData: ["sesid", "uid"],
-    sqlParams: [rpg.param("post", "sesid"), rpg.param("post", "uid")]
+    sqlParams:   [rpg.param("post", "sesid"), rpg.param("post", "uid")]
 }));
 
 
 router.post("/get-selection-comment", rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: "select answer, comment, confidence from selection where uid = $1 and qid = $2 and iteration = $3",
+    sql:   `
+    SELECT answer,
+        COMMENT,
+        confidence
+    FROM selection
+    WHERE UID = $1
+        AND qid = $2
+        AND iteration = $3
+    `,
     postReqData: ["qid", "uid", "iteration"],
-    sqlParams: [rpg.param("post", "uid"), rpg.param("post", "qid"), rpg.param("post", "iteration")]
+    sqlParams:   [
+        rpg.param("post", "uid"), rpg.param("post", "qid"), rpg.param("post", "iteration")
+    ]
 }));
 
 
 router.post("/get-selection-team-comment", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select s.answer, s.comment, s.confidence, u.name as uname from selection as s inner join teamusers as tu on tu.uid = s.uid " +
-        "inner join users as u on u.id = s.uid where tu.tmid = $1 and s.qid = $2 and iteration = 3",
+    sql:   `
+    SELECT s.answer,
+        s.comment,
+        s.confidence,
+        u.name AS uname
+    FROM selection AS s
+    INNER JOIN teamusers AS tu
+    ON tu.uid = s.uid
+    INNER JOIN users AS u
+    ON u.id = s.uid
+    WHERE tu.tmid = $1
+        AND s.qid = $2
+        AND iteration = 3
+    `,
     postReqData: ["qid", "tmid"],
-    sqlParams: [rpg.param("post", "tmid"), rpg.param("post", "qid")]
+    sqlParams:   [rpg.param("post", "tmid"), rpg.param("post", "qid")]
 }));
 
 router.post("/semantic-documents", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select id, title, content from semantic_document where sesid = $1 order by orden asc",
+    sql:   `
+    SELECT id,
+        title,
+        content
+    FROM semantic_document
+    WHERE sesid = $1
+    ORDER BY orden ASC
+    `,
     postReqData: ["sesid"],
-    sqlParams: [rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "sesid")]
 }));
 
 router.post("/get-semantic-documents", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select id, title, content from semantic_document where sesid = $1 order by orden asc",
+    sql:   `
+    SELECT id,
+        title,
+        content
+    FROM semantic_document
+    WHERE sesid = $1
+    ORDER BY orden ASC
+    `,
     sesReqData: ["ses"],
-    sqlParams: [rpg.param("ses", "ses")]
+    sqlParams:  [rpg.param("ses", "ses")]
 }));
 
 
 router.post("/add-semantic-unit", rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: "insert into semantic_unit(sentences,docs,comment,uid,sesid,iteration) values ($1,$2,$3,$4,$5,$6) returning id",
-    postReqData: ["comment","sentences","docs","iteration"],
-    sesReqData: ["uid","ses"],
-    sqlParams: [rpg.param("post", "sentences"), rpg.param("post", "docs"), rpg.param("post", "comment"),
-        rpg.param("ses", "uid"), rpg.param("ses","ses"), rpg.param("post","iteration")]
+    sql:   `
+    INSERT INTO semantic_unit(sentences, docs, COMMENT, UID, sesid, iteration)
+    VALUES ($1,$2,$3,$4,$5,$6)
+    RETURNING id
+    `,
+    postReqData: ["comment", "sentences", "docs", "iteration"],
+    sesReqData:  ["uid", "ses"],
+    sqlParams:   [
+        rpg.param("post", "sentences"), rpg.param("post", "docs"), rpg.param("post", "comment"),
+        rpg.param("ses", "uid"), rpg.param("ses", "ses"), rpg.param("post", "iteration")
+    ]
 }));
 
 router.post("/add-sync-semantic-unit", rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: "insert into semantic_unit(sentences,docs,comment,uid,sesid,iteration) values ($1,$2,$3,$4,$5,$6) returning id",
-    postReqData: ["comment","sentences","docs","iteration","uidoriginal"],
-    sesReqData: ["uid","ses"],
-    sqlParams: [rpg.param("post", "sentences"), rpg.param("post", "docs"), rpg.param("post", "comment"),
-        rpg.param("post", "uidoriginal"), rpg.param("ses","ses"), rpg.param("post","iteration")]
+    sql:   `
+    INSERT INTO semantic_unit(sentences, docs, COMMENT, UID, sesid, iteration)
+    VALUES ($1,$2,$3,$4,$5,$6)
+    RETURNING id
+    `,
+    postReqData: ["comment", "sentences", "docs", "iteration", "uidoriginal"],
+    sesReqData:  ["uid", "ses"],
+    sqlParams:   [
+        rpg.param("post", "sentences"), rpg.param("post", "docs"), rpg.param("post", "comment"),
+        rpg.param("post", "uidoriginal"), rpg.param("ses", "ses"), rpg.param("post", "iteration")
+    ]
 }));
 
 
 router.post("/update-semantic-unit", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "update semantic_unit set (sentences,comment,docs) = ($1,$2,$3) where id = $4",
-    postReqData: ["comment","sentences","docs","id"],
-    sesReqData: ["uid"],
-    sqlParams: [rpg.param("post", "sentences"), rpg.param("post", "comment"), rpg.param("post","docs"), rpg.param("post","id")]
+    sql:   `
+    UPDATE semantic_unit
+    SET
+        (sentences, COMMENT, docs) = ($1, $2, $3)
+    WHERE id = $4
+    `,
+    postReqData: ["comment", "sentences", "docs", "id"],
+    sesReqData:  ["uid"],
+    sqlParams:   [
+        rpg.param("post", "sentences"), rpg.param("post", "comment"),
+        rpg.param("post", "docs"), rpg.param("post", "id")
+    ]
 }));
 
 
 router.post("/get-semantic-units", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select u.id, u.sentences, u.comment, u.docs, u.iteration from semantic_unit as u " +
-        "where u.uid = $1 and u.sesid = $2 and (u.iteration = $3 or u.iteration <= 0)",
-    sesReqData: ["uid","ses"],
+    sql:   `
+    SELECT u.id,
+        u.sentences,
+        u.comment,
+        u.docs,
+        u.iteration
+    FROM semantic_unit AS u
+    WHERE u.uid = $1
+        AND u.sesid = $2
+        AND (
+            u.iteration = $3
+            OR u.iteration <= 0
+        )
+    `,
+    sesReqData:  ["uid", "ses"],
     postReqData: ["iteration"],
-    sqlParams: [rpg.param("ses", "uid"), rpg.param("ses","ses"), rpg.param("post","iteration")]
+    sqlParams:   [
+        rpg.param("ses", "uid"), rpg.param("ses", "ses"), rpg.param("post", "iteration")
+    ]
 }));
+
 
 router.post("/get-team-sync-units", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select u.id, u.sentences, u.comment, u.docs, u.iteration from semantic_unit as u where " +
-        "u.uid in (select original_leader from teams inner join teamusers on tmid = id where uid = $1 and sesid = $2) and u.sesid = $3 and " +
-        "u.iteration = 3 order by u.id asc",
+    sql:   `
+    SELECT u.id,
+        u.sentences,
+        u.comment,
+        u.docs,
+        u.iteration
+    FROM semantic_unit AS u
+    WHERE u.uid in (
+        SELECT original_leader
+        FROM teams
+        INNER JOIN teamusers
+        ON tmid = id
+        WHERE UID = $1
+        AND sesid = $2
+    )
+        AND u.sesid = $3
+        AND u.iteration = 3
+    ORDER BY u.id ASC
+    `,
     sesReqData: ["uid", "ses"],
-    sqlParams: [rpg.param("ses", "uid"), rpg.param("ses", "ses"), rpg.param("ses", "ses")]
+    sqlParams:  [rpg.param("ses", "uid"), rpg.param("ses", "ses"), rpg.param("ses", "ses")]
 }));
+
 
 router.post("/delete-semantic-unit", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "delete from semantic_unit where id = $1",
+    sql:   `
+    DELETE
+    FROM semantic_unit
+    WHERE id = $1
+    `,
     postReqData: ["id"],
-    sqlParams: [rpg.param("post", "id")]
+    sqlParams:   [rpg.param("post", "id")]
 }));
+
 
 router.post("/update-ses-options", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "update sessions set options = $1 where id = $2",
+    sql:   `
+    UPDATE sessions
+    SET OPTIONS = $1
+    WHERE id = $2
+    `,
     postReqData: ["sesid", "options"],
-    sqlParams: [rpg.param("post", "options"), rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "options"), rpg.param("post", "sesid")]
 }));
+
 
 router.post("/differentials", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select * from differential where sesid = $1 order by orden",
+    sql:   `
+    SELECT *
+    FROM differential
+    WHERE sesid = $1
+    ORDER BY orden
+    `,
     postReqData: ["sesid"],
-    sesReqData: ["uid"],
-    sqlParams: [rpg.param("post", "sesid")]
+    sesReqData:  ["uid"],
+    sqlParams:   [rpg.param("post", "sesid")]
 }));
+
 
 router.post("/get-differentials", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select * from differential where sesid = $1 order by orden",
+    sql:   `
+    SELECT *
+    FROM differential
+    WHERE sesid = $1
+    ORDER BY orden
+    `,
     sesReqData: ["uid", "ses"],
-    sqlParams: [rpg.param("ses", "ses")]
+    sqlParams:  [rpg.param("ses", "ses")]
 }));
+
 
 router.post("/get-differentials-stage", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select * from differential where stageid = $1 order by orden",
+    sql:   `
+    SELECT *
+    FROM differential
+    WHERE stageid = $1
+    ORDER BY orden
+    `,
     postReqData: ["stageid"],
-    sesReqData: ["uid"],
-    sqlParams: [rpg.param("post", "stageid")]
+    sesReqData:  ["uid"],
+    sqlParams:   [rpg.param("post", "stageid")]
 }));
+
 
 router.post("/add-differential", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "insert into differential(title, tleft, tright, orden, creator, sesid) select $1, $2, $3, $4, $5, $6 " +
-        "where not exists (select id from differential where orden = $7 and sesid = $8)",
+    sql:   `
+    INSERT INTO differential(title, tleft, tright, orden, creator, sesid)
+    SELECT $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6
+    WHERE NOT EXISTS (
+        SELECT id
+        FROM differential
+        WHERE orden = $7
+            AND sesid = $8
+    )
+    `,
     postReqData: ["orden", "tleft", "tright", "name", "sesid"],
-    sesReqData: ["uid"],
-    sqlParams: [rpg.param("post", "name"), rpg.param("post", "tleft"), rpg.param("post", "tright"), rpg.param("post", "orden"),
-        rpg.param("ses", "uid"), rpg.param("post", "sesid"), rpg.param("post", "orden"), rpg.param("post", "sesid")]
+    sesReqData:  ["uid"],
+    sqlParams:   [
+        rpg.param("post", "name"), rpg.param("post", "tleft"), rpg.param("post", "tright"),
+        rpg.param("post", "orden"), rpg.param("ses", "uid"), rpg.param("post", "sesid"),
+        rpg.param("post", "orden"), rpg.param("post", "sesid")
+    ]
 }));
+
 
 router.post("/add-differential-stage", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "insert into differential(title, tleft, tright, orden, creator, stageid, num, justify, sesid, word_count) values " +
-        "($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+    sql:   `
+    INSERT INTO differential(
+        title, tleft, tright, orden, creator, stageid, num, justify, sesid, word_count
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `,
     postReqData: ["orden", "tleft", "tright", "name", "stageid", "num", "justify", "sesid"],
-    sesReqData: ["uid"],
-    sqlParams: [rpg.param("post", "name"), rpg.param("post", "tleft"), rpg.param("post", "tright"), rpg.param("post", "orden"),
-        rpg.param("ses", "uid"), rpg.param("post", "stageid"), rpg.param("post", "num"), rpg.param("post", "justify"),
-        rpg.param("post", "sesid"), rpg.param("post", "word_count")]
+    sesReqData:  ["uid"],
+    sqlParams:   [
+        rpg.param("post", "name"), rpg.param("post", "tleft"), rpg.param("post", "tright"),
+        rpg.param("post", "orden"), rpg.param("ses", "uid"), rpg.param("post", "stageid"),
+        rpg.param("post", "num"), rpg.param("post", "justify"), rpg.param("post", "sesid"),
+        rpg.param("post", "word_count")
+    ]
 }));
+
 
 router.post("/update-differential", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql: "update differential set title = $1, tleft = $2, tright = $3 where id = $4",
+    sql:   `
+    UPDATE differential
+    SET title = $1,
+        tleft = $2,
+        tright = $3
+    WHERE id = $4
+    `,
     postReqData: ["tleft", "tright", "name", "id"],
-    sesReqData: ["uid"],
-    sqlParams: [rpg.param("post", "name"), rpg.param("post", "tleft"), rpg.param("post", "tright"), rpg.param("post", "id")]
+    sesReqData:  ["uid"],
+    sqlParams:   [
+        rpg.param("post", "name"), rpg.param("post", "tleft"), rpg.param("post", "tright"),
+        rpg.param("post", "id")
+    ]
 }));
 
+
 router.post("/duplicate-session", (req, res) => {
-     if(req.session.uid != null && req.session.role == "P" && req.body.name != null && req.body.name != ""
-         && req.body.tipo != null && req.body.descr != null && req.body.originalSesid != null){
-         rpg.singleSQL({
-             dbcon: pass.dbcon,
-             sql: "insert into sessions(name,descr,creator,time,status,type) values ($1,$2,$3,now(),1,$4) returning id",
-             postReqData: ["sesid", "uid"],
-             sqlParams: [rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("ses", "uid"), rpg.param("post", "tipo")],
-             onEnd: (req, res, result) => {
-                 let sesid = result.id;
-                 let oldsesid = req.body.originalSesid;
-                 if(req.body.copyUsers) {
-                     rpg.execSQL({
-                         dbcon: pass.dbcon,
-                         sql: "insert into sesusers(sesid,uid) select " + sesid +
-                            " as sesid, uid from sesusers where sesid = " + oldsesid,
-                         preventResEnd: true,
-                         onEnd: () => {}
-                     })(req,res);
-                 }
-                 else{
-                     rpg.execSQL({
-                         dbcon: pass.dbcon,
-                         sql: "insert into sesusers(sesid,uid) values (" + sesid + "," + req.session.uid + ")",
-                         preventResEnd: true,
-                         onEnd: () => {}
-                     })(req,res);
-                 }
-                 if(req.body.copySemDocs){
-                     rpg.execSQL({
-                         dbcon: pass.dbcon,
-                         sql: "insert into semantic_document(sesid,title,content,orden) select " + sesid +
-                         " as sesid, title, content, orden from semantic_document where sesid = " + oldsesid,
-                         preventResEnd: true,
-                         onEnd: () => {}
-                     })(req,res);
-                 }
-                 if(req.body.copySemUnits){
-                     rpg.execSQL({
-                         dbcon: pass.dbcon,
-                         sql: "insert into semantic_unit(sesid,sentences,comment,uid,iteration,docs) select " + sesid +
-                             " as sesid, sentences, comment, uid, 0 as iteration, docs from semantic_unit where sesid = "
-                             + oldsesid + " and iteration <= 0",
-                         preventResEnd: true,
-                         onEnd: () => {}
-                     })(req,res);
-                 }
-                 if(req.body.copyDocuments){
-                     rpg.execSQL({
-                         dbcon: pass.dbcon,
-                         sql: "insert into documents(sesid,title,path,uploader,active) select " + sesid +
-                         " as sesid, title, path, uploader, active from documents where sesid = " + oldsesid,
-                         preventResEnd: true,
-                         onEnd: () => {}
-                     })(req,res);
-                 }
-                 if(req.body.copyDifferentials){
-                     rpg.execSQL({
-                         dbcon: pass.dbcon,
-                         sql: "insert into differential(sesid,title,tleft,tright,orden,creator) select " + sesid +
-                             " as sesid, title, tleft, tright, orden, creator from differential where sesid = " + oldsesid,
-                         preventResEnd: true,
-                         onEnd: () => {}
-                     })(req,res);
-                 }
-                 if(req.body.copyQuestions){
-                     rpg.execSQL({
-                         dbcon: pass.dbcon,
-                         sql: "insert into questions(sesid,content,options,answer,comment,other,textid,plugin_data,cpid) select " + sesid +
-                            " as sesid, content,options,answer,comment,other,textid,plugin_data,id as cpid" +
-                            " from questions where sesid = " + oldsesid + " order by id asc",
-                         preventResEnd: true
-                     })(req,res);
-                     rpg.execSQL({
-                         dbcon: pass.dbcon,
-                         sql: "insert into question_text(sesid,content,title) select " + sesid +
-                         " as sesid, content, title from question_text where sesid = " + oldsesid,
-                         preventResEnd: true,
-                         onEnd: () => {}
-                     })(req,res);
-                 }
-                 if(req.body.copyIdeas){
-                    console.log("Copy Ideas is not implemented yet");
-                 }
-                 if(req.body.copyRubrica){
+    if (
+        req.session.uid != null && req.session.role == "P" && req.body.name != null
+        && req.body.name != "" && req.body.tipo != null && req.body.descr != null
+        && req.body.originalSesid != null
+    ) {
+        rpg.singleSQL({
+            dbcon: pass.dbcon,
+            sql:   `
+            INSERT INTO sessions(name, descr, creator, TIME, status, TYPE)
+            VALUES ($1, $2, $3, now(), 1, $4)
+            RETURNING id
+            `,
+            postReqData: ["sesid", "uid"],
+            sqlParams:   [
+                rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("ses", "uid"),
+                rpg.param("post", "tipo")
+            ],
+            onEnd: (req, res, result) => {
+                let sesid = result.id;
+                let oldsesid = req.body.originalSesid;
+                if (req.body.copyUsers) {
+                    rpg.execSQL({
+                        dbcon: pass.dbcon,
+                        sql:   `
+                        INSERT INTO sesusers(sesid, UID)
+                        SELECT ${sesid} AS sesid, UID
+                        FROM sesusers
+                        WHERE sesid = ${oldsesid}
+                        `,
+                        preventResEnd: true,
+                        onEnd:         () => {}
+                    })(req,res);
+                }
+                else {
+                    rpg.execSQL({
+                        dbcon: pass.dbcon,
+                        sql:   `
+                        INSERT INTO sesusers(sesid, UID)
+                        VALUES (${sesid}, ${req.session.uid})
+                        `,
+                        preventResEnd: true,
+                        onEnd:         () => {}
+                    })(req,res);
+                }
+                if (req.body.copySemDocs) {
+                    rpg.execSQL({
+                        dbcon: pass.dbcon,
+                        sql:   `
+                        INSERT INTO semantic_document(sesid, title, content, orden)
+                        SELECT ${sesid} AS sesid,
+                            title,
+                            content,
+                            orden
+                        FROM semantic_document
+                        WHERE sesid = ${oldsesid}
+                        `,
+                        preventResEnd: true,
+                        onEnd:         () => {}
+                    })(req,res);
+                }
+                if (req.body.copySemUnits) {
+                    rpg.execSQL({
+                        dbcon: pass.dbcon,
+                        sql:   `
+                        INSERT INTO semantic_unit(sesid, sentences, COMMENT, UID, iteration, docs)
+                        SELECT ${sesid} AS sesid,
+                            sentences,
+                            COMMENT,
+                            UID,
+                            0 AS iteration,
+                            docs
+                        FROM semantic_unit
+                        WHERE sesid = ${oldsesid}
+                            AND iteration <= 0
+                        `,
+                        preventResEnd: true,
+                        onEnd:         () => {}
+                    })(req,res);
+                }
+                if (req.body.copyDocuments) {
+                    rpg.execSQL({
+                        dbcon: pass.dbcon,
+                        sql:   `
+                        INSERT INTO documents(sesid, title, PATH, uploader, active)
+                        SELECT ${sesid} AS sesid,
+                            title,
+                            PATH,
+                            uploader,
+                            active
+                        FROM documents
+                        WHERE sesid = ${oldsesid}
+                        `,
+                        preventResEnd: true,
+                        onEnd:         () => {}
+                    })(req,res);
+                }
+                if (req.body.copyDifferentials) {
+                    rpg.execSQL({
+                        dbcon: pass.dbcon,
+                        sql:   `
+                        INSERT INTO differential(sesid, title, tleft, tright, orden, creator)
+                        SELECT ${sesid} AS sesid,
+                            title,
+                            tleft,
+                            tright,
+                            orden,
+                            creator
+                        FROM differential
+                        WHERE sesid = ${oldsesid}
+                        `,
+                        preventResEnd: true,
+                        onEnd:         () => {}
+                    })(req,res);
+                }
+                if (req.body.copyQuestions) {
+                    rpg.execSQL({
+                        dbcon: pass.dbcon,
+                        sql:   `
+                        INSERT INTO questions(
+                            sesid, content, OPTIONS, answer, COMMENT, other, textid, plugin_data,
+                            cpid
+                        )
+                        SELECT ${sesid} AS sesid,
+                            content,
+                            OPTIONS,
+                            answer,
+                            COMMENT,
+                            other,
+                            textid,
+                            plugin_data,
+                            id AS cpid
+                        FROM questions
+                        WHERE sesid = ${oldsesid}
+                        ORDER BY id ASC
+                        `,
+                        preventResEnd: true
+                    })(req,res);
+                    rpg.execSQL({
+                        dbcon: pass.dbcon,
+                        sql:   `
+                        INSERT INTO question_text(sesid, content, title)
+                        SELECT ${sesid} AS sesid,
+                            content,
+                            title
+                        FROM question_text
+                        WHERE sesid = ${oldsesid}
+                        `,
+                        preventResEnd: true,
+                        onEnd:         () => {}
+                    })(req,res);
+                }
+                if (req.body.copyIdeas) {
+                    console.log("Copy Ideas is not implemented yet"); //?
+                }
+                if (req.body.copyRubrica) {
                     rpg.singleSQL({
                         dbcon: pass.dbcon,
-                        sql: "insert into rubricas(sesid) values (" + sesid + ") returning id",
+                        sql:   `
+                        INSERT INTO rubricas(sesid)
+                        VALUES (${sesid})
+                        RETURNING id
+                        `,
                         onEnd: (req, res, result) => {
                             rpg.execSQL({
                                 dbcon: pass.dbcon,
-                                sql: "insert into criteria(name,pond,inicio,proceso,competente,avanzado,rid) select " +
-                                    "c.name, c.pond, c.inicio, c.proceso, c.competente, c.avanzado, " + result.id + " as rid " +
-                                    "from criteria as c inner join rubricas as r on r.id = c.rid where r.sesid = " + oldsesid,
-                                onEnd: () => {},
+                                sql:   `
+                                INSERT INTO criteria(
+                                    name, pond, inicio, proceso, competente, avanzado, rid
+                                )
+                                SELECT c.name,
+                                    c.pond,
+                                    c.inicio,
+                                    c.proceso,
+                                    c.competente,
+                                    c.avanzado, ${result.id} AS rid
+                                FROM criteria AS c
+                                INNER JOIN rubricas AS r
+                                ON r.id = c.rid
+                                WHERE r.sesid = ${oldsesid}
+                                `,
+                                onEnd:         () => {},
                                 preventResEnd: true
                             })(req,res);
                         },
                         preventResEnd: true
                     })(req,res);
-                 }
-             }
-         })(req,res);
-         //res.end('{"status":"ok"}');
-     }
-     else{
-         res.end('{"status":"err"}');
-     }
+                }
+            }
+        })(req,res);
+    }
+    else {
+        res.end('{"status":"err"}');
+    }
 });
+
 
 router.get("/export-session-data-sel", (req,res) => {
     let id = req.query.id;
-    if(!isNaN(id)) {
+    if (!isNaN(id)) {
         rpg.multiSQL({
             dbcon: pass.dbcon,
-            sql: "select u.name as nombre, q.content as pregunta, substring('ABCDE' from s.answer + 1 for 1) as alternativa, s.answer = q.answer as " +
-            "correcta, s.iteration as iteracion, s.comment as comentario, s.confidence as confianza, s.stime as hora_respuesta from selection as s inner " +
-            "join users as u on s.uid = u.id inner join questions as q on s.qid = q.id where q.sesid = " + id + " order by s.stime",
+            sql:   `
+            SELECT u.name AS nombre,
+                q.content AS pregunta,
+                substring(
+                    'ABCDE'
+                    FROM s.answer + 1
+                    FOR 1
+                ) AS alternativa,
+                s.answer = q.answer AS correcta,
+                s.iteration AS iteracion,
+                s.comment AS comentario,
+                s.confidence AS confianza,
+                s.stime AS hora_respuesta
+            FROM selection AS s
+            INNER JOIN users AS u
+            ON s.uid = u.id
+            INNER JOIN questions AS q
+            ON s.qid = q.id
+            WHERE q.sesid = ${id}
+            ORDER BY s.stime
+            `,
             onEnd: (req, res, arr) => {
                 res.xls("resultados.xlsx", arr);
             }
@@ -719,38 +1203,70 @@ router.get("/export-session-data-sel", (req,res) => {
     }
 });
 
+
 router.post("/generate-session-code", rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: "update sessions set code = $1 where id = $2 and code is null returning code",
+    sql:   `
+    UPDATE sessions
+    SET code = $1
+    WHERE id = $2
+        AND code IS NULL RETURNING code
+    `,
     postReqData: ["id"],
-    sesReqData: ["uid"],
-    sqlParams: [rpg.param("calc", "code"), rpg.param("post", "id")],
-    onStart: (ses, data, calc) => {
+    sesReqData:  ["uid"],
+    sqlParams:   [rpg.param("calc", "code"), rpg.param("post", "id")],
+    onStart:     (ses, data, calc) => {
         calc.code = generateCode(data.id);
     }
 }));
 
+
 router.post("/archive-session", rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: "update sessions set archived = $1 where id = $2",
+    sql:   `
+    UPDATE sessions
+    SET archived = $1
+    WHERE id = $2
+    `,
     postReqData: ["sesid", "val"],
-    sqlParams: [rpg.param("post", "val"), rpg.param("post", "sesid")],
+    sqlParams:   [rpg.param("post", "val"), rpg.param("post", "sesid")],
 }));
+
 
 router.post("/enter-session-code", rpg.singleSQL({
     dbcon: pass.dbcon,
-    /*sql: "insert into sesusers(uid,sesid) select $1::int as uid, id from sessions where code = $2 on conflict (sesid,uid) do update " +
-        "set uid = sesusers.uid returning sesid",*/
-    sql: "insert into sesusers(uid,sesid,device) select $1::int as uid, id, $2 as device from sessions where code = $3 and not exists " +
-        "(select su.sesid from sesusers as su, sessions as s where su.uid = $4 and s.code = $5 and su.sesid = s.id) " +
-        "and not exists (select st.id from stages as st, sessions as ss where st.sesid = ss.id and ss.code = $6 and " +
-        "st.type = 'team') returning sesid",
+    sql:   `
+    INSERT INTO sesusers(UID, sesid, device)
+    SELECT $1::int AS UID,
+        id,
+        $2 AS device
+    FROM sessions
+    WHERE code = $3
+    AND NOT EXISTS (
+        SELECT su.sesid
+        FROM sesusers AS su,
+            sessions AS s
+        WHERE su.uid = $4
+            AND s.code = $5
+            AND su.sesid = s.id
+    )
+    AND NOT EXISTS (
+        SELECT st.id
+        FROM stages AS st,
+            sessions AS ss
+        WHERE st.sesid = ss.id
+            AND ss.code = $6
+            AND st.type = 'team'
+    ) RETURNING sesid
+    `,
     postReqData: ["code"],
-    sesReqData: ["uid"],
-    sqlParams: [rpg.param("ses", "uid"), rpg.param("post", "device"), rpg.param("post", "code"), rpg.param("ses", "uid"),
-        rpg.param("post", "code"), rpg.param("post", "code")],
+    sesReqData:  ["uid"],
+    sqlParams:   [
+        rpg.param("ses", "uid"), rpg.param("post", "device"), rpg.param("post", "code"),
+        rpg.param("ses", "uid"), rpg.param("post", "code"), rpg.param("post", "code")
+    ],
     preventResEnd: true,
-    onEnd: (req, res, result) => {
+    onEnd:         (req, res, result) => {
         if(result.sesid == null){
             res.end('{"status": "end"}');
         }
@@ -758,7 +1274,11 @@ router.post("/enter-session-code", rpg.singleSQL({
             let id = result.sesid;
             rpg.singleSQL({
                 dbcon: pass.dbcon,
-                sql: "select type from sessions where id = " + id,
+                sql:   `
+                SELECT TYPE
+                FROM sessions
+                WHERE id = ${id}
+                `,
                 onEnd: (req,res,result) => {
                     let type = result.type;
                     if(type == null){
@@ -766,7 +1286,9 @@ router.post("/enter-session-code", rpg.singleSQL({
                     }
                     else{
                         req.session.ses = id;
-                        let urlr = (type == "R" || type == "J") ? "role-playing" : (type == "T") ? "ethics" : "select";
+                        let urlr = (type == "R" || type == "J") ?
+                            "role-playing" :
+                            (type == "T") ? "ethics" : "select";
                         res.end(JSON.stringify({status: "ok", redirect: urlr}));
                     }
                 }
@@ -781,5 +1303,6 @@ let generateCode = (id) => {
     let s = n.toString(16);
     return "k00000".substring(0, 6 - s.length) + s;
 };
+
 
 module.exports = router;

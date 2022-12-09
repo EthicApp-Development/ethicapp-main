@@ -1,6 +1,6 @@
 "use strict";
 
-let express = require('express');
+let express = require("express");
 let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
@@ -8,13 +8,21 @@ let middleware = require("../midleware/validate-session");
 
 router.post("/get-alum-state-sel", middleware.verifySession, rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select uid, sum(correct) as score, count(correct) as answered from (select s.uid, (s.answer = q.answer)::int " +
-        "as correct from selection as s inner join questions as q on s.qid = q.id where q.sesid = $1 and s.iteration = $2) as r group by uid",
-    postReqData: ["sesid","iteration"],
-    onStart: (ses, data, calc) => {
+    sql:   `
+    SELECT uid, SUM(correct) AS score, COUNT(correct) AS answered
+    FROM (
+        SELECT s.uid, (s.answer = q.answer)::int AS correct
+        FROM SELECTION AS s
+        INNER JOIN questions AS q
+        ON s.qid = q.id
+        WHERE q.sesid = $1 AND s.iteration = $2
+    ) AS r group by uid
+    `,
+    postReqData: ["sesid", "iteration"],
+    onStart:     (ses, data, calc) => {
         if (ses.role != "P") {
-            console.log("ERR: Solo profesor puede ver estado de alumnos.");
-            return "select $1"
+            console.error("Sólo el profesor puede ver el estado de los alumnos");
+            return "SELECT $1";
         }
     },
     sqlParams: [rpg.param("post", "sesid"),rpg.param("post", "iteration")]
@@ -22,13 +30,18 @@ router.post("/get-alum-state-sel", middleware.verifySession, rpg.multiSQL({
 
 router.post("/get-alum-full-state-sel", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select s.uid, q.id as qid, (s.answer = q.answer)::int as correct from selection as s inner join questions as q on " +
-    "s.qid = q.id where q.sesid = $1 and s.iteration = $2",
-    postReqData: ["sesid","iteration"],
-    onStart: (ses, data, calc) => {
+    sql:   `
+    SELECT s.uid, q.id AS qid, (s.answer = q.answer)::int AS correct
+    FROM selection AS s
+    INNER JOIN questions AS q
+    ON s.qid = q.id
+    WHERE q.sesid = $1 AND s.iteration = $2
+    `,
+    postReqData: ["sesid", "iteration"],
+    onStart:     (ses, data, calc) => {
         if (ses.role != "P") {
-            console.log("ERR: Solo profesor puede ver estado de alumnos.");
-            return "select $1"
+            console.error("Sólo el profesor puede ver el estado de los alumnos");
+            return "SELECT $1";
         }
     },
     sqlParams: [rpg.param("post", "sesid"),rpg.param("post", "iteration")]
@@ -41,25 +54,38 @@ router.post("/group-proposal-sel", (req, res) => {
     }
     rpg.multiSQL({
         dbcon: pass.dbcon,
-        sql: "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
-        "u.id = tu.uid and t.sesid = " + req.body.sesid,
+        sql:   `
+        SELECT t.id AS team, u.id AS uid
+        FROM teams AS t, users AS u, teamusers AS tu
+        WHERE t.id = tu.tmid AND u.id = tu.uid AND t.sesid = ${req.body.sesid}
+        `,
         preventResEnd: true,
-        onEnd: (req,res,arr) => {
-            if(arr.length == 0) {
+        onEnd:         (req,res,arr) => {
+            if (arr.length == 0) {
                 rpg.multiSQL({
                     dbcon: pass.dbcon,
-                    sql: "select uid, sum(correct) as score, count(correct) as answered from (select s.uid, (s.answer = q.answer)::int " +
-                        "as correct from selection as s inner join questions as q on s.qid = q.id where q.sesid = $1 and s.iteration = $2) as r group by uid",
+                    sql:   `
+                    SELECT uid, SUM(correct) AS score, COUNT(correct) AS answered
+                    FROM (
+                        SELECT s.uid, (s.answer = q.answer)::int AS correct
+                        FROM selection AS s
+                        INNER JOIN questions AS q
+                        ON s.qid = q.id
+                        WHERE q.sesid = $1 AND s.iteration = $2
+                    ) AS r GROUP BY uid
+                    `,
                     onStart: (ses, data, calc) => {
                         if (ses.role != "P") {
-                            console.log("ERR: Solo profesor puede ver estado de alumnos.");
-                            return "select $1"
+                            console.error("Sólo el profesor puede ver el estado de los alumnos");
+                            return "SELECT $1";
                         }
                     },
                     preventResEnd: true,
-                    sqlParams: [rpg.param("post", "sesid")],
-                    onEnd: (req, res, arr) => {
-                        let groups = generateTeams(arr, (s) => s.score, req.body.gnum, isDifferent(req.body.method));
+                    sqlParams:     [rpg.param("post", "sesid")],
+                    onEnd:         (req, res, arr) => {
+                        let groups = generateTeams(
+                            arr, (s) => s.score, req.body.gnum, isDifferent(req.body.method)
+                        );
                         res.end(JSON.stringify(groups));
                     }
                 })(req, res);
@@ -88,10 +114,13 @@ router.post("/group-proposal-stage", (req, res) => {
     }
     rpg.multiSQL({
         dbcon: pass.dbcon,
-        sql: "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
-            "u.id = tu.uid and t.stageid = " + req.body.stageid,
+        sql:   `
+        SELECT t.id AS team, u.id AS uid
+        FROM teams AS t, users AS u, teamusers AS tu
+        WHERE t.id = tu.tmid AND u.id = tu.uid AND t.stageid = ${req.body.stageid}
+        `,
         preventResEnd: true,
-        onEnd: (req,res,arr) => {
+        onEnd:         (req,res,arr) => {
             let t = {};
             let groups = [];
             arr.forEach((row) => {
@@ -109,24 +138,42 @@ router.post("/group-proposal-stage", (req, res) => {
 
 router.post("/get-alum-state-lect", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select distinct a.uid, a.orden, a.serial, a.content, a.docid, p.serial as serial_ans, p.content as content_ans, p.docid as docid_ans" +
-            " from ideas as a, ideas as p, sessions as s where s.creator = p.uid and a.uid != s.creator and a.orden = p.orden and " +
-            "s.id = $1 and a.docid in (select id from documents where sesid = s.id) and p.docid in (select id from documents where " +
-            "sesid = s.id) and a.iteration = $2 order by uid, a.orden asc",
-    postReqData: ["sesid","iteration"],
-    onStart: (ses, data, calc) => {
+    sql:   `
+    SELECT DISTINCT a.uid, a.orden, a.serial, a.content, a.docid, p.serial AS serial_ans,
+        p.content AS content_ans, p.docid AS docid_ans
+    FROM ideas AS a, ideas AS p, sessions AS s
+    WHERE s.creator = p.uid AND a.uid != s.creator AND a.orden = p.orden AND s.id = $1
+        AND a.docid IN (
+            SELECT id
+            FROM documents
+            WHERE sesid = s.id
+        ) AND p.docid IN (
+            SELECT id FROM documents WHERE sesid = s.id
+        ) AND a.iteration = $2
+    ORDER BY uid, a.orden ASC
+    `,
+    postReqData: ["sesid", "iteration"],
+    onStart:     (ses, data, calc) => {
         if (ses.role != "P") {
-            console.log("ERR: Solo profesor puede ver estado de alumnos.");
-            return "select $1, $2"
+            console.error("Sólo el profesor puede ver el estado de los alumnos");
+            return "SELECT $1, $2";
         }
     },
     preventResEnd: true,
-    sqlParams: [rpg.param("post", "sesid"), rpg.param("post", "iteration")],
-    onEnd: (req,res,arr) => {
+    sqlParams:     [rpg.param("post", "sesid"), rpg.param("post", "iteration")],
+    onEnd:         (req,res,arr) => {
         rpg.singleSQL({
             dbcon: pass.dbcon,
-            sql: "select max(orden) as total from ideas as p, sessions as s, documents as d where p.docid = d.id and " +
-                "d.sesid = s.id and s.creator = p.uid and s.id = " + req.body.sesid,
+            sql:   `
+            SELECT Max(orden) AS total
+            FROM   ideas      AS p,
+                sessions   AS s,
+                documents  AS d
+            WHERE  p.docid = d.id
+            AND    d.sesid = s.id
+            AND    s.creator = p.uid
+            AND    s.id = ${req.body.sesid}
+            `,
             onEnd: (reqin,res,rowin) => {
                 let scores = [];
                 let last_uid = -1;
@@ -134,7 +181,7 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
                 let total = rowin.total + 1;
                 let allAns = [];
                 arr.forEach((row) => {
-                     allAns.push(row.content_ans.trim().toLowerCase());
+                    allAns.push(row.content_ans.trim().toLowerCase());
                 });
                 var scoresUsed = {};
                 arr.forEach((row) => {
@@ -143,10 +190,9 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
                             scores[i].score /= total;
                         i++;
                         last_uid = row.uid;
-                        scores.push({uid: last_uid, score:0});
+                        scores.push({uid: last_uid, score: 0});
                         scoresUsed = {};
                     }
-                    console.log(row.orden, "|", row.content, "|", row.content_ans);
                     if(ideasMatch(row)){
                         if(!scoresUsed[row.orden]){
                             scores[i].score += 1;
@@ -156,7 +202,9 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
                         }
                         scoresUsed[row.orden] = true;
                     }
-                    else if(!scoresUsed[row.orden] && allAns.includes(row.content.trim().toLowerCase())){
+                    else if (
+                        !scoresUsed[row.orden] && allAns.includes(row.content.trim().toLowerCase())
+                    ) {
                         scores[i].score += 0.7;
                         scoresUsed[row.orden] = true;
                     }
@@ -171,18 +219,38 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
 
 router.post("/get-alum-state-semantic", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select a.uid, a.sentences, a.docs, a.uid = s.creator as is_ans from semantic_unit as a, sessions as s where " +
-        "s.id = $1 and a.sesid = s.id and (a.iteration = $2 or a.uid = s.creator) order by is_ans desc, a.uid, a.sentences",
+    sql:   `
+    SELECT
+        a.uid,
+        a.sentences,
+        a.docs,
+        a.uid = s.creator AS is_ans 
+    FROM
+        semantic_unit AS a,
+        sessions AS s 
+    WHERE
+        s.id = $1 
+        AND a.sesid = s.id 
+        AND 
+        (
+            a.iteration = $2 
+            OR a.uid = s.creator
+        )
+    ORDER BY
+        is_ans DESC,
+        a.uid,
+        a.sentences
+    `,
     postReqData: ["sesid","iteration"],
-    onStart: (ses, data, calc) => {
+    onStart:     (ses, data, calc) => {
         if (ses.role != "P") {
-            console.log("ERR: Solo profesor puede ver estado de alumnos.");
-            return "select $1, $2"
+            console.error("Sólo el profesor puede ver el estado de los alumnos");
+            return "select $1, $2";
         }
     },
     preventResEnd: true,
-    sqlParams: [rpg.param("post", "sesid"), rpg.param("post", "iteration")],
-    onEnd: (req,res,arr) => {
+    sqlParams:     [rpg.param("post", "sesid"), rpg.param("post", "iteration")],
+    onEnd:         (req,res,arr) => {
         let scores = [];
         let i = 0;
         let pauta = [];
@@ -202,7 +270,6 @@ router.post("/get-alum-state-semantic", rpg.multiSQL({
         for(; i < arr.length; i++){
             let alum = arr[i];
             if(alum.uid != last_uid){
-                console.log(sc);
                 scores.push({uid: last_uid, score: sc/total});
                 last_uid = alum.uid;
                 sc = 0;
@@ -226,30 +293,76 @@ router.post("/group-proposal-lect", (req,res) => {
     }
     rpg.multiSQL({
         dbcon: pass.dbcon,
-        sql: "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
-        "u.id = tu.uid and t.sesid = " + req.body.sesid,
+        sql:   `
+        SELECT
+            t.id AS team,
+            u.id AS uid 
+        FROM
+            teams AS t,
+            users AS u,
+            teamusers AS tu 
+        WHERE
+            t.id = tu.tmid 
+            AND u.id = tu.uid 
+            AND t.sesid = ${req.body.sesid}
+        `,
         preventResEnd: true,
-        onEnd: (req,res,arr) => {
+        onEnd:         (req,res,arr) => {
             if(arr.length == 0) {
                 rpg.multiSQL({
                     dbcon: pass.dbcon,
-                    sql: "select distinct a.uid, a.orden, a.serial, a.content, a.docid, p.serial as serial_ans, p.content as content_ans, p.docid as docid_ans" +
-                    " from ideas as a, ideas as p, sessions as s where s.creator = p.uid and a.uid != s.creator and a.orden = p.orden and " +
-                    "s.id = $1 and a.docid in (select id from documents where sesid = s.id) and p.docid in (select id from documents where " +
-                    "sesid = s.id) and a.iteration = 1 order by uid, a.orden asc",
+                    sql:   `
+                    SELECT DISTINCT a.uid,
+                        a.orden,
+                        a.serial,
+                        a.content,
+                        a.docid,
+                        p.serial AS serial_ans,
+                        p.content AS content_ans,
+                        p.docid AS docid_ans
+                    FROM ideas AS a,
+                        ideas AS p,
+                        sessions AS s
+                    WHERE s.creator = p.uid
+                        AND a.uid != s.creator
+                        AND a.orden = p.orden
+                        AND s.id = $1
+                        AND a.docid in (
+                            SELECT id
+                            FROM documents
+                            WHERE sesid = s.id
+                        )
+                        AND p.docid in (
+                            SELECT id
+                            FROM documents
+                            WHERE sesid = s.id
+                        )
+                        AND a.iteration = 1
+                    ORDER BY UID,
+                        a.orden ASC
+                    `,
                     postReqData: ["sesid"],
-                    onStart: (ses, data, calc) => {
+                    onStart:     (ses, data, calc) => {
                         if (ses.role != "P") {
-                            console.log("ERR: Solo profesor puede ver estado de alumnos.");
-                            return "select $1"
+                            console.error("Sólo el profesor puede ver el estado de los alumnos");
+                            return "SELECT $1";
                         }
                     },
                     preventResEnd: true,
-                    sqlParams: [rpg.param("post", "sesid")],
-                    onEnd: (req,res,arr) => {
+                    sqlParams:     [rpg.param("post", "sesid")],
+                    onEnd:         (req,res,arr) => {
                         rpg.singleSQL({
                             dbcon: pass.dbcon,
-                            sql: "select max(orden) as total from ideas as p, sessions as s, documents as d where p.docid = d.id and d.sesid = s.id and s.creator = p.uid and s.id = " + req.body.sesid,
+                            sql:   `
+                            SELECT max(orden) AS total
+                            FROM ideas AS p,
+                                sessions AS s,
+                                documents AS d
+                            WHERE p.docid = d.id
+                                AND d.sesid = s.id
+                                AND s.creator = p.uid
+                                AND s.id = ${req.body.sesid}
+                            `,
                             onEnd: (reqin,res,rowin) => {
                                 let scores = [];
                                 let last_uid = -1;
@@ -266,10 +379,9 @@ router.post("/group-proposal-lect", (req,res) => {
                                             scores[i].score /= total;
                                         i++;
                                         last_uid = row.uid;
-                                        scores.push({uid: last_uid, score:0});
+                                        scores.push({uid: last_uid, score: 0});
                                         scoresUsed = {};
                                     }
-                                    console.log(row.orden, "|", row.content, "|", row.content_ans);
                                     if(ideasMatch(row)){
                                         if(!scoresUsed[row.orden]){
                                             scores[i].score += 1;
@@ -279,14 +391,21 @@ router.post("/group-proposal-lect", (req,res) => {
                                         }
                                         scoresUsed[row.orden] = true;
                                     }
-                                    else if(!scoresUsed[row.orden] && allAns.includes(row.content.trim().toLowerCase())){
+                                    else if (
+                                        !scoresUsed[row.orden] &&
+                                        allAns.includes(row.content.trim().toLowerCase())
+                                    ){
                                         scores[i].score += 0.7;
                                         scoresUsed[row.orden] = true;
                                     }
                                 });
                                 if (i>=0)
                                     scores[i].score /= total;
-                                let groups = generateTeams(scores, (s) => s.score, req.body.gnum, isDifferent(req.body.method));
+                                let groups = generateTeams(
+                                    scores,
+                                    (s) => s.score, req.body.gnum,
+                                    isDifferent(req.body.method)
+                                );
                                 res.end(JSON.stringify(groups));
                             }
                         })(req,res);
@@ -317,17 +436,34 @@ router.post("/group-proposal-hab", (req, res) => {
     }
     rpg.multiSQL({
         dbcon: pass.dbcon,
-        sql: "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
-        "u.id = tu.uid and t.sesid = " + req.body.sesid,
+        sql:   `
+        SELECT t.id AS team,
+            u.id AS UID
+        FROM teams AS t,
+            users AS u,
+            teamusers AS tu
+        WHERE t.id = tu.tmid
+        AND u.id = tu.uid
+        AND t.sesid = ${req.body.sesid}
+        `,
         preventResEnd: true,
-        onEnd: (req,res,arr) => {
+        onEnd:         (req,res,arr) => {
             if(arr.length == 0) {
                 rpg.multiSQL({
                     dbcon: pass.dbcon,
-                    sql: "select u.id as uid, u.aprendizaje from users as u inner join sesusers as su on su.uid = u.id where su.sesid = "
-                        + req.body.sesid + " and u.role='A'",
+                    sql:   `
+                    SELECT u.id AS UID,
+                        u.aprendizaje
+                    FROM users AS u
+                    INNER JOIN sesusers AS su
+                    ON su.uid = u.id
+                    WHERE su.sesid = ${req.body.sesid}
+                    AND u.role='A'
+                    `,
                     onEnd: (req, res, arr) => {
-                        let groups = generateTeams(arr, habMetric, req.body.gnum, isDifferent(req.body.method));
+                        let groups = generateTeams(
+                            arr, habMetric, req.body.gnum, isDifferent(req.body.method)
+                        );
                         res.end(JSON.stringify(groups));
                     }
                 })(req, res);
@@ -356,15 +492,30 @@ router.post("/group-proposal-rand", (req, res) => {
     }
     rpg.multiSQL({
         dbcon: pass.dbcon,
-        sql: "select t.id as team, u.id as uid from teams as t, users as u, teamusers as tu where t.id = tu.tmid and " +
-        "u.id = tu.uid and t.sesid = " + req.body.sesid,
+        sql:   `
+        SELECT t.id AS team,
+            u.id AS UID
+        FROM teams AS t,
+            users AS u,
+            teamusers AS tu
+        WHERE t.id = tu.tmid
+        AND u.id = tu.uid
+        AND t.sesid = ${req.body.sesid}
+        `,
         preventResEnd: true,
-        onEnd: (req,res,arr) => {
+        onEnd:         (req,res,arr) => {
             if(arr.length == 0) {
                 rpg.multiSQL({
                     dbcon: pass.dbcon,
-                    sql: "select u.id as uid, random() as rnd from users as u inner join sesusers as su on su.uid = u.id where su.sesid = "
-                    + req.body.sesid + " and u.role='A'",
+                    sql:   `
+                    SELECT u.id AS UID,
+                        random() AS rnd
+                    FROM users AS u
+                    INNER JOIN sesusers AS su
+                    ON su.uid = u.id
+                    WHERE su.sesid = ${req.body.sesid}
+                    AND u.role='A'
+                    `,
                     onEnd: (req, res, arr) => {
                         let groups = generateTeams(arr, (s) => s.rnd, req.body.gnum, false);
                         res.end(JSON.stringify(groups));
@@ -389,33 +540,34 @@ router.post("/group-proposal-rand", (req, res) => {
 });
 
 let ideasMatch = (row) => {
-    return row.docid == row.docid_ans && row.content.toLowerCase().trim() == row.content_ans.toLowerCase().trim();
+    return row.docid == row.docid_ans &&
+        row.content.toLowerCase().trim() == row.content_ans.toLowerCase().trim();
 };
 
 let isDifferent = (type) => {
     switch (type){
-        case "Rendimiento Homogeneo":
-            return false;
-        case "Rendimiento Heterogeneo":
-            return true;
-        case "Tipo Aprendizaje Homogeneo":
-            return false;
-        case "Tipo Aprendizaje Heterogeneo":
-            return true;
+    case "Rendimiento Homogéneo":
+        return false;
+    case "Rendimiento Heterogéneo":
+        return true;
+    case "Tipo Aprendizaje Homogéneo":
+        return false;
+    case "Tipo Aprendizaje Heterogéneo":
+        return true;
     }
     return false;
 };
 
 let habMetric = (u) => {
     switch (u.aprendizaje){
-        case "Teorico":
-            return -2;
-        case "Reflexivo":
-            return -1;
-        case "Activo":
-            return 1;
-        case "Pragmatico":
-            return 2;
+    case "Teórico":
+        return -2;
+    case "Reflexivo":
+        return -1;
+    case "Activo":
+        return 1;
+    case "Pragmático":
+        return 2;
     }
     return 0;
 };
@@ -425,55 +577,40 @@ router.post("/set-groups", (req, res) => {
         res.end('{"status":"err"}');
         return;
     }
-    let sql = "delete from teamusers as tu using teams as t where tu.tmid = t.id and t.sesid = " + req.body.sesid+"; "
-            + "delete from teams where sesid = " + req.body.sesid + "; ";
+    let sql = `
+    DELETE
+    FROM teamusers AS tu USING teams AS t
+    WHERE tu.tmid = t.id
+    AND t.sesid = ${req.body.sesid};
+
+    DELETE
+    FROM teams
+    WHERE sesid = ${req.body.sesid}:
+    `;
     let grupos = JSON.parse(req.body.groups);
     grupos.forEach((team) => {
-        sql += "with rows as (insert into teams(sesid,leader,original_leader) values (" + req.body.sesid + "," + team[0] + "," + team[0] + ") returning id) " +
-            "insert into teamusers(tmid,uid) select id, unnest('{" + team.join(",") + "}'::int[]) from rows; ";
+        sql += `
+        WITH ROWS AS (
+            INSERT INTO teams(sesid, leader, original_leader)
+            VALUES (
+                ${req.body.sesid}, ${team[0]}, ${team[0]}
+            ) RETURNING id
+        )
+            INSERT INTO teamusers(tmid, UID)
+            SELECT id,
+                unnest(
+                    '{${team.join(",")}}'::int[]
+                )
+            FROM ROWS;
+        `;
     });
-    console.log(sql);
     rpg.execSQL({
         dbcon: pass.dbcon,
-        sql: sql,
+        sql:   sql,
         onEnd: () => {
             res.end('{"status":"ok"}');
         }
     })(req,res);
-    /*rpg.execSQL({
-     dbcon: pass.dbcon,
-     sql: sql,
-     preventResEnd: true,
-     onEnd: () => { console.log("Team generation ok"); }
-     })(req,res);
-     res.end('{"status":"ok"}');
-     /*rpg.multiSQL({
-     dbcon: pass.dbcon,
-     sql: "select " + req.body.sesid + " in (select sesid from teams) as ans",
-     onEnd: (req,res,arr) => {
-     if(arr == null || arr.length == 0 || !arr[0]) {
-     res.end('{"status":"unchanged"}');
-     }
-     else{
-     console.log(req.body);
-     console.log(req.body.groups);
-     console.log(req.body.sesid);
-     let sql = "";
-     req.body.groups.forEach((team) => {
-     sql += "with rows as (insert into teams(sesid,leader) values (" + req.body.sesid + "," + team[0] + ") returning id) " +
-     "insert into teamusers(tmid,uid) select id, unnest('{" + team.join(",") + "}'::int[]) from rows; ";
-     });
-     console.log(sql);
-     /*rpg.execSQL({
-     dbcon: pass.dbcon,
-     sql: sql,
-     preventResEnd: true,
-     onEnd: () => { console.log("Team generation ok"); }
-     })(req,res);
-     res.end('{"status":"ok"}');
-     }
-     }
-     })(req,res);*/
 });
 
 router.post("/set-groups-stage", (req, res) => {
@@ -481,17 +618,37 @@ router.post("/set-groups-stage", (req, res) => {
         res.end('{"status":"err"}');
         return;
     }
-    let sql = "delete from teamusers as tu using teams as t where tu.tmid = t.id and t.stageid = " + req.body.stageid + "; "
-        + "delete from teams where stageid = " + req.body.stageid + "; ";
+    let sql = `
+    DELETE
+    FROM teamusers AS tu USING teams AS t
+    WHERE tu.tmid = t.id
+    AND t.stageid = ${req.body.stageid};
+
+    DELETE
+    FROM teams
+    WHERE stageid = ${req.body.stageid};
+    `;
     let grupos = JSON.parse(req.body.groups);
     grupos.forEach((team) => {
-        sql += "with rows as (insert into teams(stageid,leader,original_leader) values (" + req.body.stageid + "," + team[0] + "," + team[0] + ") returning id) " +
-            "insert into teamusers(tmid,uid) select id, unnest('{" + team.join(",") + "}'::int[]) from rows; ";
+        sql += `
+        WITH ROWS AS (
+            INSERT INTO teams(stageid, leader, original_leader)
+            VALUES (
+                ${req.body.stageid}, ${team[0]}, ${team[0]}
+            )
+            RETURNING id
+        )
+        INSERT INTO teamusers(tmid, UID)
+        SELECT id,
+            unnest(
+                '{${team.join(",")}}'::int[]
+            )
+        FROM ROWS;
+        `;
     });
-    console.log(sql);
     rpg.execSQL({
         dbcon: pass.dbcon,
-        sql: sql,
+        sql:   sql,
         onEnd: () => {
             res.end('{"status":"ok"}');
         }
@@ -524,7 +681,7 @@ let generateTeams = (alumArr, scFun, n, different) => {
 router.post("/assign-pairs", (req, res) => {
     res.header("Content-type", "application/json");
     if (req.session.role != "P" || req.body.sesid == null || req.body.rnum == null) {
-        console.log("Data not provided");
+        console.error("Data not provided");
         res.end('{"status":"err", "msg":"No hay datos suficientes"}');
         return;
     }
@@ -532,12 +689,22 @@ router.post("/assign-pairs", (req, res) => {
     let m = req.body.rnum;
     rpg.multiSQL({
         dbcon: pass.dbcon,
-        sql: "select r.id, r.uid from reports as r inner join rubricas as k on r.rid = k.id where r.example = false and k.sesid = " + ses,
+        sql:   `
+        SELECT r.id,
+            r.uid
+        FROM reports AS r
+        INNER JOIN rubricas AS k
+        ON r.rid = k.id
+        WHERE r.example = FALSE
+        AND k.sesid = ${ses}
+        `,
         onEnd: (req, res, arr) => {
             let n = arr.length;
             if (m >= n) {
-                console.log("More pairs than reports");
-                res.end('{"status":"err", "msg":"No hay suficientes reportes completos para asignar pares"}');
+                console.error("More pairs than reports");
+                res.end(
+                    '{"status":"err", "msg":"No hay suficientes reportes completos para asignar pares"}'
+                );
                 return;
             }
 
@@ -554,14 +721,16 @@ router.post("/assign-pairs", (req, res) => {
                 let k = m;
                 while(k > 0){
                     let sel = Object.keys(counter);
-                    console.log("Seleccionable son: " + sel);
+                    // console.log("Seleccionable son: " + sel);
                     if(sel.length == 0 || sel.length == 1 && sel[0] == uids[i]){
-                        console.log("Infinite loop");
-                        res.end('{"status":"err", "msg":"Error de consistencia de los pares formados. Intente nuevamente"}');
+                        console.error("Infinite loop");
+                        res.end(
+                            '{"status":"err", "msg":"Error de consistencia de los pares formados. Intente nuevamente"}'
+                        );
                         return;
                     }
                     let r = ~~(Math.random()*sel.length);
-                    console.log("Indice random es: " + r + ", rid es: " + ri);
+                    // console.log("Indice random es: " + r + ", rid es: " + ri);
                     if (sel[r] != uids[i]){
                         k -= 1;
                         pairs.push({uid: sel[r], rid: ri});
@@ -575,22 +744,28 @@ router.post("/assign-pairs", (req, res) => {
 
             let pairstr = pairs.map(e => "("+e.uid+","+e.rid+")");
             if(pairs.length != n*m){
-                res.end('{"status":"err", "msg":"Error de consistencia de los pares formados. Intente nuevamente"}');
+                res.end(
+                    '{"status":"err", "msg":"Error de consistencia de los pares formados. Intente nuevamente"}'
+                );
                 return;
             }
             if(hasDuplicates(pairstr)){
-                console.log("Se encontraron duplicados");
-                res.end('{"status":"err", "msg":"Error de duplicación de pares asignados. Intente nuevamente"}');
+                console.error("Se encontraron duplicados");
+                res.end(
+                    '{"status":"err", "msg":"Error de duplicación de pares asignados. Intente nuevamente"}'
+                );
                 return;
             }
             console.log("Pairs formed: " + pairstr.join(" "));
 
-            let sql = "insert into report_pair(sesid,uid,repid) values ";
-            sql += pairs.map(e => "("+ses+","+e.uid+","+e.rid+")").join(",");
+            let sql = `
+            INSERT INTO report_pair(sesid, uid, repid) VALUES
+            `;
+            sql += pairs.map(e => `(${ses}, ${e.uid}, ${e.rid})`).join(",");
             rpg.execSQL({
-                dbcon: pass.dbcon,
-                sql: sql,
-                onEnd: () => {},
+                dbcon:         pass.dbcon,
+                sql:           sql,
+                onEnd:         () => {},
                 preventResEnd: true
             })(req,res);
 
@@ -601,29 +776,59 @@ router.post("/assign-pairs", (req, res) => {
 
 router.post("/get-ideas-progress", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select i.uid, count(*) as count from ideas as i inner join users as u on i.uid = u.id where iteration = $1 and u.role = 'A' " +
-        "and i.docid in (select id from documents where sesid = $2) group by uid",
+    sql:   `
+    SELECT i.uid,
+        count(*) AS COUNT
+    FROM ideas AS i
+    INNER JOIN users AS u
+    ON i.uid = u.id
+    WHERE iteration = $1
+    AND u.role = 'A'
+    AND i.docid in (
+        SELECT id
+        FROM documents
+        WHERE sesid = $2
+    )
+    GROUP BY UID
+    `,
     postReqData: ["iteration", "sesid"],
-    sqlParams: [rpg.param("post", "iteration"), rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "iteration"), rpg.param("post", "sesid")]
 }));
 
 router.post("/get-alum-done-time", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select f.uid, extract(epoch from f.stime - s.stime) as dtime from finish_session as f, status_record as s where s.status = f.status and " +
-        "s.sesid = f.sesid and f.status = ($1 + 2) and f.sesid = $2",
+    sql:   `
+    SELECT f.uid, extract(epoch FROM f.stime - s.stime) AS dtime
+    FROM finish_session AS f,
+        status_record AS s
+    WHERE s.status = f.status
+    AND s.sesid = f.sesid
+    AND f.status = ($1 + 2)
+    AND f.sesid = $2
+    `,
     postReqData: ["iteration", "sesid"],
-    sqlParams: [rpg.param("post", "iteration"), rpg.param("post", "sesid")]
+    sqlParams:   [rpg.param("post", "iteration"), rpg.param("post", "sesid")]
 }));
 
 router.post("/get-alum-confidence", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql: "select s.confidence as conf, q.id as qid, count(*) as freq from selection as s inner join questions as q on s.qid = q.id " +
-        "where q.sesid = $1 and s.iteration = $2 and s.confidence is not null group by s.confidence, q.id",
+    sql:   `
+    SELECT s.confidence AS conf,
+        q.id AS qid,
+        count(*) AS freq
+    FROM selection AS s
+    INNER JOIN questions AS q
+    ON s.qid = q.id
+    WHERE q.sesid = $1
+    AND s.iteration = $2
+    AND s.confidence IS NOT NULL
+    GROUP BY s.confidence, q.id
+    `,
     postReqData: ["sesid","iteration"],
-    onStart: (ses, data, calc) => {
+    onStart:     (ses, data, calc) => {
         if (ses.role != "P") {
-            console.log("ERR: Solo profesor puede ver estado de alumnos.");
-            return "select $1, $2"
+            console.error("Sólo el profesor puede ver el estado de los alumnos");
+            return "SELECT $1, $2";
         }
     },
     sqlParams: [rpg.param("post", "sesid"),rpg.param("post", "iteration")]
