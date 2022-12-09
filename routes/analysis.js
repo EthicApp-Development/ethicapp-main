@@ -21,7 +21,7 @@ router.post("/get-alum-state-sel", middleware.verifySession, rpg.multiSQL({
     postReqData: ["sesid", "iteration"],
     onStart:     (ses, data, calc) => {
         if (ses.role != "P") {
-            console.error("Sólo profesor puede ver estado de alumnos.");
+            console.error("Sólo el profesor puede ver el estado de los alumnos");
             return "SELECT $1";
         }
     },
@@ -40,7 +40,7 @@ router.post("/get-alum-full-state-sel", rpg.multiSQL({
     postReqData: ["sesid", "iteration"],
     onStart:     (ses, data, calc) => {
         if (ses.role != "P") {
-            console.error("Sólo profesor puede ver estado de alumnos.");
+            console.error("Sólo el profesor puede ver el estado de los alumnos");
             return "SELECT $1";
         }
     },
@@ -76,7 +76,7 @@ router.post("/group-proposal-sel", (req, res) => {
                     `,
                     onStart: (ses, data, calc) => {
                         if (ses.role != "P") {
-                            console.error("Sólo profesor puede ver estado de alumnos.");
+                            console.error("Sólo el profesor puede ver el estado de los alumnos");
                             return "SELECT $1";
                         }
                     },
@@ -155,7 +155,7 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
     postReqData: ["sesid", "iteration"],
     onStart:     (ses, data, calc) => {
         if (ses.role != "P") {
-            console.log("ERR: Solo profesor puede ver estado de alumnos.");
+            console.error("Sólo el profesor puede ver el estado de los alumnos");
             return "SELECT $1, $2";
         }
     },
@@ -244,7 +244,7 @@ router.post("/get-alum-state-semantic", rpg.multiSQL({
     postReqData: ["sesid","iteration"],
     onStart:     (ses, data, calc) => {
         if (ses.role != "P") {
-            console.log("ERR: Solo profesor puede ver estado de alumnos.");
+            console.error("Sólo el profesor puede ver el estado de los alumnos");
             return "select $1, $2";
         }
     },
@@ -270,7 +270,6 @@ router.post("/get-alum-state-semantic", rpg.multiSQL({
         for(; i < arr.length; i++){
             let alum = arr[i];
             if(alum.uid != last_uid){
-                console.log(sc);
                 scores.push({uid: last_uid, score: sc/total});
                 last_uid = alum.uid;
                 sc = 0;
@@ -345,7 +344,7 @@ router.post("/group-proposal-lect", (req,res) => {
                     postReqData: ["sesid"],
                     onStart:     (ses, data, calc) => {
                         if (ses.role != "P") {
-                            console.error("Sólo profesor puede ver estado de alumnos.");
+                            console.error("Sólo el profesor puede ver el estado de los alumnos");
                             return "SELECT $1";
                         }
                     },
@@ -647,7 +646,6 @@ router.post("/set-groups-stage", (req, res) => {
         FROM ROWS;
         `;
     });
-    console.log(sql);
     rpg.execSQL({
         dbcon: pass.dbcon,
         sql:   sql,
@@ -723,7 +721,7 @@ router.post("/assign-pairs", (req, res) => {
                 let k = m;
                 while(k > 0){
                     let sel = Object.keys(counter);
-                    console.log("Seleccionable son: " + sel);
+                    // console.log("Seleccionable son: " + sel);
                     if(sel.length == 0 || sel.length == 1 && sel[0] == uids[i]){
                         console.error("Infinite loop");
                         res.end(
@@ -732,7 +730,7 @@ router.post("/assign-pairs", (req, res) => {
                         return;
                     }
                     let r = ~~(Math.random()*sel.length);
-                    console.log("Indice random es: " + r + ", rid es: " + ri);
+                    // console.log("Indice random es: " + r + ", rid es: " + ri);
                     if (sel[r] != uids[i]){
                         k -= 1;
                         pairs.push({uid: sel[r], rid: ri});
@@ -752,7 +750,7 @@ router.post("/assign-pairs", (req, res) => {
                 return;
             }
             if(hasDuplicates(pairstr)){
-                console.log("Se encontraron duplicados");
+                console.error("Se encontraron duplicados");
                 res.end(
                     '{"status":"err", "msg":"Error de duplicación de pares asignados. Intente nuevamente"}'
                 );
@@ -800,8 +798,7 @@ router.post("/get-ideas-progress", rpg.multiSQL({
 router.post("/get-alum-done-time", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
-    SELECT f.uid,
-        extract(epoch FROM f.stime - s.stime) AS dtime
+    SELECT f.uid, extract(epoch FROM f.stime - s.stime) AS dtime
     FROM finish_session AS f,
         status_record AS s
     WHERE s.status = f.status
@@ -815,13 +812,23 @@ router.post("/get-alum-done-time", rpg.multiSQL({
 
 router.post("/get-alum-confidence", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql:   "select s.confidence as conf, q.id as qid, count(*) as freq from selection as s inner join questions as q on s.qid = q.id " +
-        "where q.sesid = $1 and s.iteration = $2 and s.confidence is not null group by s.confidence, q.id",
+    sql:   `
+    SELECT s.confidence AS conf,
+        q.id AS qid,
+        count(*) AS freq
+    FROM selection AS s
+    INNER JOIN questions AS q
+    ON s.qid = q.id
+    WHERE q.sesid = $1
+    AND s.iteration = $2
+    AND s.confidence IS NOT NULL
+    GROUP BY s.confidence, q.id
+    `,
     postReqData: ["sesid","iteration"],
     onStart:     (ses, data, calc) => {
         if (ses.role != "P") {
-            console.log("ERR: Solo profesor puede ver estado de alumnos.");
-            return "select $1, $2";
+            console.error("Sólo el profesor puede ver el estado de los alumnos");
+            return "SELECT $1, $2";
         }
     },
     sqlParams: [rpg.param("post", "sesid"),rpg.param("post", "iteration")]

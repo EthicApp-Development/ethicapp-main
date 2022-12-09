@@ -15,117 +15,240 @@ router.get("/rubrica", (req, res) => {
         res.redirect(".");
 });
 
-router.post("/send-rubrica",rpg.singleSQL({
+
+router.post("/send-rubrica", rpg.singleSQL({
     //TODO Auth
-    dbcon:       pass.dbcon,
-    sql:         "insert into rubricas (sesid) values ($1) returning id",
+    dbcon: pass.dbcon,
+    sql:   `
+    INSERT INTO rubricas (sesid)
+    VALUES ($1) RETURNING id
+    `,
     sesReqData:  ["uid"],
     postReqData: ["sesid"],
-    sqlParams:   [rpg.param("post","sesid")]
+    sqlParams:   [rpg.param("post", "sesid")]
 }));
 
-router.post("/send-criteria",rpg.execSQL({
+
+router.post("/send-criteria", rpg.execSQL({
     //TODO Auth
-    dbcon:       pass.dbcon,
-    sql:         "insert into criteria (name,pond,inicio,proceso,competente,avanzado,rid) values ($1,$2,$3,$4,$5,$6,$7)",
+    dbcon: pass.dbcon,
+    sql:   `
+    INSERT INTO criteria (name, pond, inicio, proceso, competente, avanzado, rid)
+    VALUES ($1,$2,$3,$4,$5,$6,$7)
+    `,
     sesReqData:  ["uid"],
-    postReqData: ["name","pond","inicio","proceso","competente","avanzado","rid"],
-    sqlParams:   [rpg.param("post","name"),rpg.param("post","pond"),rpg.param("post","inicio"),rpg.param("post","proceso"),
-        rpg.param("post","competente"),rpg.param("post","avanzado"),rpg.param("post","rid")]
+    postReqData: ["name", "pond", "inicio", "proceso", "competente", "avanzado", "rid"],
+    sqlParams:   [
+        rpg.param("post", "name"), rpg.param("post", "pond"), rpg.param("post", "inicio"),
+        rpg.param("post", "proceso"), rpg.param("post", "competente"),
+        rpg.param("post", "avanzado"), rpg.param("post", "rid")
+    ]
 }));
+
 
 router.post("/delete-criterias", rpg.execSQL({
-    dbcon:       pass.dbcon,
-    sql:         "delete from criteria where rid = $1",
+    dbcon: pass.dbcon,
+    sql:   `
+    DELETE
+    FROM criteria
+    WHERE rid = $1
+    `,
     sesReqData:  ["uid"],
     postReqData: ["rid"],
     sqlParams:   [rpg.param("post","rid")]
 }));
 
-router.post("/get-admin-rubrica",rpg.multiSQL({
+
+router.post("/get-admin-rubrica", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql:   "select c.id, c.name, c.pond, c.inicio, c.proceso, c.competente, c.avanzado, c.rid from criteria as c, rubricas as r " +
-    "where c.rid = r.id and r.sesid = $1",
+    sql:   `
+    SELECT c.id,
+        c.name,
+        c.pond,
+        c.inicio,
+        c.proceso,
+        c.competente,
+        c.avanzado,
+        c.rid
+    FROM criteria AS c,
+        rubricas AS r
+    WHERE c.rid = r.id
+        AND r.sesid = $1
+    `,
     sesReqData:  ["uid"],
     postReqData: ["sesid"],
-    sqlParams:   [rpg.param("post","sesid")]
+    sqlParams:   [rpg.param("post", "sesid")]
 }));
 
-router.post("/get-rubrica",rpg.multiSQL({
+
+router.post("/get-rubrica", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql:   "select c.id, c.name, c.pond, c.inicio, c.proceso, c.competente, c.avanzado from criteria as c, rubricas as r " +
-        "where c.rid = r.id and r.sesid = $1",
+    sql:   `
+    SELECT c.id,
+        c.name,
+        c.pond,
+        c.inicio,
+        c.proceso,
+        c.competente,
+        c.avanzado
+    FROM criteria AS c,
+        rubricas AS r
+    WHERE c.rid = r.id
+        AND r.sesid = $1
+    `,
     sesReqData: ["ses"],
-    sqlParams:  [rpg.param("ses","ses")]
+    sqlParams:  [rpg.param("ses", "ses")]
 }));
 
-router.post("/get-criteria-selection",rpg.multiSQL({
-    dbcon:       pass.dbcon,
-    sql:         "select id, cid, selection from criteria_selection where uid = $1 and repid = $2",
+
+router.post("/get-criteria-selection", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT id,
+        cid,
+        selection
+    FROM criteria_selection
+    WHERE UID = $1
+        AND repid = $2
+    `,
     sesReqData:  ["uid"],
     postReqData: ["rid"],
-    sqlParams:   [rpg.param("ses","uid"),rpg.param("post","rid")]
+    sqlParams:   [rpg.param("ses", "uid"), rpg.param("post", "rid")]
 }));
 
-router.post("/get-report-comment",rpg.singleSQL({
-    dbcon:       pass.dbcon,
-    sql:         "select comment from report_comment where uid = $1 and repid = $2",
+
+router.post("/get-report-comment", rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT comment
+    FROM report_comment
+    WHERE UID = $1
+        AND repid = $2
+    `,
     sesReqData:  ["uid"],
     postReqData: ["rid"],
-    sqlParams:   [rpg.param("ses","uid"),rpg.param("post","rid")]
+    sqlParams:   [rpg.param("ses","uid"), rpg.param("post","rid")]
 }));
 
-router.post("/get-criteria-selection-by-report",rpg.multiSQL({
-    dbcon:       pass.dbcon,
-    sql:         "select uid, cid, selection from criteria_selection where repid = $1",
+
+router.post("/get-criteria-selection-by-report", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT UID,
+        cid,
+        selection
+    FROM criteria_selection
+    WHERE repid = $1
+    `,
     sesReqData:  ["uid"],
     postReqData: ["repid"],
     sqlParams:   [rpg.param("post","repid")]
 }));
 
-router.post("/get-criteria-answer",rpg.multiSQL({
+
+router.post("/get-criteria-answer", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql:   "select id, cid, selection from criteria_selection where uid in (select id from users inner join sesusers on id = uid " +
-        "where role = 'P' and sesid = $1) and repid = $2",
-    sesReqData:  ["uid","ses"],
+    sql:   `
+    SELECT id,
+        cid,
+        selection
+    FROM criteria_selection
+    WHERE UID in (
+        SELECT id
+        FROM users
+        INNER JOIN sesusers
+        ON id = UID
+        WHERE ROLE = 'P'
+            AND sesid = $1
+    ) AND repid = $2
+    `,
+    sesReqData:  ["uid", "ses"],
     postReqData: ["rid"],
-    sqlParams:   [rpg.param("ses","ses"),rpg.param("post","rid")]
+    sqlParams:   [rpg.param("ses","ses"), rpg.param("post","rid")]
 }));
 
-router.post("/send-example-report",rpg.execSQL({
-    dbcon:       pass.dbcon,
-    sql:         "insert into reports (content,example,rid,uid,title) select $1, true, r.id, $2, $3 from rubricas as r where r.sesid = $4 limit 1",
+
+router.post("/send-example-report", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql:   `
+    INSERT INTO reports (content, example, rid, UID, title)
+    SELECT $1,
+        TRUE,
+        r.id,
+        $2,
+        $3
+    FROM rubricas AS r
+    WHERE r.sesid = $4
+    LIMIT 1
+    `,
     sesReqData:  ["uid"],
     postReqData: ["sesid","content","title"],
-    sqlParams:   [rpg.param("post","content"),rpg.param("ses","uid"),rpg.param("post","title"),rpg.param("post","sesid")]
+    sqlParams:   [
+        rpg.param("post","content"), rpg.param("ses","uid"), rpg.param("post","title"),
+        rpg.param("post","sesid")
+    ]
 }));
 
+
 router.post("/get-example-reports", rpg.multiSQL({
-    dbcon:       pass.dbcon,
-    sql:         "select r.id, r.title, r.content, r.uid from reports as r, rubricas as b where r.rid = b.id and b.sesid = $1 and r.example = true",
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT r.id,
+        r.title,
+        r.content,
+        r.uid
+    FROM reports AS r,
+        rubricas AS b
+    WHERE r.rid = b.id
+        AND b.sesid = $1
+        AND r.example = TRUE
+    `,
     sesReqData:  ["uid"],
     postReqData: ["sesid"],
     sqlParams:   [rpg.param("post","sesid")]
 }));
 
+
 router.post("/get-report", rpg.singleSQL({
-    dbcon:      pass.dbcon,
-    sql:        "select r.id, r.content, r.uid from reports as r where r.id = $1",
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT r.id,
+        r.content,
+        r.uid
+    FROM reports AS r
+    WHERE r.id = $1
+    `,
     sesReqData: ["uid"],
     sqlParams:  [rpg.param("post","rid")]
 }));
 
+
 router.post("/get-report-uid", rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql:   "select r.id, r.content, r.uid from reports as r inner join rubricas as ru on r.rid = ru.id " +
-            "where ru.sesid = $1 and r.uid = $2",
+    sql:   `
+    SELECT r.id,
+        r.content,
+        r.uid
+    FROM reports AS r
+    INNER JOIN rubricas AS ru
+    ON r.rid = ru.id
+    WHERE ru.sesid = $1
+        AND r.uid = $2
+    `,
     postReqData: ["uid","sesid"],
     sqlParams:   [rpg.param("post","sesid"), rpg.param("post","uid")]
 }));
 
+
 router.post("/get-active-example-report", rpg.singleSQL({
-    dbcon:      pass.dbcon,
-    sql:        "select r.id, r.content, r.uid from reports as r where r.id = $1",
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT r.id,
+        r.content,
+        r.uid
+    FROM reports AS r
+    WHERE r.id = $1
+    `,
     sesReqData: ["uid","ses"],
     onStart:    (ses, data, calc) => {
         calc.rid = exampleReports[ses.ses];
@@ -133,26 +256,61 @@ router.post("/get-active-example-report", rpg.singleSQL({
     sqlParams: [rpg.param("calc","rid")]
 }));
 
+
 router.post("/get-paired-report", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql:   "select rp.repid as id, r.content, r.uid from report_pair as rp inner join reports as r on rp.repid = r.id " +
-        "inner join rubricas as k on r.rid = k.id where k.sesid = $1 and rp.uid = $2",
+    sql:   `
+    SELECT rp.repid AS id,
+        r.content,
+        r.uid
+    FROM report_pair AS rp
+    INNER JOIN reports AS r
+    ON rp.repid = r.id
+    INNER JOIN rubricas AS k
+    ON r.rid = k.id
+    WHERE k.sesid = $1
+        AND rp.uid = $2
+    `,
     sesReqData: ["uid","ses"],
     sqlParams:  [rpg.param("ses","ses"),rpg.param("ses","uid")]
 }));
 
+
 router.post("/send-criteria-selection", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql:   "with rows as (update criteria_selection set selection = $1 where cid = $2 and uid = $3 and repid = $4 returning 1) " +
-        "insert into criteria_selection(selection,cid,uid,repid) select $5,$6,$7,$8 where 1 not in (select * from rows)",
+    sql:   `
+    WITH ROWS AS (
+        UPDATE criteria_selection
+        SET selection = $1
+        WHERE cid = $2
+            AND UID = $3
+            AND repid = $4 RETURNING 1
+    )
+    INSERT INTO criteria_selection(selection, cid, UID, repid)
+    SELECT $5,
+        $6,
+        $7,
+        $8
+    WHERE 1 not in (
+        SELECT *
+        FROM ROWS
+    )
+    `,
     sesReqData:  ["uid"],
-    postReqData: ["sel","rid","cid"],
-    sqlParams:   [rpg.param("post","sel"),rpg.param("post","cid"),rpg.param("ses","uid"),rpg.param("post","rid"),
-        rpg.param("post","sel"),rpg.param("post","cid"),rpg.param("ses","uid"),rpg.param("post","rid")]
+    postReqData: ["sel", "rid", "cid"],
+    sqlParams:   [
+        rpg.param("post","sel"), rpg.param("post","cid"), rpg.param("ses","uid"),
+        rpg.param("post","rid"), rpg.param("post","sel"), rpg.param("post","cid"),
+        rpg.param("ses","uid"), rpg.param("post","rid")
+    ]
 }));
 
+
 router.post("/set-active-example-report", (req,res) => {
-    if(req.session.uid == null || req.body.rid == null || req.body.sesid == null || req.session.role == null || req.session.role != "P"){
+    if (
+        req.session.uid == null || req.body.rid == null || req.body.sesid == null
+        || req.session.role == null || req.session.role != "P"
+    ) {
         res.end('{"status":"err"}');
         return;
     }
@@ -161,8 +319,12 @@ router.post("/set-active-example-report", (req,res) => {
     res.end('{"status":"ok"}');
 });
 
+
 router.post("/set-eval-report", (req,res) => {
-    if(req.session.uid == null || req.body.rid == null || req.body.sesid == null || req.session.role == null || req.session.role != "P"){
+    if (
+        req.session.uid == null || req.body.rid == null || req.body.sesid == null
+        || req.session.role == null || req.session.role != "P"
+    ) {
         res.end('{"status":"err"}');
         return;
     }
@@ -170,8 +332,12 @@ router.post("/set-eval-report", (req,res) => {
     res.end('{"status":"ok"}');
 });
 
+
 router.post("/broadcast-diff", (req,res) => {
-    if(req.session.uid == null || req.body.sesid == null || req.body.content == null || req.session.role == null || req.session.role != "P"){
+    if (
+        req.session.uid == null || req.body.sesid == null || req.body.content == null
+        || req.session.role == null || req.session.role != "P"
+    ) {
         res.end('{"status":"err"}');
         return;
     }
@@ -182,40 +348,114 @@ router.post("/broadcast-diff", (req,res) => {
 
 router.post("/send-report", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql:   "with rows as (update reports as r set content = $1 from rubricas as b where r.uid = $2 and r.rid = b.id and b.sesid = $3 returning 1) " +
-        "insert into reports(content,uid,example,rid) select $4,$5,false,id from rubricas as t where t.sesid = $6 and 1 not in (select * from rows)",
+    sql:   `
+    WITH ROWS AS (
+        UPDATE reports AS r
+        SET content = $1
+        FROM rubricas AS b
+        WHERE r.uid = $2
+            AND r.rid = b.id
+            AND b.sesid = $3
+        RETURNING 1
+    )
+    INSERT INTO reports(content, UID, example, rid)
+    SELECT $4,
+        $5,
+        FALSE,
+        id
+    FROM rubricas AS t
+    WHERE t.sesid = $6
+        AND 1 not in (
+            SELECT *
+            FROM ROWS
+        )
+    `,
     sesReqData:  ["uid","ses"],
     postReqData: ["content"],
-    sqlParams:   [rpg.param("post","content"),rpg.param("ses","uid"),rpg.param("ses","ses"),rpg.param("post","content"),rpg.param("ses","uid"),rpg.param("ses","ses")]
+    sqlParams:   [
+        rpg.param("post","content"), rpg.param("ses","uid"), rpg.param("ses","ses"),
+        rpg.param("post","content"), rpg.param("ses","uid"), rpg.param("ses","ses")
+    ]
 }));
+
 
 router.post("/send-report-comment", rpg.execSQL({
     dbcon: pass.dbcon,
-    sql:   "with rows as (update report_comment as r set comment = $1 where r.uid = $2 and r.repid = $3 returning 1) " +
-    "insert into report_comment(comment,uid,repid) select $4,$5,$6 where 1 not in (select * from rows)",
+    sql:   `
+    WITH ROWS AS (
+        UPDATE report_comment AS r
+        SET COMMENT = $1
+        WHERE r.uid = $2
+            AND r.repid = $3
+            RETURNING 1
+    )
+    INSERT INTO report_comment(COMMENT, UID, repid)
+    SELECT $4,
+        $5,
+        $6
+    WHERE 1 not in (
+        SELECT *
+        FROM ROWS
+    )
+    `,
     sesReqData:  ["uid","ses"],
     postReqData: ["rid","text"],
-    sqlParams:   [rpg.param("post","text"),rpg.param("ses","uid"),rpg.param("post","rid"),rpg.param("post","text"),rpg.param("ses","uid"),rpg.param("post","rid")]
+    sqlParams:   [
+        rpg.param("post","text"), rpg.param("ses","uid"), rpg.param("post","rid"),
+        rpg.param("post","text"), rpg.param("ses","uid"), rpg.param("post","rid")
+    ]
 }));
+
 
 router.post("/get-my-report", rpg.singleSQL({
-    dbcon:      pass.dbcon,
-    sql:        "select r.id, r.content from reports as r, rubricas as b where r.uid = $1 and b.id = r.rid and b.sesid = $2",
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT r.id,
+        r.content
+    FROM reports AS r,
+        rubricas AS b
+    WHERE r.uid = $1
+        AND b.id = r.rid
+        AND b.sesid = $2
+    `,
     sesReqData: ["uid","ses"],
-    sqlParams:  [rpg.param("ses","uid"),rpg.param("ses","ses")]
+    sqlParams:  [rpg.param("ses","uid"), rpg.param("ses","ses")]
 }));
 
+
 router.post("/get-report-list", rpg.multiSQL({
-    dbcon:       pass.dbcon,
-    sql:         "select r.id, r.title, r.example, r.uid from reports as r inner join rubricas as ru on ru.id = r.rid and ru.sesid = $1",
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT r.id,
+        r.title,
+        r.example,
+        r.uid
+    FROM reports AS r
+    INNER JOIN rubricas AS ru
+    ON ru.id = r.rid
+        AND ru.sesid = $1
+    `,
     postReqData: ["sesid"],
     sqlParams:   [rpg.param("post","sesid")]
 }));
 
+
 router.post("/get-report-result", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql:   "select cs.id, cs.selection, cs.uid, c.pond, rc.comment from criteria_selection as cs inner join criteria as c on cs.cid = c.id " +
-        "left outer join report_comment as rc on cs.uid = rc.uid and cs.repid = rc.repid where cs.repid = $1",
+    sql:   `
+    SELECT cs.id,
+        cs.selection,
+        cs.uid,
+        c.pond,
+        rc.comment
+    FROM criteria_selection AS cs
+    INNER JOIN criteria AS c
+    ON cs.cid = c.id
+    LEFT OUTER JOIN report_comment AS rc
+    ON cs.uid = rc.uid
+        AND cs.repid = rc.repid
+    WHERE cs.repid = $1
+    `,
     postReqData: ["repid"],
     sqlParams:   [rpg.param("post","repid")],
     onEnd:       (req,res,arr) => {
@@ -234,10 +474,25 @@ router.post("/get-report-result", rpg.multiSQL({
     }
 }));
 
+
 router.post("/get-report-result-all", rpg.multiSQL({
     dbcon: pass.dbcon,
-    sql:   "select r.id as repid, cs.id, cs.selection, cs.uid, c.pond from criteria_selection as cs inner join criteria as c on cs.cid = c.id " +
-        "inner join reports as r on r.id = cs.repid inner join rubricas as rb on r.rid = rb.id where rb.sesid = $1 and r.example = false",
+    sql:   `
+    SELECT r.id AS repid,
+        cs.id,
+        cs.selection,
+        cs.uid,
+        c.pond
+    FROM criteria_selection AS cs
+    INNER JOIN criteria AS c
+    ON cs.cid = c.id
+    INNER JOIN reports AS r
+    ON r.id = cs.repid
+    INNER JOIN rubricas AS rb
+    ON r.rid = rb.id
+    WHERE rb.sesid = $1
+        AND r.example = FALSE
+    `,
     postReqData: ["sesid"],
     sqlParams:   [rpg.param("post","sesid")],
     onEnd:       (req,res,arr) => {
@@ -260,32 +515,52 @@ router.post("/get-report-result-all", rpg.multiSQL({
     }
 }));
 
+
 router.post("/get-report-ideas", rpg.multiSQL({
-    dbcon:       pass.dbcon,
-    sql:         "select idea_id as ideaid from report_ideas where rid = $1",
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT idea_id AS ideaid
+    FROM report_ideas
+    WHERE rid = $1
+    `,
     postReqData: ["repid"],
     sqlParams:   [rpg.param("post","repid")]
 }));
+
 
 router.post("/clear-report-ideas", rpg.execSQL({
-    dbcon:       pass.dbcon,
-    sql:         "delete from report_ideas where rid = $1",
+    dbcon: pass.dbcon,
+    sql:   `
+    DELETE
+    FROM report_ideas
+    WHERE rid = $1
+    `,
     postReqData: ["repid"],
     sqlParams:   [rpg.param("post","repid")]
 }));
 
+
 router.post("/send-report-idea", rpg.execSQL({
-    dbcon:       pass.dbcon,
-    sql:         "insert into report_ideas(rid,idea_id) values ($1,$2)",
+    dbcon: pass.dbcon,
+    sql:   `
+    INSERT INTO report_ideas(rid, idea_id)
+    VALUES ($1,$2)
+    `,
     postReqData: ["repid", "iid"],
     sqlParams:   [rpg.param("post","repid"), rpg.param("post","iid")]
 }));
 
+
 router.post("/get-report-evaluators", rpg.multiSQL({
-    dbcon:       pass.dbcon,
-    sql:         "select uid from report_pair where repid = $1",
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT UID
+    FROM report_pair
+    WHERE repid = $1
+    `,
     postReqData: ["repid"],
     sqlParams:   [rpg.param("post","repid")]
 }));
+
 
 module.exports = router;
