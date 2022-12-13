@@ -21,6 +21,6 @@ node db_config/init_db.js
 ```
 This option connects into the postgres address you provide, and 'manually' send the query to create & populate the DB.
 
-#PENDING:
+# PENDING:
 - Allow 'personalization' of db (username, password, db_name, etc)
 - For js script, INSERT queries are very vulnerable. Refactor needed before launching into production. 
