@@ -16,7 +16,7 @@ This creates the database and its schema, and then export it into the dockerized
 ## JS script
 The second option is to run the init_db.js script:
 
-´´´shell
+```shell
 node db_config/init_db.js
 ```
 This option connects into the postgres address you provide, and 'manually' send the query to create & populate the DB.
