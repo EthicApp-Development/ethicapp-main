@@ -1,47 +1,51 @@
 #Temporary file to run automatization of db.
 
-<<comment
-For proper modularization of code. (TO BE IMPLEMENTED)
+
+#Use of enviromental variables (mainly for security reasons)
 export PGHOST=${PGHOST-localhost}
-export PGPORT=${PGPORT-5432}
-export PGDATABASE=${PGDATABASE-doccollab}
-export PGUSER=${PGUSER-app}
+export PGPORT=${PGPORT-5433}
+export PGDATABASE=${PGDATABASE-postgres}
+export PGUSER=${PGUSER-postgres}
 export PGPASSWORD=${PGPASSWORD-app2020}
-comment
 
 
-<<comment 
-Command line arguments. (TO BE IMPLEMENTED)
-/*
-DB_NAME=$1
-PG_USER=$2
-PG_PASSSWORD=$3
-comment
+
+#Command line arguments. 
+DB_NAME=${1:-$PGDATABASE}
+PG_USER=${2:-$PGUSER}             #Username given when created the server in pgAdmin.
+PG_PASSSWORD=${3:-$PGPASSWORD}    #Password given when created the server in pgAdmin.
 
 
-CREATE_DB_FILE=create_db.sql
 
-psql -U postgres -a -f $CREATE_DB_FILE -h localhost 
-#echo $CREATE_MYDB
-# Run create db script.
+#Creates the database $DB_NAME in server.
+CREATE_DB_FILE=db_config/create_db.sql
+psql -U $PG_USER -a -f $CREATE_DB_FILE -h $PGHOST -p $PGPORT
 
-#RUN_ON_MYDB="psql -U postgres -a -f ${f} -h localhost "
 
-for f in ./db_config/*; do
+#Creates connection string for new database.
+export DBCON=${DBCON-postgresql://$PG_USER:$PG_PASSSWORD@$PGHOST:$PGPORT/$DB_NAME}
+
+# Creates and implements the schema for db $DB_NAME.
+for f in ./db_config/create_sql_schema/* ; do
   case "$f" in
-    *_db.sql)    echo "$0: ignoring $f";;
-    *.sql) psql -U postgres -a -f ${f} -h localhost -d doccollabtest ;;
-    *)        echo "$0: ignoring $f" ;;
+    *.sql) psql $DBCON --file=${f} ;;
+
   esac
   echo
 done
 
-POPULATE_MYDB=populate_db.sql
-psql -U postgres -a -f $POPULATE_MYDB -h localhost -d doccollabtest
-#echo $POPULATE_MYDB 
+
+#Populates db with test users.
+POPULATE_MYDB=db_config/populate_db.sql
+psql -U $PG_USER -a -f $POPULATE_MYDB -h $PGHOST -p $PGPORT -d $DB_NAME
+
+
+#Once the database it's fully created, it exports the connection string to the rest of the app.
+DBCON=$DBCON node modules/passwords.js
 
 <<comment
 For uploading db dump into dockerized container pgadmin address
 pg_dump --attribute-inserts --dbname=doccollabtest --username=postgres --password --host=localhost --file=ethicapp-postgres-$(date +%F).sql
-psql postgresql://app:app2020@localhost:5432/doccollab --file=ethicapp-postgres-$(date +%F).sql--quiet
+psql postgresql://app:app2020@localhost:5432/doccollab --file=ethicapp-postgres-$(date +%F).sql --quiet
 comment
+
