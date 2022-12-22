@@ -30,6 +30,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: app2020
       POSTGRES_DB: postgres
+    ports:
+      - "5433:5432"
     networks:
       - default
 
