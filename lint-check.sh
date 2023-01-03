@@ -9,8 +9,12 @@
 set -eu
 
 echo ">>> Running SQL linter"
-sqlfluff lint ./db_config/
-# sqlfluff fix ./db_config/ --dialect postgres --force
+sqlfluff lint ./db_config/create_sql_schema
+# sqlfluff fix ./db_config/create_sql_schema --dialect postgres --force
+sqlfluff lint ./db_config/create_db.sql
+# sqlfluff fix ./db_config/create_db.sql --dialect postgres --force
+sqlfluff lint ./db_config/populate_db.sql
+# sqlfluff fix ./db_config/populate_db.sql --dialect postgres --force
 echo "[OK] SQLFluff pass"
 
 echo ">>> Running CSS linter"
