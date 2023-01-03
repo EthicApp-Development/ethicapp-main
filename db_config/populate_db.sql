@@ -19,8 +19,3 @@ INSERT INTO users(name, rut, pass, mail, sex, role, aprendizaje)
 VALUES(
     'Alumno 3', '22222222-2',md5('alumno3'), 'alumno3@test', 'F', 'A', 'Activo'
 );
-
-INSERT INTO users(name, rut, pass, mail, sex, role, aprendizaje)
-VALUES(
-    'MEGA CHECK TEST USER', '22222222-2', md5('testuser'), 'checkuser@test', 'F', 'P', 'Reflexivo'
-);
