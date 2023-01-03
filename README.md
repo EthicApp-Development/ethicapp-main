@@ -44,7 +44,7 @@ Ask the maintainer for the value of the secrets as you need them.
 #### 3.1.1. Native
 
 1. At the root directory of the project and run `npm install` for installing dependencies.
-2. As issue [#71](https://github.com/EthicApp-Development/ethicapp-main/issues/71) is not yet resolved, you will have to ask for a database image with the existing schema and data for the system to start running (e.g. users). The maintainer will give you further details.
+2. For creating a database image with the existing schema, go to the root directory of the project and run `sh db_config/init_db.sh ${YOUR_DB_NAME}${YOUR_PG_USER} ${YOUR_PG_PASSWORD}`, where you'll pass both your credentials and the database name, and create a database image you can see and interact with in your pgadmin server page. In case you want more information or see posible common problems, go to the [DB_CONFIG/README.md](db_config/README.md) file.
 
 #### 3.1.2. Virtualized
 
