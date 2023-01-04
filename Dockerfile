@@ -1,7 +1,8 @@
-FROM node:12.22.9-buster
+ARG NODE_VERSION
+FROM node:${NODE_VERSION}
+
 RUN mkdir -p /home/app
+
 WORKDIR /home/app
-#COPY ["package.json", "package-lock.json*", "./"]
-#RUN npm install
-#COPY . .
+
 CMD npm install && npm start
