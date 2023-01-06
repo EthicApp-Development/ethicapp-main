@@ -12,11 +12,11 @@ services:
   #     args:
   #       NGINX_VERSION: 1.22
   #       WEB_APP_PORT: ${WEB_APP_PORT}
-  #   ports:
-  #     - "${NGINX_LISTEN_PORT}:80"
   #   networks:
   #     - default
-  #   restart: "unless-stopped"
+  #   restart: unless-stopped
+  #   ports:
+  #     - "${NGINX_LISTEN_PORT}:80"
     # depends_on:
     #   - node
 
@@ -26,43 +26,60 @@ services:
     build:
       context: .
       args:
-        NODE_VERSION: "12.22.9-buster"
+        NODE_VERSION: ${NODE_VERSION}
     environment:
       NODE_ENV: development
       JWT_SECRET: ${JWT_SECRET}
-    depends_on:
-      - postgres
-    volumes:
-      - .:/home/app
-    ports:
-      - "${WEB_APP_PORT}:8501"
+    restart: unless-stopped
     networks:
       - default
+    ports:
+      - "${WEB_APP_PORT}:8501"
+    volumes:
+      - ".:/home/app:rw"
+    depends_on:
+      - postgres
 
   # ---------------------- Database ---------------------- #
   postgres:
     container_name: "ethicapp-postgres"
-    image: "postgres:10.19-bullseye"
-    volumes:
-      - ./postgres:/var/lib/postgresql/data
+    build:
+      context: postgres-db/
+      args:
+        UBUNTU_VERSION: "22.04"
+        POSTGRES_VERSION: ${POSTGRES_VERSION}
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: app2020
-      POSTGRES_DB: postgres
+      POSTGRES_LOG_LEVEL: 1
+      PGPORT: 5432
+      PGDATA: /var/lib/postgresql/${POSTGRES_VERSION}/main
+    restart: "unless-stopped"
     networks:
       - default
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 20s
+      timeout: 5s
+      retries: 1
+      start_period: 10s
+    volumes:
+      - "./postgres-db/data-volume:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"
 
   # ---------------------- PGAdmin ---------------------- #
   pgadmin:
     container_name: "ethicapp-pgadmin"
-    image: dpage/pgadmin4
-    depends_on:
-      - postgres
-    ports:
-      - "${PG_ADMIN_PORT}:80"
+    build:
+      context: pgadmin
+      args:
+        PGADMIN_VERSION: ${PGADMIN_VERSION}
+        POSTGRES_CONN_PORT: 5432
+        POSTGRES_CONN_USER: app
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
     restart: unless-stopped
     networks:
       - default
+    ports:
+      - "${PGADMIN_PORT}:80"
+    depends_on:
+      - postgres

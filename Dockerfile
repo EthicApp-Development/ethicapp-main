@@ -1,7 +1,7 @@
 ARG NODE_VERSION
 FROM node:${NODE_VERSION}
 
-RUN mkdir -p /home/app
+ARG DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /home/app
 
