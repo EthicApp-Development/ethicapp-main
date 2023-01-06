@@ -110,6 +110,7 @@ For ensuring the codebase fulfills the linting settings, you execute `./lint-che
 ### 7.2. Recommended extensions
 
 - [GitLens](https://marketplace.visualstudio.com/items?itemName=eamodio.gitlens): for advanced usage of Git. Highly recommended, as it is specially helpful for merging commits and branches, comparing commits, as well as keeping track of history of a selected line of code. If you are new to this extension, please go to [appendix 8.1](#81-recommendation-for-gitlens).
+- [Git Graph](https://marketplace.visualstudio.com/items?itemName=mhutchie.git-graph): provides visualization of commit history. Extremely useful for viewing changes and merges on branches.
 - [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker): for `Dockerfile` and `docker-compose` intellisense.
 - [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml): validation and formatting of YAML files (e.g. for when editing linter config files in YAML).
 
