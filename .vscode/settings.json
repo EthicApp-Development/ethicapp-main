@@ -3,7 +3,8 @@
     "files.associations": {
         ".eslintrc.json": "jsonc", //* redundant setting for current vscode versions
         ".htmlhintrc": "jsonc",
-        ".sqlfluff": "properties"
+        ".sqlfluff": "properties",
+        ".env": "properties"
     },
 
     // Configuration files
