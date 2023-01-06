@@ -19,23 +19,25 @@ RUN apt-get update --quiet && apt-get install --quiet -y \
         language-pack-es \
         lsb-core
 
-ARG POSTGRES_VERSION_MAJOR
+ARG POSTGRES_VERSION
 
 # Installing PostgreSQL server
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
         > /etc/apt/sources.list.d/pgdg.list \
     && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
     && apt-get update --quiet && apt-get install --quiet -y \
-        postgresql-${POSTGRES_VERSION_MAJOR}
+        postgresql-${POSTGRES_VERSION}
 
 # Allowing all external connections
 RUN echo "\
-host    all     	all     0.0.0.0/0    md5 \n\
+host    all         all     0.0.0.0/0    md5 \n\
 host    all         all     ::/0         md5 \n\
-" >> /etc/postgresql/${POSTGRES_VERSION_MAJOR}/main/pg_hba.conf
+" >> /etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf
 
 WORKDIR /code
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
+
+ENV POSTGRES_VERSION=${POSTGRES_VERSION}
 
 CMD [ "/code/entrypoint.sh" ]

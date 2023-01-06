@@ -55,12 +55,11 @@ services:
   postgres:
     container_name: "ethicapp-postgres"
     build:
-      context: postgres-db
+      context: postgres-db/
       args:
         UBUNTU_VERSION: "22.04"
-        POSTGRES_VERSION_MAJOR: ${POSTGRES_VERSION_MAJOR}
+        POSTGRES_VERSION: ${POSTGRES_VERSION_MAJOR}
     environment:
-      POSTGRES_VERSION_MAJOR: ${POSTGRES_VERSION_MAJOR}
       POSTGRES_LOG_LEVEL: 1
       PGPORT: 5432
       PGDATA: /var/lib/postgresql/${POSTGRES_VERSION_MAJOR}/main
@@ -74,20 +73,23 @@ services:
       retries: 1
       start_period: 10s
     volumes:
-      - ./postgres:/var/lib/postgresql/${POSTGRES_VERSION_MAJOR}/main:rw
-      #- ./postgres-db/data-volume:/var/lib/postgresql/${POSTGRES_VERSION_MAJOR}/main:rw
+      - "./postgres:/var/lib/postgresql/${POSTGRES_VERSION_MAJOR}/main:rw"
+      #- "./postgres-db/data-volume:/var/lib/postgresql/${POSTGRES_VERSION_MAJOR}/main:rw"
 
   # ---------------------- PGAdmin ---------------------- #
   pgadmin:
     container_name: "ethicapp-pgadmin"
-    image: dpage/pgadmin4
-    depends_on:
-      - postgres
+    image: dpage/pgadmin4:${PGADMIN_VERSION}
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
+    #user: root #!
     restart: unless-stopped
     networks:
       - default
     ports:
       - "${PGADMIN_PORT}:80"
+    depends_on:
+      - postgres
+    volumes:
+      - "./pgadmin/servers.json:/pgadmin4/servers.json:ro"
