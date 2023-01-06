@@ -57,19 +57,14 @@ services:
     build:
       context: postgres-db
       args:
+        UBUNTU_VERSION: "22.04"
         POSTGRES_VERSION_MAJOR: ${POSTGRES_VERSION_MAJOR}
-        POSTGRES_VERSION_MINOR: ${POSTGRES_VERSION_MINOR}
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: doccollab
-      #PGDATA: /var/lib/postgresql/custompath
-      POSTGRES_HOST_AUTH_METHOD: "md5"
+      POSTGRES_VERSION_MAJOR: ${POSTGRES_VERSION_MAJOR}
+      POSTGRES_LOG_LEVEL: 1
       PGPORT: 5432
-      # POSTGRES_PORT: 5432
-      # POSTGRES_LOG_LEVEL: 1
-      # DATA_DIR: /var/lib/postgresql/custompath
-    restart: unless-stopped
+      PGDATA: /var/lib/postgresql/${POSTGRES_VERSION_MAJOR}/main
+    restart: "no" #unless-stopped #!
     networks:
       - default
     healthcheck:
@@ -79,9 +74,7 @@ services:
       retries: 1
       start_period: 10s
     volumes:
-      - ./postgres-db/data-volume:/tmp/data:rw
-      - ./entrypoint.sh:/docker-entrypoint-initdb.d/init-database.sh:ro
-
+      - ./postgres-db/data-volume:/var/lib/postgresql/${POSTGRES_VERSION_MAJOR}/main:rw
 
   # ---------------------- PGAdmin ---------------------- #
   pgadmin:
