@@ -1,6 +1,4 @@
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
-INSERT INTO users(name, rut, pass, mail, sex, ROLE, aprendizaje)
+INSERT INTO users(name, rut, pass, mail, sex, role, aprendizaje)
 VALUES (
     'Profesor', '12312312-3', md5('profesor'), 'profesor@test', 'M', 'P', 'Reflexivo'
 );
@@ -17,5 +15,5 @@ VALUES(
 
 INSERT INTO users(name, rut, pass, mail, sex, role, aprendizaje)
 VALUES(
-    'Alumno 3', '22222222-2',md5('alumno3'), 'alumno3@test', 'F', 'A', 'Activo'
+    'Alumno 3', '22222222-2', md5('alumno3'), 'alumno3@test', 'F', 'A', 'Activo'
 );
