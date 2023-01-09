@@ -1,14 +1,17 @@
 *.min.js
-.idea/*
+.idea/
 dev_other/*
 modules/passwords.js
 node_modules/
 .DS_store
-uploads
+uploads/
 public/fonts/*
-sessions
-postgres
+sessions/
 
+# Postgres volume
+postgres-db/data-volume/
+
+# Lock and log files
 package-lock.json
 pnpm-lock.yaml
 *.log
