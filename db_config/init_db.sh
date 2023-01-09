@@ -19,7 +19,7 @@ PG_PORT=${4:-$PGPORT}
 
 #Creates the database $DB_NAME in server.
 CREATE_DB_FILE=db_config/create_db.sql
-psql -U $PG_USER -a -f $CREATE_DB_FILE -h $PGHOST -p $PG_PORT -v db_name=$DB_NAME -v \
+psql -U $PGUSER -a -f $CREATE_DB_FILE -h $PGHOST -p $PG_PORT -v db_name=$DB_NAME -v \
 pg_user=$PG_USER -v pg_password=$PG_PASSSWORD
 
 
