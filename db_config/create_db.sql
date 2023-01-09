@@ -1,6 +1,6 @@
 -- Database: :db_name
 -- DROP DATABASE IF EXISTS :db_name
-
+CREATE ROLE :pg_user WITH PASSWORD :pg_password;
 CREATE DATABASE :db_name
     WITH
     OWNER = :pg_user
@@ -16,5 +16,3 @@ GRANT TEMPORARY, CONNECT ON DATABASE :db_name TO PUBLIC;
 GRANT ALL ON DATABASE :db_name TO :pg_user;
 
 GRANT ALL ON DATABASE :db_name TO postgres;
-
-CREATE ROLE :pg_user WITH PASSWORD :pg_password;
