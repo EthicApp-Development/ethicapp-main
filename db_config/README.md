@@ -2,7 +2,7 @@
 This directory contains hand-made migrations scripts for setting up the database schema.
 
 # Sequence for creation of DB.
-For creating a database image with the existing schema, go to the root directory of the project and run `sh db_config/init_db.sh ${YOUR_DB_NAME}${YOUR_PG_USER} ${YOUR_PG_PASSWORD}`, where you'll pass both your credentials and the database name and create a database image you can see and interact with in your pgadmin server page. The variables `YOUR_DB_NAME`, `YOUR_PG_USER` & `YOUR_PG_PASSWORD` are required only when you have different credentials than the project standards, which you can see in the `init_db.sh` file. Nevertheless, for security reasons, it's always recommended that you use your own credentials each time you need to run this script.
+For creating a database image with the existing schema, go to the root directory of the project and run `sh db_config/init_db.sh ${YOUR_DB_NAME}  ${YOUR_PG_USER} ${YOUR_PG_PASSWORD} ${PG_PORT}`, where you'll pass both your credentials and the database name and create a database image you can see and interact with in your pgadmin server page. The variables `YOUR_DB_NAME`, `YOUR_PG_USER`, `YOUR_PG_PASSWORD` & `PG_PORT` are required only when you have different credentials than the project standards, which you can see in the `init_db.sh` file. Nevertheless, for security reasons, it's always recommended that you use your own credentials each time you need to run this script.
 
 This DB will come with some test users for you to use right away. These are: 
 
