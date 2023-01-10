@@ -54,10 +54,10 @@ services:
       POSTGRES_DB: postgres
       POSTGRES_LOG_LEVEL: 1
       PGDATA: /var/lib/postgresql/${POSTGRES_VERSION}/main
+      PGPORT: 5432
 
     restart: "unless-stopped"
-    ports:
-      - "5433:5432"
+    
     networks:
       - default
     healthcheck:
