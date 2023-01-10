@@ -56,7 +56,7 @@ services:
     networks:
       - default
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready"]
+      test: ["CMD-SHELL", "su healthcheckuser -c pg_isready"]
       interval: 20s
       timeout: 5s
       retries: 1
@@ -68,9 +68,9 @@ services:
   pgadmin:
     container_name: "ethicapp-pgadmin"
     build:
-      context: pgadmin
+      context: pgadmin/
       args:
-        PGADMIN_VERSION: ${PGADMIN_VERSION}
+        PGADMIN_VERSION: 6.14
         POSTGRES_CONN_PORT: 5432
         POSTGRES_CONN_USER: app
     environment:
