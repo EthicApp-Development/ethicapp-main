@@ -9,7 +9,7 @@ public/fonts/*
 sessions/
 
 # Postgres volume
-postgres-db/data-volume/
+db-data-volume/
 
 # Lock and log files
 package-lock.json

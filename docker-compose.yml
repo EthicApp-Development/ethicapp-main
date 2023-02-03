@@ -4,22 +4,6 @@ networks:
   default:
 
 services:
-  # ---------------------- NGINX ---------------------- #
-  # nginx:
-  #   container_name: "ethicapp-nginx"
-  #   build:
-  #     context: web-nginx
-  #     args:
-  #       NGINX_VERSION: 1.22
-  #       WEB_APP_PORT: ${WEB_APP_PORT}
-  #   networks:
-  #     - default
-  #   restart: unless-stopped
-  #   ports:
-  #     - "${NGINX_LISTEN_PORT}:80"
-    # depends_on:
-    #   - node
-
   # ---------------------- Node web app ---------------------- #
   node:
     container_name: "ethicapp-node"
@@ -62,7 +46,7 @@ services:
       retries: 1
       start_period: 10s
     volumes:
-      - "./postgres-db/data-volume:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"
+      - "./db-data-volume:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"
 
   # ---------------------- PGAdmin ---------------------- #
   pgadmin:
