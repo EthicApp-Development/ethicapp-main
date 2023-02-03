@@ -77,4 +77,4 @@ Once your Postgres server is up and running (with the appropriate data) on the d
 
 #### 3.2.2. Virtualized
 
-Run `docker-compose up --build`. It is recommended to start the environment in detached mode (`--detach` flag) and check the logs of the Node.JS web application or the desired service with `docker-compose logs -f ${SERVICE_NAME}
+Run `docker-compose up --build`. It is recommended to start the environment in detached mode (`--detach` flag) and check the logs of the Node.JS web application or the desired service with `docker-compose logs -f ${SERVICE_NAME}`.
