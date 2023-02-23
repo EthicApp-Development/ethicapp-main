@@ -16,10 +16,9 @@ This repository contains the main project for EthicApp: a web application (devel
       - [3.2.1. Native](#321-native)
       - [3.2.2. Virtualized](#322-virtualized)
 
-
 ## 1. Developing
 
-Please head to the [CONTRIBUTING](./CONTRIBUTING.md) document and review our [communication channels](https://github.com/EthicApp-Development/organization/blob/master/CONTRIBUTING.md) for the project.
+Please head to the [CONTRIBUTING document](./CONTRIBUTING.md) and review our [communication channels](https://github.com/EthicApp-Development/organization/blob/master/CONTRIBUTING.md#1-communication-channels) for the project.
 
 ## 2. Architecture overview
 
@@ -34,13 +33,15 @@ In order to run the project *physically* in your computer, the following softwar
 
 #### 2.1.2. Virtualized
 
-Only `docker-compose` (from Docker) is required. Note that *Docker Desktop* is not required for installing Docker itself.
+The only dependency is `docker-compose` (from [Docker](https://www.docker.com/)).
 
 ## 3. Install
 
 ### 3.1. Setup
 
-First you need two things: the `passwords.js` file and a dump for the Postgres database with the data needed to start the web application. For the former, you can simply run the shell command below. For the latter, please contact the maintainer, as [issue #71](https://github.com/EthicApp-Development/ethicapp-main/issues/71) is not yet completed.
+Before running the environment, you will need (1) the `passwords.js` file, (2) the docker-compose secret file(s) and (3) a dump for the Postgres database with the data needed to start the web application.
+
+For (1), just run the shell command below. Note that the `dbconn` is similar to Postgres' [connection URI](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING).
 
 ```shell
 echo '
@@ -58,9 +59,18 @@ module.exports.secretAccessKey = "";
 ' > modules/passwords.js
 ```
 
+Then, run the following for (2), at the root directory of the cloned project in your machine:
+
+```shell
+mkdir secrets
+echo 'some-secret-token' > ./secrets/jwt_token
+```
+
+For (3), please contact the maintainer to receive a proper dump for you, as the database setup is not yet automated (see [issue #71](https://github.com/EthicApp-Development/ethicapp-main/issues/71) for details).
+
 #### 3.1.1. Natively
 
-At the root directory of the project, and run `npm install` for installing Node.JS dependencies.
+At the root directory of the project, and run `npm install` for installing Node.JS dependencies. In order for the ESLint vscode extension to work properly, you may need to run `sudo npm install --global eslint`.
 
 #### 3.1.2. Virtualized
 

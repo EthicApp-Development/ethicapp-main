@@ -11,6 +11,9 @@ sessions/
 # Postgres volume
 db-data-volume/
 
+# Docker-compose secrets
+secrets/
+
 # Lock and log files
 package-lock.json
 pnpm-lock.yaml
