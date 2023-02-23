@@ -1,5 +1,7 @@
 # EthicApp
 
+> IMPORTANT: please refer to the [`overhaul-2122`](https://github.com/EthicApp-Development/ethicapp-main/tree/overhaul-2122) branch for the updated documentation.
+
 This repository contains the main project for EthicApp: a web application (developed in JavaScript and Angular.JS) for supporting teaching Ethics in high education environments. Please review the [organization README document](https://github.com/EthicApp-Development/organization#readme) for a detailed description of this project and its goals.
 
 ## 1. Developing
