@@ -6,6 +6,8 @@ networks:
 secrets:
   jwt_token:
     file: ./secrets/jwt_token
+  pgadmin_password:
+    file: ./secrets/pgadmin_password
 
 services:
   # ---------------------- NGINX ---------------------- #
@@ -15,12 +17,12 @@ services:
       context: web-nginx
       args:
         NGINX_VERSION: 1.23.3
-        WEB_APP_PORT: ${WEB_APP_PORT}
+        NODE_PORT: ${NODE_PORT}
     restart: "unless-stopped"
     networks:
       default:
     ports:
-      - "${NGINX_LISTEN_PORT}:80"
+      - "${NGINX_WEBAPP_PORT}:80"
     depends_on:
       - node
 
@@ -35,7 +37,7 @@ services:
       - jwt_token
     environment:
       NODE_ENV: development
-      WEB_APP_PORT: ${WEB_APP_PORT}
+      NODE_PORT: ${NODE_PORT}
     restart: "no"
     networks:
       default:

@@ -9,4 +9,4 @@ CMD set -ux \
     && test -f /run/secrets/jwt_token \
     && export JWT_SECRET=$(cat /run/secrets/jwt_token) \
     && npm install \
-    && PORT=${WEB_APP_PORT} npm start
+    && PORT=${NODE_PORT} npm start
