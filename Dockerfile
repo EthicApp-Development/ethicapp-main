@@ -8,4 +8,4 @@ WORKDIR /home/app
 CMD test -f /run/secrets/jwt_token \
     && export JWT_SECRET=$(cat /run/secrets/jwt_token) \
     && npm install \
-    && npm start
+    && PORT=${WEB_APP_PORT} npm start

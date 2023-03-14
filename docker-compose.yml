@@ -1,7 +1,12 @@
 version: "3.9"
 
 networks:
-  default:
+  ethic-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.22.0.0/16
+          gateway: 10.22.0.1
 
 secrets:
   jwt_token:
@@ -18,7 +23,8 @@ services:
         WEB_APP_PORT: ${WEB_APP_PORT}
     restart: "unless-stopped"
     networks:
-      - default
+      ethic-net:
+        ipv4_address: 10.22.0.2
     ports:
       - "${NGINX_LISTEN_PORT}:80"
     depends_on:
@@ -37,7 +43,8 @@ services:
       NODE_ENV: development
     restart: "no"
     networks:
-      - default
+      ethic-net:
+        ipv4_address: 10.22.0.3
     ports:
       - "${WEB_APP_PORT}:8501"
     volumes:
@@ -60,7 +67,8 @@ services:
       PGDATA: /var/lib/postgresql/${POSTGRES_VERSION}/main
     restart: unless-stopped
     networks:
-      - default
+      ethic-net:
+        ipv4_address: 10.22.0.4
     healthcheck:
       test: ["CMD-SHELL", "su healthcheckuser -c pg_isready"]
       interval: 20s
@@ -84,7 +92,8 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin
     restart: unless-stopped
     networks:
-      - default
+      ethic-net:
+        ipv4_address: 10.22.0.5
     ports:
       - "${PGADMIN_PORT}:80"
     depends_on:
