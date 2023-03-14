@@ -6,8 +6,6 @@ networks:
 secrets:
   jwt_token:
     file: ./secrets/jwt_token
-  pgadmin_password:
-    file: ./secrets/pgadmin_password
 
 services:
   # ---------------------- NGINX ---------------------- #
@@ -80,8 +78,6 @@ services:
         PGADMIN_VERSION: 6.14
         POSTGRES_CONN_PORT: 5432
         POSTGRES_CONN_USER: app
-    secrets:
-      - pgadmin_password
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
