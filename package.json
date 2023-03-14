@@ -1,5 +1,5 @@
 {
-  "name": "doccollab",
+  "name": "ethicapp",
   "version": "0.0.5",
   "private": true,
   "scripts": {
@@ -19,6 +19,7 @@
     "express-session": "^1.17.3",
     "http-parser": "^1.0.3",
     "json2xls": "^0.1.2",
+    "log-timestamp": "^0.3.0",
     "morgan": "^1.10.0",
     "node-fetch": "^2.6.6",
     "nodemailer": "^6.8.0",

@@ -55,7 +55,7 @@ rules:
 
   func-style:
     - warn
-    - expression
+    - declaration
 
   no-redeclare:
     - warn # default: error
