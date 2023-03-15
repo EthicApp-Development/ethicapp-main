@@ -1,0 +1,8 @@
+*.min.js
+modules/passwords.js
+node_modules/
+uploads/
+public/fonts/*
+sessions/
+package-lock.json
+*.lock

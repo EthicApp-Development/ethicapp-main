@@ -39,31 +39,31 @@ The only dependency is `docker-compose` (from [Docker](https://www.docker.com/))
 
 ### 3.1. Setup
 
-Before running the environment, you will need (1) the `passwords.js` file, (2) the docker-compose secret file(s) and (3) a dump for the Postgres database with the data needed to start the web application.
+Before running the environment, you will need (1) the `passwords.js` file for the node app, (2) the docker-compose secret file(s) and (3) a dump for the Postgres database with the data needed to start the web application.
 
-For (1), just run the shell command below. Note that the `dbconn` is similar to Postgres' [connection URI](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING).
+For (1), just run the shell command below. Note that the `dbconn` is very similar to Postgres' [connection URI](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING).
 
 ```shell
 echo '
-module.exports.dbcon = "tcp://app:app2020@postgres/ethicapp";
-module.exports.uploadPath = "";
+module.exports.dbcon = "tcp://app:app2020@postgres:5432/ethicapp";
+module.exports.uploadPath = "/tmp/foo";
 
-module.exports.GOOGLE_CLIENT_ID = "";
-module.exports.GOOGLE_CLIENT_SECRET ="";
+module.exports.GOOGLE_CLIENT_ID = "foo.apps.googleusercontent.com";;
+module.exports.GOOGLE_CLIENT_SECRET = "qwerty";
 
-module.exports.Captcha_Web = "";
-module.exports.Captcha_Secret = "";
+module.exports.Captcha_Web = "qwerty";
+module.exports.Captcha_Secret = "qwerty";
 
-module.exports.accessKeyId = "";
-module.exports.secretAccessKey = "";
-' > modules/passwords.js
+module.exports.accessKeyId = "qwerty";
+module.exports.secretAccessKey = "qwerty";
+' > ./ethicapp-node/modules/passwords.js
 ```
 
 Then, run the following for (2), at the root directory of the cloned project in your machine:
 
 ```shell
 mkdir secrets
-echo 'some-secret-token' > ./secrets/jwt_token
+echo 'foo-dev-token' > ./secrets/jwt_token
 ```
 
 For (3), please contact the maintainer to receive a proper dump for you, as the database setup is not yet automated (see [issue #71](https://github.com/EthicApp-Development/ethicapp-main/issues/71) for details).

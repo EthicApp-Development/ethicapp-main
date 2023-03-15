@@ -1,4 +1,4 @@
-# Draft compose for production docker-compose runtime. Extends the development docker-compose file
+# Draft for production docker-compose runtime. Extends the development docker-compose file
 # (see https://docs.docker.com/compose/extends/).
 
 services:

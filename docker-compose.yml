@@ -12,7 +12,7 @@ services:
   node:
     container_name: "ethicapp-node"
     build:
-      context: .
+      context: ethicapp-node/
       args:
         NODE_VERSION: ${NODE_VERSION}
     secrets:
@@ -26,7 +26,7 @@ services:
     ports:
       - "${NODE_PORT}:${NODE_PORT}"
     volumes:
-      - ".:/home/app:rw"
+      - "./ethicapp-node:/home/app:rw"
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,7 +61,7 @@ services:
     build:
       context: pgadmin/
       args:
-        PGADMIN_VERSION: 6.14
+        PGADMIN_VERSION: ${PGADMIN_VERSION}
         POSTGRES_CONN_PORT: 5432
         POSTGRES_CONN_USER: app
     environment:
