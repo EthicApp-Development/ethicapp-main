@@ -1,17 +1,14 @@
-*.min.js
 .idea/
-dev_other/*
-modules/passwords.js
-node_modules/
 .DS_store
-uploads/
-public/fonts/*
-sessions/
 
-# Postgres volume
-postgres-db/data-volume/
+# Postgres volume (dev)
+db-data-volume/
 
-# Lock and log files
-package-lock.json
-pnpm-lock.yaml
+# Docker-compose secrets
+secrets/
+
+# Log files and root node modules (for linters)
 *.log
+*.lock
+package-lock.json
+node_modules/

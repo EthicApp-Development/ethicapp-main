@@ -34,7 +34,10 @@ host    all         all     0.0.0.0/0    md5 \n\
 host    all         all     ::/0         md5 \n\
 " >> /etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf
 
+RUN adduser --disabled-password --gecos "" healthcheckuser
+
 WORKDIR /code
+
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
 

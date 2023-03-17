@@ -8,8 +8,8 @@ RUN apt-get update --quiet && apt-get install -y gettext-base
 
 COPY nginx.conf /tmp/nginx.conf
 
-ARG WEB_APP_PORT
-RUN envsubst '${WEB_APP_PORT}' < /tmp/nginx.conf > /etc/nginx/conf.d/default.conf
+ARG NODE_PORT
+RUN envsubst '${NODE_PORT}' < /tmp/nginx.conf > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 

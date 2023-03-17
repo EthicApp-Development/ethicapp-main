@@ -8,7 +8,7 @@ env:
   es2021: true
   node: true
   jquery: true
-  # mocha: true #* for when tests are implemented
+  # mocha: true #* should uncomment when JS tests are implemented
 extends:
   - eslint:recommended
 overrides: []
@@ -55,7 +55,8 @@ rules:
 
   func-style:
     - warn
-    - expression
+    - declaration
+    - allowArrowFunctions: false
 
   no-redeclare:
     - warn # default: error

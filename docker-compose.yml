@@ -3,42 +3,33 @@ version: "3.9"
 networks:
   default:
 
-services:
-  # ---------------------- NGINX ---------------------- #
-  # nginx:
-  #   container_name: "ethicapp-nginx"
-  #   build:
-  #     context: web-nginx
-  #     args:
-  #       NGINX_VERSION: 1.22
-  #       WEB_APP_PORT: ${WEB_APP_PORT}
-  #   networks:
-  #     - default
-  #   restart: unless-stopped
-  #   ports:
-  #     - "${NGINX_LISTEN_PORT}:80"
-    # depends_on:
-    #   - node
+secrets:
+  jwt_token:
+    file: ./secrets/jwt_token
 
+services:
   # ---------------------- Node web app ---------------------- #
   node:
     container_name: "ethicapp-node"
     build:
-      context: .
+      context: ethicapp-node/
       args:
         NODE_VERSION: ${NODE_VERSION}
+    secrets:
+      - jwt_token
     environment:
       NODE_ENV: development
-      JWT_SECRET: ${JWT_SECRET}
-    restart: unless-stopped
+      NODE_PORT: ${NODE_PORT}
+    restart: "no"
     networks:
-      - default
+      default:
     ports:
-      - "${WEB_APP_PORT}:8501"
+      - "${NODE_PORT}:${NODE_PORT}"
     volumes:
-      - ".:/home/app:rw"
+      - "./ethicapp-node:/home/app:rw"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   # ---------------------- Database ---------------------- #
   postgres:
@@ -54,26 +45,23 @@ services:
       POSTGRES_DB: postgres
       POSTGRES_LOG_LEVEL: 1
       PGDATA: /var/lib/postgresql/${POSTGRES_VERSION}/main
-      PGPORT: 5432
-
-    restart: "unless-stopped"
-    
+    restart: unless-stopped
     networks:
-      - default
+      default:
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready"]
+      test: ["CMD-SHELL", "su healthcheckuser -c pg_isready"]
       interval: 20s
       timeout: 5s
       retries: 1
       start_period: 10s
     volumes:
-      - "./postgres-db/data-volume:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"
+      - "./db-data-volume:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"
 
   # ---------------------- PGAdmin ---------------------- #
   pgadmin:
     container_name: "ethicapp-pgadmin"
     build:
-      context: pgadmin
+      context: pgadmin/
       args:
         PGADMIN_VERSION: ${PGADMIN_VERSION}
         POSTGRES_CONN_PORT: 5432
@@ -83,8 +71,9 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin
     restart: unless-stopped
     networks:
-      - default
+      default:
     ports:
       - "${PGADMIN_PORT}:80"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy

@@ -1,0 +1,23 @@
+# Draft for production docker-compose runtime. Extends the development docker-compose file
+# (see https://docs.docker.com/compose/extends/).
+
+services:
+  # ---------------------- NGINX ---------------------- #
+  nginx:
+    container_name: "ethicapp-nginx"
+    build:
+      context: web-nginx
+      args:
+        NGINX_VERSION: 1.23.3
+        NODE_PORT: ${NODE_PORT}
+    restart: "unless-stopped"
+    networks:
+      default:
+    ports:
+      - "${NGINX_WEBAPP_PORT}:80"
+    depends_on:
+      - node
+
+  # Disabling exposed port for Node web application.
+  node:
+    ports: []

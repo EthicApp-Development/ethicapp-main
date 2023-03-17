@@ -23,8 +23,8 @@ aliasing = explicit
 indent_unit = space
 max_line_length = 100
 
-[sqlfluff:rules:L019]
-comma_style = trailing
+[sqlfluff:layout:type:comma]
+line_position = trailing
 
 [sqlfluff:rules:L052]
 require_final_semicolon = true

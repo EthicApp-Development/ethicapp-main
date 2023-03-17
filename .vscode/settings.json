@@ -16,7 +16,6 @@
     },
 
     // JavaScript
-    "javascript.preferences.importModuleSpecifier": "non-relative",
     "[javascript]": {
         "editor.rulers": [
             100
@@ -26,10 +25,10 @@
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "dbaeumer.vscode-eslint"
     },
-
-    // ESLint (Javascript)
+    "javascript.preferences.importModuleSpecifier": "non-relative",
     "eslint.format.enable": true,
     "eslint.lintTask.enable": true,
+    "eslint.run": "onType",
     "eslint.validate": [
         "javascript",
         "javascriptreact",
