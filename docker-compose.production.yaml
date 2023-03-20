@@ -18,6 +18,9 @@ services:
     depends_on:
       - node
 
-  # Disabling exposed port for Node web application.
+  # Ensuring no additional ports are exposed.
   node:
+    ports: []
+
+  postgres:
     ports: []

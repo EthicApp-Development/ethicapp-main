@@ -39,6 +39,9 @@ services:
       args:
         UBUNTU_VERSION: "22.04"
         POSTGRES_VERSION: ${POSTGRES_VERSION}
+        DB_USER_NAME: ethicapp
+        DB_USER_PASSWORD: ethicapp
+        DB_NAME: ethicapp_dev
     environment:
       POSTGRES_LOG_LEVEL: 1
       PGPORT: 5432
@@ -52,8 +55,8 @@ services:
       timeout: 5s
       retries: 1
       start_period: 10s
-    volumes:
-      - "./db-data-volume:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"
+    # volumes:
+    #   - "./db-data-volume:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"
 
   # ---------------------- PGAdmin ---------------------- #
   pgadmin:
@@ -63,7 +66,7 @@ services:
       args:
         PGADMIN_VERSION: ${PGADMIN_VERSION}
         POSTGRES_CONN_PORT: 5432
-        POSTGRES_CONN_USER: app
+        POSTGRES_CONN_USER: ethicapp
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin

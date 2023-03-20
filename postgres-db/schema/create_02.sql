@@ -1,5 +1,3 @@
--- 2. Postgres script for create database
-
 CREATE TABLE IF NOT EXISTS rubricas (
     id serial,
     sesid integer,
