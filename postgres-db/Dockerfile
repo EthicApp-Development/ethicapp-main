@@ -43,4 +43,6 @@ RUN chmod +x entrypoint.sh
 
 ENV POSTGRES_VERSION=${POSTGRES_VERSION}
 
+#COPY db_config/create_sql_schema/create_1.sql .
+
 CMD [ "/code/entrypoint.sh" ]
