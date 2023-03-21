@@ -1,7 +1,6 @@
 #!/bin/bash -exu
 # --------------------------------------------------------------------------------------------------
 # Executes a "dump" for the containerized EthicApp database server, into the host's /tmp directory.
-# Note: the schema is not included in the dump (data only).
 # --------------------------------------------------------------------------------------------------
 
 source .env
@@ -20,4 +19,4 @@ docker exec ethicapp-postgres /bin/bash -c "
         --file=/tmp/dump-$DB_NAME.tar
 "
 
-docker cp ethicapp-postgres:/tmp/dump-$DB_NAME.tar /tmp/dump-host-$DB_NAME.tar
+docker cp ethicapp-postgres:/tmp/dump-$DB_NAME.tar /tmp/dump-$DB_NAME.tar

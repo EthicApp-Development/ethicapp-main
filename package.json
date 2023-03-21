@@ -9,7 +9,8 @@
     "lint-sql": "sqlfluff lint ./postgres-db/",
     "pgdump": "./dev-ops/docker-pgdump.sh",
     "pgrestore": "./dev-ops/docker-pgrestore.sh",
-    "psql": "./dev-ops/docker-psql.sh"
+    "psql": "./dev-ops/docker-psql.sh",
+    "init-passwords-js": "./dev-ops/create-passwords-js.sh"
   },
   "devDependencies": {
     "eslint": "^8.24.0",

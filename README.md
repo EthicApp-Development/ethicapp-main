@@ -26,51 +26,33 @@ Please head to the [CONTRIBUTING document](./CONTRIBUTING.md) and review our [co
 
 #### 2.1.1. Natively
 
-In order to run the project *physically* in your computer, the following software is required:
+In order to run the project *natively* in your computer, the following software is required:
 
-- Node.JS.
+- Node.JS (with `npm`).
 - PostgreSQL 10.X.
 
 #### 2.1.2. Virtualized
 
-The only dependency is `docker-compose` (from [Docker](https://www.docker.com/)).
+`docker-compose` (from [Docker](https://www.docker.com/)) amd [`npm`](https://www.npmjs.com/package/npm) (due some setup tasks needed prior Docker shared volume).
 
 ## 3. Install
 
 ### 3.1. Setup
 
-Before running the environment, you will need (1) the `passwords.js` file for the node app, (2) the docker-compose secret file(s) and (3) a dump for the Postgres database with the data needed to start the web application.
+Before running the environment, you will need to:
 
-For (1), just run the shell command below. Note that the `dbconn` is very similar to Postgres' [connection URI](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING).
+1. Run `npm install`, needed for a few [DevOps](https://about.gitlab.com/topics/devops/) utilities needed for this project (e.g. linters).
+2. Initialize the `passwords.js` file for setting the database connection (among other things) for the Node app: `npm run init-passwords-js`.
+3. Get the docker-compose secret file(s): `mkdir secrets && echo 'foo-dev-token' > ./secrets/jwt_token`
+4. Initialize the database for shared Docker volume: ..... TODO
 
-```shell
-echo '
-module.exports.dbcon = "tcp://app:app2020@postgres:5432/ethicapp";
-module.exports.uploadPath = "/tmp/foo";
-
-module.exports.GOOGLE_CLIENT_ID = "foo.apps.googleusercontent.com";;
-module.exports.GOOGLE_CLIENT_SECRET = "qwerty";
-
-module.exports.Captcha_Web = "qwerty";
-module.exports.Captcha_Secret = "qwerty";
-
-module.exports.accessKeyId = "qwerty";
-module.exports.secretAccessKey = "qwerty";
-' > ./ethicapp-node/modules/passwords.js
-```
-
-Then, run the following for (2), at the root directory of the cloned project in your machine:
-
-```shell
-mkdir secrets
-echo 'foo-dev-token' > ./secrets/jwt_token
-```
-
-For (3), please contact the maintainer to receive a proper dump for you, as the database setup is not yet automated (see [issue #71](https://github.com/EthicApp-Development/ethicapp-main/issues/71) for details).
+<!-- TODO -->
+<!-- TODO -->
+<!-- TODO -->
 
 #### 3.1.1. Natively
 
-At the root directory of the project, and run `npm install` for installing Node.JS dependencies. In order for the ESLint vscode extension to work properly, you may need to run `sudo npm install --global eslint`.
+Head into `ethicapp-node` and run `npm install`.
 
 #### 3.1.2. Virtualized
 
@@ -83,7 +65,7 @@ docker-compose build
 
 #### 3.2.1. Native
 
-Once your Postgres server is up and running (with the appropriate data) on the default port, execute the `start` Node task with `npm run-script start` for starting the web server.
+Once your Postgres server is up and running with the appropriate data (which is up to you) on the default port `5432`, execute the `start` Node task with `npm run-script start` for starting the web server, at the `ethicapp-node` directory.
 
 #### 3.2.2. Virtualized
 
