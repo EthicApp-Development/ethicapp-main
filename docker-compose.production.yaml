@@ -21,6 +21,7 @@ services:
       - node
 
   # Ensuring no additional ports are exposed.
+  #* Update: that won't work, see https://github.com/docker/compose/issues/3729
   node:
     ports: []
 
