@@ -17,9 +17,9 @@ the DB shared volume?" >&2
     exit 1
 fi;
 
-#*
+#* ---
 #* Step (1): start Postgres without shared volume mount (i.e. with proper schema and dev data).
-#*
+#* ---
 export HOST_DB_VOLUME_PATH=
 
 TempComposeFilePath=./.docker-compose.NO-DB-VOLUME.temp
@@ -46,17 +46,17 @@ docker-compose ${ComposeRewriteFlags} up --detach postgres pgadmin
 docker exec ethicapp-postgres /bin/bash -c \
     "psql postgresql://$DB_USER_NAME:$DB_USER_PASSWORD@localhost:5432/$DB_NAME -c '\conninfo'"
 
-#*
+#* ---
 #* Step (2): export database files directly into host.
-#*
+#* ---
 mkdir -p ${TargetVolumePath}
 docker cp --quiet ethicapp-postgres:/var/lib/postgresql/${POSTGRES_VERSION}/main/ ${TargetVolumePath}
 mv ${TargetVolumePath}/main/* ${TargetVolumePath}
 rm -R -v ${TargetVolumePath}/main/
 
-#*
+#* ---
 #* Step (3): restart Postgres with mounted volume into previously exported database.
-#*
+#* ---
 export HOST_DB_VOLUME_PATH=${TargetVolumePath}
 
 docker-compose down --remove-orphans

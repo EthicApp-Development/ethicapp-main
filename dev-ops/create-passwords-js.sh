@@ -1,12 +1,13 @@
 #!/bin/bash -eu
 # --------------------------------------------------------------------------------------------------
-# Sets the database connection string for the Node module and other values.
+# Sets the database connection string for the Node module and other values (for containerized
+# runtime).
 # --------------------------------------------------------------------------------------------------
 
 source .env
 
 echo "module.exports.dbcon = \"tcp://$DB_USER_NAME:$DB_USER_PASSWORD@postgres:5432/$DB_NAME\";
-module.exports.uploadPath = \"/tmp/foo\";
+module.exports.uploadPath = \"uploads\";
 
 module.exports.GOOGLE_CLIENT_ID = \"foo.apps.googleusercontent.com\";
 module.exports.GOOGLE_CLIENT_SECRET = \"qwerty\";
