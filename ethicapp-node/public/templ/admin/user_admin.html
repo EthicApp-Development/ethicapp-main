@@ -5,14 +5,14 @@
         <div >
             <div class="inst">
                 <div class="tab-cs" ng-init="tab_view=0">
-                    <button class="tab-cs" ng-click= 'tab_view=0' ng-class="{'btn-selected': tab_view == 0}">
+                    <button class="tab-cs" ng-click= "tab_view=0" ng-class="{'btn-selected': tab_view == 0}">
                         {{ 'students' | lang}}
                         </button>
                         <button class="tab-cs" ng-click = "tab_view=1" ng-class="{'btn-selected': tab_view == 1}">
                         {{ 'teachers' | lang}}
                         </button>
                     
-                    <input type="text" placeholder="{{ 'filter' | lang}}" class="input-inst" ng-model="UserSearch"></input>
+                    <input type="text" placeholder="{{ 'filter' | lang}}" class="input-inst" ng-model="UserSearch">
                 </div>
             </div>
 

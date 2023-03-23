@@ -2,7 +2,7 @@
 <button class="btn btn-primary " ng-click="selectView('launchActivity')">{{'launchActivity' | lang}}</button>
 <div ng-controller= "ActivityController">
     <div class="tab-cs" ng-init="dsgnMode=0">
-        <button class="tab-cs" ng-click= 'dsgnMode=0' ng-class="{'btn-selected': dsgnMode == 0}">
+        <button class="tab-cs" ng-click= "dsgnMode=0" ng-class="{'btn-selected': dsgnMode == 0}">
         Actuales
         </button>
         <button class="tab-cs" ng-click = "dsgnMode=1" ng-class="{'btn-selected': dsgnMode == 1}">
@@ -25,7 +25,7 @@
                 <p class="list-group-item-text">{{'launched' | lang}} {{ses.time | date}}</p>
                 <p class="list-group-item-text">{{'code' | lang}}: {{ses.code}}</p>
                 <div class="text-right">
-                    <button class="btn btn-default" ng-click="createCopy(ses)">
+                    <button class="btn btn-default" ng-click="createCopy(ses)"></button>
                         <i class="fa fa-copy"></i>
                     <button class="btn btn-primary " ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
                     <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
@@ -39,7 +39,7 @@
                 <p class="list-group-item-text">{{'code' | lang}}: {{ses.code}}</p>
                 <div class="text-right">
                     <button class="btn btn-primary " ng-click="archiveActivity(ses, $event)"><i class="fa fa-inbox"></i></button>
-                    <button class="btn btn-default" ng-click="createCopy(ses)">
+                    <button class="btn btn-default" ng-click="createCopy(ses)"></button>
                         <i class="fa fa-copy"></i>
                     <button class="btn btn-primary " ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
                     <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
