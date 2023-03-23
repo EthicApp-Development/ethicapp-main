@@ -9,7 +9,7 @@
                 <div class="container phase_container">
                     <div class = "row">
                         <div class="col-xs-1 phase_element"  ng-repeat="item in getStages()" ng-init="current" 
-                        ng-class='{phase_current: currentActivity.stage == $index, phase_selected:currentStage==$index}' ng-click='selectStage($index)'>
+                        ng-class="{phase_current: currentActivity.stage == $index, phase_selected:currentStage==$index}" ng-click="selectStage($index)">
                             {{'stage' | lang}} {{$index+ 1}}
                             {{'mode' | lang}}: {{item.mode|lang}}
                         </div>
@@ -47,7 +47,7 @@
                             <div class="row margin-top-8" > 
                                 <label class="col-lg-2">{{'studentsPerGroup' | lang}}:</label>
                                 <div class = "col-lg-2">
-                                    <input type="number" id="points" name="length" step="1"  min=2 class="form-control"
+                                    <input type="number" id="points" name="length" step="1"  min="2" class="form-control"
                                     ng-model="design.phases[currentStage].stdntAmount" readonly
                                     style="width: 6em; text-align: center; height: 2em;"> <!--EDIT LATER-->
                                 </div>
@@ -109,7 +109,7 @@
                     <!--TABS QUESTIONS-->
                     <div class="tab-cs">
                         <button ng-repeat="i in buildArray(design.phases[currentStage].questions.length)" 
-                        class="tab-cs" ng-click= 'selectQuestion($index)' ng-class="{'btn-selected': currentQuestion == $index}">
+                        class="tab-cs" ng-click= "selectQuestion($index)" ng-class="{'btn-selected': currentQuestion == $index}">
                         {{'question'|lang}} {{i}}
                         </button>
                     </div>
@@ -124,7 +124,7 @@
                         </div>
                         <!--Semantic Differential-->
                         <div ng-show="stageType == 'semantic_differential'">   
-                            <label class="margin-top-8">{{'semanticDiffEscale'|lang}}</label class="margin-top-8">
+                            <label class="margin-top-8">{{'semanticDiffEscale'|lang}}</label>
                             <div class="row margin-top-8">
                                 <div class="col-xs-3 text-right">
                                     <div class="tlabel">
@@ -137,7 +137,7 @@
                                     <div class="option eq-space" ng-repeat="i in buildArray(num)">{{i}}</div>
                                 </div>
                                 <div class="col-xs-3">
-                                    <button class="btn btn-default"ng-disabled="true">+</button>
+                                    <button class="btn btn-default" ng-disabled="true">+</button>
                                     <div class="tlabel">
                                         <input type="text" class="form-control" ng-disabled="readonly" readonly
                                             placeholder="{{'right'|lang}}" ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.r_pole">
@@ -163,7 +163,7 @@
                             <div class="row margin-top-24"> 
                                 <label class= "col-lg-2">{{'minComment'|lang}}</label>
                                 <div class = "col-lg-1">
-                                    <input type="number" id="points" name="length" step="1"  min=5 class="form-control" readonly
+                                    <input type="number" id="points" name="length" step="1" min="5" class="form-control" readonly
                                     ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.min_just_length"
                                     style="width: 6em; text-align: center; height: 2em;">
                                 </div>
@@ -171,7 +171,9 @@
                             </div>
                         </div>
                         <!--ANOTHER OPTION-->
-                        <div ng-show="stageType == 'ANOTHER OPTION'"> </div>                
+                        <div ng-show="stageType == 'ANOTHER OPTION'"> 
+
+                        </div>                
                     </div>
                     
                 </div>
