@@ -1,24 +1,28 @@
-#!/bin/bash -eu
+#!/bin/bash -e
 # --------------------------------------------------------------------------------------------------
-# Initializes the shared volume for the Postgres database in the host filesystem.
+# Initializes the shared volume for the Postgres database in the host filesystem. The directory in
+# which the virtualized Postgres database will be mounted at is $HOST_DB_VOLUME_PATH, but can be
+# overridden if given as an argument.
 # --------------------------------------------------------------------------------------------------
 
 source .env
 
-newVolPath=./db-data-volume-v2
+TargetVolumePath=${1:-$HOST_DB_VOLUME_PATH}
 
-if test -d ${newVolPath}; then
-    echo "[ERROR] Directory \"${newVolPath}\" already exists in your machine, you seem to have \
-already initialized the Postgres shared volume." >&2
+set -u
+
+if test -d ${TargetVolumePath}; then
+    echo "[ERROR] Directory \"${TargetVolumePath}\" already exists. Have you already initialized \
+the DB shared volume?" >&2
     exit 1
 fi;
 
 #*
 #* Step (1): start Postgres without shared volume mount (i.e. with proper schema and dev data).
 #*
-HOST_DB_VOLUME_PATH=
+export HOST_DB_VOLUME_PATH=
 
-TempComposeFilePath=./.docker-compose.REWRITTEN.yml
+TempComposeFilePath=./.docker-compose.NO-DB-VOLUME.temp
 ComposeRewriteFlags="--file ${TempComposeFilePath}"
 
 # Manually rewriting compose file, as usual docker-compose overrides can't undo an existing
@@ -27,9 +31,8 @@ touch ${TempComposeFilePath} #* not needed
 echo "# ----
 # GENERATED FILE FROM $0
 # ----" > ${TempComposeFilePath}
-sed 's^- "./db-data-volume:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"^[]^g' \
+sed 's^- "${HOST_DB_VOLUME_PATH}:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"^[]^g' \
     ./docker-compose.yml >> ${TempComposeFilePath}
-#! PROBLEM DETECTED: THIS SED DOES NOT SEEM TO WORK...
 
 docker-compose ${ComposeRewriteFlags} config 1> /dev/null
 
@@ -39,22 +42,22 @@ docker-compose ${ComposeRewriteFlags} down --remove-orphans
 docker-compose ${ComposeRewriteFlags} build postgres
 docker-compose ${ComposeRewriteFlags} up --detach postgres pgadmin
 
-#! User defined during built time should exist at Postgres server, testing...
+# Checking target Postgres role and database exist
 docker exec ethicapp-postgres /bin/bash -c \
     "psql postgresql://$DB_USER_NAME:$DB_USER_PASSWORD@localhost:5432/$DB_NAME -c '\conninfo'"
 
 #*
-#* Step (2): export bare database into host filesystem.
+#* Step (2): export database files directly into host.
 #*
-mkdir -p ${newVolPath}
-docker cp ethicapp-postgres:/var/lib/postgresql/${POSTGRES_VERSION}/main/ ${newVolPath}
-mv ${newVolPath}/main/* ${newVolPath}
-rm -R -v ${newVolPath}/main/
+mkdir -p ${TargetVolumePath}
+docker cp --quiet ethicapp-postgres:/var/lib/postgresql/${POSTGRES_VERSION}/main/ ${TargetVolumePath}
+mv ${TargetVolumePath}/main/* ${TargetVolumePath}
+rm -R -v ${TargetVolumePath}/main/
 
 #*
 #* Step (3): restart Postgres with mounted volume into previously exported database.
 #*
-export HOST_DB_VOLUME_PATH=${newVolPath}
+export HOST_DB_VOLUME_PATH=${TargetVolumePath}
 
 docker-compose down --remove-orphans
 
@@ -62,6 +65,5 @@ docker-compose down --remove-orphans
 docker-compose build postgres
 docker-compose up --detach postgres
 
-echo "[OK] Postgres service up and running with data volume at ${HOST_DB_VOLUME_PATH}"
-
-docker-compose logs -f postgres
+rm ${TempComposeFilePath}
+echo "[OK] Postgres service up and running with development data volume at ${HOST_DB_VOLUME_PATH}"

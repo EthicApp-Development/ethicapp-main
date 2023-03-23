@@ -3,15 +3,15 @@
   "description": "Core node packages for developing EthicApp project (DevOps)",
   "private": true,
   "scripts": {
+    "init-passwords-js": "./dev-ops/create-passwords-js.sh",
+    "init-db": "./dev-ops/docker-init-db-volume.sh",
     "lint-js": "npx eslint './ethicapp-node/**/*.js' ./ethicapp-node/bin/www",
     "lint-html": "npx htmlhint './ethicapp-node/public/**/*.html'",
     "lint-css": "npx stylelint './ethicapp-node/public/css/**/*.css'",
     "lint-sql": "sqlfluff lint ./postgres-db/",
     "pgdump": "./dev-ops/docker-pgdump.sh",
     "pgrestore": "./dev-ops/docker-pgrestore.sh",
-    "psql": "./dev-ops/docker-psql.sh",
-    "init-passwords-js": "./dev-ops/create-passwords-js.sh",
-    "init-db": "./dev-ops/docker-init-db-volume.sh"
+    "psql": "./dev-ops/docker-psql.sh"
   },
   "devDependencies": {
     "eslint": "^8.24.0",

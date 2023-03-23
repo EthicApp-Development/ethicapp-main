@@ -1,8 +1,9 @@
 .idea/
 .DS_store
 
-# Postgres volume (dev)
+# Postgres dev volume(s)
 db-data-volume/
+db-data-volume*/
 
 # Docker-compose secrets
 secrets/

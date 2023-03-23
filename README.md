@@ -43,12 +43,12 @@ Before running the environment, you will need to:
 
 1. Run `npm install`, needed for a few [DevOps](https://about.gitlab.com/topics/devops/) utilities needed for this project (e.g. linters).
 2. Initialize the `passwords.js` file for setting the database connection (among other things) for the Node app: `npm run init-passwords-js`.
-3. Get the docker-compose secret file(s): `mkdir secrets && echo 'foo-dev-token' > ./secrets/jwt_token`
-4. Initialize the database with `npm run init-db`
+3. Get the docker-compose secret file(s): `mkdir secrets && echo 'foo-dev-token' > ./secrets/jwt_token`.
+4. Initialize the database with `npm run init-db`.
 
 #### 3.1.1. Natively
 
-Head into `ethicapp-node` and run `npm install`.
+Head into `ethicapp-node` and run `npm install` for installing all dependencies.
 
 #### 3.1.2. Virtualized
 
