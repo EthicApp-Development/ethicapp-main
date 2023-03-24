@@ -75,8 +75,8 @@ adpp.controller("RouteCtrl", function($scope) {
         "activities":            "/templ/admin/activities.html",
         "launchActivity":        "/templ/admin/launchActivity.html",
         "viewDesign":            "/templ/admin/viewDesign.html",
-        "activity":              "templ/admin/activity.html",
-        "profile":               "templ/admin/profile.html",
+        "activity":              "/templ/admin/activity.html",
+        "profile":               "/templ/admin/profile.html",
         "user_admin":            "/templ/admin/user_admin.html",
         "institution_admin":     "/templ/admin/institution_admin.html",
         "institution_data":      "/templ/admin/institution_data.html",
@@ -2703,6 +2703,8 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         for(let i =0; i< phases.length; i++){
             var phase = self.design.phases[i];
             var questions = phase.questions;
+
+            if(self.design.metainfo.title === "") error = true;
 
             if(phase.mode == "individual"){
                 phase.chat = false;

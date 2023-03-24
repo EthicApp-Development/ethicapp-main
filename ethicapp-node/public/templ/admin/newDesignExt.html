@@ -2,8 +2,12 @@
 <div class="" ng-controller="StagesEditController" ng-if="selectedView == 'newDesignExt'">
     <div class="container">
         <h2>{{'designMsg'|lang}}</h2>
-        <h3>{{design.metainfo.title}}</h3>
-        <div class="container" ng-controller="DesignsDocController"> <!--ng-controller="DocumentsController"-->
+        <div class="" ng-controller="DesignsDocController"> <!--ng-controller="DocumentsController"-->
+            <div class="row margin-top-8">
+                <div class="col-xs-6 text-right">
+                    <input type="text" class="form-control input-lg mb-3" ng-model="design.metainfo.title">
+                </div>
+            </div>
             <h4>{{'documents' | lang}}</h4>
             <div class="list-group" style="margin-bottom: 0">
                 <div class="list-group-item" ng-repeat="doc in documents">
