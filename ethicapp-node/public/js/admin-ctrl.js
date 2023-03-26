@@ -2698,11 +2698,11 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
                     "stdntAmount":        3,
                     "questions":          [
                         {
-                            "q_text":     "",
+                            "q_text":     "N/A",
                             "ans_format": {
                                 "values":          7,
-                                "l_pole":          "",
-                                "r_pole":          "",
+                                "l_pole":          "N/A",
+                                "r_pole":          "N/A",
                                 "just_required":   true,
                                 "min_just_length": 5
                             }
