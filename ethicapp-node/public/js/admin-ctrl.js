@@ -2,7 +2,7 @@
 
 var adpp = angular.module("Admin", [
     "ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill", "tableSort",
-    "btford.socket-io", "ngRoute", "checklist-model"]
+    "btford.socket-io", "ngRoute", "checklist-model", "ngDialog"]
 );
 
 var DASHBOARD_AUTOREALOD = window.location.hostname.indexOf("fen") != -1;
@@ -84,6 +84,25 @@ adpp.controller("RouteCtrl", function($scope) {
     };
 });
 
+adpp.service('DialogService', function(ngDialog) {
+    this.openDialog = function() {
+      ngDialog.open({
+        template: '/templ/admin/warningDialog.html',
+        controller: 'DialogCtrl',
+        className: 'ngdialog-theme-default',
+        closeByDocument: true
+      });
+    };
+  
+    this.closeDialog = function() {
+      ngDialog.close();
+    };
+  });
+
+  adpp.controller('DialogCtrl', function($scope, DialogService) {
+    $scope.openDialog = DialogService.openDialog;
+    $scope.closeDialog = DialogService.closeDialog;
+  });
 //#############################################
 
 adpp.controller("AdminController", function (
@@ -201,7 +220,10 @@ adpp.controller("AdminController", function (
             self.shared.getStages();
     };
 
+
+    //Select activity from Activities
     self.selectActivity = function(activityId, sesId, design){
+        //DialogService.openDialog();
         self.selectView("activity");
         self.currentActivity.id = activityId;
         self.selectedId = sesId;
@@ -210,14 +232,6 @@ adpp.controller("AdminController", function (
         self.design = design;
         console.log("Activity ID:",self.currentActivity);
         console.log("Session ID:",self.selectedId);
-        console.log("Design:",self.design); 
-        console.log("Design:",self.design); 
-        console.log("Design:",self.design); 
-        console.log("Design:",self.design); 
-        console.log("Design:",self.design); 
-        console.log("Design:",self.design); 
-        console.log("Design:",self.design); 
-        console.log("Design:",self.design); 
         console.log("Design:",self.design); 
         //------------------------
         self.requestDocuments();
@@ -233,6 +247,7 @@ adpp.controller("AdminController", function (
         //$location.path(self.selectedSes.id);
         if(self.shared.getStages)
             self.shared.getStages();
+        
     };
 
     var getSession = function(id) {
@@ -276,14 +291,23 @@ adpp.controller("AdminController", function (
         self.design = selectedDesign;
     };
 
-    self.shared.getActivities = function(){
-        var postdata = { };
-        $http({ url: "get-activities", method: "post", data: postdata }).success(function (data) {
+    self.shared.getActivities = function() {
+        return new Promise(function(resolve, reject) {
+          var postdata = {};
+          $http({
+            url: "get-activities",
+            method: "post",
+            data: postdata
+          }).success(function(data) {
             for (var index = 0; index < data.activities.length; index++)
-                data.activities[index].title= data.activities[index].design.metainfo.title;
+              data.activities[index].title = data.activities[index].design.metainfo.title;
             self.activities = data.activities;
+            resolve(self.activities);
+          }).error(function(error) {
+            reject(error);
+          });
         });
-    };
+      };
 
     self.sesFromURL = function () {
         var sesid = +$location.path().substring(1);
@@ -2186,7 +2210,7 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
 
 });
 
-adpp.controller("ActivityController", function ($scope, $filter, $http, Notification, $timeout) {
+adpp.controller("ActivityController", function ($scope, $filter, $http, Notification, $timeout, DialogService) {
     var self = $scope;
     self.selectedSes = {};
 
@@ -2196,6 +2220,7 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
     };
 
 
+    //Create Activity from launch activity
     self.createSession = function(dsgnName, dsgndescr, dsgntype, dsgnid){
         var postdata = { name: dsgnName, descr: dsgndescr, type: dsgntype};
         $http({
@@ -2217,7 +2242,18 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
             console.log("ACTIVITY CREATED");
             var dsng = data.result;
             self.startActivityDesign(dsng, sesID);
-            self.shared.getActivities();
+            let result = self.shared.getActivities();
+            result.then(
+                function(result) {
+                const filteredObj = result.filter(item => item.session === sesID)[0];
+                console.log(filteredObj)
+                self.selectActivity(filteredObj.id, sesID, dsng)
+                },
+                function(error) {
+                  // This code runs when the Promise is rejected
+                  console.log(error);
+                }
+              )
             //get current DESIGNS UPDATED
             //console.log(data);
         });
@@ -2226,6 +2262,7 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
     self.startActivityDesign = function (design, sesid) {
         //change it to do it for the first stage or a selected stage?
         var stageCounter = 0;
+        console.log(design)
         for(var phase of design.phases){
             console.log(phase);
             var postdata = {
@@ -2253,8 +2290,9 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
                     self.acceptGroups(stageid);
                 }
                 */
+                console.log(self.selectedSes)
                     console.log("TYPE:",self.selectedSes.type);
-                    if (self.selectedSes.type == "T") {
+                    if (design.type == "semantic_differential") {
                         var counter = 1;
                         for(var question of phase.questions){
                             var content = question.ans_format;
@@ -2408,7 +2446,7 @@ adpp.controller("MonitorActivityController", function (
                 }
 
                 console.log("TYPE:",self.selectedSes.type);
-                if (self.selectedSes.type == "T") {
+                if (self.design.type == "semantic_differential") {
                     var counter = 1;
                     for(var question of current_phase.questions){
                         var content = question.ans_format;
@@ -2456,8 +2494,7 @@ adpp.controller("MonitorActivityController", function (
             sesid: self.selectedSes.id
         };
         $http({ url: "get-current-stage", method: "post", data: pd }).success(function (data) {
-            console.log(data);
-            self.currentActivity.stage = data[0].number -1;
+            self.currentActivity.stage = data.length === 0 ? 0: data[0].number -1; //data.length fixes issue when starting activity
         });
     };
 
@@ -2587,7 +2624,7 @@ adpp.controller("BrowseDesignsController", function (
 });
 
 
-adpp.controller("StagesEditController", function ($scope, $filter, $http, Notification, $timeout) {
+adpp.controller("StagesEditController", function ($scope, $filter, $http, Notification, $timeout, DialogService) {
 
     var self = $scope;
 
@@ -2632,10 +2669,14 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     };
 
     self.launchDesignEdit = function(){
-        launchId.id = designId.id;
-        launchId.title = self.design.metainfo.title;
-        launchId.type = self.design.type;
-        self.selectView("launchActivity");
+        self.updateDesign().then(function(saved) {
+            if(saved){
+                launchId.id = designId.id;
+                launchId.title = self.design.metainfo.title;
+                launchId.type = self.design.type;
+                self.selectView("launchActivity");
+            }
+        });
     };
   
     self.uploadDesign = function (title, author) {
@@ -2679,23 +2720,28 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         
     };
 
-    self.updateDesign = function () {
+    self.updateDesign = function() {
         self.error = self.checkDesign();
-        if(!self.error){
-            var postdata = {"design": self.design,"id": designId.id};
-            $http.post("update-design", postdata).success(function (data) {
-                
-                if (data.status == "ok") {
+        if (!self.error) {
+            var postdata = {"design": self.design, "id": designId.id};
+            $http.post("update-design", postdata).then(function(response) {
+                if (response.data.status == "ok") {
                     self.saved = true;
-                //    console.log(data)
+                } else {
+                    self.saved = false;
                 }
-                
+            }, function(error) {
+                self.saved = false;
             });
-        }
-        else{
+        } else {
+            DialogService.openDialog();
             self.saved = false;
         }
+        return $timeout(function() {
+            return self.saved;
+        }, 500);
     };
+    
 
     self.checkDesign = function(){ 
         var error = false;

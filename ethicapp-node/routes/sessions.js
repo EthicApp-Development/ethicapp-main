@@ -388,6 +388,7 @@ router.get("/get-user-designs", (req, res) => {
     SELECT *
     FROM DESIGNS
     WHERE creator = ${uid}
+    ORDER BY id DESC;
     `;
     var db = getDBInstance(pass.dbcon);
     var qry;
@@ -417,6 +418,7 @@ router.get("/get-public-designs", (req, res) => {
     FROM DESIGNS
     WHERE public = true
         AND creator != ${uid}
+    ORDER BY id DESC;
     `;
     var db = getDBInstance(pass.dbcon);
     var qry;

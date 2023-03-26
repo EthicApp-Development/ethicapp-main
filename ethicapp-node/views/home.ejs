@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="css/tablesort.min.css" />
     <link rel="stylesheet" href="css/main.css" />
     <link rel="stylesheet" href="css/custom.css" />
+    <link rel="stylesheet" href="css/ngDialog-theme-default.css" />
     <script src="libs/angular.min.js"></script>
     <script src="libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
     <script src="libs/katex.min.js"></script>
@@ -38,7 +39,9 @@
     <script src="js/admin-ctrl.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script src="libs/angular-route.js"></script>
-    <script src='libs/checklist-model.js'></script>
+    <script src="libs/checklist-model.js"></script>
+    <script src="libs/ngDialog.min.js"></script>
+
 </head>
 <body ng-controller="AdminController">
     <!--TOP BAR-->
@@ -72,7 +75,7 @@
           <a href="super" ng-if="super"> {{'Administración'|lang}}</a>
         </div>
       </div> <!-- ERROR FALTABA UN DIV-->
-        <div class="main-body vl"   > <!--Right side--> 
+        <div class="main-body vl" > <!--Right side--> 
             <div class="container" style="margin-top: 3em;">
               
                 <div ng-view="" ng-controller="TabsController"></div> <!--Ng view templates-->

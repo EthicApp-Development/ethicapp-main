@@ -16,11 +16,11 @@
         </div>
         
     </div>
-    <div class="container" style="overflow: scroll; max-height: 40em; min-height: 10em; border: #bbb 1px solid;">
+    <div class="container" style="overflow: scroll; max-height: 40em; min-height: 10em; border: #bbb 1px solid;" ng-controller="DialogCtrl">
         <div class="activities_container" style="margin-top: 2em;">
             <!--ACTIVE ACTIVITIES-->
             <div class="list-group-item" ng-repeat="ses in currentActivities(0) | filter:{title:userSearch} | orderBy : '-time'" ng-if="dsgnMode==0">
-                <a href="admin#/{{ses.id}}"><h4 class="list-group-item-heading" ng-bind="ses.name"></h4></a>
+                <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
                 <p class="list-group-item-text" ng-bind="ses.descr"></p>
                 <p class="list-group-item-text">{{'launched' | lang}} {{ses.time | date}}</p>
                 <p class="list-group-item-text">{{'code' | lang}}: {{ses.code}}</p>
@@ -33,7 +33,7 @@
             </div>
             <!--FINISHED ACTIVITIES-->
             <div class="list-group-item" ng-repeat="ses in currentActivities(1) | filter:{title:userSearch} | orderBy : '-time'" ng-if="dsgnMode==1">
-                <a href="admin#/{{ses.id}}"><h4 class="list-group-item-heading" ng-bind="ses.name"></h4></a>
+                <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
                 <p class="list-group-item-text" ng-bind="ses.descr"></p>
                 <p class="list-group-item-text">{{'launched' | lang}} {{ses.time | date}}</p>
                 <p class="list-group-item-text">{{'code' | lang}}: {{ses.code}}</p>
@@ -47,7 +47,7 @@
             </div>
             <!--ARCHIVED ACTIVITIES-->
             <div class="list-group-item" ng-repeat="ses in currentActivities(2) | filter:{title:userSearch}  | orderBy : '-time'" ng-if="dsgnMode==2">
-                <a href="admin#/{{ses.id}}"><h4 class="list-group-item-heading" ng-bind="ses.name"></h4></a>
+                <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
                 <p class="list-group-item-text" ng-bind="ses.descr"></p>
                 <p class="list-group-item-text">{{'launched' | lang}} {{ses.time | date}}</p>
                 <p class="list-group-item-text">{{'code' | lang}}: {{ses.code}}</p>
