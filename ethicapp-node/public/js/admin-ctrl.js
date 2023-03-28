@@ -2978,6 +2978,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         var index = self.design.phases.length -1;
         var prev_phase = self.design.phases[index];
         self.design.phases.push(self.copyPrevStage("semantic_differential", prev_phase));
+        self.errorList.push(JSON.parse(JSON.stringify(self.errorList[self.currentStage])));
         console.log(self.design.phases);
     };
 
