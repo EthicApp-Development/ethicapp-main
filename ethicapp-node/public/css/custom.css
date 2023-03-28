@@ -301,3 +301,7 @@ body {
     position: absolute;
     z-index: 10001;
   }
+
+  .error{
+    background-color: #ff858581 !important;
+  }
