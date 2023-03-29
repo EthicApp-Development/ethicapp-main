@@ -1,5 +1,3 @@
--- 1. Postgres script for create database
-
 CREATE TABLE IF NOT EXISTS users (
     id serial,
     name text NOT NULL,
@@ -10,7 +8,6 @@ CREATE TABLE IF NOT EXISTS users (
     role char(1),
     PRIMARY KEY(id)
 );
-
 
 CREATE TABLE IF NOT EXISTS sessions (
     id serial,
@@ -25,14 +22,12 @@ CREATE TABLE IF NOT EXISTS sessions (
     FOREIGN KEY(creator) REFERENCES users(id)
 );
 
-
 CREATE TABLE IF NOT EXISTS sesusers (
     sesid integer,
     uid integer,
     FOREIGN KEY(sesid) REFERENCES sessions(id),
     FOREIGN KEY(uid) REFERENCES users(id)
 );
-
 
 CREATE TABLE IF NOT EXISTS documents (
     id serial,
@@ -44,7 +39,6 @@ CREATE TABLE IF NOT EXISTS documents (
     FOREIGN KEY(sesid) REFERENCES sessions(id),
     FOREIGN KEY(uploader) REFERENCES users(id)
 );
-
 
 CREATE TABLE IF NOT EXISTS ideas (
     id serial,

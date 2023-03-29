@@ -66,5 +66,8 @@
         ],
         "editor.insertSpaces": true,
         "editor.tabSize": 4
-    }
+    },
+    "cSpell.words": [
+        "ethicapp"
+    ]
 }

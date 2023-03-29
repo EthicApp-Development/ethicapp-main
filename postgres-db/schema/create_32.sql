@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS jigsaw_role(
     PRIMARY KEY(id)
 );
 
-
 CREATE TABLE IF NOT EXISTS jigsaw_users(
     stageid integer REFERENCES stages(id),
     userid integer REFERENCES users(id),

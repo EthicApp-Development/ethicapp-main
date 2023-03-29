@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS stages(
     PRIMARY KEY(id)
 );
 
-
 CREATE TABLE IF NOT EXISTS actors(
     id serial,
     name varchar(255) NOT NULL,
@@ -17,7 +16,6 @@ CREATE TABLE IF NOT EXISTS actors(
     stageid integer REFERENCES stages(id),
     PRIMARY KEY(id)
 );
-
 
 CREATE TABLE IF NOT EXISTS actor_selection(
     id serial,
