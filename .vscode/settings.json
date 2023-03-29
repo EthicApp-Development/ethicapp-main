@@ -4,7 +4,8 @@
         ".eslintrc.json": "jsonc", //* redundant setting for current vscode versions
         ".htmlhintrc": "jsonc",
         ".sqlfluff": "properties",
-        ".env": "properties"
+        ".env": "properties",
+        ".sqlfluffignore": "ignore"
     },
 
     // Configuration files
