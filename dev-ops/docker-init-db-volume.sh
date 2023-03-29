@@ -2,7 +2,7 @@
 # --------------------------------------------------------------------------------------------------
 # Initializes the shared volume for the Postgres database in the host filesystem. The directory in
 # which the virtualized Postgres database will be mounted at is $HOST_DB_VOLUME_PATH, but can be
-# overridden if given as an argument.
+# overridden if given as an argument (if so, make sure to include the `./` prefix if relative).
 # --------------------------------------------------------------------------------------------------
 
 source .env
@@ -27,7 +27,6 @@ ComposeRewriteFlags="--file ${TempComposeFilePath}"
 
 # Manually rewriting compose file, as usual docker-compose overrides can't undo an existing
 # property, see https://github.com/docker/compose/issues/3729
-touch ${TempComposeFilePath} #* not needed
 echo "# ----
 # GENERATED FILE FROM $0
 # ----" > ${TempComposeFilePath}

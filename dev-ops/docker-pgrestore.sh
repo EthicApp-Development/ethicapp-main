@@ -14,5 +14,6 @@ docker exec ethicapp-postgres /bin/bash -c "
         --port=5432 \
         --dbname=$DB_NAME \
         --username=$DB_USER_NAME \
+        --no-owner \
         /tmp/dump-$DB_NAME.tar
 "

@@ -40,7 +40,7 @@ In order to run the project *natively* in your computer, the following software 
 
 ### 3.1. Install root Node dependencies
 
-Run `npm install`, needed for a few [DevOps](https://about.gitlab.com/topics/devops/) utilities needed for this project (e.g. linters).
+Run `npm install`, needed for a few [DevOps](https://about.gitlab.com/topics/devops/) utilities needed for this project (e.g. linters). You can skip this step if you are not going to contribute.
 
 ### 3.2. "Passwords" file
 
@@ -54,7 +54,7 @@ npm run init-passwords-js
 
 ```shell
 mkdir secrets
-echo 'foo-dev-token' > ./secrets/jwt_token
+echo 'qwerty-dev-token' > ./secrets/jwt_token
 ```
 
 ### 3.4. Initialize the dockerized database shared volume
@@ -64,6 +64,8 @@ The virtualized Postgres server is configured to run with a mounted [Docker volu
 ```shell
 npm run init-db
 ```
+
+This will create a directory at `$HOST_DB_VOLUME_PATH` (see the [DotEnv file](./.env)) in your filesystem, containing the preset development database, thus being preserved despite the state of the database container.
 
 ## 4. Run the environment
 
@@ -79,6 +81,8 @@ Note: you can change the web server port by setting a custom `PORT` variable for
 
 ### 4.2. Virtualized
 
+This is the recommended (and most documented) way to run the environment.
+
 ```shell
 docker-compose down --remove-orphans
 docker-compose up --build --detach
@@ -91,3 +95,5 @@ Then, you can check the output of any desired service with:
 ```shell
 docker-compose logs -f $SERVICE_NAME
 ```
+
+For checking which users are available to log-in as in the Node web application, please check [this file](./postgres-db/seeds/01_users.sql).

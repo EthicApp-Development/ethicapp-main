@@ -12,7 +12,6 @@ CREATE TABLE IF NOT EXISTS mail_domain(
     id serial,
     institutionid integer REFERENCES institution(id),
     domain_name text UNIQUE,
-    -- ALTER TABLE mail_domain ADD CONSTRAINT domain_name UNIQUE(domain_name);
     PRIMARY KEY(id)
 );
 
