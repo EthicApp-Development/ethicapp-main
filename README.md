@@ -97,3 +97,5 @@ docker-compose logs -f $SERVICE_NAME
 ```
 
 For checking which users are available to log-in as in the Node web application, please check [this file](./postgres-db/seeds/01_users.sql).
+
+Note: if you experience any issue while attempting to log-in as any of those users, please run `npm run clear-sessions` (at the root project directory) for preventing previous sessions conflicting with the current runtime.
