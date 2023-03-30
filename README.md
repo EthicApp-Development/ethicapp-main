@@ -16,6 +16,8 @@ This repository contains the main project for EthicApp: a web application (devel
   - [4. Run the environment](#4-run-the-environment)
     - [4.1. Natively](#41-natively)
     - [4.2. Virtualized](#42-virtualized)
+  - [5. Appendixes](#5-appendixes)
+    - [5.1. NPM developing and debugging scripts](#51-npm-developing-and-debugging-scripts)
 
 ## 1. Developing
 
@@ -99,3 +101,18 @@ docker-compose logs -f $SERVICE_NAME
 For checking which users are available to log-in as in the Node web application, please check [this file](./postgres-db/seeds/01_users.sql).
 
 Note: if you experience any issue while attempting to log-in as any of those users, please run `npm run clear-sessions` (at the root project directory) for preventing previous sessions conflicting with the current runtime.
+
+## 5. Appendixes
+
+### 5.1. NPM developing and debugging scripts
+
+The root [`package.json`](./package.json) file contains some useful scripts for initialization and/or debugging, which are detailed at the following table (ordered by relevance) and can be easily run with `npm run $Script`.
+
+| Script                   | Description                                                                                                                 |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `init-passwords-js`      | For [section 3.2](#32-passwords-file).                                                                                      |
+| `init-db`                | For [section 3.4](#34-initialize-the-dockerized-database-shared-volume).                                                    |
+| `clear-sessions`         | Deletes all web sessions (from local filesystem). Needed when login gets buggy due database modifications in certain cases. |
+| `psql`                   | Quickly run a command-line Postgres client to the containerized development database.                                       |
+| `lint-$LANG`             | For running a lint check for a given `LANG`: `js`, `html`, `css` or `sql`.                                                  |
+| `pgdump` and `pgrestore` | Easily dumping/restoring the containerized database, if desired.                                                            |
