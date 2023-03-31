@@ -2212,6 +2212,7 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
 adpp.controller("ActivityController", function ($scope, $filter, $http, Notification, $timeout) {
     var self = $scope;
     self.selectedSes = {};
+    self.error = false;
 
     self.init =function(){
         self.selectedSes = {};
@@ -2221,17 +2222,26 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
 
     //Create Activity from launch activity
     self.createSession = function(dsgnName, dsgndescr, dsgntype, dsgnid){
-        var postdata = { name: dsgnName, descr: dsgndescr, type: dsgntype};
+
         $http({
-            url: "add-session-activity", method: "post", data: postdata
+            url: "check-design", method: "post", data: { dsgnid: dsgnid}
         }).success(function (data) {
-            console.log("SESSION CREATED");
-            var id = data.id;
-            self.createActivity(id, dsgnid,);
-            self.generateCodeActivity(id);
-            self.shared.getActivities();
-            self.shared.updateSesData();
-            //console.log(data);
+            self.error = !data.result;
+            console.log(self.error)
+            if(data.result){
+                var postdata = { name: dsgnName, descr: dsgndescr, type: dsgntype};
+                $http({
+                    url: "add-session-activity", method: "post", data: postdata
+                }).success(function (data) {
+                    console.log("SESSION CREATED");
+                    var id = data.id;
+                    self.createActivity(id, dsgnid,);
+                    self.generateCodeActivity(id);
+                    self.shared.getActivities();
+                    self.shared.updateSesData();
+                    //console.log(data);
+                });
+            }
         });
     };
 
@@ -2665,9 +2675,26 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
             self.stageType = self.design.type;
             self.num = self.design.phases[0].questions[0].ans_format.values;
             resetValues();
+            self.CleanEmptyValues();
             self.CreateErrorList();
         }
     };
+
+    self.CleanEmptyValues = function(){
+        var phases = self.design.phases;
+        for(let i =0; i< phases.length; i++){
+            var phase = phases[i];
+            var questions = phase.questions;
+            for(let j=0; j<questions.length; j++){
+                var question = questions[j];
+
+                question.q_text = question.q_text === "-->>N/A<<--" ? "" : question.q_text
+                question.ans_format.l_pole = question.ans_format.l_pole === "-->>N/A<<--" ? "" : question.ans_format.l_pole
+                question.ans_format.r_pole = question.ans_format.r_pole === "-->>N/A<<--" ? "" : question.ans_format.r_pole
+            }
+        }
+        return;
+    }
 
     self.CreateErrorList = function(){
         //[[{q:false, l:false, t:true}]]
@@ -2755,11 +2782,11 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
                     "stdntAmount":        3,
                     "questions":          [
                         {
-                            "q_text":     "N/A",
+                            "q_text":     "-->>N/A<<--",
                             "ans_format": {
                                 "values":          7,
-                                "l_pole":          "N/A",
-                                "r_pole":          "N/A",
+                                "l_pole":          "-->>N/A<<--",
+                                "r_pole":          "-->>N/A<<--",
                                 "just_required":   true,
                                 "min_just_length": 5
                             }
@@ -2880,16 +2907,16 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     self.addQuestion = function(){
         self.design.phases[self.currentStage].questions.push(
             {
-                "q_text":     "N/A",
+                "q_text":     "",
                 "ans_format": {
                     "values":          5,
-                    "l_pole":          "N/A",
-                    "r_pole":          "N/A",
+                    "l_pole":          "",
+                    "r_pole":          "",
                     "just_required":   true,
                     "min_just_length": 10
                 }});
         self.selectQuestion(self.design.phases[self.currentStage].questions.length-1); //send to new question
-        self.errorList[self.currentStage].push({q:false,l:false,r:false})
+        self.errorList[self.currentStage].push({q:true,l:true,r:true})
     };
 
     self.deleteQuestion = function(index){
