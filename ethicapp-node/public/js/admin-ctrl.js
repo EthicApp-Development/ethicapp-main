@@ -2398,18 +2398,19 @@ adpp.controller("MonitorActivityController", function (
     };
 
     self.getPrevAns = function(current_phase){
-        return "";
-        // if(current_phase.prevPhasesResponse.length == 0){ //! Unreachable code
-        //     return "";
-        // }
-        // var temp = [];
-        // let answers = current_phase.prevPhasesResponse;
-        // for(let i=0; i < current_phase.prevPhasesResponse.length; i++){
-        //     let answerIndex = answers[i];
-        //     temp.push(self.stages[answerIndex]);
-        // }
-        // console.log(temp);
-        // return temp.map(e => e.id).join(",");
+        //console.log(current_phase.prevPhasesResponse)
+        //return "";
+        if(current_phase.prevPhasesResponse.length == 0){ //! Unreachable code volver prev_ans = [] al copiar fase anterior
+            return "";
+        }
+        var temp = [];
+        let answers = current_phase.prevPhasesResponse;
+        for(let i=0; i < current_phase.prevPhasesResponse.length; i++){
+            let answerIndex = answers[i];
+            temp.push(self.stages[answerIndex]);
+        }
+        console.log(temp);
+        return temp.map(e => e.id).join(",");
     };
 
     self.nextActivityDesign = function () {//check for race condition
@@ -2440,10 +2441,10 @@ adpp.controller("MonitorActivityController", function (
         };
         console.log(postdata);
         console.log(self.selectedSes);
-
+        console.log(self.currentActivity.stage)
         if(current_phase.mode == "team"){
             //self.generateGroups(true);
-            self.generateGroups(null,self.selectedSes.current_stage ); //<-------------update value
+            self.generateGroups(null,self.currentActivity.stage +1 ); //<-------------update value
         }
         
         $http({url: "add-stage", method: "post", data: postdata}).success(function (data) {
@@ -2996,7 +2997,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
             "anonymous":          phase.anonymous,
             "questions":          phase.questions,
             "grouping_algorithm": phase.grouping_algorithm,
-            "prevPhasesResponse": phase.prevPhasesResponse,
+            "prevPhasesResponse": [],//phase.prevPhasesResponse,
             "stdntAmount":        phase.stdntAmount
         };
     };

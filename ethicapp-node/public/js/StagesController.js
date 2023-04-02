@@ -452,8 +452,9 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
     self.generateGroups = function (key, stage) {
         console.log("Generate groups StageController");
         if(stage != null){
-            self.groupopt.num = self.design.phases[2].stdntAmount;
-            self.groupopt.met = self.design.phases[2].grouping_algorithm;
+            console.log(self.design.phases, stage)
+            self.groupopt.num = self.design.phases[stage].stdntAmount;
+            self.groupopt.met = self.design.phases[stage].grouping_algorithm;
         }
         
         // 1 ignore
