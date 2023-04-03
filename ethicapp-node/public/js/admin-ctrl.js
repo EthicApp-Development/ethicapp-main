@@ -84,25 +84,25 @@ adpp.controller("RouteCtrl", function($scope) {
     };
 });
 
-adpp.service('DialogService', function(ngDialog) {
+adpp.service("DialogService", function(ngDialog) {
     this.openDialog = function() {
-      ngDialog.open({
-        template: '/templ/admin/warningDialog.html',
-        controller: 'DialogCtrl',
-        className: 'ngdialog-theme-default',
-        closeByDocument: true
-      });
+        ngDialog.open({
+            template:        "/templ/admin/warningDialog.html",
+            controller:      "DialogCtrl",
+            className:       "ngdialog-theme-default",
+            closeByDocument: true
+        });
     };
   
     this.closeDialog = function() {
-      ngDialog.close();
+        ngDialog.close();
     };
-  });
+});
 
-  adpp.controller('DialogCtrl', function($scope, DialogService) {
+adpp.controller("DialogCtrl", function($scope, DialogService) {
     $scope.openDialog = DialogService.openDialog;
     $scope.closeDialog = DialogService.closeDialog;
-  });
+});
 //#############################################
 
 adpp.controller("AdminController", function (
@@ -292,21 +292,21 @@ adpp.controller("AdminController", function (
 
     self.shared.getActivities = function() {
         return new Promise(function(resolve, reject) {
-          var postdata = {};
-          $http({
-            url: "get-activities",
-            method: "post",
-            data: postdata
-          }).success(function(data) {
-            for (var index = 0; index < data.activities.length; index++)
-              data.activities[index].title = data.activities[index].design.metainfo.title;
-            self.activities = data.activities;
-            resolve(self.activities);
-          }).error(function(error) {
-            reject(error);
-          });
+            var postdata = {};
+            $http({
+                url:    "get-activities",
+                method: "post",
+                data:   postdata
+            }).success(function(data) {
+                for (var index = 0; index < data.activities.length; index++)
+                    data.activities[index].title = data.activities[index].design.metainfo.title;
+                self.activities = data.activities;
+                resolve(self.activities);
+            }).error(function(error) {
+                reject(error);
+            });
         });
-      };
+    };
 
     self.sesFromURL = function () {
         var sesid = +$location.path().substring(1);
@@ -2227,7 +2227,7 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
             url: "check-design", method: "post", data: { dsgnid: dsgnid}
         }).success(function (data) {
             self.error = !data.result;
-            console.log(self.error)
+            console.log(self.error);
             if(data.result){
                 var postdata = { name: dsgnName, descr: dsgndescr, type: dsgntype};
                 $http({
@@ -2254,15 +2254,15 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
             let result = self.shared.getActivities();
             result.then(
                 function(result) {
-                const filteredObj = result.filter(item => item.session === sesID)[0];
-                console.log(filteredObj)
-                self.selectActivity(filteredObj.id, sesID, dsng)
+                    const filteredObj = result.filter(item => item.session === sesID)[0];
+                    console.log(filteredObj);
+                    self.selectActivity(filteredObj.id, sesID, dsng);
                 },
                 function(error) {
-                  // This code runs when the Promise is rejected
-                  console.log(error);
+                    // This code runs when the Promise is rejected
+                    console.log(error);
                 }
-              )
+            );
             //get current DESIGNS UPDATED
             //console.log(data);
         });
@@ -2271,7 +2271,7 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
     self.startActivityDesign = function (design, sesid) {
         //change it to do it for the first stage or a selected stage?
         var stageCounter = 0;
-        console.log(design)
+        console.log(design);
         for(var phase of design.phases){
             console.log(phase);
             var postdata = {
@@ -2299,7 +2299,7 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
                     self.acceptGroups(stageid);
                 }
                 */
-                console.log(self.selectedSes)
+                    console.log(self.selectedSes);
                     console.log("TYPE:",self.selectedSes.type);
                     if (design.type == "semantic_differential") {
                         var counter = 1;
@@ -2409,7 +2409,6 @@ adpp.controller("MonitorActivityController", function (
             let answerIndex = answers[i];
             temp.push(self.stages[answerIndex]);
         }
-        console.log(temp);
         return temp.map(e => e.id).join(",");
     };
 
@@ -2439,9 +2438,7 @@ adpp.controller("MonitorActivityController", function (
             sesid:    sesid,
             prev_ans: self.getPrevAns(current_phase)
         };
-        console.log(postdata);
-        console.log(self.selectedSes);
-        console.log(self.currentActivity.stage)
+        console.debug(postdata);
         if(current_phase.mode == "team"){
             //self.generateGroups(true);
             self.generateGroups(null,self.currentActivity.stage +1 ); //<-------------update value
@@ -2689,13 +2686,13 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
             for(let j=0; j<questions.length; j++){
                 var question = questions[j];
 
-                question.q_text = question.q_text === "-->>N/A<<--" ? "" : question.q_text
-                question.ans_format.l_pole = question.ans_format.l_pole === "-->>N/A<<--" ? "" : question.ans_format.l_pole
-                question.ans_format.r_pole = question.ans_format.r_pole === "-->>N/A<<--" ? "" : question.ans_format.r_pole
+                question.q_text = question.q_text === "-->>N/A<<--" ? "" : question.q_text;
+                question.ans_format.l_pole = question.ans_format.l_pole === "-->>N/A<<--" ? "" : question.ans_format.l_pole;
+                question.ans_format.r_pole = question.ans_format.r_pole === "-->>N/A<<--" ? "" : question.ans_format.r_pole;
             }
         }
         return;
-    }
+    };
 
     self.CreateErrorList = function(){
         //[[{q:false, l:false, t:true}]]
@@ -2706,21 +2703,21 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
             let questionsErrorList = [];
 
             for(let j=0; j<questions.length; j++){
-                let questionErrors = {}
+                let questionErrors = {};
                 var question = questions[j];
 
                 questionErrors = {
-                    q:question.q_text == "",
-                    l:question.ans_format.l_pole == "",
-                    r:question.ans_format.r_pole ==""
-                }
+                    q: question.q_text == "",
+                    l: question.ans_format.l_pole == "",
+                    r: question.ans_format.r_pole ==""
+                };
  
                 questionsErrorList.push(questionErrors);
             }
             self.errorList.push(questionsErrorList);
 
         }
-    }
+    };
 
     self.CheckPhase = function(phase){ //IF Phase deleted or Question deleted, delete errorList
         const questions = self.errorList[phase];
@@ -2748,10 +2745,10 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         const isEmpty = value==="";
         const phase = self.currentStage;
         const question  = self.currentQuestion;
-        if(type !== '') self.errorList[phase][question][type] = isEmpty;
+        if(type !== "") self.errorList[phase][question][type] = isEmpty;
 
-        return isEmpty
-    }
+        return isEmpty;
+    };
 
     self.launchDesignEdit = function(){
         self.updateDesign().then(function(saved) {
@@ -2917,7 +2914,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
                     "min_just_length": 10
                 }});
         self.selectQuestion(self.design.phases[self.currentStage].questions.length-1); //send to new question
-        self.errorList[self.currentStage].push({q:true,l:true,r:true})
+        self.errorList[self.currentStage].push({q: true,l: true,r: true});
     };
 
     self.deleteQuestion = function(index){
