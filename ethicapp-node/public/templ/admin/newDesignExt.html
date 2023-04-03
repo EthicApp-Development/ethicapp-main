@@ -2,8 +2,13 @@
 <div class="" ng-controller="StagesEditController" ng-if="selectedView == 'newDesignExt'">
     <div class="container">
         <h2>{{'designMsg'|lang}}</h2>
-        <h3>{{design.metainfo.title}}</h3>
-        <div class="container" ng-controller="DesignsDocController"> <!--ng-controller="DocumentsController"-->
+        <div class="" ng-controller="DesignsDocController"> <!--ng-controller="DocumentsController"-->
+            <div class="row margin-top-8">
+                <div class="col-xs-6 text-right">
+                    <input type="text" class="form-control input-lg mb-3" ng-model="design.metainfo.title"
+                    ng-class="{'error': IsEmpty(design.metainfo.title, '')}">
+                </div>
+            </div>
             <h4>{{'documents' | lang}}</h4>
             <div class="list-group" style="margin-bottom: 0">
                 <div class="list-group-item" ng-repeat="doc in documents">
@@ -36,7 +41,7 @@
     <div class="container phase_container">
         <div class = "row">
             <div class="col-xs-1 phase_element"  ng-repeat="item in getStages()" ng-init="current" 
-            ng-class="{phase_selected:currentStage==$index}" ng-click="selectStage($index)">
+            ng-class="{phase_selected:currentStage==$index, error: CheckPhase($index)}" ng-click="selectStage($index)">
                 {{'stage' | lang}} {{$index+ 1}}
                 {{'mode' | lang}}: {{item.mode|lang}}
             </div>
@@ -143,7 +148,7 @@
         <!--TABS QUESTIONS-->
         <div class="tab-cs">
             <button ng-repeat="i in buildArray(design.phases[currentStage].questions.length)" 
-            class="tab-cs" ng-click= "selectQuestion($index)" ng-class="{'btn-selected': currentQuestion == $index}">
+            class="tab-cs" ng-click= "selectQuestion($index)" ng-class="{'btn-selected': currentQuestion == $index, 'error': CheckQuestion($index)}">
             {{'question'|lang}} {{i}}
             </button>
             <button class="tab-cs" ng-click = "addQuestion()">
@@ -156,6 +161,7 @@
                 <label class="col-lg-2">{{'questionText'|lang}}</label>
                 <div class= "col-lg-6">
                     <input type="text" class="form-control text-center" ng-disabled="readonly"
+                    ng-class="{'error': IsEmpty(design.phases[currentStage].questions[currentQuestion].q_text,'q')}"
                     placeholder="{{'title'|lang}}" ng-model="design.phases[currentStage].questions[currentQuestion].q_text"> 
                 </div>
             </div>
@@ -166,6 +172,7 @@
                     <div class="col-xs-3 text-right">
                         <div class="tlabel">
                             <input type="text" class="form-control" ng-disabled="readonly" 
+                            ng-class="{'error': IsEmpty(design.phases[currentStage].questions[currentQuestion].ans_format.l_pole, 'l')}"
                             placeholder="{{'left'|lang}}" ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.l_pole">
                         </div>
                         <button class="btn btn-default" ng-click="amountOptions('-')" ng-disabled="num==2">-</button>
@@ -177,6 +184,7 @@
                         <button class="btn btn-default" ng-click="amountOptions('+')" ng-disabled="num==10">+</button>
                         <div class="tlabel">
                             <input type="text" class="form-control" ng-disabled="readonly"
+                            ng-class="{'error': IsEmpty(design.phases[currentStage].questions[currentQuestion].ans_format.r_pole, 'r')}"
                                 placeholder="{{'right'|lang}}" ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.r_pole">
                         </div>
                     </div>
@@ -223,7 +231,11 @@
         <h4 style="color:red; text-align: center; "><strong>{{'errorSave'|lang}}</strong></h4>
     </div>
     <div class = "row" style="padding-left: 70%; margin-bottom: 5em;">
-        <button class="btn btn-primary col-xs-3" ng-click="updateDesign()">{{'save'|lang}}</button>
+        <button class="btn btn-success col-xs-3" ng-click="updateDesign()">{{'save'|lang}}</button>
         <button class="btn btn-primary col-xs-6" ng-click="launchDesignEdit(ses.id, ses.metainfo.title, ses.type)" style="margin-left: 1em;">{{'launchActivity'|lang}}</button>
     </div>
 </div>  
+
+<!--
+    Si encuentra errores, marque las fases, preguntas en rojo junto con los textboxes
+-->

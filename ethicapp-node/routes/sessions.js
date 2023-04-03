@@ -186,6 +186,45 @@ router.post("/add-activity", (req, res) => {
     });
 });
 
+router.post("/check-design", (req, res) => {
+    var dsgnid = req.body.dsgnid;
+    var sql = `
+    SELECT design
+    FROM DESIGNS
+    WHERE id = ${dsgnid};
+    `;
+    var db = getDBInstance(pass.dbcon);
+    var qry;
+    var result = true;;
+    var phases;
+    qry = db.query(sql, (err,res) =>{
+        if(res!= null) {
+            phases = res.rows[0].design.phases;
+            for(let i =0; i< phases.length; i++){
+                var phase = phases[i];
+                var questions = phase.questions;
+                for(let j=0; j<questions.length; j++){
+                    var question = questions[j];
+    
+                    question.q_text = (question.q_text === "" || question.q_text === "-->>N/A<<--") ? result = false : result
+                    question.ans_format.l_pole = (question.ans_format.l_pole === "" | question.ans_format.l_pole === "-->>N/A<<--") ? result = false : result
+                    question.ans_format.r_pole = (question.ans_format.r_pole === "" | question.ans_format.l_pole === "-->>N/A<<--") ? result = false : result
+                }
+            }
+            return;
+        }
+    });
+    qry.on("end", function () {
+        res.json({status: 200, "result": result});
+    });
+    qry.on("error", function(err){
+        console.error(`Fatal error on the SQL query "${sql}"`);
+        console.error(err);
+        res.json({status: 400, });
+
+    });
+});
+
 
 router.post("/get-activities", (req, res) => {
     var uid = req.session.uid;
@@ -388,6 +427,7 @@ router.get("/get-user-designs", (req, res) => {
     SELECT *
     FROM DESIGNS
     WHERE creator = ${uid}
+    ORDER BY id DESC;
     `;
     var db = getDBInstance(pass.dbcon);
     var qry;
@@ -417,6 +457,7 @@ router.get("/get-public-designs", (req, res) => {
     FROM DESIGNS
     WHERE public = true
         AND creator != ${uid}
+    ORDER BY id DESC;
     `;
     var db = getDBInstance(pass.dbcon);
     var qry;

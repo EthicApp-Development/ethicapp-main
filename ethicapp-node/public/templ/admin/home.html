@@ -58,7 +58,7 @@
 <div class="activities_container" ng-controller= "ActivityController">
     <div class="list-group pad-content">
         <div class="list-group-item" ng-repeat="ses in currentActivities(0) | limitTo: 3 | orderBy : '-time'">
-            <a href="admin#/{{ses.id}}"><h4 class="list-group-item-heading" ng-bind="ses.name"></h4></a>
+            <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
             <p class="list-group-item-text" ng-bind="ses.descr"></p>
             <p class="list-group-item-text">{{'launched' | lang}} {{ses.time | date}}</p>
             <p class="list-group-item-text">{{'code' | lang}}: {{ses.code}}</p>

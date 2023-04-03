@@ -287,3 +287,21 @@ body {
   .slider.round:before {
     border-radius: 50%;
   }
+
+  .ngdialog-overlay {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10000;
+  }
+  
+  .ngdialog-content {
+    position: absolute;
+    z-index: 10001;
+  }
+
+  .error{
+    background-color: #ff858581 !important;
+  }
