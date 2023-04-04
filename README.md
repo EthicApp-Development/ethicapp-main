@@ -18,6 +18,7 @@ This repository contains the main project for EthicApp: a web application (devel
     - [4.2. Virtualized](#42-virtualized)
   - [5. Appendixes](#5-appendixes)
     - [5.1. NPM developing and debugging scripts](#51-npm-developing-and-debugging-scripts)
+    - [5.2. Persistance of PgAdmin (containerized)](#52-persistance-of-pgadmin-containerized)
 
 ## 1. Developing
 
@@ -116,3 +117,19 @@ The root [`package.json`](./package.json) file contains some useful scripts for 
 | `psql`                   | Quickly run a command-line Postgres client to the containerized development database.                                       |
 | `lint-$LANG`             | For running a lint check for a given `LANG`: `js`, `html`, `css` or `sql`.                                                  |
 | `pgdump` and `pgrestore` | Easily dumping/restoring the containerized database, if desired.                                                            |
+
+### 5.2. Persistance of PgAdmin (containerized)
+
+If you inspect the [`docker-compose`](./docker-compose.yml) file, you will note that the database (and PgAdmin) use the `unless-stopped` restart policy. This means that those services will keep running unless `docker-compose down` is executed. Therefore, it is recommended to, when running the environment for the first time, do:
+
+```shell
+docker-compose up --build --detach postgres pgadmin
+```
+
+Then, you can launch the Node service with:
+
+```shell
+docker-compose up --build node
+```
+
+With Postgres and PgAdmin running [constantly] on the background, they will be preserved even if the host machine is restarted, i.e., the developer will not have to re-enter the Postgres connection password whenever they want to connect to the database on PgAdmin.
