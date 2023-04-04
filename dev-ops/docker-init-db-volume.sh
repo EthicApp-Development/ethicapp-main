@@ -49,7 +49,7 @@ docker exec ethicapp-postgres /bin/bash -c \
 #* Step (2): export database files directly into host.
 #* ---
 mkdir -p ${TargetVolumePath}
-docker cp --quiet ethicapp-postgres:/var/lib/postgresql/${POSTGRES_VERSION}/main/ ${TargetVolumePath}
+docker cp ethicapp-postgres:/var/lib/postgresql/${POSTGRES_VERSION}/main/ ${TargetVolumePath}
 mv ${TargetVolumePath}/main/* ${TargetVolumePath}
 rm -R -v ${TargetVolumePath}/main/
 
