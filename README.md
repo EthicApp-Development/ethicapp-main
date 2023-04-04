@@ -1,8 +1,8 @@
-# 1. EthicApp
+# EthicApp
 
 This repository contains the main project for EthicApp: a web application (developed in JavaScript and Angular.JS) for supporting teaching Ethics in higher education environments. Please review the [organization README document](https://github.com/EthicApp-Development/organization#readme) for a detailed description of this project and its goals.
 
-- [1. EthicApp](#1-ethicapp)
+- [EthicApp](#ethicapp)
   - [1. Developing](#1-developing)
   - [2. Architecture overview](#2-architecture-overview)
     - [2.1. Runtime dependencies](#21-runtime-dependencies)
@@ -20,8 +20,8 @@ This repository contains the main project for EthicApp: a web application (devel
     - [5.1. NPM developing and debugging scripts](#51-npm-developing-and-debugging-scripts)
     - [5.2. Persistance of PgAdmin (containerized)](#52-persistance-of-pgadmin-containerized)
     - [5.3. For non-Linux developers](#53-for-non-linux-developers)
-      - [MacOS](#macos)
-      - [Windows](#windows)
+      - [5.3.1. MacOS](#531-macos)
+      - [5.3.2. Windows](#532-windows)
 
 ## 1. Developing
 
@@ -141,10 +141,10 @@ With Postgres and PgAdmin running [constantly] on the background, they will be p
 
 If you have chosen not to use a Linux-based OS in your developing machine, read this section. If you are unfamiliar with Linux OSes, your first task would be install it on your machine (you may want to research about how to make a *dual boot*). If not, be aware that successful execution, debugging and documentation will not be guaranteed, as the project is defined from its start to be executed and developed in a Linux environment.
 
-#### MacOS
+#### 5.3.1. MacOS
 
 You will have trouble running `npm` scripts from [appendix 5.1](#51-npm-developing-and-debugging-scripts), including mandatory initialization tasks. You may need to prepend `bash -eu` to the commands at sections [3.2](#32-passwords-file) and [3.4](#34-initialize-the-dockerized-database-shared-volume).
 
-#### Windows
+#### 5.3.2. Windows
 
 For Windows, you must have [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) so that you can run a `bash` shell directly in your host filesystem. You also need to install `npm` and `docker-compose` inside that WSL console. Then, all commands given in the documentation must be ran at that `bash` console through WSL.
