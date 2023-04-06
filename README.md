@@ -52,13 +52,13 @@ Run `npm install`, needed for a few [DevOps](https://about.gitlab.com/topics/dev
 
 Initialize the `passwords.js` file for setting the database connection (among other things) for the Node app:
 
-```shell
+```bash
 npm run init-passwords-js
 ```
 
 ### 3.3. Create docker-compose secret file(s)
 
-```shell
+```bash
 mkdir secrets
 echo 'qwerty-dev-token' > ./secrets/jwt_token
 ```
@@ -67,7 +67,7 @@ echo 'qwerty-dev-token' > ./secrets/jwt_token
 
 The virtualized Postgres server is configured to run with a mounted [Docker volume](https://docs.docker.com/storage/volumes/). Setup this with:
 
-```shell
+```bash
 npm run init-db
 ```
 
@@ -79,7 +79,7 @@ This will create a directory at `$HOST_DB_VOLUME_PATH` (see the [DotEnv file](./
 
 Head into `ethicapp-node` and run `npm install` for installing all dependencies. Then, once your Postgres server is up and running with the appropriate data and configuration at `passwords.js` (which is up to you), head into `ethicapp-node` directory and run the following for starting the web server at the default port `8501`:
 
-```shell
+```bash
 npm run start
 ```
 
@@ -89,7 +89,7 @@ Note: you can change the web server port by setting a custom `PORT` variable for
 
 This is the recommended (and most documented) way to run the environment.
 
-```shell
+```bash
 docker-compose down --remove-orphans
 docker-compose up --build --detach
 ```
@@ -98,7 +98,7 @@ After those commands are executed, the dockerized web server will be available a
 
 Then, you can check the output of any desired service with:
 
-```shell
+```bash
 docker-compose logs -f $SERVICE_NAME
 ```
 
@@ -125,13 +125,13 @@ The root [`package.json`](./package.json) file contains some useful scripts for 
 
 If you inspect the [`docker-compose`](./docker-compose.yml) file, you will note that the database (and PgAdmin) use the `unless-stopped` restart policy. This means that those services will keep running unless `docker-compose down` is executed. Therefore, it is recommended to, when running the environment for the first time, do:
 
-```shell
+```bash
 docker-compose up --build --detach postgres pgadmin
 ```
 
 Then, you can launch the Node service with:
 
-```shell
+```bash
 docker-compose up --build node
 ```
 
@@ -147,4 +147,4 @@ You will have trouble running `npm` scripts from [appendix 5.1](#51-npm-developi
 
 #### 5.3.2. Windows
 
-For Windows, you must have [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) so that you can run a `bash` shell directly in your host filesystem. You also need to install `npm` and `docker-compose` inside that WSL console. Then, all commands given in the documentation must be ran at that `bash` console through WSL.
+For Windows, you must have [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) so that you can run a `bash` shell directly in your host filesystem. You also need to install `npm` and `docker-compose` inside that WSL console. Then, it is important that you work on the *Linux-exclusive* filesystem, due to permission troubles with Windows files (i.e. do not use any child directory of your "`C:`" Windows disk: `/mnt/c`). For instance, clone the project at `$HOME/ethicapp-main` and follow the instructions of the README file for building and running the environment properly. You also have to manage to open your IDE from the WSL `bash` console (with `code <CLONED_REPO_PATH>`).
