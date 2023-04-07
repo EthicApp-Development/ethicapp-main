@@ -279,7 +279,11 @@
 	"workflow": "Workflow",
 	"yes": "Yes",
 	"yours": "Yours",
-	"enter_code":"Input Code"
+	"enter_code":"Input Code",
+	"performance homog": "Performance Homogeneous",
+	"performance heterg": "Performance Heterogeneous",
+	"knowledgeType homog": "Knowledge Type Homogeneous",
+	"knowledgeType heterg": "Knowledge Type Heterogeneous"
 }
 
 

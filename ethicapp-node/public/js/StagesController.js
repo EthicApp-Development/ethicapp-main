@@ -456,9 +456,13 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
             self.groupopt.num = self.design.phases[stage].stdntAmount;
             self.groupopt.met = self.design.phases[stage].grouping_algorithm;
         }
-        
+        console.log(self.groupopt.met, self.selectedSes.grouped, self.groups);
+        if (self.groupopt.met == "previous") {
+            console.log("Ignore, keeps groups")
+            return;
+        }
         // 1 ignore
-        if (self.selectedSes.grouped) {
+        if (self.selectedSes.grouped && self.groupopt.met == "previous") {
             $http({
                 url:    "group-proposal-sel",
                 method: "post",
@@ -473,12 +477,11 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
             return;
         }
         if (key == null && (self.groupopt.num < 1 || self.groupopt.num > self.users.length)) {
+            console.log("Error, low users")
             Notification.error("Error en los parámetros de formación de grupos");
             return;
         }
-        if (self.groupopt.met == "previous") {
-            return;
-        }
+        console.log(self.groupopt.met);
         // *1 ignore
         var postdata = {
             sesid:  self.selectedSes.id,

@@ -32,7 +32,7 @@
                                 <label class="col-lg-2">{{'modeType' | lang}}:</label>
                                 <div class="col-lg-3">
                                     <select class="form-control form-inline-med"
-                                        ng-options="x.key as x.name for x in groupType"
+                                        ng-options="x.key as (x.name | lang) for x in groupType"
                                         ng-model="design.phases[currentStage].mode" ng-disabled="true"></select>
                                 </div>
                             </div>
@@ -42,7 +42,7 @@
                                     <div class="col-lg-3">
                                         <select class="form-control form-inline-med"
                                             ng-init="design.phases[currentStage].grouping_algorithm"
-                                            ng-options="x.key as x.name for x in methods"
+                                            ng-options="x.key as (x.name | lang) for x in methods"
                                             ng-model="design.phases[currentStage].grouping_algorithm"
                                             ng-disabled="true"></select> <!--EDIT LATER-->
                                     </div>
