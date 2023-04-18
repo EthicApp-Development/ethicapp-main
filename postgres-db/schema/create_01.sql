@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     mail text NOT NULL,
     sex char(1),
     role char(1),
-    PRIMARY KEY(id)
+    PRIMARY KEY (id)
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
@@ -19,14 +19,14 @@ CREATE TABLE IF NOT EXISTS sessions (
     code char(6),
     type char(1),
     PRIMARY KEY (id),
-    FOREIGN KEY(creator) REFERENCES users(id)
+    FOREIGN KEY (creator) REFERENCES users (id)
 );
 
 CREATE TABLE IF NOT EXISTS sesusers (
     sesid integer,
     uid integer,
-    FOREIGN KEY(sesid) REFERENCES sessions(id),
-    FOREIGN KEY(uid) REFERENCES users(id)
+    FOREIGN KEY (sesid) REFERENCES sessions (id),
+    FOREIGN KEY (uid) REFERENCES users (id)
 );
 
 CREATE TABLE IF NOT EXISTS documents (
@@ -35,9 +35,9 @@ CREATE TABLE IF NOT EXISTS documents (
     path text NOT NULL,
     sesid integer,
     uploader integer,
-    PRIMARY KEY(id),
-    FOREIGN KEY(sesid) REFERENCES sessions(id),
-    FOREIGN KEY(uploader) REFERENCES users(id)
+    PRIMARY KEY (id),
+    FOREIGN KEY (sesid) REFERENCES sessions (id),
+    FOREIGN KEY (uploader) REFERENCES users (id)
 );
 
 CREATE TABLE IF NOT EXISTS ideas (
@@ -48,9 +48,9 @@ CREATE TABLE IF NOT EXISTS ideas (
     iteration integer DEFAULT 1,
     uid integer,
     docid integer,
-    PRIMARY KEY(id),
-    FOREIGN KEY(uid) REFERENCES users(id),
-    FOREIGN KEY(docid) REFERENCES documents(id)
+    PRIMARY KEY (id),
+    FOREIGN KEY (uid) REFERENCES users (id),
+    FOREIGN KEY (docid) REFERENCES documents (id)
 );
 
 CREATE TABLE IF NOT EXISTS questions (
@@ -61,8 +61,8 @@ CREATE TABLE IF NOT EXISTS questions (
     comment text,
     other text,
     sesid integer,
-    PRIMARY KEY(id),
-    FOREIGN KEY(sesid) REFERENCES sessions(id)
+    PRIMARY KEY (id),
+    FOREIGN KEY (sesid) REFERENCES sessions (id)
 );
 
 CREATE TABLE IF NOT EXISTS selection (
@@ -71,21 +71,21 @@ CREATE TABLE IF NOT EXISTS selection (
     iteration integer DEFAULT 1,
     comment text,
     qid integer,
-    PRIMARY KEY(uid, qid),
-    FOREIGN KEY(uid) REFERENCES users(id),
-    FOREIGN KEY(qid) REFERENCES questions(id)
+    PRIMARY KEY (uid, qid),
+    FOREIGN KEY (uid) REFERENCES users (id),
+    FOREIGN KEY (qid) REFERENCES questions (id)
 );
 
 CREATE TABLE IF NOT EXISTS teams (
     id serial,
     sesid integer,
-    PRIMARY KEY(id),
-    FOREIGN KEY(sesid) REFERENCES sessions(id)
+    PRIMARY KEY (id),
+    FOREIGN KEY (sesid) REFERENCES sessions (id)
 );
 
 CREATE TABLE IF NOT EXISTS teamusers (
     tmid integer,
     uid integer,
-    FOREIGN KEY(tmid) REFERENCES teams(id),
-    FOREIGN KEY(uid) REFERENCES users(id)
+    FOREIGN KEY (tmid) REFERENCES teams (id),
+    FOREIGN KEY (uid) REFERENCES users (id)
 );
