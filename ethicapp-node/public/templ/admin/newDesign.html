@@ -11,12 +11,18 @@
         <div class="form-group" style="display: flex;">
             <label class="line-labels">{{'title'|lang}}:</label>
             <input type="text" class="form-control line-input" name="name" ng-model="title" ng-required="true">
+            <div class="row">
+                <select ng-model="selectedOption" class="form-control col-3">
+                    <option value="semantic_differential">Semantic Differentials</option>
+                    <option value="ranking">Ranking</option>
+                </select>
+            </div>
         </div>
         <br>
         <hr>
         <br>
         <button class="btn btn-primary" 
-        ng-click = "formDesign.$valid && uploadDesign(title,'template')" 
+        ng-click = "formDesign.$valid && uploadDesign(title,'template', selectedOption)" 
         type="submit">{{'next'|lang}}</button>
     </form>
 </div>

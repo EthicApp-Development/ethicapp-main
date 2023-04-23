@@ -2663,7 +2663,8 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     self.error = false;
     self.saved = false;
     self.errorList = [];
-
+    self.selectedOption = 'semantic_differential';
+    self.roles = [];
     /*
         BACKEND FUNCTIONS
     */
@@ -2675,7 +2676,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         if(self.selectedView == "newDesign") self.changeDesign(null);
         if(self.design != null){
             self.stageType = self.design.type;
-            self.num = self.design.phases[0].questions[0].ans_format.values;
+            if(self.design.type == "semantic_differential") self.num = self.design.phases[0].questions[0].ans_format.values;
             resetValues();
             self.CleanEmptyValues();
             self.CreateErrorList();
@@ -2686,15 +2687,26 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         var phases = self.design.phases;
         for(let i =0; i< phases.length; i++){
             var phase = phases[i];
-            var questions = phase.questions;
-            for(let j=0; j<questions.length; j++){
-                var question = questions[j];
+            if(self.stageType == "semantic_differential"){
+                var questions = phase.questions;
+                for(let j=0; j<questions.length; j++){
+                    var question = questions[j];
 
-                question.q_text = question.q_text === "-->>N/A<<--" ? "" : question.q_text
-                question.ans_format.l_pole = question.ans_format.l_pole === "-->>N/A<<--" ? "" : question.ans_format.l_pole
-                question.ans_format.r_pole = question.ans_format.r_pole === "-->>N/A<<--" ? "" : question.ans_format.r_pole
+                    question.q_text = question.q_text === "-->>N/A<<--" ? "" : question.q_text
+                    question.ans_format.l_pole = question.ans_format.l_pole === "-->>N/A<<--" ? "" : question.ans_format.l_pole
+                    question.ans_format.r_pole = question.ans_format.r_pole === "-->>N/A<<--" ? "" : question.ans_format.r_pole
+                }
+            }
+            else if(self.stageType == "ranking"){
+                var roles = phase.roles;
+                phase.q_text = phase.q_text === "-->>N/A<<--" ? "" : phase.q_text;
+                for(let j=0; j<roles.length; j++){
+                    var role = roles[j];
+                    role.name = role.name === "-->>N/A<<--" ? "" : role.name;
+                }
             }
         }
+    
         return;
     }
 
@@ -2703,41 +2715,67 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         var phases = self.design.phases;
         for(let i =0; i< phases.length; i++){
             var phase = phases[i];
-            var questions = phase.questions;
-            let questionsErrorList = [];
+            if(self.stageType == "semantic_differential"){
+                var questions = phase.questions;
+                let questionsErrorList = [];
+                for(let j=0; j<questions.length; j++){
+                    let questionErrors = {}
+                    var question = questions[j];
 
-            for(let j=0; j<questions.length; j++){
-                let questionErrors = {}
-                var question = questions[j];
-
-                questionErrors = {
-                    q:question.q_text == "",
-                    l:question.ans_format.l_pole == "",
-                    r:question.ans_format.r_pole ==""
+                    questionErrors = {
+                        q:question.q_text == "",
+                        l:question.ans_format.l_pole == "",
+                        r:question.ans_format.r_pole ==""
+                    }
+    
+                    questionsErrorList.push(questionErrors);
                 }
- 
-                questionsErrorList.push(questionErrors);
+                self.errorList.push(questionsErrorList);
             }
-            self.errorList.push(questionsErrorList);
+            else if(self.stageType == "ranking"){
+                var roles = phase.roles;
+                var rolesErrorList = [];
+                for(let j=0; j<roles.length; j++){
+                    var role = roles[j];
+
+                    rolesErrorList.push(role.name=="")
+                }
+
+                self.errorList.push(rolesErrorList);
+            }
 
         }
     }
 
     self.CheckPhase = function(phase){ //IF Phase deleted or Question deleted, delete errorList
-        const questions = self.errorList[phase];
-        let error = false;
-        for(let question=0; question<questions.length; question++){
-            const questionValues = Object.values(self.errorList[phase][question]);
-            const questionResult = checkIfTrue(questionValues);
-            if(questionResult) error = true;
+        if(self.stageType == "semantic_differential"){
+            const questions = self.errorList[phase];
+            let error = false;
+            for(let question=0; question<questions.length; question++){
+                const questionValues = Object.values(self.errorList[phase][question]);
+                const questionResult = checkIfTrue(questionValues);
+                if(questionResult) error = true;
+            }
+            return error;
         }
-        return error;
+        else if(self.stageType == "ranking"){
+            const roles = self.errorList[phase];
+            let error = false;
+            if(self.design.phases[phase].q_text == "") error = true;
+            for(let role=0; role<roles.length; role++){
+
+                if(self.errorList[phase][role]) error = true;
+            }
+            return error;
+        }
     };
 
     self.CheckQuestion = function(index){
-        const phase = self.currentStage;
-        const questionValues = Object.values(self.errorList[phase][index]);
-        return checkIfTrue(questionValues);
+        if(self.currentStage !== null){
+            const phase = self.currentStage;
+            const questionValues = Object.values(self.errorList[phase][index]);
+            return checkIfTrue(questionValues);
+        }
     };
 
     function checkIfTrue(arr) {
@@ -2746,12 +2784,25 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     
     self.IsEmpty = function(value, type){
         //check currentStage && currentQuestion to update on the fly
-        const isEmpty = value==="";
-        const phase = self.currentStage;
-        const question  = self.currentQuestion;
-        if(type !== '') self.errorList[phase][question][type] = isEmpty;
+        if(self.stageType == "semantic_differential" && self.currentStage !== null || type == ''){
+            const isEmpty = value==="";
+            const phase = self.currentStage;
+            const question  = self.currentQuestion;
+            if(type !== '') self.errorList[phase][question][type] = isEmpty;
 
-        return isEmpty
+            return isEmpty
+        }
+        
+    }
+
+    self.IsTextEmpty = function(index, value){
+        if(self.stageType == "ranking" && self.currentStage !== null){
+            //check currentStage && currentQuestion to update on the fly
+            const isEmpty = value==="";
+            const phase = self.currentStage;
+            self.errorList[phase][index] = isEmpty;
+            return isEmpty
+        }
     }
 
     self.launchDesignEdit = function(){
@@ -2765,8 +2816,8 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         });
     };
   
-    self.uploadDesign = function (title, author) {
-        var postdata = { 
+    self.uploadDesign = function (title, author, type) {
+        var semantic = { 
             "metainfo": {
                 "title":         title,
                 "author":        author,
@@ -2797,13 +2848,77 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
                 }
             ]
         };
-        $http.post("upload-design", postdata).success(function (data) {
-            
-            if (data.status == "ok") {
-                self.getDesign(data.id);
+        var ranking = { 
+            "metainfo": {
+                "title":         title,
+                "author":        author,
+                "creation_date": Date.now()
+            },
+            "roles":  [],
+            "type":   "ranking",
+            "phases": [
+                {
+                    "mode":               "individual",
+                    "chat":               false,
+                    "anonymous":          false,
+                    "grouping_algorithm": "random",
+                    "prevPhasesResponse": [ ],
+                    "stdntAmount":        3,
+                    "q_text":     "-->>N/A<<--",
+                    "roles":[
+                    ]
+                }
+            ]
+        };
+        if(type){
+            var postdata;
+            if(type === "semantic_differential"){
+                postdata = semantic;
             }
-        });
+            else if(type== "ranking"){
+                postdata = ranking;
+            }
+
+            $http.post("upload-design", postdata).success(function (data) {
+            
+                if (data.status == "ok") {
+                    self.getDesign(data.id);
+                }
+            });
+        }
         
+    };
+
+    self.addRole = function(){
+        self.design.phases[self.currentStage].roles.push({
+            name: "",
+            type: "role", //order
+            wc: 5
+        })
+    }
+
+    self.setRoleType = function(role, type){
+        if(role.type == type){
+            role.type = null;
+            return;
+        }
+        if(self.roles.find(e => e.type != null && e.type != type)){
+            self.setAllRolesType(null);
+        }
+
+        role.type = type;
+    }
+
+    self.setAllRolesType = function (type) {
+        for (let i = 0; i < self.design.phases[self.currentStage].roles.length; i++) {
+            self.design.phases[self.currentStage].roles[i].type = type;
+        }
+    };
+
+    self.removeRole = function (index) {
+        if (window.confirm("¿Esta seguro de eliminar este rol?")) {
+            self.design.phases[self.currentStage].roles.splice(index, 1);
+        }
     };
 
     self.updateDesign = function() {
@@ -2831,9 +2946,10 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     self.checkDesign = function(){ 
         var error = false;
         var phases = self.design.phases;
+        console.log(self.design)
         for(let i =0; i< phases.length; i++){
             var phase = self.design.phases[i];
-            var questions = phase.questions;
+
 
             if(self.design.metainfo.title === "") error = true;
 
@@ -2841,13 +2957,23 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
                 phase.chat = false;
                 phase.anonymous = false;
             }
-
-            for(let j=0; j<questions.length; j++){
-                var question = questions[j];
-                if(question.q_text == "") error = true;
-                if(question.ans_format.l_pole == "") error = true;
-                if(question.ans_format.r_pole =="") error = true;
-                if(question.ans_format.min_just_length < 0 ) error = true;
+            if(self.stageType == "semantic_differential"){
+                var questions = phase.questions;
+                for(let j=0; j<questions.length; j++){
+                    var question = questions[j];
+                    if(question.q_text == "") error = true;
+                    if(question.ans_format.l_pole == "") error = true;
+                    if(question.ans_format.r_pole =="") error = true;
+                    if(question.ans_format.min_just_length < 0 ) error = true;
+                }
+            }
+            if(self.stageType == "ranking"){
+                var roles = phase.roles;
+                if(phase.q_text == "") error = true;
+                for(let j=0; j<roles.length; j++){
+                    var role = roles[j];
+                    if(role.name == "") error = true;
+                }
             }
 
         }
@@ -2876,7 +3002,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         self.currentStage = 0; 
         self.currentQuestion = 0; 
         self.stageType = self.design.type;
-        self.design.phases[0].questions[0].ans_format.values;
+        if(self.design.type == "semantic_differential") self.design.phases[0].questions[0].ans_format.values;
         self.busy = false; 
         self.extraOpts = false;
         self.prevStages = false;
@@ -2942,8 +3068,14 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
             self.currentStage = id;
             self.stageType = self.design.type;
             self.currentQuestion = 0; //reset question index
-            self.num = self.design.phases[self.currentStage].questions[self.currentQuestion]
+            if(self.stageType == "semantic_differential"){  
+                self.num = self.design.phases[self.currentStage].questions[self.currentQuestion]
                 .ans_format.values;
+            }
+            else if(self.stageType == "ranking"){
+
+            }
+
         }
         else {
             /*
@@ -2966,6 +3098,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
             self.currentStage = null;
             self.extraOpts = false;
             self.prevStages = false;
+            self.errorList.splice(index, 1);
         }
     };
 
@@ -2992,23 +3125,38 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     
     self.copyPrevStage = function(type, prevphase){
         var phase = JSON.parse(JSON.stringify(prevphase)); //removes reference from previous object
-        return {
-            "mode":               phase.mode,
-            "chat":               phase.chat,
-            "anonymous":          phase.anonymous,
-            "questions":          phase.questions,
-            "grouping_algorithm": phase.grouping_algorithm,
-            "prevPhasesResponse": [],//phase.prevPhasesResponse,
-            "stdntAmount":        phase.stdntAmount
-        };
+        if(type =="semantic_differential"){
+            return {
+                "mode":               phase.mode,
+                "chat":               phase.chat,
+                "anonymous":          phase.anonymous,
+                "questions":          phase.questions,
+                "grouping_algorithm": phase.grouping_algorithm,
+                "prevPhasesResponse": [],//phase.prevPhasesResponse,
+                "stdntAmount":        phase.stdntAmount
+            };
+        }
+        else if("ranking"){
+            return{
+                mode:phase.mode,
+                chat: phase.chat,
+                anonymous:phase.anonymous,
+                grouping_algorithm: phase.grouping_algorithm,
+                prevPhasesResponse: [],
+                stdntAmount:  phase.stdntAmount,
+                q_text: phase.q_text,
+                roles: phase.roles
+            }
+        }
+
     };
 
     self.addStage = function(){
         var index = self.design.phases.length -1;
         var prev_phase = self.design.phases[index];
-        self.design.phases.push(self.copyPrevStage("semantic_differential", prev_phase));
-        self.errorList.push(JSON.parse(JSON.stringify(self.errorList[self.currentStage])));
-        console.log(self.design.phases);
+        self.design.phases.push(self.copyPrevStage(self.stageType, prev_phase));
+        self.errorList.push(JSON.parse(JSON.stringify(self.errorList[index])));
+        
     };
 
     self.getStages = function(){
