@@ -2331,6 +2331,31 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
                             counter++;
                         }
                     }
+                    else if (design.type == "ranking") {
+                        let c = phase.roles.length;
+                        for (let i = 0; i < phase.roles.length; i++) {
+                            const role = phase.roles[i];
+                            let p = {
+                                name:       role.name,
+                                jorder:     role.type == "order",
+                                justified:  role.type != null,
+                                word_count: role.wc,
+                                stageid:    stageid,
+                            };
+                            $http({url: "add-actor", method: "post", data: p}).success(function (data) {
+                                console.log("Actor added");
+                                c -= 1;
+                                if (c == 0) {
+                                    let pp = {sesid: sesid, stageid: stageid};
+                                    $http({
+                                        url: "session-start-stage", method: "post", data: pp
+                                    }).success(function (data) {
+                                        Notification.success("Etapa creada correctamente");
+                                    });
+                                }
+                            });
+                        }
+                    }
 
                 
                 }
@@ -2477,20 +2502,50 @@ adpp.controller("MonitorActivityController", function (
                         }).success(function (data) {    });
                         counter++;
                     }
+                    let pp = {sesid: sesid, stageid: stageid};
+                    $http({
+                        url: "session-start-stage", method: "post", data: pp
+                    }).success(function (data) {
+                        Notification.success("Etapa creada correctamente");
+                        //window.location.reload()
+                        self.currentStage(); // <--------Actualiza la data del current stage
+                        self.shared.verifyTabs();
+                        self.getStages();
+                        self.selectedSes.current_stage = stageid;
+                        //call request to change activity currentstage 
+                    });
                 }
-                let pp = {sesid: sesid, stageid: stageid};
-                $http({
-                    url: "session-start-stage", method: "post", data: pp
-                }).success(function (data) {
-                    Notification.success("Etapa creada correctamente");
-                    //window.location.reload()
-                    self.currentStage(); // <--------Actualiza la data del current stage
-                    self.shared.verifyTabs();
-                    self.getStages();
-                    self.selectedSes.current_stage = stageid;
-                    //call request to change activity currentstage 
-                });
-                
+                else if (self.design.type == "ranking") {
+                    let c = current_phase.roles.length;
+                    for (let i = 0; i < current_phase.roles.length; i++) {
+                        const role = current_phase.roles[i];
+                        let p = {
+                            name:       role.name,
+                            jorder:     role.type == "order",
+                            justified:  role.type != null,
+                            word_count: role.wc,
+                            stageid:    stageid,
+                        };
+                        $http({url: "add-actor", method: "post", data: p}).success(function (data) {
+                            console.log("Actor added");
+                            c -= 1;
+                            if (c == 0) {
+                                let pp = {sesid: sesid, stageid: stageid};
+                                $http({
+                                    url: "session-start-stage", method: "post", data: pp
+                                }).success(function (data) {
+                                    Notification.success("Etapa creada correctamente");
+                                    //window.location.reload()
+                                    self.currentStage(); // <--------Actualiza la data del current stage
+                                    self.shared.verifyTabs();
+                                    self.getStages();
+                                    self.selectedSes.current_stage = stageid;
+                                    //call request to change activity currentstage 
+                                });
+                            }
+                        });
+                    }
+                }
             }
             else {
                 Notification.error("Error al crear la etapa");
@@ -2543,13 +2598,13 @@ adpp.controller("BrowseDesignsController", function (
     self.setValues = function(){
         self.dsgnid = launchId.id;
         self.dsgntitle = launchId.title;
-        self.dsgntype = launchId.type;
+        self.dsgntype = (launchId.type == "semantic_differential" ? "T": "R");
     };
 
     self.designValues = function(id, title, type){
         self.dsgnid = id;
         self.dsgntitle = title;
-        self.dsgntype = type;
+        self.dsgntype = (type == "semantic_differential" ? "T": "R");
     };
 
     self.designPublic = function (dsgnid) {

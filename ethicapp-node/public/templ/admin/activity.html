@@ -117,16 +117,16 @@
                         </div>
 
                         <div class="question_container">
-                            <div class="row">
-                                <label class="col-lg-2">{{'questionText'|lang}}</label>
-                                <div class="col-lg-6">
-                                    <input type="text" class="form-control text-center" ng-disabled="readonly" readonly
-                                        placeholder="{{'title'|lang}}"
-                                        ng-model="design.phases[currentStage].questions[currentQuestion].q_text">
-                                </div>
-                            </div>
-                            <!--Semantic Differential-->
                             <div ng-show="stageType == 'semantic_differential'">
+                                <div class="row">
+                                    <label class="col-lg-2">{{'questionText'|lang}}</label>
+                                    <div class="col-lg-6">
+                                        <input type="text" class="form-control text-center" ng-disabled="readonly" readonly
+                                            placeholder="{{'title'|lang}}"
+                                            ng-model="design.phases[currentStage].questions[currentQuestion].q_text">
+                                    </div>
+                                </div>
+                                <!--Semantic Differential-->
                                 <label class="margin-top-8">{{'semanticDiffEscale'|lang}}</label>
                                 <div class="row margin-top-8">
                                     <div class="col-xs-3 text-right">
@@ -148,7 +148,7 @@
                                                 ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.r_pole">
                                         </div>
                                     </div>
-
+                
                                 </div>
                                 <div class="row margin-top-24">
                                     <label class="col-lg-2">{{'mandatoryComment'|lang}}</label>
@@ -166,8 +166,7 @@
                                 <div class="row margin-top-24">
                                     <label class="col-lg-2">{{'minComment'|lang}}</label>
                                     <div class="col-lg-1">
-                                        <input type="number" id="points" name="length" step="1" min="5"
-                                            class="form-control" readonly
+                                        <input type="number" id="points" name="length" step="1" min="5" class="form-control" readonly
                                             ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.min_just_length"
                                             style="width: 6em; text-align: center; height: 2em;">
                                     </div>
@@ -175,9 +174,60 @@
                                 </div>
                             </div>
                             <!--ANOTHER OPTION-->
-                            <div ng-show="stageType == 'ANOTHER OPTION'">
-
+                            <div ng-show="stageType == 'ranking'">
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <label>{{ 'question' | lang }}</label>
+                                        <textarea rows="2" class="form-control" ng-model="design.phases[currentStage].q_text"
+                                            ng-disabled="true"
+                                            ng-class="{'error': IsTextEmpty($index, design.phases[currentStage].q_text)}"></textarea>
+                                    </div>
+                                    <div class="col-sm-5">
+                                        <h4>{{ 'listOf' | lang }} {{ 'roles' | lang }}/{{ 'actors' |
+                                            lang }}</h4>
+                                    </div>
+                                    <div class="col-sm-2 text-center margin-top-8">
+                                        <button class="btn btn-default" ng-click="setAllRolesType('role')" ng-disabled="true">
+                                            {{ 'justifyAll' | lang }} {{ 'roles' | lang }}
+                                        </button>
+                                    </div>
+                                    <div class="col-sm-2 text-center margin-top-8">
+                                        <button class="btn btn-default" ng-click="setAllRolesType('order')" ng-disabled="true">
+                                            {{ 'justifyAll' | lang }} {{ 'orders' | lang }}
+                                        </button>
+                                    </div>
+                                    <div class="col-sm-2 text-center margin-top-8">
+                                        <button class="btn btn-default" ng-click="addRole()" ng-disabled="true">
+                                            <i class="fa fa-plus"></i> {{ 'add' | lang }} {{ 'role' | lang }}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="row row-border" ng-repeat="role in design.phases[currentStage].roles">
+                                    <div class="col-sm-5">
+                                        <input class="form-control" ng-model="role.name" ng-disabled="true"
+                                            ng-class="{'error': IsTextEmpty($index, role.name)}">
+                                    </div>
+                                    <div class="col-sm-2 text-center">
+                                        <button class="btn btn-default" ng-class="{'btn-primary': role.type == 'role'}"
+                                            ng-click="setRoleType(role, 'role')" ng-disabled="true">
+                                            {{ 'justify' | lang }} {{ 'role' | lang }}
+                                        </button>
+                                    </div>
+                                    <div class="col-sm-2 text-center">
+                                        <button class="btn btn-default" ng-class="{'btn-primary': role.type == 'order'}"
+                                            ng-click="setRoleType(role, 'order')" ng-disabled="true">
+                                            {{ 'justify' | lang }} {{ 'order' | lang }}
+                                        </button>
+                                    </div>
+                                    <div class="col-sm-2 text-right">
+                                        <input class="form-control form-inline-mini" placeholder="Word Count" type="number"
+                                            ng-model="role.wc" ng-disabled="true">
+                                    </div>
+                
+                                </div>
                             </div>
+                
+                
                         </div>
 
                     </div>

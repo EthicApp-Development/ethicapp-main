@@ -195,20 +195,31 @@ router.post("/check-design", (req, res) => {
     `;
     var db = getDBInstance(pass.dbcon);
     var qry;
-    var result = true;;
+    var result = true;
     var phases;
     qry = db.query(sql, (err,res) =>{
         if(res!= null) {
             phases = res.rows[0].design.phases;
             for(let i =0; i< phases.length; i++){
                 var phase = phases[i];
-                var questions = phase.questions;
-                for(let j=0; j<questions.length; j++){
-                    var question = questions[j];
-    
-                    question.q_text = (question.q_text === "" || question.q_text === "-->>N/A<<--") ? result = false : result
-                    question.ans_format.l_pole = (question.ans_format.l_pole === "" | question.ans_format.l_pole === "-->>N/A<<--") ? result = false : result
-                    question.ans_format.r_pole = (question.ans_format.r_pole === "" | question.ans_format.l_pole === "-->>N/A<<--") ? result = false : result
+                if(res.rows[0].design.type == "semantic_differential"){
+                    var questions = phase.questions;
+                    for(let j=0; j<questions.length; j++){
+                        var question = questions[j];
+        
+                        question.q_text = (question.q_text === "" || question.q_text === "-->>N/A<<--") ? result = false : result
+                        question.ans_format.l_pole = (question.ans_format.l_pole === "" | question.ans_format.l_pole === "-->>N/A<<--") ? result = false : result
+                        question.ans_format.r_pole = (question.ans_format.r_pole === "" | question.ans_format.l_pole === "-->>N/A<<--") ? result = false : result
+                    }
+                }
+                else if(res.rows[0].design.type == "ranking"){
+                    phase.q_text = (phase.q_text === "" || phase.q_text === "-->>N/A<<--") ? result = false : result
+                    var roles = phase.roles;
+                    for(let j=0; j<roles.length; j++){
+                        var role = roles[j];      
+                        role.name = (role.name === "" || role.name === "-->>N/A<<--") ? result = false : result
+
+                    }
                 }
             }
             return;
