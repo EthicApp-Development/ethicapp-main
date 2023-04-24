@@ -320,7 +320,7 @@
                         </table>
                     </div>
 
-                    <div ng-show="selectedSes.type == 'T' || true" class="margin-top-8">
+                    <div ng-show="design.type == 'semantic_differential'" class="margin-top-8">
                         <strong>{{ 'indAggAns' | lang }}</strong>
                         <span class="pull-right"><span style="color: red;">*</span> {{ 'commentReq' | lang }}</span>
                         <table class="table table-bordered" ts-wrapper>
@@ -374,6 +374,63 @@
                             <strong class="simple-margin-left">{{ 'cvs' | lang }}: </strong> {{ 'cvdesc' | lang }}.
                             <span class="badge bg-red simple-margin-left"><i class="fa fa-comments"></i> N</span> N {{
                             'chatMessages' | lang }}.
+                        </div>
+                    </div>
+                    <div ng-show="design.type == 'ranking'" class="margin-top-8">
+                        <span>{{ shared.stagesMap[iterationIndicator].question }}</span>
+                        <table class="table table-bordered">
+                            <tr>
+                                <th>{{'order' | lang}}</th>
+                                <th ng-repeat="actor in rawActors" class="text-center">{{ actor.name }}</th>
+                            </tr>
+                            <tr ng-repeat="(p, aa) in rawActors track by p">
+                                <td class="text-center">{{ p + 1 }}</td>
+                                <td ng-repeat="(i, actor) in rawActors track by i" ng-style="getFreqColor(actor.id, p+1)"
+                                    class="text-center text-black">
+                                    <strong>{{ posFreqTable[actor.id][p + 1] || 0 }}</strong>
+                                </td>
+                            </tr>
+                        </table>
+        
+                        <br>
+                        <strong>{{ 'indAggAns' | lang }}</strong>
+                        <span class="pull-right"><span style="color: red;">*</span> {{ 'commentReq' | lang }}</span>
+                        <table class="table table-bordered" ts-wrapper>
+                            <tr>
+                                <th ts-criteria="ceqlnum | parseFloat" ts-default="descending">{{ 'numEqual' | lang }}</th>
+                                <th ts-criteria="uid" ts-order-by="sortByAutorName">{{ 'author' | lang }}</th>
+                                <th ts-criteria="jigsawId">{{ 'role' | lang }}</th>
+                                <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'" ts-criteria="uid2"
+                                    ts-order-by="sortByAutorGroup">{{ 'group' | lang }}</th>
+                                <th ng-repeat="(p, aa) in rawActors track by p">Pos {{ p + 1 }}</th>
+                            </tr>
+                            <tr ng-repeat="udata in indvTableSorted track by udata.uid" ts-repeat
+                                ng-click="openActorDetails(udata.uid, iterationIndicator)">
+                                <td>{{ udata.ceq }}</td>
+                                <td>
+                                    {{ users[udata.uid].name }}
+                                    <span class="badge bg-red" ng-show="shared.stagesMap[iterationIndicator].chat">
+                                        <i class="fa fa-comments"></i> {{ shared.chatByUid[udata.uid] }}
+                                    </span>
+                                </td>
+                                <td>{{ users[udata.uid].jigsaw.name }}</td>
+                                <td ng-if="shared.stagesMap[iterationIndicator].type == 'team'">
+                                    {{ shared.groupByUid[udata.uid].index }}
+                                    <span class="badge bg-red">
+                                        <i class="fa fa-comments"></i> {{ shared.chatByTeam[shared.groupByUid[udata.uid].tmid] }}
+                                    </span>
+                                </td>
+                                <td ng-repeat="aid in udata.arr track by $index">
+                                    <span style="color: red;" ng-if="udata.just[$index]">*</span>
+                                    {{ actorMap[aid].name }}
+                                    <i class="fa fa-check" ng-if="udata.com[$index] && udata.just[$index]"></i>
+                                </td>
+                            </tr>
+                        </table>
+                        <div class="simple-padding-bottom">
+                            <span>{{ 'students' | lang }}: {{indvTableSorted.length}}</span>
+                            <span class="badge bg-red simple-margin-left"><i class="fa fa-comments"></i> N</span> N {{ 'chatMessages' | lang }}.
+                            <i class="fa fa-check simple-margin-left"></i> {{ 'commented' | lang }}.
                         </div>
                     </div>
 
