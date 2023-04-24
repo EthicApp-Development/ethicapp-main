@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS designs (
     id serial,
     creator integer,
     design jsonb,
-    FOREIGN KEY(creator) REFERENCES users(id),
+    FOREIGN KEY (creator) REFERENCES users (id),
     public boolean DEFAULT false,
     locked boolean DEFAULT false
 );
@@ -16,9 +16,9 @@ CREATE TABLE IF NOT EXISTS designs_documents (
     path text NOT NULL,
     dsgnid integer,
     uploader integer,
-    PRIMARY KEY(id),
-    FOREIGN KEY(dsgnid) REFERENCES designs(id),
-    FOREIGN KEY(uploader) REFERENCES users(id),
+    PRIMARY KEY (id),
+    FOREIGN KEY (dsgnid) REFERENCES designs (id),
+    FOREIGN KEY (uploader) REFERENCES users (id),
     active boolean DEFAULT true
 );
 
@@ -33,6 +33,6 @@ CREATE TABLE IF NOT EXISTS activity (
     id serial,
     design integer,
     session integer,
-    FOREIGN KEY(design) REFERENCES designs(id),
-    FOREIGN KEY(session) REFERENCES sessions(id)
+    FOREIGN KEY (design) REFERENCES designs (id),
+    FOREIGN KEY (session) REFERENCES sessions (id)
 );

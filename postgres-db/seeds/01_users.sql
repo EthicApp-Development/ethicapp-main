@@ -1,4 +1,4 @@
-INSERT INTO users(name, rut, pass, mail, sex, role, aprendizaje)
+INSERT INTO users (name, rut, pass, mail, sex, role, aprendizaje)
 VALUES
 ('Admin', 'N/A', md5('admin'), 'admin@admin', NULL, 'S', NULL),
 ('profesor', '16308816-9', md5('profesor'), 'profesor@test', 'M', 'P', 'Reflexivo'),

@@ -1,4 +1,4 @@
-INSERT INTO designs(creator, public, locked, design)
+INSERT INTO designs (creator, public, locked, design)
 VALUES
 (2, false, false, '{
   "type": "semantic_differential",

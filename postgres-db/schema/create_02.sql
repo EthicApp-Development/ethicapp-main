@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS rubricas (
     id serial,
     sesid integer,
-    PRIMARY KEY(id),
-    FOREIGN KEY(sesid) REFERENCES sessions(id)
+    PRIMARY KEY (id),
+    FOREIGN KEY (sesid) REFERENCES sessions (id)
 );
 
 CREATE TABLE IF NOT EXISTS reports (
@@ -11,9 +11,9 @@ CREATE TABLE IF NOT EXISTS reports (
     example boolean DEFAULT false,
     rid integer,
     uid integer,
-    PRIMARY KEY(id),
-    FOREIGN KEY(rid) REFERENCES rubricas(id),
-    FOREIGN KEY(uid) REFERENCES users(id)
+    PRIMARY KEY (id),
+    FOREIGN KEY (rid) REFERENCES rubricas (id),
+    FOREIGN KEY (uid) REFERENCES users (id)
 );
 
 CREATE TABLE IF NOT EXISTS criteria (
@@ -25,8 +25,8 @@ CREATE TABLE IF NOT EXISTS criteria (
     competente text,
     avanzado text,
     rid integer,
-    PRIMARY KEY(id),
-    FOREIGN KEY(rid) REFERENCES rubricas(id)
+    PRIMARY KEY (id),
+    FOREIGN KEY (rid) REFERENCES rubricas (id)
 );
 
 CREATE TABLE IF NOT EXISTS criteria_selection (
@@ -35,10 +35,10 @@ CREATE TABLE IF NOT EXISTS criteria_selection (
     cid integer,
     uid integer,
     repid integer,
-    PRIMARY KEY(id),
-    FOREIGN KEY(cid) REFERENCES criteria(id),
-    FOREIGN KEY(uid) REFERENCES users(id),
-    FOREIGN KEY(repid) REFERENCES reports(id)
+    PRIMARY KEY (id),
+    FOREIGN KEY (cid) REFERENCES criteria (id),
+    FOREIGN KEY (uid) REFERENCES users (id),
+    FOREIGN KEY (repid) REFERENCES reports (id)
 );
 
 CREATE TABLE report_pair (
@@ -46,14 +46,14 @@ CREATE TABLE report_pair (
     uid integer,
     sesid integer,
     repid integer,
-    PRIMARY KEY(id),
-    FOREIGN KEY(uid) REFERENCES users(id),
-    FOREIGN KEY(sesid) REFERENCES sessions(id),
-    FOREIGN KEY(repid) REFERENCES reports(id)
+    PRIMARY KEY (id),
+    FOREIGN KEY (uid) REFERENCES users (id),
+    FOREIGN KEY (sesid) REFERENCES sessions (id),
+    FOREIGN KEY (repid) REFERENCES reports (id)
 );
 
-CREATE TYPE tipo_aprendizaje AS ENUM('Reflexivo', 'Activo', 'Teorico', 'Pragmatico');
+CREATE TYPE tipo_aprendizaje AS ENUM ('Reflexivo', 'Activo', 'Teorico', 'Pragmatico');
 ALTER TABLE users ADD COLUMN aprendizaje tipo_aprendizaje;
 
 ALTER TABLE teams ADD COLUMN leader integer;
-ALTER TABLE teams ADD CONSTRAINT fk_leader FOREIGN KEY(leader) REFERENCES users(id);
+ALTER TABLE teams ADD CONSTRAINT fk_leader FOREIGN KEY (leader) REFERENCES users (id);

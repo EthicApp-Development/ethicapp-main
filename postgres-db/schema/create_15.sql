@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS overlays (
     geom text NOT NULL,
     "name" varchar(255) NOT NULL,
     description text,
-    PRIMARY KEY(id),
-    FOREIGN KEY(uid) REFERENCES users(id),
-    FOREIGN KEY(qid) REFERENCES questions(id)
+    PRIMARY KEY (id),
+    FOREIGN KEY (uid) REFERENCES users (id),
+    FOREIGN KEY (qid) REFERENCES questions (id)
 );

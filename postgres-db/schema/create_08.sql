@@ -1,6 +1,6 @@
-CREATE TABLE question_text(
+CREATE TABLE question_text (
     id serial,
-    sesid integer REFERENCES sessions(id),
+    sesid integer REFERENCES sessions (id),
     title text,
     content text
 );
