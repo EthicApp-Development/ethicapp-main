@@ -25,7 +25,7 @@ This repository contains the main project for EthicApp: a web application (devel
 
 ## 1. Developing
 
-Please head to the [CONTRIBUTING document](./CONTRIBUTING.md) and review our [communication channels](https://github.com/EthicApp-Development/organization/blob/master/CONTRIBUTING.md#1-communication-channels) for the project. The build and run documentation is intended for **Linux-based systems**, as it is practically the standard in particular for open-source projects. Please consider having a machine with a Linux-based OS.
+Please head to the [CONTRIBUTING document](./CONTRIBUTING.md) and review our [communication channels](https://github.com/EthicApp-Development/organization/blob/master/CONTRIBUTING.md#1-communication-channels) for the project. The build and run documentation is intended for **Linux-based systems**, for this project. Please consider having a machine with a Linux-based OS (or with a Linux-friendly console such as `bash`).
 
 ## 2. Architecture overview
 
@@ -139,7 +139,7 @@ With Postgres and PgAdmin running [constantly] on the background, they will be p
 
 ### 5.3. For non-Linux developers
 
-If you have chosen not to use a Linux-based OS in your developing machine, read this section. If you are unfamiliar with Linux OSes, your first task would be install it on your machine (you may want to research about how to make a *dual boot*). If not, be aware that successful execution, debugging and documentation will not be guaranteed, as the project is defined from its start to be executed and developed in a Linux environment.
+If you have chosen not to use a Linux-based OS in your developing machine, read this section. If you are unfamiliar with Linux OSes, your first task would be install it on your machine (you may want to research about how to make a *dual boot*). If not, be aware that successful execution, debugging and updated runtime documentation will not be guaranteed, as the project is defined from its start to be executed and developed in a Linux environment.
 
 #### 5.3.1. MacOS
 
@@ -147,4 +147,4 @@ You will have trouble running `npm` scripts from [appendix 5.1](#51-npm-developi
 
 #### 5.3.2. Windows
 
-For Windows, you must have [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) so that you can run a `bash` shell directly in your host filesystem. You also need to install `npm` and `docker-compose` inside that WSL console. Then, it is important that you work on the *Linux-exclusive* filesystem, due to permission troubles with Windows files (i.e. do not use any child directory of your "`C:`" Windows disk: `/mnt/c`). For instance, clone the project at `$HOME/ethicapp-main` and follow the instructions of the README file for building and running the environment properly. You also have to manage to open your IDE from the WSL `bash` console (with `code <CLONED_REPO_PATH>`).
+For Windows, you must have [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) so that you can run a `bash` (or similar) shell directly in your host filesystem. You also need to install `npm` and `docker-compose` inside that WSL console. Then, it is important that you work on the *Linux-exclusive* filesystem, due to permission troubles with Windows files (i.e. do not use any child directory of your "`C:`" Windows disk: `/mnt/c`). For instance, clone the project at `$HOME/ethicapp-main` and follow the instructions of the README file for building and running the environment properly. You also have to manage to open your IDE from the WSL `bash` console (with `code <CLONED_REPO_PATH>`).
