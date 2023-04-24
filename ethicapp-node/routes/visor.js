@@ -584,7 +584,7 @@ router.post("/add-chat-msg", rpg.execSQL({
         rpg.param("ses", "uid"), rpg.param("post", "did"), rpg.param("post","content"),
         rpg.param("post","parent_id")
     ],
-    onEnd: (req,res) => {
+    onEnd: (req) => {
         socket.chatMsg(req.session.ses, req.body.tmid);
     }
 }));
@@ -602,7 +602,7 @@ router.post("/add-chat-msg-stage", rpg.execSQL({
         rpg.param("ses", "uid"), rpg.param("post", "stageid"), rpg.param("post","content"),
         rpg.param("post","parent_id")
     ],
-    onEnd: (req,res) => {
+    onEnd: (req) => {
         socket.chatMsgStage(req.body.stageid, req.body.tmid);
     }
 }));
@@ -893,7 +893,7 @@ router.post("/get-chat-data-csv", rpg.multiSQL({
         AND tu.uid = u.id
     ORDER BY t.id, c.stime
     `,
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.error("Sólo profesor puede ver datos de sesiones.");
             return "SELECT $1, $2";
@@ -932,7 +932,7 @@ router.post("/get-sel-data-csv", rpg.multiSQL({
         AND tu.uid = u.id
     ORDER BY s.iteration, s.stime
     `,
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.error("Sólo profesor puede ver datos de sesiones.");
             return "SELECT $1, $2";
@@ -981,7 +981,7 @@ router.post("/get-sel-data-csv-ethics", rpg.multiSQL({
     WHERE ses.id = $1
     ORDER BY st."number", s.stime
     `,
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.error("Sólo profesor puede ver datos de sesiones.");
             return "SELECT $1, $2";
@@ -1029,7 +1029,7 @@ router.post("/get-chat-data-csv-ethics", rpg.multiSQL({
     WHERE ses.id = $1
     ORDER BY st."number", s.stime
     `,
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.error("Sólo profesor puede ver datos de sesiones.");
             return "SELECT $1, $2";
@@ -1074,7 +1074,7 @@ router.post("/get-sel-data-csv-role", rpg.multiSQL({
     WHERE ses.id = $1
     ORDER BY st."number", s.stime
     `,
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.error("Sólo profesor puede ver datos de sesiones.");
             return "SELECT $1, $2";
@@ -1116,7 +1116,7 @@ router.post("/get-chat-data-csv-role", rpg.multiSQL({
     WHERE ses.id = $1
     ORDER BY st."number", s.stime
     `,
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.error("Sólo profesor puede ver datos de sesiones.");
             return "SELECT $1, $2";
@@ -1166,7 +1166,7 @@ router.post("/get-sel-data-csv-jigsaw", rpg.multiSQL({
     WHERE ses.id = $1
     ORDER BY st."number", s.stime
     `,
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.error("Sólo profesor puede ver datos de sesiones.");
             return "SELECT $1, $2";
@@ -1213,7 +1213,7 @@ router.post("/get-chat-data-csv-jigsaw", rpg.multiSQL({
     WHERE ses.id = $1
     ORDER BY st."number", s.stime
     `,
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.error("Sólo profesor puede ver datos de sesiones.");
             return "select $1, $2";

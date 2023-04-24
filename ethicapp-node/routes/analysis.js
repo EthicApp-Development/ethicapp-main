@@ -19,7 +19,7 @@ router.post("/get-alum-state-sel", middleware.verifySession, rpg.multiSQL({
     ) AS r group by uid
     `,
     postReqData: ["sesid", "iteration"],
-    onStart:     (ses, data, calc) => {
+    onStart:     (ses) => {
         if (ses.role != "P") {
             console.error("Sólo el profesor puede ver el estado de los alumnos");
             return "SELECT $1";
@@ -38,7 +38,7 @@ router.post("/get-alum-full-state-sel", rpg.multiSQL({
     WHERE q.sesid = $1 AND s.iteration = $2
     `,
     postReqData: ["sesid", "iteration"],
-    onStart:     (ses, data, calc) => {
+    onStart:     (ses) => {
         if (ses.role != "P") {
             console.error("Sólo el profesor puede ver el estado de los alumnos");
             return "SELECT $1";
@@ -74,7 +74,7 @@ router.post("/group-proposal-sel", (req, res) => {
                         WHERE q.sesid = $1 AND s.iteration = $2
                     ) AS r GROUP BY uid
                     `,
-                    onStart: (ses, data, calc) => {
+                    onStart: (ses) => {
                         if (ses.role != "P") {
                             console.error("Sólo el profesor puede ver el estado de los alumnos");
                             return "SELECT $1";
@@ -153,7 +153,7 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
     ORDER BY uid, a.orden ASC
     `,
     postReqData: ["sesid", "iteration"],
-    onStart:     (ses, data, calc) => {
+    onStart:     (ses) => {
         if (ses.role != "P") {
             console.error("Sólo el profesor puede ver el estado de los alumnos");
             return "SELECT $1, $2";
@@ -242,7 +242,7 @@ router.post("/get-alum-state-semantic", rpg.multiSQL({
         a.sentences
     `,
     postReqData: ["sesid","iteration"],
-    onStart:     (ses, data, calc) => {
+    onStart:     (ses) => {
         if (ses.role != "P") {
             console.error("Sólo el profesor puede ver el estado de los alumnos");
             return "select $1, $2";
@@ -342,7 +342,7 @@ router.post("/group-proposal-lect", (req,res) => {
                         a.orden ASC
                     `,
                     postReqData: ["sesid"],
-                    onStart:     (ses, data, calc) => {
+                    onStart:     (ses) => {
                         if (ses.role != "P") {
                             console.error("Sólo el profesor puede ver el estado de los alumnos");
                             return "SELECT $1";
@@ -825,7 +825,7 @@ router.post("/get-alum-confidence", rpg.multiSQL({
     GROUP BY s.confidence, q.id
     `,
     postReqData: ["sesid","iteration"],
-    onStart:     (ses, data, calc) => {
+    onStart:     (ses) => {
         if (ses.role != "P") {
             console.error("Sólo el profesor puede ver el estado de los alumnos");
             return "SELECT $1, $2";

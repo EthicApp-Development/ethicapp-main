@@ -46,7 +46,7 @@ passport.use(
         WHERE mail = '${profile.email}'
         LIMIT 1
         `;
-        var qry = db.query(sql,(err,res) =>{
+        db.query(sql,(err,res) =>{
             if (res.rows[0] == null) {
                 var sql = `
                 INSERT INTO users(rut, pass, name, mail, sex, ROLE)
@@ -58,7 +58,7 @@ passport.use(
                 var sqlarr = smartArrayConvert(sqlParams);
                 qry = db.query(sql, sqlarr);
                 qry.on("end", function () {});
-                qry.on("error", function(err){});
+                qry.on("error", function(){});
             }
         });
         return done(null, profile);

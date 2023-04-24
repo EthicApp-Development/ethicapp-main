@@ -40,7 +40,7 @@ app.controller("SuperAdminController", function($scope, $http) {
         let postdata = {
             uid: self.selectedUser
         };
-        $http.post("/convert-prof", postdata).success((data) => {
+        $http.post("/convert-prof", postdata).success(() => {
             self.getUsers();
             alert("Profesor creado correctamente");
         });
@@ -52,7 +52,7 @@ app.controller("SuperAdminController", function($scope, $http) {
         let postdata = {
             uid: uid
         };
-        $http.post("/remove-prof", postdata).success((data) => {
+        $http.post("/remove-prof", postdata).success(() => {
             self.getUsers();
             alert("Profesor eliminado correctamente");
         });
@@ -68,7 +68,7 @@ app.controller("SuperAdminController", function($scope, $http) {
         let postdata = {
             uid: uid
         };
-        $http.post("/super-login-as", postdata).success((data) => {
+        $http.post("/super-login-as", postdata).success(() => {
             window.location.replace("/");
         });
     };
@@ -77,7 +77,7 @@ app.controller("SuperAdminController", function($scope, $http) {
 
 });
 
-app.controller("instituciones",["$scope","$http",function($scope,$http,Admin){
+app.controller("instituciones",["$scope","$http",function($scope,$http){
     var self = $scope;
     self.accepted = [];
     self.pending = [];

@@ -326,14 +326,14 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                             word_count: role.wc,
                             stageid:    stageid,
                         };
-                        $http({url: "add-actor", method: "post", data: p}).success(function (data) {
+                        $http({url: "add-actor", method: "post", data: p}).success(function () {
                             console.debug("Actor added");
                             c -= 1;
                             if (c == 0) {
                                 let pp = {sesid: self.selectedSes.id, stageid: stageid};
                                 $http({
                                     url: "session-start-stage", method: "post", data: pp
-                                }).success(function (data) {
+                                }).success(function () {
                                     Notification.success("Etapa creada correctamente");
                                     window.location.reload();
                                 });
@@ -358,13 +358,13 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                         };
                         $http({
                             url: "add-differential-stage", method: "post", data: p
-                        }).success(function (data) {
+                        }).success(function () {
                             c -= 1;
                             if (c == 0) {
                                 let pp = {sesid: self.selectedSes.id, stageid: stageid};
                                 $http({
                                     url: "session-start-stage", method: "post", data: pp
-                                }).success(function (data) {
+                                }).success(function () {
                                     Notification.success("Etapa creada correctamente");
                                     window.location.reload();
                                 });
@@ -383,14 +383,14 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                             word_count: role.wc,
                             stageid:    stageid,
                         };
-                        $http({url: "add-actor", method: "post", data: p}).success(function (data) {
+                        $http({url: "add-actor", method: "post", data: p}).success(function () {
                             console.debug("Actor added");
                             c -= 1;
                             if (c == 0) {
                                 let pp = {sesid: self.selectedSes.id, stageid: stageid};
                                 $http({
                                     url: "session-start-stage", method: "post", data: pp
-                                }).success(function (data) {
+                                }).success(function () {
                                     Notification.success("Etapa creada correctamente");
                                 });
                             }
@@ -406,7 +406,7 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                             };
                             $http({
                                 url: "add-jigsaw-role", method: "post", data: p
-                            }).success(function (data) {
+                            }).success(function () {
                                 console.debug("JRole added");
                                 c -= 1;
                                 if (c == 0) {
@@ -415,7 +415,7 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                                         url:    "session-start-stage",
                                         method: "post",
                                         data:   pp
-                                    }).success(function (data) {
+                                    }).success(function () {
                                         Notification.success("Etapa creada correctamente");
                                     });
                                 }
@@ -466,12 +466,6 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
         if (self.groupopt.met == "previous") {
             return;
         }
-        // *1 ignore
-        var postdata = {
-            sesid:  self.selectedSes.id,
-            gnum:   self.groupopt.num,
-            method: self.groupopt.met
-        };
 
         var users = Object.values(self.users).filter(function (e) {
             return e.role == "A";
@@ -722,7 +716,7 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
             sesid: self.selectedSes.id,
             data:  JSON.stringify(data),
         };
-        $http.post("save-draft", postdata).success((data) => {
+        $http.post("save-draft", postdata).success(() => {
             Notification.success("Datos guardados");
         });
     };

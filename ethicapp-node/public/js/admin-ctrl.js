@@ -52,7 +52,7 @@ adpp.config(["ngQuillConfigProvider", function (ngQuillConfigProvider) {
 
 //ROUTING
 
-adpp.config(function ($routeProvider, $locationProvider) {
+adpp.config(function ($routeProvider) {
     $routeProvider
     // set route for the index page
         .when("/",
@@ -174,7 +174,6 @@ adpp.controller("AdminController", function (
     };
 
     self.updatelangdata = function() {
-        var postdata2 = self.uid;
         $http({ url: "updatelangdata", method: "post", data: {lang} }).success(function (data) {
             console.log(data);
 
@@ -329,7 +328,7 @@ adpp.controller("AdminController", function (
 
     self.deleteDocument = function (docid) {
         var postdata = { docid: docid };
-        $http({ url: "delete-document", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "delete-document", method: "post", data: postdata }).success(function () {
             self.requestDocuments();
         });
     };
@@ -541,7 +540,7 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
     self.archiveSes = function(ses, $event){
         $event.stopPropagation();
         var postdata = { sesid: ses.id, val: true };
-        $http({ url: "archive-session", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "archive-session", method: "post", data: postdata }).success(function () {
             Notification.info("Sesión archivada");
             ses.archived = true;
         });
@@ -550,7 +549,7 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
     self.restoreSes = function(ses, $event){
         $event.stopPropagation();
         var postdata = { sesid: ses.id, val: false };
-        $http({ url: "archive-session", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "archive-session", method: "post", data: postdata }).success(function () {
             Notification.info("Sesión restaurada");
             ses.archived = false;
         });
@@ -559,7 +558,7 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
     self.archiveActivity = function(ses, $event){
         $event.stopPropagation();
         var postdata = { sesid: ses.session, val: true };
-        $http({ url: "archive-session", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "archive-session", method: "post", data: postdata }).success(function () {
             Notification.info("Sesión archivada");
             ses.archived = true;
         });
@@ -568,7 +567,7 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
     self.restoreActivity = function(ses, $event){
         $event.stopPropagation();
         var postdata = { sesid: ses.session, val: false };
-        $http({ url: "archive-session", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "archive-session", method: "post", data: postdata }).success(function () {
             Notification.info("Sesión restaurada");
             ses.archived = false;
         });
@@ -617,7 +616,7 @@ adpp.controller("DocumentsController", function ($scope, $http, Notification, $t
             let url = df.id ? "update-differential" : "add-differential";
             df.orden = i;
             df.sesid = self.selectedSes.id;
-            $http.post(url, df).success(function (data) {
+            $http.post(url, df).success(function () {
                 k += 1;
                 if (k == self.dfs.length - 1) {
                     Notification.success("Diferenciales guardados correctamente");
@@ -663,7 +662,7 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
         var postdata = {
             name: self.selectedSes.name, descr: self.selectedSes.descr, id: self.selectedSes.id
         };
-        $http({ url: "update-session", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "update-session", method: "post", data: postdata }).success(function () {
             console.log("Session updated");
         });
     };
@@ -677,7 +676,7 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
             var _postdata = { sesid: self.selectedSes.id };
             $http({
                 url: "change-state-session", method: "post", data: _postdata
-            }).success(function (data) {
+            }).success(function () {
                 self.shared.updateSesData();
             });
         }
@@ -698,7 +697,6 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
 
 adpp.controller("NewUsersController", function ($scope, $http, Notification) {
     var self = $scope;
-    var newMembs = [];
 
     self.addToSession = function () {
         if (self.newMembs.length == 0) {
@@ -822,7 +820,6 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.updateStateIni = function () {
         console.log(self.iterationIndicator);
         self.alumTime = {};
-        var postdata = { sesid: self.selectedSes.id, iteration: self.iterationIndicator };
         if (self.selectedSes.type == "R") {
             var _postdata2 = {
                 stageid: self.iterationIndicator
@@ -1029,9 +1026,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         var t = 0;
         if (self.alumState != null) {
             for (var u in self.alumState) {
-                for (var k in self.alumState[u]) {
-                    t++;
-                }
+                self.alumState[u].forEach(() => t++);
             }
             return 100 * t / (Object.keys(self.alumState).length * self.questions.length);
         }
@@ -1041,9 +1036,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.progressAlum = function (uid) {
         var t = 0;
         if (self.alumState != null && self.alumState[uid] != null) {
-            for (var k in self.alumState[uid]) {
-                t++;
-            }
+            self.alumState[uid].forEach(() => t++);
             return 100 * t / self.questions.length;
         }
         return 0;
@@ -1363,7 +1356,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
 
     self.broadcastReport = function (rid) {
         var postdata = { sesid: self.selectedSes.id, rid: rid };
-        $http({ url: "set-eval-report", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "set-eval-report", method: "post", data: postdata }).success(function () {
             Notification.success("Reporte enviado a alumnos");
         });
     };
@@ -1828,7 +1821,7 @@ adpp.controller("EthicsModalController", function ($scope, $http, $uibModalInsta
             sesid:   vm.data.sesid,
             content: content
         };
-        $http({ url: "broadcast-diff", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "broadcast-diff", method: "post", data: postdata }).success(function () {
             Notification.success("Diferencial enviado exitosamente");
         });
     };
@@ -2106,7 +2099,7 @@ adpp.controller("RubricaController", function ($scope, $http) {
         };
         $http({
             url: "send-example-report", method: "post", data: postdata
-        }).success(function (data) {
+        }).success(function () {
             self.newExampleReport = "";
             self.shared.getExampleReports();
         });
@@ -2195,7 +2188,7 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
         var postdata = { dsgnid: dsgnid };
         $http({
             url: "delete-design-document", method: "post", data: postdata
-        }).success(function (data) {
+        }).success(function () {
             self.requestDesignDocuments();
         });
     };
@@ -2209,7 +2202,7 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
 
 });
 
-adpp.controller("ActivityController", function ($scope, $filter, $http, Notification, $timeout) {
+adpp.controller("ActivityController", function ($scope, $filter, $http, Notification) {
     var self = $scope;
     self.selectedSes = {};
     self.error = false;
@@ -2319,11 +2312,11 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
                             console.log(p);
                             $http({url:
                                 "add-differential-stage", method: "post", data:   p
-                            }).success(function (data) {
+                            }).success(function () {
                                 let pp = {sesid: sesid, stageid: stageid};
                                 $http({
                                     url: "session-start-stage", method: "post", data: pp
-                                }).success(function (data) {
+                                }).success(function () {
                                     Notification.success("Etapa creada correctamente");
                                 });
                             
@@ -2385,7 +2378,7 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
 });
 
 adpp.controller("MonitorActivityController", function (
-    $scope, $filter, $http, Notification, $timeout
+    $scope, $filter, $http, Notification
 ) {
     var self = $scope;
 
@@ -2471,14 +2464,14 @@ adpp.controller("MonitorActivityController", function (
                         console.log(p);
                         $http({
                             url: "add-differential-stage", method: "post", data: p
-                        }).success(function (data) {    });
+                        }).success(function () {    });
                         counter++;
                     }
                 }
                 let pp = {sesid: sesid, stageid: stageid};
                 $http({
                     url: "session-start-stage", method: "post", data: pp
-                }).success(function (data) {
+                }).success(function () {
                     Notification.success("Etapa creada correctamente");
                     //window.location.reload()
                     self.currentStage(); // <--------Actualiza la data del current stage
@@ -2518,7 +2511,7 @@ adpp.controller("MonitorActivityController", function (
 });
 
 adpp.controller("BrowseDesignsController", function (
-    $scope, $filter, $http, Notification, $timeout
+    $scope, $filter, $http
 ) {
     var self = $scope;
     self.designs = [];
@@ -2551,14 +2544,14 @@ adpp.controller("BrowseDesignsController", function (
 
     self.designPublic = function (dsgnid) {
         var postdata = { dsgnid: dsgnid };
-        $http({ url: "design-public", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "design-public", method: "post", data: postdata }).success(function () {
 
         });
     };
 
     self.designLock = function (dsgnid) {
         var postdata = { dsgnid: dsgnid };
-        $http({ url: "design-lock", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "design-lock", method: "post", data: postdata }).success(function () {
   
         });
     };
@@ -2812,7 +2805,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
                 } else {
                     self.saved = false;
                 }
-            }, function(error) {
+            }, function() {
                 self.saved = false;
             });
         } else {
@@ -2965,7 +2958,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         }
     };
 
-    self.templateStage = function(type){ 
+    self.templateStage = function(){ 
         // UNUSED
         return {
             "mode":      "individual",
@@ -3077,7 +3070,7 @@ adpp.controller("OptionsController", function ($scope, $http, Notification) {
     };
 });
 
-adpp.controller("DashboardRubricaController", function ($scope, $http) {
+adpp.controller("DashboardRubricaController", function ($scope) {
     var self = $scope;
     self.reports = [];
     self.result = [];
@@ -3226,7 +3219,7 @@ var habMetric = function habMetric(u) {
 };
 
 
-adpp.controller("instituciones",["$scope","$http",function($scope,$http,Admin){
+adpp.controller("instituciones",["$scope","$http",function($scope,$http){
     var self = $scope;
     self.uid = [];
     self.domains =[];
@@ -3304,8 +3297,6 @@ adpp.controller("instituciones",["$scope","$http",function($scope,$http,Admin){
 
 
     self.refreshUsers = function () {
-        var postdata2 = self.domains;
-
         $http({
             url: "get_mail_domains", method: "post",data: self.institutionid
         }).success(function (data) {
@@ -3330,7 +3321,7 @@ adpp.controller("instituciones",["$scope","$http",function($scope,$http,Admin){
 }]);
 
 
-adpp.controller("no_account",["$scope","$http",function($scope,$http,Admin){
+adpp.controller("no_account",["$scope","$http",function($scope,$http){
     var self = $scope;
     const lang = navigator.language;
     if(lang[0] == "e" && lang[1] == "s"){
@@ -3350,10 +3341,9 @@ adpp.controller("no_account",["$scope","$http",function($scope,$http,Admin){
     self.activate_user = function(){
         var url_string = window.location;
         var url = new URL(url_string);
-        var rc = url.searchParams.get("rc");
         var token = url.searchParams.get("tok");
         console.log(token);
-        $http({ url: "activate_user", method: "post",data: {token} }).success(function (data) {
+        $http({ url: "activate_user", method: "post",data: {token} }).success(function () {
         });
     };
 
@@ -3393,7 +3383,7 @@ adpp.controller("no_account",["$scope","$http",function($scope,$http,Admin){
 
 
 adpp.controller("super_admin", ["$scope", "$http", "$uibModal", function(
-    $scope, $http, $uibModal, Admin
+    $scope, $http, $uibModal
 ){
     var self = $scope;
     self.accepted = [];
@@ -3602,7 +3592,6 @@ adpp.controller("super_admin", ["$scope", "$http", "$uibModal", function(
         });
     };
     self.refreshUsers = function () {
-        var postdata2 = self.domains;
 
         $http({ url: "get_all_users", method: "post",data: postdata }).success(function (data) {
             var res = [];

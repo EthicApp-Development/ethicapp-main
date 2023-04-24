@@ -209,13 +209,13 @@ app.controller("SemanticController", [
 
         self.getHgSents = () => {
             return self.highlight.map(
-                (a,i) => a.map((e,j) => [e,j]).filter(e => e[0]).map(e => e[1])
+                (a) => a.map((e,j) => [e,j]).filter(e => e[0]).map(e => e[1])
             ).reduce((v,e) => v.concat(e), []);
         };
 
         self.getHgDocs = () => {
             return self.highlight.map(
-                (a,i) => a.map((e,j) => [e,j]).filter(e => e[0]).map(e => i)
+                (a,i) => a.map((e,j) => [e,j]).filter(e => e[0]).map(() => i)
             ).reduce((v,e) => v.concat(e), []);
         };
 
@@ -251,13 +251,13 @@ app.controller("SemanticController", [
         };
 
         self.updateSignal = () => {
-            $http({url: "update-my-team", method: "post"}).success((data) => {
+            $http({url: "update-my-team", method: "post"}).success(() => {
                 console.log("Team updated");
             });
         };
 
         self.takeControl = () => {
-            $http({url: "take-team-control", method: "post"}).success((data) => {
+            $http({url: "take-team-control", method: "post"}).success(() => {
                 console.log("Control given");
                 self.updateSignal();
             });
@@ -304,7 +304,7 @@ app.controller("SemanticController", [
             );
             if(confirm) {
                 let postdata = {status: self.iteration + 2};
-                $http({url: "record-finish", method: "post", data: postdata}).success((data) => {
+                $http({url: "record-finish", method: "post", data: postdata}).success(() => {
                     self.hasFinished = true;
                     self.finished = true;
                     console.log("FINISH");
@@ -446,7 +446,7 @@ app.controller("SemanticController", [
                 let postdata = {id: unit.id};
                 $http({
                     url: "delete-semantic-unit", method: "post", data: postdata
-                }).success((data) => {
+                }).success(() => {
                     console.log("Idea deleted");
                     if(self.iteration == 3)
                         self.updateSignal();

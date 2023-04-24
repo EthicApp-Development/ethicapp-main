@@ -2,7 +2,7 @@
 
 var BASE_APP = window.location.href.replace("ethics", "");
 
-var app = angular.module("Ethics", ["ngSanitize", "ui.bootstrap", 'ui.tree', 'btford.socket-io', "angular-intro", "ui-notification", "luegg.directives"]);
+var app = angular.module("Ethics", ["ngSanitize", "ui.bootstrap", "ui.tree", "btford.socket-io", "angular-intro", "ui-notification", "luegg.directives"]);
 
 app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
@@ -112,7 +112,7 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
                 e.cr = e.cr == null ? e.c : e.cr;
             });
             if (self.dfs.length==1){
-                self.openChat(self.dfs[0])
+                self.openChat(self.dfs[0]);
             }
         });
     };
@@ -148,7 +148,7 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
     self.loadStageData = function () {
         $http.post("get-stages", {}).success(function (data) {
             self.stages = data;
-            console.log(self.stages)
+            console.log(self.stages);
             self.selectStage2(self.stages.find(e => e.id == self.currentStageId).number-1);
 
             self.currentStage = self.stages.find(function (e) {
@@ -171,7 +171,7 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
                 });
                 if (self.currentStage.prev_ans != "" && self.currentStage.prev_ans != null) {
                     var p = {
-                        stageid: self.currentStageId,
+                        stageid:    self.currentStageId,
                         prevstages: self.currentStage.prev_ans
                     };
                     // TODO : Refactor to DF
@@ -322,7 +322,7 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
             });
             if (st.prev_ans != "" && st.prev_ans != null) {
                 var p = {
-                    stageid: st.id,
+                    stageid:    st.id,
                     prevstages: st.prev_ans
                 };
                 $http.post("get-team-differential-selection", p).success(function (data) {
@@ -398,7 +398,7 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
             });
             if (st.prev_ans != "" && st.prev_ans != null) {
                 var p = {
-                    stageid: st.id,
+                    stageid:    st.id,
                     prevstages: st.prev_ans
                 };
                 $http.post("get-team-differential-selection", p).success(function (data) {
@@ -429,12 +429,12 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
             return;
         }
         var postdata = {
-            sel: df.select,
-            comment: df.comment,
-            did: df.id,
+            sel:       df.select,
+            comment:   df.comment,
+            did:       df.id,
             iteration: 0
         };
-        $http.post("send-diff-selection", postdata).success(function (data) {
+        $http.post("send-diff-selection", postdata).success(function () {
             df.dirty = false;
             df.sent = true;
         });
@@ -443,12 +443,12 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
 
     self.sendChatMsg = function () {
         var postdata = {
-            did: self.selectedDF,
-            content: self.chatmsg,
-            tmid: self.tmId,
+            did:       self.selectedDF,
+            content:   self.chatmsg,
+            tmid:      self.tmId,
             parent_id: self.chatmsgreply
         };
-        $http.post("add-chat-msg", postdata).success(function (data) {
+        $http.post("add-chat-msg", postdata).success(function () {
             self.chatmsg = "";
             self.chatmsgreply = null;
         });
@@ -458,9 +458,9 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
         return $sce.trustAsResourceUrl("https://docs.google.com/viewer?url=" + BASE_APP + self.documents[self.selectedDocument].path + "&embedded=true");
     };
 
-    var notify = function notify(title, message, closable) {
+    var notify = function notify(title, message) {
         $uibModal.open({
-            template: '<div><div class="modal-header"><h4>' + title + '</h4></div><div class="modal-body"><p>' + message + '</p></div></div>'
+            template: '<div><div class="modal-header"><h4>' + title + '</h4></div><div class="modal-body"><p>' + message + "</p></div></div>"
         });
     };
 
@@ -485,11 +485,11 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
 
     self.openDetails = function (_data) {
         $uibModal.open({
-            templateUrl: "templ/direct-content.html",
-            controller: "DirectContentController",
+            templateUrl:  "templ/direct-content.html",
+            controller:   "DirectContentController",
             controllerAs: "vm",
-            scope: self,
-            resolve: {
+            scope:        self,
+            resolve:      {
                 data: function data() {
                     return _data;
                 }
@@ -504,24 +504,24 @@ app.controller("EthicssController", ["$scope", "$http", "$timeout", "$socket", "
 
     var introOptions = {
         steps: [{
-            element: '#tabd0',
-            intro: 'En esta pestaña encontrarás el caso a leer'
+            element: "#tabd0",
+            intro:   "En esta pestaña encontrarás el caso a leer"
         }, {
             element: "#tabq0",
-            intro: "En esta pestaña se encuentra la lista de items que debes categorizar y justificar"
+            intro:   "En esta pestaña se encuentra la lista de items que debes categorizar y justificar"
         }, {
             element: "#seslistbtn",
-            intro: "Usando este botón puedes volver a la lista de sesiones"
+            intro:   "Usando este botón puedes volver a la lista de sesiones"
         }],
-        showStepNumbers: false,
-        showBullets: false,
+        showStepNumbers:    false,
+        showBullets:        false,
         exitOnOverlayClick: true,
-        exitOnEsc: true,
-        tooltipPosition: "auto",
-        nextLabel: 'Siguiente',
-        prevLabel: 'Anterior',
-        skipLabel: 'Salir',
-        doneLabel: 'Listo'
+        exitOnEsc:          true,
+        tooltipPosition:    "auto",
+        nextLabel:          "Siguiente",
+        prevLabel:          "Anterior",
+        skipLabel:          "Salir",
+        doneLabel:          "Listo"
     };
 
     ngIntroService.setOptions(introOptions);
@@ -557,14 +557,14 @@ app.controller("DirectContentController", ["$scope", "$uibModalInstance", "data"
     }, 500);
 
     vm.cancel = function () {
-        $uibModalInstance.dismiss('cancel');
+        $uibModalInstance.dismiss("cancel");
     };
 }]);
 
 window.DIC = null;
 window.warnDIC = {};
 
-app.filter('lang', function () {
+app.filter("lang", function () {
     filt.$stateful = true;
     return filt;
 
@@ -579,16 +579,11 @@ app.filter('lang', function () {
     }
 });
 
-var indexById = function indexById(arr, id) {
-    return arr.findIndex(function (e) {
-        return e.id == id;
-    });
-};
 
-app.directive('bindHtmlCompile', ['$compile', function ($compile) {
+app.directive("bindHtmlCompile", ["$compile", function ($compile) {
     return {
-        restrict: 'A',
-        link: function link(scope, element, attrs) {
+        restrict: "A",
+        link:     function link(scope, element, attrs) {
             scope.$watch(function () {
                 return scope.$eval(attrs.bindHtmlCompile);
             }, function (value) {
@@ -603,20 +598,20 @@ app.directive('bindHtmlCompile', ['$compile', function ($compile) {
     };
 }]);
 
-app.filter('linkfy', function () {
+app.filter("linkfy", function () {
     var replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
     var replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
     var replacePattern3 = /(\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,6})/gim;
 
-    return function (text, target, otherProp) {
+    return function (text) {
         if (text == null) return text;
-        angular.forEach(text.match(replacePattern1), function (url) {
+        angular.forEach(text.match(replacePattern1), function () {
             text = text.replace(replacePattern1, "<a href=\"$1\" target=\"_blank\">$1</a>");
         });
-        angular.forEach(text.match(replacePattern2), function (url) {
+        angular.forEach(text.match(replacePattern2), function () {
             text = text.replace(replacePattern2, "$1<a href=\"http://$2\" target=\"_blank\">$2</a>");
         });
-        angular.forEach(text.match(replacePattern3), function (url) {
+        angular.forEach(text.match(replacePattern3), function () {
             text = text.replace(replacePattern3, "<a href=\"mailto:$1\">$1</a>");
         });
         return text;

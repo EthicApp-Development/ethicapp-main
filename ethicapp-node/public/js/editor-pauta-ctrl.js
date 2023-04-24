@@ -199,7 +199,7 @@ app.controller("EditorController", [
 
         let renderPdf = (pdf, idx) => {
             for (let i = 1; i <= pdf.numPages; i++) {
-                let p = pdf.getPage(i).then((p) => renderPage(p, idx));
+                pdf.getPage(i).then((p) => renderPage(p, idx));
                 self.numPages += 1;
             }
         };
@@ -218,7 +218,7 @@ app.controller("EditorController", [
             $pdfContainer.css("height", canvas.height + "px").css("width", canvas.width + "px");
             $pdfContainer.append($canvas);
 
-            let canvasOffset = $canvas.offset();
+            $canvas.offset();
             let $textLayerDiv = jQuery("<div></div>")
                 .addClass("textLayer")
                 .css("height", viewport.height + "px")

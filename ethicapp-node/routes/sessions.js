@@ -5,7 +5,7 @@ let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 let pg = require("pg");
-let middleware = require("../midleware/validate-session");
+require("../midleware/validate-session");
 
 var DB = null;
 
@@ -103,7 +103,7 @@ router.post("/add-session", rpg.execSQL({
         rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("ses", "uid"),
         rpg.param("post","type"), rpg.param("ses", "uid")
     ],
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.warn("Sólo profesor puede crear sesiones");
             console.warn(ses);
@@ -195,7 +195,7 @@ router.post("/check-design", (req, res) => {
     `;
     var db = getDBInstance(pass.dbcon);
     var qry;
-    var result = true;;
+    var result = true;
     var phases;
     qry = db.query(sql, (err,res) =>{
         if(res!= null) {
@@ -206,9 +206,9 @@ router.post("/check-design", (req, res) => {
                 for(let j=0; j<questions.length; j++){
                     var question = questions[j];
     
-                    question.q_text = (question.q_text === "" || question.q_text === "-->>N/A<<--") ? result = false : result
-                    question.ans_format.l_pole = (question.ans_format.l_pole === "" | question.ans_format.l_pole === "-->>N/A<<--") ? result = false : result
-                    question.ans_format.r_pole = (question.ans_format.r_pole === "" | question.ans_format.l_pole === "-->>N/A<<--") ? result = false : result
+                    question.q_text = (question.q_text === "" || question.q_text === "-->>N/A<<--") ? result = false : result;
+                    question.ans_format.l_pole = (question.ans_format.l_pole === "" | question.ans_format.l_pole === "-->>N/A<<--") ? result = false : result;
+                    question.ans_format.r_pole = (question.ans_format.r_pole === "" | question.ans_format.l_pole === "-->>N/A<<--") ? result = false : result;
                 }
             }
             return;
@@ -659,7 +659,7 @@ router.post("/get-all-users", rpg.multiSQL({
     FROM users AS u
     `,
     sqlParams: [],
-    onStart:   (ses, data, calc) => {
+    onStart:   (ses) => {
         if (ses.role != "S") return "SELECT 1";
     },
 }));
@@ -673,7 +673,7 @@ router.post("/convert-prof", rpg.execSQL({
     `,
     postReqData: ["uid"],
     sqlParams:   [rpg.param("post", "uid")],
-    onStart:     (ses, data, calc) => {
+    onStart:     (ses) => {
         if (ses.role != "S") return "SELECT $1";
     },
 }));
@@ -687,7 +687,7 @@ router.post("/remove-prof", rpg.execSQL({
     `,
     postReqData: ["uid"],
     sqlParams:   [rpg.param("post", "uid")],
-    onStart:     (ses, data, calc) => {
+    onStart:     (ses) => {
         if (ses.role != "S") return "SELECT $1";
     },
 }));

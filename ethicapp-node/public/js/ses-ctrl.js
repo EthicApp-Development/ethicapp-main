@@ -1,12 +1,12 @@
 "use strict";
 
-var adpp = angular.module("SesList", ["ui.bootstrap", 'btford.socket-io', 'angular-intro']);
+var adpp = angular.module("SesList", ["ui.bootstrap", "btford.socket-io", "angular-intro"]);
 
 adpp.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
 
-adpp.filter('mylang', function () {
+adpp.filter("mylang", function () {
     filt.$stateful = true;
     return filt;
 
@@ -28,7 +28,7 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", "$uibModal",
     self.invCode = "";
     self.showCodeError = false;
     self.currTab = false;
-    self.sesTypeTab = false
+    self.sesTypeTab = false;
     self.routes = {
         L: "to-visor",
         M: "to-semantic",
@@ -50,31 +50,31 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", "$uibModal",
     };
 
     self.currentSessions = function(){
-        return  self.sessions.filter(self.checkStatus)
-    }
+        return  self.sessions.filter(self.checkStatus);
+    };
 
     self.checkStatus = function(session){
-        if(self.sesTypeTab) return session["status"] == 3
-        else return session["status"] != 3
+        if(self.sesTypeTab) return session["status"] == 3;
+        else return session["status"] != 3;
         
-    }
+    };
 
     self.changeTab = function(tab){
         if(tab)  self.currTab = false;        
         else self.currTab = true; 
 
-    }
+    };
 
     self.changeTypeTab = function(tab){
         if(tab)  self.sesTypeTab = false;        
         else self.sesTypeTab = true; 
   
-    }
+    };
 
     self.showName = function () {
         $http.post("get-my-name").success(function (data) {
-            self.mail = data.mail
-            self.rol = data.role
+            self.mail = data.mail;
+            self.rol = data.role;
             self.username = data.name;
             self.mylang = data.lang;
             self.updateLang(self.mylang);
@@ -95,7 +95,7 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", "$uibModal",
     self.enterCode = function () {
         if (self.checkCode(self.invCode.toLowerCase())) {
             var postdata = {
-                code: self.invCode.toLowerCase(),
+                code:   self.invCode.toLowerCase(),
                 device: self.getDeviceInfo()
             };
             $http.post("enter-session-code", postdata).success(function (data) {
@@ -103,7 +103,7 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", "$uibModal",
                     window.location.replace(data.redirect);
                 } else {
                     $uibModal.open({
-                        template: '<div><div class="modal-header"><h4>Error</h4></div><div class="modal-body">' + '<p>El código ingresado no es válido o la sesión no admite nuevos usuarios</p></div></div>'
+                        template: '<div><div class="modal-header"><h4>Error</h4></div><div class="modal-body">' + "<p>El código ingresado no es válido o la sesión no admite nuevos usuarios</p></div></div>"
                     });
                 }
             });
@@ -130,40 +130,40 @@ adpp.controller("SesListController", ["$scope", "$http", "$socket", "$uibModal",
 
     self.changeLang = function () {
         var newlang = self.mylang == "english" ? "spanish" : "english";
-        $http.post("update-lang", { lang: newlang }).success(function (data) {
+        $http.post("update-lang", { lang: newlang }).success(function () {
             self.showName();
         });
     };
 
     var introOptions = {
         steps: [{
-            element: '#seslistdiv',
-            intro: 'Aqui debajo se muestran todas las sesiones que tienes disponibles. Al apretar en una de ellas puedes ingresar a la actividad',
+            element:  "#seslistdiv",
+            intro:    "Aqui debajo se muestran todas las sesiones que tienes disponibles. Al apretar en una de ellas puedes ingresar a la actividad",
             position: "right"
         }, {
             element: "#codebox",
-            intro: "Para ingresar a una nueva actividad, debes ingresar el código de una sesión que te entrega el/la profesor/a en este campo."
+            intro:   "Para ingresar a una nueva actividad, debes ingresar el código de una sesión que te entrega el/la profesor/a en este campo."
         }, {
             element: "#codeboxbtn",
-            intro: "Usando este botón ingresas a la sesión indicada por el código"
+            intro:   "Usando este botón ingresas a la sesión indicada por el código"
         }, {
-            element: '#changelang',
-            intro: "Con este botón puedes cambiar el idioma. Using this button you can change the language",
+            element:  "#changelang",
+            intro:    "Con este botón puedes cambiar el idioma. Using this button you can change the language",
             position: "left"
         }, {
-            element: '#topbtnlist',
-            intro: 'Finalmente usando el botón de ayuda puedes volver a ver esta ayuda y con el botón de salir puedes cerrar sesión.',
+            element:  "#topbtnlist",
+            intro:    "Finalmente usando el botón de ayuda puedes volver a ver esta ayuda y con el botón de salir puedes cerrar sesión.",
             position: "left"
         }],
-        showStepNumbers: false,
-        showBullets: false,
+        showStepNumbers:    false,
+        showBullets:        false,
         exitOnOverlayClick: true,
-        exitOnEsc: true,
-        tooltipPosition: "auto",
-        nextLabel: 'Siguiente',
-        prevLabel: 'Anterior',
-        skipLabel: 'Salir',
-        doneLabel: 'Listo'
+        exitOnEsc:          true,
+        tooltipPosition:    "auto",
+        nextLabel:          "Siguiente",
+        prevLabel:          "Anterior",
+        skipLabel:          "Salir",
+        doneLabel:          "Listo"
     };
 
     ngIntroService.setOptions(introOptions);

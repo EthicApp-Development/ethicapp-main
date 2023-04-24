@@ -1,6 +1,6 @@
 "use strict";
 
-let BASE_APP = window.location.href.replace("role-playing", "");
+window.location.href.replace("role-playing", "");
 
 let app = angular.module("Role", [
     "ngSanitize", "ui.bootstrap", "ui.tree", "btford.socket-io", "angular-intro", "ui-notification",
@@ -116,7 +116,7 @@ app.controller("RoleController", [
             });
         };
 
-        let updateChat = (count) => {
+        let updateChat = () => {
             $http.post("get-chat-stage", {
                 stageid: self.currentStageId
             }).success((data) => {
@@ -185,7 +185,7 @@ app.controller("RoleController", [
                     $http.post("assign-cyclic-jigsaw-role", {
                         cycle:   self.jroles.length,
                         stageid: self.currentStageId
-                    }).success((data) => {
+                    }).success(() => {
                         self.getAssignedJigsawRole();
                     });
                 }
@@ -446,7 +446,7 @@ app.controller("RoleController", [
                     stageid:     self.currentStageId
                 };
                 console.log(postdata);
-                $http.post("send-actor-selection", postdata).success((data) => {
+                $http.post("send-actor-selection", postdata).success(() => {
                     a.dirty = false;
                     a.sent = (a.comment != null && a.comment != "");
                 });
@@ -464,7 +464,7 @@ app.controller("RoleController", [
                 tmid:      self.tmId,
                 parent_id: self.chatmsgreply
             };
-            $http.post("add-chat-msg-stage", postdata).success(data => {
+            $http.post("add-chat-msg-stage", postdata).success(() => {
                 self.chatmsg = "";
                 self.chatmsgreply = null;
             });
@@ -474,7 +474,7 @@ app.controller("RoleController", [
             return $sce.trustAsResourceUrl(self.documents[self.selectedDocument].path);
         };
 
-        let notify = (title, message, closable) => {
+        let notify = (title, message) => {
             $uibModal.open({
                 template: `
                 <div>
@@ -651,17 +651,17 @@ app.filter("linkfy", function() {
     let replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
     let replacePattern3 = /(\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,6})/gim;
 
-    return function(text, target, otherProp) {
+    return function(text) {
         if(text == null) return text;
-        angular.forEach(text.match(replacePattern1), function(url) {
+        angular.forEach(text.match(replacePattern1), function() {
             text = text.replace(replacePattern1, "<a href=\"$1\" target=\"_blank\">$1</a>");
         });
-        angular.forEach(text.match(replacePattern2), function(url) {
+        angular.forEach(text.match(replacePattern2), function() {
             text = text.replace(
                 replacePattern2, "$1<a href=\"http://$2\" target=\"_blank\">$2</a>"
             );
         });
-        angular.forEach(text.match(replacePattern3), function(url) {
+        angular.forEach(text.match(replacePattern3), function() {
             text = text.replace(replacePattern3, "<a href=\"mailto:$1\">$1</a>");
         });
         return text;

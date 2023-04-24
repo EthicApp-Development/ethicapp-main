@@ -308,7 +308,7 @@ app.controller("SelectController", [
             });
         };
 
-        let notify = (title, message, closable) => {
+        let notify = (title, message) => {
             $uibModal.open({
                 template: `
                 <div>
