@@ -809,6 +809,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         else {
             self.updateStateRub();
         }
+        self.shared.refreshUsers();
     };
 
     self.shared.updateState = self.updateState;
