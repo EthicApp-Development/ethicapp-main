@@ -300,7 +300,8 @@ app.controller("SemanticController", [
                 self.shared.sendReport();
             }
             let confirm = window.confirm(
-                "¿Estaá seguro que desea terminar la actividad?\nEsto implica no volver a poder editar sus respuestas"
+                "¿Estaá seguro que desea terminar la actividad?" +
+                "\nEsto implica no volver a poder editar sus respuestas"
             );
             if(confirm) {
                 let postdata = {status: self.iteration + 2};

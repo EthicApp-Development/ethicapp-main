@@ -535,7 +535,8 @@ app.controller("RoleController", [
                 },
                 {
                     element: "#tabq0",
-                    intro:   "En esta pestaña se encuentra la lista de roles que debes ordenar y justificar"
+                    intro:   "En esta pestaña se encuentra la lista de " + 
+                    "roles que debes ordenar y justificar"
                 },
                 {
                     element: "#seslistbtn",

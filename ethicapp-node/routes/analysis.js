@@ -700,10 +700,11 @@ router.post("/assign-pairs", (req, res) => {
         `,
         onEnd: (req, res, arr) => {
             let n = arr.length;
+            let msg = "No hay suficientes reportes completos para asignar pares";
             if (m >= n) {
                 console.error("More pairs than reports");
                 res.end(
-                    '{"status":"err", "msg":"No hay suficientes reportes completos para asignar pares"}'
+                    `{"status":"err", "msg":"${msg}"}`
                 );
                 return;
             }
@@ -723,9 +724,10 @@ router.post("/assign-pairs", (req, res) => {
                     let sel = Object.keys(counter);
                     // console.log("Seleccionable son: " + sel);
                     if(sel.length == 0 || sel.length == 1 && sel[0] == uids[i]){
+                        let msg = "Error de consistencia de los pares formados. Intente nuevamente";
                         console.error("Infinite loop");
                         res.end(
-                            '{"status":"err", "msg":"Error de consistencia de los pares formados. Intente nuevamente"}'
+                            `{"status":"err", "msg":"${msg}"}`
                         );
                         return;
                     }
@@ -744,15 +746,17 @@ router.post("/assign-pairs", (req, res) => {
 
             let pairstr = pairs.map(e => "("+e.uid+","+e.rid+")");
             if(pairs.length != n*m){
+                let msg = "Error de consistencia de los pares formados. Intente nuevamente";
                 res.end(
-                    '{"status":"err", "msg":"Error de consistencia de los pares formados. Intente nuevamente"}'
+                    `{"status":"err", "msg":"${msg}"}`
                 );
                 return;
             }
             if(hasDuplicates(pairstr)){
+                let msg = "Error de duplicación de pares asignados. Intente nuevamente";
                 console.error("Se encontraron duplicados");
                 res.end(
-                    '{"status":"err", "msg":"Error de duplicación de pares asignados. Intente nuevamente"}'
+                    `{"status":"err", "msg":"${msg}"}`
                 );
                 return;
             }

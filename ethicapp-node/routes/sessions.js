@@ -205,10 +205,14 @@ router.post("/check-design", (req, res) => {
                 var questions = phase.questions;
                 for(let j=0; j<questions.length; j++){
                     var question = questions[j];
-    
-                    question.q_text = (question.q_text === "" || question.q_text === "-->>N/A<<--") ? result = false : result;
-                    question.ans_format.l_pole = (question.ans_format.l_pole === "" | question.ans_format.l_pole === "-->>N/A<<--") ? result = false : result;
-                    question.ans_format.r_pole = (question.ans_format.r_pole === "" | question.ans_format.l_pole === "-->>N/A<<--") ? result = false : result;
+                    var isQtextNA = (question.q_text === "" || question.q_text === "-->>N/A<<--");
+                    var isLpoleNA = (question.ans_format.l_pole === "" | 
+                                    question.ans_format.l_pole === "-->>N/A<<--");
+                    var isRpoleNA = (question.ans_format.r_pole === "" | 
+                                    question.ans_format.l_pole === "-->>N/A<<--");
+                    question.q_text = isQtextNA ? result = false : result;
+                    question.ans_format.l_pole = isLpoleNA ? result = false : result;
+                    question.ans_format.r_pole = isRpoleNA ? result = false : result;
                 }
             }
             return;
@@ -434,10 +438,10 @@ router.get("/get-user-designs", (req, res) => {
     var result = [];
     qry = db.query(sql,(err,res) =>{
         if(res != null){
-            for (var i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
-            for (var i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
-            for (var i=0; i<result.length;i++) result[i].public= res.rows[i].public; //add id to to design
-            for (var i=0; i<result.length;i++) result[i].locked= res.rows[i].locked; //add id to to design
+            for (let i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
+            for (let i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
+            for (let i=0; i<result.length;i++) result[i].public= res.rows[i].public; //add id to to design
+            for (let i=0; i<result.length;i++) result[i].locked= res.rows[i].locked; //add id to to design
         }
     });
     qry.on("end", function () {
@@ -464,8 +468,8 @@ router.get("/get-public-designs", (req, res) => {
     var result = [];
     qry = db.query(sql,(err,res) =>{
         if(res != null){
-            for (var i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
-            for (var i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
+            for (let i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
+            for (let i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
         }
     });
     qry.on("end", function () {

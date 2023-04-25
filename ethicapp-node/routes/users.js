@@ -158,7 +158,8 @@ router.post("/register", (req, res) => {
     const response_key = req.body["g-recaptcha-response"];
     const secret_key = pass.Captcha_Secret;
     fetch(
-        `https://www.google.com/recaptcha/api/siteverify?secret=${secret_key}&response=${response_key}`
+        "https://www.google.com/recaptcha/api/siteverify" +
+        `secret=${secret_key}&response=${response_key}`
     )
         .then(response => response.json())
         .then(data => {
@@ -201,7 +202,8 @@ router.post("/register_institucion", (req, res) => {
     var user_mail;
     var country;
     fetch(
-        `https://www.google.com/recaptcha/api/siteverify?secret=${secret_key}&response=${response_key}`
+        "https://www.google.com/recaptcha/api/siteverify?" +
+        `secret=${secret_key}&response=${response_key}`
     )
         .then(response => response.json())
         .then(data => {
@@ -897,11 +899,12 @@ router.post("/deleteacc", (req, res) => {
     SET disabled = true
     WHERE id ='${req.session.uid}'
     `;
+    var newmail;
+    var sql2;
     db.query(sql, () => {});
     try {
-        var newmail;
         newmail = Date.now().toString() + req.session.passport.user.email;
-        var sql2 = `
+        sql2 = `
         UPDATE users
         SET mail = '${newmail}'
         WHERE id = '${req.session.uid}'
@@ -909,9 +912,8 @@ router.post("/deleteacc", (req, res) => {
         db.query(sql2, () => {});
     }
     catch {
-        var newmail;
         newmail = Date.now().toString() + req.body.mail;
-        var sql2 = `
+        sql2 = `
         UPDATE users
         SET mail = '${newmail}'
         WHERE id = '${req.session.uid}'
@@ -1299,7 +1301,8 @@ router.post("/accept_institution", (req, res) => {
                                                                 ]},
                                                             Message: {
                                                                 "Subject": {
-                                                                    "Data": "Resolucion de cuenta Institucional"
+                                                                    "Data": 
+                                                                "Resolucion de cuenta Institucional"
                                                                 },
                                                                 "Body": {
                                                                     "Text": {
@@ -1418,12 +1421,11 @@ router.post("/reject_institution", (req, res) => {
                 user_mail = resu.rows[0].mail;
             }
         });
-        var sql = `
+        sql = `
         DELETE
         FROM temporary_users
         WHERE id = '${req.body.userid}'
         `;
-        var qry;
         qry = db.query(sql, () =>{});
         qry.on("end",function(){
             var SES_CONFIG = {

@@ -818,10 +818,11 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     };
 
     self.updateStateIni = function () {
+        var _postdata2;
         console.log(self.iterationIndicator);
         self.alumTime = {};
         if (self.selectedSes.type == "R") {
-            var _postdata2 = {
+            _postdata2 = {
                 stageid: self.iterationIndicator
             };
             $http.post("get-actors", _postdata2).success(function(data){
@@ -870,7 +871,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             });
         }
         else if (self.selectedSes.type == "T"){
-            var _postdata2 = {
+            _postdata2 = {
                 stageid: self.iterationIndicator
             };
             self.dfsStage = [];
@@ -915,7 +916,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             });
         }
         else if (self.selectedSes.type == "J"){
-            var _postdata2 = {
+            _postdata2 = {
                 stageid: self.iterationIndicator
             };
             if(self.shared.inputAssignedRoles) {
@@ -1802,30 +1803,32 @@ adpp.controller("ContentModalController", function ($scope, $uibModalInstance, d
     };
 });
 
-adpp.controller("EthicsModalController", function ($scope, $http, $uibModalInstance, Notification, data) {
-    var vm = this;
-    vm.data = data;
-    vm.isAnon = true;
+adpp.controller("EthicsModalController",
+    function ($scope, $http, $uibModalInstance, Notification, data) {
+        var vm = this;
+        vm.data = data;
+        vm.isAnon = true;
 
-    vm.cancel = function () {
-        $uibModalInstance.dismiss("cancel");
-    };
-
-    vm.shareDetails = function () {
-        if (!vm.isAnon) {
-            Notification.error("Sólo se pueden enviar diferenciales en forma anónima");
-            return;
-        }
-        var content = document.getElementById("details-modal").innerHTML.replace(/<\!--.*?-->/g, "");
-        var postdata = {
-            sesid:   vm.data.sesid,
-            content: content
+        vm.cancel = function () {
+            $uibModalInstance.dismiss("cancel");
         };
-        $http({ url: "broadcast-diff", method: "post", data: postdata }).success(function () {
-            Notification.success("Diferencial enviado exitosamente");
-        });
-    };
-});
+
+        vm.shareDetails = function () {
+            if (!vm.isAnon) {
+                Notification.error("Sólo se pueden enviar diferenciales en forma anónima");
+                return;
+            }
+            var content = document.getElementById("details-modal")
+                .innerHTML.replace(/<\!--.*?-->/g, "");
+            var postdata = {
+                sesid:   vm.data.sesid,
+                content: content
+            };
+            $http({ url: "broadcast-diff", method: "post", data: postdata }).success(function () {
+                Notification.success("Diferencial enviado exitosamente");
+            });
+        };
+    });
 
 adpp.controller("DuplicateSesModalController", function ($scope, $http, $uibModalInstance, data) {
     var vm = this;
@@ -2678,10 +2681,12 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
             var questions = phase.questions;
             for(let j=0; j<questions.length; j++){
                 var question = questions[j];
-
-                question.q_text = question.q_text === "-->>N/A<<--" ? "" : question.q_text;
-                question.ans_format.l_pole = question.ans_format.l_pole === "-->>N/A<<--" ? "" : question.ans_format.l_pole;
-                question.ans_format.r_pole = question.ans_format.r_pole === "-->>N/A<<--" ? "" : question.ans_format.r_pole;
+                var isQtextNA = question.q_text === "-->>N/A<<--";
+                var isLpoleNA = question.ans_format.l_pole === "-->>N/A<<--";
+                var isRpoleNA = question.ans_format.r_pole === "-->>N/A<<--";
+                question.q_text = isQtextNA ? "" : question.q_text;
+                question.ans_format.l_pole = isLpoleNA ? "" : question.ans_format.l_pole;
+                question.ans_format.r_pole = isRpoleNA ? "" : question.ans_format.r_pole;
             }
         }
         return;

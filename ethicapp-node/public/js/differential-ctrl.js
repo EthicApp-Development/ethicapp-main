@@ -228,7 +228,8 @@ app.controller("DifferentialController", [
                 }
             }
             let confirm = window.confirm(
-                "¿Está seguro que desea terminar la actividad?\nEsto implica no volver a poder editar sus respuestas"
+                "¿Está seguro que desea terminar la actividad?\n" + 
+                "Esto implica no volver a poder editar sus respuestas"
             );
             if(confirm) {
                 let postdata = {status: self.iteration + 2};

@@ -128,14 +128,14 @@ app.controller("RubricaController", [
                     };
                     $http({
                         url: "send-criteria-selection", method: "post", data: postdata}
-                    ).success((data) => {
+                    ).success(() => {
                         console.log("ok");
                     });
                 });
                 let postdata = {rid: report.id, text: report.comment};
                 $http({
                     url: "send-report-comment", method: "post", data: postdata
-                }).success((data) => {
+                }).success(() => {
                     console.log("ok");
                 });
                 report.status = "SENT";
@@ -165,11 +165,12 @@ app.controller("RubricaController", [
                 return;
             }
             let confirm = window.confirm(
-                "¿Está seguro que desea terminar la actividad?\nEsto implica no volver a poder editar sus respuestas"
+                "¿Está seguro que desea terminar la actividad?" +
+                "\nEsto implica no volver a poder editar sus respuestas"
             );
             if(confirm) {
                 let postdata = {status: self.iteration + 2};
-                $http({url: "record-finish", method: "post", data: postdata}).success((data) => {
+                $http({url: "record-finish", method: "post", data: postdata}).success(() => {
                 // self.hasFinished = true;
                     self.finished = true;
                     console.log("FINISH");
@@ -267,7 +268,7 @@ app.controller("RubricaController", [
             });
         };
 
-        let notify = (title, message, closable) => {
+        let notify = (title, message) => {
             $uibModal.open({
                 template: `
                 <div>

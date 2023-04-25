@@ -115,7 +115,8 @@ app.controller("EditorController", [
                 return;
             }
             let confirm = window.confirm(
-                "¿Está seguro que desea terminar la actividad?\nEsto implica no volver a poder editar sus respuestas"
+                "¿Está seguro que desea terminar la actividad?\n" + 
+                "Esto implica no volver a poder editar sus respuestas"
             );
             if(confirm) {
                 self.setSelOrder();
