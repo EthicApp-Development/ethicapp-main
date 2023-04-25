@@ -187,24 +187,24 @@ app.controller("EditorController", [
             });
         };
 
-        let arrayIndexOfId = (arr, id) => {
+        function arrayIndexOfId (arr, id)  {
             return arr.reduce((prev, cur, i) => (cur.id == id) ? i : prev, -1);
-        };
+        }
 
-        let loadPdf = (pdfData, i) => {
+        function loadPdf (pdfData, i) {
             PDFJS.disableWorker = true;
             let pdf = PDFJS.getDocument(pdfData);
             pdf.then((pdf) => renderPdf(pdf, i));
-        };
+        }
 
-        let renderPdf = (pdf, idx) => {
+        function renderPdf (pdf, idx) {
             for (let i = 1; i <= pdf.numPages; i++) {
                 pdf.getPage(i).then((p) => renderPage(p, idx));
                 self.numPages += 1;
             }
-        };
+        }
 
-        let renderPage = (page, i) => {
+        function renderPage (page, i)  {
             let scale = 1.3;
             let viewport = page.getViewport(scale);
             let $canvas = $("<canvas></canvas>");
@@ -248,7 +248,7 @@ app.controller("EditorController", [
                     }
                 });
             });
-        };
+        }
 
         self.init();
 

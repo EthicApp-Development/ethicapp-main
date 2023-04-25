@@ -96,7 +96,7 @@ app.controller(
                 });
             };
 
-            var updateChat = function updateChat(count) {
+            function updateChat(count) {
                 $http.post("get-diff-chat-stage",
                     { stageid: self.currentStageId }).success(function (data) {
                     self.chatMsgs = {};
@@ -122,7 +122,7 @@ app.controller(
                         self.openChat(self.dfs[0]);
                     }
                 });
-            };
+            }
 
             self.openChat = function (df) {
                 self.selDF = df;
@@ -475,12 +475,12 @@ app.controller(
                 BASE_APP + self.documents[self.selectedDocument].path + "&embedded=true");
             };
 
-            var notify = function notify(title, message) {
+            function notify(title, message) {
                 $uibModal.open({
                     template: '<div><div class="modal-header"><h4>' + title + 
                     '</h4></div><div class="modal-body"><p>' + message + "</p></div></div>"
                 });
-            };
+            }
 
             self.openComment = function (com) {
                 notify("Comentario", com);

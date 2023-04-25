@@ -248,11 +248,11 @@ adpp.controller("AdminController", function (
         
     };
 
-    var getSession = function(id) {
+    function getSession(id) {
         return self.sessions.filter(
             function(sessions){ return sessions.id == id; }
         );
-    };
+    }
 
     self.selectView = function(tab, type){
         if(tab != self.selectedView){
@@ -1885,12 +1885,12 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
         }
     };
 
-    var klg = function klg(k1, k2) {
+    function klg(k1, k2) {
         return {
             key:  k1 + (k2 == null ? "" : " " + k2),
             name: self.flang(k1) + (k2 == null ? "" : " " + self.flang(k2))
         };
-    };
+    }
 
     self.generateGroups = function (key) {
         console.log("Generate groups AdminController");
@@ -2865,7 +2865,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         return designId.id;
     };
 
-    var resetValues = function(){
+    function resetValues() {
         // RESET VALUES
         self.currentStage = 0; 
         self.currentQuestion = 0; 
@@ -2874,7 +2874,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         self.busy = false; 
         self.extraOpts = false;
         self.prevStages = false;
-    };
+    }
 
     /*
         FRONTEND FUNCTIONS
@@ -3129,7 +3129,7 @@ adpp.filter("trustHtml", ["$sce", function ($sce) {
 }]);
 
 adpp.filter("lang", function () {
-    var filt = function (label) {
+    function filt (label) {
         if (window.DIC == null) return;
         if (window.DIC[label]) return window.DIC[label];
         if (!window.warnDIC[label]) {
@@ -3137,13 +3137,13 @@ adpp.filter("lang", function () {
             window.warnDIC[label] = true;
         }
         return label;
-    };
+    }
 
     filt.$stateful = true;
     return filt;
 });
 
-var generateTeams = function generateTeams(alumArr, scFun, n, different, double) {
+function generateTeams(alumArr, scFun, n, different, double) {
     if (n == null || n == 0) return [];
     console.log(alumArr);
     var arr = alumArr;
@@ -3193,9 +3193,9 @@ var generateTeams = function generateTeams(alumArr, scFun, n, different, double)
         }
     }
     return final_groups;
-};
+}
 
-var isDifferent = function isDifferent(type) {
+function isDifferent(type) {
     switch (type) {
     case "performance homog":
         return false;
@@ -3207,9 +3207,9 @@ var isDifferent = function isDifferent(type) {
         return true;
     }
     return false;
-};
+}
 
-var habMetric = function habMetric(u) {
+function habMetric(u) {
     switch (u.aprendizaje) {
     case "Teorico":
         return -2;
@@ -3221,7 +3221,7 @@ var habMetric = function habMetric(u) {
         return 2;
     }
     return 0;
-};
+}
 
 
 adpp.controller("instituciones",["$scope","$http",function($scope,$http){

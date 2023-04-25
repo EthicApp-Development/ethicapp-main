@@ -10,7 +10,7 @@ require("../midleware/validate-session");
 var DB = null;
 
 
-var getDBInstance = function(dbcon) {
+function getDBInstance(dbcon) {
     if (DB == null) {
         DB = new pg.Client(dbcon);
         DB.connect();
@@ -21,7 +21,7 @@ var getDBInstance = function(dbcon) {
         return DB;
     }
     return DB;
-};
+}
 
 
 router.get("/seslist", (req, res) => {
@@ -1343,11 +1343,11 @@ router.post("/enter-session-code", rpg.singleSQL({
 }));
 
 
-let generateCode = (id) => {
+function generateCode(id) {
     let n = id*5 + 255 + ~~(Math.random()*5);
     let s = n.toString(16);
     return "k00000".substring(0, 6 - s.length) + s;
-};
+}
 
 
 module.exports = router;

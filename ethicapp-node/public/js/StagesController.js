@@ -3,12 +3,12 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
 
     self.stages = [];
 
-    var klg = function klg(k1, k2) {
+    function klg(k1, k2) {
         return {
             key:  k1 + (k2 == null ? "" : " " + k2),
             name: self.flang(k1) + (k2 == null ? "" : " " + self.flang(k2))
         };
-    };
+    }
 
     self.readonly = false;
 
@@ -729,7 +729,7 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
 };
 
 
-var groupByUser = function(data, acts) {
+function groupByUser(data, acts) {
     let u = {};
     let jusOrder = acts.some(e => e.jorder);
     data.forEach(d => {
@@ -742,7 +742,7 @@ var groupByUser = function(data, acts) {
         u[d.uid].just.push(a && a.justified);
     });
     return u;
-};
+}
 
 window.computePosFreqTable = function (data, actors) {
     if (data == null || actors == null || data.length == 0 || actors.length == 0) {
@@ -761,7 +761,7 @@ window.computePosFreqTable = function (data, actors) {
 };
 
 
-var lehmerCode  = function(arr, acts) {
+function lehmerCode(arr, acts) {
     let p = acts.map(e => e.id);
     let perm = arr.map(e => e);
 
@@ -789,10 +789,10 @@ var lehmerCode  = function(arr, acts) {
     }
 
     return w;
-};
+}
 
 
-var lehmerNum = function(code) {
+function lehmerNum(code) {
     let n = 0;
     for (let i = 0; i < code.length; i++) {
         let v = code[code.length - i - 1];
@@ -800,10 +800,10 @@ var lehmerNum = function(code) {
         n += v;
     }
     return n;
-};
+}
 
 
-var simpleNum = function(code) {
+function simpleNum(code) {
     let n = 0;
     for (let i = 0; i < code.length; i++) {
         let v = code[code.length - i - 1];
@@ -811,7 +811,7 @@ var simpleNum = function(code) {
         n += v;
     }
     return n;
-};
+}
 
 
 window.computeIndTable = function (data, actors) {
@@ -877,8 +877,10 @@ window.buildDifTable = function(data, users, dfs, gbu) {
     }
 
     let tres = [];
-    let avg = (arr) => arr.length > 0 ? arr.reduce((v, e) => v + e, 0) / arr.length : 0;
-    let sdf = (arr) => {
+    function avg (arr)  {
+        return arr.length > 0 ? arr.reduce((v, e) => v + e, 0) / arr.length : 0;
+    }
+    function sdf  (arr) {
         if (arr.length <= 1)
             return 0;
         let av = avg(arr);
@@ -887,7 +889,7 @@ window.buildDifTable = function(data, users, dfs, gbu) {
             sd += (a - av) * (a - av);
         });
         return Math.sqrt(sd / (arr.length - 1)) / av;
-    };
+    }
     Object.keys(tmids).forEach(t => {
         let r = res.filter(e => e.tmid == t);
         let row = {

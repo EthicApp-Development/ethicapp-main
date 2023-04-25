@@ -114,7 +114,7 @@ app.controller("DifferentialController", [
             });
         };
 
-        let updateChat = (count) => {
+        function updateChat (count) {
             $http.post("get-chat-msgs").success((data) => {
                 self.chatMsgs = {};
                 self.dfs.forEach(e => {
@@ -131,7 +131,7 @@ app.controller("DifferentialController", [
                     self.chatMsgs[msg.did].push(msg);
                 });
             });
-        };
+        }
 
         self.getMe = () => {
             $http.post("get-my-name").success((data) => {
@@ -270,7 +270,7 @@ app.controller("DifferentialController", [
             self.dfs[self.selectedDF].dirty = true;
         };
 
-        let notify = (title, message) => {
+        function notify (title, message)  {
             $uibModal.open({
                 template: `
                 <div>
@@ -283,7 +283,7 @@ app.controller("DifferentialController", [
                 </div>
                 `
             });
-        };
+        }
 
         self.openComment = (com) => {
             notify("Comentario", com);
@@ -351,7 +351,7 @@ window.DIC = null;
 window.warnDIC = {};
 
 app.filter("lang", function(){
-    var filt = function(label) {
+    function filt(label) {
         if(window.DIC == null)
             return;
         if(window.DIC[label])
@@ -361,7 +361,7 @@ app.filter("lang", function(){
             window.warnDIC[label] = true;
         }
         return label;
-    };
+    }
 
     filt.$stateful = true;
     return filt;

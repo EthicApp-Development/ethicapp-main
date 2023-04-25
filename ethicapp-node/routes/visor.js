@@ -8,15 +8,26 @@ let socket = require("../modules/socket.config");
 
 let sesStatusCache = {};
 
+function doRedirect (status, res, call){
+    console.log(status);
+    switch(call) {
+    case "to-visor":
+        if(status <= 6) res.redirect("visor");
+        else res.redirect("rubrica");
+        break;
+    case "to-pauta":
+        res.redirect("pauta");
+        break;
+    case "to-rubrica":
+        res.redirect("rubrica");
+        break;
+    }
+}
+
 
 router.get("/to-visor", (req, res) => {
     if (req.session.uid && !isNaN(req.query.sesid)) {
         req.session.ses = req.query.sesid;
-        let doRedirect = (status) => {
-            console.log(status);
-            if(status <= 6) res.redirect("visor");
-            else res.redirect("rubrica");
-        };
         if(sesStatusCache[req.query.sesid] == null) {
             rpg.singleSQL({
                 dbcon: pass.dbcon,
@@ -27,12 +38,12 @@ router.get("/to-visor", (req, res) => {
                 `,
                 onEnd: (req, res, result) => {
                     sesStatusCache[req.query.sesid] = result.status;
-                    doRedirect(result.status);
+                    doRedirect(result.status, res, "to-visor");
                 }
             })(req, res);
         }
         else {
-            doRedirect(sesStatusCache[req.query.sesid]);
+            doRedirect(sesStatusCache[req.query.sesid], res, "to-visor");
         }
     }
     else
@@ -43,10 +54,6 @@ router.get("/to-visor", (req, res) => {
 router.get("/to-pauta", (req, res) => {
     if (req.session.uid && !isNaN(req.query.sesid) && req.session.role == "P") {
         req.session.ses = req.query.sesid;
-        let doRedirect = (status) => {
-            console.log(status);
-            res.redirect("pauta");
-        };
         if(sesStatusCache[req.query.sesid] == null) {
             rpg.singleSQL({
                 dbcon: pass.dbcon,
@@ -57,12 +64,12 @@ router.get("/to-pauta", (req, res) => {
                 `,
                 onEnd: (req, res, result) => {
                     sesStatusCache[req.query.sesid] = result.status;
-                    doRedirect(result.status);
+                    doRedirect(result.status, res, "to-pauta");
                 }
             })(req, res);
         }
         else {
-            doRedirect(sesStatusCache[req.query.sesid]);
+            doRedirect(sesStatusCache[req.query.sesid], res, "to-pauta");
         }
     }
     else
@@ -73,10 +80,6 @@ router.get("/to-pauta", (req, res) => {
 router.get("/to-rubrica", (req, res) => {
     if (req.session.uid && !isNaN(req.query.sesid) && req.session.role == "P") {
         req.session.ses = req.query.sesid;
-        let doRedirect = (status) => {
-            console.log(status);
-            res.redirect("rubrica");
-        };
         if(sesStatusCache[req.query.sesid] == null) {
             rpg.singleSQL({
                 dbcon: pass.dbcon,
@@ -87,12 +90,12 @@ router.get("/to-rubrica", (req, res) => {
                 `,
                 onEnd: (req, res, result) => {
                     sesStatusCache[req.query.sesid] = result.status;
-                    doRedirect(result.status);
+                    doRedirect(result.status, res, "to-rubrica");
                 }
             })(req, res);
         }
         else {
-            doRedirect(sesStatusCache[req.query.sesid]);
+            doRedirect(sesStatusCache[req.query.sesid], res, "to-rubrica");
         }
     }
     else

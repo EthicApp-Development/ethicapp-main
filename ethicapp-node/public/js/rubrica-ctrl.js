@@ -268,7 +268,7 @@ app.controller("RubricaController", [
             });
         };
 
-        let notify = (title, message) => {
+        function notify (title, message) {
             $uibModal.open({
                 template: `
                 <div>
@@ -283,7 +283,7 @@ app.controller("RubricaController", [
                 </div>
                 `
             });
-        };
+        }
 
         self.init();
 

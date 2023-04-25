@@ -5,7 +5,7 @@
 var pg = require("pg");
 var DB = null;
 
-var smartArrayConvert  = function(sqlParams, ses, data, calc) {
+function smartArrayConvert(sqlParams, ses, data, calc) {
     var arr = [];
     for (let i = 0; i < sqlParams.length; i++) {
         var p = sqlParams[i];
@@ -20,10 +20,10 @@ var smartArrayConvert  = function(sqlParams, ses, data, calc) {
             arr.push(data[p.name]);
     }
     return arr;
-};
+}
 
 
-var getDBInstance = function(dbcon) {
+function getDBInstance(dbcon) {
     if(DB == null) {
         DB = new pg.Client(dbcon);
         DB.connect();
@@ -34,7 +34,7 @@ var getDBInstance = function(dbcon) {
         return DB;
     }
     return DB;
-};
+}
 
 
 /**

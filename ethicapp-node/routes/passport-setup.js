@@ -7,7 +7,7 @@ const GoogleStrategy = require( "passport-google-oauth2" ).Strategy;
 var DB = null;
 
 
-var getDBInstance = function(dbcon) {
+function getDBInstance(dbcon) {
     if(DB == null) {
         DB = new pg.Client(dbcon);
         DB.connect();
@@ -18,17 +18,17 @@ var getDBInstance = function(dbcon) {
         return DB;
     }
     return DB;
-};
+}
 
 
-var smartArrayConvert = function(sqlParams) {
+function smartArrayConvert(sqlParams) {
     var arr = [];
     for (var i = 0; i < sqlParams.length; i++) {
         var p = sqlParams[i];
         arr.push(p);
     }
     return arr;
-};
+}
 
 
 passport.use(

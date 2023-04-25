@@ -116,7 +116,7 @@ app.controller("RoleController", [
             });
         };
 
-        let updateChat = () => {
+        function updateChat () {
             $http.post("get-chat-stage", {
                 stageid: self.currentStageId
             }).success((data) => {
@@ -129,7 +129,7 @@ app.controller("RoleController", [
                 });
                 console.log(self.chatMsgs);
             });
-        };
+        }
 
         self.getMe = () => {
             $http.post("get-my-name").success((data) => {
@@ -474,7 +474,7 @@ app.controller("RoleController", [
             return $sce.trustAsResourceUrl(self.documents[self.selectedDocument].path);
         };
 
-        let notify = (title, message) => {
+        function notify (title, message) {
             $uibModal.open({
                 template: `
                 <div>
@@ -487,7 +487,7 @@ app.controller("RoleController", [
                 </div>
                 `
             });
-        };
+        }
 
         self.openComment = (com) => {
             notify("Comentario", com);
@@ -613,7 +613,7 @@ window.DIC = null;
 window.warnDIC = {};
 
 app.filter("lang", function(){
-    var filt = function(label){
+    function filt (label){
         if(window.DIC == null)
             return;
         if(window.DIC[label])
@@ -623,7 +623,7 @@ app.filter("lang", function(){
             window.warnDIC[label] = true;
         }
         return label;
-    };
+    }
 
     filt.$stateful = true;
     return filt;

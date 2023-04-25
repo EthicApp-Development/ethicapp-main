@@ -130,7 +130,7 @@ router.get("/google/callback",
 );
 
 
-var getDBInstance = function(dbcon) {
+function getDBInstance(dbcon) {
     if (DB == null) {
         DB = new pg.Client(dbcon);
         DB.connect();
@@ -141,17 +141,16 @@ var getDBInstance = function(dbcon) {
         return DB;
     }
     return DB;
-};
+}
 
-
-var smartArrayConvert = function(sqlParams) {
+function smartArrayConvert(sqlParams) {
     var arr = [];
     for (var i = 0; i < sqlParams.length; i++) {
         var p = sqlParams[i];
         arr.push(p);
     }
     return arr;
-};
+}
 
 
 router.post("/register", (req, res) => {
@@ -280,7 +279,7 @@ router.post("/register_institucion", (req, res) => {
                                     region:          "us-east-1",
                                 };
                                 var AWS_SES = new AWS.SES(SES_CONFIG);
-                                var mail = async function() {
+                                async function mail() {
                                     var params ={
                                         Source:      "no-reply@iccuandes.org",
                                         Destination: {
@@ -372,7 +371,7 @@ router.post("/register_institucion", (req, res) => {
                                             .then(function() {})
                                             .catch(function() {});
                                     }
-                                };
+                                }
                                 mail();
                                 res.redirect("login?rc=1");
                             });
@@ -456,7 +455,7 @@ router.post("/resetpassword", (req, res) => {
         region:          "us-east-1",
     };
     var AWS_SES = new AWS.SES(SES_CONFIG);
-    var mail = async function() {
+    async function mail() {
         var params = {
             Source:      "no-reply@iccuandes.org",
             Destination: {
@@ -596,7 +595,7 @@ router.post("/resetpassword", (req, res) => {
                 })
                 .catch(function() {});
         }
-    };
+    }
     mail();
 });
 
@@ -745,7 +744,7 @@ router.post("/create-multicounts",(req,res)=> {
                                 region:          "us-east-1",
                             };
                             var AWS_SES = new AWS.SES(SES_CONFIG);
-                            var mail = async function() {
+                            async function mail() {
                                 var params ={
                                     Source:      "no-reply@iccuandes.org",
                                     Destination: {
@@ -841,7 +840,7 @@ router.post("/create-multicounts",(req,res)=> {
                                 AWS_SES.sendEmail(params).promise()
                                     .then(function() {})
                                     .catch(function() {});
-                            };
+                            }
                             mail();
                         });
                         qry.on("error", function(err){
@@ -1292,7 +1291,7 @@ router.post("/accept_institution", (req, res) => {
                                                         region:          "us-east-1",
                                                     };
                                                     var AWS_SES = new AWS.SES(SES_CONFIG);
-                                                    var mail = async function() {
+                                                    async function mail() {
                                                         var params = {
                                                             Source:      "no-reply@iccuandes.org",
                                                             Destination: {
@@ -1375,7 +1374,7 @@ router.post("/accept_institution", (req, res) => {
                                                         AWS_SES.sendEmail(params).promise()
                                                             .then(function() {})
                                                             .catch(function() {});
-                                                    };
+                                                    }
                                                     mail();
                                                 });
                                             });
@@ -1434,7 +1433,7 @@ router.post("/reject_institution", (req, res) => {
                 region:          "us-east-1",
             };
             var AWS_SES = new AWS.SES(SES_CONFIG);
-            var mail = async function() {
+            async function mail() {
                 var params ={
                     Source:      "no-reply@iccuandes.org",
                     Destination: {
@@ -1493,7 +1492,7 @@ router.post("/reject_institution", (req, res) => {
                 AWS_SES.sendEmail(params).promise()
                     .then(function() {})
                     .catch(function() {});
-            };
+            }
             mail();
             res.redirect("home");
         });
