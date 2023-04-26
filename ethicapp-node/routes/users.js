@@ -11,14 +11,13 @@ const passport = require("passport");
 require("./passport-setup");
 var AWS = require("aws-sdk");
 var pg = require("pg");
-const app = require("../app");
-
 var DB = null;
+require("../app");
 router.use(passport.initialize());
 router.use(passport.session());
 
 
-let mailserv = mailer.createTransport({
+mailer.createTransport({
     sendmail: true,
     newline:  "unix"
 });
@@ -119,19 +118,19 @@ router.get("/google/callback",
         WHERE mail = '${req.user.email}'
         LIMIT 1
         `;
-        var qry = db.query(sql, (err, res) => {
+        db.query(sql, (err, res) => {
             if (res.rows[0] != null) {
                 req.session.uid = res.rows[0].id;
                 req.session.role = "A";
                 req.session.ses = null;
             }
         })
-            .then(t => res.redirect("/seslist"));
+            .then(() => res.redirect("/seslist"));
     }
 );
 
 
-var getDBInstance = function(dbcon) {
+function getDBInstance(dbcon) {
     if (DB == null) {
         DB = new pg.Client(dbcon);
         DB.connect();
@@ -142,24 +141,24 @@ var getDBInstance = function(dbcon) {
         return DB;
     }
     return DB;
-};
+}
 
-
-var smartArrayConvert = function(sqlParams) {
+function smartArrayConvert(sqlParams) {
     var arr = [];
     for (var i = 0; i < sqlParams.length; i++) {
         var p = sqlParams[i];
         arr.push(p);
     }
     return arr;
-};
+}
 
 
 router.post("/register", (req, res) => {
     const response_key = req.body["g-recaptcha-response"];
     const secret_key = pass.Captcha_Secret;
     fetch(
-        `https://www.google.com/recaptcha/api/siteverify?secret=${secret_key}&response=${response_key}`
+        "https://www.google.com/recaptcha/api/siteverify" +
+        `secret=${secret_key}&response=${response_key}`
     )
         .then(response => response.json())
         .then(data => {
@@ -179,7 +178,7 @@ router.post("/register", (req, res) => {
                     qry.on("end", function () {
                         res.redirect("login?rc=1");
                     });
-                    qry.on("error", function (err) {
+                    qry.on("error", function () {
                         res.end('{"status":"err"}');
                     });
                 } else {
@@ -202,7 +201,8 @@ router.post("/register_institucion", (req, res) => {
     var user_mail;
     var country;
     fetch(
-        `https://www.google.com/recaptcha/api/siteverify?secret=${secret_key}&response=${response_key}`
+        "https://www.google.com/recaptcha/api/siteverify?" +
+        `secret=${secret_key}&response=${response_key}`
     )
         .then(response => response.json())
         .then(data => {
@@ -247,7 +247,7 @@ router.post("/register_institucion", (req, res) => {
                                 SELECT * FROM temporary_users
                                 WHERE mail = '${req.body.email}' LIMIT 1
                                 `;
-                                var qry2 = db.query(sql2, (err,rest) => {
+                                db.query(sql2, (err,rest) => {
                                     if (rest.rows[0] != null) {
                                         var sql3 = `
                                         INSERT INTO temporary_institution(
@@ -279,7 +279,7 @@ router.post("/register_institucion", (req, res) => {
                                     region:          "us-east-1",
                                 };
                                 var AWS_SES = new AWS.SES(SES_CONFIG);
-                                var mail = async function() {
+                                async function mail() {
                                     var params ={
                                         Source:      "no-reply@iccuandes.org",
                                         Destination: {
@@ -362,16 +362,16 @@ router.post("/register_institucion", (req, res) => {
                                     };
                                     if (country == "Chile") { // ver como decidir en que idioma se manda el mail
                                         AWS_SES.sendEmail(params).promise()
-                                            .then(function(data) {})
-                                            .catch(function(err) {});
+                                            .then(function() {})
+                                            .catch(function() {});
                         
                                     }
                                     else {
                                         AWS_SES.sendEmail(params2).promise()
-                                            .then(function(data) {})
-                                            .catch(function(err) {});
+                                            .then(function() {})
+                                            .catch(function() {});
                                     }
-                                };
+                                }
                                 mail();
                                 res.redirect("login?rc=1");
                             });
@@ -455,7 +455,7 @@ router.post("/resetpassword", (req, res) => {
         region:          "us-east-1",
     };
     var AWS_SES = new AWS.SES(SES_CONFIG);
-    var mail = async function() {
+    async function mail() {
         var params = {
             Source:      "no-reply@iccuandes.org",
             Destination: {
@@ -583,19 +583,19 @@ router.post("/resetpassword", (req, res) => {
         };
         if (req.body.lenguaje == "Español") {
             AWS_SES.sendEmail(params).promise()
-                .then(function(data) {
+                .then(function() {
                     res.redirect("login?rc=3");
                 })
-                .catch(function(err) {});
+                .catch(function() {});
         }
         else {
             AWS_SES.sendEmail(params2).promise()
-                .then(function(data) {
+                .then(function() {
                     res.redirect("login?rc=3");
                 })
-                .catch(function(err) {});
+                .catch(function() {});
         }
-    };
+    }
     mail();
 });
 
@@ -697,7 +697,7 @@ router.post("/changepassword", (req, res) => {
         qry.on("end", function () {
             res.redirect("login?rc=4");
         });
-        qry.on("error", function (err) {
+        qry.on("error", function () {
             res.end('{"status":"err"}');
         });
     }
@@ -715,7 +715,7 @@ router.post("/create-multicounts",(req,res)=> {
             WHERE mail = '${account_data[0]}'
             LIMIT 1
             `;
-            var qry = db.query(sql, (err,resu) => {
+            db.query(sql, (err,resu) => {
                 if (resu.rowCount == 0) {
                     if (account_data.length > 1) {
                         var sql = `
@@ -744,7 +744,7 @@ router.post("/create-multicounts",(req,res)=> {
                                 region:          "us-east-1",
                             };
                             var AWS_SES = new AWS.SES(SES_CONFIG);
-                            var mail = async function() {
+                            async function mail() {
                                 var params ={
                                     Source:      "no-reply@iccuandes.org",
                                     Destination: {
@@ -838,9 +838,9 @@ router.post("/create-multicounts",(req,res)=> {
                                     } 
                                 };
                                 AWS_SES.sendEmail(params).promise()
-                                    .then(function(data) {})
-                                    .catch(function(err) {});
-                            };
+                                    .then(function() {})
+                                    .catch(function() {});
+                            }
                             mail();
                         });
                         qry.on("error", function(err){
@@ -856,7 +856,7 @@ router.post("/create-multicounts",(req,res)=> {
 });
 
 
-router.post("/activate_user", (req, res) => {
+router.post("/activate_user", (req) => {
     var db = getDBInstance(pass.dbcon);
     var sql = `
     SELECT *
@@ -883,8 +883,7 @@ router.post("/activate_user", (req, res) => {
                 FROM temporary_users
                 WHERE token = '${req.body.token}'
                 `;
-                var qry;
-                qry = db.query(sql,(err,rest) =>{});
+                db.query(sql,() =>{});
             });
         }
     });
@@ -899,29 +898,26 @@ router.post("/deleteacc", (req, res) => {
     SET disabled = true
     WHERE id ='${req.session.uid}'
     `;
-    var qry;
-    qry = db.query(sql, (err, res) => {});
+    var newmail;
+    var sql2;
+    db.query(sql, () => {});
     try {
-        var newmail;
         newmail = Date.now().toString() + req.session.passport.user.email;
-        var sql2 = `
+        sql2 = `
         UPDATE users
         SET mail = '${newmail}'
         WHERE id = '${req.session.uid}'
         `;
-        var qry2;
-        qry2 = db.query(sql2, (err, res) => {});
+        db.query(sql2, () => {});
     }
     catch {
-        var newmail;
         newmail = Date.now().toString() + req.body.mail;
-        var sql2 = `
+        sql2 = `
         UPDATE users
         SET mail = '${newmail}'
         WHERE id = '${req.session.uid}'
         `;
-        var qry2;
-        qry2 = db.query(sql2, (err, res) => {});
+        db.query(sql2, () => {});
     }
     finally {
         res.redirect("login");
@@ -1022,7 +1018,7 @@ router.post("/getdomains", (req, res) => {
 });
 
 
-router.post("/make_prof", (req, res) => {
+router.post("/make_prof", (req) => {
     var db = getDBInstance(pass.dbcon);
     var sql = `
     UPDATE users
@@ -1030,17 +1026,12 @@ router.post("/make_prof", (req, res) => {
     WHERE mail = '${req.body.mail}'
     `;
     var qry;
-    var result;
-    qry = db.query(sql,(err,rest) =>{
-        if(rest != null){
-            result = rest;
-        }
-    });
+    qry = db.query(sql,() =>{});
     qry.on("end",function(){});
 });
 
 
-router.post("/make_alum", (req, res) => {
+router.post("/make_alum", (req) => {
     var db = getDBInstance(pass.dbcon);
     var sql = `
     UPDATE users
@@ -1048,12 +1039,7 @@ router.post("/make_alum", (req, res) => {
     WHERE mail = '${req.body.mail}'
     `;
     var qry;
-    var result;
-    qry = db.query(sql,(err,rest) =>{
-        if(rest != null){
-            result = rest;
-        }
-    });
+    qry = db.query(sql,() =>{});
     qry.on("end",function(){});
 });
 
@@ -1218,10 +1204,9 @@ router.post("/accept_institution", (req, res) => {
             WHERE id = '${req.body.userid}'
             LIMIT 1
             `;
-            var qry;
             var result2;
 
-            qry = db.query(sql, (err,resu) => {
+            db.query(sql, (err,resu) => {
                 if (rest != null) {
                     result2 = resu.rows[0];
                     var sql = `
@@ -1242,11 +1227,9 @@ router.post("/accept_institution", (req, res) => {
                         WHERE mail = '${result2.mail}'
                         LIMIT 1
                         `;
-                        var qry;
                         var result3;
                         user_mail = result2.mail;
-
-                        qry = db.query(sql,(err,resul) =>{
+                        db.query(sql,(err,resul) =>{
                             result3 = resul.rows[0];
                             var sql = `
                             INSERT INTO institution(
@@ -1269,10 +1252,7 @@ router.post("/accept_institution", (req, res) => {
                                 WHERE institution_name = '${result.institution_name}'
                                 LIMIT 1
                                 `;
-                                var qry;
-                                var result5;
-
-                                qry = db.query(sql,(err,res_inst) =>{
+                                var result5;db.query(sql,(err,res_inst) =>{
                                     if(res_inst != null){
                                         result5 = res_inst.rows[0];
                                         var domains = result.mail_domains.split(",");
@@ -1294,12 +1274,7 @@ router.post("/accept_institution", (req, res) => {
                                             WHERE id = '${req.body.institutionid}'
                                             `;
                                             var qry;
-                                            var result4;
-                                            qry = db.query(sql,(err,resto) =>{
-                                                if(rest != null){
-                                                    result4 = resto;
-                                                }
-                                            });
+                                            qry = db.query(sql,() =>{});
 
                                             qry.on("end",function(){
                                                 var sql = `
@@ -1308,12 +1283,7 @@ router.post("/accept_institution", (req, res) => {
                                                 WHERE id = '${req.body.userid}'
                                                 `;
                                                 var qry;
-                                                var result5;
-                                                qry = db.query(sql,(err,resta) =>{
-                                                    if(rest != null){
-                                                        result5 = resta;
-                                                    }
-                                                });
+                                                qry = db.query(sql,() =>{});
                                                 qry.on("end", function() {
                                                     var SES_CONFIG = {
                                                         accessKeyId:     pass.accessKeyId,
@@ -1321,7 +1291,7 @@ router.post("/accept_institution", (req, res) => {
                                                         region:          "us-east-1",
                                                     };
                                                     var AWS_SES = new AWS.SES(SES_CONFIG);
-                                                    var mail = async function() {
+                                                    async function mail() {
                                                         var params = {
                                                             Source:      "no-reply@iccuandes.org",
                                                             Destination: {
@@ -1330,7 +1300,8 @@ router.post("/accept_institution", (req, res) => {
                                                                 ]},
                                                             Message: {
                                                                 "Subject": {
-                                                                    "Data": "Resolucion de cuenta Institucional"
+                                                                    "Data": 
+                                                                "Resolucion de cuenta Institucional"
                                                                 },
                                                                 "Body": {
                                                                     "Text": {
@@ -1401,9 +1372,9 @@ router.post("/accept_institution", (req, res) => {
                                                             } 
                                                         };
                                                         AWS_SES.sendEmail(params).promise()
-                                                            .then(function(data) {})
-                                                            .catch(function(err) {});
-                                                    };
+                                                            .then(function() {})
+                                                            .catch(function() {});
+                                                    }
                                                     mail();
                                                 });
                                             });
@@ -1431,13 +1402,8 @@ router.post("/reject_institution", (req, res) => {
     WHERE id = '${req.body.institutionid}'
     `;
     var qry;
-    var result;
     var user_mail;
-    qry = db.query(sql, (err,rest) => {
-        if (rest != null) {
-            result = rest;
-        }
-    });
+    qry = db.query(sql, () => {});
     qry.on("end", function() {
         var sql = `
         SELECT *
@@ -1454,13 +1420,12 @@ router.post("/reject_institution", (req, res) => {
                 user_mail = resu.rows[0].mail;
             }
         });
-        var sql = `
+        sql = `
         DELETE
         FROM temporary_users
         WHERE id = '${req.body.userid}'
         `;
-        var qry;
-        qry = db.query(sql, (err, rest) =>{});
+        qry = db.query(sql, () =>{});
         qry.on("end",function(){
             var SES_CONFIG = {
                 accessKeyId:     pass.accessKeyId,
@@ -1468,7 +1433,7 @@ router.post("/reject_institution", (req, res) => {
                 region:          "us-east-1",
             };
             var AWS_SES = new AWS.SES(SES_CONFIG);
-            var mail = async function() {
+            async function mail() {
                 var params ={
                     Source:      "no-reply@iccuandes.org",
                     Destination: {
@@ -1525,9 +1490,9 @@ router.post("/reject_institution", (req, res) => {
                     } 
                 };
                 AWS_SES.sendEmail(params).promise()
-                    .then(function(data) {})
-                    .catch(function(err) {});
-            };
+                    .then(function() {})
+                    .catch(function() {});
+            }
             mail();
             res.redirect("home");
         });

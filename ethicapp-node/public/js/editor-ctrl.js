@@ -96,7 +96,7 @@ app.controller("EditorController", [
         self.finishState = () => {
             if(self.iteration == 0){
                 let postdata = {status: self.iteration + 2};
-                $http({url: "record-finish", method: "post", data: postdata}).success((data) => {
+                $http({url: "record-finish", method: "post", data: postdata}).success(() => {
                     self.hasFinished = true;
                     self.finished = true;
                     console.log("FINISH");
@@ -115,12 +115,13 @@ app.controller("EditorController", [
                 return;
             }
             let confirm = window.confirm(
-                "¿Está seguro que desea terminar la actividad?\nEsto implica no volver a poder editar sus respuestas"
+                "¿Está seguro que desea terminar la actividad?\n" + 
+                "Esto implica no volver a poder editar sus respuestas"
             );
             if(confirm) {
                 self.setSelOrder();
                 let postdata = {status: self.iteration + 2};
-                $http({url: "record-finish", method: "post", data: postdata}).success((data) => {
+                $http({url: "record-finish", method: "post", data: postdata}).success(() => {
                     self.hasFinished = true;
                     self.finished = true;
                     console.log("FINISH");
@@ -211,7 +212,7 @@ app.controller("EditorController", [
             }
         };
 
-        self.unhighlightSerial = (serial, index, applier) => {
+        self.unhighlightSerial = () => {
             console.log("TODO");
         };
 
@@ -326,7 +327,7 @@ app.controller("EditorController", [
         };
 
         self.updateSignal = () => {
-            $http({url: "update-my-team", method: "post"}).success((data) => {
+            $http({url: "update-my-team", method: "post"}).success(() => {
                 console.log("Team updated");
             });
         };
@@ -369,7 +370,7 @@ app.controller("EditorController", [
         };
 
         self.takeControl = () => {
-            $http({url: "take-team-control", method: "post"}).success((data) => {
+            $http({url: "take-team-control", method: "post"}).success(() => {
                 console.log("Control given");
                 self.updateSignal();
             });
@@ -415,24 +416,24 @@ app.controller("EditorController", [
             console.log(self.ansIter1);
         };
 
-        let arrayIndexOfId = (arr, id) => {
+        function arrayIndexOfId (arr, id)  {
             return arr.reduce((prev, cur, i) => (cur.id == id) ? i : prev, -1);
-        };
+        }
 
-        let loadPdf = (pdfData, i) => {
+        function loadPdf (pdfData, i)  {
             PDFJS.disableWorker = true;
             let pdf = PDFJS.getDocument(pdfData);
             pdf.then((pdf) => renderPdf(pdf, i));
-        };
+        }
 
-        let renderPdf = (pdf, idx) => {
+        function renderPdf (pdf, idx) {
             for (let i = 1; i <= pdf.numPages; i++) {
-                let p = pdf.getPage(i).then((p) => renderPage(p, idx));
+                pdf.getPage(i).then((p) => renderPage(p, idx));
                 self.numPages += 1;
             }
-        };
+        }
 
-        let renderPage = (page, i) => {
+        function renderPage (page, i) {
             let scale = 1.3;
             let viewport = page.getViewport(scale);
             let $canvas = $("<canvas></canvas>");
@@ -446,7 +447,7 @@ app.controller("EditorController", [
             $pdfContainer.css("height", canvas.height + "px").css("width", canvas.width + "px");
             $pdfContainer.append($canvas);
 
-            let canvasOffset = $canvas.offset();
+            $canvas.offset();
             let $textLayerDiv = jQuery("<div></div>")
                 .addClass("textLayer")
                 .css("height", viewport.height + "px")
@@ -476,7 +477,7 @@ app.controller("EditorController", [
                     }
                 });
             });
-        };
+        }
 
 
         self.toggleUseIdea = (ideaId) => {
@@ -508,7 +509,7 @@ app.controller("EditorController", [
                                     url:    "send-report-idea", method: "post", data:   {
                                         repid: self.shared.idReport, iid: iid
                                     }
-                                }).success((data) => {
+                                }).success(() => {
                                     console.log("Report idea sent");
                                 });
                             }

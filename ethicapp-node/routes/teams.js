@@ -448,7 +448,7 @@ router.post("/send-team-progress", rpg.execSQL({
     sesReqData:  ["ses","uid"],
     postReqData: ["tmid","progress"],
     sqlParams:   [rpg.param("post","progress"),rpg.param("post","tmid")],
-    onEnd:       (req,res,ans) => {
+    onEnd:       (req) => {
         socket.teamProgress(req.session.ses, req.body.tmid);
     }
 }));
