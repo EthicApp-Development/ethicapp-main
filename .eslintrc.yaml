@@ -18,7 +18,13 @@ parserOptions:
 plugins:
   - angular
 globals:
-  angular: true
+  # Defining globals for linter (otherwise, they will trigger the "no-undef" rule with importing)
+  angular: true # ethicapp-node/public/libs/angular.min.js
+  rangy: true # ethicapp-node/public/libs/rangy-core.min.js
+  PDFJS: true # ethicapp-node/public/libs/pdf.min.js
+  TextLayerBuilder: true # ethicapp-node/public/libs/textlayerbuilder.js
+  UAParser: true # ethicapp-node/public/libs/ua-parser.min.js
+  saveCsv: true # ethicapp-node/public/libs/save-csv.min.js
 rules:
   quotes:
     - error
