@@ -1,5 +1,7 @@
+# --------------------------------------------------------------------------------------------------
 # Draft for production docker-compose runtime. Extends the development docker-compose file
 # (see https://docs.docker.com/compose/extends/).
+# --------------------------------------------------------------------------------------------------
 
 services:
   # ---------------------- NGINX ---------------------- #
@@ -18,6 +20,10 @@ services:
     depends_on:
       - node
 
-  # Disabling exposed port for Node web application.
+  # Ensuring no additional ports are exposed.
+  #* Update: that won't work, see https://github.com/docker/compose/issues/3729
   node:
+    ports: []
+
+  postgres:
     ports: []

@@ -3,7 +3,6 @@
 let express = require("express");
 let session = require("express-session");
 let path = require("path");
-let favicon = require("serve-favicon");
 let logger = require("morgan");
 let cookieParser = require("cookie-parser");
 let FileStore = require("session-file-store")(session);
@@ -21,6 +20,7 @@ let rubrica = require("./routes/rubrica");
 let stages = require("./routes/stages");
 let pass = require("./modules/passwords");
 let middleware = require("./midleware/validate-session");
+require("serve-favicon");
 require("./routes/passport-setup");
 
 let app = express();

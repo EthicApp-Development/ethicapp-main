@@ -114,7 +114,7 @@ app.controller("DifferentialController", [
             });
         };
 
-        let updateChat = (count) => {
+        function updateChat (count) {
             $http.post("get-chat-msgs").success((data) => {
                 self.chatMsgs = {};
                 self.dfs.forEach(e => {
@@ -131,7 +131,7 @@ app.controller("DifferentialController", [
                     self.chatMsgs[msg.did].push(msg);
                 });
             });
-        };
+        }
 
         self.getMe = () => {
             $http.post("get-my-name").success((data) => {
@@ -212,7 +212,7 @@ app.controller("DifferentialController", [
                 did:       df.id,
                 iteration: self.iteration
             };
-            $http.post("send-diff-selection", postdata).success((data) => {
+            $http.post("send-diff-selection", postdata).success(() => {
                 df.dirty = false;
             });
         };
@@ -228,11 +228,12 @@ app.controller("DifferentialController", [
                 }
             }
             let confirm = window.confirm(
-                "¿Está seguro que desea terminar la actividad?\nEsto implica no volver a poder editar sus respuestas"
+                "¿Está seguro que desea terminar la actividad?\n" + 
+                "Esto implica no volver a poder editar sus respuestas"
             );
             if(confirm) {
                 let postdata = {status: self.iteration + 2};
-                $http({url: "record-finish", method: "post", data: postdata}).success((data) => {
+                $http({url: "record-finish", method: "post", data: postdata}).success(() => {
                     self.hasFinished = true;
                     self.finished = true;
                     console.log("FINISH");
@@ -249,7 +250,7 @@ app.controller("DifferentialController", [
                 tmid:      self.tmId,
                 parent_id: self.chatmsgreply
             };
-            $http.post("add-chat-msg", postdata).success(data => {
+            $http.post("add-chat-msg", postdata).success(() => {
                 self.chatmsg = "";
                 self.chatmsgreply = null;
             });
@@ -269,7 +270,7 @@ app.controller("DifferentialController", [
             self.dfs[self.selectedDF].dirty = true;
         };
 
-        let notify = (title, message, closable) => {
+        function notify (title, message)  {
             $uibModal.open({
                 template: `
                 <div>
@@ -282,7 +283,7 @@ app.controller("DifferentialController", [
                 </div>
                 `
             });
-        };
+        }
 
         self.openComment = (com) => {
             notify("Comentario", com);
@@ -350,7 +351,7 @@ window.DIC = null;
 window.warnDIC = {};
 
 app.filter("lang", function(){
-    var filt = function(label) {
+    function filt(label) {
         if(window.DIC == null)
             return;
         if(window.DIC[label])
@@ -360,7 +361,7 @@ app.filter("lang", function(){
             window.warnDIC[label] = true;
         }
         return label;
-    };
+    }
 
     filt.$stateful = true;
     return filt;
@@ -389,17 +390,17 @@ app.filter("linkfy", function() {
     let replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
     let replacePattern3 = /(\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,6})/gim;
 
-    return function(text, target, otherProp) {
+    return function(text) {
         if(text == null) return text;
-        angular.forEach(text.match(replacePattern1), function(url) {
+        angular.forEach(text.match(replacePattern1), function() {
             text = text.replace(replacePattern1, "<a href=\"$1\" target=\"_blank\">$1</a>");
         });
-        angular.forEach(text.match(replacePattern2), function(url) {
+        angular.forEach(text.match(replacePattern2), function() {
             text = text.replace(
                 replacePattern2, "$1<a href=\"http://$2\" target=\"_blank\">$2</a>"
             );
         });
-        angular.forEach(text.match(replacePattern3), function(url) {
+        angular.forEach(text.match(replacePattern3), function() {
             text = text.replace(replacePattern3, "<a href=\"mailto:$1\">$1</a>");
         });
         return text;

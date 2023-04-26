@@ -2,7 +2,7 @@
 
 var BASE_APP = window.location.href.replace("role-playing", "");
 
-var app = angular.module("Role", ["ngSanitize", "ui.bootstrap", 'ui.tree', 'btford.socket-io', "angular-intro", "ui-notification", "luegg.directives"]);
+var app = angular.module("Role", ["ngSanitize", "ui.bootstrap", "ui.tree", "btford.socket-io", "angular-intro", "ui-notification", "luegg.directives"]);
 
 app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
@@ -107,7 +107,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
         });
     };
 
-    var updateChat = function updateChat(count) {
+    function updateChat(count) {
         $http.post("get-chat-stage", {
             stageid: self.currentStageId
         }).success(function (data) {
@@ -121,7 +121,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             });
             console.log(self.chatMsgs);
         });
-    };
+    }
 
     self.getMe = function () {
         $http.post("get-my-name").success(function (data) {
@@ -172,7 +172,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
                 self.myJigsaw = data[0].roleid;
             } else if (self.jroles.length > 0) {
                 $http.post("assign-cyclic-jigsaw-role", {
-                    cycle: self.jroles.length,
+                    cycle:   self.jroles.length,
                     stageid: self.currentStageId
                 }).success(function (data) {
                     self.getAssignedJigsawRole();
@@ -185,7 +185,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     self.loadStageData = function () {
         $http.post("get-stages", {}).success(function (data) {
             self.stages = data;
-            self.selectStage2(self.stages.length - 1)
+            self.selectStage2(self.stages.length - 1);
             self.currentStage = self.stages.find(function (e) {
                 return e.id == self.currentStageId;
             });
@@ -209,7 +209,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
                 });
                 if (self.currentStage.prev_ans != "" && self.currentStage.prev_ans != null) {
                     var p = {
-                        stageid: self.currentStageId,
+                        stageid:    self.currentStageId,
                         prevstages: self.currentStage.prev_ans
                     };
                     $http.post("get-team-actor-selection", p).success(function (data) {
@@ -394,7 +394,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             });
             if (st.prev_ans != "" && st.prev_ans != null) {
                 var p = {
-                    stageid: st.id,
+                    stageid:    st.id,
                     prevstages: st.prev_ans
                 };
                 $http.post("get-team-actor-selection", p).success(function (data) {
@@ -471,7 +471,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             });
             if (st.prev_ans != "" && st.prev_ans != null) {
                 var p = {
-                    stageid: st.id,
+                    stageid:    st.id,
                     prevstages: st.prev_ans
                 };
                 $http.post("get-team-actor-selection", p).success(function (data) {
@@ -507,10 +507,10 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
         }
         self.actors.forEach(function (a, i) {
             var postdata = {
-                orden: i + 1,
+                orden:       i + 1,
                 description: a.comment || "",
-                actorid: a.id,
-                stageid: self.currentStageId
+                actorid:     a.id,
+                stageid:     self.currentStageId
             };
             console.log(postdata);
             $http.post("send-actor-selection", postdata).success(function (data) {
@@ -526,9 +526,9 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
 
     self.sendChatMsg = function () {
         var postdata = {
-            stageid: self.currentStageId,
-            content: self.chatmsg,
-            tmid: self.tmId,
+            stageid:   self.currentStageId,
+            content:   self.chatmsg,
+            tmid:      self.tmId,
             parent_id: self.chatmsgreply
         };
         // console.log(postdata);
@@ -545,7 +545,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
 
     var notify = function notify(title, message, closable) {
         $uibModal.open({
-            template: '<div><div class="modal-header"><h4>' + title + '</h4></div><div class="modal-body"><p>' + message + '</p></div></div>'
+            template: '<div><div class="modal-header"><h4>' + title + '</h4></div><div class="modal-body"><p>' + message + "</p></div></div>"
         });
     };
 
@@ -570,11 +570,11 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
 
     self.openDetails = function (_data) {
         $uibModal.open({
-            templateUrl: "templ/direct-content.html",
-            controller: "DirectContentController",
+            templateUrl:  "templ/direct-content.html",
+            controller:   "DirectContentController",
             controllerAs: "vm",
-            scope: self,
-            resolve: {
+            scope:        self,
+            resolve:      {
                 data: function data() {
                     return _data;
                 }
@@ -589,24 +589,24 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
 
     var introOptions = {
         steps: [{
-            element: '#tabd0',
-            intro: 'En esta pestaña encontrarás el caso a leer'
+            element: "#tabd0",
+            intro:   "En esta pestaña encontrarás el caso a leer"
         }, {
             element: "#tabq0",
-            intro: "En esta pestaña se encuentra la lista de roles que debes ordenar y justificar"
+            intro:   "En esta pestaña se encuentra la lista de roles que debes ordenar y justificar"
         }, {
             element: "#seslistbtn",
-            intro: "Usando este botón puedes volver a la lista de sesiones"
+            intro:   "Usando este botón puedes volver a la lista de sesiones"
         }],
-        showStepNumbers: false,
-        showBullets: false,
+        showStepNumbers:    false,
+        showBullets:        false,
         exitOnOverlayClick: true,
-        exitOnEsc: true,
-        tooltipPosition: "auto",
-        nextLabel: 'Siguiente',
-        prevLabel: 'Anterior',
-        skipLabel: 'Salir',
-        doneLabel: 'Listo'
+        exitOnEsc:          true,
+        tooltipPosition:    "auto",
+        nextLabel:          "Siguiente",
+        prevLabel:          "Anterior",
+        skipLabel:          "Salir",
+        doneLabel:          "Listo"
     };
 
     ngIntroService.setOptions(introOptions);
@@ -649,25 +649,27 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     self.init();
 }]);
 
-app.controller("DirectContentController", ["$scope", "$uibModalInstance", "data", function ($scope, $uibModalInstance, data) {
-    var vm = this;
-    vm.data = data;
-    vm.data.title = "Respuesta recibida";
+app.controller("DirectContentController", [
+    "$scope", "$uibModalInstance", "data", function ($scope, $uibModalInstance, data) {
+        var vm = this;
+        vm.data = data;
+        vm.data.title = "Respuesta recibida";
 
-    setTimeout(function () {
-        console.log(vm);
-        document.getElementById("modal-content").innerHTML = vm.data.content;
-    }, 500);
+        setTimeout(function () {
+            console.log(vm);
+            document.getElementById("modal-content").innerHTML = vm.data.content;
+        }, 500);
 
-    vm.cancel = function () {
-        $uibModalInstance.dismiss('cancel');
-    };
-}]);
+        vm.cancel = function () {
+            $uibModalInstance.dismiss("cancel");
+        };
+    }
+]);
 
 window.DIC = null;
 window.warnDIC = {};
 
-app.filter('lang', function () {
+app.filter("lang", function () {
     filt.$stateful = true;
     return filt;
 
@@ -682,16 +684,16 @@ app.filter('lang', function () {
     }
 });
 
-var indexById = function indexById(arr, id) {
+function indexById(arr, id) {
     return arr.findIndex(function (e) {
         return e.id == id;
     });
-};
+}
 
-app.directive('bindHtmlCompile', ['$compile', function ($compile) {
+app.directive("bindHtmlCompile", ["$compile", function ($compile) {
     return {
-        restrict: 'A',
-        link: function link(scope, element, attrs) {
+        restrict: "A",
+        link:     function link(scope, element, attrs) {
             scope.$watch(function () {
                 return scope.$eval(attrs.bindHtmlCompile);
             }, function (value) {
@@ -706,7 +708,7 @@ app.directive('bindHtmlCompile', ['$compile', function ($compile) {
     };
 }]);
 
-app.filter('linkfy', function () {
+app.filter("linkfy", function () {
     var replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
     var replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
     var replacePattern3 = /(\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,6})/gim;
@@ -717,7 +719,9 @@ app.filter('linkfy', function () {
             text = text.replace(replacePattern1, "<a href=\"$1\" target=\"_blank\">$1</a>");
         });
         angular.forEach(text.match(replacePattern2), function (url) {
-            text = text.replace(replacePattern2, "$1<a href=\"http://$2\" target=\"_blank\">$2</a>");
+            text = text.replace(
+                replacePattern2, "$1<a href=\"http://$2\" target=\"_blank\">$2</a>"
+            );
         });
         angular.forEach(text.match(replacePattern3), function (url) {
             text = text.replace(replacePattern3, "<a href=\"mailto:$1\">$1</a>");

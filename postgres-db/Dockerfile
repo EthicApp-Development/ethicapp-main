@@ -1,7 +1,3 @@
-# --------------------------------------------------------------------------------------------------
-# Temporarily based on blank Ubuntu for easy setup and debugging.
-# --------------------------------------------------------------------------------------------------
-
 ARG UBUNTU_VERSION
 FROM ubuntu:${UBUNTU_VERSION}
 
@@ -9,7 +5,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /tmp
 
-# Installing basic debugging utilities and spanish language pack
+# Installing dependencies, basic debugging utilities (including envsubst) and spanish language pack
 RUN apt-get update --quiet && apt-get install --quiet -y \
         wget \
         man  \
@@ -17,7 +13,8 @@ RUN apt-get update --quiet && apt-get install --quiet -y \
         gnupg \
         ca-certificates \
         language-pack-es \
-        lsb-core
+        lsb-core \
+        gettext-base
 
 ARG POSTGRES_VERSION
 
@@ -36,11 +33,22 @@ host    all         all     ::/0         md5 \n\
 
 RUN adduser --disabled-password --gecos "" healthcheckuser
 
-WORKDIR /code
+WORKDIR /ethicapp-db
+
+COPY init-db.sh .
+COPY create-db.sql .
+COPY schema/ schema/
+COPY seeds/ seeds/
+
+ARG DB_USER_NAME
+ARG DB_USER_PASSWORD
+ARG DB_NAME
+
+RUN chmod +x init-db.sh \
+    && ./init-db.sh
 
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
-
 ENV POSTGRES_VERSION=${POSTGRES_VERSION}
 
-CMD [ "/code/entrypoint.sh" ]
+CMD [ "/ethicapp-db/entrypoint.sh" ]

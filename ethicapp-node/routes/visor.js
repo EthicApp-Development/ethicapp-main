@@ -8,15 +8,26 @@ let socket = require("../modules/socket.config");
 
 let sesStatusCache = {};
 
+function doRedirect (status, res, call){
+    console.log(status);
+    switch(call) {
+    case "to-visor":
+        if(status <= 6) res.redirect("visor");
+        else res.redirect("rubrica");
+        break;
+    case "to-pauta":
+        res.redirect("pauta");
+        break;
+    case "to-rubrica":
+        res.redirect("rubrica");
+        break;
+    }
+}
+
 
 router.get("/to-visor", (req, res) => {
     if (req.session.uid && !isNaN(req.query.sesid)) {
         req.session.ses = req.query.sesid;
-        let doRedirect = (status) => {
-            console.log(status);
-            if(status <= 6) res.redirect("visor");
-            else res.redirect("rubrica");
-        };
         if(sesStatusCache[req.query.sesid] == null) {
             rpg.singleSQL({
                 dbcon: pass.dbcon,
@@ -27,12 +38,12 @@ router.get("/to-visor", (req, res) => {
                 `,
                 onEnd: (req, res, result) => {
                     sesStatusCache[req.query.sesid] = result.status;
-                    doRedirect(result.status);
+                    doRedirect(result.status, res, "to-visor");
                 }
             })(req, res);
         }
         else {
-            doRedirect(sesStatusCache[req.query.sesid]);
+            doRedirect(sesStatusCache[req.query.sesid], res, "to-visor");
         }
     }
     else
@@ -43,10 +54,6 @@ router.get("/to-visor", (req, res) => {
 router.get("/to-pauta", (req, res) => {
     if (req.session.uid && !isNaN(req.query.sesid) && req.session.role == "P") {
         req.session.ses = req.query.sesid;
-        let doRedirect = (status) => {
-            console.log(status);
-            res.redirect("pauta");
-        };
         if(sesStatusCache[req.query.sesid] == null) {
             rpg.singleSQL({
                 dbcon: pass.dbcon,
@@ -57,12 +64,12 @@ router.get("/to-pauta", (req, res) => {
                 `,
                 onEnd: (req, res, result) => {
                     sesStatusCache[req.query.sesid] = result.status;
-                    doRedirect(result.status);
+                    doRedirect(result.status, res, "to-pauta");
                 }
             })(req, res);
         }
         else {
-            doRedirect(sesStatusCache[req.query.sesid]);
+            doRedirect(sesStatusCache[req.query.sesid], res, "to-pauta");
         }
     }
     else
@@ -73,10 +80,6 @@ router.get("/to-pauta", (req, res) => {
 router.get("/to-rubrica", (req, res) => {
     if (req.session.uid && !isNaN(req.query.sesid) && req.session.role == "P") {
         req.session.ses = req.query.sesid;
-        let doRedirect = (status) => {
-            console.log(status);
-            res.redirect("rubrica");
-        };
         if(sesStatusCache[req.query.sesid] == null) {
             rpg.singleSQL({
                 dbcon: pass.dbcon,
@@ -87,12 +90,12 @@ router.get("/to-rubrica", (req, res) => {
                 `,
                 onEnd: (req, res, result) => {
                     sesStatusCache[req.query.sesid] = result.status;
-                    doRedirect(result.status);
+                    doRedirect(result.status, res, "to-rubrica");
                 }
             })(req, res);
         }
         else {
-            doRedirect(sesStatusCache[req.query.sesid]);
+            doRedirect(sesStatusCache[req.query.sesid], res, "to-rubrica");
         }
     }
     else
@@ -584,7 +587,7 @@ router.post("/add-chat-msg", rpg.execSQL({
         rpg.param("ses", "uid"), rpg.param("post", "did"), rpg.param("post","content"),
         rpg.param("post","parent_id")
     ],
-    onEnd: (req,res) => {
+    onEnd: (req) => {
         socket.chatMsg(req.session.ses, req.body.tmid);
     }
 }));
@@ -602,7 +605,7 @@ router.post("/add-chat-msg-stage", rpg.execSQL({
         rpg.param("ses", "uid"), rpg.param("post", "stageid"), rpg.param("post","content"),
         rpg.param("post","parent_id")
     ],
-    onEnd: (req,res) => {
+    onEnd: (req) => {
         socket.chatMsgStage(req.body.stageid, req.body.tmid);
     }
 }));
@@ -893,7 +896,7 @@ router.post("/get-chat-data-csv", rpg.multiSQL({
         AND tu.uid = u.id
     ORDER BY t.id, c.stime
     `,
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.error("Sólo profesor puede ver datos de sesiones.");
             return "SELECT $1, $2";
@@ -932,7 +935,7 @@ router.post("/get-sel-data-csv", rpg.multiSQL({
         AND tu.uid = u.id
     ORDER BY s.iteration, s.stime
     `,
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.error("Sólo profesor puede ver datos de sesiones.");
             return "SELECT $1, $2";
@@ -981,7 +984,7 @@ router.post("/get-sel-data-csv-ethics", rpg.multiSQL({
     WHERE ses.id = $1
     ORDER BY st."number", s.stime
     `,
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.error("Sólo profesor puede ver datos de sesiones.");
             return "SELECT $1, $2";
@@ -1029,7 +1032,7 @@ router.post("/get-chat-data-csv-ethics", rpg.multiSQL({
     WHERE ses.id = $1
     ORDER BY st."number", s.stime
     `,
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.error("Sólo profesor puede ver datos de sesiones.");
             return "SELECT $1, $2";
@@ -1074,7 +1077,7 @@ router.post("/get-sel-data-csv-role", rpg.multiSQL({
     WHERE ses.id = $1
     ORDER BY st."number", s.stime
     `,
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.error("Sólo profesor puede ver datos de sesiones.");
             return "SELECT $1, $2";
@@ -1116,7 +1119,7 @@ router.post("/get-chat-data-csv-role", rpg.multiSQL({
     WHERE ses.id = $1
     ORDER BY st."number", s.stime
     `,
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.error("Sólo profesor puede ver datos de sesiones.");
             return "SELECT $1, $2";
@@ -1166,7 +1169,7 @@ router.post("/get-sel-data-csv-jigsaw", rpg.multiSQL({
     WHERE ses.id = $1
     ORDER BY st."number", s.stime
     `,
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.error("Sólo profesor puede ver datos de sesiones.");
             return "SELECT $1, $2";
@@ -1213,7 +1216,7 @@ router.post("/get-chat-data-csv-jigsaw", rpg.multiSQL({
     WHERE ses.id = $1
     ORDER BY st."number", s.stime
     `,
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.error("Sólo profesor puede ver datos de sesiones.");
             return "select $1, $2";

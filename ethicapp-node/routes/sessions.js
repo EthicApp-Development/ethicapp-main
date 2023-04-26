@@ -5,12 +5,12 @@ let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 let pg = require("pg");
-let middleware = require("../midleware/validate-session");
+require("../midleware/validate-session");
 
 var DB = null;
 
 
-var getDBInstance = function(dbcon) {
+function getDBInstance(dbcon) {
     if (DB == null) {
         DB = new pg.Client(dbcon);
         DB.connect();
@@ -21,7 +21,7 @@ var getDBInstance = function(dbcon) {
         return DB;
     }
     return DB;
-};
+}
 
 
 router.get("/seslist", (req, res) => {
@@ -103,7 +103,7 @@ router.post("/add-session", rpg.execSQL({
         rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("ses", "uid"),
         rpg.param("post","type"), rpg.param("ses", "uid")
     ],
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.warn("Sólo profesor puede crear sesiones");
             console.warn(ses);
@@ -207,17 +207,29 @@ router.post("/check-design", (req, res) => {
                     for(let j=0; j<questions.length; j++){
                         var question = questions[j];
         
-                        question.q_text = (question.q_text === "" || question.q_text === "-->>N/A<<--") ? result = false : result
-                        question.ans_format.l_pole = (question.ans_format.l_pole === "" | question.ans_format.l_pole === "-->>N/A<<--") ? result = false : result
-                        question.ans_format.r_pole = (question.ans_format.r_pole === "" | question.ans_format.l_pole === "-->>N/A<<--") ? result = false : result
+                        question.q_text = (
+                            question.q_text === "" || question.q_text === "-->>N/A<<--"
+                        ) ? result = false : result;
+                        question.ans_format.l_pole = (
+                            question.ans_format.l_pole === "" |
+                            question.ans_format.l_pole === "-->>N/A<<--"
+                        ) ? result = false : result;
+                        question.ans_format.r_pole = (
+                            question.ans_format.r_pole === "" |
+                            question.ans_format.l_pole === "-->>N/A<<--"
+                        ) ? result = false : result;
                     }
                 }
                 else if(res.rows[0].design.type == "ranking"){
-                    phase.q_text = (phase.q_text === "" || phase.q_text === "-->>N/A<<--") ? result = false : result
+                    phase.q_text = (
+                        phase.q_text === "" || phase.q_text === "-->>N/A<<--"
+                    ) ? result = false : result;
                     var roles = phase.roles;
                     for(let j=0; j<roles.length; j++){
                         var role = roles[j];      
-                        role.name = (role.name === "" || role.name === "-->>N/A<<--") ? result = false : result
+                        role.name = (
+                            role.name === "" || role.name === "-->>N/A<<--"
+                        ) ? result = false : result;
 
                     }
                 }
@@ -445,10 +457,10 @@ router.get("/get-user-designs", (req, res) => {
     var result = [];
     qry = db.query(sql,(err,res) =>{
         if(res != null){
-            for (var i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
-            for (var i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
-            for (var i=0; i<result.length;i++) result[i].public= res.rows[i].public; //add id to to design
-            for (var i=0; i<result.length;i++) result[i].locked= res.rows[i].locked; //add id to to design
+            for (let i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
+            for (let i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
+            for (let i=0; i<result.length;i++) result[i].public= res.rows[i].public; //add id to to design
+            for (let i=0; i<result.length;i++) result[i].locked= res.rows[i].locked; //add id to to design
         }
     });
     qry.on("end", function () {
@@ -475,8 +487,8 @@ router.get("/get-public-designs", (req, res) => {
     var result = [];
     qry = db.query(sql,(err,res) =>{
         if(res != null){
-            for (var i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
-            for (var i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
+            for (let i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
+            for (let i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
         }
     });
     qry.on("end", function () {
@@ -670,7 +682,7 @@ router.post("/get-all-users", rpg.multiSQL({
     FROM users AS u
     `,
     sqlParams: [],
-    onStart:   (ses, data, calc) => {
+    onStart:   (ses) => {
         if (ses.role != "S") return "SELECT 1";
     },
 }));
@@ -684,7 +696,7 @@ router.post("/convert-prof", rpg.execSQL({
     `,
     postReqData: ["uid"],
     sqlParams:   [rpg.param("post", "uid")],
-    onStart:     (ses, data, calc) => {
+    onStart:     (ses) => {
         if (ses.role != "S") return "SELECT $1";
     },
 }));
@@ -698,7 +710,7 @@ router.post("/remove-prof", rpg.execSQL({
     `,
     postReqData: ["uid"],
     sqlParams:   [rpg.param("post", "uid")],
-    onStart:     (ses, data, calc) => {
+    onStart:     (ses) => {
         if (ses.role != "S") return "SELECT $1";
     },
 }));
@@ -1350,11 +1362,11 @@ router.post("/enter-session-code", rpg.singleSQL({
 }));
 
 
-let generateCode = (id) => {
+function generateCode(id) {
     let n = id*5 + 255 + ~~(Math.random()*5);
     let s = n.toString(16);
     return "k00000".substring(0, 6 - s.length) + s;
-};
+}
 
 
 module.exports = router;
