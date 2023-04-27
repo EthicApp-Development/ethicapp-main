@@ -5,7 +5,7 @@ let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 let pg = require("pg");
-require("../midleware/validate-session");
+require("../validate-session");
 
 var DB = null;
 

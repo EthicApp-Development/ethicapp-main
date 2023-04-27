@@ -5,7 +5,7 @@
   "scripts": {
     "init-passwords-js": "./dev-ops/create-passwords-js.sh",
     "init-db": "./dev-ops/docker-init-db-volume.sh",
-    "lint-js": "npx eslint './ethicapp-node/**/*.js' ./ethicapp-node/bin/www",
+    "lint-js": "npx eslint './ethicapp-node/**/*.js' ./ethicapp-node/backend/webserver-setup",
     "lint-html": "npx htmlhint './ethicapp-node/public/**/*.html'",
     "lint-css": "npx stylelint './ethicapp-node/public/css/**/*.css'",
     "lint-sql": "sqlfluff lint ./postgres-db/",

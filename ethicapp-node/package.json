@@ -4,7 +4,7 @@
   "version": "0.0.5",
   "private": true,
   "scripts": {
-    "start": "node ./bin/www",
+    "start": "node ./backend/webserver-setup",
     "test": "mocha tests"
   },
   "dependencies": {

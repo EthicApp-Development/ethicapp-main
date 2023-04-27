@@ -21,7 +21,7 @@ npx htmlhint "public/**/*.html"
 echo "[OK] HTMLHint pass"
 
 echo ">>> Running JavaScript linter"
-npx eslint "./**/*.js" "./bin/www" # --fix
+npx eslint "./**/*.js" "./backend/webserver-setup" # --fix
 echo "[OK] ESLint pass"
 
 echo "[OK] Yay! Linters passed with no errors"

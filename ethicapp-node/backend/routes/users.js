@@ -12,7 +12,7 @@ require("./passport-setup");
 var AWS = require("aws-sdk");
 var pg = require("pg");
 var DB = null;
-require("../app");
+require("../../app");
 router.use(passport.initialize());
 router.use(passport.session());
 
