@@ -2,9 +2,9 @@
 
 let express = require("express");
 let router = express.Router();
-let rpg = require("../modules/rest-pg");
-let pass = require("../modules/passwords");
-let middleware = require("../validate-session");
+let rpg = require("../db/rest-pg");
+let pass = require("../config/keys-n-secrets");
+let middleware = require("../middleware/validate-session");
 
 router.post("/get-alum-state-sel", middleware.verifySession, rpg.multiSQL({
     dbcon: pass.dbcon,

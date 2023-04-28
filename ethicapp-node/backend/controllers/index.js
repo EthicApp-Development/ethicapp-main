@@ -1,7 +1,7 @@
 "use strict";
 
 let express = require("express");
-let middleware = require("../validate-session");
+let middleware = require("../middleware/validate-session");
 let router = express.Router();
 
 router.get("/", (req, res) => {

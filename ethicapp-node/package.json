@@ -4,7 +4,7 @@
   "version": "0.0.5",
   "private": true,
   "scripts": {
-    "start": "node ./backend/webserver-setup",
+    "start": "node ./backend/ethicapp",
     "test": "mocha tests"
   },
   "dependencies": {

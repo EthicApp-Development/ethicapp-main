@@ -2,9 +2,9 @@
 
 let express = require("express");
 let router = express.Router();
-let rpg = require("../modules/rest-pg");
-let pass = require("../modules/passwords");
-let socket = require("../modules/socket.config");
+let rpg = require("../db/rest-pg");
+let pass = require("../config/keys-n-secrets");
+let socket = require("../config/socket.config");
 
 
 router.post("/get-stages", rpg.multiSQL({

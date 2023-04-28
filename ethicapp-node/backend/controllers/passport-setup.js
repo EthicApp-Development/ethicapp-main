@@ -1,5 +1,5 @@
 const passport = require("passport");
-let pass = require("../modules/passwords");
+let pass = require("../config/keys-n-secrets");
 var pg = require("pg");
 let crypto = require("crypto");
 

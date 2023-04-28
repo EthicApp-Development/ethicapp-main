@@ -1,4 +1,4 @@
-backend/modules/passwords.js
+backend/modules/keys-n-secrets.js
 
 public/js/**/*.min.js
 public/minjs/**/*.min.js

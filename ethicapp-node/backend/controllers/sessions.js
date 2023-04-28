@@ -2,10 +2,10 @@
 
 let express = require("express");
 let router = express.Router();
-let rpg = require("../modules/rest-pg");
-let pass = require("../modules/passwords");
+let rpg = require("../db/rest-pg");
+let pass = require("../config/keys-n-secrets");
 let pg = require("pg");
-require("../validate-session");
+require("../middleware/validate-session");
 
 var DB = null;
 

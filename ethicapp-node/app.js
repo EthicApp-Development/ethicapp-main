@@ -10,18 +10,18 @@ let busboy = require("express-busboy");
 let sss = require("simple-stats-server");
 let json2xls = require("json2xls");
 
-let index = require("./backend/routes/index");
-let users = require("./backend/routes/users");
-let sessions = require("./backend/routes/sessions");
-let visor = require("./backend/routes/visor");
-let analysis = require("./backend/routes/analysis");
-let teams = require("./backend/routes/teams");
-let rubrica = require("./backend/routes/rubrica");
-let stages = require("./backend/routes/stages");
-let pass = require("./backend/modules/passwords");
-let middleware = require("./backend/validate-session");
+let index = require("./backend/controllers/index");
+let users = require("./backend/controllers/users");
+let sessions = require("./backend/controllers/sessions");
+let visor = require("./backend/controllers/visor");
+let analysis = require("./backend/controllers/analysis");
+let teams = require("./backend/controllers/teams");
+let rubrica = require("./backend/controllers/rubrica");
+let stages = require("./backend/controllers/stages");
+let pass = require("./backend/config/keys-n-secrets");
+let middleware = require("./backend/middleware/validate-session");
 require("serve-favicon");
-require("./backend/routes/passport-setup");
+require("./backend/controllers/passport-setup");
 
 let app = express();
 
