@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es" ng-app="Admin">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>EthicApp</title>
+    <link rel="stylesheet" href="assets/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="assets/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="assets/css/nv.d3.min.css">
+    <link rel="stylesheet" href="assets/css/angular-ui-notification.min.css">
+    <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.9.0-alpha2/katex.min.css">
+    <link rel="stylesheet" href="assets/css/tablesort.min.css">
+    <link rel="stylesheet" href="assets/css/main.css"/>
+    <script src="assets/libs/angular.min.js"></script>
+    <script src="assets/libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
+    <script src="assets/libs/katex.min.js"></script>
+    <script src="assets/libs/angular-bootstrap-multiselect.js"></script>
+    <script src="assets/libs/d3.min.js"></script>
+    <script src="assets/libs/nv.d3.min.js"></script>
+    <script src="assets/libs/angular-nvd3.min.js"></script>
+    <script src="assets/libs/ng-map.min.js"></script>
+    <script type="text/javascript" src="assets/libs/quill.min.js"></script>
+    <script type="text/javascript" src="assets/libs/ng-quill.min.js"></script>
+    <script src="assets/libs/socket.min.js"></script>
+    <script src="assets/libs/angular-timer.min.js"></script>
+    <script src="assets/libs/angular-ui-notification.min.js"></script>
+    <script src="assets/libs/save-csv.min.js"></script>
+    <script src="assets/libs/angular-tablesort.min.js"></script>
+    <script src="assets/js/StagesController.js"></script>
+    <script src="assets/js/admin-ctrl.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="assets/libs/angular-route.js"></script>
+    <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit"
+    async defer></script>
+</head>
+<body ng-controller="no_account">
+
+
+<div class="middle-box">
+    <div class="logo">
+        <img src="assets/img/ethicapp-logo.svg" alt="EthicApp" />
+      </div>
+
+
+    <h2>{{'pass_reset' | lang}}</h2>
+    <hr/>
+    <br/>
+    <form action="resetpassword" method="POST">
+        <label>{{'user_mail' | lang}}:</label>
+        <input type="text" class="form-control" name="user" required autofocus>
+        <input type="hidden" class="form-control" name="lenguaje" value="{{'langName' | lang}}">
+        <button type="submit" class="btn btn-primary form-control" style="margin-top: 20px;">{{'pass_reset' | lang}}</button>
+    </form>
+
+    <br><br>
+
+    <!--<small>Do have a FEN account?</small>
+    <a href="login-fen">Login with FEN</a><br>-->
+    <br/>
+    <a href="register">{{ 'register'|lang}}</a>
+    <br/>
+    <small>{{ 'alredy_acc'|lang}}</small>
+    <br/>
+    <a href="login">{{ 'login'|lang}}</a>
+
+</div>
+
+</body>
+</html>

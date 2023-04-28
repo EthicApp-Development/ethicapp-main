@@ -310,7 +310,7 @@ router.post("/register_institucion", (req, res) => {
                                     margin-bottom: 2em;
                                     margin-top: 2em;
                                 ">
-                                    <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
+                                    <img src="/assets/img/ethicapp-logo.svg" alt="Ethicapp">
                                 </div>
                                 En un plazo de 24 a 48 horas hábiles quedará habilitada tu cuenta.
                                 <br>
@@ -350,7 +350,7 @@ router.post("/register_institucion", (req, res) => {
                                     margin-bottom: 2em;
                                     margin-top: 2em;
                                 ">
-                                    <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
+                                    <img src="/assets/img/ethicapp-logo.svg" alt="Ethicapp">
                                 </div>
                                 Within 24 to 48 business hours your account will be enabled.
                                 <br>
@@ -486,7 +486,7 @@ router.post("/resetpassword", (req, res) => {
                                 margin-bottom: 2em;
                                 margin-top: 2em;
                             ">
-                                <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
+                                <img src="/assets/img/ethicapp-logo.svg" alt="Ethicapp">
                             </div>
                             Hola
                             <br>
@@ -550,7 +550,7 @@ router.post("/resetpassword", (req, res) => {
                                 margin-bottom: 2em;
                                 margin-top: 2em;
                             ">
-                                <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
+                                <img src="/assets/img/ethicapp-logo.svg" alt="Ethicapp">
                             </div>
                             Hi
                             <br>
@@ -775,7 +775,7 @@ router.post("/create-multicounts",(req,res)=> {
         margin-bottom: 2em;
         margin-top: 2em;
     ">
-        <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
+        <img src="/assets/img/ethicapp-logo.svg" alt="Ethicapp">
     </div>
     Hola, ${name}
     <br>
@@ -1324,7 +1324,7 @@ router.post("/accept_institution", (req, res) => {
         margin-bottom: 2em;
         margin-top: 2em;
     ">
-        <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
+        <img src="/assets/img/ethicapp-logo.svg" alt="Ethicapp">
     </div>
     Hola ${fullname}!
     <br>
@@ -1466,7 +1466,7 @@ router.post("/reject_institution", (req, res) => {
         margin-bottom: 2em;
         margin-top: 2em;
     ">
-        <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
+        <img src="/assets/img/ethicapp-logo.svg" alt="Ethicapp">
     </div>
     Hola ${fullname}!
     <br>

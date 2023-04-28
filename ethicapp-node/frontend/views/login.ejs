@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html ng-app="Admin">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>EthicApp</title>
+    <link rel="stylesheet" href="assets/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="assets/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="assets/css/nv.d3.min.css" />
+    <link rel="stylesheet" href="assets/css/angular-ui-notification.min.css" />
+    <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.9.0-alpha2/katex.min.css" />
+    <link rel="stylesheet" href="assets/css/tablesort.min.css" />
+    <link rel="stylesheet" href="assets/css/main.css" />
+    <link rel="stylesheet" href="assets/css/ngDialog-theme-default.css" />
+    <script src="assets/libs/angular.min.js"></script>
+    <script src="assets/libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
+    <script src="assets/libs/katex.min.js"></script>
+    <script src="assets/libs/angular-bootstrap-multiselect.js"></script>
+    <script src="assets/libs/d3.min.js"></script>
+    <script src="assets/libs/nv.d3.min.js"></script>
+    <script src="assets/libs/angular-nvd3.min.js"></script>
+    <script src="assets/libs/ng-map.min.js"></script>
+    <script type="text/javascript" src="assets/libs/quill.min.js"></script>
+    <script type="text/javascript" src="assets/libs/ng-quill.min.js"></script>
+    <script src="assets/libs/socket.min.js"></script>
+    <script src="assets/libs/angular-timer.min.js"></script>
+    <script src="assets/libs/angular-ui-notification.min.js"></script>
+    <script src="assets/libs/save-csv.min.js"></script>
+    <script src="assets/libs/angular-tablesort.min.js"></script>
+    <script src="assets/js/StagesController.js"></script>
+    <script src="assets/libs/checklist-model.js"></script>
+    <script src="assets/js/admin-ctrl.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="assets/libs/angular-route.js"></script>
+    <script src="assets/libs/ngDialog.min.js"></script>
+    
+  </head>
+  <body ng-controller="no_account">
+    <div class="form-signin panel panel-default">
+      <div class="panel-body">
+        <div class="logo">
+          <img src="assets/img/ethicapp-logo.svg" alt="EthicApp" />
+        </div>
+        <div class="row">
+          <% if(rc == 1) { %>
+            <div class="alert alert-info">
+              {{ "log1" | lang }}
+            </div>
+          <% } %>
+          <% if(rc == 2) { %>
+            <div class="alert alert-danger">
+              {{ "log2" | lang }}
+            </div>
+          <% } %>
+          <% if(rc == 3) { %>
+            <div class="alert alert-info">
+              {{ "log3" | lang }}
+            </div>
+          <% } %>
+          <% if(rc == 4) { %>
+            <div class="alert alert-info">
+              {{ "log4" | lang }}
+            </div>
+          <% } %>
+          <% if(rc == 5) { %>
+            <div class="alert alert-info">
+              {{ "log5" | lang }}
+              <div ng-init="activate_user()">
+              </div>
+            </div>
+          <% } %>
+          <br />
+          <form class="form-horizontal" action="login" method="POST"> 
+            <div class="form-group">
+              <label for="user" class="col-sm-3 control-label">{{ "email" | lang }}</label>
+              <div class="col-sm-8">
+                <input class="form-control" type="text" name="user" required autofocus />
+              </div>
+              <div class="col-sm-1">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="user" class="col-sm-3 control-label">{{ "password" | lang }}</label>
+              <div class="col-sm-8">
+                <input class="form-control" type="password" name="pass" required />
+              </div>
+              <div class="col-sm-1">
+              </div>
+            </div>
+            <div class="form-group text-center">
+              <button type="submit" class="btn btn-primary" style="margin: 0 auto; width:140px;">{{ "login" | lang }}</button>
+            </div>
+          </form>
+          <br />
+          <div class="row text-center">
+            <a href="register">{{ "register" | lang }} </a>|
+            <a href="forgot-pass">{{ "forgot_pass" | lang }}</a>
+            <br />
+            <a href="/google" role="button" class="btn btn-default" style="margin-top:1em;">
+              <img style="width: 20px; margin-bottom: 3px; margin-right: 5px" alt="Google sign-in" src="assets/img/google.png" />
+              {{ "glogin" | lang }}
+            </a>                
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

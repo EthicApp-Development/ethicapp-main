@@ -1,11 +1,11 @@
 backend/modules/keys-n-secrets.js
 
-public/js/**/*.min.js
-public/minjs/**/*.min.js
+frontend/assets/js/**/*.min.js
+frontend/assets/minjs/**/*.min.js
 
 node_modules/
-uploads/
-public/fonts/*
+frontend/assets/uploads/
+frontend/assets/fonts/*
 sessions/
 
 package-lock.json

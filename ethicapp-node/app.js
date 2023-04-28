@@ -27,7 +27,7 @@ let app = express();
 
 
 // view engine setup
-app.set("views", path.join(__dirname, "views"));
+app.set("views", path.join(__dirname, "frontend/views"));
 app.set("view engine", "ejs");
 
 // uncomment after placing your favicon in /public
@@ -40,8 +40,8 @@ busboy.extend(app, {
     limits:        { fileSize: 5*1024*1024 }
 });
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, "public")));
-app.use("/uploads",express.static(path.join(__dirname, "uploads")));
+app.use(express.static(path.join(__dirname, "frontend")));
+app.use("/uploads",express.static(path.join(__dirname, "frontend/assets")));
 app.use(session({
     secret:            "ssshhh",
     saveUninitialized: false,
