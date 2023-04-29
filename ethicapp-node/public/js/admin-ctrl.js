@@ -2273,7 +2273,7 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
             console.log(phase);
             var postdata = {
                 number:   stageCounter + 1,
-                question: "",
+                question: phase.q_text !== undefined ? phase.q_text : "",
 
                 // ver si es equipo, si lo es, igualar a numero de integrantes + el tipo,
                 // sino es nulo
@@ -2410,14 +2410,61 @@ adpp.controller("MonitorActivityController", function (
     $scope, $filter, $http, Notification
 ) {
     var self = $scope;
+    self.stagesState = null;
+    self.completion = null;
 
 
-    self.init = function(){
-        if(self.selectedView == "activity") {
-            //self.shared.resetGraphs(); // self.iterationIndicator  fix this id
-            self.currentStage();
+    self.init = function() {
+        if (self.selectedView === "activity") {
+          self.currentStage()
         }
-    };
+      };
+
+    self.ActivityState = function(stageId){
+        if(self.design.type == "semantic_differential"){
+            $http({
+                url: "stage-state-df", method: "post", data: {sesid:self.selectedSes.id}
+            }).success(function (data) {
+                self.stagesState = data;
+                self.ActivityCompletion(stageId);
+            });
+        }
+        else if(self.design.type = "ranking"){
+            $http({
+                url: "stage-state-r", method: "post", data: {sesid:self.selectedSes.id}
+            }).success(function (data) {
+                self.stagesState = data;
+                self.ActivityCompletion(stageId);
+            });
+        }
+    }
+
+    self.ActivityCompletion = function(stageId){
+        const numUsers = Object.keys(self.users).length -1;
+        
+        const stageCounter = self.stagesState.findIndex(stage => stage.id === stageId);
+        var current_phase = self.design.phases[stageCounter];
+        console.log(stageCounter, self.stagesState, stageId)
+        if(self.stagesState[stageCounter] !== undefined){
+            var current_phase = self.design.phases[stageCounter];
+            if(self.design.type == "semantic_differential"){
+                self.completion = self.stagesState[stageCounter].count +"/" + current_phase.questions.length * numUsers
+            }
+            else if(self.design.type == "ranking"){
+                self.completion =  self.stagesState[stageCounter].count +"/" + current_phase.roles.length * numUsers
+            }
+        }
+        else{
+            var current_phase = self.design.phases[self.currentActivity.stage];
+            console.log(current_phase, self.currentActivity.stage)
+            if(self.design.type == "semantic_differential"){
+                self.completion = 0+"/" + current_phase.questions.length * numUsers;
+            } 
+            else if(self.design.type == "ranking"){
+                self.completion = 0+"/" + current_phase.roles.length * numUsers
+            }
+        }
+    }
 
     self.getPrevAns = function(current_phase){
         //console.log(current_phase.prevPhasesResponse)
@@ -2450,7 +2497,7 @@ adpp.controller("MonitorActivityController", function (
         //prev_ans: s.prevResponses.map(e => e.id).join(",")
         var postdata = {
             number:   stageCounter + 1,
-            question: "",
+            question: current_phase.q_text !== undefined ? current_phase.q_text : "",
             grouping: current_phase.mode == "team" ?
                 current_phase.stdntAmount + ":" + current_phase.grouping_algorithm :
                 null,
@@ -2530,9 +2577,8 @@ adpp.controller("MonitorActivityController", function (
                                 }).success(function (data) {
                                     Notification.success("Etapa creada correctamente");
                                     //window.location.reload()
-                                    self.currentStage(); // <--------Actualiza la data del current stage
                                     self.shared.verifyTabs();
-                                    self.getStages();
+                                    self.currentStage();
                                     self.selectedSes.current_stage = stageid;
                                     //call request to change activity currentstage 
                                 });
@@ -2548,14 +2594,15 @@ adpp.controller("MonitorActivityController", function (
    
     };
 
-    self.currentStage = function () {
+    self.currentStage = function() {
         var pd = {
-            sesid: self.selectedSes.id
+          sesid: self.selectedSes.id
         };
-        $http({ url: "get-current-stage", method: "post", data: pd }).success(function (data) {
-            self.currentActivity.stage = data.length === 0 ? 0: data[0].number -1; //data.length fixes issue when starting activity
+        return $http({ url: "get-current-stage", method: "post", data: pd }).then(function(response) {
+          self.currentActivity.stage = response.data.length === 0 ? 0: response.data[0].number -1;
         });
-    };
+      };
+      
 
     self.finishActivity = function(){
         $http.post("session-finish-stages", {sesid: self.selectedSes.id}).success((data) => {

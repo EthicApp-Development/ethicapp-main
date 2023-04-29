@@ -1361,6 +1361,39 @@ router.post("/enter-session-code", rpg.singleSQL({
     }
 }));
 
+router.post("/stage-state-df", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT COUNT(ds.id), s.id FROM differential_selection ds 
+    INNER JOIN differential d ON ds.did = d.id INNER JOIN 
+    stages s ON d.stageid = s.id AND s.sesid = $1 GROUP BY s.id;
+    `,
+    postReqData: ["sesid"],
+    onStart:     (ses) => {
+        if (ses.role != "P") {
+            console.error("Sólo el profesor puede ver el estado de los alumnos");
+            return "SELECT $1";
+        }
+    },
+    sqlParams: [rpg.param("post", "sesid")]
+}));
+
+router.post("/stage-state-r", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT COUNT(act.id), s.id FROM actor_selection act 
+    INNER JOIN stages s ON act.stageid = s.id AND s.sesid = $1 GROUP BY s.id;
+    `,
+    postReqData: ["sesid"],
+    onStart:     (ses) => {
+        if (ses.role != "P") {
+            console.error("Sólo el profesor puede ver el estado de los alumnos");
+            return "SELECT $1";
+        }
+    },
+    sqlParams: [rpg.param("post", "sesid")]
+}));
+
 
 function generateCode(id) {
     let n = id*5 + 255 + ~~(Math.random()*5);
