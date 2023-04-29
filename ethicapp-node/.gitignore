@@ -5,7 +5,6 @@ frontend/assets/minjs/**/*.min.js
 
 node_modules/
 frontend/assets/uploads/
-frontend/assets/fonts/*
 sessions/
 
 package-lock.json
