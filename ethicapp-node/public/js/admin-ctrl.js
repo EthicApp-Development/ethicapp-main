@@ -2646,6 +2646,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         self.keyGroups("random"), self.keyGroups("performance", "homog"),
         self.keyGroups("performance", "heterg"), 
         self.keyGroups("knowledgeType", "homog"), self.keyGroups("knowledgeType", "heterg")
+        , self.keyGroups("previous")
     ];
     self.groupType = [self.keyGroups("individual"), self.keyGroups("team")];
     self.busy = false; //upload file

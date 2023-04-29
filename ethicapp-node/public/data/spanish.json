@@ -237,7 +237,7 @@
 	"right": "Derecha",
 	"yes": "Sí",
 	"no": "No",
-	"team": "Equipo",
+	"team": "Grupo",
 	"words": "Palabras",
 	"minComment": "Largo mínimo de comentario",
 	"institution": "Institución",
@@ -281,6 +281,10 @@
 	"sessionFinish":"Sesión finalizada",
 	"sessionCode": "Código de la sesión",
 	"errorSave": "Error: Hay preguntas con valores incorrectos.",
-	"savedSuccess":"Guardado con éxito."
+	"savedSuccess":"Guardado con éxito.",
+	"performance homog": "Performance Homogéneo",
+	"performance heterg": "Performance Heterogéneo",
+	"knowledgeType homog": "Tipo de Conocimiento Homogéneo",
+	"knowledgeType heterg": "Tipo de Conocimiento Heterogéneo"
 }
 
