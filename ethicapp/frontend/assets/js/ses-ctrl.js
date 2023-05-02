@@ -135,7 +135,7 @@ adpp.controller("SesListController",
             };
 
             self.changeLang = function () {
-                var newlang = self.mylang == "EN_US/english" ? "ES_CL/spanish" : "EN_US/english";
+                var newlang = self.mylang == "EN_US/english" ? "spanish" : "english";
                 $http.post("update-lang", { lang: newlang }).success(function () {
                     self.showName();
                 });
