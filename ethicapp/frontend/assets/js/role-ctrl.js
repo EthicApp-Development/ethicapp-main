@@ -57,7 +57,7 @@ app.controller("RoleController", [
         self.teamMap = {};
         self.teamMapPrev = {};
 
-        self.lang = "spanish";
+        self.lang = "ES_CL/spanish";
         self.selectedActor = null;
         self.selectedActorPrev = null;
 
@@ -133,7 +133,8 @@ app.controller("RoleController", [
 
         self.getMe = () => {
             $http.post("get-my-name").success((data) => {
-                self.lang = data.lang;
+                //self.lang = data.lang;
+                self.lang = data.lang == "spanish" ? "ES_CL/spanish" : "EN_US/english";
                 self.updateLang(self.lang);
             });
         };
@@ -498,13 +499,13 @@ app.controller("RoleController", [
         };
 
         self.updateLang = (lang) => {
-            $http.get("assets/data/" + lang + ".json").success((data) => {
+            $http.get("assets/i18n/" + lang + ".json").success((data) => {
                 window.DIC = data;
             });
         };
 
         self.changeLang = () => {
-            self.lang = (self.lang == "english") ? "spanish" : "english";
+            self.lang = (self.lang == "EN_US/english") ? "ES_CL/spanish" : "EN_US/english";
             self.updateLang(self.lang);
         };
 

@@ -74,7 +74,7 @@ app.controller("EditorController", [
                     });
                     self.renderAll();
                 });
-                $http({url: "assets/data/instructions.json", method: "get"}).success((data) => {
+                $http({url: "assets/i18n/instructions.json", method: "get"}).success((data) => {
                     self.instructions = data;
                 });
                 if (self.iteration == 3){

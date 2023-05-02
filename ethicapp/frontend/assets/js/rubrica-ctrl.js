@@ -46,7 +46,7 @@ app.controller("RubricaController", [
                     self.openReport(data);
                 }
             });
-            $http({url: "assets/data/instructions.json", method: "get"}).success((data) => {
+            $http({url: "assets/i18n/instructions.json", method: "get"}).success((data) => {
                 self.instructions = data;
             });
         };

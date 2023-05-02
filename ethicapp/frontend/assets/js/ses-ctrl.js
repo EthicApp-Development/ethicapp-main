@@ -78,7 +78,8 @@ adpp.controller("SesListController",
                     self.mail = data.mail;
                     self.rol = data.role;
                     self.username = data.name;
-                    self.mylang = data.lang;
+                    //self.mylang = data.lang;
+                    self.mylang = data.lang == "spanish" ? "ES_CL/spanish" : "EN_US/english";
                     self.updateLang(self.mylang);
                 });
             };
@@ -128,13 +129,13 @@ adpp.controller("SesListController",
             };
 
             self.updateLang = function (lang) {
-                $http.get("assets/data/" + lang + ".json").success(function (data) {
+                $http.get("assets/i18n/" + lang + ".json").success(function (data) {
                     window.DIC = data;
                 });
             };
 
             self.changeLang = function () {
-                var newlang = self.mylang == "english" ? "spanish" : "english";
+                var newlang = self.mylang == "EN_US/english" ? "ES_CL/spanish" : "EN_US/english";
                 $http.post("update-lang", { lang: newlang }).success(function () {
                     self.showName();
                 });

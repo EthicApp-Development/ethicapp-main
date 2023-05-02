@@ -135,10 +135,10 @@ adpp.controller("AdminController", function (
     self.institution = false;
     self.inst_id = 0;
     if(lang[0] == "e" && lang[1] == "s"){
-        self.lang = "spanish";
+        self.lang = "ES_CL/spanish";
     }
     else{
-        self.lang = "english";
+        self.lang = "EN_US/english";
     }
     
     self.secIcons = {
@@ -430,7 +430,7 @@ adpp.controller("AdminController", function (
     };
 
     self.updateLang = function (lang) {
-        $http.get("assets/data/" + lang + ".json").success(function (data) {
+        $http.get("assets/i18n/" + lang + ".json").success(function (data) {
             window.DIC = data;
         });
     };
@@ -440,7 +440,7 @@ adpp.controller("AdminController", function (
     };
 
     self.changeLang = function () {
-        self.lang = self.lang == "english" ? "spanish" : "english";
+        self.lang = self.lang == "EN_US/english" ? "ES_CL/spanish" : "EN_US/english";
         self.updateLang(self.lang);
     };
 
@@ -3330,13 +3330,13 @@ adpp.controller("no_account",["$scope","$http",function($scope,$http){
     var self = $scope;
     const lang = navigator.language;
     if(lang[0] == "e" && lang[1] == "s"){
-        self.lang = "spanish";
+        self.lang = "ES_CL/spanish";
     }
     else{
-        self.lang = "english";
+        self.lang = "EN_US/english";
     }
 
-    window.DIC = "assets/data/" + self.lang + ".json";
+    window.DIC = "assets/i18n/" + self.lang + ".json";
 
     self.init = function () {
         self.updateLang(self.lang);
@@ -3373,13 +3373,13 @@ adpp.controller("no_account",["$scope","$http",function($scope,$http){
     };
 
     self.updateLang = function (lang) {
-        $http.get("assets/data/" + lang + ".json").success(function (data) {
+        $http.get("assets/i18n/" + lang + ".json").success(function (data) {
             window.DIC = data;
         });
     };
 
     self.changeLang = function () {
-        self.lang = self.lang == "english" ? "spanish" : "english";
+        self.lang = self.lang == "EN_US/english" ? "ES_CL/spanish" : "EN_US/english";
         self.updateLang(self.lang);
     };
 
