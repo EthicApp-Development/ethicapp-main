@@ -5,14 +5,14 @@
   "scripts": {
     "init-passwords-js": "./dev-ops/create-passwords-js.sh",
     "init-db": "./dev-ops/docker-init-db-volume.sh",
-    "lint-js": "npx eslint './ethicapp-node/**/*.js' ./ethicapp-node/backend/ethicapp",
-    "lint-html": "npx htmlhint './ethicapp-node/frontend/static/**/*.html'",
-    "lint-css": "npx stylelint './ethicapp-node/frontend/assets/css/**/*.css'",
+    "lint-js": "npx eslint './ethicapp/**/*.js' ./ethicapp/backend/ethicapp",
+    "lint-html": "npx htmlhint './ethicapp/frontend/static/**/*.html'",
+    "lint-css": "npx stylelint './ethicapp/frontend/assets/css/**/*.css'",
     "lint-sql": "sqlfluff lint ./postgres-db/",
     "pgdump": "./dev-ops/docker-pgdump.sh",
     "pgrestore": "./dev-ops/docker-pgrestore.sh",
     "psql": "./dev-ops/docker-psql.sh",
-    "clear-sessions": "rm -f -v ./ethicapp-node/sessions/*"
+    "clear-sessions": "rm -f -v ./ethicapp/sessions/*"
   },
   "devDependencies": {
     "eslint": "^8.24.0",

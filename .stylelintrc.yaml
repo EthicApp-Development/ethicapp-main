@@ -4,7 +4,7 @@ extends:
   - stylelint-config-prettier
 ignoreFiles:
   - "**/*.js"
-  - "./ethicapp-node/node_modules/*"
+  - "./ethicapp/node_modules/*"
   - "**/*.min.css"
   - bootstrap*.css
 rules:
