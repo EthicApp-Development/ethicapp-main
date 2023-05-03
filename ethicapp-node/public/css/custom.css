@@ -1,5 +1,5 @@
 body {
-    font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+    font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
 }
 
 .navmenu{
@@ -93,7 +93,7 @@ body {
     background: #5cb85c;
 }
 
-.circle_profile {
+.circle-profile {
     width: 100px;
     height: 100px;
     -moz-border-radius: 50%;
@@ -117,13 +117,14 @@ body {
 .line-input{
     margin-left: 10px;
 }
-.activities_container{
+
+.activities-container{
     min-width: 20em;
     max-width: 80em;
 }
 
 /* Phase item */
-.phase_element{
+.phase-element{
     border:4px solid #bbbbbb;
     height:5em;
     width:15em;
@@ -135,32 +136,36 @@ body {
 }
 
 /* Phase container */
-.phase_container{
+.phase-container{
     max-width: 80em;
     margin: 2em;
     border:1px solid #bbbbbb;
 }
-.margin_container{
+
+.margin-container{
     margin: 2em;
 }
-.phase_selected{
+
+.phase-selected{
     border:4px solid #f39316;
 }
-.phase_current{
+
+.phase-current{
     border:4px solid #7bc54a;
 }
-.phase_element:hover{
+
+.phase-element:hover{
     border:4px solid #67aed6;
 }
 
 /* Current phase container */
-.stage_container{
+.stage-container{
     margin: 2em;
     max-width: 80em;
     border:1px solid #bbbbbb;
 }
 
-.question_container{
+.question-container{
     max-width: 80em;
     padding: 1em;
     margin-bottom: 1em;
@@ -189,13 +194,16 @@ body {
     justify-content: left;
     align-items: center;
 }
+
 .tab-cs button:hover {
     background-color: #ddd;
 }
+
 .btn-selected{
     background-color: #bbbbbb;
     font-weight: bolder;
 }
+
 .margin-left-low{
     margin-left: 2em;
 }
@@ -224,6 +232,7 @@ body {
 .dsgn-sel{
     background-color: #67aed6;
 }
+
 .dsgn:hover{
     cursor: pointer;
 }
@@ -254,7 +263,7 @@ body {
     transition: .4s;
 }
   
-.slider:before {
+.slider::before {
     position: absolute;
     content: "";
     height: 26px;
@@ -274,7 +283,7 @@ input:focus + .slider {
     box-shadow: 0 0 1px #52f321;
 }
   
-input:checked + .slider:before {
+input:checked + .slider::before {
     -webkit-transform: translateX(26px);
     -ms-transform: translateX(26px);
     transform: translateX(26px);
@@ -285,7 +294,7 @@ input:checked + .slider:before {
     border-radius: 34px;
 }
   
-.slider.round:before {
+.slider.round::before {
     border-radius: 50%;
 }
 

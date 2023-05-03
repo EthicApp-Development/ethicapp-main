@@ -54,7 +54,7 @@
 
     // CSS
     "[css]": {
-        "editor.defaultFormatter": "vscode.css-language-features",
+        "editor.defaultFormatter": "stylelint.vscode-stylelint",
         "editor.insertSpaces": true,
         "editor.tabSize": 4
     },

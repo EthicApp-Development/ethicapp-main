@@ -70,7 +70,7 @@
     background: #f0f0f0;
     border-radius: 5px;
     color: #444;
-    font-family: 'Helvetica', sans-serif;
+    font-family: Helvetica, sans-serif;
     font-size: 1.1em;
     line-height: 1.5em;
     margin: 0 auto;
@@ -89,7 +89,7 @@
     top: 0;
 }
 
-.ngdialog.ngdialog-theme-default .ngdialog-close:before {
+.ngdialog.ngdialog-theme-default .ngdialog-close::before {
     display: block;
     padding: 3px;
     background: transparent;
@@ -101,8 +101,8 @@
     text-align: center;
 }
 
-.ngdialog.ngdialog-theme-default .ngdialog-close:hover:before,
-.ngdialog.ngdialog-theme-default .ngdialog-close:active:before {
+.ngdialog.ngdialog-theme-default .ngdialog-close:hover::before,
+.ngdialog.ngdialog-theme-default .ngdialog-close:active::before {
     color: #777;
 }
 
@@ -144,7 +144,7 @@
     *zoom: 1;
 }
 
-.ngdialog.ngdialog-theme-default .ngdialog-buttons:after {
+.ngdialog.ngdialog-theme-default .ngdialog-buttons::after {
     content: '';
     display: table;
     clear: both;

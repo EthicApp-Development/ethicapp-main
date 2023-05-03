@@ -8,7 +8,7 @@ html{
 }
 
 body{
-    font-family: "Helvetica-Neue", Helvetica, Verdana, sans-serif;
+    font-family: Helvetica Neue, Helvetica, Verdana, sans-serif;
     padding: 0;
     margin: 0;
     height: 100%;
@@ -409,6 +409,7 @@ ul[dnd-list] .dndPlaceholder {
     overflow-y: scroll;
     background: #333;
 }
+
 .small-scrollable-container{
     height: calc(50vh - 76px);
     overflow-y: scroll;
@@ -558,33 +559,40 @@ p{
     position: relative; width: 62px; height: 28px;
     -webkit-user-select:none; -moz-user-select:none; -ms-user-select: none;
 }
+
 .onoffswitch-checkbox {
     display: none;
 }
+
 .onoffswitch-label {
     display: block; overflow: hidden; cursor: pointer;
     border: 2px solid #FFFFFF; border-radius: 28px;
 }
+
 .onoffswitch-inner {
     display: block; width: 200%; margin-left: -100%;
     transition: margin 0.3s ease-in 0s;
 }
-.onoffswitch-inner:before, .onoffswitch-inner:after {
+
+.onoffswitch-inner::before, .onoffswitch-inner::after {
     display: block; float: left; width: 50%; height: 27px; padding: 0; line-height: 27px;
     font-size: 14px; color: white; font-family: Trebuchet, Arial, sans-serif; font-weight: bold;
     box-sizing: border-box;
 }
-.onoffswitch-inner:before {
+
+.onoffswitch-inner::before {
     content: "SI";
     padding-left: 10px;
     background-color: #42A5F5; color: #FFFFFF;
 }
-.onoffswitch-inner:after {
+
+.onoffswitch-inner::after {
     content: "NO";
     padding-right: 6px;
     background-color: #9E9E9E; color: #FFFFFF;
     text-align: right;
 }
+
 .onoffswitch-switch {
     display: block;
     width: 30px;
@@ -598,12 +606,15 @@ p{
     border-radius: 28px;
     transition: all 0.3s ease-in 0s;
 }
+
 .onoffswitch-checkbox:checked + .onoffswitch-label .onoffswitch-inner {
     margin-left: 0;
 }
+
 .onoffswitch-checkbox:checked + .onoffswitch-label .onoffswitch-switch {
     right: 0px;
 }
+
 .sliders strong{
     font-size: 125%;
 }
@@ -630,7 +641,7 @@ ng-quill-editor.large{
     height: 200px;
 }
 
-.quill-disabled:after {
+.quill-disabled::after {
     display: block;
     width: 100%;
     background: rgba(200,200,200,0.3);
@@ -641,7 +652,7 @@ ng-quill-editor.large{
     z-index: 500;
 }
 
-.quill-disabled.large:after {
+.quill-disabled.large::after {
     height: 220px;
     top: -220px;
 }
@@ -766,7 +777,7 @@ ng-quill-editor.large .ql-editor{
 
 .invitation-code{
     font-size: 300%;
-    font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+    font-family: Menlo, Monaco, Consolas, Courier New, monospace;
     color: black;
     background: #ddd;
     padding: 12px;
@@ -1080,6 +1091,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     height: 36px;
     padding-left: 8px;
 }
+
 .rtab-nb{
     display: inline-block;
     position: absolute;
@@ -1321,20 +1333,25 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     flex: 0 0 200px;
     margin-left: 10px;
 }
+
 .app-title{
 
     color: blue;
 }
+
 .radio-btn{
     width: 100%;
     height: 1em;
 }
+
 .profile-input{
     width: 300px;
 }
+
 .left-border{
     margin-left: 10px;
 }
+
 .circle {
     width: 100px;
     height: 100px;
@@ -1344,7 +1361,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     background: #5cb85c;
 }
 
-.circle_profile {
+.circle-profile {
     width: 100px;
     height: 100px;
     -moz-border-radius: 50%;
@@ -1379,6 +1396,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     justify-content: left;
     align-items: center;
 }
+
 .tab-cs2 button:hover {
     background-color: #ddd;
 }
@@ -1393,6 +1411,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     display: flex;
 
 }
+
 .inst{
     margin-left: 12%;
 
