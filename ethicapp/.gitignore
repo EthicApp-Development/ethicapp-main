@@ -1,4 +1,4 @@
-backend/modules/keys-n-secrets.js
+backend/config/keys-n-secrets.js
 
 frontend/assets/js/**/*.min.js
 frontend/assets/minjs/**/*.min.js
