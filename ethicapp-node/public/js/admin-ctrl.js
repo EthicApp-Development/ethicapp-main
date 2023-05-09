@@ -2448,20 +2448,20 @@ adpp.controller("MonitorActivityController", function (
         if(self.stagesState[stageCounter] !== undefined){
             var current_phase = self.design.phases[stageCounter];
             if(self.design.type == "semantic_differential"){
-                self.completion = self.stagesState[stageCounter].count +"/" + current_phase.questions.length * numUsers
+                self.completion = self.stagesState[stageCounter].count +"/" +  numUsers
             }
             else if(self.design.type == "ranking"){
-                self.completion =  self.stagesState[stageCounter].count +"/" + current_phase.roles.length * numUsers
+                self.completion =  self.stagesState[stageCounter].count/self.stagesState[stageCounter].count +"/" + numUsers
             }
         }
         else{
             var current_phase = self.design.phases[self.currentActivity.stage];
             console.log(current_phase, self.currentActivity.stage)
             if(self.design.type == "semantic_differential"){
-                self.completion = 0+"/" + current_phase.questions.length * numUsers;
+                self.completion = 0+"/" +  numUsers;
             } 
             else if(self.design.type == "ranking"){
-                self.completion = 0+"/" + current_phase.roles.length * numUsers
+                self.completion = 0+"/" + numUsers
             }
         }
     }

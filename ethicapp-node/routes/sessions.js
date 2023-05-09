@@ -1364,13 +1364,36 @@ router.post("/enter-session-code", rpg.singleSQL({
 router.post("/stage-state-df", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
-    SELECT COUNT(ds.id), s.id FROM differential_selection ds 
-    INNER JOIN differential d ON ds.did = d.id INNER JOIN 
-    stages s ON d.stageid = s.id AND s.sesid = $1 GROUP BY s.id;
+    SELECT COUNT(*), query1.stage_id1 as id FROM (SELECT 
+        stages.id AS stage_id1, 
+        differential_selection.uid as uid,
+        COUNT(differential_selection.uid) AS num_answers
+      FROM 
+        stages 
+        JOIN differential ON stages.id = differential.stageid 
+        JOIN differential_selection ON differential.id = differential_selection.did 
+      WHERE 
+        stages.sesid = $1
+      GROUP BY 
+        stages.id, differential_selection.uid
+      ) as query1 JOIN (
+      SELECT 
+        stages.id AS stage_id2, 
+        COUNT(differential.id) AS questions
+      FROM 
+        stages 
+        JOIN differential ON stages.id = differential.stageid 
+      WHERE 
+        stages.sesid = $1
+      GROUP BY 
+        stages.id
+        ) as query2 ON query1.stage_id1= query2.stage_id2
+      
+        WHERE query1.num_answers = query2.questions GROUP BY query1.stage_id1;
     `,
-    postReqData: ["sesid"],
-    onStart:     (ses) => {
-        if (ses.role != "P") {
+    postReqData: ["sesid"], //differential_selection uid
+    onStart:     (ses) => {  //Session -> Stage -> Differential -> Differential_Selection {id:stage, counter: respuestas completas}
+        if (ses.role != "P") { //sesusers role != P
             console.error("Sólo el profesor puede ver el estado de los alumnos");
             return "SELECT $1";
         }
