@@ -21,6 +21,6 @@ for sqlFile in ./schema/*.sql; do
 done
 
 # Populating development database with basic data
-for sqlFile in ./seeds/*.sql; do
+for sqlFile in ./seeds/development/*.sql; do
     psql ${DB_CONNECTION_URI} --set ON_ERROR_STOP=1 --file ${sqlFile}
 done

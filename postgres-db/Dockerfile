@@ -38,7 +38,7 @@ WORKDIR /ethicapp-db
 COPY init-db.sh .
 COPY create-db.sql .
 COPY schema/ schema/
-COPY seeds/ seeds/
+COPY seeds/development seeds/development
 
 ARG DB_USER_NAME
 ARG DB_USER_PASSWORD
