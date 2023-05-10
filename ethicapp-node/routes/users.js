@@ -587,95 +587,41 @@ router.post("/create-multicounts",(req,res)=> {
                                 region:          "us-east-1",
                             };
                             var AWS_SES = new AWS.SES(SES_CONFIG);
+                            var emailTemplate, subject; 
+                            // Still needed to figure out how to send this mail in different languages.
+                            /*
+                            if (req.body.lenguaje == "Español") {   
+                                // versión en español
+                                emailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/create-multicounts/es-create-multicounts.html', 'utf8');
+                                subject = "Resolucion de cuenta Institucional";
+                            }
+                            
+                            else {
+                                // versión en inglés
+        
+                            }
+                            */
+                            emailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/create-multicounts/es-create-multicounts.html', 'utf8');
+                            subject = "Resolucion de cuenta Institucional";
+                            const template = handlebars.compile(emailTemplate);
+                            const html = template({name: name});
                             async function mail() {
                                 var params ={
                                     Source:      "no-reply@iccuandes.org",
                                     Destination: {
-                                        "ToAddresses": [
+                                        ToAddresses: [
                                             user_mail,
                                         ]},
                                     Message: {
-                                        "Subject": {
-                                            "Data": "Resolucion de cuenta Institucional"},
-                                        "Body": {
-                                            "Text": {
-                                                "Data": ""
+                                        Subject: {
+                                            Data: subject
+                                        },
+                                        Body: {
+                                            Text: {
+                                                Data: ""
                                             },
-                                            "Html": {
-                                                "Data": `
-<div style="
-    max-width: 640px;
-    display: block;
-    padding: 4px 24px 20px 24px;
-    border-color: gray;
-    border-width: 10px;
-    border-width: 5px;
-    border-style: solid;
-    margin: 20px auto;
-">
-    <div style="
-        text-align: center;
-        margin-bottom: 2em;
-        margin-top: 2em;
-    ">
-        <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
-    </div>
-    Hola, ${name}
-    <br>
-    Bienvenido a EthicApp. Has sido invitado a incorporarte a EthicApp por
-    [nombre usuario institucional] de [institución]. Para aceptar la invitación, pincha el siguiente
-    botón:
-    <br>
-    <br>
-    <div style="text-align: center;">
-        <a href="http://localhost:8501/login?rc=5&&tok='+token+'">
-            <button style="
-                background-color: #2649EC;
-                border-color: #102AA0;
-                color: white;
-            ">
-                Activar tu Cuenta
-            </button>
-        </a>
-    </div>
-    <br>
-    <br>
-    Te recordamos que en EthicApp usamos los datos generados por los usuarios con fines de
-    investigación.
-    <br>
-    <br>
-    Garantizamos la absoluta confidencialidad de los datos, y que los datos no los entregamos a
-    terceras partes. En nuestras investigaciones reportamos los datos siempre a nivel agregado y
-    nunca a nivel individual, ni revelando la identidad de los participantes. Las actividades
-    basadas en EthicApp no presentan ningún riesgo físico o psicológico a docentes o a estudiantes.
-    <br>
-    <br>
-    EthicApp se reserva el derecho de suspender o terminar cuentas de usuario en caso que se detecte
-    uso indebido del servicio.
-    <br>
-    <br>
-    <strong>
-        Activando tu cuenta a través del botón de arriba manifiestas tu aceptación de las
-        condiciones antes descritas.
-    </strong>
-    <br>
-    <br>
-    Te deseamos el mayor éxito en tus actividades con EthicApp.
-    <br>
-    <br>
-    Creadores de EthicApp
-    <br>
-    <br>
-    ESTE SOFTWARE SE SUMINISTRA POR LA UNIVERSIDAD DE CHILE, CHILE Y LA UNIVERSIDAD DE LOS ANDES,
-    CHILE. EN NINGÚN CASO LAS INSTITUCIONES MENCIONADAS SERÁN RESPONSABLES POR NINGÚN DAÑO DIRECTO,
-    INDIRECTO, INCIDENTAL, ESPECIAL, EJEMPLAR O CONSECUENTE (INCLUYENDO,PERO NO LIMITADO A, LA
-    ADQUISICIÓN DE BIENES O SERVICIOS; LA PÉRDIDA DE USO, DE DATOS O DE BENEFICIOS; O INTERRUPCIÓN
-    DE LA ACTIVIDAD EMPRESARIAL) O POR CUALQUIER TEORÍA DE RESPONSABILIDAD, YA SEA POR CONTRATO,
-    RESPONSABILIDAD ESTRICTA O AGRAVIO (INCLUYENDO NEGLIGENCIA O CUALQUIER OTRA CAUSA) QUE SURJA DE
-    CUALQUIER MANERA DEL USO DE ESTE SOFTWARE, INCLUSO SI SE HA ADVERTIDO DE LA POSIBILIDAD DE TALES
-    DAÑOS.
-</div>
-                                            `
+                                            Html: {
+                                                Data: html
                                             }
                                         }
                                     } 
