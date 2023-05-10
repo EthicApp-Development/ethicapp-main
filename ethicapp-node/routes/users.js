@@ -7,6 +7,8 @@ let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 let crypto = require("crypto");
 let mailer = require("nodemailer");
+const handlebars = require("handlebars"); 
+const fs = require('fs');
 const passport = require("passport");
 require("./passport-setup");
 var AWS = require("aws-sdk");
@@ -455,146 +457,41 @@ router.post("/resetpassword", (req, res) => {
         region:          "us-east-1",
     };
     var AWS_SES = new AWS.SES(SES_CONFIG);
+
+
+    if (req.body.lenguaje == "Español") {
+        const resetPasswordEmailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/reset-password-es.html', 'utf8');
+        const emailTemplate = handlebars.compile(resetPasswordEmailTemplate);
+    } else {
+        const resetPasswordEmailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/reset-password-en.html', 'utf8');
+        const emailTemplate = handlebars.compile(resetPasswordEmailTemplate);
+    }
+    const html = emailTemplate({ userName: req.body.user, passwordResetLink: "http://localhost:8501/passreset" });
+    
     async function mail() {
-        var params = {
-            Source:      "no-reply@iccuandes.org",
+        const params = {
+            Source: "no-reply@iccuandes.org",
             Destination: {
-                "ToAddresses": [
-                    req.body.user,
-                ]},
+                ToAddresses: [req.body.user],
+            },
             Message: {
-                "Subject": {
-                    "Data": "Test"
+                Subject: {
+                Data: "Solicitud de restablecimiento de contraseña",
                 },
-                "Body": {
-                    "Text": {
-                        "Data": "Mail de prueba"},
-                    "Html": {
-                        "Data": `
-                        <div style="
-                            max-width: 640px;
-                            display: block;
-                            padding: 4px 24px 20px 24px;
-                            border-color: gray;
-                            border-width: 10px;
-                            border-width: 5px;
-                            border-style: solid;
-                            margin: 20px auto;
-                        ">
-                            <div style="
-                                text-align: center;
-                                margin-bottom: 2em;
-                                margin-top: 2em;
-                            ">
-                                <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
-                            </div>
-                            Hola
-                            <br>
-                            <br>
-                            ¿Has perdido tu contraseña? Puedes restablecerla a continuación:
-                            <br>
-                            <br>
-                            <div style="
-                                text-align: center;
-                            ">
-                                <a href="http://localhost:8501/passreset">
-                                    <button style="
-                                        background-color: #2649EC;
-                                        border-color: #102AA0;
-                                        color: white;
-                                    ">
-                                        Restablecer contraseña
-                                    </button>
-                                </a>
-                            </div>
-                            <br>
-                            <br>
-                            Recibe un cordial saludo,
-                            <br>
-                            <br>
-                            Creadores de EthicApp
-                        </div>
-                        `
-                    }
-                }
-            } 
+                Body: {
+                Html: {
+                    Data: html,
+                },
+                },
+            },
         };
 
-        var params2 = {
-            Source:      "no-reply@iccuandes.org",
-            Destination: {
-                "ToAddresses": [
-                    req.body.user,
-                ]},
-            Message: {
-                "Subject": {
-                    "Data": "Test"
-                },
-                "Body": {
-                    "Text": {
-                        "Data": "Mail de prueba"},
-                    "Html": {
-                        "Data": `
-                        <div style="
-                            max-width: 640px;
-                            display: block;
-                            padding: 4px 24px 20px 24px;
-                            border-color: gray;
-                            border-width: 10px;
-                            border-width: 5px;
-                            border-style: solid;
-                            margin: 20px auto;
-                        ">
-                            <div style="
-                                text-align: center;
-                                margin-bottom: 2em;
-                                margin-top: 2em;
-                            ">
-                                <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
-                            </div>
-                            Hi
-                            <br>
-                            <br>
-                            Have you lost your password? You can restore it in the following link:
-                            <br>
-                            <br>
-                            <div style="text-align: center;">
-                                <a href="http://localhost:8501/passreset">
-                                    <button style="
-                                        background-color: #2649EC;
-                                        border-color: #102AA0;
-                                        color: white;
-                                    ">
-                                        Restore password
-                                    </button>
-                                </a>
-                            </div>
-                            <br>
-                            <br>
-                            Greetings
-                            <br>
-                            <br>
-                            Creators of EthicApp
-                        </div>
-                        `
-                    }
-                }
-            } 
-        };
-        if (req.body.lenguaje == "Español") {
-            AWS_SES.sendEmail(params).promise()
-                .then(function() {
-                    res.redirect("login?rc=3");
-                })
-                .catch(function() {});
-        }
-        else {
-            AWS_SES.sendEmail(params2).promise()
-                .then(function() {
-                    res.redirect("login?rc=3");
-                })
-                .catch(function() {});
-        }
+        AWS_SES.sendEmail(params).promise()
+            .then(function() {
+                res.redirect("login?rc=3");
+            })
+            .catch(function() {});
+        
     }
     mail();
 });
