@@ -472,9 +472,9 @@ router.post("/resetpassword", (req, res) => {
         const params = {
             Source: "no-reply@iccuandes.org",
             Destination: {
-                ToAddresses: [
-                    req.body.email],
-            },
+                "ToAddresses": [
+                    req.body.email,
+                ]},
             Message: {
                 Subject: {
                 Data: "Solicitud de restablecimiento de contraseña",
