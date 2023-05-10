@@ -1080,6 +1080,23 @@ router.post("/accept_institution", (req, res) => {
                                                         region:          "us-east-1",
                                                     };
                                                     var AWS_SES = new AWS.SES(SES_CONFIG);
+                                                    // Still needed to figure out how to send this mail in different languages.
+                                                    /*
+                                                    if (req.body.lenguaje == "Español") {   
+                                                        // versión en español
+                                                        emailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/accept-inst/accept-inst.html', 'utf8');
+                                                        subject = "Resolucion de cuenta Institucional";
+                                                    }
+                                                    
+                                                    else {
+                                                        // versión en inglés
+                                
+                                                    }
+                                                    */
+                                                    emailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/accept-inst/accept-inst.html', 'utf8');
+                                                    subject = "Resolucion de cuenta Institucional";
+                                                    const template = handlebars.compile(emailTemplate);
+                                                    const html = template({name: name});
                                                     async function mail() {
                                                         var params = {
                                                             Source:      "no-reply@iccuandes.org",
@@ -1089,73 +1106,14 @@ router.post("/accept_institution", (req, res) => {
                                                                 ]},
                                                             Message: {
                                                                 "Subject": {
-                                                                    "Data": 
-                                                                "Resolucion de cuenta Institucional"
+                                                                    "Data": subject
                                                                 },
                                                                 "Body": {
                                                                     "Text": {
                                                                         "Data": ""
                                                                     },
                                                                     "Html": {
-                                                                        "Data": `
-<div style="
-    max-width: 640px;
-    display: block;
-    padding: 4px 24px 20px 24px;
-    border-color: gray;
-    border-width: 10px;
-    border-width: 5px;
-    border-style: solid;
-    margin: 20px auto;
-">
-    <div style="
-        text-align: center;
-        margin-bottom: 2em;
-        margin-top: 2em;
-    ">
-        <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
-    </div>
-    Hola ${fullname}!
-    <br>
-    <br>
-    Bienvenido a EthicApp. Tu cuenta institucional se encuentra aprobada. Puedes ingresar a
-    EthicApp y comenzar invitando a profesores a utilizarla, e incluso creando tu primera actividad.
-    <br>
-    <br>
-    <div style="text-align: center;">
-        <a href="http://localhost:8501/login">
-            <button style="
-                background-color: #2649EC;
-                border-color: #102AA0;
-                color: white;
-            ">
-                ¡Comenzar!
-            </button>
-        </a>
-    </div>
-    <br>
-    Te recordamos que en EthicApp usamos los datos generados por los usuarios con fines de
-    investigación. Garantizamos la absoluta confidencialidad de los datos, y que los datos no los
-    entregamos a terceras partes. En nuestras investigaciones reportamos los datos siempre a nivel
-    agregado y nunca a nivel individual, ni revelando la identidad de los participantes.
-    <br>
-    <br>
-    Las actividades basadas en EthicApp no presentan ningún riesgo a docentes ni estudiantes.
-    EthicApp se entrega como servicio a los usuarios “tal cual”. Los desarrolladores de EthicApp
-    quedan exentos de cualquier responsabilidad… [tenemos que ver si lo expresamos en forma similar
-    a las licencias permisivas tipo BSD, MIT o Apache].
-    <br>
-    <br>
-    EthicApp se reserva el derecho de suspender o terminar cuentas de usuario en caso que se detecte
-    uso indebido del servicio.
-    <br>
-    <br>
-    Deseamos a ti y a tus colegas el mayor éxito utilizando EthicApp en la enseñanza.
-    <br>
-    <br>
-    Creadores de EthicApp
-</div>
-`
+                                                                        "Data": html
                                                                     }
                                                                 }
                                                             } 
