@@ -281,100 +281,44 @@ router.post("/register_institucion", (req, res) => {
                                     region:          "us-east-1",
                                 };
                                 var AWS_SES = new AWS.SES(SES_CONFIG);
-                                async function mail() {
+                                var emailTemplate, subject; 
+                                if (country == "Chile") {   // ver como decidir en que idioma se manda el mail
+                                    // versión en español
+                                    emailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/inst-account-request/es-inst-account-request.html', 'utf8');
+                                    subject = "Solicitud de cuenta Institucional";
+                                }
+                                else {
+                                    // versión en inglés
+                                    emailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/inst-account-request/en-inst-account-request.html', 'utf8');
+                                    subject = "Institutional account request";
+                                }
+                                const template = handlebars.compile(emailTemplate);
+                                const html = template;
+                                async function mail(user_mail, subject) {
                                     var params ={
                                         Source:      "no-reply@iccuandes.org",
                                         Destination: {
-                                            "ToAddresses": [
+                                            ToAddresses: [
                                                 user_mail,
                                             ]},
                                         Message: {
-                                            "Subject": {
-                                                "Data": "Solicitud de cuenta Institucional"
+                                            Subject: {
+                                                Data: subject
                                             },
-                                            "Body": {
-                                                "Text": {
-                                                    "Data": ""},
-                                                "Html": {
-                                                    "Data": `
-                            <div style="
-                                max-width: 640px;
-                                display: block;
-                                padding: 4px 24px 20px 24px;
-                                border-color: gray;
-                                border-width: 10px;
-                                border-width: 5px;
-                                border-style: solid;
-                                margin: 20px auto;
-                            ">
-                                <div style="
-                                    text-align: center;
-                                    margin-bottom: 2em;
-                                    margin-top: 2em;
-                                ">
-                                    <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
-                                </div>
-                                En un plazo de 24 a 48 horas hábiles quedará habilitada tu cuenta.
-                                <br>
-                                Te enviaremos un correo con los pasos a seguir.
-                            </div>
-                                                `}
+                                            Body: {
+                                                Text: {
+                                                    Data: ""},
+                                                Html: html
                                             }
                                         } 
                                     };
-                                    var params2 = {
-                                        Source:      "no-reply@iccuandes.org",
-                                        Destination: {
-                                            "ToAddresses": [
-                                                user_mail,
-                                            ]},
-                                        Message: {
-                                            "Subject": {
-                                                "Data": "Test"
-                                            },
-                                            "Body": {
-                                                "Text": {
-                                                    "Data": "Mail de prueba"},
-                                                "Html": {
-                                                    "Data": `
-                            <div style="
-                                max-width: 640px;
-                                display: block;
-                                padding: 4px 24px 20px 24px;
-                                border-color: gray;
-                                border-width: 10px;
-                                border-width: 5px;
-                                border-style: solid;
-                                margin: 20px auto;
-                            ">
-                                <div style="
-                                    text-align: center;
-                                    margin-bottom: 2em;
-                                    margin-top: 2em;
-                                ">
-                                    <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
-                                </div>
-                                Within 24 to 48 business hours your account will be enabled.
-                                <br>
-                                We will send you an email with the steps to follow.
-                            </div>`
-                                                }
-                                            }
-                                        } 
-                                    };
-                                    if (country == "Chile") { // ver como decidir en que idioma se manda el mail
-                                        AWS_SES.sendEmail(params).promise()
-                                            .then(function() {})
-                                            .catch(function() {});
+                                    
+                                    AWS_SES.sendEmail(params).promise()
+                                        .then(function() {})
+                                        .catch(function() {});
                         
-                                    }
-                                    else {
-                                        AWS_SES.sendEmail(params2).promise()
-                                            .then(function() {})
-                                            .catch(function() {});
-                                    }
                                 }
-                                mail();
+                                mail(user_mail, subject);
                                 res.redirect("login?rc=1");
                             });
                         }
@@ -460,29 +404,30 @@ router.post("/resetpassword", (req, res) => {
 
 
     if (req.body.lenguaje == "Español") {
-        const resetPasswordEmailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/reset-password-es.html', 'utf8');
-        const emailTemplate = handlebars.compile(resetPasswordEmailTemplate);
+        const resetPasswordEmailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/reset-password/reset-password-es.html', 'utf8');
+        const data = "Solicitud de restablecimiento de contraseña";
     } else {
-        const resetPasswordEmailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/reset-password-en.html', 'utf8');
-        const emailTemplate = handlebars.compile(resetPasswordEmailTemplate);
+        const resetPasswordEmailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/reset-password/reset-password-en.html', 'utf8');
+        const data = "Reset Password Request";
     }
+    const emailTemplate = handlebars.compile(resetPasswordEmailTemplate);
     const html = emailTemplate({ userName: req.body.user, passwordResetLink: "http://localhost:8501/passreset" });
     
-    async function mail() {
+    async function mail(user_mail, subject) {
         const params = {
             Source: "no-reply@iccuandes.org",
             Destination: {
-                "ToAddresses": [
-                    req.body.email,
+                ToAddresses: [
+                    user_mail,
                 ]},
             Message: {
                 Subject: {
-                Data: "Solicitud de restablecimiento de contraseña",
+                    Data: subject,
                 },
                 Body: {
-                Html: {
-                    Data: html,
-                },
+                    Html: {
+                        Data: html,
+                    },
                 },
             },
         };
@@ -494,7 +439,7 @@ router.post("/resetpassword", (req, res) => {
             .catch(function() {});
         
     }
-    mail();
+    mail(req.body.email, subject);
 });
 
 
