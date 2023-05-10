@@ -1101,19 +1101,19 @@ router.post("/accept_institution", (req, res) => {
                                                         var params = {
                                                             Source:      "no-reply@iccuandes.org",
                                                             Destination: {
-                                                                "ToAddresses": [
+                                                                ToAddresses: [
                                                                     user_mail,
                                                                 ]},
                                                             Message: {
-                                                                "Subject": {
-                                                                    "Data": subject
+                                                                Subject: {
+                                                                    Data: subject
                                                                 },
-                                                                "Body": {
-                                                                    "Text": {
-                                                                        "Data": ""
+                                                                Body: {
+                                                                    Text: {
+                                                                        Data: ""
                                                                     },
-                                                                    "Html": {
-                                                                        "Data": html
+                                                                    Html: {
+                                                                        Data: html
                                                                     }
                                                                 }
                                                             } 
