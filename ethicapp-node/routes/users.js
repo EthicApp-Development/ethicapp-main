@@ -1096,7 +1096,7 @@ router.post("/accept_institution", (req, res) => {
                                                     emailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/accept-inst/accept-inst.html', 'utf8');
                                                     subject = "Resolucion de cuenta Institucional";
                                                     const template = handlebars.compile(emailTemplate);
-                                                    const html = template({name: name});
+                                                    const html = template({fullName: fullname});
                                                     async function mail() {
                                                         var params = {
                                                             Source:      "no-reply@iccuandes.org",
