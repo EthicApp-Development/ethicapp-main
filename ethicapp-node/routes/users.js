@@ -1180,58 +1180,41 @@ router.post("/reject_institution", (req, res) => {
                 region:          "us-east-1",
             };
             var AWS_SES = new AWS.SES(SES_CONFIG);
+            // Still needed to figure out how to send this mail in different languages.
+            /*
+            if (req.body.lenguaje == "Español") {   
+                // versión en español
+                emailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/reject-inst/reject-inst.html', 'utf8');
+                subject = "Resolucion de cuenta Institucional";
+            }
+            
+            else {
+                // versión en inglés
+
+            }
+            */
+            emailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/reject-inst/reject-inst.html', 'utf8');
+            subject = "Resolucion de cuenta Institucional";
+            const template = handlebars.compile(emailTemplate);
+            const html = template({fullName: fullname});
             async function mail() {
                 var params ={
                     Source:      "no-reply@iccuandes.org",
                     Destination: {
-                        "ToAddresses": [
+                        ToAddresses: [
                             user_mail,
                         ]
                     },
                     Message: {
-                        "Subject": {
-                            "Data": "Resolucion de cuenta Institucional"
+                        Subject: {
+                            Data: subject
                         },
-                        "Body": {
-                            "Text": {
-                                "Data": ""
+                        Body: {
+                            Text: {
+                                Data: ""
                             },
-                            "Html": {
-                                "Data": `
-<div style="
-    max-width: 640px;
-    display: block;
-    padding: 4px 24px 20px 24px;
-    border-color: gray;
-    border-width: 10px;
-    border-width: 5px;
-    border-style: solid;
-    margin: 20px auto;
-">
-    <div style="
-        text-align: center;
-        margin-bottom: 2em;
-        margin-top: 2em;
-    ">
-        <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
-    </div>
-    Hola ${fullname}!
-    <br>
-    <br>
-    Lamentamos que tu solicitud de creación de cuenta institucional fue rechazada. Esto pudo deberse
-    a que tu institución ya se encuentra registrada en EthicApp, o a información faltante en el
-    proceso de registro.
-    <br>
-    <br>
-    Puedes contactarnos a estudios-icc (at) miuandes.cl para buscar solución al problema
-    <br>
-    <br>
-    Un cordial saludo,
-    <br>
-    <br>
-    Creadores de EthicApp
-</div>
-                                `
+                            Html: {
+                                Data: html
                             }
                         }
                     } 
