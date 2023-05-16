@@ -157,7 +157,7 @@ router.post("/register", (req, res) => {
     const response_key = req.body["g-recaptcha-response"];
     const secret_key = pass.Captcha_Secret;
     fetch(
-        "https://www.google.com/recaptcha/api/siteverify" +
+        "https://www.google.com/recaptcha/api/siteverify?" +
         `secret=${secret_key}&response=${response_key}`
     )
         .then(response => response.json())
