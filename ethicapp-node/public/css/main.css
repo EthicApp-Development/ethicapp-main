@@ -44,7 +44,7 @@ hr{
     max-width: 360px;
     display: block;
     padding: 4px 44px 20px 44px;
-    border-bottom: 4px solid #aaaaaa;
+    border-bottom: 4px solid #aaa;
     background: #f3f3f3;
     margin: 20px auto;
     text-align: center;
@@ -58,7 +58,7 @@ hr{
     max-width: 640px;
     display: block;
     padding: 4px 24px 20px 24px;
-    border-bottom: 4px solid #aaaaaa;
+    border-bottom: 4px solid #aaa;
     background: #f3f3f3;
     margin: 20px auto;
 }
@@ -566,7 +566,7 @@ p{
 
 .onoffswitch-label {
     display: block; overflow: hidden; cursor: pointer;
-    border: 2px solid #FFFFFF; border-radius: 28px;
+    border: 2px solid #FFF; border-radius: 28px;
 }
 
 .onoffswitch-inner {
@@ -583,13 +583,13 @@ p{
 .onoffswitch-inner::before {
     content: "SI";
     padding-left: 10px;
-    background-color: #42A5F5; color: #FFFFFF;
+    background-color: #42A5F5; color: #FFF;
 }
 
 .onoffswitch-inner::after {
     content: "NO";
     padding-right: 6px;
-    background-color: #9E9E9E; color: #FFFFFF;
+    background-color: #9E9E9E; color: #FFF;
     text-align: right;
 }
 
@@ -602,7 +602,7 @@ p{
     top: 0;
     bottom: -2px;
     right: 34px;
-    border: 2px solid #FFFFFF;
+    border: 2px solid #FFF;
     border-radius: 28px;
     transition: all 0.3s ease-in 0s;
 }
@@ -612,7 +612,7 @@ p{
 }
 
 .onoffswitch-checkbox:checked + .onoffswitch-label .onoffswitch-switch {
-    right: 0px;
+    right: 0;
 }
 
 .sliders strong{
@@ -882,7 +882,7 @@ ng-quill-editor.large .ql-editor{
     border-top-right-radius: 8px;
     border-top-left-radius: 8px;
     background: #fff;
-    color: #000000;
+    color: #000;
     text-align: center;
     padding: 4px 2px;
     border-top: 8px solid #eee;
@@ -941,7 +941,7 @@ ng-quill-editor.large .ql-editor{
 }
 
 .text-white{
-    color: #ffffff !important;
+    color: #fff !important;
 }
 
 .cflex{
@@ -980,8 +980,8 @@ ng-quill-editor.large .ql-editor{
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    border: 4px solid #dddddd;
-    background: #dddddd;
+    border: 4px solid #ddd;
+    background: #ddd;
     vertical-align: middle;
     text-align: center;
     line-height: 4;
@@ -989,7 +989,7 @@ ng-quill-editor.large .ql-editor{
 
 .ansoption .option.selected, .dopts .option.selected{
     border: 6px solid #0075c3;
-    background: #FFFFFF;
+    background: #FFF;
 }
 
 .question-content{
@@ -1362,8 +1362,6 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 }
 
 .circle-profile {
-    width: 100px;
-    height: 100px;
     -moz-border-radius: 50%;
     -webkit-border-radius: 50%;
     border-radius: 50%;
@@ -1388,8 +1386,8 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     height: 2em;
     padding: 6px 27px;
     transition: 0.3s;
-    border: 1px solid #ffffff;
-    background-color: #ffffff;
+    border: 1px solid #fff;
+    background-color: #fff;
     border: 1px solid #000;
     font-size: 15px;
     display: flex;

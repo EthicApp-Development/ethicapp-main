@@ -27,11 +27,11 @@ body {
     font-size: 10pt;
     color: #555;
     display: block;
-    border-bottom: 1px solid #bbbbbb;
+    border-bottom: 1px solid #bbb;
 }
 
 .vl {
-    border-left: 1px solid #bbbbbb;
+    border-left: 1px solid #bbb;
     height:100%;
     position: absolute;
     margin-left: -3px;
@@ -43,7 +43,7 @@ body {
 
 .main-body {
     margin-left: 14em; /* Same as the width of the sidenav */
-    padding: 0px 10px;
+    padding: 0 10px;
 }
 
 .thumbnail-image{
@@ -71,7 +71,7 @@ body {
     text-align: center;
     line-height: 2.135em;
     font-size: 1em;
-    border:1px solid #bbbbbb;
+    border:1px solid #bbb;
     align-items: center;
     justify-content: center;
     display: flex;
@@ -94,8 +94,6 @@ body {
 }
 
 .circle-profile {
-    width: 100px;
-    height: 100px;
     -moz-border-radius: 50%;
     -webkit-border-radius: 50%;
     border-radius: 50%;
@@ -125,7 +123,7 @@ body {
 
 /* Phase item */
 .phase-element{
-    border:4px solid #bbbbbb;
+    border:4px solid #bbb;
     height:5em;
     width:15em;
     margin: 1em;
@@ -139,7 +137,7 @@ body {
 .phase-container{
     max-width: 80em;
     margin: 2em;
-    border:1px solid #bbbbbb;
+    border:1px solid #bbb;
 }
 
 .margin-container{
@@ -162,14 +160,14 @@ body {
 .stage-container{
     margin: 2em;
     max-width: 80em;
-    border:1px solid #bbbbbb;
+    border:1px solid #bbb;
 }
 
 .question-container{
     max-width: 80em;
     padding: 1em;
     margin-bottom: 1em;
-    border:1px solid #bbbbbb;
+    border:1px solid #bbb;
 }
 
 .tab-cs {
@@ -177,17 +175,14 @@ body {
 }
   
 .tab-cs button {
-    background-color: inherit;
     float: left;
-    border: none;
     outline: none;
     cursor: pointer;
     width: 9em;
     height: 2em;
     padding: 6px 27px;
     transition: 0.3s;
-    border: 1px solid #bbbbbb;
-    background-color: #bbbbbb;
+    background-color: #bbb;
     border: 1px solid #000;
     font-size: 15px;
     display: flex;
@@ -200,7 +195,7 @@ body {
 }
 
 .btn-selected{
-    background-color: #bbbbbb;
+    background-color: #bbb;
     font-weight: bolder;
 }
 
@@ -226,7 +221,7 @@ body {
     line-height: 1.25em;
     text-align: left;
     margin-left: 0.25em;
-    margin-top: 0.25m;
+    margin-top: 0.25em;
 }
 
 .dsgn-sel{

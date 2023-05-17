@@ -59,11 +59,6 @@
     padding-top: 160px;
 }
 
-.ngdialog.ngdialog-theme-default.ngdialog-closing .ngdialog-content {
-    -webkit-animation: ngdialog-flyout .5s;
-    animation: ngdialog-flyout .5s;
-}
-
 .ngdialog.ngdialog-theme-default .ngdialog-content {
     -webkit-animation: ngdialog-flyin .5s;
     animation: ngdialog-flyin .5s;
@@ -78,6 +73,11 @@
     padding: 1em;
     position: relative;
     width: 450px;
+}
+
+.ngdialog.ngdialog-theme-default.ngdialog-closing .ngdialog-content {
+    -webkit-animation: ngdialog-flyout .5s;
+    animation: ngdialog-flyout .5s;
 }
 
 .ngdialog.ngdialog-theme-default .ngdialog-close {

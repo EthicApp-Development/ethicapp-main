@@ -4,12 +4,11 @@
     background-color: #000;
     opacity: 0;
     background: -moz-radial-gradient(center,ellipse cover,rgba(0,0,0,0.4) 0,rgba(0,0,0,0.9) 100%);
-    background: -webkit-gradient(radial,center center,0px,center center,100%,color-stop(0%,rgba(0,0,0,0.4)),color-stop(100%,rgba(0,0,0,0.9)));
+    background: -webkit-gradient(radial,center center,0,center center,100%,color-stop(0%,rgba(0,0,0,0.4)),color-stop(100%,rgba(0,0,0,0.9)));
     background: -webkit-radial-gradient(center,ellipse cover,rgba(0,0,0,0.4) 0,rgba(0,0,0,0.9) 100%);
     background: -o-radial-gradient(center,ellipse cover,rgba(0,0,0,0.4) 0,rgba(0,0,0,0.9) 100%);
     background: -ms-radial-gradient(center,ellipse cover,rgba(0,0,0,0.4) 0,rgba(0,0,0,0.9) 100%);
     background: radial-gradient(center,ellipse cover,rgba(0,0,0,0.4) 0,rgba(0,0,0,0.9) 100%);
-    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#66000000',endColorstr='#e6000000',GradientType=1);
     -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=50)";
     filter: alpha(opacity=50);
     -webkit-transition: all 0.3s ease-out;
@@ -142,7 +141,6 @@
 .introjs-button {
     position: relative;
     overflow: visible;
-    display: inline-block;
     padding: 0.3em 0.8em;
     border: 1px solid #d4d4d4;
     margin: 0;
@@ -176,7 +174,7 @@
 .introjs-button:hover {
     border-color: #bcbcbc;
     text-decoration: none; 
-    box-shadow: 0px 1px 1px #e3e3e3;
+    box-shadow: 0 1px 1px #e3e3e3;
 }
 
 .introjs-button:focus,
