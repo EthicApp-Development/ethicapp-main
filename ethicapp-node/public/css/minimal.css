@@ -11,11 +11,11 @@ body {
 
 /* This stuff is important! Otherwise when you select the text, the text in the divs will show up! */
 ::selection {
-    background: rgba(0, 0, 255, 0.3);
+    background: rgb(0 0 255 /30%);
 }
 
 ::-moz-selection {
-    background: rgba(0, 0, 255, 0.3);
+    background: rgb(0 0 255 /30%);
 }
 
 .textLayer {
@@ -38,8 +38,8 @@ canvas {
 }
 
 .textLayer > div {
-    /* color: rgba(0,0,0,0.1); */
-    color: rgba(0,0,0,1);
+    /* color: rgb(0,0,0,0.1); */
+    color: rgb(0 0 0 /100%);
     position: absolute;
     line-height: 1;
     white-space: pre;

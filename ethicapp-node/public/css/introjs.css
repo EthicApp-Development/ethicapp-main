@@ -3,12 +3,12 @@
     z-index: 999999;
     background-color: #000;
     opacity: 0;
-    background: -moz-radial-gradient(center,ellipse cover,rgba(0,0,0,0.4) 0,rgba(0,0,0,0.9) 100%);
-    background: -webkit-gradient(radial,center center,0,center center,100%,color-stop(0%,rgba(0,0,0,0.4)),color-stop(100%,rgba(0,0,0,0.9)));
-    background: -webkit-radial-gradient(center,ellipse cover,rgba(0,0,0,0.4) 0,rgba(0,0,0,0.9) 100%);
-    background: -o-radial-gradient(center,ellipse cover,rgba(0,0,0,0.4) 0,rgba(0,0,0,0.9) 100%);
-    background: -ms-radial-gradient(center,ellipse cover,rgba(0,0,0,0.4) 0,rgba(0,0,0,0.9) 100%);
-    background: radial-gradient(center,ellipse cover,rgba(0,0,0,0.4) 0,rgba(0,0,0,0.9) 100%);
+    background: -moz-radial-gradient(center,ellipse cover,rgb(0 0 0 /40%) 0,rgb(0 0 0 /90%) 100%);
+    background: -webkit-gradient(radial,center center,0,center center,100%,color-stop(0%,rgb(0 0 0 /40%)),color-stop(100%,rgb(0 0 0 /90%)));
+    background: -webkit-radial-gradient(center,ellipse cover,rgb(0 0 0 /40%) 0,rgb(0 0 0 /90%) 100%);
+    background: -o-radial-gradient(center,ellipse cover,rgb(0 0 0 /40%) 0,rgb(0 0 0 /90%) 100%);
+    background: -ms-radial-gradient(center,ellipse cover,rgb(0 0 0 /40%) 0,rgb(0 0 0 /90%) 100%);
+    background: radial-gradient(center,ellipse cover,rgb(0 0 0 /40%) 0,rgb(0 0 0 /90%) 100%);
     -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=50)";
     filter: alpha(opacity=50);
     -webkit-transition: all 0.3s ease-out;
@@ -34,11 +34,11 @@
     position: absolute;
     z-index: 9999998;
     background-color: #FFF;
-    background-color: rgba(255,255,255,.9);
+    background-color: rgb(255 255 255 /90%);
     border: 1px solid #777;
-    border: 1px solid rgba(0,0,0,.5);
+    border: 1px solid rgb(0 0 0 /50%);
     border-radius: 4px;
-    box-shadow: 0 2px 15px rgba(0,0,0,.4);
+    box-shadow: 0 2px 15px rgb(0 0 0 /40%);
     -webkit-transition: all 0.3s ease-out;
     -moz-transition: all 0.3s ease-out;
     -ms-transition: all 0.3s ease-out;
@@ -57,7 +57,7 @@
     font-weight: bold;
     color: white;
     text-align: center;
-    text-shadow: 1px 1px 1px rgba(0,0,0,.3);
+    text-shadow: 1px 1px 1px rgb(0 0 0 /30%);
     background: #ff3019; /* Old browsers */
     background: -webkit-linear-gradient(top, #ff3019 0%, #cf0404 100%); /* Chrome10+,Safari5.1+ */
     background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #ff3019), color-stop(100%, #cf0404)); /* Chrome,Safari4+ */
@@ -72,7 +72,7 @@
     border-radius: 50%;
     filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff3019', endColorstr='#cf0404', GradientType=0); /* IE6-9 */ 
     filter: progid:DXImageTransform.Microsoft.Shadow(direction=135, strength=2, color=ff0000); /* IE10 text shadows */
-    box-shadow: 0 2px 5px rgba(0,0,0,.4);
+    box-shadow: 0 2px 5px rgb(0 0 0 /40%);
 }
 
 .introjs-arrow {
@@ -83,36 +83,24 @@
 
 .introjs-arrow.top {
     top: -10px;
-    border-top-color:transparent;
-    border-right-color:transparent;
-    border-bottom-color:white;
-    border-left-color:transparent;
+    border-color: transparent transparent white;
 }
 
 .introjs-arrow.right {
     right: -10px;
     top: 10px;
-    border-top-color:transparent;
-    border-right-color:transparent;
-    border-bottom-color:transparent;
-    border-left-color:white;
+    border-color: transparent transparent transparent white;
 }
 
 .introjs-arrow.bottom {
     bottom: -10px;
-    border-top-color:white;
-    border-right-color:transparent;
-    border-bottom-color:transparent;
-    border-left-color:transparent;
+    border-color: white transparent transparent;
 }
 
 .introjs-arrow.left {
     left: -10px;
     top: 10px;
-    border-top-color:transparent;
-    border-right-color:white;
-    border-bottom-color:transparent;
-    border-left-color:transparent;
+    border-color: transparent right transparent transparent;
 }
 
 .introjs-tooltip {
@@ -122,7 +110,7 @@
     min-width: 200px;
     max-width: 300px;
     border-radius: 3px;
-    box-shadow: 0 1px 10px rgba(0,0,0,.4);
+    box-shadow: 0 1px 10px rgb(0 0 0 /40%);
     -webkit-transition: opacity 0.1s ease-out;
     -moz-transition: opacity 0.1s ease-out;
     -ms-transition: opacity 0.1s ease-out;

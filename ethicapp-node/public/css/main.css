@@ -25,12 +25,12 @@ hr{
 }
 
 ::-webkit-scrollbar-track {
-    background-color: rgba(0,0,0,0);
+    background-color: rgb(0 0 0 /0%);
 }
 
 ::-webkit-scrollbar-thumb {
     border-radius: 10px;
-    background-color: rgba(0,0,0,0.2);
+    background-color: rgb(0 0 0 /20%);
 }
 
 .row-eq-height {
@@ -43,7 +43,7 @@ hr{
 .middle-box{
     max-width: 360px;
     display: block;
-    padding: 4px 44px 20px 44px;
+    padding: 4px 44px 20px;
     border-bottom: 4px solid #aaa;
     background: #f3f3f3;
     margin: 20px auto;
@@ -51,13 +51,13 @@ hr{
 }
 
 .middle-box-mail{
-    max-width: 640px;display: block;padding: 4px 24px 20px 24px;border-color: gray;border-width: 10px;border-width: 5px;border-style: solid;margin: 20px auto;
+    max-width: 640px;display: block;padding: 4px 24px 20px;border-color: gray;border-width: 10px;border-width: 5px;border-style: solid;margin: 20px auto;
 }
 
 .large-box{
     max-width: 640px;
     display: block;
-    padding: 4px 24px 20px 24px;
+    padding: 4px 24px 20px;
     border-bottom: 4px solid #aaa;
     background: #f3f3f3;
     margin: 20px auto;
@@ -192,11 +192,11 @@ a:hover{
 }
 
 .discrete{
-    color: rgba(0,0,0,0.3);
+    color: rgb(0 0 0 /30%);
 }
 
 .discrete:hover{
-    color: rgba(0,0,0,0.6);
+    color: rgb(0 0 0 /60%);
 }
 
 .pdf-content{
@@ -223,11 +223,11 @@ canvas{
 }
 
 .highlight{
-    background: rgba(245,167,67,0.5);
+    background: rgb(245 167 67 /50%);
 }
 
 .highlight-secondary{
-    background: rgba(245,217,67,0.5);
+    background: rgb(245 217 67 /50%);
 }
 
 .side-top-btn{
@@ -236,17 +236,17 @@ canvas{
     height: 100%;
     padding-top: 4px;
     text-align: center;
-    background: rgba(0,0,0,0.1);
+    background: rgb(0 0 0 /10%);
     color: white;
 }
 
 .side-top-btn:hover{
-    background: rgba(0,0,0,0.2);
+    background: rgb(0 0 0 /20%);
     cursor: pointer;
 }
 
 .side-top-btn.active{
-    background: rgba(0,0,0,0.4);
+    background: rgb(0 0 0 /40%);
 }
 
 .simple-margin-left{
@@ -479,7 +479,7 @@ td.clickable:hover{
 .splash{
     position: absolute;
     z-index: 100;
-    background: rgba(0,0,0,0.35);
+    background: rgb(0 0 0 /35%);
     top: 0;
     left: 0;
     width: 100vw;
@@ -504,7 +504,7 @@ span.boxed{
 }
 
 .bg-black-alpha{
-    background: rgba(0,0,0,0.4);
+    background: rgb(0 0 0 /40%);
 }
 
 .margin-right-24{
@@ -550,7 +550,7 @@ p{
 }
 
 .parent-msg{
-    background: rgba(0,0,0,0.1);
+    background: rgb(0 0 0 /10%);
 }
 
 
@@ -644,7 +644,7 @@ ng-quill-editor.large{
 .quill-disabled::after {
     display: block;
     width: 100%;
-    background: rgba(200,200,200,0.3);
+    background: rgb(200 200 200 /30%);
     height: 120px;
     content: "";
     position: relative;
@@ -725,7 +725,7 @@ ng-quill-editor.large .ql-editor{
 }
 
 .top-bar .chip{
-    background: rgba(0,0,0,0.1);
+    background: rgb(0 0 0 /10%);
     padding: 8px;
     margin-left: 4px;
     color: white;
@@ -738,13 +738,13 @@ ng-quill-editor.large .ql-editor{
 }
 
 .top-bar .chip.hoverable:hover{
-    background: rgba(0,0,0,0.7);
+    background: rgb(0 0 0 /70%);
     cursor: pointer;
     text-decoration: none;
 }
 
 .top-bar .chip.active{
-    background: rgba(0,0,0,0.5);
+    background: rgb(0 0 0 /50%);
     font-weight: bold;
 }
 
@@ -1003,12 +1003,12 @@ ng-quill-editor.large .ql-editor{
 }
 
 .flat.btn{
-    background: rgba(0,0,0,0.1);
+    background: rgb(0 0 0 /10%);
     border: 1px solid transparent;
 }
 
 .flat.btn:hover{
-    background: rgba(0,0,0,0.2);
+    background: rgb(0 0 0 /20%);
     border: 1px solid white;
     color: white;
 }
@@ -1026,7 +1026,7 @@ input.flat:focus{
 }
 
 input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
-    color: rgba(255,255,255,0.8);
+    color: rgb(255 255 255 /80%);
     opacity: 1; /* Firefox */
 }
 
@@ -1039,7 +1039,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 ::-webkit-scrollbar-thumb {
     border-radius: 10px;
     border: solid 2px transparent;
-    background-color: rgba(208, 208, 208, 0.9);
+    background-color: rgb(208  208  208 /90%);
 }
 
 .mid-container.simple-pad{
@@ -1153,7 +1153,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 }
 
 .chat-msg:hover{
-    background: rgba(0,0,0,0.1);
+    background: rgb(0 0 0 /10%);
 }
 
 .margin-top-28{
@@ -1288,7 +1288,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 }
 
 .as-textfield{
-    border: 1px solid rgb(231, 231, 231);
+    border: 1px solid rgb(231 231 231);
     padding: 8px;
     border-radius: 4px;
 }
@@ -1335,7 +1335,6 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 }
 
 .app-title{
-
     color: blue;
 }
 
@@ -1403,7 +1402,6 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     width: 43.3em;
     height: 2em;
     padding: 6px 27px;
-
     outline: none;
     font-size: 15px;
     display: flex;
