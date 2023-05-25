@@ -1,16 +1,15 @@
 .introjs-overlay {
     position: absolute;
-    z-index: 999999;
-    background-color: #000;
-    opacity: 0;
+    z-index: 999999; 
     background: -moz-radial-gradient(center,ellipse cover,rgb(0 0 0 /40%) 0,rgb(0 0 0 /90%) 100%);
     background: -webkit-gradient(radial,center center,0,center center,100%,color-stop(0%,rgb(0 0 0 /40%)),color-stop(100%,rgb(0 0 0 /90%)));
     background: -webkit-radial-gradient(center,ellipse cover,rgb(0 0 0 /40%) 0,rgb(0 0 0 /90%) 100%);
     background: -o-radial-gradient(center,ellipse cover,rgb(0 0 0 /40%) 0,rgb(0 0 0 /90%) 100%);
     background: -ms-radial-gradient(center,ellipse cover,rgb(0 0 0 /40%) 0,rgb(0 0 0 /90%) 100%);
     background: radial-gradient(center,ellipse cover,rgb(0 0 0 /40%) 0,rgb(0 0 0 /90%) 100%);
+    background-color: #000;
     -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=50)";
-    filter: alpha(opacity=50);
+    opacity: 0.5;
     -webkit-transition: all 0.3s ease-out;
     -moz-transition: all 0.3s ease-out;
     -ms-transition: all 0.3s ease-out;

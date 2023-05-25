@@ -1376,16 +1376,13 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 }
   
 .tab-cs2 button {
-    background-color: inherit;
     float: left;
-    border: none;
     outline: none;
     cursor: pointer;
     width: 9em;
     height: 2em;
     padding: 6px 27px;
     transition: 0.3s;
-    border: 1px solid #fff;
     background-color: #fff;
     border: 1px solid #000;
     font-size: 15px;
