@@ -2413,7 +2413,6 @@ adpp.controller("MonitorActivityController", function (
     self.stagesState = null;
     self.completion = null;
 
-
     self.init = function() {
         if (self.selectedView === "activity") {
           self.currentStage()
@@ -2437,6 +2436,11 @@ adpp.controller("MonitorActivityController", function (
                 self.ActivityCompletion(stageId);
             });
         }
+    }
+
+    self.test = function(xd, xd2){
+        console.log(xd2[0])
+        console.log(xd2)
     }
 
     self.ActivityCompletion = function(stageId){

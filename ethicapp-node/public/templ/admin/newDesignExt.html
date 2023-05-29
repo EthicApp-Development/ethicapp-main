@@ -261,7 +261,8 @@
                         </button>
                     </div>
                     <div class="col-sm-2 text-right">
-                        <input class="form-control form-inline-mini" placeholder="Word Count" type="number"
+                        <label >{{'words'|lang}}</label>
+                        <input class="form-control form-inline-mini" placeholder="Word Count" type="number" min="1"
                             ng-model="role.wc" ng-disabled="readonly || role.type == null">
                     </div>
                     <div class="col-sm-1">
