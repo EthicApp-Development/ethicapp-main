@@ -16,10 +16,10 @@
     </div>
 
     <!--Phases selections-->
-    <div class="container phase_container">
+    <div class="container phase-container">
         <div class="row">
-            <div class="col-xs-1 phase_element" ng-repeat="item in getStages()" ng-init="current"
-                ng-class="{phase_selected:currentStage==$index}" ng-click="selectStage($index)">
+            <div class="col-xs-1 phase-element" ng-repeat="item in getStages()" ng-init="current"
+                ng-class="{phase-selected:currentStage==$index}" ng-click="selectStage($index)">
                 {{'stage' | lang}} {{$index+ 1}}
                 {{'mode' | lang}}: {{item.mode|lang}}
             </div>
@@ -66,7 +66,7 @@
             <!--EXTRA OPTIONS-->
             <div ng-if="design.phases[currentStage].mode == 'team'">
                 <a ng-click="toggleOpts(1)">{{'advOpts'|lang}}</a>
-                <div ng-show="extraOpts" class="question_container">
+                <div ng-show="extraOpts" class="question-container">
                     <div class="row margin-top-8">
                         <label class="col-lg-2">{{'studentAnon'|lang}}:</label>
                         <div class="col-lg-1">
@@ -83,7 +83,7 @@
                             <div ng-click="toggleOpts(2)" style="cursor: pointer;">
                                 {{'viewPastSes'|lang}}:
                             </div>
-                            <div class="stack-top stage_container" ng-show="prevStages"
+                            <div class="stack-top stage-container" ng-show="prevStages"
                                 style="z-index: 2; position:absolute; background:#fff; border: 2px #bbb solid; width:10em;">
                                 <div ng-repeat="n in buildArray(currentStage)">
                                     <input type="checkbox" name="prevStage" ng-disabled="true" checklist-value="n-1"
@@ -119,7 +119,7 @@
             </button>
         </div>
 
-        <div class="question_container">
+        <div class="question-container">
             <div ng-show="stageType == 'semantic_differential'">
                 <div class="row">
                     <label class="col-lg-2">{{'questionText'|lang}}</label>

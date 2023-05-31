@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 # --------------------------------------------------------------------------------------------------
 # Initializes the shared volume for the Postgres database in the host filesystem. The directory in
 # which the virtualized Postgres database will be mounted at is $HOST_DB_VOLUME_PATH, but can be

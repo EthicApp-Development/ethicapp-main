@@ -78,7 +78,7 @@ adpp.controller("SesListController",
                     self.mail = data.mail;
                     self.rol = data.role;
                     self.username = data.name;
-                    //self.mylang = data.lang;
+                    // self.mylang = data.lang;
                     self.mylang = data.lang == "spanish" ? "ES_CL/spanish" : "EN_US/english";
                     self.updateLang(self.mylang);
                 });

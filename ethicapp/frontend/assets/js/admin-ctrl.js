@@ -2415,60 +2415,58 @@ adpp.controller("MonitorActivityController", function (
 
     self.init = function() {
         if (self.selectedView === "activity") {
-          self.currentStage()
+            self.currentStage();
         }
-      };
+    };
 
     self.ActivityState = function(stageId){
         if(self.design.type == "semantic_differential"){
             $http({
-                url: "stage-state-df", method: "post", data: {sesid:self.selectedSes.id}
+                url: "stage-state-df", method: "post", data: {sesid: self.selectedSes.id}
             }).success(function (data) {
                 self.stagesState = data;
                 self.ActivityCompletion(stageId);
             });
         }
-        else if(self.design.type = "ranking"){
+        else if (self.design.type == "ranking") {
             $http({
-                url: "stage-state-r", method: "post", data: {sesid:self.selectedSes.id}
+                url: "stage-state-r", method: "post", data: {sesid: self.selectedSes.id}
             }).success(function (data) {
                 self.stagesState = data;
                 self.ActivityCompletion(stageId);
             });
         }
-    }
+    };
 
     self.test = function(xd, xd2){
-        console.log(xd2[0])
-        console.log(xd2)
-    }
+        console.log(xd2[0]);
+        console.log(xd2);
+    };
 
     self.ActivityCompletion = function(stageId){
         const numUsers = Object.keys(self.users).length -1;
         
         const stageCounter = self.stagesState.findIndex(stage => stage.id === stageId);
         var current_phase = self.design.phases[stageCounter];
-        console.log(stageCounter, self.stagesState, stageId)
         if(self.stagesState[stageCounter] !== undefined){
             var current_phase = self.design.phases[stageCounter];
             if(self.design.type == "semantic_differential"){
-                self.completion = self.stagesState[stageCounter].count +"/" +  numUsers
+                self.completion = self.stagesState[stageCounter].count +"/" +  numUsers;
             }
             else if(self.design.type == "ranking"){
-                self.completion =  self.stagesState[stageCounter].count/self.stagesState[stageCounter].count +"/" + numUsers
+                self.completion =  self.stagesState[stageCounter].count/self.stagesState[stageCounter].count +"/" + numUsers;
             }
         }
         else{
             var current_phase = self.design.phases[self.currentActivity.stage];
-            console.log(current_phase, self.currentActivity.stage)
             if(self.design.type == "semantic_differential"){
                 self.completion = 0+"/" +  numUsers;
             } 
             else if(self.design.type == "ranking"){
-                self.completion = 0+"/" + numUsers
+                self.completion = 0+"/" + numUsers;
             }
         }
-    }
+    };
 
     self.getPrevAns = function(current_phase){
         //console.log(current_phase.prevPhasesResponse)
@@ -2600,12 +2598,12 @@ adpp.controller("MonitorActivityController", function (
 
     self.currentStage = function() {
         var pd = {
-          sesid: self.selectedSes.id
+            sesid: self.selectedSes.id
         };
         return $http({ url: "get-current-stage", method: "post", data: pd }).then(function(response) {
-          self.currentActivity.stage = response.data.length === 0 ? 0: response.data[0].number -1;
+            self.currentActivity.stage = response.data.length === 0 ? 0: response.data[0].number -1;
         });
-      };
+    };
       
 
     self.finishActivity = function(){
@@ -3172,10 +3170,6 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
                 self.num = self.design.phases[self.currentStage].questions[self.currentQuestion]
                     .ans_format.values;
             }
-            else if(self.stageType == "ranking"){
-
-            }
-
         }
         else {
             /*
@@ -3236,7 +3230,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
                 "stdntAmount":        phase.stdntAmount
             };
         }
-        else if("ranking"){
+        else if (type == "ranking") {
             return{
                 mode:               phase.mode,
                 chat:               phase.chat,

@@ -27,7 +27,6 @@ function getDBInstance(dbcon) {
 router.get("/seslist", (req, res) => {
     if (req.session.uid) {
         if (req.session.role == "P")
-            //res.redirect("admin");
             res.redirect("home");
         else
             res.render("seslist");
