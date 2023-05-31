@@ -7,6 +7,8 @@ let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 let crypto = require("crypto");
 let mailer = require("nodemailer");
+const handlebars = require("handlebars"); 
+const fs = require('fs');
 const passport = require("passport");
 require("./passport-setup");
 var AWS = require("aws-sdk");
@@ -279,100 +281,44 @@ router.post("/register_institucion", (req, res) => {
                                     region:          "us-east-1",
                                 };
                                 var AWS_SES = new AWS.SES(SES_CONFIG);
-                                async function mail() {
+                                var emailTemplate, subject; 
+                                if (country == "Chile") {   // ver como decidir en que idioma se manda el mail
+                                    // versión en español
+                                    emailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/inst-account-request/es-inst-account-request.html', 'utf8');
+                                    subject = "Solicitud de cuenta Institucional";
+                                }
+                                else {
+                                    // versión en inglés
+                                    emailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/inst-account-request/en-inst-account-request.html', 'utf8');
+                                    subject = "Institutional account request";
+                                }
+                                const template = handlebars.compile(emailTemplate);
+                                const html = template;
+                                async function mail(user_mail, subject) {
                                     var params ={
                                         Source:      "no-reply@iccuandes.org",
                                         Destination: {
-                                            "ToAddresses": [
+                                            ToAddresses: [
                                                 user_mail,
                                             ]},
                                         Message: {
-                                            "Subject": {
-                                                "Data": "Solicitud de cuenta Institucional"
+                                            Subject: {
+                                                Data: subject
                                             },
-                                            "Body": {
-                                                "Text": {
-                                                    "Data": ""},
-                                                "Html": {
-                                                    "Data": `
-                            <div style="
-                                max-width: 640px;
-                                display: block;
-                                padding: 4px 24px 20px 24px;
-                                border-color: gray;
-                                border-width: 10px;
-                                border-width: 5px;
-                                border-style: solid;
-                                margin: 20px auto;
-                            ">
-                                <div style="
-                                    text-align: center;
-                                    margin-bottom: 2em;
-                                    margin-top: 2em;
-                                ">
-                                    <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
-                                </div>
-                                En un plazo de 24 a 48 horas hábiles quedará habilitada tu cuenta.
-                                <br>
-                                Te enviaremos un correo con los pasos a seguir.
-                            </div>
-                                                `}
+                                            Body: {
+                                                Text: {
+                                                    Data: ""},
+                                                Html: html
                                             }
                                         } 
                                     };
-                                    var params2 = {
-                                        Source:      "no-reply@iccuandes.org",
-                                        Destination: {
-                                            "ToAddresses": [
-                                                user_mail,
-                                            ]},
-                                        Message: {
-                                            "Subject": {
-                                                "Data": "Test"
-                                            },
-                                            "Body": {
-                                                "Text": {
-                                                    "Data": "Mail de prueba"},
-                                                "Html": {
-                                                    "Data": `
-                            <div style="
-                                max-width: 640px;
-                                display: block;
-                                padding: 4px 24px 20px 24px;
-                                border-color: gray;
-                                border-width: 10px;
-                                border-width: 5px;
-                                border-style: solid;
-                                margin: 20px auto;
-                            ">
-                                <div style="
-                                    text-align: center;
-                                    margin-bottom: 2em;
-                                    margin-top: 2em;
-                                ">
-                                    <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
-                                </div>
-                                Within 24 to 48 business hours your account will be enabled.
-                                <br>
-                                We will send you an email with the steps to follow.
-                            </div>`
-                                                }
-                                            }
-                                        } 
-                                    };
-                                    if (country == "Chile") { // ver como decidir en que idioma se manda el mail
-                                        AWS_SES.sendEmail(params).promise()
-                                            .then(function() {})
-                                            .catch(function() {});
+                                    
+                                    AWS_SES.sendEmail(params).promise()
+                                        .then(function() {})
+                                        .catch(function() {});
                         
-                                    }
-                                    else {
-                                        AWS_SES.sendEmail(params2).promise()
-                                            .then(function() {})
-                                            .catch(function() {});
-                                    }
                                 }
-                                mail();
+                                mail(user_mail, subject);
                                 res.redirect("login?rc=1");
                             });
                         }
@@ -455,148 +401,45 @@ router.post("/resetpassword", (req, res) => {
         region:          "us-east-1",
     };
     var AWS_SES = new AWS.SES(SES_CONFIG);
-    async function mail() {
-        var params = {
-            Source:      "no-reply@iccuandes.org",
+
+
+    if (req.body.lenguaje == "Español") {
+        const resetPasswordEmailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/reset-password/reset-password-es.html', 'utf8');
+        const data = "Solicitud de restablecimiento de contraseña";
+    } else {
+        const resetPasswordEmailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/reset-password/reset-password-en.html', 'utf8');
+        const data = "Reset Password Request";
+    }
+    const emailTemplate = handlebars.compile(resetPasswordEmailTemplate);
+    const html = emailTemplate({ userName: req.body.user, passwordResetLink: "http://localhost:8501/passreset" });
+    
+    async function mail(user_mail, subject) {
+        const params = {
+            Source: "no-reply@iccuandes.org",
             Destination: {
-                "ToAddresses": [
-                    req.body.user,
+                ToAddresses: [
+                    user_mail,
                 ]},
             Message: {
-                "Subject": {
-                    "Data": "Test"
+                Subject: {
+                    Data: subject,
                 },
-                "Body": {
-                    "Text": {
-                        "Data": "Mail de prueba"},
-                    "Html": {
-                        "Data": `
-                        <div style="
-                            max-width: 640px;
-                            display: block;
-                            padding: 4px 24px 20px 24px;
-                            border-color: gray;
-                            border-width: 10px;
-                            border-width: 5px;
-                            border-style: solid;
-                            margin: 20px auto;
-                        ">
-                            <div style="
-                                text-align: center;
-                                margin-bottom: 2em;
-                                margin-top: 2em;
-                            ">
-                                <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
-                            </div>
-                            Hola
-                            <br>
-                            <br>
-                            ¿Has perdido tu contraseña? Puedes restablecerla a continuación:
-                            <br>
-                            <br>
-                            <div style="
-                                text-align: center;
-                            ">
-                                <a href="http://localhost:8501/passreset">
-                                    <button style="
-                                        background-color: #2649EC;
-                                        border-color: #102AA0;
-                                        color: white;
-                                    ">
-                                        Restablecer contraseña
-                                    </button>
-                                </a>
-                            </div>
-                            <br>
-                            <br>
-                            Recibe un cordial saludo,
-                            <br>
-                            <br>
-                            Creadores de EthicApp
-                        </div>
-                        `
-                    }
-                }
-            } 
+                Body: {
+                    Html: {
+                        Data: html,
+                    },
+                },
+            },
         };
 
-        var params2 = {
-            Source:      "no-reply@iccuandes.org",
-            Destination: {
-                "ToAddresses": [
-                    req.body.user,
-                ]},
-            Message: {
-                "Subject": {
-                    "Data": "Test"
-                },
-                "Body": {
-                    "Text": {
-                        "Data": "Mail de prueba"},
-                    "Html": {
-                        "Data": `
-                        <div style="
-                            max-width: 640px;
-                            display: block;
-                            padding: 4px 24px 20px 24px;
-                            border-color: gray;
-                            border-width: 10px;
-                            border-width: 5px;
-                            border-style: solid;
-                            margin: 20px auto;
-                        ">
-                            <div style="
-                                text-align: center;
-                                margin-bottom: 2em;
-                                margin-top: 2em;
-                            ">
-                                <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
-                            </div>
-                            Hi
-                            <br>
-                            <br>
-                            Have you lost your password? You can restore it in the following link:
-                            <br>
-                            <br>
-                            <div style="text-align: center;">
-                                <a href="http://localhost:8501/passreset">
-                                    <button style="
-                                        background-color: #2649EC;
-                                        border-color: #102AA0;
-                                        color: white;
-                                    ">
-                                        Restore password
-                                    </button>
-                                </a>
-                            </div>
-                            <br>
-                            <br>
-                            Greetings
-                            <br>
-                            <br>
-                            Creators of EthicApp
-                        </div>
-                        `
-                    }
-                }
-            } 
-        };
-        if (req.body.lenguaje == "Español") {
-            AWS_SES.sendEmail(params).promise()
-                .then(function() {
-                    res.redirect("login?rc=3");
-                })
-                .catch(function() {});
-        }
-        else {
-            AWS_SES.sendEmail(params2).promise()
-                .then(function() {
-                    res.redirect("login?rc=3");
-                })
-                .catch(function() {});
-        }
+        AWS_SES.sendEmail(params).promise()
+            .then(function() {
+                res.redirect("login?rc=3");
+            })
+            .catch(function() {});
+        
     }
-    mail();
+    mail(req.body.email, subject);
 });
 
 
@@ -744,95 +587,41 @@ router.post("/create-multicounts",(req,res)=> {
                                 region:          "us-east-1",
                             };
                             var AWS_SES = new AWS.SES(SES_CONFIG);
+                            var emailTemplate, subject; 
+                            // Still needed to figure out how to send this mail in different languages.
+                            /*
+                            if (req.body.lenguaje == "Español") {   
+                                // versión en español
+                                emailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/create-multicounts/es-create-multicounts.html', 'utf8');
+                                subject = "Resolucion de cuenta Institucional";
+                            }
+                            
+                            else {
+                                // versión en inglés
+        
+                            }
+                            */
+                            emailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/create-multicounts/es-create-multicounts.html', 'utf8');
+                            subject = "Resolucion de cuenta Institucional";
+                            const template = handlebars.compile(emailTemplate);
+                            const html = template({name: name});
                             async function mail() {
                                 var params ={
                                     Source:      "no-reply@iccuandes.org",
                                     Destination: {
-                                        "ToAddresses": [
+                                        ToAddresses: [
                                             user_mail,
                                         ]},
                                     Message: {
-                                        "Subject": {
-                                            "Data": "Resolucion de cuenta Institucional"},
-                                        "Body": {
-                                            "Text": {
-                                                "Data": ""
+                                        Subject: {
+                                            Data: subject
+                                        },
+                                        Body: {
+                                            Text: {
+                                                Data: ""
                                             },
-                                            "Html": {
-                                                "Data": `
-<div style="
-    max-width: 640px;
-    display: block;
-    padding: 4px 24px 20px 24px;
-    border-color: gray;
-    border-width: 10px;
-    border-width: 5px;
-    border-style: solid;
-    margin: 20px auto;
-">
-    <div style="
-        text-align: center;
-        margin-bottom: 2em;
-        margin-top: 2em;
-    ">
-        <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
-    </div>
-    Hola, ${name}
-    <br>
-    Bienvenido a EthicApp. Has sido invitado a incorporarte a EthicApp por
-    [nombre usuario institucional] de [institución]. Para aceptar la invitación, pincha el siguiente
-    botón:
-    <br>
-    <br>
-    <div style="text-align: center;">
-        <a href="http://localhost:8501/login?rc=5&&tok='+token+'">
-            <button style="
-                background-color: #2649EC;
-                border-color: #102AA0;
-                color: white;
-            ">
-                Activar tu Cuenta
-            </button>
-        </a>
-    </div>
-    <br>
-    <br>
-    Te recordamos que en EthicApp usamos los datos generados por los usuarios con fines de
-    investigación.
-    <br>
-    <br>
-    Garantizamos la absoluta confidencialidad de los datos, y que los datos no los entregamos a
-    terceras partes. En nuestras investigaciones reportamos los datos siempre a nivel agregado y
-    nunca a nivel individual, ni revelando la identidad de los participantes. Las actividades
-    basadas en EthicApp no presentan ningún riesgo físico o psicológico a docentes o a estudiantes.
-    <br>
-    <br>
-    EthicApp se reserva el derecho de suspender o terminar cuentas de usuario en caso que se detecte
-    uso indebido del servicio.
-    <br>
-    <br>
-    <strong>
-        Activando tu cuenta a través del botón de arriba manifiestas tu aceptación de las
-        condiciones antes descritas.
-    </strong>
-    <br>
-    <br>
-    Te deseamos el mayor éxito en tus actividades con EthicApp.
-    <br>
-    <br>
-    Creadores de EthicApp
-    <br>
-    <br>
-    ESTE SOFTWARE SE SUMINISTRA POR LA UNIVERSIDAD DE CHILE, CHILE Y LA UNIVERSIDAD DE LOS ANDES,
-    CHILE. EN NINGÚN CASO LAS INSTITUCIONES MENCIONADAS SERÁN RESPONSABLES POR NINGÚN DAÑO DIRECTO,
-    INDIRECTO, INCIDENTAL, ESPECIAL, EJEMPLAR O CONSECUENTE (INCLUYENDO,PERO NO LIMITADO A, LA
-    ADQUISICIÓN DE BIENES O SERVICIOS; LA PÉRDIDA DE USO, DE DATOS O DE BENEFICIOS; O INTERRUPCIÓN
-    DE LA ACTIVIDAD EMPRESARIAL) O POR CUALQUIER TEORÍA DE RESPONSABILIDAD, YA SEA POR CONTRATO,
-    RESPONSABILIDAD ESTRICTA O AGRAVIO (INCLUYENDO NEGLIGENCIA O CUALQUIER OTRA CAUSA) QUE SURJA DE
-    CUALQUIER MANERA DEL USO DE ESTE SOFTWARE, INCLUSO SI SE HA ADVERTIDO DE LA POSIBILIDAD DE TALES
-    DAÑOS.
-</div>
-                                            `
+                                            Html: {
+                                                Data: html
                                             }
                                         }
                                     } 
@@ -1291,82 +1080,40 @@ router.post("/accept_institution", (req, res) => {
                                                         region:          "us-east-1",
                                                     };
                                                     var AWS_SES = new AWS.SES(SES_CONFIG);
+                                                    // Still needed to figure out how to send this mail in different languages.
+                                                    /*
+                                                    if (req.body.lenguaje == "Español") {   
+                                                        // versión en español
+                                                        emailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/accept-inst/accept-inst.html', 'utf8');
+                                                        subject = "Resolucion de cuenta Institucional";
+                                                    }
+                                                    
+                                                    else {
+                                                        // versión en inglés
+                                
+                                                    }
+                                                    */
+                                                    emailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/accept-inst/accept-inst.html', 'utf8');
+                                                    subject = "Resolucion de cuenta Institucional";
+                                                    const template = handlebars.compile(emailTemplate);
+                                                    const html = template({fullName: fullname});
                                                     async function mail() {
                                                         var params = {
                                                             Source:      "no-reply@iccuandes.org",
                                                             Destination: {
-                                                                "ToAddresses": [
+                                                                ToAddresses: [
                                                                     user_mail,
                                                                 ]},
                                                             Message: {
-                                                                "Subject": {
-                                                                    "Data": 
-                                                                "Resolucion de cuenta Institucional"
+                                                                Subject: {
+                                                                    Data: subject
                                                                 },
-                                                                "Body": {
-                                                                    "Text": {
-                                                                        "Data": ""
+                                                                Body: {
+                                                                    Text: {
+                                                                        Data: ""
                                                                     },
-                                                                    "Html": {
-                                                                        "Data": `
-<div style="
-    max-width: 640px;
-    display: block;
-    padding: 4px 24px 20px 24px;
-    border-color: gray;
-    border-width: 10px;
-    border-width: 5px;
-    border-style: solid;
-    margin: 20px auto;
-">
-    <div style="
-        text-align: center;
-        margin-bottom: 2em;
-        margin-top: 2em;
-    ">
-        <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
-    </div>
-    Hola ${fullname}!
-    <br>
-    <br>
-    Bienvenido a EthicApp. Tu cuenta institucional se encuentra aprobada. Puedes ingresar a
-    EthicApp y comenzar invitando a profesores a utilizarla, e incluso creando tu primera actividad.
-    <br>
-    <br>
-    <div style="text-align: center;">
-        <a href="http://localhost:8501/login">
-            <button style="
-                background-color: #2649EC;
-                border-color: #102AA0;
-                color: white;
-            ">
-                ¡Comenzar!
-            </button>
-        </a>
-    </div>
-    <br>
-    Te recordamos que en EthicApp usamos los datos generados por los usuarios con fines de
-    investigación. Garantizamos la absoluta confidencialidad de los datos, y que los datos no los
-    entregamos a terceras partes. En nuestras investigaciones reportamos los datos siempre a nivel
-    agregado y nunca a nivel individual, ni revelando la identidad de los participantes.
-    <br>
-    <br>
-    Las actividades basadas en EthicApp no presentan ningún riesgo a docentes ni estudiantes.
-    EthicApp se entrega como servicio a los usuarios “tal cual”. Los desarrolladores de EthicApp
-    quedan exentos de cualquier responsabilidad… [tenemos que ver si lo expresamos en forma similar
-    a las licencias permisivas tipo BSD, MIT o Apache].
-    <br>
-    <br>
-    EthicApp se reserva el derecho de suspender o terminar cuentas de usuario en caso que se detecte
-    uso indebido del servicio.
-    <br>
-    <br>
-    Deseamos a ti y a tus colegas el mayor éxito utilizando EthicApp en la enseñanza.
-    <br>
-    <br>
-    Creadores de EthicApp
-</div>
-`
+                                                                    Html: {
+                                                                        Data: html
                                                                     }
                                                                 }
                                                             } 
@@ -1433,58 +1180,41 @@ router.post("/reject_institution", (req, res) => {
                 region:          "us-east-1",
             };
             var AWS_SES = new AWS.SES(SES_CONFIG);
+            // Still needed to figure out how to send this mail in different languages.
+            /*
+            if (req.body.lenguaje == "Español") {   
+                // versión en español
+                emailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/reject-inst/reject-inst.html', 'utf8');
+                subject = "Resolucion de cuenta Institucional";
+            }
+            
+            else {
+                // versión en inglés
+
+            }
+            */
+            emailTemplate = fs.readFileSync(__dirname + '/../public/email-templ/reject-inst/reject-inst.html', 'utf8');
+            subject = "Resolucion de cuenta Institucional";
+            const template = handlebars.compile(emailTemplate);
+            const html = template({fullName: fullname});
             async function mail() {
                 var params ={
                     Source:      "no-reply@iccuandes.org",
                     Destination: {
-                        "ToAddresses": [
+                        ToAddresses: [
                             user_mail,
                         ]
                     },
                     Message: {
-                        "Subject": {
-                            "Data": "Resolucion de cuenta Institucional"
+                        Subject: {
+                            Data: subject
                         },
-                        "Body": {
-                            "Text": {
-                                "Data": ""
+                        Body: {
+                            Text: {
+                                Data: ""
                             },
-                            "Html": {
-                                "Data": `
-<div style="
-    max-width: 640px;
-    display: block;
-    padding: 4px 24px 20px 24px;
-    border-color: gray;
-    border-width: 10px;
-    border-width: 5px;
-    border-style: solid;
-    margin: 20px auto;
-">
-    <div style="
-        text-align: center;
-        margin-bottom: 2em;
-        margin-top: 2em;
-    ">
-        <img src="/img/ethicapp-logo.svg" alt="Ethicapp">
-    </div>
-    Hola ${fullname}!
-    <br>
-    <br>
-    Lamentamos que tu solicitud de creación de cuenta institucional fue rechazada. Esto pudo deberse
-    a que tu institución ya se encuentra registrada en EthicApp, o a información faltante en el
-    proceso de registro.
-    <br>
-    <br>
-    Puedes contactarnos a estudios-icc (at) miuandes.cl para buscar solución al problema
-    <br>
-    <br>
-    Un cordial saludo,
-    <br>
-    <br>
-    Creadores de EthicApp
-</div>
-                                `
+                            Html: {
+                                Data: html
                             }
                         }
                     } 
