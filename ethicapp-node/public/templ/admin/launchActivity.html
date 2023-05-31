@@ -26,13 +26,9 @@
                     </div>
                 </div>
             </div>
-            <!--
-            <p><strong>[DEBUG] Design selected: {{dgsnSel.dsgn.id}}</strong>->{{dgsnSel.dsgn.metainfo.title}}</p>
-            <p>Current var launchID: {{dsgnid}} {{dsgntitle}} {{dsgntype}}</p>
-            -->
             <br>
             <p>Dale una descripcion a la actividad</p>
-            <form ng-submit="createSession(dsgntitle,descr, 'T', dsgnid)">
+            <form ng-submit="createSession(dsgntitle,descr, dsgntype, dsgnid)">
                 <div class="row">
                     <div class="col-lg-6">
                         <input type="text" class="form-control" ng-model="descr" required>
@@ -59,9 +55,3 @@
         </div>
     </div>
 </div>
-<!--
-    Se puede setear el id, pero no se puede setear el titulo del diseño
-
-    SACAR EL VALOR DE DESIGN DESDE DESIGNS Y DESIGN EXT Y GUARDARLO COMO LAUNCHID,
-    PUEDE QUE HAGA REDUNDANTE TENER LAUNCHID
--->

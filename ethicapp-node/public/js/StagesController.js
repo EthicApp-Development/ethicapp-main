@@ -3,12 +3,12 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
 
     self.stages = [];
 
-    var klg = function klg(k1, k2) {
+    function klg(k1, k2) {
         return {
             key:  k1 + (k2 == null ? "" : " " + k2),
             name: self.flang(k1) + (k2 == null ? "" : " " + self.flang(k2))
         };
-    };
+    }
 
     self.readonly = false;
 
@@ -280,7 +280,6 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
         let arr = self.selectedSes.type == "R" || self.selectedSes.type == "J" ?
             self.roles : self.dfs;
         let isFirst = self.stages.length == 0;
-        console.log(isFirst);
         if (s.type == null || arr.length == 0 || s.type == "team" && (
             self.groups == null || self.groups.length == 0
         )) {
@@ -302,11 +301,6 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
             sesid:    self.selectedSes.id,
             prev_ans: s.prevResponses.map(e => e.id).join(",")
         };
-        console.log("DEBUG");
-        console.log(arr);
-        console.log(postdata);
-        console.log(s);
-
         var confirm = window.confirm(
             "¿Está seguro que quiere ir a la siguiente etapa? (Etapa " + (self.stages.length + 1) +
             ")"
@@ -332,14 +326,14 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                             word_count: role.wc,
                             stageid:    stageid,
                         };
-                        $http({url: "add-actor", method: "post", data: p}).success(function (data) {
-                            console.log("Actor added");
+                        $http({url: "add-actor", method: "post", data: p}).success(function () {
+                            console.debug("Actor added");
                             c -= 1;
                             if (c == 0) {
                                 let pp = {sesid: self.selectedSes.id, stageid: stageid};
                                 $http({
                                     url: "session-start-stage", method: "post", data: pp
-                                }).success(function (data) {
+                                }).success(function () {
                                     Notification.success("Etapa creada correctamente");
                                     window.location.reload();
                                 });
@@ -364,13 +358,13 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                         };
                         $http({
                             url: "add-differential-stage", method: "post", data: p
-                        }).success(function (data) {
+                        }).success(function () {
                             c -= 1;
                             if (c == 0) {
                                 let pp = {sesid: self.selectedSes.id, stageid: stageid};
                                 $http({
                                     url: "session-start-stage", method: "post", data: pp
-                                }).success(function (data) {
+                                }).success(function () {
                                     Notification.success("Etapa creada correctamente");
                                     window.location.reload();
                                 });
@@ -389,15 +383,14 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                             word_count: role.wc,
                             stageid:    stageid,
                         };
-                        console.log("Add Actor " + p.name);
-                        $http({url: "add-actor", method: "post", data: p}).success(function (data) {
-                            console.log("Actor added");
+                        $http({url: "add-actor", method: "post", data: p}).success(function () {
+                            console.debug("Actor added");
                             c -= 1;
                             if (c == 0) {
                                 let pp = {sesid: self.selectedSes.id, stageid: stageid};
                                 $http({
                                     url: "session-start-stage", method: "post", data: pp
-                                }).success(function (data) {
+                                }).success(function () {
                                     Notification.success("Etapa creada correctamente");
                                 });
                             }
@@ -411,11 +404,10 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                                 sesid:       self.selectedSes.id,
                                 description: jrole.description
                             };
-                            console.log("Add JRole " + p.name);
                             $http({
                                 url: "add-jigsaw-role", method: "post", data: p
-                            }).success(function (data) {
-                                console.log("JRole added");
+                            }).success(function () {
+                                console.debug("JRole added");
                                 c -= 1;
                                 if (c == 0) {
                                     let pp = {sesid: self.selectedSes.id, stageid: stageid};
@@ -423,7 +415,7 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                                         url:    "session-start-stage",
                                         method: "post",
                                         data:   pp
-                                    }).success(function (data) {
+                                    }).success(function () {
                                         Notification.success("Etapa creada correctamente");
                                     });
                                 }
@@ -450,15 +442,13 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
     };
 
     self.generateGroups = function (key, stage) {
-        console.log("Generate groups StageController");
         if(stage != null){
-            console.log(self.design.phases, stage)
             self.groupopt.num = self.design.phases[stage].stdntAmount;
             self.groupopt.met = self.design.phases[stage].grouping_algorithm;
         }
         console.log(self.groupopt.met, self.selectedSes.grouped, self.groups);
         if (self.groupopt.met == "previous") {
-            console.log("Ignore, keeps groups")
+            console.log("Ignore, keeps groups");
             return;
         }
         // 1 ignore
@@ -470,14 +460,11 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
             }).success(function (data) {
                 self.groups = data;
                 self.shared.groups = self.groups;
-                //self.groupsProp = angular.copy(self.groups);
-                console.log("G", data);
-                //self.groupNames = [];
             });
             return;
         }
         if (key == null && (self.groupopt.num < 1 || self.groupopt.num > self.users.length)) {
-            console.log("Error, low users")
+            console.log("Error, low users");
             Notification.error("Error en los parámetros de formación de grupos");
             return;
         }
@@ -509,7 +496,6 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
             self.groups = generateTeams(arr, function (s) {
                 return s.rnd;
             }, self.groupopt.num, false);
-            console.log(self.groups); // print groups made
         }
         else if (self.selectedSes.type == "T"){
             let d = self.shared.difTable.filter(e => !e.group);
@@ -613,15 +599,11 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
 
         if (self.groups != null) {
             self.groupsProp = angular.copy(self.groups);
-            console.log(self.groupsProp);
             self.groupNames = [];
         }
     };
 
     self.acceptGroups = function (stid) {
-        console.log("Accept Groups");
-        console.log(self.groups);
-        console.log(stid);
         if (self.groups == null) {
             Notification.error("No hay propuesta de grupos para fijar");
             return;
@@ -634,12 +616,9 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                 });
             }))
         };
-        console.log(postdata);
         $http({url: "set-groups-stage", method: "post", data: postdata}).success(function (data) {
             if (data.status == "ok") {
-                console.log("Groups accepted");
                 self.selectedSes.grouped = true;
-                // self.shared.verifyGroups();
             }
         });
     };
@@ -671,8 +650,7 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                         $http.post(
                             "session-finish-stages", { sesid: self.selectedSes.id }
                         ).success((data) => {
-                            console.log("AAA");
-                            console.log(data);
+                            console.debug(data);
                         });
                     }
                     else if (vm.radioval == "N") {
@@ -734,7 +712,6 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                     u.jigsawId = d.roleid;
                 }
             });
-            console.log(self.users);
         });
     };
 
@@ -748,7 +725,7 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
             sesid: self.selectedSes.id,
             data:  JSON.stringify(data),
         };
-        $http.post("save-draft", postdata).success((data) => {
+        $http.post("save-draft", postdata).success(() => {
             Notification.success("Datos guardados");
         });
     };
@@ -761,7 +738,7 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
 };
 
 
-var groupByUser = function(data, acts) {
+function groupByUser(data, acts) {
     let u = {};
     let jusOrder = acts.some(e => e.jorder);
     data.forEach(d => {
@@ -774,7 +751,7 @@ var groupByUser = function(data, acts) {
         u[d.uid].just.push(a && a.justified);
     });
     return u;
-};
+}
 
 window.computePosFreqTable = function (data, actors) {
     if (data == null || actors == null || data.length == 0 || actors.length == 0) {
@@ -793,7 +770,7 @@ window.computePosFreqTable = function (data, actors) {
 };
 
 
-var lehmerCode  = function(arr, acts) {
+function lehmerCode(arr, acts) {
     let p = acts.map(e => e.id);
     let perm = arr.map(e => e);
 
@@ -821,10 +798,10 @@ var lehmerCode  = function(arr, acts) {
     }
 
     return w;
-};
+}
 
 
-var lehmerNum = function(code) {
+function lehmerNum(code) {
     let n = 0;
     for (let i = 0; i < code.length; i++) {
         let v = code[code.length - i - 1];
@@ -832,10 +809,10 @@ var lehmerNum = function(code) {
         n += v;
     }
     return n;
-};
+}
 
 
-var simpleNum = function(code) {
+function simpleNum(code) {
     let n = 0;
     for (let i = 0; i < code.length; i++) {
         let v = code[code.length - i - 1];
@@ -843,7 +820,7 @@ var simpleNum = function(code) {
         n += v;
     }
     return n;
-};
+}
 
 
 window.computeIndTable = function (data, actors) {
@@ -884,7 +861,6 @@ window.sortIndTable = function (table, users) {
         e.ceqlnum = e.ceq + e.pnum / 1e7;
         return e;
     });
-    console.log(arr);
     return arr;
 };
 
@@ -910,8 +886,10 @@ window.buildDifTable = function(data, users, dfs, gbu) {
     }
 
     let tres = [];
-    let avg = (arr) => arr.length > 0 ? arr.reduce((v, e) => v + e, 0) / arr.length : 0;
-    let sdf = (arr) => {
+    function avg (arr)  {
+        return arr.length > 0 ? arr.reduce((v, e) => v + e, 0) / arr.length : 0;
+    }
+    function sdf  (arr) {
         if (arr.length <= 1)
             return 0;
         let av = avg(arr);
@@ -920,7 +898,7 @@ window.buildDifTable = function(data, users, dfs, gbu) {
             sd += (a - av) * (a - av);
         });
         return Math.sqrt(sd / (arr.length - 1)) / av;
-    };
+    }
     Object.keys(tmids).forEach(t => {
         let r = res.filter(e => e.tmid == t);
         let row = {

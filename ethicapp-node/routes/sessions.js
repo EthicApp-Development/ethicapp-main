@@ -5,12 +5,12 @@ let router = express.Router();
 let rpg = require("../modules/rest-pg");
 let pass = require("../modules/passwords");
 let pg = require("pg");
-let middleware = require("../midleware/validate-session");
+require("../midleware/validate-session");
 
 var DB = null;
 
 
-var getDBInstance = function(dbcon) {
+function getDBInstance(dbcon) {
     if (DB == null) {
         DB = new pg.Client(dbcon);
         DB.connect();
@@ -21,7 +21,7 @@ var getDBInstance = function(dbcon) {
         return DB;
     }
     return DB;
-};
+}
 
 
 router.get("/seslist", (req, res) => {
@@ -103,7 +103,7 @@ router.post("/add-session", rpg.execSQL({
         rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("ses", "uid"),
         rpg.param("post","type"), rpg.param("ses", "uid")
     ],
-    onStart: (ses, data, calc) => {
+    onStart: (ses) => {
         if (ses.role != "P") {
             console.warn("Sólo profesor puede crear sesiones");
             console.warn(ses);
@@ -195,20 +195,43 @@ router.post("/check-design", (req, res) => {
     `;
     var db = getDBInstance(pass.dbcon);
     var qry;
-    var result = true;;
+    var result = true;
     var phases;
     qry = db.query(sql, (err,res) =>{
         if(res!= null) {
             phases = res.rows[0].design.phases;
             for(let i =0; i< phases.length; i++){
                 var phase = phases[i];
-                var questions = phase.questions;
-                for(let j=0; j<questions.length; j++){
-                    var question = questions[j];
-    
-                    question.q_text = (question.q_text === "" || question.q_text === "-->>N/A<<--") ? result = false : result
-                    question.ans_format.l_pole = (question.ans_format.l_pole === "" | question.ans_format.l_pole === "-->>N/A<<--") ? result = false : result
-                    question.ans_format.r_pole = (question.ans_format.r_pole === "" | question.ans_format.l_pole === "-->>N/A<<--") ? result = false : result
+                if(res.rows[0].design.type == "semantic_differential"){
+                    var questions = phase.questions;
+                    for(let j=0; j<questions.length; j++){
+                        var question = questions[j];
+        
+                        question.q_text = (
+                            question.q_text === "" || question.q_text === "-->>N/A<<--"
+                        ) ? result = false : result;
+                        question.ans_format.l_pole = (
+                            question.ans_format.l_pole === "" |
+                            question.ans_format.l_pole === "-->>N/A<<--"
+                        ) ? result = false : result;
+                        question.ans_format.r_pole = (
+                            question.ans_format.r_pole === "" |
+                            question.ans_format.l_pole === "-->>N/A<<--"
+                        ) ? result = false : result;
+                    }
+                }
+                else if(res.rows[0].design.type == "ranking"){
+                    phase.q_text = (
+                        phase.q_text === "" || phase.q_text === "-->>N/A<<--"
+                    ) ? result = false : result;
+                    var roles = phase.roles;
+                    for(let j=0; j<roles.length; j++){
+                        var role = roles[j];      
+                        role.name = (
+                            role.name === "" || role.name === "-->>N/A<<--"
+                        ) ? result = false : result;
+
+                    }
                 }
             }
             return;
@@ -434,10 +457,10 @@ router.get("/get-user-designs", (req, res) => {
     var result = [];
     qry = db.query(sql,(err,res) =>{
         if(res != null){
-            for (var i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
-            for (var i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
-            for (var i=0; i<result.length;i++) result[i].public= res.rows[i].public; //add id to to design
-            for (var i=0; i<result.length;i++) result[i].locked= res.rows[i].locked; //add id to to design
+            for (let i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
+            for (let i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
+            for (let i=0; i<result.length;i++) result[i].public= res.rows[i].public; //add id to to design
+            for (let i=0; i<result.length;i++) result[i].locked= res.rows[i].locked; //add id to to design
         }
     });
     qry.on("end", function () {
@@ -464,8 +487,8 @@ router.get("/get-public-designs", (req, res) => {
     var result = [];
     qry = db.query(sql,(err,res) =>{
         if(res != null){
-            for (var i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
-            for (var i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
+            for (let i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
+            for (let i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
         }
     });
     qry.on("end", function () {
@@ -659,7 +682,7 @@ router.post("/get-all-users", rpg.multiSQL({
     FROM users AS u
     `,
     sqlParams: [],
-    onStart:   (ses, data, calc) => {
+    onStart:   (ses) => {
         if (ses.role != "S") return "SELECT 1";
     },
 }));
@@ -673,7 +696,7 @@ router.post("/convert-prof", rpg.execSQL({
     `,
     postReqData: ["uid"],
     sqlParams:   [rpg.param("post", "uid")],
-    onStart:     (ses, data, calc) => {
+    onStart:     (ses) => {
         if (ses.role != "S") return "SELECT $1";
     },
 }));
@@ -687,7 +710,7 @@ router.post("/remove-prof", rpg.execSQL({
     `,
     postReqData: ["uid"],
     sqlParams:   [rpg.param("post", "uid")],
-    onStart:     (ses, data, calc) => {
+    onStart:     (ses) => {
         if (ses.role != "S") return "SELECT $1";
     },
 }));
@@ -1338,12 +1361,68 @@ router.post("/enter-session-code", rpg.singleSQL({
     }
 }));
 
+router.post("/stage-state-df", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT COUNT(*), query1.stage_id1 as id FROM (SELECT 
+        stages.id AS stage_id1, 
+        differential_selection.uid as uid,
+        COUNT(differential_selection.uid) AS num_answers
+      FROM 
+        stages 
+        JOIN differential ON stages.id = differential.stageid 
+        JOIN differential_selection ON differential.id = differential_selection.did 
+      WHERE 
+        stages.sesid = $1
+      GROUP BY 
+        stages.id, differential_selection.uid
+      ) as query1 JOIN (
+      SELECT 
+        stages.id AS stage_id2, 
+        COUNT(differential.id) AS questions
+      FROM 
+        stages 
+        JOIN differential ON stages.id = differential.stageid 
+      WHERE 
+        stages.sesid = $1
+      GROUP BY 
+        stages.id
+        ) as query2 ON query1.stage_id1= query2.stage_id2
+      
+        WHERE query1.num_answers = query2.questions GROUP BY query1.stage_id1;
+    `,
+    postReqData: ["sesid"], //differential_selection uid
+    onStart:     (ses) => {  //Session -> Stage -> Differential -> Differential_Selection {id:stage, counter: respuestas completas}
+        if (ses.role != "P") { //sesusers role != P
+            console.error("Sólo el profesor puede ver el estado de los alumnos");
+            return "SELECT $1";
+        }
+    },
+    sqlParams: [rpg.param("post", "sesid")]
+}));
 
-let generateCode = (id) => {
+router.post("/stage-state-r", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT COUNT(act.id), s.id FROM actor_selection act 
+    INNER JOIN stages s ON act.stageid = s.id AND s.sesid = $1 GROUP BY s.id;
+    `,
+    postReqData: ["sesid"],
+    onStart:     (ses) => {
+        if (ses.role != "P") {
+            console.error("Sólo el profesor puede ver el estado de los alumnos");
+            return "SELECT $1";
+        }
+    },
+    sqlParams: [rpg.param("post", "sesid")]
+}));
+
+
+function generateCode(id) {
     let n = id*5 + 255 + ~~(Math.random()*5);
     let s = n.toString(16);
     return "k00000".substring(0, 6 - s.length) + s;
-};
+}
 
 
 module.exports = router;

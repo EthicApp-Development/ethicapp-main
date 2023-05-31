@@ -19,7 +19,7 @@ router.post("/get-alum-state-sel", middleware.verifySession, rpg.multiSQL({
     ) AS r group by uid
     `,
     postReqData: ["sesid", "iteration"],
-    onStart:     (ses, data, calc) => {
+    onStart:     (ses) => {
         if (ses.role != "P") {
             console.error("Sólo el profesor puede ver el estado de los alumnos");
             return "SELECT $1";
@@ -38,7 +38,7 @@ router.post("/get-alum-full-state-sel", rpg.multiSQL({
     WHERE q.sesid = $1 AND s.iteration = $2
     `,
     postReqData: ["sesid", "iteration"],
-    onStart:     (ses, data, calc) => {
+    onStart:     (ses) => {
         if (ses.role != "P") {
             console.error("Sólo el profesor puede ver el estado de los alumnos");
             return "SELECT $1";
@@ -74,7 +74,7 @@ router.post("/group-proposal-sel", (req, res) => {
                         WHERE q.sesid = $1 AND s.iteration = $2
                     ) AS r GROUP BY uid
                     `,
-                    onStart: (ses, data, calc) => {
+                    onStart: (ses) => {
                         if (ses.role != "P") {
                             console.error("Sólo el profesor puede ver el estado de los alumnos");
                             return "SELECT $1";
@@ -153,7 +153,7 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
     ORDER BY uid, a.orden ASC
     `,
     postReqData: ["sesid", "iteration"],
-    onStart:     (ses, data, calc) => {
+    onStart:     (ses) => {
         if (ses.role != "P") {
             console.error("Sólo el profesor puede ver el estado de los alumnos");
             return "SELECT $1, $2";
@@ -242,7 +242,7 @@ router.post("/get-alum-state-semantic", rpg.multiSQL({
         a.sentences
     `,
     postReqData: ["sesid","iteration"],
-    onStart:     (ses, data, calc) => {
+    onStart:     (ses) => {
         if (ses.role != "P") {
             console.error("Sólo el profesor puede ver el estado de los alumnos");
             return "select $1, $2";
@@ -342,7 +342,7 @@ router.post("/group-proposal-lect", (req,res) => {
                         a.orden ASC
                     `,
                     postReqData: ["sesid"],
-                    onStart:     (ses, data, calc) => {
+                    onStart:     (ses) => {
                         if (ses.role != "P") {
                             console.error("Sólo el profesor puede ver el estado de los alumnos");
                             return "SELECT $1";
@@ -539,12 +539,12 @@ router.post("/group-proposal-rand", (req, res) => {
     })(req,res);
 });
 
-let ideasMatch = (row) => {
+function ideasMatch(row) {
     return row.docid == row.docid_ans &&
         row.content.toLowerCase().trim() == row.content_ans.toLowerCase().trim();
-};
+}
 
-let isDifferent = (type) => {
+function isDifferent (type) {
     switch (type){
     case "Rendimiento Homogéneo":
         return false;
@@ -556,9 +556,9 @@ let isDifferent = (type) => {
         return true;
     }
     return false;
-};
+}
 
-let habMetric = (u) => {
+function habMetric (u) {
     switch (u.aprendizaje){
     case "Teórico":
         return -2;
@@ -570,7 +570,7 @@ let habMetric = (u) => {
         return 2;
     }
     return 0;
-};
+}
 
 router.post("/set-groups", (req, res) => {
     if (req.session.role != "P" || req.body.sesid == null || req.body.groups == null) {
@@ -655,7 +655,7 @@ router.post("/set-groups-stage", (req, res) => {
     })(req, res);
 });
 
-let generateTeams = (alumArr, scFun, n, different) => {
+function generateTeams (alumArr, scFun, n, different)  {
     if(n == null || n == 0) return [];
     let arr = alumArr;
     arr.sort((a, b) => scFun(b) - scFun(a));
@@ -676,7 +676,7 @@ let generateTeams = (alumArr, scFun, n, different) => {
         }
     }
     return groups;
-};
+}
 
 router.post("/assign-pairs", (req, res) => {
     res.header("Content-type", "application/json");
@@ -700,10 +700,11 @@ router.post("/assign-pairs", (req, res) => {
         `,
         onEnd: (req, res, arr) => {
             let n = arr.length;
+            let msg = "No hay suficientes reportes completos para asignar pares";
             if (m >= n) {
                 console.error("More pairs than reports");
                 res.end(
-                    '{"status":"err", "msg":"No hay suficientes reportes completos para asignar pares"}'
+                    `{"status":"err", "msg":"${msg}"}`
                 );
                 return;
             }
@@ -723,9 +724,10 @@ router.post("/assign-pairs", (req, res) => {
                     let sel = Object.keys(counter);
                     // console.log("Seleccionable son: " + sel);
                     if(sel.length == 0 || sel.length == 1 && sel[0] == uids[i]){
+                        let msg = "Error de consistencia de los pares formados. Intente nuevamente";
                         console.error("Infinite loop");
                         res.end(
-                            '{"status":"err", "msg":"Error de consistencia de los pares formados. Intente nuevamente"}'
+                            `{"status":"err", "msg":"${msg}"}`
                         );
                         return;
                     }
@@ -744,15 +746,17 @@ router.post("/assign-pairs", (req, res) => {
 
             let pairstr = pairs.map(e => "("+e.uid+","+e.rid+")");
             if(pairs.length != n*m){
+                let msg = "Error de consistencia de los pares formados. Intente nuevamente";
                 res.end(
-                    '{"status":"err", "msg":"Error de consistencia de los pares formados. Intente nuevamente"}'
+                    `{"status":"err", "msg":"${msg}"}`
                 );
                 return;
             }
             if(hasDuplicates(pairstr)){
+                let msg = "Error de duplicación de pares asignados. Intente nuevamente";
                 console.error("Se encontraron duplicados");
                 res.end(
-                    '{"status":"err", "msg":"Error de duplicación de pares asignados. Intente nuevamente"}'
+                    `{"status":"err", "msg":"${msg}"}`
                 );
                 return;
             }
@@ -825,7 +829,7 @@ router.post("/get-alum-confidence", rpg.multiSQL({
     GROUP BY s.confidence, q.id
     `,
     postReqData: ["sesid","iteration"],
-    onStart:     (ses, data, calc) => {
+    onStart:     (ses) => {
         if (ses.role != "P") {
             console.error("Sólo el profesor puede ver el estado de los alumnos");
             return "SELECT $1, $2";
@@ -834,7 +838,7 @@ router.post("/get-alum-confidence", rpg.multiSQL({
     sqlParams: [rpg.param("post", "sesid"),rpg.param("post", "iteration")]
 }));
 
-let hasDuplicates = (arr) => {
+function hasDuplicates (arr) {
     let dict = {};
     for (var i = 0; i < arr.length; i++) {
         if(dict[arr[i]] != null)
@@ -842,9 +846,9 @@ let hasDuplicates = (arr) => {
         dict[arr[i]] = true;
     }
     return false;
-};
+}
 
-let getSemanticScore = (pauta, alum) => {
+function getSemanticScore (pauta, alum) {
     let r = 0;
     alum.sentences.forEach((s,i) => {
         let k = pauta.sentences.indexOf(s);
@@ -852,6 +856,6 @@ let getSemanticScore = (pauta, alum) => {
             r++;
     });
     return r/Math.max(pauta.sentences.length, alum.sentences.length);
-};
+}
 
 module.exports = router;

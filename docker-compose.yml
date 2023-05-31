@@ -1,3 +1,7 @@
+# --------------------------------------------------------------------------------------------------
+# DEVELOPMENT docker-compose.
+# --------------------------------------------------------------------------------------------------
+
 version: "3.9"
 
 networks:
@@ -39,6 +43,9 @@ services:
       args:
         UBUNTU_VERSION: "22.04"
         POSTGRES_VERSION: ${POSTGRES_VERSION}
+        DB_NAME: ${DB_NAME}
+        DB_USER_NAME: ${DB_USER_NAME}
+        DB_USER_PASSWORD: ${DB_USER_PASSWORD}
     environment:
       POSTGRES_LOG_LEVEL: 1
       PGPORT: 5432
@@ -52,8 +59,10 @@ services:
       timeout: 5s
       retries: 1
       start_period: 10s
+    #* Do not modify this volume declaration, as the automated initialization of the volume mount
+    #* will break if not updated as well
     volumes:
-      - "./db-data-volume:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"
+      - "${HOST_DB_VOLUME_PATH}:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"
 
   # ---------------------- PGAdmin ---------------------- #
   pgadmin:
@@ -63,7 +72,7 @@ services:
       args:
         PGADMIN_VERSION: ${PGADMIN_VERSION}
         POSTGRES_CONN_PORT: 5432
-        POSTGRES_CONN_USER: app
+        POSTGRES_CONN_USER: ${DB_USER_NAME}
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin

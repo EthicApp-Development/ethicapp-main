@@ -7,7 +7,7 @@ const GoogleStrategy = require( "passport-google-oauth2" ).Strategy;
 var DB = null;
 
 
-var getDBInstance = function(dbcon) {
+function getDBInstance(dbcon) {
     if(DB == null) {
         DB = new pg.Client(dbcon);
         DB.connect();
@@ -18,17 +18,17 @@ var getDBInstance = function(dbcon) {
         return DB;
     }
     return DB;
-};
+}
 
 
-var smartArrayConvert = function(sqlParams) {
+function smartArrayConvert(sqlParams) {
     var arr = [];
     for (var i = 0; i < sqlParams.length; i++) {
         var p = sqlParams[i];
         arr.push(p);
     }
     return arr;
-};
+}
 
 
 passport.use(
@@ -46,7 +46,7 @@ passport.use(
         WHERE mail = '${profile.email}'
         LIMIT 1
         `;
-        var qry = db.query(sql,(err,res) =>{
+        db.query(sql,(err,res) =>{
             if (res.rows[0] == null) {
                 var sql = `
                 INSERT INTO users(rut, pass, name, mail, sex, ROLE)
@@ -58,7 +58,7 @@ passport.use(
                 var sqlarr = smartArrayConvert(sqlParams);
                 qry = db.query(sql, sqlarr);
                 qry.on("end", function () {});
-                qry.on("error", function(err){});
+                qry.on("error", function(){});
             }
         });
         return done(null, profile);

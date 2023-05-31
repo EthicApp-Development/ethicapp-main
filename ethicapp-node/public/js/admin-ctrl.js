@@ -52,7 +52,7 @@ adpp.config(["ngQuillConfigProvider", function (ngQuillConfigProvider) {
 
 //ROUTING
 
-adpp.config(function ($routeProvider, $locationProvider) {
+adpp.config(function ($routeProvider) {
     $routeProvider
     // set route for the index page
         .when("/",
@@ -84,25 +84,25 @@ adpp.controller("RouteCtrl", function($scope) {
     };
 });
 
-adpp.service('DialogService', function(ngDialog) {
+adpp.service("DialogService", function(ngDialog) {
     this.openDialog = function() {
-      ngDialog.open({
-        template: '/templ/admin/warningDialog.html',
-        controller: 'DialogCtrl',
-        className: 'ngdialog-theme-default',
-        closeByDocument: true
-      });
+        ngDialog.open({
+            template:        "/templ/admin/warningDialog.html",
+            controller:      "DialogCtrl",
+            className:       "ngdialog-theme-default",
+            closeByDocument: true
+        });
     };
   
     this.closeDialog = function() {
-      ngDialog.close();
+        ngDialog.close();
     };
-  });
+});
 
-  adpp.controller('DialogCtrl', function($scope, DialogService) {
+adpp.controller("DialogCtrl", function($scope, DialogService) {
     $scope.openDialog = DialogService.openDialog;
     $scope.closeDialog = DialogService.closeDialog;
-  });
+});
 //#############################################
 
 adpp.controller("AdminController", function (
@@ -174,7 +174,6 @@ adpp.controller("AdminController", function (
     };
 
     self.updatelangdata = function() {
-        var postdata2 = self.uid;
         $http({ url: "updatelangdata", method: "post", data: {lang} }).success(function (data) {
             console.log(data);
 
@@ -249,11 +248,11 @@ adpp.controller("AdminController", function (
         
     };
 
-    var getSession = function(id) {
+    function getSession(id) {
         return self.sessions.filter(
             function(sessions){ return sessions.id == id; }
         );
-    };
+    }
 
     self.selectView = function(tab, type){
         if(tab != self.selectedView){
@@ -292,21 +291,21 @@ adpp.controller("AdminController", function (
 
     self.shared.getActivities = function() {
         return new Promise(function(resolve, reject) {
-          var postdata = {};
-          $http({
-            url: "get-activities",
-            method: "post",
-            data: postdata
-          }).success(function(data) {
-            for (var index = 0; index < data.activities.length; index++)
-              data.activities[index].title = data.activities[index].design.metainfo.title;
-            self.activities = data.activities;
-            resolve(self.activities);
-          }).error(function(error) {
-            reject(error);
-          });
+            var postdata = {};
+            $http({
+                url:    "get-activities",
+                method: "post",
+                data:   postdata
+            }).success(function(data) {
+                for (var index = 0; index < data.activities.length; index++)
+                    data.activities[index].title = data.activities[index].design.metainfo.title;
+                self.activities = data.activities;
+                resolve(self.activities);
+            }).error(function(error) {
+                reject(error);
+            });
         });
-      };
+    };
 
     self.sesFromURL = function () {
         var sesid = +$location.path().substring(1);
@@ -329,7 +328,7 @@ adpp.controller("AdminController", function (
 
     self.deleteDocument = function (docid) {
         var postdata = { docid: docid };
-        $http({ url: "delete-document", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "delete-document", method: "post", data: postdata }).success(function () {
             self.requestDocuments();
         });
     };
@@ -541,7 +540,7 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
     self.archiveSes = function(ses, $event){
         $event.stopPropagation();
         var postdata = { sesid: ses.id, val: true };
-        $http({ url: "archive-session", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "archive-session", method: "post", data: postdata }).success(function () {
             Notification.info("Sesión archivada");
             ses.archived = true;
         });
@@ -550,7 +549,7 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
     self.restoreSes = function(ses, $event){
         $event.stopPropagation();
         var postdata = { sesid: ses.id, val: false };
-        $http({ url: "archive-session", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "archive-session", method: "post", data: postdata }).success(function () {
             Notification.info("Sesión restaurada");
             ses.archived = false;
         });
@@ -559,7 +558,7 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
     self.archiveActivity = function(ses, $event){
         $event.stopPropagation();
         var postdata = { sesid: ses.session, val: true };
-        $http({ url: "archive-session", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "archive-session", method: "post", data: postdata }).success(function () {
             Notification.info("Sesión archivada");
             ses.archived = true;
         });
@@ -568,7 +567,7 @@ adpp.controller("TabsController", function ($scope, $http, Notification) {
     self.restoreActivity = function(ses, $event){
         $event.stopPropagation();
         var postdata = { sesid: ses.session, val: false };
-        $http({ url: "archive-session", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "archive-session", method: "post", data: postdata }).success(function () {
             Notification.info("Sesión restaurada");
             ses.archived = false;
         });
@@ -617,7 +616,7 @@ adpp.controller("DocumentsController", function ($scope, $http, Notification, $t
             let url = df.id ? "update-differential" : "add-differential";
             df.orden = i;
             df.sesid = self.selectedSes.id;
-            $http.post(url, df).success(function (data) {
+            $http.post(url, df).success(function () {
                 k += 1;
                 if (k == self.dfs.length - 1) {
                     Notification.success("Diferenciales guardados correctamente");
@@ -663,7 +662,7 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
         var postdata = {
             name: self.selectedSes.name, descr: self.selectedSes.descr, id: self.selectedSes.id
         };
-        $http({ url: "update-session", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "update-session", method: "post", data: postdata }).success(function () {
             console.log("Session updated");
         });
     };
@@ -677,7 +676,7 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
             var _postdata = { sesid: self.selectedSes.id };
             $http({
                 url: "change-state-session", method: "post", data: _postdata
-            }).success(function (data) {
+            }).success(function () {
                 self.shared.updateSesData();
             });
         }
@@ -698,7 +697,6 @@ adpp.controller("SesEditorController", function ($scope, $http, Notification) {
 
 adpp.controller("NewUsersController", function ($scope, $http, Notification) {
     var self = $scope;
-    var newMembs = [];
 
     self.addToSession = function () {
         if (self.newMembs.length == 0) {
@@ -809,6 +807,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         else {
             self.updateStateRub();
         }
+        self.shared.refreshUsers();
     };
 
     self.shared.updateState = self.updateState;
@@ -820,11 +819,11 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     };
 
     self.updateStateIni = function () {
+        var _postdata2;
         console.log(self.iterationIndicator);
         self.alumTime = {};
-        var postdata = { sesid: self.selectedSes.id, iteration: self.iterationIndicator };
         if (self.selectedSes.type == "R") {
-            var _postdata2 = {
+            _postdata2 = {
                 stageid: self.iterationIndicator
             };
             $http.post("get-actors", _postdata2).success(function(data){
@@ -873,7 +872,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             });
         }
         else if (self.selectedSes.type == "T"){
-            var _postdata2 = {
+            _postdata2 = {
                 stageid: self.iterationIndicator
             };
             self.dfsStage = [];
@@ -918,7 +917,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
             });
         }
         else if (self.selectedSes.type == "J"){
-            var _postdata2 = {
+            _postdata2 = {
                 stageid: self.iterationIndicator
             };
             if(self.shared.inputAssignedRoles) {
@@ -1029,9 +1028,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         var t = 0;
         if (self.alumState != null) {
             for (var u in self.alumState) {
-                for (var k in self.alumState[u]) {
-                    t++;
-                }
+                self.alumState[u].forEach(() => t++);
             }
             return 100 * t / (Object.keys(self.alumState).length * self.questions.length);
         }
@@ -1041,9 +1038,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     self.progressAlum = function (uid) {
         var t = 0;
         if (self.alumState != null && self.alumState[uid] != null) {
-            for (var k in self.alumState[uid]) {
-                t++;
-            }
+            self.alumState[uid].forEach(() => t++);
             return 100 * t / self.questions.length;
         }
         return 0;
@@ -1363,7 +1358,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
 
     self.broadcastReport = function (rid) {
         var postdata = { sesid: self.selectedSes.id, rid: rid };
-        $http({ url: "set-eval-report", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "set-eval-report", method: "post", data: postdata }).success(function () {
             Notification.success("Reporte enviado a alumnos");
         });
     };
@@ -1809,30 +1804,32 @@ adpp.controller("ContentModalController", function ($scope, $uibModalInstance, d
     };
 });
 
-adpp.controller("EthicsModalController", function ($scope, $http, $uibModalInstance, Notification, data) {
-    var vm = this;
-    vm.data = data;
-    vm.isAnon = true;
+adpp.controller("EthicsModalController",
+    function ($scope, $http, $uibModalInstance, Notification, data) {
+        var vm = this;
+        vm.data = data;
+        vm.isAnon = true;
 
-    vm.cancel = function () {
-        $uibModalInstance.dismiss("cancel");
-    };
-
-    vm.shareDetails = function () {
-        if (!vm.isAnon) {
-            Notification.error("Sólo se pueden enviar diferenciales en forma anónima");
-            return;
-        }
-        var content = document.getElementById("details-modal").innerHTML.replace(/<\!--.*?-->/g, "");
-        var postdata = {
-            sesid:   vm.data.sesid,
-            content: content
+        vm.cancel = function () {
+            $uibModalInstance.dismiss("cancel");
         };
-        $http({ url: "broadcast-diff", method: "post", data: postdata }).success(function (data) {
-            Notification.success("Diferencial enviado exitosamente");
-        });
-    };
-});
+
+        vm.shareDetails = function () {
+            if (!vm.isAnon) {
+                Notification.error("Sólo se pueden enviar diferenciales en forma anónima");
+                return;
+            }
+            var content = document.getElementById("details-modal")
+                .innerHTML.replace(/<\!--.*?-->/g, "");
+            var postdata = {
+                sesid:   vm.data.sesid,
+                content: content
+            };
+            $http({ url: "broadcast-diff", method: "post", data: postdata }).success(function () {
+                Notification.success("Diferencial enviado exitosamente");
+            });
+        };
+    });
 
 adpp.controller("DuplicateSesModalController", function ($scope, $http, $uibModalInstance, data) {
     var vm = this;
@@ -1889,12 +1886,12 @@ adpp.controller("GroupController", function ($scope, $http, Notification) {
         }
     };
 
-    var klg = function klg(k1, k2) {
+    function klg(k1, k2) {
         return {
             key:  k1 + (k2 == null ? "" : " " + k2),
             name: self.flang(k1) + (k2 == null ? "" : " " + self.flang(k2))
         };
-    };
+    }
 
     self.generateGroups = function (key) {
         console.log("Generate groups AdminController");
@@ -2106,7 +2103,7 @@ adpp.controller("RubricaController", function ($scope, $http) {
         };
         $http({
             url: "send-example-report", method: "post", data: postdata
-        }).success(function (data) {
+        }).success(function () {
             self.newExampleReport = "";
             self.shared.getExampleReports();
         });
@@ -2195,7 +2192,7 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
         var postdata = { dsgnid: dsgnid };
         $http({
             url: "delete-design-document", method: "post", data: postdata
-        }).success(function (data) {
+        }).success(function () {
             self.requestDesignDocuments();
         });
     };
@@ -2209,7 +2206,7 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
 
 });
 
-adpp.controller("ActivityController", function ($scope, $filter, $http, Notification, $timeout) {
+adpp.controller("ActivityController", function ($scope, $filter, $http, Notification) {
     var self = $scope;
     self.selectedSes = {};
     self.error = false;
@@ -2227,7 +2224,7 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
             url: "check-design", method: "post", data: { dsgnid: dsgnid}
         }).success(function (data) {
             self.error = !data.result;
-            console.log(self.error)
+            console.log(self.error);
             if(data.result){
                 var postdata = { name: dsgnName, descr: dsgndescr, type: dsgntype};
                 $http({
@@ -2254,15 +2251,15 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
             let result = self.shared.getActivities();
             result.then(
                 function(result) {
-                const filteredObj = result.filter(item => item.session === sesID)[0];
-                console.log(filteredObj)
-                self.selectActivity(filteredObj.id, sesID, dsng)
+                    const filteredObj = result.filter(item => item.session === sesID)[0];
+                    console.log(filteredObj);
+                    self.selectActivity(filteredObj.id, sesID, dsng);
                 },
                 function(error) {
-                  // This code runs when the Promise is rejected
-                  console.log(error);
+                    // This code runs when the Promise is rejected
+                    console.log(error);
                 }
-              )
+            );
             //get current DESIGNS UPDATED
             //console.log(data);
         });
@@ -2271,12 +2268,12 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
     self.startActivityDesign = function (design, sesid) {
         //change it to do it for the first stage or a selected stage?
         var stageCounter = 0;
-        console.log(design)
+        console.log(design);
         for(var phase of design.phases){
             console.log(phase);
             var postdata = {
                 number:   stageCounter + 1,
-                question: "",
+                question: phase.q_text !== undefined ? phase.q_text : "",
 
                 // ver si es equipo, si lo es, igualar a numero de integrantes + el tipo,
                 // sino es nulo
@@ -2299,7 +2296,7 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
                     self.acceptGroups(stageid);
                 }
                 */
-                console.log(self.selectedSes)
+                    console.log(self.selectedSes);
                     console.log("TYPE:",self.selectedSes.type);
                     if (design.type == "semantic_differential") {
                         var counter = 1;
@@ -2319,16 +2316,41 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
                             console.log(p);
                             $http({url:
                                 "add-differential-stage", method: "post", data:   p
-                            }).success(function (data) {
+                            }).success(function () {
                                 let pp = {sesid: sesid, stageid: stageid};
                                 $http({
                                     url: "session-start-stage", method: "post", data: pp
-                                }).success(function (data) {
+                                }).success(function () {
                                     Notification.success("Etapa creada correctamente");
                                 });
                             
                             });
                             counter++;
+                        }
+                    }
+                    else if (design.type == "ranking") {
+                        let c = phase.roles.length;
+                        for (let i = 0; i < phase.roles.length; i++) {
+                            const role = phase.roles[i];
+                            let p = {
+                                name:       role.name,
+                                jorder:     role.type == "order",
+                                justified:  role.type != null,
+                                word_count: role.wc,
+                                stageid:    stageid,
+                            };
+                            $http({url: "add-actor", method: "post", data: p}).success(function (data) {
+                                console.log("Actor added");
+                                c -= 1;
+                                if (c == 0) {
+                                    let pp = {sesid: sesid, stageid: stageid};
+                                    $http({
+                                        url: "session-start-stage", method: "post", data: pp
+                                    }).success(function (data) {
+                                        Notification.success("Etapa creada correctamente");
+                                    });
+                                }
+                            });
                         }
                     }
 
@@ -2385,17 +2407,68 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
 });
 
 adpp.controller("MonitorActivityController", function (
-    $scope, $filter, $http, Notification, $timeout
+    $scope, $filter, $http, Notification
 ) {
     var self = $scope;
+    self.stagesState = null;
+    self.completion = null;
 
-
-    self.init = function(){
-        if(self.selectedView == "activity") {
-            //self.shared.resetGraphs(); // self.iterationIndicator  fix this id
-            self.currentStage();
+    self.init = function() {
+        if (self.selectedView === "activity") {
+          self.currentStage()
         }
-    };
+      };
+
+    self.ActivityState = function(stageId){
+        if(self.design.type == "semantic_differential"){
+            $http({
+                url: "stage-state-df", method: "post", data: {sesid:self.selectedSes.id}
+            }).success(function (data) {
+                self.stagesState = data;
+                self.ActivityCompletion(stageId);
+            });
+        }
+        else if(self.design.type = "ranking"){
+            $http({
+                url: "stage-state-r", method: "post", data: {sesid:self.selectedSes.id}
+            }).success(function (data) {
+                self.stagesState = data;
+                self.ActivityCompletion(stageId);
+            });
+        }
+    }
+
+    self.test = function(xd, xd2){
+        console.log(xd2[0])
+        console.log(xd2)
+    }
+
+    self.ActivityCompletion = function(stageId){
+        const numUsers = Object.keys(self.users).length -1;
+        
+        const stageCounter = self.stagesState.findIndex(stage => stage.id === stageId);
+        var current_phase = self.design.phases[stageCounter];
+        console.log(stageCounter, self.stagesState, stageId)
+        if(self.stagesState[stageCounter] !== undefined){
+            var current_phase = self.design.phases[stageCounter];
+            if(self.design.type == "semantic_differential"){
+                self.completion = self.stagesState[stageCounter].count +"/" +  numUsers
+            }
+            else if(self.design.type == "ranking"){
+                self.completion =  self.stagesState[stageCounter].count/self.stagesState[stageCounter].count +"/" + numUsers
+            }
+        }
+        else{
+            var current_phase = self.design.phases[self.currentActivity.stage];
+            console.log(current_phase, self.currentActivity.stage)
+            if(self.design.type == "semantic_differential"){
+                self.completion = 0+"/" +  numUsers;
+            } 
+            else if(self.design.type == "ranking"){
+                self.completion = 0+"/" + numUsers
+            }
+        }
+    }
 
     self.getPrevAns = function(current_phase){
         //console.log(current_phase.prevPhasesResponse)
@@ -2409,7 +2482,6 @@ adpp.controller("MonitorActivityController", function (
             let answerIndex = answers[i];
             temp.push(self.stages[answerIndex]);
         }
-        console.log(temp);
         return temp.map(e => e.id).join(",");
     };
 
@@ -2429,7 +2501,7 @@ adpp.controller("MonitorActivityController", function (
         //prev_ans: s.prevResponses.map(e => e.id).join(",")
         var postdata = {
             number:   stageCounter + 1,
-            question: "",
+            question: current_phase.q_text !== undefined ? current_phase.q_text : "",
             grouping: current_phase.mode == "team" ?
                 current_phase.stdntAmount + ":" + current_phase.grouping_algorithm :
                 null,
@@ -2439,9 +2511,7 @@ adpp.controller("MonitorActivityController", function (
             sesid:    sesid,
             prev_ans: self.getPrevAns(current_phase)
         };
-        console.log(postdata);
-        console.log(self.selectedSes);
-        console.log(self.currentActivity.stage)
+        console.debug(postdata);
         if(current_phase.mode == "team"){
             //self.generateGroups(true);
             self.generateGroups(null,self.currentActivity.stage +1 ); //<-------------update value
@@ -2474,23 +2544,52 @@ adpp.controller("MonitorActivityController", function (
                         console.log(p);
                         $http({
                             url: "add-differential-stage", method: "post", data: p
-                        }).success(function (data) {    });
+                        }).success(function () {    });
                         counter++;
                     }
+                    let pp = {sesid: sesid, stageid: stageid};
+                    $http({
+                        url: "session-start-stage", method: "post", data: pp
+                    }).success(function (data) {
+                        Notification.success("Etapa creada correctamente");
+                        //window.location.reload()
+                        self.currentStage(); // <--------Actualiza la data del current stage
+                        self.shared.verifyTabs();
+                        self.getStages();
+                        self.selectedSes.current_stage = stageid;
+                        //call request to change activity currentstage 
+                    });
                 }
-                let pp = {sesid: sesid, stageid: stageid};
-                $http({
-                    url: "session-start-stage", method: "post", data: pp
-                }).success(function (data) {
-                    Notification.success("Etapa creada correctamente");
-                    //window.location.reload()
-                    self.currentStage(); // <--------Actualiza la data del current stage
-                    self.shared.verifyTabs();
-                    self.getStages();
-                    self.selectedSes.current_stage = stageid;
-                    //call request to change activity currentstage 
-                });
-                
+                else if (self.design.type == "ranking") {
+                    let c = current_phase.roles.length;
+                    for (let i = 0; i < current_phase.roles.length; i++) {
+                        const role = current_phase.roles[i];
+                        let p = {
+                            name:       role.name,
+                            jorder:     role.type == "order",
+                            justified:  role.type != null,
+                            word_count: role.wc,
+                            stageid:    stageid,
+                        };
+                        $http({url: "add-actor", method: "post", data: p}).success(function (data) {
+                            console.log("Actor added");
+                            c -= 1;
+                            if (c == 0) {
+                                let pp = {sesid: sesid, stageid: stageid};
+                                $http({
+                                    url: "session-start-stage", method: "post", data: pp
+                                }).success(function (data) {
+                                    Notification.success("Etapa creada correctamente");
+                                    //window.location.reload()
+                                    self.shared.verifyTabs();
+                                    self.currentStage();
+                                    self.selectedSes.current_stage = stageid;
+                                    //call request to change activity currentstage 
+                                });
+                            }
+                        });
+                    }
+                }
             }
             else {
                 Notification.error("Error al crear la etapa");
@@ -2499,14 +2598,15 @@ adpp.controller("MonitorActivityController", function (
    
     };
 
-    self.currentStage = function () {
+    self.currentStage = function() {
         var pd = {
-            sesid: self.selectedSes.id
+          sesid: self.selectedSes.id
         };
-        $http({ url: "get-current-stage", method: "post", data: pd }).success(function (data) {
-            self.currentActivity.stage = data.length === 0 ? 0: data[0].number -1; //data.length fixes issue when starting activity
+        return $http({ url: "get-current-stage", method: "post", data: pd }).then(function(response) {
+          self.currentActivity.stage = response.data.length === 0 ? 0: response.data[0].number -1;
         });
-    };
+      };
+      
 
     self.finishActivity = function(){
         $http.post("session-finish-stages", {sesid: self.selectedSes.id}).success((data) => {
@@ -2521,7 +2621,7 @@ adpp.controller("MonitorActivityController", function (
 });
 
 adpp.controller("BrowseDesignsController", function (
-    $scope, $filter, $http, Notification, $timeout
+    $scope, $filter, $http
 ) {
     var self = $scope;
     self.designs = [];
@@ -2543,25 +2643,25 @@ adpp.controller("BrowseDesignsController", function (
     self.setValues = function(){
         self.dsgnid = launchId.id;
         self.dsgntitle = launchId.title;
-        self.dsgntype = launchId.type;
+        self.dsgntype = (launchId.type == "semantic_differential" ? "T": "R");
     };
 
     self.designValues = function(id, title, type){
         self.dsgnid = id;
         self.dsgntitle = title;
-        self.dsgntype = type;
+        self.dsgntype = (type == "semantic_differential" ? "T": "R");
     };
 
     self.designPublic = function (dsgnid) {
         var postdata = { dsgnid: dsgnid };
-        $http({ url: "design-public", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "design-public", method: "post", data: postdata }).success(function () {
 
         });
     };
 
     self.designLock = function (dsgnid) {
         var postdata = { dsgnid: dsgnid };
-        $http({ url: "design-lock", method: "post", data: postdata }).success(function (data) {
+        $http({ url: "design-lock", method: "post", data: postdata }).success(function () {
   
         });
     };
@@ -2663,7 +2763,8 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     self.error = false;
     self.saved = false;
     self.errorList = [];
-
+    self.selectedOption = "semantic_differential";
+    self.roles = [];
     /*
         BACKEND FUNCTIONS
     */
@@ -2675,7 +2776,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         if(self.selectedView == "newDesign") self.changeDesign(null);
         if(self.design != null){
             self.stageType = self.design.type;
-            self.num = self.design.phases[0].questions[0].ans_format.values;
+            if(self.design.type == "semantic_differential") self.num = self.design.phases[0].questions[0].ans_format.values;
             resetValues();
             self.CleanEmptyValues();
             self.CreateErrorList();
@@ -2686,58 +2787,95 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         var phases = self.design.phases;
         for(let i =0; i< phases.length; i++){
             var phase = phases[i];
-            var questions = phase.questions;
-            for(let j=0; j<questions.length; j++){
-                var question = questions[j];
+            if(self.stageType == "semantic_differential"){
+                var questions = phase.questions;
+                for(let j=0; j<questions.length; j++){
+                    var question = questions[j];
 
-                question.q_text = question.q_text === "-->>N/A<<--" ? "" : question.q_text
-                question.ans_format.l_pole = question.ans_format.l_pole === "-->>N/A<<--" ? "" : question.ans_format.l_pole
-                question.ans_format.r_pole = question.ans_format.r_pole === "-->>N/A<<--" ? "" : question.ans_format.r_pole
+                    question.q_text = question.q_text === "-->>N/A<<--" ? "" : question.q_text;
+                    question.ans_format.l_pole = question.ans_format.l_pole === "-->>N/A<<--" ? "" : question.ans_format.l_pole;
+                    question.ans_format.r_pole = question.ans_format.r_pole === "-->>N/A<<--" ? "" : question.ans_format.r_pole;
+                }
+            }
+            else if(self.stageType == "ranking"){
+                var roles = phase.roles;
+                phase.q_text = phase.q_text === "-->>N/A<<--" ? "" : phase.q_text;
+                for(let j=0; j<roles.length; j++){
+                    var role = roles[j];
+                    role.name = role.name === "-->>N/A<<--" ? "" : role.name;
+                }
             }
         }
+    
         return;
-    }
+    };
 
     self.CreateErrorList = function(){
         //[[{q:false, l:false, t:true}]]
         var phases = self.design.phases;
         for(let i =0; i< phases.length; i++){
             var phase = phases[i];
-            var questions = phase.questions;
-            let questionsErrorList = [];
+            if(self.stageType == "semantic_differential"){
+                var questions = phase.questions;
+                let questionsErrorList = [];
+                for(let j=0; j<questions.length; j++){
+                    let questionErrors = {};
+                    var question = questions[j];
 
-            for(let j=0; j<questions.length; j++){
-                let questionErrors = {}
-                var question = questions[j];
-
-                questionErrors = {
-                    q:question.q_text == "",
-                    l:question.ans_format.l_pole == "",
-                    r:question.ans_format.r_pole ==""
+                    questionErrors = {
+                        q: question.q_text == "",
+                        l: question.ans_format.l_pole == "",
+                        r: question.ans_format.r_pole ==""
+                    };
+    
+                    questionsErrorList.push(questionErrors);
                 }
- 
-                questionsErrorList.push(questionErrors);
+                self.errorList.push(questionsErrorList);
             }
-            self.errorList.push(questionsErrorList);
+            else if(self.stageType == "ranking"){
+                var roles = phase.roles;
+                var rolesErrorList = [];
+                for(let j=0; j<roles.length; j++){
+                    var role = roles[j];
+
+                    rolesErrorList.push(role.name=="");
+                }
+
+                self.errorList.push(rolesErrorList);
+            }
 
         }
-    }
+    };
 
     self.CheckPhase = function(phase){ //IF Phase deleted or Question deleted, delete errorList
-        const questions = self.errorList[phase];
-        let error = false;
-        for(let question=0; question<questions.length; question++){
-            const questionValues = Object.values(self.errorList[phase][question]);
-            const questionResult = checkIfTrue(questionValues);
-            if(questionResult) error = true;
+        if(self.stageType == "semantic_differential"){
+            const questions = self.errorList[phase];
+            let error = false;
+            for(let question=0; question<questions.length; question++){
+                const questionValues = Object.values(self.errorList[phase][question]);
+                const questionResult = checkIfTrue(questionValues);
+                if(questionResult) error = true;
+            }
+            return error;
         }
-        return error;
+        else if(self.stageType == "ranking"){
+            const roles = self.errorList[phase];
+            let error = false;
+            if(self.design.phases[phase].q_text == "") error = true;
+            for(let role=0; role<roles.length; role++){
+
+                if(self.errorList[phase][role]) error = true;
+            }
+            return error;
+        }
     };
 
     self.CheckQuestion = function(index){
-        const phase = self.currentStage;
-        const questionValues = Object.values(self.errorList[phase][index]);
-        return checkIfTrue(questionValues);
+        if(self.currentStage !== null){
+            const phase = self.currentStage;
+            const questionValues = Object.values(self.errorList[phase][index]);
+            return checkIfTrue(questionValues);
+        }
     };
 
     function checkIfTrue(arr) {
@@ -2746,13 +2884,26 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     
     self.IsEmpty = function(value, type){
         //check currentStage && currentQuestion to update on the fly
-        const isEmpty = value==="";
-        const phase = self.currentStage;
-        const question  = self.currentQuestion;
-        if(type !== '') self.errorList[phase][question][type] = isEmpty;
+        if(self.stageType == "semantic_differential" && self.currentStage !== null || type == ""){
+            const isEmpty = value==="";
+            const phase = self.currentStage;
+            const question  = self.currentQuestion;
+            if(type !== "") self.errorList[phase][question][type] = isEmpty;
 
-        return isEmpty
-    }
+            return isEmpty;
+        }
+        
+    };
+
+    self.IsTextEmpty = function(index, value){
+        if(self.stageType == "ranking" && self.currentStage !== null){
+            //check currentStage && currentQuestion to update on the fly
+            const isEmpty = value==="";
+            const phase = self.currentStage;
+            self.errorList[phase][index] = isEmpty;
+            return isEmpty;
+        }
+    };
 
     self.launchDesignEdit = function(){
         self.updateDesign().then(function(saved) {
@@ -2765,8 +2916,8 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         });
     };
   
-    self.uploadDesign = function (title, author) {
-        var postdata = { 
+    self.uploadDesign = function (title, author, type) {
+        var semantic = { 
             "metainfo": {
                 "title":         title,
                 "author":        author,
@@ -2797,13 +2948,77 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
                 }
             ]
         };
-        $http.post("upload-design", postdata).success(function (data) {
-            
-            if (data.status == "ok") {
-                self.getDesign(data.id);
+        var ranking = { 
+            "metainfo": {
+                "title":         title,
+                "author":        author,
+                "creation_date": Date.now()
+            },
+            "roles":  [],
+            "type":   "ranking",
+            "phases": [
+                {
+                    "mode":               "individual",
+                    "chat":               false,
+                    "anonymous":          false,
+                    "grouping_algorithm": "random",
+                    "prevPhasesResponse": [ ],
+                    "stdntAmount":        3,
+                    "q_text":             "-->>N/A<<--",
+                    "roles":              [
+                    ]
+                }
+            ]
+        };
+        if(type){
+            var postdata;
+            if(type === "semantic_differential"){
+                postdata = semantic;
             }
-        });
+            else if(type== "ranking"){
+                postdata = ranking;
+            }
+
+            $http.post("upload-design", postdata).success(function (data) {
+            
+                if (data.status == "ok") {
+                    self.getDesign(data.id);
+                }
+            });
+        }
         
+    };
+
+    self.addRole = function(){
+        self.design.phases[self.currentStage].roles.push({
+            name: "",
+            type: "role", //order
+            wc:   5
+        });
+    };
+
+    self.setRoleType = function(role, type){
+        if(role.type == type){
+            role.type = null;
+            return;
+        }
+        if(self.roles.find(e => e.type != null && e.type != type)){
+            self.setAllRolesType(null);
+        }
+
+        role.type = type;
+    };
+
+    self.setAllRolesType = function (type) {
+        for (let i = 0; i < self.design.phases[self.currentStage].roles.length; i++) {
+            self.design.phases[self.currentStage].roles[i].type = type;
+        }
+    };
+
+    self.removeRole = function (index) {
+        if (window.confirm("¿Esta seguro de eliminar este rol?")) {
+            self.design.phases[self.currentStage].roles.splice(index, 1);
+        }
     };
 
     self.updateDesign = function() {
@@ -2816,7 +3031,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
                 } else {
                     self.saved = false;
                 }
-            }, function(error) {
+            }, function() {
                 self.saved = false;
             });
         } else {
@@ -2831,9 +3046,10 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     self.checkDesign = function(){ 
         var error = false;
         var phases = self.design.phases;
+        console.log(self.design);
         for(let i =0; i< phases.length; i++){
             var phase = self.design.phases[i];
-            var questions = phase.questions;
+
 
             if(self.design.metainfo.title === "") error = true;
 
@@ -2841,13 +3057,23 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
                 phase.chat = false;
                 phase.anonymous = false;
             }
-
-            for(let j=0; j<questions.length; j++){
-                var question = questions[j];
-                if(question.q_text == "") error = true;
-                if(question.ans_format.l_pole == "") error = true;
-                if(question.ans_format.r_pole =="") error = true;
-                if(question.ans_format.min_just_length < 0 ) error = true;
+            if(self.stageType == "semantic_differential"){
+                var questions = phase.questions;
+                for(let j=0; j<questions.length; j++){
+                    var question = questions[j];
+                    if(question.q_text == "") error = true;
+                    if(question.ans_format.l_pole == "") error = true;
+                    if(question.ans_format.r_pole =="") error = true;
+                    if(question.ans_format.min_just_length < 0 ) error = true;
+                }
+            }
+            if(self.stageType == "ranking"){
+                var roles = phase.roles;
+                if(phase.q_text == "") error = true;
+                for(let j=0; j<roles.length; j++){
+                    var role = roles[j];
+                    if(role.name == "") error = true;
+                }
             }
 
         }
@@ -2871,16 +3097,16 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
         return designId.id;
     };
 
-    var resetValues = function(){
+    function resetValues() {
         // RESET VALUES
         self.currentStage = 0; 
         self.currentQuestion = 0; 
         self.stageType = self.design.type;
-        self.design.phases[0].questions[0].ans_format.values;
+        if(self.design.type == "semantic_differential") self.design.phases[0].questions[0].ans_format.values;
         self.busy = false; 
         self.extraOpts = false;
         self.prevStages = false;
-    };
+    }
 
     /*
         FRONTEND FUNCTIONS
@@ -2918,7 +3144,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
                     "min_just_length": 10
                 }});
         self.selectQuestion(self.design.phases[self.currentStage].questions.length-1); //send to new question
-        self.errorList[self.currentStage].push({q:true,l:true,r:true})
+        self.errorList[self.currentStage].push({q: true,l: true,r: true});
     };
 
     self.deleteQuestion = function(index){
@@ -2942,8 +3168,14 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
             self.currentStage = id;
             self.stageType = self.design.type;
             self.currentQuestion = 0; //reset question index
-            self.num = self.design.phases[self.currentStage].questions[self.currentQuestion]
-                .ans_format.values;
+            if(self.stageType == "semantic_differential"){  
+                self.num = self.design.phases[self.currentStage].questions[self.currentQuestion]
+                    .ans_format.values;
+            }
+            else if(self.stageType == "ranking"){
+
+            }
+
         }
         else {
             /*
@@ -2966,10 +3198,11 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
             self.currentStage = null;
             self.extraOpts = false;
             self.prevStages = false;
+            self.errorList.splice(index, 1);
         }
     };
 
-    self.templateStage = function(type){ 
+    self.templateStage = function(){ 
         // UNUSED
         return {
             "mode":      "individual",
@@ -2992,23 +3225,38 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     
     self.copyPrevStage = function(type, prevphase){
         var phase = JSON.parse(JSON.stringify(prevphase)); //removes reference from previous object
-        return {
-            "mode":               phase.mode,
-            "chat":               phase.chat,
-            "anonymous":          phase.anonymous,
-            "questions":          phase.questions,
-            "grouping_algorithm": phase.grouping_algorithm,
-            "prevPhasesResponse": [],//phase.prevPhasesResponse,
-            "stdntAmount":        phase.stdntAmount
-        };
+        if(type =="semantic_differential"){
+            return {
+                "mode":               phase.mode,
+                "chat":               phase.chat,
+                "anonymous":          phase.anonymous,
+                "questions":          phase.questions,
+                "grouping_algorithm": phase.grouping_algorithm,
+                "prevPhasesResponse": [],//phase.prevPhasesResponse,
+                "stdntAmount":        phase.stdntAmount
+            };
+        }
+        else if("ranking"){
+            return{
+                mode:               phase.mode,
+                chat:               phase.chat,
+                anonymous:          phase.anonymous,
+                grouping_algorithm: phase.grouping_algorithm,
+                prevPhasesResponse: [],
+                stdntAmount:        phase.stdntAmount,
+                q_text:             phase.q_text,
+                roles:              phase.roles
+            };
+        }
+
     };
 
     self.addStage = function(){
         var index = self.design.phases.length -1;
         var prev_phase = self.design.phases[index];
-        self.design.phases.push(self.copyPrevStage("semantic_differential", prev_phase));
-        self.errorList.push(JSON.parse(JSON.stringify(self.errorList[self.currentStage])));
-        console.log(self.design.phases);
+        self.design.phases.push(self.copyPrevStage(self.stageType, prev_phase));
+        self.errorList.push(JSON.parse(JSON.stringify(self.errorList[index])));
+        
     };
 
     self.getStages = function(){
@@ -3081,7 +3329,7 @@ adpp.controller("OptionsController", function ($scope, $http, Notification) {
     };
 });
 
-adpp.controller("DashboardRubricaController", function ($scope, $http) {
+adpp.controller("DashboardRubricaController", function ($scope) {
     var self = $scope;
     self.reports = [];
     self.result = [];
@@ -3135,7 +3383,7 @@ adpp.filter("trustHtml", ["$sce", function ($sce) {
 }]);
 
 adpp.filter("lang", function () {
-    var filt = function (label) {
+    function filt (label) {
         if (window.DIC == null) return;
         if (window.DIC[label]) return window.DIC[label];
         if (!window.warnDIC[label]) {
@@ -3143,13 +3391,13 @@ adpp.filter("lang", function () {
             window.warnDIC[label] = true;
         }
         return label;
-    };
+    }
 
     filt.$stateful = true;
     return filt;
 });
 
-var generateTeams = function generateTeams(alumArr, scFun, n, different, double) {
+function generateTeams(alumArr, scFun, n, different, double) {
     if (n == null || n == 0) return [];
     console.log(alumArr);
     var arr = alumArr;
@@ -3199,9 +3447,9 @@ var generateTeams = function generateTeams(alumArr, scFun, n, different, double)
         }
     }
     return final_groups;
-};
+}
 
-var isDifferent = function isDifferent(type) {
+function isDifferent(type) {
     switch (type) {
     case "performance homog":
         return false;
@@ -3213,9 +3461,9 @@ var isDifferent = function isDifferent(type) {
         return true;
     }
     return false;
-};
+}
 
-var habMetric = function habMetric(u) {
+function habMetric(u) {
     switch (u.aprendizaje) {
     case "Teorico":
         return -2;
@@ -3227,10 +3475,10 @@ var habMetric = function habMetric(u) {
         return 2;
     }
     return 0;
-};
+}
 
 
-adpp.controller("instituciones",["$scope","$http",function($scope,$http,Admin){
+adpp.controller("instituciones",["$scope","$http",function($scope,$http){
     var self = $scope;
     self.uid = [];
     self.domains =[];
@@ -3308,8 +3556,6 @@ adpp.controller("instituciones",["$scope","$http",function($scope,$http,Admin){
 
 
     self.refreshUsers = function () {
-        var postdata2 = self.domains;
-
         $http({
             url: "get_mail_domains", method: "post",data: self.institutionid
         }).success(function (data) {
@@ -3334,7 +3580,7 @@ adpp.controller("instituciones",["$scope","$http",function($scope,$http,Admin){
 }]);
 
 
-adpp.controller("no_account",["$scope","$http",function($scope,$http,Admin){
+adpp.controller("no_account",["$scope","$http",function($scope,$http){
     var self = $scope;
     const lang = navigator.language;
     if(lang[0] == "e" && lang[1] == "s"){
@@ -3354,10 +3600,9 @@ adpp.controller("no_account",["$scope","$http",function($scope,$http,Admin){
     self.activate_user = function(){
         var url_string = window.location;
         var url = new URL(url_string);
-        var rc = url.searchParams.get("rc");
         var token = url.searchParams.get("tok");
         console.log(token);
-        $http({ url: "activate_user", method: "post",data: {token} }).success(function (data) {
+        $http({ url: "activate_user", method: "post",data: {token} }).success(function () {
         });
     };
 
@@ -3397,7 +3642,7 @@ adpp.controller("no_account",["$scope","$http",function($scope,$http,Admin){
 
 
 adpp.controller("super_admin", ["$scope", "$http", "$uibModal", function(
-    $scope, $http, $uibModal, Admin
+    $scope, $http, $uibModal
 ){
     var self = $scope;
     self.accepted = [];
@@ -3606,7 +3851,6 @@ adpp.controller("super_admin", ["$scope", "$http", "$uibModal", function(
         });
     };
     self.refreshUsers = function () {
-        var postdata2 = self.domains;
 
         $http({ url: "get_all_users", method: "post",data: postdata }).success(function (data) {
             var res = [];

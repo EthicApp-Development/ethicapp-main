@@ -285,6 +285,9 @@
 	"performance homog": "Performance Homogéneo",
 	"performance heterg": "Performance Heterogéneo",
 	"knowledgeType homog": "Tipo de Conocimiento Homogéneo",
-	"knowledgeType heterg": "Tipo de Conocimiento Heterogéneo"
+	"knowledgeType heterg": "Tipo de Conocimiento Heterogéneo",
+	"semantic_differential": "Diferencial Semántico",
+	"ranking_activity": "Actividad de ordenamiento",
+	"studentsFinish": "Estudiantes han respondido."
 }
 

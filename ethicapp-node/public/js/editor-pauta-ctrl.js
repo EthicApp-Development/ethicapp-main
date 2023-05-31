@@ -187,24 +187,24 @@ app.controller("EditorController", [
             });
         };
 
-        let arrayIndexOfId = (arr, id) => {
+        function arrayIndexOfId (arr, id)  {
             return arr.reduce((prev, cur, i) => (cur.id == id) ? i : prev, -1);
-        };
+        }
 
-        let loadPdf = (pdfData, i) => {
+        function loadPdf (pdfData, i) {
             PDFJS.disableWorker = true;
             let pdf = PDFJS.getDocument(pdfData);
             pdf.then((pdf) => renderPdf(pdf, i));
-        };
+        }
 
-        let renderPdf = (pdf, idx) => {
+        function renderPdf (pdf, idx) {
             for (let i = 1; i <= pdf.numPages; i++) {
-                let p = pdf.getPage(i).then((p) => renderPage(p, idx));
+                pdf.getPage(i).then((p) => renderPage(p, idx));
                 self.numPages += 1;
             }
-        };
+        }
 
-        let renderPage = (page, i) => {
+        function renderPage (page, i)  {
             let scale = 1.3;
             let viewport = page.getViewport(scale);
             let $canvas = $("<canvas></canvas>");
@@ -218,7 +218,7 @@ app.controller("EditorController", [
             $pdfContainer.css("height", canvas.height + "px").css("width", canvas.width + "px");
             $pdfContainer.append($canvas);
 
-            let canvasOffset = $canvas.offset();
+            $canvas.offset();
             let $textLayerDiv = jQuery("<div></div>")
                 .addClass("textLayer")
                 .css("height", viewport.height + "px")
@@ -248,7 +248,7 @@ app.controller("EditorController", [
                     }
                 });
             });
-        };
+        }
 
         self.init();
 
