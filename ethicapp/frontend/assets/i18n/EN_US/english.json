@@ -283,7 +283,10 @@
 	"performance homog": "Performance Homogeneous",
 	"performance heterg": "Performance Heterogeneous",
 	"knowledgeType homog": "Knowledge Type Homogeneous",
-	"knowledgeType heterg": "Knowledge Type Heterogeneous"
+	"knowledgeType heterg": "Knowledge Type Heterogeneous",
+	"semantic_differential": "Semantic Differentials",
+	"ranking_activity": "Ranking Activity",
+	"studentsFinish": "Students have answered."
 }
 
 

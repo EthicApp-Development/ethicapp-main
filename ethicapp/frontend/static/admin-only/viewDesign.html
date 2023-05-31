@@ -1,4 +1,3 @@
-
 <div class="" ng-controller="StagesEditController" ng-if="selectedView == 'viewDesign'">
     <div class="container">
         <h2>{{'designMsg'|lang}}</h2>
@@ -15,12 +14,12 @@
         <br>
         <hr>
     </div>
-   
+
     <!--Phases selections-->
-    <div class="container phase-container">
-        <div class = "row">
-            <div class="col-xs-1 phase-element"  ng-repeat="item in getStages()" ng-init="current" 
-            ng-class="{phase-selected:currentStage==$index}" ng-click="selectStage($index)">
+    <div class="container phase_container">
+        <div class="row">
+            <div class="col-xs-1 phase_element" ng-repeat="item in getStages()" ng-init="current"
+                ng-class="{phase_selected:currentStage==$index}" ng-click="selectStage($index)">
                 {{'stage' | lang}} {{$index+ 1}}
                 {{'mode' | lang}}: {{item.mode|lang}}
             </div>
@@ -30,117 +29,114 @@
     <div class="container stage-container" ng-show="currentStage != null"> <!--ng-controller="StagesController"-->
         <div class="row">
             <h4 class="col-lg-2"><strong>{{'stage' | lang}} #{{currentStage+1}}</strong></h4>
-            <h4 class="col-lg-4" ng-show="currentStage == 0"><strong>{{'modeType' | lang}}:</strong> {{design.phases[currentStage].mode|lang}} </h4>
+            <h4 class="col-lg-4" ng-show="currentStage == 0"><strong>{{'modeType' | lang}}:</strong>
+                {{design.phases[currentStage].mode|lang}} </h4>
         </div>
-        
+
         <!--STAGE 2 AND FOWARD-->
         <div ng-if="currentStage>0">
             <div class="row margin-top-8">
                 <label class="col-lg-2">{{'modeType' | lang}}:</label>
                 <div class="col-lg-3">
-                    <select class="form-control form-inline-med" 
-                    ng-options="x.key as (x.name | lang) for x in groupType"
-                    ng-model="design.phases[currentStage].mode" 
-                    ng-disabled="true"></select>
+                    <select class="form-control form-inline-med"
+                        ng-options="x.key as (x.name | lang) for x in groupType"
+                        ng-model="design.phases[currentStage].mode" ng-disabled="true"></select>
                 </div>
             </div>
             <div ng-if="design.phases[currentStage].mode == 'team'">
                 <div class="row margin-top-8">
                     <label class="col-lg-2">{{'groupingMethod' | lang}}:</label>
                     <div class="col-lg-3">
-                        <select class="form-control form-inline-med" 
-                        ng-init="design.phases[currentStage].grouping_algorithm"
-                        ng-options="x.key as (x.name | lang) for x in methods" 
-                        ng-model="design.phases[currentStage].grouping_algorithm"
-                        ng-disabled="true"></select> <!--EDIT LATER-->
+                        <select class="form-control form-inline-med"
+                            ng-init="design.phases[currentStage].grouping_algorithm"
+                            ng-options="x.key as (x.name | lang) for x in methods"
+                            ng-model="design.phases[currentStage].grouping_algorithm" ng-disabled="true"></select>
+                        <!--EDIT LATER-->
                     </div>
                 </div>
-                <div class="row margin-top-8" > 
+                <div class="row margin-top-8">
                     <label class="col-lg-2">{{'studentsPerGroup' | lang}}:</label>
-                    <div class = "col-lg-2">
-                        <input type="number" id="points" name="length" step="1"  min="2" class="form-control"
-                        ng-model="design.phases[currentStage].stdntAmount" readonly
-                        style="width: 6em; text-align: center; height: 2em;"> <!--EDIT LATER-->
+                    <div class="col-lg-2">
+                        <input type="number" id="points" name="length" step="1" min="2" class="form-control"
+                            ng-model="design.phases[currentStage].stdntAmount" readonly
+                            style="width: 6em; text-align: center; height: 2em;"> <!--EDIT LATER-->
                     </div>
-                </div> 
+                </div>
             </div>
             <!--EXTRA OPTIONS-->
             <div ng-if="design.phases[currentStage].mode == 'team'">
                 <a ng-click="toggleOpts(1)">{{'advOpts'|lang}}</a>
-                <div ng-show="extraOpts" class="question-container">
-                    <div class="row margin-top-8" > 
+                <div ng-show="extraOpts" class="question_container">
+                    <div class="row margin-top-8">
                         <label class="col-lg-2">{{'studentAnon'|lang}}:</label>
                         <div class="col-lg-1">
-                            <input type="radio" name="anon2" 
-                            ng-value="true" ng-disabled="true"
-                            ng-model="design.phases[currentStage].anonymous">
+                            <input type="radio" name="anon2" ng-value="true" ng-disabled="true"
+                                ng-model="design.phases[currentStage].anonymous">
                             <label>{{'yes'|lang}}</label>
                         </div>
                         <div class="col-lg-1">
-                            <input type="radio" name="anon2" 
-                            ng-value="false" ng-disabled="true"
-                            ng-model="design.phases[currentStage].anonymous">
+                            <input type="radio" name="anon2" ng-value="false" ng-disabled="true"
+                                ng-model="design.phases[currentStage].anonymous">
                             <label>{{'no'|lang}}</label>
                         </div>
-                        <div class= "col-lg-3 "> 
-                            <div ng-click="toggleOpts(2)"  style="cursor: pointer;">
+                        <div class="col-lg-3 ">
+                            <div ng-click="toggleOpts(2)" style="cursor: pointer;">
                                 {{'viewPastSes'|lang}}:
                             </div>
-                            <div class="stack-top stage-container" ng-show="prevStages"
-                            style="z-index: 2; position:absolute; background:#fff; border: 2px #bbb solid; width:10em;">
+                            <div class="stack-top stage_container" ng-show="prevStages"
+                                style="z-index: 2; position:absolute; background:#fff; border: 2px #bbb solid; width:10em;">
                                 <div ng-repeat="n in buildArray(currentStage)">
-                                    <input type="checkbox" name="prevStage" ng-disabled="true"
-                                    checklist-value="n-1" 
-                                    checklist-model="design.phases[currentStage].prevPhasesResponse[n-1]">
+                                    <input type="checkbox" name="prevStage" ng-disabled="true" checklist-value="n-1"
+                                        checklist-model="design.phases[currentStage].prevPhasesResponse[n-1]">
                                     <label for="S{{n}}">{{'stage'|lang}}: {{n}}</label> <!--FIX TOGGLE OPTION-->
                                 </div>
                             </div>
 
                         </div>
                     </div>
-                    <div class="row margin-top-8"> 
+                    <div class="row margin-top-8">
                         <label class="col-lg-2">{{'activeChat'|lang}}:</label>
                         <div class="col-lg-1">
-                            <input type="radio" name="chat2" 
-                            ng-value="true" ng-disabled="true"
-                            ng-model="design.phases[currentStage].chat">
+                            <input type="radio" name="chat2" ng-value="true" ng-disabled="true"
+                                ng-model="design.phases[currentStage].chat">
                             <label>{{'yes'|lang}}</label>
                         </div>
                         <div class="col-lg-1">
-                            <input type="radio" name="chat2" readonly 
-                            ng-value="false" ng-disabled="true"
-                            ng-model="design.phases[currentStage].chat">
+                            <input type="radio" name="chat2" readonly ng-value="false" ng-disabled="true"
+                                ng-model="design.phases[currentStage].chat">
                             <label>{{'no'|lang}}</label>
                         </div>
                     </div>
-                    
+
                 </div>
             </div>
         </div>
         <!--TABS QUESTIONS-->
         <div class="tab-cs">
-            <button ng-repeat="i in buildArray(design.phases[currentStage].questions.length)" 
-            class="tab-cs" ng-click= "selectQuestion($index)" ng-class="{'btn-selected': currentQuestion == $index}">
-            {{'question'|lang}} {{i}}
+            <button ng-repeat="i in buildArray(design.phases[currentStage].questions.length)" class="tab-cs"
+                ng-click="selectQuestion($index)" ng-class="{'btn-selected': currentQuestion == $index}">
+                {{'question'|lang}} {{i}}
             </button>
         </div>
-        
-        <div class="question-container">
-            <div class="row"> 
-                <label class="col-lg-2">{{'questionText'|lang}}</label>
-                <div class= "col-lg-6">
-                    <input type="text" class="form-control text-center" ng-disabled="readonly" readonly
-                    placeholder="{{'title'|lang}}" ng-model="design.phases[currentStage].questions[currentQuestion].q_text"> 
+
+        <div class="question_container">
+            <div ng-show="stageType == 'semantic_differential'">
+                <div class="row">
+                    <label class="col-lg-2">{{'questionText'|lang}}</label>
+                    <div class="col-lg-6">
+                        <input type="text" class="form-control text-center" ng-disabled="readonly" readonly
+                            placeholder="{{'title'|lang}}"
+                            ng-model="design.phases[currentStage].questions[currentQuestion].q_text">
+                    </div>
                 </div>
-            </div>
-            <!--Semantic Differential-->
-            <div ng-show="stageType == 'semantic_differential'">   
+                <!--Semantic Differential-->
                 <label class="margin-top-8">{{'semanticDiffEscale'|lang}}</label>
                 <div class="row margin-top-8">
                     <div class="col-xs-3 text-right">
                         <div class="tlabel">
                             <input type="text" class="form-control" ng-disabled="readonly" readonly
-                            placeholder="{{'left'|lang}}" ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.l_pole">
+                                placeholder="{{'left'|lang}}"
+                                ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.l_pole">
                         </div>
                         <button class="btn btn-default" ng-disabled="true">-</button>
                     </div>
@@ -151,42 +147,92 @@
                         <button class="btn btn-default" ng-disabled="true">+</button>
                         <div class="tlabel">
                             <input type="text" class="form-control" ng-disabled="readonly" readonly
-                                placeholder="{{'right'|lang}}" ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.r_pole">
+                                placeholder="{{'right'|lang}}"
+                                ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.r_pole">
                         </div>
                     </div>
-                    
+
                 </div>
-                <div class="row margin-top-24"> 
+                <div class="row margin-top-24">
                     <label class="col-lg-2">{{'mandatoryComment'|lang}}</label>
                     <div class="col-lg-1">
-                        <input type="radio" name="comment2"
-                        ng-value="true" ng-disabled="true"
-                        ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.just_required">
+                        <input type="radio" name="comment2" ng-value="true" ng-disabled="true"
+                            ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.just_required">
                         <label>{{'yes'|lang}}</label>
                     </div>
                     <div class="col-lg-1">
-                        <input type="radio" name="comment2" 
-                        ng-value="false" ng-disabled="true"
-                        ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.just_required">
+                        <input type="radio" name="comment2" ng-value="false" ng-disabled="true"
+                            ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.just_required">
                         <label>{{'no'|lang}}</label>
                     </div>
                 </div>
-                <div class="row margin-top-24"> 
-                    <label class= "col-lg-2">{{'minComment'|lang}}</label>
-                    <div class = "col-lg-1">
-                        <input type="number" id="points" name="length" step="1"  min="5" class="form-control" readonly
-                        ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.min_just_length"
-                        style="width: 6em; text-align: center; height: 2em;">
+                <div class="row margin-top-24">
+                    <label class="col-lg-2">{{'minComment'|lang}}</label>
+                    <div class="col-lg-1">
+                        <input type="number" id="points" name="length" step="1" min="5" class="form-control" readonly
+                            ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.min_just_length"
+                            style="width: 6em; text-align: center; height: 2em;">
                     </div>
                     <label class="col-lg-2" for="length">{{'words'|lang}}</label>
                 </div>
             </div>
             <!--ANOTHER OPTION-->
-            <div ng-show="stageType == 'ANOTHER OPTION'"> </div>
+            <div ng-show="stageType == 'ranking'">
+                <div class="row">
+                    <div class="col-sm-12">
+                        <label>{{ 'question' | lang }}</label>
+                        <textarea rows="2" class="form-control" ng-model="design.phases[currentStage].q_text"
+                            ng-disabled="true"
+                            ng-class="{'error': IsTextEmpty($index, design.phases[currentStage].q_text)}"></textarea>
+                    </div>
+                    <div class="col-sm-5">
+                        <h4>{{ 'listOf' | lang }} {{ 'roles' | lang }}/{{ 'actors' |
+                            lang }}</h4>
+                    </div>
+                    <div class="col-sm-2 text-center margin-top-8">
+                        <button class="btn btn-default" ng-click="setAllRolesType('role')" ng-disabled="true">
+                            {{ 'justifyAll' | lang }} {{ 'roles' | lang }}
+                        </button>
+                    </div>
+                    <div class="col-sm-2 text-center margin-top-8">
+                        <button class="btn btn-default" ng-click="setAllRolesType('order')" ng-disabled="true">
+                            {{ 'justifyAll' | lang }} {{ 'orders' | lang }}
+                        </button>
+                    </div>
+                    <div class="col-sm-2 text-center margin-top-8">
+                        <button class="btn btn-default" ng-click="addRole()" ng-disabled="true">
+                            <i class="fa fa-plus"></i> {{ 'add' | lang }} {{ 'role' | lang }}
+                        </button>
+                    </div>
+                </div>
+                <div class="row row-border" ng-repeat="role in design.phases[currentStage].roles">
+                    <div class="col-sm-5">
+                        <input class="form-control" ng-model="role.name" ng-disabled="true"
+                            ng-class="{'error': IsTextEmpty($index, role.name)}">
+                    </div>
+                    <div class="col-sm-2 text-center">
+                        <button class="btn btn-default" ng-class="{'btn-primary': role.type == 'role'}"
+                            ng-click="setRoleType(role, 'role')" ng-disabled="true">
+                            {{ 'justify' | lang }} {{ 'role' | lang }}
+                        </button>
+                    </div>
+                    <div class="col-sm-2 text-center">
+                        <button class="btn btn-default" ng-class="{'btn-primary': role.type == 'order'}"
+                            ng-click="setRoleType(role, 'order')" ng-disabled="true">
+                            {{ 'justify' | lang }} {{ 'order' | lang }}
+                        </button>
+                    </div>
+                    <div class="col-sm-2 text-right">
+                        <input class="form-control form-inline-mini" placeholder="Word Count" type="number"
+                            ng-model="role.wc" ng-disabled="true">
+                    </div>
 
-            
+                </div>
+            </div>
+
+
         </div>
-        
+
     </div>
 
-</div>  
+</div>

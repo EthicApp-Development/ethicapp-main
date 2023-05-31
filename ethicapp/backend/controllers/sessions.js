@@ -202,17 +202,36 @@ router.post("/check-design", (req, res) => {
             phases = res.rows[0].design.phases;
             for(let i =0; i< phases.length; i++){
                 var phase = phases[i];
-                var questions = phase.questions;
-                for(let j=0; j<questions.length; j++){
-                    var question = questions[j];
-                    var isQtextNA = (question.q_text === "" || question.q_text === "-->>N/A<<--");
-                    var isLpoleNA = (question.ans_format.l_pole === "" | 
-                                    question.ans_format.l_pole === "-->>N/A<<--");
-                    var isRpoleNA = (question.ans_format.r_pole === "" | 
-                                    question.ans_format.l_pole === "-->>N/A<<--");
-                    question.q_text = isQtextNA ? result = false : result;
-                    question.ans_format.l_pole = isLpoleNA ? result = false : result;
-                    question.ans_format.r_pole = isRpoleNA ? result = false : result;
+                if(res.rows[0].design.type == "semantic_differential"){
+                    var questions = phase.questions;
+                    for(let j=0; j<questions.length; j++){
+                        var question = questions[j];
+        
+                        question.q_text = (
+                            question.q_text === "" || question.q_text === "-->>N/A<<--"
+                        ) ? result = false : result;
+                        question.ans_format.l_pole = (
+                            question.ans_format.l_pole === "" |
+                            question.ans_format.l_pole === "-->>N/A<<--"
+                        ) ? result = false : result;
+                        question.ans_format.r_pole = (
+                            question.ans_format.r_pole === "" |
+                            question.ans_format.l_pole === "-->>N/A<<--"
+                        ) ? result = false : result;
+                    }
+                }
+                else if(res.rows[0].design.type == "ranking"){
+                    phase.q_text = (
+                        phase.q_text === "" || phase.q_text === "-->>N/A<<--"
+                    ) ? result = false : result;
+                    var roles = phase.roles;
+                    for(let j=0; j<roles.length; j++){
+                        var role = roles[j];      
+                        role.name = (
+                            role.name === "" || role.name === "-->>N/A<<--"
+                        ) ? result = false : result;
+
+                    }
                 }
             }
             return;
@@ -1340,6 +1359,62 @@ router.post("/enter-session-code", rpg.singleSQL({
             })(req,res);
         }
     }
+}));
+
+router.post("/stage-state-df", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT COUNT(*), query1.stage_id1 as id FROM (SELECT 
+        stages.id AS stage_id1, 
+        differential_selection.uid as uid,
+        COUNT(differential_selection.uid) AS num_answers
+      FROM 
+        stages 
+        JOIN differential ON stages.id = differential.stageid 
+        JOIN differential_selection ON differential.id = differential_selection.did 
+      WHERE 
+        stages.sesid = $1
+      GROUP BY 
+        stages.id, differential_selection.uid
+      ) as query1 JOIN (
+      SELECT 
+        stages.id AS stage_id2, 
+        COUNT(differential.id) AS questions
+      FROM 
+        stages 
+        JOIN differential ON stages.id = differential.stageid 
+      WHERE 
+        stages.sesid = $1
+      GROUP BY 
+        stages.id
+        ) as query2 ON query1.stage_id1= query2.stage_id2
+      
+        WHERE query1.num_answers = query2.questions GROUP BY query1.stage_id1;
+    `,
+    postReqData: ["sesid"], //differential_selection uid
+    onStart:     (ses) => {  //Session -> Stage -> Differential -> Differential_Selection {id:stage, counter: respuestas completas}
+        if (ses.role != "P") { //sesusers role != P
+            console.error("Sólo el profesor puede ver el estado de los alumnos");
+            return "SELECT $1";
+        }
+    },
+    sqlParams: [rpg.param("post", "sesid")]
+}));
+
+router.post("/stage-state-r", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT COUNT(act.id), s.id FROM actor_selection act 
+    INNER JOIN stages s ON act.stageid = s.id AND s.sesid = $1 GROUP BY s.id;
+    `,
+    postReqData: ["sesid"],
+    onStart:     (ses) => {
+        if (ses.role != "P") {
+            console.error("Sólo el profesor puede ver el estado de los alumnos");
+            return "SELECT $1";
+        }
+    },
+    sqlParams: [rpg.param("post", "sesid")]
 }));
 
 
