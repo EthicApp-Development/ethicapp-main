@@ -3,10 +3,13 @@ extends:
   - stylelint-config-standard
   - stylelint-config-prettier
 ignoreFiles:
+  # Ignoring libraries
   - "**/*.js"
-  - "./ethicapp-node/node_modules/*"
   - "**/*.min.css"
-  - bootstrap*.css
+  - "./ethicapp-node/node_modules/*"
+  - "ethicapp-node/public/css/bootstrap*.css"
+  - "ethicapp-node/public/css/introjs.css"
+  - "ethicapp-node/public/css/minimal.css"
 rules:
   indentation: 4
   linebreaks: unix
