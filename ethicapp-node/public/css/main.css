@@ -17,20 +17,11 @@ body{
 
 hr{
     margin: 0;
-}
-
-::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+    background: #000;
 }
 
 ::-webkit-scrollbar-track {
     background-color: rgb(0 0 0 /0%);
-}
-
-::-webkit-scrollbar-thumb {
-    border-radius: 10px;
-    background-color: rgb(0 0 0 /20%);
 }
 
 .row-eq-height {
@@ -107,10 +98,6 @@ label {
     min-height: 100vh;
     background: #f3f3f3;
     margin: 0 auto;
-}
-
-hr{
-    background: #000;
 }
 
 .bg-white{
@@ -350,17 +337,6 @@ canvas{
 
 .text-gray{
     color: #999;
-}
-
-
-ul[dnd-list] .dndDraggingSource {
-    display: none;
-}
-
-ul[dnd-list] .dndPlaceholder {
-    background-color: #ddd;
-    display: block;
-    min-height: 42px;
 }
 
 .margin-top-8{
@@ -797,6 +773,7 @@ ng-quill-editor.large .ql-editor{
 
 .question-content{
     font-size: 125%;
+    color: #000;
 }
 
 .question-content img{
@@ -990,10 +967,6 @@ ng-quill-editor.large .ql-editor{
 .ansoption .option.selected, .dopts .option.selected{
     border: 6px solid #0075c3;
     background: #FFF;
-}
-
-.question-content{
-    color: #000;
 }
 
 .flat{
