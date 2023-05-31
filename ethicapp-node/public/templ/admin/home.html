@@ -55,7 +55,7 @@
 
 <!--Activities-->
 <h2>{{'recentActivity'|lang}}</h2>
-<div class="activities_container" ng-controller= "ActivityController">
+<div class="activities-container" ng-controller= "ActivityController">
     <div class="list-group pad-content">
         <div class="list-group-item" ng-repeat="ses in currentActivities(0) | limitTo: 3 | orderBy : '-time'">
             <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>

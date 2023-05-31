@@ -3,10 +3,13 @@ extends:
   - stylelint-config-standard
   - stylelint-config-prettier
 ignoreFiles:
+  # Ignoring libraries
   - "**/*.js"
-  - "./ethicapp-node/node_modules/*"
   - "**/*.min.css"
-  - bootstrap*.css
+  - "./ethicapp-node/node_modules/*"
+  - "ethicapp-node/public/css/bootstrap*.css"
+  - "ethicapp-node/public/css/introjs.css"
+  - "ethicapp-node/public/css/minimal.css"
 rules:
   indentation: 4
   linebreaks: unix
@@ -16,3 +19,11 @@ rules:
   no-duplicate-selectors: true
   font-family-name-quotes: "always-where-required"
   length-zero-no-unit: true
+
+  # Ignoring vendor rules
+  property-no-vendor-prefix: null
+  value-no-vendor-prefix: null
+  function-name-case: null
+  function-no-unknown: null
+  selector-no-vendor-prefix: null
+  at-rule-no-vendor-prefix: null

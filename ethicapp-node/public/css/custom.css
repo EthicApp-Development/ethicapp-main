@@ -1,5 +1,5 @@
 body {
-    font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+    font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
 }
 
 .navmenu{
@@ -19,7 +19,7 @@ body {
     left: 0;
     overflow-x: hidden;
     padding-top: 20px;
-    }
+}
 
 .sidenav a {
     padding: 6px 8px 6px 16px;
@@ -27,17 +27,15 @@ body {
     font-size: 10pt;
     color: #555;
     display: block;
-    border-bottom: 1px solid #bbbbbb;
+    border-bottom: 1px solid #bbb;
 }
 
 .vl {
-    border-left: 1px solid #bbbbbb;
+    border-left: 1px solid #bbb;
     height:100%;
     position: absolute;
     margin-left: -3px;
-    /*margin-top: 3.5em;*/
-    /*top: 3.5em;*/
-    }
+}
 
 .sidenav a:hover {
     color: #818181;
@@ -45,7 +43,7 @@ body {
 
 .main-body {
     margin-left: 14em; /* Same as the width of the sidenav */
-    padding: 0px 10px;
+    padding: 0 10px;
 }
 
 .thumbnail-image{
@@ -73,7 +71,7 @@ body {
     text-align: center;
     line-height: 2.135em;
     font-size: 1em;
-    border:1px solid #bbbbbb;
+    border:1px solid #bbb;
     align-items: center;
     justify-content: center;
     display: flex;
@@ -95,9 +93,7 @@ body {
     background: #5cb85c;
 }
 
-.circle_profile {
-    width: 100px;
-    height: 100px;
+.circle-profile {
     -moz-border-radius: 50%;
     -webkit-border-radius: 50%;
     border-radius: 50%;
@@ -119,14 +115,15 @@ body {
 .line-input{
     margin-left: 10px;
 }
-.activities_container{
+
+.activities-container{
     min-width: 20em;
     max-width: 80em;
 }
 
 /* Phase item */
-.phase_element{
-    border:4px solid #bbbbbb;
+.phase-element{
+    border:4px solid #bbb;
     height:5em;
     width:15em;
     margin: 1em;
@@ -135,73 +132,79 @@ body {
     align-items: center;
     cursor: pointer;
 }
-/*Phase container*/
-.phase_container{
+
+/* Phase container */
+.phase-container{
     max-width: 80em;
     margin: 2em;
-    border:1px solid #bbbbbb;
-}
-.margin_container{
-    margin: 2em;
-}
-.phase_selected{
-    border:4px solid #f39316;
-}
-.phase_current{
-    border:4px solid #7bc54a;
-}
-.phase_element:hover{
-    border:4px solid #67aed6;
-}
-/*Current phase container*/
-.stage_container{
-    margin: 2em;
-    max-width: 80em;
-    border:1px solid #bbbbbb;
+    border:1px solid #bbb;
 }
 
-.question_container{
+.margin-container{
+    margin: 2em;
+}
+
+.phase-selected{
+    border:4px solid #f39316;
+}
+
+.phase-current{
+    border:4px solid #7bc54a;
+}
+
+.phase-element:hover{
+    border:4px solid #67aed6;
+}
+
+/* Current phase container */
+.stage-container{
+    margin: 2em;
+    max-width: 80em;
+    border:1px solid #bbb;
+}
+
+.question-container{
     max-width: 80em;
     padding: 1em;
     margin-bottom: 1em;
-    border:1px solid #bbbbbb;
+    border:1px solid #bbb;
 }
 
 .tab-cs {
     overflow: hidden;
-  }
+}
   
 .tab-cs button {
-    background-color: inherit;
     float: left;
-    border: none;
     outline: none;
     cursor: pointer;
     width: 9em;
     height: 2em;
     padding: 6px 27px;
     transition: 0.3s;
-    border: 1px solid #bbbbbb;
-    background-color: #bbbbbb;
+    background-color: #bbb;
     border: 1px solid #000;
     font-size: 15px;
     display: flex;
     justify-content: left;
     align-items: center;
 }
+
 .tab-cs button:hover {
     background-color: #ddd;
 }
+
 .btn-selected{
-    background-color: #bbbbbb;
+    background-color: #bbb;
     font-weight: bolder;
 }
+
 .margin-left-low{
     margin-left: 2em;
 }
 
 .debug-wip{
-    background-color: rgb(226, 95, 95); color: white;
+    background-color: rgb(226 95 95); color: white;
 }
 
 .stack-top{
@@ -209,8 +212,8 @@ body {
     margin: 20px;
 }
 
-.div-debug{ /*USE TO CHECK DIV SIZES*/
-    border: 1px solid rgb(245, 0, 0);
+.div-debug{ /* USE TO CHECK DIV SIZES */
+    border: 1px solid rgb(245 0 0);
     background-color: #99f8ff;
 }
 
@@ -218,30 +221,32 @@ body {
     line-height: 1.25em;
     text-align: left;
     margin-left: 0.25em;
-    margin-top: 0.25m;
+    margin-top: 0.25em;
 }
 
 .dsgn-sel{
     background-color: #67aed6;
 }
+
 .dsgn:hover{
     cursor: pointer;
 }
+
 /* TOGGLE SWITCH */
 .switch {
     position: relative;
     display: inline-block;
     width: 60px;
     height: 34px;
-  }
+}
   
-  .switch input { 
+.switch input { 
     opacity: 0;
     width: 0;
     height: 0;
-  }
+}
   
-  .slider {
+.slider {
     position: absolute;
     cursor: pointer;
     top: 0;
@@ -251,9 +256,9 @@ body {
     background-color: #ccc;
     -webkit-transition: .4s;
     transition: .4s;
-  }
+}
   
-  .slider:before {
+.slider::before {
     position: absolute;
     content: "";
     height: 26px;
@@ -263,45 +268,45 @@ body {
     background-color: white;
     -webkit-transition: .4s;
     transition: .4s;
-  }
+}
   
-  input:checked + .slider {
+input:checked + .slider {
     background-color: #52f321;
-  }
+}
   
-  input:focus + .slider {
+input:focus + .slider {
     box-shadow: 0 0 1px #52f321;
-  }
+}
   
-  input:checked + .slider:before {
+input:checked + .slider::before {
     -webkit-transform: translateX(26px);
     -ms-transform: translateX(26px);
     transform: translateX(26px);
-  }
+}
   
-  /* Rounded sliders */
-  .slider.round {
+/* Rounded sliders */
+.slider.round {
     border-radius: 34px;
-  }
+}
   
-  .slider.round:before {
+.slider.round::before {
     border-radius: 50%;
-  }
+}
 
-  .ngdialog-overlay {
+.ngdialog-overlay {
     position: fixed;
     top: 0;
     bottom: 0;
     left: 0;
     right: 0;
     z-index: 10000;
-  }
+}
   
-  .ngdialog-content {
+.ngdialog-content {
     position: absolute;
     z-index: 10001;
-  }
+}
 
-  .error{
+.error{
     background-color: #ff858581 !important;
-  }
+}
