@@ -14,9 +14,9 @@ secrets:
 services:
   # ---------------------- Node web app ---------------------- #
   node:
-    container_name: "ethicapp-node"
+    container_name: "ethicapp"
     build:
-      context: ethicapp-node/
+      context: ethicapp/
       args:
         NODE_VERSION: ${NODE_VERSION}
     secrets:
@@ -30,7 +30,7 @@ services:
     ports:
       - "${NODE_PORT}:${NODE_PORT}"
     volumes:
-      - "./ethicapp-node:/home/app:rw"
+      - "./ethicapp:/home/app:rw"
     depends_on:
       postgres:
         condition: service_healthy

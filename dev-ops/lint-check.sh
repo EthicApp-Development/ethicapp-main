@@ -12,16 +12,16 @@ sqlfluff lint ./db_config/
 echo "[OK] SQLFluff pass"
 
 echo ">>> Running CSS linter"
-npx stylelint public/css/*.css
+npx stylelint frontend/assets/css/*.css
 # npx stylelint --fix ...
 echo "[OK] StyleLint pass"
 
 echo ">>> Running HTML linter"
-npx htmlhint "public/**/*.html"
+npx htmlhint "frontend/**/*.html"
 echo "[OK] HTMLHint pass"
 
 echo ">>> Running JavaScript linter"
-npx eslint "./**/*.js" "./bin/www" # --fix
+npx eslint "./**/*.js" "./backend/ethicapp" # --fix
 echo "[OK] ESLint pass"
 
 echo "[OK] Yay! Linters passed with no errors"

@@ -17,4 +17,4 @@ module.exports.Captcha_Secret = \"qwerty\";
 
 module.exports.accessKeyId = \"qwerty\";
 module.exports.secretAccessKey = \"qwerty\";
-" > ./ethicapp-node/modules/passwords.js
+" > ./ethicapp/backend/config/keys-n-secrets.js

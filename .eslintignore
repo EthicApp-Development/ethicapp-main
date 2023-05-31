@@ -1,2 +1,2 @@
 *.min.js
-ethicapp-node/public/libs/*.js
+ethicapp/frontend/assets/libs/*.js
