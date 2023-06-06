@@ -52,7 +52,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     self.teamMap = {};
     self.teamMapPrev = {};
 
-    self.lang = "spanish";
+    self.lang = "ES_CL/spanish";
     self.selectedActor = null;
     self.selectedActorPrev = null;
 
@@ -125,7 +125,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
 
     self.getMe = function () {
         $http.post("get-my-name").success(function (data) {
-            self.lang = data.lang;
+            self.lang = data.lang == "spanish" ? "ES_CL/spanish" : "EN_US/english";
             self.updateLang(self.lang);
         });
     };
@@ -558,13 +558,13 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     };
 
     self.updateLang = function (lang) {
-        $http.get("data/" + lang + ".json").success(function (data) {
+        $http.get("assets/i18n/" + lang + ".json").success(function (data) {
             window.DIC = data;
         });
     };
 
     self.changeLang = function () {
-        self.lang = self.lang == "english" ? "spanish" : "english";
+        self.lang = self.lang == "spanish" ? "ES_CL/spanish" : "EN_US/english";
         self.updateLang(self.lang);
     };
 
