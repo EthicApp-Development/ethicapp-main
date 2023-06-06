@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html ng-app="Admin">
+<head>
+    <meta charset="UTF-8">
+    <title>EthicApp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="stylesheet" href="assets/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="assets/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="assets/css/nv.d3.min.css">
+    <link rel="stylesheet" href="assets/css/angular-ui-notification.min.css">
+    <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.9.0-alpha2/katex.min.css">
+    <link rel="stylesheet" href="assets/css/tablesort.min.css">
+    <link rel="stylesheet" href="assets/css/main.css"/>
+    <script src="assets/libs/angular.min.js"></script>
+    <script src="assets/libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
+    <script src="assets/libs/katex.min.js"></script>
+    <script src="assets/libs/angular-bootstrap-multiselect.js"></script>
+    <script src="assets/libs/d3.min.js"></script>
+    <script src="assets/libs/nv.d3.min.js"></script>
+    <script src="assets/libs/angular-nvd3.min.js"></script>
+    <script src="assets/libs/ng-map.min.js"></script>
+    <script type="text/javascript" src="assets/libs/quill.min.js"></script>
+    <script type="text/javascript" src="assets/libs/ng-quill.min.js"></script>
+    <script src="assets/libs/socket.min.js"></script>
+    <script src='assets/libs/checklist-model.js'></script>
+    <script src="assets/libs/angular-timer.min.js"></script>
+    <script src="assets/libs/angular-ui-notification.min.js"></script>
+    <script src="assets/libs/save-csv.min.js"></script>
+    <script src="assets/libs/angular-tablesort.min.js"></script>
+    <script src="assets/libs/angular-route.js"></script> <!--Agregado recientemente-->
+    <script src="assets/js/StagesController.js"></script>
+    <script src="assets/js/admin-ctrl.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="libs/ngDialog.min.js"></script>
+</head>
+<body class="blue" ng-controller="AdminController">
+
+<div class="super-bar" ng-if="superBar">
+    <div class="pull-right">
+        <a href="/super-logout" class="href">Volver a administrador</a>
+    </div>
+    <strong>Administrador</strong>
+</div>
+
+<div ng-controller="TabsController">
+
+    <!-- STATUSES -->
+    <div class="top-bar-mini cflex">
+        <div class="cf1 simple-padding-top">
+            <a ng-click="backToList()" class="simple-margin-left text-white">
+                <i class="fa fa-list fa-2x"></i>
+            </a>
+        </div>
+        <div class="cf3 grow text-center simple-padding-top hscroll" ng-show="selectedId != -1">
+            <span ng-repeat="st in sesStatusses" ng-if="selectedSes.type != 'R' && selectedSes.type != 'T' && selectedSes.type != 'J'">
+                <span class="label label-primary bg-black-alpha margin-right-8"
+                      ng-class="{'bg-yellow': $index==selectedSes.status-1}">
+                    {{st | lang}}
+                </span>
+                <!-- <span ng-hide="$last">→</span> -->
+            </span>
+            <span ng-if="selectedSes.type == 'R' || selectedSes.type == 'T' || selectedSes.type == 'J'">
+                <span class="label label-primary bg-black-alpha margin-right-8"
+                      ng-class="{'bg-yellow': selectedSes.current_stage == null && selectedSes.status < 3}">
+                    {{'configuration' | lang}}
+                </span>
+                <span class="label label-primary bg-black-alpha margin-right-8"
+                      ng-class="{'bg-yellow': st.id==selectedSes.current_stage}" ng-repeat="st in stages">
+                    {{'stage' | lang}} {{ st.number }}
+                </span>
+                <span class="label label-primary bg-black-alpha margin-right-8 bg-yellow" ng-if="selectedSes.status >= 3">
+                    {{'finished' | lang}}
+                </span>
+            </span>
+            <i class="fa fa-angle-right"></i>
+            <!-- <span class="pull-right margin-right-24" ng-show="sesSTime != null">
+                <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
+            </span> -->
+        </div>
+        <div class="cf1 simple-padding-top">
+            <button class="btn btn-xs btn-default simple-margin-left" ng-if="selectedId != -1 && selectedSes.type != 'R' && selectedSes.type != 'T' && selectedSes.type != 'J'"
+                    ng-click="shared.changeState()">
+                {{'gotoNext' | lang}}
+            </button>
+            <button class="btn btn-xs btn-default simple-margin-left" ng-if="selectedId != -1 && (selectedSes.type == 'R' || selectedSes.type == 'T' || selectedSes.type == 'J') && selectedSes.status < 3"
+                    ng-click="shared.openNextModal()">
+                {{'gotoNext' | lang}}
+            </button>
+        </div>
+        <div class="cf1 text-right margin-right-8 simple-padding-top">
+            <a href="logout" class="text-white">
+                <i class="fa fa-sign-out fa-2x"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- TABS -->
+    
+    <div class="top-bar top-bar-tabs">
+        <div class="qs-tabs">
+            <div class="tab tab-text tab-text-lg" ng-repeat="tab in tabOptions" ng-class="{active: tab == selectedTab}"
+                 ng-click="setTab(tab)">
+                <i class="fa fa-{{secIcons[tab]}}"></i> {{tab | lang}}
+            </div>
+            <div class="tab tab-text tab-text-lg" ng-class="{'active': !archivedTab}" ng-if="tabOptions.length == 0"
+                ng-click="archTab(false)">
+                {{'sessionList' | lang}}
+            </div>
+            <div class="tab tab-text tab-text-lg" ng-class="{'active': archivedTab}" ng-if="tabOptions.length == 0"
+                 ng-click="archTab(true)">
+                {{'archived' | lang}}
+            </div>
+            <div class="btab"></div>
+            <div class="rtab">
+                <strong class="margin-right-8"><a href="profile" style="color: white;">Profesor</a></strong>
+                <button class="btn btn-default btn-sm" ng-click="changeLang()">
+                    {{'langOther' | lang}}
+                </button>
+            </div>
+        </div>
+    </div>
+    <!--
+    <div class="sidenav">
+        <div style = "margin-top: 10em;">
+            <a href="/admin">Inicio</a>
+            <a href="/test">Lanzar Actividad</a>
+            <a href="#clients">Actividades</a>
+            <a href="#contact">Diseño</a>
+        </div>
+      </div>
+    -->
+    <!-- <div class="container-fluid full-height-topbar admin-container"> -->
+    <div class="scrollable-container blue"> <!--main class makes it go right-->
+        <div class="mid-container qs-content simple-pad scrollable-container bg-white">
+
+        <div ng-show="selectedId == -1">
+            <button class="btn btn-sm btn-primary pull-right" ng-click="openNewSes()">{{'new' | lang}}</button>
+            <input placeholder="Buscar..." class="form-control" ng-model="sesSearch">
+            
+            <div class="list-group">
+                <a class="list-group-item" ng-repeat="ses in currentSessions() | filter:sesSearch" ng-click="selectSession(ses,ses.id)"
+                   ng-class="{'active':ses.id==selectedId}">
+                    <button class="btn btn-default pull-right margin-right-8" ng-click="archiveSes(ses,$event)" ng-if="!ses.archived">
+                        <i class="fa fa-inbox"></i>
+                    </button>
+                    <button class="btn btn-default pull-right margin-right-8" ng-click="restoreSes(ses,$event)" ng-if="ses.archived">
+                        <i class="fa fa-undo"></i>
+                    </button>
+                    <h4 class="list-group-item-heading">{{ses.name}}
+                        <span class="text-gray font-mini"> - {{typeNames[ses.type] | lang}} - {{ses.time | date}}</span>
+                    </h4>
+                    <p class="list-group-item-text" ng-bind="ses.descr"></p>
+                </a>
+            </div>
+        </div>
+
+        <!-- SES INFO -->
+        <!--<div ng-show="selectedTab == 'configuration'" ng-controller="SesEditorController">
+            <h3>{{selectedSes.name}}</h3>
+            <h4>{{'workflow' | lang}}:</h4>
+            <div class="center-block font-large">
+                <button class="btn btn-sm btn-default pull-right" ng-click="shared.changeState()">{{'gotoNext' | lang}}</button>
+                <span ng-repeat="st in sesStatusses">
+                    <span class="label label-default" ng-class="{'label-info': $index==selectedSes.status-1}">
+                        {{st | lang}}
+                    </span>
+                    <span ng-hide="$last">→</span>
+                </span>
+            </div>
+            <br>
+            <div ng-show="selectedSes.stime != null">
+                <strong>{{'timer' | lang}}</strong>:
+                <timer start-time="selectedSes.stime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
+            </div>
+            <br>
+            <hr>
+            <br>
+            <label>{{'title' | lang}}:</label>
+            <input type="text" class="form-control" ng-model="selectedSes.name" ng-disabled="selectedSes.status!=1">
+            <br>
+            <label>{{'detFactor' | lang}}:</label>
+            <textarea class="form-control" ng-model="selectedSes.descr" ng-disabled="selectedSes.status!=1" ng-show="!splitDescr"></textarea>
+            <div ng-show="splitDescr">
+                <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" ng-model="splDes1" placeholder="Selección de unidades">
+                <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" ng-model="splDes2" placeholder="Reporte">
+            </div>
+            
+            <br>
+            <button class="btn btn-default pull-right" ng-click="updateSession()" ng-disabled="selectedSes.status!=1">
+                {{'saveChanges' | lang}}
+            </button>
+            <br>
+        </div>-->
+
+        <!-- CONFIGURACION -->
+        <div class="pad-content" ng-show="selectedTab == 'editor'">
+            <div ng-controller="SesEditorController" class="simple-padding-top">
+                <label>{{'title' | lang}}:</label>
+                <input type="text" class="form-control" ng-model="selectedSes.name" ng-disabled="selectedSes.status!=1">
+                <br>
+                <label>{{'actGenDesc' | lang}}:</label>
+                <textarea class="form-control" ng-model="selectedSes.descr" ng-disabled="selectedSes.status!=1" ng-show="!splitDescr"></textarea>
+                <div ng-show="splitDescr">
+                    <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" ng-model="splDes1" placeholder="Selección de unidades">
+                    <input type="text" class="form-control" ng-disabled="selectedSes.status!=1" ng-model="splDes2" placeholder="Reporte">
+                </div>
+                
+                <button class="btn btn-default pull-right" ng-click="updateSession()" ng-disabled="selectedSes.status!=1">
+                    {{'saveChanges' | lang}}
+                </button>
+<!--                <br>-->
+                <!-- OPTIONS -->
+            </div>
+            <!--<div ng-show="selectedTabConfig == -1">-->
+            <div ng-if="selectedSes.type == 'R' || selectedSes.type == 'T' || selectedSes.type == 'J'" ng-controller="DocumentsController">
+                <h4>{{'documents' | lang}}</h4>
+                <div class="list-group">
+                    <div class="list-group-item" ng-repeat="doc in documents">
+                        <i class="fa fa-file-text-o"></i> <strong ng-bind="doc.title"></strong>
+                        <a href="{{doc.path}}" class="discrete"> - {{'view' | lang}}</a>
+                        <button class="btn btn-xs btn-default pull-right" ng-disabled="selectedSes.status!=1" ng-click="deleteDocument(doc.id)">{{'delete' | lang}}</button>
+                    </div>
+                </div>
+                <br>
+                <label>{{'add' | lang}} {{'document' | lang}}:</label>
+                <form id="doc-form" class="row" ng-submit="uploadDocument($event)" enctype="multipart/form-data">
+                    <div class="col-sm-4">
+                        <input type="text" class="form-control" name="title" placeholder="Titulo" required ng-disabled="selectedSes.status!=1" maxlength="20">
+                    </div>
+                    <div class="col-sm-6">
+                        <input type="file" class="form-control" name="pdf" ng-disabled="selectedSes.status!=1" required>
+                        <input type="text" ng-value="selectedSes.id" name="sesid" hidden>
+                    </div>
+                    <div class="col-sm-2">
+                        <button class="form-control btn btn-default" ng-disabled="selectedSes.status!=1 || busy">{{'upload' | lang}} <i ng-show="busy" class="fa fa-spinner fa-pulse"></i></button>
+                    </div>
+                </form>
+                <br>
+                <hr>
+            </div>
+            <div ng-controller="StagesController" ng-if="selectedSes.type == 'R' || selectedSes.type == 'T' || selectedSes.type == 'J'">
+                <h4>{{ 'stages' | lang }}</h4>
+                <div class="qs-tabs bg-darkgray pad-content top-tab-content">
+                    <div class="tab tab-text tab-text-lg" ng-repeat="stage in stages" ng-click="setCurrentStage($index)"
+                         ng-class="{'active': currentStage == $index, 'green': stage.id==selectedSes.current_stage}">
+                        {{ 'stage' | lang }} {{ stage.number }}
+                    </div>
+                    <div class="tab tab-text tab-text-lg yellow" ng-click="setCurrentStage(-1)"
+                         ng-if="selectedSes.status < 3" ng-class="{'active': currentStage == -1}">
+                        {{ 'add' | lang }} {{ 'stage' | lang }} {{ stages.length + 1 }}
+                    </div>
+                </div>
+                <div class="sub-tab-content">
+                    <div ng-if="selectedSes.type == 'J'">
+                        <h4>{{ 'listOf' | lang }} {{ 'roles' | lang }}</h4>
+                        <div class="row row-border" ng-repeat="jrole in jroles">
+                            <div class="col-sm-2 text-right">
+                                <strong class="font-large">{{$index + 1}}.</strong>
+                                <div class="quad" style="vertical-align: bottom;"
+                                ng-class="colors[$index]"></div>
+                            </div>
+                            <div class="col-sm-8">
+                                <input ng-show="jrole.edit" class="form-control" ng-model="jrole.name"
+                                       ng-disabled="readonly" placeholder="Name">
+                                <strong class="font-large" ng-show="!jrole.edit" >{{ jrole.name }}</strong>
+                            </div>
+                            <div class="col-sm-2">
+                                <button class="btn btn-default" ng-class="{active: jrole.edit}"
+                                        ng-click="jrole.edit = !jrole.edit" ng-disabled="readonly">
+                                    <i class="fa fa-edit"></i>
+                                </button>
+                                <button class="btn btn-default" ng-click="removeJRole($index)"
+                                        ng-disabled="readonly" ng-show="stages.length == 0">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            </div>
+                            <div class="col-sm-12" ng-show="jrole.edit">
+                                <textarea rows="3" class="form-control" ng-model="jrole.description"
+                                          ng-disabled="readonly" placeholder="Description"></textarea>
+                            </div>
+                        </div>
+                        <div class="row" ng-show="stages.length == 0">
+                            <div class="col-sm-12 text-center">
+                                <button class="btn btn-default" ng-click="addJRole()" ng-disabled="readonly">
+                                    <i class="fa fa-plus"></i> {{ 'add' | lang }} {{ 'role' | lang }}
+                                </button>
+                            </div>
+                        </div>
+                        <br>
+                        <hr>
+                        <br>
+                    </div>
+                    <div ng-if="selectedSes.type == 'R' || selectedSes.type == 'J'">
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <label>{{ 'question' | lang }}</label>
+                            <textarea rows="2" class="form-control" ng-model="stage.question" ng-disabled="readonly"></textarea>
+                        </div>
+                        <div class="col-sm-5">
+                            <h4 ng-show="selectedSes.type == 'R'">{{ 'listOf' | lang }} {{ 'roles' | lang }}/{{ 'actors' | lang }}</h4>
+                            <h4 ng-show="selectedSes.type == 'J'">{{ 'listOf' | lang }} {{ 'actions' | lang }}</h4>
+                        </div>
+                        <div class="col-sm-2 text-center margin-top-8">
+                            <button class="btn btn-default" ng-click="setAllRolesType('role')" ng-disabled="readonly">
+                                {{ 'justifyAll' | lang }} {{ 'roles' | lang }}
+                            </button>
+                        </div>
+                        <div class="col-sm-2 text-center margin-top-8">
+                            <button class="btn btn-default" ng-click="setAllRolesType('order')" ng-disabled="readonly">
+                                {{ 'justifyAll' | lang }} {{ 'orders' | lang }}
+                            </button>
+                        </div>
+                        <div class="col-sm-2">
+
+                        </div>
+                    </div>
+                    <div class="row row-border" ng-repeat="role in roles">
+                        <div class="col-sm-5">
+                            <input class="form-control" ng-model="role.name" ng-disabled="readonly">
+                        </div>
+                        <div class="col-sm-2 text-center">
+                            <button class="btn btn-default" ng-class="{'btn-primary': role.type == 'role'}"
+                                ng-click="setRoleType(role, 'role')" ng-disabled="readonly">
+                                {{ 'justify' | lang }} {{ 'role' | lang }}
+                            </button>
+                        </div>
+                        <div class="col-sm-2 text-center">
+                            <button class="btn btn-default" ng-class="{'btn-primary': role.type == 'order'}"
+                                    ng-click="setRoleType(role, 'order')" ng-disabled="readonly">
+                                {{ 'justify' | lang }} {{ 'order' | lang }}
+                            </button>
+                        </div>
+                        <div class="col-sm-2 text-right">
+                            <input class="form-control form-inline-mini" placeholder="Word Count" type="number"
+                                   ng-model="role.wc" ng-disabled="readonly || role.type == null">
+                        </div>
+                        <div class="col-sm-1">
+                            <button class="btn btn-default">
+                                <i class="fa fa-trash" ng-click="removeRole($index)" ng-disabled="readonly"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-12 text-center">
+                            <button class="btn btn-default" ng-click="addRole()" ng-disabled="readonly">
+                                <i class="fa fa-plus"></i> {{ 'add' | lang }} {{ 'role' | lang }}
+                            </button>
+                        </div>
+                    </div>
+                    </div>
+                    <div ng-if="selectedSes.type == 'T'">
+                        <h4>{{ 'ethics' | lang }}</h4>
+                        <div class="differential" ng-repeat="df in dfs">
+                            <div class="row">
+                                <div class="col-xs-2 text-center">
+                                    <h4>Item {{df.orden}}</h4>
+                                </div>
+                                <div class="col-xs-7">
+                                    <input type="text" class="form-control text-center" ng-disabled="readonly"
+                                           placeholder="Titulo" ng-model="df.name">
+                                </div>
+                                <div class="col-xs-3 text-center">
+                                    <button class="btn btn-default" ng-class="{'btn-primary': df.justify}"
+                                            ng-click="df.justify = !df.justify" ng-disabled="readonly">
+                                        {{ 'justify' | lang }}
+                                    </button>
+                                    <input class="form-control form-inline-mini" placeholder="Word Count" type="number"
+                                           ng-model="df.wc" ng-disabled="readonly || !df.justify">
+                                    <button class="btn btn-default" ng-click="removeDF($index)" ng-disabled="readonly">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="row margin-top-8">
+                                <div class="col-xs-3 text-right">
+                                    <div class="tlabel">
+                                        <input type="text" class="form-control" ng-disabled="readonly" placeholder="Left" ng-model="df.tleft">
+                                    </div>
+                                    <button class="btn btn-default" ng-click="df.num = df.num > 2 ? df.num - 1 : 2" ng-disabled="readonly">-</button>
+                                </div>
+                                <div class="dopts col-xs-6">
+                                    <div class="option eq-space" ng-repeat="i in buildArray(df.num)">{{i}}</div>
+                                </div>
+                                <div class="col-xs-3">
+                                    <button class="btn btn-default" ng-click="df.num = df.num < 9 ? df.num + 1 : 10" ng-disabled="readonly">+</button>
+                                    <div class="tlabel">
+                                        <input type="text" class="form-control" ng-disabled="readonly" placeholder="Right" ng-model="df.tright">
+                                    </div>
+                                </div>
+                            </div>
+                            <br>
+                            <hr>
+                            <br>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-12 text-center">
+                                <button class="btn btn-default" ng-click="addDF()" ng-disabled="readonly">
+                                    <i class="fa fa-plus"></i> {{ 'add' | lang }} Item
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <h4>{{ 'stage' | lang }} {{ 'configuration' | lang }}</h4>
+                        </div>
+                        <div class="col-sm-4">
+                            <label>{{ 'type' | lang }}:</label>
+                            <button class="btn btn-default" ng-class="{'btn-primary': stage.type == 'individual'}"
+                                    ng-click="stage.type = 'individual'" ng-disabled="readonly">
+                                {{ 'individual' | lang }}
+                            </button>
+                            <button class="btn btn-default" ng-class="{'btn-primary': stage.type == 'team'}"
+                                    ng-click="setGroupal()" ng-disabled="readonly || stages.length == 0">
+                                {{ 'teamWork' | lang }}
+                            </button>
+                        </div>
+                        <div class="col-sm-4" ng-if="stage.type == 'team'">
+                            <label>Chat:</label>
+                            <button class="btn btn-default" ng-class="{'btn-success': stage.chat}"
+                                    ng-click="stage.chat = true" ng-disabled="readonly">
+                                <i class="fa fa-check"></i>
+                            </button>
+                            <button class="btn btn-default" ng-class="{'btn-danger': !stage.chat}"
+                                    ng-click="stage.chat = false" ng-disabled="readonly">
+                                <i class="fa fa-remove"></i>
+                            </button>
+                        </div>
+                        <div class="col-sm-4" ng-if="stage.type == 'team'">
+                            <label>{{ 'anon' | lang }}:</label>
+                            <button class="btn btn-default" ng-class="{'btn-success': stage.anon}"
+                                    ng-click="stage.anon = true" ng-disabled="readonly">
+                                <i class="fa fa-check"></i>
+                            </button>
+                            <button class="btn btn-default" ng-class="{'btn-danger': !stage.anon}"
+                                    ng-click="stage.anon = false" ng-disabled="readonly">
+                                <i class="fa fa-remove"></i>
+                            </button>
+                        </div>
+                        <div class="col-sm-12 margin-top-8" ng-if="stage.type == 'team'">
+                            <label>{{ 'viewPastSes' | lang }}:</label>
+                            <multiselect multiple="true" options="('Stage ' + s.number) for s in stages"
+                                         ng-model="stage.prevResponses" show-search="true" ng-if="!readonly"
+                                         style="width: 50vw !important; display: inline-block;">
+                            </multiselect>
+                            <span ng-if="readonly">{{ formatStageNames(stage.prev_ans) }}</span>
+                        </div>
+                    </div>
+                    <div class="row margin-top-8" ng-if="stage.type == 'team'">
+                        <div class="col-sm-12" ng-if="!readonly && selectedSes.type != 'J'">
+                            <label>{{'studentsPerGroup' | lang}}: </label>
+                            <input class="form-control form-inline-mini" ng-model="groupopt.num" type="number" min="2" ng-disabled="selectedSes.grouped">
+                            <label class="simple-margin-left">{{'groupingMethod' | lang}}: </label>
+                            <select class="form-control form-inline-med" ng-options="x.key as x.name for x in methods" ng-disabled="selectedSes.grouped" ng-model="groupopt.met"></select>
+                            <button class="btn btn-default simple-margin-left" ng-click="generateGroups()" ng-disabled="selectedSes.grouped">{{ 'generate' | lang }}</button>
+                            <span ng-show="selectedSes.grouped"> - {{'groupsAreSet' | lang}}</span>
+<!--                            <button class="btn btn-default pull-right" ng-click="acceptGroups()" ng-disabled="selectedSes.grouped">{{'setGroups' | lang}}</button>-->
+                        </div>
+                        <div class="col-sm-12" ng-if="!readonly && selectedSes.type == 'J'">
+                            <label>{{ 'groupingMethod' | lang }}:</label>
+                            <button class="btn btn-default" ng-class="{'btn-primary': groupopt.met == 'expert'}"
+                                    ng-click="groupopt.met = 'expert'" ng-disabled="readonly">
+                                {{ 'expert' | lang }}
+                            </button>
+                            <button class="btn btn-default" ng-class="{'btn-primary': groupopt.met == 'wjigsaw'}"
+                                    ng-click="groupopt.met = 'wjigsaw'" ng-disabled="readonly">
+                                {{ 'wjigsaw' | lang }}
+                            </button>
+                            <button class="btn btn-default" ng-class="{'btn-primary': groupopt.met == 'wjigsawrep'}"
+                                    ng-click="groupopt.met = 'wjigsawrep'" ng-disabled="readonly">
+                                {{ 'wjigsawrep' | lang }}
+                            </button>
+                            <button class="btn btn-default simple-margin-left" ng-click="generateGroups(true)" ng-disabled="selectedSes.grouped">{{ 'generate' | lang }}</button>
+                        </div>
+                        <div class="col-sm-12" ng-if="readonly">
+                            <strong>{{ 'groups' | lang }}</strong> ({{ getGrouping(stage.grouping) }})
+                        </div>
+                        <div class="col-sm-12 margin-top-8">
+                            <table class="table table-bordered">
+                                <tr ng-repeat="group in groups">
+                                    <td ng-bind="$index + 1"></td>
+                                    <td ng-repeat="alum in group">
+                                        <strong ng-bind="users[alum.uid || alum.id].name"></strong>
+                                        <span ng-if="users[alum.uid || alum.id].jigsaw">- {{ users[alum.uid || alum.id].jigsaw.name }}</span>
+<!--                                        <span class="label label-info" ng-bind="alum.aprendizaje"></span>-->
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="row margin-top-24" ng-if="!readonly">
+                        <div class="col-sm-12">
+                            <button class="btn btn-primary pull-right margin-right-8" ng-click="sendStage()">
+                                {{ 'startStage' | lang }}
+                            </button>
+                            <button class="btn btn-defualt pull-right margin-right-8" ng-if="stages.length == 0" ng-click="saveDraft()">
+                                {{ 'saveDraft' | lang }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div style="height: 80px"></div>
+            </div>
+        </div>
+        <!--<br>
+        <hr>
+        <br>
+        <h4>{{'configuration' | lang}}</h4>
+        </div>--
+        <a class="pull-right btn btn-default" ng-click="setTabConfig(-1)"><i class="fa fa-close"></i></a>
+        <div class="row">
+        <div class="btn-group center-block w500">
+            <button class="btn btn-default" ng-repeat="x in tabConfig" ng-bind="x" ng-show="x != null"
+                    ng-class="{active: $index==selectedTabConfig}" ng-click="setTabConfig($index)">
+            </button>
+        </div>
+        </div>-->
+        <!-- / CONFIGURACION -->
+
+        <!-- USUARIOS -->
+        <div class="pad-content" ng-show="selectedTab == 'users'" ng-controller="NewUsersController">
+            <h4>{{'invitationCode' | lang}}</h4>
+            <div ng-show="selectedSes.code == null">
+                <strong>{{'invitationCodeNotActived' | lang}}</strong>
+                <br>
+                <button class="btn btn-primary" ng-click="generateCode()">{{'generateCode' | lang}}</button>
+            </div>
+            <div ng-show="selectedSes.code != null">
+                <span class="invitation-code">{{selectedSes.code}}</span>
+            </div>
+            <br>
+<!--            <hr>-->
+<!--            <br>-->
+<!--            <h4>{{'users' | lang}}</h4>-->
+<!--            <label>{{'bySpecificUsers' | lang}}</label>-->
+<!--            <div class="row">-->
+<!--                <div class="col-xs-6">-->
+<!--                    <multiselect ms-header="Seleccionar Usuarios" multiple="true" options="x.name for x in newUsers"-->
+<!--                                 ng-model="newMembs" show-search="true" ng-disabled="selectedSes.status > 2">-->
+<!--                    </multiselect>-->
+<!--                </div>-->
+<!--                <div class="col-xs-3">-->
+<!--                    <button class="btn btn-default form-control" ng-click="newMembs = newUsers" ng-disabled="selectedSes.status > 2">-->
+<!--                        <i class="fa fa-check-square-o"></i> {{'selectAll' | lang}}</button>-->
+<!--                </div>-->
+<!--                <div class="col-xs-3">-->
+<!--                    <button class="btn btn-default form-control" ng-click="addToSession()" ng-disabled="selectedSes.status > 2">-->
+<!--                        <i class="fa fa-plus"></i> {{'addToSession' | lang}}</button>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--            <br>-->
+            <hr>
+            <br>
+            <button class="btn btn-default pull-right" ng-click="refreshUsers()">{{'update' | lang}}</button>
+            <span class="margin-right-24 margin-top-8 pull-right"><strong>Total: </strong> {{ usersArr.length }}</span>
+            <h4>{{'users' | lang}}</h4>
+            <table class="table table-bordered">
+                <tr>
+                    <th></th>
+                    <th>{{'user' | lang}}</th>
+                    <th ng-if="selectedSes.type == 'J'">{{ 'role' | lang }}</th>
+                    <th>Email</th>
+                    <th>{{'knowledgeType' | lang}}</th>
+                    <th>{{'device' | lang}}</th>
+                    <th></th>
+                </tr>
+                <tr ng-repeat="alum in usersArr" ng-class="{'bg-info': alum.role == 'P'}">
+                    <td>{{ $index  + 1 }}</td>
+                    <td ng-bind="alum.name"></td>
+                    <td ng-if="selectedSes.type == 'J'">{{ alum.jigsaw.name }}</td>
+                    <td ng-bind="alum.mail"></td>
+                    <td ng-bind="alum.aprendizaje"></td>
+                    <td ng-bind="alum.device"></td>
+                    <td><button class="btn btn-default btn-sm" ng-click="removeUser(alum.id)" ng-disabled="selectedSes.status > 2"><i class="fa fa-trash"></i></button></td>
+                </tr>
+            </table>
+            <br/>
+<!--                <hr/>-->
+<!--                <br>-->
+<!--                <label>{{'uploadStudentList' | lang}}</label>-->
+<!--                <div class="input-group">-->
+<!--                    <input type="file" class="form-control" disabled>-->
+<!--                    <span class="input-group-btn">-->
+<!--                    <button class="btn btn-default" disabled>{{'add' | lang}}</button>-->
+<!--                </span>-->
+            </div>
+        <!-- / USUARIOS -->
+
+        <!-- GRUPOS -->
+        <div class="pad-content" ng-show="selectedTab == 'groups'" ng-controller="GroupController">
+            <h4>{{'groups' | lang}}</h4>
+            <!--<p>Las propuestas de grupo intentan agrupar alumnos con distintos tipos de puntaje</p>-->
+            <br>
+            <label>{{'studentsPerGroup' | lang}}: </label>
+            <input class="form-control form-inline-mini" ng-model="groupNum" type="number" min="2" ng-disabled="selectedSes.grouped">
+            <select class="form-control form-inline-med" ng-options="x.key as x.name for x in methods" ng-disabled="selectedSes.grouped" ng-model="groupMet"></select>
+            <button class="btn btn-default" ng-click="generateGroups()" ng-disabled="selectedSes.grouped">Generar</button>
+            <span ng-show="selectedSes.grouped"> - {{'groupsAreSet' | lang}}</span>
+            <button class="btn btn-default pull-right" ng-click="acceptGroups()" ng-disabled="selectedSes.grouped">{{'setGroups' | lang}}</button>
+            <br>
+            <hr>
+            <br>
+            <h4><span ng-show="!self.selectedSes.grouped">{{'proposeOf' | lang}} </span>{{'groups' | lang}}:</h4>
+            <table class="table table-bordered">
+                <tr ng-repeat="group in groups">
+                    <td ng-bind="$index + 1"></td>
+                    <td ng-repeat="alum in group">
+                        <strong ng-bind="users[alum.uid || alum.id].name"></strong>
+                        <span class="label label-success" ng-show="alum.score!=null">
+                            {{ alum.score | number:0}}
+                        </span>
+                        <span class="label label-info" ng-bind="alum.aprendizaje"></span>
+                    </td>
+                </tr>
+            </table>
+            <hr>
+            <!--<h4 ng-if="!selectedSes.grouped" ng-show="false">Editor de Propuesta de Grupos:</h4>
+            <table class="table table-bordered table-hover" ng-if="!selectedSes.grouped">
+                <tr ng-repeat="group in groupsProp">
+                    <td ng-bind="$index + 1"></td>
+                    <td ng-repeat="alum in group" class="pointable" ng-click="swapTable($parent.$index,$index)"
+                        ng-class="{'bg-lightgreen': $parent.$index == lastI && $index == lastJ}">
+                        <strong ng-bind="users[alum.uid].name"></strong>
+                        <span class="label label-success">
+                            {{(alum.score!=null)? (alum.score) : null | number:0}}
+                        </span>
+                        <span class="label label-info" ng-bind="alum.aprendizaje"></span>
+                    </td>
+                </tr>
+            </table>-->
+        </div>
+        <!-- / GRUPOS -->
+
+        <!-- RUBRICA -->
+        <div class="pad-content" ng-show="selectedTab == 'rubrica'" ng-controller="RubricaController">
+            <h4>{{'rubricaSpec' | lang}}</h4>
+            <!--<h5>Definir esquema de rúbrica:</h5>-->
+            <table class="table table-bordered">
+                <tr>
+                    <th>{{'criteria' | lang}}</th>
+                    <th>% {{'pond' | lang}}</th>
+                    <th>{{'notAccomplished' | lang}} (1p)</th>
+                    <th>{{'inProcess' | lang}} (2p)</th>
+                    <th>{{'toAccomplish' | lang}} (3p)</th>
+                    <th>{{'accomplished' | lang}} (4p)</th>
+                    <th ng-if="editable"></th>
+                </tr>
+                <tr ng-repeat="criterio in criterios" ng-if="!editable">
+                    <td ng-bind="criterio.name"></td>
+                    <td ng-bind="criterio.pond"></td>
+                    <td ng-bind="criterio.inicio"></td>
+                    <td ng-bind="criterio.proceso"></td>
+                    <td ng-bind="criterio.competente"></td>
+                    <td ng-bind="criterio.avanzado"></td>
+                </tr>
+                <tr ng-repeat="criterio in criterios" ng-if="editable">
+                    <td><input ng-model="criterio.name" class="w150"></td>
+                    <td><input ng-model="criterio.pond" class="w50" type="number"></td>
+                    <td><input ng-model="criterio.inicio" class="w150"></td>
+                    <td><input ng-model="criterio.proceso" class="w150"></td>
+                    <td><input ng-model="criterio.competente" class="w150"></td>
+                    <td><input ng-model="criterio.avanzado" class="w150"></td>
+                    <td><button class="btn btn-default btn-sm" ng-if="editable" ng-click="removeCriterio($index)"><i class="fa fa-times"></i></button></td>
+                </tr>
+            </table>
+            <div class="row">
+                <div class="col-sm-3 col-sm-offset-6">
+                    <span ng-show="!checkSum()" class="red">{{'sumOfCritnot100p' | lang}}</span>
+                </div>
+                <div class="col-sm-3">
+                    <button class="btn btn-default" ng-if="editable" ng-click="addCriterio()" ng-disabled="checkSum()"><i class="fa fa-plus"></i> {{'add' | lang}}</button>
+                    <button class="btn btn-default" ng-disabled="!checkSum() || !editable" ng-click="saveRubrica()">{{'save' | lang}}</button>
+                    <button class="btn btn-default" ng-if="!editable && selectedSes.status == 1" ng-click="startEditing()">{{'edit' | lang}}</button>
+                </div>
+            </div>
+            <br><br>
+            <hr>
+            <div ng-show="selectedSes.status >= 6">
+            <h4>{{'pairEval' | lang}}</h4>
+            <span ng-show="selectedSes.paired > 0">{{'pairAlreadyAssigned' | lang}}</span>
+            <div ng-hide="selectedSes.paired > 0">
+                <strong>{{'numOfPairs' | lang}}:</strong>
+                <input type="number" class="form-control form-inline-mini" min="2" max="8" step="1" ng-model="pairNum">
+                <button class="btn btn-default" ng-click="pairAssign()">{{'assignPairs' | lang}}</button>
+            </div>
+            <span class="red" ng-bind="errPairMsg"></span>
+            </div>
+        </div>
+        <!-- / RUBRICA -->
+
+        <!-- OPTIONS -->
+<!--            <div class="pad-content" ng-show="selectedTabConfig == 'options' && updateConf()" ng-controller="OptionsController">-->
+
+<!--            </div>-->
+        <!-- /OPTIONS -->
+
+
+        <!-- DASHBOARDS -->
+        <div class="pad-content" ng-show="selectedTab == 'dashboard'" ng-controller="DashboardController">
+            <div ng-show="selectedSes.type != 'R' && selectedSes.type != 'T' && selectedSes.type != 'J'">
+                <div class="pull-right">
+                    <label>{{'iteration' | lang}}:</label>
+                    <select class="" ng-options="x.val as flang(x.name) for x in iterationNames" ng-model="iterationIndicator" ng-change="updateState()"></select>
+                    <button class="btn btn-default" ng-click="updateState()">{{'update' | lang}}</button>
+                </div>
+                <h4></h4><br>
+
+                <nvd3 options="barOpts" data="barData" ng-hide="iterationIndicator == 0 || iterationIndicator == 4"></nvd3>
+            </div>
+            <div class="pull-right margin-ver-8" ng-show="selectedSes.type == 'R' || selectedSes.type == 'T' || selectedSes.type == 'J'">
+                <button class="btn btn-sm btn-success" ng-click="exportChatCSV()" ng-show="selectedSes.status >= 3">{{ 'export' | lang }} Chat CSV</button>
+                <button class="btn btn-sm btn-success" ng-click="exportSelCSV()" ng-show="selectedSes.status >= 3">{{ 'export' | lang }} {{ 'answer' | lang }} CSV</button>
+                <select class="" ng-options="x.val as flang(x.name) for x in iterationNames" ng-model="iterationIndicator" ng-change="updateState()"></select>
+                <button class="btn btn-default" ng-click="updateState()">{{'update' | lang}}</button>
+            </div>
+            <hr>
+            
+            <!-- RUBRICA DASHBOARD -->
+            <div ng-show="iterationIndicator == 5 && selectedSes.type!='R' && selectedSes.type != 'T' && selectedSes.type != 'J'">
+            <h4>{{'details' | lang}}:</h4>
+            <div class="row">
+                <div class="col-sm-2">{{'report' | lang}}: </div>
+                <div class="col-sm-8">
+                    <select class="form-control" ng-model="selectedReport" ng-options="showName(x) for x in exampleReports"
+                            ng-change="getReportResult()"></select>
+                </div>
+                <div class="col-sm-2">
+                    <button class="btn btn-default" ng-click="getReportResult()">{{'view' | lang}} {{'results' | lang}}</button>
+                </div>
+            </div>
+            <table class="table table-bordered">
+                <tr>
+                    <th>{{'student' | lang}}</th>
+                    <th style="width: 420px">{{'evaluation' | lang}}</th>
+                </tr>
+                <tr ng-repeat="dato in result | orderBy:'-val'">
+                    <td ng-bind="users[dato.uid].name"></td>
+                    <td>
+                        <div class="bg-darkgreen table-green-bar" style="width: {{100*dato.val}}px;">
+                            {{dato.val | number:2}}
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            </div>
+            <div ng-show="iterationIndicator == 6 && selectedSes.type!='R' && selectedSes.type != 'T' && selectedSes.type != 'J'">
+                <h4>{{'details' | lang}} {{'report' | lang}}:</h4>
+                <table class="table table-bordered">
+                    <tr>
+                        <th>{{'report' | lang}}</th>
+                        <th ng-repeat="x in getInMax(resultAll) track by $index">Ev. {{$index + 1}}</th>
+                        <th>{{'average' | lang}}</th>
+                    </tr>
+                    <!--<tr ng-repeat="dato in result | orderBy:'-score'">-->
+                    <tr ng-repeat="(alum,row) in resultAll">
+                        <td>
+                            {{'reportOf' | lang}} <span ng-bind="users[alum].name"></span>
+                            <i class="fa fa-check-square" ng-show="row.reviews == selectedSes.paired"></i>
+                            <button class="btn btn-default btn-sm pull-right" ng-click="broadcastReport(row.data[0].rid)" ng-show="selectedSes.status == 9">
+                                <i class="fa fa-share"></i>
+                            </button>
+                            <button class="btn btn-default btn-sm pull-right" ng-click="showReport(row.data[0].rid)"><i class="fa fa-eye"></i></button>
+                        </td>
+                        <td ng-repeat="x in getInMax(resultAll) track by $index">
+                            {{row.data[$index].val | number:2}}
+                        </td>
+                        <td>{{getAvg(row.data) | number:2}}</td>
+                    </tr>
+                </table>
+            </div>
+            <!-- ROLEPLAYING DASHBOARD -->
+            <div ng-show="selectedSes.type == 'R' || selectedSes.type == 'J'" class="margin-top-8">
+                <span>{{ shared.stagesMap[iterationIndicator].question }}</span>
+                <table class="table table-bordered">
+                    <tr>
+                        <th>{{'order' | lang}}</th>
+                        <th ng-repeat="actor in rawActors" class="text-center">{{ actor.name }}</th>
+                    </tr>
+                    <tr ng-repeat="(p, aa) in rawActors track by p">
+                        <td class="text-center">{{ p + 1 }}</td>
+                        <td ng-repeat="(i, actor) in rawActors track by i" ng-style="getFreqColor(actor.id, p+1)"
+                            class="text-center text-black">
+                            <strong>{{ posFreqTable[actor.id][p + 1] || 0 }}</strong>
+                        </td>
+                    </tr>
+                </table>
+
+                <br>
+                <strong>{{ 'indAggAns' | lang }}</strong>
+                <span class="pull-right"><span style="color: red;">*</span> {{ 'commentReq' | lang }}</span>
+                <table class="table table-bordered" ts-wrapper>
+                    <tr>
+                        <th ts-criteria="ceqlnum | parseFloat" ts-default="descending">{{ 'numEqual' | lang }}</th>
+                        <th ts-criteria="uid" ts-order-by="sortByAutorName">{{ 'author' | lang }}</th>
+                        <th ts-criteria="jigsawId">{{ 'role' | lang }}</th>
+                        <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'" ts-criteria="uid2"
+                            ts-order-by="sortByAutorGroup">{{ 'group' | lang }}</th>
+                        <th ng-repeat="(p, aa) in rawActors track by p">Pos {{ p + 1 }}</th>
+                    </tr>
+                    <tr ng-repeat="udata in indvTableSorted track by udata.uid" ts-repeat
+                        ng-click="openActorDetails(udata.uid, iterationIndicator)">
+                        <td>{{ udata.ceq }}</td>
+                        <td>
+                            {{ users[udata.uid].name }}
+                            <span class="badge bg-red" ng-show="shared.stagesMap[iterationIndicator].chat">
+                                <i class="fa fa-comments"></i> {{ shared.chatByUid[udata.uid] }}
+                            </span>
+                        </td>
+                        <td>{{ users[udata.uid].jigsaw.name }}</td>
+                        <td ng-if="shared.stagesMap[iterationIndicator].type == 'team'">
+                            {{ shared.groupByUid[udata.uid].index }}
+                            <span class="badge bg-red">
+                                <i class="fa fa-comments"></i> {{ shared.chatByTeam[shared.groupByUid[udata.uid].tmid] }}
+                            </span>
+                        </td>
+                        <td ng-repeat="aid in udata.arr track by $index">
+                            <span style="color: red;" ng-if="udata.just[$index]">*</span>
+                            {{ actorMap[aid].name }}
+                            <i class="fa fa-check" ng-if="udata.com[$index] && udata.just[$index]"></i>
+                        </td>
+                    </tr>
+                </table>
+                <div class="simple-padding-bottom">
+                    <span>{{ 'students' | lang }}: {{indvTableSorted.length}}</span>
+                    <span class="badge bg-red simple-margin-left"><i class="fa fa-comments"></i> N</span> N {{ 'chatMessages' | lang }}.
+                    <i class="fa fa-check simple-margin-left"></i> {{ 'commented' | lang }}.
+                </div>
+            </div>
+            <div ng-show="selectedSes.type == 'T'" class="margin-top-8">
+                <strong>{{ 'indAggAns' | lang }}</strong>
+                <span class="pull-right"><span style="color: red;">*</span> {{ 'commentReq' | lang }}</span>
+                <table class="table table-bordered" ts-wrapper>
+                    <tr>
+                        <th ts-criteria="uid" ts-order-by="sortByAutorName">{{ 'author' | lang }}</th>
+                        <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'" ts-criteria="tmid" ts-default>{{ 'group' | lang }}</th>
+                        <th ng-repeat="df in dfsStage">
+                            Item {{ df.orden }} (1-{{ df.num }})
+                            <span style="color: red;" ng-if="df.justify">*</span>
+                        </th>
+                    </tr>
+                    <tr ng-repeat="udata in shared.difTable track by $index" ts-repeat
+                        ng-class="{'bg-gray': udata.group}">
+                        <td>
+                            <span ng-show="!udata.group">{{ users[udata.uid].name }}</span>
+                            <strong ng-show="udata.group">{{ 'group' | lang }} {{ shared.groupByTmid[udata.tmid].index }}</strong>
+                        </td>
+                        <td ng-if="shared.stagesMap[iterationIndicator].type == 'team'">
+                            <span ng-show="udata.group">{{ shared.groupByTmid[udata.tmid].index }}</span>
+                            <span ng-show="!udata.group">{{ shared.groupByUid[udata.uid].index }}</span>
+                        </td>
+                        <td ng-repeat="aid in udata.arr track by $index" ng-click="openDF2Details(udata.tmid, aid.did, udata.uid)">
+                            <span class="mini-inline">
+                                <span ng-show="udata.group">{{ 'avgs' | lang }}: </span>
+                                <span ng-if="udata.group">{{ aid.sel | number:1 }}</span>
+                                <span ng-if="!udata.group">{{ aid.sel }}</span>
+                                <i class="fa fa-check" ng-if="aid.comment"></i>
+                            </span>
+                            <span class="badge bg-red" ng-show="shared.stagesMap[iterationIndicator].chat && !udata.group">
+                                <i class="fa fa-comments"></i> {{ shared.chatByUid[aid.did][udata.uid] || 0 }}
+                            </span>
+                            <span class="badge bg-darkgreen simple-margin-left" ng-show="aid.sd != null"
+                                  ng-class="{'bg-red': aid.sd >= 1, 'bg-yellow': aid.sd < 1 && aid.sd > 0.5}">
+                                {{ 'cvs' | lang }}:
+                                {{ aid.sd | number:2 }}
+                            </span>
+                            <span class="badge bg-red simple-margin-left" ng-show="shared.stagesMap[iterationIndicator].chat && udata.group">
+                                <i class="fa fa-comments"></i> {{ shared.chatByTeam[aid.did][udata.tmid] || 0 }}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+                <div class="simple-padding-bottom">
+                    <span>{{ 'students' | lang }}: {{shared.difTableUsers}}</span>
+                    <strong class="simple-margin-left">{{ 'avgs' | lang }}: </strong> {{ 'average' | lang }}.
+                    <strong class="simple-margin-left">{{ 'cvs' | lang }}: </strong> {{ 'cvdesc' | lang }}.
+                    <span class="badge bg-red simple-margin-left"><i class="fa fa-comments"></i> N</span> N {{ 'chatMessages' | lang }}.
+                </div>
+            </div>
+
+        </div>
+        <!-- / DASHBOARDS -->
+
+        <!-- DASHBOARDS RUBRICA -->
+<!--        <div class="pad-content" ng-show="selectedTab == 2" ng-controller="DashboardRubricaController">-->
+<!--            <h4>{{'results' | lang}} {{'rubrica' | lang}}</h4>-->
+<!--            <button class="pull-right btn btn-default" ng-click="getAllReportResult()">{{'update' | lang}}</button>-->
+<!--            <nvd3 options="barOpts" data="barData"></nvd3>-->
+<!--            <hr>-->
+<!--        </div>-->
+        <!-- / DASHBOARDS RUBRICA -->
+
+    </div>
+    </div>
+
+</div>
+
+</body>
+</html>

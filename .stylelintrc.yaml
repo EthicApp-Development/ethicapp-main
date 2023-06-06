@@ -6,10 +6,10 @@ ignoreFiles:
   # Ignoring libraries
   - "**/*.js"
   - "**/*.min.css"
-  - "./ethicapp-node/node_modules/*"
-  - "ethicapp-node/public/css/bootstrap*.css"
-  - "ethicapp-node/public/css/introjs.css"
-  - "ethicapp-node/public/css/minimal.css"
+  - "./ethicapp/node_modules/*"
+  - "ethicapp/frontend/assets/css/bootstrap*.css"
+  - "ethicapp/frontend/assets/css/introjs.css"
+  - "ethicapp/frontend/assets/css/minimal.css"
 rules:
   indentation: 4
   linebreaks: unix

@@ -77,7 +77,7 @@ This will create a directory at `$HOST_DB_VOLUME_PATH` (see the [DotEnv file](./
 
 ### 4.1. Natively
 
-Head into `ethicapp-node` and run `npm install` for installing all dependencies. Then, once your Postgres server is up and running with the appropriate data and configuration at `passwords.js` (which is up to you), head into `ethicapp-node` directory and run the following for starting the web server at the default port `8501`:
+Head into `ethicapp` and run `npm install` for installing all dependencies. Then, once your Postgres server is up and running with the appropriate data and configuration at `passwords.js` (which is up to you), head into `ethicapp` directory and run the following for starting the web server at the default port `8501`:
 
 ```bash
 npm run start
@@ -123,19 +123,19 @@ The root [`package.json`](./package.json) file contains some useful scripts for 
 
 ### 5.2. Persistance of PgAdmin (containerized)
 
-If you inspect the [`docker-compose`](./docker-compose.yml) file, you will note that the database (and PgAdmin) use the `unless-stopped` restart policy. This means that those services will keep running unless `docker-compose down` is executed. Therefore, it is recommended to, when running the environment for the first time, do:
+If you inspect the [`docker-compose`](./docker-compose.yml) file, you will note that the database (and PgAdmin) use the `unless-stopped` restart policy. This means that those services will keep running unless `docker-compose down` is executed. Therefore, it is recommended to, when running the environment for the first time, first starting those services in detached mode:
 
 ```bash
 docker-compose up --build --detach postgres pgadmin
 ```
 
-Then, you can launch the Node service with:
+Then, you can launch the Node service with, for instance:
 
 ```bash
 docker-compose up --build node
 ```
 
-With Postgres and PgAdmin running [constantly] on the background, they will be preserved even if the host machine is restarted, i.e., the developer will not have to re-enter the Postgres connection password whenever they want to connect to the database on PgAdmin.
+By that way, Postgres and PgAdmin will run [constantly] on the background, they will be preserved even if the host machine is restarted, i.e., the developer will not have to re-enter the Postgres connection password whenever they want to connect to the database at PgAdmin.
 
 ### 5.3. For non-Linux developers
 
@@ -143,8 +143,8 @@ If you have chosen not to use a Linux-based OS in your developing machine, read 
 
 #### 5.3.1. MacOS
 
-You will have trouble running `npm` scripts from [appendix 5.1](#51-npm-developing-and-debugging-scripts), including mandatory initialization tasks. You may need to prepend `bash -eu` to the commands at sections [3.2](#32-passwords-file) and [3.4](#34-initialize-the-dockerized-database-shared-volume).
+You may have trouble running `npm` scripts from [appendix 5.1](#51-npm-developing-and-debugging-scripts), including mandatory initialization tasks. If this happens, you will need to prepend `bash -eu` to the commands at sections [3.2](#32-passwords-file) and [3.4](#34-initialize-the-dockerized-database-shared-volume).
 
 #### 5.3.2. Windows
 
-For Windows, you must have [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) so that you can run a `bash` (or similar) shell directly in your host filesystem. You also need to install `npm` and `docker-compose` inside that WSL console. Then, it is important that you work on the *Linux-exclusive* filesystem, due to permission troubles with Windows files (i.e. do not use any child directory of your "`C:`" Windows disk: `/mnt/c`). For instance, clone the project at `$HOME/ethicapp-main` and follow the instructions of the README file for building and running the environment properly. You also have to manage to open your IDE from the WSL `bash` console (with `code <CLONED_REPO_PATH>`).
+For Windows, you must have [WSL](https://learn.microsoft.com/en-us/windows/wsl/install), so that you can run a `bash` (or alike) shell directly in your host filesystem. You also need to install `npm` and `docker-compose` inside that WSL console. Then, it is important that you work on the *Linux-exclusive* filesystem, due to permission troubles with Windows files (i.e. do not use any child directory of your default "`C:`" Windows disk: `/mnt/c`). For instance, clone the project at `$HOME/ethicapp-main` and follow the instructions of the README file for building and running the environment properly. You also have to manage to open your IDE from the WSL `bash` console (i.e. with `code <CLONED_REPO_PATH>`).
