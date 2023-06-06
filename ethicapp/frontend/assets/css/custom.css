@@ -2,7 +2,7 @@ body {
     font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
 }
 
-.navmenu{
+.navmenu {
     position: fixed;
     z-index: 0;
     top: 0;
@@ -41,12 +41,12 @@ body {
     color: #818181;
 }
 
-.main-body {
+.main_body {
     margin-left: 14em; /* Same as the width of the sidenav */
     padding: 0 10px;
 }
 
-.thumbnail-image{
+.thumbnail_image{
     min-width:60px;
     min-height:60px;
     max-width:60px;
@@ -54,8 +54,7 @@ body {
     background-repeat: no-repeat;
 }
 
-
-.flex-container {
+.flex_container {
     display: flex;
     flex-wrap: wrap;
     background-color: #fff;
@@ -63,7 +62,7 @@ body {
     gap: 30px;  
 }
 
-.flex-container > div {
+.flex_container > div {
     background-color: #fff;
     width: 13em;
     height: 6.8em;
@@ -80,7 +79,7 @@ body {
     padding: 10px;
 }
 
-.flex-container > div:hover {
+.flex_container > div:hover {
     border:1px solid #2649EC;
 }
 
@@ -93,7 +92,7 @@ body {
     background: #5cb85c;
 }
 
-.circle-profile {
+.circle_profile {
     -moz-border-radius: 50%;
     -webkit-border-radius: 50%;
     border-radius: 50%;
@@ -102,7 +101,7 @@ body {
     background: #fff;
 }
 
-.line-labels{
+.line_labels {
     display: flex;
     flex-direction: row;
     justify-content: flex-end;
@@ -112,17 +111,17 @@ body {
     margin-bottom: 10px;
 }
 
-.line-input{
+.line_input {
     margin-left: 10px;
 }
 
-.activities-container{
+.activities_container {
     min-width: 20em;
     max-width: 80em;
 }
 
 /* Phase item */
-.phase-element{
+.phase_element {
     border:4px solid #bbb;
     height:5em;
     width:15em;
@@ -134,47 +133,47 @@ body {
 }
 
 /* Phase container */
-.phase-container{
+.phase_container {
     max-width: 80em;
     margin: 2em;
     border:1px solid #bbb;
 }
 
-.margin-container{
+.margin_container {
     margin: 2em;
 }
 
-.phase-selected{
+.phase_selected {
     border:4px solid #f39316;
 }
 
-.phase-current{
+.phase_current {
     border:4px solid #7bc54a;
 }
 
-.phase-element:hover{
+.phase_element:hover {
     border:4px solid #67aed6;
 }
 
 /* Current phase container */
-.stage-container{
+.stage_container {
     margin: 2em;
     max-width: 80em;
     border:1px solid #bbb;
 }
 
-.question-container{
+.question_container {
     max-width: 80em;
     padding: 1em;
     margin-bottom: 1em;
     border:1px solid #bbb;
 }
 
-.tab-cs {
+.tab_cs {
     overflow: hidden;
 }
   
-.tab-cs button {
+.tab_cs button {
     float: left;
     outline: none;
     cursor: pointer;
@@ -190,45 +189,45 @@ body {
     align-items: center;
 }
 
-.tab-cs button:hover {
+.tab_cs button:hover {
     background-color: #ddd;
 }
 
-.btn-selected{
+.btn_selected {
     background-color: #bbb;
     font-weight: bolder;
 }
 
-.margin-left-low{
+.margin_left_low {
     margin-left: 2em;
 }
 
-.debug-wip{
-    background-color: rgb(226 95 95); color: white;
-}
-
-.stack-top{
+.stack_top {
     z-index: 9;
     margin: 20px;
 }
 
-.div-debug{ /* USE TO CHECK DIV SIZES */
+.div_debug { /* USE TO CHECK DIV SIZES */
     border: 1px solid rgb(245 0 0);
     background-color: #99f8ff;
 }
 
-.box-text{
+.debug_wip {
+    background-color: rgb(226 95 95); color: white;
+}
+
+.box_text {
     line-height: 1.25em;
     text-align: left;
     margin-left: 0.25em;
     margin-top: 0.25em;
 }
 
-.dsgn-sel{
+.dsgn_sel {
     background-color: #67aed6;
 }
 
-.dsgn:hover{
+.dsgn:hover {
     cursor: pointer;
 }
 
@@ -293,6 +292,8 @@ input:checked + .slider::before {
     border-radius: 50%;
 }
 
+/* The following CSS classes are from libraries (it seems), so the kebab-case will be preserved */
+
 .ngdialog-overlay {
     position: fixed;
     top: 0;
@@ -307,6 +308,6 @@ input:checked + .slider::before {
     z-index: 10001;
 }
 
-.error{
+.error {
     background-color: #ff858581 !important;
 }
