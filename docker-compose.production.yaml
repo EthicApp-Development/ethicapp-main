@@ -1,29 +1,79 @@
 # --------------------------------------------------------------------------------------------------
-# Draft for production docker-compose runtime. Extends the development docker-compose file
-# (see https://docs.docker.com/compose/extends/).
+# DEVELOPMENT docker-compose.
 # --------------------------------------------------------------------------------------------------
 
+version: "3.9"
+
+networks:
+  default:
+
+secrets:
+  jwt_token:
+    file: ./secrets/jwt_token
+
 services:
-  # ---------------------- NGINX ---------------------- #
-  nginx:
-    container_name: "ethicapp-nginx"
+  # ---------------------- Node web app ---------------------- #
+  node:
+    container_name: "ethicapp"
     build:
-      context: web-nginx
+      context: ethicapp/
       args:
-        NGINX_VERSION: 1.23.3
-        NODE_PORT: ${NODE_PORT}
-    restart: "unless-stopped"
+        NODE_VERSION: ${NODE_VERSION}
+    secrets:
+      - jwt_token
+    environment:
+      NODE_ENV: development
+      NODE_PORT: ${NODE_PORT}
+    restart: "no"
     networks:
       default:
     ports:
-      - "${NGINX_WEBAPP_PORT}:80"
+      - "${NODE_PORT}:${NODE_PORT}"
+    volumes:
+      - "./ethicapp:/home/app:rw"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ---------------------- Database ---------------------- #
+  postgres:
+    container_name: "ethicapp-postgres"
+    build:
+      context: postgres-db/
+      args:
+        UBUNTU_VERSION: "22.04"
+        POSTGRES_VERSION: ${POSTGRES_VERSION}
+        DB_NAME: ${DB_NAME}
+        DB_USER_NAME: ${DB_USER_NAME}
+        DB_USER_PASSWORD: ${DB_USER_PASSWORD}
+    environment:
+      POSTGRES_LOG_LEVEL: 1
+      PGPORT: 5432
+      PGDATA: /var/lib/postgresql/${POSTGRES_VERSION}/main
+    restart: unless-stopped
+    networks:
+      default:
+    healthcheck:
+      test: ["CMD-SHELL", "su healthcheckuser -c pg_isready"]
+      interval: 20s
+      timeout: 5s
+      retries: 1
+      start_period: 10s
+    #* Do not modify this volume declaration, as the automated initialization of the volume mount
+    #* will break if not updated as well
+    volumes:
+      - "${HOST_DB_VOLUME_PATH}:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"
+
+  # ---------------------- Nginx ---------------------- #
+  nginx:
+    container_name: "ethicapp-nginx"
+    build:
+      context: web-nginx/
+    environment:
+      NGINX_PORT: ${NGINX_PORT}
+    ports:
+      - '${NGINX_PORT}:${NGINX_PORT}'
+    volumes:
+      - "./ethicapp/frontend:/frontend:rw"
     depends_on:
       - node
-
-  # Ensuring no additional ports are exposed.
-  #* Update: that won't work, see https://github.com/docker/compose/issues/3729
-  node:
-    ports: []
-
-  postgres:
-    ports: []
