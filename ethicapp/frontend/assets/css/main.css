@@ -1292,7 +1292,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     padding: 5px;
 }
 
-.line-labels{
+.line_labels{
     display: flex;
     flex-direction: row;
     justify-content: flex-end;
@@ -1302,7 +1302,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     margin-bottom: 10px;
 }
 
-.line-input{
+.line_input{
     flex: 0 0 200px;
     margin-left: 10px;
 }
@@ -1333,7 +1333,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     background: #5cb85c;
 }
 
-.circle-profile {
+.circle_profile {
     -moz-border-radius: 50%;
     -webkit-border-radius: 50%;
     border-radius: 50%;
