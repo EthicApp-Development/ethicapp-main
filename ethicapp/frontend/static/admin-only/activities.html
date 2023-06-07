@@ -1,14 +1,14 @@
 <h1>ACTIVITIES</h1>
 <button class="btn btn-primary " ng-click="selectView('launchActivity')">{{'launchActivity' | lang}}</button>
 <div ng-controller= "ActivityController">
-    <div class="tab-cs" ng-init="dsgnMode=0">
-        <button class="tab-cs" ng-click= "dsgnMode=0" ng-class="{'btn-selected': dsgnMode == 0}">
+    <div class="tab_cs" ng-init="dsgnMode=0">
+        <button class="tab_cs" ng-click= "dsgnMode=0" ng-class="{'btn_selected': dsgnMode == 0}">
         Actuales
         </button>
-        <button class="tab-cs" ng-click = "dsgnMode=1" ng-class="{'btn-selected': dsgnMode == 1}">
+        <button class="tab_cs" ng-click = "dsgnMode=1" ng-class="{'btn_selected': dsgnMode == 1}">
         Terminadas
         </button>
-        <button class="tab-cs" ng-click = "dsgnMode=2" ng-class="{'btn-selected': dsgnMode == 2}">
+        <button class="tab_cs" ng-click = "dsgnMode=2" ng-class="{'btn_selected': dsgnMode == 2}">
             Archivadas
         </button>
         <div style="float: left;display: flex;justify-content: left;align-items: center;"> 
@@ -17,7 +17,7 @@
         
     </div>
     <div class="container" style="overflow: scroll; max-height: 40em; min-height: 10em; border: #bbb 1px solid;" ng-controller="DialogCtrl">
-        <div class="activities-container" style="margin-top: 2em;">
+        <div class="activities_container" style="margin-top: 2em;">
             <!--ACTIVE ACTIVITIES-->
             <div class="list-group-item" ng-repeat="ses in currentActivities(0) | filter:{title:userSearch} | orderBy : '-time'" ng-if="dsgnMode==0">
                 <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>

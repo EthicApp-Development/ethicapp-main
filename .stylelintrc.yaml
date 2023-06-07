@@ -27,3 +27,7 @@ rules:
   function-no-unknown: null
   selector-no-vendor-prefix: null
   at-rule-no-vendor-prefix: null
+
+  # Ignoring kebab-case rule for CSS class names, due a bug in Angular with the `-` character in
+  # class names
+  selector-class-pattern: null
