@@ -1,4 +1,10 @@
 {
+    // Temporal/generated files at read-only for the IDE
+    "files.readonlyInclude": {
+        "/**/*/node_modules/**/*": true,
+        "/**/*/package-lock.json": true
+    },
+
     // Schema IDE association for IDE with config file(s)
     "files.associations": {
         ".eslintrc.json": "jsonc", //* redundant setting for current vscode versions
@@ -8,7 +14,7 @@
         ".sqlfluffignore": "ignore"
     },
 
-    // Configuration files
+    // Indentation for configuration files syntax
     "[yaml]": {
         "editor.tabSize": 2
     },
@@ -23,7 +29,7 @@
         ],
         "editor.insertSpaces": true,
         "editor.tabSize": 4,
-        "editor.formatOnSave": true,
+        "editor.formatOnSave": true, // linting has to be enforced
         "editor.defaultFormatter": "dbaeumer.vscode-eslint"
     },
     "javascript.preferences.importModuleSpecifier": "non-relative",
@@ -43,7 +49,6 @@
         ],
         "editor.insertSpaces": true,
         "editor.tabSize": 4,
-        //"editor.formatOnSave": true,
         "editor.defaultFormatter": "vscode.html-language-features"
     },
     "htmlhint.enable": true,
@@ -66,7 +71,8 @@
             100
         ],
         "editor.insertSpaces": true,
-        "editor.tabSize": 4
+        "editor.tabSize": 4,
+        "editor.formatOnSave": true // linting has to be enforced
     },
     "cSpell.words": [
         "ethicapp"
