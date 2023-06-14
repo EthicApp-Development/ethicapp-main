@@ -116,9 +116,10 @@ The root [`package.json`](./package.json) file contains some useful scripts for 
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
 | `init-passwords-js`      | For [section 3.2](#32-passwords-file).                                                                                      |
 | `init-db`                | For [section 3.4](#34-initialize-the-dockerized-database-shared-volume).                                                    |
+| `lint-$LANG`             | For running a lint check for a given `LANG`. Values can be `js`, `html`, `css` or `sql`.                                    |
+| `fix-$LANG`              | Runs automatic formatting fixes for linting rules, given a `LANG`. Values can be `js`, `css` or `sql`.                      |
 | `clear-sessions`         | Deletes all web sessions (from local filesystem). Needed when login gets buggy due database modifications in certain cases. |
 | `psql`                   | Quickly run a command-line Postgres client to the containerized development database.                                       |
-| `lint-$LANG`             | For running a lint check for a given `LANG`. Values can be `js`, `html`, `css` or `sql`.                                    |
 | `pgdump` and `pgrestore` | Easily dumping/restoring the containerized database, if desired.                                                            |
 
 ### 5.2. Persistance of PgAdmin (containerized)
