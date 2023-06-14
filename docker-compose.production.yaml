@@ -19,10 +19,8 @@ services:
       context: ethicapp/
       args:
         NODE_VERSION: ${NODE_VERSION}
-    secrets:
-      - jwt_token
     environment:
-      NODE_ENV: development
+      NODE_ENV: release
       NODE_PORT: ${NODE_PORT}
     restart: "no"
     networks:
@@ -31,9 +29,6 @@ services:
       - "${NODE_PORT}:${NODE_PORT}"
     volumes:
       - "./ethicapp:/home/app:rw"
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   # ---------------------- Database ---------------------- #
   postgres:

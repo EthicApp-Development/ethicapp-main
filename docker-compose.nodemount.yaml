@@ -1,0 +1,29 @@
+# --------------------------------------------------------------------------------------------------
+# DEVELOPMENT docker-compose.
+# --------------------------------------------------------------------------------------------------
+
+version: "3.9"
+
+networks:
+  default:
+
+secrets:
+  jwt_token:
+    file: ./secrets/jwt_token
+
+services:
+  node:
+    container_name: "ethicapp"
+    image: jigracia1/ethicapp:latest
+    environment:
+      NODE_ENV: release
+      NODE_PORT: ${NODE_PORT}
+    restart: "no"
+    networks:
+      default:
+    ports:
+      - "${NODE_PORT}:${NODE_PORT}"
+    secrets:
+      - jwt_token
+    volumes:
+      - ./secrets/jwt_token:/run/secrets/jwt_token:ro
