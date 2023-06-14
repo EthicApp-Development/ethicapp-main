@@ -5,7 +5,9 @@
 version: "3.9"
 
 networks:
-  default:
+  ethicapp-network:
+    external:
+      name: ethicapp-network
 
 secrets:
   jwt_token:
@@ -24,11 +26,9 @@ services:
       NODE_PORT: ${NODE_PORT}
     restart: "no"
     networks:
-      default:
+      - ethicapp-network
     ports:
       - "${NODE_PORT}:${NODE_PORT}"
-    volumes:
-      - "./ethicapp:/home/app:rw"
 
   # ---------------------- Database ---------------------- #
   postgres:
@@ -47,7 +47,7 @@ services:
       PGDATA: /var/lib/postgresql/${POSTGRES_VERSION}/main
     restart: unless-stopped
     networks:
-      default:
+      - ethicapp-network
     healthcheck:
       test: ["CMD-SHELL", "su healthcheckuser -c pg_isready"]
       interval: 20s
@@ -70,5 +70,5 @@ services:
       - '${NGINX_PORT}:${NGINX_PORT}'
     volumes:
       - "./ethicapp/frontend:/frontend:rw"
-    depends_on:
-      - node
+    networks:
+      - ethicapp-network

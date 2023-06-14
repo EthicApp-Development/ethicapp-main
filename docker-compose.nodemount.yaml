@@ -5,7 +5,9 @@
 version: "3.9"
 
 networks:
-  default:
+  ethicapp-network:
+    external: true
+
 
 secrets:
   jwt_token:
@@ -20,10 +22,8 @@ services:
       NODE_PORT: ${NODE_PORT}
     restart: "no"
     networks:
-      default:
+      - ethicapp-network
     ports:
       - "${NODE_PORT}:${NODE_PORT}"
     secrets:
       - jwt_token
-    volumes:
-      - ./secrets/jwt_token:/run/secrets/jwt_token:ro
