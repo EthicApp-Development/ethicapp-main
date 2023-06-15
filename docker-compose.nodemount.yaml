@@ -16,7 +16,7 @@ secrets:
 services:
   node:
     container_name: "ethicapp"
-    image: jigracia1/ethicapp:latest
+    image: ethicapp/stable-2:latest
     environment:
       NODE_ENV: release
       NODE_PORT: ${NODE_PORT}

@@ -15,20 +15,21 @@ secrets:
 
 services:
   # ---------------------- Node web app ---------------------- #
-  node:
-    container_name: "ethicapp"
-    build:
-      context: ethicapp/
-      args:
-        NODE_VERSION: ${NODE_VERSION}
-    environment:
-      NODE_ENV: release
-      NODE_PORT: ${NODE_PORT}
-    restart: "no"
-    networks:
-      - ethicapp-network
-    ports:
-      - "${NODE_PORT}:${NODE_PORT}"
+  
+  #node:
+  #  container_name: "ethicapp"
+  #  build:
+  #    context: ethicapp/
+  #    args:
+  #      NODE_VERSION: ${NODE_VERSION}
+  #  environment:
+  #    NODE_ENV: release
+  #    NODE_PORT: ${NODE_PORT}
+  #  restart: "no"
+  #  networks:
+  #    - ethicapp-network
+  #  ports:
+  #    - "${NODE_PORT}:${NODE_PORT}"
 
   # ---------------------- Database ---------------------- #
   postgres:
