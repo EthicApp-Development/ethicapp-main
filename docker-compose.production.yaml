@@ -72,5 +72,6 @@ services:
       NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
       NGINX_PORT: ${NGINX_PORT}
       NODE_PORT: ${NODE_PORT}
+      NODE_SERVER: node
     networks:
       - ethicapp-network
