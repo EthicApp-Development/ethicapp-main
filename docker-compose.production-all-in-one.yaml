@@ -15,6 +15,7 @@ secrets:
     file: ./secrets/jwt_token
 
 services:
+  # ---------------------- Node web app ---------------------- #
   node:
     container_name: "ethicapp"
     image: ethicapp/stable-2:latest
@@ -30,7 +31,37 @@ services:
       - jwt_token
     volumes:
       - ethicapp:/home/app:rw
+
+  # ---------------------- Database ---------------------- #
+  postgres:
+    container_name: "ethicapp-postgres"
+    build:
+      context: postgres-db/
+      args:
+        UBUNTU_VERSION: "22.04"
+        POSTGRES_VERSION: ${POSTGRES_VERSION}
+        DB_NAME: ${DB_NAME}
+        DB_USER_NAME: ${DB_USER_NAME}
+        DB_USER_PASSWORD: ${DB_USER_PASSWORD}
+    environment:
+      POSTGRES_LOG_LEVEL: 1
+      PGPORT: 5432
+      PGDATA: /var/lib/postgresql/${POSTGRES_VERSION}/main
+    restart: unless-stopped
+    networks:
+      - ethicapp-network
+    healthcheck:
+      test: ["CMD-SHELL", "su healthcheckuser -c pg_isready"]
+      interval: 20s
+      timeout: 5s
+      retries: 1
+      start_period: 10s
+    #* Do not modify this volume declaration, as the automated initialization of the volume mount
+    #* will break if not updated as well
+    volumes:
+      - "${HOST_DB_VOLUME_PATH}:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"
   
+  # ---------------------- Nginx ---------------------- #
   nginx:
     container_name: "ethicapp-nginx"
     build:

@@ -8,75 +8,48 @@ networks:
   ethicapp-network:
     external: true
 
+
+
 secrets:
   jwt_token:
     file: ./secrets/jwt_token
 
-volumes:
-  ethicapp:
-
 services:
   # ---------------------- Node web app ---------------------- #
-  
-  #node:
-  #  container_name: "ethicapp"
-  #  build:
-  #    context: ethicapp/
-  #    args:
-  #      NODE_VERSION: ${NODE_VERSION}
-  #  environment:
-  #    NODE_ENV: release
-  #    NODE_PORT: ${NODE_PORT}
-  #  restart: "no"
-  #  networks:
-  #    - ethicapp-network
-  #  ports:
-  #    - "${NODE_PORT}:${NODE_PORT}"
-  #    volumes:
-  #    - ./ethicapp:/home/app
-
-  # ---------------------- Database ---------------------- #
-  postgres:
-    container_name: "ethicapp-postgres"
-    build:
-      context: postgres-db/
-      args:
-        UBUNTU_VERSION: "22.04"
-        POSTGRES_VERSION: ${POSTGRES_VERSION}
-        DB_NAME: ${DB_NAME}
-        DB_USER_NAME: ${DB_USER_NAME}
-        DB_USER_PASSWORD: ${DB_USER_PASSWORD}
+  node:
+    container_name: "ethicapp"
+    image: ethicapp/stable-2:latest
     environment:
-      POSTGRES_LOG_LEVEL: 1
-      PGPORT: 5432
-      PGDATA: /var/lib/postgresql/${POSTGRES_VERSION}/main
-    restart: unless-stopped
+      NODE_ENV: release
+      NODE_PORT: ${NODE_PORT}
+    restart: "no"
     networks:
       - ethicapp-network
-    healthcheck:
-      test: ["CMD-SHELL", "su healthcheckuser -c pg_isready"]
-      interval: 20s
-      timeout: 5s
-      retries: 1
-      start_period: 10s
-    #* Do not modify this volume declaration, as the automated initialization of the volume mount
-    #* will break if not updated as well
+    ports:
+      - "${NODE_PORT}:${NODE_PORT}"
+    secrets:
+      - jwt_token
     volumes:
-      - "${HOST_DB_VOLUME_PATH}:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"
-
+      - ethicapp:/home/app:rw
+        
   # ---------------------- Nginx ---------------------- #
-  #nginx:
-  #  container_name: "ethicapp-nginx"
-  #  build:
-  #    context: web-nginx/
-  #  ports:
-  #    - '${NGINX_PORT}:${NGINX_PORT}'
-  #  volumes:
-  #    - "./ethicapp/frontend:/frontend:rw"
-  #  environment:
-  #    NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
-  #    NGINX_PORT: ${NGINX_PORT}
-  #    NODE_PORT: ${NODE_PORT}
-  #    NODE_SERVER: node
-  #  networks:
-  #    - ethicapp-network
+  nginx:
+    container_name: "ethicapp-nginx"
+    build:
+      context: web-nginx/
+    ports:
+      - '${NGINX_PORT}:${NGINX_PORT}'
+    environment:
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
+      NGINX_PORT: ${NGINX_PORT}
+      NODE_PORT: ${NODE_PORT}
+      NODE_SERVER: node
+    networks:
+      - ethicapp-network
+    volumes:
+      - ethicapp:/usr/share/nginx/:rw
+    depends_on:
+      - node
+
+volumes:
+  ethicapp:
