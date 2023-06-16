@@ -12,6 +12,9 @@ secrets:
   jwt_token:
     file: ./secrets/jwt_token
 
+volumes:
+  ethicapp:
+
 services:
   # ---------------------- Node web app ---------------------- #
   
@@ -29,6 +32,8 @@ services:
   #    - ethicapp-network
   #  ports:
   #    - "${NODE_PORT}:${NODE_PORT}"
+  #    volumes:
+  #    - ./ethicapp:/home/app
 
   # ---------------------- Database ---------------------- #
   postgres:
@@ -60,18 +65,18 @@ services:
       - "${HOST_DB_VOLUME_PATH}:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"
 
   # ---------------------- Nginx ---------------------- #
-  nginx:
-    container_name: "ethicapp-nginx"
-    build:
-      context: web-nginx/
-    ports:
-      - '${NGINX_PORT}:${NGINX_PORT}'
-    volumes:
-      - "./ethicapp/frontend:/frontend:rw"
-    environment:
-      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
-      NGINX_PORT: ${NGINX_PORT}
-      NODE_PORT: ${NODE_PORT}
-      NODE_SERVER: node
-    networks:
-      - ethicapp-network
+  #nginx:
+  #  container_name: "ethicapp-nginx"
+  #  build:
+  #    context: web-nginx/
+  #  ports:
+  #    - '${NGINX_PORT}:${NGINX_PORT}'
+  #  volumes:
+  #    - "./ethicapp/frontend:/frontend:rw"
+  #  environment:
+  #    NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
+  #    NGINX_PORT: ${NGINX_PORT}
+  #    NODE_PORT: ${NODE_PORT}
+  #    NODE_SERVER: node
+  #  networks:
+  #    - ethicapp-network

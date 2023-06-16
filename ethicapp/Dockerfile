@@ -3,7 +3,7 @@ FROM node:${NODE_VERSION}
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-COPY ./ /home/app
+COPY ./ethicapp /home/app
 
 WORKDIR /home/app
 
