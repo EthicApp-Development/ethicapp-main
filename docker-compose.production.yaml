@@ -6,8 +6,7 @@ version: "3.9"
 
 networks:
   ethicapp-network:
-    external:
-      name: ethicapp-network
+    external: true
 
 secrets:
   jwt_token:
@@ -65,11 +64,13 @@ services:
     container_name: "ethicapp-nginx"
     build:
       context: web-nginx/
-    environment:
-      NGINX_PORT: ${NGINX_PORT}
     ports:
       - '${NGINX_PORT}:${NGINX_PORT}'
     volumes:
       - "./ethicapp/frontend:/frontend:rw"
+    environment:
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
+      NGINX_PORT: ${NGINX_PORT}
+      NODE_PORT: ${NODE_PORT}
     networks:
       - ethicapp-network
