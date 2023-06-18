@@ -22,16 +22,6 @@ function getDBInstance(dbcon) {
 }
 
 
-function smartArrayConvert(sqlParams) {
-    var arr = [];
-    for (var i = 0; i < sqlParams.length; i++) {
-        var p = sqlParams[i];
-        arr.push(p);
-    }
-    return arr;
-}
-
-
 passport.serializeUser( (user, done) => {
     done(null, user)
 })
@@ -76,7 +66,6 @@ passport.deserializeUser(async (req, user, done) => {
                         req.session.ses = null;
                         done(null, res.rows[0]);
                     }else{
-                        // Crear usuario con datos de Google
                         try {
                             var passcr = crypto.createHash("md5").update(user.displayName).digest("hex");
                             var sql2 = `
@@ -125,7 +114,6 @@ passport.use(
         passReqToCallback: true
     },
     (req, accessToken, refreshToken, profile, done) => {
-        console.log(`\n--------> Google Strategy`);
         req.session.uid = profile.id;
         req.session.role = profile.role;
         req.session.ses = null;
@@ -133,14 +121,12 @@ passport.use(
     })
 );
 
-// Estrategia local de Passport
 passport.use(new LocalStrategy(
     {
         usernameField: 'user',
         passwordField: 'pass',
     },
     async (email, password, done) => {
-        console.log(`\n--------> Local Strategy`);
         try {
             var db = getDBInstance(pass.dbcon);
             var sql = `SELECT * FROM users WHERE mail = '${email}'`;
@@ -164,7 +150,6 @@ passport.use(new LocalStrategy(
                 }
             });
         } catch (err) {
-            console.log(`\n--------> Error en Local Strategy: ${err}`);
             return done(err);
         }
     }
