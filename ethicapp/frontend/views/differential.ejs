@@ -7,20 +7,14 @@
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
     <script src="libs/angular.min.js"></script>
     <script src="libs/angular-sanitize.min.js"></script>
-    <script src="libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
-    <script src="libs/angular-ui-tree.min.js"></script>
-    <script src="libs/angular-timer.min.js"></script>
-    <script src="libs/socket.min.js"></script>
     <script src="libs/angular-ui-notification.min.js"></script>
     <script src="libs/angular-glue.min.js"></script>
     <script src="assets/js/differential-ctrl.min.js"></script>
+    <script src="<%= asset('/assets/js/ethicapp-external.js') %>"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <link rel="stylesheet" href="assets/css/bootstrap.min.css"/>
-    <link rel="stylesheet" href="assets/css/font-awesome.min.css">
-    <link rel="stylesheet" href="assets/css/minimal.css">
     <link rel="stylesheet" href="assets/css/angular-ui-tree.min.css">
-    <link rel="stylesheet" href="assets/css/angular-ui-notification.min.css">
-    <link rel="stylesheet" href="assets/css/main.css"/>
+    <link rel="stylesheet" href="<%= asset('/assets/css/ethicapp-styles.css') %>">
+    
 </head>
 <body>
 
@@ -78,7 +72,7 @@
             </div>
             <div class="tab tab-text" ng-repeat="df in dfs" ng-class="{active: selectedDF + 1 == df.orden && !showDoc , 'green': !df.dirty && df.select != null}"
                  ng-click="selectDF($index)">
-                <i class="fa fa-question-circle"></i> Pregunta {{df.orden}} <span class="badge bg-red" ng-show="df.c != null && df.c > df.cr">{{df.c - df.cr}}</span>
+                <i class="fa fa-question-circle"></i> Pregunta 2 {{df.orden}} <span class="badge bg-red" ng-show="df.c != null && df.c > df.cr">{{df.c - df.cr}}</span>
             </div>
             <!--<div class="btab"></div>
             <div class="rtab">
