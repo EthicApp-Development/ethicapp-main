@@ -49,48 +49,19 @@ router.get("/admin-profile", function(req,res){
 
 
 router.get("/logout", (req, res) => {
-    req.session.uid = null;
-    req.session.role = null;
-    req.session.ses = null;
-    req.session.prevUid = null;
-    res.redirect("login");
+    req.logout(function (err) {
+        if (err) { console.log(err) }
+        req.session.uid = null;
+        req.session.role = null;
+        req.session.ses = null;
+        req.session.prevUid = null;
+        res.redirect("login");
+    });
 });
 
-
-router.post("/login", rpg.singleSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    SELECT id,
-        role
-    FROM users
-    WHERE (
-        rut = $1
-        AND pass = $2
-    ) OR (
-        mail = $3
-        AND pass=$4
-    )
-    `,
-    postReqData: ["user", "pass"],
-    onStart:     (ses, data, calc) => {
-        calc.user = data.user.trim();
-        calc.passcr = crypto.createHash("md5").update(data.pass).digest("hex");
-    },
-    sqlParams: [
-        rpg.param("calc", "user"), rpg.param("calc", "passcr"), rpg.param("calc", "user"),
-        rpg.param("calc", "passcr")
-    ],
-    onEnd: (req, res, result) => {
-        if (result.id != null) {
-            req.session.uid = result.id;
-            req.session.role = result.role;
-            req.session.ses = null;
-            res.redirect(".");
-        }
-        else {
-            res.redirect("login?rc=2");
-        }
-    }
+router.post("/login", passport.authenticate(`local`, {
+    successRedirect: `/seslist`,
+    failureRedirect: `login?rc=2`,
 }));
 
 
@@ -108,25 +79,9 @@ router.get("/google",
 
 router.get("/google/callback",
     passport.authenticate("google", {
+        successRedirect: "/seslist",
         failureRedirect: "/register"
-    }),
-    function (req, res) {
-        var db = getDBInstance(pass.dbcon);
-        var sql = `
-        SELECT *
-        FROM users
-        WHERE mail = '${req.user.email}'
-        LIMIT 1
-        `;
-        db.query(sql, (err, res) => {
-            if (res.rows[0] != null) {
-                req.session.uid = res.rows[0].id;
-                req.session.role = "A";
-                req.session.ses = null;
-            }
-        })
-            .then(() => res.redirect("/seslist"));
-    }
+    })
 );
 
 
@@ -153,45 +108,47 @@ function smartArrayConvert(sqlParams) {
 }
 
 
-router.post("/register", (req, res) => {
+router.post("/register", async (req, res) => {
     const response_key = req.body["g-recaptcha-response"];
     const secret_key = pass.Captcha_Secret;
-    fetch(
-        "https://www.google.com/recaptcha/api/siteverify?" +
-        `secret=${secret_key}&response=${response_key}`
-    )
-        .then(response => response.json())
-        .then(data => {
-            if (data.success == true) {
-                if (req.body.pass == req.body["conf-pass"]) {
-                    var db = getDBInstance(pass.dbcon);
-                    var sql = `
-                    INSERT INTO users(rut, pass, name, mail, sex, ROLE)
-                    VALUES ($1,$2,$3,$4,$5,'A')
-                    `;
-                    var qry;
-                    var passcr = crypto.createHash("md5").update(req.body.pass).digest("hex");
-                    var fullname = (req.body.name + " " + req.body.lastname);
-                    var sqlParams = [req.body.rut, passcr, fullname, req.body.mail, req.body.sex];
-                    var sqlarr = smartArrayConvert(sqlParams);
-                    qry = db.query(sql, sqlarr);
-                    qry.on("end", function () {
+    try {
+        const response = await fetch(
+            "https://www.google.com/recaptcha/api/siteverify?" +
+            `secret=${secret_key}&response=${response_key}`
+        )
+        const data = await response.json();
+        if (data.success == true) {
+            try {
+                var passcr = crypto.createHash("md5").update(req.body.pass).digest("hex");
+                var fullname = (req.body.name + " " + req.body.lastname);
+                var db = getDBInstance(pass.dbcon);
+
+                var sql = `
+                    INSERT INTO users (rut, pass, name, mail, sex, ROLE) 
+                    VALUES ('${req.body.rut}','${passcr}','${fullname}','${req.body.mail}','${req.body.sex}','A')
+                `;
+
+                db.query(sql,(err,sql_res) =>{
+                    if(err){
+                        console.error(err);
+                        res.redirect("register");
+                    }else{
                         res.redirect("login?rc=1");
-                    });
-                    qry.on("error", function () {
-                        res.end('{"status":"err"}');
-                    });
-                } else {
-                    res.redirect("register");
-                }
-            }
-            else {
+                    }
+                });
+            } catch (err) {
+                console.error(`Error al registrar el usuario`, err);
                 res.redirect("register");
             }
-        })
-        .catch(function (e) {
-            console.error(e);
-        });
+        }
+        else {
+            console.error(`Error recaptcha`, data);
+            res.redirect("register");
+        }
+    } catch(error) {
+        console.error("Error en post /register", error);
+        res.redirect("register");
+    }
 });
 
 

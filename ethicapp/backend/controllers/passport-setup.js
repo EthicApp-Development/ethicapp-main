@@ -4,6 +4,7 @@ var pg = require("pg");
 let crypto = require("crypto");
 
 const GoogleStrategy = require( "passport-google-oauth2" ).Strategy;
+const LocalStrategy = require("passport-local").Strategy;
 var DB = null;
 
 
@@ -21,14 +22,88 @@ function getDBInstance(dbcon) {
 }
 
 
-function smartArrayConvert(sqlParams) {
-    var arr = [];
-    for (var i = 0; i < sqlParams.length; i++) {
-        var p = sqlParams[i];
-        arr.push(p);
+passport.serializeUser( (user, done) => {
+    done(null, user)
+})
+
+passport.deserializeUser(async (req, user, done) => {
+    try {
+        // Local User
+        if (user.email === undefined) {
+            var db = getDBInstance(pass.dbcon);
+            var sql = `SELECT * FROM users WHERE mail = '${user.mail}'`;
+
+            db.query(sql,(err,res) =>{
+                if(err){
+                    console.error(err);
+                    done(null, false, { message: err });
+                }else{
+                    if(res.rows.length > 0){
+                        var user = res.rows[0];
+                        req.session.uid = res.rows[0].id;
+                        req.session.role = res.rows[0].role;
+                        req.session.ses = null;
+                        done(null, user);
+                    }else{
+                        done(null, false, { message: `User not found` });
+                    }
+                }
+            });
+        }
+        // Google User
+        else {
+            var db = getDBInstance(pass.dbcon);
+            var sql = `SELECT * FROM users WHERE mail = '${user.email}'`;
+
+            db.query(sql,(err,res) =>{
+                if(err){
+                    console.error(err);
+                    done(null, false, { message: err });
+                }else{
+                    if(res.rows.length > 0){
+                        req.session.uid = res.rows[0].id;
+                        req.session.role = res.rows[0].role;
+                        req.session.ses = null;
+                        done(null, res.rows[0]);
+                    }else{
+                        try {
+                            var passcr = crypto.createHash("md5").update(user.displayName).digest("hex");
+                            var sql2 = `
+                            INSERT INTO users (name, mail, pass, rut, sex, ROLE) 
+                            VALUES ('${user.displayName}','${user.email}','${passcr}','11111111-1','O','A')
+                            `;
+                            db.query(sql2,(err,res) =>{
+                                if(err){
+                                    console.error(err);
+                                    done(null, false, { message: err });
+                                }
+                            });
+
+                            var sql3 = `SELECT * FROM users WHERE mail = '${user.email}'`;
+                            db.query(sql3,(err,res) =>{
+                                if(err){
+                                    console.error(err);
+                                    done(null, false, { message: err });
+                                }else{
+                                    req.session.uid = res.rows[0].id;
+                                    req.session.role = res.rows[0].role;
+                                    req.session.ses = null;
+                                    done(null, res.rows[0]);
+                                }
+                            });
+                        } catch (err) {
+                            console.error(`Error al registrar el usuario`, err);
+                            done(err);
+                        }
+                    }
+                }
+            });
+        }
+    } catch (err) {
+        console.error(`Error al buscar el usuario`, err);
+        done(err);
     }
-    return arr;
-}
+});
 
 
 passport.use(
@@ -38,37 +113,44 @@ passport.use(
         callbackURL:       "http://localhost:8501/google/callback",
         passReqToCallback: true
     },
-    function(request, accessToken, refreshToken, profile, done) { 
-        var db = getDBInstance(pass.dbcon);
-        var sql = `
-        SELECT *
-        FROM users
-        WHERE mail = '${profile.email}'
-        LIMIT 1
-        `;
-        db.query(sql,(err,res) =>{
-            if (res.rows[0] == null) {
-                var sql = `
-                INSERT INTO users(rut, pass, name, mail, sex, ROLE)
-                VALUES ($1,$2,$3,$4,$5,'A')
-                `;
-                var qry;
-                var passcr = crypto.createHash("md5").update(profile.displayName).digest("hex");
-                var sqlParams = ["11111111-1", passcr, profile.displayName, profile.email, "O"];
-                var sqlarr = smartArrayConvert(sqlParams);
-                qry = db.query(sql, sqlarr);
-                qry.on("end", function () {});
-                qry.on("error", function(){});
-            }
-        });
+    (req, accessToken, refreshToken, profile, done) => {
+        req.session.uid = profile.id;
+        req.session.role = profile.role;
+        req.session.ses = null;
         return done(null, profile);
     })
 );
 
-passport.serializeUser((user, done) => { 
-    done(null, user);
-});
+passport.use(new LocalStrategy(
+    {
+        usernameField: 'user',
+        passwordField: 'pass',
+    },
+    async (email, password, done) => {
+        try {
+            var db = getDBInstance(pass.dbcon);
+            var sql = `SELECT * FROM users WHERE mail = '${email}'`;
 
-passport.deserializeUser((user, done) => {
-    done(null, user);
-}); 
+            db.query(sql,(err,res) =>{
+                if(err){
+                    console.error(err);
+                    done(null, false, { message: err });
+                }else{
+                    if(res.rows.length > 0){
+                        var user = res.rows[0];
+                        var passcr = crypto.createHash("md5").update(password).digest("hex");
+                        if(passcr === user.pass){
+                            return done(null, user);
+                        }else{
+                            return done(null, false, { message: `Incorrect email or password` });
+                        }
+                    }else{
+                        return done(null, false, { message: `User not found` });
+                    }
+                }
+            });
+        } catch (err) {
+            return done(err);
+        }
+    }
+));
