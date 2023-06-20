@@ -50,7 +50,7 @@ router.get("/admin-profile", function(req,res){
 
 router.get("/logout", (req, res) => {
     req.logout(function (err) {
-        if (err) { console.log(err) }
+        if (err) { console.log(err); }
         req.session.uid = null;
         req.session.role = null;
         req.session.ses = null;
@@ -59,9 +59,9 @@ router.get("/logout", (req, res) => {
     });
 });
 
-router.post("/login", passport.authenticate(`local`, {
-    successRedirect: `/seslist`,
-    failureRedirect: `login?rc=2`,
+router.post("/login", passport.authenticate("local", {
+    successRedirect: "/seslist",
+    failureRedirect: "login?rc=2",
 }));
 
 
@@ -115,7 +115,7 @@ router.post("/register", async (req, res) => {
         const response = await fetch(
             "https://www.google.com/recaptcha/api/siteverify?" +
             `secret=${secret_key}&response=${response_key}`
-        )
+        );
         const data = await response.json();
         if (data.success == true) {
             try {
@@ -137,12 +137,12 @@ router.post("/register", async (req, res) => {
                     }
                 });
             } catch (err) {
-                console.error(`Error al registrar el usuario`, err);
+                console.error("Error al registrar el usuario", err);
                 res.redirect("register");
             }
         }
         else {
-            console.error(`Error recaptcha`, data);
+            console.error("Error recaptcha", data);
             res.redirect("register");
         }
     } catch(error) {

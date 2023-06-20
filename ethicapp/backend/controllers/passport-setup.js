@@ -23,8 +23,8 @@ function getDBInstance(dbcon) {
 
 
 passport.serializeUser( (user, done) => {
-    done(null, user)
-})
+    done(null, user);
+});
 
 passport.deserializeUser(async (req, user, done) => {
     try {
@@ -45,7 +45,7 @@ passport.deserializeUser(async (req, user, done) => {
                         req.session.ses = null;
                         done(null, user);
                     }else{
-                        done(null, false, { message: `User not found` });
+                        done(null, false, { message: "User not found" });
                     }
                 }
             });
@@ -92,7 +92,7 @@ passport.deserializeUser(async (req, user, done) => {
                                 }
                             });
                         } catch (err) {
-                            console.error(`Error al registrar el usuario`, err);
+                            console.error("Error al registrar el usuario", err);
                             done(err);
                         }
                     }
@@ -100,7 +100,7 @@ passport.deserializeUser(async (req, user, done) => {
             });
         }
     } catch (err) {
-        console.error(`Error al buscar el usuario`, err);
+        console.error("Error al buscar el usuario", err);
         done(err);
     }
 });
@@ -123,8 +123,8 @@ passport.use(
 
 passport.use(new LocalStrategy(
     {
-        usernameField: 'user',
-        passwordField: 'pass',
+        usernameField: "user",
+        passwordField: "pass",
     },
     async (email, password, done) => {
         try {
@@ -142,10 +142,10 @@ passport.use(new LocalStrategy(
                         if(passcr === user.pass){
                             return done(null, user);
                         }else{
-                            return done(null, false, { message: `Incorrect email or password` });
+                            return done(null, false, { message: "Incorrect email or password" });
                         }
                     }else{
-                        return done(null, false, { message: `User not found` });
+                        return done(null, false, { message: "User not found" });
                     }
                 }
             });
