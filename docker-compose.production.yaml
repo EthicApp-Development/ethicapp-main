@@ -1,14 +1,11 @@
 # --------------------------------------------------------------------------------------------------
-# DEVELOPMENT docker-compose.
+# PRODUCTION docker-compose.
 # --------------------------------------------------------------------------------------------------
 
 version: "3.9"
 
 networks:
-  ethicapp-network:
-    external: true
-
-
+  default:
 
 secrets:
   jwt_token:
@@ -24,13 +21,16 @@ services:
       NODE_PORT: ${NODE_PORT}
     restart: "no"
     networks:
-      - ethicapp-network
+      default:
     ports:
       - "${NODE_PORT}:${NODE_PORT}"
     secrets:
       - jwt_token
     volumes:
       - ethicapp:/home/app:rw
+    depends_on:
+      postgres:
+        condition: service_healthy
         
   # ---------------------- Nginx ---------------------- #
   nginx:
@@ -45,7 +45,7 @@ services:
       NODE_PORT: ${NODE_PORT}
       NODE_SERVER: node
     networks:
-      - ethicapp-network
+      default:
     volumes:
       - ethicapp:/usr/share/nginx/:rw
     depends_on:
@@ -68,7 +68,7 @@ services:
       PGDATA: /var/lib/postgresql/${POSTGRES_VERSION}/main
     restart: unless-stopped
     networks:
-      - ethicapp-network
+      default:
     healthcheck:
       test: ["CMD-SHELL", "su healthcheckuser -c pg_isready"]
       interval: 20s
