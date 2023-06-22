@@ -16,6 +16,7 @@ This repository contains the main project for EthicApp: a web application (devel
   - [4. Run the environment](#4-run-the-environment)
     - [4.1. Natively](#41-natively)
     - [4.2. Virtualized](#42-virtualized)
+    - [4.3. Production Mode](#43-production-mode)
   - [5. Appendices](#5-appendices)
     - [5.1. NPM developing and debugging scripts](#51-npm-developing-and-debugging-scripts)
     - [5.2. Persistance of PgAdmin (containerized)](#52-persistance-of-pgadmin-containerized)
@@ -105,6 +106,10 @@ docker-compose logs -f $SERVICE_NAME
 For checking which users are available to log-in as in the Node web application, please check [this file](./postgres-db/seeds/01_users.sql).
 
 Note: if you experience any issue while attempting to log-in as any of those users, please run `npm run clear-sessions` (at the root project directory) for preventing previous sessions conflicting with the current runtime.
+
+### 4.3. Production Mode
+
+Please refer to the [PRODUCTION Markdown](PRODUCTION.md) for a detail information on how to run the app on production mode.
 
 ## 5. Appendices
 
