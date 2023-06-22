@@ -118,10 +118,7 @@ body {
 .activities_container {
     min-width: 20em;
     max-width: 80em;
-    margin-top: 2em;
-    margin-bottom: 2em;
-    margin-left:1em;
-    margin-right:1em;
+    margin: 2em 1em;
 }
 
 /* Phase item */
