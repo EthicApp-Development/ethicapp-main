@@ -835,7 +835,7 @@ ng-quill-editor.large .ql-editor{
 }
 
 .logo img{
-    height: 50px;
+    width: 25rem;
 }
 
 .top-bar-tabs{
@@ -1402,4 +1402,10 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     border:1px solid #ddd;
     width: 100%;
     justify-content: space-between;
+}
+
+.logoEthicapp{
+    width: 14rem;
+    height: 5rem;
+    padding: 1rem;
 }
