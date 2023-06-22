@@ -109,7 +109,7 @@ Note: if you experience any issue while attempting to log-in as any of those use
 
 ### 4.3. Production Mode
 
-Please refer to the [PRODUCTION Markdown](PRODUCTION.md) for a detail information on how to run the app on production mode.
+Please refer to the [INSTALL Markdown](INSTALL.md) for a detail information on how to run the app on production mode.
 
 ## 5. Appendices
 
