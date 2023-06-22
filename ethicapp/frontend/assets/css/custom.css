@@ -118,6 +118,10 @@ body {
 .activities_container {
     min-width: 20em;
     max-width: 80em;
+    margin-top: 2em;
+    margin-bottom: 2em;
+    margin-left:1em;
+    margin-right:1em;
 }
 
 /* Phase item */
@@ -181,16 +185,22 @@ body {
     height: 2em;
     padding: 6px 27px;
     transition: 0.3s;
-    background-color: #bbb;
-    border: 1px solid #000;
+    border: 1px solid #ddd;
     font-size: 15px;
     display: flex;
-    justify-content: left;
+    justify-content: center;
     align-items: center;
+    background-color: #ddd;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    margin-right: 1rem;
+    border-bottom: none;
+    color: black;
 }
 
 .tab_cs button:hover {
-    background-color: #ddd;
+    border: 1px solid gray;
+    border-bottom: none;
 }
 
 .btn_selected {
@@ -310,4 +320,10 @@ input:checked + .slider::before {
 
 .error {
     background-color: #ff858581 !important;
+}
+
+.vertical-align {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }

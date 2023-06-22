@@ -22,9 +22,12 @@
             <div class="list-group pad-content">
                 <!--OWN-->
                 <div class="list-group-item" ng-repeat="ses in designs | filter:userSearch" ng-if="dsgnMode==0"> <!--UPDATE IT CORRECTLY-->
-                    <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
-                    <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
-                    <div class="text-right">
+                    <div>
+                        <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
+                        <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
+                    </div>
+                    
+                    <div class="text-right vertical-align">
                         <strong ng-show="ses.locked">LOCKED</strong>
                         <button class="btn btn-primary " ng-click="launchDesign(ses.id, ses.metainfo.title, ses.type)">{{'launchActivity' | lang}}</button>
                         <label class="switch">
@@ -39,9 +42,12 @@
                 </div>
                 <!--PUBLIC-->
                 <div class="list-group-item" ng-repeat="ses in public | filter:userSearch" ng-if="dsgnMode==1"> <!--UPDATE IT CORRECTLY-->
-                    <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
-                    <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
-                    <div class="text-right">
+                    <div>
+                        <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
+                        <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
+                    </div>
+                    
+                    <div class="text-right vertical-align">
                         <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'V')">{{'view' | lang}}</button>
                     </div>
                 </div>
