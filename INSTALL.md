@@ -43,6 +43,12 @@ NOTICE: Ethicapp Node pull and image from [DockerHub](https://hub.docker.com/rep
 
 ## 3. Setting up the environments
 
+Before running any of the production services, you must run initiate the database by running the following command:
+
+```bash
+npm run init-db
+```
+
 ### 3.1. Setting up the production environment
 
 To run the `docker-compose.production.yaml` for just for ethicapp front + backend without the database you must run the following command:
@@ -55,14 +61,6 @@ NOTICE: is important to have de `secrets` folder within the same directory of th
 
 ### 3.2. Setting up the production services environment
 
-Before running the production services yaml you must run the following commands:
-
-```bash
-npm run init-db
-```
-
-This initializes the database, the base data and shared volume necessary to properly run the docker database image.
-
 To run the `docker-compose.production.yaml` for just for the database you must run the following command:
 
 ```bash
@@ -70,14 +68,6 @@ docker-compose -f docker-compose.production.yaml up -d postgres
 ```
 
 ### 3.3. Setting up the production all-in-one environment
-
-Before running the production services yaml you must run the following commands:
-
-```bash
-npm run init-db
-```
-
-This initializes the database the base data and shared volume necessary to properly run the docker database image.
 
 To run the `docker-compose.production.yaml` with all the necessary services to deploy ethicapp in the same machine you must run the following command:
 
