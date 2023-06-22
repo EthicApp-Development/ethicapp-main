@@ -1392,3 +1392,14 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     right: 10px;
     position:absolute;
 }
+
+.list-group-item{
+    position:relative;
+    display:inline-flex;
+    padding:10px 15px;
+    margin-bottom:-1px;
+    background-color:#fff;
+    border:1px solid #ddd;
+    width: 100%;
+    justify-content: space-between;
+}
