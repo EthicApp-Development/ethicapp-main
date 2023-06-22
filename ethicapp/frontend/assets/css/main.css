@@ -129,6 +129,11 @@ a:hover{
     /* height: 24px; */
     background: #ddd;
     color: white;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 9999;
 }
 
 .side-panel{
