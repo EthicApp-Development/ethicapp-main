@@ -14,7 +14,8 @@
     "psql": "./dev-ops/docker-psql.sh",
     "clear-sessions": "rm -f -v ./ethicapp/sessions/*",
     "build-js": "bash ./dev-ops/build-js.sh",
-    "build-css": "bash ./dev-ops/build-css.sh"
+    "build-css": "bash ./dev-ops/build-css.sh",
+    "build-bundles": "npm run build-js && npm run build-css"
 
   },
   "devDependencies": {
