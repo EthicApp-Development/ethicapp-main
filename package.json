@@ -12,7 +12,10 @@
     "pgdump": "./dev-ops/docker-pgdump.sh",
     "pgrestore": "./dev-ops/docker-pgrestore.sh",
     "psql": "./dev-ops/docker-psql.sh",
-    "clear-sessions": "rm -f -v ./ethicapp/sessions/*"
+    "clear-sessions": "rm -f -v ./ethicapp/sessions/*",
+    "build-js": "bash ./dev-ops/build-js.sh",
+    "build-css": "bash ./dev-ops/build-css.sh"
+
   },
   "devDependencies": {
     "eslint": "^8.24.0",

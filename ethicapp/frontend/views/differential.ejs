@@ -72,7 +72,7 @@
             </div>
             <div class="tab tab-text" ng-repeat="df in dfs" ng-class="{active: selectedDF + 1 == df.orden && !showDoc , 'green': !df.dirty && df.select != null}"
                  ng-click="selectDF($index)">
-                <i class="fa fa-question-circle"></i> Pregunta 2 {{df.orden}} <span class="badge bg-red" ng-show="df.c != null && df.c > df.cr">{{df.c - df.cr}}</span>
+                <i class="fa fa-question-circle"></i> Pregunta {{df.orden}} <span class="badge bg-red" ng-show="df.c != null && df.c > df.cr">{{df.c - df.cr}}</span>
             </div>
             <!--<div class="btab"></div>
             <div class="rtab">
