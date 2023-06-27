@@ -5,4 +5,5 @@ sessions/
 .gitignore
 .gitkeep
 Dockerfile
+DockerfileProduction
 .dockerignore

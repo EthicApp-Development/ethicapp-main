@@ -17,7 +17,9 @@ services:
   # ---------------------- Node web app ---------------------- #
   node:
     container_name: "ethicapp"
-    image: ethicapp/stable-2:latest
+    build:
+      context: ethicapp/
+      dockerfile: DockerfileProduction
     environment:
       NODE_ENV: release
       NODE_PORT: ${NODE_PORT}
