@@ -24,8 +24,6 @@ services:
     restart: "no"
     networks:
       default:
-    ports:
-      - "${NODE_PORT}:${NODE_PORT}"
     secrets:
       - jwt_token
       - keys-n-secrets.js
