@@ -1,5 +1,3 @@
-@import 'main.css';
-@import 'custom.css';
 @import 'ngDialog-theme-default.css';
 @import 'nv.d3.min.css';
 @import 'bootstrap.min.css';
@@ -9,5 +7,6 @@
 @import 'introjs.css';
 @import 'custom.css';
 @import 'minimal.css';
+@import 'main.css';
 
 /*# sourceMappingURL=ethicapp-styles.css.map */
