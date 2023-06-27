@@ -84,7 +84,7 @@ To commit and push Docker images to Docker Hub, follow these steps:
 2. Build your Docker image using the docker build command or alternatively use the docker compose up function:
 
    ```bash
-   docker-compose up --build
+    docker-compose up --build
    ```
 
 3. Test the image to ensure its proper functionality and REMOVE the secret files containing sensible information BEFORE committing.
