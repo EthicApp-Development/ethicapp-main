@@ -10,6 +10,8 @@ networks:
 secrets:
   jwt_token:
     file: ./secrets/jwt_token
+  keys-n-secrets.js:
+    file: ./secrets/keys-n-secrets.js
 
 services:
   # ---------------------- Node web app ---------------------- #
@@ -21,6 +23,7 @@ services:
         NODE_VERSION: ${NODE_VERSION}
     secrets:
       - jwt_token
+      - keys-n-secrets.js
     environment:
       NODE_ENV: development
       NODE_PORT: ${NODE_PORT}
@@ -29,8 +32,6 @@ services:
       default:
     ports:
       - "${NODE_PORT}:${NODE_PORT}"
-    volumes:
-      - "./ethicapp:/home/app:rw"
     depends_on:
       postgres:
         condition: service_healthy

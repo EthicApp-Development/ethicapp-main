@@ -10,6 +10,8 @@ networks:
 secrets:
   jwt_token:
     file: ./secrets/jwt_token
+  keys-n-secrets.js:
+    file: ./secrets/keys-n-secrets.js
 
 services:
   # ---------------------- Node web app ---------------------- #
@@ -26,8 +28,9 @@ services:
       - "${NODE_PORT}:${NODE_PORT}"
     secrets:
       - jwt_token
+      - keys-n-secrets.js
     volumes:
-      - ethicapp:/home/app:rw
+      - shared-volume:/home/app:rw
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,7 +50,7 @@ services:
     networks:
       default:
     volumes:
-      - ethicapp:/usr/share/nginx/:rw
+      - shared-volume:/usr/share/nginx/:rw
     depends_on:
       - node
   
@@ -81,4 +84,4 @@ services:
       - "${HOST_DB_VOLUME_PATH}:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"
 
 volumes:
-  ethicapp:
+  shared-volume:
