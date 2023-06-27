@@ -69,6 +69,12 @@ docker-compose -f docker-compose.production.yaml up --detach
 
 This will install all the necessary files to run the Ethicapp on the machine.
 
+If you wish to stop the production images, then run the following command:
+
+```bash
+docker-compose -f docker-compose.production.yaml down --remove-orphans
+```
+
 ## 4. DockerHub
 
 Docker Hub is a cloud-based repository for Docker images. Share, store, and download containerized software packages. Central hub for Docker image distribution.
@@ -83,17 +89,17 @@ To commit and push Docker images to Docker Hub, follow these steps:
 
 2. Build your Docker image using the docker build command or alternatively use the docker compose up function:
 
-   ```bash
-    docker-compose up --build
-   ```
+    ```bash
+      docker-compose build
+    ```
 
-3. Test the image to ensure its proper functionality and REMOVE the secret files containing sensible information BEFORE committing.
+3. Test the image to ensure its proper functionality and REMOVE the secret files containing sensible information and auto generated files BEFORE committing.
 
 4. Commit the ethicapp/node image using the following command:
 
-   ```bash
-    docker commit ethicapp ethicapp/stable-2
-   ```
+    ```bash
+      docker commit ethicapp ethicapp/stable-2
+    ```
 
    you can alternatively add a tag. For example:
 
