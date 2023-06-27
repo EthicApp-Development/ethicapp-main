@@ -64,7 +64,7 @@ npm run init-db
 To run the `docker-compose.production.yaml` with all the necessary services to deploy ethicapp in the same machine you must run the following command:
 
 ```bash
-docker-compose -f docker-compose.production.yaml up -d
+docker-compose -f docker-compose.production.yaml up --detach
 ```
 
 This will install all the necessary files to run the Ethicapp on the machine.
@@ -84,10 +84,12 @@ To commit and push Docker images to Docker Hub, follow these steps:
 2. Build your Docker image using the docker build command or alternatively use the docker compose up function:
 
    ```bash
-   docker-compose up --build --detach
+   docker-compose up --build
    ```
 
-3. Commit the ethicapp/node image using the following command:
+3. Test the image to ensure its proper functionality and REMOVE the secret files containing sensible information BEFORE committing.
+
+4. Commit the ethicapp/node image using the following command:
 
    ```bash
     docker commit ethicapp ethicapp/stable-2
@@ -99,7 +101,7 @@ To commit and push Docker images to Docker Hub, follow these steps:
       docker commit ethicapp ethicapp/stable-2:NameOfTag
     ```
 
-4. Push the image to the DockerHub repository using the following command:
+5. Push the image to the DockerHub repository using the following command:
 
     ```bash
       docker push ethicapp/stable-2
