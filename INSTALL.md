@@ -8,10 +8,8 @@ This file will detail all about the production version of the Ethicapp project. 
     - [1.2. Other dependencies](#12-other-dependencies)
   - [2. Docker Compose Explanations](#2-docker-compose-explanations)
     - [2.1. docker-compose.production.yaml](#21-docker-composeproductionyaml)
-  - [3. Setting up the environments](#3-setting-up-the-environments)
+  - [3. Setting up the environment pre requisites](#3-setting-up-the-environment-pre-requisites)
     - [3.1. Setting up the production environment](#31-setting-up-the-production-environment)
-    - [3.2. Setting up the production services environment](#32-setting-up-the-production-services-environment)
-    - [3.3. Setting up the production all-in-one environment](#33-setting-up-the-production-all-in-one-environment)
   - [4. DockerHub](#4-dockerhub)
     - [4.1. Commit and Push to Docker Hub](#41-commit-and-push-to-docker-hub)
 
@@ -25,7 +23,16 @@ In order to run the project in production mode in your machine, the following so
 
 ### 1.2. Other dependencies
 
-In order to run the `docker-compose.production.yaml` you must have a directory named `secrets` with necessary token and API keys within it. This file must be provided from an official Ethicapp distributor to work.
+In order to run the `docker-compose.production.yaml` you must have a directory named `secrets` with necessary secret tokens for the application to properly run.
+
+You must provide the following files:
+
+- jwt_token
+  - Contains the JWT token for the app to work
+- keys-n-secrets.js
+  - Google Cloud Platform API Key and Secret
+  - Captcha Web API key and Secrets
+  - AWS API key and Secrets
 
 ## 2. Docker Compose Explanations
 
@@ -34,14 +41,17 @@ In order to run the `docker-compose.production.yaml` you must have a directory n
 This file will run the following programs:
 
 - Node
+  - Node.js is a server-side JavaScript runtime environment that allows for efficient, scalable, and event-driven network applications. Serving as the main Backend + Frontend for Ethicapp.
 - Nginx
+  - Nginx is a high-performance web server and reverse proxy server that efficiently handles HTTP, HTTPS, and other protocols, serving as a powerful intermediary between clients and web servers. Serving as a static content provider for Ethicapp's users.
 - Postgres
+  - PostgreSQL is an open-source relational database management system that provides robust data storage and advanced querying capabilities, allowing for efficient management and retrieval of structured data. Serving as Ethicapp's database.
 
 It sets up the necessary software to run Ethicapp. It contains all the necessary software to fully run in production mode. All in the same machine.
 
 NOTICE: Ethicapp Node pull and image from [DockerHub](https://hub.docker.com/repository/docker/ethicapp/stable-2/general) to work. If you wish to update the DockerHub image please refer to the [4. DockerHub](#4-dockerhub) Section
 
-## 3. Setting up the environments
+## 3. Setting up the environment pre requisites
 
 Before running any of the production services, you must run initiate the database by running the following command:
 
@@ -50,24 +60,6 @@ npm run init-db
 ```
 
 ### 3.1. Setting up the production environment
-
-To run the `docker-compose.production.yaml` for just for ethicapp front + backend without the database you must run the following command:
-
-```bash
-docker-compose -f docker-compose.production.yaml up -d node nginx
-```
-
-NOTICE: is important to have de `secrets` folder within the same directory of the docker-compose file or the build will result in an error.
-
-### 3.2. Setting up the production services environment
-
-To run the `docker-compose.production.yaml` for just for the database you must run the following command:
-
-```bash
-docker-compose -f docker-compose.production.yaml up -d postgres
-```
-
-### 3.3. Setting up the production all-in-one environment
 
 To run the `docker-compose.production.yaml` with all the necessary services to deploy ethicapp in the same machine you must run the following command:
 
@@ -80,6 +72,8 @@ This will install all the necessary files to run the Ethicapp on the machine.
 ## 4. DockerHub
 
 Docker Hub is a cloud-based repository for Docker images. Share, store, and download containerized software packages. Central hub for Docker image distribution.
+
+IMPORTANT: Remember to DELETE or NOT COPY secret files to the DockerHub repo, or else the secrets will be publicly to copy and steal.
 
 ### 4.1. Commit and Push to Docker Hub
 
