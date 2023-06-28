@@ -6,10 +6,11 @@ This file will detail all about the production version of the Ethicapp project. 
   - [1. Architecture overview](#1-architecture-overview)
     - [1.1. Runtime dependencies](#11-runtime-dependencies)
     - [1.2. Other dependencies](#12-other-dependencies)
-  - [2. Docker Compose Explanations](#2-docker-compose-explanations)
-    - [2.1. docker-compose.production.yaml](#21-docker-composeproductionyaml)
-  - [3. Setting up the environment pre requisites](#3-setting-up-the-environment-pre-requisites)
-    - [3.1. Setting up the production environment](#31-setting-up-the-production-environment)
+  - [2. Production docker-compose](#2-production-docker-compose)
+  - [3. Build and run](#3-build-and-run)
+    - [3.1. Database](#31-database)
+    - [3.2. Production Docker image](#32-production-docker-image)
+    - [3.3. Launching the environment](#33-launching-the-environment)
   - [4. DockerHub](#4-dockerhub)
     - [4.1. Commit and Push to Docker Hub](#41-commit-and-push-to-docker-hub)
 
@@ -34,60 +35,55 @@ You must provide the following files:
   - Captcha Web API key and Secrets
   - AWS API key and Secrets
 
-## 2. Docker Compose Explanations
+## 2. Production docker-compose
 
-### 2.1. docker-compose.production.yaml
+`docker-compose.production.yaml` declares three services, described as follows (all of them are open-source projects themselves):
 
-This file will run the following programs:
+- Node: a server-side JavaScript runtime environment that allows for efficient, scalable, and event-driven network applications. Serving as the main Backend + Frontend for Ethicapp.
+- Nginx: high-performance web server and reverse proxy server that efficiently handles HTTP, HTTPS, and other protocols, serving as a powerful intermediary between clients and web servers. Serving as a static content provider for Ethicapp's users.
+- Postgres: popular relational database management system that provides robust data storage and advanced querying capabilities, allowing for efficient management and retrieval of structured data. Serving as Ethicapp's database.
 
-- Node
-  - Node.js is a server-side JavaScript runtime environment that allows for efficient, scalable, and event-driven network applications. Serving as the main Backend + Frontend for Ethicapp.
-- Nginx
-  - Nginx is a high-performance web server and reverse proxy server that efficiently handles HTTP, HTTPS, and other protocols, serving as a powerful intermediary between clients and web servers. Serving as a static content provider for Ethicapp's users.
-- Postgres
-  - PostgreSQL is an open-source relational database management system that provides robust data storage and advanced querying capabilities, allowing for efficient management and retrieval of structured data. Serving as Ethicapp's database.
+The service named "node" contains the web application, and uses the EthicApp production image, which is [published at DockerHub](https://hub.docker.com/repository/docker/ethicapp/stable-2/general). In order to update this public image, please refer to [section 4](#4-dockerhub).
 
-It sets up the necessary software to run Ethicapp. It contains all the necessary software to fully run in production mode. All in the same machine.
+## 3. Build and run
 
-NOTICE: Ethicapp Node pull and image from [DockerHub](https://hub.docker.com/repository/docker/ethicapp/stable-2/general) to work. If you wish to update the DockerHub image please refer to the [4. DockerHub](#4-dockerhub) Section
+### 3.1. Database
 
-## 3. Setting up the environment pre requisites
-
-Before running any of the production services, you must run initiate the database by running the following command:
+First, initialize the shared volume for the database, with:
 
 ```bash
 npm run init-db
 ```
 
-### 3.1. Setting up the production environment
+### 3.2. Production Docker image
 
-To run the `docker-compose.production.yaml` with all the necessary services to deploy ethicapp in the same machine you must run the following command:
-
-```bash
-docker-compose -f docker-compose.production.yaml up --detach
-```
-
-This will install all the necessary files to run the Ethicapp on the machine.
-
-If you wish to stop the production images, then run the following command:
+It is important to make sure to pull the latest production image from DockerHub:
 
 ```bash
-docker-compose -f docker-compose.production.yaml down --remove-orphans
+docker pull ethicapp/stable-2:latest
 ```
+
+### 3.3. Launching the environment
+
+In order to run the production environment in your machine, you must use the `-f` flag in order to use the [production docker-compose file](./docker-compose.production.yaml) instead of the [default development one](./docker-compose.yml). The following command will build and run the environment accordingly.
+
+```bash
+docker-compose -f docker-compose.production.yaml up --build --detach
+```
+
+If you previously executed the development docker-compose runtime, the previous command may complain about "orphan" services. For such case, execute `docker-compose down --remove-orphans` and then launch the production environment again.
 
 ## 4. DockerHub
 
-Docker Hub is a cloud-based repository for Docker images. Share, store, and download containerized software packages. Central hub for Docker image distribution.
-
-IMPORTANT: Remember to DELETE or NOT COPY secret files to the DockerHub repo, or else the secrets will be publicly to copy and steal.
+[DockerHub](https://hub.docker.com/) is Docker's cloud-based repository for images. This section explains how to update the production Docker image for EthicApp, which contains (only) the web application in Node.
 
 ### 4.1. Commit and Push to Docker Hub
 
 To commit and push Docker images to Docker Hub, follow these steps:
 
-1. Make sure you have Docker installed and logged in to your Docker Hub account using the docker login command.
+1. Make sure you have Docker installed and logged in to your Docker Hub account using the `docker login` command.
 
-2. Build your Docker image using the docker build command or alternatively use the docker compose up function:
+2. Build your Docker image:
 
     ```bash
       docker-compose build
@@ -95,7 +91,7 @@ To commit and push Docker images to Docker Hub, follow these steps:
 
 3. Test the image to ensure its proper functionality and REMOVE the secret files containing sensible information and auto generated files BEFORE committing.
 
-4. Commit the ethicapp/node image using the following command:
+4. Commit the ethicapp/node image:
 
     ```bash
       docker commit ethicapp ethicapp/stable-2
@@ -107,7 +103,7 @@ To commit and push Docker images to Docker Hub, follow these steps:
       docker commit ethicapp ethicapp/stable-2:NameOfTag
     ```
 
-5. Push the image to the DockerHub repository using the following command:
+5. Push the image to the DockerHub repository:
 
     ```bash
       docker push ethicapp/stable-2
@@ -119,4 +115,4 @@ To commit and push Docker images to Docker Hub, follow these steps:
       docker push ethicapp/stable-2:NameOfTag
     ```
 
-NOTICE: Ensure that you have proper permissions and the correct repository name and tag in the commands.
+NOTICE: Ensure that you have proper permissions and the correct repository name and tag in the mentioned commands.

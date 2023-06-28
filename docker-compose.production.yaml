@@ -16,7 +16,7 @@ secrets:
 services:
   # ---------------------- Node web app ---------------------- #
   node:
-    container_name: "ethicapp"
+    container_name: "ethicapp-node"
     build:
       context: ethicapp/
       dockerfile: DockerfileProduction
