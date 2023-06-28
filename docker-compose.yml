@@ -29,6 +29,9 @@ services:
       default:
     ports:
       - "${NODE_PORT}:${NODE_PORT}"
+    #Highly recommended to comment the volume before renewing the DockerHub image.
+    volumes:
+      - "./ethicapp:/home/app:rw"
     depends_on:
       postgres:
         condition: service_healthy

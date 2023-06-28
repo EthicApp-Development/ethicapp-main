@@ -10,6 +10,7 @@ COPY package.json /home/app
 
 WORKDIR /home/app
 
+#Comment the CMD lines whenever you wish to renew the DockerHub image.
 CMD set -ux \
     && export JWT_SECRET=$(cat /run/secrets/jwt_token) \
     && npm install \

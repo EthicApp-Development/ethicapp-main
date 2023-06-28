@@ -90,6 +90,8 @@ To commit and push Docker images to Docker Hub, follow these steps:
     ```
 
 3. Test the image to ensure its proper functionality and REMOVE the secret files containing sensible information and auto generated files BEFORE committing.
+     - RECOMMENDATION: Due to the fact that in the "docker-compose.yml" file a volume is mounted for ease of development. It is recommended to remove this mount previous to the renewal of the DockerHub image to reduce the risk of pushing unnecessary file within the image. By removing the mount it ensures that the image only has the files that are copied to it (by the COPY function in "Ethicapp/Dockerfile").
+     - RECOMMENDATION: Comment the CMD actions within "Ethicapp/DockerFile" to ensure the npm install is not run and thus unnecessary files such as "node_modules" and "package-lock.json" are not added to the image, thus not being added to DockerHub.
 
 4. Commit the ethicapp/node image:
 
