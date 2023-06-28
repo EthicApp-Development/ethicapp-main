@@ -9,7 +9,7 @@ sessions/
 package-lock.json
 
 Dockerfile
-DockerfileProduction
+production.Dockerfile
 
 .gitignore
 .gitkeep

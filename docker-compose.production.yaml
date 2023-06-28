@@ -19,7 +19,7 @@ services:
     container_name: "ethicapp-node"
     build:
       context: ethicapp/
-      dockerfile: DockerfileProduction
+      dockerfile: production.Dockerfile
     environment:
       NODE_ENV: release
       NODE_PORT: ${NODE_PORT}
