@@ -1,16 +1,11 @@
-ARG NODE_VERSION
-FROM node:${NODE_VERSION}
+FROM ethicapp/stable-2:latest
 
 ARG DEBIAN_FRONTEND=noninteractive
-
-COPY backend /home/app/backend
-COPY frontend /home/app/frontend
-COPY app.js /home/app
-COPY package.json /home/app
 
 WORKDIR /home/app
 
 CMD set -ux \
     && export JWT_SECRET=$(cat /run/secrets/jwt_token) \
+    && cp /run/secrets/keys-n-secrets.js /home/app/backend/config/ \
     && npm install \
     && PORT=${NODE_PORT} npm start
