@@ -1,6 +1,5 @@
-#!/bin/bash
+#!/bin/bash -exu
 
-cd "$(dirname "$0")/../ethicapp/frontend/assets/js" 
+cd "$(dirname "$0")/../ethicapp/frontend/assets/js"
 
 esbuild main.js --bundle --outfile=ethicapp-external.js --minify --watch=forever
-
