@@ -41,10 +41,11 @@ services:
     build:
       context: web-nginx/
     ports:
-      - '${NGINX_PORT}:${NGINX_PORT}'
+      - '${NGINX_OUT_PORT}:${NGINX_IN_PORT}'
     environment:
       NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
-      NGINX_PORT: ${NGINX_PORT}
+      NGINX_OUT_PORT: ${NGINX_OUT_PORT}
+      NGINX_IN_PORT: ${NGINX_IN_PORT}
       NODE_PORT: ${NODE_PORT}
       NODE_SERVER: node
     networks:
