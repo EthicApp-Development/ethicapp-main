@@ -4,6 +4,6 @@ COPY nginx.conf /etc/nginx/templates/nginx.conf.template
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-EXPOSE ${NGINX_PORT}
+EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]

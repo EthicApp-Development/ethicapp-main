@@ -454,7 +454,7 @@ router.post("/resetpassword", (req, res) => {
                             <div style="
                                 text-align: center;
                             ">
-                                <a href="http://localhost:8501/passreset">
+                                <a href="http://localhost:8080/passreset">
                                     <button style="
                                         background-color: #2649EC;
                                         border-color: #102AA0;
@@ -516,7 +516,7 @@ router.post("/resetpassword", (req, res) => {
                             <br>
                             <br>
                             <div style="text-align: center;">
-                                <a href="http://localhost:8501/passreset">
+                                <a href="http://localhost:8080/passreset">
                                     <button style="
                                         background-color: #2649EC;
                                         border-color: #102AA0;
@@ -742,7 +742,7 @@ router.post("/create-multicounts",(req,res)=> {
     <br>
     <br>
     <div style="text-align: center;">
-        <a href="http://localhost:8501/login?rc=5&&tok='+token+'">
+        <a href="http://localhost:8080/login?rc=5&&tok='+token+'">
             <button style="
                 background-color: #2649EC;
                 border-color: #102AA0;
@@ -1291,7 +1291,7 @@ router.post("/accept_institution", (req, res) => {
     <br>
     <br>
     <div style="text-align: center;">
-        <a href="http://localhost:8501/login">
+        <a href="http://localhost:8080/login">
             <button style="
                 background-color: #2649EC;
                 border-color: #102AA0;

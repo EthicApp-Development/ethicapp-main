@@ -78,7 +78,7 @@ This will create a directory at `$HOST_DB_VOLUME_PATH` (see the [DotEnv file](./
 
 ### 4.1. Natively
 
-Head into `ethicapp` and run `npm install` for installing all dependencies. Then, once your Postgres server is up and running with the appropriate data and configuration at `passwords.js` (which is up to you), head into `ethicapp` directory and run the following for starting the web server at the default port `8501`:
+Head into `ethicapp` and run `npm install` for installing all dependencies. Then, once your Postgres server is up and running with the appropriate data and configuration at `passwords.js` (which is up to you), head into `ethicapp` directory and run the following for starting the web server at the default port `8080`:
 
 ```bash
 npm run start
