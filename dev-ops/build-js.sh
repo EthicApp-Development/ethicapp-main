@@ -2,4 +2,4 @@
 
 cd "$(dirname "$0")/../ethicapp/frontend/assets/js"
 
-esbuild main.js --bundle --outfile=ethicapp-external.js --minify --watch=forever
+esbuild main.js --bundle --outfile=assets-bundle.js --minify --watch=forever

@@ -13,6 +13,7 @@ This repository contains the main project for EthicApp: a web application (devel
     - [3.2. "Passwords" file](#32-passwords-file)
     - [3.3. Create docker-compose secret file(s)](#33-create-docker-compose-secret-files)
     - [3.4. Initialize the dockerized database shared volume](#34-initialize-the-dockerized-database-shared-volume)
+    - [3.5. Build static assets](#35-build-static-assets)
   - [4. Run the environment](#4-run-the-environment)
     - [4.1. Natively](#41-natively)
     - [4.2. Virtualized](#42-virtualized)
@@ -50,7 +51,7 @@ Run `npm install`, needed for a few [DevOps](https://about.gitlab.com/topics/dev
 
 ### 3.2. "Passwords" file
 
-Initialize the `passwords.js` file for setting the database connection (among other things) for the Node app:
+Initialize the file with development credential values for the Node web app such as the database connection URI:
 
 ```bash
 npm run init-passwords-js
@@ -72,6 +73,14 @@ npm run init-db
 ```
 
 This will create a directory at `$HOST_DB_VOLUME_PATH` (see the [DotEnv file](./.env)) in your filesystem, containing the preset development database, thus being preserved despite the state of the database container.
+
+### 3.5. Build static assets
+
+Finally, it is mandatory to build the "bundles" for static assets:
+
+```bash
+npm run build-assets
+```
 
 ## 4. Run the environment
 
@@ -120,6 +129,9 @@ The root [`package.json`](./package.json) file contains some useful scripts for 
 | `psql`                   | Quickly run a command-line Postgres client to the containerized development database.                                       |
 | `lint-$LANG`             | For running a lint check for a given `LANG`. Values can be `js`, `html`, `css` or `sql`.                                    |
 | `pgdump` and `pgrestore` | Easily dumping/restoring the containerized database, if desired.                                                            |
+| `build-js`               | Builds asset bundle for static frontend JS files.                                                                           |
+| `build-css`              | Builds asset bundle for static frontend CSS files.                                                                          |
+| `build-assets`           | Runs `build-js` and `build-css` simultaneously.                                                                             |
 
 ### 5.2. Persistance of PgAdmin (containerized)
 

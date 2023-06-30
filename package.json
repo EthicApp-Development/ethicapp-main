@@ -15,7 +15,7 @@
     "clear-sessions": "rm -f -v ./ethicapp/sessions/*",
     "build-js": "./dev-ops/build-js.sh",
     "build-css": "./dev-ops/build-css.sh",
-    "build-bundles": "npm run build-js & npm run build-css"
+    "build-assets": "npm run build-js & npm run build-css"
   },
   "devDependencies": {
     "eslint": "^8.24.0",
