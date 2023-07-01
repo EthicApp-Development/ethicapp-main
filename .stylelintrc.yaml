@@ -10,6 +10,7 @@ ignoreFiles:
   - "ethicapp/frontend/assets/css/bootstrap*.css"
   - "ethicapp/frontend/assets/css/introjs.css"
   - "ethicapp/frontend/assets/css/minimal.css"
+  - "ethicapp/frontend/assets/css/assets-bundle.css"
 rules:
   indentation: 4
   linebreaks: unix

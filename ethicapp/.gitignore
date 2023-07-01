@@ -8,3 +8,8 @@ frontend/assets/uploads/
 sessions/
 
 package-lock.json
+
+# Generated frontend asset bundles
+frontend/assets/css/assets-bundle.css
+frontend/assets/css/assets-bundle.css.map
+frontend/assets/js/assets-bundle.js

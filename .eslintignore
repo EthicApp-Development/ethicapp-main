@@ -1,2 +1,3 @@
 *.min.js
 ethicapp/frontend/assets/libs/*.js
+ethicapp/frontend/assets/js/assets-bundle.js
