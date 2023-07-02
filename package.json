@@ -15,7 +15,7 @@
     "fix-css": "npx stylelint --fix './ethicapp/frontend/assets/css/**/*.css'",
     "fix-sql": "sqlfluff fix --show-lint-violations --force ./postgres-db/",
 
-    "clear-sessions": "rm -f -v ./ethicapp/sessions/*",
+    "clear-sessions": "sudo rm -f -v ./ethicapp/sessions/*",
 
     "pgdump": "./dev-ops/docker-pgdump.sh",
     "pgrestore": "./dev-ops/docker-pgrestore.sh",

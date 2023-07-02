@@ -126,18 +126,18 @@ Please refer to the [INSTALL Markdown](INSTALL.md) for a detail information on h
 
 The root [`package.json`](./package.json) file contains some useful scripts for initialization and/or debugging, which are detailed at the following table (ordered by relevance) and can be easily run with `npm run $Script`.
 
-| Script                   | Description                                                                                                                 |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `init-passwords-js`      | For [section 3.2](#32-passwords-file).                                                                                      |
-| `init-db`                | For [section 3.4](#34-initialize-the-dockerized-database-shared-volume).                                                    |
-| `lint-$LANG`             | For running a lint check for a given `LANG`. Values can be `js`, `html`, `css` or `sql`.                                    |
-| `fix-$LANG`              | Runs automatic formatting fixes for linting rules, given a `LANG`. Values can be `js`, `css` or `sql`.                      |
-| `clear-sessions`         | Deletes all web sessions (from local filesystem). Needed when login gets buggy due database modifications in certain cases. |
-| `psql`                   | Quickly run a command-line Postgres client to the containerized development database.                                       |
-| `pgdump` and `pgrestore` | Easily dumping/restoring the containerized database, if desired.                                                            |
-| `build-js`               | Builds asset bundle for static frontend JS files.                                                                           |
-| `build-css`              | Builds asset bundle for static frontend CSS files.                                                                          |
-| `build-assets`           | Runs `build-js` and `build-css` simultaneously.                                                                             |
+| Script                   | Description                                                                                                                                                                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `init-passwords-js`      | For [section 3.2](#32-passwords-file).                                                                                                                                                                                                                       |
+| `init-db`                | For [section 3.4](#34-initialize-the-dockerized-database-shared-volume).                                                                                                                                                                                     |
+| `lint-$LANG`             | For running a lint check for a given `LANG`. Values can be `js`, `html`, `css` or `sql`.                                                                                                                                                                     |
+| `fix-$LANG`              | Runs automatic formatting fixes for linting rules, given a `LANG`. Values can be `js`, `css` or `sql`.                                                                                                                                                       |
+| `clear-sessions`         | Deletes all web sessions (from local filesystem). Needed when authentication or other features gets buggy in certain cases. See [issue #151](https://github.com/EthicApp-Development/ethicapp-main/issues/151). It does need superuser permissions, somehow. |
+| `psql`                   | Quickly run a command-line Postgres client to the containerized development database.                                                                                                                                                                        |
+| `pgdump` and `pgrestore` | Easily dumping/restoring the containerized database, if desired.                                                                                                                                                                                             |
+| `build-js`               | Builds asset bundle for static frontend JS files.                                                                                                                                                                                                            |
+| `build-css`              | Builds asset bundle for static frontend CSS files.                                                                                                                                                                                                           |
+| `build-assets`           | Runs `build-js` and `build-css` simultaneously.                                                                                                                                                                                                              |
 
 ### 5.2. Persistance of PgAdmin (containerized)
 
