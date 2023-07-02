@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es" ng-app="Select">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>EthicApp</title>
+    <script src="assets/libs/angular.min.js"></script>
+    <script src="assets/libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
+    <script src="assets/libs/angular-timer.min.js"></script>
+    <script src="assets/libs/angular-sanitize.min.js"></script>
+    <script src="assets/libs/socket.min.js"></script>
+    <script src="assets/libs/angular-ui-notification.min.js"></script>
+    <script src="assets/libs/ng-map.min.js"></script>
+    <script src="assets/js/select-ctrl.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="assets/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="assets/css/font-awesome.min.css">
+    <link rel="stylesheet" href="assets/css/angular-ui-notification.min.css">
+    <link rel="stylesheet" href="assets/css/quill-sup.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.9.0-alpha2/katex.min.css">
+    <link rel="stylesheet" href="assets/css/main.css"/>
+</head>
+<body>
+
+<div class="editor-container" ng-controller="SelectController">
+
+    <div class="top-bar-mini cflex">
+        <div class="cf1">
+            <a href="seslist" class="simple-margin-left">
+                <img src="assets/images/logos/logo.png" class="logo-bar">
+            </a>
+        </div>
+        <div class="cf3 grow text-center simple-padding-top hscroll" ng-show="iteration > 0">
+            <span ng-repeat="st in sesStatusses">
+                <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': $index==iteration}">{{st | lang}}</span>
+                <!-- <span ng-hide="$last">→</span> -->
+            </span>
+            <i class="fa fa-angle-right"></i>
+            <!-- <span class="pull-right margin-right-24" ng-show="sesSTime != null">
+                <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
+            </span> -->
+        </div>
+        <div class="cf1 text-right margin-right-8 simple-padding-top">
+            <a href="logout" class="text-white">
+                <i class="fa fa-sign-out fa-2x"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="top-bar top-bar-tabs">
+        <!-- <div class="col-sm-6 full-height simple-padding-top">
+            <strong class="simple-margin-left">{{sesName | limitTo:18}}</strong>
+            <div class="quad" ng-repeat="qs in questions" ng-class="{'yellow': sent[qs.id]}">{{$index + 1}}</div>
+        </div>
+        <div class="col-sm-6">
+            <a href="seslist" class="btn btn-sm btn-default pull-right">{{'logout' | lang}}</a>
+            <a ng-click="showInfo()" class="btn btn-sm btn-default pull-right"><i class="fa fa-question"></i></a>
+            <span class="pull-right boxed" ng-bind="teamstr" style="
+    overflow-x: scroll;
+    max-height: 24px;
+    max-width: 340px;
+"></span>
+            <span class="chip hoverable pull-right" ng-click="changeLang()">
+                {{'langOther' | lang}}
+            </span>
+        </div>-->
+        <div class="qs-tabs" ng-show="iteration > 0">
+            <div class="tab" ng-repeat="qs in questions" ng-class="{active: selectedQs == $index, yellow: sent[qs.id],
+                green: anskey[qs.id] != null && anskey[qs.id].answer == answers[qs.id],
+                red: anskey[qs.id] != null && anskey[qs.id].answer != answers[qs.id]}"
+                 ng-click="selectQuestionTab($index)">
+                {{$index + 1 }}
+            </div>
+        </div>
+    </div>
+
+    <div class="scrollable-container blue">
+        <div class="mid-container qs-content" ng-show="iteration > 0">
+
+            <!-- TEXT AREA -->
+            <div ng-show="questions[selectedQs].text_content != null">
+                <strong>{{'text' | lang}}:</strong>
+                <p class="question-block" ng-bind-html="questions[selectedQs].text_content | trustHtml"></p>
+                <br>
+            </div>
+
+            <div ng-repeat="qs in questions" ng-show="selectedQs == $index">
+                <span ng-bind-html="qs.content | trustHtml" class="question-content"></span>
+
+                <div class="answers">
+                    <div class="ansoption" ng-repeat="x in optLabels" ng-click="!finished && setAnswer(qs,$index)">
+                        <span>{{x}}) </span>
+                        <div class="option" ng-class="{'selected': answers[qs.id]==$index}"></div>
+                        <span ng-bind="qs.options[$index]"></span>
+                    </div>
+                </div>
+
+                <!-- <div class="list-group">
+                    <div class="" ng-repeat="x in optLabels">
+                        <a class="input-group-addon addon-little" ng-bind="x" ng-class="{'bg-green': answers[qs.id]==$index}"
+                           ng-click="!finished && setAnswer(qs,$index)"></a>
+                        <span class="mini" ></span>
+                    </div>
+                </div> -->
+                <!-- <label>{{'comment' | lang}}:</label> -->
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="{{'comment' | lang}}" ng-model="comments[qs.id]" ng-change="qs.dirty = true" ng-disabled="finished || !useComments">
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" ng-disabled="finished || !qs.dirty )" ng-click="sendAnswer(qs)">
+                            <i class="fa fa-check" ng-show="qs.dirty ==false"></i>
+                            <span ng-show="qs.dirty ==false">Enviado</span>
+                            <i class="fa fa-send" ng-show="qs.dirty ||qs.dirty==null"></i>
+                            <span ng-show="qs.dirty || qs.dirty==null ">Por Enviar</span>
+                            
+                        </button>
+                    </span>
+                </div>
+                <div ng-show="useConfidence">
+                    <label>{{'confidenceLevel' | lang}}:</label>
+                    <div class="btn-group btn-group-justified" ng-disabled="finished">
+                        <label class="btn btn-default" ng-repeat="conf in optConfidence" ng-class="{active: confidences[qs.id] == conf}" ng-disabled="finished">
+                            <input ng-disabled="finished" hidden type="radio" name="confidence" ng-model="confidences[qs.id]" ng-value="conf" ng-change="qs.dirty = true"> {{conf}}%
+                        </label>
+                    </div>
+                </div>
+                <br>
+                <table class="table table-condensed table-bordered" ng-show="iteration > 1">
+                    <tr>
+                        <th class="col-sm-2">{{'student' | lang}}</th>
+                        <th class="col-sm-5 text-center">{{'individual' | lang}}</th>
+                        <th class="col-sm-5 text-center" ng-show="iteration > 2">{{'anon' | lang}}</th>
+                    </tr>
+                    <tr ng-repeat="uid in teamUids">
+                        <td>
+                            <span ng-show="team[uid] == null">{{'anon' | lang}} {{uid}}</span>
+                            <span ng-show="team[uid] != null" ng-bind="team[uid]"></span>
+                        </td>
+                        <td class="text-center">
+                            <strong>{{optLabels[ansIter1[qs.id][uid].answer]}}</strong>
+                            <a ng-click="openComment(ansIter1[qs.id][uid].comment)" ng-show="ansIter1[qs.id][uid].comment != null">
+                                <i class="fa fa-comment"></i>
+                            </a>
+                            <!-- <br>
+                            <strong>{{'comment' | lang}}:</strong>
+                            <span ng-bind="ansIter1[qs.id][uid].comment"></span> -->
+                        </td>
+                        <td ng-show="iteration > 2" class="text-center">
+                            <strong>{{optLabels[ansIter2[qs.id][uid].answer]}}</strong>
+                            <a ng-click="openComment(ansIter2[qs.id][uid].comment)" ng-show="ansIter2[qs.id][uid].comment != null">
+                                <i class="fa fa-comment"></i>
+                            </a>
+                            <!-- <br>
+                            <strong>{{'comment' | lang}}:</strong>
+                            <span ng-bind="ansIter2[qs.id][uid].comment"></span> -->
+                        </td>
+                    </tr>
+                </table>
+                <hr>
+                <br>
+                <div ng-if="iteration >= 4">
+                    <strong>{{'correctOption' | lang}}: {{optLabels[anskey[qs.id].answer]}}</strong>
+                    <br>
+                    <strong>{{'answer' | lang}}: </strong><span ng-bind="anskey[qs.id].comment"></span>
+                    <br>
+                    <br>
+                    <hr>
+                    <br>
+                </div>
+                <!--<div class="row">
+                    <div class="col-xs-2">
+                        <button class="btn btn-default" ng-click="prevQuestion()"><i class="fa fa-arrow-left"></i></button>
+                    </div>
+                    <div class="col-xs-8">
+                        <span class="text-danger full-width text-center center-block" ng-bind="bottomMsg"></span>
+                    </div>
+                    <div class="col-xs-2 text-right">
+                        <button class="btn btn-default" ng-click="nextQuestion()"><i class="fa fa-arrow-right"></i></button>
+                    </div>
+                </div>
+            </div>-->
+        </div>
+    </div>
+
+    <div class="splash" ng-if="iteration == 0">
+        <div class="splash-box">
+            <h3><i class="fa fa-clock-o"></i> Sesión en espera</h3>
+            <h5>Espere a que el profesor indique el inicio de la actividad.</h5>
+            <h5>Esta página se recargará automáticamente cuando comience.</h5>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

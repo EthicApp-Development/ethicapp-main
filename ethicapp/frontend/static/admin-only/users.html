@@ -1,0 +1,52 @@
+
+<div ng-controller="instituciones" ng-if="selectedView == 'users'">
+<h3 style="margin-left: 12%;">{{'Institucional_Users' | lang}}</h3> <br>
+
+<button class="btn btn-primary inst" >{{'Import_Users' | lang}}</button><br><br>
+<div >
+    <div class="inst">
+        <div class="tab_cs" ng-init="tab_view=0">
+            <button class="tab_cs" ng-click= "tab_view=0" ng-class="{'btn_selected': tab_view == 0}">
+                {{ 'students' | lang}}
+                </button>
+                <button class="tab_cs" ng-click = "tab_view=1" ng-class="{'btn_selected': tab_view == 1}">
+                {{ 'teachers' | lang}}
+                </button>
+            
+            <input type="text" placeholder="{{ 'filter' | lang}}" class="input-inst" ng-model="UserSearch">
+        </div>
+    </div>
+
+
+    <div class="scrollable-container blue" style="width: 100%;" id="box_alumnos">
+        <div class="mid-container-inst  small-scrollable-container inst" id="container" >
+        <div ng-repeat="user in users | filter:UserSearch" ng-show="tab_view == 0" ng-if="user.role == 'A'"  class="mid-container-inst">
+            <strong>{{user.name}}</strong><br>
+            <a ng-bind="user.mail"></a>
+            <form action="make_prof" method="POST" ng-submit="refreshUsers($event)"><input style="display: none;" value="{{user.mail}}" type="text"  name="mail"><button class=" btn-primary rtab-nb2" ng-click="refreshUsers()">{{ 'make_t' | lang}}</button></form>
+            <button class=" btn-primary rtab-nb2" >{{ 'res_pass' | lang}}</button>
+            {{user.role}}
+        </div>
+        <div ng-repeat="user in users | filter:UserSearch" ng-show="tab_view == 1" ng-if="user.role == 'P'" class="mid-container-inst">
+            <strong>{{user.name}}</strong><br>
+            <a ng-bind="user.mail"></a>
+            <form action="make_alum" method="POST" ng-submit="refreshUsers($event)"><input style="display: none;" value="{{user.mail}}" type="text"  name="mail"> <button class=" btn-primary rtab-nb2" ng-click="refreshUsers()">{{ 'make_s' | lang}}</button></form>
+            <button class=" btn-primary rtab-nb2" >{{ 'res_pass' | lang}}</button>
+            {{user.role}}
+        </div>
+        </div> 
+    </div> 
+    <div class="scrollable-container blue" style="width: 100%; display: none;" id="box_profesor">
+        <div class="mid-container-inst  small-scrollable-container inst" id="container" >
+        <div ng-repeat="user in users | filter:UserSearch" ng-if="user.role == 'P'" class="mid-container-inst">
+            <strong>{{user.name}}</strong><br>
+            <a ng-bind="user.mail"></a>
+            <form action="make_alum" method="POST" ng-submit="refreshUsers($event)"><input style="display: none;" value="{{user.mail}}" type="text"  name="mail"> <button class=" btn-primary rtab-nb2" ng-click="refreshUsers()">{{ 'make_s' | lang}}</button></form>
+            <button class=" btn-primary rtab-nb2" >{{ 'res_pass' | lang}}</button>
+            {{user.role}}
+        </div>
+        </div> 
+    </div> 
+</div>
+</div>
+

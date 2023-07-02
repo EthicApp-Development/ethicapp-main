@@ -1,0 +1,17 @@
+
+
+<div ng-controller="instituciones" ng-if="selectedView == 'institution'"> 
+<h3 style="margin-left: 12%;">{{'Institucional_Users' | lang}}</h3> <br>
+
+<a class="inst"> <strong>{{'Back' | lang}}</strong></a> <br><br>
+<h2 class="inst" style="font: bold;"><strong>{{'Import_Users' | lang}}</strong> </h2>
+<h5 class="inst">{{'Enter_the_users' | lang}}</h5>
+<form method="post" action="create-multicounts">
+    <textarea class="inst mid-container-inst S input-inst" style="resize: none; height: 10em; width: 50em;" name="data" ng-model="textarea"> </textarea> <br>
+    <h10 class="inst">{{'import_phrase1' | lang}}</h10><br>
+    <h10 class="inst"> {{'import_phrase2' | lang}}</h10> <br>
+    <h3 class="inst" style="font: bold;" id="num-usuaios"><strong>{{'Import_number' | lang}}: {{user_amount()}}</strong> </h3>
+    <button class="btn btn-primary inst" style="margin-left: 50%;" >{{'Import_Users' | lang}}</button> 
+</form>
+</div>
+

@@ -4,30 +4,49 @@
 
 [sqlfluff]
 dialect = postgres
+processes = 0
+rules = all
+encoding = utf-8
+sql_file_exts = .sql
+output_line_length = 100
+max_line_length = 100
 
 [sqlfluff:indentation]
+indent_unit = space
+tab_space_size = 4
 indented_joins = false
 indented_using_on = true
 
-[sqlfluff:rules:L003]
+[sqlfluff:rules:layout.indent]
 indent_unit = space
 tab_space_size = 4
 
-[sqlfluff:rules:L010]
-capitalisation_policy = upper
+[sqlfluff:layout:type:comma]
+line_position = trailing
 
-[sqlfluff:rules:L012]
-aliasing = explicit
-
-[sqlfluff:rules:L016]
+[sqlfluff:rules:layout.long_lines]
 indent_unit = space
 max_line_length = 100
 
-[sqlfluff:rules:L019]
-comma_style = trailing
+[sqlfluff:layout:type:alias_expression]
+spacing_before = align
+align_scope = bracketed
+align_within = select_clause
 
-[sqlfluff:rules:L052]
+[sqlfluff:rules:ambiguous.join]
+fully_qualify_join_types = inner
+
+[sqlfluff:rules:convention.select_trailing_comma]
+select_clause_trailing_comma = forbid
+
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = upper
+
+[sqlfluff:rules:aliasing.column]
+aliasing = explicit
+
+[sqlfluff:rules:convention.terminator]
 require_final_semicolon = true
 
-[sqlfluff:rules:L063]
+[sqlfluff:rules:capitalisation.types]
 extended_capitalisation_policy = lower

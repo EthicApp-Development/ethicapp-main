@@ -1,0 +1,16 @@
+backend/config/keys-n-secrets.js
+
+frontend/assets/js/**/*.min.js
+frontend/assets/minjs/**/*.min.js
+
+node_modules/
+frontend/assets/uploads/
+sessions/
+package-lock.json
+
+Dockerfile
+production.Dockerfile
+
+.gitignore
+.gitkeep
+.dockerignore

@@ -1,0 +1,18 @@
+{
+    "Servers": {
+        "1": {
+            "Name": "ethicapp-postgres",
+            "Group": "Servers",
+            "Host": "ethicapp-postgres",
+            "Port": ${POSTGRES_CONN_PORT},
+            "MaintenanceDB": "postgres",
+            "Username": "${POSTGRES_CONN_USER}",
+            "SSLMode": "prefer",
+            "SSLCompression": 0,
+            "Timeout": 10,
+            "UseSSHTunnel": 0,
+            "TunnelPort": "22",
+            "TunnelAuthentication": 0
+        }
+    }
+}
