@@ -33,16 +33,16 @@ When opening the project with `vscode` and its required extensions for this proj
 
 ### 2.1. Project structure
 
-| Directory    | Description                                                                                     |
-| ------------ | ----------------------------------------------------------------------------------------------- |
-| `db_config/` | SQL migrations for setting up the database schema (more details [here](./db_config/README.md)). |
-| `modules/`   | Global JavaScript utility modules.                                                              |
-| `public/`    | Backend source code (JavaScript).                                                               |
-| `routes/`    | Web routing JS scripts.                                                                         |
-| `tests/`     | Automated tests.                                                                                |
-| `views/`     | Frontend source code (Angular.JS).                                                              |
+| Directory    | Description                                                        |
+| ------------ | ------------------------------------------------------------------ |
+| `dev-ops/`   | Shell scripts for automated tasks related to development (DevOps). |
+| `ethicapp/`  | Contains the Node web application.                                 |
+| `pgadmin/`   | Configuration for PgAdmin in development runtime.                  |
+| `web-nginx/` | Configuration for NGINX in production runtime.                     |
 
 ## 3. Required skills
+
+This section details base knowledge needed in order to perform source code contributions (remember that documentation and translation updates, as well as bug reports, are also important contributions, not involving code).
 
 ### 3.1. Overall
 

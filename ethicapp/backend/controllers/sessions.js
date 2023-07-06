@@ -363,7 +363,7 @@ router.post("/upload-design-file", (req, res) => {
                 rpg.param("calc", "path"), rpg.param("post", "dsgnid"), rpg.param("ses", "uid")
             ],
             onStart: (ses, data, calc) => {
-                calc.path = "uploads" + req.files.pdf.file.split("uploads")[1];
+                calc.path = "assets/uploads" + req.files.pdf.file.split("uploads")[1];
             },
             onEnd: () => {
             }

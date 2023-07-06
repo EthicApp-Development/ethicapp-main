@@ -118,6 +118,7 @@ a:hover{
     color: white;
     padding: 2px;
     overflow: hidden;
+    margin-top: 3.5rem;
 }
 
 .top-bar.top-bar-student{
@@ -129,6 +130,11 @@ a:hover{
     /* height: 24px; */
     background: #ddd;
     color: white;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 9999;
 }
 
 .side-panel{
@@ -830,7 +836,7 @@ ng-quill-editor.large .ql-editor{
 }
 
 .logo img{
-    height: 50px;
+    width: 25rem;
 }
 
 .top-bar-tabs{
@@ -1386,4 +1392,21 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 .modal-buttons{
     right: 10px;
     position:absolute;
+}
+
+.list-group-item{
+    position:relative;
+    display:inline-flex;
+    padding:10px 15px;
+    margin-bottom:-1px;
+    background-color:#fff;
+    border:1px solid #ddd;
+    width: 100%;
+    justify-content: space-between;
+}
+
+.logoEthicapp{
+    width: 14rem;
+    height: 5rem;
+    padding: 1rem;
 }
