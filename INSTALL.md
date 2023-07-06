@@ -37,13 +37,13 @@ You must provide the following files:
 
 ## 2. Production docker-compose
 
-`docker-compose.production.yaml` declares three services, described as follows (all of them are open-source projects themselves):
+The file [`docker-compose.production.yaml`](./docker-compose.production.yaml) declares three services, which are based on open source projects that are described as follows:
 
-- Node: a server-side JavaScript runtime environment that allows for efficient, scalable, and event-driven network applications. Serving as the main Backend + Frontend for Ethicapp.
-- Nginx: high-performance web server and reverse proxy server that efficiently handles HTTP, HTTPS, and other protocols, serving as a powerful intermediary between clients and web servers. Serving as a static content provider for Ethicapp's users.
-- Postgres: popular relational database management system that provides robust data storage and advanced querying capabilities, allowing for efficient management and retrieval of structured data. Serving as Ethicapp's database.
+- NodeJS: a server-side JavaScript runtime environment that allows for efficient, scalable, and event-driven network applications.
+- Nginx proxy: high-performance web server and reverse proxy server that efficiently handles HTTP, HTTPS, and other protocols, serving as a powerful intermediary between clients and web servers. Serving as a static assets provider for EthicApp.
+- PostgreSQL: popular relational database management system that provides robust data storage and advanced querying capabilities, allowing for efficient management and retrieval of structured data.
 
-The service named "node" contains the web application, and uses the EthicApp production image, which is [published at DockerHub](https://hub.docker.com/repository/docker/ethicapp/stable-2/general). In order to update this public image, please refer to [section 4](#4-dockerhub).
+The service named "node" contains the web application, which uses the EthicApp production image, which is [published at DockerHub](https://hub.docker.com/repository/docker/ethicapp/stable-2/general). In order to update this public image, please refer to [section 4](#4-dockerhub).
 
 ## 3. Build and run
 

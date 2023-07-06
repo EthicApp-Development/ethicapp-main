@@ -5,7 +5,7 @@ This repository contains the main project for EthicApp: a web application (devel
 - [EthicApp](#ethicapp)
   - [1. Developing](#1-developing)
   - [2. Runtime Dependencies](#2-runtime-dependencies)
-    - [2.1. Native](#211-native)
+    - [2.1. Native](#21-native)
     - [2.2. Virtualized](#22-virtualized)
   - [3. Setting up the environment](#3-setting-up-the-environment)
     - [3.1. Install root Node dependencies](#31-install-root-node-dependencies)
@@ -30,14 +30,14 @@ Please head to the [CONTRIBUTING document](./CONTRIBUTING.md) and review our [co
 
 ## 2. Runtime Dependencies
 
-## 2.1. Native
+### 2.1. Native
 
 In order to run the project *natively* in your computer, the following software is required:
 
 - Node.JS (with `npm`).
 - PostgreSQL 10.X.
 
-## 2.2. Virtualized
+### 2.2. Virtualized
 
 `docker-compose` (from [Docker](https://www.docker.com/)) amd [`npm`](https://www.npmjs.com/package/npm) (due some setup tasks needed prior Docker shared volume).
 
