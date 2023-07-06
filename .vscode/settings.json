@@ -76,6 +76,8 @@
         "editor.tabSize": 4,
         "editor.formatOnSave": true // linting has to be enforced
     },
+
+    // Avoiding project words to be marked as typos by the "Code Spell Chcker" vscode extension
     "cSpell.words": [
         "ethicapp"
     ]
