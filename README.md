@@ -4,23 +4,22 @@ This repository contains the main project for EthicApp: a web application (devel
 
 - [EthicApp](#ethicapp)
   - [1. Developing](#1-developing)
-  - [2. Architecture overview](#2-architecture-overview)
-    - [2.1. Runtime dependencies](#21-runtime-dependencies)
-      - [2.1.1. Natively](#211-natively)
-      - [2.1.2. Virtualized](#212-virtualized)
+  - [2. Runtime Dependencies](#2-runtime-dependencies)
+    - [2.1. Native](#211-native)
+    - [2.2. Virtualized](#22-virtualized)
   - [3. Setting up the environment](#3-setting-up-the-environment)
     - [3.1. Install root Node dependencies](#31-install-root-node-dependencies)
     - [3.2. "Passwords" file](#32-passwords-file)
     - [3.3. Create docker-compose secret file(s)](#33-create-docker-compose-secret-files)
     - [3.4. Initialize the dockerized database shared volume](#34-initialize-the-dockerized-database-shared-volume)
     - [3.5. Build static assets](#35-build-static-assets)
-  - [4. Run the environment](#4-run-the-environment)
-    - [4.1. Natively](#41-natively)
-    - [4.2. Virtualized](#42-virtualized)
-    - [4.3. Production Mode](#43-production-mode)
+  - [4. Deploy EthicApp](#4-deploy-ethicapp)
+    - [4.1. Native Development Environment](#41-native-development-environment)
+    - [4.2. Virtualized Development Environment](#42-virtualized-development-environment)
+    - [4.3. Production Install](#43-production-install)
   - [5. Appendices](#5-appendices)
     - [5.1. NPM developing and debugging scripts](#51-npm-developing-and-debugging-scripts)
-    - [5.2. Persistance of PgAdmin (containerized)](#52-persistance-of-pgadmin-containerized)
+    - [5.2. Persistence of PgAdmin (containerized)](#52-persistence-of-pgadmin-containerized)
     - [5.3. For non-Linux developers](#53-for-non-linux-developers)
       - [5.3.1. MacOS](#531-macos)
       - [5.3.2. Windows](#532-windows)
@@ -29,18 +28,16 @@ This repository contains the main project for EthicApp: a web application (devel
 
 Please head to the [CONTRIBUTING document](./CONTRIBUTING.md) and review our [communication channels](https://github.com/EthicApp-Development/organization/blob/master/CONTRIBUTING.md#1-communication-channels) for the project. The build and run documentation is intended for **Linux-based systems**, for this project. Please consider having a machine with a Linux-based OS (or with a Linux-friendly console such as `bash`).
 
-## 2. Architecture overview
+## 2. Runtime Dependencies
 
-### 2.1. Runtime dependencies
-
-#### 2.1.1. Natively
+## 2.1. Native
 
 In order to run the project *natively* in your computer, the following software is required:
 
 - Node.JS (with `npm`).
 - PostgreSQL 10.X.
 
-#### 2.1.2. Virtualized
+## 2.2. Virtualized
 
 `docker-compose` (from [Docker](https://www.docker.com/)) amd [`npm`](https://www.npmjs.com/package/npm) (due some setup tasks needed prior Docker shared volume).
 
@@ -83,9 +80,9 @@ Finally, it is mandatory to build the "bundles" for static assets:
 npm run build-assets
 ```
 
-## 4. Run the environment
+## 4. Deploy EthicApp
 
-### 4.1. Natively
+### 4.1. Native Development Environment
 
 Head into `ethicapp` and run `npm install` for installing all dependencies. Then, once your Postgres server is up and running with the appropriate data and configuration at `passwords.js` (which is up to you), head into `ethicapp` directory and run the following for starting the web server at the default port `8080`:
 
@@ -95,7 +92,7 @@ npm run start
 
 Note: you can change the web server port by setting a custom `PORT` variable for the command, e.g. `PORT=11500 npm run start`.
 
-### 4.2. Virtualized
+### 4.2. Virtualized Development Environment
 
 This is the recommended (and most documented) way to run the environment.
 
@@ -116,7 +113,7 @@ For checking which users are available to log-in as in the Node web application,
 
 Note: if you experience any issue while attempting to log-in as any of those users, please run `npm run clear-sessions` (at the root project directory) for preventing previous sessions conflicting with the current runtime.
 
-### 4.3. Production Mode
+### 4.3. Production Install
 
 Please refer to the [INSTALL Markdown](INSTALL.md) for a detail information on how to run the app on production mode.
 
@@ -139,7 +136,7 @@ The root [`package.json`](./package.json) file contains some useful scripts for 
 | `build-css`              | Builds asset bundle for static frontend CSS files.                                                                                                                                                                                                           |
 | `build-assets`           | Runs `build-js` and `build-css` simultaneously.                                                                                                                                                                                                              |
 
-### 5.2. Persistance of PgAdmin (containerized)
+### 5.2. Persistence of PgAdmin (containerized)
 
 If you inspect the [`docker-compose`](./docker-compose.yml) file, you will note that the database (and PgAdmin) use the `unless-stopped` restart policy. This means that those services will keep running unless `docker-compose down` is executed. Therefore, it is recommended to, when running the environment for the first time, first starting those services in detached mode:
 
