@@ -96,13 +96,13 @@ To commit and push Docker images to Docker Hub, follow these steps:
 4. Commit the ethicapp/node image:
 
     ```bash
-      docker commit ethicapp ethicapp/stable-2
+      docker commit ethicapp-node ethicapp/stable-2
     ```
 
    you can alternatively add a tag. For example:
 
     ```bash
-      docker commit ethicapp ethicapp/stable-2:NameOfTag
+      docker commit ethicapp-node ethicapp/stable-2:NameOfTag
     ```
 
 5. Push the image to the DockerHub repository:
