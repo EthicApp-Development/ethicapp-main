@@ -29,7 +29,7 @@ let app = express();
 //express asset versions
 var assetPath = path.join(__dirname, '/frontend/assets');
 app.use(express.static(assetPath));
-app.use(assetVersions('/', assetPath));
+app.use(assetVersions('/assets', assetPath));
 
 
 
