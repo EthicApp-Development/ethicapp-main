@@ -1,9 +1,10 @@
 // TODO: Testing
 module.exports.verifySession = (req, res, next) => {
-    if (req.isAuthenticated()) {
-        return next();
+    if (req.session.uid != null) {
+        next();
+    } else {
+        res.redirect("login");
     }
-    res.redirect("/login");
 };
 
 // TODO: Extend to verify user.type (S, P or A)
