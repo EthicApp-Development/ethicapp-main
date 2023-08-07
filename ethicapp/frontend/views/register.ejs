@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css" />
     <script src="assets/libs/angular.min.js"></script>
     <script src="assets/libs/angular-nvd3.min.js"></script>
+    <script src="assets/libs/ngDialog.min.js"></script>
     <script type="text/javascript" src="assets/libs/ng-quill.min.js"></script>
     <script src="assets/js/StagesController.js"></script>
     <script src="assets/js/admin-ctrl.js"></script>
@@ -25,7 +26,7 @@
   <body ng-controller="no_account">
     <div class="form-register panel panel-default">
       <div class="row logo" style="margin-top:-.5em">
-        <img src="assets/images/logos/ethicapp-logo.svg" class="logo" alt="EthicApp" />
+        <img src="assets/images/logos/ethicapp-logo.png" alt="Logo">
       </div>
       <div class="row" style="margin-top:-2em">
         <form action="#" class="form-horizontal">
@@ -96,7 +97,7 @@
           </div>
           <div class="form-group">
             <div class="col-sm-2">
-              <label>{{ "email" | lang }}:</label>
+              <label>{{ "email" | lang }}</label>
             </div>
             <div class="col-sm-10">
               <input type="email" class="form-control" name="mail" required />
