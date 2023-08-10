@@ -9,7 +9,7 @@ let FileStore = require("session-file-store")(session);
 let busboy = require("express-busboy");
 let sss = require("simple-stats-server");
 let json2xls = require("json2xls");
-let assetVersions = require('express-asset-versions');
+let assetVersions = require("express-asset-versions");
 
 let index = require("./backend/controllers/index");
 let users = require("./backend/controllers/users");
@@ -27,9 +27,9 @@ require("./backend/controllers/passport-setup");
 let app = express();
 
 //express asset versions
-var assetPath = path.join(__dirname, '/frontend/assets');
+var assetPath = path.join(__dirname, "/frontend/assets");
 app.use(express.static(assetPath));
-app.use(assetVersions('/assets', assetPath));
+app.use(assetVersions("/assets", assetPath));
 
 
 
