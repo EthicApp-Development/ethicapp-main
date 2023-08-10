@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>EthicApp</title>
-    <link rel="stylesheet" href="assets/css/assets-bundle.css">
     
     <script src="assets/libs/angular.min.js"></script>
     <script src="assets/libs/angular-nvd3.min.js"></script>
@@ -12,7 +11,9 @@
     <script src="assets/js/StagesController.js"></script>
     <script src="assets/js/admin-ctrl.js"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="assets/libs/ngDialog.min.js"></script><script src="<%= asset('/assets/js/assets-bundle.js') %>"></script>
+    <script src="assets/libs/ngDialog.min.js"></script>
+    <script src="<%= asset('/js/assets-bundle.js') %>"></script>
+    <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
     
     
   </head>
