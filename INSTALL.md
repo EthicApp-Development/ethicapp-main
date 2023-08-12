@@ -79,7 +79,13 @@ If you previously executed the development docker-compose runtime, the previous 
 
 ### 4.1. Commit and Push to Docker Hub
 
-To commit and push Docker images to Docker Hub, follow these steps:
+To quickly update the DockerHub image run the following script:
+
+  ```bash
+    npm run build-and-push
+  ```
+
+Alternatively, To commit and push Docker images to Docker Hub, follow these steps:
 
 1. Make sure you have Docker installed and logged in to your Docker Hub account using the `docker login` command.
 
