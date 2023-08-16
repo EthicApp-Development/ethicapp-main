@@ -20,6 +20,7 @@
       async
       defer
     ></script>
+    <script src="assets/js/apiParams.js"></script>
     <script src="<%= asset('/js/assets-bundle.js') %>"></script>
     <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
   </head>
@@ -131,7 +132,7 @@
             <div
               class="g-recaptcha"
               id="captcha"
-              data-sitekey="6LcGAKUdAAAAAAw_3EmC7ViIPclVDON_Gc5o4Uay"
+              data-sitekey="{{ apiParams.reCaptchaSiteKey }}"
               data-type="image"></div>
           </div>
           <div class="form-group text-center">
@@ -235,7 +236,7 @@
             <div
               class="g-recaptcha"
               id="captcha2"
-              data-sitekey="6LcGAKUdAAAAAAw_3EmC7ViIPclVDON_Gc5o4Uay"
+              data-sitekey="{{ apiParams.reCaptchaSiteKey }}"
               data-type="image"
             ></div>
           </div>
@@ -295,11 +296,13 @@
 <script type="text/javascript">
   var onloadCallback = function () {
     grecaptcha.render("captcha", {
-      sitekey: "6LcGAKUdAAAAAAw_3EmC7ViIPclVDON_Gc5o4Uay",
+      sitekey: apiParams.reCaptchaSiteKey,
     });
     grecaptcha.render("captcha2", {
-      sitekey: "6LcGAKUdAAAAAAw_3EmC7ViIPclVDON_Gc5o4Uay",
+      sitekey: apiParams.reCaptchaSiteKey,
     });
   };
 </script>
+
+
 
