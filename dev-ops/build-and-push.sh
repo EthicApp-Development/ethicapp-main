@@ -4,7 +4,7 @@
 # --------------------------------------------------------------------------------------------------
 
 # Build and tag the Docker image
-docker-compose -f docker-compose.imageRenewal.yml up --build --detach
+docker-compose -f docker-compose-image-renewal.yml up --build --detach
 
 # commit the image for Docker Hub
 docker commit ethicapp-node ethicapp/stable-2

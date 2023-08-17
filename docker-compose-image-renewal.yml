@@ -13,11 +13,11 @@ services:
     container_name: "ethicapp-node"
     build:
       context: ethicapp/
-      dockerfile: imageRenewal.Dockerfile
+      dockerfile: image-renewal.Dockerfile
       args:
         NODE_VERSION: ${NODE_VERSION}
     environment:
-      NODE_ENV: development
+      NODE_ENV: release
       NODE_PORT: ${NODE_PORT}
     restart: "no"
     networks:
