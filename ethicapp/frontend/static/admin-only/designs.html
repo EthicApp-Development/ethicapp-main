@@ -3,6 +3,9 @@
 <a ng-click="selectView('')" >{{'back'|lang}}</a>
 <br>
 <h2>{{'actDesigns'|lang}}</h2>
+<button class="btn btn-primary" ng-click="selectView('newDesign')"
+    style="margin-bottom: 2rem; margin-top: 1rem;">{{'createDesign' | lang}}</button>
+<p style="margin-bottom: 2rem;">{{'designContext' | lang}}</p>
 <div ng-controller ="BrowseDesignsController">
     <div class="tab_cs" ng-init="dsgnMode= tab">
         <button class="tab_cs" ng-click= "dsgnMode=0;getDesigns()" ng-class="{'btn_selected': dsgnMode == 0}">

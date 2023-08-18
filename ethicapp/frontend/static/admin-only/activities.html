@@ -12,7 +12,7 @@
             Archivadas
         </button>
         <div style="float: left;display: flex;justify-content: left;align-items: center;"> 
-            <input class="form-control text-center" type="text" placeholder="{{'search'|lang}}" ng-model="userSearch" style="height: 2em;">
+            <input class="form-control text-center" type="text" placeholder="{{'searchTitle'|lang}}" ng-model="userSearch" style="height: 2em;">
         </div>
         
     </div>
@@ -27,8 +27,8 @@
                     <p class="list-group-item-text">{{'code' | lang}}: {{ses.code}}</p>
                 </div>
                 <div class="text-right vertical-align">
-                    <button class="btn btn-default" ng-click="createCopy(ses)"></button>
-                        <i class="fa fa-copy"></i>
+                    <button class="btn btn-default" ng-click="createCopy(ses)" title="{{'copy'|lang}}"><i class="fa fa-copy"></i></button>
+                        
                     <button class="btn btn-primary " ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
                     <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
                 </div>
