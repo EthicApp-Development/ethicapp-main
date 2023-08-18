@@ -286,7 +286,14 @@
 	"knowledgeType heterg": "Knowledge Type Heterogeneous",
 	"semantic_differential": "Semantic Differentials",
 	"ranking_activity": "Ranking Activity",
-	"studentsFinish": "Students have answered."
+	"studentsFinish": "Students have answered.",
+	"currentActivity": "Current Activity",
+	"end": "End",
+	"showDesign": "Show design",
+	"currentTab": "Current",
+	"finishedTab": "Finished",
+	"giveDesignLaunch": "Give a description to the activity",
+	"chooseDesignLaunch": "Choose a design for the activity to launch"
 }
 
 
