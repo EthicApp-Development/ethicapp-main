@@ -1,9 +1,10 @@
 "use strict";
 
 var adpp = angular.module("Admin", [
-    "ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill", "tableSort",
+    "api-params","ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill", "tableSort",
     "btford.socket-io", "ngRoute", "checklist-model", "ngDialog"]
 );
+
 
 var DASHBOARD_AUTOREALOD = window.location.hostname.indexOf("fen") != -1;
 var DASHBOARD_AUTOREALOD_TIME = 15;
@@ -3574,8 +3575,11 @@ adpp.controller("instituciones",["$scope","$http",function($scope,$http){
 }]);
 
 
-adpp.controller("no_account",["$scope","$http",function($scope,$http){
+adpp.controller("no_account",["$scope","$http", "apiParams", function($scope, $http, apiParams){
     var self = $scope;
+
+    self.reCaptchaSiteKey = apiParams.reCaptchaSiteKey;
+
     const lang = navigator.language;
     if(lang[0] == "e" && lang[1] == "s"){
         self.lang = "ES_CL/spanish";

@@ -20,7 +20,6 @@
       async
       defer
     ></script>
-    <script src="assets/js/apiParams.js"></script>
     <script src="<%= asset('/js/assets-bundle.js') %>"></script>
     <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
   </head>
@@ -33,7 +32,7 @@
         <form action="#" class="form-horizontal">
           <div class="form-group">
             <div class="col-sm-12 text-center">
-              <p>{{ "accounttype" | lang }}</p>
+              <p>{{ "accounttype" | lang }} {{key}}</p>
             </div>            
             <div class="col-sm-12 text-center">
               <input
@@ -132,7 +131,7 @@
             <div
               class="g-recaptcha"
               id="captcha"
-              data-sitekey="{{ apiParams.reCaptchaSiteKey }}"
+              data-sitekey="{{ reCaptchaSiteKey }}"
               data-type="image"></div>
           </div>
           <div class="form-group text-center">
@@ -236,7 +235,7 @@
             <div
               class="g-recaptcha"
               id="captcha2"
-              data-sitekey="{{ apiParams.reCaptchaSiteKey }}"
+              data-sitekey="{{ reCaptchaSiteKey }}"
               data-type="image"
             ></div>
           </div>
@@ -295,6 +294,8 @@
 
 <script type="text/javascript">
   var onloadCallback = function () {
+    var apiParams = angular.injector(['api-params']).get('apiParams');
+
     grecaptcha.render("captcha", {
       sitekey: apiParams.reCaptchaSiteKey,
     });
@@ -303,6 +304,8 @@
     });
   };
 </script>
+
+
 
 
 
