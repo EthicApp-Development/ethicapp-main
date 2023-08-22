@@ -1,14 +1,16 @@
 <div ng-controller="instituciones" ng-if="selectedView == 'profile'">
-    <div>
-        <img src="assets/images/assorted/blanco.jpg" alt="No Carga" class=""
-            style="border: 5px solid #555; max-width: 100px; max-height: 100px;">
-        <strong style="font-size: 25px;">{{ username }} </strong>
-        <h3 ng-if="role == 'A'">{{'student' | lang}} </h3>
-        <h3 ng-if="role == 'P'">{{'teacher' | lang}} </h3>
-        <h3 ng-if="role == 'I'">{{'institution' | lang}} </h3>
 
-        <br><br>
+    <div class="profile">
+        <img src="assets/images/assorted/blanco.jpg" alt="No Carga" class="profile-pic">
+        <div class="profile-info">
+            <strong class="username">{{ username }}</strong>
+            <h3 ng-if="role == 'A'" class="role">{{ 'student' | lang }}</h3>
+            <h3 ng-if="role == 'P'" class="role">{{ 'teacher' | lang }}</h3>
+            <h3 ng-if="role == 'I'" class="role">{{ 'institution' | lang }}</h3>
+        </div>
     </div>
+
+
     <div>
         <form action="changepassword" method="post">
             <input name="mail" type="hidden" value="{{mail}}" class="form-control profile-input">

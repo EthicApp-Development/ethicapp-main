@@ -3,55 +3,85 @@
 <p>Escoge el diseño de actividad que desees lanzar.</p>
 <br>
 <div ng-controller="GroupController">
-    <div ng-controller="ActivityController"  ng-if="selectedView=='launchActivity'">
-        <div ng-controller ="BrowseDesignsController">
-            <div ng-init="setValues()" ng-show="designSelected() == null">
-                <div clas="col-lg-1">
-                    <input class="form-control text-center" type="text" placeholder="{{'search'|lang}}" ng-model="userSearch" style="height: 2em;">
-                </div>
-                <div class="container" style="overflow: scroll; max-height: 20em; min-height: 10em;">
-                    <div class="list-group-item dsgn" ng-repeat="ses in designs | filter:userSearch " 
-                    ng-click="designValues(ses.id, ses.metainfo.title, ses.type)" ng-class="{'dsgn_sel': dsgnid == ses.id}"> <!--UPDATE IT CORRECTLY-->
-                        <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
-                        <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
+    <div class="launchActivity-wrapper">
+        <div ng-controller="ActivityController" ng-if="selectedView=='launchActivity'" class="launchActivityDiv">
+            <div ng-controller="BrowseDesignsController">
+                <div ng-init="setValues()" ng-show="designSelected() == null">
+                    <div clas="col-lg-1">
+                        <input class="form-control text-center" type="text" placeholder="{{'search'|lang}}"
+                            ng-model="userSearch">
                     </div>
-                </div>
-            </div>
-            <div ng-show="designSelected() != null">
-                <div class="container" style="overflow: scroll; max-height: 20em; min-height: 10em;">
-                    <div class="list-group-item dsgn" ng-repeat="ses in designs | filter:designSelected()" 
-                    ng-click="designValues(ses.id, ses.metainfo.title, ses.type)" ng-class="{'dsgn_sel': dsgnid == ses.id}"> <!--UPDATE IT CORRECTLY-->
-                        <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
-                        <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
-                    </div>
-                </div>
-            </div>
-            <br>
-            <p>Dale una descripcion a la actividad</p>
-            <form ng-submit="createSession(dsgntitle,descr, dsgntype, dsgnid)">
-                <div class="row">
-                    <div class="col-lg-6">
-                        <input type="text" class="form-control" ng-model="descr" required>
-                    </div>
-                </div>
-                <div ng-show="error"> 
-                    <div class="row">
-                        <div class="col-lg-6">
-                            <h4 style="color:red; text-align: center; "><strong>El diseño contiene valores no válidos, por favor editar antes de utilizarlo.</strong></h4>
+                    <div class="container launchActivityContainer">
+                        <div class="list-group-item dsgn" ng-repeat="ses in designs | filter:userSearch "
+                            ng-click="designValues(ses.id, ses.metainfo.title, ses.type)"
+                            ng-class="{'dsgn_sel': dsgnid == ses.id}"> <!--UPDATE IT CORRECTLY-->
+                            <div>
+                                <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
+                                <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date |
+                                    date}}</p>
+                            </div>
+
                         </div>
                     </div>
                 </div>
-                <div class="row" >
-                    <div class="col-lg-6">
-                        <button class="btn btn-primary" ng-disabled="dsgnid == null">Lanzar actividad</button>
+                <div ng-show="designSelected() != null">
+                    <div class="container launchActivityContainer">
+                        <div class="list-group-item dsgn" ng-repeat="ses in designs | filter:designSelected()"
+                            ng-click="designValues(ses.id, ses.metainfo.title, ses.type)"
+                            ng-class="{'dsgn_sel': dsgnid == ses.id}"> <!--UPDATE IT CORRECTLY-->
+                            <div>
+                                <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
+                                <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date |
+                                    date}}</p>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
-            </form>
-            <div ng-if="selectedSes.code != null">
-                <div style="background-color: gray; height: 15em; width: 30em;">
-                    <strong>{{selectedSes.code}}</strong>
+                <br>
+                <p>Dale una descripcion a la actividad</p>
+                <form ng-submit="createSession(dsgntitle,descr, dsgntype, dsgnid)">
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <input type="text" class="form-control launchActivityInput" ng-model="descr" required>
+                        </div>
+                    </div>
+                    <div ng-show="error">
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <h4 style="color:red; text-align: center; "><strong>El diseño contiene valores no
+                                        válidos, por
+                                        favor editar antes de utilizarlo.</strong></h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <button class="btn btn-primary" ng-disabled="dsgnid == null">Lanzar actividad</button>
+                        </div>
+                    </div>
+                </form>
+                <div ng-if="selectedSes.code != null">
+                    <div style="background-color: gray; height: 15em; width: 30em;">
+                        <strong>{{selectedSes.code}}</strong>
+                    </div>
                 </div>
             </div>
         </div>
+        <div class="help_panel">
+            <img src="../../assets/images/iconsets/exclamation-mark.png" alt="signoExclamacion" class="exclamation-mark-image">
+            <div class="help-container">
+                <p class="help-paragraph">
+                    Puedes lanzar un diseño de actividad todas las veces que requieras.
+                </p>
+                <p class="help-paragraph">
+                    Cuando un diseño es lanzado, EthicApp genera un código de acceso que puedes entregar a tus estudiantes para unirse a participar.
+                </p>
+            </div>
+        
+        </div>
+        
     </div>
+    
+
 </div>
