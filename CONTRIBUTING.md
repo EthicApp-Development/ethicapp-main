@@ -23,7 +23,7 @@
 
 ## 1. Getting started
 
-If you intent to contribute (thank you), after reviewing this file, please check the [organization repo](https://github.com/EthicApp-Development/organization) for detailed information about coding styles, git guidelines and governance, as well as a more detailed description of the project and its goals. Head for issues labeled `good-first-issue` to start your first contributions.
+If you intent to contribute (thank you), after reviewing this file, please check the [organization repo](https://github.com/EthicApp-Development/organization) for detailed information about coding styles, git guidelines and governance, as well as a more detailed description of the project and its goals. Head for issues labeled `enhancement` to start your first contributions or raise an issue of your own interest that might prove useful to the overall project.
 
 When opening the project with `vscode` and its required extensions for this project (see [section 6](#6-required-software)), the [workspace settings](./.vscode/settings.json) will load and your IDE will be ready for development.
 
@@ -42,7 +42,15 @@ When opening the project with `vscode` and its required extensions for this proj
 
 ## 3. Required skills
 
-This section details base knowledge needed in order to perform source code contributions (remember that documentation and translation updates, as well as bug reports, are also important contributions, not involving code).
+In order to work in the project you should be familiar with the following:
+
+- [JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Language_overview)
+- [HTML](https://developer.mozilla.org/en-US/docs/Learn/HTML/Introduction_to_HTML)
+- [CSS](https://developer.mozilla.org/en-US/docs/Learn/CSS/First_steps)
+- [AngularJS](https://angularjs.org/)
+- [NodeJS](https://nodejs.org/en)
+
+Knowledge of (Docker)[https://www.docker.com/] and (PostgreSQL)[https://www.postgresql.org/] could be helpful, but not required
 
 ### 3.1. Overall
 
@@ -76,7 +84,7 @@ The official IDE for this project is [Visual Studio Code](https://code.visualstu
 
 - Git.
 - Node.JS.
-- Linux, or `sh` script-capable operating system, e.g. Windows with [WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
+- Linux, or `sh` script-capable operating system, e.g. Windows with [WSL](https://learn.microsoft.com/en-us/windows/wsl/install). For more information on this head to the appendices of the [following document](https://github.com/EthicApp-Development/ethicapp-main/blob/master/README.md)
 
 ### 6.2. Linters
 
