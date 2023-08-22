@@ -1,275 +1,202 @@
 <!DOCTYPE html>
 <html lang="es" ng-app="Admin">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, user-scalable=no"
-    />
-    <title>EthicApp</title>
-    <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css" />
-    <script src="assets/libs/angular.min.js"></script>
-    <script src="assets/libs/angular-nvd3.min.js"></script>
-    <script src="assets/libs/ngDialog.min.js"></script>
-    <script type="text/javascript" src="assets/libs/ng-quill.min.js"></script>
-    <script src="assets/js/StagesController.js"></script>
-    <script src="assets/js/admin-ctrl.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
-    <script
-      src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit"
-      async
-      defer
-    ></script>
-    <script src="<%= asset('/js/assets-bundle.js') %>"></script>
-    <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
-  </head>
-  <body ng-controller="no_account">
-    <div class="form-register panel panel-default">
-      <div class="row logo" style="margin-top:-.5em">
-        <img src="assets/images/logos/ethicapp-logo.png" alt="Logo">
-      </div>
-      <div class="row" style="margin-top:-2em">
-        <form action="#" class="form-horizontal">
-          <div class="form-group">
-            <div class="col-sm-12 text-center">
-              <p>{{ "accounttype" | lang }} {{key}}</p>
-            </div>            
-            <div class="col-sm-12 text-center">
-              <input
-              type="radio"
-              id="rad1"
-              onchange="hideB(this)"
-              name="rad"
-              value="Personal"
-              checked
-              />
-              <label for="rad1 control-label">
-                {{ "personal" | lang }}
-              </label>
-              &nbsp;&nbsp;
-              <input
-              type="radio"
-              id="rad2"
-              onchange="hideA(this)"
-              name="rad"
-              value="Institucional"
-            />
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>EthicApp</title>
+  <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css" />
+  <script src="assets/libs/angular.min.js"></script>
+  <script src="assets/libs/angular-nvd3.min.js"></script>
+  <script src="assets/libs/ngDialog.min.js"></script>
+  <script type="text/javascript" src="assets/libs/ng-quill.min.js"></script>
+  <script src="assets/js/StagesController.js"></script>
+  <script src="assets/js/admin-ctrl.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit" async defer></script>
+  <script src="<%= asset('/js/assets-bundle.js') %>"></script>
+  <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
+</head>
+
+<body ng-controller="no_account">
+  <div class="form-register panel panel-default">
+    <div class="row logo" style="margin-top:-.5em">
+      <img src="assets/images/logos/ethicapp-logo.png" alt="Logo">
+    </div>
+    <div class="row" style="margin-top:-2em">
+      <form action="#" class="form-horizontal">
+        <div class="form-group">
+          <div class="col-sm-12 text-center">
+            <p>{{ "accounttype" | lang }}</p>
+          </div>
+          <div class="col-sm-12 text-center">
+            <input type="radio" id="rad1" onchange="hideB(this)" name="rad" value="Personal" checked />
+            <label for="rad1 control-label">
+              {{ "personal" | lang }}
+            </label>
+            &nbsp;&nbsp;
+            <input type="radio" id="rad2" onchange="hideA(this)" name="rad" value="Institucional" />
             <label for="rad2 control-label">{{ "Institutional" | lang }}</label>
-            </div>
           </div>
-          <% if(rc == 1) {%>
-            <div class="alert alert-info">
-              {{ "domains_message" | lang }}
-            </div>
-            <% } %>
-        </form>
-      </div>
-      <div class="row" style="padding:16px">
-        <form action="register" method="post" id="form_user" class="form-horizontal">
-          <div class="form-group">
-            <label class="col-sm-2">{{ "name" | lang }}:</label>
-            <div class="col-sm-10">
-              <input
-                type="text"
-                class="form-control"
-                name="name"
-                required
-                autofocus
-              />
-            </div>
+        </div>
+        <% if(rc==1) {%>
+          <div class="alert alert-info">
+            {{ "domains_message" | lang }}
           </div>
-          <div class="form-group">
-            <label class="col-sm-2">{{ "lastname" | lang }}:</label>
-            <div class="col-sm-10">
-              <input type="text" class="form-control" name="lastname" />
-            </div>
+          <% } %>
+      </form>
+    </div>
+    <div class="row" style="padding:16px">
+      <form action="register" method="post" id="form_user" class="form-horizontal">
+        <div class="form-group">
+          <label class="col-sm-2">{{ "name" | lang }}:</label>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" name="name" required autofocus />
           </div>
-          <div class="form-group">
-            <label class="col-sm-2">RUT/DNI:</label>
-            <div class="col-sm-10">
-              <input
-                type="text"
-                class="form-control"
-                name="rut"
-                placeholder="{{ 'optional_parent' | lang }}"
-              />
-            </div>  
+        </div>
+        <div class="form-group">
+          <label class="col-sm-2">{{ "lastname" | lang }}:</label>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" name="lastname" />
           </div>
-          <div class="form-group">
-            <div class="col-sm-2">
-              <label>{{ "email" | lang }}</label>
-            </div>
-            <div class="col-sm-10">
-              <input type="email" class="form-control" name="mail" required />
-            </div>
+        </div>
+        <div class="form-group">
+          <label class="col-sm-2">RUT/DNI:</label>
+          <div class="col-sm-10">
+            <input type="text" class="form-control" name="rut" placeholder="{{ 'optional_parent' | lang }}" />
           </div>
-          <div class="form-group">
-            <div class="col-sm-2">
-              <label>{{ "gender" | lang }}:</label>
-            </div>
-            <div class="col-sm-10">
-              <select name="sex" class="form-control">
-                <option value="F">{{ "female" | lang }}</option>
-                <option value="M">{{ "male" | lang }}</option>
-                <option value="O">{{ "other" | lang }}</option>
-              </select>
-            </div>
+        </div>
+        <div class="form-group">
+          <div class="col-sm-2">
+            <label>{{ "email" | lang }}</label>
           </div>
-          <div class="form-group">
-            <label class="col-sm-3">{{ "password" | lang }}</label>
-            <div class="col-sm-9">
-              <input type="password" class="form-control" name="pass" />
-            </div>
+          <div class="col-sm-10">
+            <input type="email" class="form-control" name="mail" required />
           </div>
-          <div class="form-group">
-            <label class="col-sm-3">{{ "cpassword" | lang }}:</label>
-            <div class="col-sm-9">
-              <input type="password" class="form-control" name="conf-pass" />
-            </div>
+        </div>
+        <div class="form-group">
+          <div class="col-sm-2">
+            <label>{{ "gender" | lang }}:</label>
           </div>
-          <div class="form-group text-center">
-            <div
-              class="g-recaptcha"
-              id="captcha"
-              data-sitekey="{{ reCaptchaSiteKey }}"
-              data-type="image"></div>
-          </div>
-          <div class="form-group text-center">
-            <button
-            type="submit"
-            class="btn btn-primary form-control"
-            style="width:200px"
-            id="register-btn"
-            >
-            {{ "register" | lang }}
-            </button>
-          </div>
-        </form>
-      </div>
-  
-      <div id="form_institucion" class="row" style="display:none;">
-        <form action="register_institucion" style="margin-top:-2em" method="post">
-          <div class="form-group">
-            <label for="name_ins">{{ "inst_name" | lang }}:</label>
-            <input
-              type="text"
-              class="form-control"
-              name="name_ins"
-              required
-              autofocus
-            />
-          </div>
-          <div class="form-group">
-            <label for="Numero_estudiantes">{{ "num_est" | lang }}:</label>
-            <select name="Numero_estudiantes" class="form-control">
-              <option value="1000">1-1000</option>
-              <option value="2000">1001-2000</option>
-              <option value="3000">2001-3000</option>
+          <div class="col-sm-10">
+            <select name="sex" class="form-control">
+              <option value="F">{{ "female" | lang }}</option>
+              <option value="M">{{ "male" | lang }}</option>
+              <option value="O">{{ "other" | lang }}</option>
             </select>
           </div>
-          <div class="form-group">
-            <label for="Pais">{{ "country" | lang }}:</label>
-            <select [(ngModel)]="selectedValue" name="Pais" class="form-control">
-              <option ng-repeat="x in countries" value="{{x}}">{{x}}</option>
-           </select>`
-          </div>
-          <div class="form-group">
-            <label for="domains">{{ "inst_mail" | lang }}:</label>
-            <input
-              type="text"
-              class="form-control"
-              name="domains"
-              placeholder="mit.edu,harvard.edu,stanford.edu"
-            />
-          </div>
-          <div class="form-group">
-            <h5 style="font-size: 8pt; margin-top:-.75em">
-              {{ "sep_data" | lang }}
-            </h5>
-          </div>
-          <div class="form-group">
-            <label for="name">{{ "name" | lang }}:</label>
-            <input
-              type="text"
-              class="form-control"
-              name="name"
-              required
-              autofocus
-            />
-          </div>
-          <div class="form-group">
-            <label for="lastname">{{ "lastname" | lang }}:</label>
-            <input
-              type="text"
-              class="form-control"
-              name="lastname"
-              required
-              autofocus />
-          </div>
-          <div class="form-group">
-            <label class="left">{{ "ints_mail" | lang }}:</label>
-            <input
-              type="text"
-              class="form-control"
-              name="email"
-              required
-              autofocus />
-          </div>
-          <div class="form-group">
-            <label for="Cargo">{{ "position" | lang }}:</label>
-            <select name="Cargo" class="form-control">
-              <option value="Academico">{{ "academic" | lang }}</option>
-              <option value="Rector">{{ "rector" | lang }}</option>
-              <option value="Director">{{ "director" | lang }}</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="pass">{{ "password" | lang }}</label>
+        </div>
+        <div class="form-group">
+          <label class="col-sm-3">{{ "password" | lang }}</label>
+          <div class="col-sm-9">
             <input type="password" class="form-control" name="pass" />
           </div>
-          <div class="form-group">
-            <label for="conf-pass">{{ "cpassword" | lang }}:</label>
+        </div>
+        <div class="form-group">
+          <label class="col-sm-3">{{ "cpassword" | lang }}:</label>
+          <div class="col-sm-9">
             <input type="password" class="form-control" name="conf-pass" />
           </div>
-          <div class="form-group text-center">
-            <div
-              class="g-recaptcha"
-              id="captcha2"
-              data-sitekey="{{ reCaptchaSiteKey }}"
-              data-type="image"
-            ></div>
-          </div>
-          <div class="form-group text-center">
-            <button type="submit" class="btn btn-primary form-control" style="width:200px">
-              {{ "sol_acc" | lang }}
-            </button>
-          </div>
-        </form> 
+        </div>
+        <div class="form-group text-center">
+          <div class="g-recaptcha" id="captcha" data-sitekey="{{ reCaptchaSiteKey }}" data-type="image"></div>
+        </div>
+        <div class="form-group text-center">
+          <button type="submit" class="btn btn-primary form-control" style="width:200px" id="register-btn">
+            {{ "register" | lang }}
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div id="form_institucion" class="row" style="display:none;">
+      <form action="register_institucion" style="margin-top:-2em" method="post">
+        <div class="form-group">
+          <label for="name_ins">{{ "inst_name" | lang }}:</label>
+          <input type="text" class="form-control" name="name_ins" required autofocus />
+        </div>
+        <div class="form-group">
+          <label for="Numero_estudiantes">{{ "num_est" | lang }}:</label>
+          <select name="Numero_estudiantes" class="form-control">
+            <option value="1000">1-1000</option>
+            <option value="2000">1001-2000</option>
+            <option value="3000">2001-3000</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="Pais">{{ "country" | lang }}:</label>
+          <select [(ngModel)]="selectedValue" name="Pais" class="form-control">
+            <option ng-repeat="x in countries" value="{{x}}">{{x}}</option>
+          </select>`
+        </div>
+        <div class="form-group">
+          <label for="domains">{{ "inst_mail" | lang }}:</label>
+          <input type="text" class="form-control" name="domains" placeholder="mit.edu,harvard.edu,stanford.edu" />
+        </div>
+        <div class="form-group">
+          <h5 style="font-size: 8pt; margin-top:-.75em">
+            {{ "sep_data" | lang }}
+          </h5>
+        </div>
+        <div class="form-group">
+          <label for="name">{{ "name" | lang }}:</label>
+          <input type="text" class="form-control" name="name" required autofocus />
+        </div>
+        <div class="form-group">
+          <label for="lastname">{{ "lastname" | lang }}:</label>
+          <input type="text" class="form-control" name="lastname" required autofocus />
+        </div>
+        <div class="form-group">
+          <label class="left">{{ "ints_mail" | lang }}:</label>
+          <input type="text" class="form-control" name="email" required autofocus />
+        </div>
+        <div class="form-group">
+          <label for="Cargo">{{ "position" | lang }}:</label>
+          <select name="Cargo" class="form-control">
+            <option value="Academico">{{ "academic" | lang }}</option>
+            <option value="Rector">{{ "rector" | lang }}</option>
+            <option value="Director">{{ "director" | lang }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="pass">{{ "password" | lang }}</label>
+          <input type="password" class="form-control" name="pass" />
+        </div>
+        <div class="form-group">
+          <label for="conf-pass">{{ "cpassword" | lang }}:</label>
+          <input type="password" class="form-control" name="conf-pass" />
+        </div>
+        <div class="form-group text-center">
+          <div class="g-recaptcha" id="captcha2" data-sitekey="{{ reCaptchaSiteKey }}" data-type="image"></div>
+        </div>
+        <div class="form-group text-center">
+          <button type="submit" class="btn btn-primary form-control" style="width:200px">
+            {{ "sol_acc" | lang }}
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div class="row">
+      <div class="col-sm-12 text-center">
+        <p>{{ "alredy_acc" | lang }}</p>
       </div>
-      
-      <div class="row">
-        <div class="col-sm-12 text-center">
-          <p>{{ "alredy_acc" | lang }}</p>
-        </div>
-        <div class="col-sm-12 text-center">
-          <a href="login" style="margin-top: 8px">{{
-            "login_w_account" | lang
+      <div class="col-sm-12 text-center">
+        <a href="login" style="margin-top: 8px">{{
+          "login_w_account" | lang
           }}</a>
-        </div>
-        <div class="col-sm-12 text-center" style="margin-top:1em">
-          <a
-            class="btn btn-default"
-            href="/google"
-            role="button"
-            style="text-transform: none"
-          >
-            <img style="width: 20px" style="margin-bottom: 3px; margin-right: 5px" alt="Google sign-in" src="assets/images/logos/google.png" />
-            {{ "glogin" | lang }}
-          </a>
-        </div>
+      </div>
+      <div class="col-sm-12 text-center" style="margin-top:1em">
+        <a class="btn btn-default" href="/google" role="button" style="text-transform: none">
+          <img style="width: 20px" style="margin-bottom: 3px; margin-right: 5px" alt="Google sign-in"
+            src="assets/images/logos/google.png" />
+          {{ "glogin" | lang }}
+        </a>
       </div>
     </div>
-  </body>
+  </div>
+</body>
+
 </html>
 
 <script>
@@ -304,8 +231,3 @@
     });
   };
 </script>
-
-
-
-
-
