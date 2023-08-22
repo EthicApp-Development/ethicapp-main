@@ -1,7 +1,8 @@
 "use strict";
 
 var adpp = angular.module("Admin", [
-    "api-params","ui.bootstrap", "ui.multiselect", "nvd3", "timer", "ui-notification", "ngQuill", "tableSort",
+    "api-params","ui.bootstrap", "ui.multiselect", "nvd3", "timer",
+    "ui-notification", "ngQuill", "tableSort",
     "btford.socket-io", "ngRoute", "checklist-model", "ngDialog"]
 );
 
