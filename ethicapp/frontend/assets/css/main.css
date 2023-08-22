@@ -1410,3 +1410,8 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     height: 5rem;
     padding: 1rem;
 }
+
+h2{
+    font-weight: bold;
+    margin-top: 4rem;
+}
