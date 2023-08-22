@@ -287,6 +287,10 @@
 	"semantic_differential": "Semantic Differentials",
 	"ranking_activity": "Ranking Activity",
 	"studentsFinish": "Students have answered.",
+	"createDesign": "Create Design",
+	"designContext": "You can search for designs created by other users in the list below, and import them into your collection of own designs.",
+	"searchTitle":"Search by title",
+	"copy":"Copy"
 	"currentActivity": "Current Activity",
 	"end": "End",
 	"showDesign": "Show design",
