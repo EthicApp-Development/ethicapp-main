@@ -1,25 +1,30 @@
-<h2>Actividades</h2>
-<button class="btn btn-primary" ng-click="selectView('launchActivity')" style="margin-bottom: 2rem; margin-top: 1rem;">{{'launchActivity' | lang}}</button>
-<div ng-controller= "ActivityController">
+<h2>{{'activities' | lang}}</h2>
+<button class="btn btn-primary" ng-click="selectView('launchActivity')"
+    style="margin-bottom: 2rem; margin-top: 1rem;">{{'launchActivity' | lang}}</button>
+<div ng-controller="ActivityController">
     <div class="tab_cs" ng-init="dsgnMode=0">
-        <button class="tab_cs" ng-click= "dsgnMode=0" ng-class="{'btn_selected': dsgnMode == 0}">
-        Actuales
+        <button class="tab_cs" ng-click="dsgnMode=0" ng-class="{'btn_selected': dsgnMode == 0}">
+            Actuales
         </button>
-        <button class="tab_cs" ng-click = "dsgnMode=1" ng-class="{'btn_selected': dsgnMode == 1}">
-        Terminadas
+        <button class="tab_cs" ng-click="dsgnMode=1" ng-class="{'btn_selected': dsgnMode == 1}">
+            Terminadas
         </button>
-        <button class="tab_cs" ng-click = "dsgnMode=2" ng-class="{'btn_selected': dsgnMode == 2}">
+        <button class="tab_cs" ng-click="dsgnMode=2" ng-class="{'btn_selected': dsgnMode == 2}">
             Archivadas
         </button>
-        <div style="float: left;display: flex;justify-content: left;align-items: center;"> 
-            <input class="form-control text-center" type="text" placeholder="{{'search'|lang}}" ng-model="userSearch" style="height: 2em;">
+        <div style="float: left;display: flex;justify-content: left;align-items: center;">
+            <input class="form-control text-center" type="text" placeholder="{{'search'|lang}}" ng-model="userSearch"
+                style="height: 2em;">
         </div>
-        
+
     </div>
-    <div class="container" style="overflow: scroll; max-height: 40em; min-height: 10em; border: #bbb 1px solid;" ng-controller="DialogCtrl">
+    <div class="container" style="overflow: scroll; max-height: 40em; min-height: 10em; border: #bbb 1px solid;"
+        ng-controller="DialogCtrl">
         <div class="activities_container" style="margin-top: 2em;">
             <!--ACTIVE ACTIVITIES-->
-            <div class="list-group-item" ng-repeat="ses in currentActivities(0) | filter:{title:userSearch} | orderBy : '-time'" ng-if="dsgnMode==0">
+            <div class="list-group-item"
+                ng-repeat="ses in currentActivities(0) | filter:{title:userSearch} | orderBy : '-time'"
+                ng-if="dsgnMode==0">
                 <div>
                     <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
                     <p class="list-group-item-text" ng-bind="ses.descr"></p>
@@ -28,40 +33,49 @@
                 </div>
                 <div class="text-right vertical-align">
                     <button class="btn btn-default" ng-click="createCopy(ses)"></button>
-                        <i class="fa fa-copy"></i>
-                    <button class="btn btn-primary " ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
+                    <i class="fa fa-copy"></i>
+                    <button class="btn btn-primary "
+                        ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
                     <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
                 </div>
             </div>
             <!--FINISHED ACTIVITIES-->
-            <div class="list-group-item" ng-repeat="ses in currentActivities(1) | filter:{title:userSearch} | orderBy : '-time'" ng-if="dsgnMode==1">
+            <div class="list-group-item"
+                ng-repeat="ses in currentActivities(1) | filter:{title:userSearch} | orderBy : '-time'"
+                ng-if="dsgnMode==1">
                 <div>
                     <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
                     <p class="list-group-item-text" ng-bind="ses.descr"></p>
                     <p class="list-group-item-text">{{'launched' | lang}} {{ses.time | date}}</p>
                     <p class="list-group-item-text">{{'code' | lang}}: {{ses.code}}</p>
                 </div>
-                
+
                 <div class="text-right vertical-align">
-                    <button class="btn btn-primary " ng-click="archiveActivity(ses, $event)"><i class="fa fa-inbox"></i></button>
+                    <button class="btn btn-primary " ng-click="archiveActivity(ses, $event)"><i
+                            class="fa fa-inbox"></i></button>
                     <button class="btn btn-default" ng-click="createCopy(ses)"></button>
-                        <i class="fa fa-copy"></i>
-                    <button class="btn btn-primary " ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
+                    <i class="fa fa-copy"></i>
+                    <button class="btn btn-primary "
+                        ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
                     <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
                 </div>
             </div>
             <!--ARCHIVED ACTIVITIES-->
-            <div class="list-group-item" ng-repeat="ses in currentActivities(2) | filter:{title:userSearch}  | orderBy : '-time'" ng-if="dsgnMode==2">
+            <div class="list-group-item"
+                ng-repeat="ses in currentActivities(2) | filter:{title:userSearch}  | orderBy : '-time'"
+                ng-if="dsgnMode==2">
                 <div>
                     <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
                     <p class="list-group-item-text" ng-bind="ses.descr"></p>
                     <p class="list-group-item-text">{{'launched' | lang}} {{ses.time | date}}</p>
                     <p class="list-group-item-text">{{'code' | lang}}: {{ses.code}}</p>
                 </div>
-                
+
                 <div class="text-right vertical-align">
-                    <button class="btn btn-primary " ng-click="restoreActivity(ses, $event)"><i class="fa fa-undo"></i></button>
-                    <button class="btn btn-primary " ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
+                    <button class="btn btn-primary " ng-click="restoreActivity(ses, $event)"><i
+                            class="fa fa-undo"></i></button>
+                    <button class="btn btn-primary "
+                        ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
                     <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
                 </div>
             </div>
