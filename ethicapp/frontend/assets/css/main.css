@@ -1410,3 +1410,13 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     height: 5rem;
     padding: 1rem;
 }
+
+
+.designContext{
+    margin-bottom: 2rem;
+}
+
+.createDesignBtn{
+    margin-bottom: 2rem;
+    margin-top: 1rem;
+}
