@@ -4,13 +4,14 @@
 <div ng-controller="ActivityController">
     <div class="tab_cs" ng-init="dsgnMode=0">
         <button class="tab_cs" ng-click="dsgnMode=0" ng-class="{'btn_selected': dsgnMode == 0}">
-            Actuales
+            {{'currentTab' | lang}}
         </button>
         <button class="tab_cs" ng-click="dsgnMode=1" ng-class="{'btn_selected': dsgnMode == 1}">
-            Terminadas
+            {{'finishedTab' | lang}}
         </button>
         <button class="tab_cs" ng-click="dsgnMode=2" ng-class="{'btn_selected': dsgnMode == 2}">
-            Archivadas
+        {{'archived' | lang}}
+ ethicapp-v2
         </button>
         <div style="float: left;display: flex;justify-content: left;align-items: center;">
             <input class="form-control text-center" type="text" placeholder="{{'search'|lang}}" ng-model="userSearch"
