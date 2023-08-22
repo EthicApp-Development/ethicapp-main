@@ -1,0 +1,26 @@
+# --------------------------------------------------------------------------------------------------
+# DEVELOPMENT docker-compose.
+# --------------------------------------------------------------------------------------------------
+
+version: "3.9"
+
+networks:
+  default:
+
+services:
+  # ---------------------- Node web app ---------------------- #
+  node:
+    container_name: "ethicapp-node"
+    build:
+      context: ethicapp/
+      dockerfile: image-renewal.Dockerfile
+      args:
+        NODE_VERSION: ${NODE_VERSION}
+    environment:
+      NODE_ENV: release
+      NODE_PORT: ${NODE_PORT}
+    restart: "no"
+    networks:
+      default:
+    ports:
+      - "${NODE_PORT}:${NODE_PORT}"

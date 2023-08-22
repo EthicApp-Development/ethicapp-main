@@ -1412,6 +1412,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 }
 
 
+
 .designContext{
     margin-bottom: 2rem;
 }
@@ -1419,4 +1420,9 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 .createDesignBtn{
     margin-bottom: 2rem;
     margin-top: 1rem;
+
+h2{
+    font-weight: bold;
+    margin-top: 4rem;
+
 }

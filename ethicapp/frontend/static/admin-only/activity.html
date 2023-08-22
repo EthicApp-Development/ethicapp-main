@@ -2,7 +2,7 @@
     <div ng-controller="NewUsersController">
         <div ng-controller="StagesController">
             <div ng-controller="MonitorActivityController" ng-init="showDesign = false">
-                <h2>CURRENT ACTIVITY</h2>
+                <h2>{{'currentActivity' | lang}}</h2>
 
                 <div class="" ng-controller="StagesEditController">
 
@@ -244,10 +244,10 @@
             -->
                 <p><strong>{{'sessionCode'|lang}}: {{selectedSes.code}}</strong></p>
                 <br>
-                <button class="btn btn-info" ng-click="showDesign = !showDesign">Show design</button>
+                <button class="btn btn-info" ng-click="showDesign = !showDesign">{{'showDesign' | lang}}</button>
                 <button class="btn btn-success" ng-click="nextActivityDesign(design,selectedId)"
-                    ng-disabled="design.phases.length-1 == currentActivity.stage ">Next</button>
-                <button class="btn btn-danger" ng-click="finishActivity()">End</button>
+                    ng-disabled="design.phases.length-1 == currentActivity.stage ">{{'next' | lang}}</button>
+                <button class="btn btn-danger" ng-click="finishActivity()">{{'end' | lang}}</button>
 
                 <div class="container">
                     <div class="row">

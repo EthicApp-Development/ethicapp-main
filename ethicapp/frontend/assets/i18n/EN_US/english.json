@@ -291,6 +291,13 @@
 	"designContext": "You can search for designs created by other users in the list below, and import them into your collection of own designs.",
 	"searchTitle":"Search by title",
 	"copy":"Copy"
+	"currentActivity": "Current Activity",
+	"end": "End",
+	"showDesign": "Show design",
+	"currentTab": "Current",
+	"finishedTab": "Finished",
+	"giveDesignLaunch": "Give a description to the activity",
+	"chooseDesignLaunch": "Choose a design for the activity to launch"
 }
 
 
