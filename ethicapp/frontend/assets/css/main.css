@@ -1411,6 +1411,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     padding: 1rem;
 }
 
+
 .launchActivityContainer{
         overflow: scroll; 
         max-height: 20em; 
@@ -1537,3 +1538,21 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 .mt-1medio{
     margin-top: 1.5rem;
 }
+
+
+
+.designContext{
+    margin-bottom: 2rem;
+}
+
+.createDesignBtn{
+    margin-bottom: 2rem;
+    margin-top: 1rem;
+}
+
+h2{
+    font-weight: bold;
+    margin-top: 4rem;
+
+}
+

@@ -11,3 +11,5 @@ import "../libs/d3.min.js";
 import "../libs/nv.d3.min.js";
 import "../libs/quill.min.js";
 import "../libs/katex.min.js";
+//Api Params
+import "../js/api-params.js";

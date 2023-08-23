@@ -254,7 +254,7 @@
 	"byOthers":"De otros",
 	"semDiff":"Diferenciales Semánticos",
 	"search":"Buscar",
-	"profile":"Profile",
+	"profile":"Perfil",
 	"domains_message":"El dominio que ingreso ya existe en Ethicapp",
 	"incorporation_solicitude":"Solicitud de Incorporación",
 	"institution_mail_domains":"Dominios de correo electrónico permitidos",
@@ -288,6 +288,17 @@
 	"knowledgeType heterg": "Tipo de Conocimiento Heterogéneo",
 	"semantic_differential": "Diferencial Semántico",
 	"ranking_activity": "Actividad de ordenamiento",
-	"studentsFinish": "Estudiantes han respondido."
+	"studentsFinish": "Estudiantes han respondido.",
+	"createDesign": "Crear Diseño",
+	"designContext": "Puedes buscar diseños creados por otros usuarios en el listado a continuación, e importarlos a tu colección de diseños propios.",
+	"searchTitle":"Buscar por título",
+	"copy":"Copiar",
+	"currentActivity": "Actividad Actual",
+	"end": "Terminar",
+	"showDesign": "Mostrar Diseño",
+	"currentTab": "Actuales",
+	"finishedTab": "Terminadas",
+	"giveDesignLaunch": "Dale una descripción a la actividad",
+	"chooseDesignLaunch": "Escoge el diseño de actividad que desees lanzar"
 }
 

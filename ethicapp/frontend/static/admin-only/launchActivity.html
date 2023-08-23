@@ -1,6 +1,6 @@
 <h2>{{'launchActivity' | lang}}</h2>
 <br>
-<p>Escoge el diseño de actividad que desees lanzar.</p>
+<p>{{'chooseDesignLaunch' | lang}}</p>
 <br>
 <div ng-controller="GroupController">
     <div class="launchActivity-wrapper">
@@ -39,7 +39,7 @@
                     </div>
                 </div>
                 <br>
-                <p>Dale una descripcion a la actividad</p>
+                 <p>{{'giveDesignLaunch' | lang}}</p>
                 <form ng-submit="createSession(dsgntitle,descr, dsgntype, dsgnid)">
                     <div class="row">
                         <div class="col-lg-6">
@@ -57,13 +57,15 @@
                     </div>
                     <div class="row">
                         <div class="col-lg-6">
-                            <button class="btn btn-primary" ng-disabled="dsgnid == null">Lanzar actividad</button>
+                            <button class="btn btn-primary" ng-disabled="dsgnid == null">{{'launchActivity' |
+                            lang}}</button>
                         </div>
                     </div>
                 </form>
                 <div ng-if="selectedSes.code != null">
                     <div style="background-color: gray; height: 15em; width: 30em;">
                         <strong>{{selectedSes.code}}</strong>
+
                     </div>
                 </div>
             </div>
@@ -82,6 +84,4 @@
         </div>
         
     </div>
-    
-
 </div>
