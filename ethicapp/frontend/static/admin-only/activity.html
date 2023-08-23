@@ -234,7 +234,7 @@
                     </div>
                 </div>
 
-                <!--MONITOR-->
+                <!-- MONITOR-->
                 <!--
             <ul>
                 <li><strong>Activity: {{currentActivity.id}}</strong></li>
@@ -244,10 +244,12 @@
             -->
                 <p><strong>{{'sessionCode'|lang}}: {{selectedSes.code}}</strong></p>
                 <br>
-                <button class="btn btn-info" ng-click="showDesign = !showDesign">{{'showDesign' | lang}}</button>
-                <button class="btn btn-success" ng-click="nextActivityDesign(design,selectedId)"
+
+                <button class="btn btn-info btn-activity" ng-click="showDesign = !showDesign">{{'showDesign' | lang}}</button>
+                <button class="btn btn-success btn-activity" ng-click="nextActivityDesign(design,selectedId)"
                     ng-disabled="design.phases.length-1 == currentActivity.stage ">{{'next' | lang}}</button>
-                <button class="btn btn-danger" ng-click="finishActivity()">{{'end' | lang}}</button>
+                <button class="btn btn-danger btn-activity" ng-click="finishActivity()">{{'end' | lang}}</button>
+
 
                 <div class="container">
                     <div class="row">
@@ -338,7 +340,7 @@
 
                     <div ng-show="design.type == 'semantic_differential'" class="margin-top-8">
                         <strong>{{ 'indAggAns' | lang }}</strong>
-                        <span class="pull-right"><span style="color: red;">*</span> {{ 'commentReq' | lang }}</span>
+                        <span class="pull-right mt-1medio margin-right-8"><span style="color: red;">*</span> {{ 'commentReq' | lang }}</span>
                         <table class="table table-bordered" ts-wrapper>
                             <tr>
                                 <th ts-criteria="uid" ts-order-by="sortByAutorName">{{ 'author' | lang }}</th>

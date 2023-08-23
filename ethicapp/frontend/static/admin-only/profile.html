@@ -1,14 +1,15 @@
 <div ng-controller="instituciones" ng-if="selectedView == 'profile'">
-    <div class="profile-section">
-        <img src="assets/images/assorted/blanco.jpg" alt="No Carga" class=""
-            style="border: 5px solid #555; max-width: 100px; max-height: 100px;">
-        <strong style="font-size: 25px;">{{ username }} </strong>
-        <h3 ng-if="role == 'A'">{{'student' | lang}} </h3>
-        <h3 ng-if="role == 'P'">{{'teacher' | lang}} </h3>
-        <h3 ng-if="role == 'I'">{{'institution' | lang}} </h3>
-
-        <br><br>
+    <div class="profile">
+        <img src="assets/images/assorted/blanco.jpg" alt="No Carga" class="profile-pic">
+        <div class="profile-info">
+            <strong class="profile-username">{{ username }}</strong>
+            <h3 ng-if="role == 'A'" class="profile-role">{{ 'student' | lang }}</h3>
+            <h3 ng-if="role == 'P'" class="profile-role">{{ 'teacher' | lang }}</h3>
+            <h3 ng-if="role == 'I'" class="profile-role">{{ 'institution' | lang }}</h3>
+        </div>
     </div>
+
+
     <div>
         <form action="changepassword" method="post">
             <input name="mail" type="hidden" value="{{mail}}" class="form-control profile-input">
@@ -23,9 +24,12 @@
         </form>
     </div>
     <br>
+    <br>
     <div>
         <form action="deleteacc" method="post">
-            {{'terminate_account' | lang}}<br>
+            {{'terminate_account' | lang}}
+            <br>
+            <br>
             <input name="mail" type="hidden" value="{{mail}}" class="form-control profile-input">
             <button type="submit" class="btn btn-primary" style="width: 200px;">
                 {{'unsubscribe_account' | lang}}
