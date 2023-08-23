@@ -1519,12 +1519,21 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     margin-left: 20px; 
 }
 
-.username {
+.profile-username {
     font-size: 25px;
     display: block; 
 }
 
-.role {
+.profile-role {
     font-size: 18px;
     margin-top: 5px;
+}
+
+.btn-activity{
+    width: 13rem;
+    margin-bottom: 3rem;
+}
+
+.mt-1medio{
+    margin-top: 1.5rem;
 }

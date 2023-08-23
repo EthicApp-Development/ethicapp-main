@@ -3,10 +3,10 @@
     <div class="profile">
         <img src="assets/images/assorted/blanco.jpg" alt="No Carga" class="profile-pic">
         <div class="profile-info">
-            <strong class="username">{{ username }}</strong>
-            <h3 ng-if="role == 'A'" class="role">{{ 'student' | lang }}</h3>
-            <h3 ng-if="role == 'P'" class="role">{{ 'teacher' | lang }}</h3>
-            <h3 ng-if="role == 'I'" class="role">{{ 'institution' | lang }}</h3>
+            <strong class="profile-username">{{ username }}</strong>
+            <h3 ng-if="role == 'A'" class="profile-role">{{ 'student' | lang }}</h3>
+            <h3 ng-if="role == 'P'" class="profile-role">{{ 'teacher' | lang }}</h3>
+            <h3 ng-if="role == 'I'" class="profile-role">{{ 'institution' | lang }}</h3>
         </div>
     </div>
 
@@ -25,9 +25,12 @@
         </form>
     </div>
     <br>
+    <br>
     <div>
         <form action="deleteacc" method="post">
-            {{'terminate_account' | lang}}<br>
+            {{'terminate_account' | lang}}
+            <br>
+            <br>
             <input name="mail" type="hidden" value="{{mail}}" class="form-control profile-input">
             <button type="submit" class="btn btn-primary" style="width: 200px;">
                 {{'unsubscribe_account' | lang}}
