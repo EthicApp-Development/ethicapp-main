@@ -1640,22 +1640,16 @@ h2{
 }
 
 .loading-container {
+  margin-left: 1rem;
+  margin-top: 1rem;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  background-color: rgba(0, 0, 0, 0.6);
-  height: 100vh; 
-  width: 100vw; 
-  position: fixed; 
-  top: 0;
-  left: 0;
-  z-index: 9999;
+  justify-content: left;
 }
 
 .loading-container p {
-  margin-top: 1em;
-  color: white;
+  margin-left: 1rem;
+  color: #aaa;
 }
 
 .loading-container i {

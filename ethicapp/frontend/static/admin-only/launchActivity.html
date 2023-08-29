@@ -61,12 +61,16 @@
                             lang}}</button>
                         </div>
                     </div>
+
+                    <div class="row">
+                        <div class="loading-container" ng-show="showSpinner">
+                            <i class="fa fa-spinner fa-spin"></i>
+                            <p>{{ 'Preparando dashboard para la actividad...' | lang }}</p>
+                        </div>
+                    </div>
                 </form>
                 
-                <div class="loading-container" ng-show="showSpinner">
-                    <i class="fa fa-spinner fa-spin"></i>
-                    <p>{{ 'Preparando dashboard para la actividad...' | lang }}</p>
-                </div>
+                
 
             </div>
         </div>
