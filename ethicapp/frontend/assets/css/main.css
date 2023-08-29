@@ -1346,6 +1346,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     height: 30px;
     width: 30px;
     background: #fff;
+    margin-top: -0.5rem;
 }
 
 
@@ -1426,8 +1427,13 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 
 
 .launchActivityInput{
-    width: 65rem;
+    width: 35rem;
     margin-bottom: 2rem;
+}
+
+.launchActivity-search{
+    width: 35rem;
+    margin-bottom: 1rem;
 }
 
 .dsgn_sel{
@@ -1440,25 +1446,21 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
    width: 82%;
 }
 
+@media (min-width: 1360px){
+    .container {width: 1170px;}
+}
+@media (min-width: 1200px){
+    .container {width: 1050px;}
+}
+
 @media (max-width: 1111px) {
     .launchActivityContainer { max-width: 58.8rem; }
     .launchActivityDiv {max-width: 55rem;}
-    .launchActivityInput{width: 55rem;}
 }
 
 @media (max-width: 1011px) {
     .launchActivityContainer { max-width: 50.8rem; }
     .launchActivityDiv {max-width: 47rem;}
-    .launchActivityInput{width: 47rem;}
-}
-
-
-@media (min-width: 1200px){
-    .container {width: 1050px;}
-}
-
-@media (min-width: 1360px){
-    .container {width: 1170px;}
 }
 
 
@@ -1475,6 +1477,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
    flex-direction: column; 
    align-items: center; 
    padding: 1em;
+   margin-top: -5rem;
 }
 
 .exclamation-mark-image{
@@ -1497,6 +1500,10 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 .flex-justify-center{
     display: flex;
     justify-content: center;
+}
+
+.ml-1{
+    margin-left: 1rem;
 }
 
 .ml-2{
@@ -1555,4 +1562,81 @@ h2{
     margin-top: 4rem;
 
 }
+
+.language-dropdown {
+  position: relative;
+  display: inline-block;
+  margin-right: 2rem;
+  padding: 10px; 
+  border-radius: 15px; 
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.language-dropdown:hover {
+  background-color: #bbb;
+}
+
+.language-dropdown i {
+  cursor: pointer;
+  font-size: 2.5rem; 
+  margin-right: 0.5rem; 
+}
+
+.language-options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: #ddd;
+  border: 1px solid #ddd;
+  border-radius: 5px; 
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  z-index: 1;
+}
+
+.language-options li {
+  padding: 8px 10px;
+  
+}
+
+.language-options li:hover {
+  background-color: #bbb;
+}
+
+.selected-language {
+  display: flex;
+  align-items: left;
+}
+
+.not-selected-language {
+  display: flex;
+  align-items: left;
+}
+
+.selected-language i {
+  margin-left: 0.5rem; 
+}
+
+.language-options li i {
+  font-size: 0.9em; 
+  margin-top: 0.5rem;
+}
+
+.top-bar-mini .cf1.text-right.margin-right-8 {
+  display: flex;
+  justify-content: right;
+  align-items: center;
+}
+
+.top-bar-mini strong {
+  margin-top: -0.5rem;
+  margin-left: 0.8rem;
+}
+
+.locked-svg{
+    width: 3.5rem;
+}
+
 

@@ -431,20 +431,38 @@ adpp.controller("AdminController", function (
         self.shared.updateState();
     };
 
+    self.showLanguageDropdown = false;
+
+    self.toggleLanguageDropdown = function () {
+        self.showLanguageDropdown = !self.showLanguageDropdown;
+    };
+
+    self.changeLang = function (lang) {
+        self.lang = lang;
+        self.updateLang(lang);
+        self.showLanguageDropdown = false;
+    };
+
     self.updateLang = function (lang) {
-        $http.get("assets/i18n/" + lang + ".json").success(function (data) {
-            window.DIC = data;
+        $http.get("assets/i18n/" + lang + ".json").then(function (response) {
+            window.DIC = response.data;
         });
+    };
+
+    self.getTranslatedLanguageName = function (languageKey) {
+        const languageNames = {
+            "ES_CL/spanish": $filter("lang")("spanish"),
+            "EN_US/english": $filter("lang")("english")
+            
+        };
+
+        return languageNames[languageKey] || languageKey;
     };
 
     self.shared.resetSesId = function () {
         self.selectedId = -1;
     };
 
-    self.changeLang = function () {
-        self.lang = self.lang == "EN_US/english" ? "ES_CL/spanish" : "EN_US/english";
-        self.updateLang(self.lang);
-    };
 
     self.generateCode = function () {
         var postdata = {

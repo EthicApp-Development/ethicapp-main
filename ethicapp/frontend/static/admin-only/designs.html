@@ -1,22 +1,19 @@
-<br>
-<br>
-<a ng-click="selectView('')" >{{'back'|lang}}</a>
-<br>
 <h2>{{'actDesigns'|lang}}</h2>
 <button class="btn btn-primary createDesignBtn" ng-click="selectView('newDesign')">{{'createDesign' | lang}}</button>
 <p class="designContext">{{'designContext' | lang}}</p>
-<div ng-controller ="BrowseDesignsController">
+<div ng-controller="BrowseDesignsController">
     <div class="tab_cs" ng-init="dsgnMode= tab">
-        <button class="tab_cs" ng-click= "dsgnMode=0;getDesigns()" ng-class="{'btn_selected': dsgnMode == 0}">
-        {{'yours'|lang}}
+        <button class="tab_cs" ng-click="dsgnMode=0;getDesigns()" ng-class="{'btn_selected': dsgnMode == 0}">
+            {{'yours'|lang}}
         </button>
-        <button class="tab_cs" ng-click = "dsgnMode=1;getPublicDesigns()" ng-class="{'btn_selected': dsgnMode == 1}">
-        {{'byOthers'|lang}}
+        <button class="tab_cs" ng-click="dsgnMode=1;getPublicDesigns()" ng-class="{'btn_selected': dsgnMode == 1}">
+            {{'byOthers'|lang}}
         </button>
-        <div style="float: left;display: flex;justify-content: left;align-items: center;"> 
-            <input class="form-control text-center" type="text" placeholder="{{'search'|lang}}" ng-model="userSearch" style="height: 2em;">
+        <div style="float: left;display: flex;justify-content: left;align-items: center;">
+            <input class="form-control text-center" type="text" placeholder="{{'search'|lang}}" ng-model="userSearch"
+                style="height: 2em;">
         </div>
-        
+
     </div>
     <div class="wrapper">
         <div class="container" style="overflow: scroll; max-height: 40em; min-height: 10em; border: #bbb 1px solid;"
@@ -28,24 +25,31 @@
                         <!--UPDATE IT CORRECTLY-->
                         <div>
                             <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
-                            <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
+                            <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}
+                            </p>
                         </div>
-        
+
                         <div class="text-right vertical-align">
-                            <strong ng-show="ses.locked">LOCKED</strong>
-                            <button class="btn btn-primary "
+                            <img class="locked-svg" ng-show="ses.locked"
+                                src="../../assets/images/iconsets/gray-lineart/design-lock-active.svg" alt="SVGLocked">
+                            <button class="btn btn-primary ml-1"
                                 ng-click="launchDesign(ses.id, ses.metainfo.title, ses.type)">{{'launchActivity' |
                                 lang}}</button>
-                            <label class="switch">
+
+                            <button class="btn btn-primary ml-1" ng-click="goToDesign(ses.id, 'E')"
+                                ng-hide="ses.locked">{{'edit' |
+                                lang}}</button>
+                            <button class="btn btn-primary ml-1" ng-click="goToDesign(ses.id, 'V')">{{'view' |
+                                lang}}</button>
+                            <button class="btn btn-danger ml-1" ng-click="deleteDesign(ses.id)"
+                                ng-hide="ses.locked">{{'delete' |
+                                lang}}</button>
+
+                            <label class="switch ml-1">
                                 <input type="checkbox" ng-checked="ses.public" ng-click="designPublic(ses.id)">
                                 <span class="slider round"></span>
-        
+
                             </label>{{'share'|lang}}
-                            <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'E')" ng-hide="ses.locked">{{'edit' |
-                                lang}}</button>
-                            <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'V')">{{'view' | lang}}</button>
-                            <button class="btn btn-danger " ng-click="deleteDesign(ses.id)" ng-hide="ses.locked">{{'delete' |
-                                lang}}</button>
                         </div>
                     </div>
                     <!--PUBLIC-->
@@ -53,31 +57,33 @@
                         <!--UPDATE IT CORRECTLY-->
                         <div>
                             <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
-                            <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}</p>
+                            <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date | date}}
+                            </p>
                         </div>
-        
+
                         <div class="text-right vertical-align">
-                            <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'V')">{{'view' | lang}}</button>
+                            <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'V')">{{'view' |
+                                lang}}</button>
                         </div>
                     </div>
                 </div>
-        
+
             </div>
-        
+
         </div>
         <div class="help_panel">
-            <img src="../../assets/images/iconsets/exclamation-mark.png"
-                alt="signoExclamacion" class="exclamation-mark-image">
+            <img src="../../assets/images/iconsets/exclamation-mark.png" alt="signoExclamacion"
+                class="exclamation-mark-image">
             <div class="help-container">
                 <p class="help-paragraph">
-                    Puedes crear un nuevo diseño, o continuar la edición de un diseño tuyo que esté libre para edición.
+                    {{'designsPanel1' | lang}}
                 </p>
                 <p class="help-paragraph">
-                    También puedes importar un diseño compartido por otro usuario para incorporarlo a tu colección de diseños.
+                    {{'designsPanel2' | lang}}
                 </p>
             </div>
-        
+
         </div>
     </div>
-    
+
 </div>

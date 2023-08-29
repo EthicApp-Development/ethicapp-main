@@ -36,7 +36,7 @@
                     <button class="btn btn-default" ng-click="createCopy(ses)" title="{{'copy'|lang}}"><i
                             class="fa fa-copy"></i></button>
 
-                    <button class="btn btn-primary "
+                    <button class="btn btn-primary ml-1"
                         ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
 
                     <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
@@ -54,11 +54,11 @@
                 </div>
 
                 <div class="text-right vertical-align">
-                    <button class="btn btn-primary " ng-click="archiveActivity(ses, $event)"><i
+                    <button class="btn btn-primary " title="{{'file'|lang}}" ng-click="archiveActivity(ses, $event)"><i
                             class="fa fa-inbox"></i></button>
-                    <button class="btn btn-default" ng-click="createCopy(ses)"></button>
-                    <i class="fa fa-copy"></i>
-                    <button class="btn btn-primary "
+                    <button class="btn btn-default ml-1" ng-click="createCopy(ses)" title="{{'copy'|lang}}"><i class="fa fa-copy"></i></button>
+                    
+                    <button class="btn btn-primary ml-1"
                         ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
                     <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
                 </div>
@@ -75,9 +75,9 @@
                 </div>
 
                 <div class="text-right vertical-align">
-                    <button class="btn btn-primary " ng-click="restoreActivity(ses, $event)"><i
+                    <button class="btn btn-primary " title="{{'restore'|lang}}" ng-click="restoreActivity(ses, $event)"><i
                             class="fa fa-undo"></i></button>
-                    <button class="btn btn-primary "
+                    <button class="btn btn-primary ml-1"
                         ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
                     <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
                 </div>
