@@ -309,7 +309,8 @@
 	"newDesignsPanel1": "En esta actividad cada pregunta va acompañada por una escala numérica de 2 a 10 valores, y un recuadro para ingresar un comentario.",
 	"newDesignsPanel2": "La escala debe incluir polos descritos por términos opuestos, por ejemplo “Justo” - “Injusto”, “Prudente” - “Imprudente”.",
 	"file": "Archivar",
-	"restore": "Restaurar"
+	"restore": "Restaurar",
+	"preparingDashboard": "Preparando dashboard para la actividad..."
 
 }
 

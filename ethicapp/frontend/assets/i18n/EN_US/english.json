@@ -307,7 +307,8 @@
 	"newDesignsPanel1": "In this activity each question is accompanied by a numerical scale of 2 to 10 values, and a box to enter a comment.",
 	"newDesignsPanel2": "The scale must include poles described by opposite terms, for example “Fair” - “Unfair”, “Prudent” - “Imprudent”.",
 	"file": "File",
-	"restore": "Restore"
+	"restore": "Restore",
+	"preparingDashboard": "Preparing the activity dashboard..."
 }
 
 

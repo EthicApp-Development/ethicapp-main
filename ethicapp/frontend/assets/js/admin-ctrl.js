@@ -2226,10 +2226,11 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
 
 });
 
-adpp.controller("ActivityController", function ($scope, $filter, $http, Notification) {
+adpp.controller("ActivityController", function ($scope, $filter, $http, Notification, $timeout) {
     var self = $scope;
     self.selectedSes = {};
     self.error = false;
+    self.showSpinner = false;
 
     self.init =function(){
         self.selectedSes = {};
@@ -2239,6 +2240,8 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
 
     //Create Activity from launch activity
     self.createSession = function(dsgnName, dsgndescr, dsgntype, dsgnid){
+
+        self.showSpinner = true;
 
         $http({
             url: "check-design", method: "post", data: { dsgnid: dsgnid}
@@ -2256,6 +2259,9 @@ adpp.controller("ActivityController", function ($scope, $filter, $http, Notifica
                     self.generateCodeActivity(id);
                     self.shared.getActivities();
                     self.shared.updateSesData();
+                    $timeout(function() {
+                        self.showSpinner = false; 
+                    }, 5000);
                     //console.log(data);
                 });
             }
@@ -2947,7 +2953,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
                 {
                     "mode":               "individual",
                     "chat":               false,
-                    "anonymous":          false,
+                    "anonymous":          true,
                     "grouping_algorithm": "random",
                     "prevPhasesResponse": [ ],
                     "stdntAmount":        3,
@@ -2978,7 +2984,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
                 {
                     "mode":               "individual",
                     "chat":               false,
-                    "anonymous":          false,
+                    "anonymous":          true,
                     "grouping_algorithm": "random",
                     "prevPhasesResponse": [ ],
                     "stdntAmount":        3,
