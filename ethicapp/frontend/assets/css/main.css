@@ -1566,7 +1566,7 @@ h2{
 .language-dropdown {
   position: relative;
   display: inline-block;
-  margin-right: 2rem;
+  margin-right: 1rem;
   padding: 10px; 
   border-radius: 15px; 
   transition: background-color 0.2s ease;
