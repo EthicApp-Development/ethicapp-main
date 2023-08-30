@@ -25,7 +25,9 @@
 
     "build-js": "./dev-ops/build-js.sh",
     "build-css": "./dev-ops/build-css.sh",
-    "build-assets": "npm run build-js & npm run build-css"
+    "build-assets": "npm run build-js & npm run build-css",
+
+    "admin-panel": "./dev-ops/admin-panel.sh"
   },
   "devDependencies": {
     "eslint": "^8.24.0",
