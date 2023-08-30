@@ -42,7 +42,7 @@ passport.deserializeUser(async (req, user, done) => {
                         var user = res.rows[0];
                         req.session.uid = res.rows[0].id;
                         req.session.role = res.rows[0].role;
-                        req.session.ses = null;
+                        // req.session.ses = null;
                         done(null, user);
                     }else{
                         done(null, false, { message: "User not found" });
@@ -63,7 +63,7 @@ passport.deserializeUser(async (req, user, done) => {
                     if(res.rows.length > 0){
                         req.session.uid = res.rows[0].id;
                         req.session.role = res.rows[0].role;
-                        req.session.ses = null;
+                        // req.session.ses = null;
                         done(null, res.rows[0]);
                     }else{
                         try {
@@ -87,7 +87,7 @@ passport.deserializeUser(async (req, user, done) => {
                                 }else{
                                     req.session.uid = res.rows[0].id;
                                     req.session.role = res.rows[0].role;
-                                    req.session.ses = null;
+                                    // req.session.ses = null;
                                     done(null, res.rows[0]);
                                 }
                             });
@@ -116,7 +116,7 @@ passport.use(
     (req, accessToken, refreshToken, profile, done) => {
         req.session.uid = profile.id;
         req.session.role = profile.role;
-        req.session.ses = null;
+        // req.session.ses = null;
         return done(null, profile);
     })
 );
