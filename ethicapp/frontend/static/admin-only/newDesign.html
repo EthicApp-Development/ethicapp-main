@@ -7,9 +7,9 @@
     <div class="modal-header">
         <h4>{{'designMsgInfo'|lang}}</h4>
     </div>
-    <form class="modal-body" name="formDesign" ng-controller="StagesEditController" ng-if="selectedView == 'newDesign'">
-        <div class="form-group" style="display: flex;">
-            <label class="line_labels">{{'title'|lang}}:</label>
+    <form class="modal-body form-new-design" name="formDesign" ng-controller="StagesEditController" ng-if="selectedView == 'newDesign'">
+        <div class="" style="display: flex;">
+            <label class="line_labels title-new-design">{{'title'|lang}}:</label>
             <input type="text" class="form-control line_input" name="name" ng-model="title" ng-required="true">
             <div class="ml-2">
                 <select ng-model="selectedOption" class="form-control col-3">
@@ -19,9 +19,9 @@
             </div>
         </div>
         <br>
-        <hr>
+        <hr class="mt-1medio">
         <br>
-        <div class="flex-justify-center">
+        <div class="new-design-bottom">
             <button class="btn btn-primary" ng-click="formDesign.$valid && uploadDesign(title,'template', selectedOption)"
                 type="submit">{{'next'|lang}}</button>
         </div>

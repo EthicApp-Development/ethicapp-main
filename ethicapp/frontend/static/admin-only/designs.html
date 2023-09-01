@@ -10,8 +10,7 @@
             {{'byOthers'|lang}}
         </button>
         <div style="float: left;display: flex;justify-content: left;align-items: center;">
-            <input class="form-control text-center" type="text" placeholder="{{'search'|lang}}" ng-model="userSearch"
-                style="height: 2em;">
+            <input class="form-control text-left search-input fontAwesome" type="text" placeholder="{{'search'|lang}}  &#xF002;" ng-model="userSearch">
         </div>
 
     </div>
@@ -32,16 +31,16 @@
                         <div class="text-right vertical-align">
                             <img class="locked-svg" ng-show="ses.locked"
                                 src="../../assets/images/iconsets/gray-lineart/design-lock-active.svg" alt="SVGLocked">
-                            <button class="btn btn-primary ml-1"
+                            <button class="btn btn-primary btn-smaller ml-1"
                                 ng-click="launchDesign(ses.id, ses.metainfo.title, ses.type)">{{'launchActivity' |
                                 lang}}</button>
 
-                            <button class="btn btn-primary ml-1" ng-click="goToDesign(ses.id, 'E')"
+                            <button class="btn btn-primary btn-smaller ml-1" ng-click="goToDesign(ses.id, 'E')"
                                 ng-hide="ses.locked">{{'edit' |
                                 lang}}</button>
-                            <button class="btn btn-primary ml-1" ng-click="goToDesign(ses.id, 'V')">{{'view' |
+                            <button class="btn btn-primary btn-smaller ml-1" ng-click="goToDesign(ses.id, 'V')">{{'view' |
                                 lang}}</button>
-                            <button class="btn btn-danger ml-1" ng-click="deleteDesign(ses.id)"
+                            <button class="btn btn-danger btn-smaller ml-1" ng-click="deleteDesign(ses.id)"
                                 ng-hide="ses.locked">{{'delete' |
                                 lang}}</button>
 
@@ -62,7 +61,7 @@
                         </div>
 
                         <div class="text-right vertical-align">
-                            <button class="btn btn-primary " ng-click="goToDesign(ses.id, 'V')">{{'view' |
+                            <button class="btn btn-primary btn-smaller" ng-click="goToDesign(ses.id, 'V')">{{'view' |
                                 lang}}</button>
                         </div>
                     </div>

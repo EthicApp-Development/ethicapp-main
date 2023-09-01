@@ -1437,13 +1437,21 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 }
 
 .dsgn_sel{
-  background-color: #67aed6;
+  background-color: #e2e8ff;
 }
 
 .launchActivity-wrapper{
    display: flex; 
    justify-content: space-between;
    width: 82%;
+}
+
+.w-home{
+    width: 87.5rem;
+}
+
+@media (max-width: 991px){
+    .w-home {width: 65rem;}
 }
 
 @media (min-width: 1360px){
@@ -1636,7 +1644,7 @@ h2{
 }
 
 .locked-svg{
-    width: 3.5rem;
+    width: 2rem;
 }
 
 .loading-container {
@@ -1655,6 +1663,50 @@ h2{
 .loading-container i {
   font-size: 2em; 
 }
+
+.globe-icon{
+    height: 3rem;
+    cursor: pointer;
+    font-size: 2.5rem;
+    margin-right: 0.5rem;
+    display: inline-block;
+    margin-top: -1.2rem;
+}
+
+.title-new-design{
+    display: flex;
+    justify-content: left;
+    width: 38px;
+    margin-left: 2rem;
+}
+
+.form-new-design{
+    padding: 0px;
+    margin-top: 3rem;
+}
+
+.new-design-bottom{
+    display: flex;
+    justify-content: left;
+    margin-left: 1rem;
+}
+
+.btn-smaller {
+    padding: 3px 8px;
+}
+
+.fontAwesome {
+  font-family: 'Helvetica', FontAwesome, sans-serif;
+  font-size: 15px;
+}
+
+.search-input{
+    height: 3.5rem;
+    margin-bottom: -3.2rem;
+    padding-top: 0px;
+    font-size: 15px;
+}
+
 
 
 

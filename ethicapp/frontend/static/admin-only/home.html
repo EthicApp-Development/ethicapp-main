@@ -53,11 +53,11 @@
     </div>
 </div>
 
-<!--Activities-->
+
 <h2>{{'recentActivity'|lang}}</h2>
-<div class="activities_container" ng-controller= "ActivityController">
+<div class="activities_home_container" ng-controller= "ActivityController">
     <div class="list-group pad-content">
-        <div class="list-group-item" ng-repeat="ses in currentActivities(0) | limitTo: 3 | orderBy : '-time'">
+        <div class="list-group-item w-home" ng-repeat="ses in currentActivities(0) | limitTo: 3 | orderBy : '-time'">
             <div>
                 <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
                 <p class="list-group-item-text" ng-bind="ses.descr"></p>
