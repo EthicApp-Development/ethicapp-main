@@ -8,7 +8,7 @@
             <div ng-controller="BrowseDesignsController">
                 <div ng-init="setValues()" ng-show="designSelected() == null">
                     <div clas="col-lg-1">
-                        <input class="form-control text-center" type="text" placeholder="{{'search'|lang}}"
+                        <input class="form-control launchActivity-search fontAwesome" type="text" placeholder="{{'search'|lang}}  &#xF002;"
                             ng-model="userSearch">
                     </div>
                     <div class="container launchActivityContainer">
@@ -61,23 +61,27 @@
                             lang}}</button>
                         </div>
                     </div>
-                </form>
-                <div ng-if="selectedSes.code != null">
-                    <div style="background-color: gray; height: 15em; width: 30em;">
-                        <strong>{{selectedSes.code}}</strong>
 
+                    <div class="row">
+                        <div class="loading-container" ng-show="showSpinner">
+                            <i class="fa fa-spinner fa-spin"></i>
+                            <p>{{ 'Preparando dashboard para la actividad...' | lang }}</p>
+                        </div>
                     </div>
-                </div>
+                </form>
+                
+                
+
             </div>
         </div>
         <div class="help_panel">
             <img src="../../assets/images/iconsets/exclamation-mark.png" alt="signoExclamacion" class="exclamation-mark-image">
             <div class="help-container">
                 <p class="help-paragraph">
-                    Puedes lanzar un diseño de actividad todas las veces que requieras.
+                    {{'launchActivityPanel1' | lang}}
                 </p>
                 <p class="help-paragraph">
-                    Cuando un diseño es lanzado, EthicApp genera un código de acceso que puedes entregar a tus estudiantes para unirse a participar.
+                    {{'launchActivityPanel2' | lang}}
                 </p>
             </div>
         

@@ -299,6 +299,18 @@
 	"currentTab": "Actuales",
 	"finishedTab": "Terminadas",
 	"giveDesignLaunch": "Dale una descripción a la actividad",
-	"chooseDesignLaunch": "Escoge el diseño de actividad que desees lanzar"
+	"chooseDesignLaunch": "Escoge el diseño de actividad que desees lanzar",
+	"spanish": "Español",
+	"english": "Inglés",
+	"launchActivityPanel1": "Puedes lanzar un diseño de actividad todas las veces que requieras.",
+	"launchActivityPanel2": "Cuando un diseño es lanzado, EthicApp genera un código de acceso que puedes entregar a tus estudiantes para unirse a participar.",
+	"designsPanel1": "Puedes crear un nuevo diseño, o continuar la edición de un diseño tuyo que esté libre para edición.",
+	"designsPanel2": "También puedes importar un diseño compartido por otro usuario para incorporarlo a tu colección de diseños.",
+	"newDesignsPanel1": "En esta actividad cada pregunta va acompañada por una escala numérica de 2 a 10 valores, y un recuadro para ingresar un comentario.",
+	"newDesignsPanel2": "La escala debe incluir polos descritos por términos opuestos, por ejemplo “Justo” - “Injusto”, “Prudente” - “Imprudente”.",
+	"file": "Archivar",
+	"restore": "Restaurar",
+	"preparingDashboard": "Preparando dashboard para la actividad..."
+
 }
 

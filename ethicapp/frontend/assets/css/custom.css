@@ -122,6 +122,12 @@ body {
     margin: 2em 1em;
 }
 
+.activities_home_container {
+    min-width: 20em;
+    max-width: 80em;
+    margin: 2em 0em;
+}
+
 /* Phase item */
 .phase_element {
     border:4px solid #bbb;
@@ -243,8 +249,8 @@ body {
 .switch {
     position: relative;
     display: inline-block;
-    width: 60px;
-    height: 34px;
+    width: 48px;
+    height: 20px;
 }
   
 .switch input { 
@@ -268,8 +274,8 @@ body {
 .slider::before {
     position: absolute;
     content: "";
-    height: 26px;
-    width: 26px;
+    height: 13px;
+    width: 13px;
     left: 4px;
     bottom: 4px;
     background-color: white;
