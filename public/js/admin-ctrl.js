@@ -921,7 +921,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
         chart: {
             type: 'scatterChart',
             height: 400,
-            color: d3.scale.category10().range(),
+            color: d3.scale.category20c().range(),
             scatter: {
                 onlyCircles: true
             },

@@ -1341,8 +1341,7 @@
             </div>
             <!-- ETHIC CLUSTER DASHBOARD  -->
             <div ng-show="loading == true && selectedSes.type == 'T' && dashboard == false">
-                <div class="spinner" >
-                </div>
+                <div class="lds-spinner"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
             </div>
             <div ng-show="loading == true && selectedSes.type == 'T' && dashboard == false">
                <h1>PROCESANDO LOS DATOS...</h1>
@@ -1357,8 +1356,8 @@
                         </select>
                     </div>
                 </div>
-                <div>
-                    <div class="col-md-2" style="max-height: 450px !important; overflow: auto; display: inline-block;border: cornflowerblue">
+                <div style="margin: 5px;">
+                    <div class="col-md-2" style="max-height: 450px !important; overflow: auto; display: inline-block;border: cornflowerblue; margin-top: 20px;" >
                             <table class="table table-bordered" ts-wrapper >
                                     <tr style="border-style: solid; border-color:grey">
                                         <th>Mas representativo</th>
@@ -1369,10 +1368,12 @@
                             </table>
                     </div>
                     <div class="col-md-10">
-                                <h3>Cluster</h3>
+                                <h3 style="margin: 10px; margin-left: 20px;">Cluster</h3>
+                        <div style="border-style: solid; border-color: rgb(218, 218, 218); border-width: 1px; border-radius: 5px; margin: 10px; margin-left: 20px;">
                             <nvd3 options="chartOption" data="cluster" api="api" config="{refreshDataOnly: true, deepWatchData: true}" ></nvd3>
+                        </div>
                     </div>
-                    <div class="col-md-2 float-left" style="max-height: 450px !important;overflow: auto; display: inline-block;">
+                    <div class="col-md-2 float-left" style="max-height: 450px !important;overflow: auto; display: inline-block; margin-top: 20px;">
                             <table class="table table-bordered" ts-wrapper>
                                     <tr style="border-style: solid; border-color:grey">
                                         <th>Menos representativo</th>
@@ -1383,15 +1384,18 @@
                             </table>
                     </div>
                     <div class="col-md-10">
-                    <h3>Topicos</h3>
-                    <table class="table table-bordered " ts-wrapper>
+                    <h3 style="margin: 10px; margin-left: 20px;">Topicos</h3>
+                    <div style="overflow:scroll; margin: 10px; margin-left: 20px;">
+                        <table class="table table-bordered " ts-wrapper>
                             <tr >
                                 <th ng-repeat="h in topicHeader" ts-repeat>{{h}}</th>  
                             </tr>
                             <tr  ng-repeat="(key, value) in topicBody">
                                 <td ng-style="getColorTopic(value.cluster)" ng-repeat="h in topicHeader" ts-repeat >{{value[h]}}</td>
                             </tr>      
-                    </table>
+                        </table>
+                    </div>
+                    
                     </div>
                 </div>
             </div>
