@@ -37,7 +37,7 @@
     </div>
 
     <div class="wrapper">
-        <div class="container">
+        <div class="container ml-n3">
             <div class="container phase_container">
                 <div class="row">
                     <div class="col-xs-1 phase_element" ng-repeat="item in getStages()" ng-init="current"
@@ -298,9 +298,9 @@
     <div ng-show="error">
         <h4 style="color:red; text-align: center; "><strong>{{'errorSave'|lang}}</strong></h4>
     </div>
-    <div class="row" style="padding-left: 70%; margin-bottom: 5em;">
-        <button class="btn btn-success col-xs-3" ng-click="updateDesign()">{{'save'|lang}}</button>
-        <button class="btn btn-primary col-xs-6" ng-click="launchDesignEdit(ses.id, ses.metainfo.title, ses.type)"
+    <div class="row flex-justify-left ml-1" style="margin-bottom: 5em;">
+        <button class="btn btn-success w-17" ng-click="updateDesign()">{{'save'|lang}}</button>
+        <button class="btn btn-primary w-17" ng-click="launchDesignEdit(ses.id, ses.metainfo.title, ses.type)"
             style="margin-left: 1em;">{{'launchActivity'|lang}}</button>
     </div>
 

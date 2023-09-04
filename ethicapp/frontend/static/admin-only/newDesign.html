@@ -8,16 +8,34 @@
         <h4>{{'designMsgInfo'|lang}}</h4>
     </div>
     <form class="modal-body form-new-design" name="formDesign" ng-controller="StagesEditController" ng-if="selectedView == 'newDesign'">
-        <div class="" style="display: flex;">
-            <label class="line_labels title-new-design">{{'title'|lang}}:</label>
-            <input type="text" class="form-control line_input" name="name" ng-model="title" ng-required="true">
-            <div class="ml-2">
-                <select ng-model="selectedOption" class="form-control col-3">
-                    <option value="semantic_differential">{{'semantic_differential'|lang}}</option>
-                    <option value="ranking">{{'ranking_activity'|lang}}</option>
-                </select>
+        <div class="wrapper_nd">
+            <div class="line-form-nd">
+                <div class="line-row-nd">
+                    <label>Tipo de actividad:</label>
+                    <select ng-model="selectedOption" class="form-control line_input w-22" ng-required="true">
+                        <option value="" selected disabled>{{'selectActivityType'|lang}}</option>
+                        <option value="semantic_differential">{{'semantic_differential'|lang}}</option>
+                        <option value="ranking">{{'ranking_activity'|lang}}</option>
+                    </select>
+                </div>
+                <div class="line-row-nd">
+                    <label>{{'title'|lang}}:</label>
+                    <input type="text" class="form-control line_input" name="name" ng-model="title" ng-required="true">
+                </div>
+            </div>
+            <div class="vertical_help_panel">
+                <img src="../../assets/images/iconsets/exclamation-mark.png" alt="signoExclamacion" class="exclamation-mark-image">
+                <div class="vertical-help-container">
+                    <p ng-show="selectedOption === ''">{{'selectActivityType'|lang}}</p>
+                    <p ng-show="selectedOption === 'semantic_differential'">{{'SemanticDescription'|lang}}</p>
+                    <p ng-show="selectedOption === 'ranking'">{{'RankingDescription'|lang}}</p>
+                    
+                </div>
+            
             </div>
         </div>
+        
+
         <br>
         <hr class="mt-1medio">
         <br>

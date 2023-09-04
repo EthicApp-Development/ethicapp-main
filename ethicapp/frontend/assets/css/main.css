@@ -1510,12 +1510,21 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     justify-content: center;
 }
 
+.flex-justify-left{
+    display: flex;
+    justify-content: left;
+}
+
 .ml-1{
     margin-left: 1rem;
 }
 
 .ml-2{
     margin-left: 2rem;
+}
+
+.mt-medio{
+    margin-top: 0.5rem;
 }
 
 .profile {
@@ -1553,8 +1562,6 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 .mt-1medio{
     margin-top: 1.5rem;
 }
-
-
 
 .designContext{
     margin-bottom: 2rem;
@@ -1673,12 +1680,24 @@ h2{
     margin-top: -1.2rem;
 }
 
-.title-new-design{
+.line-form-nd {
     display: flex;
-    justify-content: left;
-    width: 38px;
-    margin-left: 2rem;
+    flex-direction: column;
+    align-items: flex-start;
 }
+
+.line-row-nd {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 2rem; 
+}
+
+.line_input {
+    flex: 2;
+    width: 29.1rem;
+}
+
 
 .form-new-design{
     padding: 0px;
@@ -1707,6 +1726,42 @@ h2{
     font-size: 15px;
 }
 
+.ml-n3{
+    margin-left: -3rem;
+}
 
+.w-17{
+    width: 17rem;
+}
+.w-22{
+    width: 22rem;
+}
+
+.wrapper_nd{
+    display: flex;
+}
+
+.vertical_help_panel{
+    border: #FFC107 2px solid;
+    min-width: 23em;
+    margin-left: 5em;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 1em;
+    margin-top: 0rem;
+    height: 9.4rem;
+}
+
+.vertical-help-container {
+    margin-top: 1em;
+    max-width: 37em;
+    font-size: 13px;
+    margin-left: 2rem;
+}
+
+.share-paragraph{
+    margin-bottom: -2rem;
+}
 
 
