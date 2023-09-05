@@ -106,11 +106,20 @@ passport.deserializeUser(async (req, user, done) => {
 });
 
 
+const domain_name = process.env.ETHICAPP_DOMAIN_NAME;
+let callbackURL;
+
+if (domain_name === 'localhost') {
+    callbackURL = `http://localhost:${process.env.NODE_PORT}/google/callback`;
+} else {
+    callbackURL = `http://${domain_name}/google/callback`;
+}
+
 passport.use(
     new GoogleStrategy({
         clientID:          pass.GOOGLE_CLIENT_ID,
         clientSecret:      pass.GOOGLE_CLIENT_SECRET,
-        callbackURL:       "http://localhost:8080/google/callback",
+        callbackURL:       callbackURL,
         passReqToCallback: true
     },
     (req, accessToken, refreshToken, profile, done) => {
