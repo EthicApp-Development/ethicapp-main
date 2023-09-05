@@ -2787,7 +2787,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     self.error = false;
     self.saved = false;
     self.errorList = [];
-    self.selectedOption = "semantic_differential";
+    self.selectedOption = "";
     self.roles = [];
     /*
         BACKEND FUNCTIONS

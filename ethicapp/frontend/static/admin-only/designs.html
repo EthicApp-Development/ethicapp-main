@@ -43,12 +43,15 @@
                             <button class="btn btn-danger btn-smaller ml-1" ng-click="deleteDesign(ses.id)"
                                 ng-hide="ses.locked">{{'delete' |
                                 lang}}</button>
-
-                            <label class="switch ml-1">
-                                <input type="checkbox" ng-checked="ses.public" ng-click="designPublic(ses.id)">
-                                <span class="slider round"></span>
-
-                            </label>{{'share'|lang}}
+                            <div class="ml-1">
+                                <label class="switch">
+                                    <input type="checkbox" ng-checked="ses.public" ng-click="designPublic(ses.id)">
+                                    <span class="slider round"></span>
+                                
+                                </label>
+                                <p class="share-paragraph">{{'share'|lang}}</p>
+                            </div>
+                            
                         </div>
                     </div>
                     <!--PUBLIC-->
