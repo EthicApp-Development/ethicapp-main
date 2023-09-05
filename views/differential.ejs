@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es" ng-app="Differential">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <title>DocCollab</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+    <script src="libs/angular.min.js"></script>
+    <script src="libs/angular-sanitize.min.js"></script>
+    <script src="libs/ui-bootstrap-tpls-1.1.2.min.js"></script>
+    <script src="libs/angular-ui-tree.min.js"></script>
+    <script src="libs/angular-timer.min.js"></script>
+    <script src="libs/socket.min.js"></script>
+    <script src="libs/angular-ui-notification.min.js"></script>
+    <script src="libs/angular-glue.min.js"></script>
+    <script src="js/differential-ctrl.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/minimal.css">
+    <link rel="stylesheet" href="css/angular-ui-tree.min.css">
+    <link rel="stylesheet" href="css/angular-ui-notification.min.css">
+    <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body>
+
+<div class="editor-container" ng-controller="DifferentialController">
+
+    <div class="top-bar-mini cflex">
+        <div class="cf1">
+            <a href="seslist" class="simple-margin-left">
+                <img src="img/logo.png" class="logo-bar">
+            </a>
+        </div>
+        <div class="cf3 grow text-center simple-padding-top hscroll" ng-show="iteration > 0">
+            <span ng-repeat="st in sesStatusses">
+                <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': $index==iteration - 1}">{{st | lang}}</span>
+                <!-- <span ng-hide="$last">→</span> -->
+            </span>
+            <i class="fa fa-angle-right"></i>
+            <!-- <span class="pull-right margin-right-24" ng-show="sesSTime != null">
+                <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
+            </span> -->
+        </div>
+        <div class="cf1 text-right margin-right-8 simple-padding-top">
+            <a href="logout" class="text-white">
+                <i class="fa fa-sign-out fa-2x"></i>
+            </a>
+        </div>
+    </div>
+
+    <!--<div class="top-bar-mini">
+        <span class="boxed" ng-bind="teamstr"></span>
+    </div>-->
+
+    <!-- <div class="top-bar-mini">
+        <div class="text-center">
+            <span ng-repeat="st in sesStatusses">
+                <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': st.i == iteration}" ng-bind="st.name"></span>
+                <span ng-hide="$last">→</span>
+            </span>
+            <span class="pull-right margin-right-24" ng-show="sesSTime != null">
+                <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
+            </span>
+        </div>
+    </div> -->
+
+    <!--<div class="top-bar-mini simple-padding-bottom">
+        <strong>Factor detonante: </strong>
+        <span style="color: yellow; font-size: 105%;" ng-bind="sesDescr"></span>
+    </div>-->
+
+    <div class="top-bar top-bar-tabs">
+        <div class="qs-tabs" ng-show="iteration > 0 || myRole == 'P'">
+            <div class="tab tab-text" ng-repeat="doc in documents" ng-class="{active: selectedDocument == $index && showDoc}"
+                 ng-click="selectDocument($index)">
+                <i class="fa fa-book"></i> {{doc.title | limitTo:10}}
+            </div>
+            <div class="tab tab-text" ng-repeat="df in dfs" ng-class="{active: selectedDF + 1 == df.orden && !showDoc , 'green': !df.dirty && df.select != null}"
+                 ng-click="selectDF($index)">
+                <i class="fa fa-question-circle"></i> Pregunta {{df.orden}} <span class="badge bg-red" ng-show="df.c != null && df.c > df.cr">{{df.c - df.cr}}</span>
+            </div>
+            <!--<div class="btab"></div>
+            <div class="rtab">
+                <button class="btn btn-sm margin-right-8 btn-default" ng-if="iteration > 0 && iteration < 4" ng-click="finishState()" ng-class="{'btn-success': finished, 'border-white': finished}">
+                    <i class="fa fa-check"></i></button>
+            </div>-->
+        </div>
+    </div>
+
+    <!--<div class="top-bar top-bar-student">
+        <div class="col-sm-6 full-height">
+            <span class="simple-margin-left" style="vertical-align: top;">Documentos: </span>
+            <span ng-repeat="doc in documents" class="side-top-btn" ng-class="{'active': $index==selectedDocument, 'border-orange': hgDocs[$index]}" ng-click="selectDocument($index)">
+                {{doc.title | limitTo:16}}
+            </span>
+            <strong class="pull-right margin-top-8" ng-bind="iterationNames[iteration]"></strong>--
+        </div>
+        <div class="col-sm-6">
+            <a onclick="window.history.back()" class="btn btn-sm btn-default pull-right">Atrás</a>
+            <button disabled class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i> Representante </button>
+            <button class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && followLeader" ng-click="takeControl()">Tomar Control</button>
+            <a class="btn btn-sm btn-default pull-right" ng-show="iteration > 6" href="rubrica">Ir a evaluación</a>
+            <button class="btn btn-sm btn-default pull-right" ng-if="iteration > 0" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}" ng-hide="myRole == 'P' && iteration > 0">
+                <i class="fa fa-check"></i> Terminé</button>
+            <span class="pull-right boxed" ng-bind="teamstr"></span>
+        </div>
+    </div>-->
+
+    <div class="scrollable-container blue">
+    <div class="mid-container qs-content simple-pad">
+    <div class="boxed" ng-show="iteration > 0 && showDoc">
+        <div>
+            <h3>{{documents[selectedDocument].title}}</h3>
+            <div ng-if="documents[selectedDocument].path != null">
+                <iframe ng-src="{{getDocURL()}}" class="pdf-embed">
+                </iframe>
+            </div>
+        </div>
+    </div>
+
+        <div ng-show="iteration > 0 && !showDoc">
+            <!--<h4>DF{{dfs[selectedDF].orden}}</h4>-->
+            <div class="differential margin-top-n12">
+                <h5 class="text-center">
+                    <span>{{dfs[selectedDF].title}}</span>
+                </h5>
+                <div class="row row-min-padding">
+                    <div class="col-xs-3 text-right">
+                        <strong class="break-words">{{dfs[selectedDF].tleft}}</strong>
+                    </div>
+                    <div class="dopts col-xs-6">
+                        <div class="option eq-space hoverable" ng-repeat="i in [1,2,3,4,5,6,7]" ng-click="dfSelect(i)"
+                             ng-class="{selected: dfs[selectedDF].select == i}">{{i}}</div>
+                    </div>
+                    <div class="col-xs-3">
+                        <strong class="break-words">{{dfs[selectedDF].tright}}</strong>
+                    </div>
+                </div>
+                <div class="input-group margin-top-28">
+                    <span class="input-group-addon deep-blue">{{userAnon[myUid]}}</span>
+                    <textarea type="text" class="form-control" placeholder="{{'comment' | lang}}" ng-model="dfs[selectedDF].comment"
+                              ng-change="dfs[selectedDF].dirty = true" ng-disabled="finished">
+                    </textarea>
+                    <span class="input-group-addon hoverable" ng-disabled="finished || !dfs[selectedDF].dirty" ng-click="sendDFSel()">
+                        <i class="fa fa-check" ng-show="!dfs[selectedDF].dirty"></i>
+                        <i class="fa fa-send" ng-show="dfs[selectedDF].dirty"></i>
+                    </span>
+                </div>
+            </div>
+            <br>
+            <div ng-show="iteration > 1">
+                <hr>
+                <h4>{{'individual' | lang}}</h4>
+                <div class="differential margin-top-8" ng-repeat="df in ansIter1[dfs[selectedDF].id]">
+                    <div class="row">
+                        <div class="col-xs-3 text-right">
+
+                        </div>
+                        <div class="dopts col-xs-6">
+                            <div class="option eq-space" ng-repeat="i in [1,2,3,4,5,6,7]"
+                                 ng-class="{selected: df.select == i}">{{i}}</div>
+                            <br>
+                        </div>
+                        <div class="col-xs-3"></div>
+                    </div>
+                    <div class="margin-top-28 bordered pad-content"><div class="anon-badge margin-left-n8">{{userAnon[df.uid]}}</div> <span>{{df.comment}}</span></div>
+                    <br>
+                    </div>
+            </div>
+            <br>
+            <div ng-show="iteration > 2">
+            <hr>
+            <h4>{{'anon' | lang}}</h4>
+            <div class="differential margin-top-8" ng-repeat="df in ansIter2[dfs[selectedDF].id]">
+                <div class="row">
+                    <div class="col-xs-3 text-right">
+
+                    </div>
+                    <div class="dopts col-xs-6">
+                        <div class="option eq-space" ng-repeat="i in [1,2,3,4,5,6,7]"
+                             ng-class="{selected: df.select == i}">{{i}}</div>
+                        <br>
+                    </div>
+                    <div class="col-xs-3"></div>
+                </div>
+                <div class="margin-top-28 bordered pad-content"><div class="anon-badge margin-left-n8">{{userAnon[df.uid]}}</div> <span>{{df.comment}}</span></div>
+                <br>
+            </div>
+            <hr>
+                <div class="chat-inv"></div>
+            <div class="chat-container">
+                <!-- <h4>Chat</h4> -->
+                <div class="chat bordered">
+                    <div class="chat-area" scroll-glue ng-show="chatExp">
+                        <strong ng-show="chatMsgs[dfs[selectedDF].id] == null || chatMsgs[dfs[selectedDF].id].length == 0">Chat</strong>
+                        <div class="chat-msg" ng-repeat="msg in chatMsgs[dfs[selectedDF].id]" ng-class="{'bg-gray': chatmsgreply == msg.id}">
+                            <div class="font-mini parent-msg" ng-show="msg.parent != null">
+                                <div class="anon-badge margin-left-n8">{{userAnon[msg.parent.uid]}}</div>
+                                <span class="content" bind-html-compile="msg.parent.content | limitTo:100 | linkfy"></span>
+                            </div>
+                            <i class="fa fa-reply" ng-show="msg.parent != null"></i>
+                            <div class="anon-badge" ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">{{userAnon[msg.uid]}}</div>
+                            <span class="pull-right font-mini text-right">
+                                <span class="text-muted">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
+                                <br>
+                                <a ng-click="setReply(msg)">{{'reply' | lang}}</a>
+                            </span>
+                            <span class="content" bind-html-compile="msg.content | linkfy"></span>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <span class="input-group-btn">
+                            <button class="btn btn-default" ng-click="chatExp = !chatExp">
+                                <i class="fa fa-arrow-up" ng-show="!chatExp"></i>
+                                <i class="fa fa-arrow-down" ng-show="chatExp"></i>
+                            </button>
+                            <button class="btn btn-primary" ng-show="chatmsgreply != null" ng-disabled="finished" ng-click="setReply(null)">
+                                <i class="fa fa-reply"></i>
+                            </button>
+                        </span>
+                        <input type="text" class="form-control" ng-model="chatmsg" ng-disabled="finished" id="chat-input"
+                               ng-keydown="$event.keyCode === 13 && sendChatMsg()">
+                        <span class="input-group-btn">
+                            <button class="btn btn-default" ng-disabled="finished" ng-click="sendChatMsg()">
+                                <i class="fa fa-send"></i>
+                            </button>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            </div>
+            </div>
+
+            <br>
+        </div>
+            <br>
+        </div>
+
+    <div class="splash" ng-if="iteration <= 0">
+        <div class="splash-box">
+            <h3><i class="fa fa-clock-o"></i> Sesión en espera</h3>
+            <h5>Espere a que el profesor indique el inicio de la actividad.</h5>
+            <h5>Esta página se recargará automáticamente cuando comience.</h5>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1 @@
+alter table documents add column active boolean default true;

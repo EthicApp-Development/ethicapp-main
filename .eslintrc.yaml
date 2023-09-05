@@ -8,7 +8,7 @@ env:
   es2021: true
   node: true
   jquery: true
-  # mocha: true #* should uncomment when JS tests are implemented
+  # mocha: true #* for when tests are implemented
 extends:
   - eslint:recommended
 overrides: []
@@ -18,14 +18,7 @@ parserOptions:
 plugins:
   - angular
 globals:
-  # Defining globals for linter (otherwise, they will trigger the "no-undef" rule with importing)
-  # Libraries under ethicapp/frontent/assets/libs
-  angular: true # angular.min.js
-  rangy: true # rangy-core.min.js
-  PDFJS: true # pdf.min.js
-  TextLayerBuilder: true # textlayerbuilder.js
-  UAParser: true # ua-parser.min.js
-  saveCsv: true # save-csv.min.js
+  angular: true
 rules:
   quotes:
     - error
@@ -43,7 +36,7 @@ rules:
     - warn
     - 100
     - ignoreComments: false # doc comments should be correctly wrapped
-    - ignoreTrailingComments: true # tolerance for trailing inline comments
+    - ignoreTrailingComments: true # flexibility for trailing inline comments
 
   linebreak-style:
     - error
@@ -62,8 +55,7 @@ rules:
 
   func-style:
     - warn
-    - declaration
-    - allowArrowFunctions: false
+    - expression
 
   no-redeclare:
     - warn # default: error

@@ -1,16 +1,8 @@
-.idea/
-.DS_store
-
-# Postgres dev volume(s)
-db-data-volume/
-db-data-volume*/
-
-# Docker-compose secrets
-secrets/
-
-# Log files and root node modules (for linters)
-*.log
-*.lock
-package-lock.json
+.idea/*
+dev_other/*
+modules/passwords.js
 node_modules/
-*.backup
+.DS_store
+uploads
+public/fonts/*
+sessions

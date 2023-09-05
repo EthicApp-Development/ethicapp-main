@@ -1,22 +1,12 @@
 {
-    // Generated Node files and included libraries are set as read-only for the IDE
-    "files.readonlyInclude": {
-        "/**/node_modules/**": true,
-        "/**/package-lock.json": true,
-        "ethicapp/frontend/assets/libs/*.js": true,
-        "ethicapp/frontend/assets/css/*min.css": true,
-        "ethicapp/frontend/assets/css/introjs.css": true,
-    },
-
-    // Schema association config file(s)
+    // Schema IDE association for IDE with config file(s)
     "files.associations": {
+        ".eslintrc.json": "jsonc", //* redundant setting for current vscode versions
         ".htmlhintrc": "jsonc",
-        ".sqlfluff": "properties",
-        ".env": "properties",
-        ".sqlfluffignore": "ignore"
+        ".sqlfluff": "properties"
     },
 
-    // Indentation for configuration files syntax
+    // Configuration files
     "[yaml]": {
         "editor.tabSize": 2
     },
@@ -25,19 +15,20 @@
     },
 
     // JavaScript
+    "javascript.preferences.importModuleSpecifier": "non-relative",
     "[javascript]": {
         "editor.rulers": [
             100
         ],
         "editor.insertSpaces": true,
         "editor.tabSize": 4,
-        "editor.formatOnSave": true, // linting has to be enforced
+        "editor.formatOnSave": true,
         "editor.defaultFormatter": "dbaeumer.vscode-eslint"
     },
-    "javascript.preferences.importModuleSpecifier": "non-relative",
+
+    // ESLint (Javascript)
     "eslint.format.enable": true,
     "eslint.lintTask.enable": true,
-    "eslint.run": "onType",
     "eslint.validate": [
         "javascript",
         "javascriptreact",
@@ -51,6 +42,7 @@
         ],
         "editor.insertSpaces": true,
         "editor.tabSize": 4,
+        "editor.formatOnSave": true,
         "editor.defaultFormatter": "vscode.html-language-features"
     },
     "htmlhint.enable": true,
@@ -73,10 +65,6 @@
             100
         ],
         "editor.insertSpaces": true,
-        "editor.tabSize": 4,
-        "editor.formatOnSave": true // linting has to be enforced
-    },
-    "cSpell.words": [
-        "ethicapp"
-    ]
+        "editor.tabSize": 4
+    }
 }

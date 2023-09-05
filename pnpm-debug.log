@@ -1,0 +1,16 @@
+{
+  "0 error pnpm": {
+    "message": {
+      "errno": -13,
+      "code": "EACCES",
+      "syscall": "mkdir",
+      "path": "/usr/local/pnpm-global"
+    },
+    "err": {
+      "name": "Error",
+      "message": "EACCES: permission denied, mkdir '/usr/local/pnpm-global'",
+      "code": "EACCES",
+      "stack": "Error: EACCES: permission denied, mkdir '/usr/local/pnpm-global'"
+    }
+  }
+}

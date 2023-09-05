@@ -1,0 +1,24 @@
+<div>
+    <div class="modal-header">
+        <h4>{{ 'new' | lang }} {{ 'session' | lang }}</h4>
+    </div>
+    <form action="add-session" method="post" class="modal-body">
+        <label>{{ 'title' | lang }}:</label>
+        <input type="text" class="form-control" name="name">
+        <label>{{ 'activityType' | lang }}:</label>
+        <select name="type" class="form-control">
+            <!-- <option value="L">Lectura - Ideas Fuerza</option>-->
+            <option value="M">{{ 'semUnits' | lang }}</option>
+            <option value="S">{{ 'multSel' | lang }}</option>
+            <!-- <option value="E">{{ 'ethics' | lang }}</option> -->
+            <option value="R">{{ 'rolePlaying' | lang }}</option>
+            <option value="T">{{ 'ethics' | lang }} 2</option>
+            <option value="J">{{ 'jigsaw' | lang }}</option>
+        </select>
+        <!--<label>Factor detonante:</label>
+        <textarea name="descr" class="form-control" rows="3"></textarea>-->
+        <hr>
+        <br>
+        <button class="btn btn-primary" type="submit">{{ 'add' | lang}}</button>
+    </form>
+</div>

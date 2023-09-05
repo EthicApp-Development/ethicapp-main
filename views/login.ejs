@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <title>DocCollab</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body>
+
+<div class="middle-box">
+
+    <div class="logo">
+        <img src="img/logo.png" alt="logo">
+    </div>
+
+    <h2>Login</h2>
+    <hr/>
+    <% if(rc == 1) {%>
+    <div class="alert alert-info">
+        Registro Completo. Ingrese con sus datos
+    </div>
+    <% } %>
+    <% if(rc == 2) {%>
+    <div class="alert alert-danger">
+        Login o Password Incorrectos
+    </div>
+    <% } %>
+    <% if(rc == 3) {%>
+        <div class="alert alert-info">
+            Se ha enviado un correo con la información para recuperar la contraseña.
+            Este correo podría haber llegado a spam.
+        </div>
+    <% } %>
+    <% if(rc == 4) {%>
+        <div class="alert alert-info">
+            Contraseña cambiada correctamente. Ingrese con sus datos.
+        </div>
+    <% } %>
+    <br/>
+    <form action="login" method="POST">
+        <label>RUT o E-mail:</label>
+        <input type="text" class="form-control" name="user" required autofocus><br>
+        <label>Contraseña:</label>
+        <input type="password" class="form-control" name="pass" required><br>
+        <button type="submit" class="btn btn-primary form-control">Ingresar</button>
+    </form>
+    <a href="forgot-pass">Olvidó su contraseña?</a>
+
+    <br><br>
+
+    <!--<small>Do have a FEN account?</small>
+    <a href="login-fen">Login with FEN</a><br>-->
+    <!--<small>Registro:</small>-->
+    <br/>
+    <a href="register">Crear nueva cuenta</a>
+    <!--<br>
+    <a href="#">Nueva cuenta de profesor</a>-->
+
+</div>
+
+</body>
+</html>

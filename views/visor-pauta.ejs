@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es" ng-app="Editor">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <title>DocCollab</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="libs/pdf.min.js"></script>
+    <script src="libs/rangy-core.min.js"></script>
+    <script src="libs/rangy-classapplier.min.js"></script>
+    <script src="libs/rangy-serializer.min.js"></script>
+    <script src="libs/textlayerbuilder.js"></script>
+    <script src="libs/angular.min.js"></script>
+    <script src="libs/angular-ui-tree.min.js"></script>
+    <script src="libs/angular-timer.min.js"></script>
+    <script src="js/editor-pauta-ctrl.min.js"></script>
+    <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/minimal.css">
+    <link rel="stylesheet" href="css/angular-ui-tree.min.css">
+    <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body class="bg-black">
+
+<div class="editor-container" ng-controller="EditorController">
+
+    <div class="row top-bar-mini">
+        <div class="text-center">
+            <span ng-repeat="st in sesStatusses">
+                <span class="label label-primary" ng-class="{'bg-black-alpha': $index==iteration}" ng-bind="st"></span>
+                <span ng-hide="$last">→</span>
+            </span>
+            <span class="pull-right margin-right-24" ng-show="sesSTime != null">
+                <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
+            </span>
+        </div>
+    </div>
+
+    <div class="row top-bar">
+        <div class="col-sm-6 full-height">
+            <span class="simple-margin-left">Documentos: </span>
+            <span ng-repeat="doc in documents" class="side-top-btn" ng-bind="doc.title"
+                  ng-class="{'active': $index==selectedDocument}" ng-click="selectPDF($index)"></span>
+        </div>
+        <div class="col-sm-6">
+            <button onclick="window.history.back()" class="btn btn-sm btn-default pull-right">Atrás</button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div id="pdf-container" class="col-sm-9 pdf-content">
+            <div class="centered">
+                <div ng-repeat="doc in documents" id="pdf-canvas-{{$index}}" class="centered" ng-show="$index==selectedDocument">
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-3 side-bar">
+            <!--<a class="btn btn-sm btn-default pull-right margin-top-8" ng-click="setSelOrder()" ng-disabled="!checkAllSync()">Fijar orden</a>-->
+            <h3>Ideas Fuerza:</h3>
+            <div class="text-gray text-center" ng-show="numPages>0">Cargando...</div>
+            <div class="y-scrollable" ui-tree data-max-depth="1">
+                <ul class="full-height" ui-tree-nodes="" ng-model="selections">
+                    <li class="row idea-item" ng-repeat="sel in selections" ui-tree-node>
+                        <div class="col-xs-2">
+                            <span ng-hide="true" ui-tree-handle>.</span>
+                            <input type="number" class="form-control input-sm form-inline-micro" ng-model="sel.order" min="1" step="1" max="{{documents.length * 3}}" ng-disabled="!editable || !sel.expanded" ng-change="selTextChange(sel)"></input>
+                            <a ng-click="deleteIdea(sel,$index)" class="margin-top-24" ng-if="sel.expanded && editable"><i class="fa fa-trash"></i></a></div>
+                        <div class="col-xs-9">
+                        <a ng-click="sel.expanded=!sel.expanded" class="spaced pull-right"><i class="fa fa-plus"></i></a>
+                        <strong ng-bind="sel.text" ng-click="goToSerial(sel.text,sel.document)"></strong>
+                        <span class="text-gray"> - {{documents[sel.document].title}}</span>
+                        <div class="input-group" ng-show="sel.expanded">
+                            <textarea class="form-control" ng-model="sel.comment" ng-change="selTextChange(sel)" ng-disabled="!editable"></textarea>
+                            <a class="input-group-addon btn btn-default" ng-if="editable" ng-click="sendIdea(sel)" ng-class="{'bg-lightgreen': sel.status=='saved', 'bg-lightorange': sel.status=='dirty'}">
+                                <i class="fa fa-send"></i>
+                            </a>
+                        </div>
+                        </div>
+                    </li>
+                    <button class="btn form-control btn-default" ng-click="selectText()" ng-if="editable">Nueva idea</button>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

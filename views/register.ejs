@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>DocCollab</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body>
+
+<div class="middle-box">
+
+    <h2>Registro Alumnos</h2>
+    <hr/>
+    <br/>
+    <form action="register" method="POST">
+        <label>Nombre:</label>
+        <input type="text" class="form-control" name="name" required autofocus><br>
+        <label>Apellido:</label>
+        <input type="text" class="form-control" name="lastname"><br>
+        <label>RUT:</label>
+        <input type="text" class="form-control" name="rut" pattern="[P]?[0-9]{7,8}-[0-9kK]" placeholder="sin puntos, con guión" required><br>
+        <label>E-mail:</label>
+        <input type="email" class="form-control" name="mail" required><br>
+        <label>Género:</label>
+        <select name="sex" class="form-control">
+            <option value="F">Femenino</option>
+            <option value="M">Masculino</option>
+            <option value="O">Otro</option>
+        </select><br/>
+        <label>Contraseña:</label>
+        <input type="password" class="form-control" name="pass"><br>
+
+        <button type="submit" class="btn btn-primary form-control">Registrar</button>
+    </form>
+
+    <br><br>
+
+    <!--<small>Do have a FEN account?</small>
+    <a href="login-fen">Login with FEN</a><br>-->
+    <small>Ya tiene una cuenta?</small>
+    <br/>
+    <a href="login">Login</a>
+
+</div>
+
+</body>
+</html>

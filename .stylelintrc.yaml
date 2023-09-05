@@ -3,14 +3,10 @@ extends:
   - stylelint-config-standard
   - stylelint-config-prettier
 ignoreFiles:
-  # Ignoring libraries
   - "**/*.js"
+  - "./node_modules/*"
   - "**/*.min.css"
-  - "./ethicapp/node_modules/*"
-  - "ethicapp/frontend/assets/css/bootstrap*.css"
-  - "ethicapp/frontend/assets/css/introjs.css"
-  - "ethicapp/frontend/assets/css/minimal.css"
-  - "ethicapp/frontend/assets/css/assets-bundle.css"
+  - bootstrap*.css
 rules:
   indentation: 4
   linebreaks: unix
@@ -20,15 +16,3 @@ rules:
   no-duplicate-selectors: true
   font-family-name-quotes: "always-where-required"
   length-zero-no-unit: true
-
-  # Ignoring vendor rules
-  property-no-vendor-prefix: null
-  value-no-vendor-prefix: null
-  function-name-case: null
-  function-no-unknown: null
-  selector-no-vendor-prefix: null
-  at-rule-no-vendor-prefix: null
-
-  # Ignoring kebab-case rule for CSS class names, due a bug in Angular with the `-` character in
-  # class names
-  selector-class-pattern: null
