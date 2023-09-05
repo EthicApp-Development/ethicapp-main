@@ -323,7 +323,7 @@ input:checked + .slider::before {
 }
 
 .error {
-    background-color: #ff858581 !important;
+    border-color: #F44336 !important;
 }
 
 .vertical-align {

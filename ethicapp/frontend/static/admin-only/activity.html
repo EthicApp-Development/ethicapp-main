@@ -3,11 +3,12 @@
         <div ng-controller="StagesController">
             <div ng-controller="MonitorActivityController" ng-init="showDesign = false">
                 <h2>{{'currentActivity' | lang}}</h2>
+                <h4>{{ selectedSes.name }}</h4>
 
                 <div class="" ng-controller="StagesEditController">
 
                     <!--Phases selections-->
-                    <div class="container phase_container">
+                    <div class="container phase_container ml-0">
                         <div class="row">
                             <div class="col-xs-1 phase_element" ng-repeat="item in getStages()" ng-init="current"
                                 ng-class="{phase_current: currentActivity.stage == $index, phase_selected:currentStage==$index}"

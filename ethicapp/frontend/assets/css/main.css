@@ -1215,7 +1215,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 
 .row-border{
     margin: 4px 0;
-    padding: 4px 0;
+    padding: 12px 0;
     border-bottom: 1px solid #bbb;
 }
 
@@ -1768,4 +1768,27 @@ h2{
     padding-left: 0px;
 }
 
+.modal-dialog{
+    margin-top: 10rem;
+}
 
+.pt-8{
+    padding-top: 8rem;
+}
+
+.word-count-roles{
+    width: 7rem;
+    margin-top: -3.7rem;
+}
+
+.word-count-p{
+    margin: 7px 0 10px;
+}
+
+.mb-2{
+    margin-bottom: 2rem;
+}
+
+.ml-0{
+    margin-left: 0rem;
+}
