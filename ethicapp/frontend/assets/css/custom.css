@@ -284,11 +284,11 @@ body {
 }
   
 input:checked + .slider {
-    background-color: #52f321;
+    background-color: #116329;
 }
   
 input:focus + .slider {
-    box-shadow: 0 0 1px #52f321;
+    box-shadow: 0 0 1px #116329;
 }
   
 input:checked + .slider::before {
