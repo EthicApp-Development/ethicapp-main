@@ -224,6 +224,7 @@ app.controller(
                     a.select = s.sel;
                     a.sent = s.comment != "" && s.comment != null;
                 });
+                
             };
 
             self.populateDFsPrev = function () {
@@ -443,6 +444,10 @@ app.controller(
             self.sendDFSel = function (df) {
                 if (df.select == null || df.select == -1) {
                     notify("Error", "El diferencial no está completo");
+                    return;
+                }
+                if (df.justify == true && self.wordCount(df.comment) < df.word_count) {
+                    notify("Error", "El comentario está incompleto");
                     return;
                 }
                 var postdata = {

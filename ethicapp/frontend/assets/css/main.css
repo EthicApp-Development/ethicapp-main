@@ -1757,6 +1757,12 @@ h2{
     height: 9.4rem;
 }
 
+@media (max-width: 992px) {
+    .vertical_help_panel {
+        height: 17.4rem;
+    }
+}
+
 .vertical-help-container {
     margin-top: 1em;
     max-width: 37em;

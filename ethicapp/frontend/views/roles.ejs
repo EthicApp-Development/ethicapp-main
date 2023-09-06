@@ -180,10 +180,16 @@
                                             </textarea>
                                             <span class="input-group-addon hoverable" ng-disabled="finished || !actors[selectedActor].dirty || selectedActor == null"
                                                   ng-click="sendActorSel()">
-                                            <i class="fa fa-check" ng-show="!actors[selectedActor].dirty"></i>
-                                            <span ng-show="!actors[selectedActor].dirty">Enviado</span>
-                                            <i class="fa fa-send" ng-show="actors[selectedActor].dirty"></i>
-                                            <span ng-show="actors[selectedActor].dirty">Por Enviar</span>
+                                                  <div ng-if="actor.sent">
+                                                    <i class="fa fa-check"></i>
+                                                    <span>Enviado</span>
+                                                  </div>
+                                                  <div ng-if="!actor.sent">
+                                                    <i class="fa fa-send"></i>
+                                                    <span>Por Enviar</span>
+                                                  </div>
+                                            
+                                            
                                             </span>
                                         </div>
                                     </div>
