@@ -76,7 +76,7 @@ adpp.controller("RouteCtrl", function($scope) {
         "launchActivity": "views/partials/teacher/launch-activity.html",
         "viewDesign":     "views/partials/teacher/view-design.html",
         "activity":       "views/partials/teacher/activity.html",
-        "profile":        "views/partials/teacher/profile.html",
+        "profile":        "views/partials/profile.html",
     };
 });
 
@@ -2506,13 +2506,13 @@ adpp.controller("MonitorActivityController", function (
     self.nextActivityDesign = function () {//check for race condition
         var stageCounter = self.currentActivity.stage + 1;
         var sesid = self.selectedSes.id;
-        console.log("Current design:",self.design);
-        console.log("Current stage:",stageCounter);
-        console.log("Current sesid:",sesid);
+        //console.log("Current design:",self.design);
+        //console.log("Current stage:",stageCounter);
+        //console.log("Current sesid:",sesid);
        
         var current_phase = self.design.phases[stageCounter];
-        console.log("NEXT PHASE:", current_phase);
-        console.log(self.getPrevAns(current_phase));
+        //console.log("NEXT PHASE:", current_phase);
+        //console.log(self.getPrevAns(current_phase));
        
 
         //match phase.prevPhasesResponse index con self.stages index
@@ -2543,7 +2543,7 @@ adpp.controller("MonitorActivityController", function (
                     self.acceptGroups(stageid);
                 }
 
-                console.log("TYPE:",self.selectedSes.type);
+                //console.log("TYPE:",self.selectedSes.type);
                 if (self.design.type == "semantic_differential") {
                     var counter = 1;
                     for(var question of current_phase.questions){
@@ -2559,7 +2559,7 @@ adpp.controller("MonitorActivityController", function (
                             sesid:      sesid,
                             word_count: content.min_just_length
                         };
-                        console.log(p);
+                        //console.log(p);
                         $http({
                             url: "add-differential-stage", method: "post", data: p
                         }).success(function () {    });
@@ -2590,7 +2590,7 @@ adpp.controller("MonitorActivityController", function (
                             stageid:    stageid,
                         };
                         $http({url: "add-actor", method: "post", data: p}).success(function (data) {
-                            console.log("Actor added");
+                            //console.log("Actor added");
                             c -= 1;
                             if (c == 0) {
                                 let pp = {sesid: sesid, stageid: stageid};
@@ -2628,7 +2628,7 @@ adpp.controller("MonitorActivityController", function (
 
     self.finishActivity = function(){
         $http.post("session-finish-stages", {sesid: self.selectedSes.id}).success((data) => {
-            console.log(data);
+            //console.log(data);
             window.location.reload();
         });
     };
@@ -3064,7 +3064,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
     self.checkDesign = function(){ 
         var error = false;
         var phases = self.design.phases;
-        console.log(self.design);
+        //console.log(self.design);
         for(let i =0; i< phases.length; i++){
             var phase = self.design.phases[i];
 
@@ -3329,7 +3329,7 @@ adpp.controller("OptionsController", function ($scope, $http, Notification) {
             for (var i = 0; i < op.length; i++) {
                 self.selectedSes.conf[op[i]] = true;
             }
-            console.log(self.selectedSes);
+            //console.log(self.selectedSes);
         }
         return true;
     };
@@ -3413,7 +3413,7 @@ adpp.filter("lang", function () {
 
 function generateTeams(alumArr, scFun, n, different, double) {
     if (n == null || n == 0) return [];
-    console.log(alumArr);
+    //console.log(alumArr);
     var arr = alumArr;
     if(!double) {
         arr.sort(function (a, b) {
@@ -3618,7 +3618,7 @@ adpp.controller("no_account",["$scope","$http", "apiParams", function($scope, $h
         var url_string = window.location;
         var url = new URL(url_string);
         var token = url.searchParams.get("tok");
-        console.log(token);
+        //console.log(token);
         $http({ url: "activate_user", method: "post",data: {token} }).success(function () {
         });
     };
