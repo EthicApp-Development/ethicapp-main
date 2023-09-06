@@ -1,3 +1,6 @@
-# EthicApp
+# EthicApp 1.0
 
-> IMPORTANT: please refer to the [`overhaul-2122`](https://github.com/EthicApp-Development/ethicapp-main/tree/overhaul-2122) branch for the updated documentation of EthicApp 2.0
+Welcome to an aging and deprecated branch!
+This branch cointains the sources of EthicApp 1.0, which is no longer being maintained and is solely used for research purposes.
+
+Current development is being done in branch ethicapp-v2.
