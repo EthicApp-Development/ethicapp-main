@@ -1,6 +1,6 @@
-# EthicApp
+# EthicApp 2.0
 
-This repository contains the main project for EthicApp: a web application (developed in JavaScript and Angular.JS) for supporting teaching Ethics in higher education environments. Please review the [organization README document](https://github.com/EthicApp-Development/organization#readme) for a detailed description of this project and its goals.
+This repository contains the main project for EthicApp 2.0: A CSCL script engine developed in JavaScript and Angular.JS, which supports case-based ethics education in Higher Ed environments. Please review the [organization README document](https://github.com/EthicApp-Development/organization#readme) for a detailed description of this project and its goals.
 
 - [EthicApp](#ethicapp)
   - [1. Developing](#1-developing)
