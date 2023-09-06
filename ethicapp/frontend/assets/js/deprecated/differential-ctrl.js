@@ -44,19 +44,19 @@ app.controller("DifferentialController", [
         self.init = () => {
             self.getSesInfo();
             $socket.on("stateChange", (data) => {
-                console.log("SOCKET.IO", data);
+                //console.log("SOCKET.IO", data);
                 if (data.ses == self.sesId) {
                     window.location.reload();
                 }
             });
             $socket.on("chatMsg", (data) => {
-                console.log("SOCKET.IO", data);
+                //console.log("SOCKET.IO", data);
                 if (data.ses == self.sesId && data.tmid == self.tmId && self.iteration == 3) {
                     updateChat();
                 }
             });
             $socket.on("diffReceived", (data) => {
-                console.log("SOCKET.IO", data);
+                //console.log("SOCKET.IO", data);
                 if(data.ses == self.sesId){
                     self.openDetails(data);
                 }
@@ -166,7 +166,6 @@ app.controller("DifferentialController", [
         self.loadDifferentials = () => {
             $http({url: "get-differentials", method: "post"}).success((data) => {
                 self.dfs = data;
-                console.log(self.dfs);
                 self.loadDiffSelection();
                 updateChat(true);
             });
@@ -237,7 +236,7 @@ app.controller("DifferentialController", [
                 $http({url: "record-finish", method: "post", data: postdata}).success(() => {
                     self.hasFinished = true;
                     self.finished = true;
-                    console.log("FINISH");
+                    //console.log("FINISH");
                     //if(self.iteration == 3)
                     //    self.updateSignal();
                 });
@@ -337,7 +336,7 @@ app.controller("DirectContentController", [
         vm.data.title = "Diferencial recibido";
 
         setTimeout(() => {
-            console.log(vm);
+            //console.log(vm);
             document.getElementById("modal-content").innerHTML = vm.data.content;
         }, 500);
 

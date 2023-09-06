@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="assets/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="assets/css/font-awesome.min.css">
     <link rel="stylesheet" href="assets/css/main.css"/>
-    
     <style type="text/css">
         body {
             background-color: #6c859b;
@@ -25,11 +24,11 @@
         }
     </style>
     <script src="assets/js/super-admin-ctrl.js"></script>
+    <%- include('partials/favicon.ejs') %>  
 </head>
 <body>
 
 <div class="large-box" ng-controller="SuperAdminController">
-
     <h2>Administración</h2>
     <hr/>
     <br/>
@@ -128,47 +127,42 @@
                 </div>
             </div>
 
-                <div ng-show="sec == 3" ng-controller="instituciones">
-                    <div >
-                    <h3 style="margin-left: 12%;">Usuarios Institucionales</h3> <br>
-
-                    <div >
-                        <div class="inst">
-                            <div class="tab_cs" ng-init="tab_view=0">
-                                <button class="tab_cs" ng-click= 'tab_view=0' ng-class="{'btn_selected': tab_view == 0}">
-                                    Pendientes
-                                    </button>
-                                    <button class="tab_cs" ng-click = "tab_view=1" ng-class="{'btn_selected': tab_view == 1}">
-                                    Aceptadas
-                                    </button>
-                                
-                                <input type="text" placeholder="filter" class="input-inst" style="width: auto;" ng-model="UserSearch"></input>
-                            </div>
+            <div ng-show="sec == 3" ng-controller="instituciones">
+                <div >
+                <h3 style="margin-left: 12%;">Usuarios Institucionales</h3> <br>
+                <div >
+                    <div class="inst">
+                        <div class="tab_cs" ng-init="tab_view=0">
+                            <button class="tab_cs" ng-click= 'tab_view=0' ng-class="{'btn_selected': tab_view == 0}">
+                                Pendientes
+                                </button>
+                                <button class="tab_cs" ng-click = "tab_view=1" ng-class="{'btn_selected': tab_view == 1}">
+                                Aceptadas
+                                </button>
+                            <input type="text" placeholder="filter" class="input-inst" style="width: auto;" ng-model="UserSearch"></input>
                         </div>
-                    
-                    
-                        <div class="scrollable-container blue" style="width: 100%;" id="box_alumnos">
-                            <div class="mid-container-inst  small-scrollable-container inst" id="container" >
-                            <div ng-repeat="user in institutions | filter:UserSearch" ng-show="tab_view == 0" ng-if="user.acepted == false"  class="mid-container-inst">
-                                <strong>{{user.institution_name}}</strong><br>
-                                <a ng-bind="user.mail"></a>
-                                <form action="make_prof" method="POST" ><input style="display: none;" value="{{user.id}}" type="text"  name="mail"><button class=" btn-primary rtab-nb2" ng-click="refreshUsers()">Ver Informacion</button></form>
-                                {{user.country}}
-                            </div>
-                            <div ng-repeat="user in institutions | filter:UserSearch" ng-show="tab_view == 1" ng-if="user.acepted == true" class="mid-container-inst">
-                                <strong>{{user.name}}</strong><br>
-                                <a ng-bind="user.mail"></a>
-                                <form action="make_alum" method="POST" ><input style="display: none;" value="{{user.mail}}" type="text"  name="mail"> <button class=" btn-primary rtab-nb2" ng-click="refreshUsers()">Ver Informacion</button></form>
-
-                                {{user.role}}
-                            </div>
-                            </div> 
-                        </div> 
                     </div>
+                    <div class="scrollable-container blue" style="width: 100%;" id="box_alumnos">
+                        <div class="mid-container-inst  small-scrollable-container inst" id="container" >
+                        <div ng-repeat="user in institutions | filter:UserSearch" ng-show="tab_view == 0" ng-if="user.acepted == false"  class="mid-container-inst">
+                            <strong>{{user.institution_name}}</strong><br>
+                            <a ng-bind="user.mail"></a>
+                            <form action="make_prof" method="POST" ><input style="display: none;" value="{{user.id}}" type="text"  name="mail"><button class=" btn-primary rtab-nb2" ng-click="refreshUsers()">Ver Informacion</button></form>
+                            {{user.country}}
+                        </div>
+                        <div ng-repeat="user in institutions | filter:UserSearch" ng-show="tab_view == 1" ng-if="user.acepted == true" class="mid-container-inst">
+                            <strong>{{user.name}}</strong><br>
+                            <a ng-bind="user.mail"></a>
+                            <form action="make_alum" method="POST" ><input style="display: none;" value="{{user.mail}}" type="text"  name="mail"> <button class=" btn-primary rtab-nb2" ng-click="refreshUsers()">Ver Informacion</button></form>
+                            {{user.role}}
+                        </div>
+                        </div> 
+                    </div> 
                 </div>
-                </div>
+            </div>
         </div>
     </div>
+</div>
 
 
 

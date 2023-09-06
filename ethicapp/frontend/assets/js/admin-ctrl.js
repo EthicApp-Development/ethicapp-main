@@ -6,7 +6,6 @@ var adpp = angular.module("Admin", [
     "btford.socket-io", "ngRoute", "checklist-model", "ngDialog"]
 );
 
-
 var DASHBOARD_AUTOREALOD = window.location.hostname.indexOf("fen") != -1;
 var DASHBOARD_AUTOREALOD_TIME = 15;
 
@@ -60,7 +59,7 @@ adpp.config(function ($routeProvider) {
         .when("/",
             {
                 controller:  "RouteCtrl",
-                templateUrl: "static/admin-only/uirouter.html"
+                templateUrl: "views/partials/teacher/ui-router.html"
             });
 
  
@@ -68,28 +67,23 @@ adpp.config(function ($routeProvider) {
  
 adpp.controller("RouteCtrl", function($scope) {
     $scope.template={      
-        "home":                  "static/admin-only/home.html",
-        "newDesign":             "static/admin-only/newDesign.html",
-        "newDesignExt":          "static/admin-only/newDesignExt.html",
-        "designs":               "static/admin-only/designs.html",
-        "users":                 "static/admin-only/users.html",
-        "institution":           "static/admin-only/institution.html",
-        "activities":            "static/admin-only/activities.html",
-        "launchActivity":        "static/admin-only/launchActivity.html",
-        "viewDesign":            "static/admin-only/viewDesign.html",
-        "activity":              "static/admin-only/activity.html",
-        "profile":               "static/admin-only/profile.html",
-        "user_admin":            "static/admin-only/user_admin.html",
-        "institution_admin":     "static/admin-only/institution_admin.html",
-        "institution_data":      "static/admin-only/institution_data.html",
-        "accepted_institutions": "static/admin-only/accepted_institutions.html"
+        "home":           "views/partials/teacher/home.html",
+        "newDesign":      "views/partials/teacher/new-design.html",
+        "newDesignExt":   "views/partials/teacher/new-design-ext.html",
+        "designs":        "views/partials/teacher/designs.html",
+        "users":          "views/partials/teacher/users.html",
+        "activities":     "views/partials/teacher/activities.html",
+        "launchActivity": "views/partials/teacher/launch-activity.html",
+        "viewDesign":     "views/partials/teacher/view-design.html",
+        "activity":       "views/partials/teacher/activity.html",
+        "profile":        "views/partials/teacher/profile.html",
     };
 });
 
 adpp.service("DialogService", function(ngDialog) {
     this.openDialog = function() {
         ngDialog.open({
-            template:        "static/admin-only/warningDialog.html",
+            template:        "views/partials/teacher/warning-dialog.html",
             controller:      "DialogCtrl",
             className:       "ngdialog-theme-default",
             closeByDocument: true

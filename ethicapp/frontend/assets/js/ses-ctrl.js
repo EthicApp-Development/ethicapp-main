@@ -44,7 +44,7 @@ adpp.controller("SesListController",
             self.init = function () {
                 self.updateSessions();
                 $socket.on("stateChange", function (data) {
-                    console.log("SOCKET.IO", data);
+                    //console.log("SOCKET.IO", data);
                     self.updateSessions();
                 });
                 self.showName();
@@ -117,11 +117,11 @@ adpp.controller("SesListController",
             };
 
             self.checkCode = function (code) {
-                console.log(self.sessions, code);
+                //console.log(self.sessions, code);
                 var s = self.sessions.find(function (e) {
                     return e.code == code;
                 });
-                console.log(s);
+                //console.log(s);
                 if (s == null) return true;
                 var url = self.routes[s.type] + "?sesid=" + s.id;
                 window.location.replace(url);

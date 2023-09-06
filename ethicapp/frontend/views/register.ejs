@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="es" ng-app="Admin">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
@@ -16,6 +15,7 @@
   <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit" async defer></script>
   <script src="<%= asset('/js/assets-bundle.js') %>"></script>
   <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
+  <%- include('partials/favicon.ejs') %>  
 </head>
 
 <body ng-controller="no_account">
