@@ -10,9 +10,9 @@ var tabSel = { type: 0 };
 window.DIC = null;
 window.warnDIC = {};
 
-var adpp = angular.module("Admin", [
+var adpp = angular.module("Admin", ["ngSanitize",
     "api-params", "ui.bootstrap", "ui.multiselect", "nvd3", "timer",
-    "ui-notification", "ngQuill", "tableSort",
+    "ui-notification", "ngQuill", "tableSort", "pascalprecht.translate",
     "btford.socket-io", "ngRoute", "checklist-model", "ngDialog"]
 );
 
@@ -38,8 +38,6 @@ import { DashboardRubricaController } from "../../controllers/teacher/dashboard_
 import { LoginController } from "../../controllers/login_controller.js";
 import { ngQuillConfigProvider } from "../../helpers/util.js";
 
-console.log("[teacher_admin] loaded! past controller loading.");
-
 adpp.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
@@ -47,7 +45,18 @@ adpp.factory("$socket", ["socketFactory", function (socketFactory) {
 // Rich text editor configuration
 adpp.config(["ngQuillConfigProvider", ngQuillConfigProvider]);
 
-console.log("[teacher_admin] loaded! past socket and quill.");
+// Translations
+adpp.config(function($translateProvider) {
+    $translateProvider.useSanitizeValueStrategy('sanitizeParameters');
+
+    $translateProvider.useStaticFilesLoader({
+        prefix: 'assets/i18n/', 
+        suffix: '.json'
+    });
+
+    // Establece el idioma predeterminado
+    $translateProvider.preferredLanguage('es');
+});
 
 // Inject controllers into application
 adpp.controller("RouteCtrl", RoutingController);

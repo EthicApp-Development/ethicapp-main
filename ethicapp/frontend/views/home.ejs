@@ -4,16 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>EthicApp</title>
-  <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css" />
-  <script src="assets/libs/angular.min.js"></script>
-  <script src="assets/libs/angular-nvd3.min.js"></script>
-  <script type="text/javascript" src="assets/libs/ng-quill.min.js"></script>
-  <script src="assets/js/StagesController.js"></script>
-  <script src="assets/js/admin-ctrl.js"></script>
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="assets/libs/ngDialog.min.js"></script>
-  <script src="<%= asset('/js/assets-bundle.js') %>"></script>
+  <script src="assets/libs/angular.min.js" defer></script>
+  <script src="assets/libs/angular-sanitize.min.js" defer></script>
+  <script src="assets/libs/angular-translate-2.18.4.min.js" defer></script>
+  <script src="assets/libs/angular-translate-loader-static-files-2.18.4.min.js" defer></script>
+  <script src="assets/libs/angular-nvd3.min.js" defer></script>
+  <script src="assets/libs/ng-quill.min.js" defer></script>
+  <script src="assets/libs/ngDialog.min.js" defer></script>  
+  <script src="assets/libs/socket.min.js" defer></script>
+  <script src="assets/js/ngmodules/teacher/teacher_admin.mjs" type="module" defer></script>
   <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
+  <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css" />
   <%- include('partials/favicon.ejs') %>
 </head>
 <body ng-controller="AdminController">
@@ -29,7 +30,7 @@
         ng-mouseleave="showLanguageDropdown = false">
         <i class="fa fa-globe"></i>
         <i class="fa fa-angle-down"></i>
-        <ul class="language-options" ng-show="showLanguageDropdown">
+        <ul ng-if="false" class="language-options" ng-show="showLanguageDropdown">
           <li ng-repeat="languageKey in ['ES_CL/spanish', 'EN_US/english']" ng-click="changeLang(languageKey)">
             <span ng-if="languageKey === lang" class="selected-language">{{ getTranslatedLanguageName(languageKey) }} <i
                 class="fa fa-check"></i></span>
@@ -40,7 +41,7 @@
       </div>
       <img src="assets/images/assorted/blanco.jpg" alt="No Carga"
         class="circle_profile cf1 text-right margin-right-3 simple-padding-top" ng-click="selectView('profile')">
-      <strong class="margin-right-8"><a ng-click="selectView('profile')" style="color: white;"> {{'profile' | lang}}
+      <strong class="margin-right-8"><a ng-click="selectView('profile')" style="color: white;"> {{'profile' | translate }}
         </a></strong>
       <a href="logout" class="text-white ml-2">
         <i class="fa fa-sign-out fa-2x"></i>
@@ -50,10 +51,10 @@
   <div>
     <div class="sidenav"> <!--Left side NAV BAR-->
       <div style="margin-top: 5em;">
-        <a ng-click="selectView('')">{{'home' | lang}}</a>
-        <a ng-click="selectView('launchActivity')">{{'launchActivity' | lang}}</a>
-        <a ng-click="selectView('activities')">{{'activities' | lang}}</a>
-        <a ng-click="selectView('designs')">{{'designs' | lang}}</a>
+        <a ng-click="selectView('')">{{ 'home' | translate }}</a>
+        <a ng-click="selectView('launchActivity')">{{ 'launchActivity' | translate }}</a>
+        <a ng-click="selectView('activities')">{{ 'activities' | translate }}</a>
+        <a ng-click="selectView('designs')">{{ 'designs' | translate }}</a>
       </div>
     </div>
     <div class="main_body vl"> <!--Right side-->
