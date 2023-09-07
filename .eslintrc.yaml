@@ -63,7 +63,8 @@ rules:
   func-style:
     - warn
     - declaration
-    - allowArrowFunctions: false
+    - expression
+    - allowArrowFunctions: true
 
   no-redeclare:
     - warn # default: error

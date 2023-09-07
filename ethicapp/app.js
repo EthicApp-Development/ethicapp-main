@@ -31,17 +31,13 @@ var assetPath = path.join(__dirname, "/frontend/assets");
 app.use(express.static(assetPath));
 app.use(assetVersions("/assets", assetPath));
 
-
-
-
 // view engine setup
 app.set("views", path.join(__dirname, "frontend/views"));
 app.set("view engine", "ejs");
 
-
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
-app.use(logger("[Readings] :method :url :status - :response-time ms"));
+app.use(logger("[EthicApp] :method :url :status - :response-time ms"));
 busboy.extend(app, {
     upload:        true,
     mimeTypeLimit: ["application/pdf"],
@@ -71,6 +67,7 @@ app.use("/", middleware.verifySession, stages);
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {
+    console.log(`[app.use error] req.path: '${req.path}'`);
     let err = new Error("Not Found");
     err.status = 404;
     next(err);

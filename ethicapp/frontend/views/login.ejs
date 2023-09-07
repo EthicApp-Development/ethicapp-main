@@ -5,17 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>EthicApp</title>
     <script src="assets/libs/angular.min.js"></script>
-    <script src="assets/libs/angular-nvd3.min.js"></script>
-    <script type="text/javascript" src="assets/libs/ng-quill.min.js"></script>
-    <script src="assets/js/StagesController.js"></script>
-    <script src="assets/js/admin-ctrl.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="assets/libs/ngDialog.min.js"></script>
-    <script src="<%= asset('/js/assets-bundle.js') %>"></script>
+    <script src="assets/libs/angular-nvd3.min.js" defer></script>
+    <script type="text/javascript" src="assets/libs/ng-quill.min.js" defer></script>
+    <script src="/socket.io/socket.io.js" defer></script>
+    <script src="assets/libs/ngDialog.min.js" defer></script>
+    <script src="<%= asset('/js/assets-bundle.js') %>" defer></script>
+    <%- include('partials/favicon.ejs') %>
     <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
-    <%- include('partials/favicon.ejs') %>    
-  </head>
-  <body ng-controller="no_account">
+    <script src="assets/js/ngmodules/teacher/teacher_admin.mjs" type="module" defer></script>
+  </head> 
+  <body ng-controller="LoginController">
     <div class="form-signin panel panel-default">
       <div class="panel-body">
         <div class="logo">
@@ -81,6 +80,6 @@
           </div>
         </div>
       </div>
-    </div>
-  </body>
+    </div>    
+  </body> 
 </html>
