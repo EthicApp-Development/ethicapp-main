@@ -51,6 +51,7 @@ export let ManagementController = ($scope,
     self.misc = {};
 
     self.init = function () {
+        console.log("[ManagementController] init.");
         //self.updatelangdata();
         self.getMe();
         

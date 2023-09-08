@@ -1,5 +1,6 @@
 /*eslint func-style: ["error", "expression"]*/
 export let TabsController = ($scope, $http, Notification) => {
+    console.log("[TabsController] init");
     var self = $scope;
     self.tabOptions = [];
     self.tabConfig = ["users", "groups"];

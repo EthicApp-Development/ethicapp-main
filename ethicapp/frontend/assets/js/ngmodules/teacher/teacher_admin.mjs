@@ -10,10 +10,10 @@ var tabSel = { type: 0 };
 window.DIC = null;
 window.warnDIC = {};
 
-var adpp = angular.module("Admin", ["ngSanitize",
+var adpp = angular.module("Admin", ["ngSanitize", "btford.socket-io",
     "api-params", "ui.bootstrap", "ui.multiselect", "nvd3", "timer",
-    "ui-notification", "ngQuill", "tableSort", "pascalprecht.translate",
-    "btford.socket-io", "ngRoute", "checklist-model", "ngDialog"]
+    "ui-notification", "ngQuill", "tableSort", "pascalprecht.translate", 
+    "ngRoute", "checklist-model", "ngDialog"]
 );
 
 import { ActivityController } from "../../controllers/teacher/activity_controller.js";
@@ -54,13 +54,13 @@ adpp.config(function($translateProvider) {
         suffix: '.json'
     });
 
-    // Establece el idioma predeterminado
+    // Set default language
     $translateProvider.preferredLanguage('es');
 });
 
 // Inject controllers into application
 adpp.controller("RouteCtrl", RoutingController);
-adpp.controller("AdminController", ManagementController);
+adpp.controller("ManagementController", ManagementController);
 adpp.controller("TabsController", TabsController);
 adpp.controller("DocumentsController", DocumentsController);
 adpp.controller("SesEditorController", SesEditorController);
