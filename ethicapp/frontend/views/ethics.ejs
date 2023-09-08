@@ -174,13 +174,18 @@
                                       ng-change="df.dirty = true" ng-disabled="finished || !df.justify">
                             </textarea>
                             <span class="input-group-addon hoverable" ng-disabled="finished || !df.dirty" ng-click="sendDFSel(df)">
-                            <i class="fa fa-check" ng-show="!df.dirty && df.sent"></i>
-                            <i class="fa fa-send" ng-show="df.dirty || !df.justify && !df.sent"></i>
-                            <span ng-show="misc.reportDirty">Por Enviar</span>
-                            <span ng-show="df.dirty || !df.justify && !df.sent">Por Enviar</span>
-                            <span ng-show="!df.dirty && df.sent">Enviado</span>
-                            <i class="fa fa-question-circle" ng-show="!df.dirty && !df.sent && df.justify" style="opacity: 0"></i>
+                                <div ng-if="df.sent">
+                                    <i class="fa fa-check"></i>
+                                    <span ng-show="!df.dirty && df.sent">Enviado</span>
+                                </div>
+                                <div ng-if="!df.sent">
+                                    <i class="fa fa-send"></i>
+                                    <span>Por Enviar</span>
+                                </div>
+                                
+                                <i class="fa fa-question-circle" ng-show="!df.dirty && !df.sent && df.justify" style="opacity: 0"></i>
                             </span>
+
                         </div>
                         <hr class="margin-ver-8">
                     </div>
