@@ -14,12 +14,9 @@
     <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="assets/css/angular-ui-tree.min.css">
     <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
-    
 </head>
 <body>
-
 <div class="editor-container" ng-controller="DifferentialController">
-
     <div class="top-bar-mini cflex">
         <div class="cf1">
             <a href="seslist" class="simple-margin-left">
@@ -42,28 +39,6 @@
             </a>
         </div>
     </div>
-
-    <!--<div class="top-bar-mini">
-        <span class="boxed" ng-bind="teamstr"></span>
-    </div>-->
-
-    <!-- <div class="top-bar-mini">
-        <div class="text-center">
-            <span ng-repeat="st in sesStatusses">
-                <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': st.i == iteration}" ng-bind="st.name"></span>
-                <span ng-hide="$last">→</span>
-            </span>
-            <span class="pull-right margin-right-24" ng-show="sesSTime != null">
-                <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
-            </span>
-        </div>
-    </div> -->
-
-    <!--<div class="top-bar-mini simple-padding-bottom">
-        <strong>Factor detonante: </strong>
-        <span style="color: yellow; font-size: 105%;" ng-bind="sesDescr"></span>
-    </div>-->
-
     <div class="top-bar top-bar-tabs">
         <div class="qs-tabs" ng-show="iteration > 0 || myRole == 'P'">
             <div class="tab tab-text" ng-repeat="doc in documents" ng-class="{active: selectedDocument == $index && showDoc}"
@@ -74,33 +49,8 @@
                  ng-click="selectDF($index)">
                 <i class="fa fa-question-circle"></i> Pregunta {{df.orden}} <span class="badge bg-red" ng-show="df.c != null && df.c > df.cr">{{df.c - df.cr}}</span>
             </div>
-            <!--<div class="btab"></div>
-            <div class="rtab">
-                <button class="btn btn-sm margin-right-8 btn-default" ng-if="iteration > 0 && iteration < 4" ng-click="finishState()" ng-class="{'btn-success': finished, 'border-white': finished}">
-                    <i class="fa fa-check"></i></button>
-            </div>-->
         </div>
     </div>
-
-    <!--<div class="top-bar top-bar-student">
-        <div class="col-sm-6 full-height">
-            <span class="simple-margin-left" style="vertical-align: top;">Documentos: </span>
-            <span ng-repeat="doc in documents" class="side-top-btn" ng-class="{'active': $index==selectedDocument, 'border-orange': hgDocs[$index]}" ng-click="selectDocument($index)">
-                {{doc.title | limitTo:16}}
-            </span>
-            <strong class="pull-right margin-top-8" ng-bind="iterationNames[iteration]"></strong>--
-        </div>
-        <div class="col-sm-6">
-            <a onclick="window.history.back()" class="btn btn-sm btn-default pull-right">Atrás</a>
-            <button disabled class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i> Representante </button>
-            <button class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && followLeader" ng-click="takeControl()">Tomar Control</button>
-            <a class="btn btn-sm btn-default pull-right" ng-show="iteration > 6" href="rubrica">Ir a evaluación</a>
-            <button class="btn btn-sm btn-default pull-right" ng-if="iteration > 0" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}" ng-hide="myRole == 'P' && iteration > 0">
-                <i class="fa fa-check"></i> Terminé</button>
-            <span class="pull-right boxed" ng-bind="teamstr"></span>
-        </div>
-    </div>-->
-
     <div class="scrollable-container blue">
     <div class="mid-container qs-content simple-pad">
     <div class="boxed" ng-show="iteration > 0 && showDoc">
@@ -112,9 +62,7 @@
             </div>
         </div>
     </div>
-
         <div ng-show="iteration > 0 && !showDoc">
-            <!--<h4>DF{{dfs[selectedDF].orden}}</h4>-->
             <div class="differential margin-top-n12">
                 <h5 class="text-center">
                     <span>{{dfs[selectedDF].title}}</span>
@@ -184,7 +132,6 @@
             <hr>
                 <div class="chat-inv"></div>
             <div class="chat-container">
-                <!-- <h4>Chat</h4> -->
                 <div class="chat bordered">
                     <div class="chat-area" scroll-glue ng-show="chatExp">
                         <strong ng-show="chatMsgs[dfs[selectedDF].id] == null || chatMsgs[dfs[selectedDF].id].length == 0">Chat</strong>
@@ -225,12 +172,10 @@
             </div>
             </div>
             </div>
-
             <br>
         </div>
             <br>
         </div>
-
     <div class="splash" ng-if="iteration <= 0">
         <div class="splash-box">
             <h3><i class="fa fa-clock-o"></i> Sesión en espera</h3>
@@ -238,8 +183,6 @@
             <h5>Esta página se recargará automáticamente cuando comience.</h5>
         </div>
     </div>
-
 </div>
-
 </body>
 </html>

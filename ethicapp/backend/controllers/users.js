@@ -556,11 +556,9 @@ router.post("/resetpassword", (req, res) => {
     mail();
 });
 
-
 router.get("/new-pass/:token", (req, res) => {
     res.render("newpass", { token: req.params.token });
 });
-
 
 router.post("/newpassword", rpg.execSQL({
     dbcon: pass.dbcon,
@@ -581,7 +579,6 @@ router.post("/newpassword", rpg.execSQL({
         res.redirect("login?rc=4");
     }
 }));
-
 
 router.post("/super-login-as", (req, res) => {
     if (req.session.role != "S" || req.body.uid == null) {

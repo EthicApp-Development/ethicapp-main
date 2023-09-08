@@ -15,19 +15,16 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="<%= asset('/js/assets-bundle.js') %>"></script>
     <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
-    
+    <%- include('partials/favicon.ejs') %>
 </head>
 <body>
-
     <div ng-controller="AdminController">
-
         <div class="top-bar-mini cflex">
             <div class="cf1">
                 <a href="seslist" class="simple-margin-left">
                     <h3 class="logo-bar app-title">EthicApp</h3>
                 </a>
             </div>
-            
             <div class="cf1 text-right margin-right-8 simple-padding-top" id="topbtnlist">
                 <button class="btn btn-default btn-sm " ng-click="changeLang()">{{'langOther' | lang}}</button>
                 <img src="assets/images/assorted/blanco.jpg" alt="No Carga" class="circle_profile cf1 text-right margin-right-8 simple-padding-top" ng-click="selectView('profile')">

@@ -17,12 +17,10 @@
     <link rel="stylesheet" href="assets/css/font-awesome.min.css">
     <link rel="stylesheet" href="assets/css/introjs.css">
     <link rel="stylesheet" href="assets/css/main.css"/>
+    <%- include('partials/favicon.ejs') %>
 </head>
 <body>
-
 <div ng-controller="SesListController">
-
-
     <div class="top-bar-mini cflex">
         <div class="cf1">
             <a href="seslist" class="simple-margin-left">
@@ -108,13 +106,8 @@
                     <a href="{{routes[ses.type]}}?sesid={{ses.id}}"><button class="btn btn-primary ">{{'gotoActivity'|mylang}}</button></a>
                 </div>
             </div>
-            
         </div>
     </div>
-
-
-
 </div>
-
 </body>
 </html>

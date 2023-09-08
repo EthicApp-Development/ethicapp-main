@@ -5,36 +5,30 @@
   "scripts": {
     "init-passwords-js": "./dev-ops/create-passwords-js.sh",
     "init-db": "./dev-ops/docker-init-db-volume.sh",
-
     "build-and-push": "./dev-ops/build-and-push.sh",
-
     "lint-js": "npx eslint './ethicapp/**/*.js' ./ethicapp/backend/ethicapp",
     "lint-html": "npx htmlhint './ethicapp/frontend/static/**/*.html'",
     "lint-css": "npx stylelint './ethicapp/frontend/assets/css/**/*.css'",
     "lint-sql": "sqlfluff lint ./postgres-db/",
-
     "fix-js": "npx eslint --fix './ethicapp/**/*.js' ./ethicapp/backend/ethicapp",
     "fix-css": "npx stylelint --fix './ethicapp/frontend/assets/css/**/*.css'",
     "fix-sql": "sqlfluff fix --show-lint-violations --force ./postgres-db/",
-
     "clear-sessions": "sudo rm -f -v ./ethicapp/sessions/*",
-
     "pgdump": "./dev-ops/docker-pgdump.sh",
     "pgrestore": "./dev-ops/docker-pgrestore.sh",
     "psql": "./dev-ops/docker-psql.sh",
-
     "build-js": "./dev-ops/build-js.sh",
     "build-css": "./dev-ops/build-css.sh",
     "build-assets": "npm run build-js & npm run build-css"
   },
   "devDependencies": {
+    "esbuild": "0.18.20",
     "eslint": "^8.24.0",
     "eslint-plugin-angular": "^4.1.0",
     "htmlhint": "^1.1.4",
+    "sass": "^1.63.6",
     "stylelint": "^14.13.0",
     "stylelint-config-prettier": "^9.0.3",
-    "stylelint-config-standard": "^28.0.0",
-    "esbuild": "^0.18.10",
-    "sass": "^1.63.6"
+    "stylelint-config-standard": "^28.0.0"
   }
 }
