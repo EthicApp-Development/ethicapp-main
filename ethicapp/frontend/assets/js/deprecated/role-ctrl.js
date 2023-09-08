@@ -499,7 +499,13 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     self.sendActorSel = function (verify) {
         if (verify) {
             if (self.actors.some(function (a, i) {
-                return (!self.justifyPosition && a.justified || self.justifyPosition && self.posToJustify[i]) && (a.comment == null || a.comment == "" || self.wordCount(a.comment) < a.word_count);
+                return (!self.justifyPosition 
+                    && a.justified 
+                    || self.justifyPosition 
+                    && self.posToJustify[i]) 
+                    && (a.comment == null 
+                    || a.comment == "" 
+                    || self.wordCount(a.comment) < a.word_count);
             })) {
                 notify("Datos Faltantes", "Falta completar la justificación de algunos actores");
                 return;
