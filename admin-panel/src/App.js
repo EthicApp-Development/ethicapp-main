@@ -2,6 +2,9 @@
 import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
+import CssBaseline from '@mui/material/CssBaseline';
+import Box from '@mui/material/Box';
+
 import Institution from './pages/Institution';
 import Home from './pages/Home';
 import Reports from './pages/Reports';
@@ -15,7 +18,8 @@ function App() {
   //      Make that if rendering login with existing stored token then auto redirect to admin home (/admin)
   
   return(
-    <>
+    <Box sx={{ display: 'flex' }}>
+      <CssBaseline />
       <NavBar/>
       <Routes>
         {/* Redirect any unknown url to '/' */}
@@ -28,14 +32,14 @@ function App() {
         <Route path="/admin/login" element={<Login/>}/>
 
         {/* All these pages have NavBar*/}
-        <Route path="/admin/institution" element={<Institution/>}/>
         <Route path="/admin" element={<Home/>}/>
+        <Route path="/admin/institution" element={<Institution/>}/>
         <Route path="/admin/reports" element={<Reports/>}/>
         <Route path="/admin/users" element={<Users/>}/>
         <Route path="/admin/report/:reportEnum" element={<SingleReport/>}/>
 
       </Routes>
-    </>
+    </Box>
   )
 }
 
