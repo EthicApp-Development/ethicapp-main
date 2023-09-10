@@ -104,7 +104,6 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             if (self.isJigsaw) {
                 self.getJigsawRoles();
             }
-            console.log(self);
         });
     };
 
