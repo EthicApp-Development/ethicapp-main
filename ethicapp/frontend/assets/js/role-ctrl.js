@@ -104,6 +104,7 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             if (self.isJigsaw) {
                 self.getJigsawRoles();
             }
+            console.log(self);
         });
     };
 
@@ -258,6 +259,9 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             });
             a.comment = s.description;
             a.sent = s.description != "" && s.description != null;
+            if(self.wordCount(a.comment) < a.word_count){
+                a.sent = false;
+            }
             acts.push(a);
         });
         self.actors = acts;
@@ -282,6 +286,9 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             if (a) {
                 a.comment = s.description;
                 a.sent = s.description != "" && s.description != null;
+                if(self.wordCount(a.comment) < a.word_count){
+                    a.sent = false;
+                }
                 acts.push(a);
             }
         });
@@ -522,6 +529,9 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             $http.post("send-actor-selection", postdata).success(function (data) {
                 a.dirty = false;
                 a.sent = a.comment != null && a.comment != "";
+                if(self.wordCount(a.comment) < a.word_count){
+                    a.sent = false;
+                }
             });
         });
         self.selectedActor = null;

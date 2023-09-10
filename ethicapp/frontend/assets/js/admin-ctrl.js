@@ -313,6 +313,7 @@ adpp.controller("AdminController", function (
 
     self.requestDocuments = function () {
         var postdata = { sesid: self.selectedSes.id };
+        console.log("requestDocuments");
         $http({
             url: "documents-session", method: "post", data: postdata
         }).success(function (data) {
@@ -348,6 +349,7 @@ adpp.controller("AdminController", function (
 
     self.requestSemDocuments = function () {
         var postdata = { sesid: self.selectedSes.id };
+        console.log("requestSemDocuments");
         $http({
             url: "semantic-documents", method: "post", data: postdata
         }).success(function (data) {
@@ -2194,6 +2196,8 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
     
     self.requestDesignDocuments = function ( ) {
         var postdata = { dsgnid: designId.id};
+        console.log("requestDesignDocumnets");
+        console.log(postdata);
         $http({
             url: "designs-documents", method: "post", data: postdata
         }).success(function (data) {
@@ -3322,7 +3326,7 @@ adpp.controller("OptionsController", function ($scope, $http, Notification) {
 
     self.shared.saveConfs = self.saveConfs;
 
-    self.shared.updateConf = function () {
+    self.updateConf = function () {
         if (self.selectedSes.conf == null) {
             self.selectedSes.conf = {};
             var op = self.selectedSes.options || "";
@@ -3333,6 +3337,8 @@ adpp.controller("OptionsController", function ($scope, $http, Notification) {
         }
         return true;
     };
+
+    self.shared.updateConf = self.updateConf;
 
     self.buildConfStr = function () {
         var s = "";

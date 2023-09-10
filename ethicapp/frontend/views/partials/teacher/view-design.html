@@ -4,9 +4,9 @@
         <h3>{{design.metainfo.title}}</h3>
         <div class="container" ng-controller="DesignsDocController"> <!--ng-controller="DocumentsController"-->
             <h4 ng-show="documents.length > 0">{{'documents' | lang}}</h4>
-            <div class="list-group" style="margin-bottom: 0">
-                <div class="list-group-item" ng-repeat="doc in documents">
-                    <i class="fa fa-file-text-o"></i> <strong ng-bind="getPathname(doc.path)"></strong>
+            <div class="list-group mt-1medio" style="margin-bottom: 0">
+                <div class="list-group-item inline-docs" ng-repeat="doc in documents">
+                    <i class="fa fa-file-text-o"></i> <strong class="ml-1" ng-bind="getPathname(doc.path)"></strong>
                     <a href="{{doc.path}}" class="discrete"> - {{'viewOriginalDoc'}}</a>
                 </div>
             </div>
