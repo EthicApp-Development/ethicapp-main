@@ -1,20 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import Container from '@mui/material/Container';
-import { Grid, Typography, Divider } from '@mui/material';
+import { Grid, Typography, Divider, styled } from '@mui/material';
 import DescriptionIcon from '@mui/icons-material/Description';
+
+// Override link styles
+const StyledLink = styled(Link)`
+  text-decoration: none;
+  color: inherit; /* Inherit text color from parent */
+`;
 
 function Reports() {
 
   const gridData = [
-    { icon: <DescriptionIcon fontSize="large" />, text: 'Report 1' },
-    { icon: <DescriptionIcon fontSize="large" />, text: 'Report 2' },
-    { icon: <DescriptionIcon fontSize="large" />, text: 'Report 3' },
-    { icon: <DescriptionIcon fontSize="large" />, text: 'Report 4' },
+    { icon: <DescriptionIcon fontSize="large" />, text: 'Started Activities', reportType:"start_activity", },
+    { icon: <DescriptionIcon fontSize="large" />, text: 'Accounts Created', reportType:"create_account",},
+    { icon: <DescriptionIcon fontSize="large" />, text: 'Ethicapp Logins', reportType:"logins",},
+    { icon: <DescriptionIcon fontSize="large" />, text: 'Top Activity Starting Professors ', reportType:"top_professors",},
     // Add more data as needed
   ];
+
+  const [hoveredItem, setHoveredItem] = useState('');
+  const [reportDescriptionBoxText, setReportDescriptionBoxText] = useState('Insert the information of each report being dictated by the mouse over each item in the upper grid. ');
+
+  const handleHoverStart = (reportType) => {
+    setHoveredItem(reportType);
+    setReportDescriptionBoxText("Information about the report of type: "+reportType)
+    console.log(`Hover started on ${reportType}`);
+  };
 
   return(
     <Box
@@ -44,10 +59,12 @@ function Reports() {
           </Grid>
           {gridData.map((item, index) => (
             <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
-              <Box display="flex" alignItems="center" border="1px solid black" padding={2} backgroundColor="lightGrey">
-                <Box marginRight={2}>{item.icon}</Box>
-                <Typography variant="body1">{item.text}</Typography>
-              </Box>
+              <StyledLink to={`/admin/report/${item.reportType}`} style={{ textDecoration: 'none' }}>
+                <Box display="flex" alignItems="center" border="1px solid black" padding={2} backgroundColor="lightGrey" onMouseEnter={() => handleHoverStart(item.reportType)}>
+                  <Box marginRight={2}>{item.icon}</Box>
+                  <Typography variant="body1">{item.text}</Typography>
+                </Box>
+              </StyledLink>
             </Grid>
           ))}
           <Grid item xs={12}>
@@ -57,7 +74,7 @@ function Reports() {
         <Box mt={4}>
           <Typography variant="h5">Report Information</Typography>
           <Box p={2} border="1px solid #ccc" backgroundColor="lightGrey">
-            insert the information of each report being dictated by the mouse over each item in the upper grid 
+            {reportDescriptionBoxText} 
           </Box>
         </Box>
       </Container>
