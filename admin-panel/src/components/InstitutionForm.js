@@ -55,7 +55,7 @@ const InstitutionForm = (props) =>{
 
                     <Grid item xs={12}>
                         <TextField
-                        label="Institution Url"
+                        label="Institution URL"
                         fullWidth
                         variant="outlined"
                         name="institution_url"
@@ -66,7 +66,7 @@ const InstitutionForm = (props) =>{
                     </Grid>
                     <Grid item xs={12}>
                         <TextField
-                        label="Ethicapp Url"
+                        label="Ethicapp URL"
                         fullWidth
                         variant="outlined"
                         name="ethicapp_url"
@@ -77,7 +77,7 @@ const InstitutionForm = (props) =>{
                     </Grid>
                     <Grid item xs={12}>
                         <TextField
-                        label="Institution IT Email"
+                        label="Technical Contact"
                         fullWidth
                         variant="outlined"
                         name="institution_it_email"
@@ -92,7 +92,7 @@ const InstitutionForm = (props) =>{
                     </Grid>
                     <Grid item xs={12}>
                         <TextField
-                        label="Institution Educational Email"
+                        label="Educational Contact"
                         fullWidth
                         variant="outlined"
                         name="institution_educational_email"
