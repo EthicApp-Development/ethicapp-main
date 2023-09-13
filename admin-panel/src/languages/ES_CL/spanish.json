@@ -1,0 +1,9 @@
+{
+    "navbar":{
+        "counterLang": "English"
+    },
+    "home":{
+        "title": "Inicio Administrador",
+        "subTitle": "Desde aquí podrá actualizar los datos de la institución para la que opera EthicApp, revisar informes y gestionar usuarios."
+    }
+}

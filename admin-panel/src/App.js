@@ -13,14 +13,27 @@ import NavBar from './components/NavBars'
 import SingleReport from './pages/SingleReport';
 import Login from './pages/Login';
 
+import {useTranslation} from "react-i18next"
+
 function App() {
   //TODO: Add an evolving script that checks the user token on reach view. If not logged in then redirect to login
   //      Make that if rendering login with existing stored token then auto redirect to admin home (/admin)
+
+  const [translation, i18n] = useTranslation("global")
+
+  const handleChangeLanguage = ()=>{
+    if(i18n.language=="es"){
+      i18n.changeLanguage("en")
+    }
+    else{
+      i18n.changeLanguage("es")
+    }
+  }
   
   return(
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
-      <NavBar/>
+      <NavBar handleChangeLanguage={handleChangeLanguage} translation={translation}/>
       <Routes>
         {/* Redirect any unknown url to '/' */}
         <Route path="*" element={<Navigate to="/"/>}/>
@@ -32,7 +45,7 @@ function App() {
         <Route path="/admin/login" element={<Login/>}/>
 
         {/* All these pages have NavBar*/}
-        <Route path="/admin" element={<Home/>}/>
+        <Route path="/admin" element={<Home translation={translation}/>}/>
         <Route path="/admin/institution" element={<Institution/>}/>
         <Route path="/admin/reports" element={<Reports/>}/>
         <Route path="/admin/users" element={<Users/>}/>

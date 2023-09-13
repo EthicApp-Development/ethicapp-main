@@ -8,12 +8,14 @@ import MuiDrawer from '@mui/material/Drawer';
 import MuiAppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import List from '@mui/material/List';
+import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
+import Tooltip from '@mui/material/Tooltip';
 
 //MUI ICONS
 import HomeIcon from '@mui/icons-material/Home';
@@ -74,7 +76,11 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
 }),
 );
 
-export default function NavBar(){
+export default function NavBar(props){
+
+    const handleChangeLanguage = props.handleChangeLanguage;
+    const translation = props.translation;
+
     const location = useLocation();
 
     const [open, setOpen] = useState(true);
@@ -114,9 +120,16 @@ export default function NavBar(){
                 >
                   Ethicapp Admin Panel
                 </Typography>
-                <IconButton color="inherit" component={Link} to="/admin/login">
-                  <LogoutIcon />
-                </IconButton>
+                <Tooltip title="Change Language">
+                  <Button variant="contained" style={{ marginRight: '2rem' }}size="medium" color="success" onClick={()=> handleChangeLanguage()}>
+                    {translation("navbar.counterLang")}
+                  </Button>
+                </Tooltip>
+                <Tooltip title="Logout">
+                  <IconButton color="inherit" component={Link} to="/admin/login" style={{backgroundColor: 'red'}}>
+                    <LogoutIcon />
+                  </IconButton>
+                </Tooltip>
               </Toolbar>
             </AppBar>
             <Drawer variant="permanent" open={open}>

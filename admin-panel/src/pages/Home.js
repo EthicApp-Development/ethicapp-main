@@ -11,10 +11,12 @@ import SchoolIcon from '@mui/icons-material/School';
 import PeopleIcon from '@mui/icons-material/People';
 import BarChartIcon from '@mui/icons-material/BarChart';
 
-const pageTitle= "Admin Home";
-const pageSubTitle="From here you can update the data of the institution for which EthicApp operates, review reports, and manage users.."
+function Home(props) {
 
-function Home() {
+  const translation = props.translation;
+
+  const pageTitle= translation("home.title");
+  const pageSubTitle= translation("home.subTitle")
 
   const gridData = [
     { icon: <SchoolIcon fontSize="large" />, text: 'Update institutional data', link:"/admin/institution", },

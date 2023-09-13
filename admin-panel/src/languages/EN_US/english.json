@@ -1,0 +1,9 @@
+{
+    "navbar":{
+        "counterLang": "Español"
+    },
+    "home":{
+        "title": "Admin Home",
+        "subTitle": "From here you can update the data of the institution for which EthicApp operates, review reports, and manage users."
+    }
+}
