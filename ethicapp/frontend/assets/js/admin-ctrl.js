@@ -2197,6 +2197,8 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
         $http({
             url: "designs-documents", method: "post", data: postdata
         }).success(function (data) {
+            console.log("Documento del design documents con id diseno: " + designId.id);
+            console.log(data);
             self.documents = data;
         });
     };
@@ -2215,6 +2217,11 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
         var split = path.split("/");
         return split[split.length - 1];
     };
+
+    self.openPDFInNewTab = function (pdfPath) {
+        window.open(pdfPath, "_blank");
+    };
+
 
     self.init();
 
@@ -3101,6 +3108,7 @@ adpp.controller("StagesEditController", function ($scope, $filter, $http, Notifi
 
 
     self.getDesign = function (ID) {
+        console.log("Id de Get design: "+ID);
         $http.post("get-design", ID).success(function (data) {
             if (data.status == "ok") {
                 self.changeDesign(data.result);

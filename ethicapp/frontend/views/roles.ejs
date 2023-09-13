@@ -160,7 +160,7 @@
                                     </div>
                                     <div class="col-xs-2 col-sm-1 text-right">
 <!--                                        <i class="fa fa-check margin-right-8" ng-if="actor.sent && ((!justifyPosition && actor.justified) || (justifyPosition && posToJustify[$index]))"></i>-->
-                                        <button class="btn btn-default btn-sm" ng-click="selectActor($index)" ng-class="{'bg-green': actor.sent && ((!justifyPosition && actor.justified) || (justifyPosition && posToJustify[$index]))}"
+                                        <button class="btn btn-default btn-sm" ng-click="selectActor($index)" ng-class="{'bg-green': actor.sent }"
                                                 ng-if="actor.justified || actor.jorder">
                                             <i class="fa fa-edit"></i>
                                         </button>
