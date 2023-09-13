@@ -5,7 +5,9 @@ import Container from '@mui/material/Container';
 import PageBase from '../components/PageBase';
 import InstitutionForm from '../components/InstitutionForm';
 
-function Institution() {
+function Institution(props) {
+
+  const translation = props.translation;
 
     const [formData, setFormData] = useState({
       institution_name: "",
@@ -60,6 +62,7 @@ function Institution() {
         handleInputChange={handleInputChange}
         isEmailValid={isEmailValid}
         handleFileChange={handleFileChange}
+        translation={translation}
         />
     </Container>
     }/>

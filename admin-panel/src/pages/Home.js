@@ -19,9 +19,9 @@ function Home(props) {
   const pageSubTitle= translation("home.subTitle")
 
   const gridData = [
-    { icon: <SchoolIcon fontSize="large" />, text: 'Update institutional data', link:"/admin/institution", },
-    { icon: <PeopleIcon fontSize="large" />, text: 'See Reports', link:"/admin/reports", },
-    { icon: <BarChartIcon fontSize="large" />, text: 'Administer Users', link:"/admin/users", },
+    { icon: <SchoolIcon fontSize="large" />, text: translation("home.institutionBox"), link:"/admin/institution", },
+    { icon: <PeopleIcon fontSize="large" />, text: translation("home.usersBox"), link:"/admin/reports", },
+    { icon: <BarChartIcon fontSize="large" />, text: translation("home.chartBox"), link:"/admin/users", },
     // Add more data as needed
   ];
 

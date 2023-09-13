@@ -5,6 +5,7 @@ import Box from '@mui/material/Box';
 const LoginForm = (props) =>{
 
     const handleSubmit = props.handleSubmit;
+    const translation = props.translation;
 
     return <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
         <TextField
@@ -12,7 +13,7 @@ const LoginForm = (props) =>{
             required
             fullWidth
             id="email"
-            label="Email Address"
+            label={translation("loginForm.email")}
             name="email"
             autoComplete="email"
             autoFocus
@@ -23,7 +24,7 @@ const LoginForm = (props) =>{
             required
             fullWidth
             name="password"
-            label="Password"
+            label={translation("loginForm.password")}
             type="password"
             id="password"
             autoComplete="current-password"
@@ -34,7 +35,7 @@ const LoginForm = (props) =>{
             variant="contained"
             sx={{ mt: 3, mb: 2 }}
             >
-                Sign In
+                {translation("loginForm.submit")}
         </Button>
     </Box>
 }

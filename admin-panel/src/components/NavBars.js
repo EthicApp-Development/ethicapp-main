@@ -118,14 +118,14 @@ export default function NavBar(props){
                   noWrap
                   sx={{ flexGrow: 1 }}
                 >
-                  Ethicapp Admin Panel
+                  {translation("navbar.title")}
                 </Typography>
-                <Tooltip title="Change Language">
+                <Tooltip title={translation("navbar.changeLanguageTooltip")}>
                   <Button variant="contained" style={{ marginRight: '2rem' }}size="medium" color="success" onClick={()=> handleChangeLanguage()}>
                     {translation("navbar.counterLang")}
                   </Button>
                 </Tooltip>
-                <Tooltip title="Logout">
+                <Tooltip title={translation("navbar.logoutTooltip")}>
                   <IconButton color="inherit" component={Link} to="/admin/login" style={{backgroundColor: 'red'}}>
                     <LogoutIcon />
                   </IconButton>
@@ -152,28 +152,28 @@ export default function NavBar(props){
                     <ListItemIcon>
                         <HomeIcon />
                     </ListItemIcon>
-                    <ListItemText primary="Home" />
+                    <ListItemText primary={translation("navbar.home")} />
                     </ListItemButton>
 
                     <ListItemButton component={Link} to="/admin/institution">
                     <ListItemIcon>
                         <SchoolIcon />
                     </ListItemIcon>
-                    <ListItemText primary="Institution" />
+                    <ListItemText primary={translation("navbar.institution")} />
                     </ListItemButton>
 
                     <ListItemButton component={Link} to="/admin/reports">
                     <ListItemIcon>
                         <BarChartIcon />
                     </ListItemIcon>
-                    <ListItemText primary="Reports" />
+                    <ListItemText primary={translation("navbar.reports")} />
                     </ListItemButton>
 
                     <ListItemButton component={Link} to="/admin/users">
                     <ListItemIcon>
                         <PeopleIcon />
                     </ListItemIcon>
-                    <ListItemText primary="Users" />
+                    <ListItemText primary={translation("navbar.users")} />
                     </ListItemButton>
                 </React.Fragment>
               </List>

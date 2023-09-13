@@ -12,7 +12,8 @@ import { Grid } from '@mui/material';
 //Icons
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 
-function Login() {
+function Login(props) {
+  const translation = props.translation;
   const navigate = useNavigate();
 
   const handleSubmit = (event) => {
@@ -40,15 +41,15 @@ function Login() {
           <LockOutlinedIcon />
         </Avatar>
         <Typography component="h1" variant="h5">
-          Sign in
+          {translation("login.login")}
         </Typography>
 
-        <LoginForm handleSubmit={handleSubmit}/>
+        <LoginForm handleSubmit={handleSubmit} translation={translation}/>
 
         <Grid container>
           <Grid item>
             <Link href="/" variant="body2">
-              Back To Ethicapp
+              {translation("login.return")}
             </Link>
           </Grid>
         </Grid>

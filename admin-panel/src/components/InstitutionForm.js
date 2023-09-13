@@ -4,8 +4,7 @@ import { TextField, Button, Paper, Grid, Divider, Box } from '@mui/material';
 //Icons
 import { CloudUpload } from '@mui/icons-material';
 
-const pageTitle= "Institution Data";
-const pageSubTitle="From here you can update the data of the institution for which EthicApp operates."
+
 
 const InstitutionForm = (props) =>{
 
@@ -14,6 +13,11 @@ const InstitutionForm = (props) =>{
     const handleInputChange = props.handleInputChange
     const isEmailValid = props.isEmailValid
     const handleFileChange = props.handleFileChange
+
+    const translation = props.translation;
+
+    const pageTitle= translation("institutionForm.title");
+    const pageSubTitle= translation("institutionForm.subTitle")
 
     return <Paper elevation={3}>
         <Box p={3}>
@@ -28,7 +32,7 @@ const InstitutionForm = (props) =>{
                     </Grid>
                     <Grid item xs={12}>
                         <TextField
-                        label="Institution Name"
+                        label={translation("institutionForm.institution_name")}
                         fullWidth
                         variant="outlined"
                         name="institution_name"
@@ -39,7 +43,7 @@ const InstitutionForm = (props) =>{
                     </Grid>
                     <Grid item xs={12}>
                         <TextField
-                        label="Physical Address"
+                        label={translation("institutionForm.physical_address")}
                         fullWidth
                         variant="outlined"
                         name="physical_address"
@@ -55,7 +59,7 @@ const InstitutionForm = (props) =>{
 
                     <Grid item xs={12}>
                         <TextField
-                        label="Institution URL"
+                        label={translation("institutionForm.institution_url")}
                         fullWidth
                         variant="outlined"
                         name="institution_url"
@@ -66,7 +70,7 @@ const InstitutionForm = (props) =>{
                     </Grid>
                     <Grid item xs={12}>
                         <TextField
-                        label="Ethicapp URL"
+                        label={translation("institutionForm.ethicapp_url")}
                         fullWidth
                         variant="outlined"
                         name="ethicapp_url"
@@ -77,7 +81,7 @@ const InstitutionForm = (props) =>{
                     </Grid>
                     <Grid item xs={12}>
                         <TextField
-                        label="Technical Contact"
+                        label={translation("institutionForm.institution_it_email")}
                         fullWidth
                         variant="outlined"
                         name="institution_it_email"
@@ -86,13 +90,13 @@ const InstitutionForm = (props) =>{
                         required
                         error={!isEmailValid(formData.institution_it_email) && formData.institution_it_email.length > 0}
                         helperText={
-                            !isEmailValid(formData.institution_it_email) && 'Please enter a valid email address.'
+                            !isEmailValid(formData.institution_it_email) && translation("institutionForm.email_error")
                         }
                         />
                     </Grid>
                     <Grid item xs={12}>
                         <TextField
-                        label="Educational Contact"
+                        label={translation("institutionForm.institution_educational_email")}
                         fullWidth
                         variant="outlined"
                         name="institution_educational_email"
@@ -101,7 +105,7 @@ const InstitutionForm = (props) =>{
                         required
                         error={!isEmailValid(formData.institution_educational_email) && formData.institution_educational_email.length > 0}
                         helperText={
-                            !isEmailValid(formData.institution_educational_email) && 'Please enter a valid email address.'
+                            !isEmailValid(formData.institution_educational_email) && translation("institutionForm.email_error")
                         }
                         />
                     </Grid>
@@ -124,7 +128,7 @@ const InstitutionForm = (props) =>{
                             component="span"
                             startIcon={<CloudUpload />}
                         >
-                            Upload Institution Logo
+                            {translation("institutionForm.file-upload")}
                         </Button>
                         </label>
                         {formData.file && <span> {formData.file.name}</span>}
@@ -141,7 +145,7 @@ const InstitutionForm = (props) =>{
                             color="primary"
                             fullWidth
                             >
-                                Submit
+                                {translation("institutionForm.submit")}
                         </Button>
                     </Grid>
                 </Grid>

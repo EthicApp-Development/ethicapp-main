@@ -42,14 +42,14 @@ function App() {
         <Route path="/" element={<Navigate to="/admin/login"/>}/>
 
         {/* Login does not have access to the NavBar.*/}
-        <Route path="/admin/login" element={<Login/>}/>
+        <Route path="/admin/login" element={<Login translation={translation}/>}/>
 
         {/* All these pages have NavBar*/}
         <Route path="/admin" element={<Home translation={translation}/>}/>
-        <Route path="/admin/institution" element={<Institution/>}/>
-        <Route path="/admin/reports" element={<Reports/>}/>
-        <Route path="/admin/users" element={<Users/>}/>
-        <Route path="/admin/report/:reportEnum" element={<SingleReport/>}/>
+        <Route path="/admin/institution" element={<Institution translation={translation}/>}/>
+        <Route path="/admin/reports" element={<Reports translation={translation}/>}/>
+        <Route path="/admin/users" element={<Users translation={translation}/>}/>
+        <Route path="/admin/report/:reportEnum" element={<SingleReport translation={translation}/>}/>
 
       </Routes>
     </Box>

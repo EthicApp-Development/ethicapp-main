@@ -10,16 +10,17 @@ import HeaderNSubHeader from '../components/HeaderNSubHeader';
 //Icons
 import DescriptionIcon from '@mui/icons-material/Description';
 
-const pageTitle= "Report Generation";
-const pageSubTitle="From here you can choose which report to generate using the data currently stored by Ethicapp."
+function Reports(props) {
+  const translation = props.translation;
 
-function Reports() {
+  const pageTitle= translation("reports.title");
+  const pageSubTitle= translation("reports.subTitle");
 
   const gridData = [
-    { icon: <DescriptionIcon fontSize="large" />, text: 'Started Activities', reportType:"start_activity", link:"/admin/report/start_activity" },
-    { icon: <DescriptionIcon fontSize="large" />, text: 'Accounts Created', reportType:"create_account", link:"/admin/report/create_account",},
-    { icon: <DescriptionIcon fontSize="large" />, text: 'Ethicapp Logins', reportType:"logins", link:"/admin/report/logins",},
-    { icon: <DescriptionIcon fontSize="large" />, text: 'Top Activity Starting Professors ', reportType:"top_professors", link:"/admin/report/top_professors",},
+    { icon: <DescriptionIcon fontSize="large" />, text: translation("reports.start_activity"), reportType:"start_activity", link:"/admin/report/start_activity" },
+    { icon: <DescriptionIcon fontSize="large" />, text: translation("reports.create_account"), reportType:"create_account", link:"/admin/report/create_account",},
+    { icon: <DescriptionIcon fontSize="large" />, text: translation("reports.logins"), reportType:"logins", link:"/admin/report/logins",},
+    { icon: <DescriptionIcon fontSize="large" />, text: translation("reports.top_professors"), reportType:"top_professors", link:"/admin/report/top_professors",},
     // Add more data as needed
   ];
 
@@ -29,9 +30,8 @@ function Reports() {
 
   const handleHoverStart = (reportType) => {
     setHoveredItem(reportType);
-    setReportDescriptionBoxText("Information about the report of type: "+reportType);
+    setReportDescriptionBoxText(translation(`reports.${reportType}_desc`));
     setShowReportDescription(true);
-    console.log(`Hover started on ${reportType}`);
   };
 
   return(
@@ -42,7 +42,7 @@ function Reports() {
 
         <BoxGrid gridData={gridData} handleMouseOver={handleHoverStart} />
 
-        <ReportDescriptionBox text={reportDescriptionBoxText} visibility={showReportDescription}/>
+        <ReportDescriptionBox text={reportDescriptionBoxText} visibility={showReportDescription} translation={translation}/>
       </Container>
     }/>
   ) 

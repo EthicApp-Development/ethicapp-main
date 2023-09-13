@@ -1,9 +1,84 @@
 {
-    "navbar":{
-        "counterLang": "Español"
-    },
     "home":{
         "title": "Admin Home",
-        "subTitle": "From here you can update the data of the institution for which EthicApp operates, review reports, and manage users."
+        "subTitle": "From here you can update the data of the institution for which EthicApp operates, review reports, and manage users.",
+        "institutionBox": "Update institutional data",
+        "usersBox": "Administer Users",
+        "chartBox": "See Reports"
+    },
+    "login":{
+        "login": "Sign in",
+        "return": "Back To Ethicapp"
+    },
+    "reports":{
+        "title": "Report Generation",
+        "subTitle": "From here you can choose which report to generate using the data currently stored by Ethicapp.",
+        "start_activity_desc": "Information about the report of type: start_activity",
+        "create_account_desc": "Information about the report of type: create_account",
+        "logins_desc": "Information about the report of type: logins",
+        "top_professors_desc": "Information about the report of type: top_professors",
+        "start_activity": "Started Activities",
+        "create_account": "Accounts Created",
+        "logins": "Ethicapp Logins",
+        "top_professors": "Top Activity Starting Professors"
+    },
+    "singleReport":{
+        "start_activity_title": "Started Activities Report Generation",
+        "create_account_title": "Accounts Created Report Generation",
+        "logins_title": "Ethicapp Logins Report Generation",
+        "top_professors_title": "Top Activity Starting Professors Report Generation",
+        "subTitle": "Insert information about the specific reports that is being generated."
+    },
+    "users":{
+        "title": "Users Page",
+        "subTitle": "Show all the user related actions."
+    },
+
+    "institutionForm":{
+        "title": "Institution Data",
+        "subTitle": "From here you can update the data of the institution for which EthicApp operates.",
+        "institution_name": "Institution Name",
+        "physical_address": "Physical Address",
+        "institution_url": "Institution URL",
+        "ethicapp_url": "Ethicapp URL",
+        "email_error": "Please enter a valid email address.",
+        "institution_it_email": "Technical Contact",
+        "institution_educational_email": "Educational Contact",
+        "file-upload": "Upload Institution Logo",
+        "submit": "Submit"
+    },
+    "loginForm":{
+        "email": "Email Address",
+        "password": "Password",
+        "submit": "Sign In"
+    },
+    "navbar":{
+        "counterLang": "Español",
+        "title": "Ethicapp Admin Panel",
+        "changeLanguageTooltip": "Change Language",
+        "logoutTooltip": "Logout",
+        "home": "Home",
+        "institution": "Institution",
+        "reports": "Reports",
+        "users": "Users"
+    },
+    "ReportDescriptionBox":{
+        "title": "Report Information"
+    },
+    "ReportGraphBox":{
+        "download": "Download",
+        "downloadTooltip": "Download Graph as Image"
+    },
+    "ReportOptionsBox":{
+        "title": "Report Options",
+        "selectOption": "Select an option:",
+        "option1": "1 Month",
+        "option2": "3 Month",
+        "option3": "6 Month",
+        "option4": "12 Month",
+        "option5": "Custom Date Range",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "generateReport": "Generate Report"
     }
 }

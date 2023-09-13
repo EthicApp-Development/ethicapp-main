@@ -9,14 +9,15 @@ import ReportGraphBox from '../components/ReportGraphBox';
 import { Chart, registerables } from 'chart.js';
 import { Container } from '@mui/material';
 
-const pageSubTitle="Insert information about the specific reports that is being generated."
-
 Chart.register(...registerables);
 
-function SingleReport() {
+function SingleReport(props) {
 
   const {reportEnum} = useParams();
-  const pageTitle= `${reportEnum} Report Generation`;
+  const translation = props.translation;
+
+  const pageTitle= translation(`singleReport.${reportEnum}_title`);
+  const pageSubTitle= translation("singleReport.subTitle")
 
   const [showSecondBox, setShowSecondBox] = useState(false);
 
@@ -54,9 +55,9 @@ function SingleReport() {
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
         <HeaderNSubHeader title={pageTitle} subTitle={pageSubTitle}/>
         <br/>
-        <ReportOptionsBox handleSubmit={handleSubmit}/>
+        <ReportOptionsBox handleSubmit={handleSubmit} translation={translation}/>
         <br/>
-        <ReportGraphBox data={data} options={options} visibility={showSecondBox}/>
+        <ReportGraphBox data={data} options={options} visibility={showSecondBox} translation={translation}/>
       </Container>
     }/>
   ) 

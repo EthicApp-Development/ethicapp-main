@@ -5,10 +5,12 @@ import PageBase from '../components/PageBase';
 import Container from '@mui/material/Container';
 import HeaderNSubHeader from '../components/HeaderNSubHeader';
 
-const pageTitle= "Users Page";
-const pageSubTitle="Show all the user related actions"
+function Users(props) {
+  const translation = props.translation;
 
-function Users() {
+  const pageTitle= translation("users.title");
+  const pageSubTitle= translation("users.subTitle")
+
   return(
     <PageBase children={
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
