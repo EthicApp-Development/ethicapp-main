@@ -22,6 +22,16 @@
         "logins": "Ingresos a Ethicapp",
         "top_professors": "Top Actividades Iniciadas por Profesor"
     },
+    "requests":{
+        "title": "Listado de Solicitudes",
+        "subTitle": "Desde aquí puedes ver el listado de solicitudes de cuenta de profesor",
+        "pending": "Pendientes",
+        "approved": "Aprobadas",
+        "rejected": "Rechazadas",
+        "ignore": "Ignorar",
+        "see_request": "Ver Solicitud",
+        "see_account": "Ver Cuenta"
+    },
     "singleReport":{
         "start_activity_title": "Generación de reportes Actividades Iniciadas",
         "create_account_title": "Generación de reportes Cuentas Creadas",
@@ -62,7 +72,8 @@
         "reports": "Reportes",
         "users": "Usuarios",
         "openBar": "Abrir Barra",
-        "closeBar": "Cerrar Barra"
+        "closeBar": "Cerrar Barra",
+        "requests": "Solicitudes"
     },
     "ReportDescriptionBox":{
         "title": "Información del Informe"
