@@ -60,7 +60,9 @@
         "home": "Inicio",
         "institution": "Institución",
         "reports": "Reportes",
-        "users": "Usuarios"
+        "users": "Usuarios",
+        "openBar": "Abrir Barra",
+        "closeBar": "Cerrar Barra"
     },
     "ReportDescriptionBox":{
         "title": "Información del Informe"

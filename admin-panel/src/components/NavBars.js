@@ -99,18 +99,20 @@ export default function NavBar(props){
                   pr: '24px', // keep right padding when drawer closed
                 }}
               >
-                <IconButton
-                  edge="start"
-                  color="inherit"
-                  aria-label="open drawer"
-                  onClick={toggleDrawer}
-                  sx={{
-                    marginRight: '36px',
-                    ...(open && { display: 'none' }),
-                  }}
-                >
-                  <MenuIcon />
-                </IconButton>
+                <Tooltip title={translation("navbar.openBar")}>
+                  <IconButton
+                    edge="start"
+                    color="inherit"
+                    aria-label="open drawer"
+                    onClick={toggleDrawer}
+                    sx={{
+                      marginRight: '36px',
+                      ...(open && { display: 'none' }),
+                    }}
+                  >
+                    <MenuIcon />
+                  </IconButton>
+                </Tooltip>
                 <Typography
                   component="h1"
                   variant="h6"
@@ -141,9 +143,11 @@ export default function NavBar(props){
                   px: [1],
                 }}
               >
-                <IconButton onClick={toggleDrawer}>
-                  <ChevronLeftIcon />
-                </IconButton>
+                <Tooltip title={translation("navbar.closeBar")}>
+                  <IconButton onClick={toggleDrawer}>
+                    <ChevronLeftIcon />
+                  </IconButton>
+                </Tooltip>
               </Toolbar>
               <Divider />
               <List component="nav">

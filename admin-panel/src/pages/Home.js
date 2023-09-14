@@ -20,8 +20,8 @@ function Home(props) {
 
   const gridData = [
     { icon: <SchoolIcon fontSize="large" />, text: translation("home.institutionBox"), link:"/admin/institution", },
-    { icon: <PeopleIcon fontSize="large" />, text: translation("home.usersBox"), link:"/admin/reports", },
-    { icon: <BarChartIcon fontSize="large" />, text: translation("home.chartBox"), link:"/admin/users", },
+    { icon: <PeopleIcon fontSize="large" />, text: translation("home.usersBox"), link:"/admin/users", },
+    { icon: <BarChartIcon fontSize="large" />, text: translation("home.chartBox"), link:"/admin/reports", },
     // Add more data as needed
   ];
 

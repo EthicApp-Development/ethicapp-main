@@ -16,7 +16,7 @@ const BoxGrid = (props) =>{
     {gridData.map((item, index) => (
       <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
         <StyledLink to={`${item.link}`} style={{ textDecoration: 'none' }}>
-          <Box display="flex" alignItems="center" border="1px solid black" padding={2} 
+          <Box display="flex" alignItems="center" border="1px solid black" padding={2} backgroundColor="lightgrey"
             onMouseEnter={handleMouseOver ? () => handleMouseOver(item.reportType) : null}>
               
             <Box marginRight={2}>{item.icon}</Box>

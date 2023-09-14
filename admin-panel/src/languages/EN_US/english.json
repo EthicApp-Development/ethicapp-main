@@ -60,7 +60,9 @@
         "home": "Home",
         "institution": "Institution",
         "reports": "Reports",
-        "users": "Users"
+        "users": "Users",
+        "openBar": "Open Sidebar",
+        "closeBar": "Close Sidebar"
     },
     "ReportDescriptionBox":{
         "title": "Report Information"
