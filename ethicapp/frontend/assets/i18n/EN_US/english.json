@@ -148,6 +148,7 @@
 	"log3": "An email has been send with the information to recover your password. This mail could be in the spam box.",
 	"log4": "Password change succesfully. log in in your account.",
 	"log5":"Your account is ready to use",
+	"log6": "Your request has been sent",
 	"login": "Login",
 	"login_w_account": "Login",
 	"logout": "Logout",

@@ -189,6 +189,7 @@
 	"log3": "Se ha enviado un correo con la información para recuperar la contraseña.\n Este correo podría haber llegado a spam.",
 	"log4": "Contraseña cambiada correctamente. Ingrese con sus datos.",
 	"log5":"Tu cuenta ha sido activada",
+	"log6": "Tu solicitud ha sido enviada",
 	"accounttype": "¿Quieres una cuenta personal o de profesor?",
 	"Institutional": "Institucional",
 	"name": "Nombre",

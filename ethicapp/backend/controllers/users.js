@@ -371,7 +371,7 @@ router.post("/teacher_account_request", (req, res) => {
                         var db = getDBInstance(pass.dbcon);
 
                         var sql = `
-                        INSERT INTO teacher_account_requests(rut, pass, name, mail, sex, ROLE, institution, status)
+                        INSERT INTO teacher_account_requests(rut, pass, name, mail, gender, institution, status)
                         VALUES ('${req.body.rut}','${passcr}','${fullname}','${req.body.mail}','${req.body.sex}','P','${req.body.inst_name}',0)
                         `;
 
@@ -380,7 +380,7 @@ router.post("/teacher_account_request", (req, res) => {
                                 console.error(err);
                                 res.redirect("register");
                             }else{
-                                res.redirect("login?rc=1");
+                                res.redirect("login?rc=6");
                             }
                         });
                     } catch (err) {

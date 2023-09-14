@@ -49,6 +49,11 @@
               </div>
             </div>
           <% } %>
+          <% if(rc == 6) { %>
+            <div class="alert alert-info">
+              {{ "log6" | lang }}
+            </div>
+          <% } %>
           <br />
           <form class="form-horizontal" action="login" method="POST">
             <div class="form-group">
