@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html ng-app="Admin">
+<html ng-app="UserCommon">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -8,14 +8,11 @@
     <script src="assets/libs/angular-sanitize.min.js" defer></script>
     <script src="assets/libs/angular-translate-2.18.4.min.js" defer></script>
     <script src="assets/libs/angular-translate-loader-static-files-2.18.4.min.js" defer></script>
-    <script src="assets/libs/angular-nvd3.min.js" defer></script>
-    <script type="text/javascript" src="assets/libs/ng-quill.min.js" defer></script>
     <script src="/socket.io/socket.io.js" defer></script>
-    <script src="assets/libs/ngDialog.min.js" defer></script>
     <script src="<%= asset('/js/assets-bundle.js') %>" defer></script>
     <%- include('partials/favicon.ejs') %>
     <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
-    <script src="assets/js/ngmodules/teacher/teacher_admin.mjs" type="module" defer></script>
+    <script src="assets/js/ngmodules/teacher/user_common.mjs" type="module" defer></script>
   </head> 
   <body ng-controller="LoginController">
     <div class="form-signin panel panel-default">

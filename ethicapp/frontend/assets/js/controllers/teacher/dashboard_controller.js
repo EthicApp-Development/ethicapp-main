@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export let DashboardController = ($scope, 
+export let DashboardController = ($scope, ActivityStateService,
     $http, $timeout, $uibModal, Notification) => {
     
     var self = $scope;
@@ -8,6 +8,7 @@ export let DashboardController = ($scope,
     self.showCf = false;
     self.dataDF = [];
     self.dataChatCount = {};
+    self.activityState = ActivityStateService;
 
     self.shared.resetGraphs = function () { //THIS HAS TO BE CALLED ON ADMIN
         if (
@@ -41,7 +42,7 @@ export let DashboardController = ($scope,
         };
         self.barData = [{ key: self.flang("students"), color: "#0077c1", values: [] }];
         self.updateState();
-        if (DASHBOARD_AUTORELOAD && self.selectedSes.status < 9) {
+        if (self.activityState.dashboardAutoreload  && self.selectedSes.status < 9) {
             self.reload(true);
         }
     };
@@ -53,7 +54,8 @@ export let DashboardController = ($scope,
         if (self.currentTimer != null) {
             $timeout.cancel(self.currentTimer);
         }
-        self.currentTimer = $timeout(self.reload, DASHBOARD_AUTOREALOAD_TIME * 1000);
+        self.currentTimer = $timeout(self.reload, 
+            self.activityState.dashboardAutoreloadTime * 1000);
     };
 
     self.updateState = function () {

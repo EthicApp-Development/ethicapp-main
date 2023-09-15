@@ -2,7 +2,6 @@
 export let LoginController = ($scope, $http, apiParams) => {
     $scope.init = function () {
         $scope.isTranslationAvailable = false;
-        console.log("init");
         $scope.reCaptchaSiteKey = apiParams.reCaptchaSiteKey;
         $scope.getcountries();
     };

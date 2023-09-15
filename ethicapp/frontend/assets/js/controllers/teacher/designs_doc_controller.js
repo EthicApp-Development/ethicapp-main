@@ -28,7 +28,7 @@ export let DesignsDocController = ($scope, $http, Notification, $timeout) => {
     };
     
     self.requestDesignDocuments = function ( ) {
-        var postdata = { dsgnid: designId.id};
+        var postdata = { dsgnid: self.designId.id};
         $http({
             url: "designs-documents", method: "post", data: postdata
         }).success(function (data) {

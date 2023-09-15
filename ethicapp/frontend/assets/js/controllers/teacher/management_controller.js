@@ -1,11 +1,12 @@
 /*eslint func-style: ["error", "expression"]*/
-export let ManagementController = ($scope,
+export let ManagementController = ($scope, 
+    TabStateService, DesignStateService, ActivityStateService,
     $http, $uibModal, $location, $locale, 
     $filter, $socket, $route) => {
     var self = $scope;
     self.temp = "";
     const lang = navigator.language;
-    $locale.NUMBER_FORMATS.GROUP_SEP = "";
+    //$locale.NUMBER_FORMATS.GROUP_SEP = "";
     self.shared = {};
     self.sessions = [];
     self.selectedView = ""; //current view
@@ -27,6 +28,10 @@ export let ManagementController = ($scope,
     self.superBar = false;
     self.institution = false;
     self.inst_id = 0;
+    self.tabSel = TabStateService.sharedTabState;
+    self.designId = DesignStateService.designState;
+    self.launchId = ActivityStateService.activityState;
+
     if(lang[0] == "e" && lang[1] == "s"){
         self.lang = "ES_CL/spanish";
     }
@@ -152,9 +157,11 @@ export let ManagementController = ($scope,
         if(tab != self.selectedView){
             self.selectedView = tab;
             $route.reload();
-            if (tab != "newDesignExt" && tab != "viewDesign") designId.id = null; //avoids making designs-documents request
+            if (tab != "newDesignExt" && tab != "viewDesign") self.designId.id = null; //avoids making designs-documents request
             if (tab != "launchActivity") {
-                launchId.id = null; launchId.title = null; launchId.type = null;
+                self.launchId.id = null; 
+                self.launchId.title = null; 
+                self.launchId.type = null;
             }
             if (tab == "designs") {
                 if(type != null) tabSel.type = type;

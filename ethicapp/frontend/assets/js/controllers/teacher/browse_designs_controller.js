@@ -1,5 +1,6 @@
 /*eslint func-style: ["error", "expression"]*/
-export let BrowseDesignsController = ($scope, $filter, $http) => {
+export let BrowseDesignsController = ($scope, 
+    TabStateService, DesignStateService, ActivityStateService, $filter, $http) => {
     var self = $scope;
     self.designs = [];
     self.public = null;
@@ -7,20 +8,23 @@ export let BrowseDesignsController = ($scope, $filter, $http) => {
     self.dsgntitle = null;
     self.dsgntype = null;
     self.tab = null;
+    self.tabSel = TabStateService.sharedTabState;
+    self.designId = DesignStateService.designState;
+    self.launchId = ActivityStateService.activityState;
 
     self.init = function(){
         if(self.selectedView == "launchActivity") {self.getDesigns(); self.setValues();} //make request when on launchActivity view only
         else if(self.selectedView == "designs") {
-            self.tab = tabSel.type;
+            self.tab = self.tabSel.type;
             self.getDesigns();
             self.getPublicDesigns();
         } 
     };
 
     self.setValues = function(){
-        self.dsgnid = launchId.id;
-        self.dsgntitle = launchId.title;
-        self.dsgntype = (launchId.type == "semantic_differential" ? "T": "R");
+        self.dsgnid = self.launchId.id;
+        self.dsgntitle = self.launchId.title;
+        self.dsgntype = (self.launchId.type == "semantic_differential" ? "T": "R");
     };
 
     self.designValues = function(id, title, type){
@@ -91,19 +95,19 @@ export let BrowseDesignsController = ($scope, $filter, $http) => {
                 self.changeDesign(data.result);
                 if(type=="E") self.selectView("newDesignExt");
                 else self.selectView("viewDesign");
-                designId.id = ID;
+                self.designId.id = ID;
 
             }
         });        
     };
 
     self.launchDesign = function(ID, Title, Type){
-        launchId.id = ID;
-        launchId.title = Title;
-        launchId.type = Type;
+        self.launchId.id = ID;
+        self.launchId.title = Title;
+        self.launchId.type = Type;
         //set title and type
         self.selectView("launchActivity");
-        console.log(launchId);
+        console.log(self.launchId);
     };
 
     self.init();

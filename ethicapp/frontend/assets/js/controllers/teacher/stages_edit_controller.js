@@ -1,6 +1,11 @@
 /*eslint func-style: ["error", "expression"]*/
-export let StagesEditController = ($scope, $filter, $http, Notification, $timeout) => {
+export let StagesEditController = ($scope, DesignStateService,
+    ActivityStateService, 
+    $filter, $http, Notification, $timeout) => {
     var self = $scope;
+    self.designId = DesignStateService.designstate;
+    self.launchId = ActivityStateService.activityState;
+
     self.keyGroups = function (k1, k2) {
         return {
             key:  k1 + (k2 == null ? "" : " " + k2),
@@ -170,9 +175,9 @@ export let StagesEditController = ($scope, $filter, $http, Notification, $timeou
     self.launchDesignEdit = function(){
         self.updateDesign().then(function(saved) {
             if(saved){
-                launchId.id = designId.id;
-                launchId.title = self.design.metainfo.title;
-                launchId.type = self.design.type;
+                self.launchId.id = self.designId.id;
+                self.launchId.title = self.design.metainfo.title;
+                self.launchId.type = self.design.type;
                 self.selectView("launchActivity");
             }
         });
@@ -285,7 +290,7 @@ export let StagesEditController = ($scope, $filter, $http, Notification, $timeou
     self.updateDesign = function() {
         self.error = self.checkDesign();
         if (!self.error) {
-            var postdata = {"design": self.design, "id": designId.id};
+            var postdata = {"design": self.design, "id": self.designId.id};
             $http.post("update-design", postdata).then(function(response) {
                 if (response.data.status == "ok") {
                     self.saved = true;
@@ -347,7 +352,7 @@ export let StagesEditController = ($scope, $filter, $http, Notification, $timeou
         $http.post("get-design", ID).success(function (data) {
             if (data.status == "ok") {
                 self.changeDesign(data.result);
-                designId.id = ID; //use variable from admin later
+                self.designId.id = ID; //use variable from admin later
                 self.selectView("newDesignExt");
             }
         });
@@ -355,7 +360,7 @@ export let StagesEditController = ($scope, $filter, $http, Notification, $timeou
 
 
     self.getID = function(){
-        return designId.id;
+        return self.designId.id;
     };
 
     function resetValues() {

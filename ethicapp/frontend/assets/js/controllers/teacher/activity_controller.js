@@ -1,10 +1,11 @@
 /*eslint func-style: ["error", "expression"]*/
-export let ActivityController = ($scope, $filter, $http, Notification, $timeout) => {
+export let ActivityController = ($scope, ActivityStateService, $filter, $http, Notification, $timeout) => {
     var self = $scope;
     self.selectedSes = {};
     self.error = false;
     self.showSpinner = false;
-
+    self.launchId = ActivityStateService.activityState;
+    
     self.init =function(){
         self.selectedSes = {};
         self.launchDesignId = launchId.id;
