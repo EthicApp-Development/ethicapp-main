@@ -76,7 +76,7 @@ adpp.config(function($translateProvider) {
 });
 
 // Inject controllers into application
-adpp.controller("RouteCtrl", 
+adpp.controller("RoutingController", 
     ['$scope', RoutingController]);
 adpp.controller("ManagementController",
     ['$scope', 'TabStateService', 'DesignStateService',
@@ -144,7 +144,7 @@ adpp.config(function ($routeProvider) {
     // set route for the index page
         .when("/",
             {
-                controller:  "RouteCtrl",
+                controller:  "RoutingController",
                 templateUrl: "views/partials/teacher/ui-router.html"
             });
 });

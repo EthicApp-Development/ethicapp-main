@@ -35,9 +35,6 @@ export let StagesEditController = ($scope, DesignStateService,
     /*
         BACKEND FUNCTIONS
     */
-
-    
-
     self.init = function(){
         //resetValues();
         if(self.selectedView == "newDesign") self.changeDesign(null);

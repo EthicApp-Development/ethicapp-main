@@ -6,7 +6,7 @@ export let ManagementController = ($scope,
     var self = $scope;
     self.temp = "";
     const lang = navigator.language;
-    //$locale.NUMBER_FORMATS.GROUP_SEP = "";
+    $locale.NUMBER_FORMATS.GROUP_SEP = "";
     self.shared = {};
     self.sessions = [];
     self.selectedView = ""; //current view
@@ -373,7 +373,8 @@ export let ManagementController = ($scope,
     };
 
     self.flang = function (key) {
-        return $filter("lang")(key);
+        return $filter("translate")(key);
+        //return $filter("lang")(key);
     };
 
     self.init();
