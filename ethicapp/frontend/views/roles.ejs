@@ -155,13 +155,13 @@
                                     <div class="col-xs-2 col-sm-1" ng-if="selectedActor != null">
 
                                     </div>
-                                    <div class="col-xs-8 col-sm-10 mh30">
+                                    <div class="col-xs-8 col-sm-10 mh30 ml-1">
                                        <strong>{{ $index + 1 }}. {{ actor.name }}</strong>
                                     </div>
                                     <div class="col-xs-2 col-sm-1 text-right">
 <!--                                        <i class="fa fa-check margin-right-8" ng-if="actor.sent && ((!justifyPosition && actor.justified) || (justifyPosition && posToJustify[$index]))"></i>-->
-                                        <button class="btn btn-default btn-sm" ng-click="selectActor($index)" ng-class="{'bg-green': actor.sent && ((!justifyPosition && actor.justified) || (justifyPosition && posToJustify[$index]))}"
-                                                ng-if="((!justifyPosition && actor.justified) || (justifyPosition && posToJustify[$index])) && selectedActor == null">
+                                        <button class="btn btn-default btn-sm" ng-click="selectActor($index)" ng-class="{'bg-green': actor.sent }"
+                                                ng-if="actor.justified || actor.jorder">
                                             <i class="fa fa-edit"></i>
                                         </button>
                                     </div>
@@ -180,10 +180,16 @@
                                             </textarea>
                                             <span class="input-group-addon hoverable" ng-disabled="finished || !actors[selectedActor].dirty || selectedActor == null"
                                                   ng-click="sendActorSel()">
-                                            <i class="fa fa-check" ng-show="!actors[selectedActor].dirty"></i>
-                                            <span ng-show="!actors[selectedActor].dirty">Enviado</span>
-                                            <i class="fa fa-send" ng-show="actors[selectedActor].dirty"></i>
-                                            <span ng-show="actors[selectedActor].dirty">Por Enviar</span>
+                                                  <div ng-if="actor.sent">
+                                                    <i class="fa fa-check"></i>
+                                                    <span>Enviado</span>
+                                                  </div>
+                                                  <div ng-if="!actor.sent">
+                                                    <i class="fa fa-save"></i>
+                                                    <span>Guardar</span>
+                                                  </div>
+                                            
+                                            
                                             </span>
                                         </div>
                                     </div>

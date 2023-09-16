@@ -9,11 +9,13 @@
                 </div>
             </div>
             <h4>{{'documents' | lang}}</h4>
-            <div class="list-group" style="margin-bottom: 0">
-                <div class="list-group-item" ng-repeat="doc in documents">
+            <div class="list-group mt-1medio" style="margin-bottom: 0">
+                <div class="list-group-item inline-docs" ng-repeat="doc in documents">
                     <i class="fa fa-file-text-o"></i> <strong ng-bind="getPathname(doc.path)"></strong>
-                    <a href="{{doc.path}}" class="discrete"> - {{'viewOriginalDoc'}}</a>
-                    <button class="btn btn-xs btn-default pull-right" ng-disabled="false"
+                    <button class="btn btn-xs btn-default" ng-disabled="false" ng-click="openPDFInNewTab(doc.path)">
+                        {{ 'viewOriginalDoc'| lang }}
+                    </button>
+                    <button class="btn btn-xs btn-default" ng-disabled="false"
                         ng-click="deleteDesignDocument(doc.id)">{{'delete' | lang}}</button>
                 </div>
             </div>

@@ -346,7 +346,7 @@
                                     <span style="color: red;" ng-if="df.justify">*</span>
                                 </th>
                             </tr>
-                            <tr ng-repeat="udata in shared.difTable track by $index" ts-repeat
+                            <tr ng-repeat="udata in shared.difTable track by $index" 
                                 ng-class="{'bg-gray': udata.group}">
                                 <td>
                                     <span ng-show="!udata.group">{{ users[udata.uid].name }}</span>
@@ -417,7 +417,7 @@
                                     ts-order-by="sortByAutorGroup">{{ 'group' | lang }}</th>
                                 <th ng-repeat="(p, aa) in rawActors track by p">Pos {{ p + 1 }}</th>
                             </tr>
-                            <tr ng-repeat="udata in indvTableSorted track by udata.uid" ts-repeat
+                            <tr ng-repeat="udata in indvTableSorted track by udata.uid"
                                 ng-click="openActorDetails(udata.uid, iterationIndicator)">
                                 <td>{{ udata.ceq }}</td>
                                 <td>

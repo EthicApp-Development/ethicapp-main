@@ -10,7 +10,7 @@ app.factory("$socket", ["socketFactory", function (socketFactory) {
 
 app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Notification", "$sce", "$uibModal", "ngIntroService", function ($scope, $http, $timeout, $socket, Notification, $sce, $uibModal, ngIntroService) {
     var self = $scope;
-
+    self.designId = -1;
     self.iteration = 1;
     self.myUid = -1;
     self.documents = [];
@@ -62,48 +62,89 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     self.verified = false;
 
     self.init = function () {
-        self.getSesInfo();
-        $socket.on("stateChange", function (data) {
-            console.log("SOCKET.IO", data);
-            if (data.ses == self.sesId) {
-                window.location.reload();
-            }
+        self.getSesInfo()
+            .then(function () {
+                $socket.on("stateChange", function (data) {
+                    console.log("SOCKET.IO", data);
+                    if (data.ses == self.sesId) {
+                        window.location.reload();
+                    }
+                });
+
+                $socket.on("chatMsgStage", function (data) {
+                    console.log("SOCKET.IO", data);
+                    if (data.stageid == self.currentStageId && data.tmid == self.tmId && self.currentStage.chat) {
+                        updateChat();
+                    }
+                });
+
+                $socket.on("diffReceived", function (data) {
+                    console.log("SOCKET.IO", data);
+                    if (data.ses == self.sesId) {
+                        self.openDetails(data);
+                    }
+                });
+
+                self.getMe();
+            })
+            .catch(function (error) {
+                console.error("Error:", error);
+            });
+    };
+    self.getSesInfo = function () {
+        return new Promise(function (resolve, reject) {
+            $http({ url: "get-ses-info", method: "post" })
+                .success(function (data) {
+                    self.iteration = data.iteration + 1;
+                    self.myUid = data.uid;
+                    self.sesName = data.name;
+                    self.sesId = data.id;
+                    self.sesSTime = data.stime;
+                    self.sesDescr = data.descr;
+                    self.currentStageId = data.current_stage;
+                    self.isJigsaw = data.type == "J";
+
+                    if (self.iteration >= 1) {
+                        // self.finished = true;
+                    }
+
+                    if (self.currentStageId != null || self.iteration >= 1) {
+                        self.getDesignId(self.sesId)
+                            .then(function () {
+                                self.loadDocuments();
+                                self.loadStageData();
+                            })
+                            .catch(reject);
+                    }
+
+                    if (self.isJigsaw) {
+                        self.getJigsawRoles();
+                    }
+                    console.log(data);
+
+                    resolve(); 
+                })
+                .error(reject);
         });
-        $socket.on("chatMsgStage", function (data) {
-            console.log("SOCKET.IO", data);
-            if (data.stageid == self.currentStageId && data.tmid == self.tmId && self.currentStage.chat) {
-                updateChat();
-            }
-        });
-        $socket.on("diffReceived", function (data) {
-            console.log("SOCKET.IO", data);
-            if (data.ses == self.sesId) {
-                self.openDetails(data);
-            }
-        });
-        self.getMe();
     };
 
-    self.getSesInfo = function () {
-        $http({ url: "get-ses-info", method: "post" }).success(function (data) {
-            self.iteration = data.iteration + 1;
-            self.myUid = data.uid;
-            self.sesName = data.name;
-            self.sesId = data.id;
-            self.sesSTime = data.stime;
-            self.sesDescr = data.descr;
-            self.currentStageId = data.current_stage;
-            self.isJigsaw = data.type == "J";
-            if (self.iteration >= 1) {
-                // self.finished = true;
-            }
-            if (self.currentStageId != null || self.iteration >= 1) {
-                self.loadDocuments();
-                self.loadStageData();
-            }
-            if (self.isJigsaw) {
-                self.getJigsawRoles();
-            }
+    self.getDesignId = function (sesId) {
+        return new Promise(function (resolve, reject) {
+            var postData = {
+                sesid: sesId
+            };
+            $http({
+                url:     "get-design-by-sesid",
+                method:  "post",
+                data:    postData,
+                headers: { "Content-Type": "application/json" }
+            })
+                .then(function (response) {
+                    console.log("Response data:", response.data[0].design);
+                    self.designId = response.data[0].design;
+                    resolve(); 
+                })
+                .catch(reject); 
         });
     };
 
@@ -150,7 +191,10 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     };
 
     self.loadDocuments = function () {
-        $http({ url: "get-documents", method: "post" }).success(function (data) {
+        var postdata = { dsgnid: self.designId}; 
+        $http({
+            url: "designs-documents", method: "post", data: postdata
+        }).success(function (data) {
             self.documents = data;
         });
     };
@@ -258,6 +302,9 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             });
             a.comment = s.description;
             a.sent = s.description != "" && s.description != null;
+            if(self.wordCount(a.comment) < a.word_count){
+                a.sent = false;
+            }
             acts.push(a);
         });
         self.actors = acts;
@@ -282,6 +329,9 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             if (a) {
                 a.comment = s.description;
                 a.sent = s.description != "" && s.description != null;
+                if(self.wordCount(a.comment) < a.word_count){
+                    a.sent = false;
+                }
                 acts.push(a);
             }
         });
@@ -522,6 +572,9 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
             $http.post("send-actor-selection", postdata).success(function (data) {
                 a.dirty = false;
                 a.sent = a.comment != null && a.comment != "";
+                if(self.wordCount(a.comment) < a.word_count){
+                    a.sent = false;
+                }
             });
         });
         self.selectedActor = null;
@@ -545,8 +598,11 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     };
 
     self.getDocURL = function () {
-        // return $sce.trustAsResourceUrl("https://docs.google.com/viewer?url=" + BASE_APP + self.documents[self.selectedDocument].path + "&embedded=true");
-        return $sce.trustAsResourceUrl(self.documents[self.selectedDocument].path);
+        var pdfPath = self.documents[self.selectedDocument].path;
+        var escapedPdfPath = encodeURIComponent(pdfPath);
+        var completeUrl = $sce.trustAsResourceUrl(escapedPdfPath);
+
+        return completeUrl;
     };
 
     var notify = function notify(title, message, closable) {
