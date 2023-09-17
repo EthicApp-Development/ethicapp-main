@@ -1,6 +1,6 @@
-<h2>{{'launchActivity' | lang}}</h2>
+<h2>{{'launchActivity' | translate}}</h2>
 <br>
-<p>{{'chooseDesignLaunch' | lang}}</p>
+<p>{{'chooseDesignLaunch' | translate}}</p>
 <br>
 <div ng-controller="GroupController">
     <div class="launchActivity-wrapper">
@@ -8,7 +8,7 @@
             <div ng-controller="BrowseDesignsController">
                 <div ng-init="setValues()" ng-show="designSelected() == null">
                     <div clas="col-lg-1">
-                        <input class="form-control launchActivity-search fontAwesome" type="text" placeholder="{{'search'|lang}}  &#xF002;"
+                        <input class="form-control launchActivity-search fontAwesome" type="text" placeholder="{{'search'|translate}}  &#xF002;"
                             ng-model="userSearch">
                     </div>
                     <div class="container launchActivityContainer">
@@ -17,7 +17,7 @@
                             ng-class="{'dsgn_sel': dsgnid == ses.id}"> <!--UPDATE IT CORRECTLY-->
                             <div>
                                 <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
-                                <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date |
+                                <p class="list-group-item-text">{{'created' | translate}} {{ses.metainfo.creation_date |
                                     date}}</p>
                             </div>
 
@@ -31,7 +31,7 @@
                             ng-class="{'dsgn_sel': dsgnid == ses.id}"> <!--UPDATE IT CORRECTLY-->
                             <div>
                                 <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
-                                <p class="list-group-item-text">{{'created' | lang}} {{ses.metainfo.creation_date |
+                                <p class="list-group-item-text">{{'created' | translate}} {{ses.metainfo.creation_date |
                                     date}}</p>
                             </div>
 
@@ -39,7 +39,7 @@
                     </div>
                 </div>
                 <br>
-                 <p>{{'giveDesignLaunch' | lang}}</p>
+                 <p>{{'giveDesignLaunch' | translate}}</p>
                 <form ng-submit="createSession(dsgntitle,descr, dsgntype, dsgnid)">
                     <div class="row">
                         <div class="col-lg-6">
@@ -58,14 +58,14 @@
                     <div class="row">
                         <div class="col-lg-6">
                             <button class="btn btn-primary" ng-disabled="dsgnid == null">{{'launchActivity' |
-                            lang}}</button>
+                            translate}}</button>
                         </div>
                     </div>
 
                     <div class="row">
                         <div class="loading-container" ng-show="showSpinner">
                             <i class="fa fa-spinner fa-spin"></i>
-                            <p>{{ 'Preparando dashboard para la actividad...' | lang }}</p>
+                            <p>{{ 'Preparando dashboard para la actividad...' | translate }}</p>
                         </div>
                     </div>
                 </form>
@@ -78,10 +78,10 @@
             <img src="../../assets/images/iconsets/exclamation-mark.png" alt="signoExclamacion" class="exclamation-mark-image">
             <div class="help-container">
                 <p class="help-paragraph">
-                    {{'launchActivityPanel1' | lang}}
+                    {{'launchActivityPanel1' | translate}}
                 </p>
                 <p class="help-paragraph">
-                    {{'launchActivityPanel2' | lang}}
+                    {{'launchActivityPanel2' | translate}}
                 </p>
             </div>
         

@@ -1,11 +1,11 @@
 <br>
 <br>
-<a ng-click="selectView('')" >{{'back'|lang}}</a> <!--MERGE VIEW WITH EXT VERSION-->
+<a ng-click="selectView('')" >{{'back'|translate}}</a> <!--MERGE VIEW WITH EXT VERSION-->
 <br>
-<h2>{{'designMsg'|lang}}</h2>
+<h2>{{'designMsg'|translate}}</h2>
 <div>
     <div class="modal-header pl-0">
-        <h4>{{'designMsgInfo'|lang}}</h4>
+        <h4>{{'designMsgInfo'|translate}}</h4>
     </div>
     <form class="modal-body form-new-design" name="formDesign" ng-controller="StagesEditController" ng-if="selectedView == 'newDesign'">
         <div class="wrapper_nd">
@@ -13,22 +13,22 @@
                 <div class="line-row-nd">
                     <label>Tipo de actividad:</label>
                     <select ng-model="selectedOption" class="form-control line_input w-22" ng-required="true">
-                        <option value="" selected disabled>{{'selectActivityType'|lang}}</option>
-                        <option value="semantic_differential">{{'semantic_differential'|lang}}</option>
-                        <option value="ranking">{{'ranking_activity'|lang}}</option>
+                        <option value="" selected disabled>{{'selectActivityType'|translate}}</option>
+                        <option value="semantic_differential">{{'semantic_differential'|translate}}</option>
+                        <option value="ranking">{{'ranking_activity'|translate}}</option>
                     </select>
                 </div>
                 <div class="line-row-nd">
-                    <label>{{'title'|lang}}:</label>
+                    <label>{{'title'|translate}}:</label>
                     <input type="text" class="form-control line_input" name="name" ng-model="title" ng-required="true">
                 </div>
             </div>
             <div class="vertical_help_panel">
                 <img src="../../assets/images/iconsets/exclamation-mark.png" alt="signoExclamacion" class="exclamation-mark-image">
                 <div class="vertical-help-container">
-                    <p ng-show="selectedOption === ''">{{'selectActivityType'|lang}}</p>
-                    <p ng-show="selectedOption === 'semantic_differential'">{{'SemanticDescription'|lang}}</p>
-                    <p ng-show="selectedOption === 'ranking'">{{'RankingDescription'|lang}}</p>
+                    <p ng-show="selectedOption === ''">{{'selectActivityType'|translate}}</p>
+                    <p ng-show="selectedOption === 'semantic_differential'">{{'SemanticDescription'|translate}}</p>
+                    <p ng-show="selectedOption === 'ranking'">{{'RankingDescription'|translate}}</p>
                     
                 </div>
             
@@ -41,7 +41,7 @@
         <br>
         <div class="new-design-bottom">
             <button class="btn btn-primary" ng-click="formDesign.$valid && uploadDesign(title,'template', selectedOption)"
-                type="submit">{{'next'|lang}}</button>
+                type="submit">{{'next'|translate}}</button>
         </div>
         
     </form>

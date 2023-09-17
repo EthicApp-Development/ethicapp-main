@@ -8,7 +8,7 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
     
     self.init =function(){
         self.selectedSes = {};
-        self.launchDesignId = launchId.id;
+        self.launchDesignId = self.launchId.id;
     };
 
     //Create Activity from launch activity
@@ -187,7 +187,7 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
     };
 
     self.designSelected = function(){
-        return launchId.id;
+        return self.launchId.id;
     };
 
     self.createCopy = function(ses){

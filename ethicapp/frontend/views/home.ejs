@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css" />
   <%- include('partials/favicon.ejs') %>
 </head>
-<body ng-controller="ManagementController"></body>
+<body ng-controller="ManagementController">
   <div class="top-bar-mini cflex" ng-hide="false">
     <div class="cf1">
       <a href="seslist" class="simple-margin-left">
@@ -52,7 +52,7 @@
     </div>
     <div class="main_body vl"> <!--Right side-->
       <div class="container" style="margin-top: 3em;">
-        <div ng-view="home" ng-controller="TabsController">
+        <div ng-view="" ng-controller="TabsController">
           <!--Ng view templates-->
         </div>
       </div>

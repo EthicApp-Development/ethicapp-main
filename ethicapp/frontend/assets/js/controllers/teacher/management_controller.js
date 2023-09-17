@@ -156,16 +156,19 @@ export let ManagementController = ($scope,
     self.selectView = function(tab, type){
         if(tab != self.selectedView){
             self.selectedView = tab;
+            console.log(self.selectedView);
             $route.reload();
-            if (tab != "newDesignExt" && tab != "viewDesign") self.designId.id = null; //avoids making designs-documents request
+            if (tab != "newDesignExt" && tab != "viewDesign"){
+                self.designId.id = null; //avoids making designs-documents request
+            } 
             if (tab != "launchActivity") {
                 self.launchId.id = null; 
                 self.launchId.title = null; 
                 self.launchId.type = null;
             }
             if (tab == "designs") {
-                if(type != null) tabSel.type = type;
-                else tabSel.type = 0;
+                if(type != null) self.tabSel.type = type;
+                else self.tabSel.type = 0;
             }
             console.log(self.selectedView);
         }

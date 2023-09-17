@@ -30,7 +30,7 @@ var adpp = angular.module("Admin", ["ngSanitize", "btford.socket-io",
     return service; 
 }).factory('DesignStateService', function() {
     var service = {};
-    service.activityState = { id: null };
+    service.designState = { id: null };
     return service;
 });
 
@@ -58,6 +58,17 @@ import { ngQuillConfigProvider } from "../../helpers/util.js";
 adpp.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
+
+// Routing
+adpp.config(function ($routeProvider) {
+    $routeProvider
+    // set route for the index page
+        .when("/",
+            {
+                controller:  "RoutingController",
+                templateUrl: "views/partials/teacher/ui-router.html"
+            });
+});
 
 // Rich text editor configuration
 adpp.config(["ngQuillConfigProvider", ngQuillConfigProvider]);
@@ -138,13 +149,4 @@ adpp.controller("DialogCtrl", function($scope, DialogService) {
     $scope.closeDialog = DialogService.closeDialog;
 });
 
-// Routing
-adpp.config(function ($routeProvider) {
-    $routeProvider
-    // set route for the index page
-        .when("/",
-            {
-                controller:  "RoutingController",
-                templateUrl: "views/partials/teacher/ui-router.html"
-            });
-});
+

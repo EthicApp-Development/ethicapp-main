@@ -1,19 +1,19 @@
-<h2>{{'activities' | lang}}</h2>
+<h2>{{'activities' | translate}}</h2>
 <button class="btn btn-primary" ng-click="selectView('launchActivity')"
-    style="margin-bottom: 2rem; margin-top: 1rem;">{{'launchActivity' | lang}}</button>
+    style="margin-bottom: 2rem; margin-top: 1rem;">{{'launchActivity' | translate}}</button>
 <div ng-controller="ActivityController">
     <div class="tab_cs" ng-init="dsgnMode=0">
         <button class="tab_cs" ng-click="dsgnMode=0" ng-class="{'btn_selected': dsgnMode == 0}">
-            {{'currentTab' | lang}}
+            {{'currentTab' | translate}}
         </button>
         <button class="tab_cs" ng-click="dsgnMode=1" ng-class="{'btn_selected': dsgnMode == 1}">
-            {{'finishedTab' | lang}}
+            {{'finishedTab' | translate}}
         </button>
         <button class="tab_cs" ng-click="dsgnMode=2" ng-class="{'btn_selected': dsgnMode == 2}">
-            {{'archived' | lang}}
+            {{'archived' | translate}}
         </button>
         <div style="float: left;display: flex;justify-content: left;align-items: center;">
-            <input class="form-control text-left search-input fontAwesome" type="text" placeholder="{{'search'|lang}}   &#xF002;" 
+            <input class="form-control text-left search-input fontAwesome" type="text" placeholder="{{'search'|translate}}   &#xF002;" 
                 ng-model="userSearch">
         </div>
 
@@ -28,16 +28,16 @@
                 <div>
                     <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
                     <p class="list-group-item-text" ng-bind="ses.descr"></p>
-                    <p class="list-group-item-text">{{'launched' | lang}} {{ses.time | date}}</p>
-                    <p class="list-group-item-text">{{'code' | lang}}: {{ses.code}}</p>
+                    <p class="list-group-item-text">{{'launched' | translate}} {{ses.time | date}}</p>
+                    <p class="list-group-item-text">{{'code' | translate}}: {{ses.code}}</p>
                 </div>
                 <div class="text-right vertical-align">
 
-                    <button class="btn btn-default" ng-click="createCopy(ses)" title="{{'copy'|lang}}"><i
+                    <button class="btn btn-default" ng-click="createCopy(ses)" title="{{'copy'|translate}}"><i
                             class="fa fa-copy"></i></button>
 
                     <button class="btn btn-primary ml-1"
-                        ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
+                        ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | translate}}</button>
 
                     <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
                 </div>
@@ -49,17 +49,17 @@
                 <div>
                     <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
                     <p class="list-group-item-text" ng-bind="ses.descr"></p>
-                    <p class="list-group-item-text">{{'launched' | lang}} {{ses.time | date}}</p>
-                    <p class="list-group-item-text">{{'code' | lang}}: {{ses.code}}</p>
+                    <p class="list-group-item-text">{{'launched' | translate}} {{ses.time | date}}</p>
+                    <p class="list-group-item-text">{{'code' | translate}}: {{ses.code}}</p>
                 </div>
 
                 <div class="text-right vertical-align">
-                    <button class="btn btn-primary " title="{{'file'|lang}}" ng-click="archiveActivity(ses, $event)"><i
+                    <button class="btn btn-primary " title="{{'file'|translate}}" ng-click="archiveActivity(ses, $event)"><i
                             class="fa fa-inbox"></i></button>
-                    <button class="btn btn-default ml-1" ng-click="createCopy(ses)" title="{{'copy'|lang}}"><i class="fa fa-copy"></i></button>
+                    <button class="btn btn-default ml-1" ng-click="createCopy(ses)" title="{{'copy'|translate}}"><i class="fa fa-copy"></i></button>
                     
                     <button class="btn btn-primary ml-1"
-                        ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
+                        ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | translate}}</button>
                     <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
                 </div>
             </div>
@@ -70,15 +70,15 @@
                 <div>
                     <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
                     <p class="list-group-item-text" ng-bind="ses.descr"></p>
-                    <p class="list-group-item-text">{{'launched' | lang}} {{ses.time | date}}</p>
-                    <p class="list-group-item-text">{{'code' | lang}}: {{ses.code}}</p>
+                    <p class="list-group-item-text">{{'launched' | translate}} {{ses.time | date}}</p>
+                    <p class="list-group-item-text">{{'code' | translate}}: {{ses.code}}</p>
                 </div>
 
                 <div class="text-right vertical-align">
-                    <button class="btn btn-primary " title="{{'restore'|lang}}" ng-click="restoreActivity(ses, $event)"><i
+                    <button class="btn btn-primary " title="{{'restore'|translate}}" ng-click="restoreActivity(ses, $event)"><i
                             class="fa fa-undo"></i></button>
                     <button class="btn btn-primary ml-1"
-                        ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | lang}}</button>
+                        ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | translate}}</button>
                     <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
                 </div>
             </div>
