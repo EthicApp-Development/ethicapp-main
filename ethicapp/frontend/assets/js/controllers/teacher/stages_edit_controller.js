@@ -2,8 +2,9 @@
 export let StagesEditController = ($scope, DesignStateService,
     ActivityStateService, 
     $filter, $http, Notification, $timeout) => {
+    console.log("StagesEditController Initializated");
     var self = $scope;
-    self.designId = DesignStateService.designstate;
+    self.designId = DesignStateService.designState;
     self.launchId = ActivityStateService.activityState;
 
     self.keyGroups = function (k1, k2) {
@@ -175,6 +176,12 @@ export let StagesEditController = ($scope, DesignStateService,
                 self.launchId.id = self.designId.id;
                 self.launchId.title = self.design.metainfo.title;
                 self.launchId.type = self.design.type;
+
+                // ActivityStateService.activityState.id = self.designId.id;
+                // ActivityStateService.activityState.title = self.design.metainfo.title;
+                // ActivityStateService.activityState.type = self.design.type;
+                
+                // self.launchId = ActivityStateService.activityState;
                 self.selectView("launchActivity");
             }
         });
@@ -349,7 +356,8 @@ export let StagesEditController = ($scope, DesignStateService,
         $http.post("get-design", ID).success(function (data) {
             if (data.status == "ok") {
                 self.changeDesign(data.result);
-                self.designId.id = ID; //use variable from admin later
+                DesignStateService.designState.id = ID;
+                self.designId.id = DesignStateService.designState.id; //use variable from admin later
                 self.selectView("newDesignExt");
             }
         });

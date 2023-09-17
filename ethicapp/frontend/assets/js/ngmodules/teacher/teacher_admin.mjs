@@ -115,7 +115,7 @@ adpp.controller("DuplicateSesModalController",
 adpp.controller("GroupController", 
     ['$scope', '$http', 'Notification', GroupController]);
 adpp.controller("DesignsDocController", 
-    ['$scope', '$http', 'Notification', '$timeout', DesignsDocController]);
+    ['$scope', 'DesignStateService' ,'$http', 'Notification', '$timeout', DesignsDocController]);
 adpp.controller("ActivityController", 
     ['$scope', 'ActivityStateService', '$filter', '$http', 'Notification', '$timeout', ActivityController]);
 adpp.controller("MonitorActivityController", 

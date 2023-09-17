@@ -68,6 +68,7 @@ export let BrowseDesignsController = ($scope,
     };
 
     self.deleteDesign = function (ID) {
+        console.log(ID);
         var postdata = {"id": ID};
         $http.post("delete-design", postdata).success(function (data) {
             
@@ -90,12 +91,15 @@ export let BrowseDesignsController = ($scope,
     };
 
     self.goToDesign = function(ID, type){
+        console.log(ID);
         $http.post("get-design", ID).success(function (data) {
             if (data.status == "ok") {
                 self.changeDesign(data.result);
                 if(type=="E") self.selectView("newDesignExt");
                 else self.selectView("viewDesign");
-                self.designId.id = ID;
+                DesignStateService.designState.id = ID;
+                self.designId.id = DesignStateService.designState.id;
+                console.log(self.designId);
 
             }
         });        

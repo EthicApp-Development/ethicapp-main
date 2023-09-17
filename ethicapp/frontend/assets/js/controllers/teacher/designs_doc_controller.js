@@ -1,8 +1,9 @@
 /*eslint func-style: ["error", "expression"]*/
-export let DesignsDocController = ($scope, $http, Notification, $timeout) => { 
+export let DesignsDocController = ($scope, DesignStateService, $http, Notification, $timeout) => { 
     var self = $scope;
     self.busy = false;
     self.documents = [];
+    self.designId = DesignStateService.designState;
 
     self.init = function(){
         self.requestDesignDocuments();
@@ -28,6 +29,7 @@ export let DesignsDocController = ($scope, $http, Notification, $timeout) => {
     };
     
     self.requestDesignDocuments = function ( ) {
+        console.log(self.designId);
         var postdata = { dsgnid: self.designId.id};
         $http({
             url: "designs-documents", method: "post", data: postdata
