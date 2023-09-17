@@ -2178,7 +2178,7 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
         var file = fileInput.files[0];
 
         if (file){
-            var maxSize = 5 * 1024 * 1024; // 5 MB
+            var maxSize = 20 * 1024 * 1024; // 20 MB
             if (file.size <= maxSize) {
                 self.busy = true;
                 var fd = new FormData(event.target);
@@ -2198,7 +2198,7 @@ adpp.controller("DesignsDocController", function ($scope, $http, Notification, $
                 });
             }
             else{
-                Notification.error("Documento muy grande. El tamaño máximo permitido es "+(maxSize/(1024*1024))+" MB.");
+                Notification.error("Documento muy grande. El tamaño máximo permitido es 20 MB.");
             }
 
         }
