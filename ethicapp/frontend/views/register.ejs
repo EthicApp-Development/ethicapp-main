@@ -47,23 +47,25 @@
       </form>
     </div>
     <div class="row" style="padding:16px">
-      <form action="register" method="post" id="form_user" class="form-horizontal">
+      <form ng-submit="registerUser()" method="post" id="form_user" class="form-horizontal">
         <div class="form-group">
           <label class="col-sm-2">{{ "name" | lang }}:</label>
           <div class="col-sm-10">
-            <input type="text" class="form-control" name="name" required autofocus />
+            <input type="text" class="form-control" name="name" ng-model="name" autofocus />
+            <div class="error-message" ng-show="nameError" style="color: red;">{{ nameError }}</div>
           </div>
         </div>
         <div class="form-group">
           <label class="col-sm-2">{{ "lastname" | lang }}:</label>
           <div class="col-sm-10">
-            <input type="text" class="form-control" name="lastname" />
+            <input type="text" class="form-control" name="lastname" ng-model="lastname" />
+            <div class="error-message" ng-show="lastnameError" style="color: red;">{{ lastnameError }}</div>
           </div>
         </div>
         <div class="form-group">
           <label class="col-sm-2">RUT/DNI:</label>
           <div class="col-sm-10">
-            <input type="text" class="form-control" name="rut" placeholder="{{ 'optional_parent' | lang }}" />
+            <input type="text" class="form-control" name="rut" ng-model="rut" placeholder="{{ 'optional_parent' | lang }}" />
           </div>
         </div>
         <div class="form-group">
@@ -71,7 +73,8 @@
             <label>{{ "email" | lang }}</label>
           </div>
           <div class="col-sm-10">
-            <input type="email" class="form-control" name="mail" required />
+            <input type="email" class="form-control" name="mail" ng-model="email" />
+            <div class="error-message" ng-show="emailError" style="color: red;">{{ emailError }}</div>
           </div>
         </div>
         <div class="form-group">
@@ -79,27 +82,33 @@
             <label>{{ "gender" | lang }}:</label>
           </div>
           <div class="col-sm-10">
-            <select name="sex" class="form-control">
+            <select name="sex" class="form-control" ng-model="sex" required>
+              <option selected disabled>{{ "selectGender" | lang }}</option>
               <option value="F">{{ "female" | lang }}</option>
               <option value="M">{{ "male" | lang }}</option>
               <option value="O">{{ "other" | lang }}</option>
             </select>
+            <div class="error-message" ng-show="genderError" style="color: red;">{{ genderError }}</div>
           </div>
         </div>
         <div class="form-group">
           <label class="col-sm-3">{{ "password" | lang }}</label>
           <div class="col-sm-9">
-            <input type="password" class="form-control" name="pass" />
+            <input type="password" class="form-control" name="pass" ng-model="pass" />
+            <div class="error-message" ng-show="passwordError" style="color: red;">{{ passwordError }}</div>
           </div>
         </div>
         <div class="form-group">
           <label class="col-sm-3">{{ "cpassword" | lang }}:</label>
           <div class="col-sm-9">
-            <input type="password" class="form-control" name="conf-pass" />
+            <input type="password" class="form-control" name="confPass" ng-model="confPass" />
+            <div class="error-message" ng-show="confirmPasswordError" style="color: red;">{{ confirmPasswordError }}</div>
           </div>
         </div>
         <div class="form-group text-center">
-          <div class="g-recaptcha" id="captcha" data-sitekey="{{ reCaptchaSiteKey }}" data-type="image"></div>
+          <div class="g-recaptcha" id="captcha" data-sitekey="{{ reCaptchaSiteKey }}" data-type="image">
+          </div>
+          <div class="error-message" ng-show="recaptchaError" style="color: red;">{{ recaptchaError }}</div>
         </div>
         <div class="form-group text-center">
           <button type="submit" class="btn btn-primary form-control" style="width:200px" id="register-btn">

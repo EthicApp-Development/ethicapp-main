@@ -316,7 +316,8 @@
 	"SemanticDescription": "Diferenciales Semáticos: Permite realizar preguntas sobre el caso en donde los estudiantes realizan su juicio ético mediante escalas numéricas que relacionan términos opuestos, por ejemplo, Justo-Injusto, Responsable-Irresponsable, etc. Las escalas pueden ser dicotómicas (dos valores) hasta de diez valores.",
 	"RankingDescription": "Ordenación: Permite realizar preguntas sobre el caso en donde los estudiantes deben ordenar los actores de acuerdo a una pregunta sobre un criterio ético. Por ejemplo, \"Ordene los actores poniendo en el primer lugar aquel que usted considera que actuó de la forma más prudente\".",
 	"exitEthicapp": "Salir de Ethicapp",
-	"viewOriginalDoc": "Ver Documento"
+	"viewOriginalDoc": "Ver Documento",
+	"selectGender": "Seleccione un género"
 
 }
 

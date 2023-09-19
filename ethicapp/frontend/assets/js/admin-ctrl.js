@@ -3609,6 +3609,77 @@ adpp.controller("no_account",["$scope","$http", "apiParams", function($scope, $h
 
     self.reCaptchaSiteKey = apiParams.reCaptchaSiteKey;
 
+    self.name = "";
+    self.lastname = "";
+    self.email = "";
+    self.pass = "";
+    self.confPass = "";
+    self.sex = "";
+
+    self.nameError = "";
+    self.lastnameError = "";
+    self.emailError = "";
+    self.passwordError = "";
+    self.confirmPasswordError = "";
+    self.genderError = "";
+    self.recaptchaError = "";
+
+    self.validateRecaptcha = function() {
+        var response = grecaptcha.getResponse(); 
+        if (response.length === 0) {
+            return false; 
+        } else {
+            self.recaptchaError = "";
+            return true; 
+        }
+    };
+
+    self.registerUser = function () {
+        self.nameError = "";
+        self.lastnameError = "";
+        self.emailError = "";
+        self.passwordError = "";
+        self.confirmPasswordError = "";
+        self.genderError = "";
+        self.recaptchaError = "";
+
+        if (!self.name) {
+            self.nameError = "El campo nombre es obligatorio.";
+        }
+
+        if (!self.lastname) {
+            self.lastnameError = "El campo apellido es obligatorio.";
+        }
+
+        if (!self.email) {
+            self.emailError = "El campo correo electrónico es obligatorio.";
+        }
+
+        if (!self.pass) {
+            self.passwordError = "El campo contraseña es obligatorio.";
+        }
+
+        if (self.pass !== self.confPass) {
+            self.confirmPasswordError = "Las contraseñas no coinciden.";
+        }
+
+        if (!self.sex) {
+            self.genderError = "Por favor, selecciona tu género.";
+        }
+
+        if (!self.validateRecaptcha()) {
+            self.recaptchaError = "Por favor, completa el recaptcha.";
+        }
+
+        if (self.nameError || self.lastnameError || self.emailError || 
+            self.passwordError || self.confirmPasswordError || self.genderError ||
+            self.recaptchaError) {
+            return;
+        }
+        // Si no hay errores de validación, aquí puedes realizar la llamada a la API de registro
+        
+    };
+
     const lang = navigator.language;
     if(lang[0] == "e" && lang[1] == "s"){
         self.lang = "ES_CL/spanish";
