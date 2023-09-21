@@ -3676,7 +3676,32 @@ adpp.controller("no_account",["$scope","$http", "apiParams", function($scope, $h
             self.recaptchaError) {
             return;
         }
-        // Si no hay errores de validación, aquí puedes realizar la llamada a la API de registro
+
+        // Si no hay errores de validación, llamar a API 
+        var userData = {
+            name:                   self.name,
+            lastname:               self.lastname,
+            email:                  self.email,
+            pass:                   self.pass,
+            sex:                    self.sex,
+            confPass:               self.confPass,
+            "g-recaptcha-response": grecaptcha.getResponse() 
+        };
+
+        console.log(userData);
+
+        $http.post("/register", userData)
+            .then(function (response) {
+                console.log(response);
+                if (response.data.success) {
+                    console.log("Registro exitoso");
+                } else {
+                    console.error("Error en el registro: ");
+                }
+            })
+            .catch(function (error) {
+                console.error("Error en la solicitud al backend: " + error);
+            });
         
     };
 
