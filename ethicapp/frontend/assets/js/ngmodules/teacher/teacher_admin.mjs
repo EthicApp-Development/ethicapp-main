@@ -128,6 +128,8 @@ adpp.controller("OptionsController",
     ['$scope', '$http', 'Notification', OptionsController]);
 adpp.controller("DashboardRubricaController", 
     ['$scope', DashboardRubricaController]);
+adpp.controller("StagesController", ['$scope', '$http', 'Notification', '$uibModal', StagesController]);
+
 
 adpp.service("DialogService", function(ngDialog) {
     this.openDialog = function() {
