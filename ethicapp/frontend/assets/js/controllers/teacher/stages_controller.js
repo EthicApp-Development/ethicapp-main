@@ -1,4 +1,5 @@
-window.StagesController = function ($scope, $http, Notification, $uibModal) {
+import { generateTeams, isDifferent, habMetric } from "../../helpers/util.js";
+export let StagesController = function ($scope, $http, Notification, $uibModal) {
     var self = $scope;
 
     self.stages = [];

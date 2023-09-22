@@ -35,6 +35,7 @@ var adpp = angular.module("Admin", ["ngSanitize", "btford.socket-io",
 });
 
 import { ActivityController } from "../../controllers/teacher/activity_controller.js";
+import { StagesController } from "../../controllers/teacher/stages_controller.js";
 import { BrowseDesignsController } from "../../controllers/teacher/browse_designs_controller.js";
 import { ContentModalController } from "../../controllers/teacher/content_modal_controller.js";
 import { DashboardController } from "../../controllers/teacher/dashboard_controller.js";
@@ -129,7 +130,6 @@ adpp.controller("OptionsController",
 adpp.controller("DashboardRubricaController", 
     ['$scope', DashboardRubricaController]);
 adpp.controller("StagesController", ['$scope', '$http', 'Notification', '$uibModal', StagesController]);
-
 
 adpp.service("DialogService", function(ngDialog) {
     this.openDialog = function() {
