@@ -1796,3 +1796,7 @@ h2{
 .ml-0{
     margin-left: 0;
 }
+
+.inline-docs{
+    display: inline;
+}

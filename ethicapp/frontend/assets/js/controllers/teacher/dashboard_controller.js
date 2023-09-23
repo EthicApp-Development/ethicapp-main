@@ -846,6 +846,7 @@ export let DashboardController = ($scope, ActivityStateService,
     };
 
     self.openActorDetails = function  (uid, stageid) {
+
         let group = self.shared.groupByUid ? self.shared.groupByUid[uid] ?
             self.shared.groupByUid[uid].tmid : null : null;
         var postdata = {
@@ -853,6 +854,7 @@ export let DashboardController = ($scope, ActivityStateService,
             tmid:    group
         };
         $http.post("get-team-chat-stage", postdata).success(function (res) {
+            //Aqui no funciona porque se usan ex variables globales (hay que crear un shared service)
             $uibModal.open({
                 templateUrl:  "static/actor-dialog.html",
                 controller:   "EthicsModalController",

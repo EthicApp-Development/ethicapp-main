@@ -9,11 +9,13 @@
                 </div>
             </div>
             <h4>{{'documents' | translate}}</h4>
-            <div class="list-group" style="margin-bottom: 0">
-                <div class="list-group-item" ng-repeat="doc in documents">
+            <div class="list-group mt-1medio" style="margin-bottom: 0">
+                <div class="list-group-item inline-docs" ng-repeat="doc in documents">
                     <i class="fa fa-file-text-o"></i> <strong ng-bind="getPathname(doc.path)"></strong>
-                    <a href="{{doc.path}}" class="discrete"> - {{'viewOriginalDoc'}}</a>
-                    <button class="btn btn-xs btn-default pull-right" ng-disabled="false"
+                    <button class="btn btn-xs btn-default" ng-disabled="false" ng-click="openPDFInNewTab(doc.path)">
+                        {{ 'viewOriginalDoc'| translate }}
+                    </button>
+                    <button class="btn btn-xs btn-default" ng-disabled="false"
                         ng-click="deleteDesignDocument(doc.id)">{{'delete' | translate}}</button>
                 </div>
             </div>
@@ -41,7 +43,8 @@
             <div class="container phase_container">
                 <div class="row">
                     <div class="col-xs-1 phase_element" ng-repeat="item in getStages()" ng-init="current"
-                        ng-class="{phase_selected:currentStage==$index, error: CheckPhase($index)}" ng-click="selectStage($index)">
+                        ng-class="{phase_selected:currentStage==$index, error: CheckPhase($index)}"
+                        ng-click="selectStage($index)">
                         {{'stage' | translate}} {{$index+ 1}}
                         {{'mode' | translate}}: {{item.mode|translate}}
                     </div>
@@ -55,22 +58,24 @@
                         {{'stage'|translate}}</button>
                 </div>
             </div>
-            
-            
-            
-            <div class="container stage_container" ng-show="currentStage != null"> <!--ng-controller="StagesController"-->
+
+
+
+            <div class="container stage_container" ng-show="currentStage != null">
+                <!--ng-controller="StagesController"-->
                 <div class="row">
                     <h4 class="col-lg-2"><strong>{{'stage' | translate}} #{{currentStage+1}}</strong></h4>
                     <h4 class="col-lg-4" ng-show="currentStage == 0"><strong>{{'modeType' | translate}}:</strong>
                         {{design.phases[currentStage].mode|translate}} </h4>
                 </div>
-            
+
                 <!--STAGE 2 AND FOWARD-->
                 <div ng-if="currentStage>0">
                     <div class="row margin-top-8 mb-2">
                         <label class="col-lg-2">{{'modeType' | translate}}:</label>
                         <div class="col-lg-3">
-                            <select class="form-control form-inline-med" ng-options="x.key as (x.name | translate) for x in groupType"
+                            <select class="form-control form-inline-med"
+                                ng-options="x.key as (x.name | translate) for x in groupType"
                                 ng-model="design.phases[currentStage].mode"></select>
                         </div>
                     </div>
@@ -81,7 +86,8 @@
                                 <select class="form-control form-inline-med"
                                     ng-init="design.phases[currentStage].grouping_algorithm"
                                     ng-options="x.key as (x.name | translate) for x in methods"
-                                    ng-model="design.phases[currentStage].grouping_algorithm"></select> <!--EDIT LATER-->
+                                    ng-model="design.phases[currentStage].grouping_algorithm"></select>
+                                <!--EDIT LATER-->
                             </div>
                         </div>
                         <div class="row margin-top-8">
@@ -121,21 +127,23 @@
                                             <label for="S{{n}}">{{'stage'|translate}}: {{n}}</label> <!--FIX TOGGLE OPTION-->
                                         </div>
                                     </div>
-            
+
                                 </div>
                             </div>
                             <div class="row margin-top-8">
                                 <label class="col-lg-2">{{'activeChat'|translate}}:</label>
                                 <div class="col-lg-1">
-                                    <input type="radio" name="chat" ng-value="true" ng-model="design.phases[currentStage].chat">
+                                    <input type="radio" name="chat" ng-value="true"
+                                        ng-model="design.phases[currentStage].chat">
                                     <label>{{'yes'|translate}}</label>
                                 </div>
                                 <div class="col-lg-1">
-                                    <input type="radio" name="chat" ng-value="false" ng-model="design.phases[currentStage].chat">
+                                    <input type="radio" name="chat" ng-value="false"
+                                        ng-model="design.phases[currentStage].chat">
                                     <label>{{'no'|translate}}</label>
                                 </div>
                             </div>
-            
+
                         </div>
                     </div>
                 </div>
@@ -173,13 +181,15 @@
                                         placeholder="{{'left'|translate}}"
                                         ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.l_pole">
                                 </div>
-                                <button class="btn btn-default" ng-click="amountOptions('-')" ng-disabled="num==2">-</button>
+                                <button class="btn btn-default" ng-click="amountOptions('-')"
+                                    ng-disabled="num==2">-</button>
                             </div>
                             <div class="dopts col-xs-6">
                                 <div class="option eq-space" ng-repeat="i in buildArray(num)">{{i}}</div>
                             </div>
                             <div class="col-xs-3">
-                                <button class="btn btn-default" ng-click="amountOptions('+')" ng-disabled="num==10">+</button>
+                                <button class="btn btn-default" ng-click="amountOptions('+')"
+                                    ng-disabled="num==10">+</button>
                                 <div class="tlabel">
                                     <input type="text" class="form-control" ng-disabled="readonly"
                                         ng-class="{'error': IsEmpty(design.phases[currentStage].questions[currentQuestion].ans_format.r_pole, 'r')}"
@@ -187,7 +197,7 @@
                                         ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.r_pole">
                                 </div>
                             </div>
-            
+
                         </div>
                         <div class="row margin-top-24">
                             <label class="col-lg-2">{{'mandatoryComment'|translate}}</label>
@@ -226,17 +236,19 @@
                                     translate }}</h4>
                             </div>
                             <div class="text-center mt-1medio pt-8">
-                                <button class="btn btn-default" ng-click="setAllRolesType('role')" ng-disabled="readonly">
+                                <button class="btn btn-default" ng-click="setAllRolesType('role')"
+                                    ng-disabled="readonly">
                                     {{ 'justifyAll' | translate }} {{ 'roles' | translate }}
                                 </button>
-                                <button class="btn btn-default" ng-click="setAllRolesType('order')" ng-disabled="readonly">
+                                <button class="btn btn-default" ng-click="setAllRolesType('order')"
+                                    ng-disabled="readonly">
                                     {{ 'justifyAll' | translate }} {{ 'orders' | translate }}
                                 </button>
                                 <button class="btn btn-default" ng-click="addRole()" ng-disabled="readonly">
                                     <i class="fa fa-plus"></i> {{ 'add' | translate }} {{ 'role' | translate }}
                                 </button>
                             </div>
-                           
+
                         </div>
                         <div class="row row-border" ng-repeat="role in design.phases[currentStage].roles">
                             <div class="col-sm-5">
@@ -257,8 +269,8 @@
                             </div>
                             <div class="col-sm-2 text-right">
                                 <p class="word-count-p">{{'words'|translate}}</p>
-                                <input class="form-control word-count-roles" placeholder="Word Count" type="number" min="1"
-                                    ng-model="role.wc" ng-disabled="readonly || role.type == null">
+                                <input class="form-control word-count-roles" placeholder="Word Count" type="number"
+                                    min="1" ng-model="role.wc" ng-disabled="readonly || role.type == null">
                             </div>
                             <div class="col-sm-1">
                                 <button class="btn btn-default">
@@ -267,28 +279,30 @@
                             </div>
                         </div>
                     </div>
-            
+
                 </div>
-            
+
                 <button class="btn btn-danger margin-top-24 mb-2" ng-click="deleteQuestion(currentQuestion)"
-                    ng-show="design.phases[currentStage].questions.length > 1">{{'delete'|translate}} {{'question'|translate}}</button>
-            
+                    ng-show="design.phases[currentStage].questions.length > 1">{{'delete'|translate}}
+                    {{'question'|translate}}</button>
+
             </div>
         </div>
         <div class="help_panel">
-            <img src="../../assets/images/iconsets/exclamation-mark.png" alt="signoExclamacion" class="exclamation-mark-image">
+            <img src="../../assets/images/iconsets/exclamation-mark.png" alt="signoExclamacion"
+                class="exclamation-mark-image">
             <div class="help-container">
                 <p class="help-paragraph">{{'newDesignsPanel1' | translate}}
                 </p>
                 <p class="help-paragraph">{{'newDesignsPanel2' | translate}}
                 </p>
             </div>
-        
+
         </div>
 
     </div>
     <!--Phases selections-->
-    
+
     <div ng-show="saved">
         <h4 style="color:rgb(33, 121, 15); text-align: center; "><strong>{{'savedSuccess'|translate}}</strong></h4>
     </div>

@@ -53,5 +53,9 @@ export let DesignsDocController = ($scope, DesignStateService, $http, Notificati
         return split[split.length - 1];
     };
 
+    self.openPDFInNewTab = function (pdfPath) {
+        window.open(pdfPath, "_blank");
+    };
+
     self.init();
 };
