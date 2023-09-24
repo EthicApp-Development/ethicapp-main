@@ -94,7 +94,7 @@ adpp.controller("ManagementController",
     ['$scope', 'TabStateService', 'DesignStateService',
     'ActivityStateService',
     '$http', '$uibModal', '$location', '$locale', 
-    '$filter', '$socket', '$route', ManagementController]);
+    '$filter', '$socket', '$route', '$translate', ManagementController]);
 adpp.controller("TabsController", 
     ['$scope', '$http', 'Notification', TabsController]);
 adpp.controller("DocumentsController", 

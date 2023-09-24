@@ -2,7 +2,7 @@
 export let ManagementController = ($scope, 
     TabStateService, DesignStateService, ActivityStateService,
     $http, $uibModal, $location, $locale, 
-    $filter, $socket, $route) => {
+    $filter, $socket, $route, $translate) => {
     var self = $scope;
     self.temp = "";
     const lang = navigator.language;
@@ -32,12 +32,37 @@ export let ManagementController = ($scope,
     self.designId = DesignStateService.designState;
     self.launchId = ActivityStateService.activityState;
 
-    if(lang[0] == "e" && lang[1] == "s"){
-        self.lang = "ES_CL/spanish";
+    if (lang.startsWith('es')) {
+        self.lang = 'ES_CL/spanish';
+    } else {
+        self.lang = 'EN_US/english';
     }
-    else{
-        self.lang = "EN_US/english";
-    }
+
+    self.showLanguageDropdown = false;
+
+    self.toggleLanguageDropdown = function () {
+        self.showLanguageDropdown = !self.showLanguageDropdown;
+    };
+
+    self.changeLang = function (langKey) {
+        self.lang = langKey;
+        self.updateLang(langKey);
+        self.showLanguageDropdown = false;
+    };
+
+    self.updateLang = function (langKey) {
+        $translate.use(langKey);
+    };
+
+    self.getTranslatedLanguageName = function (languageKey) {
+        const languageNames = {
+            'ES_CL/spanish': $translate.instant('spanish'),
+            'EN_US/english': $translate.instant('english')
+        };
+
+        return languageNames[languageKey] || languageKey;
+    };
+
     
     self.secIcons = {
         configuration: "cog",
@@ -333,33 +358,7 @@ export let ManagementController = ($scope,
         self.shared.updateState();
     };
 
-    self.showLanguageDropdown = false;
-
-    self.toggleLanguageDropdown = function () {
-        self.showLanguageDropdown = !self.showLanguageDropdown;
-    };
-
-    self.changeLang = function (lang) {
-        self.lang = lang;
-        self.updateLang(lang);
-        self.showLanguageDropdown = false;
-    };
-
-    self.updateLang = function (lang) {
-        $http.get("assets/i18n/" + lang + ".json").then(function (response) {
-            window.DIC = response.data;
-        });
-    };
-
-    self.getTranslatedLanguageName = function (languageKey) {
-        const languageNames = {
-            "ES_CL/spanish": $filter("lang")("spanish"),
-            "EN_US/english": $filter("lang")("english")
-            
-        };
-
-        return languageNames[languageKey] || languageKey;
-    };
+    
 
     self.shared.resetSesId = function () {
         self.selectedId = -1;
