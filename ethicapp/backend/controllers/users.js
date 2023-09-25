@@ -354,6 +354,31 @@ router.post("/register_institucion", (req, res) => {
         });   
 });
 
+
+router.get("/teacher_account_requests", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT *
+    FROM teacher_account_requests
+    `,
+}));
+
+
+router.get("/teacher_account_requests/:id", (req, res) => {
+    rpg.singleSQL({
+      dbcon: pass.dbcon,
+      sql: `
+          SELECT *
+          FROM teacher_account_requests
+          WHERE id = $1
+      `,
+      onStart: (ses, data, calc) => {
+          calc.id = req.params.id;
+      },
+      sqlParams: [rpg.param("calc", "id")]
+    })(req, res);
+  });
+
 router.post("/teacher_account_request", (req, res) => {
     let response_key = req.body["g-recaptcha-response"];
     let secret_key = pass.Captcha_Secret;
@@ -399,6 +424,23 @@ router.post("/teacher_account_request", (req, res) => {
         }).catch(function(e) {
             console.error(e);
         });
+});
+
+
+router.put("/teacher_account_requests/:id", (req, res) => {
+    rpg.execSQL({
+        dbcon: pass.dbcon,
+        sql: `
+            UPDATE teacher_account_requests
+            SET status = $1
+            WHERE id = $2
+        `,
+        onStart: (ses, data, calc) => {
+            calc.id = req.params.id;
+        },
+        postReqData: ["status"],
+        sqlParams: [rpg.param("post", "status"), rpg.param("calc", "id")]
+    })(req, res);
 });
 
 
