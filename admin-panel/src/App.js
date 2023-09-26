@@ -13,6 +13,7 @@ import NavBar from './components/NavBars'
 import SingleReport from './pages/SingleReport';
 import Login from './pages/Login';
 import Requests from './pages/Requests';
+import Request from './pages/Request';
 
 import {useTranslation} from "react-i18next"
 
@@ -52,6 +53,7 @@ function App() {
         <Route path="/admin/users" element={<Users translation={translation}/>}/>
         <Route path="/admin/report/:reportEnum" element={<SingleReport translation={translation}/>}/>
         <Route path="/admin/requests" element={<Requests translation={translation}/>}/>
+        <Route path="/admin/request/:id" element={<Request translation={translation}/>}/>
 
       </Routes>
     </Box>

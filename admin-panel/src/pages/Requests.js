@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Container, Tab, Tabs, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button } from '@mui/material';
 import PageBase from '../components/PageBase';
 import HeaderNSubHeader from '../components/HeaderNSubHeader';
+import {Link} from "react-router-dom"
 
 function Requests(props) {
   const translation = props.translation;
@@ -21,23 +23,30 @@ function Requests(props) {
     { label: translation("requests.rejected")},
   ];
 
-  const requestsData = [
-    { id: 1, name: 'Luis Canales', email: 'email1@example.com', status: 'pending', date: '2021-10-10', institution: 'Institución 1' },
-    { id: 2, name: 'Tomas Hernandez', email: 'email2@example.com', status: 'pending', date: '2021-10-09', institution: 'Institución 1' },
-    { id: 3, name: 'Rosa Delgado', email: 'email3@example.com', status: 'pending', date: '2021-10-08', institution: 'Institución 1' },
-    { id: 4, name: 'Raul Jimenez', email: 'email4@example.com', status: 'rejected', date: '2021-10-07', institution: 'Institución 1' },
-    { id: 6, name: 'Sofia Lira', email: 'email6@example.com', status: 'approved', date: '2021-10-05', institution: 'Institución 1' },
-    { id: 7, name: 'Manuel Ferrada', email: 'email7@example.com', status: 'approved', date: '2021-10-04', institution: 'Institución 1' },
-  ];
+  const [requestsData, setRequestsData] = useState([]);
+
+  useEffect(() => {
+    axios.get('http://localhost:5050/teacher_account_requests')
+      .then((response) => {
+        if (response.status === 200) {
+          setRequestsData(response.data);
+        } else {
+          console.error('Error al obtener datos:', response.status);
+        }
+      })
+      .catch((error) => {
+        console.error('Error al obtener datos:', error);
+      });
+  }, []);
 
   const filteredRequests = requestsData.filter((request) => {
     switch (activeTab) {
       case 0: // Pending
-        return request.status === 'pending';
+        return request.status === "0";
       case 1: // Approved
-        return request.status === 'approved';
+        return request.status === "1";
       case 2: // Rejected
-        return request.status === 'rejected';
+        return request.status === "2";
       default:
         return true;
     }
@@ -69,30 +78,27 @@ function Requests(props) {
                   <TableRow key={request.id}>
                     <TableCell>
                       <b>{request.date} - {request.institution}</b>
-                        <br></br>
+                      <br></br>
                       {request.name}
-                        <br></br>
+                      <br></br>
                       {request.email}
                     </TableCell>
-                    <TableCell>
-                      {request.status === 'pending' && (
-                        <Button variant="contained" color="primary">
-                          {translation("requests.ignore")}
-                        </Button>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                    {request.status === 'pending' && (
-                      <Button variant="contained" color="primary">
-                        {translation("requests.see_request")}
-                      </Button>
+                    {activeTab === 0 && (
+                      <>
+                        <TableCell>
+                          <Button variant="contained" color="primary">
+                            Ignorar
+                          </Button>
+                        </TableCell>
+                        <TableCell>
+                        <Link to={`/admin/request/${request.id}`} style={{ textDecoration: 'none' }}>
+                          <Button variant="contained" color="primary">
+                            Ver Solicitud
+                          </Button>
+                        </Link>
+                        </TableCell>
+                      </>
                     )}
-                    {request.status === 'approved' && (
-                      <Button variant="contained" color="primary">
-                        {translation("requests.see_account")}
-                      </Button>
-                    )}
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
