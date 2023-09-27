@@ -25,6 +25,8 @@
 
 If you intent to contribute (thank you), after reviewing this file, please check the [organization repo](https://github.com/EthicApp-Development/organization) for detailed information about coding styles, git guidelines and governance, as well as a more detailed description of the project and its goals. Head for issues labeled `enhancement` to start your first contributions or raise an issue of your own interest that might prove useful to the overall project.
 
+If you want to start making contributions rightaway or already have solved an issue and want to raise a new pull request then please check our ourganizations [git workflow guide](https://github.com/EthicApp-Development/organization/blob/master/Guidelines/git-workflow.md) on how to commit, raise issues and PRs the right way.
+
 When opening the project with `vscode` and its required extensions for this project (see [section 6](#6-required-software)), the [workspace settings](./.vscode/settings.json) will load and your IDE will be ready for development.
 
 ## 2. Architecture overview
