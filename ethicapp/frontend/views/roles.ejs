@@ -205,7 +205,7 @@
                     <div>
                         <div class="list-group" ng-model="actors">
                             <!--                            <span class="text-gray center-block text-center" ng-show="selections.length > 0">Más importante</span>-->
-                            <div class="list-group-item drag-item" ng-repeat="actor in actorsPrev" ng-class="{'deep-blue': selectedActorPrev == $index}">
+                            <div class="list-group-item drag-item justify-left" ng-repeat="actor in actorsPrev" ng-class="{'deep-blue': selectedActorPrev == $index}">
                                 <div class="row">
                                     <div class="col-xs-2 col-sm-1 h30 text-center">
                                         {{$index + 1}}.
@@ -219,8 +219,8 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div class="row" ng-show="!actor.expanded">
-                                    <div class="col-xs-12">
+                                <div ng-show="!actor.expanded">
+                                    <div class="col-xs-12 ml-2">
                                         {{ actor.comment }}
                                     </div>
                                 </div>
