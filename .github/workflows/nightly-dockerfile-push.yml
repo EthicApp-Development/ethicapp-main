@@ -6,7 +6,7 @@ on:
 
 jobs:
   push_to_registry:
-    name: Push Docker image pre-release version to Docker Hub
+    name: Push Docker image nightly build version to Docker Hub
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
@@ -32,4 +32,4 @@ jobs:
             "NODE_VERSION=12.22.9-buster"
           file: ./image-renewal.Dockerfile
           push: true
-          tags: ethicapp/stable-2:pre-release
+          tags: ethicapp/stable-2:nightly
