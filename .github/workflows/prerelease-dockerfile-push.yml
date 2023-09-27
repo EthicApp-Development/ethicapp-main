@@ -30,6 +30,6 @@ jobs:
           context: .
           build-args: |
             "NODE_VERSION=12.22.9-buster"
-          file: ./docker-compose-image-renewal.yml
+          file: ./ethicapp/image-renewal.Dockerfile
           push: true
           tags: ethicapp/stable-2:pre-release
