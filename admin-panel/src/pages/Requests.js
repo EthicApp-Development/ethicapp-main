@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Tab, Tabs, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button } from '@mui/material';
+import { Container, Tab, Tabs, Table, TableBody, TableCell, TableContainer, TableRow, Paper, Button } from '@mui/material';
 import PageBase from '../components/PageBase';
 import HeaderNSubHeader from '../components/HeaderNSubHeader';
 import {Link} from "react-router-dom"
@@ -96,6 +96,15 @@ function Requests(props) {
                             Ver Solicitud
                           </Button>
                         </Link>
+                        </TableCell>
+                      </>
+                    )}
+                    {activeTab === 1 && (
+                      <>
+                        <TableCell>
+                          <Button variant="contained" color="primary">
+                            Ver Cuenta
+                          </Button>
                         </TableCell>
                       </>
                     )}
