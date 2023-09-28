@@ -220,7 +220,7 @@
                                 <div>
                                     <div class="list-group" ng-model="actors">
                                         <!--                            <span class="text-gray center-block text-center" ng-show="selections.length > 0">Más importante</span>-->
-                                        <div class="list-group-item drag-item" ng-repeat="actor in actorsPrev"
+                                        <div class="list-group-item drag-item justify-left" ng-repeat="actor in actorsPrev"
                                             ng-class="{'deep-blue': selectedActorPrev == $index}">
                                             <div class="row">
                                                 <div class="col-xs-2 col-sm-1 h30 text-center">
@@ -230,15 +230,14 @@
                                                     <strong>{{ actor.name }}</strong>
                                                 </div>
                                                 <div class="col-xs-4 text-right">
-                                                    <button class="btn btn-default btn-sm"
-                                                        ng-click="actor.expanded = !actor.expanded"
+                                                    <button class="btn btn-default btn-sm" ng-click="actor.expanded = !actor.expanded"
                                                         ng-if="actor.justified && actor.comment != ''">
                                                         <i class="fa fa-eye"></i>
                                                     </button>
                                                 </div>
                                             </div>
-                                            <div class="row" ng-show="!actor.expanded">
-                                                <div class="col-xs-12">
+                                            <div ng-show="!actor.expanded">
+                                                <div class="col-xs-12 ml-2 mt-medio">
                                                     {{ actor.comment }}
                                                 </div>
                                             </div>

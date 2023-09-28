@@ -1800,3 +1800,7 @@ h2{
 .inline-docs{
     display: inline;
 }
+
+.justify-left{
+    justify-content: left;
+}

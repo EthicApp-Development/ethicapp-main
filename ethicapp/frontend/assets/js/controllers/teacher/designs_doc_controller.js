@@ -10,22 +10,34 @@ export let DesignsDocController = ($scope, DesignStateService, $http, Notificati
     };
 
     self.uploadDesignDocument = function (event) { //Work in progress
-        self.busy = true;
-        var fd = new FormData(event.target);
-        $http.post("upload-design-file", fd, {
-            transformRequest: angular.identity,
-            headers:          { "Content-Type": undefined }
-        }).success(function (data) {
-            if (data.status == "ok") {
-                $timeout(function () {
-                    //Notification.success("Documento cargado correctamente");
-                    event.target.reset();
-                    self.busy = false;
-                    //self.shared.updateDocuments();
-                    self.requestDesignDocuments();
-                }, 2000);
+        var fileInput = event.target.querySelector('input[type="file"]');
+        var file = fileInput.files[0];
+
+        if (file){
+            var maxSize = 20 * 1024 * 1024; // 20 MB
+            if (file.size <= maxSize) {
+                self.busy = true;
+                var fd = new FormData(event.target);
+                $http.post("upload-design-file", fd, {
+                    transformRequest: angular.identity,
+                    headers:          { "Content-Type": undefined }
+                }).success(function (data) {
+                    if (data.status == "ok") {
+                        $timeout(function () {
+                            //Notification.success("Documento cargado correctamente");
+                            event.target.reset();
+                            self.busy = false;
+                            //self.shared.updateDocuments();
+                            self.requestDesignDocuments();
+                        }, 2000);
+                    }
+                });
             }
-        });
+            else{
+                Notification.error("Documento muy grande. El tamaño máximo permitido es 20 MB.");
+            }
+
+        }
     };
     
     self.requestDesignDocuments = function ( ) {
