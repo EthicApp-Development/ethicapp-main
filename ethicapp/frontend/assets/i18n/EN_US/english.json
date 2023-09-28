@@ -313,7 +313,8 @@
 	"SemanticDescription": "Semantic Differential: It allows for questions about the case in which students make their ethical judgment using numeric scales that relate opposite terms, for example, Fair-Unfair, Responsible-Irresponsible, etc. The scales can range from dichotomous (two values) up to ten values.",
 	"RankingDescription": "Ranking: It allows for questions about the case in which students must rank the actors based on a question regarding an ethical criterion. For example, \"Rank the actors by placing first the one you believe acted in the most prudent manner\".",
 	"exitEthicapp": "Exit Ethicapp",
-	"viewOriginalDoc": "View Document"
+	"viewOriginalDoc": "View Document",
+	"selectGender": "Select a gender"
 }
 
 

@@ -17,4 +17,8 @@ ngapp_user_common.config(function($translateProvider) {
 });
 
 import { LoginController } from "../../controllers/login_controller.js";
-ngapp_user_common.controller("LoginController", LoginController);
+import { RegisterController } from "../../controllers/register_controller.js";
+
+ngapp_user_common.controller("LoginController", ['$scope', '$http', '$translate', LoginController]);
+ngapp_user_common.controller("RegisterController", 
+    ['$scope', '$http', '$translate', 'apiParams', RegisterController]);

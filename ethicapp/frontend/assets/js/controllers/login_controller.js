@@ -1,9 +1,26 @@
 /*eslint func-style: ["error", "expression"]*/
-export let LoginController = ($scope, $http, apiParams) => {
-    $scope.init = function () {
-        $scope.isTranslationAvailable = false;
-        $scope.reCaptchaSiteKey = apiParams.reCaptchaSiteKey;
-        $scope.getcountries();
+export let LoginController = ($scope, $http, $translate) => {
+    var self = $scope;
+    const lang = navigator.language;
+
+    if (lang.startsWith('es')) {
+        self.lang = 'ES_CL/spanish';
+    } else {
+        self.lang = 'EN_US/english';
+    }
+
+    self.updateLang = function (langKey) {
+        $translate.use(langKey);
+    };
+
+    self.changeLang = function () {
+        self.lang = self.lang == "EN_US/english" ? "ES_CL/spanish" : "EN_US/english";
+        self.updateLang(self.lang);
+    };
+
+    self.init = function () {
+        self.updateLang(self.lang);
+        self.getcountries();
     };
 
     $scope.getcountries = function(){
