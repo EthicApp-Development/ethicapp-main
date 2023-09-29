@@ -1804,3 +1804,25 @@ h2{
 .justify-left{
     justify-content: left;
 }
+
+.h4-container {
+  display: flex; 
+  align-items: center;
+}
+
+.separator {
+  margin: 0 10px;
+  font-size: large;
+}
+
+.controls-container {
+    /* border: 1px solid #bbb; */
+    display: flex;
+    justify-content: left;
+    padding-top: 1rem;
+    margin-top: -2.8rem;
+}
+
+.no-border-top {
+    border-top: none; 
+}

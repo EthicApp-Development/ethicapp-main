@@ -2,8 +2,16 @@
     <div ng-controller="NewUsersController">
         <div ng-controller="StagesController">
             <div ng-controller="MonitorActivityController" ng-init="showDesign = false">
-                <h2>{{'currentActivity' | translate}}</h2>
-                <h4>{{ selectedSes.name }}</h4>
+                <h2>{{ selectedSes.name }}</h2>
+                <div class="h4-container">
+                    <h4>Tipo: {{ selectedSes.type }}</h4>
+                    <span class="separator">|</span>
+                    <h4>Estado: {{ selectedSes.status }}</h4>
+                    <span class="separator">|</span>
+                    <h4>Lanzada el {{ selectedSes.time | date:'dd/MM/yyyy' }}</h4>
+                </div>
+
+                <p class="mt-1medio"><strong>{{'sessionCode'|translate}}: {{selectedSes.code}}</strong></p>
 
                 <div class="" ng-controller="StagesEditController">
 
@@ -18,8 +26,15 @@
                             </div>
                         </div>
                     </div>
+                    <!-- MONITOR-->
+                    <div class="controls-container no-border-top">
+                        <button class="btn btn-info btn-activity" ng-click="showDesign = !showDesign">{{'showDesign' | translate}}</button>
+                        <button class="btn btn-success btn-activity" ng-click="nextActivityDesign(design,selectedId)"
+                            ng-disabled="design.phases.length-1 == currentActivity.stage ">{{'next' | translate}}</button>
+                        <button class="btn btn-danger btn-activity" ng-click="finishActivity()">{{'end' | translate}}</button>
+                    </div>
 
-                    <div class="container stage_container" ng-show="currentStage != null && showDesign">
+                    <div class="container stage_container ml-0" ng-show="currentStage != null && showDesign">
                         <!--ng-controller="StagesController"-->
                         <div class="row">
                             <h4 class="col-lg-2"><strong>{{'stage' | translate}} #{{currentStage+1}}</strong></h4>
@@ -183,7 +198,7 @@
                                             ng-disabled="true"
                                             ng-class="{'error': IsTextEmpty($index, design.phases[currentStage].q_text)}"></textarea>
                                     </div>
-                                    <div class="col-sm-5">
+                                    <!-- <div class="col-sm-5">
                                         <h4>{{ 'listOf' | translate }} {{ 'roles' | translate }}/{{ 'actors' |
                                             translate }}</h4>
                                     </div>
@@ -201,7 +216,7 @@
                                         <button class="btn btn-default" ng-click="addRole()" ng-disabled="true">
                                             <i class="fa fa-plus"></i> {{ 'add' | translate }} {{ 'role' | translate }}
                                         </button>
-                                    </div>
+                                    </div> -->
                                 </div>
                                 <div class="row row-border" ng-repeat="role in design.phases[currentStage].roles">
                                     <div class="col-sm-5">
@@ -221,8 +236,8 @@
                                         </button>
                                     </div>
                                     <div class="col-sm-2 text-right">
-                                        <label>{{'words'|translate}}</label>
-                                        <input class="form-control form-inline-mini" placeholder="Word Count" type="number"
+                                        <p class="word-count-p">{{'words'|translate}}</p>
+                                        <input class="form-control word-count-roles" placeholder="Word Count" type="number"
                                             ng-model="role.wc" ng-disabled="true">
                                     </div>
                 
@@ -235,15 +250,8 @@
                     </div>
                 </div>
 
-                <!-- MONITOR-->
-           
-                <p><strong>{{'sessionCode'|translate}}: {{selectedSes.code}}</strong></p>
-                <br>
-
-                <button class="btn btn-info btn-activity" ng-click="showDesign = !showDesign">{{'showDesign' | translate}}</button>
-                <button class="btn btn-success btn-activity" ng-click="nextActivityDesign(design,selectedId)"
-                    ng-disabled="design.phases.length-1 == currentActivity.stage ">{{'next' | translate}}</button>
-                <button class="btn btn-danger btn-activity" ng-click="finishActivity()">{{'end' | translate}}</button>
+                
+                
 
 
                 <div class="container">
