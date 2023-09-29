@@ -837,7 +837,6 @@ export let DashboardController = ($scope, ActivityStateService,
 
                         data.dfarr = self.shared.buildArray(data.df.num);
 
-                        console.log(data);
                         return data;
                     }
                 }
@@ -854,7 +853,6 @@ export let DashboardController = ($scope, ActivityStateService,
             tmid:    group
         };
         $http.post("get-team-chat-stage", postdata).success(function (res) {
-            //Aqui no funciona porque se usan ex variables globales (hay que crear un shared service)
             $uibModal.open({
                 templateUrl:  "static/actor-dialog.html",
                 controller:   "EthicsModalController",
@@ -901,8 +899,6 @@ export let DashboardController = ($scope, ActivityStateService,
                                 i += 1;
                             }
                         });
-
-                        console.log(data);
                         return data;
                     }
                 }
