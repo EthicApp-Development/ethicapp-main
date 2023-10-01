@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html ng-app="Admin">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -11,14 +12,17 @@
   <script src="assets/libs/angular-translate-2.18.4.min.js"></script>
   <script src="assets/libs/angular-translate-loader-static-files-2.18.4.min.js"></script>
   <script src="assets/libs/ngDialog.min.js"></script>
-  <script src="https://cdn.socket.io/4.6.0/socket.io.min.js" integrity="sha384-c79GN5VsunZvi+Q/WObgk2in0CbZsHnjEqvFxC5DxHn9lTfNce2WW6h2pH6u/kF+" crossorigin="anonymous"></script>
+  <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"
+    integrity="sha384-c79GN5VsunZvi+Q/WObgk2in0CbZsHnjEqvFxC5DxHn9lTfNce2WW6h2pH6u/kF+"
+    crossorigin="anonymous"></script>
   <script src="assets/libs/socket.min.js"></script>
-  <script src="assets/js/ngmodules/teacher/teacher_admin.mjs" type="module" defer></script>
+  <script src="assets/js/ngmodules/teacher/teacher_admin.js" type="module" defer></script>
   <script src="<%= asset('/js/assets-bundle.js') %>"></script>
   <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
   <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css" />
   <%- include('partials/favicon.ejs') %>
 </head>
+
 <body ng-controller="ManagementController">
   <div class="top-bar-mini cflex" ng-hide="false">
     <div class="cf1">
@@ -27,7 +31,8 @@
       </a>
     </div>
     <div class="cf1 text-right margin-right-8 simple-padding-top" id="topbtnlist">
-      <div class="language-dropdown" ng-mouseenter="showLanguageDropdown = true" ng-mouseleave="showLanguageDropdown = false">
+      <div class="language-dropdown" ng-mouseenter="showLanguageDropdown = true"
+        ng-mouseleave="showLanguageDropdown = false">
         <i class="fa fa-globe"></i>
         <i class="fa fa-angle-down"></i>
         <ul class="language-options" ng-show="showLanguageDropdown">
@@ -41,7 +46,8 @@
       </div>
       <img src="assets/images/assorted/blanco.jpg" alt="No Carga"
         class="circle_profile cf1 text-right margin-right-3 simple-padding-top" ng-click="selectView('profile')">
-      <strong class="margin-right-8"><a ng-click="selectView('profile')" style="color: white;"> {{'profile' | translate }}
+      <strong class="margin-right-8"><a ng-click="selectView('profile')" style="color: white;"> {{'profile' | translate
+          }}
         </a></strong>
       <a href="logout" class="text-white ml-2" title="{{'exitEthicapp' | translate}}">
         <i class="fa fa-sign-out fa-2x"></i>
@@ -66,4 +72,5 @@
     </div>
   </div>
 </body>
+
 </html>

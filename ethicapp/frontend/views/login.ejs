@@ -1,85 +1,91 @@
 <!DOCTYPE html>
 <html ng-app="UserCommon">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>EthicApp</title>
-    <script src="assets/libs/angular.min.js" defer></script>
-    <script src="assets/libs/angular-sanitize.min.js" defer></script>
-    <script src="assets/libs/angular-translate-2.18.4.min.js" defer></script>
-    <script src="assets/libs/angular-translate-loader-static-files-2.18.4.min.js" defer></script>
-    <script src="/socket.io/socket.io.js" defer></script>
-    <script src="<%= asset('/js/assets-bundle.js') %>" defer></script>
-    <%- include('partials/favicon.ejs') %>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>EthicApp</title>
+  <script src="assets/libs/angular.min.js" defer></script>
+  <script src="assets/libs/angular-sanitize.min.js" defer></script>
+  <script src="assets/libs/angular-translate-2.18.4.min.js" defer></script>
+  <script src="assets/libs/angular-translate-loader-static-files-2.18.4.min.js" defer></script>
+  <script src="/socket.io/socket.io.js" defer></script>
+  <script src="<%= asset('/js/assets-bundle.js') %>" defer></script>
+  <%- include('partials/favicon.ejs') %>
     <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
-    <script src="assets/js/ngmodules/teacher/user_common.mjs" type="module" defer></script>
-  </head> 
-  <body ng-controller="LoginController">
-    <div class="form-signin panel panel-default">
-      <div class="panel-body">
-        <div class="logo">
-          <img src="assets/images/logos/ethicapp-logo.png"  alt="Logo">
-        </div>
-        <div class="row">
-          <% if(rc == 1) { %>
-            <div class="alert alert-info">
-              {{ "log1" | translate }}
-            </div>
-          <% } %>
-          <% if(rc == 2) { %>
-            <div class="alert alert-danger">
-              {{ "log2" | translate }}
-            </div>
-          <% } %>
-          <% if(rc == 3) { %>
-            <div class="alert alert-info">
-              {{ "log3" | translate }}
-            </div>
-          <% } %>
-          <% if(rc == 4) { %>
-            <div class="alert alert-info">
-              {{ "log4" | translate }}
-            </div>
-          <% } %>
-          <% if(rc == 5) { %>
-            <div class="alert alert-info">
-              {{ "log5" | translate }}
-              <div ng-init="activate_user()">
-              </div>
-            </div>
-          <% } %>
-          <br />
-          <form class="form-horizontal" action="login" method="POST">
-            <div class="form-group">
-              <label for="email" class="col-sm-3 control-label">{{ "email" | translate }}</label>
-              <div class="col-sm-8">
-                <input class="form-control" type="text" name="user" id="email" required autofocus />
-              </div>
-              <div class="col-sm-1"></div>
-            </div>
-            <div class="form-group">
-              <label for="password" class="col-sm-3 control-label">{{ "password" | translate }}</label>
-              <div class="col-sm-8">
-                <input class="form-control" type="password" name="pass" id="password" required />
-              </div>
-              <div class="col-sm-1"></div>
-            </div>
-            <div class="form-group text-center">
-              <button type="submit" class="btn btn-primary" style="margin: 0 auto; width:140px;">{{ "login" | translate }}</button>
-            </div>
-          </form>
-          <br />
-          <div class="row text-center">
-            <a href="register">{{ "register" | translate }} </a>|
-            <a href="forgot-pass">{{ "forgot_pass" | translate }}</a>
-            <br />
-            <a href="/google" role="button" class="btn btn-default" style="margin-top:1em;">
-              <img style="width: 20px; margin-bottom: 3px; margin-right: 5px" alt="Google sign-in" src="assets/images/logos/google.png" />
-              {{ "glogin" | translate }}
-            </a>                
-          </div>
-        </div>
+    <script src="assets/js/ngmodules/teacher/user_common.js" type="module" defer></script>
+</head>
+
+<body ng-controller="LoginController">
+  <div class="form-signin panel panel-default">
+    <div class="panel-body">
+      <div class="logo">
+        <img src="assets/images/logos/ethicapp-logo.png" alt="Logo">
       </div>
-    </div>   
-  </body> 
+      <div class="row">
+        <% if(rc==1) { %>
+          <div class="alert alert-info">
+            {{ "log1" | translate }}
+          </div>
+          <% } %>
+            <% if(rc==2) { %>
+              <div class="alert alert-danger">
+                {{ "log2" | translate }}
+              </div>
+              <% } %>
+                <% if(rc==3) { %>
+                  <div class="alert alert-info">
+                    {{ "log3" | translate }}
+                  </div>
+                  <% } %>
+                    <% if(rc==4) { %>
+                      <div class="alert alert-info">
+                        {{ "log4" | translate }}
+                      </div>
+                      <% } %>
+                        <% if(rc==5) { %>
+                          <div class="alert alert-info">
+                            {{ "log5" | translate }}
+                            <div ng-init="activate_user()">
+                            </div>
+                          </div>
+                          <% } %>
+                            <br />
+                            <form class="form-horizontal" action="login" method="POST">
+                              <div class="form-group">
+                                <label for="email" class="col-sm-3 control-label">{{ "email" | translate }}</label>
+                                <div class="col-sm-8">
+                                  <input class="form-control" type="text" name="user" id="email" required autofocus />
+                                </div>
+                                <div class="col-sm-1"></div>
+                              </div>
+                              <div class="form-group">
+                                <label for="password" class="col-sm-3 control-label">{{ "password" | translate
+                                  }}</label>
+                                <div class="col-sm-8">
+                                  <input class="form-control" type="password" name="pass" id="password" required />
+                                </div>
+                                <div class="col-sm-1"></div>
+                              </div>
+                              <div class="form-group text-center">
+                                <button type="submit" class="btn btn-primary" style="margin: 0 auto; width:140px;">{{
+                                  "login" | translate }}</button>
+                              </div>
+                            </form>
+                            <br />
+                            <div class="row text-center">
+                              <a href="register">{{ "register" | translate }} </a>|
+                              <a href="forgot-pass">{{ "forgot_pass" | translate }}</a>
+                              <br />
+                              <a href="/google" role="button" class="btn btn-default" style="margin-top:1em;">
+                                <img style="width: 20px; margin-bottom: 3px; margin-right: 5px" alt="Google sign-in"
+                                  src="assets/images/logos/google.png" />
+                                {{ "glogin" | translate }}
+                              </a>
+                            </div>
+      </div>
+    </div>
+  </div>
+</body>
+
 </html>
