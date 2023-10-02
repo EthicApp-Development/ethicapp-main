@@ -777,7 +777,7 @@ export let DashboardController = ($scope, ActivityStateService,
     };
 
     self.openDF2Details = function (group, did, uid) {
-        console.log(group, did, uid);
+        console.log(group, did, uid);   
         var postdata = {
             stageid: self.iterationIndicator,
             tmid:    group,

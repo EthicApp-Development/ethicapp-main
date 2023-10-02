@@ -3,15 +3,28 @@
         <div ng-controller="StagesController">
             <div ng-controller="MonitorActivityController" ng-init="showDesign = false">
                 <h2>{{ selectedSes.name }}</h2>
-                <div class="h4-container">
-                    <h4>Tipo: {{ selectedSes.type }}</h4>
+                <div class="activity-data-container">
+                    <h4 ng-if="selectedSes.type == 'R'">{{'type'|translate}}: {{'ranking_activity'|translate}}</h4>
+                    <h4 ng-if="selectedSes.type != 'R'">{{'type'|translate}}: {{'semantic_differential'|translate}}</h4>
                     <span class="separator">|</span>
-                    <h4>Estado: {{ selectedSes.status }}</h4>
+                    <h4 ng-if="selectedSes.status != 3">{{'status'|translate}}: {{'in-progress'|translate}}</h4>
+                    <h4 ng-if="selectedSes.status == 3">{{'status'|translate}}: {{'terminated'|translate}}</h4>
                     <span class="separator">|</span>
-                    <h4>Lanzada el {{ selectedSes.time | date:'dd/MM/yyyy' }}</h4>
+                    <h4>{{'launched'|translate}} {{ selectedSes.time | date:'dd/MM/yyyy' }}</h4>
                 </div>
 
-                <p class="mt-1medio"><strong>{{'sessionCode'|translate}}: {{selectedSes.code}}</strong></p>
+                
+                <div class="code-div mt-1medio">
+                    <div class="flex-justify-center">
+                        {{'sessionCode'|translate}}
+                    </div>
+                    <div class="flex-justify-center fs-2">
+                        <strong>{{selectedSes.code}}</strong>
+                        <button class="copy-code-button ml-1" title="{{'copy'|translate}} {{'code'|translate}}" ng-click="copyToClipboard()">
+                            <i class="fa fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
 
                 <div class="" ng-controller="StagesEditController">
 
@@ -27,11 +40,11 @@
                         </div>
                     </div>
                     <!-- MONITOR-->
-                    <div class="controls-container no-border-top">
-                        <button class="btn btn-info btn-activity" ng-click="showDesign = !showDesign">{{'showDesign' | translate}}</button>
-                        <button class="btn btn-success btn-activity" ng-click="nextActivityDesign(design,selectedId)"
+                    <div class="container controls-container no-border-top">
+                        <button class="btn btn-info btn-activity mb-0" ng-click="showDesign = !showDesign">{{'showDesign' | translate}}</button>
+                        <button class="btn btn-success btn-activity ml-1 mb-0" ng-click="nextActivityDesign(design,selectedId)"
                             ng-disabled="design.phases.length-1 == currentActivity.stage ">{{'next' | translate}}</button>
-                        <button class="btn btn-danger btn-activity" ng-click="finishActivity()">{{'end' | translate}}</button>
+                        <button class="btn btn-danger btn-activity ml-1 mb-0" ng-click="finishActivity()">{{'end' | translate}}</button>
                     </div>
 
                     <div class="container stage_container ml-0" ng-show="currentStage != null && showDesign">

@@ -190,5 +190,20 @@ export let MonitorActivityController = ($scope, $filter, $http, Notification) =>
         });
     };
 
+    self.copyToClipboard = function() {
+        var codeElement = document.querySelector('.code-div strong');
+        var codeToCopy = codeElement.textContent;
+
+        var tempInput = document.createElement('textarea');
+        tempInput.value = codeToCopy;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+
+        Notification.success("Código de sesión copiado");
+
+    };
+
     self.init();
 };

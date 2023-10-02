@@ -1805,7 +1805,7 @@ h2{
     justify-content: left;
 }
 
-.h4-container {
+.activity-data-container {
   display: flex; 
   align-items: center;
 }
@@ -1816,13 +1816,43 @@ h2{
 }
 
 .controls-container {
-    /* border: 1px solid #bbb; */
+    border: 1px solid #bbb;
     display: flex;
     justify-content: left;
     padding-top: 1rem;
+    padding-bottom: 1rem;
     margin-top: -2.8rem;
+    border-top: none; 
+    align-items: center; 
 }
 
-.no-border-top {
-    border-top: none; 
+.code-div{
+    background-color: #ddd;
+    margin-bottom: -2.8rem;
+    width: 16rem;
+}
+
+.fs-2{
+    font-size: 2rem;
+}
+
+.copy-code-button {
+    background-color: #ddd;
+    cursor: pointer; 
+    border: 1px solid #ddd;
+    border-radius: 5px; 
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
+.copy-code-button .fa-copy {
+    font-size: 1.5rem; 
+}
+
+.copy-code-button:hover {
+    background-color: #bbb;
+}
+
+.mb-0{
+    margin-bottom: 0;
 }
