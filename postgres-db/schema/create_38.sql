@@ -24,18 +24,6 @@ CREATE TABLE IF NOT EXISTS report_type (
     PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS institution (
-    id serial,
-    institution_name text,
-    institution_url text,
-    ethicapp_url text,
-    physical_address text,
-    institution_logo text,
-    institution_it_email text,
-    institution_educational_email text,
-    PRIMARY KEY (id)
-);
-
 CREATE OR REPLACE FUNCTION UpdateOrInsertLoginRecord() RETURNS VOID AS $$
 DECLARE
 currentDate DATE;
