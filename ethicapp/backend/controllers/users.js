@@ -59,10 +59,53 @@ router.get("/logout", (req, res) => {
     });
 });
 
-router.post("/login", passport.authenticate("local", {
-    successRedirect: "/seslist",
-    failureRedirect: "login?rc=2",
-}));
+router.post("/login", (req, res, next) => {
+    passport.authenticate("local", (err, user, info) => {
+        if (err) {
+            return next(err);
+        }
+        if (!user) {
+            return res.redirect("/login?rc=2");
+        }
+
+        //OIIII
+
+        var db = getDBInstance(pass.dbcon);
+        const sqlQuery = `
+            DELIMITER //
+
+            CREATE PROCEDURE UpdateOrInsertLoginRecord()
+            BEGIN
+                DECLARE currentDate DATE;
+                DECLARE currentCount INT;
+
+                SET currentDate = CURDATE(); -- Get the current date
+
+                -- Check if a row with the current date exists
+                SELECT count INTO currentCount FROM report_login WHERE login_date = currentDate;
+
+                IF currentCount IS NULL THEN
+                    -- If no row exists, insert a new row with counter initialized to 0
+                    INSERT INTO report_login (login_date, count) VALUES (currentDate, 0);
+                ELSE
+                    -- If a row exists, increment the counter and update the row
+                    UPDATE report_login SET count = currentCount + 1 WHERE login_date = currentDate;
+                END IF;
+            END //
+
+            DELIMITER ;
+            `;
+        
+        db.query(sqlQuery,(dbErr, results) =>{
+            if (dbErr) {
+                return next(dbErr);
+            }
+            // Redirect to /seslist after successful authentication and database query
+            return res.redirect("/seslist");
+        });
+
+    })(req, res, next);
+});
 
 
 router.get("/register", (req, res) => {
