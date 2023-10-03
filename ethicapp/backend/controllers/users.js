@@ -395,19 +395,39 @@ router.post("/teacher_account_request", (req, res) => {
                         var fullname = (req.body.name + " " + req.body.lastname);
                         var db = getDBInstance(pass.dbcon);
 
+                        var upgrade_flag = false;
                         var sql = `
-                        INSERT INTO teacher_account_requests(rut, pass, name, mail, gender, institution, status)
-                        VALUES ('${req.body.rut}','${passcr}','${fullname}','${req.body.mail}','${req.body.sex}','P','${req.body.inst_name}',0)
+                        SELECT *
+                        FROM users
+                        WHERE mail = '${req.body.mail}'
                         `;
-
-                        db.query(sql,(err,sql_res) =>{
-                            if(err){
-                                console.error(err);
-                                res.redirect("register");
-                            }else{
-                                res.redirect("login?rc=6");
+                        var qry;
+                    
+                        qry = db.query(sql, (err,res) => {
+                            if (res.rowCount > 0) {
+                                upgrade_flag = true;
                             }
                         });
+                    
+                        qry.on("end", function() {
+                            var sql = `
+                            INSERT INTO teacher_account_requests(rut, pass, name, mail, gender, institution, status, upgrade_flag)
+                            VALUES ('${req.body.rut}','${passcr}','${fullname}','${req.body.mail}','${req.body.sex}','${req.body.inst_name}',0,'${upgrade_flag}')
+                            `;
+                            var qry2;
+                            qry2 = db.query(sql);
+                            qry2.on("end", function () {});
+                            qry2.on("error", function(err){
+                                console.error(err);
+                                res.redirect("register");
+                            });
+                        });
+                        qry.on("error", function(err){
+                            console.error(err);
+                            res.redirect("register");
+                        });
+                        res.redirect("login?rc=6");
+
                     } catch (err) {
                         console.error("Error when creating teacher request", err);
                         res.redirect("register");
