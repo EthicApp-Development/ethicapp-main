@@ -94,7 +94,9 @@ router.post("/add-session", rpg.execSQL({
     INSERT INTO sesusers(sesid, UID)
     SELECT id,
         $5
-    FROM ROWS
+    FROM ROWS;
+
+    SELECT UpdateOrInsertActivityRecord($3)
     `,
     sesReqData:  ["uid"],
     postReqData: ["name", "type"],
