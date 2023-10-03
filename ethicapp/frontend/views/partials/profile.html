@@ -3,20 +3,20 @@
         <img src="assets/images/assorted/blanco.jpg" alt="No Carga" class="profile-pic">
         <div class="profile-info">
             <strong class="profile-username">{{ username }}</strong>
-            <h3 ng-if="role == 'A'" class="profile-role">{{ 'student' | lang }}</h3>
-            <h3 ng-if="role == 'P'" class="profile-role">{{ 'teacher' | lang }}</h3>
-            <h3 ng-if="role == 'I'" class="profile-role">{{ 'institution' | lang }}</h3>
+            <h3 ng-if="role == 'A'" class="profile-role">{{ 'student' | translate }}</h3>
+            <h3 ng-if="role == 'P'" class="profile-role">{{ 'teacher' | translate }}</h3>
+            <h3 ng-if="role == 'I'" class="profile-role">{{ 'institution' | translate }}</h3>
         </div>
     </div>
     <div>
         <form action="changepassword" method="post">
             <input name="mail" type="hidden" value="{{mail}}" class="form-control profile-input">
-            <label class="left">{{'change_passwors' | lang}}:</label>
+            <label class="left">{{'change_passwors' | translate}}:</label>
             <input type="text" class="form-control profile-input" name="pass" required autofocus><br>
-            <label>{{'confirm_password' | lang}}:</label>
+            <label>{{'confirm_password' | translate}}:</label>
             <input type="text" class="form-control profile-input" name="pass-conf"><br>
             <button type="submit" class="btn btn-primary" style="width: 200px;">
-                {{'change_passwors' | lang}}
+                {{'change_passwors' | translate}}
             </button>
         </form>
     </div>
@@ -24,12 +24,12 @@
     <br>
     <div>
         <form action="deleteacc" method="post">
-            {{'terminate_account' | lang}}
+            {{'terminate_account' | translate}}
             <br>
             <br>
             <input name="mail" type="hidden" value="{{mail}}" class="form-control profile-input">
             <button type="submit" class="btn btn-primary" style="width: 200px;">
-                {{'unsubscribe_account' | lang}}
+                {{'unsubscribe_account' | translate}}
             </button>
         </form>
     </div>

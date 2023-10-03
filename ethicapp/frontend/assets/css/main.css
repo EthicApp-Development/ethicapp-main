@@ -1726,7 +1726,7 @@ h2{
 .search-input{
     height: 3.5rem;
     margin-bottom: -3.2rem;
-    padding-top: 0px;
+    padding-top: 0;
     font-size: 15px;
 }
 
@@ -1737,6 +1737,7 @@ h2{
 .w-17{
     width: 17rem;
 }
+
 .w-22{
     width: 22rem;
 }
@@ -1810,3 +1811,58 @@ h2{
 .justify-left{
     justify-content: left;
 }
+
+.activity-data-container {
+    display: flex; 
+    align-items: center;
+}
+
+.separator {
+    margin: 0 10px;
+    font-size: large;
+}
+
+.controls-container {
+    border: 1px solid #bbb;
+    display: flex;
+    justify-content: left;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    margin-top: -2.8rem;
+    border-top: none; 
+    align-items: center; 
+}
+
+
+.code-div{
+    background-color: #ddd;
+    margin-bottom: -2.8rem;
+    width: 16rem;
+}
+
+
+.fs-2{
+    font-size: 2rem;
+}
+
+.copy-code-button {
+    background-color: #ddd;
+    cursor: pointer; 
+    border: 1px solid #ddd;
+    border-radius: 5px; 
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
+.copy-code-button .fa-copy {
+    font-size: 1.5rem; 
+}
+
+.mb-0{
+    margin-bottom: 0;
+}
+
+.copy-code-button:hover {
+    background-color: #bbb;
+}
+
