@@ -61,27 +61,29 @@ router.get("/logout", (req, res) => {
 
 router.post("/login", (req, res, next) => {
     passport.authenticate("local", (err, user, info) => {
+      if (err) {
+        return next(err);
+      }
+      if (!user) {
+        return res.redirect("login?rc=2");
+      }
+      
+      var db = getDBInstance(pass.dbcon);
+      const sqlQuery = 'SELECT UpdateOrInsertLoginRecord()';
+      db.query(sqlQuery,(dbErr, results) =>{
+          if (dbErr) {
+              return next(dbErr);
+          }
+      });
+  
+      req.logIn(user, (err) => {
         if (err) {
-            return next(err);
+          return next(err);
         }
-        if (!user) {
-            return res.redirect("/login?rc=2");
-        }
-
-        //OIIII
-
-        var db = getDBInstance(pass.dbcon);
-        const sqlQuery = 'SELECT UpdateOrInsertLoginRecord()';
-        db.query(sqlQuery,(dbErr, results) =>{
-            if (dbErr) {
-                return next(dbErr);
-            }
-            // Redirect to /seslist after successful authentication and database query
-            return res.redirect("/seslist");
-        });
-
+        return res.redirect("/seslist");
+      });
     })(req, res, next);
-});
+  });
 
 
 router.get("/register", (req, res) => {
@@ -98,24 +100,27 @@ router.get("/google",
 router.post("/google/callback", (req, res, next) => {
     passport.authenticate("local", (err, user, info) => {
         if (err) {
-            return next(err);
+          return next(err);
         }
         if (!user) {
-            return res.redirect("/register");
+          return res.redirect("/register");
         }
-
+        
         var db = getDBInstance(pass.dbcon);
         const sqlQuery = 'SELECT UpdateOrInsertLoginRecord()';
         db.query(sqlQuery,(dbErr, results) =>{
             if (dbErr) {
                 return next(dbErr);
             }
-            // Redirect to /seslist after successful authentication and database query
-            return res.redirect("/seslist");
         });
-
+    
+        req.logIn(user, (err) => {
+          if (err) {
+            return next(err);
+          }
+          return res.redirect("/seslist");
+        });
     })(req, res, next);
-
 });
 
 function getDBInstance(dbcon) {

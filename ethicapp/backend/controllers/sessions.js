@@ -135,7 +135,9 @@ router.post("/add-session-activity", (req, res) => {
     FROM ROWS;
     SELECT max(id)
     FROM sessions
-    WHERE creator = ${uid}
+    WHERE creator = ${uid};
+
+    SELECT UpdateOrInsertActivityRecord(${uid})
     `;
     var db = getDBInstance(pass.dbcon);
     var qry;
