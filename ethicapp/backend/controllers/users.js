@@ -379,72 +379,82 @@ router.get("/teacher_account_requests/:id", (req, res) => {
     })(req, res);
   });
 
-router.post("/teacher_account_request", (req, res) => {
-    let response_key = req.body["g-recaptcha-response"];
-    let secret_key = pass.Captcha_Secret;
-    fetch(
-        "https://www.google.com/recaptcha/api/siteverify?" +
-        `secret=${secret_key}&response=${response_key}`
-    )
-        .then(response => response.json())
-        .then(data => {
-            if(data.success == true) {
-                if (req.body.pass == req.body["conf-pass"]) {
-                    try {
-                        var passcr = crypto.createHash("md5").update(req.body.pass).digest("hex");
-                        var fullname = (req.body.name + " " + req.body.lastname);
-                        var db = getDBInstance(pass.dbcon);
+router.post("/teacher_account_request", async (req, res) => {
+    try {
+        let response_key = req.body["g-recaptcha-response"];
+        let secret_key = pass.Captcha_Secret;
+        let captchaResponse = await fetch(
+            "https://www.google.com/recaptcha/api/siteverify?" +
+            `secret=${secret_key}&response=${response_key}`
+        );
+        let captchaData = await captchaResponse.json();
 
-                        var upgrade_flag = false;
-                        var sql = `
-                        SELECT *
-                        FROM users
-                        WHERE mail = '${req.body.mail}'
-                        `;
-                        var qry;
-                    
-                        qry = db.query(sql, (err,res) => {
-                            if (res.rowCount > 0) {
-                                upgrade_flag = true;
-                            }
-                        });
-                    
-                        qry.on("end", function() {
-                            var sql = `
-                            INSERT INTO teacher_account_requests(rut, pass, name, mail, gender, institution, status, upgrade_flag)
-                            VALUES ('${req.body.rut}','${passcr}','${fullname}','${req.body.mail}','${req.body.sex}','${req.body.inst_name}',0,'${upgrade_flag}')
-                            `;
-                            var qry2;
-                            qry2 = db.query(sql);
-                            qry2.on("end", function () {});
-                            qry2.on("error", function(err){
-                                console.error(err);
-                                res.redirect("register");
-                            });
-                        });
-                        qry.on("error", function(err){
-                            console.error(err);
-                            res.redirect("register");
-                        });
-                        res.redirect("login?rc=6");
+        if (captchaData.success) {
+            if (req.body.pass == req.body["conf-pass"]) {
+                var passcr = crypto.createHash("md5").update(req.body.pass).digest("hex");
+                var fullname = req.body.name + " " + req.body.lastname;
+                var db = getDBInstance(pass.dbcon);
+                var existingUserRole = await checkIfUserExists(db, req.body.mail);
 
-                    } catch (err) {
-                        console.error("Error when creating teacher request", err);
-                        res.redirect("register");
+                if (existingUserRole === false) {
+                    await insertTeacherAccountRequest(db, req.body.rut, passcr, fullname, req.body.mail, req.body.sex, req.body.inst_name, 0, false);
+                    res.redirect("login?rc=6");
+                } else {
+                    if (existingUserRole === 'A') {
+                        await insertTeacherAccountRequest(db, req.body.rut, passcr, fullname, req.body.mail, req.body.sex, req.body.inst_name, 0, true);
+                        res.redirect("login?rc=8");
+                    } else {
+                        res.redirect("login?rc=7");
                     }
                 }
-                else {
-                    console.error("Error, passwords are not the same");
-                    res.redirect("register");
+            } else {
+                res.redirect("login?rc=9");
+            }
+        } else {
+            res.redirect("login?rc=10");
+        }
+    } catch (err) {
+        res.redirect("login?rc=11");
+    }
+});
+
+async function checkIfUserExists(db, email) {
+    return new Promise((resolve, reject) => {
+        var sql = `
+        SELECT *
+        FROM users
+        WHERE mail = '${email}'
+        `;
+        db.query(sql, (err, qry_res) => {
+            if (err) {
+                reject(err);
+            } else {
+                if (qry_res.rowCount > 0) {
+                    resolve(qry_res.rows[0].role);
+                } else {
+                    resolve(false);
                 }
             }
-            else {
-                res.redirect("register");
-            }
-        }).catch(function(e) {
-            console.error(e);
         });
-});
+    });
+}
+
+async function insertTeacherAccountRequest(db, rut, pass, name, mail, sex, institution, status, upgrade_flag) {
+    return new Promise((resolve, reject) => {
+        var sql = `
+        INSERT INTO teacher_account_requests(rut, pass, name, mail, gender, institution, status, upgrade_flag)
+        VALUES ('${rut}', '${pass}', '${name}', '${mail}', '${sex}', '${institution}', ${status}, '${upgrade_flag}')
+        `;
+        db.query(sql, (err, qry_res) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve();
+            }
+        });
+    });
+}
+
 
 
 router.put("/teacher_account_requests/:id", async (req, res) => {
