@@ -43,7 +43,6 @@ The file [`docker-compose.production.yaml`](./docker-compose.production.yaml) de
 - Nginx proxy: high-performance web server and reverse proxy server that efficiently handles HTTP, HTTPS, and other protocols, serving as a powerful intermediary between clients and web servers. Serving as a static assets provider for EthicApp.
 - PostgreSQL: popular relational database management system that provides robust data storage and advanced querying capabilities, allowing for efficient management and retrieval of structured data.
 
-
 The service named "node" contains the web application, which uses the EthicApp production image, which is [published at DockerHub](https://hub.docker.com/repository/docker/ethicapp/stable-2/general). In order to update this public image, please refer to [section 4](#4-dockerhub).
 
 ## 3. Build and run
