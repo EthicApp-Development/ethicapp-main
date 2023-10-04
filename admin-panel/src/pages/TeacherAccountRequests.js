@@ -5,11 +5,11 @@ import PageBase from '../components/PageBase';
 import HeaderNSubHeader from '../components/HeaderNSubHeader';
 import {Link} from "react-router-dom"
 
-function Requests(props) {
+function TeacherAccountRequests(props) {
   const translation = props.translation;
 
-  const pageTitle = translation("requests.title");
-  const pageSubTitle = translation("requests.subTitle");
+  const pageTitle = translation("teacherAccountRequests.title");
+  const pageSubTitle = translation("teacherAccountRequests.subTitle");
 
   const [activeTab, setActiveTab] = useState(0);
 
@@ -18,9 +18,9 @@ function Requests(props) {
   };
 
   const tabData = [
-    { label: translation("requests.pending") },
-    { label: translation("requests.approved")},
-    { label: translation("requests.rejected")},
+    { label: translation("teacherAccountRequests.pending") },
+    { label: translation("teacherAccountRequests.approved")},
+    { label: translation("teacherAccountRequests.rejected")},
   ];
 
   const [requestsData, setRequestsData] = useState([]);
@@ -28,8 +28,14 @@ function Requests(props) {
   useEffect(() => {
     axios.get('http://localhost:5050/teacher_account_requests')
       .then((response) => {
+        console.log(response);
         if (response.status === 200) {
-          setRequestsData(response.data);
+          if (Array.isArray(response.data)) {
+            setRequestsData(response.data);
+          }
+          else {
+            console.error('Error al obtener datos (no son una lista):', response.status);
+          }
         } else {
           console.error('Error al obtener datos:', response.status);
         }
@@ -87,13 +93,13 @@ function Requests(props) {
                       <>
                         <TableCell>
                           <Button variant="contained" color="primary">
-                            Ignorar
+                            {translation("teacherAccountRequests.ignore")}
                           </Button>
                         </TableCell>
                         <TableCell>
-                        <Link to={`/admin/request/${request.id}`} style={{ textDecoration: 'none' }}>
+                        <Link to={`/admin/teacher_account_request/${request.id}`} style={{ textDecoration: 'none' }}>
                           <Button variant="contained" color="primary">
-                            Ver Solicitud
+                            {translation("teacherAccountRequests.see_request")}
                           </Button>
                         </Link>
                         </TableCell>
@@ -103,7 +109,7 @@ function Requests(props) {
                       <>
                         <TableCell>
                           <Button variant="contained" color="primary">
-                            Ver Cuenta
+                            {translation("teacherAccountRequests.see_account")}
                           </Button>
                         </TableCell>
                       </>
@@ -119,4 +125,4 @@ function Requests(props) {
   );
 }
 
-export default Requests;
+export default TeacherAccountRequests;

@@ -10,9 +10,11 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString(undefined, options);
 }
 
-function Request(props) {
+function TeacherAccountRequest(props) {
   const { id } = useParams();
-  const pageTitle = 'Solicitud de Cuenta Profesor';
+  const translation = props.translation;
+
+  const pageTitle = translation("teacherAccountRequest.title");
 
   const [requestData, setRequestData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -39,7 +41,7 @@ function Request(props) {
       .put(`http://localhost:5050/teacher_account_requests/${id}`, { status: '1' })
       .then((response) => {
         if (response.status === 200) {
-          window.location.href = '/admin/requests';
+          window.location.href = '/admin/teacher_account_requests';
         } else {
           console.error('Error al aceptar la solicitud:', response.status);
         }
@@ -57,30 +59,30 @@ function Request(props) {
           <br />
 
           {loading ? (
-            <p>Cargando...</p>
+            <p>{translation("teacherAccountRequest.loading")}</p>
           ) : (
             requestData ? (
               <Paper elevation={3} sx={{ padding: '16px' }}>
                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  Profesor
+                  {translation("teacherAccountRequest.teacher")}
                 </Typography>
                 <Typography variant="body1">
-                  Nombre: {requestData.name}
+                  {translation("teacherAccountRequest.name")}: {requestData.name}
                 </Typography>
                 <Typography variant="body1">
-                  Institución: {requestData.institution}
+                  {translation("teacherAccountRequest.institution")}: {requestData.institution}
                 </Typography>
                 <Typography variant="body1">
-                  Email: {requestData.mail}
+                  {translation("teacherAccountRequest.email")}: {requestData.mail}
                 </Typography>
                 <Typography variant="body1">
-                  Rut: {requestData.rut}
+                  {translation("teacherAccountRequest.rut")}: {requestData.rut}
                 </Typography>
                 <Typography variant="body1">
-                  Género: {requestData.gender}
+                  {translation("teacherAccountRequest.gender")}: {requestData.gender}
                 </Typography>
                 <Typography variant="body1">
-                  Fecha: {formatDate(requestData.date)}
+                  {translation("teacherAccountRequest.date")}: {formatDate(requestData.date)}
                 </Typography>
 
                 <Button
@@ -89,7 +91,7 @@ function Request(props) {
                   onClick={handleAcceptRequest}
                   sx={{ mt: 2 }}
                 >
-                  Aceptar Solicitud
+                  {translation("teacherAccountRequest.accept_request")}
                 </Button>
 
                 <Button
@@ -98,7 +100,7 @@ function Request(props) {
                   onClick={() => {}}
                   sx={{ mt: 2, marginLeft: 2 }}
                 >
-                  Rechazar Solicitud
+                  {translation("teacherAccountRequest.reject_request")}
                 </Button>
 
                 <Button
@@ -107,13 +109,13 @@ function Request(props) {
                   onClick={() => {}}
                   sx={{ mt: 2, marginLeft: 2 }}
                 >
-                  Ignorar Solicitud
+                  {translation("teacherAccountRequest.ignore_request")}
                 </Button>
 
 
               </Paper>
             ) : (
-              <p>No se encontraron datos.</p>
+              <p>{translation("teacherAccountRequest.no_data")}</p>
             )
           )}
         </Container>
@@ -122,4 +124,4 @@ function Request(props) {
   );
 }
 
-export default Request;
+export default TeacherAccountRequest;

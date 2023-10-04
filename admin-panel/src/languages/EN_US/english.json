@@ -22,8 +22,8 @@
         "logins": "Ethicapp Logins",
         "top_professors": "Top Activity Starting Professors"
     },
-    "requests":{
-        "title": "Requests List",
+    "teacherAccountRequests":{
+        "title": "Teacher Account Requests List", 
         "subTitle": "From here you can see the list of teacher account requests.",
         "pending": "Pending",
         "approved": "Approved",
@@ -31,6 +31,21 @@
         "ignore": "Ignore",
         "see_request": "See Request",
         "see_account": "See Account"
+    },
+    "teacherAccountRequest":{
+        "title": "Teacher Account Request",
+        "loading": "Loading...",
+        "teacher": "Teacher",
+        "name": "Name",
+        "institution": "Institution",
+        "email": "Email",
+        "rut": "Rut",
+        "gender": "Gender",
+        "date": "Date",
+        "accept_request": "Accept Request",
+        "reject_request": "Reject Request",
+        "ignore_request": "Ignore Request",
+        "no_data": "No data to show"
     },
     "singleReport":{
         "start_activity_title": "Started Activities Report Generation",
@@ -73,7 +88,7 @@
         "users": "Users",
         "openBar": "Open Sidebar",
         "closeBar": "Close Sidebar",
-        "requests": "Requests"
+        "teacherAccountRequests": "Teacher Requests"
     },
     "ReportDescriptionBox":{
         "title": "Report Information"

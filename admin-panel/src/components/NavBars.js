@@ -181,11 +181,11 @@ export default function NavBar(props){
                     <ListItemText primary={translation("navbar.users")} />
                     </ListItemButton>
 
-                    <ListItemButton component={Link} to="/admin/requests">
+                    <ListItemButton component={Link} to="/admin/teacher_account_requests"> 
                     <ListItemIcon>
                         <AddCircleOutlineIcon />
                     </ListItemIcon>
-                    <ListItemText primary={translation("navbar.requests")} />
+                    <ListItemText primary={translation("navbar.teacherAccountRequests")} />
                     </ListItemButton>
                 </React.Fragment>
               </List>
