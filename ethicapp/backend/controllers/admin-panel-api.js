@@ -7,18 +7,21 @@ router.get("/report", async (req, res) => {
     rpg.multiSQL({
         dbcon: pass.dbcon,
         sql:   `
-        SELECT report_description
+        SELECT *
         FROM report_type;
         `,
         onEnd:(req,res,results) => {
             var reportDescriptions = [];
+            var reportTypes = [];
 
             results.forEach(element => {
                 reportDescriptions.push(element["report_description"])
+                reportTypes.push(element["report_type"])
             });
 
             res.status(200).json({
-                reports: reportDescriptions
+                reports: reportTypes,
+                description: reportDescriptions
             });
         }
     })(req,res);
