@@ -1,4 +1,3 @@
-import { Line } from 'react-chartjs-2';
 import { Paper, Grid, Box, IconButton, Tooltip } from '@mui/material';
 import { SaveAlt as SaveAltIcon } from '@mui/icons-material';
 
@@ -6,8 +5,7 @@ const ReportGraphBox = (props) =>{
 
     const translation = props.translation;
 
-    const data = props.data;
-    const options = props.options;
+    const graph = props.graph;
     const visibility = props.visibility;
 
     return<>         
@@ -22,7 +20,7 @@ const ReportGraphBox = (props) =>{
                             </IconButton>
                         </Tooltip>
                         <div style={{ width: 'auto', height: 'auto', alignContent: 'center'}}>
-                            <Line data={data} options={options} />
+                            {graph}
                         </div>
                     </Box>
                 </Paper>

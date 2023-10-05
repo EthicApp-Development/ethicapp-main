@@ -4,10 +4,10 @@ const api = axios.create({
   baseURL: 'http://localhost:5050',
 });
 
-export const getReports= () => {
+export const GetReports= () => {
   return api.get('/report');
 };
 
-export const getReportGraphData= (reportType, postData) => {
+export const GetReportGraphData= (reportType, postData) => {
     return api.post(`/report/${reportType}`,postData);
   };

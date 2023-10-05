@@ -6,7 +6,7 @@ import BoxGrid from '../components/BoxGrid';
 import ReportDescriptionBox from '../components/ReportDescriptionBox';
 import PageBase from '../components/PageBase';
 import HeaderNSubHeader from '../components/HeaderNSubHeader';
-import { getReports } from '../components/APICommunication';
+import { GetReports } from '../components/APICommunication';
 
 //Icons
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -14,7 +14,7 @@ import DescriptionIcon from '@mui/icons-material/Description';
 function Reports(props) {
   const translation = props.translation;
   useEffect(() => {
-    getReports()
+    GetReports()
       .then((response) => {
         let gridData = []
         response.data["reports"].forEach(element => {
