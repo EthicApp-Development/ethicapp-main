@@ -26,7 +26,16 @@ require("serve-favicon");
 require("./backend/controllers/passport-setup");
 
 let app = express();
-app.use(cors());
+
+// TODO: Add staging and production Admin Panel origins
+const corsOptions = {
+    origin: ['http://localhost:3000'],
+    credentials: true,
+};
+
+
+app.use(cors(corsOptions));
+
 
 //express asset versions
 var assetPath = path.join(__dirname, "/frontend/assets");
