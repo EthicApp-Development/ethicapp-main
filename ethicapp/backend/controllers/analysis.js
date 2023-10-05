@@ -921,17 +921,17 @@ router.post("/report/:type", async (req, res) => {
 
         case "create_account":
             sqlQuery=`
-                SELECT TO_CHAR(creation_date, 'YY-MM-DD') AS date, count AS count
+                SELECT TO_CHAR(creation_date, 'YY-MM-DD') AS date, count AS count , isProfessor
                 FROM report_create_account
                 WHERE creation_date >= '${initialDate}' AND creation_date <= '${endDate}'
                 ORDER BY creation_date;
             `
             if (differenceInMonths>1) {
                 sqlQuery=`
-                    SELECT TO_CHAR(creation_date, 'YYYY-MM') AS date, SUM(count) AS count
+                    SELECT TO_CHAR(creation_date, 'YYYY-MM') AS date, SUM(count) AS count , isProfessor
                     FROM report_create_account
                     WHERE creation_date >= '${initialDate}' AND creation_date <= '${endDate}'
-                    GROUP BY date
+                    GROUP BY date , isProfessor
                     ORDER BY date;
                 `
             }
@@ -939,17 +939,17 @@ router.post("/report/:type", async (req, res) => {
 
         case "logins":
             sqlQuery=`
-                SELECT TO_CHAR(login_date, 'YY-MM-DD') AS date, count AS count
+                SELECT TO_CHAR(login_date, 'YY-MM-DD') AS date, count AS count, isProfessor
                 FROM report_login
                 WHERE login_date >= '${initialDate}' AND login_date <= '${endDate}'
                 ORDER BY login_date;
             `
             if (differenceInMonths>1) {
                 sqlQuery=`
-                    SELECT TO_CHAR(login_date, 'YYYY-MM') AS date, SUM(count) AS count
+                    SELECT TO_CHAR(login_date, 'YYYY-MM') AS date, SUM(count) AS count, isProfessor
                     FROM report_login
                     WHERE login_date >= '${initialDate}' AND login_date <= '${endDate}'
-                    GROUP BY date
+                    GROUP BY date, isProfessor
                     ORDER BY date;
                 `
             }
