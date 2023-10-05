@@ -24,6 +24,7 @@ services:
     environment:
       NODE_ENV: development
       NODE_PORT: ${NODE_PORT}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
     restart: "no"
     networks:
       default:

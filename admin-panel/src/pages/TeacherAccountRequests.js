@@ -28,7 +28,6 @@ function TeacherAccountRequests(props) {
   useEffect(() => {
     axios.get('http://localhost:5050/teacher_account_requests')
       .then((response) => {
-        console.log(response);
         if (response.status === 200) {
           if (Array.isArray(response.data)) {
             setRequestsData(response.data);
