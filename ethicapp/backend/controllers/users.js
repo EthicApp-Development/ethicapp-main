@@ -67,9 +67,14 @@ router.post("/login", (req, res, next) => {
       if (!user) {
         return res.redirect("login?rc=2");
       }
+
+      var isProfessor = 0;
+      if (user["role"]=='P') {
+        isProfessor=1;
+      }
       
       var db = getDBInstance(pass.dbcon);
-      const sqlQuery = 'SELECT UpdateOrInsertLoginRecord()';
+      const sqlQuery = `SELECT UpdateOrInsertLoginRecord(${isProfessor})`;
       db.query(sqlQuery,(dbErr, results) =>{
           if (dbErr) {
               return next(dbErr);
@@ -171,7 +176,7 @@ router.post("/register", async (req, res) => {
                         console.error(err);
                         res.redirect("register");
                     }else{
-                        const sqlQuery = 'SELECT UpdateOrInsertCreateAccountRecord()';
+                        const sqlQuery = 'SELECT UpdateOrInsertCreateAccountRecord(0)';
                         db.query(sqlQuery,(dbErr, results) =>{
                             if (dbErr) {
                                 res.redirect("register");
