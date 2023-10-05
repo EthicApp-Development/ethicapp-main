@@ -957,10 +957,11 @@ router.post("/report/:type", async (req, res) => {
 
         case "top_professors":
             sqlQuery=`
-                SELECT professor AS date, SUM(count) AS count
-                FROM report_activity
+                SELECT users.name AS date, SUM(count) AS count
+                FROM report_activity 
+                JOIN users on users.id=report_activity.professor
                 WHERE creation_date >= '${initialDate}' AND creation_date <= '${endDate}'
-                GROUP BY professor
+                GROUP BY users.name
                 ORDER BY count desc
                 LIMIT 10;
             `
@@ -973,17 +974,27 @@ router.post("/report/:type", async (req, res) => {
         onEnd:(req,res,results) => {
 
             var x_data=[]
-            var y_data=[]
+            var y1_data=[]
+            var y2_data=[]
 
             results.forEach(element => {
                 x_data.push(element["date"])
-                y_data.push(parseInt(element["count"]))
+                if (type == "create_account" || type == "logins") {
+                    if (element["isprofessor"]=='0') {
+                        y1_data.push(parseInt(element["count"]))
+                    }else{
+                        y2_data.push(parseInt(element["count"]))
+                    }
+                }else{
+                    y1_data.push(parseInt(element["count"]))
+                }
             });
 
             res.status(200).json({
                 "repor_title": `${type} : ${initialDate} - ${endDate}`,
                 "report_x_data": x_data,
-                "report_y_data": y_data,
+                "report_y1_data": y1_data,
+                "report_y2_data": y2_data,
                 "report_type": type,
                 "creation_date": CurrentDate()
             });
