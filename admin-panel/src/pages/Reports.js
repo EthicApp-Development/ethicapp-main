@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 //Components
-import { Grid, Container, Divider } from '@mui/material';
+import { Container } from '@mui/material';
 import BoxGrid from '../components/BoxGrid';
 import ReportDescriptionBox from '../components/ReportDescriptionBox';
 import PageBase from '../components/PageBase';
@@ -25,7 +25,6 @@ function Reports(props) {
             link:`/admin/report/${element}` })
         });
         setGridDataFinal(gridData)
-        console.log(gridData)
       })
       .catch((error) => {
         console.error('Error fetching items:', error);

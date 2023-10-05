@@ -3,45 +3,41 @@ function ParseGraphData(apiData){
 
     let graphDataTemp={}
 
-    switch (apiData["report_type"]) {
-        case "start_activity":
-             graphDataTemp = {
-                labels: apiData["report_x_data"],
-                datasets: [
-                  {
-                    label: 'Sample Line Chart',
-                    data: apiData["report_y1_data"],
-                    fill: false,
-                    borderColor: 'rgba(75,192,192,1)',
-                    borderWidth: 2,
-                  },
-                ],
-              };
-            break;
-        
-        case "create_account":
-            graphDataTemp = {
-                labels: RemoveDuplicates(apiData["report_x_data"]),
-                datasets: [
-                    {
-                    label: 'Sample Line Chart',
-                    data: apiData["report_y1_data"],
-                    fill: false,
-                    borderColor: 'rgba(75,192,192,1)',
-                    borderWidth: 2,
-                    },
-                    {
-                    label: 'Sample Line Chart',
-                    data: apiData["report_y2_data"],
-                    fill: false,
-                    borderColor: 'rgba(75,0,192,1)',
-                    borderWidth: 2,
-                    },
-                ],
-                };
-            break;
+    if (apiData["report_type"] == "start_activity" || apiData["report_type"] == "top_professors") {
+        graphDataTemp = {
+            labels: apiData["report_x_data"],
+            datasets: [
+              {
+                label: 'Sample Line Chart',
+                data: apiData["report_y1_data"],
+                fill: false,
+                borderColor: 'rgba(75,192,192,1)',
+                borderWidth: 2,
+              },
+            ],
+          };
+    }else{
+        graphDataTemp = {
+            labels: RemoveDuplicates(apiData["report_x_data"]),
+            datasets: [
+                {
+                label: 'Sample Line Chart',
+                data: apiData["report_y1_data"],
+                fill: false,
+                borderColor: 'rgba(75,192,192,1)',
+                borderWidth: 2,
+                },
+                {
+                label: 'Sample Line Chart',
+                data: apiData["report_y2_data"],
+                fill: false,
+                borderColor: 'rgba(75,0,192,1)',
+                borderWidth: 2,
+                },
+            ],
+            };
     }
-
+    
     return graphDataTemp
 };
 
@@ -49,42 +45,36 @@ function ParseGraphOptions(apiData){
 
     let options={}
 
-    switch (apiData["report_type"]) {
-        case "start_activity":
-            options = {
-                scales: {
-                    y: {
-                    beginAtZero: true,
-                    },
-                },
-            };
-            break;
-
-        case "create_account":
-            options = {
-                scales: {
-                  x: { stacked: true },
-                  y: { stacked: true },
-                },
-            };
-            break;    
+    if (apiData["report_type"] == "start_activity" || apiData["report_type"] == "top_professors") {
+        options = {
+            scales: {
+              y: {
+                beginAtZero: true,
+              },
+            },
+        };
+    }else{
+        options = {
+            scales: {
+              x: { stacked: true },
+              y: { stacked: true },
+            },
+        };
     }
-
 
     return options
 };
 
 export function CreateGraph(apiData){
-    switch (apiData["report_type"]) {
-        case "start_activity":
-            return <>
-                <Line data={ParseGraphData(apiData)} options={ParseGraphOptions(apiData)} />
-            </>
-        case "create_account":
-            return <>
-                <Bar data={ParseGraphData(apiData)} options={ParseGraphOptions(apiData)} />
-            </>
+    if (apiData["report_type"] == "start_activity") {
+        return <>
+            <Line data={ParseGraphData(apiData)} options={ParseGraphOptions(apiData)} />
+        </>
     }
+
+    return <>
+        <Bar data={ParseGraphData(apiData)} options={ParseGraphOptions(apiData)} />
+    </>
 };
 
 export function GetDateRange(formData){
