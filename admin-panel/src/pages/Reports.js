@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 //Components
 import { Grid, Container, Divider } from '@mui/material';
@@ -6,12 +6,23 @@ import BoxGrid from '../components/BoxGrid';
 import ReportDescriptionBox from '../components/ReportDescriptionBox';
 import PageBase from '../components/PageBase';
 import HeaderNSubHeader from '../components/HeaderNSubHeader';
+import { getItems } from '../components/APICommunication';
 
 //Icons
 import DescriptionIcon from '@mui/icons-material/Description';
 
 function Reports(props) {
   const translation = props.translation;
+
+  useEffect(() => {
+    getItems()
+      .then((response) => {
+        console.log(response.data)
+      })
+      .catch((error) => {
+        console.error('Error fetching items:', error);
+      });
+  }, []);
 
   const pageTitle= translation("reports.title");
   const pageSubTitle= translation("reports.subTitle");
