@@ -120,7 +120,7 @@ adpp.controller("DesignsDocController",
 adpp.controller("ActivityController", 
     ['$scope', 'ActivityStateService', '$filter', '$http', 'Notification', '$timeout', ActivityController]);
 adpp.controller("MonitorActivityController", 
-    ['$scope', '$filter', '$http', 'Notification', MonitorActivityController]);
+    ['$scope', '$filter', '$http', '$window', 'Notification', MonitorActivityController]);
 adpp.controller("BrowseDesignsController", 
     ['$scope', 'TabStateService', 'DesignStateService', 'ActivityStateService', '$filter', '$http', BrowseDesignsController]);
 adpp.controller("StagesEditController", 

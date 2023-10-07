@@ -37,15 +37,7 @@
             </a>
         </div>
         <div class="cf3 grow text-center simple-padding-top hscroll" ng-show="iteration > 0">
-<!--            <span ng-repeat="st in stages">-->
-<!--                <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': st.id==currentStageId}">{{ 'stage' | lang}} {{ st.number }}</span>-->
-<!--                &lt;!&ndash; <span ng-hide="$last">→</span> &ndash;&gt;-->
-<!--            </span>-->
-<!--            <span class="label label-primary bg-black-alpha bg-yellow" ng-if="finished">{{ 'finished' | lang}}</span>-->
-<!--            <i class="fa fa-angle-right" ng-if="!finished"></i>-->
-            <!-- <span class="pull-right margin-right-24" ng-show="sesSTime != null">
-                <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
-            </span> -->
+
         </div>
         <div class="cf1 text-right margin-right-8 simple-padding-top">
             <a href="#" class="text-white margin-right-8" ng-click="startTour()">
@@ -57,27 +49,6 @@
         </div>
     </div>
 
-    <!--<div class="top-bar-mini">
-        <span class="boxed" ng-bind="teamstr"></span>
-    </div>-->
-
-    <!-- <div class="top-bar-mini">
-        <div class="text-center">
-            <span ng-repeat="st in sesStatusses">
-                <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': st.i == iteration}" ng-bind="st.name"></span>
-                <span ng-hide="$last">→</span>
-            </span>
-            <span class="pull-right margin-right-24" ng-show="sesSTime != null">
-                <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
-            </span>
-        </div>
-    </div> -->
-
-    <!--<div class="top-bar-mini simple-padding-bottom">
-        <strong>Factor detonante: </strong>
-        <span style="color: yellow; font-size: 105%;" ng-bind="sesDescr"></span>
-    </div>-->
-
     <div class="top-bar top-bar-tabs">
         <div class="qs-tabs" ng-show="iteration > 0 || myRole == 'P'">
             <div class="tab tab-text" ng-repeat="doc in documents" ng-class="{active: selectedDocument == $index && showDoc}"
@@ -88,32 +59,10 @@
                  ng-click="selectStage($index)" ng-attr-id="{{ 'tabq' + $index }}">
                 <i class="fa fa-question-circle"></i> {{ 'stage' | lang }} {{st.number}} <span class="badge bg-red" ng-show="st.c != null && st.c > st.cr">{{st.c - st.cr}}</span>
             </div>
-            <!--<div class="btab"></div>
-            <div class="rtab">
-                <button class="btn btn-sm margin-right-8 btn-default" ng-if="iteration > 0 && iteration < 4" ng-click="finishState()" ng-class="{'btn-success': finished, 'border-white': finished}">
-                    <i class="fa fa-check"></i></button>
-            </div>-->
+           
         </div>
     </div>
 
-    <!--<div class="top-bar top-bar-student">
-        <div class="col-sm-6 full-height">
-            <span class="simple-margin-left" style="vertical-align: top;">Documentos: </span>
-            <span ng-repeat="doc in documents" class="side-top-btn" ng-class="{'active': $index==selectedDocument, 'border-orange': hgDocs[$index]}" ng-click="selectDocument($index)">
-                {{doc.title | limitTo:16}}
-            </span>
-            <strong class="pull-right margin-top-8" ng-bind="iterationNames[iteration]"></strong>--
-        </div>
-        <div class="col-sm-6">
-            <a onclick="window.history.back()" class="btn btn-sm btn-default pull-right">Atrás</a>
-            <button disabled class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i> Representante </button>
-            <button class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && followLeader" ng-click="takeControl()">Tomar Control</button>
-            <a class="btn btn-sm btn-default pull-right" ng-show="iteration > 6" href="rubrica">Ir a evaluación</a>
-            <button class="btn btn-sm btn-default pull-right" ng-if="iteration > 0" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}" ng-hide="myRole == 'P' && iteration > 0">
-                <i class="fa fa-check"></i> Terminé</button>
-            <span class="pull-right boxed" ng-bind="teamstr"></span>
-        </div>
-    </div>-->
 
     <div class="scrollable-container blue" >
     <div class="mid-container qs-content simple-pad" >
@@ -130,14 +79,14 @@
     <div ng-show="iteration > 0 && (!showDoc || documents.length==0)">
         <!--<h4>DF{{dfs[selectedDF].orden}}</h4>-->
         <div class="differential margin-top-n12">
-            <h5>
+            <h5> 
                 <span>{{stages[selectedStage].question}}</span>
             </h5>
             <div class="row" ng-if="stages[selectedStage].id == currentStageId">
                 <div class="col-sm-10 col-sm-offset-1 col-xs-12">
                     <div class="differential" ng-repeat="df in dfs">
                         <div class="row">
-                            <div class="col-xs-12">
+                            <div class="col-xs-12 mb-2">
 
                                 <button class="btn btn-default" ng-class="{'btn-primary': selDF.id == df.id}" ng-click="openChat(df)"
                                         style="padding: 2px 8px;" ng-show="stages[selectedStage].chat" ng-if="dfs.length>1">
@@ -163,14 +112,14 @@
                         <div class="input-group margin-top-28">
 <!--                            <span class=" deep-blue">{{userAnon[myUid]}}</span>-->
                             <span class="input-group-addon word-count-r" ng-if="df.justify"
-                                  ng-class="{'bg-red': wordCount(df.comment) < df.word_count }">
+                                  ng-class="{'bg-red border-word-count-red': wordCount(df.comment) < df.word_count }">
                                 <span>{{ wordCount(df.comment) }}</span>
                                 <br ng-if="df.word_count">
                                 <span style="font-size: 80%" ng-if="df.word_count">de</span>
                                 <br ng-if="df.word_count">
                                 <span ng-if="df.word_count">{{ df.word_count }}</span>
                             </span>
-                            <textarea type="text" class="form-control" placeholder="{{'comment' | lang}}" ng-model="df.comment"
+                            <textarea type="text" class="form-control text-comment-input" placeholder="{{'comment' | lang}}" ng-model="df.comment"
                                       ng-change="df.dirty = true" ng-disabled="finished || !df.justify">
                             </textarea>
                             <span class="input-group-addon hoverable" ng-disabled="finished || !df.dirty" ng-click="sendDFSel(df)">
@@ -195,7 +144,7 @@
                 <div class="col-sm-10 col-sm-offset-1 col-xs-12">
                     <div class="differential" ng-repeat="df in dfsPrev">
                         <div class="row">
-                            <div class="col-xs-12">
+                            <div class="col-xs-12 mb-2">
                                 <button class="btn btn-default" ng-class="{'btn-primary': selDF.id == df.id}" ng-click="openChat(df)"
                                         style="padding: 2px 8px;" ng-show="stages[selectedStage].chat" ng-if="dfs.length>1"> 
                                     <i class="fa fa-comments"></i>
@@ -353,7 +302,7 @@
                         <div ><strong ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">{{ teamMapPrev[msg.uid] }}:</strong></div>
                         <span class="content" ng-bind-html="msg.content | linkfy"></span>
                     </div>
-                </div>n
+                </div>
                 <div class="input-group">
                     <span class="input-group-btn">
                         <button class="btn btn-default" ng-click="chatExp = !chatExp">

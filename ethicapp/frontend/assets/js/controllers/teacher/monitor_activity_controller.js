@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export let MonitorActivityController = ($scope, $filter, $http, Notification) => {
+export let MonitorActivityController = ($scope, $filter, $http, $window, Notification) => {
     var self = $scope;
     self.stagesState = null;
     self.completion = null;
@@ -184,10 +184,12 @@ export let MonitorActivityController = ($scope, $filter, $http, Notification) =>
     };
     
     self.finishActivity = function(){
-        $http.post("session-finish-stages", {sesid: self.selectedSes.id}).success((data) => {
-            //console.log(data);
+        if ($window.confirm('¿Estás seguro que quieres terminar la actividad?')) {
+        $http.post("session-finish-stages", { sesid: self.selectedSes.id }).success((data) => {
             window.location.reload();
         });
+        } else {
+        }
     };
 
     self.copyToClipboard = function() {
