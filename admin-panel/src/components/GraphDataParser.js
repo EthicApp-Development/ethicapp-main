@@ -8,11 +8,9 @@ function ParseGraphData(apiData){
             labels: apiData["report_x_data"],
             datasets: [
               {
-                label: 'Sample Line Chart',
+                label: 'Activities Started',
                 data: apiData["report_y1_data"],
-                fill: false,
-                borderColor: 'rgba(75,192,192,1)',
-                borderWidth: 2,
+                backgroundColor: 'rgba(0,102,204)',
               },
             ],
           };
@@ -21,18 +19,14 @@ function ParseGraphData(apiData){
             labels: RemoveDuplicates(apiData["report_x_data"]),
             datasets: [
                 {
-                label: 'Sample Line Chart',
+                label: 'Students',
                 data: apiData["report_y1_data"],
-                fill: false,
-                borderColor: 'rgba(75,192,192,1)',
-                borderWidth: 2,
+                backgroundColor: 'rgba(0,102,204)',
                 },
                 {
-                label: 'Sample Line Chart',
+                label: 'Professors',
                 data: apiData["report_y2_data"],
-                fill: false,
-                borderColor: 'rgba(75,0,192,1)',
-                borderWidth: 2,
+                backgroundColor: 'rgba(255,51,51)',
                 },
             ],
             };
@@ -42,24 +36,77 @@ function ParseGraphData(apiData){
 };
 
 function ParseGraphOptions(apiData){
-
     let options={}
 
     if (apiData["report_type"] == "start_activity" || apiData["report_type"] == "top_professors") {
-        options = {
-            scales: {
-              y: {
-                beginAtZero: true,
-              },
+      let auxXLabel= "Activity Date";
+      if (apiData["report_type"] == "top_professors") {
+        auxXLabel= "Professor Name"
+      }
+      options = {
+          scales: {
+            y: {
+              beginAtZero: true,
+              display: true,
+              title: {
+                display: true,
+                text: 'Started Activities'
+              }
             },
+            x: {
+              display: true,
+              title: {
+                display: true,
+                text: auxXLabel
+              }
+            },
+          },
+          responsive: true,
+          pointStyle: 'rectRot',
+          plugins: {
+            title: {
+              display: true,
+              text: apiData["report_title"]
+            },
+            legend: {
+              labels: {
+                usePointStyle: true,
+              },
+            }
+          },
         };
     }else{
-        options = {
-            scales: {
-              x: { stacked: true },
-              y: { stacked: true },
+      let auxYLabel= "EthicApp Logins";
+      if (apiData["report_type"] == "create_account") {
+        auxYLabel= "Accounts Created"
+      }
+      options = {
+          scales: {
+            x: { 
+              stacked: true,
+              display: true,
+              title: {
+                display: true,
+                text: "Event Date"
+              }
             },
-        };
+            y: { 
+              stacked: true,
+              display: true,
+              title: {
+                display: true,
+                text: auxYLabel
+              }
+            },
+          },
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: apiData["report_title"]
+            },
+          },
+      };
     }
 
     return options

@@ -10,7 +10,6 @@ import { Chart, registerables } from 'chart.js';
 import { Container } from '@mui/material';
 import { GetReportGraphData } from '../components/APICommunication';
 import { GetDateRange, CreateGraph } from '../components/GraphDataParser';
-import { Api } from '@mui/icons-material';
 
 Chart.register(...registerables);
 

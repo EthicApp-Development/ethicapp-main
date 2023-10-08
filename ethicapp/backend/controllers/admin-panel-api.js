@@ -182,7 +182,7 @@ router.post("/report/:type", async (req, res) => {
             });
 
             res.status(200).json({
-                "repor_title": `${type} : ${initialDate} - ${endDate}`,
+                "report_title": `${type} : ${initialDate} - ${endDate}`,
                 "report_x_data": x_data,
                 "report_y1_data": y1_data,
                 "report_y2_data": y2_data,

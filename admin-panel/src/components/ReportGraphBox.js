@@ -30,20 +30,21 @@ const ReportGraphBox = (props) =>{
         }
     };
 
-    return<>         
+    return <>
         {visibility && (
             <Grid item xs={12} md={6}>
                 <Paper elevation={3} style={{ height: '100%' }}>
-                    <Box p={3}>
+                    <Box p={3} display="flex" flexDirection="column" alignItems="center">
+                        <div style={{ width: '150vh', height: 'auto' }} ref={graphRef}>
+                            {graph}
+                        </div>
+                        <br />
                         <Tooltip title={translation("ReportGraphBox.downloadTooltip")}>
                             <IconButton color="primary" component="a" onClick={captureChartAsImage}>
                                 <SaveAltIcon />
                                 {translation("ReportGraphBox.download")}
                             </IconButton>
                         </Tooltip>
-                        <div style={{ width: 'auto', height: 'auto', alignContent: 'center'}} ref={graphRef}>
-                            {graph}
-                        </div>
                     </Box>
                 </Paper>
             </Grid>
