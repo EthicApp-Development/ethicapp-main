@@ -46,6 +46,9 @@ services:
       - "3000:3000"
     networks:
       default:
+    depends_on:
+      - node
+
   # ---------------------- Database ---------------------- #
   postgres:
     container_name: "ethicapp-postgres"

@@ -34,6 +34,20 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  # ---------------------- Admin Panel ---------------------- #
+  admin-panel:
+    container_name: "ethicapp-admin-panel"
+    build:
+      context: admin-panel/
+      args:
+        NODE_VERSION: ${NODE_VERSION}
+    ports:
+      - "3000:3000"
+    networks:
+      default:
+    depends_on:
+      - node
         
   # ---------------------- Nginx ---------------------- #
   nginx:
@@ -52,6 +66,7 @@ services:
       - shared-volume:/usr/share/nginx/:rw
     depends_on:
       - node
+      - admin-panel
   
   # ---------------------- Database ---------------------- #
   postgres:
