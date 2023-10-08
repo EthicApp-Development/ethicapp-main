@@ -50,7 +50,7 @@ router.get("/institution", async (req, res) => {
         FROM institution;
         `,
         onEnd:(req,res,results) => {
-            res.status(200).json(results);
+            res.status(200).json(results[0]);
         }
     })(req,res);
 });
