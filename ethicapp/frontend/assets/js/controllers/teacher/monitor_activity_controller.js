@@ -210,7 +210,15 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
         document.execCommand('copy');
         document.body.removeChild(tempInput);
 
-        Notification.success("Código de sesión copiado");
+        var codeMessage;
+
+        if (self.lang === 'EN_US/english') {
+            codeMessage = 'Session code copied';
+        } else {
+            codeMessage = 'Código de sesión copiado';
+        }
+        
+        Notification.success(codeMessage);
 
     };
 
