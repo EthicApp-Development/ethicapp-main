@@ -1595,7 +1595,6 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 h2{
     font-weight: bold;
     margin-top: 4rem;
-
 }
 
 .language-dropdown {
@@ -1882,12 +1881,10 @@ h2{
 }
 
 .border-word-count-red{
-    
     border: 1px solid #d74448;
 }
 
 .border-word-count-blue{
-    
     border: 1px solid #0077C2;
 }
 
