@@ -184,7 +184,14 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
     };
     
     self.finishActivity = function(){
-        if ($window.confirm('¿Estás seguro que quieres terminar la actividad?')) {
+        var confirmationMessage;
+
+        if (self.lang === 'EN_US/english') {
+            confirmationMessage = 'Are you sure you want to finish the activity?';
+        } else {
+            confirmationMessage = '¿Estás seguro que quieres terminar la actividad?';
+        }
+        if ($window.confirm(confirmationMessage)) {
         $http.post("session-finish-stages", { sesid: self.selectedSes.id }).success((data) => {
             window.location.reload();
         });
