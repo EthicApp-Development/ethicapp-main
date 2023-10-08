@@ -35,6 +35,17 @@ services:
       postgres:
         condition: service_healthy
 
+ # ---------------------- Admin Panel ---------------------- #
+  admin-panel:
+    container_name: "ethicapp-admin-panel"
+    build:
+      context: admin-panel/
+      args:
+        NODE_VERSION: ${NODE_VERSION}
+    ports:
+      - "3000:3000"
+    networks:
+      default:
   # ---------------------- Database ---------------------- #
   postgres:
     container_name: "ethicapp-postgres"
