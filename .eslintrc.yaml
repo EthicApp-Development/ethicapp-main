@@ -60,12 +60,6 @@ rules:
     - align: value
       beforeColon: false
 
-  func-style:
-    - warn
-    - declaration
-    - expression
-    - allowArrowFunctions: true
-
   no-redeclare:
     - warn # default: error
 
