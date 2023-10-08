@@ -72,6 +72,10 @@ function ParseGraphOptions(apiData){
               labels: {
                 usePointStyle: true,
               },
+            },
+            subtitle: {
+              display: true,
+              text: `Creation Date : ${apiData["creation_date"]}`
             }
           },
         };
@@ -105,6 +109,10 @@ function ParseGraphOptions(apiData){
               display: true,
               text: apiData["report_title"]
             },
+            subtitle: {
+              display: true,
+              text: `Creation Date : ${apiData["creation_date"]}`
+            }
           },
       };
     }
