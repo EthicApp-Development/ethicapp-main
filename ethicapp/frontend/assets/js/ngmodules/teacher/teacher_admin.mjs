@@ -14,21 +14,21 @@ var adpp = angular.module("Admin", ["ngSanitize", "btford.socket-io",
     "api-params", "ui.bootstrap", "ui.multiselect", "nvd3", "timer",
     "ui-notification", "ngQuill", "tableSort", "pascalprecht.translate", 
     "ngRoute", "checklist-model", "ngDialog"]
-).factory('TabStateService', function() {
+).factory("TabStateService", function() {
     var service = {};
     service.sharedTabState = { type: 0 };
     return service;
-}).factory('ActivityStateService', function() {
+}).factory("ActivityStateService", function() {
     var service = {};
     service.activityState = { 
-        id: null,
-        title: null,
-        type: null,
-        dashboardAutoreload: true,
+        id:                      null,
+        title:                   null,
+        type:                    null,
+        dashboardAutoreload:     true,
         dashboardAutoreloadTime: 15 
     };
     return service; 
-}).factory('DesignStateService', function() {
+}).factory("DesignStateService", function() {
     var service = {};
     service.designState = { id: null };
     return service;
@@ -77,62 +77,62 @@ adpp.config(["ngQuillConfigProvider", ngQuillConfigProvider]);
 
 // Translations
 adpp.config(function($translateProvider) {
-    $translateProvider.useSanitizeValueStrategy('sanitizeParameters');
+    $translateProvider.useSanitizeValueStrategy("sanitizeParameters");
 
     $translateProvider.useStaticFilesLoader({
-        prefix: 'assets/i18n/', 
-        suffix: '.json'
+        prefix: "assets/i18n/", 
+        suffix: ".json"
     });
 
     // Set default language
-    $translateProvider.preferredLanguage('es');
+    $translateProvider.preferredLanguage("es");
 });
 
 // Inject controllers into application
 adpp.controller("RoutingController", 
-    ['$scope', RoutingController]);
+    ["$scope", RoutingController]);
 adpp.controller("ManagementController",
-    ['$scope', 'TabStateService', 'DesignStateService',
-    'ActivityStateService',
-    '$http', '$uibModal', '$location', '$locale', 
-    '$filter', '$socket', '$route', '$translate', ManagementController]);
+    ["$scope", "TabStateService", "DesignStateService",
+        "ActivityStateService",
+        "$http", "$uibModal", "$location", "$locale", 
+        "$filter", "$socket", "$route", "$translate", ManagementController]);
 adpp.controller("TabsController", 
-    ['$scope', '$http', 'Notification', TabsController]);
+    ["$scope", "$http", "Notification", TabsController]);
 adpp.controller("DocumentsController", 
-    ['$scope', '$http', 'Notification', '$timeout', DocumentsController]);
+    ["$scope", "$http", "Notification", "$timeout", DocumentsController]);
 adpp.controller("SesEditorController", 
-    ['$scope', '$http', 'Notification', SesEditorController]);
+    ["$scope", "$http", "Notification", SesEditorController]);
 adpp.controller("NewUsersController", 
-    ['$scope', '$http', 'Notification', IncomingUsersController]);
+    ["$scope", "$http", "Notification", IncomingUsersController]);
 adpp.controller("DashboardController", 
-    ['$scope', 'ActivityStateService', '$http', '$timeout', '$uibModal', 'Notification', DashboardController]);
+    ["$scope", "ActivityStateService", "$http", "$timeout", "$uibModal", "Notification", DashboardController]);
 adpp.controller("MapSelectionModalController", 
-    ['$scope', '$uibModalInstance', MapSelectionModalController]);
+    ["$scope", "$uibModalInstance", MapSelectionModalController]);
 adpp.controller("ConfirmModalController", 
-    ['$uibModalInstance', ConfirmModalController]);
+    ["$uibModalInstance", ConfirmModalController]);
 adpp.controller("ContentModalController", 
-    ['$scope', '$uibModalInstance', 'data', ContentModalController]);
+    ["$scope", "$uibModalInstance", "data", ContentModalController]);
 adpp.controller("EthicsModalController", 
-    ['$scope', '$http', '$uibModalInstance', 'Notification', 'data', EthicsModalController]);
+    ["$scope", "$http", "$uibModalInstance", "Notification", "data", EthicsModalController]);
 adpp.controller("DuplicateSesModalController", 
-    ['$scope', '$http', '$uibModalInstance', 'data', DuplicateSesModalController]);
+    ["$scope", "$http", "$uibModalInstance", "data", DuplicateSesModalController]);
 adpp.controller("GroupController", 
-    ['$scope', '$http', 'Notification', GroupController]);
+    ["$scope", "$http", "Notification", GroupController]);
 adpp.controller("DesignsDocController", 
-    ['$scope', 'DesignStateService' ,'$http', 'Notification', '$timeout', DesignsDocController]);
+    ["$scope", "DesignStateService" ,"$http", "Notification", "$timeout", DesignsDocController]);
 adpp.controller("ActivityController", 
-    ['$scope', 'ActivityStateService', '$filter', '$http', 'Notification', '$timeout', ActivityController]);
+    ["$scope", "ActivityStateService", "$filter", "$http", "Notification", "$timeout", ActivityController]);
 adpp.controller("MonitorActivityController", 
-    ['$scope', '$filter', '$http', '$window', 'Notification','$uibModal', MonitorActivityController]);
+    ["$scope", "$filter", "$http", "$window", "Notification","$uibModal", MonitorActivityController]);
 adpp.controller("BrowseDesignsController", 
-    ['$scope', 'TabStateService', 'DesignStateService', 'ActivityStateService', '$filter', '$http', BrowseDesignsController]);
+    ["$scope", "TabStateService", "DesignStateService", "ActivityStateService", "$filter", "$http", BrowseDesignsController]);
 adpp.controller("StagesEditController", 
-    ['$scope', 'DesignStateService', 'ActivityStateService', '$filter', '$http', 'Notification', '$timeout', StagesEditController]);
+    ["$scope", "DesignStateService", "ActivityStateService", "$filter", "$http", "Notification", "$timeout", StagesEditController]);
 adpp.controller("OptionsController", 
-    ['$scope', '$http', 'Notification', OptionsController]);
+    ["$scope", "$http", "Notification", OptionsController]);
 adpp.controller("DashboardRubricaController", 
-    ['$scope', DashboardRubricaController]);
-adpp.controller("StagesController", ['$scope', '$http', 'Notification', '$uibModal', StagesController]);
+    ["$scope", DashboardRubricaController]);
+adpp.controller("StagesController", ["$scope", "$http", "Notification", "$uibModal", StagesController]);
 
 adpp.service("DialogService", function(ngDialog) {
     this.openDialog = function() {
