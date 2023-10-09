@@ -1187,9 +1187,15 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     background: white;
     margin-right: 16px;
     margin-left: -12px;
-    border-top: 8px solid #1b5986;
+    border-top: 8px solid #0077c1;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
     z-index: 99999;
     width: 98%;
+}
+
+.chat-border{
+    border: 1px solid #0077c1;
 }
 
 .chat-area{
@@ -1200,6 +1206,11 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 .chat-inv{
     display: block;
     height: 30vh;
+}
+
+.chat-label-background{
+    background-color: #0077c1;
+    color: white;
 }
 
 .sub-tab-content{
@@ -1584,7 +1595,6 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 h2{
     font-weight: bold;
     margin-top: 4rem;
-
 }
 
 .language-dropdown {
@@ -1866,3 +1876,18 @@ h2{
     background-color: #bbb;
 }
 
+.min-w-16{
+    min-width: 16rem;
+}
+
+.border-word-count-red{
+    border: 1px solid #d74448;
+}
+
+.border-word-count-blue{
+    border: 1px solid #0077C2;
+}
+
+.text-comment-input{
+    height: 6rem !important;
+}

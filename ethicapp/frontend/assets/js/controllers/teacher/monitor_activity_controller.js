@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export let MonitorActivityController = ($scope, $filter, $http, Notification) => {
+export let MonitorActivityController = ($scope, $filter, $http, $window, Notification, $uibModal) => {
     var self = $scope;
     self.stagesState = null;
     self.completion = null;
@@ -182,13 +182,25 @@ export let MonitorActivityController = ($scope, $filter, $http, Notification) =>
             self.currentActivity.stage = response.data.length === 0 ? 0: response.data[0].number -1;
         });
     };
-    
-    self.finishActivity = function(){
-        $http.post("session-finish-stages", {sesid: self.selectedSes.id}).success((data) => {
-            //console.log(data);
-            window.location.reload();
+
+    self.openFinishConfirmationModal = function () {
+       
+
+        var modalInstance = $uibModal.open({
+            templateUrl: "static/end-activity-dialog.html",
+            controller: "ConfirmModalController",
+            controllerAs: "vm",
+            
+        });
+
+        modalInstance.result.then(function () {
+            $http.post("session-finish-stages", { sesid: self.selectedSes.id }).success(function (data) {
+                window.location.reload();
+            });
+        }, function () {
         });
     };
+
 
     self.copyToClipboard = function() {
         var codeElement = document.querySelector('.code-div strong');
@@ -201,7 +213,15 @@ export let MonitorActivityController = ($scope, $filter, $http, Notification) =>
         document.execCommand('copy');
         document.body.removeChild(tempInput);
 
-        Notification.success("Código de sesión copiado");
+        var codeMessage;
+
+        if (self.lang === 'EN_US/english') {
+            codeMessage = 'Session code copied';
+        } else {
+            codeMessage = 'Código de sesión copiado';
+        }
+        
+        Notification.success(codeMessage);
 
     };
 

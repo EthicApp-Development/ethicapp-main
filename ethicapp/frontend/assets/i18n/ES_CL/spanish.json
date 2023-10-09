@@ -273,7 +273,7 @@
 	"female":"Femenino",
 	"male":"Masculino",
 	"other":"Otro",
-	"enter_code":"Ingresar codigo",
+	"enter_code":"Ingresar código",
 	"enterCodeAct":"Ingresa código para unirte a una actividad",
 	"enter":"Ingresar",
 	"myActivities": "Mis Actividades",
@@ -320,7 +320,12 @@
 	"selectGender": "Seleccione un género",
 	"status": "Estado",
 	"in-progress": "En Curso",
-	"terminated": "Terminada"
+	"terminated": "Terminada",
+	"confirmationMessage": "¿Estás seguro que quieres terminar la actividad?",
+	"confirmation": "Confirmación",
+	"cancel": "Cancelar",
+	"endActivity": "Terminar Actividad"
+
 
 }
 

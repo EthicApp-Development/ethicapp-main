@@ -42,9 +42,11 @@
                     <!-- MONITOR-->
                     <div class="container controls-container no-border-top">
                         <button class="btn btn-info btn-activity mb-0" ng-click="showDesign = !showDesign">{{'showDesign' | translate}}</button>
-                        <button class="btn btn-success btn-activity ml-1 mb-0" ng-click="nextActivityDesign(design,selectedId)"
+                        <button ng-if="selectedSes.status != 3" class="btn btn-success btn-activity ml-1 mb-0" ng-click="nextActivityDesign(design,selectedId)"
                             ng-disabled="design.phases.length-1 == currentActivity.stage ">{{'next' | translate}}</button>
-                        <button class="btn btn-danger btn-activity ml-1 mb-0" ng-click="finishActivity()">{{'end' | translate}}</button>
+                        <button ng-if="selectedSes.status != 3" class="btn btn-danger btn-activity ml-1 mb-0"
+                            ng-click="openFinishConfirmationModal()">{{'end' | translate}}</button>
+
                     </div>
 
                     <div class="container stage_container ml-0" ng-show="currentStage != null && showDesign">
