@@ -41,7 +41,7 @@ services:
     build:
       context: admin-panel/
       args:
-        NODE_VERSION: ${NODE_VERSION}
+        REACT_APP_API_PORT: ${NGINX_PORT}
     ports:
       - "3000:3000"
     networks:
