@@ -1,6 +1,7 @@
 "use strict";
 
 let express = require("express");
+const cors = require('cors');
 let session = require("express-session");
 let path = require("path");
 let logger = require("morgan");
@@ -23,8 +24,19 @@ let pass = require("./backend/config/keys-n-secrets");
 let middleware = require("./backend/middleware/validate-session");
 require("serve-favicon");
 require("./backend/controllers/passport-setup");
+require('dotenv').config();
 
 let app = express();
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS.split(',');
+const corsOptions = {
+    origin: allowedOrigins,
+    credentials: true,
+};
+
+
+app.use(cors(corsOptions));
+
 
 //express asset versions
 var assetPath = path.join(__dirname, "/frontend/assets");
