@@ -37,6 +37,7 @@ var adpp = angular.module("Admin", ["ngSanitize", "btford.socket-io",
 import { ActivityController } from "../../controllers/teacher/activity_controller.js";
 import { StagesController } from "../../controllers/teacher/stages_controller.js";
 import { BrowseDesignsController } from "../../controllers/teacher/browse_designs_controller.js";
+import { ConfirmModalController } from "../../controllers/teacher/confirm_modal_controller.js";
 import { ContentModalController } from "../../controllers/teacher/content_modal_controller.js";
 import { DashboardController } from "../../controllers/teacher/dashboard_controller.js";
 import { DesignsDocController } from "../../controllers/teacher/designs_doc_controller.js";
@@ -107,6 +108,8 @@ adpp.controller("DashboardController",
     ['$scope', 'ActivityStateService', '$http', '$timeout', '$uibModal', 'Notification', DashboardController]);
 adpp.controller("MapSelectionModalController", 
     ['$scope', '$uibModalInstance', MapSelectionModalController]);
+adpp.controller("ConfirmModalController", 
+    ['$uibModalInstance', ConfirmModalController]);
 adpp.controller("ContentModalController", 
     ['$scope', '$uibModalInstance', 'data', ContentModalController]);
 adpp.controller("EthicsModalController", 
@@ -120,7 +123,7 @@ adpp.controller("DesignsDocController",
 adpp.controller("ActivityController", 
     ['$scope', 'ActivityStateService', '$filter', '$http', 'Notification', '$timeout', ActivityController]);
 adpp.controller("MonitorActivityController", 
-    ['$scope', '$filter', '$http', '$window', 'Notification', MonitorActivityController]);
+    ['$scope', '$filter', '$http', '$window', 'Notification','$uibModal', MonitorActivityController]);
 adpp.controller("BrowseDesignsController", 
     ['$scope', 'TabStateService', 'DesignStateService', 'ActivityStateService', '$filter', '$http', BrowseDesignsController]);
 adpp.controller("StagesEditController", 

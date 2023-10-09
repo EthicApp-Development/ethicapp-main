@@ -320,7 +320,12 @@
 	"selectGender": "Seleccione un género",
 	"status": "Estado",
 	"in-progress": "En Curso",
-	"terminated": "Terminada"
+	"terminated": "Terminada",
+	"confirmationMessage": "¿Estás seguro que quieres terminar la actividad?",
+	"confirmation": "Confirmación",
+	"cancel": "Cancelar",
+	"endActivity": "Terminar Actividad"
+
 
 }
 

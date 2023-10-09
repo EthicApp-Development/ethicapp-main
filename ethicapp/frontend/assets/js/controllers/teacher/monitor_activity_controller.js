@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export let MonitorActivityController = ($scope, $filter, $http, $window, Notification) => {
+export let MonitorActivityController = ($scope, $filter, $http, $window, Notification, $uibModal) => {
     var self = $scope;
     self.stagesState = null;
     self.completion = null;
@@ -182,22 +182,25 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
             self.currentActivity.stage = response.data.length === 0 ? 0: response.data[0].number -1;
         });
     };
-    
-    self.finishActivity = function(){
-        var confirmationMessage;
 
-        if (self.lang === 'EN_US/english') {
-            confirmationMessage = 'Are you sure you want to finish the activity?';
-        } else {
-            confirmationMessage = '¿Estás seguro que quieres terminar la actividad?';
-        }
-        if ($window.confirm(confirmationMessage)) {
-        $http.post("session-finish-stages", { sesid: self.selectedSes.id }).success((data) => {
-            window.location.reload();
+    self.openFinishConfirmationModal = function () {
+       
+
+        var modalInstance = $uibModal.open({
+            templateUrl: "static/end-activity-dialog.html",
+            controller: "ConfirmModalController",
+            controllerAs: "vm",
+            
         });
-        } else {
-        }
+
+        modalInstance.result.then(function () {
+            $http.post("session-finish-stages", { sesid: self.selectedSes.id }).success(function (data) {
+                window.location.reload();
+            });
+        }, function () {
+        });
     };
+
 
     self.copyToClipboard = function() {
         var codeElement = document.querySelector('.code-div strong');

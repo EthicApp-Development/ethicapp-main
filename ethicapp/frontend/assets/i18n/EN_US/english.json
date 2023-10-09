@@ -318,7 +318,11 @@
 	"selectGender": "Select a gender",
 	"status": "Status",
 	"in-progress": "In Progress",
-	"terminated": "Finished"
+	"terminated": "Finished",
+	"confirmationMessage": "Are you sure you want to finish the activity?",
+	"confirmation": "Confirmation",
+	"cancel": "Cancel",
+	"endActivity": "End Activity"
 }
 
 
