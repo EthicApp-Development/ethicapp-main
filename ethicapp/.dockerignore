@@ -15,3 +15,8 @@ image-renewal.Dockerfile
 .gitignore
 .gitkeep
 .dockerignore
+
+
+!frontend/assets/js/assets-bundle.js
+!frontend/assets/css/assets-bundle.css
+!frontend/assets/css/assets-bundle.css.map
