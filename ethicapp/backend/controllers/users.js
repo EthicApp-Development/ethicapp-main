@@ -477,8 +477,6 @@ router.put("/teacher_account_requests/:id", async (req, res) => {
         })(req, res);
 
         if (newStatus === "1") {
-            console.log('step 3');
-
             // Consulta para obtener datos del profesor
             const teacherDataQuery = `
                 SELECT *
@@ -512,13 +510,9 @@ router.put("/teacher_account_requests/:id", async (req, res) => {
 
             await db.query(insertUserQuery, userParams);
 
-            console.log('step 5');
-
             // Enviar una respuesta de éxito
             res.status(200).json({ message: 'Solicitud aceptada y profesor agregado como usuario' });
         } else {
-            console.log('step 6');
-            
             // Enviar una respuesta de éxito sin agregar al profesor como usuario
             res.status(200).json({ message: 'Solicitud aceptada' });
         }
