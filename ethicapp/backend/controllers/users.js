@@ -366,18 +366,17 @@ router.get("/teacher_account_requests", rpg.multiSQL({
 
 router.get("/teacher_account_requests/:id", (req, res) => {
     rpg.singleSQL({
-      dbcon: pass.dbcon,
-      sql: `
+        dbcon: pass.dbcon,
+        sql:   `
           SELECT *
           FROM teacher_account_requests
-          WHERE id = $1
       `,
-      onStart: (ses, data, calc) => {
-          calc.id = req.params.id;
-      },
-      sqlParams: [rpg.param("calc", "id")]
+        onStart: (ses, data, calc) => {
+            calc.id = req.params.id;
+        },
+        sqlParams: [rpg.param("calc", "id")]
     })(req, res);
-  });
+});
 
 router.post("/teacher_account_request", async (req, res) => {
     try {
@@ -400,7 +399,7 @@ router.post("/teacher_account_request", async (req, res) => {
                     await insertTeacherAccountRequest(db, req.body.rut, passcr, fullname, req.body.mail, req.body.sex, req.body.inst_name, 0, false);
                     res.redirect("login?rc=6");
                 } else {
-                    if (existingUserRole === 'A') {
+                    if (existingUserRole === "A") {
                         await insertTeacherAccountRequest(db, req.body.rut, passcr, fullname, req.body.mail, req.body.sex, req.body.inst_name, 0, true);
                         res.redirect("login?rc=8");
                     } else {
@@ -464,7 +463,7 @@ router.put("/teacher_account_requests/:id", async (req, res) => {
         // Actualizar el estado en la base de datos
         await rpg.execSQL({
             dbcon: pass.dbcon,
-            sql: `
+            sql:   `
                 UPDATE teacher_account_requests
                 SET status = $1
                 WHERE id = $2
@@ -473,7 +472,7 @@ router.put("/teacher_account_requests/:id", async (req, res) => {
                 calc.id = req.params.id;
             },
             postReqData: ["status"],
-            sqlParams: [rpg.param("post", "status"), rpg.param("calc", "id")]
+            sqlParams:   [rpg.param("post", "status"), rpg.param("calc", "id")]
         })(req, res);
 
         if (newStatus === "1") {
@@ -489,7 +488,7 @@ router.put("/teacher_account_requests/:id", async (req, res) => {
             const { rows } = await db.query(teacherDataQuery, [req.params.id]);
 
             if (rows.length === 0) {
-                return res.status(404).json({ error: 'Profesor no encontrado' });
+                return res.status(404).json({ error: "Profesor no encontrado" });
             }
 
             const teacherData = rows[0];
@@ -511,16 +510,16 @@ router.put("/teacher_account_requests/:id", async (req, res) => {
             await db.query(insertUserQuery, userParams);
 
             // Enviar una respuesta de éxito
-            res.status(200).json({ message: 'Solicitud aceptada y profesor agregado como usuario' });
+            res.status(200).json({ message: "Solicitud aceptada y profesor agregado como usuario" });
         } else {
             // Enviar una respuesta de éxito sin agregar al profesor como usuario
-            res.status(200).json({ message: 'Solicitud aceptada' });
+            res.status(200).json({ message: "Solicitud aceptada" });
         }
     } catch (error) {
-        console.error('Error en el controlador:', error);
+        console.error("Error en el controlador:", error);
 
         // Enviar una respuesta de error
-        res.status(500).json({ error: 'Error interno del servidor' });
+        res.status(500).json({ error: "Error interno del servidor" });
     }
 });
 
