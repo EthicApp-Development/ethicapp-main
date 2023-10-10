@@ -47,6 +47,11 @@ function Institution(props) {
 
     const isEmailValid = (email) => {
       // Regular expression for a simple email format validation
+      try {
+        const auxChecker = email.length;
+      } catch (error) {
+        return true;
+      }
       const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
       return emailRegex.test(email);
     };
