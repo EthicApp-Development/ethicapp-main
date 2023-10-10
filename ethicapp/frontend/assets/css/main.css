@@ -847,7 +847,7 @@ ng-quill-editor.large .ql-editor{
 .qs-tabs{
     overflow-x: auto;
     overflow-y: hidden;
-    margin-top: 2px;
+    margin-top: 1.1em;
     max-height: 36px;
     white-space: nowrap;
     -ms-overflow-style: none;
