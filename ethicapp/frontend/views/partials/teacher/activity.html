@@ -13,14 +13,15 @@
                     <h4>{{'launched'|translate}} {{ selectedSes.time | date:'dd/MM/yyyy' }}</h4>
                 </div>
 
-                
+
                 <div class="code-div mt-1medio">
                     <div class="flex-justify-center">
                         {{'sessionCode'|translate}}
                     </div>
                     <div class="flex-justify-center fs-2">
                         <strong>{{selectedSes.code}}</strong>
-                        <button class="copy-code-button ml-1" title="{{'copy'|translate}} {{'code'|translate}}" ng-click="copyToClipboard()">
+                        <button class="copy-code-button ml-1" title="{{'copy'|translate}} {{'code'|translate}}"
+                            ng-click="copyToClipboard()">
                             <i class="fa fa-copy"></i>
                         </button>
                     </div>
@@ -41,9 +42,14 @@
                     </div>
                     <!-- MONITOR-->
                     <div class="container controls-container no-border-top">
-                        <button class="btn btn-info btn-activity mb-0" ng-click="showDesign = !showDesign">{{'showDesign' | translate}}</button>
-                        <button ng-if="selectedSes.status != 3" class="btn btn-success btn-activity ml-1 mb-0" ng-click="nextActivityDesign(design,selectedId)"
-                            ng-disabled="design.phases.length-1 == currentActivity.stage ">{{'next' | translate}}</button>
+                        <button class="btn btn-info btn-activity mb-0" ng-click="showDesign = !showDesign">
+                            <div ng-if="!showDesign">{{'showDesign' | translate}}</div>
+                            <div ng-if="showDesign">{{'hideDesign' | translate}}</div>
+                        </button>
+                        <button ng-if="selectedSes.status != 3" class="btn btn-success btn-activity ml-1 mb-0"
+                            ng-click="nextActivityDesign(design,selectedId)"
+                            ng-disabled="design.phases.length-1 == currentActivity.stage ">{{'next' |
+                            translate}}</button>
                         <button ng-if="selectedSes.status != 3" class="btn btn-danger btn-activity ml-1 mb-0"
                             ng-click="openFinishConfirmationModal()">{{'end' | translate}}</button>
 
@@ -53,7 +59,8 @@
                         <!--ng-controller="StagesController"-->
                         <div class="row">
                             <h4 class="col-lg-2"><strong>{{'stage' | translate}} #{{currentStage+1}}</strong></h4>
-                            <h4 class="col-lg-4" ng-show="currentStage == 0"><strong>{{'modeType' | translate}}:</strong>
+                            <h4 class="col-lg-4" ng-show="currentStage == 0"><strong>{{'modeType' |
+                                    translate}}:</strong>
                                 {{design.phases[currentStage].mode|translate}} </h4>
                         </div>
 
@@ -152,8 +159,8 @@
                                 <div class="row">
                                     <label class="col-lg-2">{{'questionText'|translate}}</label>
                                     <div class="col-lg-6">
-                                        <input type="text" class="form-control text-center" ng-disabled="readonly" readonly
-                                            placeholder="{{'title'|translate}}"
+                                        <input type="text" class="form-control text-center" ng-disabled="readonly"
+                                            readonly placeholder="{{'title'|translate}}"
                                             ng-model="design.phases[currentStage].questions[currentQuestion].q_text">
                                     </div>
                                 </div>
@@ -179,7 +186,7 @@
                                                 ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.r_pole">
                                         </div>
                                     </div>
-                
+
                                 </div>
                                 <div class="row margin-top-24">
                                     <label class="col-lg-2">{{'mandatoryComment'|translate}}</label>
@@ -197,7 +204,8 @@
                                 <div class="row margin-top-24">
                                     <label class="col-lg-2">{{'minComment'|translate}}</label>
                                     <div class="col-lg-1">
-                                        <input type="number" id="points" name="length" step="1" min="5" class="form-control" readonly
+                                        <input type="number" id="points" name="length" step="1" min="5"
+                                            class="form-control" readonly
                                             ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.min_just_length"
                                             style="width: 6em; text-align: center; height: 2em;">
                                     </div>
@@ -209,8 +217,8 @@
                                 <div class="row">
                                     <div class="col-sm-12">
                                         <label>{{ 'question' | translate }}</label>
-                                        <textarea rows="2" class="form-control" ng-model="design.phases[currentStage].q_text"
-                                            ng-disabled="true"
+                                        <textarea rows="2" class="form-control"
+                                            ng-model="design.phases[currentStage].q_text" ng-disabled="true"
                                             ng-class="{'error': IsTextEmpty($index, design.phases[currentStage].q_text)}"></textarea>
                                     </div>
                                     <!-- <div class="col-sm-5">
@@ -252,30 +260,30 @@
                                     </div>
                                     <div class="col-sm-2 text-right">
                                         <p class="word-count-p">{{'words'|translate}}</p>
-                                        <input class="form-control word-count-roles" placeholder="Word Count" type="number"
-                                            ng-model="role.wc" ng-disabled="true">
+                                        <input class="form-control word-count-roles" placeholder="Word Count"
+                                            type="number" ng-model="role.wc" ng-disabled="true">
                                     </div>
-                
+
                                 </div>
                             </div>
-                
-                
+
+
                         </div>
 
                     </div>
                 </div>
 
-                
-                
+
+
 
 
                 <div class="container">
                     <div class="row">
-                      <div class="col-xs-12">
-                        <h2 class="text-center"><strong>{{completion}} {{'studentsFinish'| translate}}</strong></h2>
-                      </div>
+                        <div class="col-xs-12">
+                            <h2 class="text-center"><strong>{{completion}} {{'studentsFinish'| translate}}</strong></h2>
+                        </div>
                     </div>
-                  </div>
+                </div>
                 <!-- DASHBOARDS -->
                 <div class="pad-content" ng-controller="DashboardController">
                     <div class="pull-right margin-ver-8"
@@ -283,15 +291,19 @@
                         <button class="btn btn-sm btn-success" ng-click="exportChatCSV()"
                             ng-show="selectedSes.status >= 3">{{ 'export' | translate }} Chat CSV</button>
                         <button class="btn btn-sm btn-success" ng-click="exportSelCSV()"
-                            ng-show="selectedSes.status >= 3">{{ 'export' | translate }} {{ 'answer' | translate }} CSV</button>
+                            ng-show="selectedSes.status >= 3">{{ 'export' | translate }} {{ 'answer' | translate }}
+                            CSV</button>
                         <div class="row">
                             <div class="col-lg-7">
                                 <select class="form-control" ng-options="x.val as flang(x.name) for x in iterationNames"
-                                ng-model="iterationIndicator" ng-change="updateState();ActivityState(iterationIndicator);">
+                                    ng-model="iterationIndicator"
+                                    ng-change="updateState();ActivityState(iterationIndicator);">
                                 </select>
                             </div>
                             <div class="col-lg-4">
-                                <button class="btn btn-default" ng-click="updateState();ActivityState(iterationIndicator);">{{'update' | translate}}</button>
+                                <button class="btn btn-default"
+                                    ng-click="updateState();ActivityState(iterationIndicator);">{{'update' |
+                                    translate}}</button>
                             </div>
                         </div>
                     </div>
@@ -358,7 +370,8 @@
 
                     <div ng-show="design.type == 'semantic_differential'" class="margin-top-8">
                         <strong>{{ 'indAggAns' | translate }}</strong>
-                        <span class="pull-right mt-1medio margin-right-8"><span style="color: red;">*</span> {{ 'commentReq' | translate }}</span>
+                        <span class="pull-right mt-1medio margin-right-8"><span style="color: red;">*</span> {{
+                            'commentReq' | translate }}</span>
                         <table class="table table-bordered" ts-wrapper>
                             <tr>
                                 <th ts-criteria="uid" ts-order-by="sortByAutorName">{{ 'author' | translate }}</th>
@@ -369,7 +382,7 @@
                                     <span style="color: red;" ng-if="df.justify">*</span>
                                 </th>
                             </tr>
-                            <tr ng-repeat="udata in shared.difTable track by $index" 
+                            <tr ng-repeat="udata in shared.difTable track by $index"
                                 ng-class="{'bg-gray': udata.group}">
                                 <td>
                                     <span ng-show="!udata.group">{{ users[udata.uid].name }}</span>
@@ -406,8 +419,10 @@
                         </table>
                         <div class="simple-padding-bottom">
                             <span>{{ 'students' | translate }}: {{shared.difTableUsers}}</span>
-                            <strong class="simple-margin-left">{{ 'avgs' | translate }}: </strong> {{ 'average' | translate }}.
-                            <strong class="simple-margin-left">{{ 'cvs' | translate }}: </strong> {{ 'cvdesc' | translate }}.
+                            <strong class="simple-margin-left">{{ 'avgs' | translate }}: </strong> {{ 'average' |
+                            translate }}.
+                            <strong class="simple-margin-left">{{ 'cvs' | translate }}: </strong> {{ 'cvdesc' |
+                            translate }}.
                             <span class="badge bg-red simple-margin-left"><i class="fa fa-comments"></i> N</span> N {{
                             'chatMessages' | translate }}.
                         </div>
@@ -421,19 +436,21 @@
                             </tr>
                             <tr ng-repeat="(p, aa) in rawActors track by p">
                                 <td class="text-center">{{ p + 1 }}</td>
-                                <td ng-repeat="(i, actor) in rawActors track by i" ng-style="getFreqColor(actor.id, p+1)"
-                                    class="text-center text-black">
+                                <td ng-repeat="(i, actor) in rawActors track by i"
+                                    ng-style="getFreqColor(actor.id, p+1)" class="text-center text-black">
                                     <strong>{{ posFreqTable[actor.id][p + 1] || 0 }}</strong>
                                 </td>
                             </tr>
                         </table>
-        
+
                         <br>
                         <strong>{{ 'indAggAns' | translate }}</strong>
-                        <span class="pull-right"><span style="color: red;">*</span> {{ 'commentReq' | translate }}</span>
+                        <span class="pull-right"><span style="color: red;">*</span> {{ 'commentReq' | translate
+                            }}</span>
                         <table class="table table-bordered" ts-wrapper>
                             <tr>
-                                <th ts-criteria="ceqlnum | parseFloat" ts-default="descending">{{ 'numEqual' | translate }}</th>
+                                <th ts-criteria="ceqlnum | parseFloat" ts-default="descending">{{ 'numEqual' | translate
+                                    }}</th>
                                 <th ts-criteria="uid" ts-order-by="sortByAutorName">{{ 'author' | translate }}</th>
                                 <th ts-criteria="jigsawId">{{ 'role' | translate }}</th>
                                 <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'" ts-criteria="uid2"
@@ -453,7 +470,8 @@
                                 <td ng-if="shared.stagesMap[iterationIndicator].type == 'team'">
                                     {{ shared.groupByUid[udata.uid].index }}
                                     <span class="badge bg-red">
-                                        <i class="fa fa-comments"></i> {{ shared.chatByTeam[shared.groupByUid[udata.uid].tmid] }}
+                                        <i class="fa fa-comments"></i> {{
+                                        shared.chatByTeam[shared.groupByUid[udata.uid].tmid] }}
                                     </span>
                                 </td>
                                 <td ng-repeat="aid in udata.arr track by $index">
@@ -465,7 +483,8 @@
                         </table>
                         <div class="simple-padding-bottom">
                             <span>{{ 'students' | translate }}: {{indvTableSorted.length}}</span>
-                            <span class="badge bg-red simple-margin-left"><i class="fa fa-comments"></i> N</span> N {{ 'chatMessages' | translate }}.
+                            <span class="badge bg-red simple-margin-left"><i class="fa fa-comments"></i> N</span> N {{
+                            'chatMessages' | translate }}.
                             <i class="fa fa-check simple-margin-left"></i> {{ 'commented' | translate }}.
                         </div>
                     </div>
