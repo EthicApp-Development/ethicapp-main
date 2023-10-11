@@ -7,16 +7,16 @@ CREATE TABLE IF NOT EXISTS report_activity (
 
 CREATE TABLE IF NOT EXISTS report_create_account (
     creation_date DATE,
-    isProfessor BIT,
+    is_teacher BIT,
     count INT,
-    PRIMARY KEY (creation_date, isProfessor)
+    PRIMARY KEY (creation_date, is_teacher)
 );
 
 CREATE TABLE IF NOT EXISTS report_login (
     login_date DATE,
-    isProfessor BIT,
+    is_teacher BIT,
     count INT,
-    PRIMARY KEY (login_date, isProfessor)
+    PRIMARY KEY (login_date, is_teacher)
 );
 
 CREATE TABLE IF NOT EXISTS report_type (
@@ -34,14 +34,14 @@ BEGIN
 currentDate := current_date; -- Get the current date
 
 -- Check if a row with the current date exists
-SELECT INTO currentCount count FROM report_login WHERE login_date = currentDate AND isprofessor = (isProfessorPointer::bit);
+SELECT INTO currentCount count FROM report_login WHERE login_date = currentDate AND is_teacher = (isProfessorPointer::bit);
 
 IF currentCount IS NULL THEN
     -- If no row exists, insert a new row with counter initialized to 1
-    INSERT INTO report_login (login_date, isprofessor, count) VALUES (currentDate, isProfessorPointer::bit, 1);
+    INSERT INTO report_login (login_date, is_teacher, count) VALUES (currentDate, isProfessorPointer::bit, 1);
 ELSE
     -- If a row exists, increment the counter and update the row
-    UPDATE report_login SET count = currentCount + 1 WHERE login_date = currentDate AND isprofessor = (isProfessorPointer::bit);
+    UPDATE report_login SET count = currentCount + 1 WHERE login_date = currentDate AND is_teacher = (isProfessorPointer::bit);
 END IF;
 END;
 $$ LANGUAGE plpgsql;
@@ -54,14 +54,14 @@ BEGIN
 currentDate := current_date; -- Get the current date
 
 -- Check if a row with the current date exists
-SELECT INTO currentCount count FROM report_create_account WHERE creation_date = currentDate AND isProfessor= (isProfessorPointer::bit);
+SELECT INTO currentCount count FROM report_create_account WHERE creation_date = currentDate AND is_teacher= (isProfessorPointer::bit);
 
 IF currentCount IS NULL THEN
     -- If no row exists, insert a new row with counter initialized to 1
-    INSERT INTO report_create_account (creation_date, isProfessor, count) VALUES (currentDate, isProfessorPointer::bit, 1);
+    INSERT INTO report_create_account (creation_date, is_teacher, count) VALUES (currentDate, isProfessorPointer::bit, 1);
 ELSE
     -- If a row exists, increment the counter and update the row
-    UPDATE report_create_account SET count = currentCount + 1 WHERE creation_date = currentDate AND isprofessor = (isProfessorPointer::bit);
+    UPDATE report_create_account SET count = currentCount + 1 WHERE creation_date = currentDate AND is_teacher = (isProfessorPointer::bit);
 END IF;
 END;
 $$ LANGUAGE plpgsql;

@@ -68,13 +68,13 @@ router.post("/login", (req, res, next) => {
         return res.redirect("login?rc=2");
       }
 
-      var isProfessor = 0;
+      var is_teacher = 0;
       if (user["role"]=='P') {
-        isProfessor=1;
+        is_teacher=1;
       }
       
       var db = getDBInstance(pass.dbcon);
-      const sqlQuery = `SELECT UpdateOrInsertLoginRecord(${isProfessor})`;
+      const sqlQuery = `SELECT UpdateOrInsertLoginRecord(${is_teacher})`;
       db.query(sqlQuery,(dbErr, results) =>{
           if (dbErr) {
               return next(dbErr);

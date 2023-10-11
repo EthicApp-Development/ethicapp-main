@@ -112,17 +112,17 @@ router.post("/report/:type", async (req, res) => {
 
         case "create_account":
             sqlQuery=`
-                SELECT TO_CHAR(creation_date, 'YY-MM-DD') AS date, count AS count , isProfessor
+                SELECT TO_CHAR(creation_date, 'YY-MM-DD') AS date, count AS count , is_teacher
                 FROM report_create_account
                 WHERE creation_date >= '${initialDate}' AND creation_date <= '${endDate}'
                 ORDER BY creation_date;
             `
             if (differenceInMonths>1) {
                 sqlQuery=`
-                    SELECT TO_CHAR(creation_date, 'YYYY-MM') AS date, SUM(count) AS count , isProfessor
+                    SELECT TO_CHAR(creation_date, 'YYYY-MM') AS date, SUM(count) AS count , is_teacher
                     FROM report_create_account
                     WHERE creation_date >= '${initialDate}' AND creation_date <= '${endDate}'
-                    GROUP BY date , isProfessor
+                    GROUP BY date , is_teacher
                     ORDER BY date;
                 `
             }
@@ -130,17 +130,17 @@ router.post("/report/:type", async (req, res) => {
 
         case "logins":
             sqlQuery=`
-                SELECT TO_CHAR(login_date, 'YY-MM-DD') AS date, count AS count, isProfessor
+                SELECT TO_CHAR(login_date, 'YY-MM-DD') AS date, count AS count, is_teacher
                 FROM report_login
                 WHERE login_date >= '${initialDate}' AND login_date <= '${endDate}'
                 ORDER BY login_date;
             `
             if (differenceInMonths>1) {
                 sqlQuery=`
-                    SELECT TO_CHAR(login_date, 'YYYY-MM') AS date, SUM(count) AS count, isProfessor
+                    SELECT TO_CHAR(login_date, 'YYYY-MM') AS date, SUM(count) AS count, is_teacher
                     FROM report_login
                     WHERE login_date >= '${initialDate}' AND login_date <= '${endDate}'
-                    GROUP BY date, isProfessor
+                    GROUP BY date, is_teacher
                     ORDER BY date;
                 `
             }
@@ -171,7 +171,7 @@ router.post("/report/:type", async (req, res) => {
             results.forEach(element => {
                 x_data.push(element["date"])
                 if (type == "create_account" || type == "logins") {
-                    if (element["isprofessor"]=='0') {
+                    if (element["is_teacher"]=='0') {
                         y1_data.push(parseInt(element["count"]))
                     }else{
                         y2_data.push(parseInt(element["count"]))
