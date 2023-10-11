@@ -40,6 +40,7 @@ services:
     container_name: "ethicapp-admin-panel"
     build:
       context: admin-panel/
+      dockerfile: production.Dockerfile
       args:
         REACT_APP_API_PORT: ${NGINX_PORT}
     volumes:
