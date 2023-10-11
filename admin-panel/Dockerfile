@@ -1,6 +1,6 @@
 FROM node:14-alpine
 
-WORKDIR /app
+WORKDIR /home/app
 
 COPY package*.json ./
 
@@ -13,9 +13,3 @@ ENV REACT_APP_API_PORT $REACT_APP_API_PORT
 COPY . .
 
 RUN npm run build
-
-RUN npm install -g serve
-
-EXPOSE 3000
-
-CMD ["serve", "-s", "build", "-l", "3000"]

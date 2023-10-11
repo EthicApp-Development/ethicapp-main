@@ -42,10 +42,8 @@ services:
       context: admin-panel/
       args:
         REACT_APP_API_PORT: ${NGINX_PORT}
-    networks:
-      default:
-    depends_on:
-      - node
+    volumes:
+      - shared-volume-admin:/home/app:rw
         
   # ---------------------- Nginx ---------------------- #
   nginx:
@@ -62,6 +60,7 @@ services:
       default:
     volumes:
       - shared-volume:/usr/share/nginx/:rw
+      - shared-volume-admin:/usr/share/nginx/:rw
     depends_on:
       - node
       - admin-panel
@@ -97,3 +96,4 @@ services:
 
 volumes:
   shared-volume:
+  shared-volume-admin:
