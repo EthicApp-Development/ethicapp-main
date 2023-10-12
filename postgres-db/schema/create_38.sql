@@ -1,21 +1,21 @@
 CREATE TABLE IF NOT EXISTS report_activity (
-    creation_date DATE,
-    professor INT,
-    count INT,
+    creation_date date,
+    professor int,
+    count int,
     PRIMARY KEY (creation_date, professor)
 );
 
 CREATE TABLE IF NOT EXISTS report_create_account (
-    creation_date DATE,
-    is_teacher BIT,
-    count INT,
+    creation_date date,
+    is_teacher bit,
+    count int,
     PRIMARY KEY (creation_date, is_teacher)
 );
 
 CREATE TABLE IF NOT EXISTS report_login (
-    login_date DATE,
-    is_teacher BIT,
-    count INT,
+    login_date date,
+    is_teacher bit,
+    count int,
     PRIMARY KEY (login_date, is_teacher)
 );
 
@@ -26,10 +26,10 @@ CREATE TABLE IF NOT EXISTS report_type (
     PRIMARY KEY (id)
 );
 
-CREATE OR REPLACE FUNCTION UpdateOrInsertLoginRecord(isProfessorPointer INT) RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION UpdateOrInsertLoginRecord(isProfessorPointer int) RETURNS void AS $$
 DECLARE
-currentDate DATE;
-currentCount INT;
+currentDate date;
+currentCount int;
 BEGIN
 currentDate := current_date; -- Get the current date
 
@@ -46,10 +46,11 @@ END IF;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION UpdateOrInsertCreateAccountRecord(isProfessorPointer INT) RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION UpdateOrInsertCreateAccountRecord(isProfessorPointer int)
+RETURNS void AS $$
 DECLARE
-currentDate DATE;
-currentCount INT;
+currentDate date;
+currentCount int;
 BEGIN
 currentDate := current_date; -- Get the current date
 
@@ -66,11 +67,11 @@ END IF;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION UpdateOrInsertActivityRecord(professor_id INT)
-RETURNS VOID AS $$
+CREATE OR REPLACE FUNCTION UpdateOrInsertActivityRecord(professor_id int)
+RETURNS void AS $$
 DECLARE
-    current_date DATE;
-    current_count INT;
+    current_date date;
+    current_count int;
 BEGIN
     current_date := current_date; -- Get the current date
 

@@ -1,7 +1,7 @@
 "use strict";
 
 let express = require("express");
-let cors = require('cors')
+let cors = require("cors");
 let session = require("express-session");
 let path = require("path");
 let logger = require("morgan");
@@ -28,7 +28,7 @@ require("./backend/controllers/passport-setup");
 
 let app = express();
 
-app.use(cors())
+app.use(cors());
 
 //express asset versions
 var assetPath = path.join(__dirname, "/frontend/assets");

@@ -1,4 +1,4 @@
-INSERT INTO report_type (report_type, report_description) 
+INSERT INTO report_type (report_type, report_description)
 VALUES
 ('start_activity', 'start_activity_desc'),
 ('create_account', 'create_account_desc'),
