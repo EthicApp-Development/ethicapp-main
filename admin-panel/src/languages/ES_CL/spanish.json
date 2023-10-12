@@ -52,7 +52,8 @@
         "create_account_title": "Generación de reportes Cuentas Creadas",
         "logins_title": "Generación de reportes Ingresos a Ethicapp",
         "top_professors_title": "Generación de reportes Top Actividades Iniciadas por Profesor",
-        "subTitle": "Introduzca información sobre los informes específicos que se están generando."
+        "subTitle": "Introduzca información sobre los informes específicos que se están generando.",
+        "formError": "Seleccione una opción de informe"
     },
     "users":{
         "title": "Pagina de Usuarios",

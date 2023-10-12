@@ -1,30 +1,41 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 //Components
-import { Grid, Container, Divider } from '@mui/material';
+import { Container } from '@mui/material';
 import BoxGrid from '../components/BoxGrid';
 import ReportDescriptionBox from '../components/ReportDescriptionBox';
 import PageBase from '../components/PageBase';
 import HeaderNSubHeader from '../components/HeaderNSubHeader';
+import { GetReports } from '../components/APICommunication';
 
 //Icons
 import DescriptionIcon from '@mui/icons-material/Description';
 
 function Reports(props) {
   const translation = props.translation;
+  useEffect(() => {
+    GetReports()
+      .then((response) => {
+        let gridData = []
+        response.data["reports"].forEach(element => {
+          gridData.push({ 
+            icon: <DescriptionIcon fontSize="large" />, 
+            text: translation(`reports.${element}`), 
+            reportType:element,  
+            link:`/admin/report/${element}` })
+        });
+        setGridDataFinal(gridData)
+      })
+      .catch((error) => {
+        console.error('Error fetching items:', error);
+      });
+  }, []);
 
   const pageTitle= translation("reports.title");
   const pageSubTitle= translation("reports.subTitle");
 
-  const gridData = [
-    { icon: <DescriptionIcon fontSize="large" />, text: translation("reports.start_activity"), reportType:"start_activity", link:"/admin/report/start_activity" },
-    { icon: <DescriptionIcon fontSize="large" />, text: translation("reports.create_account"), reportType:"create_account", link:"/admin/report/create_account",},
-    { icon: <DescriptionIcon fontSize="large" />, text: translation("reports.logins"), reportType:"logins", link:"/admin/report/logins",},
-    { icon: <DescriptionIcon fontSize="large" />, text: translation("reports.top_professors"), reportType:"top_professors", link:"/admin/report/top_professors",},
-    // Add more data as needed
-  ];
-
   const [hoveredItem, setHoveredItem] = useState('');
+  const [gridDataFinal, setGridDataFinal] = useState([]);
   const [reportDescriptionBoxText, setReportDescriptionBoxText] = useState('');
   const [showReportDescription, setShowReportDescription] = useState(false);
 
@@ -40,7 +51,7 @@ function Reports(props) {
         <HeaderNSubHeader title={pageTitle} subTitle={pageSubTitle}/>
         <br/>
 
-        <BoxGrid gridData={gridData} handleMouseOver={handleHoverStart} />
+        <BoxGrid gridData={gridDataFinal} handleMouseOver={handleHoverStart} />
 
         <ReportDescriptionBox text={reportDescriptionBoxText} visibility={showReportDescription} translation={translation}/>
       </Container>

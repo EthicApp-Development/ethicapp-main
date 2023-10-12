@@ -34,6 +34,17 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  # ---------------------- Admin Panel ---------------------- #
+  admin-panel:
+    container_name: "ethicapp-admin-panel"
+    build:
+      context: admin-panel/
+      dockerfile: production.Dockerfile
+      args:
+        REACT_APP_API_PORT: ${NGINX_PORT}
+    volumes:
+      - shared-volume-admin:/home/app:rw
         
   # ---------------------- Nginx ---------------------- #
   nginx:
@@ -50,8 +61,10 @@ services:
       default:
     volumes:
       - shared-volume:/usr/share/nginx/:rw
+      - shared-volume-admin:/usr/share/nginx/:rw
     depends_on:
       - node
+      - admin-panel
   
   # ---------------------- Database ---------------------- #
   postgres:
@@ -84,3 +97,4 @@ services:
 
 volumes:
   shared-volume:
+  shared-volume-admin:

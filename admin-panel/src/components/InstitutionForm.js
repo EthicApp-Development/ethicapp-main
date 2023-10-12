@@ -88,7 +88,7 @@ const InstitutionForm = (props) =>{
                         value={formData.institution_it_email}
                         onChange={handleInputChange}
                         required
-                        error={!isEmailValid(formData.institution_it_email) && formData.institution_it_email.length > 0}
+                        error={!isEmailValid(formData.institution_it_email)}
                         helperText={
                             !isEmailValid(formData.institution_it_email) && translation("institutionForm.email_error")
                         }
@@ -103,7 +103,7 @@ const InstitutionForm = (props) =>{
                         value={formData.institution_educational_email}
                         onChange={handleInputChange}
                         required
-                        error={!isEmailValid(formData.institution_educational_email) && formData.institution_educational_email.length > 0}
+                        error={!isEmailValid(formData.institution_educational_email)}
                         helperText={
                             !isEmailValid(formData.institution_educational_email) && translation("institutionForm.email_error")
                         }

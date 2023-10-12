@@ -52,7 +52,11 @@
         "create_account_title": "Accounts Created Report Generation",
         "logins_title": "Ethicapp Logins Report Generation",
         "top_professors_title": "Top Activity Starting Professors Report Generation",
-        "subTitle": "Insert information about the specific reports that is being generated."
+        "start_activity_desc": "Information about the report of type: start_activity",
+        "create_account_desc": "Information about the report of type: create_account",
+        "logins_desc": "Information about the report of type: logins",
+        "top_professors_desc": "Information about the report of type: top_professors",
+        "formError": "Please select a report option"
     },
     "users":{
         "title": "Users Page",
