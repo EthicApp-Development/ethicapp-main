@@ -20,6 +20,7 @@ import Tooltip from '@mui/material/Tooltip';
 //MUI ICONS
 import HomeIcon from '@mui/icons-material/Home';
 import SchoolIcon from '@mui/icons-material/School';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import PeopleIcon from '@mui/icons-material/People';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -178,6 +179,13 @@ export default function NavBar(props){
                         <PeopleIcon />
                     </ListItemIcon>
                     <ListItemText primary={translation("navbar.users")} />
+                    </ListItemButton>
+
+                    <ListItemButton component={Link} to="/admin/teacher_account_requests"> 
+                    <ListItemIcon>
+                        <AddCircleOutlineIcon />
+                    </ListItemIcon>
+                    <ListItemText primary={translation("navbar.teacherAccountRequests")} />
                     </ListItemButton>
                 </React.Fragment>
               </List>

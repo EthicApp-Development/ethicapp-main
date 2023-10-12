@@ -22,6 +22,31 @@
         "logins": "Ingresos a Ethicapp",
         "top_professors": "Top Actividades Iniciadas por Profesor"
     },
+    "teacherAccountRequests":{
+        "title": "Listado de Solicitudes de Cuenta de Profesor",
+        "subTitle": "Desde aquí puedes ver el listado de solicitudes de cuenta de profesor",
+        "pending": "Pendientes",
+        "approved": "Aprobadas",
+        "rejected": "Rechazadas",
+        "ignore": "Ignorar",
+        "see_request": "Ver Solicitud",
+        "see_account": "Ver Cuenta"
+    },
+    "teacherAccountRequest":{
+        "title": "Solicitud de Cuenta de Profesor",
+        "loading": "Cargando...",
+        "teacher": "Profesor",
+        "name": "Nombre",
+        "institution": "Institución",
+        "email": "Email", 
+        "rut": "Rut",
+        "gender": "Género",
+        "date": "Fecha",
+        "accept_request": "Aceptar Solicitud",
+        "reject_request": "Rechazar Solicitud",
+        "ignore_request": "Ignorar Solicitud",
+        "no_data": "No hay datos para mostrar"
+    },
     "singleReport":{
         "start_activity_title": "Generación de reportes Actividades Iniciadas",
         "create_account_title": "Generación de reportes Cuentas Creadas",
@@ -63,7 +88,8 @@
         "reports": "Reportes",
         "users": "Usuarios",
         "openBar": "Abrir Barra",
-        "closeBar": "Cerrar Barra"
+        "closeBar": "Cerrar Barra",
+        "teacherAccountRequests": "Solicitudes de Profesor"
     },
     "ReportDescriptionBox":{
         "title": "Información del Informe"
