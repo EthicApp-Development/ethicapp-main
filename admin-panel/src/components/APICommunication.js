@@ -27,3 +27,7 @@ export const GetInstitutionForm = async () => {
 export const UpdateInstitutionForm= (postData) => {
   return api.put(`/institution`,postData);
 };
+
+export const ApiLogin= (postData) => {
+  return api.post(`/login`,postData);
+};

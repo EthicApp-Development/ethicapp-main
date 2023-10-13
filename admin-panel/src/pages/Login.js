@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect} from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 //Components
@@ -7,7 +7,10 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
 import LoginForm from '../components/LoginForm';
+import Cookies from 'js-cookie';
+import { useHistory } from 'react-router-dom';
 import { Grid } from '@mui/material';
+import { ApiLogin } from '../components/APICommunication';
 
 //Icons
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
@@ -16,14 +19,41 @@ function Login(props) {
   const translation = props.translation;
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const sessionIdAux = Cookies.get('connect.sid');
+
+    if (sessionIdAux) {
+      navigate('/admin');
+    }
+  }, []);
+ 
   const handleSubmit = (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    console.log({
-      email: data.get('email'),
-      password: data.get('password'),
+    let loginJson = {
+      user: data.get('email'),
+      pass: data.get('password'),
+      source: "admin-panel"
+    };
+
+    ApiLogin(loginJson).then((response) => {
+      if (response.data["sessionID"]=="ErrorCredential") {
+        alert("Incorrect Credentials");
+        return;
+      }
+
+      if (response.data["sessionID"]=="Unauthorized") {
+        alert("User does not have access to Admin Panel");
+        return;
+      }
+
+      Cookies.set('connect.sid', response.data["sessionID"], { expires: 1 });
+
+      navigate('/admin');
+    })
+    .catch((error) => {
+      console.error('Error fetching items:', error);
     });
-    navigate('/admin');
   };
 
 
