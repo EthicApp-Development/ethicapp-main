@@ -23,6 +23,8 @@ services:
     environment:
       NODE_ENV: release
       NODE_PORT: ${NODE_PORT}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      REDIS_HOST: RedisContainer
     restart: "no"
     networks:
       default:
@@ -32,8 +34,13 @@ services:
     volumes:
       - shared-volume:/home/app:rw
     depends_on:
-      postgres:
-        condition: service_healthy
+      - RedisContainer
+      - postgres
+
+  # ---------------------- Redis Cache Server ---------------------- #
+  RedisContainer:
+    image: redis
+    container_name: ethicapp-redis-container
 
   # ---------------------- Admin Panel ---------------------- #
   admin-panel:
@@ -61,7 +68,7 @@ services:
       default:
     volumes:
       - shared-volume:/usr/share/nginx/:rw
-      - shared-volume-admin:/usr/share/nginx/:rw
+      - shared-volume-admin:/usr/share/nginx/admin:rw
     depends_on:
       - node
       - admin-panel
