@@ -814,37 +814,29 @@ router.post("/get-alum-done-time", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "iteration"), rpg.param("post", "sesid")]
 }));
 
-router.post("/get-ideas-progress", async (req, res) => {
-    try {
-        const { iteration, sesid } = req.body; // Assuming the POST data is in the request body
-
-        // Execute the SQL query
-        const result = await pass.dbcon.query(`
-            SELECT i.uid,
-                count(*) AS COUNT
-            FROM ideas AS i
-            INNER JOIN users AS u
-            ON i.uid = u.id
-            WHERE iteration = $1
-            AND u.role = 'A'
-            AND i.docid in (
-                SELECT id
-                FROM documents
-                WHERE sesid = $2
-            )
-            GROUP BY UID
-        `, [iteration, sesid]);
-
-        // Extract the data from the result
-        const data = result.rows;
-
-        // Send the data as JSON in the response
-        res.json({ data });
-    } catch (error) {
-        // Handle any errors that occur during the execution or response
-        res.status(500).json({ error: "Internal Server Error" });
-    }
-});
+router.post("/get-alum-confidence", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT s.confidence AS conf,
+        q.id AS qid,
+        count(*) AS freq
+    FROM selection AS s
+    INNER JOIN questions AS q
+    ON s.qid = q.id
+    WHERE q.sesid = $1
+    AND s.iteration = $2
+    AND s.confidence IS NOT NULL
+    GROUP BY s.confidence, q.id
+    `,
+    postReqData: ["sesid","iteration"],
+    onStart:     (ses) => {
+        if (ses.role != "P") {
+            console.error("Sólo el profesor puede ver el estado de los alumnos");
+            return "SELECT $1, $2";
+        }
+    },
+    sqlParams: [rpg.param("post", "sesid"),rpg.param("post", "iteration")]
+}));
 
 function hasDuplicates (arr) {
     let dict = {};

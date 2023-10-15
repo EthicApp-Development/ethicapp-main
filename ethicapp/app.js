@@ -1,7 +1,6 @@
 "use strict";
 
 let express = require("express");
-let cors = require("cors");
 let session = require("express-session");
 let path = require("path");
 let logger = require("morgan");
@@ -14,7 +13,6 @@ let assetVersions = require("express-asset-versions");
 
 let index = require("./backend/controllers/index");
 let users = require("./backend/controllers/users");
-let admin_api = require("./backend/controllers/admin-panel-api");
 let sessions = require("./backend/controllers/sessions");
 let visor = require("./backend/controllers/visor");
 let analysis = require("./backend/controllers/analysis");
@@ -25,21 +23,8 @@ let pass = require("./backend/config/keys-n-secrets");
 let middleware = require("./backend/middleware/validate-session");
 require("serve-favicon");
 require("./backend/controllers/passport-setup");
-require("dotenv").config();
 
 let app = express();
-
-
-const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
-const corsOptions = {
-    origin:      allowedOrigins,
-    credentials: true,
-};
-
-
-app.use(cors(corsOptions));
-
-
 
 //express asset versions
 var assetPath = path.join(__dirname, "/frontend/assets");
@@ -55,7 +40,7 @@ app.set("view engine", "ejs");
 app.use(logger("[EthicApp] :method :url :status - :response-time ms"));
 busboy.extend(app, {
     upload:        true,
-    mimeTypeLimit: ["application/pdf", "image/png"],
+    mimeTypeLimit: ["application/pdf"],
     path:          pass.uploadPath,
     limits:        { fileSize: 5*1024*1024 }
 });
@@ -73,7 +58,6 @@ app.use(json2xls.middleware);
 
 app.use("/", index);
 app.use("/", users);
-app.use("/", admin_api);
 app.use("/", middleware.verifySession, sessions);
 app.use("/", middleware.verifySession, visor);
 app.use("/", middleware.verifySession, analysis);

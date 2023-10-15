@@ -94,9 +94,7 @@ router.post("/add-session", rpg.execSQL({
     INSERT INTO sesusers(sesid, UID)
     SELECT id,
         $5
-    FROM ROWS;
-
-    SELECT UpdateOrInsertActivityRecord($3)
+    FROM ROWS
     `,
     sesReqData:  ["uid"],
     postReqData: ["name", "type"],
@@ -135,9 +133,7 @@ router.post("/add-session-activity", (req, res) => {
     FROM ROWS;
     SELECT max(id)
     FROM sessions
-    WHERE creator = ${uid};
-
-    SELECT UpdateOrInsertActivityRecord(${uid})
+    WHERE creator = ${uid}
     `;
     var db = getDBInstance(pass.dbcon);
     var qry;

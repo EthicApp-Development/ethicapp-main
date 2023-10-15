@@ -1,12 +1,17 @@
 CREATE TABLE IF NOT EXISTS institution (
     id serial,
+    userid integer REFERENCES users (id),
     institution_name text,
-    institution_url text,
-    ethicapp_url text,
-    physical_address text,
-    institution_logo text,
-    institution_it_email text,
-    institution_educational_email text,
+    num_students int,
+    country text,
+    position text,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS mail_domain (
+    id serial,
+    institutionid integer REFERENCES institution (id),
+    domain_name text UNIQUE,
     PRIMARY KEY (id)
 );
 

@@ -1,8 +1,7 @@
-INSERT INTO institution (
-    institution_name, institution_url, ethicapp_url,
-    physical_address, institution_logo, institution_it_email, institution_educational_email
-)
-VALUES (
-    'Test Inst', 'test.com', 'Test2.com',
-    'Physical Address', 'logo url', 'ItMail@test.com', 'educationl@test.com'
-);
+INSERT INTO institution (userid, institution_name, num_students, country, "position")
+VALUES
+(1, 'QWERTY-institution', 999, 'qwerty', 'qwerty');
+
+INSERT INTO mail_domain (institutionid, domain_name)
+VALUES
+(1, 'qwertymail.com');
