@@ -23,7 +23,7 @@
     "admin-panel": "./dev-ops/admin-panel.sh"
   },
   "devDependencies": {
-    "esbuild": "^0.18.10",
+    "esbuild": "^0.18.20",
     "eslint": "^8.24.0",
     "eslint-plugin-angular": "^4.1.0",
     "htmlhint": "^1.1.4",

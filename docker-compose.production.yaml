@@ -23,6 +23,7 @@ services:
     environment:
       NODE_ENV: release
       NODE_PORT: ${NODE_PORT}
+      ETHICAPP_DOMAIN_NAME: ${ETHICAPP_DOMAIN_NAME}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
       REDIS_HOST: RedisContainer
     restart: "no"
