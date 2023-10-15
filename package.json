@@ -19,10 +19,11 @@
     "psql": "./dev-ops/docker-psql.sh",
     "build-js": "./dev-ops/build-js.sh",
     "build-css": "./dev-ops/build-css.sh",
-    "build-assets": "npm run build-js & npm run build-css"
+    "build-assets": "npm run build-js & npm run build-css",
+    "admin-panel": "./dev-ops/admin-panel.sh"
   },
   "devDependencies": {
-    "esbuild": "0.18.20",
+    "esbuild": "^0.18.20",
     "eslint": "^8.24.0",
     "eslint-plugin-angular": "^4.1.0",
     "htmlhint": "^1.1.4",
@@ -30,5 +31,8 @@
     "stylelint": "^14.13.0",
     "stylelint-config-prettier": "^9.0.3",
     "stylelint-config-standard": "^28.0.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5"
   }
 }
