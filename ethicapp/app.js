@@ -59,7 +59,7 @@ app.set("view engine", "ejs");
 app.use(logger("[Readings] :method :url :status - :response-time ms"));
 busboy.extend(app, {
     upload:        true,
-    mimeTypeLimit: ["application/pdf"],
+    mimeTypeLimit: ["application/pdf", "image/png"],
     path:          pass.uploadPath,
     limits:        { fileSize: 5*1024*1024 }
 });

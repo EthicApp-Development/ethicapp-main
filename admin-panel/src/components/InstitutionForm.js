@@ -25,7 +25,7 @@ const InstitutionForm = (props) =>{
 
             <br/>
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} encType="multipart/form-data">
                 <Grid container spacing={3}>
                     <Grid item xs={12}>
                         <Divider variant="fullWidth" />
@@ -116,10 +116,11 @@ const InstitutionForm = (props) =>{
 
                     <Grid item xs={12}>
                         <input
-                        accept="image/*"
+                        accept="image/png"
                         style={{ display: 'none' }}
                         id="file-upload"
                         type="file"
+                        name="file"
                         onChange={handleFileChange}
                         />
                         <label htmlFor="file-upload">

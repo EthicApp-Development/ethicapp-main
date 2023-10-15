@@ -214,6 +214,15 @@ router.post("/report/:type", async (req, res) => {
     }
 });
 
+router.post('/upload-file-institution', (req, res) => {
+    if (req.files.file != null && req.files.file.mimetype == "image/png") {
+        res.status(200).json({ message: 'File uploaded successfully', filename: req.files.file.file });
+    } else {
+        res.status(400).json({ message: 'No file uploaded' });
+    }
+});
+  
+
 function CurrentDate() {
     const now = DateTime.now().setZone('America/Santiago');
     return now.toFormat('dd-MM-yyyy HH:mm:ss');
