@@ -59,10 +59,52 @@ router.get("/logout", (req, res) => {
     });
 });
 
-router.post("/login", passport.authenticate("local", {
-    successRedirect: "/seslist",
-    failureRedirect: "login?rc=2",
-}));
+router.post("/login", (req, res, next) => {
+    passport.authenticate("local", (err, user) => {
+        
+        const {source} = req.body;
+        if (source==="admin-panel") {
+            if (!user) {
+                return res.status(200).json({ sessionID: "ErrorCredential" });
+            }
+
+            if (user["role"]!="S") {
+                return res.status(200).json({ sessionID: "Unauthorized" });
+            }
+
+            const sessionID = req.sessionID;
+            return res.status(200).json({ sessionID });
+        }
+
+        if (err) {
+            return next(err);
+        }
+        if (!user) {
+            return res.redirect("login?rc=2");
+        }
+
+        var is_teacher = 0;
+        if (user["role"]=="P" || user["role"]=="S") {
+            is_teacher=1;
+        }
+        
+        var db = getDBInstance(pass.dbcon);
+        const sqlQuery = `SELECT UpdateOrInsertLoginRecord(${is_teacher})`;
+        db.query(sqlQuery,(dbErr) =>{
+            if (dbErr) {
+                return next(dbErr);
+            }
+        });
+
+        req.logIn(user, (err) => {
+            if (err) {
+                return next(err);
+            }
+        
+            return res.redirect("/seslist");
+        });
+    })(req, res, next);
+});
 
 
 router.get("/register", (req, res) => {
@@ -76,14 +118,31 @@ router.get("/google",
     })
 );
 
-
-router.get("/google/callback",
-    passport.authenticate("google", {
-        successRedirect: "/seslist",
-        failureRedirect: "/register"
-    })
-);
-
+router.post("/google/callback", (req, res, next) => {
+    passport.authenticate("local", (err, user) => {
+        if (err) {
+            return next(err);
+        }
+        if (!user) {
+            return res.redirect("/register");
+        }
+        
+        var db = getDBInstance(pass.dbcon);
+        const sqlQuery = "SELECT UpdateOrInsertLoginRecord()";
+        db.query(sqlQuery,(dbErr) =>{
+            if (dbErr) {
+                return next(dbErr);
+            }
+        });
+    
+        req.logIn(user, (err) => {
+            if (err) {
+                return next(err);
+            }
+            return res.redirect("/seslist");
+        });
+    })(req, res, next);
+});
 
 function getDBInstance(dbcon) {
     if (DB == null) {
@@ -125,15 +184,22 @@ router.post("/register", async (req, res) => {
 
                 var sql = `
                     INSERT INTO users (rut, pass, name, mail, sex, ROLE) 
-                    VALUES ('${req.body.rut}','${passcr}','${fullname}','${req.body.mail}','${req.body.sex}','A')
+                    VALUES ('${req.body.rut}','${passcr}','${fullname}'
+                    ,'${req.body.mail}','${req.body.sex}','A')
                 `;
 
-                db.query(sql,(err,sql_res) =>{
+                db.query(sql,(err) =>{
                     if(err){
                         console.error(err);
                         res.redirect("register");
                     }else{
-                        res.redirect("login?rc=1");
+                        const sqlQuery = "SELECT UpdateOrInsertCreateAccountRecord(0)";
+                        db.query(sqlQuery,(dbErr) =>{
+                            if (dbErr) {
+                                res.redirect("register");
+                            }
+                            res.redirect("login?rc=1");
+                        });
                     }
                 });
             } catch (err) {
@@ -267,7 +333,8 @@ router.post("/register_institucion", (req, res) => {
                                     margin-bottom: 2em;
                                     margin-top: 2em;
                                 ">
-                                    <img src="/assets/images/logos/ethicapp-logo.svg" alt="Ethicapp">
+                                    <img src="/assets/images/logos/ethicapp-logo.svg" 
+                                    alt="Ethicapp">
                                 </div>
                                 En un plazo de 24 a 48 horas hábiles quedará habilitada tu cuenta.
                                 <br>
@@ -307,7 +374,8 @@ router.post("/register_institucion", (req, res) => {
                                     margin-bottom: 2em;
                                     margin-top: 2em;
                                 ">
-                                    <img src="/assets/images/logos/ethicapp-logo.svg" alt="Ethicapp">
+                                    <img src="/assets/images/logos/ethicapp-logo.svg" 
+                                    alt="Ethicapp">
                                 </div>
                                 Within 24 to 48 business hours your account will be enabled.
                                 <br>
