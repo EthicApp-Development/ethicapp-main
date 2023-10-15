@@ -1,8 +1,12 @@
-FROM ethicapp/stable-2:latest
+FROM ethicapp/stable-2:nightly
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /home/app
+
+COPY frontend/assets/js/assets-bundle.js /home/app/frontend/assets/js/
+COPY frontend/assets/css/assets-bundle.css /home/app/frontend/assets/css/
+COPY frontend/assets/css/assets-bundle.css.map /home/app/frontend/assets/css/
 
 CMD set -ux \
     && export JWT_SECRET=$(cat /run/secrets/jwt_token) \

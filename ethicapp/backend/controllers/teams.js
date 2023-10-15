@@ -655,5 +655,16 @@ router.post("/get-chat-count-stage", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "stageid"), rpg.param("post", "stageid")]
 }));
 
+router.post("/get-design-by-sesid", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT a.design
+    FROM activity AS a
+    WHERE a.session = $1
+    `,
+    postReqData: ["sesid"],
+    sqlParams:   [rpg.param("post", "sesid")]
+}));
+
 
 module.exports = router;

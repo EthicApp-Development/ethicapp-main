@@ -122,6 +122,12 @@ body {
     margin: 2em 1em;
 }
 
+.activities_home_container {
+    min-width: 20em;
+    max-width: 80em;
+    margin: 2em 0;
+}
+
 /* Phase item */
 .phase_element {
     border:4px solid #bbb;
@@ -243,8 +249,8 @@ body {
 .switch {
     position: relative;
     display: inline-block;
-    width: 60px;
-    height: 34px;
+    width: 48px;
+    height: 20px;
 }
   
 .switch input { 
@@ -268,8 +274,8 @@ body {
 .slider::before {
     position: absolute;
     content: "";
-    height: 26px;
-    width: 26px;
+    height: 13px;
+    width: 13px;
     left: 4px;
     bottom: 4px;
     background-color: white;
@@ -278,11 +284,11 @@ body {
 }
   
 input:checked + .slider {
-    background-color: #52f321;
+    background-color: #116329;
 }
   
 input:focus + .slider {
-    box-shadow: 0 0 1px #52f321;
+    box-shadow: 0 0 1px #116329;
 }
   
 input:checked + .slider::before {
@@ -317,7 +323,7 @@ input:checked + .slider::before {
 }
 
 .error {
-    background-color: #ff858581 !important;
+    border-color: #F44336 !important;
 }
 
 .vertical-align {

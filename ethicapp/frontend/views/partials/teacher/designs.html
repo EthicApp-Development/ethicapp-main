@@ -1,0 +1,91 @@
+<h2>{{'actDesigns'|translate}}</h2>
+<button class="btn btn-primary createDesignBtn" ng-click="selectView('newDesign')">{{'createDesign' | translate}}</button>
+<p class="designContext">{{'designContext' | translate}}</p>
+<div ng-controller="BrowseDesignsController">
+    <div class="tab_cs" ng-init="dsgnMode= tab">
+        <button class="tab_cs" ng-click="dsgnMode=0;getDesigns()" ng-class="{'btn_selected': dsgnMode == 0}">
+            {{'yours'|translate}}
+        </button>
+        <button class="tab_cs" ng-click="dsgnMode=1;getPublicDesigns()" ng-class="{'btn_selected': dsgnMode == 1}">
+            {{'byOthers'|translate}}
+        </button>
+        <div style="float: left;display: flex;justify-content: left;align-items: center;">
+            <input class="form-control text-left search-input fontAwesome" type="text" placeholder="{{'search'|translate}}  &#xF002;" ng-model="userSearch">
+        </div>
+
+    </div>
+    <div class="wrapper">
+        <div class="container" style="overflow: scroll; max-height: 40em; min-height: 10em; border: #bbb 1px solid;"
+            ng-if="selectedView=='designs'">
+            <div class="activities_container" style="margin-top: 2em;">
+                <div class="list-group pad-content">
+                    <!--OWN-->
+                    <div class="list-group-item" ng-repeat="ses in designs | filter:userSearch" ng-if="dsgnMode==0">
+                        <!--UPDATE IT CORRECTLY-->
+                        <div>
+                            <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
+                            <p class="list-group-item-text">{{'created' | translate}} {{ses.metainfo.creation_date | date}}
+                            </p>
+                        </div>
+
+                        <div class="text-right vertical-align">
+                            <img class="locked-svg" ng-show="ses.locked"
+                                src="../../assets/images/iconsets/gray-lineart/design-lock-active.svg" alt="SVGLocked">
+                            <button class="btn btn-primary btn-smaller ml-1"
+                                ng-click="launchDesign(ses.id, ses.metainfo.title, ses.type)">{{'launchActivity' |
+                                translate}}</button>
+
+                            <button class="btn btn-primary btn-smaller ml-1" ng-click="goToDesign(ses.id, 'E')"
+                                ng-hide="ses.locked">{{'edit' |
+                                translate}}</button>
+                            <button class="btn btn-primary btn-smaller ml-1" ng-click="goToDesign(ses.id, 'V')">{{'view' |
+                                translate}}</button>
+                            <button class="btn btn-danger btn-smaller ml-1" ng-click="deleteDesign(ses.id)"
+                                ng-hide="ses.locked">{{'delete' |
+                                translate}}</button>
+                            <div class="ml-1">
+                                <label class="switch">
+                                    <input type="checkbox" ng-checked="ses.public" ng-click="designPublic(ses.id)">
+                                    <span class="slider round"></span>
+                                
+                                </label>
+                                <p class="share-paragraph">{{'share'|translate}}</p>
+                            </div>
+                            
+                        </div>
+                    </div>
+                    <!--PUBLIC-->
+                    <div class="list-group-item" ng-repeat="ses in public | filter:userSearch" ng-if="dsgnMode==1">
+                        <!--UPDATE IT CORRECTLY-->
+                        <div>
+                            <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
+                            <p class="list-group-item-text">{{'created' | translate}} {{ses.metainfo.creation_date | date}}
+                            </p>
+                        </div>
+
+                        <div class="text-right vertical-align">
+                            <button class="btn btn-primary btn-smaller" ng-click="goToDesign(ses.id, 'V')">{{'view' |
+                                translate}}</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+        <div class="help_panel">
+            <img src="../../assets/images/iconsets/exclamation-mark.png" alt="signoExclamacion"
+                class="exclamation-mark-image">
+            <div class="help-container">
+                <p class="help-paragraph">
+                    {{'designsPanel1' | translate}}
+                </p>
+                <p class="help-paragraph">
+                    {{'designsPanel2' | translate}}
+                </p>
+            </div>
+
+        </div>
+    </div>
+
+</div>

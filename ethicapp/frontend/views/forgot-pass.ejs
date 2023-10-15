@@ -1,54 +1,52 @@
 <!DOCTYPE html>
-<html lang="es" ng-app="Admin">
+<html lang="es" ng-app="UserCommon">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>EthicApp</title>
-    <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css">
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.9.0-alpha2/katex.min.css">
+    <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css" />
     <script src="assets/libs/angular.min.js"></script>
+    <script src="assets/libs/angular-sanitize.min.js" defer></script>
+    <script src="assets/libs/angular-translate-2.18.4.min.js" defer></script>
+    <script src="assets/libs/angular-translate-loader-static-files-2.18.4.min.js" defer></script>
     <script src="assets/libs/angular-nvd3.min.js"></script>
-    <script type="text/javascript" src="assets/libs/ng-quill.min.js"></script>
-    <script src="assets/js/StagesController.js"></script>
-    <script src="assets/js/admin-ctrl.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit"
-    async defer></script>
     <script src="assets/libs/ngDialog.min.js"></script>
+    <script type="text/javascript" src="assets/libs/ng-quill.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit" async defer></script>
     <script src="<%= asset('/js/assets-bundle.js') %>"></script>
     <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
+    <%- include('partials/favicon.ejs') %>
+        <script src="assets/js/ngmodules/teacher/user_common.mjs" type="module" defer></script>
 </head>
-<body ng-controller="no_account">
 
-
-<div class="middle-box">
-    <div class="logo">
-        <img src="assets/images/logos/ethicapp-logo.png" alt="Logo">
-      </div>
-
-
-    <h2>{{'pass_reset' | lang}}</h2>
-    <hr/>
-    <br/>
-    <form action="resetpassword" method="POST">
-        <label>{{'user_mail' | lang}}:</label>
-        <input type="text" class="form-control" name="user" required autofocus>
-        <input type="hidden" class="form-control" name="lenguaje" value="{{'langName' | lang}}">
-        <button type="submit" class="btn btn-primary form-control" style="margin-top: 20px;">{{'pass_reset' | lang}}</button>
-    </form>
-
-    <br><br>
-
-    <!--<small>Do have a FEN account?</small>
+<body ng-controller="RegisterController">
+    <div class="middle-box">
+        <div class="logo">
+            <img src="assets/images/logos/ethicapp-logo.png" alt="Logo">
+        </div>
+        <h2>{{'pass_reset' | translate}}</h2>
+        <hr />
+        <br />
+        <form action="resetpassword" method="POST">
+            <label>{{'user_mail' | translate}}:</label>
+            <input type="text" class="form-control" name="user" required autofocus>
+            <input type="hidden" class="form-control" name="lenguaje" value="{{'langName' | translate}}">
+            <button type="submit" class="btn btn-primary form-control" style="margin-top: 20px;">{{'pass_reset' |
+                translate}}</button>
+        </form>
+        <br><br>
+        <!--<small>Do have a FEN account?</small>
     <a href="login-fen">Login with FEN</a><br>-->
-    <br/>
-    <a href="register">{{ 'register'|lang}}</a>
-    <br/>
-    <small>{{ 'alredy_acc'|lang}}</small>
-    <br/>
-    <a href="login">{{ 'login'|lang}}</a>
-
-</div>
+        <br />
+        <a href="register">{{ 'register'|translate}}</a>
+        <br />
+        <small>{{ 'alredy_acc'|translate}}</small>
+        <br />
+        <a href="login">{{ 'login'|translate}}</a>
+    </div>
 
 </body>
+
 </html>

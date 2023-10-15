@@ -42,7 +42,7 @@ passport.deserializeUser(async (req, user, done) => {
                         var user = res.rows[0];
                         req.session.uid = res.rows[0].id;
                         req.session.role = res.rows[0].role;
-                        req.session.ses = null;
+                        // req.session.ses = null;
                         done(null, user);
                     }else{
                         done(null, false, { message: "User not found" });
@@ -63,7 +63,7 @@ passport.deserializeUser(async (req, user, done) => {
                     if(res.rows.length > 0){
                         req.session.uid = res.rows[0].id;
                         req.session.role = res.rows[0].role;
-                        req.session.ses = null;
+                        // req.session.ses = null;
                         done(null, res.rows[0]);
                     }else{
                         try {
@@ -87,7 +87,7 @@ passport.deserializeUser(async (req, user, done) => {
                                 }else{
                                     req.session.uid = res.rows[0].id;
                                     req.session.role = res.rows[0].role;
-                                    req.session.ses = null;
+                                    // req.session.ses = null;
                                     done(null, res.rows[0]);
                                 }
                             });
@@ -106,17 +106,26 @@ passport.deserializeUser(async (req, user, done) => {
 });
 
 
+const domain_name = process.env.ETHICAPP_DOMAIN_NAME;
+let callbackURL;
+
+if (domain_name === 'localhost') {
+    callbackURL = `http://localhost:${process.env.NODE_PORT}/google/callback`;
+} else {
+    callbackURL = `http://${domain_name}/google/callback`;
+}
+
 passport.use(
     new GoogleStrategy({
         clientID:          pass.GOOGLE_CLIENT_ID,
         clientSecret:      pass.GOOGLE_CLIENT_SECRET,
-        callbackURL:       "http://localhost:8080/google/callback",
+        callbackURL:       callbackURL,
         passReqToCallback: true
     },
     (req, accessToken, refreshToken, profile, done) => {
         req.session.uid = profile.id;
         req.session.role = profile.role;
-        req.session.ses = null;
+        // req.session.ses = null;
         return done(null, profile);
     })
 );

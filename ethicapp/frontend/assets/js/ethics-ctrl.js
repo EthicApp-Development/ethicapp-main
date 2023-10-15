@@ -16,7 +16,7 @@ app.controller(
     ["$scope", "$http", "$timeout", "$socket", "Notification", "$sce", "$uibModal","ngIntroService",
         function ($scope, $http, $timeout, $socket, Notification, $sce, $uibModal, ngIntroService) {
             var self = $scope;
-
+            self.designId = -1;
             self.iteration = 1;
             self.myUid = -1;
             self.documents = [];
@@ -53,46 +53,83 @@ app.controller(
             self.selectedDF = null;
             self.selectedDFPrev = null;
 
+            
+
             self.init = function () {
-                self.getSesInfo();
-                $socket.on("stateChange", function (data) {
-                    console.log("SOCKET.IO", data);
-                    if (data.ses == self.sesId) {
-                        window.location.reload();
-                    }
-                });
-                $socket.on("chatMsg", function (data) {
-                    console.log("SOCKET.IO", data);
-                    if (data.tmid == self.tmId && self.currentStage.chat) {
-                        updateChat();
-                    }
-                });
-                $socket.on("diffReceived", function (data) {
-                    console.log("SOCKET.IO", data);
-                    if (data.ses == self.sesId) {
-                        console.log("Open");
-                        self.openDetails(data);
-                    }
-                });
+                self.getSesInfo()
+                    .then(function () {
+                        $socket.on("stateChange", function (data) {
+                            console.log("SOCKET.IO", data);
+                            if (data.ses == self.sesId) {
+                                window.location.reload();
+                            }
+                        });
+
+                        $socket.on("chatMsg", function (data) {
+                            console.log("SOCKET.IO", data);
+                            if (data.tmid == self.tmId && self.currentStage.chat) {
+                                updateChat();
+                            }
+                        });
+
+                        $socket.on("diffReceived", function (data) {
+                            console.log("SOCKET.IO", data);
+                            if (data.ses == self.sesId) {
+                                console.log("Open");
+                                self.openDetails(data);
+                            }
+                        });
+
+                        self.loadDocuments();
+                    })
+                    .catch(function (error) {
+                        console.error("Error:", error);
+                    });
+
                 self.getMe();
             };
 
             self.getSesInfo = function () {
-                $http({ url: "get-ses-info", method: "post" }).success(function (data) {
-                    self.iteration = data.iteration + 1;
-                    self.myUid = data.uid;
-                    self.sesName = data.name;
-                    self.sesId = data.id;
-                    self.sesSTime = data.stime;
-                    self.sesDescr = data.descr;
-                    self.currentStageId = data.current_stage;
-                    if (self.iteration > 1) {
-                        self.finished = true;
-                    }
-                    if (self.currentStageId != null || self.iteration >= 1) {
-                        self.loadDocuments();
-                        self.loadStageData();
-                    }
+                return new Promise(function (resolve, reject) {
+                    $http({ url: "get-ses-info", method: "post" })
+                        .success(function (data) {
+                            self.iteration = data.iteration + 1;
+                            self.myUid = data.uid;
+                            self.sesName = data.name;
+                            self.sesId = data.id;
+                            self.sesSTime = data.stime;
+                            self.sesDescr = data.descr;
+                            self.currentStageId = data.current_stage;
+                            self.getDesignId(self.sesId)
+                                .then(resolve)
+                                .catch(reject);
+                            if (self.iteration > 1) {
+                                self.finished = true;
+                            }
+                            if (self.currentStageId != null || self.iteration >= 1) {
+                                self.loadStageData();
+                            }
+                        })
+                        .error(reject);
+                });
+            };
+
+            self.getDesignId = function (sesId) {
+                return new Promise(function (resolve, reject) {
+                    var postData = {
+                        sesid: sesId
+                    };
+                    $http({
+                        url:     "get-design-by-sesid",
+                        method:  "post",
+                        data:    postData,
+                        headers: { "Content-Type": "application/json" }
+                    })
+                        .then(function (response) {
+                            self.designId = response.data[0].design;
+                            resolve(); 
+                        })
+                        .catch(reject); 
                 });
             };
 
@@ -145,10 +182,13 @@ app.controller(
             //
             // self.selectDFView = (i) => {
             //     self.selectedDFPrev = i;
-            // };
+            // };   
 
             self.loadDocuments = function () {
-                $http({ url: "get-documents", method: "post" }).success(function (data) {
+                var postdata = { dsgnid: self.designId};
+                $http({
+                    url: "designs-documents", method: "post", data: postdata
+                }).success(function (data) {
                     self.documents = data;
                 });
             };
@@ -224,6 +264,7 @@ app.controller(
                     a.select = s.sel;
                     a.sent = s.comment != "" && s.comment != null;
                 });
+                
             };
 
             self.populateDFsPrev = function () {
@@ -445,6 +486,10 @@ app.controller(
                     notify("Error", "El diferencial no está completo");
                     return;
                 }
+                if (df.justify == true && self.wordCount(df.comment) < df.word_count) {
+                    notify("Error", "El comentario está incompleto");
+                    return;
+                }
                 var postdata = {
                     sel:       df.select,
                     comment:   df.comment,
@@ -472,8 +517,11 @@ app.controller(
             };
 
             self.getDocURL = function () {
-                return $sce.trustAsResourceUrl("https://docs.google.com/viewer?url=" + 
-                BASE_APP + self.documents[self.selectedDocument].path + "&embedded=true");
+                var pdfPath = self.documents[self.selectedDocument].path;
+                var escapedPdfPath = encodeURIComponent(pdfPath);
+                var completeUrl = $sce.trustAsResourceUrl(escapedPdfPath);
+
+                return completeUrl;
             };
 
             function notify(title, message) {

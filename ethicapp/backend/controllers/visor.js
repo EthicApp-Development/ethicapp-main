@@ -194,10 +194,18 @@ router.get("/role-playing", (req, res) => {
 router.get("/to-diff", (req, res) => {
     if (req.session.uid) {
         req.session.ses = req.query.sesid;
-        res.redirect("ethics");
+        req.session.save((err) => {
+            if (err) {
+                res.redirect(".");
+            }
+            else {
+                res.redirect("ethics");
+            }
+        });
     }
-    else
+    else {
         res.redirect(".");
+    }
 });
 
 

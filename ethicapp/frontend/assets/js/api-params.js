@@ -1,4 +1,4 @@
 angular.module("api-params", [])
     .constant("apiParams", {
-        reCaptchaSiteKey: "6LcGAKUdAAAAAAw_3EmC7ViIPclVDON_Gc5o4Uay"
+        reCaptchaSiteKey: "6LeupAAoAAAAAE4WiU9WpJ99eqqy2a556DhI8i28"
     });

@@ -1,0 +1,74 @@
+<h2>{{'home' | translate}}</h2>
+<p class="margin-top-24" style="width: 60em;">{{'homeMsg' | translate}}</p>
+
+<!--Choices-->
+<div class="flex_container" ng-init="path='assets/images/iconsets/gray-lineart/'">
+    <div ng-click="selectView('newDesign')" 
+        ng-init="design = true"
+        ng-mouseover="design = false"
+        ng-mouseout="design = true">
+        <p class="box_text">{{'designActivity' | translate}}</p>
+        <div class="thumbnail_image" ng-show="design" style="background-image: url('{{path}}design-activity.svg');"></div>
+        <div class="thumbnail_image" ng-show="!design" style="background-image: url('{{path}}design-activity-active.svg');"></div>
+    </div>
+    <div ng-click="selectView('launchActivity')"
+        ng-init="launch = true"
+        ng-mouseover="launch = false"
+        ng-mouseout="launch = true">
+        <p class="box_text">{{'launchAnActivity' | translate}}</p>
+        <div class="thumbnail_image" ng-show="launch" style="background-image: url('{{path}}launch.svg');"></div>
+        <div class="thumbnail_image" ng-show="!launch" style="background-image: url('{{path}}launch-active.svg');"></div>
+    </div>
+    <div ng-click="selectView('designs', 0);"
+        ng-init="designShare = true"
+        ng-mouseover="designShare = false"
+        ng-mouseout="designShare = true">
+        <p class="box_text">{{'shareActivityDesign' | translate}}</p>
+        <div class="thumbnail_image" ng-show="designShare" style="background-image: url('{{path}}design-share.svg');"></div>
+        <div class="thumbnail_image" ng-show="!designShare" style="background-image: url('{{path}}design-share-active.svg');"></div>
+    </div>
+    <div ng-click="selectView('designs', 1);"
+        ng-init="designSearch = true"
+        ng-mouseover="designSearch = false"
+        ng-mouseout="designSearch = true">
+        <p class="box_text">{{'searchSharedDesign' | translate}}</p>
+        <div class="thumbnail_image" ng-show="designSearch" style="background-image: url('{{path}}design-search.svg');"></div>
+        <div class="thumbnail_image" ng-show="!designSearch" style="background-image: url('{{path}}design-search-active.svg');"></div>
+    </div>
+    <div ng-click="selectView('users')" ng-if="institution"
+        ng-init="manageUsers = true"
+        ng-mouseover="manageUsers = false"
+        ng-mouseout="manageUsers = true">
+        <p class="box_text">{{'adminInstUsers' | translate}}</p>
+        <div class="thumbnail_image" ng-show="manageUsers" style="background-image: url('{{path}}manage-users.svg');"></div>
+        <div class="thumbnail_image" ng-show="!manageUsers" style="background-image: url('{{path}}manage-users-active.svg');"></div>
+    </div>
+    <div ng-click="selectView('institution')" ng-if="institution"
+        ng-init="institution2 = true"
+        ng-mouseover="institution2 = false"
+        ng-mouseout="institution2 = true">
+        <p class="box_text">{{'adminInstData' | translate}}</p>
+        <div class="thumbnail_image" ng-show="institution2" style="background-image: url('{{path}}institution.svg');"></div>
+        <div class="thumbnail_image" ng-show="!institution2" style="background-image: url('{{path}}institution-active.svg');"></div>
+    </div>
+</div>
+
+<h2>{{'recentActivity'|translate}}</h2>
+<div class="activities_home_container" ng-controller= "ActivityController">
+    <div class="list-group pad-content">
+        <div class="list-group-item w-home" ng-repeat="ses in currentActivities(0) | limitTo: 3 | orderBy : '-time'">
+            <div>
+                <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
+                <p class="list-group-item-text" ng-bind="ses.descr"></p>
+                <p class="list-group-item-text">{{'launched' | translate}} {{ses.time | date}}</p>
+                <p class="list-group-item-text">{{'code' | translate}}: {{ses.code}}</p>
+            </div>
+            
+            <div class="text-right vertical-align">
+                <button class="btn btn-primary " ng-click="selectActivity(ses.id, ses.session, ses.design)">{{'gotoActivity' | translate}}</button>
+                <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
+            </div>
+        </div>
+    </div>
+</div>
+

@@ -1,6 +1,6 @@
 import "../libs/ui-bootstrap-tpls-1.1.2.min.js";
 import "../libs/angular-bootstrap-multiselect.js";
-import "../libs/socket.min.js";
+//import "../libs/socket.min.js";
 import "../libs/angular-ui-notification.min.js";
 import "../libs/save-csv.min.js";
 import "../libs/angular-tablesort.min.js";

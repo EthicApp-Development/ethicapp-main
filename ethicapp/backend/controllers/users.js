@@ -423,6 +423,175 @@ router.post("/register_institucion", (req, res) => {
 });
 
 
+router.get("/teacher_account_requests", rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT *
+    FROM teacher_account_requests
+    `,
+}));
+
+
+router.get("/teacher_account_requests/:id", (req, res) => {
+    rpg.singleSQL({
+        dbcon: pass.dbcon,
+        sql:   `
+          SELECT *
+          FROM teacher_account_requests
+      `,
+        onStart: (ses, data, calc) => {
+            calc.id = req.params.id;
+        },
+        sqlParams: [rpg.param("calc", "id")]
+    })(req, res);
+});
+
+router.post("/teacher_account_request", async (req, res) => {
+    try {
+        let response_key = req.body["g-recaptcha-response"];
+        let secret_key = pass.Captcha_Secret;
+        let captchaResponse = await fetch(
+            "https://www.google.com/recaptcha/api/siteverify?" +
+            `secret=${secret_key}&response=${response_key}`
+        );
+        let captchaData = await captchaResponse.json();
+
+        if (captchaData.success) {
+            if (req.body.pass == req.body["conf-pass"]) {
+                var passcr = crypto.createHash("md5").update(req.body.pass).digest("hex");
+                var fullname = req.body.name + " " + req.body.lastname;
+                var db = getDBInstance(pass.dbcon);
+                var existingUserRole = await checkIfUserExists(db, req.body.mail);
+
+                if (existingUserRole === false) {
+                    await insertTeacherAccountRequest(db, req.body.rut, passcr, fullname, req.body.mail, req.body.sex, req.body.inst_name, 0, false);
+                    res.redirect("login?rc=6");
+                } else {
+                    if (existingUserRole === "A") {
+                        await insertTeacherAccountRequest(db, req.body.rut, passcr, fullname, req.body.mail, req.body.sex, req.body.inst_name, 0, true);
+                        res.redirect("login?rc=8");
+                    } else {
+                        res.redirect("login?rc=7");
+                    }
+                }
+            } else {
+                res.redirect("login?rc=9");
+            }
+        } else {
+            res.redirect("login?rc=10");
+        }
+    } catch (err) {
+        res.redirect("login?rc=11");
+    }
+});
+
+async function checkIfUserExists(db, email) {
+    return new Promise((resolve, reject) => {
+        var sql = `
+        SELECT *
+        FROM users
+        WHERE mail = '${email}'
+        `;
+        db.query(sql, (err, qry_res) => {
+            if (err) {
+                reject(err);
+            } else {
+                if (qry_res.rowCount > 0) {
+                    resolve(qry_res.rows[0].role);
+                } else {
+                    resolve(false);
+                }
+            }
+        });
+    });
+}
+
+async function insertTeacherAccountRequest(db, rut, pass, name, mail, sex, institution, status, upgrade_flag) {
+    return new Promise((resolve, reject) => {
+        var sql = `
+        INSERT INTO teacher_account_requests(rut, pass, name, mail, gender, institution, status, upgrade_flag)
+        VALUES ('${rut}', '${pass}', '${name}', '${mail}', '${sex}', '${institution}', ${status}, '${upgrade_flag}')
+        `;
+        db.query(sql, (err, qry_res) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve();
+            }
+        });
+    });
+}
+
+
+
+router.put("/teacher_account_requests/:id", async (req, res) => {
+    try {
+        const newStatus = req.body.status;
+
+        // Actualizar el estado en la base de datos
+        await rpg.execSQL({
+            dbcon: pass.dbcon,
+            sql:   `
+                UPDATE teacher_account_requests
+                SET status = $1
+                WHERE id = $2
+            `,
+            onStart: (ses, data, calc) => {
+                calc.id = req.params.id;
+            },
+            postReqData: ["status"],
+            sqlParams:   [rpg.param("post", "status"), rpg.param("calc", "id")]
+        })(req, res);
+
+        if (newStatus === "1") {
+            // Consulta para obtener datos del profesor
+            const teacherDataQuery = `
+                SELECT *
+                FROM teacher_account_requests
+                WHERE id = $1
+            `;
+
+            var db = getDBInstance(pass.dbcon);
+
+            const { rows } = await db.query(teacherDataQuery, [req.params.id]);
+
+            if (rows.length === 0) {
+                return res.status(404).json({ error: "Profesor no encontrado" });
+            }
+
+            const teacherData = rows[0];
+
+            // Consulta para insertar el profesor como usuario
+            const insertUserQuery = `
+                INSERT INTO users(rut, pass, name, mail, sex, ROLE)
+                VALUES ($1, $2, $3, $4, $5, 'P')
+            `;
+
+            const userParams = [
+                teacherData.rut,
+                teacherData.pass,
+                teacherData.name,
+                teacherData.mail,
+                teacherData.gender
+            ];
+
+            await db.query(insertUserQuery, userParams);
+
+            // Enviar una respuesta de éxito
+            res.status(200).json({ message: "Solicitud aceptada y profesor agregado como usuario" });
+        } else {
+            // Enviar una respuesta de éxito sin agregar al profesor como usuario
+            res.status(200).json({ message: "Solicitud aceptada" });
+        }
+    } catch (error) {
+        console.error("Error en el controlador:", error);
+
+        // Enviar una respuesta de error
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+
+
 router.post("/register-prof", rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
@@ -624,11 +793,9 @@ router.post("/resetpassword", (req, res) => {
     mail();
 });
 
-
 router.get("/new-pass/:token", (req, res) => {
     res.render("newpass", { token: req.params.token });
 });
-
 
 router.post("/newpassword", rpg.execSQL({
     dbcon: pass.dbcon,
@@ -649,7 +816,6 @@ router.post("/newpassword", rpg.execSQL({
         res.redirect("login?rc=4");
     }
 }));
-
 
 router.post("/super-login-as", (req, res) => {
     if (req.session.role != "S" || req.body.uid == null) {

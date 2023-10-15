@@ -5,8 +5,9 @@
 db-data-volume/
 db-data-volume*/
 
-# Docker-compose secrets
+# Secret files, but keep directory
 secrets/
+!secrets/.keep
 
 # Log files and root node modules (for linters)
 *.log

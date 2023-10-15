@@ -1,0 +1,14 @@
+<div ng-controller="RoutingController">
+    <div ng-show = "selectedView == ''" ng-include="template.home"></div>
+    <div ng-show = "selectedView == 'newDesign'" ng-include="template.newDesign"></div>
+    <div ng-show = "selectedView == 'newDesignExt'" ng-include="template.newDesignExt"></div>
+    <div ng-show = "selectedView == 'designs'" ng-include="template.designs"></div>
+    <div ng-show = "selectedView == 'users'" ng-include="template.users"></div>
+    <div ng-show = "selectedView == 'institution'" ng-include="template.institution"></div>
+    <div ng-show = "selectedView == 'activities'" ng-include="template.activities"></div>
+    <div ng-show = "selectedView == 'launchActivity'" ng-include="template.launchActivity"></div>
+    <div ng-show = "selectedView == 'viewDesign'" ng-include="template.viewDesign"></div>
+    <div ng-show = "selectedView == 'activity'" ng-include="template.activity"></div>
+    <div ng-show = "selectedView == 'profile'" ng-include="template.profile"></div>
+    <div ng-show = "selectedView == 'user_admin'" ng-include="template.user_admin"></div>
+</div>

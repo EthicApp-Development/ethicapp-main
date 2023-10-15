@@ -5,21 +5,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>EthicApp</title>
-  <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css" />
-  <script src="assets/libs/angular.min.js"></script>
+  <script src="assets/libs/angular.js"></script>
   <script src="assets/libs/angular-nvd3.min.js"></script>
-  <script type="text/javascript" src="assets/libs/ng-quill.min.js"></script>
-  <script src="assets/js/StagesController.js"></script>
-  <script src="assets/js/admin-ctrl.js"></script>
-  <script src="/socket.io/socket.io.js"></script>
+  <script src="assets/libs/ng-quill.min.js"></script>
+  <script src="assets/libs/angular-sanitize.min.js"></script>
+  <script src="assets/libs/angular-translate-2.18.4.min.js"></script>
+  <script src="assets/libs/angular-translate-loader-static-files-2.18.4.min.js"></script>
   <script src="assets/libs/ngDialog.min.js"></script>
+  <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"
+    integrity="sha384-c79GN5VsunZvi+Q/WObgk2in0CbZsHnjEqvFxC5DxHn9lTfNce2WW6h2pH6u/kF+"
+    crossorigin="anonymous"></script>
+  <script src="assets/libs/socket.min.js"></script>
+  <script src="assets/js/ngmodules/teacher/teacher_admin.mjs" type="module" defer></script>
   <script src="<%= asset('/js/assets-bundle.js') %>"></script>
   <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
-
+  <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css" />
+  <%- include('partials/favicon.ejs') %>
 </head>
 
-<body ng-controller="AdminController">
-  <!--TOP BAR-->
+<body ng-controller="ManagementController">
   <div class="top-bar-mini cflex" ng-hide="false">
     <div class="cf1">
       <a href="seslist" class="simple-margin-left">
@@ -27,12 +31,25 @@
       </a>
     </div>
     <div class="cf1 text-right margin-right-8 simple-padding-top" id="topbtnlist">
-      <button class="btn btn-default btn-sm " ng-click="changeLang()">{{'langOther' | lang}}</button>
+      <div class="language-dropdown" ng-mouseenter="showLanguageDropdown = true"
+        ng-mouseleave="showLanguageDropdown = false">
+        <i class="fa fa-globe"></i>
+        <i class="fa fa-angle-down"></i>
+        <ul class="language-options" ng-show="showLanguageDropdown">
+          <li ng-repeat="languageKey in ['ES_CL/spanish', 'EN_US/english']" ng-click="changeLang(languageKey)">
+            <span ng-if="languageKey === lang" class="selected-language">{{ getTranslatedLanguageName(languageKey) }} <i
+                class="fa fa-check"></i></span>
+            <span ng-if="languageKey !== lang" class="not-selected-language">{{ getTranslatedLanguageName(languageKey)
+              }}</span>
+          </li>
+        </ul>
+      </div>
       <img src="assets/images/assorted/blanco.jpg" alt="No Carga"
         class="circle_profile cf1 text-right margin-right-3 simple-padding-top" ng-click="selectView('profile')">
-      <strong class="margin-right-8"><a ng-click="selectView('profile')" style="color: white;"> {{'profile' | lang}}
+      <strong class="margin-right-8"><a ng-click="selectView('profile')" style="color: white;"> {{'profile' | translate
+          }}
         </a></strong>
-      <a href="logout" class="text-white">
+      <a href="logout" class="text-white ml-2" title="{{'exitEthicapp' | translate}}">
         <i class="fa fa-sign-out fa-2x"></i>
       </a>
     </div>
@@ -40,21 +57,17 @@
   <div>
     <div class="sidenav"> <!--Left side NAV BAR-->
       <div style="margin-top: 5em;">
-        <a ng-click="selectView('')">{{'home' | lang}}</a>
-        <a ng-click="selectView('launchActivity')">{{'launchActivity' | lang}}</a>
-        <a ng-click="selectView('activities')">{{'activities' | lang}}</a>
-        <a ng-click="selectView('designs')">{{'designs' | lang}}</a>
-        <a ng-click="selectView('users')" ng-if="institution">{{'users' | lang}}</a>
-        <a ng-click="selectView('institution')" ng-if="institution"> {{'institution'|lang}}</a>
-        <a ng-click="selectView('institution_admin')" ng-if="super"> {{'institution'|lang}}</a>
-        <a ng-click="selectView('user_admin')" ng-if="super">{{'users' | lang}}</a>
-        <a href="super" ng-if="super"> {{'Administración'|lang}}</a>
+        <a ng-click="selectView('')">{{ 'home' | translate }}</a>
+        <a ng-click="selectView('launchActivity')">{{ 'launchActivity' | translate }}</a>
+        <a ng-click="selectView('activities')">{{ 'activities' | translate }}</a>
+        <a ng-click="selectView('designs')">{{ 'designs' | translate }}</a>
       </div>
     </div>
     <div class="main_body vl"> <!--Right side-->
       <div class="container" style="margin-top: 3em;">
-
-        <div ng-view="" ng-controller="TabsController"></div> <!--Ng view templates-->
+        <div ng-view="" ng-controller="TabsController">
+          <!--Ng view templates-->
+        </div>
       </div>
     </div>
   </div>
