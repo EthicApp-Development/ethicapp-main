@@ -25,14 +25,14 @@ let pass = require("./backend/config/keys-n-secrets");
 let middleware = require("./backend/middleware/validate-session");
 require("serve-favicon");
 require("./backend/controllers/passport-setup");
-require('dotenv').config();
+require("dotenv").config();
 
 let app = express();
 
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS.split(',');
+const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
 const corsOptions = {
-    origin: allowedOrigins,
+    origin:      allowedOrigins,
     credentials: true,
 };
 

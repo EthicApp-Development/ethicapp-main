@@ -1,12 +1,12 @@
 let express = require("express");
-let Redis = require('ioredis');
+let Redis = require("ioredis");
 let router = express.Router();
 const { DateTime } = require("luxon");
 let rpg = require("../db/rest-pg");
 let pass = require("../config/keys-n-secrets");
 
 const redisClient = new Redis({
-    host: 'RedisContainer', // Redis server host
+    host: "RedisContainer", // Redis server host
     port: 6379,       // Redis server port
 });
 
@@ -94,7 +94,7 @@ router.post("/report/:type", async (req, res) => {
     const cacheTTL = 24 * 60 * 60; // 24 hours in seconds
 
     if (cachedData !== null) {
-        console.log("Cache Passing")
+        console.log("Cache Passing");
         const parsedData = JSON.parse(cachedData);
         return res.status(200).json(parsedData);
     } else {
@@ -135,7 +135,8 @@ router.post("/report/:type", async (req, res) => {
             `;
             if (differenceInMonths>1) {
                 sqlQuery=`
-                    SELECT TO_CHAR(creation_date, 'YYYY-MM') AS date, SUM(count) AS count , is_teacher
+                    SELECT TO_CHAR(creation_date, 'YYYY-MM') AS date, 
+                    SUM(count) AS count , is_teacher
                     FROM report_create_account
                     WHERE creation_date >= '${initialDate}' AND creation_date <= '${endDate}'
                     GROUP BY date , is_teacher
@@ -204,7 +205,7 @@ router.post("/report/:type", async (req, res) => {
                     "report_y2_data": y2_data,
                     "report_type":    type,
                     "creation_date":  CurrentDate()
-                }
+                };
 
                 redisClient.setex(cacheKey, cacheTTL, JSON.stringify(json_query));
 
@@ -214,18 +215,18 @@ router.post("/report/:type", async (req, res) => {
     }
 });
 
-router.post('/upload-file-institution', (req, res) => {
+router.post("/upload-file-institution", (req, res) => {
     if (req.files.file != null && req.files.file.mimetype == "image/png") {
-        res.status(200).json({ message: 'File uploaded successfully', filename: req.files.file.file });
+        res.status(200).json({ message: "File uploaded", filename: req.files.file.file });
     } else {
-        res.status(400).json({ message: 'No file uploaded' });
+        res.status(400).json({ message: "No file uploaded" });
     }
 });
   
 
 function CurrentDate() {
-    const now = DateTime.now().setZone('America/Santiago');
-    return now.toFormat('dd-MM-yyyy HH:mm:ss');
+    const now = DateTime.now().setZone("America/Santiago");
+    return now.toFormat("dd-MM-yyyy HH:mm:ss");
 }
 
 module.exports = router;
