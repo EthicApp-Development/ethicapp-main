@@ -4,7 +4,7 @@ import React, {useEffect, useState} from 'react';
 import Container from '@mui/material/Container';
 import PageBase from '../components/PageBase';
 import InstitutionForm from '../components/InstitutionForm';
-import { GetInstitutionForm, UpdateInstitutionForm } from '../components/APICommunication';
+import { GetInstitutionForm, UpdateInstitutionForm, UploadInstitutionImage} from '../components/APICommunication';
 
 function Institution(props) {
 
@@ -65,13 +65,30 @@ function Institution(props) {
         return;
       }
 
-      UpdateInstitutionForm(formData)
+      const formDataFileAux = new FormData();
+      formDataFileAux.append('file', formData.file);
+
+      UploadInstitutionImage(formDataFileAux)
       .then((response) => {
-        if (response.status === 200) {
-          alert('Success: Form updated successfully');
-        } else {
-          alert('Error: Form update failed');
-        }
+
+        setFormData((formData) => ({
+          ...formData,
+          institution_logo: response.data["filename"],
+        }));
+
+        UpdateInstitutionForm(formData)
+        .then((response) => {
+          if (response.status === 200) {
+            alert('Success: Form updated successfully');
+          } else {
+            alert('Error: Form update failed');
+          }
+        })
+        .catch((error) => {
+          console.error('Error updating form:', error);
+          alert('Error: An error occurred while updating the form');
+        });
+
       })
       .catch((error) => {
         console.error('Error updating form:', error);

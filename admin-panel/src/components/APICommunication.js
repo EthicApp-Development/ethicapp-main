@@ -27,3 +27,16 @@ export const GetInstitutionForm = async () => {
 export const UpdateInstitutionForm= (postData) => {
   return api.put(`/institution`,postData);
 };
+
+export const UploadInstitutionImage= (formData) => {
+  return api.post('/upload-file-institution', formData, {
+      headers: {
+        'Content-Type': undefined,
+      },
+  });
+};
+
+
+export const ApiLogin= (postData) => {
+  return api.post(`/login`,postData);
+};

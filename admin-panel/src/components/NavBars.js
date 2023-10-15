@@ -1,6 +1,7 @@
 //REACT
 import React, {useState} from "react"
 import {useLocation, Link} from "react-router-dom"
+import Cookies from 'js-cookie';
 
 //MUI
 import {styled} from '@mui/material/styles';
@@ -26,7 +27,6 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import LogoutIcon from '@mui/icons-material/Logout';
-
 
 
 const urlBlackList = ["/admin/login"]
@@ -76,6 +76,11 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
     },
 }),
 );
+
+const handleLogout = () => {
+  Cookies.remove('connect.sid');
+  window.location.href = '/admin/login';
+};
 
 export default function NavBar(props){
 
@@ -129,9 +134,9 @@ export default function NavBar(props){
                   </Button>
                 </Tooltip>
                 <Tooltip title={translation("navbar.logoutTooltip")}>
-                  <IconButton color="inherit" component={Link} to="/admin/login" style={{backgroundColor: 'red'}}>
-                    <LogoutIcon />
-                  </IconButton>
+                <IconButton color="inherit" onClick={handleLogout} component={Link} to="/admin/login" style={{ backgroundColor: 'red' }}>
+                  <LogoutIcon />
+                </IconButton>
                 </Tooltip>
               </Toolbar>
             </AppBar>

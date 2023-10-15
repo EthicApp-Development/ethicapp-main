@@ -61,6 +61,21 @@ router.get("/logout", (req, res) => {
 
 router.post("/login", (req, res, next) => {
     passport.authenticate("local", (err, user) => {
+        
+        const {source} = req.body;
+        if (source==="admin-panel") {
+            if (!user) {
+                return res.status(200).json({ sessionID: "ErrorCredential" });
+            }
+
+            if (user["role"]!="S") {
+                return res.status(200).json({ sessionID: "Unauthorized" });
+            }
+
+            const sessionID = req.sessionID;
+            return res.status(200).json({ sessionID });
+        }
+
         if (err) {
             return next(err);
         }
@@ -69,7 +84,7 @@ router.post("/login", (req, res, next) => {
         }
 
         var is_teacher = 0;
-        if (user["role"]=="P") {
+        if (user["role"]=="P" || user["role"]=="S") {
             is_teacher=1;
         }
         

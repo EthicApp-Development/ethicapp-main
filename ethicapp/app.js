@@ -25,14 +25,14 @@ let pass = require("./backend/config/keys-n-secrets");
 let middleware = require("./backend/middleware/validate-session");
 require("serve-favicon");
 require("./backend/controllers/passport-setup");
-require('dotenv').config();
+require("dotenv").config();
 
 let app = express();
 
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS.split(',');
+const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
 const corsOptions = {
-    origin: allowedOrigins,
+    origin:      allowedOrigins,
     credentials: true,
 };
 
@@ -59,7 +59,7 @@ app.set("view engine", "ejs");
 app.use(logger("[Readings] :method :url :status - :response-time ms"));
 busboy.extend(app, {
     upload:        true,
-    mimeTypeLimit: ["application/pdf"],
+    mimeTypeLimit: ["application/pdf", "image/png"],
     path:          pass.uploadPath,
     limits:        { fileSize: 5*1024*1024 }
 });

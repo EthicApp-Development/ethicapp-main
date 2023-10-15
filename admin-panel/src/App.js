@@ -14,6 +14,7 @@ import SingleReport from './pages/SingleReport';
 import Login from './pages/Login';
 import TeacherAccountRequests from './pages/TeacherAccountRequests';
 import TeacherAccountRequest from './pages/TeacherAccountRequest';
+import ProtectedRoute from './components/ProtectedRoute';
 
 import {useTranslation} from "react-i18next"
 
@@ -47,13 +48,13 @@ function App() {
         <Route path="/admin/login" element={<Login translation={translation}/>}/>
 
         {/* All these pages have NavBar*/}
-        <Route path="/admin" element={<Home translation={translation}/>}/>
-        <Route path="/admin/institution" element={<Institution translation={translation}/>}/>
-        <Route path="/admin/reports" element={<Reports translation={translation}/>}/>
-        <Route path="/admin/users" element={<Users translation={translation}/>}/>
-        <Route path="/admin/report/:reportEnum" element={<SingleReport translation={translation}/>}/>
-        <Route path="/admin/teacher_account_requests" element={<TeacherAccountRequests translation={translation}/>}/>
-        <Route path="/admin/teacher_account_request/:id" element={<TeacherAccountRequest translation={translation}/>}/>
+        <Route path="/admin/" element={<ProtectedRoute element={<Home translation={translation} />} />} />
+        <Route path="/admin/institution/" element={<ProtectedRoute element={<Institution translation={translation} />} />} />
+        <Route path="/admin/reports/" element={<ProtectedRoute element={<Reports translation={translation} />} />} />
+        <Route path="/admin/users/" element={<ProtectedRoute element={<Users translation={translation} />} />} />
+        <Route path="/admin/report/:reportEnum/" element={<ProtectedRoute element={<SingleReport translation={translation} />} />} />
+        <Route path="/admin/teacher_account_requests/" element={<ProtectedRoute element={<TeacherAccountRequests translation={translation} />} />} />
+        <Route path="/admin/teacher_account_request/:id/" element={<ProtectedRoute element={<TeacherAccountRequest translation={translation} />} />} />
 
       </Routes>
     </Box>
