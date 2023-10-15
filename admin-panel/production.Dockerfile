@@ -13,3 +13,5 @@ ENV REACT_APP_API_PORT $REACT_APP_API_PORT
 COPY . .
 
 RUN npm run build
+
+CMD ["npm", "start"]
