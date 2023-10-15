@@ -78,7 +78,7 @@ function Login(props) {
 
         <Grid container>
           <Grid item>
-            <Link href="/" variant="body2">
+            <Link to="/" variant="body2">
               {translation("login.return")}
             </Link>
           </Grid>
