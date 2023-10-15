@@ -47,9 +47,10 @@ function Login(props) {
         return;
       }
 
+      Cookies.remove('connect.sid');
       Cookies.set('connect.sid', response.data["sessionID"], { expires: 1 });
 
-      navigate('/admin');
+      navigate('/admin/');
     })
     .catch((error) => {
       console.error('Error fetching items:', error);
