@@ -6,6 +6,6 @@ export let ConfirmModalController = function($uibModalInstance){
     };
 
     vm.cancel = function () {
-        $uibModalInstance.dismiss('cancel');
+        $uibModalInstance.dismiss("cancel");
     };
 };

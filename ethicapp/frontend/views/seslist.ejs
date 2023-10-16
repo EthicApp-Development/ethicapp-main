@@ -98,13 +98,17 @@
         </div>
         <div class="list-group pad-content">
             <div class="list-group-item" ng-repeat="ses in currentSessions()">
-                <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
-                <p class="list-group-item-text" ng-bind="ses.descr"></p>
-                <p class="list-group-item-text">{{'launched'|mylang}} {{ses.time | date}}</p>
-                <p class="list-group-item-text">{{'code'|mylang}} {{ses.code}}</p>
-                <div class="text-right">
+                <div>
+                    <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
+                    <p class="list-group-item-text" ng-bind="ses.descr"></p>
+                    <p class="list-group-item-text">{{'launched'|mylang}} {{ses.time | date}}</p>
+                    <p class="list-group-item-text">{{'code'|mylang}} {{ses.code}}</p>
+                </div>
+                <div class="text-right vertical-align">
                     <a href="{{routes[ses.type]}}?sesid={{ses.id}}"><button class="btn btn-primary ">{{'gotoActivity'|mylang}}</button></a>
                 </div>
+                
+               
             </div>
         </div>
     </div>

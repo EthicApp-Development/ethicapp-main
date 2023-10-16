@@ -27,6 +27,8 @@
                 ng-if="dsgnMode==0">
                 <div>
                     <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
+                    <p class="list-group-item-text" ng-if="ses.type == 'R'">{{'ranking_activity'|translate}}</p>
+                    <p class="list-group-item-text" ng-if="ses.type != 'R'">{{'semantic_differential'|translate}}</p>
                     <p class="list-group-item-text" ng-bind="ses.descr"></p>
                     <p class="list-group-item-text">{{'launched' | translate}} {{ses.time | date}}</p>
                     <p class="list-group-item-text">{{'code' | translate}}: {{ses.code}}</p>
@@ -48,6 +50,8 @@
                 ng-if="dsgnMode==1">
                 <div>
                     <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
+                    <p class="list-group-item-text" ng-if="ses.type == 'R'">{{'ranking_activity'|translate}}</p>
+                    <p class="list-group-item-text" ng-if="ses.type != 'R'">{{'semantic_differential'|translate}}</p>
                     <p class="list-group-item-text" ng-bind="ses.descr"></p>
                     <p class="list-group-item-text">{{'launched' | translate}} {{ses.time | date}}</p>
                     <p class="list-group-item-text">{{'code' | translate}}: {{ses.code}}</p>
@@ -69,6 +73,8 @@
                 ng-if="dsgnMode==2">
                 <div>
                     <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
+                    <p class="list-group-item-text" ng-if="ses.type == 'R'">{{'ranking_activity'|translate}}</p>
+                    <p class="list-group-item-text" ng-if="ses.type != 'R'">{{'semantic_differential'|translate}}</p>
                     <p class="list-group-item-text" ng-bind="ses.descr"></p>
                     <p class="list-group-item-text">{{'launched' | translate}} {{ses.time | date}}</p>
                     <p class="list-group-item-text">{{'code' | translate}}: {{ses.code}}</p>
