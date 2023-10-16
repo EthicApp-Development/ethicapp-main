@@ -23,7 +23,7 @@ function Login(props) {
     const sessionIdAux = Cookies.get('connect.sid');
 
     if (sessionIdAux) {
-      navigate('/admin');
+      navigate('/admin/');
     }
   }, []);
  
