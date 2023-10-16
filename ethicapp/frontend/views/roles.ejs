@@ -172,22 +172,18 @@
                                                 </div>
                                                 <div
                                                     ng-if="selectedActor == $index && stages[selectedStage].id == currentStageId">
+                                                    <div class="row flex-justify-start">
+                                                        <div class="text-white word-count-df word-count-df-bg ml-3"
+                                                            ng-class="{'bg-red': wordCount(actors[selectedActor].comment) < actors[selectedActor].word_count, 'border-word-count-red': wordCount(actors[selectedActor].comment) < actors[selectedActor].word_count, 'border-word-count-blue': wordCount(actors[selectedActor].comment) >= actors[selectedActor].word_count }">
+                                                            <span>{{ wordCount(actors[selectedActor].comment)
+                                                                }}</span>
+                                                            <span ng-if="actors[selectedActor].word_count"
+                                                                style="font-size: 80%; margin-left: 0.5rem; margin-right: 0.5rem;">de</span>
+                                                            <span ng-if="actors[selectedActor].word_count">{{
+                                                                actors[selectedActor].word_count }}</span>
+                                                        </div>
 
-                                                    <div class="col-xs-6">
-                                                        <span class="input-group-addon mt-medio text-white word-count-r"
-                                                            ng-class="{'bg-red': wordCount(actors[selectedActor].comment) < actors[selectedActor].word_count }">
-                                                            <div class="row">
-                                                                <span>{{ wordCount(actors[selectedActor].comment)
-                                                                    }}</span>
-                                                                <span ng-if="actors[selectedActor].word_count"
-                                                                    style="font-size: 80%">de</span>
-                                                                <span ng-if="actors[selectedActor].word_count">{{
-                                                                    actors[selectedActor].word_count }}</span>
-                                                                <span ng-if="actors[selectedActor].word_count"
-                                                                    style="font-size: 80%">palabras</span>
 
-                                                            </div>
-                                                        </span>
                                                     </div>
                                                     <div class="col-xs-12">
                                                         <textarea type="text" class="form-control text-comment-input"
