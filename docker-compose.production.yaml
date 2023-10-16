@@ -20,6 +20,8 @@ services:
     build:
       context: ethicapp/
       dockerfile: production.Dockerfile
+      args:
+        NODE_VERSION: ${NODE_VERSION}
     environment:
       NODE_ENV: release
       NODE_PORT: ${NODE_PORT}
@@ -41,7 +43,7 @@ services:
   # ---------------------- Redis Cache Server ---------------------- #
   RedisContainer:
     image: redis
-    container_name: ethicapp-redis-container
+    container_name: ethicapp-redis
 
   # ---------------------- Admin Panel ---------------------- #
   admin-panel:
@@ -51,6 +53,7 @@ services:
       dockerfile: production.Dockerfile
       args:
         REACT_APP_API_PORT: ${NGINX_PORT}
+        REACT_APP_DOMAIN: ${ETHICAPP_DOMAIN_NAME}
     volumes:
       - shared-volume-admin:/home/app:rw
         

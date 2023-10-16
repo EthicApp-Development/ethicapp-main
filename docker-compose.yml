@@ -45,6 +45,7 @@ services:
       context: admin-panel/
       args:
         REACT_APP_API_PORT: ${NODE_PORT}
+        REACT_APP_DOMAIN: ${ETHICAPP_DOMAIN_NAME}
     ports:
       - "3000:3000"
     networks:
@@ -56,7 +57,7 @@ services:
   # ---------------------- Redis Cache Server ---------------------- #
   RedisContainer:
     image: redis
-    container_name: ethicapp-redis-container
+    container_name: ethicapp-redis
     ports:
       - "6379:6379"
 
