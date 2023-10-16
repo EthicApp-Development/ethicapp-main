@@ -20,8 +20,6 @@ services:
     build:
       context: ethicapp/
       dockerfile: production.Dockerfile
-      args:
-        NODE_VERSION: ${NODE_VERSION}
     environment:
       NODE_ENV: release
       NODE_PORT: ${NODE_PORT}
