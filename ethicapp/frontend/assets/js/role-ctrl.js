@@ -172,7 +172,11 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     };
 
     self.selectActor = function (i) {
-        self.selectedActor = i;
+        if (self.selectedActor === i) {
+            self.selectedActor = null;
+        } else {
+            self.selectedActor = i;
+        }
     };
 
     self.selectActorView = function (i) {
