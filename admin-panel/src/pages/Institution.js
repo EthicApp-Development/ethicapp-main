@@ -65,17 +65,7 @@ function Institution(props) {
         return;
       }
 
-      const formDataFileAux = new FormData();
-      formDataFileAux.append('file', formData.file);
-
-      UploadInstitutionImage(formDataFileAux)
-      .then((response) => {
-
-        setFormData((formData) => ({
-          ...formData,
-          institution_logo: response.data["filename"],
-        }));
-
+      if (formData.file === undefined) {
         UpdateInstitutionForm(formData)
         .then((response) => {
           if (response.status === 200) {
@@ -88,14 +78,38 @@ function Institution(props) {
           console.error('Error updating form:', error);
           alert('Error: An error occurred while updating the form');
         });
+      } else {
+        const formDataFileAux = new FormData();
+        formDataFileAux.append('file', formData.file);
 
-      })
-      .catch((error) => {
-        console.error('Error updating form:', error);
-        alert('Error: An error occurred while updating the form');
-      });
+        UploadInstitutionImage(formDataFileAux)
+        .then((response) => {
+
+          setFormData((formData) => ({
+            ...formData,
+            institution_logo: response.data["filename"],
+          }));
+
+          UpdateInstitutionForm(formData)
+          .then((response) => {
+            if (response.status === 200) {
+              alert('Success: Form updated successfully');
+            } else {
+              alert('Error: Form update failed');
+            }
+          })
+          .catch((error) => {
+            console.error('Error updating form:', error);
+            alert('Error: An error occurred while updating the form');
+          });
+
+        })
+        .catch((error) => {
+          console.error('Error updating form:', error);
+          alert('Error: An error occurred while updating the form');
+        });
+      }
     };
-
 
   return(
     <PageBase children={

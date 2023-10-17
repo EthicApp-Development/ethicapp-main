@@ -131,8 +131,9 @@ const InstitutionForm = (props) =>{
                         >
                             {translation("institutionForm.file-upload")}
                         </Button>
+                        {' '} Current File: {formData.institution_logo.split("file/")[1]}
                         </label>
-                        {formData.file && <span> {formData.file.name}</span>}
+                        {formData.file && <span> || New File: {formData.file.name}</span>}
                     </Grid>
 
                     <Grid item xs={12}>
