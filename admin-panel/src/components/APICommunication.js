@@ -48,3 +48,15 @@ export const UploadInstitutionImage= (formData) => {
 export const ApiLogin= (postData) => {
   return api.post(`/login`,postData);
 };
+
+export const GetTeacherAccountRequests= () => {
+  return api.get('/teacher_account_requests');
+}
+
+export const GetTeacherAccountRequest= (id) => {
+  return api.get(`/teacher_account_requests/${id}`);
+}
+
+export const UpdateTeacherAccountRequest= (id, postData) => {
+  return api.put(`/teacher_account_requests/${id}`,postData);
+}
