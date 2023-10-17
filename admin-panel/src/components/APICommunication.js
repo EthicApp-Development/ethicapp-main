@@ -1,8 +1,16 @@
 import axios from 'axios';
 
-const api = axios.create({
-  baseURL: `http://${process.env.REACT_APP_DOMAIN}`,
-});
+let api;
+
+if (process.env.REACT_APP_DOMAIN==="localhost") {
+  api = axios.create({
+    baseURL: `http://${process.env.REACT_APP_DOMAIN}:${process.env.REACT_APP_API_PORT}`,
+  });
+} else {
+  api = axios.create({
+    baseURL: `http://${process.env.REACT_APP_DOMAIN}`,
+  });
+}
 
 export const GetReports= () => {
   return api.get('/report');
