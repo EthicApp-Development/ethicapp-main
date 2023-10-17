@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
+import { GetTeacherAccountRequest, UpdateTeacherAccountRequest } from '../components/APICommunication';
 import { Container, Paper, Typography, Button } from '@mui/material';
 import PageBase from '../components/PageBase';
 import HeaderNSubHeader from '../components/HeaderNSubHeader';
@@ -20,8 +20,7 @@ function TeacherAccountRequest(props) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios
-      .get(`http://localhost:5050/teacher_account_requests/${id}`)
+    GetTeacherAccountRequest(id)
       .then((response) => {
         if (response.status === 200) {
           setRequestData(response.data);
@@ -37,8 +36,7 @@ function TeacherAccountRequest(props) {
   }, [id]);
 
   const handleAcceptRequest = () => {
-    axios
-      .put(`http://localhost:5050/teacher_account_requests/${id}`, { status: '1' })
+    UpdateTeacherAccountRequest(id, { status: '1' })
       .then((response) => {
         if (response.status === 200) {
           window.location.href = '/admin/teacher_account_requests';

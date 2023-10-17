@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { GetTeacherAccountRequests } from '../components/APICommunication';
 import { Container, Tab, Tabs, Table, TableBody, TableCell, TableContainer, TableRow, Paper, Button } from '@mui/material';
 import PageBase from '../components/PageBase';
 import HeaderNSubHeader from '../components/HeaderNSubHeader';
@@ -26,7 +26,7 @@ function TeacherAccountRequests(props) {
   const [requestsData, setRequestsData] = useState([]);
 
   useEffect(() => {
-    axios.get('http://localhost:5050/teacher_account_requests')
+    GetTeacherAccountRequests()
       .then((response) => {
         if (response.status === 200) {
           if (Array.isArray(response.data)) {
