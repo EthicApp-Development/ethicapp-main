@@ -330,7 +330,9 @@
 	"confirmationMessage": "¿Estás seguro que quieres terminar la actividad?",
 	"confirmation": "Confirmación",
 	"cancel": "Cancelar",
-	"endActivity": "Terminar Actividad"
+	"endActivity": "Terminar Actividad",
+	"openInNewTab": "Abrir en nueva pestaña",
+	"noDocQuestion": "No puedes ver el documento?"
 
 
 }

@@ -712,6 +712,10 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
         });
     };
 
+    self.openPDFInNewTab = function (pdfPath) {
+        window.open(pdfPath, "_blank");
+    };
+
     self.init();
 }]);
 

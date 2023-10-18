@@ -328,7 +328,9 @@
 	"confirmationMessage": "Are you sure you want to finish the activity?",
 	"confirmation": "Confirmation",
 	"cancel": "Cancel",
-	"endActivity": "End Activity"
+	"endActivity": "End Activity",
+	"openInNewTab": "Open in a new tab",
+	"noDocQuestion": "Can't view the document?"
 }
 
 
