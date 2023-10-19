@@ -91,11 +91,6 @@ function TeacherAccountRequests(props) {
                     {activeTab === 0 && (
                       <>
                         <TableCell>
-                          <Button variant="contained" color="primary">
-                            {translation("teacherAccountRequests.ignore")}
-                          </Button>
-                        </TableCell>
-                        <TableCell>
                         <Link to={`/admin/teacher_account_request/${request.id}`} style={{ textDecoration: 'none' }}>
                           <Button variant="contained" color="primary">
                             {translation("teacherAccountRequests.see_request")}

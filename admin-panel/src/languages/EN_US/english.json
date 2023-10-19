@@ -45,7 +45,10 @@
         "accept_request": "Accept Request",
         "reject_request": "Reject Request",
         "ignore_request": "Ignore Request",
-        "no_data": "No data to show"
+        "no_data": "No data to show",
+        "reject_reason": "Insert the reason for rejecting the request",
+        "cancel": "Cancel",
+        "send": "Send"
     },
     "singleReport":{
         "start_activity_title": "Started Activities Report Generation",

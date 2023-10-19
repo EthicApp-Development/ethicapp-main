@@ -45,7 +45,10 @@
         "accept_request": "Aceptar Solicitud",
         "reject_request": "Rechazar Solicitud",
         "ignore_request": "Ignorar Solicitud",
-        "no_data": "No hay datos para mostrar"
+        "no_data": "No hay datos para mostrar",
+        "reject_reason": "Ingrese el motivo del rechazo",
+        "cancel": "Cancelar",
+        "send": "Enviar"
     },
     "singleReport":{
         "start_activity_title": "Generación de reportes Actividades Iniciadas",

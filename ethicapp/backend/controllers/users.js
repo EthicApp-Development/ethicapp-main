@@ -529,60 +529,76 @@ router.put("/teacher_account_requests/:id", async (req, res) => {
     try {
         const newStatus = req.body.status;
 
-        // Actualizar el estado en la base de datos
-        await rpg.execSQL({
-            dbcon: pass.dbcon,
-            sql:   `
-                UPDATE teacher_account_requests
-                SET status = $1
-                WHERE id = $2
-            `,
-            onStart: (ses, data, calc) => {
-                calc.id = req.params.id;
-            },
-            postReqData: ["status"],
-            sqlParams:   [rpg.param("post", "status"), rpg.param("calc", "id")]
-        })(req, res);
+        if (newStatus === "2") {
 
-        if (newStatus === "1") {
-            // Consulta para obtener datos del profesor
-            const teacherDataQuery = `
-                SELECT *
-                FROM teacher_account_requests
-                WHERE id = $1
-            `;
+            await rpg.execSQL({
+                dbcon: pass.dbcon,
+                sql:   `
+                    UPDATE teacher_account_requests
+                    SET status = $1, reject_reason = $2
+                    WHERE id = $3
+                `,
+                onStart: (ses, data, calc) => {
+                    calc.id = req.params.id;
+                },
+                postReqData: ["status", "reject_reason"],
+                sqlParams:   [rpg.param("post", "status"), rpg.param("post", "reject_reason"), rpg.param("calc", "id")]
+            })(req, res);
 
-            var db = getDBInstance(pass.dbcon);
+        }
+        else {
+            // Actualizar el estado en la base de datos
+            await rpg.execSQL({
+                dbcon: pass.dbcon,
+                sql:   `
+                    UPDATE teacher_account_requests
+                    SET status = $1
+                    WHERE id = $2
+                `,
+                onStart: (ses, data, calc) => {
+                    calc.id = req.params.id;
+                },
+                postReqData: ["status"],
+                sqlParams:   [rpg.param("post", "status"), rpg.param("calc", "id")]
+            })(req, res);
 
-            const { rows } = await db.query(teacherDataQuery, [req.params.id]);
+            if (newStatus === "1") {
+                // Consulta para obtener datos del profesor
+                const teacherDataQuery = `
+                    SELECT *
+                    FROM teacher_account_requests
+                    WHERE id = $1
+                `;
 
-            if (rows.length === 0) {
-                return res.status(404).json({ error: "Profesor no encontrado" });
+                var db = getDBInstance(pass.dbcon);
+
+                const { rows } = await db.query(teacherDataQuery, [req.params.id]);
+
+                if (rows.length === 0) {
+                    return res.status(404).json({ error: "Profesor no encontrado" });
+                }
+
+                const teacherData = rows[0];
+
+                // Consulta para insertar el profesor como usuario
+                const insertUserQuery = `
+                    INSERT INTO users(rut, pass, name, mail, sex, ROLE)
+                    VALUES ($1, $2, $3, $4, $5, 'P')
+                `;
+
+                const userParams = [
+                    teacherData.rut,
+                    teacherData.pass,
+                    teacherData.name,
+                    teacherData.mail,
+                    teacherData.gender
+                ];
+
+                await db.query(insertUserQuery, userParams);
+
+                // Enviar una respuesta de éxito
+                res.status(200).json({ message: "Solicitud aceptada y profesor agregado como usuario" });
             }
-
-            const teacherData = rows[0];
-
-            // Consulta para insertar el profesor como usuario
-            const insertUserQuery = `
-                INSERT INTO users(rut, pass, name, mail, sex, ROLE)
-                VALUES ($1, $2, $3, $4, $5, 'P')
-            `;
-
-            const userParams = [
-                teacherData.rut,
-                teacherData.pass,
-                teacherData.name,
-                teacherData.mail,
-                teacherData.gender
-            ];
-
-            await db.query(insertUserQuery, userParams);
-
-            // Enviar una respuesta de éxito
-            res.status(200).json({ message: "Solicitud aceptada y profesor agregado como usuario" });
-        } else {
-            // Enviar una respuesta de éxito sin agregar al profesor como usuario
-            res.status(200).json({ message: "Solicitud aceptada" });
         }
     } catch (error) {
         console.error("Error en el controlador:", error);
