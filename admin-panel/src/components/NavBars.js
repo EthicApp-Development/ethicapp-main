@@ -78,7 +78,7 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
 );
 
 const handleLogout = () => {
-  Cookies.remove('connect.sid');
+  Cookies.remove('connect.admin.sid');
   window.location.href = '/admin/login';
 };
 

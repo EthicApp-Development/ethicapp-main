@@ -20,7 +20,7 @@ function Login(props) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const sessionIdAux = Cookies.get('connect.sid');
+    const sessionIdAux = Cookies.get('connect.admin.sid');
 
     if (sessionIdAux) {
       navigate('/admin/');
@@ -47,8 +47,8 @@ function Login(props) {
         return;
       }
 
-      Cookies.remove('connect.sid');
-      Cookies.set('connect.sid', response.data["sessionID"], { expires: 1 });
+      Cookies.remove('connect.admin.sid');
+      Cookies.set('connect.admin.sid', response.data["sessionID"], { expires: 1 });
 
       navigate('/admin/');
     })
