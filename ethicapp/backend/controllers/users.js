@@ -428,6 +428,7 @@ router.get("/teacher_account_requests", rpg.multiSQL({
     sql:   `
     SELECT *
     FROM teacher_account_requests
+    ORDER BY date DESC
     `,
 }));
 
