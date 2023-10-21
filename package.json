@@ -21,7 +21,7 @@
     "build-css": "./dev-ops/build-css.sh",
     "build-assets": "npm run build-js & npm run build-css",
     "bundle-teacher-module": "./dev-ops/bundle-teacher-module.sh",
-    "build": "./dev-ops/build-application.sh"
+    "build": "./dev-ops/build-application.sh",
     "admin-panel": "./dev-ops/admin-panel.sh"
   },
   "devDependencies": {
