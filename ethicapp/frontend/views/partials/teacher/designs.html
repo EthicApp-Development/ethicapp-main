@@ -24,6 +24,9 @@
                         <!--UPDATE IT CORRECTLY-->
                         <div>
                             <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
+                            <p class="list-group-item-text" ng-if="ses.type == 'ranking'">{{'ranking_activity'|translate}}</p>
+                            <p class="list-group-item-text" ng-if="ses.type != 'ranking'">{{'semantic_differential'|translate}}</p>
+                            <p class="list-group-item-text"></p>
                             <p class="list-group-item-text">{{'created' | translate}} {{ses.metainfo.creation_date | date}}
                             </p>
                         </div>
@@ -59,6 +62,8 @@
                         <!--UPDATE IT CORRECTLY-->
                         <div>
                             <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
+                            <p class="list-group-item-text" ng-if="ses.type == 'ranking'">{{'ranking_activity'|translate}}</p>
+                            <p class="list-group-item-text" ng-if="ses.type != 'ranking'">{{'semantic_differential'|translate}}</p>
                             <p class="list-group-item-text">{{'created' | translate}} {{ses.metainfo.creation_date | date}}
                             </p>
                         </div>
