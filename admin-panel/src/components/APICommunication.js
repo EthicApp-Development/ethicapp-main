@@ -4,7 +4,7 @@ let api;
 
 if (process.env.REACT_APP_DOMAIN==="localhost") {
   api = axios.create({
-    baseURL: `http://${process.env.REACT_APP_DOMAIN}:${process.env.REACT_APP_API_PORT}`,
+    baseURL: `//${process.env.REACT_APP_DOMAIN}:${process.env.REACT_APP_API_PORT}`,
   });
 } else {
   api = axios.create({

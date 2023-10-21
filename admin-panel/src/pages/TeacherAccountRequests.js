@@ -5,6 +5,21 @@ import PageBase from '../components/PageBase';
 import HeaderNSubHeader from '../components/HeaderNSubHeader';
 import {Link} from "react-router-dom"
 
+function formatDate(dateStr) {
+  const options = {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric'
+  };
+  
+  const formattedDate = new Date(dateStr);
+  const datePart = formattedDate.toLocaleDateString(undefined, options);
+
+  return `${datePart}`;
+}
+
 function TeacherAccountRequests(props) {
   const translation = props.translation;
 
@@ -82,7 +97,7 @@ function TeacherAccountRequests(props) {
                 {filteredRequests.map((request) => (
                   <TableRow key={request.id}>
                     <TableCell>
-                      <b>{request.date} - {request.institution}</b>
+                      <b>{formatDate(request.date)} - {request.institution}</b>
                       <br></br>
                       {request.name}
                       <br></br>
@@ -90,11 +105,6 @@ function TeacherAccountRequests(props) {
                     </TableCell>
                     {activeTab === 0 && (
                       <>
-                        <TableCell>
-                          <Button variant="contained" color="primary">
-                            {translation("teacherAccountRequests.ignore")}
-                          </Button>
-                        </TableCell>
                         <TableCell>
                         <Link to={`/admin/teacher_account_request/${request.id}`} style={{ textDecoration: 'none' }}>
                           <Button variant="contained" color="primary">
