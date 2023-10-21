@@ -59,10 +59,52 @@ router.get("/logout", (req, res) => {
     });
 });
 
-router.post("/login", passport.authenticate("local", {
-    successRedirect: "/seslist",
-    failureRedirect: "login?rc=2",
-}));
+router.post("/login", (req, res, next) => {
+    passport.authenticate("local", (err, user) => {
+        
+        const {source} = req.body;
+        if (source==="admin-panel") {
+            if (!user) {
+                return res.status(200).json({ sessionID: "ErrorCredential" });
+            }
+
+            if (user["role"]!="S") {
+                return res.status(200).json({ sessionID: "Unauthorized" });
+            }
+
+            const sessionID = req.sessionID;
+            return res.status(200).json({ sessionID });
+        }
+
+        if (err) {
+            return next(err);
+        }
+        if (!user) {
+            return res.redirect("login?rc=2");
+        }
+
+        var is_teacher = 0;
+        if (user["role"]=="P" || user["role"]=="S") {
+            is_teacher=1;
+        }
+        
+        var db = getDBInstance(pass.dbcon);
+        const sqlQuery = `SELECT UpdateOrInsertLoginRecord(${is_teacher})`;
+        db.query(sqlQuery,(dbErr) =>{
+            if (dbErr) {
+                return next(dbErr);
+            }
+        });
+
+        req.logIn(user, (err) => {
+            if (err) {
+                return next(err);
+            }
+        
+            return res.redirect("/seslist");
+        });
+    })(req, res, next);
+});
 
 
 router.get("/register", (req, res) => {
@@ -76,14 +118,38 @@ router.get("/google",
     })
 );
 
-
 router.get("/google/callback",
-    passport.authenticate("google", {
-        successRedirect: "/seslist",
-        failureRedirect: "/register"
-    })
+  passport.authenticate("google", {
+    failureRedirect: "/register"
+  }),
+  (req, res) => {
+    // Run the database query and wait for it to complete
+    runDbQuery()
+      .then(() => {
+        // Successful login record update/inserted
+        // You can add additional logic here if needed
+        res.redirect("/seslist");
+      })
+      .catch((error) => {
+        console.error(error);
+        res.redirect("/error");
+      });
+  }
 );
 
+function runDbQuery() {
+    return new Promise((resolve, reject) => {
+      var db = getDBInstance(pass.dbcon);
+      const sqlQuery = "SELECT UpdateOrInsertLoginRecord(0)";
+      db.query(sqlQuery, (dbErr) => {
+        if (dbErr) {
+          reject(dbErr);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
 
 function getDBInstance(dbcon) {
     if (DB == null) {
@@ -125,15 +191,22 @@ router.post("/register", async (req, res) => {
 
                 var sql = `
                     INSERT INTO users (rut, pass, name, mail, sex, ROLE) 
-                    VALUES ('${req.body.rut}','${passcr}','${fullname}','${req.body.mail}','${req.body.sex}','A')
+                    VALUES ('${req.body.rut}','${passcr}','${fullname}'
+                    ,'${req.body.mail}','${req.body.sex}','A')
                 `;
 
-                db.query(sql,(err,sql_res) =>{
+                db.query(sql,(err) =>{
                     if(err){
                         console.error(err);
                         res.redirect("register");
                     }else{
-                        res.redirect("login?rc=1");
+                        const sqlQuery = "SELECT UpdateOrInsertCreateAccountRecord(0)";
+                        db.query(sqlQuery,(dbErr) =>{
+                            if (dbErr) {
+                                res.redirect("register");
+                            }
+                            res.redirect("login?rc=1");
+                        });
                     }
                 });
             } catch (err) {
@@ -267,7 +340,8 @@ router.post("/register_institucion", (req, res) => {
                                     margin-bottom: 2em;
                                     margin-top: 2em;
                                 ">
-                                    <img src="/assets/images/logos/ethicapp-logo.svg" alt="Ethicapp">
+                                    <img src="/assets/images/logos/ethicapp-logo.svg" 
+                                    alt="Ethicapp">
                                 </div>
                                 En un plazo de 24 a 48 horas hábiles quedará habilitada tu cuenta.
                                 <br>
@@ -307,7 +381,8 @@ router.post("/register_institucion", (req, res) => {
                                     margin-bottom: 2em;
                                     margin-top: 2em;
                                 ">
-                                    <img src="/assets/images/logos/ethicapp-logo.svg" alt="Ethicapp">
+                                    <img src="/assets/images/logos/ethicapp-logo.svg" 
+                                    alt="Ethicapp">
                                 </div>
                                 Within 24 to 48 business hours your account will be enabled.
                                 <br>
@@ -360,6 +435,7 @@ router.get("/teacher_account_requests", rpg.multiSQL({
     sql:   `
     SELECT *
     FROM teacher_account_requests
+    ORDER BY date DESC
     `,
 }));
 
@@ -460,60 +536,76 @@ router.put("/teacher_account_requests/:id", async (req, res) => {
     try {
         const newStatus = req.body.status;
 
-        // Actualizar el estado en la base de datos
-        await rpg.execSQL({
-            dbcon: pass.dbcon,
-            sql:   `
-                UPDATE teacher_account_requests
-                SET status = $1
-                WHERE id = $2
-            `,
-            onStart: (ses, data, calc) => {
-                calc.id = req.params.id;
-            },
-            postReqData: ["status"],
-            sqlParams:   [rpg.param("post", "status"), rpg.param("calc", "id")]
-        })(req, res);
+        if (newStatus === "2") {
 
-        if (newStatus === "1") {
-            // Consulta para obtener datos del profesor
-            const teacherDataQuery = `
-                SELECT *
-                FROM teacher_account_requests
-                WHERE id = $1
-            `;
+            await rpg.execSQL({
+                dbcon: pass.dbcon,
+                sql:   `
+                    UPDATE teacher_account_requests
+                    SET status = $1, reject_reason = $2
+                    WHERE id = $3
+                `,
+                onStart: (ses, data, calc) => {
+                    calc.id = req.params.id;
+                },
+                postReqData: ["status", "reject_reason"],
+                sqlParams:   [rpg.param("post", "status"), rpg.param("post", "reject_reason"), rpg.param("calc", "id")]
+            })(req, res);
 
-            var db = getDBInstance(pass.dbcon);
+        }
+        else {
+            // Actualizar el estado en la base de datos
+            await rpg.execSQL({
+                dbcon: pass.dbcon,
+                sql:   `
+                    UPDATE teacher_account_requests
+                    SET status = $1
+                    WHERE id = $2
+                `,
+                onStart: (ses, data, calc) => {
+                    calc.id = req.params.id;
+                },
+                postReqData: ["status"],
+                sqlParams:   [rpg.param("post", "status"), rpg.param("calc", "id")]
+            })(req, res);
 
-            const { rows } = await db.query(teacherDataQuery, [req.params.id]);
+            if (newStatus === "1") {
+                // Consulta para obtener datos del profesor
+                const teacherDataQuery = `
+                    SELECT *
+                    FROM teacher_account_requests
+                    WHERE id = $1
+                `;
 
-            if (rows.length === 0) {
-                return res.status(404).json({ error: "Profesor no encontrado" });
+                var db = getDBInstance(pass.dbcon);
+
+                const { rows } = await db.query(teacherDataQuery, [req.params.id]);
+
+                if (rows.length === 0) {
+                    return res.status(404).json({ error: "Profesor no encontrado" });
+                }
+
+                const teacherData = rows[0];
+
+                // Consulta para insertar el profesor como usuario
+                const insertUserQuery = `
+                    INSERT INTO users(rut, pass, name, mail, sex, ROLE)
+                    VALUES ($1, $2, $3, $4, $5, 'P')
+                `;
+
+                const userParams = [
+                    teacherData.rut,
+                    teacherData.pass,
+                    teacherData.name,
+                    teacherData.mail,
+                    teacherData.gender
+                ];
+
+                await db.query(insertUserQuery, userParams);
+
+                // Enviar una respuesta de éxito
+                res.status(200).json({ message: "Solicitud aceptada y profesor agregado como usuario" });
             }
-
-            const teacherData = rows[0];
-
-            // Consulta para insertar el profesor como usuario
-            const insertUserQuery = `
-                INSERT INTO users(rut, pass, name, mail, sex, ROLE)
-                VALUES ($1, $2, $3, $4, $5, 'P')
-            `;
-
-            const userParams = [
-                teacherData.rut,
-                teacherData.pass,
-                teacherData.name,
-                teacherData.mail,
-                teacherData.gender
-            ];
-
-            await db.query(insertUserQuery, userParams);
-
-            // Enviar una respuesta de éxito
-            res.status(200).json({ message: "Solicitud aceptada y profesor agregado como usuario" });
-        } else {
-            // Enviar una respuesta de éxito sin agregar al profesor como usuario
-            res.status(200).json({ message: "Solicitud aceptada" });
         }
     } catch (error) {
         console.error("Error en el controlador:", error);

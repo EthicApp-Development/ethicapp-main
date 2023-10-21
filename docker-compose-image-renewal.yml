@@ -19,6 +19,7 @@ services:
     environment:
       NODE_ENV: release
       NODE_PORT: ${NODE_PORT}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
     restart: "no"
     networks:
       default:
