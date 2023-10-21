@@ -2,7 +2,7 @@
 
 This main branch of the repository contains the sources of EthicApp 2: A CSCL script engine developed in JavaScript and Angular.JS, which supports case-based ethics education in Higher Ed environments. Please review the [organization README document](https://github.com/EthicApp-Development/organization#readme) for a detailed description of this project and its goals.
 
-- [EthicApp](#ethicapp)
+- [EthicApp 2](#ethicapp-2)
   - [1. Developing](#1-developing)
   - [2. Required Skills](#2-required-skills)
   - [3. Runtime Dependencies](#3-runtime-dependencies)
@@ -39,7 +39,7 @@ In order to work in the project you should be familiar with the following:
 - [AngularJS](https://angularjs.org/)
 - [NodeJS](https://nodejs.org/en)
 
-Knowledge of (Docker)[https://www.docker.com/] and (PostgreSQL)[https://www.postgresql.org/] could be helpful, but not required
+Knowledge of [Docker](https://www.docker.com/) and [PostgreSQL](https://www.postgresql.org/) could be helpful, but not required
 
 ## 3. Runtime Dependencies
 
@@ -90,7 +90,7 @@ This will create a directory at `$HOST_DB_VOLUME_PATH` (see the [DotEnv file](./
 Finally, it is mandatory to build the "bundles" for static assets:
 
 ```bash
-npm run build-assets
+npm run build
 ```
 
 ## 5. Deploy EthicApp
@@ -148,6 +148,9 @@ The root [`package.json`](./package.json) file contains some useful scripts for 
 | `build-js`               | Builds asset bundle for static frontend JS files.                                                                                                                                                                                                            |
 | `build-css`              | Builds asset bundle for static frontend CSS files.                                                                                                                                                                                                           |
 | `build-assets`           | Runs `build-js` and `build-css` simultaneously.                                                                                                                                                                                                              |
+| `bundle-teacher-module`  | Build and minifies controllers for faster file loading time|
+| `build`                  | Runs `build-js` and `build-css` and `bundle-teacher-module` simultaneously.
+|
 
 ### 6.2. Persistence of PgAdmin (containerized)
 
