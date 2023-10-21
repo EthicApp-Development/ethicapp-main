@@ -24,6 +24,8 @@ services:
       NODE_ENV: release
       NODE_PORT: ${NODE_PORT}
       ETHICAPP_DOMAIN_NAME: ${ETHICAPP_DOMAIN_NAME}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      REDIS_HOST: RedisContainer
     restart: "no"
     networks:
       default:
@@ -33,8 +35,25 @@ services:
     volumes:
       - shared-volume:/home/app:rw
     depends_on:
-      postgres:
-        condition: service_healthy
+      - RedisContainer
+      - postgres
+
+  # ---------------------- Redis Cache Server ---------------------- #
+  RedisContainer:
+    image: redis
+    container_name: ethicapp-redis
+
+  # ---------------------- Admin Panel ---------------------- #
+  admin-panel:
+    container_name: "ethicapp-admin-panel"
+    build:
+      context: admin-panel/
+      dockerfile: production.Dockerfile
+      args:
+        REACT_APP_API_PORT: ${NGINX_PORT}
+        REACT_APP_DOMAIN: ${ETHICAPP_DOMAIN_NAME}
+    volumes:
+      - shared-volume-admin:/home/app:rw
         
   # ---------------------- Nginx ---------------------- #
   nginx:
@@ -51,8 +70,10 @@ services:
       default:
     volumes:
       - shared-volume:/usr/share/nginx/:rw
+      - shared-volume-admin:/usr/share/nginx/admin:rw
     depends_on:
       - node
+      - admin-panel
   
   # ---------------------- Database ---------------------- #
   postgres:
@@ -85,3 +106,4 @@ services:
 
 volumes:
   shared-volume:
+  shared-volume-admin:

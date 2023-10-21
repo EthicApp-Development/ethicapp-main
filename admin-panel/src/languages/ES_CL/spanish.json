@@ -1,0 +1,116 @@
+{
+    "home":{
+        "title": "Inicio Administrador",
+        "subTitle": "Desde aquí puede actualizar los datos de la institución para la que opera EthicApp, revisar informes y gestionar usuarios.",
+        "institutionBox": "Actualizar los datos Institucionales",
+        "usersBox": "Administrar Usuarios",
+        "chartBox": "Ver los Reportes"
+    },
+    "login":{
+        "login": "Ingresar",
+        "return": "Volver a Ethicapp"
+    },
+    "reports":{
+        "title": "Generación de Reportes",
+        "subTitle": "Desde aquí puede elegir qué informe generar utilizando los datos almacenados actualmente por Ethicapp.",
+        "start_activity_desc": "Información sobre el informe de tipo: start_activity",
+        "create_account_desc": "Información sobre el informe de tipo: create_account",
+        "logins_desc": "Información sobre el informe de tipo: logins",
+        "top_professors_desc": "Información sobre el informe de tipo: top_professors",
+        "start_activity": "Actividades Iniciadas",
+        "create_account": "Cuentas Creadas",
+        "logins": "Ingresos a Ethicapp",
+        "top_professors": "Top Actividades Iniciadas por Profesor"
+    },
+    "teacherAccountRequests":{
+        "title": "Listado de Solicitudes de Cuenta de Profesor",
+        "subTitle": "Desde aquí puedes ver el listado de solicitudes de cuenta de profesor",
+        "pending": "Pendientes",
+        "approved": "Aprobadas",
+        "rejected": "Rechazadas",
+        "ignore": "Ignorar",
+        "see_request": "Ver Solicitud",
+        "see_account": "Ver Cuenta"
+    },
+    "teacherAccountRequest":{
+        "title": "Solicitud de Cuenta de Profesor",
+        "loading": "Cargando...",
+        "teacher": "Profesor",
+        "name": "Nombre",
+        "institution": "Institución",
+        "email": "Email", 
+        "rut": "Rut",
+        "gender": "Género",
+        "date": "Fecha",
+        "accept_request": "Aceptar Solicitud",
+        "reject_request": "Rechazar Solicitud",
+        "ignore_request": "Ignorar Solicitud",
+        "no_data": "No hay datos para mostrar",
+        "reject_reason": "Ingrese el motivo del rechazo",
+        "cancel": "Cancelar",
+        "send": "Enviar"
+    },
+    "singleReport":{
+        "start_activity_title": "Generación de reportes Actividades Iniciadas",
+        "create_account_title": "Generación de reportes Cuentas Creadas",
+        "logins_title": "Generación de reportes Ingresos a Ethicapp",
+        "top_professors_title": "Generación de reportes Top Actividades Iniciadas por Profesor",
+        "subTitle": "Introduzca información sobre los informes específicos que se están generando.",
+        "formError": "Seleccione una opción de informe"
+    },
+    "users":{
+        "title": "Pagina de Usuarios",
+        "subTitle": "Mostrar todas las acciones relacionadas con el usuario."
+    },
+
+    "institutionForm":{
+        "title": "Datos de la Institución",
+        "subTitle": "Desde aquí puede actualizar los datos de la institución para la que opera EthicApp.",
+        "institution_name": "Nombre de la Institución",
+        "physical_address": "Dirección Física",
+        "institution_url": "URL de la Institución",
+        "ethicapp_url": "URL de Ethicapp",
+        "email_error": "Por favor, introduzca una dirección de correo electrónico válida.",
+        "institution_it_email": "Contacto Técnico",
+        "institution_educational_email": "Contacto Educacional",
+        "file-upload": "Cargar logotipo de la Institución",
+        "submit": "Guardar"
+    },
+    "loginForm":{
+        "email": "Email",
+        "password": "Constraseña",
+        "submit": "Ingresar"
+    },
+    "navbar":{
+        "counterLang": "English",
+        "title": "Panel de Administración de Ethicapp",
+        "changeLanguageTooltip": "Cambiar Idioma",
+        "logoutTooltip": "Cerrar Sesión",
+        "home": "Inicio",
+        "institution": "Institución",
+        "reports": "Reportes",
+        "users": "Usuarios",
+        "openBar": "Abrir Barra",
+        "closeBar": "Cerrar Barra",
+        "teacherAccountRequests": "Solicitudes de Profesor"
+    },
+    "ReportDescriptionBox":{
+        "title": "Información del Informe"
+    },
+    "ReportGraphBox":{
+        "download": "Descargar",
+        "downloadTooltip": "Descargar Grafico como Imagen"
+    },
+    "ReportOptionsBox":{
+        "title": "Opciones de Informe",
+        "selectOption": "Selecciona una opción:",
+        "option1": "1 Mes",
+        "option2": "3 Meses",
+        "option3": "6 Meses",
+        "option4": "12 Meses",
+        "option5": "Elegir Fechas",
+        "startDate": "Fecha Inicio",
+        "endDate": "Fecha Termino",
+        "generateReport": "Generar Reporte"
+    }
+}

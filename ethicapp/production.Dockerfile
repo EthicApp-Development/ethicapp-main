@@ -1,4 +1,4 @@
-FROM ethicapp/stable-2:nightly
+FROM ethicapp/stable-2:latest
 
 ARG DEBIAN_FRONTEND=noninteractive
 
