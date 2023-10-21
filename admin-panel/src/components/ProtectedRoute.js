@@ -4,7 +4,7 @@ import Cookies from 'js-cookie';
 
 const ProtectedRoute = ({ element }) => {
   // Check if the session ID cookie is set
-  const sessionId = Cookies.get('connect.sid');
+  const sessionId = Cookies.get('connect.admin.sid');
 
   if (sessionId) {
     return element; // Render the element directly

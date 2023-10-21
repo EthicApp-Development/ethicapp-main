@@ -118,31 +118,38 @@ router.get("/google",
     })
 );
 
-router.post("/google/callback", (req, res, next) => {
-    passport.authenticate("local", (err, user) => {
-        if (err) {
-            return next(err);
+router.get("/google/callback",
+  passport.authenticate("google", {
+    failureRedirect: "/register"
+  }),
+  (req, res) => {
+    // Run the database query and wait for it to complete
+    runDbQuery()
+      .then(() => {
+        // Successful login record update/inserted
+        // You can add additional logic here if needed
+        res.redirect("/seslist");
+      })
+      .catch((error) => {
+        console.error(error);
+        res.redirect("/error");
+      });
+  }
+);
+
+function runDbQuery() {
+    return new Promise((resolve, reject) => {
+      var db = getDBInstance(pass.dbcon);
+      const sqlQuery = "SELECT UpdateOrInsertLoginRecord(0)";
+      db.query(sqlQuery, (dbErr) => {
+        if (dbErr) {
+          reject(dbErr);
+        } else {
+          resolve();
         }
-        if (!user) {
-            return res.redirect("/register");
-        }
-        
-        var db = getDBInstance(pass.dbcon);
-        const sqlQuery = "SELECT UpdateOrInsertLoginRecord()";
-        db.query(sqlQuery,(dbErr) =>{
-            if (dbErr) {
-                return next(dbErr);
-            }
-        });
-    
-        req.logIn(user, (err) => {
-            if (err) {
-                return next(err);
-            }
-            return res.redirect("/seslist");
-        });
-    })(req, res, next);
-});
+      });
+    });
+  }
 
 function getDBInstance(dbcon) {
     if (DB == null) {
@@ -439,7 +446,6 @@ router.get("/teacher_account_requests/:id", (req, res) => {
         sql:   `
           SELECT *
           FROM teacher_account_requests
-          WHERE id = $1
       `,
         onStart: (ses, data, calc) => {
             calc.id = req.params.id;
