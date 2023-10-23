@@ -74,11 +74,8 @@
                 <div class="boxed" ng-show="iteration > 0 && showDoc" ng-if="documents.length>0">
                     <div>
                         <h3>{{documents[selectedDocument].title}}</h3>
-                        <div class="flex-justify-center">
-                            <p>{{'noDocQuestion'|lang}}</p>
-                        </div>
-                        <div class="flex-justify-center mt-medio mb-2">
-                            <button class="btn btn-md text-white bg-ethicapp"
+                        <div class="flex-justify-center mt-n2 mb-medio">
+                            <button class="btn btn-sm text-white bg-ethicapp"
                                 ng-click="openPDFInNewTab(documents[selectedDocument].path)">{{'openInNewTab'|lang}}</button>
                         </div>
                         <div>
