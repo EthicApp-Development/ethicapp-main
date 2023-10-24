@@ -172,7 +172,11 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     };
 
     self.selectActor = function (i) {
-        self.selectedActor = i;
+        if (self.selectedActor === i) {
+            self.selectedActor = null;
+        } else {
+            self.selectedActor = i;
+        }
     };
 
     self.selectActorView = function (i) {
@@ -708,6 +712,9 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
         });
     };
 
+    self.openPDFInNewTab = function (pdfPath) {
+        window.open(pdfPath, "_blank");
+    };
     self.init();
 }]);
 

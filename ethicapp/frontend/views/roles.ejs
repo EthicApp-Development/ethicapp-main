@@ -58,27 +58,6 @@
             </div>
         </div>
 
-        <!--<div class="top-bar-mini">
-        <span class="boxed" ng-bind="teamstr"></span>
-    </div>-->
-
-        <!-- <div class="top-bar-mini">
-        <div class="text-center">
-            <span ng-repeat="st in sesStatusses">
-                <span class="label label-primary bg-black-alpha" ng-class="{'bg-yellow': st.i == iteration}" ng-bind="st.name"></span>
-                <span ng-hide="$last">→</span>
-            </span>
-            <span class="pull-right margin-right-24" ng-show="sesSTime != null">
-                <timer start-time="sesSTime">{{hours}}h {{minutes}}m {{seconds}}s</timer>
-            </span>
-        </div>
-    </div> -->
-
-        <!--<div class="top-bar-mini simple-padding-bottom">
-        <strong>Factor detonante: </strong>
-        <span style="color: yellow; font-size: 105%;" ng-bind="sesDescr"></span>
-    </div>-->
-
         <div class="top-bar top-bar-tabs">
             <div class="qs-tabs" ng-show="iteration > 0 || myRole == 'P'">
                 <div class="tab tab-text" ng-repeat="doc in documents"
@@ -95,39 +74,19 @@
                     <i class="fa fa-question-circle"></i> {{ 'stage' | lang }} {{st.number}} <span class="badge bg-red"
                         ng-show="st.c != null && st.c > st.cr">{{st.c - st.cr}}</span>
                 </div>
-                <!--<div class="btab"></div>
-            <div class="rtab">
-                <button class="btn btn-sm margin-right-8 btn-default" ng-if="iteration > 0 && iteration < 4" ng-click="finishState()" ng-class="{'btn-success': finished, 'border-white': finished}">
-                    <i class="fa fa-check"></i></button>
-            </div>-->
             </div>
         </div>
 
-        <!--<div class="top-bar top-bar-student">
-        <div class="col-sm-6 full-height">
-            <span class="simple-margin-left" style="vertical-align: top;">Documentos: </span>
-            <span ng-repeat="doc in documents" class="side-top-btn" ng-class="{'active': $index==selectedDocument, 'border-orange': hgDocs[$index]}" ng-click="selectDocument($index)">
-                {{doc.title | limitTo:16}}
-            </span>
-            <strong class="pull-right margin-top-8" ng-bind="iterationNames[iteration]"></strong>--
-        </div>
-        <div class="col-sm-6">
-            <a onclick="window.history.back()" class="btn btn-sm btn-default pull-right">Atrás</a>
-            <button disabled class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && !followLeader"><i class="fa fa-star"></i> Representante </button>
-            <button class="btn btn-sm btn-default pull-right" ng-show="iteration == 3 && followLeader" ng-click="takeControl()">Tomar Control</button>
-            <a class="btn btn-sm btn-default pull-right" ng-show="iteration > 6" href="rubrica">Ir a evaluación</a>
-            <button class="btn btn-sm btn-default pull-right" ng-if="iteration > 0" ng-click="finishState()" ng-class="{'btn-success': hasFinished || finished}" ng-hide="myRole == 'P' && iteration > 0">
-                <i class="fa fa-check"></i> Terminé</button>
-            <span class="pull-right boxed" ng-bind="teamstr"></span>
-        </div>
-    </div>-->
-
         <div class="scrollable-container blue">
             <div class="mid-container qs-content simple-pad">
-                <div class="boxed" ng-show="iteration > 0 && showDoc" ng-if="documents.length>0">
+                <div class="boxed" ng-show="iteration > 0 && showDoc">
                     <div>
                         <h3>{{documents[selectedDocument].title}}</h3>
-                        <div ng-if="documents[selectedDocument].path != null">
+                        <div>
+                            <div class="flex-justify-center mt-n2 mb-medio">
+                                <button class="btn btn-sm text-white bg-ethicapp"
+                                    ng-click="openPDFInNewTab(documents[selectedDocument].path)">{{'openInNewTab'|lang}}</button>
+                            </div>
                             <iframe ng-src="{{getDocURL()}}" class="pdf-embed">
                             </iframe>
                         </div>
@@ -142,56 +101,58 @@
                     <span ng-repeat="j in jroles">{{ j.name }} - </span>
                 </div>
                 <div ng-show="iteration > 0 && (!showDoc || documents.length==0) && !showRole">
-                    <!--<h4>DF{{dfs[selectedDF].orden}}</h4>-->
                     <div class="differential margin-top-n12">
-                        <h5>
-                            <span>{{stages[selectedStage].question}}</span>
+                        <h5 class="flex-justify-center mb-2">
+                            <strong>{{'question'|lang}}: </strong><span class="ml-1">{{stages[selectedStage].question}}</span>
                         </h5>
                         <div class="row" ng-if="stages[selectedStage].id == currentStageId">
-                            <div class="col-sm-10 col-sm-offset-1 col-xs-12">
+                            <div
+                                class="col-lg-4 col-lg-offset-4 col-md-6 col-md-offset-3 col-sm-8 col-sm-offset-2 col-xs-12">
                                 <div ui-tree data-max-depth="1">
-                                    <div class="list-group" ui-tree-nodes="" ng-model="actors">
-                                        <!--                            <span class="text-gray center-block text-center" ng-show="selections.length > 0">Más importante</span>-->
-                                        <div class="list-group-item drag-item" ng-repeat="actor in actors" ui-tree-node>
+                                    <div class="container-div" ui-tree-nodes="" ng-model="actors">
+                                        <div class="rounded-div border-gray mb-2" ng-repeat="actor in actors"
+                                            ui-tree-node>
                                             <div class="row">
-                                                <div class="col-xs-2 col-sm-1 text-center h30" ui-tree-handle
-                                                    ng-if="selectedActor == null">
-                                                    <span class="font-large">:::</span>
-                                                </div>
                                                 <div class="col-xs-2 col-sm-1" ng-if="selectedActor != null">
-
                                                 </div>
-                                                <div class="col-xs-8 col-sm-10 mh30 ml-1">
-                                                    <strong>{{ $index + 1 }}. {{ actor.name }}</strong>
+                                                <div class="col-xs-6 col-sm-8 col-md-8 mh30 ml-1" ui-tree-handle
+                                                    style="cursor: grab;">
+                                                    <i class="fa fa-bars"></i>
+                                                    <strong class="ml-1">{{ $index + 1 }}. {{ actor.name }}</strong>
                                                 </div>
-                                                <div class="col-xs-2 col-sm-1 text-right ml-1">
-                                                    <!--                                        <i class="fa fa-check margin-right-8" ng-if="actor.sent && ((!justifyPosition && actor.justified) || (justifyPosition && posToJustify[$index]))"></i>-->
-                                                    <button class="btn btn-default btn-sm"
-                                                        ng-click="selectActor($index)"
+                                                <div class="text-right mr-1">
+                                                    <button class="btn btn-md bg-ethicapp text-white"
+                                                        ng-mousedown="$event.preventDefault(); selectActor($index)"
                                                         ng-class="{'bg-green': actor.sent }"
                                                         ng-if="actor.justified || actor.jorder">
-                                                        <i class="fa fa-edit"></i>
+                                                        <i
+                                                            ng-class="{'fa fa-edit': !selectedActor, 'fa fa-chevron-up fa-ml-1': selectedActor === $index, 'fa fa-chevron-down fa-ml-1': selectedActor !== $index}"></i>
                                                     </button>
                                                 </div>
-                                                <div class="col-xs-12"
+                                                <div
                                                     ng-if="selectedActor == $index && stages[selectedStage].id == currentStageId">
-                                                    <div class="input-group mt-medio">
-                                                        <span class="input-group-addon word-count-r"
-                                                            ng-class="{'bg-red': wordCount(actors[selectedActor].comment) < actors[selectedActor].word_count }">
-                                                            <span>{{ wordCount(actors[selectedActor].comment) }}</span>
-                                                            <br ng-if="actors[selectedActor].word_count">
-                                                            <span style="font-size: 80%"
-                                                                ng-if="actors[selectedActor].word_count">de</span>
-                                                            <br ng-if="actors[selectedActor].word_count">
+                                                    <div class="row flex-justify-start">
+                                                        <div class="text-white word-count-df word-count-df-bg ml-3"
+                                                            ng-class="{'bg-red': wordCount(actors[selectedActor].comment) < actors[selectedActor].word_count, 'border-word-count-red': wordCount(actors[selectedActor].comment) < actors[selectedActor].word_count, 'border-word-count-blue': wordCount(actors[selectedActor].comment) >= actors[selectedActor].word_count }">
+                                                            <span>{{ wordCount(actors[selectedActor].comment)
+                                                                }}</span>
+                                                            <span ng-if="actors[selectedActor].word_count"
+                                                                style="font-size: 80%; margin-left: 0.5rem; margin-right: 0.5rem;">de</span>
                                                             <span ng-if="actors[selectedActor].word_count">{{
                                                                 actors[selectedActor].word_count }}</span>
-                                                        </span>
+                                                        </div>
+
+
+                                                    </div>
+                                                    <div class="col-xs-12">
                                                         <textarea type="text" class="form-control text-comment-input"
                                                             placeholder="{{getPlaceholder()}}"
                                                             ng-model="actors[selectedActor].comment"
                                                             ng-change="actors[selectedActor].dirty = true"
                                                             ng-disabled="selectedActor == null">
-                                                        </textarea>
+                                                                                                                </textarea>
+                                                    </div>
+                                                    <div class="col-xs-12">
                                                         <span class="input-group-addon hoverable"
                                                             ng-disabled="finished || !actors[selectedActor].dirty || selectedActor == null"
                                                             ng-click="sendActorSel()">
@@ -203,14 +164,13 @@
                                                                 <i class="fa fa-save"></i>
                                                                 <span>Guardar</span>
                                                             </div>
-
-
                                                         </span>
                                                     </div>
+
+
                                                 </div>
                                             </div>
                                         </div>
-                                        <!--                            <span class="text-gray center-block text-center" ng-show="selections.length > 0">Menos importante</span>-->
                                     </div>
                                 </div>
                             </div>
@@ -219,7 +179,6 @@
                             <div class="col-sm-10 col-sm-offset-1 col-xs-12">
                                 <div>
                                     <div class="list-group" ng-model="actors">
-                                        <!--                            <span class="text-gray center-block text-center" ng-show="selections.length > 0">Más importante</span>-->
                                         <div class="list-group-item drag-item justify-left"
                                             ng-repeat="actor in actorsPrev"
                                             ng-class="{'deep-blue': selectedActorPrev == $index}">

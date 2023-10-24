@@ -612,6 +612,9 @@ app.controller(
                 return a;
             };
 
+            self.openPDFInNewTab = function (pdfPath) {
+                window.open(pdfPath, "_blank");
+            };
             self.init();
         }]);
 

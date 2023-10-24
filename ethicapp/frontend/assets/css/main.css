@@ -1248,12 +1248,8 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 }
 
 .word-count{
-    position: absolute;
-    left: 5px;
-    z-index: 99;
-    color: white;
     background: #004093;
-    top: 4px;
+   
 }
 
 .word-count-r{
@@ -1882,12 +1878,92 @@ h2{
 
 .border-word-count-red{
     border: 1px solid #d74448;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
 }
 
 .border-word-count-blue{
     border: 1px solid #0077C2;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
 }
 
 .text-comment-input{
     height: 6rem !important;
 }
+
+.rounded-div {
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    padding: 10px;
+    background-color: #fff; 
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+}
+
+.rounded-div-seslist {
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    padding: 10px;
+    background-color: #fff; 
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+    width: 35rem;
+    margin-top: 2rem;
+}
+
+.center-text {
+    text-align: center;
+}
+
+.mr-1{
+    margin-right: 1rem;
+}
+
+.bg-ethicapp{
+    background-color: #0077c1;
+}
+
+.mb-4{
+    margin-bottom: 4rem;
+}
+
+.flex-justify-end{
+    display: flex;
+    justify-content: end;
+    
+}
+
+.flex-justify-start{
+    display: flex;
+    justify-content: start;
+    
+}
+
+.word-count-df-bg{
+    background: #0077C2; 
+}
+
+.word-count-df{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 8rem;
+    height: 1.5rem;
+    padding: 1rem;
+}
+
+.mr-2{
+    margin-right: 1.5rem;
+}
+
+.ml-3{
+    margin-left: 3rem;
+}
+
+.mb-medio{
+    margin-bottom: 0.5rem;
+}
+
+.mt-n2{
+    margin-top: -2rem;
+}
+
