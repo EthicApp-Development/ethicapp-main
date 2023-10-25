@@ -446,6 +446,7 @@ router.get("/teacher_account_requests/:id", (req, res) => {
         sql:   `
           SELECT *
           FROM teacher_account_requests
+          WHERE id = $1
       `,
         onStart: (ses, data, calc) => {
             calc.id = req.params.id;
