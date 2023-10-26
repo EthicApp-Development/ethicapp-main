@@ -1460,21 +1460,21 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 
 @media (max-width: 991px){
     .w-home {width: 65rem;}
-    .designContext { width: 493px;}
+    .indicationsText { width: 493px;}
 }
 
 @media (min-width: 992px){
     .container{width: 896px;}
-    .designContext {width: 652px;}
+    .indicationsText {width: 652px;}
 }
 
 @media (min-width: 1360px){
     .container {width: 1170px;}
-    .designContext {width: 1170px;}
+    .indicationsText {width: 1170px;}
 }
 @media (min-width: 1200px){
     .container {width: 1050px;}
-    .designContext {width: 1050px;}
+    .indicationsText {width: 1050px;}
 }
 
 @media (max-width: 1111px) {

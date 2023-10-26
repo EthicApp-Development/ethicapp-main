@@ -1,6 +1,6 @@
 <h2>{{'actDesigns'|translate}}</h2>
 <button class="btn btn-primary createDesignBtn" ng-click="selectView('newDesign')">{{'createDesign' | translate}}</button>
-<p class="designContext">{{'designContext' | translate}}</p>
+<p class="indications-text">{{'designContext' | translate}}</p>
 <div ng-controller="BrowseDesignsController">
     <div class="tab_cs" ng-init="dsgnMode= tab">
         <button class="tab_cs" ng-click="dsgnMode=0;getDesigns()" ng-class="{'btn_selected': dsgnMode == 0}">
@@ -33,8 +33,9 @@
 
                         <div class="text-right vertical-align">
                             <img class="locked-svg" ng-show="ses.locked"
-                                src="../../assets/images/iconsets/gray-lineart/design-lock-active.svg" alt="SVGLocked">
-                            <button class="btn btn-primary btn-smaller ml-1"
+                                src="../../assets/images/iconsets/gray-lineart/design-lock-active.svg" title="Copy" alt="SVGLocked">
+                            <button class="btn btn-default ml-1" ng-click="" title="{{'copy'|translate}}"><i class="fa fa-copy"></i></button>
+                                <button class="btn btn-primary btn-smaller ml-1"
                                 ng-click="launchDesign(ses.id, ses.metainfo.title, ses.type)">{{'launchActivity' |
                                 translate}}</button>
 

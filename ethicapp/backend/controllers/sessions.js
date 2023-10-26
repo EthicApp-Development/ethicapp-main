@@ -272,7 +272,8 @@ router.post("/get-activities", (req, res) => {
     ON activity.session = sessions.id
     INNER JOIN designs
     ON activity.design = designs.id
-    WHERE sessions.creator = ${uid};
+    WHERE sessions.creator = ${uid}
+    ORDER BY sessions.time DESC;
     `;
     var db = getDBInstance(pass.dbcon);
     var qry;

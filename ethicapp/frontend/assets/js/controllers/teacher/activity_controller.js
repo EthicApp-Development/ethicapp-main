@@ -174,18 +174,27 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
         });
     };
 
-    self.currentActivities = function(type){
-        if (type == 0) return self.activities.filter(function(activity) {
+    self.getOngoingActivities = () => {
+        console.log("getOngoingActivities");
+        return self.activities.filter((activity) => {
             return activity.status != 3 && activity.archived == false;
-        });
-        if (type == 1) return self.activities.filter(function(activity) {
-            return activity.status == 3 && activity.archived == false;
-        });
-        if (type == 2) return self.activities.filter(function(activity) {
-            return activity.archived;
         });
     };
 
+    self.getFinishedActivities = () => {
+        console.log("getFinishedActivities");  
+        return self.activities.filter((activity) => {
+            return activity.status == 3 && activity.archived == false;
+        });  
+    };
+
+    self.getArchivedActivities = () => {
+        console.log("getArchivedActivities");
+        return self.activities.filter((activity) => {
+            return activity.archived;
+        });
+    };
+    
     self.designSelected = function(){
         return self.launchId.id;
     };
