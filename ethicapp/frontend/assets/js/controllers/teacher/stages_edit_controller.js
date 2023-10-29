@@ -2,7 +2,7 @@
 export let StagesEditController = ($scope, DesignStateService,
     ActivityStateService, 
     $filter, $http, Notification, $timeout) => {
-    console.log("StagesEditController Initializated");
+    //console.log("StagesEditController Initializated");
     var self = $scope;
     self.designId = DesignStateService.designState;
     self.launchId = ActivityStateService.activityState;
@@ -43,12 +43,12 @@ export let StagesEditController = ($scope, DesignStateService,
             self.stageType = self.design.type;
             if(self.design.type == "semantic_differential") self.num = self.design.phases[0].questions[0].ans_format.values;
             resetValues();
-            self.CleanEmptyValues();
-            self.CreateErrorList();
+            self.cleanEmptyValues();
+            self.createErrorList();
         }
     };
 
-    self.CleanEmptyValues = function(){
+    self.cleanEmptyValues = function(){
         var phases = self.design.phases;
         for(let i =0; i< phases.length; i++){
             var phase = phases[i];
@@ -75,7 +75,7 @@ export let StagesEditController = ($scope, DesignStateService,
         return;
     };
 
-    self.CreateErrorList = function(){
+    self.createErrorList = function(){
         //[[{q:false, l:false, t:true}]]
         var phases = self.design.phases;
         for(let i =0; i< phases.length; i++){
@@ -112,7 +112,7 @@ export let StagesEditController = ($scope, DesignStateService,
         }
     };
 
-    self.CheckPhase = function(phase){ //IF Phase deleted or Question deleted, delete errorList
+    self.checkPhase = function(phase){ //IF Phase deleted or Question deleted, delete errorList
         if(self.stageType == "semantic_differential"){
             const questions = self.errorList[phase];
             let error = false;
@@ -135,7 +135,7 @@ export let StagesEditController = ($scope, DesignStateService,
         }
     };
 
-    self.CheckQuestion = function(index){
+    self.checkQuestion = function(index){
         if(self.currentStage !== null){
             const phase = self.currentStage;
             const questionValues = Object.values(self.errorList[phase][index]);
@@ -147,26 +147,26 @@ export let StagesEditController = ($scope, DesignStateService,
         return arr.some(value => value === true);
     };
     
-    self.IsEmpty = function(value, type){
+    self.isEmpty = function(value, type){
         //check currentStage && currentQuestion to update on the fly
         if(self.stageType == "semantic_differential" && self.currentStage !== null || type == ""){
-            const isEmpty = value==="";
+            const _isEmpty = value==="";
             const phase = self.currentStage;
             const question  = self.currentQuestion;
-            if(type !== "") self.errorList[phase][question][type] = isEmpty;
+            if(type !== "") self.errorList[phase][question][type] = _isEmpty;
 
-            return isEmpty;
+            return _isEmpty;
         }
         
     };
 
-    self.IsTextEmpty = function(index, value){
+    self.isTextEmpty = function(index, value){
         if(self.stageType == "ranking" && self.currentStage !== null){
             //check currentStage && currentQuestion to update on the fly
-            const isEmpty = value==="";
+            const _isEmpty = value==="";
             const phase = self.currentStage;
-            self.errorList[phase][index] = isEmpty;
-            return isEmpty;
+            self.errorList[phase][index] = _isEmpty;
+            return _isEmpty;
         }
     };
 

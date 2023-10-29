@@ -52,7 +52,6 @@
                             translate}}</button>
                         <button ng-if="selectedSes.status != 3" class="btn btn-danger btn-activity ml-1 mb-0"
                             ng-click="openFinishConfirmationModal()">{{'end' | translate}}</button>
-
                     </div>
 
                     <div class="container stage_container ml-0" ng-show="currentStage != null && showDesign">
@@ -186,7 +185,6 @@
                                                 ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.r_pole">
                                         </div>
                                     </div>
-
                                 </div>
                                 <div class="row margin-top-24">
                                     <label class="col-lg-2">{{'mandatoryComment'|translate}}</label>
@@ -273,10 +271,6 @@
                     </div>
                 </div>
 
-
-
-
-
                 <div class="container">
                     <div class="row">
                         <div class="col-xs-12">
@@ -307,74 +301,13 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- RUBRICA DASHBOARD -->
-                    <div
-                        ng-show="iterationIndicator == 5 && selectedSes.type!='R' && selectedSes.type != 'T' && selectedSes.type != 'J'">
-                        <h4>{{'details' | translate}}:</h4>
-                        <div class="row">
-                            <div class="col-sm-2">{{'report' | translate}}: </div>
-                            <div class="col-sm-8">
-                                <select class="form-control" ng-model="selectedReport"
-                                    ng-options="showName(x) for x in exampleReports"
-                                    ng-change="getReportResult()"></select>
-                            </div>
-                            <div class="col-sm-2">
-                                <button class="btn btn-default" ng-click="getReportResult()">{{'view' | translate}}
-                                    {{'results' | translate}}</button>
-                            </div>
-                        </div>
-                        <table class="table table-bordered">
-                            <tr>
-                                <th>{{'student' | translate}}</th>
-                                <th style="width: 420px">{{'evaluation' | translate}}</th>
-                            </tr>
-                            <tr ng-repeat="dato in result | orderBy:'-val'">
-                                <td ng-bind="users[dato.uid].name"></td>
-                                <td>
-                                    <div class="bg-darkgreen table-green-bar" style="width: {{100*dato.val}}px;">
-                                        {{dato.val | number:2}}
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                    <div
-                        ng-show="iterationIndicator == 6 && selectedSes.type!='R' && selectedSes.type != 'T' && selectedSes.type != 'J'">
-                        <h4>{{'details' | translate}} {{'report' | translate}}:</h4>
-                        <table class="table table-bordered">
-                            <tr>
-                                <th>{{'report' | translate}}</th>
-                                <th ng-repeat="x in getInMax(resultAll) track by $index">Ev. {{$index + 1}}</th>
-                                <th>{{'average' | translate}}</th>
-                            </tr>
-                            <!--<tr ng-repeat="dato in result | orderBy:'-score'">-->
-                            <tr ng-repeat="(alum,row) in resultAll">
-                                <td>
-                                    {{'reportOf' | translate}} <span ng-bind="users[alum].name"></span>
-                                    <i class="fa fa-check-square" ng-show="row.reviews == selectedSes.paired"></i>
-                                    <button class="btn btn-default btn-sm pull-right"
-                                        ng-click="broadcastReport(row.data[0].rid)" ng-show="selectedSes.status == 9">
-                                        <i class="fa fa-share"></i>
-                                    </button>
-                                    <button class="btn btn-default btn-sm pull-right"
-                                        ng-click="showReport(row.data[0].rid)"><i class="fa fa-eye"></i></button>
-                                </td>
-                                <td ng-repeat="x in getInMax(resultAll) track by $index">
-                                    {{row.data[$index].val | number:2}}
-                                </td>
-                                <td>{{getAvg(row.data) | number:2}}</td>
-                            </tr>
-                        </table>
-                    </div>
-
                     <div ng-show="design.type == 'semantic_differential'" class="margin-top-8">
                         <strong>{{ 'indAggAns' | translate }}</strong>
                         <span class="pull-right mt-1medio margin-right-8"><span style="color: red;">*</span> {{
                             'commentReq' | translate }}</span>
                         <table class="table table-bordered" ts-wrapper>
                             <tr>
-                                <th ts-criteria="uid" ts-order-by="sortByAutorName">{{ 'author' | translate }}</th>
+                                <th ts-criteria="uid" ts-order-by="sortByAuthorName">{{ 'author' | translate }}</th>
                                 <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'" ts-criteria="tmid"
                                     ts-default>{{ 'group' | translate }}</th>
                                 <th ng-repeat="df in dfsStage">
@@ -442,7 +375,6 @@
                                 </td>
                             </tr>
                         </table>
-
                         <br>
                         <strong>{{ 'indAggAns' | translate }}</strong>
                         <span class="pull-right"><span style="color: red;">*</span> {{ 'commentReq' | translate
@@ -451,10 +383,10 @@
                             <tr>
                                 <th ts-criteria="ceqlnum | parseFloat" ts-default="descending">{{ 'numEqual' | translate
                                     }}</th>
-                                <th ts-criteria="uid" ts-order-by="sortByAutorName">{{ 'author' | translate }}</th>
+                                <th ts-criteria="uid" ts-order-by="sortByAuthorName">{{ 'author' | translate }}</th>
                                 <th ts-criteria="jigsawId">{{ 'role' | translate }}</th>
                                 <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'" ts-criteria="uid2"
-                                    ts-order-by="sortByAutorGroup">{{ 'group' | translate }}</th>
+                                    ts-order-by="sortByAuthorGroup">{{ 'group' | translate }}</th>
                                 <th ng-repeat="(p, aa) in rawActors track by p">Pos {{ p + 1 }}</th>
                             </tr>
                             <tr ng-repeat="udata in indvTableSorted track by udata.uid"
@@ -488,7 +420,6 @@
                             <i class="fa fa-check simple-margin-left"></i> {{ 'commented' | translate }}.
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>

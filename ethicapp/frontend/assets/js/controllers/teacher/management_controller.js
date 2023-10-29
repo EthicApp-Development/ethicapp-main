@@ -63,7 +63,6 @@ export let ManagementController = ($scope,
         return languageNames[languageKey] || languageKey;
     };
 
-    
     self.secIcons = {
         configuration: "cog",
         editor:        "edit",
@@ -81,8 +80,6 @@ export let ManagementController = ($scope,
     self.misc = {};
 
     self.init = function () {
-        console.log("[ManagementController] init.");
-        //self.updatelangdata();
         self.getMe();
         
         self.shared.updateSesData();
@@ -91,9 +88,6 @@ export let ManagementController = ($scope,
         
         $socket.on("stateChange", (data) => {
             console.log("SOCKET.IO", data);
-            //if (data.ses == self.selectedSes.id) {
-            //window.location.reload(); <--------
-            //}
         });
     };
 
@@ -152,9 +146,10 @@ export let ManagementController = ($scope,
         self.selectedSes = getSession(sesId)[0];
         console.log(self.selectedSes);
         self.design = design;
-        console.log("Activity ID:",self.currentActivity);
-        console.log("Session ID:",self.selectedId);
-        console.log("Design:",self.design); 
+        
+        //console.log("Activity ID:",self.currentActivity);
+        //console.log("Session ID:",self.selectedId);
+        //console.log("Design:",self.design); 
         //------------------------
         self.requestDocuments();
         //self.shared.updateState();
@@ -181,7 +176,7 @@ export let ManagementController = ($scope,
     self.selectView = function(tab, type){
         if(tab != self.selectedView){
             self.selectedView = tab;
-            console.log(self.selectedView);
+            // console.log(self.selectedView);
             $route.reload();
             if (tab != "newDesignExt" && tab != "viewDesign"){
                 self.designId.id = null; //avoids making designs-documents request
@@ -195,13 +190,13 @@ export let ManagementController = ($scope,
                 if(type != null) self.tabSel.type = type;
                 else self.tabSel.type = 0;
             }
-            console.log(self.selectedView);
+            // console.log(self.selectedView);
         }
     };
 
     self.shared.updateSesData = function () {
         $http({ url: "get-session-list", method: "post" }).success(function (data) {
-            console.log("Session data updated");
+            //console.log("Session data updated");
             self.sessions = data;
             if (self.selectedId != -1) {
                 var ses = self.sessions.find(function (e) {
