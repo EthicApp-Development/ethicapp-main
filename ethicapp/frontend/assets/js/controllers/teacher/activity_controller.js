@@ -4,11 +4,9 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
     self.selectedSes = {};
     self.error = false;
     self.showSpinner = false;
-    self.launchId = ActivityStateService.activityState;
-    
+
     self.init =function(){
         self.selectedSes = {};
-        self.launchDesignId = self.launchId.id;
     };
 
     //Create Activity from launch activity
@@ -165,12 +163,14 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
         }
     };
 
-    self.generateCodeActivity = function (ID) { //use it to generate the code
+    self.generateCodeActivity = function (ID) { // use it to generate the code
         var postdata = {
             id: ID
         };
         $http.post("generate-session-code", postdata).success(function (data) {
-            if (data.code != null) self.selectedSes.code = data.code;
+            if (data.code != null) {
+                self.selectedSes.code = data.code;
+            }
         });
     };
 
@@ -186,15 +186,15 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
         });
     };
 
-    self.designSelected = function(){
-        return self.launchId.id;
+    self.getSelectedDesignId = function(){
+        return ActivityStateService.activityState.designId;
     };
 
     self.createCopy = function(ses){
         self.createSession(ses.name, ses.descr, ses.type, ses.dsgnid);
         self.shared.getActivities();
         self.shared.updateSesData();
-        Notification.success("Actividad copiada!");
     };
+    
     self.init();
 };

@@ -11,7 +11,6 @@ export let DashboardController = ($scope, ActivityStateService,
     self.showCf = false;
     self.dataDF = [];
     self.dataChatCount = {};
-    self.activityState = ActivityStateService;
 
     self.shared.resetGraphs = function () { //THIS HAS TO BE CALLED ON ADMIN
         if (
@@ -45,7 +44,7 @@ export let DashboardController = ($scope, ActivityStateService,
         };
         self.barData = [{ key: self.flang("students"), color: "#0077c1", values: [] }];
         self.updateState();
-        if (self.activityState.dashboardAutoreload  && self.selectedSes.status < 9) {
+        if (ActivityStateService.dashboardAutoreload  && self.selectedSes.status < 9) {
             self.reload(true);
         }
     };
@@ -58,7 +57,7 @@ export let DashboardController = ($scope, ActivityStateService,
             $timeout.cancel(self.currentTimer);
         }
         self.currentTimer = $timeout(self.reload, 
-            self.activityState.dashboardAutoreloadTime * 1000);
+            ActivityStateService.dashboardAutoreloadTime * 1000);
     };
 
     self.updateState = function () {

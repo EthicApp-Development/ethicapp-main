@@ -1,14 +1,7 @@
 "use strict";
-// TODO: refactor these global variables
-//var DASHBOARD_AUTORELOAD = window.location.hostname.indexOf("localhost") == -1;
-//var DASHBOARD_AUTORELOAD_TIME = 15;
 
-//var designId = { id: null };
-//var launchId = { id: null, title: null, type: null };
-//var tabSel = { type: 0 };
-
-window.DIC = null;
-window.warnDIC = {};
+//window.DIC = null;
+//window.warnDIC = {};
 
 var adpp = angular.module("Admin", ["ngSanitize", "btford.socket-io", 
     "api-params", "ui.bootstrap", "ui.multiselect", "nvd3", "timer",
@@ -20,12 +13,12 @@ var adpp = angular.module("Admin", ["ngSanitize", "btford.socket-io",
     return service;
 }).factory("ActivityStateService", function() {
     var service = {};
-    service.activityState = { 
-        id:                      null,
+    service.activityState = {
+        designId:                null,
         title:                   null,
         type:                    null,
         dashboardAutoreload:     true,
-        dashboardAutoreloadTime: 15 
+        dashboardAutoreloadTime: 15
     };
     return service; 
 }).factory("DesignStateService", function() {

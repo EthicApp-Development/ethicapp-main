@@ -3,115 +3,121 @@ export let BrowseDesignsController = ($scope,
     TabStateService, DesignStateService, ActivityStateService, $filter, $http) => {
     var self = $scope;
     self.designs = [];
-    self.public = null;
-    self.dsgnid = null;
-    self.dsgntitle = null;
-    self.dsgntype = null;
+    self.publicDesigns = null;
+    self.designId = null;
+    self.designTitle = null;
+    self.designType = null;
     self.tab = null;
-    self.tabSel = TabStateService.sharedTabState;
-    self.designId = DesignStateService.designState;
-    self.launchId = ActivityStateService.activityState;
 
     self.init = function(){
-        if(self.selectedView == "launchActivity") {self.getDesigns(); self.setValues();} //make request when on launchActivity view only
+        // This controller is used in two different contexts,
+        // that is, when using the "Launch Activity" feature,
+        // and when browsing designs.
+        if(self.selectedView == "launchActivity") {
+            // Only designs owned by the current user are
+            // available
+            self.getUserDesigns(); 
+            self.initValues();
+        }
         else if(self.selectedView == "designs") {
-            self.tab = self.tabSel.type;
-            self.getDesigns();
+            self.tab = TabStateService.sharedTabState.type;
+            // Designs by the current user, as well as
+            // publicly shared designs must be available
+            self.getUserDesigns();
             self.getPublicDesigns();
-        } 
+        }
     };
 
-    self.setValues = function(){
-        self.dsgnid = self.launchId.id;
-        self.dsgntitle = self.launchId.title;
-        self.dsgntype = (self.launchId.type == "semantic_differential" ? "T": "R");
+    self.initValues = function() {
+        self.designId = ActivityStateService.activityState.id;
+        self.designTitle = ActivityStateService.activityState.title;
+        self.designType = ActivityStateService.activityState.type == "semantic_differential" ? 
+            "T" : "R";
     };
 
-    self.designValues = function(id, title, type){
-        self.dsgnid = id;
-        self.dsgntitle = title;
-        self.dsgntype = (type == "semantic_differential" ? "T": "R");
+    self.setActivityDesignValues = function(id, title, type) {
+        ActivityStateService.activityState.designId = id;
+        ActivityStateService.activityState.title = title;
+        ActivityStateService.activityState.type = type == "semantic_differential" ? "T" : "R";
     };
 
-    self.designPublic = function (dsgnid) {
-        var postdata = { dsgnid: dsgnid };
-        $http({ url: "design-public", method: "post", data: postdata }).success(function () {
+    self.designPublic = function (id) {
+        // Make design with 'id' publicly shared
+        let postdata = { designId: id };
+        $http({ 
+            url:    "design-public", 
+            method: "post", 
+            data:   postdata }).success(function () { });
+    };
 
+    self.designLock = function (id) {
+        // Lock the given design
+        let postdata = { designId: id };
+        $http({ 
+            url:    "design-lock", 
+            method: "post", 
+            data:   postdata 
+        }).success(function () {
+        
         });
     };
 
-    self.designLock = function (dsgnid) {
-        var postdata = { dsgnid: dsgnid };
-        $http({ url: "design-lock", method: "post", data: postdata }).success(function () {
-  
-        });
-    };
-
-    self.getDesigns = function(){
+    self.getUserDesigns = function(){
+        // Get all designs by the current user
         $http.get("get-user-designs").success(function (data) {
-            
             if (data.status == "ok") {
                 self.designs = data.result;
             }
-            
         });
     };
 
     self.getPublicDesigns = function(){
+        // Get all public designs
         $http.get("get-public-designs").success(function (data) {
-            
             if (data.status == "ok") {
-                self.public = data.result;
+                self.publicDesigns = data.result;
             }
-            
         });
     };
 
-    self.deleteDesign = function (ID) {
-        console.log(ID);
-        var postdata = {"id": ID};
+    self.deleteDesign = function (id) {
+        var postdata = { "id": id };
         $http.post("delete-design", postdata).success(function (data) {
-            
             if (data.status == "ok") {
-                self.getDesigns(); //get current Designs 
+                // Update available designs after delete 
+                self.getUserDesigns();
             }
-            
         });
-
     };
-
-
-    self.getDesign = function (ID) {
-        $http.post("get-design", ID).success(function (data) {
+    
+    self.openDesignForEditing = (id) => {
+        $http.post("get-design", id).success(function (data) {
             if (data.status == "ok") {
                 self.changeDesign(data.result);
-
+                self.selectView("editDesign");
+                DesignStateService.designState.id = id;
             }
         });
     };
 
-    self.goToDesign = function(ID, type){
-        console.log(ID);
-        $http.post("get-design", ID).success(function (data) {
+    self.openDesignForViewing = (id) => {
+        $http.post("get-design", id).success(function (data) {
             if (data.status == "ok") {
                 self.changeDesign(data.result);
-                if(type=="E") self.selectView("newDesignExt");
-                else self.selectView("viewDesign");
-                DesignStateService.designState.id = ID;
-                self.designId.id = DesignStateService.designState.id;
-                console.log(self.designId);
-
+                self.selectView("viewDesign");
+                DesignStateService.designState.id = id;
             }
-        });        
+        });
     };
 
-    self.launchDesign = function(ID, Title, Type){
-        self.launchId.id = ID;
-        self.launchId.title = Title;
-        self.launchId.type = Type;
+    self.launchDesign = function(id, title, type) {
+        // Sets the design that is to be launched
+        ActivityStateService.activityState.designId = id;
+        ActivityStateService.activityState.title = title;
+        ActivityStateService.activityState.type = type;
+        
         //set title and type
         self.selectView("launchActivity");
-        console.log(self.launchId);
     };
 
     self.init();

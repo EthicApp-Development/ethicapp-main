@@ -3,7 +3,7 @@ export let RoutingController = function($scope) {
     $scope.template = {      
         "home":           "views/partials/teacher/home.html",
         "newDesign":      "views/partials/teacher/new-design.html",
-        "newDesignExt":   "views/partials/teacher/new-design-ext.html",
+        "editDesign":     "views/partials/teacher/edit-design.html",
         "designs":        "views/partials/teacher/designs.html",
         "users":          "views/partials/teacher/users.html",
         "activities":     "views/partials/teacher/activities.html",

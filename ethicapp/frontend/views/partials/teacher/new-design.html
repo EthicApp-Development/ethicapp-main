@@ -25,19 +25,15 @@
                 </div>
             </div>
             <div class="vertical_help_panel">
-                <img src="../../assets/images/iconsets/exclamation-mark.png" alt="signoExclamacion"
+                <img src="../../assets/images/iconsets/exclamation-mark.png" alt="!"
                     class="exclamation-mark-image">
                 <div class="vertical-help-container">
                     <p ng-show="selectedOption === ''">{{'selectActivityType'|translate}}</p>
                     <p ng-show="selectedOption === 'semantic_differential'">{{'SemanticDescription'|translate}}</p>
                     <p ng-show="selectedOption === 'ranking'">{{'RankingDescription'|translate}}</p>
-
                 </div>
-
             </div>
         </div>
-
-
         <br>
         <hr class="mt-1medio">
         <br>
@@ -46,6 +42,5 @@
                 ng-click="formDesign.$valid && uploadDesign(title,'template', selectedOption)"
                 type="submit">{{'next'|translate}}</button>
         </div>
-
     </form>
 </div>

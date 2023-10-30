@@ -32,10 +32,10 @@ export let ManagementController = ($scope,
     self.designId = DesignStateService.designState;
     self.launchId = ActivityStateService.activityState;
 
-    if (lang.startsWith('es')) {
-        self.lang = 'ES_CL/spanish';
+    if (lang.startsWith("es")) {
+        self.lang = "ES_CL/spanish";
     } else {
-        self.lang = 'EN_US/english';
+        self.lang = "EN_US/english";
     }
 
     self.showLanguageDropdown = false;
@@ -56,8 +56,8 @@ export let ManagementController = ($scope,
 
     self.getTranslatedLanguageName = function (languageKey) {
         const languageNames = {
-            'ES_CL/spanish': $translate.instant('spanish'),
-            'EN_US/english': $translate.instant('english')
+            "ES_CL/spanish": $translate.instant("spanish"),
+            "EN_US/english": $translate.instant("english")
         };
 
         return languageNames[languageKey] || languageKey;
@@ -101,6 +101,7 @@ export let ManagementController = ($scope,
     self.set_id = function(id) {
         self.inst_id = id;
     };
+
     self.reset_inst_id = function() {
         self.inst_id = 0;
         self.selectView("institution_admin");
@@ -136,7 +137,6 @@ export let ManagementController = ($scope,
         if(self.shared.getStages)
             self.shared.getStages();
     };
-
 
     //Select activity from Activities
     self.selectActivity = function(activityId, sesId, design){
@@ -178,7 +178,7 @@ export let ManagementController = ($scope,
             self.selectedView = tab;
             // console.log(self.selectedView);
             $route.reload();
-            if (tab != "newDesignExt" && tab != "viewDesign"){
+            if (tab != "editDesign" && tab != "viewDesign"){
                 self.designId.id = null; //avoids making designs-documents request
             } 
             if (tab != "launchActivity") {
@@ -353,12 +353,9 @@ export let ManagementController = ($scope,
         self.shared.updateState();
     };
 
-    
-
     self.shared.resetSesId = function () {
         self.selectedId = -1;
     };
-
 
     self.generateCode = function () {
         var postdata = {

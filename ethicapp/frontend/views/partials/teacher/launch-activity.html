@@ -6,41 +6,40 @@
     <div class="launchActivity-wrapper">
         <div ng-controller="ActivityController" ng-if="selectedView=='launchActivity'" class="launchActivityDiv">
             <div ng-controller="BrowseDesignsController">
-                <div ng-init="setValues()" ng-show="designSelected() == null">
+                <div ng-init="initValues()" ng-show="getSelectedDesignId() == null">
                     <div clas="col-lg-1">
-                        <input class="form-control launchActivity-search fontAwesome" type="text" placeholder="{{'search'|translate}}  &#xF002;"
+                        <input class="form-control launchActivity-search fontAwesome"
+                            type="text" placeholder="{{'search'|translate}}  &#xF002;"
                             ng-model="userSearch">
                     </div>
                     <div class="container launchActivityContainer">
-                        <div class="list-group-item dsgn" ng-repeat="ses in designs | filter:userSearch "
-                            ng-click="designValues(ses.id, ses.metainfo.title, ses.type)"
-                            ng-class="{'dsgn_sel': dsgnid == ses.id}"> <!--UPDATE IT CORRECTLY-->
+                        <div class="list-group-item dsgn" ng-repeat="des in designs | filter:userSearch "
+                            ng-click="setActivityDesignValues(des.id, des.metainfo.title, des.type)"
+                            ng-class="{'dsgn_sel': designId == des.id}">
                             <div>
                                 <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
                                 <p class="list-group-item-text">{{'created' | translate}} {{ses.metainfo.creation_date |
                                     date}}</p>
                             </div>
-
                         </div>
                     </div>
                 </div>
-                <div ng-show="designSelected() != null">
+                <div ng-show="getSelectedDesignId() != null">
                     <div class="container launchActivityContainer">
-                        <div class="list-group-item dsgn" ng-repeat="ses in designs | filter:designSelected()"
-                            ng-click="designValues(ses.id, ses.metainfo.title, ses.type)"
-                            ng-class="{'dsgn_sel': dsgnid == ses.id}"> <!--UPDATE IT CORRECTLY-->
+                        <div class="list-group-item dsgn" ng-repeat="des in designs | filter:getSelectedDesignId()"
+                            ng-click="setActivityDesignValues(des.id, des.metainfo.title, des.type)"
+                            ng-class="{'dsgn_sel': designId == des.id}">
                             <div>
                                 <h4 class="list-group-item-heading" ng-bind="ses.metainfo.title"></h4>
                                 <p class="list-group-item-text">{{'created' | translate}} {{ses.metainfo.creation_date |
                                     date}}</p>
                             </div>
-
                         </div>
                     </div>
                 </div>
                 <br>
                  <p>{{'giveDesignLaunch' | translate}}</p>
-                <form ng-submit="createSession(dsgntitle,descr, dsgntype, dsgnid)">
+                <form ng-submit="createSession(designTitle, descr, designType, designId)">
                     <div class="row">
                         <div class="col-lg-6">
                             <input type="text" class="form-control launchActivityInput" ng-model="descr" required>
@@ -49,15 +48,16 @@
                     <div ng-show="error">
                         <div class="row">
                             <div class="col-lg-6">
-                                <h4 style="color:red; text-align: center; "><strong>El diseño contiene valores no
-                                        válidos, por
-                                        favor editar antes de utilizarlo.</strong></h4>
+                                <h4 style="color:red; text-align: center; "><strong>
+                                    El diseño contiene valores no válidos, por
+                                    favor editar antes de utilizarlo.</strong>
+                                </h4>
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-lg-6">
-                            <button class="btn btn-primary" ng-disabled="dsgnid == null">{{'launchActivity' |
+                            <button class="btn btn-primary" ng-disabled="designId == null">{{'launchActivity' |
                             translate}}</button>
                         </div>
                     </div>
@@ -69,13 +69,10 @@
                         </div>
                     </div>
                 </form>
-                
-                
-
             </div>
         </div>
         <div class="help_panel">
-            <img src="../../assets/images/iconsets/exclamation-mark.png" alt="signoExclamacion" class="exclamation-mark-image">
+            <img src="../../assets/images/iconsets/exclamation-mark.png" alt="!" class="exclamation-mark-image">
             <div class="help-container">
                 <p class="help-paragraph">
                     {{'launchActivityPanel1' | translate}}
@@ -84,8 +81,6 @@
                     {{'launchActivityPanel2' | translate}}
                 </p>
             </div>
-        
         </div>
-        
     </div>
 </div>

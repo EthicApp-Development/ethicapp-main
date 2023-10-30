@@ -358,7 +358,7 @@ export let StagesEditController = ($scope, DesignStateService,
                 self.changeDesign(data.result);
                 DesignStateService.designState.id = ID;
                 self.designId.id = DesignStateService.designState.id; //use variable from admin later
-                self.selectView("newDesignExt");
+                self.selectView("editDesign");
             }
         });
     };
