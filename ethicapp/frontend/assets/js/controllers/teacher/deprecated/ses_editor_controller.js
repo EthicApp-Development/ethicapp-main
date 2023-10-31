@@ -48,16 +48,4 @@ export let SesEditorController = ($scope, $http, Notification) => {
             });
         }
     };
-
-    /*self.exportData = () => {
-        let postdata = {id: self.selectedSes.id};
-        $http.post("export-session-data-sel", postdata).success((data) => {
-            let anchor = angular.element('<a/>');
-            anchor.attr({
-                href: 'data:attachment/vnd.openxmlformats,' + encodeURI(data),
-                target: '_blank',
-                download: 'resultados.xlsx'
-            })[0].click();
-        });
-    }*/
 };

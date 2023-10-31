@@ -24,95 +24,89 @@
         <div class="activities_container" style="margin-top: 2em;">
             <!-- Activities in "active" state -->
             <div class="list-group-item"
-                ng-repeat="ses in currentActivities(0) | filter:{title:userSearch} | orderBy : '-time'"
+                ng-repeat="act in getOngoingActivities() | filter:{title:userSearch} | orderBy : '-time'"
                 ng-if="dsgnMode==0">
                 <div>
-                    <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
-                    <p class="list-group-item-text" ng-if="ses.type == 'R'">
+                    <h4 class="list-group-item-heading" ng-bind="act.name"></h4>
+                    <p class="list-group-item-text" ng-if="act.type == 'R'">
                         {{'ranking_activity'|translate}}
                     </p>
-                    <p class="list-group-item-text" ng-if="ses.type != 'R'">
+                    <p class="list-group-item-text" ng-if="act.type != 'R'">
                         {{'semantic_differential'|translate}}
                     </p>
-                    <p class="list-group-item-text" ng-bind="ses.descr"></p>
+                    <p class="list-group-item-text" ng-bind="act.descr"></p>
                     <p class="list-group-item-text">
-                        {{'launched' | translate}} {{ses.time | date}}
+                        {{'launched' | translate}} {{act.time | date}}
                     </p>
                     <p class="list-group-item-text">
-                        <b>{{'code' | translate}}: {{ses.code}}</b>
+                        <b>{{'code' | translate}}: {{act.code}}</b>
                     </p>
                 </div>
                 <div class="text-right vertical-align">
-                    <button class="btn btn-default" ng-click="createCopy(ses)" 
-                        title="{{'copy'|translate}}">
-                        <i class="fa fa-copy"></i>
-                    </button>
                     <button class="btn btn-primary ml-1"
-                        ng-click="selectActivity(ses.id, ses.session, ses.design)">
+                        ng-click="openActivity(act.id)">
                         {{'gotoActivity' | translate}}
                     </button>
                 </div>
             </div>
             <!-- Activities in "finished" state -->
             <div class="list-group-item"
-                ng-repeat="ses in currentActivities(1) | filter:{title:userSearch} | orderBy : '-time'"
+                ng-repeat="act in getFinishedActivities() | filter:{title:userSearch} | orderBy : '-time'"
                 ng-if="dsgnMode==1">
                 <div>
-                    <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
-                    <p class="list-group-item-text" ng-if="ses.type == 'R'">
+                    <h4 class="list-group-item-heading" ng-bind="act.name"></h4>
+                    <p class="list-group-item-text" ng-if="act.type == 'R'">
                         {{'ranking_activity'|translate}}
                     </p>
-                    <p class="list-group-item-text" ng-if="ses.type != 'R'">
+                    <p class="list-group-item-text" ng-if="act.type != 'R'">
                         {{'semantic_differential'|translate}}
                     </p>
-                    <p class="list-group-item-text" ng-bind="ses.descr"></p>
+                    <p class="list-group-item-text" ng-bind="act.descr"></p>
                     <p class="list-group-item-text">
-                        {{'launched' | translate}} {{ses.time | date}}
+                        {{'launched' | translate}} {{act.time | date}}
                     </p>
                     <p class="list-group-item-text">
-                        {{'code' | translate}}: {{ses.code}}
+                        {{'code' | translate}}: {{act.code}}
                     </p>
                 </div>
 
                 <div class="text-right vertical-align">
                     <button class="btn btn-primary " title="{{'file'|translate}}" 
-                            ng-click="archiveActivity(ses, $event)"><i
+                            ng-click="archiveActivity(act, $event)"><i
                             class="fa fa-inbox"></i></button>
-                    <button class="btn btn-default ml-1" ng-click="createCopy(ses)"
-                        title="{{'copy'|translate}}"><i class="fa fa-copy"></i></button>
                     <button class="btn btn-primary ml-1"
-                        ng-click="selectActivity(ses.id, ses.session, ses.design)">
+                        ng-click="openActivity(act.id)">
                         {{'gotoActivity' | translate}}
                     </button>
                 </div>
             </div>
             <!-- Activities in "archived" state -->
             <div class="list-group-item"
-                ng-repeat="ses in currentActivities(2) | filter:{title:userSearch}  | orderBy : '-time'"
+                ng-repeat="act in getArchivedActivities() | filter:{title:userSearch}  | orderBy : '-time'"
                 ng-if="dsgnMode==2">
                 <div>
-                    <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
-                    <p class="list-group-item-text" ng-if="ses.type == 'R'">
+                    <h4 class="list-group-item-heading" ng-bind="act.name"></h4>
+                    <p class="list-group-item-text" ng-if="act.type == 'R'">
                         {{'ranking_activity'|translate}}
                     </p>
-                    <p class="list-group-item-text" ng-if="ses.type != 'R'">
+                    <p class="list-group-item-text" ng-if="act.type != 'R'">
                         {{'semantic_differential'|translate}}
                     </p>
-                    <p class="list-group-item-text" ng-bind="ses.descr">
+                    <p class="list-group-item-text" ng-bind="act.descr">
                     </p>
                     <p class="list-group-item-text">
-                        {{'launched' | translate}} {{ses.time | date}}
+                        {{'launched' | translate}} {{act.time | date}}
                     </p>
                     <p class="list-group-item-text">
-                        {{'code' | translate}}: {{ses.code}}
+                        {{'code' | translate}}: {{act.code}}
                     </p>
                 </div>
                 <div class="text-right vertical-align">
                     <button class="btn btn-primary " 
-                        title="{{'restore'|translate}}" ng-click="restoreActivity(ses, $event)">
+                        title="{{'restore'|translate}}" ng-click="restoreActivity(act, $event)">
                         <i class="fa fa-undo"></i></button>
                     <button class="btn btn-primary ml-1"
-                        ng-click="selectActivity(ses.id, ses.session, ses.design)">
+                        ng-click="openActivity(act.id)">
                         {{'gotoActivity' | translate}
                     }</button>
                 </div>

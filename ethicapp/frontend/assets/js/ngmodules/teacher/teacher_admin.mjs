@@ -3,29 +3,23 @@
 //window.DIC = null;
 //window.warnDIC = {};
 
+import { ActivitiesService } from "../../services/teacher/activities_service.js";
+import { DesignsService } from "../../services/teacher/designs_service.js";
+import { SessionsService } from "../../services/teacher/sessions_service.js";
+import { DocumentsService } from "../../services/teacher/documents_service.js";
+
 var adpp = angular.module("Admin", ["ngSanitize", "btford.socket-io", 
     "api-params", "ui.bootstrap", "ui.multiselect", "nvd3", "timer",
     "ui-notification", "ngQuill", "tableSort", "pascalprecht.translate", 
     "ngRoute", "checklist-model", "ngDialog"]
 ).factory("TabStateService", function() {
+    // Maintains the state of the main tab view of the UI
     var service = {};
     service.sharedTabState = { type: 0 };
     return service;
-}).factory("ActivityStateService", function() {
-    var service = {};
-    service.activityState = {
-        designId:                null,
-        title:                   null,
-        type:                    null,
-        dashboardAutoreload:     true,
-        dashboardAutoreloadTime: 15
-    };
-    return service; 
-}).factory("DesignStateService", function() {
-    var service = {};
-    service.designState = { id: null };
-    return service;
-});
+}).factory("ActivitiesService", ["$http", ActivitiesService])
+    .factory("DesignsService", ["$http", DesignsService])
+    .factory("SessionsService", ["$http", SessionsService]);
 
 import { ActivityController } from "../../controllers/teacher/activity_controller.js";
 import { StagesController } from "../../controllers/teacher/stages_controller.js";
@@ -34,20 +28,13 @@ import { ConfirmModalController } from "../../controllers/teacher/confirm_modal_
 import { ContentModalController } from "../../controllers/teacher/content_modal_controller.js";
 import { DashboardController } from "../../controllers/teacher/dashboard_controller.js";
 import { DesignsDocController } from "../../controllers/teacher/designs_doc_controller.js";
-import { DocumentsController } from "../../controllers/teacher/documents_controller.js";
-import { DuplicateSesModalController } from "../../controllers/teacher/duplicate_ses_modal_controller.js";
-import { EthicsModalController } from "../../controllers/teacher/ethics_modal_controller.js";
 import { GroupController } from "../../controllers/teacher/group_controller.js";
 import { IncomingUsersController } from "../../controllers/teacher/incoming_users_controller.js";
-import { ManagementController } from "../../controllers/teacher/management_controller.js";
+import { HomeController } from "../../controllers/teacher/home_controller.js";
 import { TabsController } from "../../controllers/tabs_controller.js";
-import { MapSelectionModalController } from "../../controllers/teacher/map_selection_modal_controller.js";
 import { MonitorActivityController } from "../../controllers/teacher/monitor_activity_controller.js";
-import { OptionsController } from "../../controllers/teacher/options_controller.js";
 import { RoutingController } from "../../controllers/teacher/routing_controller.js";
-import { SesEditorController } from "../../controllers/teacher/ses_editor_controller.js";
 import { StagesEditController } from "../../controllers/teacher/stages_edit_controller.js";
-import { DashboardRubricaController } from "../../controllers/teacher/dashboard_rubrica_controller.js";
 import { ngQuillConfigProvider } from "../../helpers/util.js";
 
 adpp.factory("$socket", ["socketFactory", function (socketFactory) {
@@ -84,47 +71,33 @@ adpp.config(function($translateProvider) {
 // Inject controllers into application
 adpp.controller("RoutingController", 
     ["$scope", RoutingController]);
-adpp.controller("ManagementController",
-    ["$scope", "TabStateService", "DesignStateService",
-        "ActivityStateService",
+adpp.controller("HomeController",
+    ["$scope", "TabStateService", "DesignsService",
+        "ActivitiesService",
         "$http", "$uibModal", "$location", "$locale", 
-        "$filter", "$socket", "$route", "$translate", ManagementController]);
+        "$filter", "$socket", "$route", "$translate", HomeController]);
 adpp.controller("TabsController", 
     ["$scope", "$http", "Notification", TabsController]);
-adpp.controller("DocumentsController", 
-    ["$scope", "$http", "Notification", "$timeout", DocumentsController]);
-adpp.controller("SesEditorController", 
-    ["$scope", "$http", "Notification", SesEditorController]);
 adpp.controller("NewUsersController", 
     ["$scope", "$http", "Notification", IncomingUsersController]);
 adpp.controller("DashboardController", 
-    ["$scope", "ActivityStateService", "$http", "$timeout", "$uibModal", "Notification", DashboardController]);
-adpp.controller("MapSelectionModalController", 
-    ["$scope", "$uibModalInstance", MapSelectionModalController]);
+    ["$scope", "ActivitiesService", "$http", "$timeout", "$uibModal", "Notification", DashboardController]);
 adpp.controller("ConfirmModalController", 
     ["$uibModalInstance", ConfirmModalController]);
 adpp.controller("ContentModalController", 
     ["$scope", "$uibModalInstance", "data", ContentModalController]);
-adpp.controller("EthicsModalController", 
-    ["$scope", "$http", "$uibModalInstance", "Notification", "data", EthicsModalController]);
-adpp.controller("DuplicateSesModalController", 
-    ["$scope", "$http", "$uibModalInstance", "data", DuplicateSesModalController]);
 adpp.controller("GroupController", 
     ["$scope", "$http", "Notification", GroupController]);
 adpp.controller("DesignsDocController", 
-    ["$scope", "DesignStateService" ,"$http", "Notification", "$timeout", DesignsDocController]);
+    ["$scope", "DesignsService" ,"$http", "Notification", "$timeout", DesignsDocController]);
 adpp.controller("ActivityController", 
-    ["$scope", "ActivityStateService", "$filter", "$http", "Notification", "$timeout", ActivityController]);
+    ["$scope", "ActivitiesService", "DesignsService", "SesionsService", "DocumentsService", "$filter", "$http", "Notification", "$timeout", ActivityController]);
 adpp.controller("MonitorActivityController", 
     ["$scope", "$filter", "$http", "$window", "Notification","$uibModal", MonitorActivityController]);
 adpp.controller("BrowseDesignsController", 
-    ["$scope", "TabStateService", "DesignStateService", "ActivityStateService", "$filter", "$http", BrowseDesignsController]);
+    ["$scope", "TabStateService", "DesignsService", "ActivitiesService", "$filter", "$http", BrowseDesignsController]);
 adpp.controller("StagesEditController", 
-    ["$scope", "DesignStateService", "ActivityStateService", "$filter", "$http", "Notification", "$timeout", StagesEditController]);
-adpp.controller("OptionsController", 
-    ["$scope", "$http", "Notification", OptionsController]);
-adpp.controller("DashboardRubricaController", 
-    ["$scope", DashboardRubricaController]);
+    ["$scope", "DesignsService", "ActivitiesService", "$filter", "$http", "Notification", "$timeout", StagesEditController]);
 adpp.controller("StagesController", ["$scope", "$http", "Notification", "$uibModal", StagesController]);
 
 adpp.service("DialogService", function(ngDialog) {

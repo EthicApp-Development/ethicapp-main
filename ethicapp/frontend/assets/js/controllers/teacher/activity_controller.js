@@ -1,200 +1,236 @@
 /*eslint func-style: ["error", "expression"]*/
-export let ActivityController = ($scope, ActivityStateService, $filter, $http, Notification, $timeout) => {
+export let ActivityController = ($scope, ActivitiesService, 
+    DesignsService, SessionsService, DocumentsService,
+    $filter, $http, Notification, $timeout) => {
     var self = $scope;
     self.selectedSes = {};
     self.error = false;
     self.showSpinner = false;
 
-    self.init =function(){
+    self.init = function(){
         self.selectedSes = {};
     };
 
-    //Create Activity from launch activity
-    self.createSession = function(dsgnName, dsgndescr, dsgntype, dsgnid){
-
+    // Create Activity from launch activity
+    self.launchActivity = function(designId, instanceDescription){
         self.showSpinner = true;
 
-        $http({
-            url: "check-design", method: "post", data: { dsgnid: dsgnid}
-        }).success(function (data) {
-            self.error = !data.result;
-            console.log(self.error);
-            if(data.result){
-                var postdata = { name: dsgnName, descr: dsgndescr, type: dsgntype};
-                $http({
-                    url: "add-session-activity", method: "post", data: postdata
-                }).success(function (data) {
-                    console.log("SESSION CREATED");
-                    var id = data.id;
-                    self.createActivity(id, dsgnid,);
-                    self.generateCodeActivity(id);
-                    self.shared.getActivities();
-                    self.shared.updateSesData();
-                    $timeout(function() {
-                        self.showSpinner = false; 
-                    }, 5000);
-                    //console.log(data);
-                });
-            }
-        });
-    };
-
-    self.createActivity = function(sesID, dsgnID){
-        var postdata = { sesid: sesID, dsgnid: dsgnID};
-        $http({ url: "add-activity", method: "post", data: postdata }).success(function (data) {
-            console.log("ACTIVITY CREATED");
-            var dsng = data.result;
-            self.startActivityDesign(dsng, sesID);
-            let result = self.shared.getActivities();
-            result.then(
-                function(result) {
-                    const filteredObj = result.filter(item => item.session === sesID)[0];
-                    console.log(filteredObj);
-                    self.selectActivity(filteredObj.id, sesID, dsng);
-                },
-                function(error) {
-                    // This code runs when the Promise is rejected
-                    console.log(error);
+        DesignsService.loadUserDesignById(designId).then(() => {
+            return $http({
+                url: "check-design", method: "post", data: { dsgnid: designId }
+            }).then((data) => {
+                if (!("result" in data) || data.result == null || 
+                    Object.keys(data.result).length === 0) {
+                    throw new Error("[ActivityController] Could not validate the design");
                 }
-            );
-            //get current DESIGNS UPDATED
-            //console.log(data);
+                let postdata = { 
+                    name:  DesignsService.workingDesign.metainfo.title, 
+                    descr: instanceDescription,
+                    type:  DesignsService.resolveDesignTypeCharacter(DesignsService.workingDesign) };
+                
+                // Create a session wherein to run the design
+                return $http({
+                    url:    "add-session-activity", 
+                    method: "post", 
+                    data:   postdata
+                }).then(result => {
+                    // After creating the session, enact the activity
+                    let sessionId = result.id;
+                
+                    // Will set the current session and reload available sessions
+                    return SessionsService.setCurrentSession(sessionId)
+                        .then(() => {
+                            // Will generate an access code for the current session
+                            return SessionsService.createSessionCode(sessionId)
+                                .then(() => {
+                                    // Create the activity
+                                    return ActivitiesService.createActivity(sessionId, designId)
+                                        .then((result) => {
+                                            let activityId = result.id;
+                                            return DesignsService.loadUserDesignById(designId)
+                                                .then(() => {
+                                                    DocumentsService.loadDocumentsForSession(sessionId);
+                                            
+                                                    let act = ActivitiesService.lookUpActivity(activityId);
+                                                    ActivitiesService.setCurrentActivity(act);
+                                                    
+                                                    return addActivityStages(designId, sessionId).then(() => {
+                                                        self.showSpinner = false;
+                                                        self.selectView("activity");
+                                                    });
+                                                });
+                                        });
+                                });
+                        });
+                });
+            });
+        }).catch(error => {
+            console.log(`[Activity Controller] Error launching activity with design id:'${designId}' error:'${error}'`);
+            Notification.error("Error al iniciar actividad");
         });
     };
 
-    self.startActivityDesign = function (design, sesid) {
-        //change it to do it for the first stage or a selected stage?
-        var stageCounter = 0;
-        console.log(design);
-        for(var phase of design.phases){
-            console.log(phase);
+    self.addActivityStages = (design, sessionId) => {
+        let promises = design.phases.map((phase, index) => {
             var postdata = {
-                number:   stageCounter + 1,
+                number:   index + 1,
                 question: phase.q_text !== undefined ? phase.q_text : "",
 
-                // ver si es equipo, si lo es, igualar a numero de integrantes + el tipo,
-                // sino es nulo
+                // Group phases require number of members plus grouping algorithm, separated
+                // with a colon. Otherwise, just assign null.
                 grouping: phase.mode == "team" ?
                     phase.stdntAmount + ":" + phase.grouping_algorithm :
                     null,
                 type:     phase.mode,
                 anon:     phase.anonymous,
                 chat:     phase.chat,
-                sesid:    sesid,
+                sesid:    sessionId,
                 prev_ans: ""
             };
-            console.log(postdata);
 
-            $http({url: "add-stage", method: "post", data: postdata}).success(function (data) {
-                let stageid = data.id;
-                if (stageid != null) {
-                /*
-                if (postdata.type == "team") {
-                    self.acceptGroups(stageid);
-                }
-                */
-                    console.log(self.selectedSes);
-                    console.log("TYPE:",self.selectedSes.type);
-                    if (design.type == "semantic_differential") {
-                        var counter = 1;
-                        for(var question of phase.questions){
-                            var content = question.ans_format;
-                            let p = {
-                                name:       question.q_text,
-                                tleft:      content.l_pole,
-                                tright:     content.r_pole,
-                                num:        content.values,
-                                orden:      counter,
-                                justify:    content.just_required,
-                                stageid:    stageid,
-                                sesid:      sesid,
-                                word_count: content.min_just_length
-                            };
-                            console.log(p);
-                            $http({url:
-                                "add-differential-stage", method: "post", data:   p
-                            }).success(function () {
-                                let pp = {sesid: sesid, stageid: stageid};
-                                $http({
-                                    url: "session-start-stage", method: "post", data: pp
-                                }).success(function () {
-                                    Notification.success("Etapa creada correctamente");
-                                });
+            return $http({url: "add-stage", method: "post", data: postdata})
+                .then(function (data) {
+                    let stageid = data.id;
+                    if (stageid != null) 
+                    {
+                        if (design.type == "semantic_differential") {
+                            let _promises = phase.questions.map((question, index) => {
+                                return () => {
+                                    var content = question.ans_format;
+                                    let p = {
+                                        name:       question.q_text,
+                                        tleft:      content.l_pole,
+                                        tright:     content.r_pole,
+                                        num:        content.values,
+                                        orden:      index + 1,
+                                        justify:    content.just_required,
+                                        stageid:    stageid,
+                                        sesid:      sessionId,
+                                        word_count: content.min_just_length
+                                    };
+                                                        
+                                    return $http({url: "add-differential-stage", method: "post", data: p})
+                                        .then(() => {
+                                            if (index === phase.questions.length - 1) {
+                                                let pp = {sesid: sessionId, stageid: stageid};
+                                                return $http({ url: "session-start-stage", method: "post", data: pp })
+                                                    .then(() => {
+                                                        Notification.success("Etapa creada correctamente");
+                                                    });
+                                            }
+                                        });
+                                };
+                            });
+                            _promises.reduce((chain, currentPromise) => {
+                                return chain.then(currentPromise);
+                            }, Promise.resolve());                            
+                        }
+                        else if (design.type == "ranking") {
+                            let _promises = phase.roles.map((role, index) => {
+                                return () => {
+                                    let p = {
+                                        name:       role.name,
+                                        jorder:     role.type == "order",
+                                        justified:  role.type != null,
+                                        word_count: role.wc,
+                                        stageid:    stageid,
+                                    };
                             
+                                    return $http({url: "add-actor", method: "post", data: p})
+                                        .then((response) => {
+                                            console.log("Actor added");
+                                            if (index === phase.roles.length - 1) {  // Si es la última iteración
+                                                let pp = {sesid: sessionId, stageid: stageid};
+                                                return $http({ url: "session-start-stage", method: "post", data: pp })
+                                                    .then(() => {
+                                                        Notification.success("Etapa creada correctamente");
+                                                    });
+                                            }
+                                        });
+                                };
                             });
-                            counter++;
+                            
+                            _promises.reduce((chain, currentPromise) => {
+                                return chain.then(currentPromise);
+                            }, Promise.resolve());
                         }
                     }
-                    else if (design.type == "ranking") {
-                        let c = phase.roles.length;
-                        for (let i = 0; i < phase.roles.length; i++) {
-                            const role = phase.roles[i];
-                            let p = {
-                                name:       role.name,
-                                jorder:     role.type == "order",
-                                justified:  role.type != null,
-                                word_count: role.wc,
-                                stageid:    stageid,
-                            };
-                            $http({url: "add-actor", method: "post", data: p}).success((data) => {
-                                console.log("Actor added");
-                                c -= 1;
-                                if (c == 0) {
-                                    let pp = {sesid: sesid, stageid: stageid};
-                                    $http({
-                                        url: "session-start-stage", method: "post", data: pp
-                                    }).success(function (data) {
-                                        Notification.success("Etapa creada correctamente");
-                                    });
-                                }
-                            });
-                        }
+                    else {
+                        Notification.error("Error al crear la etapa");
                     }
-
-                
-                }
-                else {
-                    Notification.error("Error al crear la etapa");
-                }
-            });
-    
-            stageCounter++;
-            break;
-        }
+                });
+        });
+        promises.reduce((chain, currentPromise) => {
+            return chain.then(currentPromise);
+        }, Promise.resolve());
     };
 
-    self.generateCodeActivity = function (ID) { // use it to generate the code
-        var postdata = {
-            id: ID
-        };
-        $http.post("generate-session-code", postdata).success(function (data) {
-            if (data.code != null) {
-                self.selectedSes.code = data.code;
-            }
-        });
+    self.getOngoingActivities = () => {
+        return ActivitiesService.getOngoingActivities();
     };
 
-    self.currentActivities = function(type){
-        if (type == 0) return self.activities.filter(function(activity) {
-            return activity.status != 3 && activity.archived == false;
-        });
-        if (type == 1) return self.activities.filter(function(activity) {
-            return activity.status == 3 && activity.archived == false;
-        });
-        if (type == 2) return self.activities.filter(function(activity) {
-            return activity.archived;
-        });
+    self.getFinishedActivities = () => {
+        return ActivitiesService.getFinishedActivities();
+    };
+
+    self.getArchivedActivities = () => {
+        return ActivitiesService.getArchivedActivities();
     };
 
     self.getSelectedDesignId = function(){
-        return ActivityStateService.activityState.designId;
+        return ActivitiesService.activityState.designId;
     };
 
-    self.createCopy = function(ses){
-        self.createSession(ses.name, ses.descr, ses.type, ses.dsgnid);
-        self.shared.getActivities();
-        self.shared.updateSesData();
+    self.openActivity = (activityId) => {
+        let act = ActivitiesService.lookUpActivity(activityId);
+        ActivitiesService.setCurrentActivity(act);
+        let sessionId = act.session;
+        SessionsService.setCurrentSession(sessionId);
+        let designId = act.design;
+        DesignsService.loadUserDesignById(designId);
+        DocumentsService.loadDocumentsForSession(sessionId);
+        // Get Stages??
+        self.selectView("activity");
     };
+
+    self.archiveActivity = function(act, $event){
+        $event.stopPropagation();
+        SessionsService.archiveSession(act.session)
+            .then(() => {
+                Notification.info("Sesión archivada");
+                act.archived = true;
+            });
+    };
+
+    self.restoreActivity = function(act, $event){
+        $event.stopPropagation();
+        SessionsService.restoreSession(act.session)
+            .then(() => {
+                Notification.info("Sesión restaurada");
+                act.archived = false;
+            });
+    };      
+
+    // Select activity from Activities
+    /*self.selectActivity = (activityId, sesId, design) => {
+        self.selectView("activity");
+        self.currentActivity.id = activityId;
+        self.selectedId = sesId;
+        self.selectedSes = getSession(sesId)[0];
+        self.design = design;
+        
+        self.requestDocuments();
+        self.requestSemDocuments();
+        self.requestQuestions();
+        self.getNewUsers();
+        self.getMembers();
+        self.shared.verifyTabs(); // TabsController
+        self.shared.resetTab(); // TabsController
+
+        if(self.shared.getStages) {
+            self.shared.getStages();
+        }
+    };*/
     
     self.init();
 };

@@ -29,11 +29,6 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
         }
     };
 
-    self.test = function(xd, xd2){
-        console.log(xd2[0]);
-        console.log(xd2);
-    };
-
     self.ActivityCompletion = function(stageId){
         const numUsers = Object.keys(self.users).length -1;
         
@@ -187,8 +182,8 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
        
 
         var modalInstance = $uibModal.open({
-            templateUrl: "static/end-activity-dialog.html",
-            controller: "ConfirmModalController",
+            templateUrl:  "static/end-activity-dialog.html",
+            controller:   "ConfirmModalController",
             controllerAs: "vm",
             
         });
@@ -203,22 +198,22 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
 
 
     self.copyToClipboard = function() {
-        var codeElement = document.querySelector('.code-div strong');
+        var codeElement = document.querySelector(".code-div strong");
         var codeToCopy = codeElement.textContent;
 
-        var tempInput = document.createElement('textarea');
+        var tempInput = document.createElement("textarea");
         tempInput.value = codeToCopy;
         document.body.appendChild(tempInput);
         tempInput.select();
-        document.execCommand('copy');
+        document.execCommand("copy");
         document.body.removeChild(tempInput);
 
         var codeMessage;
 
-        if (self.lang === 'EN_US/english') {
-            codeMessage = 'Session code copied';
+        if (self.lang === "EN_US/english") {
+            codeMessage = "Session code copied";
         } else {
-            codeMessage = 'Código de sesión copiado';
+            codeMessage = "Código de sesión copiado";
         }
         
         Notification.success(codeMessage);

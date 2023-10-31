@@ -1,8 +1,10 @@
-import { computeRankingFrequencyTable, computeIndTable, sortIndTable } from "../../libs/dashboards/ranking.js";
+import { computeRankingFrequencyTable, 
+    computeIndTable, sortIndTable } from "../../libs/dashboards/ranking.js";
 import { buildSemanticDifferentialsTable } from "../../libs/dashboards/semantic_differential.js";
+import { ActivitiesService } from "../../services/teacher/activities_service.js";
 
 /*eslint func-style: ["error", "expression"]*/
-export let DashboardController = ($scope, ActivityStateService,
+export let DashboardController = ($scope, AcitivitiesService,
     $http, $timeout, $uibModal, Notification) => {
     
     var self = $scope;
@@ -11,6 +13,11 @@ export let DashboardController = ($scope, ActivityStateService,
     self.showCf = false;
     self.dataDF = [];
     self.dataChatCount = {};
+
+    self.dashboardConfig = {
+        dashboardAutoreload:     true,
+        dashboardAutoreloadTime: 15    
+    };
 
     self.shared.resetGraphs = function () { //THIS HAS TO BE CALLED ON ADMIN
         if (
@@ -44,7 +51,8 @@ export let DashboardController = ($scope, ActivityStateService,
         };
         self.barData = [{ key: self.flang("students"), color: "#0077c1", values: [] }];
         self.updateState();
-        if (ActivityStateService.dashboardAutoreload  && self.selectedSes.status < 9) {
+        if (self.dashboardConfig.dashboardAutoreload && 
+            self.selectedSes.status < 9) {
             self.reload(true);
         }
     };
@@ -57,7 +65,7 @@ export let DashboardController = ($scope, ActivityStateService,
             $timeout.cancel(self.currentTimer);
         }
         self.currentTimer = $timeout(self.reload, 
-            ActivityStateService.dashboardAutoreloadTime * 1000);
+            self.dashboardConfig.dashboardAutoreloadTime * 1000);
     };
 
     self.updateState = function () {

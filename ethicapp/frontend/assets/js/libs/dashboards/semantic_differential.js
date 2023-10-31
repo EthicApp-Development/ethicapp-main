@@ -24,7 +24,7 @@ export let buildSemanticDifferentialsTable = (data, users, dfs, gbu) => {
     
     let avg = (arr) => {
         return arr.length > 0 ? arr.reduce((v, e) => v + e, 0) / arr.length : 0;
-    }
+    };
     
     let sdf = (arr) => {
         if (arr.length <= 1)
@@ -35,7 +35,7 @@ export let buildSemanticDifferentialsTable = (data, users, dfs, gbu) => {
             sd += (a - av) * (a - av);
         });
         return Math.sqrt(sd / (arr.length - 1)) / av;
-    }
+    };
 
     Object.keys(tmids).forEach(t => {
         let r = res.filter(e => e.tmid == t);

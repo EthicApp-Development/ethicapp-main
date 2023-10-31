@@ -25,7 +25,7 @@
                 <form id="doc-form" class="row" ng-submit="uploadDesignDocument($event)" enctype="multipart/form-data">
                     <div class="col-sm-4">
                         <input type="file" class="form-control" name="pdf" ng-disabled="busy" required>
-                        <input type="text" ng-value="getID()" name="dsgnid" hidden> <!--DESIGN ID-->
+                        <input type="text" ng-value="getDesignId()" name="dsgnid" hidden> <!--DESIGN ID-->
                     </div>
                     <div class="col-sm-2">
                         <button class="form-control btn btn-default" ng-disabled="busy">{{'add'|translate}}<i
@@ -63,8 +63,7 @@
 
 
             <div class="container stage_container" ng-show="currentStage != null">
-                <!--ng-controller="StagesController"-->
-                <div class="row">
+ç                <div class="row">
                     <h4 class="col-lg-2"><strong>{{'stage' | translate}} #{{currentStage+1}}</strong></h4>
                     <h4 class="col-lg-4" ng-show="currentStage == 0"><strong>{{'modeType' | translate}}:</strong>
                         {{design.phases[currentStage].mode|translate}} </h4>
@@ -287,7 +286,6 @@
                 <button class="btn btn-danger margin-top-24 mb-2" ng-click="deleteQuestion(currentQuestion)"
                     ng-show="design.phases[currentStage].questions.length > 1">{{'delete'|translate}}
                     {{'question'|translate}}</button>
-
             </div>
         </div>
         <div class="help_panel">
@@ -313,7 +311,7 @@
     </div>
     <div class="row flex-justify-left ml-1" style="margin-bottom: 5em;">
         <button class="btn btn-success w-17" ng-click="updateDesign()">{{'save'|translate}}</button>
-        <button class="btn btn-primary w-17" ng-click="launchDesignEdit(ses.id, ses.metainfo.title, ses.type)"
+        <button class="btn btn-primary w-17" ng-click="launchDesignFromEditor(ses.id, ses.metainfo.title, ses.type)"
             style="margin-left: 1em;">{{'launchActivity'|translate}}</button>
     </div>
 

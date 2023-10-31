@@ -21,8 +21,8 @@ let deprecated_functions = () => {
                     // Intended to simply view the design
                     self.selectView("viewDesign");
                 }
-                DesignStateService.designState.id = id;
-                console.log(DesignStateService.designState.id);
+                DesignsService.id = id;
+                console.log(DesignsService.id);
             }
         });
     };

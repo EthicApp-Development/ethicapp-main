@@ -18,7 +18,7 @@
             ng-if="selectedView=='designs'">
             <div class="activities_container" style="margin-top: 2em;">
                 <div class="list-group pad-content">
-                    <div class="list-group-item" ng-repeat="des in designs | filter:userSearch" ng-if="dsgnMode==0">
+                    <div class="list-group-item" ng-repeat="des in userDesigns | filter:userSearch" ng-if="dsgnMode==0">
                         <div>
                             <h4 class="list-group-item-heading" ng-bind="des.metainfo.title"></h4>
                             <p class="list-group-item-text" ng-if="des.type == 'ranking'">{{'ranking_activity'|translate}}</p>
@@ -31,7 +31,7 @@
                             <img class="locked-svg" ng-show="des.locked"
                                 src="../../assets/images/iconsets/gray-lineart/design-lock-active.svg" alt="SVGLocked">
                             <button class="btn btn-primary btn-smaller ml-1"
-                                ng-click="launchDesign(des.id, des.metainfo.title, des.type)">{{'launchActivity' |
+                                ng-click="launchActivityWithDesign(des.id)">{{'launchActivity' |
                                 translate}}</button>
                             <button class="btn btn-primary btn-smaller ml-1" ng-click="openDesignForEditing(des.id)"
                                 ng-hide="des.locked">{{'edit' |
@@ -43,7 +43,7 @@
                                 translate}}</button>
                             <div class="ml-1">
                                 <label class="switch">
-                                    <input type="checkbox" ng-checked="des.public" ng-click="designPublic(des.id)">
+                                    <input type="checkbox" ng-checked="des.public" ng-click="togglePublic(des.id)">
                                     <span class="slider round"></span>
                                 </label>
                                 <p class="share-paragraph">{{'share'|translate}}</p>
@@ -54,7 +54,8 @@
                     <div class="list-group-item" ng-repeat="des in publicDesigns | filter:userSearch" ng-if="dsgnMode==1">
                         <div>
                             <h4 class="list-group-item-heading" ng-bind="des.metainfo.title"></h4>
-                            <p class="list-group-item-text" ng-if="des.type == 'ranking'">{{'ranking_activity'|translate}}</p>
+                            <p class="list-group-item-text" ng-if="des.type == 'ranking'">
+                                {{'ranking_activity'|translate}}</p>
                             <p class="list-group-item-text" ng-if="des.type != 'ranking'">{{'semantic_differential'|translate}}</p>
                             <p class="list-group-item-text">
                                 {{'created' | translate}} {{des.metainfo.creation_date | date}}

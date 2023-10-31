@@ -146,13 +146,12 @@ router.post("/add-session-activity", (req, res) => {
         if(res != null) result = res.rows[0].max;
     });
     qry.on("end", function () {
-        res.json({status: 200, id: result});
+        res.json({ status: 200, id: result});
     });
     qry.on("error", function(err){
         console.error(`Fatal error on the SQL query "${sql}"`);
         console.error(err);
-        res.json({status: 400, });
-
+        res.json({ status: 400 });
     });
 });
 
@@ -161,22 +160,18 @@ router.post("/add-activity", (req, res) => {
     var sesid =req.body.sesid;
     var dsgnid = req.body.dsgnid;
     var sql = `
-    INSERT INTO ACTIVITY (design, SESSION)
-    VALUES (${dsgnid}, ${sesid});
-
     UPDATE designs
     SET locked = TRUE
     WHERE id = ${dsgnid};
 
-    SELECT design
-    FROM DESIGNS
-    WHERE id = ${dsgnid};
+    INSERT INTO ACTIVITY (design, SESSION)
+    VALUES (${dsgnid}, ${sesid}) RETURNING id;
     `;
     var db = getDBInstance(pass.dbcon);
     var qry;
     var result;
     qry = db.query(sql, (err,res) =>{
-        if(res!= null) result = res.rows[0].design;
+        if (res!= null) result = res.rows[0].id;
     });
     qry.on("end", function () {
         res.json({status: 200, "result": result});
@@ -251,7 +246,6 @@ router.post("/check-design", (req, res) => {
     });
 });
 
-
 router.post("/get-activities", (req, res) => {
     var uid = req.session.uid;
     var sql = `
@@ -290,7 +284,6 @@ router.post("/get-activities", (req, res) => {
         res.json({status: 400, });
     });
 });
-
 
 router.get("/admin", (req, res) => {
     if (req.session.role == "P")
@@ -512,7 +505,7 @@ router.post("/design-public", rpg.multiSQL({
     WHERE id = $1;
     `,
     postReqData: ["sesid"],
-    sqlParams:   [rpg.param("post", "dsgnid")]
+    sqlParams:   [rpg.param("post", "id")]
 }));
 
 router.post("/design-lock", rpg.multiSQL({
@@ -523,7 +516,7 @@ router.post("/design-lock", rpg.multiSQL({
     WHERE id = $1;
     `,
     postReqData: ["sesid"],
-    sqlParams:   [rpg.param("post", "dsgnid")]
+    sqlParams:   [rpg.param("post", "id")]
 }));
 
 
