@@ -1,4 +1,4 @@
-export let getBlankRankingDesign = (title, author) => {
+export let getBlankDesign = (title, author) => {
     return { 
         "metainfo": {
             "title":         title,
@@ -22,3 +22,16 @@ export let getBlankRankingDesign = (title, author) => {
         ]
     };
 };
+
+export let copyPhase = (phase) => {
+    return{
+        mode:               phase.mode,
+        chat:               phase.chat,
+        anonymous:          phase.anonymous,
+        grouping_algorithm: phase.grouping_algorithm,
+        prevPhasesResponse: [],
+        stdntAmount:        phase.stdntAmount,
+        q_text:             phase.q_text,
+        roles:              phase.roles
+    };
+}

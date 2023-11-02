@@ -1,4 +1,4 @@
-export let getBlankSDDesign = (title, author) => {
+export let getBlankDesign = (title, author) => {
     return { 
         "metainfo": {
             "title":         title,
@@ -30,4 +30,29 @@ export let getBlankSDDesign = (title, author) => {
             }
         ]
     };
+};
+
+export let copyPhase = (phase) => {
+    return {
+        mode:               phase.mode,
+        chat:               phase.chat,
+        anonymous:          phase.anonymous,
+        questions:          phase.questions,
+        grouping_algorithm: phase.grouping_algorithm,
+        prevPhasesResponse: [], // This is reset, as the user is expected to reconfigure it!
+        stdntAmount:        phase.stdntAmount
+    };
+}
+
+export let getBlankQuestion = () => {
+    return {
+        "q_text":     "",
+        "ans_format": {
+            "values":          5,
+            "l_pole":          "",
+            "r_pole":          "",
+            "just_required":   true,
+            "min_just_length": 10
+        }
+    }
 };

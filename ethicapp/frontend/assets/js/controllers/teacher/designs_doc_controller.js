@@ -1,47 +1,52 @@
 /*eslint func-style: ["error", "expression"]*/
-export let DesignsDocController = ($scope, DesignsService, $http, Notification, $timeout) => { 
-    var self = $scope;
+export let DesignsDocController = ($scope, DesignsService, DocumentsService, 
+    $http, Notification, $timeout) => { 
+    let self = $scope;
     self.busy = false;
     self.documents = [];
 
-    self.init = function(){
+    self.init = () => {
         self.requestDesignDocuments();
     };
 
-    self.uploadDesignDocument = function (event) { //Work in progress
-        var fileInput = event.target.querySelector('input[type="file"]');
-        var file = fileInput.files[0];
+    self.uploadDesignDocument = (event) => { //Work in progress
+        let fileInput = event.target.querySelector('input[type="file"]');
+        let file = fileInput.files[0];
 
-        if (file){
-            var maxSize = 20 * 1024 * 1024; // 20 MB
-            if (file.size <= maxSize) {
-                self.busy = true;
-                var fd = new FormData(event.target);
-                $http.post("upload-design-file", fd, {
-                    transformRequest: angular.identity,
-                    headers:          { "Content-Type": undefined }
-                }).success(function (data) {
-                    if (data.status == "ok") {
-                        $timeout(function () {
-                            //Notification.success("Documento cargado correctamente");
-                            event.target.reset();
-                            self.busy = false;
-                            //self.shared.updateDocuments();
-                            self.requestDesignDocuments();
-                        }, 2000);
-                    }
-                });
-            }
-            else{
-                Notification.error("Documento muy grande. El tamaño máximo permitido es 20 MB.");
-            }
-
+        if (!file) {
+            Notification.error("No se encuentra el archivo para subir");
+            throw new Error("[DesignsDocController.uploadDesignDocument] File not found");
         }
+
+        const maxDocumentSize = 20 * (1 << 20); // 20 MB
+
+        if (file.size > maxDocumentSize) {
+            Notification.error("El archivo excede el tamaño límite");
+            throw new Error("[DesignsDocController.uploadDesignDocument] File too large");
+        }
+
+        self.busy = true; // Show spinner
+        let fd = new FormData(event.target);
+
+        DocumentsService.uploadDesignDocument(fd)
+            .catch(error => {
+                Notification.error("Error subiendo el documento al servidor");
+                console.log(`[DesignsDocController.uploadDesignDocument] Error: ${error}`);
+            }).then(result => {
+                const designId = DesignsService.workingDesign.id;
+                DocumentsService.loadDesignDocuments(designId)
+                    .catch(error => {
+                        Notification.error("Error cargando los documentos del diseño actual");
+                    });
+            }).finally(() => {
+                event.target.reset();
+                self.busy = false;
+            });
     };
     
-    self.requestDesignDocuments = function ( ) {
+    self.requestDesignDocuments = () => {
         console.log(DesignsService.workingDesign);
-        var postdata = { dsgnid: DesignsService.workingDesign.id};
+        var postdata = { dsgnid: DesignsService.workingDesign.id };
         $http({
             url: "designs-documents", method: "post", data: postdata
         }).success(function (data) {
@@ -49,8 +54,8 @@ export let DesignsDocController = ($scope, DesignsService, $http, Notification, 
         });
     };
 
-    self.deleteDesignDocument = function (dsgnid) {
-        var postdata = { dsgnid: dsgnid };
+    self.deleteDesignDocument = (designId) => {
+        let postdata = { dsgnid: designId };
         $http({
             url: "delete-design-document", method: "post", data: postdata
         }).success(function () {
@@ -58,12 +63,12 @@ export let DesignsDocController = ($scope, DesignsService, $http, Notification, 
         });
     };
 
-    self.getPathname = function(path){
-        var split = path.split("/");
-        return split[split.length - 1];
+    self.getPathname = (path) => {
+        let tokens = path.split("/");
+        return tokens[tokens.length - 1];
     };
 
-    self.openPDFInNewTab = function (pdfPath) {
+    self.openPDFInNewTab = (pdfPath) => {
         window.open(pdfPath, "_blank");
     };
 

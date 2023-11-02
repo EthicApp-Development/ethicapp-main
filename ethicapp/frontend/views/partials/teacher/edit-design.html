@@ -1,4 +1,4 @@
-<div class="" ng-controller="StagesEditController" ng-if="selectedView == 'editDesign'">
+<div class="" ng-controller="DesignEditorController" ng-if="selectedView == 'editDesign'">
     <div class="container">
         <h2>{{'designMsg'|translate}}</h2>
         <div class="" ng-controller="DesignsDocController"> <!--ng-controller="DocumentsController"-->
@@ -20,12 +20,12 @@
                 </div>
             </div>
             <br>
-            <div ng-hide="documents.length>0">
+            <div ng-hide="documents.length > 0">
                 <label>{{'add' | translate}} {{'document' | translate}}:</label>
                 <form id="doc-form" class="row" ng-submit="uploadDesignDocument($event)" enctype="multipart/form-data">
                     <div class="col-sm-4">
                         <input type="file" class="form-control" name="pdf" ng-disabled="busy" required>
-                        <input type="text" ng-value="getDesignId()" name="dsgnid" hidden> <!--DESIGN ID-->
+                        <input type="text" ng-value="getDesignId()" name="dsgnid" hidden> <!-- design id is passed as hidden -->
                     </div>
                     <div class="col-sm-2">
                         <button class="form-control btn btn-default" ng-disabled="busy">{{'add'|translate}}<i
@@ -43,7 +43,7 @@
             <div class="container phase_container">
                 <div class="row">
                     <div class="col-xs-1 phase_element" ng-repeat="item in getStages()" ng-init="current"
-                        ng-class="{phase_selected:currentStage==$index, error: checkPhase($index)}"
+                        ng-class="{phase_selected:currentStage==$index, error: validatePhase($index)}"
                         ng-click="selectStage($index)">
                         {{'stage' | translate}} {{$index+ 1}}
                         {{'mode' | translate}}: {{item.mode|translate}}
@@ -75,7 +75,7 @@
                         <label class="col-lg-2">{{'modeType' | translate}}:</label>
                         <div class="col-lg-3">
                             <select class="form-control form-inline-med"
-                                ng-options="x.key as (x.name | translate) for x in groupType"
+                                ng-options="x.key as (x.name | translate) for x in interactionTypes"
                                 ng-model="design.phases[currentStage].mode"></select>
                         </div>
                     </div>
@@ -85,7 +85,7 @@
                             <div class="col-lg-3">
                                 <select class="form-control form-inline-med"
                                     ng-init="design.phases[currentStage].grouping_algorithm"
-                                    ng-options="x.key as (x.name | translate) for x in methods"
+                                    ng-options="x.key as (x.name | translate) for x in groupingAlgorithms"
                                     ng-model="design.phases[currentStage].grouping_algorithm"></select>
                                 <!--EDIT LATER-->
                             </div>
@@ -153,7 +153,7 @@
                     <div class="tab_cs">
                         <button ng-repeat="i in buildArray(design.phases[currentStage].questions.length)" class="tab_cs"
                             ng-click="selectQuestion($index)"
-                            ng-class="{'btn_selected': currentQuestion == $index, 'error': checkQuestion($index)}">
+                            ng-class="{'btn_selected': currentQuestion == $index, 'error': validateQuestion($index)}">
                             {{'question'|translate}} {{i}}
                         </button>
                         <button class="tab_cs" ng-click="addQuestion()">
@@ -182,15 +182,15 @@
                                         placeholder="{{'left'|translate}}"
                                         ng-model="design.phases[currentStage].questions[currentQuestion].ans_format.l_pole">
                                 </div>
-                                <button class="btn btn-default" ng-click="amountOptions('-')"
-                                    ng-disabled="num==2">-</button>
+                                <button class="btn btn-default" ng-click="updateScaleValues('-')"
+                                    ng-disabled="sdScaleTicks==2">-</button>
                             </div>
                             <div class="dopts col-xs-6">
-                                <div class="option eq-space" ng-repeat="i in buildArray(num)">{{i}}</div>
+                                <div class="option eq-space" ng-repeat="i in buildArray(sdScaleTicks)">{{i}}</div>
                             </div>
                             <div class="col-xs-3">
-                                <button class="btn btn-default" ng-click="amountOptions('+')"
-                                    ng-disabled="num==10">+</button>
+                                <button class="btn btn-default" ng-click="updateScaleValues('+')"
+                                    ng-disabled="sdScaleTicks==10">+</button>
                                 <div class="tlabel">
                                     <input type="text" class="form-control" ng-disabled="readonly"
                                         ng-class="{'error': isEmpty(design.phases[currentStage].questions[currentQuestion].ans_format.r_pole, 'r')}"
@@ -310,7 +310,7 @@
         <h4 style="color:red; text-align: center; "><strong>{{'errorSave'|translate}}</strong></h4>
     </div>
     <div class="row flex-justify-left ml-1" style="margin-bottom: 5em;">
-        <button class="btn btn-success w-17" ng-click="updateDesign()">{{'save'|translate}}</button>
+        <button class="btn btn-success w-17" ng-click="saveDesign()">{{'save'|translate}}</button>
         <button class="btn btn-primary w-17" ng-click="launchDesignFromEditor(ses.id, ses.metainfo.title, ses.type)"
             style="margin-left: 1em;">{{'launchActivity'|translate}}</button>
     </div>

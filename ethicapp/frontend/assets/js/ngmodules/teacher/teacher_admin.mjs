@@ -1,8 +1,5 @@
 "use strict";
 
-//window.DIC = null;
-//window.warnDIC = {};
-
 import { ActivitiesService } from "../../services/teacher/activities_service.js";
 import { DesignsService } from "../../services/teacher/designs_service.js";
 import { SessionsService } from "../../services/teacher/sessions_service.js";
@@ -19,7 +16,8 @@ var adpp = angular.module("Admin", ["ngSanitize", "btford.socket-io",
     return service;
 }).factory("ActivitiesService", ["$http", ActivitiesService])
     .factory("DesignsService", ["$http", DesignsService])
-    .factory("SessionsService", ["$http", SessionsService]);
+    .factory("SessionsService", ["$http", SessionsService])
+    .factory("DocumentsService", ["$http", DocumentsService]);
 
 import { ActivityController } from "../../controllers/teacher/activity_controller.js";
 import { StagesController } from "../../controllers/teacher/stages_controller.js";
@@ -34,7 +32,7 @@ import { HomeController } from "../../controllers/teacher/home_controller.js";
 import { TabsController } from "../../controllers/tabs_controller.js";
 import { MonitorActivityController } from "../../controllers/teacher/monitor_activity_controller.js";
 import { RoutingController } from "../../controllers/teacher/routing_controller.js";
-import { StagesEditController } from "../../controllers/teacher/stages_edit_controller.js";
+import { DesignEditorController } from "../../controllers/teacher/design_editor_controller.js";
 import { ngQuillConfigProvider } from "../../helpers/util.js";
 
 adpp.factory("$socket", ["socketFactory", function (socketFactory) {
@@ -89,15 +87,15 @@ adpp.controller("ContentModalController",
 adpp.controller("GroupController", 
     ["$scope", "$http", "Notification", GroupController]);
 adpp.controller("DesignsDocController", 
-    ["$scope", "DesignsService" ,"$http", "Notification", "$timeout", DesignsDocController]);
+    ["$scope", "DesignsService", "DocumentsService", "$http", "Notification", "$timeout", DesignsDocController]);
 adpp.controller("ActivityController", 
     ["$scope", "ActivitiesService", "DesignsService", "SesionsService", "DocumentsService", "$filter", "$http", "Notification", "$timeout", ActivityController]);
 adpp.controller("MonitorActivityController", 
     ["$scope", "$filter", "$http", "$window", "Notification","$uibModal", MonitorActivityController]);
 adpp.controller("BrowseDesignsController", 
     ["$scope", "TabStateService", "DesignsService", "ActivitiesService", "$filter", "$http", BrowseDesignsController]);
-adpp.controller("StagesEditController", 
-    ["$scope", "DesignsService", "ActivitiesService", "$filter", "$http", "Notification", "$timeout", StagesEditController]);
+adpp.controller("DesignEditorController", 
+    ["$scope", "DesignsService", "ActivitiesService", "$filter", "$http", "Notification", "$timeout", DesignEditorController]);
 adpp.controller("StagesController", ["$scope", "$http", "Notification", "$uibModal", StagesController]);
 
 adpp.service("DialogService", function(ngDialog) {

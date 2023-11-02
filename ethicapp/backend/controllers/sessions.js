@@ -430,7 +430,7 @@ router.post("/get-design", (req, res) => {
         }
     });
     qry.on("end", function () {
-        res.end('{"status":"ok", "result":'+result+"}");
+        res.end(`{"status":"ok", "result":"${result}"}`);
     });
     qry.on("error", function(err){
         console.error(`Fatal error on the SQL query "${sql}"`);

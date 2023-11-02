@@ -1,4 +1,4 @@
-export let DesignsService = ($http) => {
+export let DesignsService = ($rootScope, $http) => {
     var service = { 
         userDesigns:   [],
         publicDesigns: []
@@ -9,9 +9,10 @@ export let DesignsService = ($http) => {
 
     service.setWorkingDesign = (design) => {
         service.workingDesign = design;
+        $rootScope.$broadcast('DesignsService_workingDesignUpdated', design);
     };
 
-    service.togglePublishDesign = function (designId) {
+    service.togglePublishDesign = (designId) => {
         let postdata = { id: designId };
         return $http({ 
             url:    "design-public", 
@@ -75,6 +76,7 @@ export let DesignsService = ($http) => {
                 if (data.status == "ok") {
                     self.setWorkingDesign(data.result);
                     service.workingDesign.id = designId;
+                    return Promise.resolve(data.result);
                 }
                 else {
                     throw new Error("Failed to load user design.");
@@ -89,7 +91,37 @@ export let DesignsService = ($http) => {
         // TODO: implement
     };
 
-    self.deleteDesign = function (designId) {
+    self.createDesign = (design) => {
+        return $http.post("upload-design", design)
+            .then(function (data) {
+                if (data.status == "ok") {
+                    return Promise.resolve(data.id);
+                }
+                else {
+                    throw new Error("Could not create design");
+                }
+            }).catch(error => {
+                console.log("[Designs Service] Failed to create design" +
+                    `design: ${error}`);
+            });
+    };
+
+    self.updateDesign = (designId, design) => {
+        var postdata = { 
+            "design": design, 
+            "id":     designId
+        };
+
+        return $http.post("update-design", postdata)
+            .then((response) => {
+                if (response.data.status != "ok") {
+                    throw new Error("[DesignsService.saveDesign] Failed to update design");
+                }
+                return Promise.resolve(response);
+            });
+    };
+
+    self.deleteDesign = (designId) => {
         var postdata = { id: designId };
         return $http.post("delete-design", postdata).then((data) => {
             if (data.status == "ok") {

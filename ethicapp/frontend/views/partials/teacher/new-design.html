@@ -7,7 +7,7 @@
     <div class="modal-header pl-0">
         <h4>{{'designMsgInfo'|translate}}</h4>
     </div>
-    <form class="modal-body form-new-design" name="formDesign" ng-controller="StagesEditController"
+    <form class="modal-body form-new-design" name="formDesign" ng-controller="DesignEditorController"
         ng-if="selectedView == 'newDesign'">
         <div class="wrapper_nd">
             <div class="line-form-nd">
@@ -39,7 +39,7 @@
         <br>
         <div class="new-design-bottom">
             <button class="btn btn-primary"
-                ng-click="formDesign.$valid && uploadBlankDesign(title, 'template', selectedOption)"
+                ng-click="formDesign.$valid && saveBlankDesign(title, 'template', selectedOption)"
                 type="submit">{{'next'|translate}}</button>
         </div>
     </form>
