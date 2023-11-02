@@ -1,6 +1,12 @@
-export let DocumentsService = ($http) => {
+export let DocumentsService = ($rootScope, $http) => {
     let service = {
 
+    };
+
+    service.init = () => {
+        $rootScope.$on("DesignsService_workingDesignUpdated", (event, data) => {
+            service.loadDesignDocuments(data.designId);
+        });
     };
 
     // Deprecated
@@ -33,12 +39,12 @@ export let DocumentsService = ($http) => {
         // The formData object must include a variable containing the design id (dsgnid).
         return $http.post("upload-design-file", documentData, {
             transformRequest: angular.identity,
-            headers:          { "Content-Type" : undefined }
+            headers:          { "Content-Type": undefined }
         }).catch(error => {
             console.log("[Documents Service] Failed to upload document!");
             throw error;
         });        
-    }
+    };
 
     service.deleteDesignDocument = (designId) => {
         let postdata = { dsgnid: designId };
@@ -48,6 +54,8 @@ export let DocumentsService = ($http) => {
             return service.loadDesignDocuments(designId);
         });
     };
+
+    service.init();
 
     return service;
 };

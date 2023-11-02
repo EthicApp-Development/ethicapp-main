@@ -1,4 +1,4 @@
-export let SessionsService = ($http) => {
+export let SessionsService = ($rootScope, $http) => {
     var service = { 
     };
     service.sessions = [];
@@ -16,6 +16,9 @@ export let SessionsService = ($http) => {
             users:   [],
             usermap: {}
         };
+
+        $rootScope.$broadcast("SessionsService_currentSessionUpdated", 
+            service.currentSession);
     };
 
     service.createSessionCode = (sessionId) => {
@@ -62,6 +65,9 @@ export let SessionsService = ($http) => {
                     throw new Error(`[Sessions Service] session with id:'${id}' not found.`);
                 }
                 service.currentSession = result;
+
+                $rootScope.$broadcast("SessionsService_currentSessionUpdated", 
+                    service.currentSession);                
             })
             .then(() => {
                 let postdata = { sesid: service.currentSession.id };

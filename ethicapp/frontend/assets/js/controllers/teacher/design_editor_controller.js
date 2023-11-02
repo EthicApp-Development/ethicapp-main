@@ -1,7 +1,7 @@
 /*eslint func-style: ["error", "expression"]*/
 import * as sdModule from "../../libs/designs/semantic_differential.js";
 import * as rnkModule from "../../libs/designs/ranking.js";
-import * as gaModule from "../../libs/designs/grouping_algorithms.js"
+import * as gaModule from "../../libs/designs/grouping_algorithms.js";
 
 export let DesignEditorController = ($scope, DesignsService,
     ActivitiesService, 
@@ -11,10 +11,10 @@ export let DesignEditorController = ($scope, DesignsService,
     self.init = () => {
         self.groupingAlgorithms = gaModule.getGroupingAlgorithmLabels();
         self.interactionTypes = gaModule.getInteractionTypes();
-        $scope.$on('DesignsService_workingDesignUpdated', (event, data) => {
-            resetEditorState();
-        })
-        resetEditorState();
+        $scope.$on("DesignsService_workingDesignUpdated", (event, data) => {
+            self.resetEditorState();
+        });
+        self.resetEditorState();
     };
 
     self.resetEditorState = () => {
@@ -24,7 +24,7 @@ export let DesignEditorController = ($scope, DesignsService,
         resetValues();
         self.cleanEmptyValues();
         self.createErrorList();
-    }
+    };
 
     let resetValues = () => {
         self.design = DesignsService.workingDesign;
@@ -50,7 +50,7 @@ export let DesignEditorController = ($scope, DesignsService,
 
     self.cleanEmptyValues = () => {        
         let funcs = {
-            "semantic_differential" : (phase) => {
+            "semantic_differential": (phase) => {
                 phase.questions.map(question => {
                     question.q_text = question.q_text === "-->>N/A<<--" ? "" : question.q_text;
                     question.ans_format.l_pole = question.ans_format.l_pole === "-->>N/A<<--" ? 
@@ -59,13 +59,13 @@ export let DesignEditorController = ($scope, DesignsService,
                         "" : question.ans_format.r_pole;
                 });
             },
-            "ranking" : (phase) => {
+            "ranking": (phase) => {
                 phase.q_text = phase.q_text === "-->>N/A<<--" ? "" : phase.q_text;
                 phase.roles.map(role => {
                     role.name = role.name === "-->>N/A<<--" ? "" : role.name;
                 });
             }
-        }
+        };
 
         let phases = DesignsService.workingDesign.phases;
 
@@ -82,7 +82,7 @@ export let DesignEditorController = ($scope, DesignsService,
     self.createErrorList = () => {
         //[[{q:false, l:false, t:true}]]
         let funcs = {
-            "semantic_differential" : (phase) => {
+            "semantic_differential": (phase) => {
                 let questionsErrorList = [];
                 let questions = phase.questions;
 
@@ -97,12 +97,10 @@ export let DesignEditorController = ($scope, DesignsService,
                 });
                 return questionsErrorList;
             },
-            "ranking" : (phase) => {
-                let roles = phase.roles;
+            "ranking": (phase) => {
                 let rolesErrorList = [];
-                roles.map(role => {
-                    var role = roles[j];
-                    rolesErrorList.push(role.name=="");
+                phase.roles.map(role => {
+                    rolesErrorList.push(role.name == "");
                 });
                 return rolesErrorList;
             }
@@ -119,12 +117,12 @@ export let DesignEditorController = ($scope, DesignsService,
         phases.map(phase => {
             let errors = funcs[self.stageType](phase);    
             self.errorList.push(errors);
-        })
+        });
     };
 
     self.validatePhase = (phase) => { // IF Phase deleted or Question deleted, delete errorList
         let validators = {
-            "semantic_differential" : (phase, errorList) => {
+            "semantic_differential": (phase, errorList) => {
                 const errors = self.errorList[phase];
                 let error = false;
                 errors.map((_error, index) => {
@@ -134,7 +132,7 @@ export let DesignEditorController = ($scope, DesignsService,
                 });
                 return error;
             },
-            "ranking" : (phase, errorList) => {
+            "ranking": (phase, errorList) => {
                 const errors = errorList[phase];
                 let error = DesignsService.workingDesign.phases[phase].q_text == "";
                 errors.map((_error, index) => {
@@ -142,7 +140,7 @@ export let DesignEditorController = ($scope, DesignsService,
                 });
                 return error;
             }
-        }
+        };
 
         if (!(self.stageType in validators)) {
             throw new Error("[DesignEditorController.validatePhase] Error: a function for the" +
@@ -193,7 +191,7 @@ export let DesignEditorController = ($scope, DesignsService,
             }
 
             ActivitiesService.currentActivityState.id = DesignsService
-                .workingDesign.id;
+                .workingDesignId;
             ActivitiesService.currentActivityState.title = DesignsService
                 .workingDesign
                 .metainfo.title;
@@ -284,7 +282,7 @@ export let DesignEditorController = ($scope, DesignsService,
                 Notification.error("No se pudo crear un diseño nuevo para editar");
                 return false;
             });
-        })
+        });
     };    
 
     self.validateDesign = () => { 
@@ -325,7 +323,7 @@ export let DesignEditorController = ($scope, DesignsService,
     };
 
     self.getDesignId = () => {
-        return DesignsService.workingDesign.id;
+        return DesignsService.workingDesignId;
     };
 
     self.getDesign = () => {

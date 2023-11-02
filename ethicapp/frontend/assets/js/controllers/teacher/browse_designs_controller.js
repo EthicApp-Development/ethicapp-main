@@ -1,15 +1,21 @@
+import * as dtrModule from "../../libs/designs/design_type_registry.js";
+
 /*eslint func-style: ["error", "expression"]*/
 export let BrowseDesignsController = ($scope, 
     TabStateService, DesignsService, ActivitiesService, $filter, $http) => {
-    var self = $scope;
-    self.designs = DesignsService.userDesigns;
-    self.publicDesigns = DesignsService.publicDesigns;
-    self.designId = null;
-    self.designTitle = null;
-    self.designType = null;
-    self.tab = null;
+    let self = $scope;
 
-    self.init = function(){
+    self.init = () => {
+        self.userDesigns = DesignsService.userDesigns;
+        self.publicDesigns = DesignsService.publicDesigns;
+        self.designId = null;
+        self.designTitle = null;
+        self.designType = null;
+        self.tab = null;
+
+        initUserDesignsUpdateHandler();
+        initPublicDesignsUpdateHandler();
+
         // This controller is used in two different contexts,
         // that is, when using the "Launch Activity" feature,
         // and when browsing designs.
@@ -33,6 +39,7 @@ export let BrowseDesignsController = ($scope,
             }
             else if(self.selectedView == "designs") {
                 self.tab = TabStateService.sharedTabState.type;
+
                 // Designs by the current user, as well as
                 // publicly shared designs must be available
                 DesignsService.loadPublicDesigns();
@@ -40,11 +47,22 @@ export let BrowseDesignsController = ($scope,
         });
     };
 
+    let initUserDesignsUpdateHandler = () => {
+        $scope.$on("DesignsService_userDesignsUpdated", (event, data) => {
+            self.userDesigns = DesignsService.userDesigns;
+        });
+    };
+
+    let initPublicDesignsUpdateHandler = () => {
+        $scope.$on("DesignsService_publicDesignsUpdated", (event, data) => {
+            self.publicDesigns = DesignsService.publicDesigns;
+        });
+    };
+
     self.initValues = function() {
         self.designId = ActivitiesService.currentActivityState.id;
         self.designTitle = ActivitiesService.currentActivityState.title;
-        self.designType = ActivitiesService.currentActivityState.type == "semantic_differential" ? 
-            "T" : "R";
+        self.designType = ActivitiesService.currentActivityState.type; // Watch out!
     };
 
     self.setSelectedDesign = function(designId) {

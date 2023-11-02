@@ -3,47 +3,55 @@ export let HomeController = ($scope,
     TabStateService, DesignsService, ActivitiesService,
     $http, $uibModal, $location, $locale, 
     $filter, $socket, $route, $translate) => {
-    var self = $scope;
-    self.temp = "";
     
-    $locale.NUMBER_FORMATS.GROUP_SEP = "";
+    var self = $scope;
     self.shared = {};
-    self.sessions = [];
-    self.selectedView = ""; //current view
-    self.activities = []; //activities
-    self.currentActivity = {}; //current Activity
-    self.design = null;
-    self.selectedSes = null;
-    self.documents = [];
-    self.questions = [];
-    self.questionTexts = [];
-    self.newUsers = [];
-    self.users = {};
-    self.selectedId = -1;
-    self.role = "A";
-    self.sesStatusses = ["notPublicada", "reading", "personal", "anon", "teamWork", "finished"];
-    self.optConfidence = [0, 25, 50, 75, 100];
-    self.iterationNames = [];
-    self.showSeslist = true;
-    self.superBar = false;
-    self.institution = false;
-    self.inst_id = 0;
-    self.tabSel = TabStateService.sharedTabState;
+    // [DEPRECATED] self.misc = {};
+    // [DEPRECATED] self.temp = "";
+    // [DEPRECATED] self.sessions = [];    
+    // [DEPRECATED] self.currentActivity = {}; //current Activity
+    // [DEPRECATED] self.design = null;
+    // [DEPRECATED] self.selectedSes = null;
+    // [DEPRECATED] self.documents = [];
+    // [DEPRECATED] self.questions = [];
+    // [DEPRECATED] self.questionTexts = [];
+    // [DEPRECATED] self.newUsers = [];
+    // [DEPRECATED] self.users = {};
+    // [DEPRECATED] self.selectedId = -1;
+    // [DEPRECATED] self.role = "A";
+    // [DEPRECATED] self.sesStatusses = ["notPublicada", "reading", "personal", "anon", "teamWork", "finished"];
+    // [DEPRECATED] self.optConfidence = [0, 25, 50, 75, 100];
+    // [DEPRECATED] self.iterationNames = [];
+    // [DEPRECATED] self.showSeslist = true;
+    // [DEPRECATED] self.superBar = false;
+    // [DEPRECATED] self.institution = false;
+    // [DEPRECATED] self.inst_id = 0;
 
     self.init = function () {
+        self.tabSel = TabStateService.sharedTabState;
+        self.selectedView = ""; //current view
+        self.activities = [];   //activities
+    
         const lang = navigator.language;
-
+        
         if (lang.startsWith("es")) {
             self.lang = "ES_CL/spanish";
         } else {
             self.lang = "EN_US/english";
         }
 
-        self.shared.getActivities();
+        self.initActivitiesList();
         self.updateLang(self.lang);
         
         $socket.on("stateChange", (data) => {
             console.log("SOCKET.IO", data);
+        });
+    };
+
+    self.initActivitiesList = () => {
+        self.activities = ActivitiesService.activities;
+        $scope.$on("ActivitiesService_activitiesUpdated", (event, data) => {
+            self.activities = data;
         });
     };
 
@@ -65,38 +73,6 @@ export let HomeController = ($scope,
 
         return languageNames[languageKey] || languageKey;
     };
-
-    self.shared.getActivities = function() {
-        return new Promise(function(resolve, reject) {
-            var postdata = {};
-            $http({
-                url:    "get-activities",
-                method: "post",
-                data:   postdata
-            }).success(function(data) {
-                for (var index = 0; index < data.activities.length; index++) {
-                    data.activities[index].title = data.activities[index].design.metainfo.title;
-                }
-                self.activities = data.activities;
-                resolve(self.activities);
-            }).error(function(error) {
-                reject(error);
-            });
-        });
-    };
-
-    /*
-    self.typeNames = {
-        L: "readComp", 
-        S: "multSel", 
-        M: "semUnits", 
-        E: "ethics", 
-        R: "rolePlaying", 
-        T: "ethics",
-        J: "jigsaw"
-    };*/
-
-    self.misc = {};
 
     self.selectView = function(tab, type){
         if(tab != self.selectedView){

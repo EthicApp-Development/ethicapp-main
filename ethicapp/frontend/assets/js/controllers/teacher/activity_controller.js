@@ -15,59 +15,54 @@ export let ActivityController = ($scope, ActivitiesService,
     self.launchActivity = function(designId, instanceDescription){
         self.showSpinner = true;
 
-        DesignsService.loadUserDesignById(designId).then(() => {
+        // Step 1: load the design
+        let loadDesignPms = () => { 
+            return DesignsService.loadUserDesignById(designId); 
+        };
+
+        // Step 2: validate the design is appropriate to be launched
+        let createSession = (data) => {
+            if (!("result" in data) || data.result == null || 
+            Object.keys(data.result).length === 0) {
+                throw new Error("[ActivityController] Could not validate the design");
+            }
+            
+            let postdata = { 
+                name:  DesignsService.workingDesign.metainfo.title, 
+                descr: instanceDescription,
+                type:  DesignsService.resolveDesignTypeCharacter(DesignsService.workingDesign) 
+            };
+            
+            // Create a session wherein to run the design
             return $http({
-                url: "check-design", method: "post", data: { dsgnid: designId }
-            }).then((data) => {
-                if (!("result" in data) || data.result == null || 
-                    Object.keys(data.result).length === 0) {
-                    throw new Error("[ActivityController] Could not validate the design");
-                }
-                let postdata = { 
-                    name:  DesignsService.workingDesign.metainfo.title, 
-                    descr: instanceDescription,
-                    type:  DesignsService.resolveDesignTypeCharacter(DesignsService.workingDesign) };
-                
-                // Create a session wherein to run the design
-                return $http({
-                    url:    "add-session-activity", 
-                    method: "post", 
-                    data:   postdata
-                }).then(result => {
-                    // After creating the session, enact the activity
-                    let sessionId = result.id;
-                
-                    // Will set the current session and reload available sessions
-                    return SessionsService.setCurrentSession(sessionId)
-                        .then(() => {
-                            // Will generate an access code for the current session
-                            return SessionsService.createSessionCode(sessionId)
-                                .then(() => {
-                                    // Create the activity
-                                    return ActivitiesService.createActivity(sessionId, designId)
-                                        .then((result) => {
-                                            let activityId = result.id;
-                                            return DesignsService.loadUserDesignById(designId)
-                                                .then(() => {
-                                                    DocumentsService.loadDocumentsForSession(sessionId);
-                                            
-                                                    let act = ActivitiesService.lookUpActivity(activityId);
-                                                    ActivitiesService.setCurrentActivity(act);
-                                                    
-                                                    return addActivityStages(designId, sessionId).then(() => {
-                                                        self.showSpinner = false;
-                                                        self.selectView("activity");
-                                                    });
-                                                });
-                                        });
-                                });
-                        });
-                });
+                url:    "add-session-activity", 
+                method: "post", 
+                data:   postdata
             });
-        }).catch(error => {
-            console.log(`[Activity Controller] Error launching activity with design id:'${designId}' error:'${error}'`);
-            Notification.error("Error al iniciar actividad");
-        });
+        };
+
+        // Step 3: Set the current session for the activity
+        let setCurrentSessionPms = result => {
+            // After creating the session, enact the activity
+            let sessionId = result.id;
+        
+            // Will set the current session and reload available sessions
+            return SessionsService.setCurrentSession(sessionId);
+        };
+
+        // Step 4: Give the session an access code
+        let genSessionCodePms = sessionId => {
+            return SessionsService.createSessionCode(sessionId);
+        };
+
+        // Step 5: Create the activity instance in the session
+        let createActivityInstPms = () => {
+            const sessionId = SessionsService.currentSession.id;
+            return ActivitiesService.createActivity(sessionId, designId, true);
+        };
+
+        // Step 6: Initialize the activity by giving it its first stage
+
     };
 
     self.addActivityStages = (design, sessionId) => {
@@ -197,7 +192,7 @@ export let ActivityController = ($scope, ActivitiesService,
         $event.stopPropagation();
         SessionsService.archiveSession(act.session)
             .then(() => {
-                Notification.info("Sesión archivada");
+                Notification.info("Actividad archivada");
                 act.archived = true;
             });
     };
@@ -206,31 +201,10 @@ export let ActivityController = ($scope, ActivitiesService,
         $event.stopPropagation();
         SessionsService.restoreSession(act.session)
             .then(() => {
-                Notification.info("Sesión restaurada");
+                Notification.info("Actividad restaurada");
                 act.archived = false;
             });
     };      
 
-    // Select activity from Activities
-    /*self.selectActivity = (activityId, sesId, design) => {
-        self.selectView("activity");
-        self.currentActivity.id = activityId;
-        self.selectedId = sesId;
-        self.selectedSes = getSession(sesId)[0];
-        self.design = design;
-        
-        self.requestDocuments();
-        self.requestSemDocuments();
-        self.requestQuestions();
-        self.getNewUsers();
-        self.getMembers();
-        self.shared.verifyTabs(); // TabsController
-        self.shared.resetTab(); // TabsController
-
-        if(self.shared.getStages) {
-            self.shared.getStages();
-        }
-    };*/
-    
     self.init();
 };

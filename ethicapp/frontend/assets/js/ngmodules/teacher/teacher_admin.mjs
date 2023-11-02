@@ -14,10 +14,10 @@ var adpp = angular.module("Admin", ["ngSanitize", "btford.socket-io",
     var service = {};
     service.sharedTabState = { type: 0 };
     return service;
-}).factory("ActivitiesService", ["$http", ActivitiesService])
-    .factory("DesignsService", ["$http", DesignsService])
-    .factory("SessionsService", ["$http", SessionsService])
-    .factory("DocumentsService", ["$http", DocumentsService]);
+}).factory("ActivitiesService", ["$rootScope", "$http", ActivitiesService])
+    .factory("DesignsService", ["$rootScope", "$http", DesignsService])
+    .factory("SessionsService", ["$rootScope", "$http", SessionsService])
+    .factory("DocumentsService", ["$rootScope", "$http", DocumentsService]);
 
 import { ActivityController } from "../../controllers/teacher/activity_controller.js";
 import { StagesController } from "../../controllers/teacher/stages_controller.js";
@@ -65,6 +65,13 @@ adpp.config(function($translateProvider) {
     // Set default language
     $translateProvider.preferredLanguage("es");
 });
+
+adpp.config(["$provide", function($provide) {
+    $provide.decorator("$locale", ["$delegate", function($delegate) {
+        $delegate.NUMBER_FORMATS.GROUP_SEP = "";
+        return $delegate;
+    }]);
+}]);
 
 // Inject controllers into application
 adpp.controller("RoutingController", 

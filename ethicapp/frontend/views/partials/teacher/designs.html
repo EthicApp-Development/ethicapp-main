@@ -3,10 +3,10 @@
 <p class="designContext">{{'designContext' | translate}}</p>
 <div ng-controller="BrowseDesignsController">
     <div class="tab_cs" ng-init="dsgnMode= tab">
-        <button class="tab_cs" ng-click="dsgnMode=0;getUserDesigns()" ng-class="{'btn_selected': dsgnMode == 0}">
+        <button class="tab_cs" ng-click="dsgnMode=0" ng-class="{'btn_selected': dsgnMode == 0}">
             {{'yours'|translate}}
         </button>
-        <button class="tab_cs" ng-click="dsgnMode=1;getPublicDesigns()" ng-class="{'btn_selected': dsgnMode == 1}">
+        <button class="tab_cs" ng-click="dsgnMode=1" ng-class="{'btn_selected': dsgnMode == 1}">
             {{'byOthers'|translate}}
         </button>
         <div style="float: left;display: flex;justify-content: left;align-items: center;">

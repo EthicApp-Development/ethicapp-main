@@ -1,6 +1,11 @@
-export let ActivitiesService = ($http) => {
+export let ActivitiesService = ($rootScope, $http) => {
     var service = { };
     service.activities = [];
+
+    service.init = () => {
+        self.loadActivities();
+        service.clearCurrentActivity();
+    };
 
     service.clearCurrentActivity = () => {
         service.currentActivity = {
@@ -10,15 +15,31 @@ export let ActivitiesService = ($http) => {
             currentPhase: -1
         };
     };
-    service.clearCurrentActivity();
-
+    
     service.setCurrentActivityById = (activityId) => {
-        let act = service.lookUpActivity(activityId);
-        Object.assign(service.currentActivity, act);
+        // Assign fields to activity object
+        let act = service.lookUpActivity(activityId).then(result => {
+            // Strip current activity object
+            Object.keys(service.currentActivity).forEach(key => delete obj[key]);
+
+            // Copy the fields
+            Object.assign(service.currentActivity, act);
+
+            $rootScope.$broadcast("ActivitiesService_currentActivityUpdated", 
+                service.currentActivity);
+        });
     };
 
     service.setCurrentActivity = (activity) => {
         Object.assign(service.currentActivity, activity);
+
+        $rootScope.$broadcast("ActivitiesService_currentActivityUpdated", 
+            service.currentActivity);
+    };
+
+    service.setActivities =  (activities) => {
+        service.activities = activities;
+        $rootScope.$broadcast("ActivitiesService_activitiesUpdated", service.activities);
     };
 
     service.loadActivities = () => {
@@ -27,12 +48,12 @@ export let ActivitiesService = ($http) => {
             method: "post",
             data:   {}
         }).then((data) => {
-            for (var index = 0; index < data.activities.length; index++) {
-                data.activities[index].title = data.activities[index].design.metainfo.title;
-            }
-            service.activities = data.activities;
+            data.activities.map(activity => {
+                activity.title = activity.design.metainfo.title;
+            });
+            service.setActivities(data.activities);
         }).catch((error) => {
-            console.log("[Activities Service] Error loading activities.");
+            console.log("[ActivitiesService.loadActivities] Error loading activities.");
             throw error;
         });
     }; 
@@ -41,7 +62,8 @@ export let ActivitiesService = ($http) => {
         const lookup = () => {
             const activity = service.activities.filter(activity => activity.id == id)[0] ?? null;
             if (!activity) {
-                console.error(`[Activities Service] activity with id:'${id}' not found.`);
+                console.error(`[ActivitiesService.lookUpActivity] activity with id:'${id}'` + 
+                    "not found.");
             }
             return activity;
         };
@@ -51,7 +73,8 @@ export let ActivitiesService = ($http) => {
                 .then(lookup)
                 .catch(error => {
                     console.error(
-                        `[Activities Service] error loading activity for lookup with id:'${id}': '${error}'.`);
+                        "[ActivitiesService.lookUpActivity] error loading activity for lookup" +
+                            ` with id:'${id}': '${error}'.`);
                     throw error;
                 });
         } else {
@@ -59,11 +82,17 @@ export let ActivitiesService = ($http) => {
         }
     };
 
-    service.createActivity = function(sessionId, designId){
+    service.createActivity = function(sessionId, designId, setAsCurrent = true){
         var postdata = { sesid: sessionId, dsgnid: designId};
         return $http({ url: "add-activity", method: "post", data: postdata })
+            .then(result => {
+                if (setAsCurrent) {
+                    return service.setCurrentActivityById(result.id);
+                }
+            })
             .catch(error => {
-                console.log(`[Activities Service] Error creating activity in session id:'${sessionId}', with designId: '${designId}.'`);
+                console.log("[Activities Service] Error creating activity in session id:" +
+                    `'${sessionId}', with designId: '${designId}.'. Error: ${error}`);
             });
     };    
 
@@ -83,7 +112,9 @@ export let ActivitiesService = ($http) => {
         return service.activities.filter((activity) => {
             return activity.archived;
         });
-    };  
+    };
+
+    service.init();
     
     return service;
 };

@@ -1,3 +1,5 @@
+import * as dtrModule from "../../libs/designs/design_type_registry.js";
+
 export let DesignsService = ($rootScope, $http) => {
     var service = { 
         userDesigns:   [],
@@ -7,9 +9,26 @@ export let DesignsService = ($rootScope, $http) => {
     service.workingDesign = {
     };
 
-    service.setWorkingDesign = (design) => {
+    service.setWorkingDesign = (designId, design) => {
         service.workingDesign = design;
-        $rootScope.$broadcast('DesignsService_workingDesignUpdated', design);
+        service.workingDesignId = designId;
+        $rootScope.$broadcast("DesignsService_workingDesignUpdated", 
+            { 
+                designId: designId,
+                design:   design
+            });
+    };
+
+    service.setUserDesigns = (designs) => {
+        service.userDesigns = designs;
+        $rootScope.$broadcast("DesignsService_userDesignsUpdated", 
+            service.publicDesigns);
+    };
+
+    service.setPublicDesigns = (designs) => {
+        service.publicDesigns = designs;
+        $rootScope.$broadcast("DesignsService_publicDesignsUpdated", 
+            service.publicDesigns);            
     };
 
     service.togglePublishDesign = (designId) => {
@@ -30,7 +49,14 @@ export let DesignsService = ($rootScope, $http) => {
             !("metainfo" in design) || !("type" in design.metainfo)) {
             throw new Error("Invalid design"); 
         }
-        return design.metainfo.type == "semantic_differential" ? "T" : "R";
+
+        const type = dtrModule.lookupDesignTypeByName(design.metainfo.type);
+        
+        if (type == null) {
+            throw new Error("[DesignsService.resolveDesignTypeCharacter] Unknown design type!");
+        }
+
+        return type.character;
     };
 
     service.toggleLockDesign = function (designId) {
@@ -45,11 +71,11 @@ export let DesignsService = ($rootScope, $http) => {
         });
     };
 
-    service.loadUserDesigns = function(){
+    service.loadUserDesigns = () =>{
         // Get all designs by the current user
         return $http.get("get-user-designs").then((data) => {
             if (data.status == "ok") {
-                service.userDesigns = data.result;
+                service.setUserDesigns(data.result);
             }
         }).catch(error => {
             console.log("[Designs Service] unable to get designs by the current user.");
@@ -57,11 +83,11 @@ export let DesignsService = ($rootScope, $http) => {
         });
     };
 
-    self.loadPublicDesigns = function(){
+    self.loadPublicDesigns = () => {
         // Get all public designs
         return $http.get("get-public-designs").then((data) => {
             if (data.status == "ok") {
-                service.publicDesigns = data.result;
+                service.setPublicDesigns(data.result);
             }
             else {
                 throw new Error("Failed to get public designs.");
@@ -74,8 +100,7 @@ export let DesignsService = ($rootScope, $http) => {
         return $http.post("get-design", postdata)
             .then((data) => {
                 if (data.status == "ok") {
-                    self.setWorkingDesign(data.result);
-                    service.workingDesign.id = designId;
+                    self.setWorkingDesign(designId, data.result);
                     return Promise.resolve(data.result);
                 }
                 else {

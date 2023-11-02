@@ -9,7 +9,7 @@ export let DesignsDocController = ($scope, DesignsService, DocumentsService,
         self.requestDesignDocuments();
     };
 
-    self.uploadDesignDocument = (event) => { //Work in progress
+    self.uploadDesignDocument = (event) => {
         let fileInput = event.target.querySelector('input[type="file"]');
         let file = fileInput.files[0];
 
@@ -33,7 +33,7 @@ export let DesignsDocController = ($scope, DesignsService, DocumentsService,
                 Notification.error("Error subiendo el documento al servidor");
                 console.log(`[DesignsDocController.uploadDesignDocument] Error: ${error}`);
             }).then(result => {
-                const designId = DesignsService.workingDesign.id;
+                const designId = DesignsService.workingDesignId;
                 DocumentsService.loadDesignDocuments(designId)
                     .catch(error => {
                         Notification.error("Error cargando los documentos del diseño actual");
@@ -45,8 +45,7 @@ export let DesignsDocController = ($scope, DesignsService, DocumentsService,
     };
     
     self.requestDesignDocuments = () => {
-        console.log(DesignsService.workingDesign);
-        var postdata = { dsgnid: DesignsService.workingDesign.id };
+        var postdata = { dsgnid: DesignsService.workingDesignId };
         $http({
             url: "designs-documents", method: "post", data: postdata
         }).success(function (data) {
