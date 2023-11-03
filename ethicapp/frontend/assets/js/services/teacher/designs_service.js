@@ -100,7 +100,8 @@ export let DesignsService = ($rootScope, $http) => {
         return $http.post("get-design", postdata)
             .then((data) => {
                 if (data.status == "ok") {
-                    self.setWorkingDesign(designId, data.result);
+                    let design = data.result;
+                    self.setWorkingDesign(designId, design);
                     return Promise.resolve(data.result);
                 }
                 else {

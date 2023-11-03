@@ -21,6 +21,33 @@ export let SessionsService = ($rootScope, $http) => {
             service.currentSession);
     };
 
+    service.createSession = (title, description, typeCharacter) => {
+        let postdata = { 
+            name:  title, 
+            descr: description,
+            type:  typeCharacter 
+        };
+        
+        return $http({
+            url:    "sessions", 
+            method: "post", 
+            data:   postdata
+        }).then(response => {
+            if (response.status == "err") {
+                throw new Error("Server returned error status.");
+            }
+            else if (response.status != "ok") {
+                console.warn("[SessionsService.createSession] Unknown status returned" +
+                    " from server.");
+            }
+            return response.id;
+        }).catch(error => {
+            console.error("[SessionsService.createSession] Failed to create a session. " +
+                `Error: ${error}`);
+            throw error;
+        });
+    };
+
     service.createSessionCode = (sessionId) => {
         const postdata = {
             id: sessionId
@@ -34,7 +61,8 @@ export let SessionsService = ($rootScope, $http) => {
                     ses = service.sessions.filter(session => session.id == sessionId)[0] || null;
     
                     if (!ses) {
-                        throw new Error(`Cannot create session code for inexisting session with id: ${sessionId}.`);
+                        throw new Error("[SessionsService.createSessionCode] Cannot create" +
+                        `session code for inexisting session with id: ${sessionId}.`);
                     }
                 });
         };
@@ -51,10 +79,11 @@ export let SessionsService = ($rootScope, $http) => {
                 }
             })
             .catch(error => {
-                console.log(
-                    `[Sessions Service] could not generate code for session id:'${sessionId}' error:'${error}`
+                console.error(
+                    "[SessionsService.createSessionCode] could not generate code for session " +
+                        `id:'${sessionId}' error:'${error}`
                 );
-                throw error;  // This will propagate the error to any caller that's also using `.then()` or `.catch()`
+                throw error;
             });
     };
     
@@ -62,7 +91,8 @@ export let SessionsService = ($rootScope, $http) => {
         return service.lookUpSession(id, true)
             .then(result => {
                 if (!result) {
-                    throw new Error(`[Sessions Service] session with id:'${id}' not found.`);
+                    throw new Error(`[SessionsService.setCurrentSession] session with id: '${id}'`+ 
+                        "not found.");
                 }
                 service.currentSession = result;
 
@@ -82,7 +112,7 @@ export let SessionsService = ($rootScope, $http) => {
                     });
             })
             .catch(error => {
-                console.log(`[Sessions Service] error: ${error}`);
+                console.error(`[SessionsService.setCurrentSession] error: ${error}`);
                 throw error;
             }); 
     };
@@ -91,6 +121,7 @@ export let SessionsService = ($rootScope, $http) => {
         return $http({ url: "get-session-list", method: "post" })
             .then(response => {
                 service.sessions = response.data;
+                return Promise.resolve();
             })
             .catch(error => {
                 console.error(`[Sessions Service] error loading sessions: '${error}'.`);
@@ -112,7 +143,8 @@ export let SessionsService = ($rootScope, $http) => {
                 .then(lookup)
                 .catch(error => {
                     console.error(
-                        `[Sessions Service] error loading sessions for lookup with id:'${id}': '${error}'.`);
+                        "[Sessions Service] error loading sessions for lookup with" + 
+                            `id:'${id}': '${error}'.`);
                     throw error;
                 });
         } else {
@@ -124,7 +156,7 @@ export let SessionsService = ($rootScope, $http) => {
         var postdata = { sesid: sessionId, val: true };
         return $http({ url: "archive-session", method: "post", data: postdata })
             .catch((error) => {
-                console.log(`[Sessions Service] Failed to archive session id:'${sessionId}'`);
+                console.error(`[Sessions Service] Failed to archive session id:'${sessionId}'`);
                 throw error;
             });
     };
@@ -133,7 +165,7 @@ export let SessionsService = ($rootScope, $http) => {
         var postdata = { sesid: sessionId, val: false };
         return $http({ url: "archive-session", method: "post", data: postdata })
             .catch((error) => {
-                console.log(`[Sessions Service] Failed to restore session id:'${sessionId}'`);
+                console.error(`[Sessions Service] Failed to restore session id:'${sessionId}'`);
                 throw error;
             });
     };        

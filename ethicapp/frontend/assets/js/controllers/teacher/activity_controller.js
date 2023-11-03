@@ -12,60 +12,80 @@ export let ActivityController = ($scope, ActivitiesService,
     };
 
     // Create Activity from launch activity
-    self.launchActivity = function(designId, instanceDescription){
+    self.launchActivity = function(designId, description){
         self.showSpinner = true;
+        let promises = [];
 
         // Step 1: load the design
-        let loadDesignPms = () => { 
+        promises.push(() => { 
             return DesignsService.loadUserDesignById(designId); 
-        };
+        });
 
         // Step 2: validate the design is appropriate to be launched
-        let createSession = (data) => {
-            if (!("result" in data) || data.result == null || 
-            Object.keys(data.result).length === 0) {
-                throw new Error("[ActivityController] Could not validate the design");
-            }
-            
-            let postdata = { 
-                name:  DesignsService.workingDesign.metainfo.title, 
-                descr: instanceDescription,
-                type:  DesignsService.resolveDesignTypeCharacter(DesignsService.workingDesign) 
-            };
-            
-            // Create a session wherein to run the design
-            return $http({
-                url:    "add-session-activity", 
-                method: "post", 
-                data:   postdata
-            });
-        };
+        promises.push(() => {
+            let design = DesignsService.workingDesign;
+            if (!design || design == null || 
+                Object.keys(design).length === 0) {
+                throw new Error("[ActivityController] A valid design is not set.");
+            }            
+            // Create a session wherein to run the activity
+            return SessionsService.createSession(
+                DesignsService.workingDesign.metainfo.title,
+                description,
+                DesignsService.resolveDesignTypeCharacter(DesignsService.workingDesign)
+            );
+        });
 
         // Step 3: Set the current session for the activity
-        let setCurrentSessionPms = result => {
+        promises.push(result => {
             // After creating the session, enact the activity
             let sessionId = result.id;
         
             // Will set the current session and reload available sessions
             return SessionsService.setCurrentSession(sessionId);
-        };
+        });
 
         // Step 4: Give the session an access code
-        let genSessionCodePms = sessionId => {
+        promises.push(sessionId => {
             return SessionsService.createSessionCode(sessionId);
-        };
+        });
 
         // Step 5: Create the activity instance in the session
-        let createActivityInstPms = () => {
+        promises.push(() => {
             const sessionId = SessionsService.currentSession.id;
             return ActivitiesService.createActivity(sessionId, designId, true);
-        };
+        });
 
         // Step 6: Initialize the activity by giving it its first stage
+        promises.push(() => {
+            return self.initializeActitity();
+        });
 
+        // Step 7: Chain promises and handle any errors
+        return promises.reduce((chain, currentPromise) => {
+            return chain.then(currentPromise);
+        }, Promise.resolve())
+            .catch((error) => {
+                console.error("[ActivityController.openActivity] Error opening activity:", error);
+                Notification.error("Sorry, I could not open the activity!");
+            });
     };
 
-    self.addActivityStages = (design, sessionId) => {
+    self.initializeActivity = () => {
+        let design = DesignsService.workingDesign;
+        const sessionId = SessionsService.currentSession.id;
+
+        // Add phase 1 to the current activity, then start it
+        ActivitiesService.addPhaseToCurrentActivity(1)
+            .then(() => {
+                ActivitiesService.startPhaseInCurrentActivity(1)
+                    .catch(error => {
+                        console.error("[ActivityController.initializeActivity] Failed to " +
+                            `initialize, error: ${error}`);
+                        Notification.error("No se pudo iniciar la actividad");
+                    });
+            });
+ 
         let promises = design.phases.map((phase, index) => {
             var postdata = {
                 number:   index + 1,
@@ -177,15 +197,42 @@ export let ActivityController = ($scope, ActivitiesService,
     };
 
     self.openActivity = (activityId) => {
-        let act = ActivitiesService.lookUpActivity(activityId);
-        ActivitiesService.setCurrentActivity(act);
-        let sessionId = act.session;
-        SessionsService.setCurrentSession(sessionId);
-        let designId = act.design;
-        DesignsService.loadUserDesignById(designId);
-        DocumentsService.loadDocumentsForSession(sessionId);
-        // Get Stages??
-        self.selectView("activity");
+        let promises = [];
+        
+        // Step 1: look up the activity
+        promises.push(() => {
+            return ActivitiesService.lookUpActivity(activityId);
+        });
+
+        // Step 2: set the current activity
+        promises.push((act) => {
+            return ActivitiesService.setCurrentActivity(act);
+        });
+
+        // Step 3: set the current design
+        promises.push(() => {
+            const designId = ActivitiesService.currentActivity.designId;
+            return DesignsService.loadUserDesignById(designId);
+        });
+
+        // Step 4: set the current session 
+        promises.push(() => {
+            const sessionId = ActivitiesService.currentActivity.session;
+            return SessionsService.setCurrentSession(sessionId);
+        });
+
+        // Chain promises and handle any errors
+        return promises.reduce((chain, currentPromise) => {
+            return chain.then(currentPromise);
+        }, Promise.resolve())
+            .then(() => {
+                // Switch to the activity view after all promises are resolved.
+                self.selectView("activity");
+            })
+            .catch((error) => {
+                console.error("[ActivityController.openActivity] Error opening activity:", error);
+                Notification.error("Sorry, I could not open the activity!");
+            });
     };
 
     self.archiveActivity = function(act, $event){

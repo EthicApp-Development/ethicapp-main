@@ -1,3 +1,5 @@
+import * as apiMod from "./activities_service/api_object_factory.js";
+
 export let ActivitiesService = ($rootScope, $http) => {
     var service = { };
     service.activities = [];
@@ -82,7 +84,7 @@ export let ActivitiesService = ($rootScope, $http) => {
         }
     };
 
-    service.createActivity = function(sessionId, designId, setAsCurrent = true){
+    service.createActivity = (sessionId, designId, setAsCurrent = true) => {
         var postdata = { sesid: sessionId, dsgnid: designId};
         return $http({ url: "add-activity", method: "post", data: postdata })
             .then(result => {
@@ -91,10 +93,52 @@ export let ActivitiesService = ($rootScope, $http) => {
                 }
             })
             .catch(error => {
-                console.log("[Activities Service] Error creating activity in session id:" +
+                console.error("[Activities Service] Error creating activity in session id:" +
                     `'${sessionId}', with designId: '${designId}.'. Error: ${error}`);
             });
-    };    
+    };
+
+    service.addPhaseToCurrentActivity = (phaseNumber, context) => {
+        let apiObject = apiMod.getPhaseAPIObject(phaseNumber, context);
+        return $http({url: "stages", method: "post", data: apiObject})
+            .then((result) => {
+                if (result.status == "err") {
+                    throw new Error("Got error response from server");
+                }
+                else if (result.status != "ok") {
+                    console.warn("[ActivitiesService.addPhaseToCurrentActivity] Got unknown " +
+                        "response from server");
+                }
+                // Returns the id of the phase (stage) added
+                return result.id;
+            }).then(stageId => {
+                return service.addContentToCurrentPhase(stageId, phaseNumber, context.design);
+            })
+            .catch(error => {
+                console.error("ActivitiesService.addPhaseToCurrentActivity] An error occured: " +
+                    `'${error}'`);
+            });
+    };
+
+    service.addContentToCurrentPhase = (stageId, phaseNumber, design) => {
+
+    };
+
+    service.startPhaseInCurrentActivity = (phaseNumber, context) => {
+        let postdata = {sesid: context.sessionId, stageid: phaseNumber};
+        return $http({ url: "session-start-stage", method: "post", data: postdata })
+            .then((result) => {
+                if (result.status == "err") {
+                    throw new Error("Got error response from server");
+                }
+                else if (result.status != "ok") {
+                    console.warn("[ActivitiesService.addPhaseToCurrentActivity] Got unknown " +
+                        "response from server");
+                }
+                service.currentActivity.currentPhase = phaseNumber;
+                return service.currentActivity.currentPhase;
+            });
+    };
 
     service.getOngoingActivities = () => {
         return service.activities.filter((activity) => {

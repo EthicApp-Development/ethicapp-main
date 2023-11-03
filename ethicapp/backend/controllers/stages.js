@@ -58,7 +58,7 @@ router.post("/get-current-stage", rpg.multiSQL({
 }));
 
 
-router.post("/add-stage", rpg.singleSQL({
+router.post("/stages", rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
     INSERT INTO stages (number, type, anon, chat, sesid, prev_ans, question, grouping)

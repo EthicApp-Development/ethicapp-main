@@ -77,10 +77,10 @@ router.post("/get-session-list", rpg.multiSQL({
     sqlParams:  [rpg.param("ses", "uid")]
 }));
 
-
-router.post("/add-session", rpg.execSQL({
+router.post("/sessions", rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
+    SELECT UpdateOrInsertActivityRecord($3);
     WITH ROWS AS (
         INSERT INTO sessions(name, descr, creator, TIME, status, TYPE)
         VALUES ($1,
@@ -95,8 +95,40 @@ router.post("/add-session", rpg.execSQL({
     SELECT id,
         $5
     FROM ROWS;
+    `,
+    sesReqData:  ["uid"],
+    postReqData: ["name", "type"],
+    sqlParams:   [
+        rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("ses", "uid"),
+        rpg.param("post","type"), rpg.param("ses", "uid")
+    ],
+    onStart: (ses) => {
+        if (ses.role != "P") {
+            console.warn("Only the teacher role 'P' may create sessions!");
+            console.warn(ses);
+            return "SELECT $1, $2, $3, $4, $5";
+        }
+    }
+}));
 
-    SELECT UpdateOrInsertActivityRecord($3)
+router.post("/add-session", rpg.execSQL({
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT UpdateOrInsertActivityRecord($3);
+    WITH ROWS AS (
+        INSERT INTO sessions(name, descr, creator, TIME, status, TYPE)
+        VALUES ($1,
+            $2,
+            $3,
+            now(),
+            1,
+            $4
+        ) RETURNING id
+    )
+    INSERT INTO sesusers(sesid, UID)
+    SELECT id,
+        $5
+    FROM ROWS;
     `,
     sesReqData:  ["uid"],
     postReqData: ["name", "type"],
@@ -118,11 +150,13 @@ router.post("/add-session", rpg.execSQL({
 
 
 router.post("/add-session-activity", (req, res) => {
+    // TODO: rewrite, as it is vulnerable to SQL injection
     var uid = req.session.uid;
     var name =req.body.name;
     var descr = req.body.descr;
     var type = req.body.type;
     var sql = `
+    SELECT UpdateOrInsertActivityRecord(${uid});
     WITH ROWS AS (
         INSERT INTO sessions(name, descr, creator, TIME, status, TYPE)
         VALUES (
@@ -133,17 +167,12 @@ router.post("/add-session-activity", (req, res) => {
     INSERT INTO sesusers(sesid, UID)
     SELECT id, ${uid}
     FROM ROWS;
-    SELECT max(id)
-    FROM sessions
-    WHERE creator = ${uid};
-
-    SELECT UpdateOrInsertActivityRecord(${uid})
     `;
     var db = getDBInstance(pass.dbcon);
     var qry;
     var result;
     qry = db.query(sql,(err,res) =>{
-        if(res != null) result = res.rows[0].max;
+        if(res != null) result = res.rows[0].id;
     });
     qry.on("end", function () {
         res.json({ status: 200, id: result});
@@ -157,6 +186,7 @@ router.post("/add-session-activity", (req, res) => {
 
 
 router.post("/add-activity", (req, res) => {
+    // TODO: rewrite, as it is vulnerable to SQL injection
     var sesid =req.body.sesid;
     var dsgnid = req.body.dsgnid;
     var sql = `
@@ -185,6 +215,7 @@ router.post("/add-activity", (req, res) => {
 });
 
 router.post("/check-design", (req, res) => {
+    // TODO: rewrite, as it is vulnerable to SQL injection
     var dsgnid = req.body.dsgnid;
     var sql = `
     SELECT design
@@ -247,6 +278,7 @@ router.post("/check-design", (req, res) => {
 });
 
 router.post("/get-activities", (req, res) => {
+    // TODO: rewrite, as it is vulnerable to SQL injection
     var uid = req.session.uid;
     var sql = `
     SELECT activity.id,
@@ -384,6 +416,7 @@ router.post("/delete-design-document", rpg.execSQL({
 
 
 router.post("/upload-design", (req, res) => {
+    // TODO: rewrite, as it is vulnerable to SQL injection
     var id = req.session.uid;
     var sql = `
     INSERT INTO DESIGNS(creator, design)
@@ -414,6 +447,7 @@ router.post("/upload-design", (req, res) => {
 
 
 router.post("/get-design", (req, res) => {
+    // TODO: rewrite, as it is vulnerable to SQL injection
     // var uid = req.session.uid;
     var id = req.body;
     var sql = `
@@ -441,6 +475,7 @@ router.post("/get-design", (req, res) => {
 
 
 router.get("/get-user-designs", (req, res) => {
+    // TODO: rewrite, as it is vulnerable to SQL injection
     var uid = req.session.uid;
     var sql = `
     SELECT *
@@ -470,6 +505,7 @@ router.get("/get-user-designs", (req, res) => {
 });
 
 router.get("/get-public-designs", (req, res) => {
+    // TODO: rewrite, as it is vulnerable to SQL injection
     var uid = req.session.uid;
     var sql = `
     SELECT *
@@ -521,6 +557,7 @@ router.post("/design-lock", rpg.multiSQL({
 
 
 router.post("/update-design", (req, res) => {
+    // TODO: rewrite, as it is vulnerable to SQL injection
     var uid = req.session.uid;
     var id = req.body.id;
     var sql = `
@@ -544,6 +581,7 @@ router.post("/update-design", (req, res) => {
 
 
 router.post("/delete-design", (req, res) => {
+    // TODO: rewrite, as it is vulnerable to SQL injection
     var uid = req.session.uid;
     var id = req.body.id;
     var sql = `

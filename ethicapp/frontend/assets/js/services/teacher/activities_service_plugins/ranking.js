@@ -1,4 +1,4 @@
-let addContentToPhase = (content) => {
+let addContentToPhase = (stageId, phaseNumber, design) => {
     let _promises = phase.roles.map((role, index) => {
         return () => {
             let p = {
@@ -6,19 +6,12 @@ let addContentToPhase = (content) => {
                 jorder:     role.type == "order",
                 justified:  role.type != null,
                 word_count: role.wc,
-                stageid:    stageid,
+                stageid:    stageId,
             };
     
             return $http({url: "add-actor", method: "post", data: p})
                 .then((response) => {
-                    console.log("Actor added");
-                    if (index === phase.roles.length - 1) {  // Si es la última iteración
-                        let pp = {sesid: sessionId, stageid: stageid};
-                        return $http({ url: "session-start-stage", method: "post", data: pp })
-                            .then(() => {
-                                Notification.success("Etapa creada correctamente");
-                            });
-                    }
+                    
                 });
         };
     });
@@ -28,7 +21,7 @@ let addContentToPhase = (content) => {
     }, Promise.resolve());
 
     let apiObject = getRankingItemAPIObject(content); // role, stageId
-}
+};
 
 
 
