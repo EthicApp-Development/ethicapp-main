@@ -8,7 +8,6 @@ import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
 import LoginForm from '../components/LoginForm';
 import Cookies from 'js-cookie';
-import { useHistory } from 'react-router-dom';
 import { Grid } from '@mui/material';
 import { ApiLogin } from '../components/APICommunication';
 import Toast from '../components/Toast';
@@ -29,7 +28,7 @@ function Login(props) {
     if (sessionIdAux) {
       navigate('/admin/');
     }
-  }, []);
+  });
  
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -41,13 +40,13 @@ function Login(props) {
     };
 
     ApiLogin(loginJson).then((response) => {
-      if (response.data["sessionID"]=="ErrorCredential") {
+      if (response.data["sessionID"]==="ErrorCredential") {
         setToastMessage(translation("login.error"));
         setShowToast(true);
         return;
       }
 
-      if (response.data["sessionID"]=="Unauthorized") {
+      if (response.data["sessionID"]==="Unauthorized") {
         setToastMessage(translation("login.noAdmin"));
         setShowToast(true);
         return;
