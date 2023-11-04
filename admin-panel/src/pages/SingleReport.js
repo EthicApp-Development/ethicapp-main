@@ -10,17 +10,19 @@ import { Chart, registerables } from 'chart.js';
 import { Container } from '@mui/material';
 import { GetReportGraphData } from '../components/APICommunication';
 import { GetDateRange, CreateGraph } from '../components/GraphDataParser';
+import Toast from '../components/Toast';
 
 Chart.register(...registerables);
 
 function SingleReport(props) {
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   const {reportEnum} = useParams();
   const translation = props.translation;
 
   const pageTitle= translation(`singleReport.${reportEnum}_title`);
   const pageSubTitle= translation(`singleReport.${reportEnum}_desc`)
-  const formError= translation(`singleReport.formError`)
 
   const [showSecondBox, setShowSecondBox] = useState(false);
   const [graphElement, setGraphElement] = useState({});
@@ -30,11 +32,26 @@ function SingleReport(props) {
     endDate: '',
   });
 
+  const handleCloseToast = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+
+    setShowToast(false);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (formData.reportOption === '' || (formData.reportOption === 'option5' && (formData.startDate==='' || formData.endDate===''))) {
-      alert(formError);
+    if (formData.reportOption === '') {
+      setToastMessage(translation(`singleReport.formError`));
+      setShowToast(true);
+      return;
+    }
+
+    if (formData.reportOption === 'option5' && (formData.startDate==='' || formData.endDate==='')) {
+      setToastMessage(translation(`singleReport.formErrorDates`));
+      setShowToast(true);
       return;
     }
 
@@ -65,6 +82,7 @@ function SingleReport(props) {
         <ReportOptionsBox handleSubmit={handleSubmit} translation={translation} handleChange={handleChange}/>
         <br/>
         <ReportGraphBox graph={graphElement} visibility={showSecondBox} translation={translation}/>
+        <Toast open={showToast} message={toastMessage} onClose={handleCloseToast} severity={0} />
       </Container>
     }/>
   ) 
