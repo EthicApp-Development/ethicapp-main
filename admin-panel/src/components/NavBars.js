@@ -132,7 +132,7 @@ export default function NavBar(props){
                   {translation("navbar.title")}
                 </Typography>
                 <Tooltip title={translation("navbar.changeLanguageTooltip")}>
-                  <Button variant="contained" style={{ marginRight: '2rem' }}size="medium" color="success" onClick={()=> handleChangeLanguage()}>
+                  <Button variant="contained" style={{ marginRight: '2rem', textTransform:"none"}}size="medium" color="success" onClick={()=> handleChangeLanguage()}>
                     {translation("navbar.counterLang")}
                   </Button>
                 </Tooltip>

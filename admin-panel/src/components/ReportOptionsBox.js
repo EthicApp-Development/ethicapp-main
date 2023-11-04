@@ -82,7 +82,7 @@ const ReportOptionsBox = (props) =>{
                     </Grid>
                     </Grid>
                     <br />
-                    <Button type="submit" variant="contained" color="primary">
+                    <Button type="submit" variant="contained" color="primary" style={{textTransform:"none"}}>
                     {translation("ReportOptionsBox.generateReport")}
                     </Button>
                 </Box>

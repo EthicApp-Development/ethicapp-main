@@ -81,7 +81,7 @@ function SingleReport(props) {
         <br/>
         <ReportOptionsBox handleSubmit={handleSubmit} translation={translation} handleChange={handleChange}/>
         <br/>
-        <ReportGraphBox graph={graphElement} visibility={showSecondBox} translation={translation}/>
+        <ReportGraphBox graph={graphElement} visibility={showSecondBox} translation={translation} downloadTitle={translation(`reports.${reportEnum}`)}/>
         <Toast open={showToast} message={toastMessage} onClose={handleCloseToast} severity={0} />
       </Container>
     }/>

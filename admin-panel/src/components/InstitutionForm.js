@@ -127,6 +127,7 @@ const InstitutionForm = (props) =>{
                         <Button
                             variant="contained"
                             component="span"
+                            style={{textTransform:"none"}}
                             startIcon={<CloudUpload />}
                         >
                             {translation("institutionForm.file-upload")}
@@ -143,6 +144,7 @@ const InstitutionForm = (props) =>{
                     <Grid item xs={12}>
                         <Button
                             type="submit"
+                            style={{textTransform:"none"}}
                             variant="contained"
                             color="primary"
                             fullWidth
