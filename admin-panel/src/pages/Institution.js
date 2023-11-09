@@ -62,11 +62,11 @@ function Institution(props) {
 
     const isEmailValid = (email) => {
       // Regular expression for a simple email format validation
-      if (!isNaN(email.length)) {
-        return false;
+      if (email.length) {
+        const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+        return emailRegex.test(email)
       }
-      const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
-      return emailRegex.test(email);
+      return true;
     };
 
     const handleSubmit = (e) => {
