@@ -51,7 +51,7 @@ const ReportOptionsBox = (props) =>{
                             label={translation("ReportOptionsBox.option4")}
                             />
                             <FormControlLabel
-                            value="const [formEndDateValue, setFormEndDateValue] = useState(""); "
+                            value="option5"
                             control={<Radio />}
                             label={translation("ReportOptionsBox.option5")}
                             />
