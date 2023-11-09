@@ -41,7 +41,7 @@ function SingleReport(props) {
     const month = (today.getMonth() + 1).toString().padStart(2, '0');
     const day = today.getDate().toString().padStart(2, '0');
     const formattedDate = `${year}-${month}-${day}`;
-    setFormStartDateValue(formattedDate);
+    setFormEndDateValue(formattedDate);
   };
 
   const calculatePreviousDate = (monthsToSubtract) => {
@@ -54,7 +54,7 @@ function SingleReport(props) {
     const day = previousDate.getDate().toString().padStart(2, '0');
     const formattedPreviousDate = `${year}-${month}-${day}`;
 
-    setFormEndDateValue(formattedPreviousDate);
+    setFormStartDateValue(formattedPreviousDate);
   };
 
   const handleCloseToast = (event, reason) => {
@@ -74,7 +74,16 @@ function SingleReport(props) {
       return;
     }
 
+    var startDateAuxCheck = new Date(formData.startDate);
+    var endDateAuxCheck = new Date(formData.endDate);
+
     if (formData.reportOption === 'option5' && (formData.startDate==='' || formData.endDate==='')) {
+      setToastMessage(translation(`singleReport.formErrorDates`));
+      setShowToast(true);
+      return;
+    }
+
+    if (formData.reportOption === 'option5' && endDateAuxCheck<startDateAuxCheck) {
       setToastMessage(translation(`singleReport.formErrorDates`));
       setShowToast(true);
       return;
@@ -98,8 +107,6 @@ function SingleReport(props) {
       ...formData,
       [name]: value,
     });
-
-    console.log(formData)
 
     if (name==="startDate" || name==="endDate" ) {
       if (name==="startDate") {
