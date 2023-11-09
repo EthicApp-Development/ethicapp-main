@@ -74,110 +74,32 @@ export let ActivityController = ($scope, ActivitiesService,
     self.initializeActivity = () => {
         let design = DesignsService.workingDesign;
         const sessionId = SessionsService.currentSession.id;
+        
+        if (design == undefined || design.phases == undefined || 
+            !Array.isArray(design.phases) || design.phases.length == 0) {
+            Notification.error("No fue posible iniciar la actividad. El diseño tiene errores.");
+        }
+
+        // Take the first phase in the design
+        let phase = design.phases[0];
+
+        let params = {
+            sessionId:   sessionId,
+            phase:       phase,
+            phaseNumber: 1
+        };
 
         // Add phase 1 to the current activity, then start it
-        ActivitiesService.addPhaseToCurrentActivity(1)
-            .then(() => {
-                ActivitiesService.startPhaseInCurrentActivity(1)
+        ActivitiesService.addPhaseToCurrentActivity(params)
+            .then((stageId) => {
+                params.stageId = stageId;
+                ActivitiesService.startPhaseInCurrentActivity(params)
                     .catch(error => {
                         console.error("[ActivityController.initializeActivity] Failed to " +
                             `initialize, error: ${error}`);
                         Notification.error("No se pudo iniciar la actividad");
                     });
             });
- 
-        let promises = design.phases.map((phase, index) => {
-            var postdata = {
-                number:   index + 1,
-                question: phase.q_text !== undefined ? phase.q_text : "",
-
-                // Group phases require number of members plus grouping algorithm, separated
-                // with a colon. Otherwise, just assign null.
-                grouping: phase.mode == "team" ?
-                    phase.stdntAmount + ":" + phase.grouping_algorithm :
-                    null,
-                type:     phase.mode,
-                anon:     phase.anonymous,
-                chat:     phase.chat,
-                sesid:    sessionId,
-                prev_ans: ""
-            };
-
-            return $http({url: "add-stage", method: "post", data: postdata})
-                .then(function (data) {
-                    let stageid = data.id;
-                    if (stageid != null) 
-                    {
-                        if (design.type == "semantic_differential") {
-                            let _promises = phase.questions.map((question, index) => {
-                                return () => {
-                                    var content = question.ans_format;
-                                    let p = {
-                                        name:       question.q_text,
-                                        tleft:      content.l_pole,
-                                        tright:     content.r_pole,
-                                        num:        content.values,
-                                        orden:      index + 1,
-                                        justify:    content.just_required,
-                                        stageid:    stageid,
-                                        sesid:      sessionId,
-                                        word_count: content.min_just_length
-                                    };
-                                                        
-                                    return $http({url: "add-differential-stage", method: "post", data: p})
-                                        .then(() => {
-                                            if (index === phase.questions.length - 1) {
-                                                let pp = {sesid: sessionId, stageid: stageid};
-                                                return $http({ url: "session-start-stage", method: "post", data: pp })
-                                                    .then(() => {
-                                                        Notification.success("Etapa creada correctamente");
-                                                    });
-                                            }
-                                        });
-                                };
-                            });
-                            _promises.reduce((chain, currentPromise) => {
-                                return chain.then(currentPromise);
-                            }, Promise.resolve());                            
-                        }
-                        else if (design.type == "ranking") {
-                            let _promises = phase.roles.map((role, index) => {
-                                return () => {
-                                    let p = {
-                                        name:       role.name,
-                                        jorder:     role.type == "order",
-                                        justified:  role.type != null,
-                                        word_count: role.wc,
-                                        stageid:    stageid,
-                                    };
-                            
-                                    return $http({url: "add-actor", method: "post", data: p})
-                                        .then((response) => {
-                                            console.log("Actor added");
-                                            if (index === phase.roles.length - 1) {  // Si es la última iteración
-                                                let pp = {sesid: sessionId, stageid: stageid};
-                                                return $http({ url: "session-start-stage", method: "post", data: pp })
-                                                    .then(() => {
-                                                        Notification.success("Etapa creada correctamente");
-                                                    });
-                                            }
-                                        });
-                                };
-                            });
-                            
-                            _promises.reduce((chain, currentPromise) => {
-                                return chain.then(currentPromise);
-                            }, Promise.resolve());
-                        }
-                    }
-                    else {
-                        Notification.error("Error al crear la etapa");
-                    }
-                });
-        });
-        promises.reduce((chain, currentPromise) => {
-            return chain.then(currentPromise);
-        }, Promise.resolve());
     };
 
     self.getOngoingActivities = () => {

@@ -1,12 +1,12 @@
-export let getPhaseAPIObject = (phase, params) => {
+export let getPhaseAPIObject = (params) => {
     if (params == undefined || 
-        !Object.prototype.hasOwnProperty.call(params, "number") || 
+        !Object.prototype.hasOwnProperty.call(params, "phaseNumber") || 
         !Object.prototype.hasOwnProperty.call(params, "sessionId") ||
         !Object.prototype.hasOwnProperty.call(params, "previousAnswerOptions")) { 
         throw new Error("[getPhaseAPIObject] One or more parameters missing.");
     }
     return {
-        number:   params.number,
+        number:   params.phaseNumber,
         question: phase.q_text !== undefined ? phase.q_text : "",
 
         // Group phases require number of members plus grouping algorithm, separated

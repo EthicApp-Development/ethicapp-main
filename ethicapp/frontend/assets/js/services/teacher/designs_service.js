@@ -44,20 +44,30 @@ export let DesignsService = ($rootScope, $http) => {
             });
     };
 
-    service.resolveDesignTypeCharacter = (design) => {
-        if (Object.keys(design).length === 0 || design == null ||
-            !("metainfo" in design) || !("type" in design.metainfo)) {
-            throw new Error("Invalid design"); 
+    /**
+ * Resolves the character associated with the type of the given design.
+ *
+ * @param {Object} design - The design object to resolve.
+ * @returns {string} The character associated with the type of the design.
+ * @throws {Error} If the design object is invalid or if the type of the design is unknown.
+ */
+    function resolveDesignTypeCharacter(design) {
+        if (!design || typeof design !== "object") {
+            throw new Error("Invalid design object");
         }
-
-        const type = dtrModule.lookupDesignTypeByName(design.metainfo.type);
-        
-        if (type == null) {
-            throw new Error("[DesignsService.resolveDesignTypeCharacter] Unknown design type!");
+  
+        const { metainfo } = design;
+        if (!metainfo || typeof metainfo !== "object" || !metainfo.type) {
+            throw new Error("Invalid design metadata");
         }
-
+  
+        const type = dtrModule.lookupDesignTypeByName(metainfo.type);
+        if (!type || typeof type !== "object" || !type.character) {
+            throw new Error(`Unknown design type: ${metainfo.type}`);
+        }
+  
         return type.character;
-    };
+    }
 
     service.toggleLockDesign = function (designId) {
         let postdata = { id: designId };

@@ -1,43 +1,56 @@
-import * as apiMod from "./activities_service/api_object_factory.js";
+import * as apiMod from "./activities_service/factories/api_object_factory.js";
+import * as cp from "./activities_service/plugins/content_plugin_registry.js";
 
 export let ActivitiesService = ($rootScope, $http) => {
-    var service = { };
+    let service = { };
     service.activities = [];
+    let contentPlugin = null;
 
     service.init = () => {
-        self.loadActivities();
+        service.loadActivities();
         service.clearCurrentActivity();
     };
 
     service.clearCurrentActivity = () => {
         service.currentActivity = {
-            designId:     null,
-            title:        null,
-            type:         null,
-            currentPhase: -1
+            designId: null,
+            title:    null,
+            type:     null,
         };
     };
     
     service.setCurrentActivityById = (activityId) => {
         // Assign fields to activity object
-        let act = service.lookUpActivity(activityId).then(result => {
-            // Strip current activity object
-            Object.keys(service.currentActivity).forEach(key => delete obj[key]);
-
-            // Copy the fields
-            Object.assign(service.currentActivity, act);
-
-            $rootScope.$broadcast("ActivitiesService_currentActivityUpdated", 
-                service.currentActivity);
+        service.lookUpActivity(activityId).then(activity => {
+            service.setCurrentActivity(activity);
         });
     };
 
     service.setCurrentActivity = (activity) => {
+        // Strip current activity object
+        Object.keys(service.currentActivity).forEach(
+            key => delete service.currentActivity[key]);
+
+        // Copy the fields
         Object.assign(service.currentActivity, activity);
+
+        service.currentActivity = activity;
+        // Set the current content plugin
+        service.setContentPlugin(activity.design.metainfo.type);
 
         $rootScope.$broadcast("ActivitiesService_currentActivityUpdated", 
             service.currentActivity);
     };
+
+    service.setContentPlugin = (designType) => {
+        if (!(designType in cp.contentPluginRegistry)) {
+            let err = `No content plugin found for design type '${designType}'`;
+            console.error(`[ActivitiesService.setContentPlugin] ${err}`);
+            throw new Error(err);
+        }
+
+        service.contentPlugin = cp.contentPluginRegistry[designType];
+    };    
 
     service.setActivities =  (activities) => {
         service.activities = activities;
@@ -98,8 +111,8 @@ export let ActivitiesService = ($rootScope, $http) => {
             });
     };
 
-    service.addPhaseToCurrentActivity = (phaseNumber, context) => {
-        let apiObject = apiMod.getPhaseAPIObject(phaseNumber, context);
+    service.addPhaseToCurrentActivity = (params) => {
+        let apiObject = apiMod.getPhaseAPIObject(params);
         return $http({url: "stages", method: "post", data: apiObject})
             .then((result) => {
                 if (result.status == "err") {
@@ -112,7 +125,11 @@ export let ActivitiesService = ($rootScope, $http) => {
                 // Returns the id of the phase (stage) added
                 return result.id;
             }).then(stageId => {
-                return service.addContentToCurrentPhase(stageId, phaseNumber, context.design);
+                return service.addContentToCurrentPhase(
+                    params.sessionId, stageId, params.phase)
+                    .then(() => {
+                        return stageId;
+                    });
             })
             .catch(error => {
                 console.error("ActivitiesService.addPhaseToCurrentActivity] An error occured: " +
@@ -120,12 +137,25 @@ export let ActivitiesService = ($rootScope, $http) => {
             });
     };
 
-    service.addContentToCurrentPhase = (stageId, phaseNumber, design) => {
+    service.addContentToCurrentPhase = (sessionId, stageId, phaseDesign) => {
+        if (phaseDesign == undefined) {
+            throw new Error("[ActivitiesService.addContentToCurrentPhase] invalid phase design");
+        }
 
+        if (contentPlugin == undefined) {
+            throw new Error("[ActivitiesService.addContentToCurrentPhase] content plugin not set!");
+        }
+
+        contentPlugin.addContentToPhase($http, sessionId, stageId, phaseDesign)
+            .catch(error => {
+                let err = `Failed to add content to stage id:'${stageId}'`;
+                console.error(`[ActivitiesService.addContentToCurrentPhase] Error: '${err}'`);
+                throw error;
+            });
     };
 
-    service.startPhaseInCurrentActivity = (phaseNumber, context) => {
-        let postdata = {sesid: context.sessionId, stageid: phaseNumber};
+    service.startPhaseInCurrentActivity = (params) => {
+        let postdata = {sesid: params.sessionId, stageid: params.stageId};
         return $http({ url: "session-start-stage", method: "post", data: postdata })
             .then((result) => {
                 if (result.status == "err") {
@@ -135,8 +165,6 @@ export let ActivitiesService = ($rootScope, $http) => {
                     console.warn("[ActivitiesService.addPhaseToCurrentActivity] Got unknown " +
                         "response from server");
                 }
-                service.currentActivity.currentPhase = phaseNumber;
-                return service.currentActivity.currentPhase;
             });
     };
 
