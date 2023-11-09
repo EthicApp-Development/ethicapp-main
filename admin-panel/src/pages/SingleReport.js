@@ -130,6 +130,10 @@ function SingleReport(props) {
       if (value==="option4") {
         calculatePreviousDate(12);
       }
+      if (value==="option5") {
+        setFormStartDateValue("")
+        setFormEndDateValue("")
+      }
     }
   };
 
