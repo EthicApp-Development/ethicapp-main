@@ -5,6 +5,9 @@ const ReportOptionsBox = (props) =>{
     const translation = props.translation;
     const handleSubmit = props.handleSubmit;
     const handleChange = props.handleChange;
+    const formStartDateValue = props.formStartDateValue;
+    const formEndDateValue = props.formEndDateValue;
+    const selectedOption = props.selectedOption;
 
     return <Grid item xs={12} md={6}>
         <Paper elevation={3} style={{ height: '100%' }}>
@@ -24,6 +27,7 @@ const ReportOptionsBox = (props) =>{
                             aria-label="report-option"
                             name="reportOption"
                             onChange={handleChange}
+                            value={selectedOption}
                             required
                         >
                             <FormControlLabel
@@ -47,7 +51,7 @@ const ReportOptionsBox = (props) =>{
                             label={translation("ReportOptionsBox.option4")}
                             />
                             <FormControlLabel
-                            value="option5"
+                            value="const [formEndDateValue, setFormEndDateValue] = useState(""); "
                             control={<Radio />}
                             label={translation("ReportOptionsBox.option5")}
                             />
@@ -61,6 +65,7 @@ const ReportOptionsBox = (props) =>{
                         label={translation("ReportOptionsBox.startDate")}
                         type="date"
                         fullWidth
+                        value={formStartDateValue}
                         InputLabelProps={{
                             shrink: true,
                         }}
@@ -74,6 +79,7 @@ const ReportOptionsBox = (props) =>{
                         label={translation("ReportOptionsBox.endDate")}
                         type="date"
                         fullWidth
+                        value={formEndDateValue}
                         InputLabelProps={{
                             shrink: true,
                         }}

@@ -31,6 +31,31 @@ function SingleReport(props) {
     startDate: '',
     endDate: '',
   });
+  const [formStartDateValue, setFormStartDateValue] = useState("");
+  const [formEndDateValue, setFormEndDateValue] = useState("");
+  const [selectedOption, setSelectedOption] = useState(""); 
+
+  const getCurrentDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = (today.getMonth() + 1).toString().padStart(2, '0');
+    const day = today.getDate().toString().padStart(2, '0');
+    const formattedDate = `${year}-${month}-${day}`;
+    setFormStartDateValue(formattedDate);
+  };
+
+  const calculatePreviousDate = (monthsToSubtract) => {
+    const today = new Date();
+    const previousDate = new Date(today);
+    previousDate.setMonth(today.getMonth() - monthsToSubtract);
+
+    const year = previousDate.getFullYear();
+    const month = (previousDate.getMonth() + 1).toString().padStart(2, '0');
+    const day = previousDate.getDate().toString().padStart(2, '0');
+    const formattedPreviousDate = `${year}-${month}-${day}`;
+
+    setFormEndDateValue(formattedPreviousDate);
+  };
 
   const handleCloseToast = (event, reason) => {
     if (reason === 'clickaway') {
@@ -68,10 +93,44 @@ function SingleReport(props) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
     setFormData({
       ...formData,
       [name]: value,
     });
+
+    console.log(formData)
+
+    if (name==="startDate" || name==="endDate" ) {
+      if (name==="startDate") {
+        setFormStartDateValue(value)
+      } else {
+        setFormEndDateValue(value)
+      }
+      setSelectedOption("option5")
+
+      setFormData((prevFormData) => ({
+        ...prevFormData,
+        reportOption: "option5",
+      }));
+    }else{
+
+      getCurrentDate();
+      setSelectedOption(value)
+
+      if (value==="option1") {
+        calculatePreviousDate(1);
+      }
+      if (value==="option2") {
+        calculatePreviousDate(3);
+      }
+      if (value==="option3") {
+        calculatePreviousDate(6);
+      }
+      if (value==="option4") {
+        calculatePreviousDate(12);
+      }
+    }
   };
 
   return(
@@ -79,7 +138,8 @@ function SingleReport(props) {
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
         <HeaderNSubHeader title={pageTitle} subTitle={pageSubTitle}/>
         <br/>
-        <ReportOptionsBox handleSubmit={handleSubmit} translation={translation} handleChange={handleChange}/>
+        <ReportOptionsBox handleSubmit={handleSubmit} translation={translation} handleChange={handleChange} 
+        formStartDateValue={formStartDateValue} formEndDateValue={formEndDateValue} selectedOption={selectedOption}/>
         <br/>
         <ReportGraphBox graph={graphElement} visibility={showSecondBox} translation={translation} downloadTitle={translation(`reports.${reportEnum}`)}/>
         <Toast open={showToast} message={toastMessage} onClose={handleCloseToast} severity={0} />
