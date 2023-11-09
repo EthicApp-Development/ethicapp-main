@@ -62,7 +62,7 @@ const ReportGraphBox = (props) =>{
             <Grid item xs={12} md={6}>
                 <Paper elevation={3} style={{ height: '100%' }}>
                     <Box p={3} display="flex" flexDirection="column" alignItems="center">
-                        <div style={{ width: '150vh', height: 'auto' }} ref={graphRef}>
+                        <div style={{ width: '99%', height: '75vh' }} ref={graphRef}>
                             {graph}
                         </div>
                         <br />

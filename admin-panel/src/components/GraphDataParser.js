@@ -62,6 +62,7 @@ function ParseGraphOptions(apiData){
             },
           },
           responsive: true,
+          maintainAspectRatio: false,
           pointStyle: 'rectRot',
           plugins: {
             title: {
@@ -104,6 +105,7 @@ function ParseGraphOptions(apiData){
             },
           },
           responsive: true,
+          maintainAspectRatio: false,
           plugins: {
             title: {
               display: true,
