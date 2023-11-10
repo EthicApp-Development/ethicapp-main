@@ -4,14 +4,6 @@ import { SaveAlt as SaveAltIcon } from '@mui/icons-material';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
-function formatDate() {
-    const date = new Date();
-    const year = date.getFullYear().toString();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
 const ReportGraphBox = (props) =>{
 
     const translation = props.translation;
