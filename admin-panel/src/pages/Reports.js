@@ -29,7 +29,7 @@ function Reports(props) {
       .catch((error) => {
         console.error('Error fetching items:', error);
       });
-  }, []);
+  });
 
   const pageTitle= translation("reports.title");
   const pageSubTitle= translation("reports.subTitle");
@@ -40,6 +40,7 @@ function Reports(props) {
   const [showReportDescription, setShowReportDescription] = useState(false);
 
   const handleHoverStart = (reportType) => {
+    console.log(hoveredItem);
     setHoveredItem(reportType);
     setReportDescriptionBoxText(translation(`reports.${reportType}_desc`));
     setShowReportDescription(true);
