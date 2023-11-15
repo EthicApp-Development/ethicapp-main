@@ -29,7 +29,7 @@ function Reports(props) {
       .catch((error) => {
         console.error('Error fetching items:', error);
       });
-  });
+  },[]);
 
   const pageTitle= translation("reports.title");
   const pageSubTitle= translation("reports.subTitle");
