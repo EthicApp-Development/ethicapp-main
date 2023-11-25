@@ -12,7 +12,7 @@ rm bundled-teacher-admin.js
 
 #Build CSS
 cd "$SCRIPT_DIR/../ethicapp/frontend/assets/css"
-sass styles.scss assets-bundle.css
+sass styles.scss:assets-bundle.css --style compressed
 
 #Build JS
 cd "$SCRIPT_DIR/../ethicapp/frontend/assets/js"
