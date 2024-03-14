@@ -5,6 +5,7 @@
   "scripts": {
     "init-passwords-js": "./dev-ops/create-passwords-js.sh",
     "init-db": "./dev-ops/docker-init-db-volume.sh",
+    "init-db-sequelize": "",
     "build-and-push": "./dev-ops/build-and-push.sh",
     "lint-js": "npx eslint './ethicapp/**/*.js' ./ethicapp/backend/ethicapp",
     "lint-html": "npx htmlhint './ethicapp/frontend/static/**/*.html'",
