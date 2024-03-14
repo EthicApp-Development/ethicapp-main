@@ -3,12 +3,12 @@ export let ActivityController = ($scope, ActivitiesService,
     DesignsService, SessionsService, DocumentsService,
     $filter, $http, Notification, $timeout) => {
     var self = $scope;
-    self.selectedSes = {};
+    // [DEPRECATED] self.selectedSes = {};
     self.error = false;
     self.showSpinner = false;
 
     self.init = function(){
-        self.selectedSes = {};
+        
     };
 
     // Create Activity from launch activity

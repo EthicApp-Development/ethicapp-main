@@ -252,9 +252,9 @@ export let DesignEditorController = ($scope, DesignsService,
         // Avoid saving the design object containing id field
         let { id, ...design } = DesignsService.workingDesign;
 
-        DesignsService.updateDesign(id, design).then(result => {
+        DesignsService.updateDesign(id, design).then(() => {
             self.saved = true;
-        }).catch(error => {
+        }).catch(() => {
             self.saved = false;
             console.log("[DesignEditorController.saveDesign] Failed to save design");
             Notification.error("No se pudo guardar el diseño");
@@ -274,7 +274,7 @@ export let DesignEditorController = ($scope, DesignsService,
         let blankDesign = designs[type](title, author);
         
         return DesignsService.createDesign(blankDesign).then(id => {
-            DesignsService.loadUserDesignById(id).then(design => {
+            DesignsService.loadUserDesignById(id).then(() => {
                 return Promise.resolve(true);
             }).catch(error => {
                 console.log("[DesignEditorController.saveBlankDesign] Failed to upload blank" +
