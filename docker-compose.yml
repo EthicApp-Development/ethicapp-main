@@ -88,7 +88,7 @@ services:
     #* Do not modify this volume declaration, as the automated initialization of the volume mount
     #* will break if not updated as well
     volumes:
-      - "${HOST_DB_VOLUME_PATH}:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"
+      - "${HOST_DB_VOLUME_PATH}:/var/lib/postgresql/data:rw"
 
   # ---------------------- PGAdmin ---------------------- #
   pgadmin:
