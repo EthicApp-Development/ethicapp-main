@@ -3,7 +3,7 @@ function ParseGraphData(apiData){
 
     let graphDataTemp={}
 
-    if (apiData["report_type"] == "start_activity" || apiData["report_type"] == "top_professors") {
+    if (apiData["report_type"] === "start_activity" || apiData["report_type"] === "top_professors") {
         graphDataTemp = {
             labels: apiData["report_x_data"],
             datasets: [
@@ -38,9 +38,9 @@ function ParseGraphData(apiData){
 function ParseGraphOptions(apiData){
     let options={}
 
-    if (apiData["report_type"] == "start_activity" || apiData["report_type"] == "top_professors") {
+    if (apiData["report_type"] === "start_activity" || apiData["report_type"] === "top_professors") {
       let auxXLabel= "Activity Date";
-      if (apiData["report_type"] == "top_professors") {
+      if (apiData["report_type"] === "top_professors") {
         auxXLabel= "Professor Name"
       }
       options = {
@@ -62,6 +62,7 @@ function ParseGraphOptions(apiData){
             },
           },
           responsive: true,
+          maintainAspectRatio: false,
           pointStyle: 'rectRot',
           plugins: {
             title: {
@@ -81,7 +82,7 @@ function ParseGraphOptions(apiData){
         };
     }else{
       let auxYLabel= "EthicApp Logins";
-      if (apiData["report_type"] == "create_account") {
+      if (apiData["report_type"] === "create_account") {
         auxYLabel= "Accounts Created"
       }
       options = {
@@ -104,6 +105,7 @@ function ParseGraphOptions(apiData){
             },
           },
           responsive: true,
+          maintainAspectRatio: false,
           plugins: {
             title: {
               display: true,
@@ -121,7 +123,7 @@ function ParseGraphOptions(apiData){
 };
 
 export function CreateGraph(apiData){
-    if (apiData["report_type"] == "start_activity") {
+    if (apiData["report_type"] === "start_activity") {
         return <>
             <Line data={ParseGraphData(apiData)} options={ParseGraphOptions(apiData)} />
         </>
@@ -157,6 +159,9 @@ export function GetDateRange(formData){
     case "option5":
       endDate = formData.endDate;
       initialDate = formData.startDate;
+      break;
+      
+    default:
       break;
    }
    

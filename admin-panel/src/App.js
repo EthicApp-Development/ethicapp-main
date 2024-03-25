@@ -25,7 +25,7 @@ function App() {
   const [translation, i18n] = useTranslation("global")
 
   const handleChangeLanguage = ()=>{
-    if(i18n.language=="es"){
+    if(i18n.language==="es"){
       i18n.changeLanguage("en")
     }
     else{

@@ -8,7 +8,9 @@
     },
     "login":{
         "login": "Ingresar",
-        "return": "Volver a Ethicapp"
+        "return": "Volver a Ethicapp",
+        "error": "Credenciales incorrectas",
+        "noAdmin": "El usuario no tiene acceso al panel de administración"
     },
     "reports":{
         "title": "Generación de Reportes",
@@ -56,13 +58,17 @@
         "logins_title": "Generación de reportes Ingresos a Ethicapp",
         "top_professors_title": "Generación de reportes Top Actividades Iniciadas por Profesor",
         "subTitle": "Introduzca información sobre los informes específicos que se están generando.",
-        "formError": "Seleccione una opción de informe"
+        "formError": "Seleccione una opción de informe",
+        "formErrorDates": "Seleccione fechas validas"
     },
     "users":{
         "title": "Pagina de Usuarios",
         "subTitle": "Mostrar todas las acciones relacionadas con el usuario."
     },
-
+    "institution":{
+        "success": "Éxito: Formulario actualizado correctamente",
+        "error": "Error: Error en la actualización del formulario"
+    },
     "institutionForm":{
         "title": "Datos de la Institución",
         "subTitle": "Desde aquí puede actualizar los datos de la institución para la que opera EthicApp.",

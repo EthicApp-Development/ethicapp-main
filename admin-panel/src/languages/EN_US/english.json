@@ -8,7 +8,9 @@
     },
     "login":{
         "login": "Sign in",
-        "return": "Back To Ethicapp"
+        "return": "Back To Ethicapp",
+        "error": "Incorrect Credentials",
+        "noAdmin": "User does not have access to Admin Panel"
     },
     "reports":{
         "title": "Report Generation",
@@ -59,13 +61,17 @@
         "create_account_desc": "Information about the report of type: create_account",
         "logins_desc": "Information about the report of type: logins",
         "top_professors_desc": "Information about the report of type: top_professors",
-        "formError": "Please select a report option"
+        "formError": "Please select a report option",
+        "formErrorDates": "Select valid dates"
     },
     "users":{
         "title": "Users Page",
         "subTitle": "Show all the user related actions."
     },
-
+    "institution":{
+        "success": "Success: Form updated successfully",
+        "error": "Error: Form update failed"
+    },
     "institutionForm":{
         "title": "Institution Data",
         "subTitle": "From here you can update the data of the institution for which EthicApp operates.",
