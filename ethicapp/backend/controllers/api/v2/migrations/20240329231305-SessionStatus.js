@@ -2,7 +2,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('status_record', {
+    await queryInterface.createTable('sessionstatus', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -36,7 +36,7 @@ module.exports = {
         type: Sequelize.DATE
       }
     });
-    await queryInterface.createTable('finish_session', {
+    await queryInterface.createTable('finishedsessions', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -88,11 +88,11 @@ module.exports = {
     });
 },
   async down(queryInterface, Sequelize) {
-    // Drop the status_record table
-    await queryInterface.dropTable('status_record');
+    // Drop the sessionstatus table
+    await queryInterface.dropTable('sessionstatus');
 
-    // Drop the finish_session table
-    await queryInterface.dropTable('finish_session');
+    // Drop the finishedsessions table
+    await queryInterface.dropTable('finishedsessions');
 
     // Remove the stime column from the selection table
     await queryInterface.removeColumn('selection', 'stime');
