@@ -31,11 +31,11 @@ module.exports = {
       role: {
         type: Sequelize.CHAR(1)
       },
-      created_at: {
+      createdAt: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updated_at: {
+      updatedAt: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -79,16 +79,16 @@ module.exports = {
         type: Sequelize.STRING(1),
         allowNull: true
       },
-      created_at: {
+      createdAt: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updated_at: {
+      updatedAt: {
         allowNull: false,
         type: Sequelize.DATE
       }
     });
-    await queryInterface.createTable('sesusers', {
+    await queryInterface.createTable('sessions_users', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -110,11 +110,11 @@ module.exports = {
           key: 'id'
         }
       },
-      created_at: {
+      createdAt: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updated_at: {
+      updatedAt: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -194,11 +194,11 @@ module.exports = {
           key: 'id'
         }
       },
-      created_at: {
+      createdAt: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updated_at: {
+      updatedAt: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -238,11 +238,11 @@ module.exports = {
           key: 'id'
         }
       },
-      created_at: {
+      createdAt: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updated_at: {
+      updatedAt: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -262,11 +262,11 @@ module.exports = {
           key: 'id'
         }
       },
-      created_at: {
+      createdAt: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updated_at: {
+      updatedAt: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -293,11 +293,11 @@ module.exports = {
           key: 'id'
         }
       },
-      created_at: {
+      createdAt: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updated_at: {
+      updatedAt: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -313,7 +313,7 @@ module.exports = {
       onDelete: 'CASCADE',
       onUpdate: 'CASCADE'
     });
-    await queryInterface.addConstraint('sesusers', {
+    await queryInterface.addConstraint('sessions_users', {
       type: 'foreign key',
       fields: ['sesid'],
       references: {
@@ -323,7 +323,7 @@ module.exports = {
       onDelete: 'CASCADE',
       onUpdate: 'CASCADE'
     });
-    await queryInterface.addConstraint('sesusers', {
+    await queryInterface.addConstraint('sessions_users', {
       type: 'foreign key',
       fields: ['uid'],
       references: {
