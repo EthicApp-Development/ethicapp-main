@@ -2,7 +2,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('question_text', {
+    await queryInterface.createTable('sessions_questions_texts', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -34,7 +34,7 @@ module.exports = {
         type: Sequelize.DATE
       }
     });
-    await queryInterface.addConstraint('question_text', {
+    await queryInterface.addConstraint('sessions_questions_texts', {
       type: 'foreign key',
       fields: ['sesid'],
       references: {
