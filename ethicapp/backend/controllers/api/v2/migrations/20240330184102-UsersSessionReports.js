@@ -2,7 +2,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('users_session_reports', {
+    await queryInterface.createTable('users_sessions_reports', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -34,7 +34,7 @@ module.exports = {
         type: Sequelize.DATE
       }
     });
-    await queryInterface.addConstraint('users_session_reports', {
+    await queryInterface.addConstraint('users_sessions_reports', {
       type: 'foreign key',
       fields: ['uid'],
       references: {
@@ -44,7 +44,7 @@ module.exports = {
       onDelete: 'CASCADE',
       onUpdate: 'CASCADE'
     });
-    await queryInterface.addConstraint('users_session_reports', {
+    await queryInterface.addConstraint('users_sessions_reports', {
       type: 'foreign key',
       fields: ['sesid'],
       references: {

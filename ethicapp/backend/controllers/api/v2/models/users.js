@@ -102,7 +102,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'Selection',
-    tableName: 'selection',
+    tableName: 'selections',
   });
 
   class Team extends Model {

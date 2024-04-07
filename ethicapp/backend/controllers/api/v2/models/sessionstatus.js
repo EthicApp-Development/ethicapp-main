@@ -15,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'SessionStatus',
-    tableName: 'sessionstatus', 
+    tableName: 'sessions_status', 
   });
 
   class FinishedSession extends Model {
@@ -31,7 +31,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'FinishedSession',
-    tableName: 'finishedsessions', 
+    tableName: 'finished_sessions', 
   });
 
   return {
