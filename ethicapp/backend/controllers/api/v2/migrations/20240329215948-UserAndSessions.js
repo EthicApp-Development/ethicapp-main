@@ -203,7 +203,7 @@ module.exports = {
         type: Sequelize.DATE
       }
     });
-    await queryInterface.createTable('selection', {
+    await queryInterface.createTable('selections', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -363,7 +363,7 @@ module.exports = {
       onDelete: 'CASCADE',
       onUpdate: 'CASCADE'
     });
-    await queryInterface.addConstraint('selection', {
+    await queryInterface.addConstraint('selections', {
       type: 'foreign key',
       fields: ['uid'],
       references: {
@@ -373,7 +373,7 @@ module.exports = {
       onDelete: 'CASCADE',
       onUpdate: 'CASCADE'
     });
-    await queryInterface.addConstraint('selection', {
+    await queryInterface.addConstraint('selections', {
       type: 'foreign key',
       fields: ['qid'],
       references: {
@@ -414,7 +414,7 @@ module.exports = {
       onUpdate: 'CASCADE'
     });
     // Make sure to create the index for the primary key after creating the table.
-    await queryInterface.addConstraint('selection', {
+    await queryInterface.addConstraint('selections', {
       type: 'primary key',
       fields: ['uid', 'qid']
     });    

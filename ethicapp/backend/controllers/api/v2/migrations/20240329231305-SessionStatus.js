@@ -81,8 +81,8 @@ module.exports = {
       }
     });
 
-    // Add the stime column to the selection table
-    await queryInterface.addColumn('selection', 'stime', {
+    // Add the stime column to the selections table
+    await queryInterface.addColumn('selections', 'stime', {
       type: Sequelize.DATE,
       allowNull: true
     });
@@ -94,8 +94,8 @@ module.exports = {
     // Drop the finishedsessions table
     await queryInterface.dropTable('finishedsessions');
 
-    // Remove the stime column from the selection table
-    await queryInterface.removeColumn('selection', 'stime');
+    // Remove the stime column from the selections table
+    await queryInterface.removeColumn('selections', 'stime');
 
   }
 };
