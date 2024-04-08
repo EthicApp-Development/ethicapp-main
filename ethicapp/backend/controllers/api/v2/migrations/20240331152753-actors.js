@@ -21,7 +21,7 @@ module.exports = {
         type: Sequelize.BOOLEAN,
         defaultValue: false
       },
-      chat: {
+      chats: {
         type: Sequelize.BOOLEAN,
         defaultValue: false
       },
