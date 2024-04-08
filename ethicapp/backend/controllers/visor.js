@@ -1,12 +1,24 @@
 "use strict";
 
 let express = require("express");
+let Redis = require("ioredis"); 
 let router = express.Router();
 let rpg = require("../db/rest-pg");
 let pass = require("../config/keys-n-secrets");
 let socket = require("../config/socket.config");
 
 let sesStatusCache = {};
+
+//redis Client connection
+let redisClient = new Redis({
+    host: "RedisContainer", // Redis server host
+    port: 6379,       // Redis server port
+});
+
+// redis Client error report
+redisClient.on("error", function (error) {
+    console.error(error);
+  });
 
 function doRedirect (status, res, call){
     console.log(status);
@@ -336,40 +348,155 @@ router.post("/get-answers", rpg.multiSQL({
 }));
 
 
-router.post("/send-diff-selection", rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    WITH ROWS AS (
-        UPDATE differential_selection
-        SET sel = $1,
-            comment = $2,
-            stime = now()
-        WHERE did = $3
-            AND UID = $4
-            AND iteration = $5
-        RETURNING 1
-    )
-    INSERT INTO differential_selection(UID, did, sel, comment, iteration, stime)
-    SELECT $6,
-        $7,
-        $8,
-        $9,
-        $10,
-        now()
-    WHERE 1 not in (
-        SELECT *
-        FROM ROWS
-    )
-    `,
-    sesReqData:  ["uid", "ses"],
-    postReqData: ["did", "sel", "comment", "iteration"],
-    sqlParams:   [
-        rpg.param("post", "sel"), rpg.param("post", "comment"), rpg.param("post", "did"),
-        rpg.param("ses", "uid"), rpg.param("post", "iteration"), rpg.param("ses", "uid"),
-        rpg.param("post", "did"), rpg.param("post", "sel"), rpg.param("post", "comment"),
-        rpg.param("post", "iteration")
-    ]
-}));
+async function handleQuestionCounter(redisKey) {
+    try {
+        const exists = await redisClient.exists(redisKey);
+        
+        if (exists === 0) {
+            await redisClient.set(redisKey, 1);
+        } else {
+            
+            await redisClient.incr(redisKey);
+            const updatedValue = await redisClient.get(redisKey);
+            
+            if (parseInt(updatedValue) >= 10) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+    } catch (error) {
+        console.error('Error al manejar el contador de redis:', error);
+        return false;
+    }
+}
+
+async function buildContentAnalysisUnit(req, res) {
+    rpg.multiSQL({
+        dbcon: pass.dbcon,
+        sql:    `
+            SELECT q.session AS session_id,
+                qc.number AS phase_id,
+                qa.path AS case_url,
+                qd.title AS question,
+                qd.id AS question_id,
+                qe.id AS response_id,
+                qe.comment AS response_text
+            FROM activity AS q
+                LEFT JOIN designs_documents AS qa
+                    ON q.design = qa.dsgnid
+                LEFT JOIN sessions AS qb
+                    ON q.session = qb.id
+                LEFT JOIN Stages AS qc
+                    ON qb.current_stage = qc.id
+                LEFT JOIN differential AS qd
+                    ON qb.id = qd.sesid AND qc.id = qd.stageid
+                LEFT JOIN differential_selection AS qe
+                    ON qd.id = qe.did
+            WHERE q.session = $1 AND qd.id = ${req.body.did}
+        `,
+        sqlParams:   [rpg.param("ses", "ses")],
+        preventResEnd: true,
+        onEnd: async (req, res, result) => {
+
+            const groupedResults = result.reduce((acc, cur) => {
+                if (!acc[cur.question_id]) {
+                  acc[cur.question_id] = [];
+                }
+                acc[cur.question_id].push(cur);
+                return acc;
+              }, {});
+            
+              const workUnitJson = {
+                context: {
+                  session_id: result[0].session_id,
+                  phase_id: result[0].phase_id,
+                  callback_url: "http://host.docker.internal:3000/test",
+                  timestamp: Date.now(),
+                },
+                content: {
+                  case_url: result[0].case_url,
+                  phase_content: Object.values(groupedResults).map(group => ({
+                    question: group[0].question,
+                    question_id: group[0].question_id,
+                    responses: group.map(item => ({
+                      response_id: item.response_id,
+                      response_text: item.response_text
+                    }))
+                  }))
+                }
+              };
+            console.log(workUnitJson);
+            return workUnitJson;
+        }
+    })(req,res);
+}
+
+router.post("/send-diff-selection", (req, res, next) => {
+    
+    rpg.singleSQL({
+        dbcon: pass.dbcon,
+        sql:   `
+        SELECT qa.number as stage_id, qb.id as question_id
+        FROM sessions AS q
+        LEFT JOIN Stages AS qa
+        ON q.current_stage = qa.id
+        LEFT JOIN differential AS qb
+        ON q.id = qb.sesid AND qa.id = qb.stageid
+        WHERE q.id = $1 AND qb.id = ${req.body.did}
+        `,
+        sqlParams:   [rpg.param("ses", "ses")],
+        preventResEnd: true,
+        onEnd: async (req, res, result) => {
+            const redisKey = `${req.session.ses}_${result.stage_id}_${result.question_id}`;
+            try {
+                const isCounterTenOrMore = await handleQuestionCounter(redisKey);
+                if (true) { // MODIFICAR A isCounterTenOrMore PARA SU FUNCIONAMIENTO
+                    const json = buildContentAnalysisUnit(req,res);
+                }
+            } catch (error) {
+                console.error("Error al manejar la cuenta de preguntas:", error);
+                // Manejar el error de alguna manera adecuada, como enviar una respuesta de error al cliente
+            }
+        }
+    })(req,res);
+    
+    return rpg.execSQL({
+        dbcon: pass.dbcon,
+        sql: `
+            WITH ROWS AS (
+                UPDATE differential_selection
+                SET sel = $1,
+                    comment = $2,
+                    stime = now()
+                WHERE did = $3
+                    AND UID = $4
+                    AND iteration = $5
+                RETURNING 1
+            )
+            INSERT INTO differential_selection(UID, did, sel, comment, iteration, stime)
+            SELECT $6,
+                $7,
+                $8,
+                $9,
+                $10,
+                now()
+            WHERE 1 not in (
+                SELECT *
+                FROM ROWS
+            )
+        `,
+        sesReqData: ["uid", "ses"],
+        postReqData: ["did", "sel", "comment", "iteration"],
+        sqlParams: [
+            rpg.param("post", "sel"), rpg.param("post", "comment"), rpg.param("post", "did"),
+            rpg.param("ses", "uid"), rpg.param("post", "iteration"), rpg.param("ses", "uid"),
+            rpg.param("post", "did"), rpg.param("post", "sel"), rpg.param("post", "comment"),
+            rpg.param("post", "iteration")
+        ]
+    })(req, res, next);
+});
 
 
 router.post("/get-diff-selection", rpg.multiSQL({
