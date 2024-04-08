@@ -5,7 +5,9 @@
   "private": true,
   "scripts": {
     "start": "node ./backend/ethicapp",
-    "test": "jest --no-cache"
+    "test-case": "jest --no-cache",
+    "debug": "node --inspect=0.0.0.0:9229 --nolazy ./backend/ethicapp",
+    "test": "mocha tests"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.185.0",
