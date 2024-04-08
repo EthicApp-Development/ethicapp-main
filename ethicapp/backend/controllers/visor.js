@@ -2,6 +2,7 @@
 
 let express = require("express");
 let Redis = require("ioredis"); 
+const fetch = require('node-fetch');
 let router = express.Router();
 let rpg = require("../db/rest-pg");
 let pass = require("../config/keys-n-secrets");
@@ -373,65 +374,87 @@ async function handleQuestionCounter(redisKey) {
 }
 
 async function buildContentAnalysisUnit(req, res) {
-    rpg.multiSQL({
-        dbcon: pass.dbcon,
-        sql:    `
-            SELECT q.session AS session_id,
-                qc.number AS phase_id,
-                qa.path AS case_url,
-                qd.title AS question,
-                qd.id AS question_id,
-                qe.id AS response_id,
-                qe.comment AS response_text
-            FROM activity AS q
-                LEFT JOIN designs_documents AS qa
-                    ON q.design = qa.dsgnid
-                LEFT JOIN sessions AS qb
-                    ON q.session = qb.id
-                LEFT JOIN Stages AS qc
-                    ON qb.current_stage = qc.id
-                LEFT JOIN differential AS qd
-                    ON qb.id = qd.sesid AND qc.id = qd.stageid
-                LEFT JOIN differential_selection AS qe
-                    ON qd.id = qe.did
-            WHERE q.session = $1 AND qd.id = ${req.body.did}
-        `,
-        sqlParams:   [rpg.param("ses", "ses")],
-        preventResEnd: true,
-        onEnd: async (req, res, result) => {
+    return new Promise((resolve, reject) => {
+        rpg.multiSQL({
+            dbcon: pass.dbcon,
+            sql:    `
+                SELECT q.session AS session_id,
+                    qc.number AS phase_id,
+                    qa.path AS case_url,
+                    qd.title AS question,
+                    qd.id AS question_id,
+                    qe.id AS response_id,
+                    qe.comment AS response_text
+                FROM activity AS q
+                    LEFT JOIN designs_documents AS qa
+                        ON q.design = qa.dsgnid
+                    LEFT JOIN sessions AS qb
+                        ON q.session = qb.id
+                    LEFT JOIN Stages AS qc
+                        ON qb.current_stage = qc.id
+                    LEFT JOIN differential AS qd
+                        ON qb.id = qd.sesid AND qc.id = qd.stageid
+                    LEFT JOIN differential_selection AS qe
+                        ON qd.id = qe.did
+                WHERE q.session = $1 AND qd.id = ${req.body.did}
+            `,
+            sqlParams:   [rpg.param("ses", "ses")],
+            preventResEnd: true,
+            onEnd: async (req, res, result) => {
+                const groupedResults = result.reduce((acc, cur) => {
+                    if (!acc[cur.question_id]) {
+                      acc[cur.question_id] = [];
+                    }
+                    acc[cur.question_id].push(cur);
+                    return acc;
+                  }, {});
+                  
+                const sessionURL = `http://host.docker.internal:${process.env.PORT}/${result[0].case_url}`;
 
-            const groupedResults = result.reduce((acc, cur) => {
-                if (!acc[cur.question_id]) {
-                  acc[cur.question_id] = [];
-                }
-                acc[cur.question_id].push(cur);
-                return acc;
-              }, {});
-            
-              const workUnitJson = {
-                context: {
-                  session_id: result[0].session_id,
-                  phase_id: result[0].phase_id,
-                  callback_url: "http://host.docker.internal:3000/test",
-                  timestamp: Date.now(),
-                },
-                content: {
-                  case_url: result[0].case_url,
-                  phase_content: Object.values(groupedResults).map(group => ({
-                    question: group[0].question,
-                    question_id: group[0].question_id,
-                    responses: group.map(item => ({
-                      response_id: item.response_id,
-                      response_text: item.response_text
-                    }))
-                  }))
-                }
-              };
-            console.log(workUnitJson);
-            
+                const workUnitJson = {
+                    context: {
+                        session_id: result[0].session_id,
+                        phase_id: result[0].phase_id,
+                        callback_url: "http://host.docker.internal:3000/test",
+                        timestamp: Date.now(),
+                    },
+                    content: {
+                        case_url: sessionURL,
+                        phase_content: Object.values(groupedResults).map(group => ({
+                            question: group[0].question,
+                            question_id: group[0].question_id,
+                            responses: group.map(item => ({
+                                response_id: item.response_id,
+                                response_text: item.response_text
+                            }))
+                        }))
+                    }
+                };
+                console.log(workUnitJson);
+                resolve(workUnitJson);
+            }
+        })(req,res);
+    });
+}
+
+async function sendContentAnalysisWorkunit(workunit){
+    try {
+        const response = await fetch('http://host.docker.internal:5000/top-worst', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(workunit)
+        });
+        if (!response.ok) {
+            throw new Error('La respuesta del servidor no fue OK');
         }
-    })(req,res);
-    return workUnitJson;
+            const responseData = await response.json();
+            res.status(200).send(responseData);
+    } catch (error) {
+        console.error('Error al invocar /content-analysis-workunit:', error);
+        res.status(500).send({ message: 'Error al invocar /content-analysis-workunit' });
+    }
 }
 
 router.post("/send-diff-selection", (req, res, next) => {
@@ -454,10 +477,12 @@ router.post("/send-diff-selection", (req, res, next) => {
 
             handleQuestionCounter(redisKey).then(isCounterTenOrMore => {
                 if (true) { // MODIFICAR A "isCounterTenOrMore" PARA SU FUNCIONAMIENTO
-                    buildContentAnalysisUnit(req,res).then(UnitWork => {
-                        console.log(UnitWork);
-                    }).catch(error => {
-                        console.error('Error fetching data from database:', error);
+                    buildContentAnalysisUnit(req, res).then(workUnitJson => {
+                        console.log(workUnitJson);
+                        sendContentAnalysisWorkunit(workUnitJson);
+                    })
+                    .catch(error => {
+                        console.error("Error al llamar a buildContentAnalysisUnit:", error);
                     });
                 }
             }).catch(error => {
