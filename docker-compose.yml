@@ -24,6 +24,7 @@ services:
     environment:
       NODE_ENV: development
       NODE_PORT: ${NODE_PORT}
+      PORT: ${NODE_PORT}
       ETHICAPP_DOMAIN_NAME: ${ETHICAPP_DOMAIN_NAME}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
       REDIS_HOST: RedisContainer
@@ -32,6 +33,7 @@ services:
       default:
     ports:
       - "${NODE_PORT}:${NODE_PORT}"
+      - "9229:9229"
     volumes:
       - "./ethicapp:/home/app:rw"
     depends_on:
