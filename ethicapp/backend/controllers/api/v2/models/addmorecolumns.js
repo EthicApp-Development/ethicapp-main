@@ -3,7 +3,7 @@ const {
   Model
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-  class create34 extends Model {
+  class AddMoreColumns extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -13,11 +13,11 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
     }
   }
-  create34.init({
+  AddMoreColumns.init({
     bool: DataTypes.BOOLEAN
   }, {
     sequelize,
-    modelName: 'create34',
+    modelName: 'AddMoreColumns',
   });
-  return create34;
+  return AddMoreColumns;
 };

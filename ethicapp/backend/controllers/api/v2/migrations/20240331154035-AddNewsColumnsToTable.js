@@ -18,7 +18,7 @@ module.exports = {
         key: 'id'
       }
     });
-    await queryInterface.addColumn('actor_selection', 'stime', {
+    await queryInterface.addColumn('actors_selections', 'stime', {
       type: Sequelize.DATE,
       allowNull: false,
       defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')

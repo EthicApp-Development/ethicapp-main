@@ -2,7 +2,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-  await queryInterface.addColumn('differential', 'stageid', {
+  await queryInterface.addColumn('differentials', 'stageid', {
     type: Sequelize.INTEGER,
     allowNull: true,
     references: {
@@ -13,13 +13,13 @@ module.exports = {
     onDelete: 'SET NULL'
   });
 
-  await queryInterface.addColumn('differential', 'justify', {
+  await queryInterface.addColumn('differentials', 'justify', {
     type: Sequelize.BOOLEAN,
     allowNull: false,
     defaultValue: true
   });
 
-  await queryInterface.addColumn('differential', 'num', {
+  await queryInterface.addColumn('differentials', 'num', {
     type: Sequelize.INTEGER,
     allowNull: false,
     defaultValue: 7
@@ -28,7 +28,7 @@ module.exports = {
     type: Sequelize.TEXT,
     allowNull: true
   });
-  await queryInterface.addColumn('differential', 'word_count', {
+  await queryInterface.addColumn('differentials', 'word_count', {
     type: Sequelize.INTEGER,
     allowNull: false,
     defaultValue: 0
