@@ -6,7 +6,7 @@ const {
 module.exports = (sequelize, DataTypes) => {
   class UserSessionReport extends Model {
     static associate(models) {
-      // Aquí puedes definir las asociaciones con otros modelos si es necesario
+      
     }
   }
   UserSessionReport.init({

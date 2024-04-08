@@ -13,7 +13,7 @@ module.exports = (sequelize, DataTypes) => {
     number: DataTypes.INTEGER,
     type: DataTypes.CHAR(15),
     anon: DataTypes.BOOLEAN,
-    chat: DataTypes.BOOLEAN,
+    chats: DataTypes.BOOLEAN,
     prev_ans: DataTypes.CHAR(255),
     sesid: DataTypes.INTEGER,
   }, {
