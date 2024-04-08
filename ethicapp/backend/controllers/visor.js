@@ -428,9 +428,10 @@ async function buildContentAnalysisUnit(req, res) {
                 }
               };
             console.log(workUnitJson);
-            return workUnitJson;
+            
         }
     })(req,res);
+    return workUnitJson;
 }
 
 router.post("/send-diff-selection", (req, res, next) => {
@@ -450,15 +451,18 @@ router.post("/send-diff-selection", (req, res, next) => {
         preventResEnd: true,
         onEnd: async (req, res, result) => {
             const redisKey = `${req.session.ses}_${result.stage_id}_${result.question_id}`;
-            try {
-                const isCounterTenOrMore = await handleQuestionCounter(redisKey);
-                if (true) { // MODIFICAR A isCounterTenOrMore PARA SU FUNCIONAMIENTO
-                    const json = buildContentAnalysisUnit(req,res);
+
+            handleQuestionCounter(redisKey).then(isCounterTenOrMore => {
+                if (true) { // MODIFICAR A "isCounterTenOrMore" PARA SU FUNCIONAMIENTO
+                    buildContentAnalysisUnit(req,res).then(UnitWork => {
+                        console.log(UnitWork);
+                    }).catch(error => {
+                        console.error('Error fetching data from database:', error);
+                    });
                 }
-            } catch (error) {
-                console.error("Error al manejar la cuenta de preguntas:", error);
-                // Manejar el error de alguna manera adecuada, como enviar una respuesta de error al cliente
-            }
+            }).catch(error => {
+                console.error('Error fetching data from Redis database:', error);
+            });
         }
     })(req,res);
     
