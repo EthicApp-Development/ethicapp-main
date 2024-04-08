@@ -5,7 +5,6 @@
   "private": true,
   "scripts": {
     "start": "node ./backend/ethicapp",
-    "debug": "node --inspect=0.0.0.0:9229 --nolazy ./backend/ethicapp",
     "test": "mocha tests"
   },
   "dependencies": {
