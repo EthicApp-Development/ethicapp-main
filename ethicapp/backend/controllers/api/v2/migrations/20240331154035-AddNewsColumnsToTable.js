@@ -10,7 +10,7 @@ module.exports = {
         key: 'id'
       }
     });
-    await queryInterface.addColumn('teams', 'stageid', {
+    await queryInterface.addColumn('teams', 'stage_id', {
       type: Sequelize.INTEGER,
       allowNull: true,
       references: {

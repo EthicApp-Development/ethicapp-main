@@ -46,8 +46,8 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   SessionsUsers.init({
-    sesid: DataTypes.INTEGER,
-    uid: DataTypes.INTEGER,
+    sesion_id: DataTypes.INTEGER,
+    user_id: DataTypes.INTEGER,
   }, {
     sequelize,
     modelName: 'SessionsUsers',
@@ -62,7 +62,7 @@ module.exports = (sequelize, DataTypes) => {
   Document.init({
     title: DataTypes.TEXT,
     path: DataTypes.TEXT,
-    sesid: DataTypes.INTEGER,
+    sesion_id: DataTypes.INTEGER,
     uploader: DataTypes.INTEGER,
   }, {
     sequelize,
@@ -81,7 +81,7 @@ module.exports = (sequelize, DataTypes) => {
     answer: DataTypes.INTEGER,
     comment: DataTypes.TEXT,
     other: DataTypes.TEXT,
-    sesid: DataTypes.INTEGER,
+    sesion_id: DataTypes.INTEGER,
   }, {
     sequelize,
     modelName: 'Question',
@@ -95,10 +95,10 @@ module.exports = (sequelize, DataTypes) => {
   }
   Selection.init({
     answer: DataTypes.INTEGER,
-    uid: DataTypes.INTEGER,
+    user_id: DataTypes.INTEGER,
     iteration: { type: DataTypes.INTEGER, defaultValue: 1 },
     comment: DataTypes.TEXT,
-    qid: DataTypes.INTEGER,
+    question_id: DataTypes.INTEGER,
   }, {
     sequelize,
     modelName: 'Selection',
@@ -111,7 +111,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Team.init({
-    sesid: DataTypes.INTEGER,
+    sesion_id: DataTypes.INTEGER,
   }, {
     sequelize,
     modelName: 'Team',
@@ -124,8 +124,8 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   TeamUser.init({
-    tmid: DataTypes.INTEGER,
-    uid: DataTypes.INTEGER,
+    team_id: DataTypes.INTEGER,
+    user_id: DataTypes.INTEGER,
   }, {
     sequelize,
     modelName: 'TeamUser',

@@ -9,7 +9,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   SessionStatus.init({
-    sesid: DataTypes.INTEGER,
+    sesion_id: DataTypes.INTEGER,
     status: DataTypes.INTEGER,
     stime: DataTypes.DATE
   }, {
@@ -24,8 +24,8 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   FinishedSession.init({
-    uid: DataTypes.INTEGER,
-    sesid: DataTypes.INTEGER,
+    user_id: DataTypes.INTEGER,
+    sesion_id: DataTypes.INTEGER,
     status: DataTypes.INTEGER,
     stime: DataTypes.DATE
   }, {

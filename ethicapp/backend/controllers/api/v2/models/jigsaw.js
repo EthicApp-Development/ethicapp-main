@@ -11,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
   JigsawRole.init({
     name: DataTypes.STRING(255),
     description: DataTypes.TEXT,
-    sesid: DataTypes.INTEGER,
+    sesion_id: DataTypes.INTEGER,
   }, {
     sequelize,
     modelName: 'JigsawRole',
@@ -23,9 +23,9 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   JigsawUser.init({
-    stageid: DataTypes.INTEGER,
-    userid: DataTypes.INTEGER,
-    roleid: DataTypes.INTEGER,
+    stage_id: DataTypes.INTEGER,
+    user__id: DataTypes.INTEGER,
+    role_id: DataTypes.INTEGER,
   }, {
     sequelize,
     modelName: 'JigsawUser',

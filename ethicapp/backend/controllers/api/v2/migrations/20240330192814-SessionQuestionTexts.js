@@ -9,7 +9,7 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      sesid: {
+      sesion_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -25,18 +25,18 @@ module.exports = {
         type: Sequelize.TEXT,
         allowNull: true
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }
     });
     await queryInterface.addConstraint('sessions_questions_texts', {
       type: 'foreign key',
-      fields: ['sesid'],
+      fields: ['sesion_id'],
       references: {
         table: 'sessions',
         field: 'id'
@@ -44,7 +44,7 @@ module.exports = {
       onDelete: 'CASCADE',
       onUpdate: 'CASCADE'
     });
-    await queryInterface.addColumn('questions', 'textid', {
+    await queryInterface.addColumn('questions', 'text_id', {
       type: Sequelize.INTEGER,
       allowNull: true,
       defaultValue: null

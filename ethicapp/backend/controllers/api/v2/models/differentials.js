@@ -11,11 +11,11 @@ module.exports = (sequelize, DataTypes) => {
   }
   Differential.init({
     title: DataTypes.TEXT,
-    tleft: DataTypes.TEXT,
-    tright: DataTypes.TEXT,
+    text_left: DataTypes.TEXT,
+    text_right: DataTypes.TEXT,
     orden: DataTypes.INTEGER,
     creator: DataTypes.INTEGER,
-    sesid: DataTypes.INTEGER,
+    sesion_id: DataTypes.INTEGER,
   }, {
     sequelize,
     modelName: 'Differential',
@@ -28,8 +28,8 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   DifferentialSelection.init({
-    uid: DataTypes.INTEGER,
-    did: DataTypes.INTEGER,
+    user_id: DataTypes.INTEGER,
+    differential_id: DataTypes.INTEGER,
     sel: DataTypes.INTEGER,
     iteration: DataTypes.INTEGER,
     comment: DataTypes.TEXT,
@@ -46,8 +46,8 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   DifferentialChat.init({
-    uid: DataTypes.INTEGER,
-    did: DataTypes.INTEGER,
+    user_id: DataTypes.INTEGER,
+    differential_id: DataTypes.INTEGER,
     content: DataTypes.TEXT,
     stime: DataTypes.DATE,
   }, {

@@ -10,9 +10,9 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Chat.init({
-    sesid: DataTypes.INTEGER,
-    stageid: DataTypes.INTEGER,
-    uid: DataTypes.INTEGER,
+    sesion_id: DataTypes.INTEGER,
+    stage_id: DataTypes.INTEGER,
+    user_id: DataTypes.INTEGER,
     content: DataTypes.TEXT,
     stime: DataTypes.DATE,
     parent_id: DataTypes.INTEGER,

@@ -9,7 +9,7 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      sesid: {
+      sesion_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -27,11 +27,11 @@ module.exports = {
         type: Sequelize.DATE,
         allowNull: false
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -43,7 +43,7 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      uid: {
+      user_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -53,7 +53,7 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      sesid: {
+      sesion_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -71,11 +71,11 @@ module.exports = {
         type: Sequelize.DATE,
         allowNull: false
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }

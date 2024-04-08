@@ -1,26 +1,23 @@
 'use strict';
-const { Model } = require('sequelize');
+const {
+  Model
+} = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class addColumnSessionAndDiffChats extends Model {
+    /**
+     * Helper method for defining associations.
+     * This method is not a part of Sequelize lifecycle.
+     * The `models/index` file will call this method automatically.
+     */
     static associate(models) {
-      // Definir la relación con differentials_chats
-      addColumnSessionAndDiffChats.belongsTo(models.differentials_chats, {
-        foreignKey: 'parent_id',
-        as: 'parentChat'
-      });
-
-      // Definir la relación con sessions
-      addColumnSessionAndDiffChats.belongsTo(models.sessions, {
-        foreignKey: 'session_id',
-        as: 'session' 
-      });
+      // define association here
     }
   }
   addColumnSessionAndDiffChats.init({
     ids: DataTypes.INTEGER
   }, {
     sequelize,
-    modelName: 'addColumnSessionAndDiffChats',
+    modelName: 'create22',
   });
   return addColumnSessionAndDiffChats;
 };

@@ -44,7 +44,7 @@ module.exports = {
     await queryInterface.addConstraint('sessions_users', {
       type: 'unique',
       name: 'no_dup_users',
-      fields: ['uid', 'sesid']
+      fields: ['user_id', 'sesion_id']
     });
     
   },

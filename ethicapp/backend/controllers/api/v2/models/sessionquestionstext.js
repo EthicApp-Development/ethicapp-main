@@ -10,7 +10,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   SessionQuestionsText.init({
-    sesid: DataTypes.INTEGER,
+    sesion_id: DataTypes.INTEGER,
     title: DataTypes.TEXT,
     content: DataTypes.TEXT
   }, {
@@ -19,9 +19,9 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'sessions_questions_texts'
   });
 
-  // Agregar la columna textid a la tabla questions
+  // Agregar la columna text_id a la tabla questions
   SessionQuestionsText.associate = function(models) {
-    models.create05.hasOne(models.SessionQuestionsText, { foreignKey: 'textid' });
+    models.create05.hasOne(models.SessionQuestionsText, { foreignKey: 'text_id' });
   };
 
   return SessionQuestionsText;

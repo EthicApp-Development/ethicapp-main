@@ -13,11 +13,11 @@ module.exports = {
         type: Sequelize.TEXT,
         defaultValue: ''
       },
-      tleft: {
+      text_left: {
         type: Sequelize.TEXT,
         allowNull: false
       },
-      tright: {
+      text_right: {
         type: Sequelize.TEXT,
         allowNull: false
       },
@@ -33,7 +33,7 @@ module.exports = {
           key: 'id'
         }
       },
-      sesid: {
+      sesion_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
@@ -41,11 +41,11 @@ module.exports = {
           key: 'id'
         }
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -57,7 +57,7 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      uid: {
+      user_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -65,7 +65,7 @@ module.exports = {
           key: 'id'
         }
       },
-      did: {
+      differential_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -90,11 +90,11 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -106,7 +106,7 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      uid: {
+      user_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -114,7 +114,7 @@ module.exports = {
           key: 'id'
         }
       },
-      did: {
+      differential_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -131,11 +131,11 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }

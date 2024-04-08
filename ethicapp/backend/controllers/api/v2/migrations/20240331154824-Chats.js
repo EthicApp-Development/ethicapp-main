@@ -9,7 +9,7 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      sesid: {
+      sesion_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
@@ -17,7 +17,7 @@ module.exports = {
           key: 'id'
         }
       },
-      stageid: {
+      stage_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
@@ -25,7 +25,7 @@ module.exports = {
           key: 'id'
         }
       },
-      uid: {
+      user_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
@@ -50,11 +50,11 @@ module.exports = {
           key: 'id'
         }
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }

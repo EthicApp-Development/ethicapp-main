@@ -9,7 +9,7 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      uid: {
+      user_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -17,7 +17,7 @@ module.exports = {
           key: 'id'
         }
       },
-      sesid: {
+      sesion_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -25,18 +25,18 @@ module.exports = {
           key: 'id'
         }
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }
     });
     await queryInterface.addConstraint('users_sessions_reports', {
       type: 'foreign key',
-      fields: ['uid'],
+      fields: ['user_id'],
       references: {
         table: 'users',
         field: 'id'
@@ -46,7 +46,7 @@ module.exports = {
     });
     await queryInterface.addConstraint('users_sessions_reports', {
       type: 'foreign key',
-      fields: ['sesid'],
+      fields: ['sesion_id'],
       references: {
         table: 'sessions',
         field: 'id'

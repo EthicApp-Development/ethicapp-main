@@ -29,7 +29,7 @@ module.exports = {
         type: Sequelize.CHAR(255),
         allowNull: true
       },
-      sesid: {
+      sesion_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
@@ -37,11 +37,11 @@ module.exports = {
           key: 'id'
         }
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -61,7 +61,7 @@ module.exports = {
         type: Sequelize.BOOLEAN,
         allowNull: false
       },
-      stageid: {
+      stage_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
@@ -69,11 +69,11 @@ module.exports = {
           key: 'id'
         }
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -93,7 +93,7 @@ module.exports = {
         type: Sequelize.INTEGER,
         allowNull: true
       },
-      actorid: {
+      actor_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -101,7 +101,7 @@ module.exports = {
           key: 'id'
         }
       },
-      uid: {
+      user_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -109,7 +109,7 @@ module.exports = {
           key: 'id'
         }
       },
-      stageid: {
+      stage_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
@@ -117,11 +117,11 @@ module.exports = {
           key: 'id'
         }
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }

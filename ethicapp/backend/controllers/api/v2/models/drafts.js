@@ -10,7 +10,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Draft.init({
-    sesid: DataTypes.INTEGER,
+    sesion_id: DataTypes.INTEGER,
     data: DataTypes.TEXT,
   }, {
     sequelize,

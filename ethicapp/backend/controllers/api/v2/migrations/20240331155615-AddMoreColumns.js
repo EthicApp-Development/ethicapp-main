@@ -2,7 +2,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-  await queryInterface.addColumn('differentials', 'stageid', {
+  await queryInterface.addColumn('differentials', 'stage_id', {
     type: Sequelize.INTEGER,
     allowNull: true,
     references: {

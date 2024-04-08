@@ -15,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
     anon: DataTypes.BOOLEAN,
     chats: DataTypes.BOOLEAN,
     prev_ans: DataTypes.CHAR(255),
-    sesid: DataTypes.INTEGER,
+    sesion_id: DataTypes.INTEGER,
   }, {
     sequelize,
     modelName: 'Stage',
@@ -30,7 +30,7 @@ module.exports = (sequelize, DataTypes) => {
   Actor.init({
     name: DataTypes.CHAR(255),
     jorder: DataTypes.BOOLEAN,
-    stageid: DataTypes.INTEGER,
+    stage_id: DataTypes.INTEGER,
   }, {
     sequelize,
     modelName: 'Actor',
@@ -45,9 +45,9 @@ module.exports = (sequelize, DataTypes) => {
   ActorsSelection.init({
     description: DataTypes.TEXT,
     orden: DataTypes.INTEGER,
-    actorid: DataTypes.INTEGER,
-    uid: DataTypes.INTEGER,
-    stageid: DataTypes.INTEGER,
+    actor_id: DataTypes.INTEGER,
+    user_id: DataTypes.INTEGER,
+    stage_id: DataTypes.INTEGER,
   }, {
     sequelize,
     modelName: 'ActorsSelection',

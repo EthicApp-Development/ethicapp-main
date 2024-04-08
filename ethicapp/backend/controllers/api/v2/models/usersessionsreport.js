@@ -10,8 +10,8 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   UserSessionReport.init({
-    uid: DataTypes.INTEGER,
-    sesid: DataTypes.INTEGER,
+    user_id: DataTypes.INTEGER,
+    sesion_id: DataTypes.INTEGER,
   }, {
     sequelize,
     modelName: 'UserSessionReport',

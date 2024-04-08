@@ -31,11 +31,11 @@ module.exports = {
       role: {
         type: Sequelize.CHAR(1)
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -79,11 +79,11 @@ module.exports = {
         type: Sequelize.STRING(1),
         allowNull: true
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -94,7 +94,7 @@ module.exports = {
         autoIncrement: true,
         type: Sequelize.INTEGER
       },
-      sesid: {
+      sesion_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -102,7 +102,7 @@ module.exports = {
           key: 'id'
         }
       },
-      uid: {
+      user_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -110,11 +110,11 @@ module.exports = {
           key: 'id'
         }
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -134,7 +134,7 @@ module.exports = {
         type: Sequelize.TEXT,
         allowNull: false
       },
-      sesid: {
+      sesion_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
@@ -150,11 +150,11 @@ module.exports = {
           key: 'id'
         }
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -186,7 +186,7 @@ module.exports = {
         type: Sequelize.TEXT,
         allowNull: true
       },
-      sesid: {
+      sesion_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
@@ -194,11 +194,11 @@ module.exports = {
           key: 'id'
         }
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -213,7 +213,7 @@ module.exports = {
         type: Sequelize.INTEGER,
         allowNull: true
       },
-      uid: {
+      user_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -230,7 +230,7 @@ module.exports = {
         type: Sequelize.TEXT,
         allowNull: true
       },
-      qid: {
+      question_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -238,11 +238,11 @@ module.exports = {
           key: 'id'
         }
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -254,7 +254,7 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      sesid: {
+      sesion_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -262,11 +262,11 @@ module.exports = {
           key: 'id'
         }
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -277,7 +277,7 @@ module.exports = {
         autoIncrement: true,
         type: Sequelize.INTEGER
       },
-      tmid: {
+      team_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -285,7 +285,7 @@ module.exports = {
           key: 'id'
         }
       },
-      uid: {
+      user_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
@@ -293,11 +293,11 @@ module.exports = {
           key: 'id'
         }
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }
@@ -315,7 +315,7 @@ module.exports = {
     });
     await queryInterface.addConstraint('sessions_users', {
       type: 'foreign key',
-      fields: ['sesid'],
+      fields: ['sesion_id'],
       references: {
         table: 'sessions',
         field: 'id'
@@ -325,7 +325,7 @@ module.exports = {
     });
     await queryInterface.addConstraint('sessions_users', {
       type: 'foreign key',
-      fields: ['uid'],
+      fields: ['user_id'],
       references: {
         table: 'users',
         field: 'id'
@@ -335,7 +335,7 @@ module.exports = {
     });
     await queryInterface.addConstraint('documents', {
       type: 'foreign key',
-      fields: ['sesid'],
+      fields: ['sesion_id'],
       references: {
         table: 'sessions',
         field: 'id'
@@ -355,7 +355,7 @@ module.exports = {
     });
     await queryInterface.addConstraint('questions', {
       type: 'foreign key',
-      fields: ['sesid'],
+      fields: ['sesion_id'],
       references: {
         table: 'sessions',
         field: 'id'
@@ -365,7 +365,7 @@ module.exports = {
     });
     await queryInterface.addConstraint('selections', {
       type: 'foreign key',
-      fields: ['uid'],
+      fields: ['user_id'],
       references: {
         table: 'users',
         field: 'id'
@@ -375,7 +375,7 @@ module.exports = {
     });
     await queryInterface.addConstraint('selections', {
       type: 'foreign key',
-      fields: ['qid'],
+      fields: ['question_id'],
       references: {
         table: 'questions',
         field: 'id'
@@ -385,7 +385,7 @@ module.exports = {
     });
     await queryInterface.addConstraint('teams', {
       type: 'foreign key',
-      fields: ['sesid'],
+      fields: ['sesion_id'],
       references: {
         table: 'sessions',
         field: 'id'
@@ -395,7 +395,7 @@ module.exports = {
     });
     await queryInterface.addConstraint('teamusers', {
       type: 'foreign key',
-      fields: ['tmid'],
+      fields: ['team_id'],
       references: {
         table: 'teams',
         field: 'id'
@@ -405,7 +405,7 @@ module.exports = {
     });
     await queryInterface.addConstraint('teamusers', {
       type: 'foreign key',
-      fields: ['uid'],
+      fields: ['user_id'],
       references: {
         table: 'users',
         field: 'id'
@@ -416,7 +416,7 @@ module.exports = {
     // Make sure to create the index for the primary key after creating the table.
     await queryInterface.addConstraint('selections', {
       type: 'primary key',
-      fields: ['uid', 'qid']
+      fields: ['user_id', 'question_id']
     });    
   },
   async down(queryInterface, Sequelize) {
