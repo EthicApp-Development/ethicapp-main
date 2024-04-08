@@ -5,7 +5,7 @@ const {
 module.exports = (sequelize, DataTypes) => {
   class JigsawRole extends Model {
     static associate(models) {
-      // Aquí puedes definir las asociaciones con otros modelos si es necesario
+      
     }
   }
   JigsawRole.init({
@@ -19,7 +19,7 @@ module.exports = (sequelize, DataTypes) => {
   });
   class JigsawUser extends Model {
     static associate(models) {
-      // Aquí puedes definir las asociaciones con otros modelos si es necesario
+      
     }
   }
   JigsawUser.init({

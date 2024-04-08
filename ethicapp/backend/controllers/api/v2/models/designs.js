@@ -6,7 +6,7 @@ const {
 module.exports = (sequelize, DataTypes) => {
   class Design extends Model {
     static associate(models) {
-      // Aquí puedes definir las asociaciones con otros modelos si es necesario
+      
     }
   }
   Design.init({
@@ -22,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
 
   class DesignsDocument extends Model {
     static associate(models) {
-      // Aquí puedes definir las asociaciones con otros modelos si es necesario
+      
     }
   }
   DesignsDocument.init({
@@ -38,7 +38,7 @@ module.exports = (sequelize, DataTypes) => {
 
   class Activity extends Model {
     static associate(models) {
-      // Aquí puedes definir las asociaciones con otros modelos si es necesario
+      
     }
   }
   Activity.init({
