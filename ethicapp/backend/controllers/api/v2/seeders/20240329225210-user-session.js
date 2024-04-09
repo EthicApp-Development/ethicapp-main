@@ -66,18 +66,18 @@ module.exports = {
       {}
     );
 
-    // Seed data for sesusers table
+    // Seed data for sessions_users table
     await queryInterface.bulkInsert(
-      'sesusers',
+      'sessions_users',
       [
         {
           id: 1,
-          sesid: 1, // Assuming session 1
-          uid: 1, // Assuming user 1
+          sesion_id: 1, // Assuming session 1
+          user_id: 1, // Assuming user 1
           created_at: new Date(),
           updated_at: new Date()
         },
-        // Add more sesusers as needed
+        // Add more sessions_users as needed
       ],
       {}
     );
@@ -87,26 +87,26 @@ module.exports = {
         {
           title: 'Documento 1',
           path: '/path/to/document1.pdf',
-          sesid: 1,
+          sesion_id: 1,
           uploader: 1,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          created_at: new Date(),
+          updated_at: new Date()
         },
         {
           title: 'Documento 2',
           path: '/path/to/document2.pdf',
-          sesid: 1,
+          sesion_id: 1,
           uploader: 2,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          created_at: new Date(),
+          updated_at: new Date()
         },
         {
           title: 'Documento 3',
           path: '/path/to/document3.pdf',
-          sesid: 2,
+          sesion_id: 2,
           uploader: 1,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          created_at: new Date(),
+          updated_at: new Date()
         },
       ],
       {}
@@ -122,7 +122,7 @@ module.exports = {
           answer: 1,
           comment: 'Comment for question 1',
           other: 'Other info for question 1',
-          sesid: 1, // Assuming session 1
+          sesion_id: 1, // Assuming session 1
           created_at: new Date(),
           updated_at: new Date()
         },
@@ -131,17 +131,17 @@ module.exports = {
       {}
     );
 
-    // Seed data for selection table
+    // Seed data for selections table
     await queryInterface.bulkInsert(
-      'selection',
+      'selections',
       [
         {
           id: 1,
           answer: 2,
-          uid: 1, // Assuming user 1
+          user_id: 1, // Assuming user 1
           iteration: 1,
-          comment: 'Comment for selection 1',
-          qid: 1, // Assuming question 1
+          comment: 'Comment for selections 1',
+          question_id: 1, // Assuming question 1
           created_at: new Date(),
           updated_at: new Date()
         },
@@ -156,7 +156,7 @@ module.exports = {
       [
         {
           id: 1,
-          sesid: 1, // Assuming session 1
+          sesion_id: 1, // Assuming session 1
           created_at: new Date(),
           updated_at: new Date()
         },
@@ -171,8 +171,8 @@ module.exports = {
       [
         {
           id: 1,
-          tmid: 1, // Assuming team 1
-          uid: 1, // Assuming user 1
+          team_id: 1, // Assuming team 1
+          user_id: 1, // Assuming user 1
           created_at: new Date(),
           updated_at: new Date()
         },
@@ -187,9 +187,9 @@ module.exports = {
     // For example, you can use bulkDelete for each table
     await queryInterface.bulkDelete('teamusers', null, {});
     await queryInterface.bulkDelete('teams', null, {});
-    await queryInterface.bulkDelete('selection', null, {});
+    await queryInterface.bulkDelete('selections', null, {});
     await queryInterface.bulkDelete('questions', null, {});
-    await queryInterface.bulkDelete('sesusers', null, {});
+    await queryInterface.bulkDelete('sessions_users', null, {});
     await queryInterface.bulkDelete('sessions', null, {});
     await queryInterface.bulkDelete('users', null, {});
   }

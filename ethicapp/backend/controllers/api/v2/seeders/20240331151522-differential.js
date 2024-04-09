@@ -3,67 +3,67 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up (queryInterface, Sequelize) {
-    await queryInterface.bulkInsert('differential', [
+    await queryInterface.bulkInsert('differentials', [
       {
         title: 'Diferencial 1',
-        tleft: 'Texto para la izquierda 1',
-        tright: 'Texto para la derecha 1',
+        text_left: 'Texto para la izquierda 1',
+        text_right: 'Texto para la derecha 1',
         orden: 1,
         creator: 1, // Reemplaza 1 por el ID del usuario creador
-        sesid: 1, // Reemplaza 1 por el ID de la sesión relacionada
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        sesion_id: 1, // Reemplaza 1 por el ID de la sesión relacionada
+        created_at: new Date(),
+        updated_at: new Date(),
       },
       {
         title: 'Diferencial 2',
-        tleft: 'Texto para la izquierda 2',
-        tright: 'Texto para la derecha 2',
+        text_left: 'Texto para la izquierda 2',
+        text_right: 'Texto para la derecha 2',
         orden: 2,
         creator: 2, // Reemplaza 2 por el ID del usuario creador
-        sesid: 2, // Reemplaza 2 por el ID de la sesión relacionada
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        sesion_id: 2, // Reemplaza 2 por el ID de la sesión relacionada
+        created_at: new Date(),
+        updated_at: new Date(),
       },
       // Agrega más objetos según sea necesario
     ]);
 
-    // Semilla para la tabla 'differential_selection'
-    await queryInterface.bulkInsert('differential_selection', [
+    // Semilla para la tabla 'differentials_selections'
+    await queryInterface.bulkInsert('differentials_selections', [
       {
-        uid: 1, // Reemplaza 1 por el ID del usuario
-        did: 1, // Reemplaza 1 por el ID del registro en 'differential' relacionado
+        user_id: 1, // Reemplaza 1 por el ID del usuario
+        differential_id: 1, // Reemplaza 1 por el ID del registro en 'differentials' relacionado
         sel: 1,
         iteration: 1,
         comment: 'Comentario sobre la selección',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        created_at: new Date(),
+        updated_at: new Date(),
       },
       // Agrega más objetos según sea necesario
     ]);
 
-    // Semilla para la tabla 'differential_chat'
-    await queryInterface.bulkInsert('differential_chat', [
+    // Semilla para la tabla 'differentials_chats'
+    await queryInterface.bulkInsert('differentials_chats', [
       {
-        uid: 1, // Reemplaza 1 por el ID del usuario
-        did: 1, // Reemplaza 1 por el ID del registro en 'differential' relacionado
-        content: 'Mensaje de chat 1',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        user_id: 1, // Reemplaza 1 por el ID del usuario
+        differential_id: 1, // Reemplaza 1 por el ID del registro en 'differentials' relacionado
+        content: 'Mensaje de chats 1',
+        created_at: new Date(),
+        updated_at: new Date(),
       },
       {
-        uid: 2, // Reemplaza 2 por el ID del usuario
-        did: 1, // Reemplaza 1 por el ID del registro en 'differential' relacionado
-        content: 'Mensaje de chat 2',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        user_id: 2, // Reemplaza 2 por el ID del usuario
+        differential_id: 1, // Reemplaza 1 por el ID del registro en 'differentials' relacionado
+        content: 'Mensaje de chats 2',
+        created_at: new Date(),
+        updated_at: new Date(),
       },
       // Agrega más objetos según sea necesario
     ]);
   },
 
   async down (queryInterface, Sequelize) {
-    await queryInterface.bulkDelete('differential_chat', null, {});
-    await queryInterface.bulkDelete('differential_selection', null, {});
-    await queryInterface.bulkDelete('differential', null, {});
+    await queryInterface.bulkDelete('differentials_chats', null, {});
+    await queryInterface.bulkDelete('differentials_selections', null, {});
+    await queryInterface.bulkDelete('differentials', null, {});
   }
 };

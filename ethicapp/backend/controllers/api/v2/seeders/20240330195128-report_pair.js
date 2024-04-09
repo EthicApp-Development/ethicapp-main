@@ -3,24 +3,24 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up (queryInterface, Sequelize) {
-    await queryInterface.bulkInsert('report_pair', [
+    await queryInterface.bulkInsert('users_sessions_reports', [
       {
-        uid: 1,
-        sesid: 1,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        user_id: 1,
+        sesion_id: 1,
+        created_at: new Date(),
+        updated_at: new Date()
       },
       {
-        uid: 2,
-        sesid: 2,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        user_id: 2,
+        sesion_id: 2,
+        created_at: new Date(),
+        updated_at: new Date()
       },
       // Agrega más filas según sea necesario
     ], {});
   },
 
   async down (queryInterface, Sequelize) {
-    await queryInterface.bulkDelete('report_pair', null, {});
+    await queryInterface.bulkDelete('users_sessions_reports', null, {});
   }
 };

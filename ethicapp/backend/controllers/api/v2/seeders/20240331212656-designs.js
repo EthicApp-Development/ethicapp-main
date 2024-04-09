@@ -26,16 +26,16 @@ module.exports = {
         design: serializedDesignData,
         public: false,
         locked: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        created_at: new Date(),
+        updated_at: new Date()
       },
       {
         creator: 2,
         design: serializedDesignData,
         public: true,
         locked: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        created_at: new Date(),
+        updated_at: new Date()
       },
       // Agrega más datos según sea necesario
     ]);
@@ -47,40 +47,40 @@ module.exports = {
         dsgnid: 1,
         uploader: 1,
         active: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        created_at: new Date(),
+        updated_at: new Date()
       },
       {
         path: '/ruta/al/archivo2.pdf',
         dsgnid: 2,
         uploader: 2,
         active: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        created_at: new Date(),
+        updated_at: new Date()
       },
       // Agrega más datos según sea necesario
     ]);
 
-    // Semilla para la tabla activity
-    await queryInterface.bulkInsert('activity', [
+    // Semilla para la tabla activities
+    await queryInterface.bulkInsert('activities', [
       {
         design: 1,
         session: 1,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        created_at: new Date(),
+        updated_at: new Date()
       },
       {
         design: 2,
         session: 2,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        created_at: new Date(),
+        updated_at: new Date()
       },
       // Agrega más datos según sea necesario
     ]);
   },
 
   async down (queryInterface, Sequelize) {
-    await queryInterface.bulkDelete('activity', null, {});
+    await queryInterface.bulkDelete('activities', null, {});
     await queryInterface.bulkDelete('designs_documents', null, {});
     await queryInterface.bulkDelete('designs', null, {});
   }

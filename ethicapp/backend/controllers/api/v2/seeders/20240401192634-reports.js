@@ -6,13 +6,13 @@ module.exports = {
     await queryInterface.bulkInsert('report_type', [{
       report_type: 'Tipo de Reporte 1',
       report_description: 'Descripción del Tipo de Reporte 1',
-      createdAt: new Date(),
-      updatedAt: new Date()
+      created_at: new Date(),
+      updated_at: new Date()
     }, {
       report_type: 'Tipo de Reporte 2',
       report_description: 'Descripción del Tipo de Reporte 2',
-      createdAt: new Date(),
-      updatedAt: new Date()
+      created_at: new Date(),
+      updated_at: new Date()
     }], {});
   },
 

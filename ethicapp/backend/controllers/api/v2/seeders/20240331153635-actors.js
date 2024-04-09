@@ -9,19 +9,19 @@ module.exports = {
         number: 1,
         type: 'Type A',
         anon: false,
-        chat: false,
+        chats: false,
         prev_ans: 'Previous answer A',
-        createdAt: new Date(),
-        updatedAt: new Date()
+        created_at: new Date(),
+        updated_at: new Date()
       },
       {
         number: 2,
         type: 'Type B',
         anon: true,
-        chat: true,
+        chats: true,
         prev_ans: 'Previous answer B',
-        createdAt: new Date(),
-        updatedAt: new Date()
+        created_at: new Date(),
+        updated_at: new Date()
       }
     ]);
 
@@ -30,38 +30,38 @@ module.exports = {
       {
         name: 'Actor 1',
         jorder: true,
-        stageid: 1,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        stage_id: 1,
+        created_at: new Date(),
+        updated_at: new Date()
       },
       {
         name: 'Actor 2',
         jorder: false,
-        stageid: 2,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        stage_id: 2,
+        created_at: new Date(),
+        updated_at: new Date()
       }
     ]);
 
-    // Seed data for actor_selection table
-    await queryInterface.bulkInsert('actor_selection', [
+    // Seed data for actors_selections table
+    await queryInterface.bulkInsert('actors_selections', [
       {
         description: 'Description 1',
         orden: 1,
-        actorid: 1,
-        uid: 1,
-        stageid: 1,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        actor_id: 1,
+        user_id: 1,
+        stage_id: 1,
+        created_at: new Date(),
+        updated_at: new Date()
       },
       {
         description: 'Description 2',
         orden: 2,
-        actorid: 2,
-        uid: 2,
-        stageid: 2,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        actor_id: 2,
+        user_id: 2,
+        stage_id: 2,
+        created_at: new Date(),
+        updated_at: new Date()
       }
     ]);
   },
@@ -70,6 +70,6 @@ module.exports = {
     // Remove all entries from the tables
     await queryInterface.bulkDelete('stages', null, {});
     await queryInterface.bulkDelete('actors', null, {});
-    await queryInterface.bulkDelete('actor_selection', null, {});
+    await queryInterface.bulkDelete('actors_selections', null, {});
   }
 };
