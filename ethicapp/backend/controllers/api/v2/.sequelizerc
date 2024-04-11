@@ -1,0 +1,8 @@
+const path = require('path');
+
+module.exports = {
+  'config': path.resolve('config', 'config.json'), 
+  'models-path': path.resolve('models'), 
+  'seeders-path': path.resolve('seeders', process.env.ETHICAPP_ENV), // Ruta de la carpeta de seeders según el entorno
+  'migrations-path': path.resolve('migrations') 
+};
