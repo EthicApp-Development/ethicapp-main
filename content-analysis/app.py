@@ -23,13 +23,13 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db, compare_type=True)
 #from models import Comments, Process, Topics
 
-redis_ulr = os.environ.get("REDIS_URL")
-if not redis_ulr:
-    redis_ulr = 'localhost' 
+redis_host_name = os.environ.get("REDIS_HOST_NAME")
+if not redis_host_name:
+    redis_host_name = 'localhost' 
     
 celery = Celery('tasks',
-    broker=f'redis://{redis_ulr}:6379/0',
-    backend=f'redis://{redis_ulr}:6379/0',
+    broker=f'redis://{redis_host_name}:6379/0',
+    backend=f'redis://{redis_host_name}:6379/0',
     include=['app','celery'])
 
 celery.conf.task_queues = [
@@ -41,12 +41,12 @@ celery.conf.task_routes = {'celery.get-top-worst-comments': {'queue': 'celery'},
 celery.autodiscover_tasks(['celery.get-top-worst-comments'], force=True)
 celery.autodiscover_tasks(['celery.client_callback'], force=True)
 
-r = redis.Redis(host=f'{redis_ulr}', port=6379, decode_responses=True)
+r = redis.Redis(host=f'{redis_host_name}', port=6379, decode_responses=True)
 
 def task_chain(params,model):
     res = chain(get_top_worst_comments.s(params, model), client_callback.s()).apply_async()
 
-@app.route('/top-worst/', methods=['POST'])
+@app.route('/top-worst', methods=['POST'])
 def top_worst_embeddings():
     params = request.get_json()
     model = 'use'
