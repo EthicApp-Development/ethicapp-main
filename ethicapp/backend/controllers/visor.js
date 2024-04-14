@@ -409,15 +409,15 @@ async function buildContentAnalysisUnit(req, res) {
                     return acc;
                   }, {});
                 
-                const nodeHostName = process.env.NODE_HOST_NAME
-
-                const sessionURL = `http://${nodeHostName}:${process.env.NODE_PORT}/${result[0].case_url}`;
+                const nodeHostName = process.env.NODE_HOST_NAME;
+                const nodePort = process.env.NODE_PORT;
+                const sessionURL = `http://${nodeHostName}:${nodePort}/${result[0].case_url}`;
 
                 const workUnitJson = {
                     context: {
                         session_id: result[0].session_id,
                         phase_id: result[0].phase_id,
-                        callback_url: "http://host.docker.internal:3000/test",
+                        callback_url: `http://${nodeHostName}:${nodePort}/content-analysis-callback`, 
                         timestamp: Date.now(),
                     },
                     content: {
@@ -432,7 +432,6 @@ async function buildContentAnalysisUnit(req, res) {
                         }))
                     }
                 };
-                console.log(workUnitJson);
                 resolve(workUnitJson);
             }
         })(req,res);
@@ -441,8 +440,8 @@ async function buildContentAnalysisUnit(req, res) {
 
 async function sendContentAnalysisWorkunit(workunit){
     try {
-        const contentAnalysisHostName = process.env.CONTENT_ANALYSIS_HOST_NAME
-        const contentAnalysisPort = process.env.CONTENT_ANALYSIS_PORT
+        const contentAnalysisHostName = process.env.CONTENT_ANALYSIS_HOST_NAME;
+        const contentAnalysisPort = process.env.CONTENT_ANALYSIS_PORT;
         const response = await fetch(`http://${contentAnalysisHostName}:${contentAnalysisPort}/top-worst`, {
             method: 'POST',
             headers: {
@@ -456,8 +455,56 @@ async function sendContentAnalysisWorkunit(workunit){
             const responseData = await response.json();
     } catch (error) {
         console.error('Error al invocar /content-analysis-workunit:', error);
+        
     }
 }
+
+router.post('/content-analysis-callback', async (req, res) => {
+    try {
+    
+        const data = req.body;
+        
+        const stageNumber = data.context.phase_id;
+        req.body.stage_number = stageNumber;
+        req.body.sesid = data.context.session_id;
+
+        rpg.execSQL({
+            dbcon: pass.dbcon,
+            sql:   `
+            WITH ROWS AS (
+                UPDATE content_analysis
+                SET content = $1,
+                    context = $2
+                WHERE sesid = $3
+                    AND stage_number = $4
+                RETURNING 1
+            )
+            INSERT INTO content_analysis(content, context, sesid, stage_number)
+            SELECT $5,
+                $6,
+                $7,
+                $8
+            WHERE 1 NOT IN (
+                SELECT *
+                FROM ROWS
+            )
+            `,
+            preventResEnd: true,
+            sesReqData:  ["ses"],
+            postReqData: ["content", "context", "stage_number"],
+            sqlParams:   [
+                rpg.param("post", "content"), rpg.param("post", "context"), rpg.param("post", "sesid"),
+                rpg.param("post", "stage_number"), rpg.param("post", "content"), rpg.param("post", "context"),
+                rpg.param("post", "sesid"), rpg.param("post", "stage_number")
+            ]
+        })(req,res);
+
+        //socket.chatMsg(req.session.ses, req.body.tmid);
+        
+    } catch (error) {
+        console.error('Error al procesar el callback:', error);
+    }
+  });
 
 router.post("/send-diff-selection", (req, res, next) => {
     
@@ -480,7 +527,6 @@ router.post("/send-diff-selection", (req, res, next) => {
             handleQuestionCounter(redisKey).then(isCounterTenOrMore => {
                 if (true) { // MODIFICAR A "isCounterTenOrMore" PARA SU FUNCIONAMIENTO
                     buildContentAnalysisUnit(req, res).then(workUnitJson => {
-                        console.log(workUnitJson);
                         sendContentAnalysisWorkunit(workUnitJson);
                     })
                     .catch(error => {
