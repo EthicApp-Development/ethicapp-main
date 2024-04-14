@@ -450,12 +450,23 @@ async function sendContentAnalysisWorkunit(workunit){
             throw new Error('La respuesta del servidor no fue OK');
         }
             const responseData = await response.json();
-            res.status(200).send(responseData);
+
     } catch (error) {
         console.error('Error al invocar /content-analysis-workunit:', error);
-        res.status(500).send({ message: 'Error al invocar /content-analysis-workunit' });
+        
     }
 }
+
+router.post('/content-analysis-callback', async (req, res) => {
+    try {
+    
+        const data = req.body;
+        console.log(data);
+
+    } catch (error) {
+        console.error('Error al procesar el callback:', error);
+    }
+  });
 
 router.post("/send-diff-selection", (req, res, next) => {
     
