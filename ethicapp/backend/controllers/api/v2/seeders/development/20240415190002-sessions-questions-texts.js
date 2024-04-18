@@ -2,7 +2,7 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkInsert('sessions_questions_texts', [
+    await queryInterface.bulkInsert('sessionsQuestionsTexts', [
       {
         sesion_id: 1,
         title: 'Pregunta 1: El desafío del día',
@@ -42,6 +42,6 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkDelete('sessions_questions_texts', null, {});
+    await queryInterface.bulkDelete('sessionsQuestionsTexts', null, {});
   }
 };
