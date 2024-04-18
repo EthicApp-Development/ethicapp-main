@@ -3,7 +3,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up (queryInterface, Sequelize) {
-    await queryInterface.addConstraint('sessions_questions_texts', {
+    await queryInterface.addConstraint('sessionsQuestionsTexts', {
       type: 'foreign key',
       fields: ['sesion_id'],
       references: {

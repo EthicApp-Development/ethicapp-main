@@ -14,7 +14,7 @@ module.exports = {
       onDelete: 'CASCADE',
       onUpdate: 'CASCADE'
     });
-    await queryInterface.addConstraint('sessions_users', {
+    await queryInterface.addConstraint('sessionsUsers', {
       type: 'foreign key',
       fields: ['sesion_id'],
       references: {
@@ -24,7 +24,7 @@ module.exports = {
       onDelete: 'CASCADE',
       onUpdate: 'CASCADE'
     });
-    await queryInterface.addConstraint('sessions_users', {
+    await queryInterface.addConstraint('sessionsUsers', {
       type: 'foreign key',
       fields: ['user_id'],
       references: {
@@ -94,7 +94,7 @@ module.exports = {
       onDelete: 'CASCADE',
       onUpdate: 'CASCADE'
     });
-    await queryInterface.addConstraint('teamusers', {
+    await queryInterface.addConstraint('teamUsers', {
       type: 'foreign key',
       fields: ['team_id'],
       references: {
@@ -104,7 +104,7 @@ module.exports = {
       onDelete: 'CASCADE',
       onUpdate: 'CASCADE'
     });
-    await queryInterface.addConstraint('teamusers', {
+    await queryInterface.addConstraint('teamUsers', {
       type: 'foreign key',
       fields: ['user_id'],
       references: {
