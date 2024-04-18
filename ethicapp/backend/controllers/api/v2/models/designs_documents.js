@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
     active: DataTypes.BOOLEAN
   }, {
     sequelize,
-    modelName: 'designs_documents',
+    modelName: 'designsDocuments',
   });
   return designs_documents;
 };

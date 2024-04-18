@@ -19,7 +19,7 @@ module.exports = (sequelize, DataTypes) => {
     stime: DataTypes.DATE
   }, {
     sequelize,
-    modelName: 'sessions_status',
+    modelName: 'sessionsStatus',
   });
   return sessions_status;
 };

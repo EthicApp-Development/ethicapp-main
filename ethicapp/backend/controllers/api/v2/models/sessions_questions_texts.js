@@ -19,7 +19,7 @@ module.exports = (sequelize, DataTypes) => {
     content: DataTypes.TEXT
   }, {
     sequelize,
-    modelName: 'sessions_questions_texts',
+    modelName: 'sessionsQuestionsTexts',
   });
   return sessions_questions_texts;
 };

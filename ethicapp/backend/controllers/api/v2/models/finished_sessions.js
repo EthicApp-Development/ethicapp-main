@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
     stime: DataTypes.DATE
   }, {
     sequelize,
-    modelName: 'finished_sessions',
+    modelName: 'finishedSessions',
   });
   return finished_sessions;
 };
