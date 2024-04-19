@@ -415,7 +415,7 @@ async function buildContentAnalysisUnit(req, res) {
                     context: {
                         session_id: result[0].session_id,
                         phase_id: result[0].phase_id,
-                        callback_url: "http://host.docker.internal:3000/test",
+                        callback_url: "http://host.docker.internal:3000/test", 
                         timestamp: Date.now(),
                     },
                     content: {
@@ -439,7 +439,7 @@ async function buildContentAnalysisUnit(req, res) {
 
 async function sendContentAnalysisWorkunit(workunit){
     try {
-        const response = await fetch('http://host.docker.internal:5000/top-worst', {
+        const response = await fetch('http://host.docker.internal:5000/top-worst', { 
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -462,7 +462,44 @@ router.post('/content-analysis-callback', async (req, res) => {
     
         const data = req.body;
         console.log(data);
+        
+        const sessionId = data.context.session_id;
+        const stageNumber = data.context.phase_id;
+        const content = data.content;
+        const context = data.context;
 
+        rpg.execSQL({
+            dbcon: pass.dbcon,
+            sql:   `
+            WITH ROWS AS (
+                UPDATE content_analysis
+                SET content = $1,
+                    context = $2
+                WHERE sesid = $3
+                    AND stage_number = $4
+                RETURNING 1
+            )
+            INSERT INTO content_analysis(content, context, sesid, stage_number)
+            SELECT $5,
+                $6,
+                $7,
+                $8
+            WHERE 1 NOT IN (
+                SELECT *
+                FROM ROWS
+            )
+            `,
+            preventResEnd: true,
+            sesReqData:  ["ses"],
+            postReqData: ["content", "context", "stage_number"],
+            sqlParams:   [
+                rpg.param("post", "content"), rpg.param("post", "context"), rpg.param("ses", "ses"),
+                rpg.param("post", "stage_number")
+            ]
+        })(req,res);
+
+        //socket.chatMsg(req.session.ses, req.body.tmid);
+        
     } catch (error) {
         console.error('Error al procesar el callback:', error);
     }
