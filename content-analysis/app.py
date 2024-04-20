@@ -23,6 +23,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db, compare_type=True)
 #from models import Comments, Process, Topics
 
+validation_api_key = os.environ.get("API_VALIDATION_KEY")
 redis_host_name = os.environ.get("REDIS_HOST_NAME")
 if not redis_host_name:
     redis_host_name = 'localhost' 
@@ -130,7 +131,8 @@ def filter_comments(comments_list):
 @celery.task(name= 'client_callback', max_retry=10, default_retry_delay=3*60)
 def client_callback(result):
     url = result['context']['callback_url']
-    response = requests.post(url,json=result)
+    headers = {'x-api-key': validation_api_key}
+    response = requests.post(url, json=result, headers=headers)
     return {'result': result}
 
 def extract_text_from_pdf_url(pdf_url):
