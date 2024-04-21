@@ -498,7 +498,7 @@ router.post('/content-analysis-callback', async (req, res) => {
             ]
         })(req,res);
 
-        //socket.chatMsg(req.session.ses, req.body.tmid);
+        socket.contentUpdate(req.session.ses, data);
         
     } catch (error) {
         console.error('Error al procesar el callback:', error);
