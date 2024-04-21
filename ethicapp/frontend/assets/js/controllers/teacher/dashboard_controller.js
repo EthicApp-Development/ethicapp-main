@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export let DashboardController = ($scope, ActivityStateService,
+export let DashboardController = ($scope, $socket,ActivityStateService,
     $http, $timeout, $uibModal, Notification) => {
     
     var self = $scope;
@@ -9,6 +9,22 @@ export let DashboardController = ($scope, ActivityStateService,
     self.dataDF = [];
     self.dataChatCount = {};
     self.activityState = ActivityStateService;
+
+    self.init = self.init = function () {
+        console.log("iteracion:", self.iterationIndicator);
+        console.log("session id:", self.selectedSes.id)
+        $socket.on("contentUpdate", (data) => {
+            console.log("Evento 'contentUpdate' recibido:", data);
+            
+            if(data.ses === self.selectedSes.id){
+                console.log("Datos coinciden con la sesión actual:", data);
+            } else {
+                console.log("Datos no coinciden con la sesión actual:", data);
+            }
+        });
+
+        console.log("DashboardController inicializado.");
+    };
 
     self.shared.resetGraphs = function () { //THIS HAS TO BE CALLED ON ADMIN
         if (
@@ -1030,4 +1046,5 @@ export let DashboardController = ($scope, ActivityStateService,
         return self.shared.groupByUid[a].index - self.shared.groupByUid[b].index;
     };
 
+    self.init();
 };
