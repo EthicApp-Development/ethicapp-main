@@ -473,13 +473,13 @@ router.post('/content-analysis-callback', async (req, res) => {
             sql:   `
             WITH ROWS AS (
                 UPDATE content_analysis
-                SET content = $1,
+                SET response_selections = $1,
                     context = $2
                 WHERE sesid = $3
                     AND stage_number = $4
                 RETURNING 1
             )
-            INSERT INTO content_analysis(content, context, sesid, stage_number)
+            INSERT INTO content_analysis(response_selections, context, sesid, stage_number)
             SELECT $5,
                 $6,
                 $7,
@@ -491,15 +491,15 @@ router.post('/content-analysis-callback', async (req, res) => {
             `,
             preventResEnd: true,
             sesReqData:  ["ses"],
-            postReqData: ["content", "context", "stage_number"],
+            postReqData: ["response_selections", "context", "stage_number"],
             sqlParams:   [
-                rpg.param("post", "content"), rpg.param("post", "context"), rpg.param("post", "sesid"),
-                rpg.param("post", "stage_number"), rpg.param("post", "content"), rpg.param("post", "context"),
+                rpg.param("post", "response_selections"), rpg.param("post", "context"), rpg.param("post", "sesid"),
+                rpg.param("post", "stage_number"), rpg.param("post", "response_selections"), rpg.param("post", "context"),
                 rpg.param("post", "sesid"), rpg.param("post", "stage_number")
             ]
         })(req,res);
 
-        //socket.chatMsg(req.session.ses, req.body.tmid);
+        socket.contentUpdate(req.session.ses, data);
         
     } catch (error) {
         console.error('Error al procesar el callback:', error);
