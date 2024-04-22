@@ -14,12 +14,43 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
         console.log("iteracion:", self.iterationIndicator);
         console.log("session id:", self.selectedSes.id)
         $socket.on("contentUpdate", (data) => {
-            console.log("Evento 'contentUpdate' recibido:", data);
-            
-            if(data.ses === self.selectedSes.id){
+            if(data.data.sesid === self.selectedSes.id){
                 console.log("Datos coinciden con la sesión actual:", data);
+                self.contentAnalysis = data;
+                const questionId = data.data.response_selections[0].question_id;
+
+                if (!self.contentAnalysis[self.selectedSes.id]) {
+                    self.contentAnalysis[self.selectedSes.id] = {};
+                }
+
+                if (!self.contentAnalysis[self.selectedSes.id][questionId]) {
+                    self.contentAnalysis[self.selectedSes.id][questionId] = {
+                        top: [],
+                        worst: []
+                    };
+                }
+                /*
+                if (!self.contentAnalysis[self.selectedSes.id]) {
+                  self.contentAnalysis[self.selectedSes.id] = {
+                        top: [],
+                        worst: []
+                    };
+                }
+                */
+                angular.forEach(data.data.response_selections, function(selection) {
+                    angular.forEach(selection.responses, function(response) {
+                        if (response.ranking_type === 'top') {
+                            self.contentAnalysis[self.selectedSes.id][questionId].top[response.ranking - 1] = response.response_text;
+                        } else if (response.ranking_type === 'worst') {
+                            self.contentAnalysis[self.selectedSes.id][questionId].worst[response.ranking - 1] = response.response_text;
+                        }
+                    });
+                });
+
+                console.log(self.contentAnalysis)
+
             } else {
-                console.log("Datos no coinciden con la sesión actual:", data);
+                console.log("Datos no coinciden con la sesión actual:");
             }
         });
 
