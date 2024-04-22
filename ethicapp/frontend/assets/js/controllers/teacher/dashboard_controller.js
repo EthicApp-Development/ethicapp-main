@@ -17,20 +17,32 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
             if(data.data.sesid === self.selectedSes.id){
                 console.log("Datos coinciden con la sesión actual:", data);
                 self.contentAnalysis = data;
+                const questionId = data.data.response_selections[0].question_id;
 
                 if (!self.contentAnalysis[self.selectedSes.id]) {
-                    self.contentAnalysis[self.selectedSes.id] = {
+                    self.contentAnalysis[self.selectedSes.id] = {};
+                }
+
+                if (!self.contentAnalysis[self.selectedSes.id][questionId]) {
+                    self.contentAnalysis[self.selectedSes.id][questionId] = {
                         top: [],
                         worst: []
                     };
                 }
-        
+                /*
+                if (!self.contentAnalysis[self.selectedSes.id]) {
+                  self.contentAnalysis[self.selectedSes.id] = {
+                        top: [],
+                        worst: []
+                    };
+                }
+                */
                 angular.forEach(data.data.response_selections, function(selection) {
                     angular.forEach(selection.responses, function(response) {
                         if (response.ranking_type === 'top') {
-                            self.contentAnalysis[self.selectedSes.id].top[response.ranking - 1] = response.response_text;
+                            self.contentAnalysis[self.selectedSes.id][questionId].top[response.ranking - 1] = response.response_text;
                         } else if (response.ranking_type === 'worst') {
-                            self.contentAnalysis[self.selectedSes.id].worst[response.ranking - 1] = response.response_text;
+                            self.contentAnalysis[self.selectedSes.id][questionId].worst[response.ranking - 1] = response.response_text;
                         }
                     });
                 });
