@@ -2,7 +2,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('chats', {
+    await queryInterface.createTable('chatroom', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -33,6 +33,12 @@ module.exports = {
           key: 'id'
         }
       },
+      chat:{
+        type: Sequelize.TEXT,
+      },
+      message:{
+        type: Sequelize.TEXT,
+      },
       content: {
         type: Sequelize.TEXT,
         allowNull: true
@@ -46,7 +52,7 @@ module.exports = {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
-          model: 'chats',
+          model: 'chatroom',
           key: 'id'
         }
       },

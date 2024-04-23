@@ -4,23 +4,25 @@ const {
 } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-  class Chat extends Model {
+  class Chatroom extends Model {
     static associate(models) {
       
     }
   }
-  Chat.init({
+  Chatroom.init({
     sesion_id: DataTypes.INTEGER,
     stage_id: DataTypes.INTEGER,
     user_id: DataTypes.INTEGER,
+    chat: DataTypes.TEXT,
+    message: DataTypes.TEXT,
     content: DataTypes.TEXT,
     stime: DataTypes.DATE,
     parent_id: DataTypes.INTEGER,
   }, {
     sequelize,
     modelName: 'Chat',
-    tableName: 'chats',
+    tableName: 'chatroom',
   });
 
-  return Chat;
+  return Chatroom;
 };

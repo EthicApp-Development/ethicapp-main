@@ -77,5 +77,6 @@ module.exports = {
     await queryInterface.sequelize.query('DROP FUNCTION IF EXISTS UpdateOrInsertLoginRecord(int)');
     await queryInterface.sequelize.query('DROP FUNCTION IF EXISTS UpdateOrInsertCreateAccountRecord(int)');
     await queryInterface.sequelize.query('DROP FUNCTION IF EXISTS UpdateOrInsertActivityRecord(int)');
+    await queryInterface.dropAllTables();
   }
 };

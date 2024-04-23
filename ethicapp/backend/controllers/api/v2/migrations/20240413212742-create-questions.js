@@ -10,25 +10,34 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       content: {
-        type: Sequelize.TEXT,
+        type: Sequelize.JSONB,
         allowNull: true
       },
-      options: {
+      additional_info:{
         type: Sequelize.TEXT,
-        allowNull: true
       },
-      answer: {
-        type: Sequelize.INTEGER,
-        allowNull: true
+      type: {
+        type: Sequelize.STRING(255)
       },
-      comment: {
-        type: Sequelize.TEXT,
-        allowNull: true
+      text: {
+        type: Sequelize.TEXT
       },
-      other: {
-        type: Sequelize.TEXT,
-        allowNull: true
-      },      
+      // options: {
+      //   type: Sequelize.TEXT,
+      //   allowNull: true
+      // },
+      // answer: {
+      //   type: Sequelize.INTEGER,
+      //   allowNull: true
+      // },
+      // comment: {
+      //   type: Sequelize.TEXT,
+      //   allowNull: true
+      // },
+      // other: {
+      //   type: Sequelize.TEXT,
+      //   allowNull: true
+      // },      
       sesion_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
