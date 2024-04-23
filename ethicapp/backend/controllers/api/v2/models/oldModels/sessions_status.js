@@ -3,7 +3,7 @@ const {
   Model
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-  class sessions_status extends Model {
+  class SessionStatus extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -13,13 +13,17 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
     }
   }
-  sessions_status.init({
+  SessionStatus.init({
     sesion_id: DataTypes.INTEGER,
     status: DataTypes.INTEGER,
-    stime: DataTypes.DATE
+    stime: DataTypes.DATE,
+    state: {
+      type: DataTypes.ENUM,
+      values: ['new', 'active', 'finished']
+    }
   }, {
     sequelize,
     modelName: 'sessionsStatus',
   });
-  return sessions_status;
+  return SessionStatus;
 };
