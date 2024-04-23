@@ -3,7 +3,7 @@ const {
   Model
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-  class differentialsSelections extends Model {
+  class SDResponse extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -13,7 +13,7 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
     }
   }
-  differentialsSelections.init({
+  SDResponse .init({
     user_id: DataTypes.INTEGER,
     differential_id: DataTypes.INTEGER,
     sel: DataTypes.INTEGER,
@@ -24,5 +24,5 @@ module.exports = (sequelize, DataTypes) => {
     sequelize,
     modelName: 'differentialsSelections',
   });
-  return differentialsSelections;
+  return SDResponse ;
 };

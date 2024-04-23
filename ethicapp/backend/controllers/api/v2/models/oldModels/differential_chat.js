@@ -3,7 +3,7 @@ const {
   Model
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-  class differential_chat extends Model {
+  class SDChatMessage extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -13,7 +13,7 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
     }
   }
-  differential_chat.init({
+  SDChatMessage.init({
     user_id: DataTypes.INTEGER,
     differential_id: DataTypes.INTEGER,
     content: DataTypes.TEXT,
@@ -22,5 +22,5 @@ module.exports = (sequelize, DataTypes) => {
     sequelize,
     modelName: 'differentialsChats',
   });
-  return differential_chat;
+  return SDChatMessage;
 };
