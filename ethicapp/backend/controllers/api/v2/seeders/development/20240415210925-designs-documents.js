@@ -2,7 +2,7 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkInsert('designsDocuments', [
+    await queryInterface.bulkInsert('designs_documents', [
       {
         path: '/uploads/design1_document.pdf',
         dsgnid: 1,
@@ -47,6 +47,6 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkDelete('designsDocuments', null, {});
+    await queryInterface.bulkDelete('designs_documents', null, {});
   }
 };

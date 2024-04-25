@@ -3,8 +3,8 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up (queryInterface, Sequelize) {
-    await queryInterface.removeConstraint('designsDocuments', 'designsDocuments_dsgnid_fkey');
-    await queryInterface.addConstraint('designsDocuments', {
+    await queryInterface.removeConstraint('designs_documents', 'designs_documents_dsgnid_fkey');
+    await queryInterface.addConstraint('designs_documents', {
       fields: ['dsgnid'],
       type: 'foreign key',
       name: 'designsDocuments_dsgnid_fkey',

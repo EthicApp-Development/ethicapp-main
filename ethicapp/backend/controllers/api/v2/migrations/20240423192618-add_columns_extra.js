@@ -27,6 +27,9 @@ module.exports = {
         key: 'id'
       }
     });
+    await queryInterface.addColumn('sessions', 'state', {
+      type: Sequelize.ENUM('new', 'active', 'finished')
+    });
   },
 
   async down (queryInterface, Sequelize) {

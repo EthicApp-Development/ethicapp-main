@@ -42,7 +42,7 @@ module.exports = {
       defaultValue: 'spanish'
     });    
     //create_20.sql
-    await queryInterface.addConstraint('sessionsUsers', {
+    await queryInterface.addConstraint('sessions_Users', {
       type: 'unique',
       name: 'no_dup_users',
       fields: ['user_id', 'sesion_id']

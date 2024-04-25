@@ -14,7 +14,7 @@ module.exports = {
       onDelete: 'CASCADE',
       onUpdate: 'CASCADE'
     });
-    await queryInterface.addConstraint('sessionsUsers', {
+    await queryInterface.addConstraint('sessions_Users', {
       type: 'foreign key',
       fields: ['sesion_id'],
       references: {
@@ -24,7 +24,7 @@ module.exports = {
       onDelete: 'CASCADE',
       onUpdate: 'CASCADE'
     });
-    await queryInterface.addConstraint('sessionsUsers', {
+    await queryInterface.addConstraint('sessions_Users', {
       type: 'foreign key',
       fields: ['user_id'],
       references: {

@@ -25,8 +25,8 @@ module.exports = (sequelize, DataTypes) => {
     upgrade_flag: DataTypes.BOOLEAN,
   }, {
     sequelize,
-    modelName: 'teachersAccountsRequests',
-    tableName: 'teachersAccountsRequests',
+    modelName: 'teachers_accounts_requests',
+    tableName: 'teachers_accounts_requests',
   });
 
   return TeacherAccountRequest;
