@@ -22,7 +22,8 @@ module.exports = (sequelize, DataTypes) => {
     sesion_id: DataTypes.INTEGER,
   }, {
     sequelize,
-    modelName: 'stages',
+    modelName: 'Stage',//class
+    tableName: 'stages' //Table
   });
   return Stage;
 };

@@ -20,8 +20,8 @@ module.exports = (sequelize, DataTypes) => {
     parent_id: DataTypes.INTEGER,
   }, {
     sequelize,
-    modelName: 'Chat',
-    tableName: 'chatroom',
+    modelName: 'Chatroom',//class
+    tableName: 'chatrooms',
   });
 
   return Chatroom;

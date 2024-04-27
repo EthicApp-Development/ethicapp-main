@@ -18,7 +18,8 @@ module.exports = (sequelize, DataTypes) => {
     session: DataTypes.INTEGER
   }, {
     sequelize,
-    modelName: 'activity',
+    modelName: 'Activity',//class
+    tableName: 'activities'
   });
   return Activity;
 };

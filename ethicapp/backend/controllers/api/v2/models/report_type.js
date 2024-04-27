@@ -18,7 +18,8 @@ module.exports = (sequelize, DataTypes) => {
     report_description: DataTypes.TEXT
   }, {
     sequelize,
-    modelName: 'report_type',
+    modelName: 'report_type',//class
+    tableName: 'report_types'
   });
   return report_type;
 };

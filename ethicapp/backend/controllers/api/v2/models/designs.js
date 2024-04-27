@@ -20,7 +20,8 @@ module.exports = (sequelize, DataTypes) => {
     locked: DataTypes.BOOLEAN
   }, {
     sequelize,
-    modelName: 'designs',
+    modelName: 'Design',//class
+    tableName: 'designs'
   });
   return Design;
 };

@@ -17,7 +17,8 @@ module.exports = (sequelize, DataTypes) => {
     session_id: DataTypes.INTEGER
   }, {
     sequelize,
-    modelName: 'teams',
+    modelName: 'Team',//class
+    tableName: 'teams' //Table
   });
   return Team;
 };

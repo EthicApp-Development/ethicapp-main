@@ -29,7 +29,7 @@ module.exports = {
         type: Sequelize.DATE,
         allowNull: false,
       },
-      responses: {
+      content: {
         type: Sequelize.JSONB,
         allowNull: false,
       },

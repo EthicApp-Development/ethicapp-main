@@ -19,7 +19,8 @@ module.exports = (sequelize, DataTypes) => {
     role_id: DataTypes.INTEGER
   }, {
     sequelize,
-    modelName: 'jigsaws_users',
+    modelName: 'JigsawUserRole',//class
+    tableName: 'jigsaws_users'
   });
   return JigsawUserRole;
 };

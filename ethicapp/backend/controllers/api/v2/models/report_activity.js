@@ -19,7 +19,8 @@ module.exports = (sequelize, DataTypes) => {
     count: DataTypes.INTEGER
   }, {
     sequelize,
-    modelName: 'report_activity',
+    modelName: 'report_activity',//class
+    tableName: 'report_activities'
   });
   return report_activity;
 };
