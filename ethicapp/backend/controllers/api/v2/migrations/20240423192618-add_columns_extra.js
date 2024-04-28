@@ -11,14 +11,14 @@ module.exports = {
         key: 'id'
       }
     });
-    await queryInterface.addColumn('designs', 'questions_id', {
-      type: Sequelize.INTEGER,
-      allowNull: true,
-      references: {
-        model: 'questions',
-        key: 'id'
-      }
-    });
+    // await queryInterface.addColumn('designs', 'questions_id', {
+    //   type: Sequelize.INTEGER,
+    //   allowNull: true,
+    //   references: {
+    //     model: 'questions',
+    //     key: 'id'
+    //   }
+    // });
     await queryInterface.addColumn('questions', 'designs_id', {
       type: Sequelize.INTEGER,
       allowNull: true,

@@ -13,7 +13,8 @@ module.exports = {
         public: true,
         locked: false,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        question_id: 2
       },
       {
         creator: 2,
@@ -25,7 +26,8 @@ module.exports = {
         public: false,
         locked: true,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        question_id: 1
       },
       {
         creator: 3,
@@ -37,7 +39,8 @@ module.exports = {
         public: true,
         locked: false,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        question_id: 3
       },
       {
         creator: 1,
@@ -49,7 +52,8 @@ module.exports = {
         public: false,
         locked: false,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        question_id: 1
       },
       {
         creator: 2,
@@ -61,7 +65,8 @@ module.exports = {
         public: true,
         locked: true,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        question_id: 2
       }
     ], {});
   },
