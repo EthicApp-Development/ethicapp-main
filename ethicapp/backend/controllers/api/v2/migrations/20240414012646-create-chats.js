@@ -2,7 +2,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('chatroom', {
+    await queryInterface.createTable('chatrooms', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -52,7 +52,7 @@ module.exports = {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
-          model: 'chatroom',
+          model: 'chatrooms',
           key: 'id'
         }
       },

@@ -2,7 +2,7 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkInsert('chatroom', [
+    await queryInterface.bulkInsert('chatrooms', [
       {
         sesion_id: 1,
         stage_id: 1,
@@ -57,6 +57,6 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkDelete('chatroom', null, {});
+    await queryInterface.bulkDelete('chatrooms', null, {});
   }
 };
