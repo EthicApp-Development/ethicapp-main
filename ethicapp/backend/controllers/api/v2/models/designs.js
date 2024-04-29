@@ -15,6 +15,7 @@ module.exports = (sequelize, DataTypes) => {
   }
   Design.init({
     creator: DataTypes.INTEGER,
+    question_id: DataTypes.INTEGER,
     design: DataTypes.JSONB,
     public: DataTypes.BOOLEAN,
     locked: DataTypes.BOOLEAN
