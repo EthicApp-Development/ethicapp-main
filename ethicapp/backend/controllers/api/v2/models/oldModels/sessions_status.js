@@ -23,7 +23,8 @@ module.exports = (sequelize, DataTypes) => {
     }
   }, {
     sequelize,
-    modelName: 'sessionsStatus',
+    modelName: 'SessionStatus',
+    tableName: 'sessionsStatus'
   });
   return SessionStatus;
 };

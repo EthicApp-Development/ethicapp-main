@@ -22,7 +22,8 @@ module.exports = (sequelize, DataTypes) => {
     sesion_id: DataTypes.INTEGER
   }, {
     sequelize,
-    modelName: 'differentials',
+    modelName: 'SemanticDifferentialItem',
+    tableName: 'differentials'
   });
   return SemanticDifferentialItem;
 };

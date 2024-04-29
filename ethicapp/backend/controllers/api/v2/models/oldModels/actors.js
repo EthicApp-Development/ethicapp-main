@@ -19,7 +19,8 @@ module.exports = (sequelize, DataTypes) => {
     stage_id: DataTypes.INTEGER,
   }, {
     sequelize,
-    modelName: 'actors',
+    modelName: 'Actor',
+    tableName: 'actors'
   });
   return Actor;
 };
