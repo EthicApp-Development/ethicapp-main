@@ -18,11 +18,11 @@ module.exports = (sequelize, DataTypes) => {
     description: DataTypes.TEXT,
     comment: DataTypes.TEXT,
     stime: DataTypes.DATE,
-    responses: DataTypes.JSONB,
+    content: DataTypes.JSONB,
     uses: DataTypes.TEXT
   }, {
     sequelize,
-    modelName: 'Responses',//class
+    modelName: 'Response',//class
     tableName: 'responses'
   });
   return Response;
