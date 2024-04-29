@@ -3,10 +3,11 @@ const router = express.Router();
 
 // import model
 
-const Design = require('../../controllers/api/v2/models/designs')
+//const Design = require('../../controllers/api/v2/models/designs')
+const { Design } = require('../../controllers/api/v2/models');
 
 // Read
-router.get('/designs', async (req, res) => {
+router.get('/', async (req, res) => {
     try {
       const designs = await Design.findAll();
       res.json(designs);
@@ -18,7 +19,7 @@ router.get('/designs', async (req, res) => {
 
 // Create
 
-router.post('/designs', async (req, res) => {
+router.post('/', async (req, res) => {
     try {
       const design = await Design.create(req.body);
       res.status(201).json(design);
@@ -30,7 +31,7 @@ router.post('/designs', async (req, res) => {
 
 // Update
 
-router.put('/designs/:id', async (req, res) => {
+router.put('/:id', async (req, res) => {
     const { id } = req.params;
     try {
       const design = await Design.findByPk(id);
@@ -47,7 +48,7 @@ router.put('/designs/:id', async (req, res) => {
 
 //Delete
 
-router.delete('/designs/:id', async (req, res) => {
+router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try {
       const design = await Design.findByPk(id);

@@ -3,10 +3,11 @@ const router = express.Router();
 
 // import model
 
-const Response = require('../../controllers/api/v2/models/responses')
+//const Response = require('../../controllers/api/v2/models/responses')
+const { Response } = require('../../controllers/api/v2/models');
 
 // Read
-router.get('/responses', async (req, res) => {
+router.get('/', async (req, res) => {
     try {
       const responses = await Response.findAll();
       res.json(responses);
@@ -18,7 +19,7 @@ router.get('/responses', async (req, res) => {
 
 // Create
 
-router.post('/responses', async (req, res) => {
+router.post('/', async (req, res) => {
     try {
       const response = await Response.create(req.body);
       res.status(201).json(response);
@@ -30,7 +31,7 @@ router.post('/responses', async (req, res) => {
 
 // Update
 
-router.put('/responses/:id', async (req, res) => {
+router.put('/:id', async (req, res) => {
     const { id } = req.params;
     try {
       const response = await Response.findByPk(id);
@@ -47,7 +48,7 @@ router.put('/responses/:id', async (req, res) => {
 
 //Delete
 
-router.delete('/responses/:id', async (req, res) => {
+router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try {
       const response = await Response.findByPk(id);
