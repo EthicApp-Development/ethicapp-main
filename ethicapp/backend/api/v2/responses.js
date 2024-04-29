@@ -1,10 +1,12 @@
 const express = require('express');
+const bodyParser = require('body-parser');
 const router = express.Router();
 
-// import model
-
-//const Response = require('../../controllers/api/v2/models/responses')
+// Import Model
 const { Response } = require('../../controllers/api/v2/models');
+
+// Configura body-parser para procesar el cuerpo de las solicitudes en formato JSON
+router.use(bodyParser.json());
 
 // Read
 router.get('/', async (req, res) => {
@@ -15,10 +17,9 @@ router.get('/', async (req, res) => {
       console.error(err);
       res.status(500).json({ message: 'Error al obtener las respuestas' });
     }
-  });
+});
 
 // Create
-
 router.post('/', async (req, res) => {
     try {
       const response = await Response.create(req.body);
@@ -27,10 +28,9 @@ router.post('/', async (req, res) => {
       console.error(err);
       res.status(500).json({ message: 'Error al crear la respuesta' });
     }
-  });
+});
 
 // Update
-
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
     try {
@@ -44,10 +44,9 @@ router.put('/:id', async (req, res) => {
       console.error(err);
       res.status(500).json({ message: 'Error al actualizar la respuesta' });
     }
-  });
+});
 
-//Delete
-
+// Delete
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try {
@@ -61,6 +60,6 @@ router.delete('/:id', async (req, res) => {
       console.error(err);
       res.status(500).json({ message: 'Error al eliminar la respuesta' });
     }
-  });
+});
 
-  module.exports = router;
+module.exports = router;

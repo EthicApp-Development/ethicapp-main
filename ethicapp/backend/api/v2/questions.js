@@ -1,9 +1,13 @@
 const express = require('express');
+const bodyParser = require('body-parser'); // Importa body-parser
 const router = express.Router();
 
 // Import Model
 //const Question = require('../../controllers/api/v2/models/questions');
 const { Question } = require('../../controllers/api/v2/models');
+
+// Configura body-parser para procesar el cuerpo de las solicitudes en formato JSON
+router.use(bodyParser.json());
 
 // Read
 router.get('/', async (req, res) => {
@@ -19,6 +23,7 @@ router.get('/', async (req, res) => {
 // Create
 router.post('/', async (req, res) => {
     try {
+        console.log("req --->", req.body)
         const question = await Question.create(req.body);
         res.status(201).json(question);
     } catch (err) {
