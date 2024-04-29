@@ -22,7 +22,8 @@ module.exports = (sequelize, DataTypes) => {
     stime: DataTypes.DATE,
   }, {
     sequelize,
-    modelName: 'differentialsSelections',
+    modelName: 'SDResponse',
+    tableName: 'differentialsSelections'
   });
   return SDResponse ;
 };

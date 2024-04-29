@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'JigsawUserRole',//class
-    tableName: 'jigsaws_users'
+    tableName: 'jigsaw_users'
   });
   return JigsawUserRole;
 };

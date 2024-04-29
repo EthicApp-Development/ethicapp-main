@@ -2,7 +2,7 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkInsert('jigsaws_roles', [
+    await queryInterface.bulkInsert('jigsaw_roles', [
       {
         name: 'Líder de grupo',
         description: 'Responsable de dirigir y coordinar al equipo durante la actividad.',
@@ -42,6 +42,6 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkDelete('jigsaws_roles', null, {});
+    await queryInterface.bulkDelete('jigsaw_roles', null, {});
   }
 };

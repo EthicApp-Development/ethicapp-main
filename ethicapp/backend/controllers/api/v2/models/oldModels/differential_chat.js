@@ -20,7 +20,8 @@ module.exports = (sequelize, DataTypes) => {
     stime: DataTypes.DATE
   }, {
     sequelize,
-    modelName: 'differentialsChats',
+    modelName: 'SDChatMessage',
+    tableName: 'differentialsChats'
   });
   return SDChatMessage;
 };
