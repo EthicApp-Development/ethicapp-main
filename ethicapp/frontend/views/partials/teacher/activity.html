@@ -370,20 +370,41 @@
 
                     <div ng-show="design.type == 'semantic_differential'" class="margin-top-8">
                         <h2>Rubrica</h2>
-                        <table class="table table-bordered">
+                        <table class="table table-bordered" ng-if="selectedKey && contentAnalysis[iterationIndicator][selectedKey] && contentAnalysis[iterationIndicator][selectedKey].top.length > 0">
                             <thead>
                                 <tr>
-                                    <th>Top</th>
-                                    <th>Worst</th>
+                                    <th>Mejores justificaciones</th>
+                                    <th>Peores justificaciones</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr ng-repeat="index in [].constructor(contentAnalysis['1']['1'].top.length) track by $index">
-                                    <td>{{ contentAnalysis['1']['1'].top[$index] }}</td>
-                                    <td>{{ contentAnalysis['1']['1'].worst[$index] }}</td>
+                                <tr ng-repeat="index in [].constructor(contentAnalysis[iterationIndicator][selectedKey].top.length) track by $index">
+                                    <td>{{ contentAnalysis[iterationIndicator][selectedKey].top[$index] }}</td>
+                                    <td>{{ contentAnalysis[iterationIndicator][selectedKey].worst[$index] }}</td>
                                 </tr>
                             </tbody>
                         </table>
+                        <table class="table table-bordered" ng-if="!selectedKey || !contentAnalysis[iterationIndicator][selectedKey] || contentAnalysis[iterationIndicator][selectedKey].top.length === 0">
+                            <!-- Table headers and empty body -->
+                            <thead>
+                                <tr>
+                                    <th>Mejores justificaciones</th>
+                                    <th>Peores justificaciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Empty row -->
+                                <tr>
+                                    <td colspan="2">No data available</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <!-- Buttons section -->
+                        <div class="buttons-container">
+                            <button class="btn btn-primary" ng-repeat="(key, value) in contentAnalysis[iterationIndicator]" ng-click="selectKey(key)" ng-init="selectFirstKey()">
+                                {{ 'question' | translate }} {{$index + 1}}
+                            </button>
+                        </div>
                         <strong>{{ 'indAggAns' | translate }}</strong>
                         <span class="pull-right mt-1medio margin-right-8"><span style="color: red;">*</span> {{
                             'commentReq' | translate }}</span>
