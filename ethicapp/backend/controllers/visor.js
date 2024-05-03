@@ -351,8 +351,14 @@ router.post("/get-answers", rpg.multiSQL({
 }));
 
 
-async function handleQuestionCounter(redisKey) {
+async function handleQuestionCounter(redisKey, redisUserKey) {
     try {
+        
+        const boolean = {
+            "true": 1,
+            "false": 2
+        }
+        
         const exists = await redisClient.exists(redisKey);
         
         if (exists === 0 ){
@@ -375,15 +381,24 @@ async function handleQuestionCounter(redisKey) {
                     const itemsCounter = result.length;
                     if (itemsCounter === 0){
                         await redisClient.set(redisKey, 1);
+                        await redisClient.set(redisUserKey, boolean["true"]);
                     }
                     else{
-                        await redisClient.set(redisKey, itemsCounter + 1);
+                        const userAnswered = await redisClient.get(redisUserKey);
+                        if (!userAnswered || userAnswered === 0){
+                            await redisClient.set(redisKey, itemsCounter + 1);
+                            await redisClient.set(redisUserKey, boolean["true"]);
+                        }
                     }
                 }
             })(req,res);
         }
         else{
-            await redisClient.incr(redisKey); //ACTUALIZAR
+            const userAnswered = await redisClient.get(redisUserKey);
+            if (!userAnswered || userAnswered === 0){
+                await redisClient.incr(redisKey);
+                await redisClient.set(redisUserKey, boolean["true"]);
+            }
         }
 
         const counterInRedis = await redisClient.get(redisKey);
@@ -567,8 +582,8 @@ router.post("/send-diff-selection", (req, res, next) => {
         preventResEnd: true,
         onEnd: async (req, res, result) => {
             const redisKey = `${req.session.ses}_${result.stage_id}_${result.question_id}`;
-
-            handleQuestionCounter(redisKey).then(isCounterTenOrMore => {
+            const redisUserKey = `${req.session.ses}_${result.stage_id}_${result.question_id}_${req.body.uid}`;
+            handleQuestionCounter(redisKey, redisUserKey).then(isCounterTenOrMore => {
                 if (isCounterTenOrMore) { // MODIFICAR A "isCounterTenOrMore" PARA SU FUNCIONAMIENTO
                     buildContentAnalysisUnit(req, res).then(workUnitJson => {
                         sendContentAnalysisWorkunit(workUnitJson);
