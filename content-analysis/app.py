@@ -14,6 +14,7 @@ import redis
 import hashlib
 from pypdf import PdfReader
 from io import BytesIO
+from stop_words import stop_words
 
 models = {'use': USELanguageModel()}
 
@@ -151,6 +152,10 @@ def extract_text_from_pdf_url(pdf_url):
         return text
     else:
         return ''
+    
+def remove_stop_word_from_text(text):
+    text = ' '.join([x.lower() for x in text.replace('.', '').replace(',', '').split() if x.lower() not in stop_words])
+    return text
 
 def get_embbedings_from_text(model, text):
     
@@ -187,6 +192,7 @@ def get_top_worst_comments(self, params, model):
     phase_contents = params['content']['phase_content']
     
     case_text = extract_text_from_pdf_url(case_text_url)
+    case_text = remove_stop_word_from_text(case_text)
     print("case text: ",case_text)
     print("phase content: ", phase_contents)
     
