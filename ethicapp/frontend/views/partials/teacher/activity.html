@@ -369,21 +369,6 @@
                     </div>
 
                     <div ng-show="design.type == 'semantic_differential'" class="margin-top-8">
-                        <h2>Rubrica</h2>
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>Top</th>
-                                    <th>Worst</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr ng-repeat="index in [].constructor(contentAnalysis['1']['1'].top.length) track by $index">
-                                    <td>{{ contentAnalysis['1']['1'].top[$index] }}</td>
-                                    <td>{{ contentAnalysis['1']['1'].worst[$index] }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
                         <strong>{{ 'indAggAns' | translate }}</strong>
                         <span class="pull-right mt-1medio margin-right-8"><span style="color: red;">*</span> {{
                             'commentReq' | translate }}</span>
@@ -440,6 +425,56 @@
                             translate }}.
                             <span class="badge bg-red simple-margin-left"><i class="fa fa-comments"></i> N</span> N {{
                             'chatMessages' | translate }}.
+                        </div>
+                    </div>
+                    <div class="simple-padding-bottom" ng-if="contentAnalysis[iterationIndicator]">
+                        <h2>Content Analysis</h2>
+                        <div>
+                            <table class="table table-bordered table-content" ng-if="selectQuestion && contentAnalysis[iterationIndicator][selectQuestion] && contentAnalysis[iterationIndicator][selectQuestion].top.length > 0">
+                                <thead>
+                                    <tr>
+                                        
+                                        <th>Mejores justificaciones</th>
+                                        <th>Peores justificaciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr ng-repeat="index in [].constructor(contentAnalysis[iterationIndicator][selectQuestion].top.length) track by $index">
+                                        <td ng-click="openDF2Details(
+                                            null, 
+                                            contentAnalysis[iterationIndicator][selectQuestion].top[$index].did, 
+                                            contentAnalysis[iterationIndicator][selectQuestion].top[$index].uid
+                                            )"
+                                        >{{ contentAnalysis[iterationIndicator][selectQuestion].top[$index].response_text }}</td>
+                                        <td ng-click="openDF2Details(
+                                            null, 
+                                            contentAnalysis[iterationIndicator][selectQuestion].worst[$index].did, 
+                                            contentAnalysis[iterationIndicator][selectQuestion].worst[$index].uid
+                                            )"
+                                        >{{ contentAnalysis[iterationIndicator][selectQuestion].worst[$index].response_text }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <table class="table table-bordered" ng-if="!selectQuestion || !contentAnalysis[iterationIndicator][selectQuestion] || contentAnalysis[iterationIndicator][selectQuestion].top.length === 0">
+                                <!-- Table headers and empty body -->
+                                <thead>
+                                    <tr>
+                                        <th>Mejores justificaciones</th>
+                                        <th>Peores justificaciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Empty row -->
+                                    <tr>
+                                        <td colspan="2">No data available</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="btn-group">
+                                <button class="btn btn-question" ng-repeat="stage in dfsStage" ng-click="selectCurrentQuestion(stage.id)" ng-disabled="!contentAnalysis[stage.stageid][stage.id].top || contentAnalysis[stage.stageid][stage.id].top.length === 0">
+                                    {{ 'question' | translate }} {{$index + 1}}
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div ng-show="design.type == 'ranking'" class="margin-top-8">
