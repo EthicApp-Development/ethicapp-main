@@ -12,38 +12,44 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
     
 
     self.formatContentAnalysis = function (data) {
-        const iterationNumber = data.stage_id;
+        const stageId = data.stage_id;
         if (!self.contentAnalysis) {
             self.contentAnalysis = {};
         }
         
-        if (!self.contentAnalysis[iterationNumber]) {
-            self.contentAnalysis[iterationNumber] = {};
+        if (!self.contentAnalysis[stageId]) {
+            self.contentAnalysis[stageId] = {};
         }
-        console.log("tipo: ", typeof data.response_selections);
 
         data.response_selections.forEach((selection) => {
             const questionId = selection.question_id;
         
-            if (!self.contentAnalysis[iterationNumber][questionId]) {
-                self.contentAnalysis[iterationNumber][questionId] = {
+            if (!self.contentAnalysis[stageId][questionId]) {
+                self.contentAnalysis[stageId][questionId] = {
                     top: [],
                     worst: []
                 };
             }
         
             selection.responses.forEach((response) => {
+
+                const responseDict = {
+                    response_text: response.response_text,
+                    did: questionId,
+                    uid: response.user_id
+                };
+
                 if (response.ranking_type === 'top') {
-                    self.contentAnalysis[iterationNumber][questionId].top[response.ranking - 1] = response.response_text;
+                    self.contentAnalysis[stageId][questionId].top[response.ranking - 1] = responseDict;
                 } else if (response.ranking_type === 'worst') {
-                    self.contentAnalysis[iterationNumber][questionId].worst[response.ranking - 1] = response.response_text;
+                    self.contentAnalysis[stageId][questionId].worst[response.ranking - 1] = responseDict;
                 }
             });
         });
     };
 
     self.init = self.init = function () {
-        
+        /*
         var _postdata2;
         _postdata2 = {
             stageid: self.iterationIndicator
@@ -51,16 +57,15 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
         $http({
             url: "get-content-analysis", method: "post", data: _postdata2
         }).success(function (dataArray) {
-            console.log("array: ", dataArray);
             dataArray.forEach(function(data) {
                 self.formatContentAnalysis(data);
+                console.log(self.contentAnalysis)
             });
         });
-        console.log(self.contentAnalysis)
+        */
         // CONTENT ANALYSIS SOCKET
         $socket.on("contentUpdate", (data) => {
             if(data.data.sesid === self.selectedSes.id){
-                console.log("data: ", data);
                 self.formatContentAnalysis(data.data);
             } else {
                 console.log("Datos no coinciden con la sesión actual:");
@@ -68,17 +73,8 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
         });
     };
 
-    self.selectKey = function(key) {
-        self.selectedKey = key;
-    };
-
-    self.selectFirstKey = function() {
-        if (!self.selectedKey) {
-            for (var key in self.contentAnalysis[self.iterationIndicator-1]) {
-                self.selectKey(key);
-                break;
-            }
-        }
+    self.selectCurrentQuestion = function(did) {
+        self.selectQuestion = did;
     };
 
     self.shared.resetGraphs = function () { //THIS HAS TO BE CALLED ON ADMIN
@@ -150,14 +146,12 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
     self.shared.updateState = self.updateState;
 
     self.shared.setIterationIndicator = function(i){
-        console.log("Set iteration Indicatior:",i);
         self.iterationIndicator = i;
         self.updateState();
     };
 
     self.updateStateIni = function () {
         var _postdata2;
-        console.log(self.iterationIndicator);
         self.alumTime = {};
         if (self.selectedSes.type == "R") {
             _postdata2 = {
@@ -252,6 +246,14 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
                     self.shared.chatByTeam[c.did][c.tmid] += +c.count;
                 });
             });
+            $http({
+                url: "get-content-analysis", method: "post", data: _postdata2
+            }).success(function (dataArray) {
+                dataArray.forEach(function(data) {
+                    self.formatContentAnalysis(data);
+                    console.log(self.contentAnalysis)
+                });
+            });
         }
         else if (self.selectedSes.type == "J"){
             _postdata2 = {
@@ -306,7 +308,6 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
                 });
             });
         }
-        console.log($scope);
         console.log(self.shared);
     };
 
