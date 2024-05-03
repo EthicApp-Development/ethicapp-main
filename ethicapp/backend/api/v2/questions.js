@@ -4,7 +4,7 @@ const router = express.Router();
 
 // Import Model
 //const Question = require('../../controllers/api/v2/models/questions');
-const { Question } = require('../../controllers/api/v2/models');
+const { Question } = require('../../api/v2/models');
 
 // Configura body-parser para procesar el cuerpo de las solicitudes en formato JSON
 router.use(bodyParser.json());

@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const router = express.Router();
 
 // Import Model
-const { Design } = require('../../controllers/api/v2/models');
+const { Design } = require('../../api/v2/models');
 
 // Configura body-parser para procesar el cuerpo de las solicitudes en formato JSON
 router.use(bodyParser.json());
