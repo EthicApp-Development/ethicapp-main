@@ -13,3 +13,6 @@ package-lock.json
 frontend/assets/css/assets-bundle.css
 frontend/assets/css/assets-bundle.css.map
 frontend/assets/js/assets-bundle.js
+
+# testing logs
+coverage/*

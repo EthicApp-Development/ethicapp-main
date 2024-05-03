@@ -1,0 +1,31 @@
+[
+    {
+      "creator": 1,
+      "question_id": 1,
+      "design": {
+        "title": "Diseño 1",
+        "description": "Descripción del diseño 1",
+        "elements": [
+          {"type": "text", "content": "Texto de ejemplo 1"},
+          {"type": "image", "url": "https://ejemplo.com/imagen1.jpg"}
+        ]
+      },
+      "public": true,
+      "locked": false
+    },
+    {
+      "creator": 2,
+      "question_id": 2,
+      "design": {
+        "title": "Diseño 2",
+        "description": "Descripción del diseño 2",
+        "elements": [
+          {"type": "text", "content": "Texto de ejemplo 2"},
+          {"type": "image", "url": "https://ejemplo.com/imagen2.jpg"}
+        ]
+      },
+      "public": false,
+      "locked": true
+    }
+  ]
+  
