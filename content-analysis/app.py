@@ -152,7 +152,12 @@ def extract_text_from_pdf_url(pdf_url):
         return text
     else:
         return ''
-    
+
+def clean_text(text):
+    text = text.replace(",", "").replace(".", "")
+    text = text.lower()
+    return text
+
 def remove_stop_word_from_text(text):
     text = ' '.join([x.lower() for x in text.replace('.', '').replace(',', '').split() if x.lower() not in stop_words])
     return text
@@ -205,8 +210,8 @@ def get_top_worst_comments(self, params, model):
         responses = params['content']['phase_content'][i]['responses']
         
         
-        ordered_responses = [[response["response_text"],response["response_id"]] for response in responses]
-        
+        ordered_responses = [[response["response_text"], response["response_id"], response["user_id"]] for response in responses]
+        print("ordered_responses: ", ordered_responses)
         question_embedding = get_embbedings_from_text(model, question)
         case_text_embedding = get_embbedings_from_text(model, case_text)
         filtered_comments = filter_comments(ordered_responses)
@@ -215,8 +220,11 @@ def get_top_worst_comments(self, params, model):
         for comment_element in filtered_comments:
             comment_string = comment_element[0]
             comment_id = comment_element[1]
+            user_id = comment_element[2]
             
-            dic = {'text': comment_string, 'embedding': get_embbedings_from_text(model, comment_string), 'id': comment_id}
+            processed_comment = clean_text(comment_string)
+            
+            dic = {'text': comment_string, 'embedding': get_embbedings_from_text(model, processed_comment), 'id': comment_id, 'user_id': user_id}
             comments.append(dic)
          
         finalists_amount = get_finalist_amount_from(len(ordered_responses))
@@ -225,13 +233,14 @@ def get_top_worst_comments(self, params, model):
         top_comments = get_top_comments(question_embedding, case_text_embedding, comments, finalists_amount, winners_amount)
         worst_comments = get_worst_comments(question_embedding, case_text_embedding, comments, finalists_amount, winners_amount)
         
+        # top worst comments structure => [[comment, str(similarity), id, user_id],...]
         response_structure = []
         for idx, comment in enumerate(top_comments):
-            response_dic_top = {"ranking_type":'top', "ranking": idx+1,"response_id": comment[2],"response_text": comment[0]}
+            response_dic_top = {"ranking_type":'top', "ranking": idx+1,"response_id": comment[2], "user_id": comment[3],"response_text": comment[0]}
             response_structure.append(response_dic_top)
         
         for idx, comment in enumerate(worst_comments):
-            response_dic_worst = {"ranking_type":'worst', "ranking": idx+1,"response_id": comment[2],"response_text": comment[0]}
+            response_dic_worst = {"ranking_type":'worst', "ranking": idx+1,"response_id": comment[2], "user_id": comment[3], "response_text": comment[0]}
             response_structure.append(response_dic_worst)
         
         response_selection_dic = {'question_id': question_id, 'responses': response_structure}
@@ -286,14 +295,14 @@ def get_top_comments(question_embedding, case_text_embedding, comments, finalist
 
     for comment in comments:
         similarity = cosine_similarity(question_embedding, comment['embedding'])
-        comments_question_similarity.append([comment['text'], similarity, comment['embedding'], comment['id']])
+        comments_question_similarity.append([comment['text'], similarity, comment['embedding'], comment['id'], comment['user_id']])
 
     comments_question_similarity.sort(key=lambda x: x[1], reverse = True)
 
     comments_case_similarity = []
-    for comment, _similarity, comment_embedding, id in comments_question_similarity[0:finalists_amount]:
+    for comment, _similarity, comment_embedding, id, user_id in comments_question_similarity[0:finalists_amount]:
         similarity = cosine_similarity(case_text_embedding, comment_embedding)
-        comments_case_similarity.append([comment, str(similarity), id])
+        comments_case_similarity.append([comment, str(similarity), id, user_id])
     
     comments_case_similarity.sort(key=lambda x: x[1], reverse = True)
 
@@ -321,14 +330,14 @@ def get_worst_comments(question_embedding, case_text_embedding, comments, finali
 
     for comment in comments:
         similarity = cosine_similarity(question_embedding, comment['embedding'])
-        comments_question_similarity.append([comment['text'], similarity, comment['embedding'], comment['id']])
+        comments_question_similarity.append([comment['text'], similarity, comment['embedding'], comment['id'], comment['user_id']])
 
     comments_question_similarity.sort(key=lambda x: x[1], reverse = False)
 
     comments_case_similarity = []
-    for comment, _similarity, comment_embedding, id in comments_question_similarity[0:finalists_amount]:
+    for comment, _similarity, comment_embedding, id, user_id in comments_question_similarity[0:finalists_amount]:
         similarity = cosine_similarity(case_text_embedding, comment_embedding)
-        comments_case_similarity.append([comment, str(similarity), id])
+        comments_case_similarity.append([comment, str(similarity), id, user_id])
     
     comments_case_similarity.sort(key=lambda x: x[1], reverse = False)
 
