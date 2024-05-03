@@ -1,7 +1,7 @@
 CREATE TABLE content_analysis (
     id SERIAL PRIMARY KEY,
-    response_selections text,
-    context text,
+    response_selections JSONB,
+    context JSONB,
     sesid integer REFERENCES sessions(id),
-    stage_number integer
+    stage_id integer
 );
