@@ -18,8 +18,8 @@ app.get('/', (req, res) => {
     res.send('¡Bienvenido a la API de EthicApp!');
 });
 
-app.listen(PORT, () => {
-    console.log(`Servidor escuchando en el puerto ${PORT}`);
-});
+// app.listen(PORT, () => {
+//     console.log(`Servidor escuchando en el puerto ${PORT}`);
+// });
 
 module.exports = app;

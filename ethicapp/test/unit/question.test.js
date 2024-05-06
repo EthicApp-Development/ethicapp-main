@@ -1,27 +1,43 @@
-// test/question.test.js
-const { sequelize } = require('../../backend/api/v2/models');
-const { Question } = require('../../backend/api/v2/models');
+const request = require('supertest');
+const app = require('../../backend/api/v2/index');// Suponiendo que el archivo principal de tu aplicación se llama index.js
 
-describe('Question Model', () => {
-  beforeAll(async () => {
-    // Antes de ejecutar los tests, sincroniza el modelo con la base de datos
-    await sequelize.sync({ force: true });
+const questionData = require('../fixtures/questions.json');
+describe('CRUD Operations for Questions API', () => {
+  let createdQuestionId;
+
+  // Test Create Operation
+  it('should create a new question', async () => {
+    const newQuestionData = questionData[0]
+
+    const response = await request(app)
+      .post('/questions')
+      .send(newQuestionData)
+      .expect(201);
+
+    createdQuestionId = response.body.id;
   });
 
-  it('Debería crear un diseño en la base de datos', async () => {
-    // Cargar los datos de prueba desde questions.json
-    const questionsData = require('../fixtures/questions.json');
+  // Test Read Operation
+  it('should retrieve all questions', async () => {
+    await request(app)
+      .get('/questions')
+      .expect(200);
+  });
 
-    // Iterar sobre los datos de prueba y crear instancias de Question
-    for (const questionData of questionsData) {
-      await Question.create(questionData);
-    }
+  // Test Update Operation
+  it('should update an existing question', async () => {
+    const updatedQuestionData = questionData[1]
 
-    // Verificar que se han creado los datos de prueba en la base de datos
-    const questionsCount = await Question.count();
-    expect(questionsCount).toBe(questionsData.length);
+    await request(app)
+      .put(`/questions/${createdQuestionId}`)
+      .send(updatedQuestionData)
+      .expect(200);
+  });
 
-    // Otras aserciones según sea necesario para verificar los datos insertados
-    // Por ejemplo, puedes hacer una consulta para verificar si los datos insertados coinciden con los datos de prueba.
+  // Test Delete Operation
+  it('should delete an existing question', async () => {
+    await request(app)
+      .delete(`/questions/${createdQuestionId}`)
+      .expect(204);
   });
 });

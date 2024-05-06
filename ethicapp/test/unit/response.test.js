@@ -1,27 +1,44 @@
-// test/response.test.js
-const { sequelize } = require('../../backend/api/v2/models');
-const { Response } = require('../../backend/api/v2/models');
+const request = require('supertest');
+const app = require('../../backend/api/v2/index');// Suponiendo que el archivo principal de tu aplicación se llama index.js
 
-describe('Response Model', () => {
-  beforeAll(async () => {
-    // Antes de ejecutar los tests, sincroniza el modelo con la base de datos
-    await sequelize.sync({ force: true });
+const responseData = require('../fixtures/responses.json');
+describe('CRUD Operations for Responses API', () => {
+  let createdResponseId;
+
+  // Test Create Operation
+  it('should create a new response', async () => {
+    const newResponseData = responseData[0]
+
+    const response = await request(app)
+      .post('/responses')
+      .send(newResponseData)
+      .expect(201);
+
+    createdResponseId = response.body.id;
   });
 
-  it('Debería crear un diseño en la base de datos', async () => {
-    // Cargar los datos de prueba desde responses.json
-    const responsesData = require('../fixtures/responses.json');
-
-    // Iterar sobre los datos de prueba y crear instancias de Response
-    for (const responseData of responsesData) {
-      await Response.create(responseData);
-    }
-
-    // Verificar que se han creado los datos de prueba en la base de datos
-    const responsesCount = await Response.count();
-    expect(responsesCount).toBe(responsesData.length);
-
-    // Otras aserciones según sea necesario para verificar los datos insertados
-    // Por ejemplo, puedes hacer una consulta para verificar si los datos insertados coinciden con los datos de prueba.
+  // Test Read Operation
+  it('should retrieve all responses', async () => {
+    await request(app)
+      .get('/responses')
+      .expect(200);
   });
+
+  // Test Update Operation
+  it('should update an existing response', async () => {
+    const updatedResponseData = responseData[1]
+
+    await request(app)
+      .put(`/responses/${createdResponseId}`)
+      .send(updatedResponseData)
+      .expect(200);
+  });
+
+  // Test Delete Operation
+  it('should delete an existing response', async () => {
+    await request(app)
+      .delete(`/responses/${createdResponseId}`)
+      .expect(204);
+  });
+  
 });
