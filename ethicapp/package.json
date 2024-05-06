@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node ./backend/ethicapp",
     "testing": "mocha tests",
-    "test": "npx jest"
+    "test": "npx jest --detectOpenHandles"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.185.0",
