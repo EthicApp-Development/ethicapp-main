@@ -12,10 +12,10 @@ router.use(bodyParser.json());
 router.get('/', async (req, res) => {
     try {
       const responses = await Response.findAll();
-      res.json(responses);
+      res.status(200).json({ status: 'success', data: responses });
     } catch (err) {
       console.error(err);
-      res.status(500).json({ message: 'Error al obtener las respuestas' });
+      res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 });
 
@@ -23,10 +23,10 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
       const response = await Response.create(req.body);
-      res.status(201).json(response);
+      res.status(201).json({ status: 'success', data: response });
     } catch (err) {
       console.error(err);
-      res.status(500).json({ message: 'Error al crear la respuesta' });
+      res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 });
 
@@ -36,13 +36,13 @@ router.put('/:id', async (req, res) => {
     try {
       const response = await Response.findByPk(id);
       if (!response) {
-        return res.status(404).json({ message: 'respuesta no encontrada' });
+        return res.status(404).json({ status: 'error', message: 'Response not found' });
       }
       await response.update(req.body);
-      res.json(response);
+      res.json({ status: 'success', data: response });
     } catch (err) {
       console.error(err);
-      res.status(500).json({ message: 'Error al actualizar la respuesta' });
+      res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 });
 
@@ -52,13 +52,13 @@ router.delete('/:id', async (req, res) => {
     try {
       const response = await Response.findByPk(id);
       if (!response) {
-        return res.status(404).json({ message: 'respuesta no encontrada' });
+        return res.status(404).json({ status: 'error', message: 'Response not found' });
       }
       await response.destroy();
       res.status(204).end();
     } catch (err) {
       console.error(err);
-      res.status(500).json({ message: 'Error al eliminar la respuesta' });
+      res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 });
 
