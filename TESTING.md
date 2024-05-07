@@ -14,7 +14,7 @@ The folder structure is as follows:
     - users.json
     - products.json
 
-habra una carpeta test donde hay otras 3 carpetas:
+there will be a test folder where there are 3 other folders:
 - *unit*: is for unit testing, the name of the files inside is:  <_nameFile_>.test.js
 - *integration*:  is to make tests that mix several other files and/or communicate constantly. The name of this files is: <_nameFile1-nameFile2_>.test.js
 - *fixtures*: are json files, they contain data so that they can be used in unit and integration, the name for this files is: <_nameFile_>.json
