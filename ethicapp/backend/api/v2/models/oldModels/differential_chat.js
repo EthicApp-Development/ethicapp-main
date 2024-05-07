@@ -21,7 +21,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'SDChatMessage',
-    tableName: 'differentialsChats'
+    tableName: 'differentials_chats'
   });
   return SDChatMessage;
 };

@@ -2,7 +2,7 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkInsert('actorsSelections', [
+    await queryInterface.bulkInsert('actors_selections', [
       {
         description: 'John Doe fue seleccionado como líder del grupo.',
         orden: 1,
@@ -52,6 +52,6 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkDelete('actorsSelections', null, {});
+    await queryInterface.bulkDelete('actors_selections', null, {});
   }
 };

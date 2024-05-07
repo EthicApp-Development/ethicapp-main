@@ -21,7 +21,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'FinishedSession',
-    tableName: 'finishedSessions'
+    tableName: 'finished_sessions'
   });
   return FinishedSession;
 };

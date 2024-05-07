@@ -23,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'SDResponse',
-    tableName: 'differentialsSelections'
+    tableName: 'differentials_selections'
   });
   return SDResponse ;
 };

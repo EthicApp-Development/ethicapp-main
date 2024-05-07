@@ -2,7 +2,7 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkInsert('differentialsSelections', [
+    await queryInterface.bulkInsert('differentials_selections', [
       {
         user_id: 1,
         differential_id: 1,
@@ -57,6 +57,6 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkDelete('differentialsSelections', null, {});
+    await queryInterface.bulkDelete('differentials_selections', null, {});
   }
 };
