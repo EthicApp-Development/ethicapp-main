@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('../../backend/api/v2/index');// Suponiendo que el archivo principal de tu aplicación se llama index.js
+const app = require('../../backend/api/v2/testApi'); // Suponiendo que el archivo principal de tu aplicación se llama index.js
 
 const responseData = require('../fixtures/responses.json');
 describe('CRUD Operations for Responses API', () => {
