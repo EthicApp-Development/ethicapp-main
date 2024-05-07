@@ -14,7 +14,7 @@ describe('CRUD Operations for Designs API', () => {
       .send(newDesignData)
       .expect(201);
 
-    createdDesignId = response.body.id; // Suponiendo que tu API devuelve el ID del diseño creado
+    createdDesignId = response.body.data.id; // Suponiendo que tu API devuelve el ID del diseño creado
 
   });
 

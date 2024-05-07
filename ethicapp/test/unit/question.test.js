@@ -7,6 +7,7 @@ describe('CRUD Operations for Questions API', () => {
 
   // Test Create Operation
   it('should create a new question', async () => {
+    console.log("CREATE")
     const newQuestionData = questionData[0]
 
     const response = await request(app)
@@ -14,11 +15,12 @@ describe('CRUD Operations for Questions API', () => {
       .send(newQuestionData)
       .expect(201);
 
-    createdQuestionId = response.body.id;
+    createdQuestionId = response.body.data.id;
   });
 
   // Test Read Operation
   it('should retrieve all questions', async () => {
+    console.log("READ")
     await request(app)
       .get('/questions')
       .expect(200);
@@ -26,6 +28,7 @@ describe('CRUD Operations for Questions API', () => {
 
   // Test Update Operation
   it('should update an existing question', async () => {
+    console.log("UPDATE")
     const updatedQuestionData = questionData[1]
 
     await request(app)
@@ -36,6 +39,7 @@ describe('CRUD Operations for Questions API', () => {
 
   // Test Delete Operation
   it('should delete an existing question', async () => {
+    console.log("DELETE")
     await request(app)
       .delete(`/questions/${createdQuestionId}`)
       .expect(204);

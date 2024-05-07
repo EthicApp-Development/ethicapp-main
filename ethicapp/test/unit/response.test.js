@@ -1,6 +1,5 @@
 const request = require('supertest');
-const app = require('../../backend/api/v2/testApi'); // Suponiendo que el archivo principal de tu aplicación se llama index.js
-
+const app = require('../../backend/api/v2/testApi');
 const responseData = require('../fixtures/responses.json');
 describe('CRUD Operations for Responses API', () => {
   let createdResponseId;
@@ -14,7 +13,7 @@ describe('CRUD Operations for Responses API', () => {
       .send(newResponseData)
       .expect(201);
 
-    createdResponseId = response.body.id;
+    createdResponseId = response.body.data.id;
   });
 
   // Test Read Operation
