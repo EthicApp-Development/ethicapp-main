@@ -92,4 +92,24 @@ router.get('/:sessionId/users', async (req, res) => {
     }
 });
 
+// Delete session user
+router.delete('/:sessionId/users/:userId', async (req, res) => {
+    const { sessionId, userId } = req.params;
+    try {
+        const session = await Sessions.findByPk(sessionId);
+        if (!session) {
+            return res.status(404).json({ status: 'error', message: 'Session not found' });
+        }
+        const sessionUser = await SessionsUsers.findOne({ where: { sesion_id: sessionId, user_id: userId } });
+        if (!sessionUser) {
+            return res.status(404).json({ status: 'error', message: 'Session user not found' });
+        }
+        await sessionUser.destroy();
+        res.status(204).end();
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+});
+
 module.exports = router;
