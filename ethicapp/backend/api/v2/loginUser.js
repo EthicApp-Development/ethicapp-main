@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const { User } = require('./models');  // Asegúrate de importar el modelo correctamente
 const bodyParser = require('body-parser');
+const authenticateToken = require('./middleware/authenticateToken');
 const router = express.Router();
 router.use(bodyParser.json());
 
@@ -36,6 +37,12 @@ router.delete('/user_session', (req, res) => {
 router.get('/logout', (req, res) => {
   // Similar a DELETE, no se puede invalidar un JWT ya emitido
   res.json({ message: 'Por favor, elimina el token del lado cliente para cerrar sesión.' });
+});
+
+// example the client token
+router.get('/protected', authenticateToken, (req, res) => {
+  console.log("req ->", req)
+  res.json({ message: "Este es un contenido protegido", user: req.user });
 });
 
 module.exports = router;
