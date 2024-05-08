@@ -7,17 +7,24 @@ router.use(bodyParser.json());
 
 // Ruta para crear una sesión de usuario (login)
 router.post('/user_session', async (req, res) => {
+  try {
     console.log("req.body ->: ",req.body)
     const { mail, pass } = req.body; // Modifica para obtener el correo y contraseña desde el cuerpo de la solicitud
     
     const user = await User.findOne({ where: { mail } }); // Busca al usuario por correo
-
-  if (!user || !user.validPassword(pass)) {
-    return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+    if (!user || !user.validPassword(pass)) {
+      return res.status(401).json({status: 'error', error: 'Usuario o contraseña incorrectos' });
+    }
+    const userId = user.dataValues.id;
+    const token = jwt.sign({id: userId}, 'your_secret_key',  { expiresIn: '1h' })
+    console.log("token -->", token)
+    res.json({ token });
+  }
+  catch (err) {
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 
-  const token = jwt.sign({ id: user.id }, 'your_secret_key', { expiresIn: '1h' });  // Asegúrate de usar una clave secreta segura
-  res.json({ token });
 });
 
 // Ruta para terminar la sesión (logout)
