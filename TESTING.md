@@ -20,3 +20,7 @@ there will be a test folder where there are 3 other folders:
 - *fixtures*: are json files, they contain data so that they can be used in unit and integration, the name for this files is: <_nameFile_>.json
 
 ### other option for to generate test data programmatically, is to use the Factory Girl or Faker.js library. This allows you to create data dynamically and customised to your testing needs.
+
+to test the tests, you need to go to the ethicapp [ `/ethicapp-main/ethicapp `] folder and in a terminal run the following command: `npm test`
+
+if the above command does not work, try using the following command: `npm install`
