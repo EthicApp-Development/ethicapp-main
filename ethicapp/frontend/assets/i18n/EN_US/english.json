@@ -330,7 +330,11 @@
 	"cancel": "Cancel",
 	"endActivity": "End Activity",
 	"openInNewTab": "Load document in new tab",
-	"answers": "Responses"	
+	"answers": "Responses",
+	"contentAnalysisTop": "Better justifications",
+	"contentAnalysisWorst": "Worst justifications",
+	"allResponses": "All",
+	"relevantResponses": "Notable"
 }
 
 
