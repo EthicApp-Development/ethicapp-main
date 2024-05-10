@@ -30,7 +30,7 @@ services:
       CONTENT_ANALYSIS_HOST_NAME: ${CONTENT_ANALYSIS_HOST_NAME}
       CONTENT_ANALYSIS_PORT: ${CONTENT_ANALYSIS_PORT}
       ETHICAPP_HOSTNAME: ${ETHICAPP_HOSTNAME}
-      API_VALIDATION_KEY: ${API_VALIDATION_KEY}
+      ETHICAPP_API_KEY: ${ETHICAPP_API_KEY}
     restart: "no"
     networks:
       default:
@@ -127,7 +127,7 @@ services:
       - .:/app
     environment:
       REDIS_HOST_NAME: ${REDIS_HOST_NAME}
-      API_VALIDATION_KEY: ${API_VALIDATION_KEY}
+      ETHICAPP_API_KEY: ${ETHICAPP_API_KEY}
     depends_on:
       - RedisContainer
 
@@ -141,7 +141,7 @@ services:
     command: ['celery', '-A', 'content-analysis.app.celery', 'worker', '-P', 'solo', '-l', 'info', '-Q', 'celery', '-n', '"celery"']
     environment:
       REDIS_HOST_NAME: ${REDIS_HOST_NAME}
-      API_VALIDATION_KEY: ${API_VALIDATION_KEY}
+      ETHICAPP_API_KEY: ${ETHICAPP_API_KEY}
     depends_on:
       - content-analysis
       - RedisContainer
