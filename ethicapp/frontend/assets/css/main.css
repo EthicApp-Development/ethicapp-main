@@ -1967,3 +1967,72 @@ h2{
     margin-top: -2rem;
 }
 
+.content-table.table {
+    margin-bottom: 0;
+    margin-right: 0px;
+    margin-bottom: 0px;
+}
+
+.content-table.table.table-bordered {
+    margin-bottom: 0;
+}
+
+.table-container {
+    overflow: auto;
+    border: 1px solid #ddd;
+    display: inline-block;
+}
+
+.content-btn {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+    
+.content-btn .btn {
+    background: lightgray;
+    border: 1px solid white;
+    height: 3em;
+    width: 8em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 1px;
+    margin-left: 1px;
+    margin-bottom: 0px;
+    border-radius: 3px;
+}
+
+.content-btn .btn:hover {
+    background: rgb(212, 212, 212);
+    border: 1px solid lightgrey;
+    color: #000000;
+}
+
+.selection-btn{
+    float: left;
+    outline: none;
+    cursor: pointer;
+    width: 9em;
+    height: 2em;
+    padding: 6px 27px;
+    transition: 0.3s;
+    border: 1px solid #ddd;
+    font-size: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #ddd;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    margin-right: 1rem;
+    margin-bottom: 0;
+    border-bottom: none;
+    color: black;
+}
+
+.selection-btn:hover {
+    border: 1px solid gray;
+    border-bottom: none;
+}
