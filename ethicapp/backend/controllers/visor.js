@@ -408,8 +408,10 @@ async function buildContentAnalysisUnit(req, res) {
                     acc[cur.question_id].push(cur);
                     return acc;
                   }, {});
-                  
-                const sessionURL = `http://host.docker.internal:${process.env.PORT}/${result[0].case_url}`;
+                
+                const nodeHostName = process.env.NODE_HOST_NAME
+
+                const sessionURL = `http://${nodeHostName}:${process.env.NODE_PORT}/${result[0].case_url}`;
 
                 const workUnitJson = {
                     context: {
@@ -439,7 +441,9 @@ async function buildContentAnalysisUnit(req, res) {
 
 async function sendContentAnalysisWorkunit(workunit){
     try {
-        const response = await fetch('http://host.docker.internal:5000/top-worst', {
+        const contentAnalysisHostName = process.env.CONTENT_ANALYSIS_HOST_NAME
+        const contentAnalysisPort = process.env.CONTENT_ANALYSIS_PORT
+        const response = await fetch(`http://${contentAnalysisHostName}:${contentAnalysisPort}/top-worst`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -450,10 +454,8 @@ async function sendContentAnalysisWorkunit(workunit){
             throw new Error('La respuesta del servidor no fue OK');
         }
             const responseData = await response.json();
-            res.status(200).send(responseData);
     } catch (error) {
         console.error('Error al invocar /content-analysis-workunit:', error);
-        res.status(500).send({ message: 'Error al invocar /content-analysis-workunit' });
     }
 }
 
