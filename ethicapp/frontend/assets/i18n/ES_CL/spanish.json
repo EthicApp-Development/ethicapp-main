@@ -331,7 +331,8 @@
 	"confirmation": "Confirmación",
 	"cancel": "Cancelar",
 	"endActivity": "Terminar Actividad",
-	"openInNewTab": "Cargar documento en otra pestaña"
+	"openInNewTab": "Cargar documento en otra pestaña",
+	"answers": "Respuestas"
 
 
 }

@@ -329,7 +329,8 @@
 	"confirmation": "Confirmation",
 	"cancel": "Cancel",
 	"endActivity": "End Activity",
-	"openInNewTab": "Load document in new tab"
+	"openInNewTab": "Load document in new tab",
+	"answers": "Responses"	
 }
 
 
