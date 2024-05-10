@@ -294,13 +294,17 @@
                 <!-- DASHBOARDS -->
                 <div class="pad-content" ng-controller="DashboardController">
                     <div class="row" ng-show="selectedSes.type == 'R' || selectedSes.type == 'T' || selectedSes.type == 'J'">
-                        <div class="col-lg-5" style="margin-bottom: auto;">
-                            <div class="btn-group" style="padding-top: 1em;">
+                        <div class="col-lg-5">
+                            <div class="btn-group" ng-init="dsgnMode=0" style="padding-top: 1em;">
                                 <button class="selection-btn" style="margin-bottom: 0px;" ng-click="dsgnMode=0" ng-class="{'btn_selected': dsgnMode == 0}">
-                                    {{'answers' | translate}}
+                                    {{'allResponses' | translate}}
                                 </button>
-                                <button class="selection-btn" style="margin-bottom: 0px;" ng-click="dsgnMode=1" ng-class="{'btn_selected': dsgnMode == 1}">
-                                    {{'finishedTab' | translate}}
+                                <button class="selection-btn" 
+                                style="margin-bottom: 0px;" 
+                                ng-click="dsgnMode=1" 
+                                ng-class="{'btn_selected': dsgnMode == 1}"
+                                ng-disabled="!contentAnalysis[iterationIndicator]">
+                                    {{'relevantResponses' | translate}}
                                 </button>
                             </div>
                         </div>
@@ -385,114 +389,129 @@
                             </tr>
                         </table>
                     </div>
-                    <div class="container phase_container ml-0" style="margin-bottom: 0; margin-top: 0;">
-                        <div ng-show="design.type == 'semantic_differential'" class="margin-top-8">
-                            <strong>{{ 'indAggAns' | translate }}</strong>
-                            <span class="pull-right mt-1medio margin-right-8"><span style="color: red;">*</span> {{
-                                'commentReq' | translate }}</span>
-                            <table class="table table-bordered" ts-wrapper>
-                                <tr>
-                                    <th ts-criteria="uid" ts-order-by="sortByAutorName">{{ 'author' | translate }}</th>
-                                    <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'" ts-criteria="tmid"
-                                        ts-default>{{ 'group' | translate }}</th>
-                                    <th ng-repeat="df in dfsStage">
-                                        {{'question' | translate}} {{ df.orden }} (1-{{ df.num }})
-                                        <span style="color: red;" ng-if="df.justify">*</span>
-                                    </th>
-                                </tr>
-                                <tr ng-repeat="udata in shared.difTable track by $index"
-                                    ng-class="{'bg-gray': udata.group}">
-                                    <td>
-                                        <span ng-show="!udata.group">{{ users[udata.uid].name }}</span>
-                                        <strong ng-show="udata.group">{{ 'group' | translate }} {{
-                                            shared.groupByTmid[udata.tmid].index }}</strong>
-                                    </td>
-                                    <td ng-if="shared.stagesMap[iterationIndicator].type == 'team'">
-                                        <span ng-show="udata.group">{{ shared.groupByTmid[udata.tmid].index }}</span>
-                                        <span ng-show="!udata.group">{{ shared.groupByUid[udata.uid].index }}</span>
-                                    </td>
-                                    <td ng-repeat="aid in udata.arr track by $index"
-                                        ng-click="openDF2Details(udata.tmid, aid.did, udata.uid)">
-                                        <span class="mini-inline">
-                                            <span ng-show="udata.group">{{ 'avgs' | translate }}: </span>
-                                            <span ng-if="udata.group">{{ aid.sel | number:1 }}</span>
-                                            <span ng-if="!udata.group">{{ aid.sel }}</span>
-                                            <i class="fa fa-check" ng-if="aid.comment"></i>
-                                        </span>
-                                        <span class="badge bg-red"
-                                            ng-show="shared.stagesMap[iterationIndicator].chat && !udata.group">
-                                            <i class="fa fa-comments"></i> {{ shared.chatByUid[aid.did][udata.uid] || 0 }}
-                                        </span>
-                                        <span class="badge bg-darkgreen simple-margin-left" ng-show="aid.sd != null"
-                                            ng-class="{'bg-red': aid.sd >= 1, 'bg-yellow': aid.sd < 1 && aid.sd > 0.5}">
-                                            {{ 'cvs' | translate }}:
-                                            {{ aid.sd | number:2 }}
-                                        </span>
-                                        <span class="badge bg-red simple-margin-left"
-                                            ng-show="shared.stagesMap[iterationIndicator].chat && udata.group">
-                                            <i class="fa fa-comments"></i> {{ shared.chatByTeam[aid.did][udata.tmid] || 0 }}
-                                        </span>
-                                    </td>
-                                </tr>
-                            </table>
-                            <div class="simple-padding-bottom">
-                                <span>{{ 'students' | translate }}: {{shared.difTableUsers}}</span>
-                                <strong class="simple-margin-left">{{ 'avgs' | translate }}: </strong> {{ 'average' |
-                                translate }}.
-                                <strong class="simple-margin-left">{{ 'cvs' | translate }}: </strong> {{ 'cvdesc' |
-                                translate }}.
-                                <span class="badge bg-red simple-margin-left"><i class="fa fa-comments"></i> N</span> N {{
-                                'chatMessages' | translate }}.
+                    <div class="container phase_container ml-0" style="margin-top: 0;">
+                        <div ng-if="dsgnMode==0">
+                            <div ng-show="design.type == 'semantic_differential'" class="margin-top-8">
+                                <strong>{{ 'indAggAns' | translate }}</strong>
+                                <span class="pull-right mt-1medio margin-right-8"><span style="color: red;">*</span> {{
+                                    'commentReq' | translate }}</span>
+                                <table class="table table-bordered" ts-wrapper>
+                                    <tr>
+                                        <th ts-criteria="uid" ts-order-by="sortByAutorName">{{ 'author' | translate }}</th>
+                                        <th ng-if="shared.stagesMap[iterationIndicator].type == 'team'" ts-criteria="tmid"
+                                            ts-default>{{ 'group' | translate }}</th>
+                                        <th ng-repeat="df in dfsStage">
+                                            {{'question' | translate}} {{ df.orden }} (1-{{ df.num }})
+                                            <span style="color: red;" ng-if="df.justify">*</span>
+                                        </th>
+                                    </tr>
+                                    <tr ng-repeat="udata in shared.difTable track by $index"
+                                        ng-class="{'bg-gray': udata.group}">
+                                        <td>
+                                            <span ng-show="!udata.group">{{ users[udata.uid].name }}</span>
+                                            <strong ng-show="udata.group">{{ 'group' | translate }} {{
+                                                shared.groupByTmid[udata.tmid].index }}</strong>
+                                        </td>
+                                        <td ng-if="shared.stagesMap[iterationIndicator].type == 'team'">
+                                            <span ng-show="udata.group">{{ shared.groupByTmid[udata.tmid].index }}</span>
+                                            <span ng-show="!udata.group">{{ shared.groupByUid[udata.uid].index }}</span>
+                                        </td>
+                                        <td ng-repeat="aid in udata.arr track by $index"
+                                            ng-click="openDF2Details(udata.tmid, aid.did, udata.uid)">
+                                            <span class="mini-inline">
+                                                <span ng-show="udata.group">{{ 'avgs' | translate }}: </span>
+                                                <span ng-if="udata.group">{{ aid.sel | number:1 }}</span>
+                                                <span ng-if="!udata.group">{{ aid.sel }}</span>
+                                                <i class="fa fa-check" ng-if="aid.comment"></i>
+                                            </span>
+                                            <span class="badge bg-red"
+                                                ng-show="shared.stagesMap[iterationIndicator].chat && !udata.group">
+                                                <i class="fa fa-comments"></i> {{ shared.chatByUid[aid.did][udata.uid] || 0 }}
+                                            </span>
+                                            <span class="badge bg-darkgreen simple-margin-left" ng-show="aid.sd != null"
+                                                ng-class="{'bg-red': aid.sd >= 1, 'bg-yellow': aid.sd < 1 && aid.sd > 0.5}">
+                                                {{ 'cvs' | translate }}:
+                                                {{ aid.sd | number:2 }}
+                                            </span>
+                                            <span class="badge bg-red simple-margin-left"
+                                                ng-show="shared.stagesMap[iterationIndicator].chat && udata.group">
+                                                <i class="fa fa-comments"></i> {{ shared.chatByTeam[aid.did][udata.tmid] || 0 }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                                <div class="simple-padding-bottom">
+                                    <span>{{ 'students' | translate }}: {{shared.difTableUsers}}</span>
+                                    <strong class="simple-margin-left">{{ 'avgs' | translate }}: </strong> {{ 'average' |
+                                    translate }}.
+                                    <strong class="simple-margin-left">{{ 'cvs' | translate }}: </strong> {{ 'cvdesc' |
+                                    translate }}.
+                                    <span class="badge bg-red simple-margin-left"><i class="fa fa-comments"></i> N</span> N {{
+                                    'chatMessages' | translate }}.
+                                </div>
                             </div>
                         </div>
-                        <div class="simple-padding-bottom" ng-if="contentAnalysis[iterationIndicator]">
-                            <h2>Content Analysis</h2>
-                            <div class="container-wrapper">
-                                <table class="content-table table table-bordered" ng-if="selectQuestion && contentAnalysis[iterationIndicator][selectQuestion] && contentAnalysis[iterationIndicator][selectQuestion].top.length > 0">
-                                    <thead>
-                                        <tr>
-                                            
-                                            <th>Mejores justificaciones</th>
-                                            <th>Peores justificaciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr ng-repeat="index in [].constructor(contentAnalysis[iterationIndicator][selectQuestion].top.length) track by $index">
-                                            <td ng-click="openDF2Details(
-                                                null, 
-                                                contentAnalysis[iterationIndicator][selectQuestion].top[$index].did, 
-                                                contentAnalysis[iterationIndicator][selectQuestion].top[$index].uid
-                                                )"
-                                            >{{ contentAnalysis[iterationIndicator][selectQuestion].top[$index].response_text }}</td>
-                                            <td ng-click="openDF2Details(
-                                                null, 
-                                                contentAnalysis[iterationIndicator][selectQuestion].worst[$index].did, 
-                                                contentAnalysis[iterationIndicator][selectQuestion].worst[$index].uid
-                                                )"
-                                            >{{ contentAnalysis[iterationIndicator][selectQuestion].worst[$index].response_text }}</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                                <table class="content-table table table-bordered" ng-if="!selectQuestion || !contentAnalysis[iterationIndicator][selectQuestion] || contentAnalysis[iterationIndicator][selectQuestion].top.length === 0">
-                                    <!-- Table headers and empty body -->
-                                    <thead>
-                                        <tr>
-                                            <th>Mejores justificaciones</th>
-                                            <th>Peores justificaciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <!-- Empty row -->
-                                        <tr>
-                                            <td colspan="2">No data available</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                                <div class="table-container">
-                                    <div class="content-btn">
-                                        <button class="btn" ng-repeat="stage in dfsStage" ng-click="selectCurrentQuestion(stage.id)" ng-disabled="!contentAnalysis[stage.stageid][stage.id].top || contentAnalysis[stage.stageid][stage.id].top.length === 0">
-                                            {{ 'question' | translate }} {{$index + 1}}
-                                        </button>
+                        <div ng-if="dsgnMode==1">
+                            <div class="simple-padding-bottom" ng-if="contentAnalysis[iterationIndicator]">
+                                <div class="container-wrapper">
+                                    <table class="content-table table table-bordered"
+                                        ng-if="selectQuestion && 
+                                        contentAnalysis[iterationIndicator][selectQuestion] && 
+                                        contentAnalysis[iterationIndicator][selectQuestion].top.length > 0">
+                                            <thead>
+                                                <tr>
+                                                    <th>{{'contentAnalysisTop' | translate }}</th>
+                                                    <th>{{'contentAnalysisWorst' | translate }}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr ng-repeat="index in [].constructor(contentAnalysis[iterationIndicator][selectQuestion].top.length) track by $index">
+                                                    <td ng-click="openDF2Details(
+                                                        null, 
+                                                        contentAnalysis[iterationIndicator][selectQuestion].top[$index].did, 
+                                                        contentAnalysis[iterationIndicator][selectQuestion].top[$index].uid
+                                                    )">
+                                                        {{ contentAnalysis[iterationIndicator][selectQuestion].top[$index].response_text }}
+                                                    </td>
+                                                    <td ng-click="openDF2Details(
+                                                        null, 
+                                                        contentAnalysis[iterationIndicator][selectQuestion].worst[$index].did, 
+                                                        contentAnalysis[iterationIndicator][selectQuestion].worst[$index].uid
+                                                    )">
+                                                        {{ contentAnalysis[iterationIndicator][selectQuestion].worst[$index].response_text }}
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                    </table>
+                                    <table class="content-table table table-bordered"
+                                        ng-if="!selectQuestion || 
+                                        !contentAnalysis[iterationIndicator][selectQuestion] || 
+                                        contentAnalysis[iterationIndicator][selectQuestion].top.length === 0">
+                                            <thead>
+                                                <tr>
+                                                    <th>{{'contentAnalysisTop' | translate }}</th>
+                                                    <th>{{'contentAnalysisWorst' | translate }}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- Empty row -->
+                                                <tr>
+                                                    <td colspan="2">No data available</td>
+                                                </tr>
+                                            </tbody>
+                                    </table>
+                                    <div class="table-container">
+                                        <div class="content-btn">
+                                            <button class="btn"
+                                            ng-repeat="stage in dfsStage"
+                                            ng-init="selectCurrentQuestion(stage.id)"
+                                            ng-click="selectCurrentQuestion(stage.id)"
+                                            ng-class="{'content-btn-selected': stage.id == selectQuestion}"
+                                            ng-disabled="!contentAnalysis[stage.stageid][stage.id].top || 
+                                            contentAnalysis[stage.stageid][stage.id].top.length === 0">
+                                                {{ 'question' | translate }} {{$index + 1}}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

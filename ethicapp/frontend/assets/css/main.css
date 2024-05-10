@@ -1991,23 +1991,32 @@ h2{
 
     
 .content-btn .btn {
-    background: lightgray;
-    border: 1px solid white;
-    height: 3em;
-    width: 8em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    margin-right: 1px;
-    margin-left: 1px;
-    margin-bottom: 0px;
-    border-radius: 3px;
+    float: left;
+    outline: none;
+    cursor: pointer;
+    height: 2em;
+    width: 7em;
+    transition: 0.5s;
+    font-size: 15px;
+    flex: 1 0 15%;
+    justify-content: center;
+    align-items: center;
+    margin-right: 0;
+    margin-left: 0;
+    margin-bottom: 0;
+    color: black;
+    border-radius: 0;
+    background-color:#eee;
+    border-color:#e2e2e2;
 }
 
 .content-btn .btn:hover {
-    background: rgb(212, 212, 212);
-    border: 1px solid lightgrey;
-    color: #000000;
+    border: 1px solid gray;
+    background-color:#ddd;
+}
+
+.content-btn-selected {
+    font-weight: bolder;
 }
 
 .selection-btn{
@@ -2035,4 +2044,9 @@ h2{
 .selection-btn:hover {
     border: 1px solid gray;
     border-bottom: none;
+}
+
+.container-wrapper {
+    padding-top: 20px; 
+    padding-bottom: 20px; 
 }
