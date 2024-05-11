@@ -8,7 +8,7 @@ const { Sessions, SessionsUsers } = require('../../api/v2/models');
 router.use(bodyParser.json());
 
 // Read
-router.get('/', async (req, res) => {
+router.get('/sessions', async (req, res) => {
     try {
         const sessions = await Sessions.findAll();
         res.status(200).json({ status: 'success', data: sessions });
@@ -19,7 +19,7 @@ router.get('/', async (req, res) => {
 });
 
 // Create
-router.post('/', async (req, res) => {
+router.post('/sessions', async (req, res) => {
     try {
         const session = await Sessions.create(req.body);
         res.status(201).json({ status: 'success', data: session });
@@ -30,7 +30,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update
-router.put('/:id', async (req, res) => {
+router.put('/sessions/:id', async (req, res) => {
     const { id } = req.params;
     try {
         const session = await Sessions.findByPk(id);
@@ -46,7 +46,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete
-router.delete('/:id', async (req, res) => {
+router.delete('/sessions/:id', async (req, res) => {
     const { id } = req.params;
     try {
         const session = await Sessions.findByPk(id);
@@ -64,7 +64,7 @@ router.delete('/:id', async (req, res) => {
 // CRUD operations for SessionsUsers
 
 // Create session user
-router.post('/:sessionId/users', async (req, res) => {
+router.post('/sessions/:sessionId/users', async (req, res) => {
     const { sessionId } = req.params;
     try {
         const session = await Sessions.findByPk(sessionId);
@@ -81,7 +81,7 @@ router.post('/:sessionId/users', async (req, res) => {
 });
 
 // Read session users
-router.get('/:sessionId/users', async (req, res) => {
+router.get('/sessions/:sessionId/users', async (req, res) => {
     const { sessionId } = req.params;
     try {
         const sessionUsers = await SessionsUsers.findAll({ where: { sesion_id: sessionId } });
@@ -93,7 +93,7 @@ router.get('/:sessionId/users', async (req, res) => {
 });
 
 // Delete session user
-router.delete('/:sessionId/users/:userId', async (req, res) => {
+router.delete('/sessions/:sessionId/users/:userId', async (req, res) => {
     const { sessionId, userId } = req.params;
     try {
         const session = await Sessions.findByPk(sessionId);

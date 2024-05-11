@@ -6,7 +6,7 @@ const router = express.Router();
 //const Question = require('../../controllers/api/v2/models/questions');
 const { Question } = require('../../api/v2/models');
 
-// Configura body-parser para procesar el cuerpo de las solicitudes en formato JSON
+// Configure body-parser to process the body of requests in JSON format.
 router.use(bodyParser.json());
 
 // Read

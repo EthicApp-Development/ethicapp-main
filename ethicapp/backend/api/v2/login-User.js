@@ -1,20 +1,20 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const { User } = require('./models');  // Asegúrate de importar el modelo correctamente
+const { User } = require('./models');  //  Make sure you import the model correctly
 const bodyParser = require('body-parser');
 const authenticateToken = require('./middleware/authenticateToken');
 const router = express.Router();
 router.use(bodyParser.json());
 
-// Ruta para crear una sesión de usuario (login)
+// Path to create a user session (login)
 router.post('/user_session', async (req, res) => {
   try {
     console.log("req.body ->: ",req.body)
-    const { mail, pass } = req.body; // Modifica para obtener el correo y contraseña desde el cuerpo de la solicitud
+    const { mail, pass } = req.body; // 
     
-    const user = await User.findOne({ where: { mail } }); // Busca al usuario por correo
+    const user = await User.findOne({ where: { mail } }); // Modifies to get the email and password from the body of the request
     if (!user || !user.validPassword(pass)) {
-      return res.status(401).json({status: 'error', error: 'Usuario o contraseña incorrectos' });
+      return res.status(401).json({status: 'error', error: 'Incorrect login or password' });
     }
     const userId = user.dataValues.id;
     const token = jwt.sign({id: userId}, 'your_secret_key',  { expiresIn: '1h' })
@@ -28,21 +28,20 @@ router.post('/user_session', async (req, res) => {
 
 });
 
-// Ruta para terminar la sesión (logout)
+// Path to logout (logout)
 router.delete('/user_session', (req, res) => {
-  // JWT no permite un cierre de sesión directo, pero puedes manejarlo en el cliente
-  res.json({ message: 'Sesión terminada. Por favor, elimina el token del lado cliente.' });
+  // JWT does not allow a direct logout, but you can handle it in the client.
+  res.json({ message: 'Session terminated. Please remove the token from the client side.' });
 });
 
 router.get('/logout', (req, res) => {
-  // Similar a DELETE, no se puede invalidar un JWT ya emitido
-  res.json({ message: 'Por favor, elimina el token del lado cliente para cerrar sesión.' });
+  // Similar to DELETE, you cannot override a JWT that has already been issued.
+  res.json({ message: 'Please remove the client-side token to log out' });
 });
 
 // example the client token
 router.get('/protected', authenticateToken, (req, res) => {
-  console.log("req ->", req)
-  res.json({ message: "Este es un contenido protegido", user: req.user });
+  res.json({ message: "This is protected content", user: req.user });
 });
 
 module.exports = router;
