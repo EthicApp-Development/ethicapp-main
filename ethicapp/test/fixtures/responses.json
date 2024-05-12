@@ -7,7 +7,8 @@
         "content": {
             "respuesta": "Esta es la respuesta a la pregunta"
         },
-        "uses": "Uso de la respuesta"
+        "uses": "Uso de la respuesta",
+        "phase_id": 1
     }
     
 ]

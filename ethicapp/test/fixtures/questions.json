@@ -11,13 +11,13 @@
     "sesion_id": 1
     },
     {
-        "content": {
-            "question": "¿Cuál es la fórmula química del agua?",
-            "correct_answer": "H2O"
-        },
-        "additional_info": "Pregunta sobre química",
-        "type": "text",
-        "text": "Escriba la fórmula química del agua.",
-        "sesion_id": 2
+    "content": {
+        "question": "¿Cuál es la fórmula química del agua?",
+        "correct_answer": "H2O"
+    },
+    "additional_info": "Pregunta sobre química",
+    "type": "text",
+    "text": "Escriba la fórmula química del agua.",
+    "sesion_id": 2
     }
 ]
