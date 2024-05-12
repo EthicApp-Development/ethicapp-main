@@ -5,6 +5,9 @@ const designRouter = require('./designs')
 const userRouter = require('./users')
 const sessionRouter = require('./sessions')
 const loginUserRouter = require('./login-User')
+const groupRouter = require('./groups')
+const chatroomRouter = require('./chatrooms')
+const activiyRouter = require('./activities')
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -13,6 +16,9 @@ app.use('/designs',designRouter);
 app.use('/responses', responseRouter);
 app.use('/users',userRouter);
 app.use('/',sessionRouter);
+app.use('/',groupRouter);
+app.use('/',chatroomRouter);
+app.use('/',activiyRouter);
 app.use('/login',loginUserRouter);
 
 app.get('/', (req, res) => {
