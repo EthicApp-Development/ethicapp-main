@@ -10,6 +10,7 @@ module.exports = {
         anon: true,
         chat: false,
         prev_ans: 'Previous answer A',
+        activity_id: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -19,6 +20,7 @@ module.exports = {
         anon: false,
         chat: true,
         prev_ans: 'Previous answer B',
+        activity_id: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -28,6 +30,7 @@ module.exports = {
         anon: true,
         chat: true,
         prev_ans: 'Previous answer C',
+        activity_id: 2,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -37,6 +40,7 @@ module.exports = {
         anon: true,
         chat: true,
         prev_ans: 'Previous D answer',
+        activity_id: 3,
         createdAt: new Date(),
         updatedAt: new Date()
       }
