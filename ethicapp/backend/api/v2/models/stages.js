@@ -19,7 +19,6 @@ module.exports = (sequelize, DataTypes) => {
     anon: DataTypes.BOOLEAN,
     chats: DataTypes.BOOLEAN,
     prev_ans: DataTypes.CHAR(255),
-    sesion_id: DataTypes.INTEGER,
   }, {
     sequelize,
     modelName: 'Stage',//class

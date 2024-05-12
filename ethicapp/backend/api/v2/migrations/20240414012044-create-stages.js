@@ -29,14 +29,6 @@ module.exports = {
         type: Sequelize.CHAR(255),
         allowNull: true
       },
-      sesion_id: {
-        type: Sequelize.INTEGER,
-        allowNull: true,
-        references: {
-          model: 'sessions',
-          key: 'id'
-        }
-      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE

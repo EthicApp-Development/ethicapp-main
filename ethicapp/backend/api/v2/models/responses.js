@@ -10,7 +10,7 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
+      Response.belongsTo(models.Phase, { foreignKey: 'phase_id' });
     }
   }
   Response.init({
@@ -19,7 +19,8 @@ module.exports = (sequelize, DataTypes) => {
     comment: DataTypes.TEXT,
     stime: DataTypes.DATE,
     content: DataTypes.JSONB,
-    uses: DataTypes.TEXT
+    uses: DataTypes.TEXT,
+    phase_id: DataTypes.INTEGER
   }, {
     sequelize,
     modelName: 'Response',//class

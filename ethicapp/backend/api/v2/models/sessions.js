@@ -18,6 +18,7 @@ module.exports = (sequelize, DataTypes) => {
     descr: DataTypes.TEXT,
     status: DataTypes.INTEGER,
     time: DataTypes.DATE,
+    creator: DataTypes.INTEGER,
     code: DataTypes.STRING(6),
     type: DataTypes.STRING(1),
   }, {
