@@ -38,7 +38,7 @@ router.put('/chatroom/:id', async (req, res) => {
             return res.status(404).json({ status: 'error', message: 'Chatroom not found' });
         }
         await chatroom.update(req.body);
-        res.json({ status: 'success', data: chatrooms });
+        res.json({ status: 'success', data: chatroom });
     } catch (err) {
         console.error(err);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
