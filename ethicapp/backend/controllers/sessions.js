@@ -51,6 +51,7 @@ router.post("/get-session-list", rpg.multiSQL({
             s.options,
             s.archived,
             s.current_stage,
+            s.additional_config,
             (
                 s.id in (SELECT sesid FROM teams)
             ) AS grouped,
@@ -122,11 +123,12 @@ router.post("/add-session-activity", (req, res) => {
     var name =req.body.name;
     var descr = req.body.descr;
     var type = req.body.type;
+    var additionalConfig = JSON.stringify(req.body.additionalConfig);
     var sql = `
     WITH ROWS AS (
-        INSERT INTO sessions(name, descr, creator, TIME, status, TYPE)
+        INSERT INTO sessions(name, descr, creator, TIME, status, TYPE, additional_config)
         VALUES (
-            '${name}', '${descr}', ${uid}, now(), 1, '${type}'
+            '${name}', '${descr}', ${uid}, now(), 1, '${type}', '${additionalConfig}'
         )
         RETURNING id
     )
