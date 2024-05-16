@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('../../backend/api/v2/testApi'); // Suponiendo que el archivo principal de tu aplicación se llama index.js
+const app = require('../../backend/api/v2/testApi'); 
 
 const designsData = require('../fixtures/designs.json');
 describe('CRUD Operations for Designs API', () => {
@@ -14,7 +14,7 @@ describe('CRUD Operations for Designs API', () => {
       .send(newDesignData)
       .expect(201);
 
-    createdDesignId = response.body.data.id; // Suponiendo que tu API devuelve el ID del diseño creado
+    createdDesignId = response.body.data.id;
 
   });
 

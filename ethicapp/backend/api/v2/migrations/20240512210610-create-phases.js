@@ -2,7 +2,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('stages', {
+    await queryInterface.createTable('phases', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -14,20 +14,28 @@ module.exports = {
         allowNull: false
       },
       type: {
-        type: Sequelize.CHAR(15),
+        type: Sequelize.CHAR,
         allowNull: false
       },
       anon: {
         type: Sequelize.BOOLEAN,
-        defaultValue: false
+        allowNull: false
       },
-      chats: {
+      chat: {
         type: Sequelize.BOOLEAN,
-        defaultValue: false
+        allowNull: false
       },
       prev_ans: {
-        type: Sequelize.CHAR(255),
-        allowNull: true
+        type: Sequelize.CHAR,
+        allowNull: false
+      },
+      activity_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'activities',
+          key: 'id'
+        }
       },
       createdAt: {
         allowNull: false,
@@ -40,7 +48,7 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
+    //await queryInterface.dropTable('Phases');
     await queryInterface.dropAllTables();
-    //await queryInterface.dropTable('stages');
   }
 };

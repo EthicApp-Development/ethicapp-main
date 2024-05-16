@@ -86,7 +86,7 @@ module.exports = {
     // });
     await queryInterface.addConstraint('teams', {
       type: 'foreign key',
-      fields: ['sesion_id'],
+      fields: ['session_id'],
       references: {
         table: 'sessions',
         field: 'id'

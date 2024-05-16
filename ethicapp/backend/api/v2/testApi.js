@@ -5,7 +5,7 @@ const designRouter = require('./designs')
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Montar el enrutador para el modelo Question bajo /questions
+//routers
 app.use('/questions', questionsRouter);
 app.use('/designs',designRouter);
 app.use('/responses', responseRouter);
