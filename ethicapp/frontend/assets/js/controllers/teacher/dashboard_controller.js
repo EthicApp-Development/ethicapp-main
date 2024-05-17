@@ -206,6 +206,7 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
             _postdata2 = {
                 stageid: self.iterationIndicator
             };
+            console.log("datos", _postdata2)
             self.dfsStage = [];
             $http.post("get-differentials-stage", _postdata2).success(function(data) {
                 self.dfsStage = data;
@@ -874,7 +875,6 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
 
                         data.anonNames = {};
                         data.sesid = self.selectedSes.id;
-
                         data.chat = res;
                         let i = 0;
                         let abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -889,11 +889,21 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
                         });
 
                         data.stage = self.shared.stagesMap[self.iterationIndicator];
-
                         if(data.stage.type == "team"){
-                            data.arr = self.shared.difTable.filter(e =>
-                                e.tmid == group && !e.group
-                            );
+                            console.log(self.shared.difTable)
+                            console.log(group)
+                            if (group){
+                                data.arr = self.shared.difTable.filter(e =>
+                                    e.tmid == group && !e.group
+                                );
+                            }
+                            else{
+                                data.arr = self.shared.difTable.filter(e =>
+                                    e.uid == uid && !e.group
+                                );
+                            }
+                            
+                            console.log("array",data.arr);
                         }
                         else {
                             data.arr = self.shared.difTable.filter(e => e.uid == uid && !e.group);
