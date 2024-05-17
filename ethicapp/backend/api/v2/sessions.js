@@ -5,6 +5,7 @@ const router = express.Router();
 // Import Model
 const { Sessions, SessionsUsers } = require('../../api/v2/models');
 
+// Configure body-parser to process the body of requests in JSON format.
 router.use(bodyParser.json());
 
 // Read

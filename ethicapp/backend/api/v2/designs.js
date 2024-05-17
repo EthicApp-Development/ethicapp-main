@@ -5,11 +5,12 @@ const router = express.Router();
 // Import Model
 const { Design } = require('../../api/v2/models');
 
-// Configura body-parser para procesar el cuerpo de las solicitudes en formato JSON
+// Configure body-parser to process the body of requests in JSON format.
+
 router.use(bodyParser.json());
 
 // Read
-router.get('/', async (req, res) => {
+router.get('/designs', async (req, res) => {
     try {
       const designs = await Design.findAll();
       res.status(200).json({ status: 'success', data: designs });
@@ -20,7 +21,7 @@ router.get('/', async (req, res) => {
 });
 
 // Create
-router.post('/', async (req, res) => {
+router.post('/designs', async (req, res) => {
     try {
       const design = await Design.create(req.body);
       res.status(201).json({ status: 'success', data: design });
@@ -31,7 +32,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update
-router.put('/:id', async (req, res) => {
+router.put('/designs/:id', async (req, res) => {
     const { id } = req.params;
     try {
       const design = await Design.findByPk(id);
@@ -47,7 +48,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete
-router.delete('/:id', async (req, res) => {
+router.delete('/designs/:id', async (req, res) => {
     const { id } = req.params;
     try {
       const design = await Design.findByPk(id);

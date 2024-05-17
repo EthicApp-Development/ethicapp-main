@@ -11,19 +11,16 @@ const activiyRouter = require('./activities')
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use('/questions', questionsRouter);
-app.use('/designs',designRouter);
-app.use('/responses', responseRouter);
-app.use('/users',userRouter);
+app.use('/',questionsRouter);
+app.use('/',designRouter);
+app.use('/',responseRouter);
+app.use('/',userRouter);
 app.use('/',sessionRouter);
 app.use('/',groupRouter);
 app.use('/',chatroomRouter);
 app.use('/',activiyRouter);
 app.use('/login',loginUserRouter);
 
-app.get('/', (req, res) => {
-    res.send('¡Bienvenido a la API de EthicApp!');
-});
 
 app.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);
