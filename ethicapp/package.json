@@ -11,6 +11,7 @@
   "dependencies": {
     "@aws-sdk/client-ses": "^3.185.0",
     "aws-sdk": "^2.1230.0",
+    "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.0",
     "checklist-model": "1.0.0",
     "cookie-parser": "~1.4.6",
@@ -24,6 +25,7 @@
     "http-parser": "^1.0.3",
     "ioredis": "^5.3.2",
     "json2xls": "^0.1.2",
+    "jsonwebtoken": "^9.0.2",
     "log-timestamp": "^0.3.0",
     "luxon": "^3.4.3",
     "morgan": "^1.10.0",

@@ -2,36 +2,32 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('jigsaw_users', {
+    await queryInterface.createTable('stages', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      stage_id: {
+      number: {
         type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'stages',
-          key: 'id'
-        }
+        allowNull: false
       },
-      user_id: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'users',
-          key: 'id'
-        }
+      type: {
+        type: Sequelize.CHAR(15),
+        allowNull: false
       },
-      role_id: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'jigsaw_roles',
-          key: 'id'
-        }
+      anon: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: false
+      },
+      chats: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: false
+      },
+      prev_ans: {
+        type: Sequelize.CHAR(255),
+        allowNull: true
       },
       createdAt: {
         allowNull: false,
@@ -45,6 +41,6 @@ module.exports = {
   },
   async down(queryInterface, Sequelize) {
     await queryInterface.dropAllTables();
-    //await queryInterface.dropTable('jigsaw_users');
+    //await queryInterface.dropTable('stages');
   }
 };

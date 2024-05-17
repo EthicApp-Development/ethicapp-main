@@ -9,7 +9,6 @@ module.exports = {
         anon: false,
         chats: true,
         prev_ans: null,
-        sesion_id: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -19,7 +18,6 @@ module.exports = {
         anon: true,
         chats: false,
         prev_ans: null,
-        sesion_id: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -29,7 +27,6 @@ module.exports = {
         anon: false,
         chats: true,
         prev_ans: 'Respuestas de la etapa anterior',
-        sesion_id: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -39,7 +36,6 @@ module.exports = {
         anon: false,
         chats: false,
         prev_ans: null,
-        sesion_id: 2,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -49,7 +45,6 @@ module.exports = {
         anon: true,
         chats: true,
         prev_ans: 'Resultados de la prueba inicial',
-        sesion_id: 2,
         createdAt: new Date(),
         updatedAt: new Date()
       }

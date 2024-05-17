@@ -2,26 +2,18 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('actors_selections', {
+    await queryInterface.createTable('jigsaw_users', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      description: {
-        type: Sequelize.TEXT,
-        allowNull: false
-      },
-      orden: {
-        type: Sequelize.INTEGER,
-        allowNull: true
-      },
-      actor_id: {
+      phase_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'actors',
+          model: 'phases',
           key: 'id'
         }
       },
@@ -33,11 +25,11 @@ module.exports = {
           key: 'id'
         }
       },
-      phase_id: {
+      role_id: {
         type: Sequelize.INTEGER,
-        allowNull: true,
+        allowNull: false,
         references: {
-          model: 'phases',
+          model: 'jigsaw_roles',
           key: 'id'
         }
       },
@@ -53,6 +45,6 @@ module.exports = {
   },
   async down(queryInterface, Sequelize) {
     await queryInterface.dropAllTables();
-    //await queryInterface.dropTable('actors_selections');
+    //await queryInterface.dropTable('jigsaw_users');
   }
 };

@@ -8,7 +8,7 @@ module.exports = {
         orden: 1,
         actor_id: 1,
         user_id: 1,
-        stage_id: 1,
+        phase_id: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -17,7 +17,7 @@ module.exports = {
         orden: 2,
         actor_id: 2,
         user_id: 2,
-        stage_id: 2,
+        phase_id: 2,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -26,7 +26,7 @@ module.exports = {
         orden: 3,
         actor_id: 3,
         user_id: 3,
-        stage_id: 1,
+        phase_id: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -35,7 +35,7 @@ module.exports = {
         orden: 4,
         actor_id: 4,
         user_id: 4,
-        stage_id: 3,
+        phase_id: 3,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -44,7 +44,7 @@ module.exports = {
         orden: 5,
         actor_id: 5,
         user_id: 5,
-        stage_id: 2,
+        phase_id: 2,
         createdAt: new Date(),
         updatedAt: new Date()
       }

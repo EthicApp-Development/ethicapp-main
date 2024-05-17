@@ -11,7 +11,8 @@ module.exports = {
         content: JSON.stringify({ key1: 'value1', key2: 'value2' }),
         uses: 'Usos de la respuesta 1',
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        phase_id: 1
       },
       {
         uid: 2,
@@ -21,7 +22,8 @@ module.exports = {
         content: JSON.stringify({ key1: 'value1', key2: 'value2' }),
         uses: 'Usos de la respuesta 2',
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        phase_id: 1
       },
       {
         uid: 3,
@@ -31,7 +33,8 @@ module.exports = {
         content: JSON.stringify({ key1: 'value1', key2: 'value2' }),
         uses: 'Usos de la respuesta 3',
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        phase_id: 1
       },
       {
         uid: 4,
@@ -41,7 +44,8 @@ module.exports = {
         content: JSON.stringify({ key1: 'value1', key2: 'value2' }),
         uses: 'Usos de la respuesta 4',
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        phase_id:2
       },
       {
         uid: 5,
@@ -51,7 +55,8 @@ module.exports = {
         content: JSON.stringify({ key1: 'value1', key2: 'value2' }),
         uses: 'Usos de la respuesta 5',
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        phase_id:3
       }
     ], {});
   },
