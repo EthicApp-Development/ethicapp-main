@@ -2,57 +2,34 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('chatrooms', {
+    await queryInterface.createTable('jigsaw_users', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      sesion_id: {
+      phase_id: {
         type: Sequelize.INTEGER,
-        allowNull: true,
+        allowNull: false,
         references: {
-          model: 'sessions',
-          key: 'id'
-        }
-      },
-      stage_id: {
-        type: Sequelize.INTEGER,
-        allowNull: true,
-        references: {
-          model: 'stages',
+          model: 'phases',
           key: 'id'
         }
       },
       user_id: {
         type: Sequelize.INTEGER,
-        allowNull: true,
+        allowNull: false,
         references: {
           model: 'users',
           key: 'id'
         }
       },
-      chat:{
-        type: Sequelize.TEXT,
-      },
-      message:{
-        type: Sequelize.TEXT,
-      },
-      content: {
-        type: Sequelize.TEXT,
-        allowNull: true
-      },
-      stime: {
-        type: Sequelize.DATE,
-        allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
-      },
-      parent_id: {
+      role_id: {
         type: Sequelize.INTEGER,
-        allowNull: true,
+        allowNull: false,
         references: {
-          model: 'chatrooms',
+          model: 'jigsaw_roles',
           key: 'id'
         }
       },
@@ -68,5 +45,6 @@ module.exports = {
   },
   async down(queryInterface, Sequelize) {
     await queryInterface.dropAllTables();
+    //await queryInterface.dropTable('jigsaw_users');
   }
 };

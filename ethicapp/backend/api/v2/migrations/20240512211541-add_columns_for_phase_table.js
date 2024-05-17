@@ -25,6 +25,22 @@ module.exports = {
       onUpdate: 'CASCADE',
       onDelete: 'SET NULL' 
     });
+    await queryInterface.addColumn('sessions', 'current_phases', {
+      type: Sequelize.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'phases',
+        key: 'id'
+      }
+    });
+    await queryInterface.addColumn('teams', 'phases_id', {
+      type: Sequelize.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'phases',
+        key: 'id'
+      }
+    });
   },
 
   async down (queryInterface, Sequelize) {

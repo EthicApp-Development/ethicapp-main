@@ -33,11 +33,11 @@ module.exports = {
           key: 'id'
         }
       },
-      stage_id: {
+      phase_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
-          model: 'stages',
+          model: 'phases',
           key: 'id'
         }
       },
