@@ -26,7 +26,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'TeacherAccountRequest',//class
-    tableName: 'teachers_accounts_requests', //Table
+    tableName: 'teacher_account_requests', //Table
   });
 
   return TeacherAccountRequest;

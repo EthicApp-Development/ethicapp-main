@@ -14,12 +14,9 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Response.init({
-    uid: DataTypes.INTEGER,
-    description: DataTypes.TEXT,
-    comment: DataTypes.TEXT,
-    stime: DataTypes.DATE,
+    user_id: DataTypes.INTEGER,
     content: DataTypes.JSONB,
-    uses: DataTypes.TEXT,
+    type: DataTypes.STRING,
     phase_id: DataTypes.INTEGER
   }, {
     sequelize,

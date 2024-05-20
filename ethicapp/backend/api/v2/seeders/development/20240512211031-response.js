@@ -4,56 +4,41 @@ module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.bulkInsert('responses', [
       {
-        uid: 1,
-        description: 'Descripción de la respuesta 1',
-        comment: 'Comentario de la respuesta 1',
-        stime: new Date(),
+        user_id: 1,
         content: JSON.stringify({ key1: 'value1', key2: 'value2' }),
-        uses: 'Usos de la respuesta 1',
+        type: "Ejemplo",
         createdAt: new Date(),
         updatedAt: new Date(),
         phase_id: 1
       },
       {
-        uid: 2,
-        description: 'Descripción de la respuesta 2',
-        comment: 'Comentario de la respuesta 2',
-        stime: new Date(),
+        user_id: 2,
         content: JSON.stringify({ key1: 'value1', key2: 'value2' }),
-        uses: 'Usos de la respuesta 2',
+        type: "Ejemplo 2",
         createdAt: new Date(),
         updatedAt: new Date(),
         phase_id: 1
       },
       {
-        uid: 3,
-        description: 'Descripción de la respuesta 3',
-        comment: 'Comentario de la respuesta 3',
-        stime: new Date(),
+        user_id: 3,
         content: JSON.stringify({ key1: 'value1', key2: 'value2' }),
-        uses: 'Usos de la respuesta 3',
+        type: "Ejemplo 3",
         createdAt: new Date(),
         updatedAt: new Date(),
         phase_id: 1
       },
       {
-        uid: 4,
-        description: 'Descripción de la respuesta 4',
-        comment: 'Comentario de la respuesta 4',
-        stime: new Date(),
+        user_id: 4,
         content: JSON.stringify({ key1: 'value1', key2: 'value2' }),
-        uses: 'Usos de la respuesta 4',
+        type: "Ejemplo 4",
         createdAt: new Date(),
         updatedAt: new Date(),
         phase_id:2
       },
       {
-        uid: 5,
-        description: 'Descripción de la respuesta 5',
-        comment: 'Comentario de la respuesta 5',
-        stime: new Date(),
+        user_id: 5,
         content: JSON.stringify({ key1: 'value1', key2: 'value2' }),
-        uses: 'Usos de la respuesta 5',
+        type: "Ejemplo 5",
         createdAt: new Date(),
         updatedAt: new Date(),
         phase_id:3
