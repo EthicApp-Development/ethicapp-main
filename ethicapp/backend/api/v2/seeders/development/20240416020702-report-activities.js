@@ -2,7 +2,7 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkInsert('report_activities', [
+    await queryInterface.bulkInsert('activity_reports', [
       {
         creation_date: new Date(),
         professor: 1, // ID del profesor asociado
@@ -28,6 +28,6 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkDelete('report_activities', null, {});
+    await queryInterface.bulkDelete('activity_reports', null, {});
   }
 };

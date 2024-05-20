@@ -3,7 +3,7 @@ const {
   Model
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-  class report_create_account extends Model {
+  class AccountCreationReport extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -13,14 +13,14 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
     }
   }
-  report_create_account.init({
+  AccountCreationReport.init({
     creation_date: DataTypes.DATE,
     is_teacher: DataTypes.BOOLEAN,
     count: DataTypes.INTEGER
   }, {
     sequelize,
-    modelName: 'report_create_account',//class
-    tableName: 'report_create_accounts'
+    modelName: 'AccountCreationReport',//class
+    tableName: 'account_creation_reports'
   });
-  return report_create_account;
+  return AccountCreationReport;
 };

@@ -2,7 +2,7 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkInsert('report_logins', [
+    await queryInterface.bulkInsert('login_reports', [
       {
         login_date: new Date(),
         is_teacher: true, // Inicio de sesión de un profesor
@@ -28,6 +28,6 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkDelete('report_logins', null, {});
+    await queryInterface.bulkDelete('login_reports', null, {});
   }
 };
