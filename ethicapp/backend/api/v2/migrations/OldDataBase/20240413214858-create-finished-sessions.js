@@ -19,7 +19,7 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      sesion_id: {
+      session_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {

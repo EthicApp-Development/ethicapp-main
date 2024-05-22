@@ -9,7 +9,7 @@ module.exports = {
         text_right: 'El té es una bebida aromática preparada al verter agua caliente sobre hojas de té.',
         orden: 1,
         creator: 1,
-        sesion_id: 1,
+        session_id: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -19,7 +19,7 @@ module.exports = {
         text_right: 'Los gatos son animales independientes y reservados que disfrutan de su propia compañía.',
         orden: 2,
         creator: 2,
-        sesion_id: 1,
+        session_id: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -29,7 +29,7 @@ module.exports = {
         text_right: 'La hamburguesa es un sándwich que consta de una o más hamburguesas de carne entre dos trozos de pan.',
         orden: 3,
         creator: 3,
-        sesion_id: 1,
+        session_id: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -39,7 +39,7 @@ module.exports = {
         text_right: 'El invierno es una estación fría del año con días cortos y temperaturas bajas.',
         orden: 4,
         creator: 4,
-        sesion_id: 1,
+        session_id: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -49,7 +49,7 @@ module.exports = {
         text_right: 'Los libros son obras escritas que cuentan historias a través de palabras impresas en papel.',
         orden: 5,
         creator: 5,
-        sesion_id: 1,
+        session_id: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       }

@@ -10,7 +10,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Chatroom.init({
-    sesion_id: DataTypes.INTEGER,
+    session_id: DataTypes.INTEGER,
     stage_id: DataTypes.INTEGER,
     user_id: DataTypes.INTEGER,
     chat: DataTypes.TEXT,

@@ -38,7 +38,7 @@ module.exports = {
       //   type: Sequelize.TEXT,
       //   allowNull: true
       // },      
-      sesion_id: {
+      session_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {

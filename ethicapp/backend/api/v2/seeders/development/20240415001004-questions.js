@@ -8,7 +8,7 @@ module.exports = {
         additional_info: 'Pregunta sobre geografía',
         type: 'choice',
         text: 'Seleccione la capital de Francia.',
-        sesion_id: 1, 
+        session_id: 1, 
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -17,7 +17,7 @@ module.exports = {
         additional_info: 'Pregunta sobre química',
         type: 'text',
         text: 'Escriba la fórmula química del agua.',
-        sesion_id: 1, 
+        session_id: 1, 
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -26,7 +26,7 @@ module.exports = {
         additional_info: 'Pregunta sobre fisica',
         type: 'text',
         text: 'Escriba la differencia de peso',
-        sesion_id: 2, 
+        session_id: 2, 
         createdAt: new Date(),
         updatedAt: new Date()
       },

@@ -16,7 +16,7 @@ module.exports = (sequelize, DataTypes) => {
   Document.init({
     title: DataTypes.TEXT,
     path: DataTypes.TEXT,
-    sesion_id: DataTypes.INTEGER,
+    session_id: DataTypes.INTEGER,
     uploader: DataTypes.INTEGER,
   }, {
     sequelize,

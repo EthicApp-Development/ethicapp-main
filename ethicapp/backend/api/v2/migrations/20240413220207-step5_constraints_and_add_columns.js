@@ -5,7 +5,7 @@ module.exports = {
   async up (queryInterface, Sequelize) {
     // await queryInterface.addConstraint('sessions_questions_texts', {
     //   type: 'foreign key',
-    //   fields: ['sesion_id'],
+    //   fields: ['session_id'],
     //   references: {
     //     table: 'sessions',
     //     field: 'id'

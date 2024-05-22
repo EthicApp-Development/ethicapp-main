@@ -4,7 +4,7 @@ module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.bulkInsert('chatrooms', [
       {
-        sesion_id: 1,
+        session_id: 1,
         phase_id: 1,
         user_id: 1,
         content: '¡Hola a todos! ¿Cómo están?',
@@ -14,7 +14,7 @@ module.exports = {
         updatedAt: new Date()
       },
       {
-        sesion_id: 1,
+        session_id: 1,
         phase_id: 1,
         user_id: 2,
         content: '¡Hola! Estoy bien, gracias por preguntar.',
@@ -24,7 +24,7 @@ module.exports = {
         updatedAt: new Date()
       },
       {
-        sesion_id: 1,
+        session_id: 1,
         phase_id: 2,
         user_id: 3,
         content: '¿Alguien tiene alguna pregunta sobre el tema que estamos discutiendo?',
@@ -34,7 +34,7 @@ module.exports = {
         updatedAt: new Date()
       },
       {
-        sesion_id: 1,
+        session_id: 1,
         phase_id: 2,
         user_id: 4,
         content: 'Sí, tengo una pregunta...',
@@ -44,7 +44,7 @@ module.exports = {
         updatedAt: new Date()
       },
       {
-        sesion_id: 2,
+        session_id: 2,
         phase_id: 3,
         user_id: 5,
         content: '¡Buen trabajo, equipo!',

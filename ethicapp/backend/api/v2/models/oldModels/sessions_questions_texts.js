@@ -14,7 +14,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   SessionQuestionText.init({
-    sesion_id: DataTypes.INTEGER,
+    session_id: DataTypes.INTEGER,
     title: DataTypes.TEXT,
     content: DataTypes.TEXT
   }, {

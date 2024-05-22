@@ -14,7 +14,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   SessionsUsers.init({
-    sesion_id: DataTypes.INTEGER,
+    session_id: DataTypes.INTEGER,
     user_id: DataTypes.INTEGER,
   }, {
     sequelize,

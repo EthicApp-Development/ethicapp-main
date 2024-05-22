@@ -84,7 +84,7 @@ module.exports = {
       [
         {
           id: 1,
-          sesion_id: 1, // Assuming session 1
+          session_id: 1, // Assuming session 1
           user_id: 1, // Assuming user 1
           created_at: new Date(),
           updated_at: new Date()
@@ -99,7 +99,7 @@ module.exports = {
         {
           title: 'Documento 1',
           path: '/path/to/document1.pdf',
-          sesion_id: 1,
+          session_id: 1,
           uploader: 1,
           created_at: new Date(),
           updated_at: new Date()
@@ -107,7 +107,7 @@ module.exports = {
         {
           title: 'Documento 2',
           path: '/path/to/document2.pdf',
-          sesion_id: 1,
+          session_id: 1,
           uploader: 2,
           created_at: new Date(),
           updated_at: new Date()
@@ -115,7 +115,7 @@ module.exports = {
         {
           title: 'Documento 3',
           path: '/path/to/document3.pdf',
-          sesion_id: 2,
+          session_id: 2,
           uploader: 1,
           created_at: new Date(),
           updated_at: new Date()
@@ -134,7 +134,7 @@ module.exports = {
           answer: 1,
           comment: 'Comment for question 1',
           other: 'Other info for question 1',
-          sesion_id: 1, // Assuming session 1
+          session_id: 1, // Assuming session 1
           created_at: new Date(),
           updated_at: new Date()
         },
@@ -168,7 +168,7 @@ module.exports = {
       [
         {
           id: 1,
-          sesion_id: 1, // Assuming session 1
+          session_id: 1, // Assuming session 1
           created_at: new Date(),
           updated_at: new Date()
         },

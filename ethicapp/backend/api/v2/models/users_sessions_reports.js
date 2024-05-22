@@ -15,11 +15,11 @@ module.exports = (sequelize, DataTypes) => {
   }
   UserSessionReport.init({
     user_id: DataTypes.INTEGER,
-    sesion_id: DataTypes.INTEGER
+    session_id: DataTypes.INTEGER
   }, {
     sequelize,
     modelName: 'UserSessionReport',//class
-    tableName: 'user_sessions_reports' //Table
+    tableName: 'user_session_reports' //Table
   });
   return UserSessionReport;
 };

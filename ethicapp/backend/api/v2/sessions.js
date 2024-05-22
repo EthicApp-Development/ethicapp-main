@@ -3,7 +3,7 @@ const bodyParser = require('body-parser'); // Importa body-parser
 const router = express.Router();
 
 // Import Model
-const { Sessions, SessionsUsers } = require('../../api/v2/models');
+const { Session, SessionsUsers } = require('../../api/v2/models');
 
 // Configure body-parser to process the body of requests in JSON format.
 router.use(bodyParser.json());
@@ -11,7 +11,7 @@ router.use(bodyParser.json());
 // Read
 router.get('/sessions', async (req, res) => {
     try {
-        const sessions = await Sessions.findAll();
+        const sessions = await Session.findAll();
         res.status(200).json({ status: 'success', data: sessions });
     } catch (err) {
         console.error(err);
@@ -22,7 +22,7 @@ router.get('/sessions', async (req, res) => {
 // Create
 router.post('/sessions', async (req, res) => {
     try {
-        const session = await Sessions.create(req.body);
+        const session = await Session.create(req.body);
         res.status(201).json({ status: 'success', data: session });
     } catch (err) {
         console.error(err);
@@ -34,9 +34,9 @@ router.post('/sessions', async (req, res) => {
 router.put('/sessions/:id', async (req, res) => {
     const { id } = req.params;
     try {
-        const session = await Sessions.findByPk(id);
+        const session = await Session.findByPk(id);
         if (!session) {
-            return res.status(404).json({ status: 'error', message: 'Sessions not found' });
+            return res.status(404).json({ status: 'error', message: 'Session not found' });
         }
         await session.update(req.body);
         res.json({ status: 'success', data: session });
@@ -50,9 +50,9 @@ router.put('/sessions/:id', async (req, res) => {
 router.delete('/sessions/:id', async (req, res) => {
     const { id } = req.params;
     try {
-        const session = await Sessions.findByPk(id);
+        const session = await Session.findByPk(id);
         if (!session) {
-            return res.status(404).json({ status: 'error', message: 'Sessions not found' });
+            return res.status(404).json({ status: 'error', message: 'Session not found' });
         }
         await session.destroy();
         res.status(204).end();
@@ -68,12 +68,12 @@ router.delete('/sessions/:id', async (req, res) => {
 router.post('/sessions/:sessionId/users', async (req, res) => {
     const { sessionId } = req.params;
     try {
-        const session = await Sessions.findByPk(sessionId);
+        const session = await Session.findByPk(sessionId);
         if (!session) {
             return res.status(404).json({ status: 'error', message: 'Session not found' });
         }
         console.log("req.body.user_id -> ", req.body.user_id)
-        const sessionUser = await SessionsUsers.create({ sesion_id: sessionId, user_id: req.body.user_id });
+        const sessionUser = await SessionsUsers.create({ session_id: sessionId, user_id: req.body.user_id });
         res.status(201).json({ status: 'success', data: sessionUser });
     } catch (err) {
         console.error(err);
@@ -85,7 +85,7 @@ router.post('/sessions/:sessionId/users', async (req, res) => {
 router.get('/sessions/:sessionId/users', async (req, res) => {
     const { sessionId } = req.params;
     try {
-        const sessionUsers = await SessionsUsers.findAll({ where: { sesion_id: sessionId } });
+        const sessionUsers = await SessionsUsers.findAll({ where: { session_id: sessionId } });
         res.status(200).json({ status: 'success', data: sessionUsers });
     } catch (err) {
         console.error(err);
@@ -97,11 +97,11 @@ router.get('/sessions/:sessionId/users', async (req, res) => {
 router.delete('/sessions/:sessionId/users/:userId', async (req, res) => {
     const { sessionId, userId } = req.params;
     try {
-        const session = await Sessions.findByPk(sessionId);
+        const session = await Session.findByPk(sessionId);
         if (!session) {
             return res.status(404).json({ status: 'error', message: 'Session not found' });
         }
-        const sessionUser = await SessionsUsers.findOne({ where: { sesion_id: sessionId, user_id: userId } });
+        const sessionUser = await SessionsUsers.findOne({ where: { session_id: sessionId, user_id: userId } });
         if (!sessionUser) {
             return res.status(404).json({ status: 'error', message: 'Session user not found' });
         }

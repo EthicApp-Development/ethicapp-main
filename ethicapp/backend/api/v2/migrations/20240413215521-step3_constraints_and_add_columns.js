@@ -3,7 +3,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up (queryInterface, Sequelize) {
-    await queryInterface.addConstraint('user_sessions_reports', {
+    await queryInterface.addConstraint('user_session_reports', {
       type: 'foreign key',
       fields: ['user_id'],
       references: {
@@ -13,9 +13,9 @@ module.exports = {
       onDelete: 'CASCADE',
       onUpdate: 'CASCADE'
     });
-    await queryInterface.addConstraint('user_sessions_reports', {
+    await queryInterface.addConstraint('user_session_reports', {
       type: 'foreign key',
-      fields: ['sesion_id'],
+      fields: ['session_id'],
       references: {
         table: 'sessions',
         field: 'id'

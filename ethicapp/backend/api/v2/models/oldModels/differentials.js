@@ -19,7 +19,7 @@ module.exports = (sequelize, DataTypes) => {
     text_right: DataTypes.TEXT,
     orden: DataTypes.INTEGER,
     creator: DataTypes.INTEGER,
-    sesion_id: DataTypes.INTEGER
+    session_id: DataTypes.INTEGER
   }, {
     sequelize,
     modelName: 'SemanticDifferentialItem',

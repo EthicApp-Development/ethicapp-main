@@ -16,7 +16,7 @@ module.exports = {
     });
     await queryInterface.addConstraint('sessions_users', {
       type: 'foreign key',
-      fields: ['sesion_id'],
+      fields: ['session_id'],
       references: {
         table: 'sessions',
         field: 'id'
@@ -36,7 +36,7 @@ module.exports = {
     });
     // await queryInterface.addConstraint('documents', {
     //   type: 'foreign key',
-    //   fields: ['sesion_id'],
+    //   fields: ['session_id'],
     //   references: {
     //     table: 'sessions',
     //     field: 'id'
@@ -56,7 +56,7 @@ module.exports = {
     // });
     await queryInterface.addConstraint('questions', {
       type: 'foreign key',
-      fields: ['sesion_id'],
+      fields: ['session_id'],
       references: {
         table: 'sessions',
         field: 'id'
