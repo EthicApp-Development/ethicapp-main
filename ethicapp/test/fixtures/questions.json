@@ -1,0 +1,23 @@
+[
+    {
+    "content": {
+        "question": "¿Cuál es tu color favorito?",
+        "options": ["Violeta", "Negro", "Azul"],
+        "correct_answer": "Azul"
+    },
+    "additional_info": "Colores",
+    "type": "choice",
+    "text": "¿Cuál es tu color favorito?",
+    "sesion_id": 1
+    },
+    {
+    "content": {
+        "question": "¿Cuál es la fórmula química del agua?",
+        "correct_answer": "H2O"
+    },
+    "additional_info": "Pregunta sobre química",
+    "type": "text",
+    "text": "Escriba la fórmula química del agua.",
+    "sesion_id": 2
+    }
+]
