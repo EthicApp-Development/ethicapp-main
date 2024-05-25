@@ -1,6 +1,6 @@
 [
     {
-        "uid": 1,
+        "user_id": 1,
         "description": "Esta es la descripción de la respuesta",
         "comment": "Este es un comentario adicional",
         "stime": "2024-04-29T12:00:00Z",
@@ -9,6 +9,11 @@
         },
         "uses": "Uso de la respuesta",
         "phase_id": 1
+    },
+    {
+        "user_id": 1,
+        "description": "Esta es la respuesta al comentario",
+        "comment": "segundo comentario importante"
     }
     
 ]

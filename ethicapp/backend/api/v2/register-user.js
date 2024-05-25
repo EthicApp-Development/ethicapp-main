@@ -1,16 +1,15 @@
 const express = require('express');
-const bodyParser = require('body-parser'); // Importbody-parser
+const bodyParser = require('body-parser');
 const router = express.Router();
 
 // Import Model
-
 const { User } = require('../../api/v2/models');
 
 // Configure body-parser to process the body of requests in JSON format.
 router.use(bodyParser.json());
 
 // Read
-router.get('/users', async (req, res) => {
+router.get('/register/users', async (req, res) => {
     try {
         const users = await User.findAll();
         res.status(200).json({ status: 'success', data: users });
@@ -20,8 +19,9 @@ router.get('/users', async (req, res) => {
     }
 });
 
-router.post('/users', async (req, res) => {
-    console.log('req.body -> ', req.body)
+// Create
+router.post('/register/users', async (req, res) => {
+    console.log('req.body -> ', req.body);
     const { pass, pass_confirmation } = req.body;
     
     // Validate password length
@@ -44,7 +44,7 @@ router.post('/users', async (req, res) => {
 });
 
 // Update
-router.put('/users/:id', async (req, res) => {
+router.put('/register/users/:id', async (req, res) => {
     const { id } = req.params;
     try {
         const user = await User.findByPk(id);
@@ -60,7 +60,7 @@ router.put('/users/:id', async (req, res) => {
 });
 
 // Delete
-router.delete('/users/:id', async (req, res) => {
+router.delete('/register/users/:id', async (req, res) => {
     const { id } = req.params;
     try {
         const user = await User.findByPk(id);

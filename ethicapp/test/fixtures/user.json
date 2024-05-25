@@ -1,0 +1,29 @@
+[
+    {
+        "name": "John Doe",
+        "rut": "12345678-9",
+        "pass": "password123",
+        "pass_confirmation": "password123",
+        "mail": "john.doe@example.com",
+        "sex": "M",
+        "role": "U"
+    },
+    {
+        "name": "John Doe",
+        "rut": "12345678-9",
+        "pass": "passwords",
+        "pass_confirmation": "contrasena",
+        "mail": "john.doe@example.com",
+        "sex": "M",
+        "role": "U" 
+    },
+    {
+        "name": "John Doe",
+        "rut": "12345678-9",
+        "pass": "pass",
+        "pass_confirmation": "pass",
+        "mail": "john.doe@example.com",
+        "sex": "M",
+        "role": "U"
+    }
+]

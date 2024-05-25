@@ -21,7 +21,7 @@ app.use('/',groupRouter);
 app.use('/',chatroomRouter);
 app.use('/',activityRouter);
 app.use('/login',loginUserRouter);
-app.use('/register',registerUserRouter)
+app.use('/',registerUserRouter)
 
 
 app.listen(PORT, () => {
