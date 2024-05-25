@@ -20,7 +20,7 @@ app.use('/',sessionRouter);
 app.use('/',groupRouter);
 app.use('/',chatroomRouter);
 app.use('/',activityRouter);
-app.use('/login',loginUserRouter);
+app.use('/',loginUserRouter);
 app.use('/',registerUserRouter)
 
 

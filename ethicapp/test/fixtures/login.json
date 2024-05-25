@@ -1,0 +1,14 @@
+[
+    {
+        "mail": "nonexistent@example.com",
+        "pass": "password123"
+    },
+    {
+        "mail": "john.doe@example.com",
+        "pass": "invalidpassword"
+    },
+    {
+        "mail": "john.doe@example.com",
+        "pass": "password123"
+    }
+]
