@@ -29,7 +29,6 @@ router.post('/sessions', async (req, res) => {
         const sessionData = {
             ...req.body,
             code: code,
-            status: 'open'
         };
 
         const session = await Session.create(sessionData);
@@ -38,7 +37,7 @@ router.post('/sessions', async (req, res) => {
             code: session.code,
             status: session.status
         };
-        console.log("code --> ",code)
+        console.log("sessionDescriptor.code =>", sessionDescriptor.code)
         console.log("sessionDescriptor -->", sessionDescriptor)
         res.status(201).json({ status: 'success', data: sessionDescriptor });
     } catch (err) {
