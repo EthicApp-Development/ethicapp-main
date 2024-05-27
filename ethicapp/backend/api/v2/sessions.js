@@ -1,6 +1,8 @@
 const express = require('express');
 const bodyParser = require('body-parser'); // Importa body-parser
 const router = express.Router();
+const crypto = require('crypto');
+
 
 // Import Model
 const { Session, SessionsUsers } = require('../../api/v2/models');
@@ -22,13 +24,29 @@ router.get('/sessions', async (req, res) => {
 // Create
 router.post('/sessions', async (req, res) => {
     try {
-        const session = await Session.create(req.body);
-        res.status(201).json({ status: 'success', data: session });
+        const code = crypto.randomBytes(3).toString('hex');
+        
+        const sessionData = {
+            ...req.body,
+            code: code,
+            status: 'open'
+        };
+
+        const session = await Session.create(sessionData);
+        const sessionDescriptor = {
+            id: session.id,
+            code: session.code,
+            status: session.status
+        };
+        console.log("code --> ",code)
+        console.log("sessionDescriptor -->", sessionDescriptor)
+        res.status(201).json({ status: 'success', data: sessionDescriptor });
     } catch (err) {
         console.error(err);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
-});
+}); 
+
 
 // Update
 router.put('/sessions/:id', async (req, res) => {

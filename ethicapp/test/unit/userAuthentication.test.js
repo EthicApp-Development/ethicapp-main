@@ -4,7 +4,7 @@ const bodyParser = require('body-parser');
 const { User } = require('../../backend/api/v2/models');
 const loginRouter =  require('../../backend/api/v2/login-user');
 const bcrypt = require('bcryptjs');
-const loginData = require('../fixtures/login.json')
+const loginData = require('../fixtures/logins.json')
 
 const app = express();
 app.use(bodyParser.json());

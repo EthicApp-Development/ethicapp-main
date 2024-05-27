@@ -3,7 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const { User } = require('../../backend/api/v2/models');
 const registerUserRouter = require('../../backend/api/v2/register-user');
-const userData = require('../fixtures/user.json')
+const userData = require('../fixtures/users.json')
 
 const app = express();
 app.use(bodyParser.json());
