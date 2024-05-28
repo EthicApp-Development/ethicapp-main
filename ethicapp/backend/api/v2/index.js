@@ -9,6 +9,7 @@ const registerUserRouter = require('./register-user')
 const groupRouter = require('./groups')
 const chatroomRouter = require('./chatrooms')
 const activityRouter = require('./activities')
+const sessionUserRouter = require('./sessions-users')
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -21,7 +22,8 @@ app.use('/',groupRouter);
 app.use('/',chatroomRouter);
 app.use('/',activityRouter);
 app.use('/',loginUserRouter);
-app.use('/',registerUserRouter)
+app.use('/',registerUserRouter);
+app.use('/',sessionUserRouter)
 
 
 app.listen(PORT, () => {

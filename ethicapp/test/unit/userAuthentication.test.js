@@ -69,7 +69,6 @@ describe('User Authentication', () => {
         const res = await request(app)
             .post('/login_user')
             .send(successUser)
-        console.log(res.body);
         expect(res.statusCode).toEqual(200);
         expect(res.body).toHaveProperty('token');
     });
