@@ -90,6 +90,10 @@ def get_winners_amount_from(finalists_amount):
     # return math.ceil(finalists_amount / 10)
     return 5
 
+def validate_total_comments_amount(comments_amount):
+    minimum_required = 10
+    if comments_amount < minimum_required:
+        raise ValueError(f"ERROR: comments_amount {comments_amount} is less than the required mimimun amount of comments {minimum_required}")
 
 def validation_amount_comments(comments_amount, finalists_amount, winners_amount):
     '''
@@ -137,9 +141,7 @@ def client_callback(result):
     return {'result': result}
 
 def extract_text_from_pdf_url(pdf_url):
-    print("in loop: ")
     response = requests.get(pdf_url)
-    print("url_response: ", response)
     if response.status_code == 200:
         pdf_content = BytesIO(response.content)
         pdf_reader = PdfReader(pdf_content)
@@ -151,6 +153,7 @@ def extract_text_from_pdf_url(pdf_url):
 
         return text
     else:
+        raise ValueError(f"ERROR: PDF file not found or URL could not be reached")
         return ''
 
 def clean_text(text):
@@ -198,8 +201,6 @@ def get_top_worst_comments(self, params, model):
     
     case_text = extract_text_from_pdf_url(case_text_url)
     case_text = remove_stop_word_from_text(case_text)
-    print("case text: ",case_text)
-    print("phase content: ", phase_contents)
     
     response_selection = []
     for i in range(len(phase_contents)):
@@ -226,12 +227,12 @@ def get_top_worst_comments(self, params, model):
             
             dic = {'text': comment_string, 'embedding': get_embbedings_from_text(model, processed_comment), 'id': comment_id, 'user_id': user_id}
             comments.append(dic)
-         
+        
+        validate_total_comments_amount(len(comments))
         finalists_amount = get_finalist_amount_from(len(ordered_responses))
         winners_amount = get_winners_amount_from(finalists_amount)
 
-        top_comments = get_top_comments(question_embedding, case_text_embedding, comments, finalists_amount, winners_amount)
-        worst_comments = get_worst_comments(question_embedding, case_text_embedding, comments, finalists_amount, winners_amount)
+        top_comments, worst_comments = get_top_worst_classification(question_embedding, case_text_embedding, comments, finalists_amount, winners_amount)
         
         # top worst comments structure => [[comment, str(similarity), id, user_id],...]
         response_structure = []
@@ -275,74 +276,40 @@ def push_Redis_element(key, element):
     
 
 #comment = [{text, embedding}, ...]
-def get_top_comments(question_embedding, case_text_embedding, comments, finalists_amount, winners_amount):
-    '''
-    Get top comments with cosine similarity.
 
-    Args:
-        question_embedding (List[float]): Embedding of question.
-        case_text_embedding (List[float]): Embedding of case text.
-        comments (Dict[str, Union[str, float]]): Comments with their embedding.
-        finalists_amount (int): finalists amount of comments.
-        winners_amount (int): winners amount of comments.
-    
-    Returns:
-        List[[float, str]]: List of tops comments with their cosine similarity.
-    '''
+def get_top_worst_classification(question_embedding, case_text_embedding, comments, finalists_amount, winners_amount):
     comments_question_similarity = []
     
     validation_amount_comments(len(comments), finalists_amount, winners_amount)
-
+    
     for comment in comments:
         similarity = cosine_similarity(question_embedding, comment['embedding'])
         comments_question_similarity.append([comment['text'], similarity, comment['embedding'], comment['id'], comment['user_id']])
-
+    
+    # Lambda function to the Similarity
     comments_question_similarity.sort(key=lambda x: x[1], reverse = True)
-
-    comments_case_similarity = []
-    for comment, _similarity, comment_embedding, id, user_id in comments_question_similarity[0:finalists_amount]:
+    
+    # Top Comments
+    comments_case_similarity_top = []
+    for comment, _similarity, comment_embedding, id, user_id in comments_question_similarity[  : finalists_amount]:
         similarity = cosine_similarity(case_text_embedding, comment_embedding)
-        comments_case_similarity.append([comment, str(similarity), id, user_id])
+        comments_case_similarity_top.append([comment, str(similarity), id, user_id])
     
-    comments_case_similarity.sort(key=lambda x: x[1], reverse = True)
-
-    top_comments = comments_case_similarity[0:winners_amount]
-    return top_comments
-
-
-def get_worst_comments(question_embedding, case_text_embedding, comments, finalists_amount, winners_amount):
-    '''
-    Get worst comments with cosine similarity.
-
-    Args:
-        question_embedding (List[float]): Embedding of question.
-        case_text_embedding (List[float]): Embedding of case text.
-        comments (Dict[str, Union[str, float]]): Comments with their embedding.
-        finalists_amount (int): finalists amount of comments.
-        winners_amount (int): winners amount of comments.
+    comments_case_similarity_top.sort(key=lambda x: x[1], reverse = True)
     
-    Returns:
-        List[[float, str]]: List of worst comments with their cosine similarity.
-    '''
-    comments_question_similarity = []
+    top_comments = comments_case_similarity_top[  : winners_amount]
     
-    validation_amount_comments(len(comments), finalists_amount, winners_amount)
-
-    for comment in comments:
-        similarity = cosine_similarity(question_embedding, comment['embedding'])
-        comments_question_similarity.append([comment['text'], similarity, comment['embedding'], comment['id'], comment['user_id']])
-
-    comments_question_similarity.sort(key=lambda x: x[1], reverse = False)
-
-    comments_case_similarity = []
-    for comment, _similarity, comment_embedding, id, user_id in comments_question_similarity[0:finalists_amount]:
+    # Worst Comments
+    comments_case_similarity_worst = []
+    for comment, _similarity, comment_embedding, id, user_id in comments_question_similarity[-finalists_amount :  ]:
         similarity = cosine_similarity(case_text_embedding, comment_embedding)
-        comments_case_similarity.append([comment, str(similarity), id, user_id])
+        comments_case_similarity_worst.append([comment, str(similarity), id, user_id])
     
-    comments_case_similarity.sort(key=lambda x: x[1], reverse = False)
-
-    worst_comments = comments_case_similarity[0:winners_amount]
-    return worst_comments
-
+    comments_case_similarity_worst.sort(key=lambda x: x[1], reverse = False)
+    
+    worst_comments = comments_case_similarity_worst[ : winners_amount]
+    
+    return top_comments, worst_comments
+    
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
