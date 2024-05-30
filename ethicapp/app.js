@@ -21,7 +21,7 @@ let analysis = require("./backend/controllers/analysis");
 let teams = require("./backend/controllers/teams");
 let rubrica = require("./backend/controllers/rubrica");
 let stages = require("./backend/controllers/stages");
-let content_analysis = require("./backend/controllers/conten-analysis-controller");
+let content_analysis = require("./backend/controllers/content-analysis-controller");
 let pass = require("./backend/config/keys-n-secrets");
 let middleware = require("./backend/middleware/validate-session");
 require("serve-favicon");
@@ -81,7 +81,7 @@ app.use("/", middleware.verifySession, analysis);
 app.use("/", middleware.verifySession, teams);
 app.use("/", middleware.verifySession, rubrica);
 app.use("/", middleware.verifySession, stages);
-app.use("/", middleware.verifySession, content_analysis)
+app.use("/", middleware.verifySession, content_analysis);
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {

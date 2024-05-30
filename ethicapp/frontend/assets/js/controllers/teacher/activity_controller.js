@@ -9,6 +9,7 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
     self.init =function(){
         self.selectedSes = {};
         self.launchDesignId = self.launchId.id;
+        self.checkContentAnalysisAvailability();
     };
 
     //Create Activity from launch activity
@@ -197,5 +198,20 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
         self.shared.updateSesData();
         Notification.success("Actividad copiada!");
     };
+
+    self.checkContentAnalysisAvailability = function() {
+    $http.post('/content-analysis-availability')
+        .then(function(response) {
+            if (response.status === 200) {
+                self.isContentAnalysisEnable = true;
+            } else {
+                self.isContentAnalysisEnable = false;
+            }
+        })
+        .catch(function(error) {
+            self.isContentAnalysisEnable = false;
+        });
+    };
+
     self.init();
 };
