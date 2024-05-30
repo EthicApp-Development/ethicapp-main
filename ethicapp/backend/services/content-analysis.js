@@ -195,12 +195,28 @@ function contentAnalysis(req, res){
     }
 }
 
+function isContentAnalysisAvailable(){
+
+    const trueOrFalse = {
+        "True": true,
+        "False": false
+    }
+    const value = process.env.CONTENT_ANALYSIS_SERVICE;
+    console.log(trueOrFalse[value]);
+    return trueOrFalse[value]
+}
+
 async function initializeContentAnalysis(req, res){
-    try {
-        await contentAnalysis(req, res);
-    } catch (error) {
-        console.error('Error running content analysis:', error);
+    if(isContentAnalysisAvailable()){
+        try {
+            await contentAnalysis(req, res);
+        } catch (error) {
+            console.error('Error running content analysis:', error);
+        }
     }
 }
 
-module.exports = initializeContentAnalysis;
+module.exports = {
+    initializeContentAnalysis,
+    isContentAnalysisAvailable
+};
