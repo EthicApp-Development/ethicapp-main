@@ -5,7 +5,7 @@ let router = express.Router();
 let rpg = require("../db/rest-pg");
 let pass = require("../config/keys-n-secrets");
 let socket = require("../config/socket.config");
-const initializeContentAnalysis = require("../services/content-analysis")
+const {initializeContentAnalysis} = require("../services/content-analysis");
 
 let sesStatusCache = {};
 

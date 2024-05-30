@@ -1,9 +1,12 @@
+"use strict";
+
 let pg = require("pg");
 let express = require("express");
 let router = express.Router();
 let rpg = require("../db/rest-pg");
 let pass = require("../config/keys-n-secrets");
 let socket = require("../config/socket.config");
+const {isContentAnalysisAvailable} = require("../services/content-analysis");
 
 var DB = null;
 function getDBInstance(dbcon) {
@@ -20,8 +23,11 @@ function getDBInstance(dbcon) {
 }
 
 router.post('/content-analysis-callback', async (req, res) => {
+    if(!isContentAnalysisAvailable()){
+        return res.status(400).json({ error: "Content analysis is not available" });
+    }
     try {
-        
+    
         const data = req.body;
         
         const stageId = data.context.phase_id;
@@ -50,17 +56,19 @@ router.post('/content-analysis-callback', async (req, res) => {
         });
         qry.on("error", function(err){
             console.error(err);
-            res.end('{"status":"err"}');
+            res.status(500).json({ error: "Internal server error" });
         });
 
         
     } catch (error) {
-        console.error('Error al procesar el callback:', error);
-        res.end('{"status":"err"}');
+        res.status(500).json({ error: "Internal server error" });
     }
 });
 
 router.post("/get-content-analysis", (req, res, next) => {
+    if(!isContentAnalysisAvailable()){
+        return res.status(400).json({ error: "Content analysis is not available" });
+    }
     return rpg.multiSQL({
         dbcon: pass.dbcon,
         sql: `
@@ -70,3 +78,14 @@ router.post("/get-content-analysis", (req, res, next) => {
         `,
     })(req, res, next);
 });
+
+router.post("/content-analysis-availability", (req, res, next) => {
+    if(isContentAnalysisAvailable()){
+        return res.status(200).json({ status: 'Content analysis is available'});
+    }
+    else{
+        return res.status(400).json({ error: "Content analysis is not available" });
+    }
+});
+
+module.exports = router;
