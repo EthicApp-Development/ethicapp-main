@@ -213,8 +213,7 @@
                             ng-init="selectCurrentQuestion(stage.id)"
                             ng-click="selectCurrentQuestion(stage.id)"
                             ng-class="{'content-btn-selected': stage.id == selectQuestion}"
-                            ng-disabled="!contentAnalysis[stage.stageid][stage.id].top || 
-                            contentAnalysis[stage.stageid][stage.id].top.length === 0">
+                            ng-disabled="!contentAnalysis[stage.stageid][stage.id].top">
                                 {{ 'question' | translate }} {{$index + 1}}
                             </button>
                         </div>

@@ -23,7 +23,7 @@ module.exports.configSocket = function(io){
     module.exports.chatMsgStage = function(stageid, tmid){
         io.of("/").emit("chatMsgStage", {stageid: stageid, tmid: tmid});
     };
-    module.exports.contentUpdate = function(sesid, data){
-        io.of("/").emit("contentUpdate", {ses: sesid, data: data});
+    module.exports.contentUpdate = function(data){
+        io.of("/").emit("contentUpdate", {data: data});
     };
 };

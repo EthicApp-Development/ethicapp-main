@@ -24,7 +24,7 @@ function getDBInstance(dbcon) {
 
 router.post('/content-analysis-callback', async (req, res) => {
     if(!isContentAnalysisAvailable()){
-        return res.status(400).json({ error: "Content analysis is not available" });
+        return res.status(503).json({ error: "Content analysis is not available" });
     }
     try {
     
@@ -51,7 +51,7 @@ router.post('/content-analysis-callback', async (req, res) => {
         var qry;
         qry = db.query(sql);
         qry.on("end", function () {
-            socket.contentUpdate(req.session.ses, data);
+            socket.contentUpdate(data);
             res.status(200).json({ status: 'success'});
         });
         qry.on("error", function(err){
@@ -67,7 +67,7 @@ router.post('/content-analysis-callback', async (req, res) => {
 
 router.post("/get-content-analysis", (req, res, next) => {
     if(!isContentAnalysisAvailable()){
-        return res.status(400).json({ error: "Content analysis is not available" });
+        return res.status(503).json({ error: "Content analysis is not available" });
     }
     return rpg.multiSQL({
         dbcon: pass.dbcon,
@@ -84,7 +84,7 @@ router.post("/content-analysis-availability", (req, res, next) => {
         return res.status(200).json({ status: 'Content analysis is available'});
     }
     else{
-        return res.status(400).json({ error: "Content analysis is not available" });
+        return res.status(503).json({ error: "Content analysis is not available" });
     }
 });
 
