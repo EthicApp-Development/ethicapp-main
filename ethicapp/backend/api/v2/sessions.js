@@ -79,7 +79,7 @@ router.delete('/sessions/:id', async (req, res) => {
 });
 
 // Add User to Session
-router.post('/api-v2/sessions/users', async (req, res) => {
+router.post('/api-v2/sessions/users', authenticateToken, async (req, res) => {
     const { code, user_id } = req.body;
 
     try {
