@@ -210,7 +210,6 @@ function isContentAnalysisAvailable(){
         "False": false
     }
     const value = process.env.CONTENT_ANALYSIS_SERVICE;
-    console.log(trueOrFalse[value]);
     return trueOrFalse[value]
 }
 
