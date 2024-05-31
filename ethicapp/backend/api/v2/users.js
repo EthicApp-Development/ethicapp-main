@@ -21,7 +21,6 @@ router.get('/users', async (req, res) => {
 
 // Create
 router.post('/users', async (req, res) => {
-    console.log('req.body -> ', req.body);
     const { pass, pass_confirmation } = req.body;
     
     // Validate password length

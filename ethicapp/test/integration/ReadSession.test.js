@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 const addUser = require('../fixtures/users.json');
 
 describe('GET /sessions/:sessionId/users', () => {
-  let adminToken, professorToken, studentToken, sessionId, professorFalsoToken;
+  let adminToken, professorToken, studentToken, sessionId, professorFalseToken;
 
   beforeAll(async () => {
     // Crea un usuario administrador
@@ -26,22 +26,18 @@ describe('GET /sessions/:sessionId/users', () => {
     // Genera tokens para cada usuario
     adminToken = jwt.sign({ id: admin.id, role: admin.role }, "your_secret_key");
     professorToken = jwt.sign({ id: professor.id, role: professor.role }, "your_secret_key");
-    professorFalsoToken = jwt.sign({ id: professorFalso.id, role: professorFalso.role }, "your_secret_key");
+    professorFalseToken = jwt.sign({ id: professorFalso.id, role: professorFalso.role }, "your_secret_key");
     studentToken = jwt.sign({ id: student.id, role: student.role }, "your_secret_key");
 
     // Crea una sesión y asigna al profesor como creador
-    const session = await Session.create({
-      name: 'Test Session Read',
-      descr: 'A session for testing Read',
-      creator: professor.id,
-      type: 'A',
-    });
-    sessionId = session.id;
-
+    const session = await request(app)
+    .post('/sessions')
+    .send({ name: `Test Session Read ${professor.name}-${professor.id}`, descr: 'A session for testing Read',time: new Date(), creator: professor.id, type: 'A', status: 1 });
+    sessionId = session.body.data.id;
     // Añade al profesor y al estudiante a la sesión
     await SessionsUsers.bulkCreate([
-      { session_id: session.id, user_id: professor.id },
-      { session_id: session.id, user_id: student.id },
+      { session_id: session.body.data.id, user_id: professor.id },
+      { session_id: session.body.data.id, user_id: student.id },
     ]);
   });
 
@@ -76,7 +72,7 @@ describe('GET /sessions/:sessionId/users', () => {
   it('should not allow the teacher who is not from this session to access the users of the session.', async() =>{
     const res = await request(app)
       .get(`/sessions/${sessionId}/users`)
-      .set('Authorization', `Bearer ${professorFalsoToken}`);
+      .set('Authorization', `Bearer ${professorFalseToken}`);
     expect(res.status).toBe(403);
   })
 });
