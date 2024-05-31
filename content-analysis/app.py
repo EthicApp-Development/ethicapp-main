@@ -157,8 +157,12 @@ def extract_text_from_pdf_url(pdf_url):
         return ''
 
 def clean_text(text):
-    text = text.replace(",", "").replace(".", "")
+    text = text.replace(",", "").replace(".", "").replace("'", "").replace('"', '')
     text = text.lower()
+    return text
+
+def delete_quotation_marks(text):
+    text = text.replace("'", "").replace('"', '')
     return text
 
 def remove_stop_word_from_text(text):
@@ -293,7 +297,8 @@ def get_top_worst_classification(question_embedding, case_text_embedding, commen
     comments_case_similarity_top = []
     for comment, _similarity, comment_embedding, id, user_id in comments_question_similarity[  : finalists_amount]:
         similarity = cosine_similarity(case_text_embedding, comment_embedding)
-        comments_case_similarity_top.append([comment, str(similarity), id, user_id])
+        comment_text = delete_quotation_marks(comment)
+        comments_case_similarity_top.append([comment_text, str(similarity), id, user_id])
     
     comments_case_similarity_top.sort(key=lambda x: x[1], reverse = True)
     
@@ -303,7 +308,8 @@ def get_top_worst_classification(question_embedding, case_text_embedding, commen
     comments_case_similarity_worst = []
     for comment, _similarity, comment_embedding, id, user_id in comments_question_similarity[-finalists_amount :  ]:
         similarity = cosine_similarity(case_text_embedding, comment_embedding)
-        comments_case_similarity_worst.append([comment, str(similarity), id, user_id])
+        comment_text = delete_quotation_marks(comment)
+        comments_case_similarity_worst.append([comment_text, str(similarity), id, user_id])
     
     comments_case_similarity_worst.sort(key=lambda x: x[1], reverse = False)
     
