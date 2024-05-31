@@ -2,7 +2,8 @@ const express = require('express');
 const bodyParser = require('body-parser'); // Importa body-parser
 const router = express.Router();
 const crypto = require('crypto');
-
+const authorizationSession = require('../v2/middleware/authenticateSession')
+const authenticateToken = require('../v2/middleware/authenticateToken')
 
 // Import Model
 const { Session, SessionsUsers } = require('../../api/v2/models');
@@ -12,7 +13,7 @@ router.use(bodyParser.json());
 
 // CRUD operations for SessionsUsers
 
-// Create session user
+// Adds a user to the session
 router.post('/sessions/:sessionId/users', async (req, res) => {
     const { sessionId } = req.params;
     try {
@@ -29,8 +30,8 @@ router.post('/sessions/:sessionId/users', async (req, res) => {
     }
 });
 
-// Read session users
-router.get('/sessions/:sessionId/users', async (req, res) => {
+// Read session users | the auth order is the left to right
+router.get('/sessions/:sessionId/users', authenticateToken, authorizationSession, async (req, res) => {
     const { sessionId } = req.params;
     try {
         const sessionUsers = await SessionsUsers.findAll({ where: { session_id: sessionId } });
