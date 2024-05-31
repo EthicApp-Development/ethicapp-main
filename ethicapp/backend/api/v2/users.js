@@ -21,12 +21,25 @@ router.get('/users', async (req, res) => {
 
 // Create
 router.post('/users', async (req, res) => {
+    console.log('req.body -> ', req.body);
+    const { pass, pass_confirmation } = req.body;
+    
+    // Validate password length
+    if (pass.length < 8) {
+        return res.status(400).json({ status: 'error', message: 'Password must be at least 8 characters long' });
+    }
+
+    // Validate password confirmation
+    if (pass !== pass_confirmation) {
+        return res.status(400).json({ status: 'error', message: 'Passwords do not match' });
+    }
+
     try {
         const user = await User.create(req.body);
         res.status(201).json({ status: 'success', data: user });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(400).json({ status: 'error', message: 'invalid field' });
     }
 });
 
@@ -56,6 +69,18 @@ router.delete('/users/:id', async (req, res) => {
         }
         await user.destroy();
         res.status(204).end();
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+});
+
+// Read One User
+router.get('/users/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const user = await User.findByPk(id);
+        res.status(200).json({ status: 'success', data: user });
     } catch (err) {
         console.error(err);
         res.status(500).json({ status: 'error', message: 'Internal server error' });

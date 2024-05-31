@@ -5,7 +5,6 @@ const designRouter = require('./designs')
 const userRouter = require('./users')
 const sessionRouter = require('./sessions')
 const loginUserRouter = require('./login-user')
-const registerUserRouter = require('./register-user')
 const groupRouter = require('./groups')
 const chatroomRouter = require('./chatrooms')
 const activityRouter = require('./activities')
@@ -22,7 +21,6 @@ app.use('/',groupRouter);
 app.use('/',chatroomRouter);
 app.use('/',activityRouter);
 app.use('/',loginUserRouter);
-app.use('/',registerUserRouter);
 app.use('/',sessionUserRouter)
 
 module.exports = app;
