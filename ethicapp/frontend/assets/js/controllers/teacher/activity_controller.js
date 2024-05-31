@@ -209,7 +209,7 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
             }
         })
         .catch(function(error) {
-            $scope.isContentAnalysisEnable = false;
+            self.isContentAnalysisEnable = false;
         });
     };
 
