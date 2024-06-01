@@ -79,7 +79,7 @@ router.delete('/sessions/:id', async (req, res) => {
 });
 
 // Add User to Session
-router.post('/api-v2/sessions/users', authenticateToken, async (req, res) => {
+router.post('/sessions/users', authenticateToken, async (req, res) => {
     const { code, user_id } = req.body;
 
     try {
@@ -106,7 +106,7 @@ router.post('/api-v2/sessions/users', authenticateToken, async (req, res) => {
 });
 
 // Get Users in a Session
-router.get('/api-v2/sessions/:id/users', authenticateToken, async (req, res) => {
+router.get('/sessionsUsers/:id/users', authenticateToken, async (req, res) => {
     const { id } = req.params;
 
     try {

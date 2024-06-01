@@ -4,10 +4,11 @@ const bodyParser = require('body-parser');
 const { User } = require('../../backend/api/v2/models');
 const registerUserRouter = require('../../backend/api/v2/users');
 const userData = require('../fixtures/users.json')
+const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2/';
 
 const app = express();
 app.use(bodyParser.json());
-app.use('/', registerUserRouter);
+app.use(`${API_VERSION_PATH_PREFIX}`, registerUserRouter);
 
 // // Mock the User model
 // jest.mock('../../backend/api/v2/models', () => ({
@@ -33,7 +34,7 @@ describe('User Registration', () => {
 
         console.log("should register a user successfully with valid password and password confirmation")
         const res = await request(app)
-            .post('/users')
+            .post(`${API_VERSION_PATH_PREFIX}/users`)
             .send(sucessfullUser)
 
         expect(res.statusCode).toEqual(201);
@@ -44,7 +45,7 @@ describe('User Registration', () => {
         console.log("should fail if password and password confirmation do not match")
         const differentPasswordUser = userData[1]
         const res = await request(app)
-            .post('/users')
+            .post(`${API_VERSION_PATH_PREFIX}/users`)
             .send(differentPasswordUser)
 
         expect(res.statusCode).toEqual(400);
@@ -55,7 +56,7 @@ describe('User Registration', () => {
         console.log("should fail if the password is less than 8 characters")
         const lessCharacters = userData[2]
         const res = await request(app)
-            .post('/users')
+            .post(`${API_VERSION_PATH_PREFIX}/users`)
             .send(lessCharacters)
 
         expect(res.statusCode).toEqual(400);

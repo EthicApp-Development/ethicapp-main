@@ -23,7 +23,7 @@ const authenticateToken = async (req, res, next) => {
     next();
   } catch (err) {
     console.error('Error verifying token:', err);
-    res.status(403).json({ status: 'error', message: 'Invalid token' });
+    return res.status(403).json({ status: 'error', message: 'Invalid token' });
   }
 };
 

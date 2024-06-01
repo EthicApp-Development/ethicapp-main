@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../../backend/api/v2/testApi'); // Asegúrate de que apunta a tu aplicación Express
 const { User, Session  } = require('../../backend/api/v2/models');
+const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
 describe('POST /api-v2/sessions/users', () => {
     let token;
@@ -62,7 +63,7 @@ describe('POST /api-v2/sessions/users', () => {
 
         // Login to get the token
         const loginRes = await request(app)
-            .post('/login/user_session')
+            .post(`${API_VERSION_PATH_PREFIX}/login/user_session`)
             .send({ mail: `testuser${randomString}@example.com`, pass: `pass${randomStringShort}` });
 
         token = loginRes.body.token;
@@ -73,13 +74,13 @@ describe('POST /api-v2/sessions/users', () => {
     it('should add a user to a session', async () => {
         // Create a session first
         const sessionRes = await request(app)
-            .post('/sessions')
+            .post(`${API_VERSION_PATH_PREFIX}/sessions`)
             .send({ name: 'Test Session', descr: 'A session for testing',time: new Date(), creator: 1, type: 'A', status: 1 });
 
         const sessionCode = sessionRes.body.data.code;
         // Add a user to the session
         const userRes = await request(app)
-            .post('/api-v2/sessions/users')
+            .post(`${API_VERSION_PATH_PREFIX}/sessions/users`)
             .send({ code: sessionCode, user_id: userId})
             .set('Authorization', `Bearer ${token}`);
         
@@ -90,7 +91,7 @@ describe('POST /api-v2/sessions/users', () => {
         // Verify the user is in the session
         console.log( "userRes.body.data.session_id ->", userRes.body.data.session_id)
         const usersRes = await request(app)
-            .get(`/api-v2/sessions/${userRes.body.data.session_id}/users`)
+            .get(`${API_VERSION_PATH_PREFIX}/sessionsUsers/${userRes.body.data.session_id}/users`)
             .set('Authorization', `Bearer ${token}`);
 
         expect(usersRes.status).toBe(200);

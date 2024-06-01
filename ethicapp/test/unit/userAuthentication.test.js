@@ -5,10 +5,11 @@ const { User } = require('../../backend/api/v2/models');
 const loginRouter =  require('../../backend/api/v2/login-user');
 const bcrypt = require('bcryptjs');
 const loginData = require('../fixtures/logins.json')
+const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
 const app = express();
 app.use(bodyParser.json());
-app.use('/', loginRouter);
+app.use(`${API_VERSION_PATH_PREFIX}`, loginRouter);
 
 // Mock the User model
 jest.mock('../../backend/api/v2/models', () => ({
@@ -22,7 +23,7 @@ describe('User Authentication', () => {
         User.findOne.mockResolvedValue(null);   
         const userNotExist = loginData[0]
         const res = await request(app)
-            .post('/login_user')
+            .post(`${API_VERSION_PATH_PREFIX}/login_user`)
             .send(userNotExist)
 
         expect(res.statusCode).toEqual(401);
@@ -44,7 +45,7 @@ describe('User Authentication', () => {
         });
 
         const res = await request(app)
-            .post('/login_user')
+            .post(`${API_VERSION_PATH_PREFIX}/login_user`)
             .send(invalidPassword)
 
         expect(res.statusCode).toEqual(401);
@@ -67,7 +68,7 @@ describe('User Authentication', () => {
         });
 
         const res = await request(app)
-            .post('/login_user')
+            .post(`${API_VERSION_PATH_PREFIX}/login_user`)
             .send(successUser)
         expect(res.statusCode).toEqual(200);
         expect(res.body).toHaveProperty('token');

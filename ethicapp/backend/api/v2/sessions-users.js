@@ -2,7 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser'); // Importa body-parser
 const router = express.Router();
 const crypto = require('crypto');
-const authorizationSession = require('../v2/middleware/authenticateSession')
+const authorizeSessionAccess = require('../v2/middleware/authenticateSession')
 const authenticateToken = require('../v2/middleware/authenticateToken')
 
 // Import Model
@@ -31,16 +31,18 @@ router.post('/sessions/:sessionId/users', async (req, res) => {
 });
 
 // Read session users | the auth order is the left to right
-router.get('/sessions/:sessionId/users', authenticateToken, authorizationSession, async (req, res) => {
+router.get('/sessions/:sessionId/users', authenticateToken, authorizeSessionAccess, async (req, res) => {
+    console.log("> LLEGA <")
     const { sessionId } = req.params;
     try {
-        const sessionUsers = await SessionsUsers.findAll({ where: { session_id: sessionId } });
-        res.status(200).json({ status: 'success', data: sessionUsers });
+      const sessionUsers = await SessionsUsers.findAll({ where: { session_id: sessionId } });
+      res.status(200).json({ status: 'success', data: sessionUsers });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+      console.error(err);
+      res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
-});
+  });
+  
 
 // Delete session user
 router.delete('/sessions/:sessionId/users/:userId', async (req, res) => {
