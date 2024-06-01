@@ -1,6 +1,8 @@
 const request = require('supertest');
 const app = require('../../backend/api/v2/testApi'); // Asegúrate de que apunta a tu aplicación Express
 const { User, Session  } = require('../../backend/api/v2/models');
+const addUser = require('../fixtures/users.json');
+const jwt = require('jsonwebtoken');
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
 describe('POST /api-v2/sessions/users', () => {
@@ -96,5 +98,36 @@ describe('POST /api-v2/sessions/users', () => {
 
         expect(usersRes.status).toBe(200);
         expect(usersRes.body.data).toContain(userId);
+    });
+});
+
+describe('POST /sessions/users with invalid session code', () => {
+    let token, userId;
+
+    beforeAll(async () => {
+        // Crea un usuario y genera un token
+        const user = await User.create(addUser[0]);
+        userId = user.id;
+        token = jwt.sign({ id: user.id, role: user.role }, 'your_secret_key');
+
+        // Crea una sesión válida
+        await request(app)
+            .post(`${API_VERSION_PATH_PREFIX}/sessions`)
+            .send({ name: 'Valid Test Session', descr: 'A valid session for testing', time: new Date(), creator: user.id, type: 'A', status: 1 })
+            .set('Authorization', `Bearer ${token}`);
+    });
+
+    it('should return 404 for invalid session code', async () => {
+        const invalidSessionCode = 'INVALID_CODE';
+
+        // Intenta añadir un usuario a la sesión con un código inválido
+        const userRes = await request(app)
+            .post(`${API_VERSION_PATH_PREFIX}/sessions/users`)
+            .send({ code: invalidSessionCode, user_id: userId })
+            .set('Authorization', `Bearer ${token}`);
+
+        expect(userRes.status).toBe(404);
+        expect(userRes.body).toHaveProperty('status', 'error');
+        expect(userRes.body).toHaveProperty('message', 'Invalid session code');
     });
 });

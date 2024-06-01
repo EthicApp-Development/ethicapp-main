@@ -85,9 +85,8 @@ router.post('/sessions/users', authenticateToken, async (req, res) => {
     try {
         const session = await Session.findOne({ where: { code } });
         if (!session) {
-            return res.status(404).json({ status: 'error', message: 'Session not found' });
+            return res.status(404).json({ status: 'error', message: 'Invalid session code' });
         }
-
         const user = await User.findByPk(user_id);
         if (!user) {
             return res.status(404).json({ status: 'error', message: 'User not found' });

@@ -34,12 +34,26 @@ router.post('/sessions/:sessionId/users', async (req, res) => {
 router.get('/sessions/:sessionId/users', authenticateToken, authorizeSessionAccess, async (req, res) => {
     console.log("> LLEGA <")
     const { sessionId } = req.params;
+
     try {
-      const sessionUsers = await SessionsUsers.findAll({ where: { session_id: sessionId } });
-      res.status(200).json({ status: 'success', data: sessionUsers });
+        const session = await Session.findByPk(sessionId);
+        if (!session) {
+            return res.status(404).json({ status: 'error', message: 'Session not found' });
+        }
+
+        // Busca los usuarios asociados a la sesión usando la tabla intermedia SessionsUsers
+        const sessionUsers = await SessionsUsers.findAll({
+            where: { session_id: sessionId },
+            attributes: ['user_id'] // Obtén solo los IDs de los usuarios
+        });
+
+        // Mapea los IDs de los usuarios
+        const userIds = sessionUsers.map(user => user.user_id);
+        console.log("userIds -=>", userIds)
+        res.status(200).json({ status: 'success', data: userIds });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ status: 'error', message: 'Internal server error' });
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
   });
   
