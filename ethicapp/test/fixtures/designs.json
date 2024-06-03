@@ -7,7 +7,7 @@
         "description": "Descripción del diseño 1",
         "elements": [
           {"type": "text", "content": "Texto de ejemplo 1"},
-          {"type": "image", "url": "https://ejemplo.com/imagen1.jpg"}
+          {"type": "image", "url": "ejemplo.com/imagen1.jpg"}
         ]
       },
       "public": true,
@@ -21,7 +21,7 @@
         "description": "Descripción del diseño 2",
         "elements": [
           {"type": "text", "content": "Texto de ejemplo 2"},
-          {"type": "image", "url": "https://ejemplo.com/imagen2.jpg"}
+          {"type": "image", "url": "ejemplo.com/imagen2.jpg"}
         ]
       },
       "public": false,
