@@ -9,12 +9,14 @@ const groupRouter = require('./groups')
 const chatroomRouter = require('./chatrooms')
 const activityRouter = require('./activities')
 const sessionUserRouter = require('./sessions-users')
+const phaseRouter = require('./phases')
 const app = express();
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 const PORT = process.env.PORT || 3000;
 
 app.use(`${API_VERSION_PATH_PREFIX}`,questionRouter);
 app.use(`${API_VERSION_PATH_PREFIX}`,designRouter);
+app.use(`${API_VERSION_PATH_PREFIX}`,phaseRouter);
 app.use(`${API_VERSION_PATH_PREFIX}`,responseRouter);
 app.use(`${API_VERSION_PATH_PREFIX}`,userRouter);
 app.use(`${API_VERSION_PATH_PREFIX}`,sessionRouter);
