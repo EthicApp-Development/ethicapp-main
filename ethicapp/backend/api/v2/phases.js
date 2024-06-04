@@ -86,4 +86,28 @@ router.get('/phases/:id', async (req, res) => {
     res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 });
+
+// Create
+router.post('/phasesTesting', async (req, res) => {
+  const { number, type, anon, chat, prev_ans, activity_id } = req.body;
+  console.log("llega")
+  try {
+    console.log("pasa el try")
+    const activity = await Activity.findByPk(activity_id);
+    if (!activity) {
+      return res.status(400).json({ status: 'error', message: 'Activity not found' });
+    }
+
+    const existingPhase = await Phase.findOne({ where: { activity_id: activity_id, number: number } });
+    if (existingPhase) {
+      return res.status(400).json({ status: 'error', message: 'Phase already exists for this activity' });
+    }
+
+    const phase = await Phase.create({ number, type, anon, chat, prev_ans, activity_id });
+    res.status(201).json({ status: 'success', data: phase });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
+});
 module.exports = router;
