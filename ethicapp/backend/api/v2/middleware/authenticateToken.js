@@ -6,7 +6,7 @@ const authenticateToken = async (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    console.log('No token provided');
+    //console.log('No token provided');
     return res.status(401).json({ status: 'error', message: 'No token provided' });
   }
 
@@ -15,14 +15,14 @@ const authenticateToken = async (req, res, next) => {
     const user = await User.findByPk(decoded.id);
 
     if (!user) {
-      console.log('Invalid token: User not found');
+      //console.log('Invalid token: User not found');
       return res.status(401).json({ status: 'error', message: 'Invalid token' });
     }
 
     req.user = user;
     next();
   } catch (err) {
-    console.error('Error verifying token:', err);
+    //console.error('Error verifying token:', err);
     return res.status(403).json({ status: 'error', message: 'Invalid token' });
   }
 };

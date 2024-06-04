@@ -47,5 +47,17 @@
         "sesion_id": 1,
         "phases_id": 2,
         "number_phase": 2
+    },
+    {
+        "content": {
+            "question": "¿Cuantos oceanos hay actualmente",
+            "options": ["5", "7", "10","11","1"],
+            "correct_answer": "5"
+        },
+        "additional_info": "Geografia",
+        "type": "choice",
+        "text": "preguntas sobre el oceano",
+        "sesion_id": 1,
+        "number_phase": 2
     }
 ]

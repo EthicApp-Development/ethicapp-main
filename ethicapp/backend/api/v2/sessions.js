@@ -122,7 +122,7 @@ router.get('/sessionsUsers/:id/users', authenticateToken, async (req, res) => {
 
         // Mapea los IDs de los usuarios
         const userIds = sessionUsers.map(user => user.user_id);
-        console.log("userIds -=>", userIds)
+        //console.log("userIds -=>", userIds)
         res.status(200).json({ status: 'success', data: userIds });
     } catch (err) {
         console.error(err);

@@ -1,6 +1,6 @@
 [
     {
-        "name": "John Doe",
+        "name": "John Doe0",
         "rut": "12345678-9",
         "pass": "password123",
         "pass_confirmation": "password123",
@@ -9,7 +9,7 @@
         "role": "A"
     },
     {
-        "name": "John Doe",
+        "name": "John Doe1",
         "rut": "12345678-9",
         "pass": "passwords",
         "pass_confirmation": "contrasena",
@@ -18,7 +18,7 @@
         "role": "E" 
     },
     {
-        "name": "John Doe",
+        "name": "John Doe2",
         "rut": "12345678-9",
         "pass": "pass",
         "pass_confirmation": "pass",
@@ -27,7 +27,7 @@
         "role": "P"
     },
     {
-        "name": "usuario infiltrado",
+        "name": "usuario infiltrado3",
         "rut": "12345678-9",
         "pass": "password123",
         "pass_confirmation": "password123",
@@ -36,7 +36,7 @@
         "role": "E"
     },
     {
-        "name": "Profesor ",
+        "name": "Profesor 4",
         "rut": "12345678-9",
         "pass": "password123",
         "pass_confirmation": "password123",
@@ -45,7 +45,7 @@
         "role": "P"
     },
     {
-        "name": "Profesor False",
+        "name": "Profesor False5",
         "rut": "99999999-9",
         "pass": "password123",
         "pass_confirmation": "password123",
@@ -54,12 +54,30 @@
         "role": "P"
     },
     {
-        "name": "usuario Response",
+        "name": "usuario Response6",
         "rut": "99999999-9",
         "pass": "password123",
         "pass_confirmation": "password123",
         "mail": "Response.Response@example.com",
         "sex": "M",
         "role": "P"
+    },
+    {
+        "name": "Profesor Integration7",
+        "rut": "99999999-9",
+        "pass": "Integration123",
+        "pass_confirmation": "Integration123",
+        "mail": "Integration.Integration@example.com",
+        "sex": "M",
+        "role": "P"
+    },
+    {
+        "name": "usuario Integration8",
+        "rut": "12345678-9",
+        "pass": "usuarioIntegration8",
+        "pass_confirmation": "usuarioIntegration8",
+        "mail": "Integration@example.com",
+        "sex": "F",
+        "role": "E"
     }
 ]

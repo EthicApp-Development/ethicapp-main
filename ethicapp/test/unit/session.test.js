@@ -90,10 +90,10 @@ describe('Session Creation', () => {
             listCode.push(res.body.data.code)
             expect(res.body.data).toHaveProperty('status', 1);
         }
-        if (createdSessions.size === listCode.length){
-            console.log(createdSessions)
-            console.log("todos distintos")
-        }
+        // if (createdSessions.size === listCode.length){
+        //     console.log(createdSessions)
+        //     console.log("todos distintos")
+        // }
         // Verify that 10 sessions have been created with unique codes
         expect(createdSessions.size).toBe(iteration);
     });

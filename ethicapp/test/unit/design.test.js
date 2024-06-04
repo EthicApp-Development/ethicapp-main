@@ -5,7 +5,7 @@ const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2'
 const designsData = require('../fixtures/designs.json');
 describe('CRUD Operations for Designs API', () => {
   let createdDesignId;
-  console.log("--- CRUD testing Design ---")
+  //console.log("--- CRUD testing Design ---")
   // Test Create Operation
   it('should create a new design', async () => {
     const newDesignData = designsData[0]
