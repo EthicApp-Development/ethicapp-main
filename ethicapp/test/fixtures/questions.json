@@ -34,5 +34,18 @@
         "text": "¿Cuál es tu color favorito?",
         "sesion_id": 1,
         "number_phase": 2
+    },
+    {
+        "content": {
+            "question": "¿Cuál es tu color favorito?",
+            "options": ["Violeta", "Negro", "Azul"],
+            "correct_answer": "Azul"
+        },
+        "additional_info": "responses",
+        "type": "choice",
+        "text": "¿Cuál es tu color favorito?",
+        "sesion_id": 1,
+        "phases_id": 2,
+        "number_phase": 2
     }
 ]

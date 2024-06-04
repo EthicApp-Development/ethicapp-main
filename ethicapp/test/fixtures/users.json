@@ -52,5 +52,14 @@
         "mail": "False.False@example.com",
         "sex": "M",
         "role": "P"
+    },
+    {
+        "name": "usuario Response",
+        "rut": "99999999-9",
+        "pass": "password123",
+        "pass_confirmation": "password123",
+        "mail": "Response.Response@example.com",
+        "sex": "M",
+        "role": "P"
     }
 ]
