@@ -75,4 +75,15 @@ router.delete('/phases/:id', async (req, res) => {
     }
 });
 
+//one phase
+router.get('/phases/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const phase = await Phase.findByPk(id);
+    res.json({ status: 'success', data: phase });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
+});
 module.exports = router;

@@ -77,4 +77,21 @@ router.delete('/questions/:id', async (req, res) => {
     }
 });
 
+//one question:
+router.get('/questions/:phaseId', async (req, res) => {
+    const { phaseId } = req.params
+    try {
+        const existingQuestionPhase = await Question.findOne({ where: { phases_id: phaseId} });
+        
+        if(!existingQuestionPhase) {
+          return res.status(400).json({ status: 'error', message: "Not Phase in the Question" });
+        }
+        res.status(201).json({ status: 'success', data: existingQuestionPhase });
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+      }
+    
+});
+
 module.exports = router;
