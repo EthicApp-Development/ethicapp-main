@@ -45,4 +45,15 @@ describe('CRUD Operations for Questions API', () => {
       .delete(`${API_VERSION_PATH_PREFIX}/questions/${createdQuestionId}`)
       .expect(204);
   });
+
+  it('should return an error if phases_id is missing', async () => {
+    const questionDataWithOutPhase = questionData[2]
+    const response = await request(app)
+      .post(`${API_VERSION_PATH_PREFIX}/questions`)
+      .send(questionDataWithOutPhase)
+      .expect(400);
+
+    expect(response.body).toHaveProperty('status', 'error');
+    expect(response.body).toHaveProperty('message', 'phases_id is required');
+  });
 });

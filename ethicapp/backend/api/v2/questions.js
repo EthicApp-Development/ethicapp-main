@@ -4,7 +4,7 @@ const router = express.Router();
 
 // Import Model
 
-const { Question } = require('../../api/v2/models');
+const { Question, Phase } = require('../../api/v2/models');
 
 // Configure body-parser to process the body of requests in JSON format.
 router.use(bodyParser.json());
@@ -22,7 +22,21 @@ router.get('/questions', async (req, res) => {
 
 // Create
 router.post('/questions', async (req, res) => {
+    const { text, phases_id } = req.body;
+    if (!phases_id) {
+        return res.status(400).json({ status: 'error', message: 'phases_id is required' });
+    }
     try {
+        const phase = await Phase.findByPk(phases_id);
+        if (!phase) {
+            return res.status(400).json({ status: 'error', message: 'Phase not found' });
+        }
+
+        const existingQuestion = await Question.findOne({ where: { phases_id, text } });
+        if (existingQuestion) {
+            return res.status(400).json({ status: 'error', message: 'Question already exists for this phase' });
+        }
+
         const question = await Question.create(req.body);
         res.status(201).json({ status: 'success', data: question });
     } catch (err) {
