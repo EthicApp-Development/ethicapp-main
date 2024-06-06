@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const router = express.Router();
+const checkAbility = require('../v2/middleware/checkAbility');
 
 const { Team } = require('../../api/v2/models');
 
@@ -19,7 +20,7 @@ router.get('/group', async (req, res) => {
 });
 
 // Create
-router.post('/group', async (req, res) => {
+router.post('/group', checkAbility('create', 'Team'), async (req, res) => {
     try {
         const group = await Team.create(req.body);
         res.status(201).json({ status: 'success', data: group });
@@ -30,7 +31,7 @@ router.post('/group', async (req, res) => {
 });
 
 // Update
-router.put('/group/:id', async (req, res) => {
+router.put('/group/:id', checkAbility('update', 'Team'), async (req, res) => {
     const { id } = req.params;
     try {
         const group = await Team.findByPk(id);
@@ -46,7 +47,7 @@ router.put('/group/:id', async (req, res) => {
 });
 
 // Delete
-router.delete('/group/:id', async (req, res) => {
+router.delete('/group/:id', checkAbility('delete', 'Team'), async (req, res) => {
     const { id } = req.params;
     try {
         const group = await Team.findByPk(id);

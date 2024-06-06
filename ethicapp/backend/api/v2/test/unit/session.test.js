@@ -2,11 +2,13 @@ const request = require('supertest');
 const express = require('express');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
-const { Session } = require('../../backend/api/v2/models');
-const sessionRouter = require('../../backend/api/v2/sessions'); // Adjust the path according to your directory structure.
+const jwt = require('jsonwebtoken');
+const sessionRouter = require('../../sessions'); // Adjust the path according to your directory structure.
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
+const app = require('../../testApi'); // Asegúrate de que apunta a tu aplicación Express
+const { User, Session  } = require('../../models');
 
-const app = express();
+const userData = require('../fixtures/users.json')
 app.use(bodyParser.json());
 app.use(`${API_VERSION_PATH_PREFIX}`, sessionRouter);
 
@@ -21,8 +23,27 @@ app.use(`${API_VERSION_PATH_PREFIX}`, sessionRouter);
 
 
 describe('Session Creation', () => {
+    let professorToken;
+    let profesorId;
+  
+    beforeAll(async () => {
+          // Create a user
+          const professorExample = userData[9]
+          const professorId = await request(app)
+          .post(`${API_VERSION_PATH_PREFIX}/users`)
+          .send(professorExample)
+          //await User.create(professorExample);
+  
+          profesorId = professorId.body.data.id
+          // Login to get the token Professor
+          const loginResProfessor = await request(app)
+              .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
+              .send({ mail: professorExample.mail, pass: professorExample.pass });
+          
+          professorToken = loginResProfessor.body.token;    
+          //console.log('token Professor-->', professorToken);
+    });
     it('should create a session and return the session descriptor with a 6-character hex code', async () => {
-        const generatedCode = crypto.randomBytes(3).toString('hex'); 
 
         // Adjust the mock to reflect actual behaviour
 
@@ -42,8 +63,10 @@ describe('Session Creation', () => {
                 creator: 1,
                 type: 'A',
                 status: 1
-            });
-
+            })
+            .set('Authorization', `Bearer ${professorToken}`)
+        
+        //console.log(res.body)
         expect(res.statusCode).toEqual(201);
         expect(res.body.data).toHaveProperty('code');
         expect(res.body.data.code).toHaveLength(6);
@@ -76,7 +99,8 @@ describe('Session Creation', () => {
                     creator: 1,
                     type: 'A',
                     status: 1
-                });
+                })
+                .set('Authorization', `Bearer ${professorToken}`)
             
             expect(res.statusCode).toEqual(201);
             expect(res.body.data).toHaveProperty('code');

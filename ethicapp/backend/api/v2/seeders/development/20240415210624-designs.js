@@ -5,7 +5,6 @@ module.exports = {
     await queryInterface.bulkInsert('designs', [
       {
         creator: 1, 
-        question_id: 1,
         design: JSON.stringify({ 
           phases: [{
             number: 1,
@@ -45,7 +44,6 @@ module.exports = {
         locked: true,
         createdAt: new Date(),
         updatedAt: new Date(),
-        question_id: 1
       },
       {
         creator: 3,
@@ -58,11 +56,9 @@ module.exports = {
         locked: false,
         createdAt: new Date(),
         updatedAt: new Date(),
-        question_id: 3
       },
       {
         creator: 1, 
-        question_id: 1,
         design: JSON.stringify({ 
           phases: [{
             number: 1,
@@ -102,7 +98,7 @@ module.exports = {
         locked: true,
         createdAt: new Date(),
         updatedAt: new Date(),
-        question_id: 2
+
       }
     ], {});
   },

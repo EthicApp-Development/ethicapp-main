@@ -17,14 +17,6 @@ module.exports = {
           key: 'id'
         }
       },
-      question_id: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'questions',
-          key: 'id'
-        }
-      },
       design: {
         type: Sequelize.JSONB,
         allowNull: false

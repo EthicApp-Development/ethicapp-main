@@ -79,5 +79,32 @@
         "mail": "Integration@example.com",
         "sex": "F",
         "role": "E"
+    },
+    {
+        "name": "profesor-Session9",
+        "rut": "12234456-k",
+        "pass": "passSession9",
+        "pass_confirmation": "passSession9",
+        "mail": "Session@ethicapp.com",
+        "sex": "M",
+        "role": "P"
+    },
+    {
+        "name": "Profesor Example-10",
+        "rut": "91219512-5",
+        "pass": "password",
+        "pass_confirmation": "password",
+        "mail": "professor@example.com",
+        "sex": "F",
+        "role": "P"
+    },
+    {
+        "name": "Sessionprofesor-11",
+        "rut": "12234056-1",
+        "pass": "passSession11",
+        "pass_confirmation": "passSession11",
+        "mail": "Sessionprofesor@ethicapp.com",
+        "sex": "F",
+        "role": "P"
     }
 ]

@@ -1,6 +1,6 @@
 const request = require('supertest');
-const app = require('../../backend/api/v2/testApi');
-const { Session, User, Question } = require('../../backend/api/v2/models');
+const app = require('../../testApi');
+const { Session, User, Question } = require('../../models');
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
 describe('POST /questions/testing', () => {
@@ -21,15 +21,69 @@ describe('POST /questions/testing', () => {
 
         // Autenticar al profesor y obtener un token
         const loginRes = await request(app)
-            .post(`${API_VERSION_PATH_PREFIX}/login_user`)
+            .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
             .send({ mail: 'ProfessorQuestion@example.com', pass: 'passwordQuestion' });
         professorToken = loginRes.body.token;
 
         // Crear una sesión
+        await request(app)
+        .post(`${API_VERSION_PATH_PREFIX}/designs`)
+        .send({
+          creator: userId,
+          design: {
+            phases: [{
+              number: 1,
+              question: [
+                {
+                  content: {
+                    question: "¿Cuantos oceanos hay actualmente",
+                    options: ["5", "7", "10", "11", "1"],
+                    correct_answer: "5"
+                  },
+                  additional_info: "Geografia",
+                  type: "choice",
+                  text: "preguntas sobre el oceano",
+                  session_id: 1,
+                  number: 1
+                },
+                {
+                  content: {
+                    question: "¿Cuantos continentes hay actualmente",
+                    options: ["5", "7", "10", "11", "1"],
+                    correct_answer: "5"
+                  },
+                  additional_info: "Geografia",
+                  type: "choice",
+                  text: "preguntas sobre los continentes",
+                  session_id: 1,
+                  number: 2
+                }]
+            }, {
+              number: 2,
+              question: [{
+                content: {
+                  question: "¿asdffasd dsffds sd fsdf",
+                  options: ["dsf", "qw", "1wer", "1er1", "1e"],
+                  correct_answer: "qw"
+                },
+                additional_info: "cosas",
+                type: "choice",
+                text: "preguntas sobre las cosas",
+                session_id: 1,
+                number: 1
+              }]
+            }]
+          },
+          public: true,
+          locked: false
+        })
+  
         const sessionRes = await request(app)
             .post(`${API_VERSION_PATH_PREFIX}/sessions`)
-            .send({ name: 'Test Session', descr: 'A session for testing', time: new Date(), creator: userId, type: 'A' });
-        sessionId = sessionRes.body.data.id;
+            .send({ name: 'Test Session', descr: 'A session for testing', time: new Date(), creator: userId, type: 'A' })
+            .set('Authorization', `Bearer ${professorToken}`)
+        
+            sessionId = sessionRes.body.data.id;
         
 
     });
@@ -46,7 +100,6 @@ describe('POST /questions/testing', () => {
         };
         const designsData = {
             creator: userId,
-            question_id: 1,
             design: {
                 phases: [{
                     number: 1,
@@ -86,7 +139,7 @@ describe('POST /questions/testing', () => {
           .send(designsData)
           .expect(201);
         const res = await request(app)
-            .post(`${API_VERSION_PATH_PREFIX}/questions/design`)
+            .post(`${API_VERSION_PATH_PREFIX}/designs/${1}/phases/${1}/questions`)
             .send(questionData)
         
         expect(res.status).toBe(400);
@@ -116,7 +169,7 @@ describe('POST /questions/testing', () => {
           .send(designsData)
           .expect(201);
           const res = await request(app)
-            .post(`${API_VERSION_PATH_PREFIX}/questions/design`)
+            .post(`${API_VERSION_PATH_PREFIX}/designs/${1}/phases/${1}/questions`)
             .send(questionData)
 
         expect(res.body.status).toBe('error');

@@ -11,6 +11,8 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+      Phase.belongsTo(models.Activity, { foreignKey: 'activity_id' });
+      Phase.hasMany(models.Question, { foreignKey: 'phase_id', as: 'questions' });
     }
   }
   Phase.init({

@@ -6,10 +6,11 @@
   "scripts": {
     "start": "node ./backend/ethicapp",
     "testing": "mocha tests",
-    "test": "npx jest --detectOpenHandles"
+    "test": "./backend/api/v2/test/repeat-test.sh"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.185.0",
+    "@casl/ability": "^6.7.1",
     "aws-sdk": "^2.1230.0",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.0",

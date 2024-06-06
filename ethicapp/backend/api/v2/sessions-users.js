@@ -2,8 +2,8 @@ const express = require('express');
 const bodyParser = require('body-parser'); // Importa body-parser
 const router = express.Router();
 const crypto = require('crypto');
-const authorizeSessionAccess = require('../v2/middleware/authenticateSession')
 const authenticateToken = require('../v2/middleware/authenticateToken')
+const checkAbility = require('../v2/middleware/checkAbility');
 
 // Import Model
 const { Session, SessionsUsers } = require('../../api/v2/models');
@@ -31,16 +31,19 @@ router.post('/sessions/:sessionId/users', async (req, res) => {
 });
 
 // Read session users | the auth order is the left to right
-router.get('/sessions/:sessionId/users', authenticateToken, authorizeSessionAccess, async (req, res) => {
+router.get('/sessions/:sessionId/users', authenticateToken, checkAbility('Get', 'Session'), async (req, res) => {
     //console.log("> LLEGA <")
     const { sessionId } = req.params;
 
     try {
+
         const session = await Session.findByPk(sessionId);
         if (!session) {
             return res.status(404).json({ status: 'error', message: 'Session not found' });
         }
-
+        if (session.creator !== req.user.id && (req.user.role !== 'A' || req.user.role === 'E')) {
+            return res.status(403).json({ status: 'error', message: 'Access forbidden: not the creator' });
+        }
         // Busca los usuarios asociados a la sesión usando la tabla intermedia SessionsUsers
         const sessionUsers = await SessionsUsers.findAll({
             where: { session_id: sessionId },
@@ -55,8 +58,8 @@ router.get('/sessions/:sessionId/users', authenticateToken, authorizeSessionAcce
         console.error(err);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
-  });
-  
+});
+
 
 // Delete session user
 router.delete('/sessions/:sessionId/users/:userId', async (req, res) => {

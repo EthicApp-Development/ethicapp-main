@@ -1,0 +1,99 @@
+[
+    {
+        "phases": [{
+            "number": 1,
+            "question": [
+                {
+                    "content": {
+                        "question": "¿Cuantos oceanos hay actualmente",
+                        "options": ["5", "7", "10", "11", "1"],
+                        "correct_answer": "5"
+                    },
+                    "additional_info": "Geografia",
+                    "type": "choice",
+                    "text": "preguntas sobre el oceano",
+                    "session_id": 1,
+                    "number": 1
+                }
+            ]
+        }, {
+            "number": 2,
+            "question": [{
+                "content": {
+                    "question": "¿asdffasd dsffds sd fsdf",
+                    "options": ["dsf", "qw", "1wer", "1er1", "1e"],
+                    "correct_answer": "qw"
+                },
+                "additional_info": "cosas",
+                "type": "choice",
+                "text": "preguntas sobre las cosas",
+                "session_id": 1,
+                "number": 1
+            }]
+        }]
+    },
+    {
+        "phases": [{
+            "number": 1,
+            "question": [
+                {
+                    "content": {
+                        "question": "¿Cuantos oceanos sdahay actualmente",
+                        "options": ["5", "s7", "10a", "11", "1"],
+                        "correct_answer": "5s"
+                    },
+                    "additional_info": "Geodagrafia",
+                    "type": "choice",
+                    "text": "preguntasdas sobre el oceano",
+                    "session_id": 1,
+                    "number": 1
+                },
+                {
+                    "content": {
+                        "question": "¿Cuantos actualmente",
+                        "options": ["5", "s7", "10a", "11", "1"],
+                        "correct_answer": "5s"
+                    },
+                    "additional_info": "zsddrgcvfx",
+                    "type": "choice",
+                    "text": "preguntasdas ",
+                    "session_id": 1,
+                    "number": 1
+                }
+            ]
+        }, {
+            "number": 1,
+            "question": [{
+                "content": {
+                    "question": "__--___--__-___---___-__--_",
+                    "options": ["_-_", "---", "-_-", "___"],
+                    "correct_answer": "___"
+                },
+                "additional_info": "codigo morse",
+                "type": "choice",
+                "text": "preguntas morse",
+                "session_id": 1,
+                "number": 1
+            }]
+        }]
+    },
+    {
+        "phases": [{
+            "number": 1,
+            "question": [
+                {
+                    "content": {
+                        "question": "¿Cuantos oceanos sdahay actualmente",
+                        "options": ["5", "s7", "10a", "11", "1"],
+                        "correct_answer": "5s"
+                    },
+                    "additional_info": "Geodagrafia",
+                    "type": "choice",
+                    "text": "preguntasdas sobre el oceano",
+                    "session_id": 1,
+                    "number": 1
+                }
+            ]
+        }]
+    }
+]

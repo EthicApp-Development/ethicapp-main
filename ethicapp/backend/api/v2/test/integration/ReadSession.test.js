@@ -1,6 +1,6 @@
 const request = require('supertest');
-const app = require('../../backend/api/v2/testApi'); // Ajusta según tu configuración
-const { User, Session, SessionsUsers } = require('../../backend/api/v2/models');
+const app = require('../../testApi'); // Ajusta según tu configuración
+const { User, Session, SessionsUsers } = require('../../models');
 const jwt = require('jsonwebtoken');
 const addUser = require('../fixtures/users.json');
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
@@ -31,6 +31,31 @@ describe('GET /sessions/:sessionId/users', () => {
     professorFalseToken = jwt.sign({ id: professorFalso.id, role: professorFalso.role }, 'your_secret_key');
     studentToken = jwt.sign({ id: student.id, role: student.role }, 'your_secret_key');
 
+    const designRes = await request(app)
+      .post(`${API_VERSION_PATH_PREFIX}/designs`)
+      .send({
+        creator: professor.id,
+        design: {
+          "phase": [{
+            "number": 1,
+            "question": [{
+              "content": {
+                "question": "¿Cuantos oceanos hay actualmente",
+                "options": ["5", "7", "10", "11", "1"],
+                "correct_answer": "5"
+              },
+              "additional_info": "Geografia",
+              "type": "choice",
+              "text": "preguntas sobre el oceano",
+              "session_id": 1,
+              "number": 1
+            }]
+          }]
+        },
+        public: true,
+        locked: false
+      })
+
     // Crea una sesión y asigna al profesor como creador
     const session = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/sessions`)
@@ -48,6 +73,7 @@ describe('GET /sessions/:sessionId/users', () => {
 
   it('should return 401 if no token is provided', async () => {
     const res = await request(app).get(`${API_VERSION_PATH_PREFIX}/sessions/${sessionId}/users`);
+    console.log('should return 401 if no token is provided')
     expect(res.status).toBe(401);
   });
 
@@ -55,6 +81,7 @@ describe('GET /sessions/:sessionId/users', () => {
     const res = await request(app)
       .get(`${API_VERSION_PATH_PREFIX}/sessions/${sessionId}/users`)
       .set('Authorization', `Bearer ${adminToken}`);
+    console.log('should allow admin to access the session users')
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(2); // Profesor y estudiante
   });
@@ -63,6 +90,7 @@ describe('GET /sessions/:sessionId/users', () => {
     const res = await request(app)
       .get(`${API_VERSION_PATH_PREFIX}/sessions/${sessionId}/users`)
       .set('Authorization', `Bearer ${professorToken}`);
+    console.log('should allow the creator professor to access the session users')
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(2); // Profesor y estudiante
   });
@@ -71,6 +99,7 @@ describe('GET /sessions/:sessionId/users', () => {
     const res = await request(app)
       .get(`${API_VERSION_PATH_PREFIX}/sessions/${sessionId}/users`)
       .set('Authorization', `Bearer ${studentToken}`);
+    console.log('should return 403 for a student trying to access session users')
     expect(res.status).toBe(403);
   });
 
@@ -78,6 +107,7 @@ describe('GET /sessions/:sessionId/users', () => {
     const res = await request(app)
       .get(`${API_VERSION_PATH_PREFIX}/sessions/${sessionId}/users`)
       .set('Authorization', `Bearer ${professorFalseToken}`);
+    console.log('should not allow the teacher who is not from this session to access the users of the session')
     expect(res.status).toBe(403);
   });
 });
