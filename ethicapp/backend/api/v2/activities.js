@@ -4,6 +4,10 @@ const router = express.Router();
 const auth = require('../v2/middleware/authenticateToken')
 
 const { Activity, Design, Session } = require('../../api/v2/models');
+const authenticateToken = require('../../api/v2/middleware/authenticateToken');
+
+// Configure body-parser to process the body of requests in JSON format.
+router.use(bodyParser.json());
 
 // Configure body-parser to process the body of requests in JSON format.
 router.use(bodyParser.json());
@@ -38,6 +42,33 @@ router.post('/activity', auth, async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 });
+
+//create activity post session
+router.post('/activity/postsession', authenticateToken, async (req, res) => {
+    const { design, session } = req.body;
+    const { id, role } = req.user;
+  
+    if (role !== 'P') {
+      return res.status(403).json({ status: 'error', message: 'Only professors can create activities' });
+    }
+  
+    try {
+      const sessionActivity = await Session.findByPk(session);
+      if (!sessionActivity) {
+        return res.status(400).json({ status: 'error', message: 'Session not found' });
+      }
+  
+      if (sessionActivity.creator !== id) {
+        return res.status(403).json({ status: 'error', message: 'You do not own this session' });
+      }
+  
+      const activity = await Activity.create({ design, session });
+      res.status(201).json({ status: 'success', data: activity });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+  });
 
 // Update
 router.put('/activity/:id', async (req, res) => {

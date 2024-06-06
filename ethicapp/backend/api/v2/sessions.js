@@ -5,7 +5,8 @@ const crypto = require('crypto');
 const authenticateToken = require('../../api/v2/middleware/authenticateToken');
 
 // Import Model
-const { Session, SessionsUsers, User } = require('../../api/v2/models');
+const { Session, SessionsUsers, User, Activity } = require('../../api/v2/models');
+const designs = require('./models/designs');
 
 // Configure body-parser to process the body of requests in JSON format.
 router.use(bodyParser.json());
@@ -45,6 +46,42 @@ router.post('/sessions', async (req, res) => {
     }
 }); 
 
+//generate a new session by professor
+router.post('/sessions/creator/:numberDesign', authenticateToken, async (req, res) => {
+    const { role } = req.user;
+    const { numberDesign } = req.params;
+    if (role !== 'P') {
+      return res.status(403).json({ status: 'error', message: 'Only professors can create sessions' });
+    }
+  
+    try {
+      const code = crypto.randomBytes(3).toString('hex');
+      const sessionData = {
+        ...req.body,
+        code,
+      };
+      const session = await Session.create(sessionData);
+  
+      // Crear automáticamente la primera actividad
+      const activity = await Activity.create({
+        design: numberDesign, // Ajustar según el diseño predeterminado
+        session: session.id
+      });
+  
+      const sessionDescriptor = {
+        id: session.id,
+        code: session.code,
+        status: session.status,
+        activity: activity.id, // Incluir la actividad creada
+        design: parseInt(numberDesign)
+      };
+  
+      res.status(201).json({ status: 'success', data: sessionDescriptor });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+  });
 
 // Update
 router.put('/sessions/:id', async (req, res) => {
