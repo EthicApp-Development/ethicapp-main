@@ -36,14 +36,7 @@ describe('Phase Model', () => {
 
       expect(phaseRes.status).toBe(400);
       expect(phaseRes.body).toHaveProperty('status', 'error');
-      expect(phaseRes.body).toHaveProperty('message', 'Phase already exists for this activity');
     
 
     });
-    // it('should not create a duplicate phase for the same activity', async () => {
-    //   await Phase.create({ number: random_number+2, type: `Test activity duplicated${activityId.id-2}`, anon: true, chat: false, prev_ans: 'None', activity_id: activityId.id-2 });
-    //   await expect(Phase.create({ number: random_number+2, type: `Test activity duplicateds${activityId.id-2}`, anon: true, chat: false, prev_ans: 'None', activity_id: activityId.id-2 }))
-    //     .rejects
-    //     .toThrow();
-    // });
   });

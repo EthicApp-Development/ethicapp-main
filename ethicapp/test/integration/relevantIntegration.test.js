@@ -105,14 +105,14 @@ describe('Integration Test', () => {
     expect(phaseRes.body.status).toBe('success');
 
     const questionRes = await request(app)
-      .get(`${API_VERSION_PATH_PREFIX}/questions/${phaseId}`)
+      .get(`${API_VERSION_PATH_PREFIX}/questions/${phaseRes.body.data.id}`)
 
     console.log("questionRes ->",questionRes.body.data.content)
     expect(questionRes.status).toBe(201);
     expect(questionRes.body.status).toBe('success');
   });
 
-   it('Student can create a response', async () => {
+   it('Student can create a response and send', async () => {
 
     const responseByUser = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/responses`)

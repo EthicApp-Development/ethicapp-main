@@ -15,7 +15,7 @@ describe('Activity Model', () => {
     });
 
     it('should not create an activity without a design', async () => {
-        await expect(Activity.create({ name: 'Test Activity' }))
+        await expect(Activity.create({ session: 2 }))
             .rejects
             .toThrow();
     });

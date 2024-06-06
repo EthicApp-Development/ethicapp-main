@@ -93,14 +93,14 @@ router.post('/phasesTesting', async (req, res) => {
   console.log("llega")
   try {
     console.log("pasa el try")
-    const activity = await Activity.findByPk(activity_id);
-    if (!activity) {
-      return res.status(400).json({ status: 'error', message: 'Activity not found' });
-    }
-
     const existingPhase = await Phase.findOne({ where: { activity_id: activity_id, number: number } });
     if (existingPhase) {
       return res.status(400).json({ status: 'error', message: 'Phase already exists for this activity' });
+    }
+
+    const activity = await Activity.findByPk(activity_id);
+    if (!activity) {
+      return res.status(400).json({ status: 'error', message: 'Activity not found' });
     }
 
     const phase = await Phase.create({ number, type, anon, chat, prev_ans, activity_id });
