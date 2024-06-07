@@ -1,15 +1,38 @@
-const { Phase, Activity } = require('../../backend/api/v2/models');
+const { Phase, Activity, User } = require('../../backend/api/v2/models');
 const request = require('supertest');
 const app = require('../../backend/api/v2/testApi');
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
 describe('Phase Model', () => {
     let activityId
+    let userId
+    let token;
     function getRandomInt(min, max) {
       return Math.floor(Math.random() * (max - min + 1)) + min;
     }
     const random_number = getRandomInt(0,9999)
     beforeAll(async () => {
+      const user = await User.create({
+        name: `Test User for phase`,
+        rut: `11222333-k`,
+        pass: `passphase`,
+        pass_confirmation: `passphase`,
+        mail: `testuserphase@example.com`,
+        sex: 'M',
+        role: 'A',
+    });
+
+    // Asignar el id del usuario creado a la variable global userId
+    userId = user.dataValues.id;
+
+    // Login to get the token
+    const loginRes = await request(app)
+        .post(`${API_VERSION_PATH_PREFIX}/login/user_session`)
+        .send({ mail: `testuserphase@example.com`, pass: `passphase` });
+
+    token = loginRes.body.token;
+
+    console.log('token -->', token);
         activityId = await Activity.create({ design: 1, session: 1 });
     });
   
@@ -27,12 +50,14 @@ describe('Phase Model', () => {
   
     it('should not create a duplicate phase for the same activity', async () => {
         await request(app)
-      .post(`${API_VERSION_PATH_PREFIX}/phasesTesting`)
-      .send({ number: random_number+2, type: `Test activity duplicated${activityId.id-2}`, anon: true, chat: false, prev_ans: 'None', activity_id: activityId.id-2 })
+      .post(`${API_VERSION_PATH_PREFIX}/phases`)
+      .send({ number: random_number+2, type: `Test activity duplicated${activityId.id-1}`, anon: true, chat: false, prev_ans: 'None', activity_id: activityId.id-1 })
+      .set('Authorization', `Bearer ${token}`);
 
       const phaseRes = await request(app)
-      .post(`${API_VERSION_PATH_PREFIX}/phasesTesting`)
-      .send({ number: random_number+2, type: `Test activity duplicated${activityId.id-2}`, anon: true, chat: false, prev_ans: 'None', activity_id: activityId.id-2 })
+      .post(`${API_VERSION_PATH_PREFIX}/phases`)
+      .send({ number: random_number+2, type: `Test activity duplicated${activityId.id-1}`, anon: true, chat: false, prev_ans: 'None', activity_id: activityId.id-1 })
+      .set('Authorization', `Bearer ${token}`);
 
       expect(phaseRes.status).toBe(400);
       expect(phaseRes.body).toHaveProperty('status', 'error');

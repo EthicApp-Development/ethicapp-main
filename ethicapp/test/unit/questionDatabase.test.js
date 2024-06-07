@@ -13,7 +13,7 @@ describe('Question Model', () => {
     //phaseQuestion = await Phase.findByPk(idPhase-1)
     randomPhase = getRandomInt(1, idPhase)
   });
-  console.log(idPhase)
+  //console.log(idPhase)
 
   it('should create a question associated with a phase', async () => {
     const question = await Question.create({ number_phase: randomPhaseQuestion, content: { text: 'Test Question' }, additional_info: `Info -phase id -> ${randomPhase}`, type: 'MCQ', text: 'What is 2+2?', phases_id: 2});
