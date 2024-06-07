@@ -91,7 +91,7 @@ describe('POST /api-v2/sessions/users', () => {
         expect(userRes.body.data).toHaveProperty('user_id');
 
         // Verify the user is in the session
-        console.log( "userRes.body.data.session_id ->", userRes.body.data.session_id)
+        //console.log( "userRes.body.data.session_id ->", userRes.body.data.session_id)
         const usersRes = await request(app)
             .get(`${API_VERSION_PATH_PREFIX}/sessionsUsers/${userRes.body.data.session_id}/users`)
             .set('Authorization', `Bearer ${token}`);

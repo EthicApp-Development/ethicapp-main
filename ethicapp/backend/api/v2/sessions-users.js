@@ -32,7 +32,7 @@ router.post('/sessions/:sessionId/users', async (req, res) => {
 
 // Read session users | the auth order is the left to right
 router.get('/sessions/:sessionId/users', authenticateToken, authorizeSessionAccess, async (req, res) => {
-    console.log("> LLEGA <")
+    //console.log("> LLEGA <")
     const { sessionId } = req.params;
 
     try {
@@ -49,7 +49,7 @@ router.get('/sessions/:sessionId/users', authenticateToken, authorizeSessionAcce
 
         // Mapea los IDs de los usuarios
         const userIds = sessionUsers.map(user => user.user_id);
-        console.log("userIds -=>", userIds)
+        //console.log("userIds -=>", userIds)
         res.status(200).json({ status: 'success', data: userIds });
     } catch (err) {
         console.error(err);

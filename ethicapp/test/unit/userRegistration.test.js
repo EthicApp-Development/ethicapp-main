@@ -32,7 +32,7 @@ describe('User Registration', () => {
         //     role: 'U'
         // });
 
-        console.log("should register a user successfully with valid password and password confirmation")
+        //console.log("should register a user successfully with valid password and password confirmation")
         const res = await request(app)
             .post(`${API_VERSION_PATH_PREFIX}/users`)
             .send(sucessfullUser)
@@ -42,7 +42,7 @@ describe('User Registration', () => {
     });
 
     it('should fail if password and password confirmation do not match', async () => {
-        console.log("should fail if password and password confirmation do not match")
+        //console.log("should fail if password and password confirmation do not match")
         const differentPasswordUser = userData[1]
         const res = await request(app)
             .post(`${API_VERSION_PATH_PREFIX}/users`)
@@ -53,7 +53,7 @@ describe('User Registration', () => {
     });
 
     it('should fail if the password is less than 8 characters', async () => {
-        console.log("should fail if the password is less than 8 characters")
+        //console.log("should fail if the password is less than 8 characters")
         const lessCharacters = userData[2]
         const res = await request(app)
             .post(`${API_VERSION_PATH_PREFIX}/users`)
