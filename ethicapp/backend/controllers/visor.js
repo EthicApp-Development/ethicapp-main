@@ -412,11 +412,16 @@ async function buildContentAnalysisUnit(req, res) {
                 const nodeHostName = process.env.NODE_HOST_NAME;
                 const nodePort = process.env.NODE_PORT;
                 const sessionURL = `http://${nodeHostName}:${nodePort}/${result[0].case_url}`;
+                
+                const nodeHostName = process.env.NODE_HOST_NAME;
+                const nodePort = process.env.NODE_PORT;
+                const sessionURL = `http://${nodeHostName}:${nodePort}/${result[0].case_url}`;
 
                 const workUnitJson = {
                     context: {
                         session_id: result[0].session_id,
                         phase_id: result[0].phase_id,
+                        callback_url: `http://${nodeHostName}:${nodePort}/content-analysis-callback`, 
                         callback_url: `http://${nodeHostName}:${nodePort}/content-analysis-callback`, 
                         timestamp: Date.now(),
                     },
@@ -504,6 +509,7 @@ router.post('/content-analysis-callback', async (req, res) => {
     } catch (error) {
         console.error('Error al procesar el callback:', error);
     }
+  });
   });
 
 router.post("/send-diff-selection", (req, res, next) => {
