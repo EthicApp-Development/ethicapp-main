@@ -11,7 +11,7 @@ module.exports = {
         session_id: 1, 
         createdAt: new Date(),
         updatedAt: new Date(),
-        number_phase:1
+        number:1
       },
       {
         content: JSON.stringify({ question: '¿Cuál es la fórmula química del agua?', answer: 'H2O' }),
@@ -21,7 +21,7 @@ module.exports = {
         session_id: 1, 
         createdAt: new Date(),
         updatedAt: new Date(),
-        number_phase:2
+        number:2
       },
       {
         content: JSON.stringify({ question: '¿que pesa mas un kilo de piedras o un kilo de plumas?', answer: 'ambas pesan igual' }),
@@ -31,7 +31,7 @@ module.exports = {
         session_id: 2, 
         createdAt: new Date(),
         updatedAt: new Date(),
-        number_phase:3
+        number:3
       },
     ], {});
   },

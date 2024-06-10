@@ -3,26 +3,105 @@
       "creator": 1,
       "question_id": 1,
       "design": {
-        "title": "Diseño 1",
-        "description": "Descripción del diseño 1",
-        "elements": [
-          {"type": "text", "content": "Texto de ejemplo 1"},
-          {"type": "image", "url": "ejemplo.com/imagen1.jpg"}
-        ]
+        "phase": [{
+          "number": 1,
+          "question": [{
+            "content": {
+              "question": "¿Cuantos oceanos hay actualmente",
+              "options": ["5", "7", "10","11","1"],
+              "correct_answer": "5"
+          },
+          "additional_info": "Geografia",
+          "type": "choice",
+          "text": "preguntas sobre el oceano",
+          "session_id": 1,
+          "number": 1
+          }]
+        }]
       },
-      "public": true,
-      "locked": false
+      "public": false,
+      "locked": true
+    },
+    {
+      "creator": 3,
+      "question_id": 2,
+      "design": {
+        "phase": [{
+          "number": 1,
+          "question": [{
+            "content": {
+              "question": "¿Cuantos oceanos hay actualmente",
+              "options": ["5", "7", "10","11","1"],
+              "correct_answer": "5"
+          },
+          "additional_info": "Geografia",
+          "type": "choice",
+          "text": "preguntas sobre el oceano",
+          "session_id": 1,
+          "number": 1
+          }]
+        },
+      {
+        "number":2,
+        "question": [{
+          "content": {
+            "question": "¿Cuál es tu color favorito?",
+            "options": ["Violeta", "Negro", "Azul"],
+            "correct_answer": "Azul"
+        },
+        "additional_info": "responses",
+        "type": "choice",
+        "text": "¿Cuál es tu color favorito?",
+        "session_id": 1,
+        "number": 2
+        }]
+      }]
+      },
+      "public": false,
+      "locked": true
     },
     {
       "creator": 2,
       "question_id": 2,
       "design": {
-        "title": "Diseño 2",
-        "description": "Descripción del diseño 2",
-        "elements": [
-          {"type": "text", "content": "Texto de ejemplo 2"},
-          {"type": "image", "url": "ejemplo.com/imagen2.jpg"}
-        ]
+        "phase": [{
+          "number": 2,
+          "question": [{
+            "content": {
+              "question": "¿Cuantos oceanos hay actualmente",
+              "options": ["5", "7", "10","11","1"],
+              "correct_answer": "5"
+          },
+          "additional_info": "Geografia",
+          "type": "choice",
+          "text": "preguntas sobre el oceano",
+          "sesion_id": 1,
+          "number": 1
+          }]
+        },
+      {
+        "number":2,
+        "question": [{
+          "content": {
+            "question": "¿Cuál es tu color favorito?",
+            "options": ["Violeta", "Negro", "Azul"],
+            "correct_answer": "Azul"
+        },
+        "additional_info": "responses",
+        "type": "choice",
+        "text": "¿Cuál es tu color favorito?",
+        "session_id": 1,
+        "number": 2
+        }]
+      }]
+      },
+      "public": false,
+      "locked": true
+    },
+    {
+      "creator": 2,
+      "question_id": 2,
+      "design": {
       },
       "public": false,
       "locked": true

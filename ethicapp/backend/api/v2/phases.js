@@ -1,7 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const router = express.Router();
-const { Phase, Activity } = require('../../api/v2/models');
+const { Phase, Activity, Design } = require('../../api/v2/models');
 const authenticateToken = require('../../api/v2/middleware/authenticateToken')
 // Import Model
 
@@ -88,27 +88,29 @@ router.get('/phases/:id', async (req, res) => {
   }
 });
 
-// Create
-// router.post('/phasesTesting', async (req, res) => {
-//   const { number, type, anon, chat, prev_ans, activity_id } = req.body;
-//   //console.log("llega")
-//   try {
-//     //console.log("pasa el try")
-//     const existingPhase = await Phase.findOne({ where: { activity_id: activity_id, number: number } });
-//     if (existingPhase) {
-//       return res.status(400).json({ status: 'error', message: 'Phase already exists for this activity' });
-//     }
+router.post('/phases/design', async (req, res) => {
+  const { number, type, anon, chat, prev_ans, activity_id } = req.body;
+  let designId, numberPhases
+  try {
+    const activity = await Activity.findByPk(activity_id);
+    if (!activity) {
+      return res.status(400).json({ status: 'error', message: 'Activity not found' });
+    }
+    
+    designId = activity.design
+    const design = await Design.findByPk(designId);
+    numberPhases = design.design.phases
+    const phaseNumber = numberPhases.find(d => d.number === number)
+    //console.log(phaseNumber)
+    if(phaseNumber){
+      return res.status(400).json({ status: 'error', message: 'phase number is exist in the design' });
+    }
+    const phase = await Phase.create({ number, type, anon, chat, prev_ans, activity_id });
+    return res.status(201).json({ status: 'success', data: phase });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
+});
 
-//     const activity = await Activity.findByPk(activity_id);
-//     if (!activity) {
-//       return res.status(400).json({ status: 'error', message: 'Activity not found' });
-//     }
-
-//     const phase = await Phase.create({ number, type, anon, chat, prev_ans, activity_id });
-//     res.status(201).json({ status: 'success', data: phase });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ status: 'error', message: 'Internal server error' });
-//   }
-// });
 module.exports = router;

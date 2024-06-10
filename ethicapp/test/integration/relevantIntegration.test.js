@@ -12,12 +12,19 @@ describe('Integration Test', () => {
   let activityId;
   let phaseId;
   let student;
+  let profesorId;
+  let question_id
 
   beforeAll(async () => {
         // Create a user
         const professorExample = userData[7]
-        await User.create(professorExample);
+        const professorId = await request(app)
+        .post(`${API_VERSION_PATH_PREFIX}/users`)
+        .send(professorExample)
+        //await User.create(professorExample);
 
+        console.log(professorId.body.data)
+        profesorId = professorId.body.data.id
         // Login to get the token Professor
         const loginResProfessor = await request(app)
             .post(`${API_VERSION_PATH_PREFIX}/login_user`)
@@ -66,7 +73,7 @@ describe('Integration Test', () => {
     phaseId = phase.body.data.id
 
     // Create Question
-    await request(app)
+    const questionId = await request(app)
         .post(`${API_VERSION_PATH_PREFIX}/questions`)
         .send({ content: {
             question: "¿Cuantos oceanos hay actualmente",
@@ -77,17 +84,21 @@ describe('Integration Test', () => {
         type: "choice",
         text: "preguntas sobre el oceano",
         sesion_id: 1,
-        number_phase: 1,
-        phases_id:phaseId})
+        number: 1})
         .expect(201);
-
+    question_id = questionId.body.data.id
   });
 //   afterAll(async () => {
 //     // Close database connection
 //     await sequelize.close();
 //   });
 
-  it('Professor can go to the next phase', async () => {
+it('que todo funcione correctamente', async () => {
+  console.log('token studentToken-->', studentToken);
+  console.log('token Professor-->', professorToken);
+})
+
+it('Professor can go to the next phase', async () => {
     const res = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/phases`)
       .set('Authorization', `Bearer ${professorToken}`)
@@ -98,18 +109,69 @@ describe('Integration Test', () => {
   });
 
   it('Student can get the current phase and question', async () => {
-    const phaseRes = await request(app)
-      .get(`${API_VERSION_PATH_PREFIX}/phases/${phaseId}`)
+    console.log("question_id ->", question_id)
+    const dataDesign = {
+      creator: profesorId,
+      question_id: question_id,
+      design: {
+        phases:[{
+          number: 1,
+          question: [
+            {
+            content: {
+              question: "¿Cuantos oceanos hay actualmente",
+              options: ["5", "7", "10","11","1"],
+              correct_answer: "5"
+          },
+          additional_info: "Geografia",
+          type: "choice",
+          text: "preguntas sobre el oceano",
+          session_id: 1,
+          number: 1
+          },
+          {
+            content: {
+              question: "¿Cuantos continentes hay actualmente",
+              options: ["5", "7", "10","11","1"],
+              correct_answer: "5"
+          },
+          additional_info: "Geografia",
+          type: "choice",
+          text: "preguntas sobre los continentes",
+          session_id: 1,
+          number: 2
+          }]
+        },{
+          number:2,
+          question: [{
+            content: {
+              question: "¿asdffasd dsffds sd fsdf",
+              options: ["dsf", "qw", "1wer","1er1","1e"],
+              correct_answer: "qw"
+          },
+          additional_info: "cosas",
+          type: "choice",
+          text: "preguntas sobre las cosas",
+          session_id: 1,
+          number: 1
+          }]
+        }]
+      },
+      public: true,
+      locked: true
+    }
+    const response = await request(app)
+      .post(`${API_VERSION_PATH_PREFIX}/designs`)
+      .send(dataDesign)
+      .expect(201);
 
-    expect(phaseRes.status).toBe(200);
-    expect(phaseRes.body.status).toBe('success');
-
-    const questionRes = await request(app)
-      .get(`${API_VERSION_PATH_PREFIX}/questions/${phaseRes.body.data.id}`)
-
-    console.log("questionRes ->",questionRes.body.data.content)
-    expect(questionRes.status).toBe(201);
-    expect(questionRes.body.status).toBe('success');
+    const createdDesignId = response.body.data
+    console.log(createdDesignId)
+    const designRes = await request(app)
+      .get(`${API_VERSION_PATH_PREFIX}/designs/${profesorId}/${1}/${1}`)
+    
+      expect(designRes.status).toBe(200);
+      expect(designRes.body.status).toBe('success');
   });
 
    it('Student can create a response and send', async () => {
