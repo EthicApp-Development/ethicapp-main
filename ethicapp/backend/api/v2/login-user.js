@@ -16,7 +16,7 @@ const JWT_SECRET = 'your_secret_key';
 // Path to create a user session (login)
 router.post('/login/user_session', async (req, res) => {
   try {
-    console.log("req.body ->: ",req.body)
+    //console.log("req.body ->: ",req.body)
     const { mail, pass } = req.body; // 
     
     const user = await User.findOne({ where: { mail } }); // Modifies to get the mail and password from the body of the request
@@ -25,7 +25,7 @@ router.post('/login/user_session', async (req, res) => {
     }
     const userId = user.dataValues.id;
     const token = jwt.sign({id: userId}, 'your_secret_key',  { expiresIn: '1h' })
-    console.log("token -->", token)
+    //console.log("token -->", token)
     res.json({ token });
   }
   catch (err) {
@@ -68,7 +68,7 @@ router.post('/login_user', async (req, res) => {
       }
 
       const token = jwt.sign({ id: user.id, mail: user.mail }, JWT_SECRET, { expiresIn: '1h' });
-      console.log("token ->", token)
+      //console.log("token ->", token)
       res.status(200).json({ status: 'success', token });
   } catch (err) {
       console.error(err);

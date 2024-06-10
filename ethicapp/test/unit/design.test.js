@@ -9,7 +9,7 @@ describe('CRUD Operations for Designs API', () => {
   // Test Create Operation
   it('should create a new design', async () => {
     const newDesignData = designsData[0]
-
+    console.log(designsData[1].design.phase[1])
     const response = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/designs`)
       .send(newDesignData)

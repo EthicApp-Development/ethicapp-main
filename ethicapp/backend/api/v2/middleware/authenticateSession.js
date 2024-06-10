@@ -25,7 +25,7 @@ const authorizeSessionAccess = async (req, res, next) => {
     }
   }
 
-  console.log('Access forbidden: insufficient permissions');
+  //console.log('Access forbidden: insufficient permissions');
   return res.status(403).json({ status: 'error', message: 'Access forbidden: insufficient permissions' });
 };
 

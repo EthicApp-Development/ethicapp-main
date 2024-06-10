@@ -70,7 +70,7 @@ describe('POST /api-v2/sessions/users', () => {
 
         token = loginRes.body.token;
 
-        console.log('token -->', token); // Ensure the token is obtained correctly
+        //console.log('token -->', token); // Ensure the token is obtained correctly
     });
 
     it('should add a user to a session', async () => {
