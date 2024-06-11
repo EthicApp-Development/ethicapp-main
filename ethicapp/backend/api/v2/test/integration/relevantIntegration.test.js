@@ -1,6 +1,6 @@
 const request = require('supertest');
-const app = require('../../backend/api/v2/testApi'); // Asegúrate de que apunta a tu aplicación Express
-const { User, Session  } = require('../../backend/api/v2/models');
+const app = require('../../testApi'); // Asegúrate de que apunta a tu aplicación Express
+const { User, Session  } = require('../../models');
 const jwt = require('jsonwebtoken');
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 

@@ -1,6 +1,6 @@
 const request = require('supertest');
-const app = require('../../backend/api/v2/testApi'); // Ajusta según tu configuración
-const { User, Session, SessionsUsers } = require('../../backend/api/v2/models');
+const app = require('../../testApi'); // Ajusta según tu configuración
+const { User, Session, SessionsUsers } = require('../../models');
 const jwt = require('jsonwebtoken');
 const addUser = require('../fixtures/users.json');
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';

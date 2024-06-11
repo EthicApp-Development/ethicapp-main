@@ -1,8 +1,8 @@
 const request = require('supertest');
 const express = require('express');
 const bodyParser = require('body-parser');
-const { User } = require('../../backend/api/v2/models');
-const loginRouter =  require('../../backend/api/v2/login-user');
+const { User } = require('../../models');
+const loginRouter =  require('../../login-user');
 const bcrypt = require('bcryptjs');
 const loginData = require('../fixtures/logins.json')
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
@@ -12,7 +12,7 @@ app.use(bodyParser.json());
 app.use(`${API_VERSION_PATH_PREFIX}`, loginRouter);
 
 // Mock the User model
-jest.mock('../../backend/api/v2/models', () => ({
+jest.mock('../../models', () => ({
     User: {
         findOne: jest.fn()
     }

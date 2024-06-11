@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('../../backend/api/v2/testApi');
+const app = require('../../testApi');
 const responseData = require('../fixtures/responses.json');
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 

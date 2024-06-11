@@ -1,6 +1,6 @@
 const request = require('supertest');
-const app = require('../../backend/api/v2/testApi');
-const { Session, User, Question } = require('../../backend/api/v2/models');
+const app = require('../../testApi');
+const { Session, User, Question } = require('../../models');
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
 describe('POST /questions/testing', () => {

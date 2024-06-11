@@ -1,6 +1,6 @@
 const request = require('supertest');
-const { Response, Phase } = require('../../backend/api/v2/models');
-const app = require('../../backend/api/v2/testApi'); 
+const { Response, Phase } = require('../../models');
+const app = require('../../testApi'); 
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
 describe('Response API', () => {

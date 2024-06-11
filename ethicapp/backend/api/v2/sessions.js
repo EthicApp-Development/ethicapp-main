@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const authenticateToken = require('../../api/v2/middleware/authenticateToken');
 
 // Import Model
-const { Session, SessionsUsers, User, Activity } = require('../../api/v2/models');
+const { Session, SessionsUsers, User, Activity, Design } = require('../../api/v2/models');
 const designs = require('./models/designs');
 
 // Configure body-parser to process the body of requests in JSON format.
@@ -167,5 +167,52 @@ router.get('/sessionsUsers/:id/users', authenticateToken, async (req, res) => {
     }
 });
 
+router.post('/sessions2', authenticateToken, async (req, res) => {
+    const { role } = req.user;
+
+    if (role !== 'P') {
+        return res.status(403).json({ status: 'error', message: 'Only professors can create sessions' });
+    }
+
+    try {
+        const code = crypto.randomBytes(3).toString('hex');
+        const sessionData = {
+            ...req.body,
+            code,
+        };
+
+        const session = await Session.create(sessionData);
+        const creatorSession = session.creator
+        const design = await Design.findOne({
+            where: {
+              creator: creatorSession // Assuming the user ID is stored in req.user.id after authentication
+            }
+          });
+        // Crear automáticamente la primera actividad
+        const activity = await Activity.create({
+            design: design.id || 1, // Ajustar según el diseño predeterminado
+            session: session.id
+        });
+
+        const sessionDescriptor = {
+            id: session.id,
+            name: session.name,
+            creator: session.creator,
+            code: session.code,
+            status: session.status,
+            type: session.type,
+            activity: {
+                id: activity.id,
+                design: activity.design,
+                session: activity.session,
+            }
+        };
+
+        res.status(201).json({ status: 'success', data: sessionDescriptor });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+});
 
 module.exports = router;

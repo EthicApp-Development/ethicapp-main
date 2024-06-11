@@ -1,6 +1,6 @@
-const { Phase, Activity, User, Design } = require('../../backend/api/v2/models');
+const { Phase, Activity, User, Design } = require('../../models');
 const request = require('supertest');
-const app = require('../../backend/api/v2/testApi');
+const app = require('../../testApi');
 const designData = require('../fixtures/designs.json')
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
