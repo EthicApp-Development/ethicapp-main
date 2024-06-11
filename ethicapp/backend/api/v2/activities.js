@@ -102,4 +102,11 @@ router.delete('/activity/:id', async (req, res) => {
     }
 });
 
+router.post('/activities/:id/init_next_phase', async (req,res) => {
+
+})
+
+
+router.get('/activities/:id/phases', async (req, res) => {
+});
 module.exports = router;

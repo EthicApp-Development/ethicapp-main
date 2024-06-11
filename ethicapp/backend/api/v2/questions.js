@@ -151,4 +151,15 @@ router.post('/questions/design', async (req, res) => {
     }
 });
 
+router.post('/questions/:id/responses', async (req, res) => {
+
+});
+
+router.put('/questions/:id/responses', async (req, res) => {
+
+});
+
+router.get('/questions/:id/responses', async (req, res) => {
+
+});
 module.exports = router;

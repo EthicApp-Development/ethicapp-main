@@ -113,4 +113,11 @@ router.post('/phases/design', async (req, res) => {
   }
 });
 
+router.post('/phases/:id/questions', async (req, res) => {
+
+});
+
+router.get('/phases/:id/questions', async (req, res) => {
+
+});
 module.exports = router;
