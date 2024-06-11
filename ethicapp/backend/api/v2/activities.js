@@ -135,13 +135,16 @@ router.post('/activities/:id/init_next_phase', authenticateToken, async (req, re
         if (!nextPhaseDesign) {
             return res.status(400).json({ status: 'error', message: 'No more phases available in the design' });
         }
-
+        const existingPhase = await Phase.findOne({ where: { activity_id: activity.id, number: nextPhaseNumber } });
+        if (existingPhase) {
+            return res.status(400).json({ status: 'error', message: 'Phase already initiated' });
+        }
         const phase = await Phase.create({
             number: nextPhaseNumber,
-            type: 'regular',
-            anon: false,
-            chat: false,
-            prev_ans: '',
+            type: nextPhaseDesign.type || 'regular',
+            anon: nextPhaseDesign.anon || false,
+            chat: nextPhaseDesign.chat || false,
+            prev_ans: nextPhaseDesign.prev_ans || '',
             activity_id: activity.id
         });
 

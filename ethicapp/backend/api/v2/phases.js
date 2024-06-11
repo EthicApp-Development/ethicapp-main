@@ -1,7 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const router = express.Router();
-const { Phase, Activity, Design } = require('../../api/v2/models');
+const { Phase, Activity, Design, Question } = require('../../api/v2/models');
 const authenticateToken = require('../../api/v2/middleware/authenticateToken')
 // Import Model
 
@@ -119,11 +119,53 @@ router.post('/phases/design', async (req, res) => {
   }
 });
 
-router.post('/phases/:id/questions', async (req, res) => {
+// POST /api/v2/phases/:id/questions
+router.post('/phases/:id/questions', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { text, content, additional_info, type, session_id, number } = req.body;
 
+  try {
+    const phase = await Phase.findByPk(id);
+    if (!phase) {
+      return res.status(400).json({ status: 'error', message: 'Phase not found' });
+    }
+
+    const question = await Question.create({
+      text,
+      content,
+      additional_info,
+      type,
+      session_id,
+      number,
+      phase_id: id
+    });
+
+    res.status(201).json({ status: 'success', data: question });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
 });
 
-router.get('/phases/:id/questions', async (req, res) => {
 
+// GET /api/v2/phases/:id/questions
+router.get('/phases/:id/questions', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const phase = await Phase.findByPk(id, {
+      include: [{ model: Question, as: 'questions' }]
+    });
+
+    if (!phase) {
+      return res.status(400).json({ status: 'error', message: 'Phase not found' });
+    }
+
+    res.status(200).json({ status: 'success', data: phase.questions });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
 });
+
 module.exports = router;
