@@ -23,7 +23,10 @@ router.get('/phases', async (req, res) => {
 // Create
 router.post('/phases', authenticateToken, async (req, res) => {
   const { number, type, anon, chat, prev_ans, activity_id } = req.body;
-
+  const { role } = req.user;
+  if (role !== 'P') {
+    return res.status(403).json({ status: 'error', message: 'Only professors can create sessions' });
+  }
   try {
 
     const activity = await Activity.findByPk(activity_id);
@@ -31,13 +34,15 @@ router.post('/phases', authenticateToken, async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Activity not found' });
     }
 
-    const existingPhase = await Phase.findOne({ where: { activity_id, number } });
-    if (existingPhase) {
-      return res.status(400).json({ status: 'error', message: 'Phase already exists for this activity' });
+    const designTable = await Design.findByPk(activity.design)
+    if (!designTable) {
+      return res.status(400).json({ status: 'error', message: 'Design not found' });
+    }
+    else {
+      const phase = await Phase.create({ number, type, anon, chat, prev_ans, activity_id });
+      return res.status(201).json({ status: 'success', data: phase });
     }
 
-    const phase = await Phase.create({ number, type, anon, chat, prev_ans, activity_id });
-    res.status(201).json({ status: 'success', data: phase });
   } catch (err) {
     console.error(err);
     res.status(500).json({ status: 'error', message: 'Internal server error' });
@@ -45,20 +50,21 @@ router.post('/phases', authenticateToken, async (req, res) => {
 });
 
 // Update
-router.put('/phases/:id', async (req, res) => {
-    const { id } = req.params;
-    try {
+router.put('/phases/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
       const phase = await Phase.findByPk(id);
       if (!phase) {
-        return res.status(404).json({ status: 'error', message: 'Phase not found' });
+          return res.status(404).json({ status: 'error', message: 'Phase not found' });
       }
       await phase.update(req.body);
       res.json({ status: 'success', data: phase });
-    } catch (err) {
+  } catch (err) {
       console.error(err);
       res.status(500).json({ status: 'error', message: 'Internal server error' });
-    }
+  }
 });
+
 
 // Delete
 router.delete('/phases/:id', async (req, res) => {

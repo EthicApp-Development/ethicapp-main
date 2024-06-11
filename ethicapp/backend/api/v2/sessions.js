@@ -5,8 +5,7 @@ const crypto = require('crypto');
 const authenticateToken = require('../../api/v2/middleware/authenticateToken');
 
 // Import Model
-const { Session, SessionsUsers, User, Activity, Design } = require('../../api/v2/models');
-const designs = require('./models/designs');
+const { Session, SessionsUsers, User, Activity, Design, Phase } = require('../../api/v2/models');
 
 // Configure body-parser to process the body of requests in JSON format.
 router.use(bodyParser.json());
@@ -48,7 +47,7 @@ router.post('/sessions', async (req, res) => {
 
 //generate a new session by professor
 router.post('/sessions/creator/:numberDesign', authenticateToken, async (req, res) => {
-    const { role } = req.user;
+    const { role, id } = req.user;
     const { numberDesign } = req.params;
     if (role !== 'P') {
       return res.status(403).json({ status: 'error', message: 'Only professors can create sessions' });
@@ -59,6 +58,7 @@ router.post('/sessions/creator/:numberDesign', authenticateToken, async (req, re
       const sessionData = {
         ...req.body,
         code,
+        creator: id
       };
       const session = await Session.create(sessionData);
   
@@ -67,7 +67,21 @@ router.post('/sessions/creator/:numberDesign', authenticateToken, async (req, re
         design: numberDesign, // Ajustar según el diseño predeterminado
         session: session.id
       });
-  
+    //   const design = await Design.findByPk(numberDesign);
+    //   if (!design) {
+    //       return res.status(400).json({ status: 'error', message: 'Design not found' });
+    //   }
+
+    //   // Crear la primera fase basada en el diseño
+    //   const firstPhaseDesign = design.design.phase[0];
+    //   const phase = await Phase.create({
+    //       number: firstPhaseDesign.number,
+    //       type: 'initial',
+    //       anon: false,
+    //       chat: false,
+    //       prev_ans: '',
+    //       activity_id: activity.id
+    //   });
       const sessionDescriptor = {
         id: session.id,
         code: session.code,
