@@ -88,14 +88,7 @@ describe('Integration Tests for Session and Activity Creation', () => {
     sessionId = sessionRes.body.data.id;
     console.log("countDesign ->", countDesign)
     console.log("sessionRes.body", sessionRes.body)
-    // const activitiesRes = await request(app)
-    //   .post(`${API_VERSION_PATH_PREFIX}/activity/postsession`)
-    //   .set('Authorization', `Bearer ${professorToken}`)
-    //   .send();
 
-    // expect(activitiesRes.status).toBe(404);
-    // expect(activitiesRes.body.data).toHaveLength(1);
-    // expect(activitiesRes.body.data[0]).toHaveProperty('session', sessionId);
   });
 
   it('should not allow a non-professor to create a session', async () => {
