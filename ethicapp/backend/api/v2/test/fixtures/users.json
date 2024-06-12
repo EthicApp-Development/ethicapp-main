@@ -88,5 +88,14 @@
         "mail": "Session@ethicapp.com",
         "sex": "M",
         "role": "P"
+    },
+    {
+        "name": "Profesor Example-10",
+        "rut": "91219512-5",
+        "pass": "password",
+        "pass_confirmation": "password",
+        "mail": "professor@example.com",
+        "sex": "F",
+        "role": "P"
     }
 ]
