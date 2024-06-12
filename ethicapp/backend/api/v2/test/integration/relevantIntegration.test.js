@@ -181,7 +181,7 @@ it('Professor can go to the next phase', async () => {
       .send({user_id: student.id,
          content:{ autor: student.name, responses: "A"},
          type: "Choice",
-         phase_id: phaseId})
+         question_id: question_id})
       .expect(201);
 
     expect(responseByUser.status).toBe(201);

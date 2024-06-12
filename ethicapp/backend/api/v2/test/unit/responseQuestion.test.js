@@ -1,5 +1,5 @@
 const request = require('supertest');
-const { Response, Phase } = require('../../models');
+const { Response, Phase, Question } = require('../../models');
 const app = require('../../testApi'); 
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
@@ -7,20 +7,25 @@ describe('Response API', () => {
     function getRandomInt(min, max) {
         return Math.floor(Math.random() * (max - min + 1)) + min;
     }
-  let phaseId;
+  let questionId;
   let userId;
   const random_phase = getRandomInt(1, 999999999)
   beforeAll(async () => {
     // Crear una fase para asociar la respuesta
-    const phase = await Phase.create({
-      number: random_phase,
-      type: 'Test',
-      anon: false,
-      chat: true,
-      prev_ans: 'None',
-      activity_id: 1 // ID de la actividad asociada a esta fase
+    const question = await Question.create({
+      content: {
+        question: "¿Cuál es tu color favorito?",
+        options: ["Violeta", "Negro", "Azul"],
+        correct_answer: "Azul"
+      },
+      additional_info: 'Test',
+      type: "false",
+      text: "true",
+      session_id: 1,
+      phase_id: 1, // ID de la actividad asociada a esta fase
+      number:1
     });
-    phaseId = phase.id;
+    questionId = question.id;
 
     // Supongamos que tenemos un usuario en la base de datos con ID 1
     userId = 1;
@@ -32,14 +37,13 @@ describe('Response API', () => {
 
     const response = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/responses`)
-      .send({ user_id: userId, content: responseContent, type: 'Text', phase_id: phaseId })
+      .send({ user_id: userId, content: responseContent, type: 'Text', question_id: questionId })
       .expect(201);
 
     expect(response.body).toHaveProperty('status', 'success');
     expect(response.body).toHaveProperty('data');
     expect(response.body.data).toHaveProperty('id');
     expect(response.body.data.user_id).toBe(userId);
-    expect(response.body.data.phase_id).toBe(phaseId);
 
     // Verificar si la respuesta se creó correctamente en la base de datos
     const createdResponse = await Response.findByPk(response.body.data.id);
@@ -49,20 +53,20 @@ describe('Response API', () => {
 
   it('should not allow creating more than one response for the same user and question', async () => {
     // Crear una respuesta para la misma fase y usuario
-    await Response.create({ user_id: userId, content: { answer: 'Previous answer' }, type: 'Text', phase_id: phaseId });
+    await Response.create({ user_id: userId, content: { answer: 'Previous answer' }, type: 'Text', question_id: questionId});
 
     // Intentar crear otra respuesta para la misma fase y usuario
     const response = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/responses`)
-      .send({ user_id: userId, content: { answer: 'New answer' }, type: 'Text', phase_id: phaseId })
+      .send({ user_id: userId, content: { answer: 'New answer' }, type: 'Text', question_id: questionId })
       .expect(400);
 
     expect(response.body).toHaveProperty('status', 'error');
-    expect(response.body).toHaveProperty('message', 'Only one response allowed per user and phase');
+    expect(response.body).toHaveProperty('message', 'Only one response allowed per user and question');
   });
 
   it('should allow updating an existing response', async () => {
-    const existingResponse = await Response.create({ user_id: userId, content: { answer: 'Previous answer' }, type: 'Text', phase_id: phaseId });
+    const existingResponse = await Response.create({ user_id: userId, content: { answer: 'Previous answer' }, type: 'Text', question_id: questionId });
 
     const updatedContent = { answer: 'Updated answer' };
     const response = await request(app)

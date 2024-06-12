@@ -22,21 +22,20 @@ router.get('/responses', async (req, res) => {
 
 // Create
 router.post('/responses', async (req, res) => {
-    const { user_id, phase_id } = req.body;
-    //console.log("user_id", user_id)
-    try {
-      const existingResponse = await Response.findOne({ where: { user_id, phase_id } });
-      
-      if(existingResponse) {
-        return res.status(400).json({ status: 'error', message: "Only one response allowed per user and phase" });
+  const { user_id, question_id } = req.body;
+  try {
+      const existingResponse = await Response.findOne({ where: { user_id, question_id } });
+      if (existingResponse) {
+          return res.status(400).json({ status: 'error', message: "Only one response allowed per user and question" });
       }
       const response = await Response.create(req.body);
       res.status(201).json({ status: 'success', data: response });
-    } catch (err) {
+  } catch (err) {
       console.error(err);
       res.status(500).json({ status: 'error', message: 'Internal server error' });
-    }
+  }
 });
+
 
 // Update
 router.put('/responses/:id', async (req, res) => {

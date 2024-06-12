@@ -15,11 +15,11 @@ module.exports = {
       type: Sequelize.TEXT,
       allowNull: true
     });
-    await queryInterface.addColumn('responses', 'phase_id', {
+    await queryInterface.addColumn('responses', 'question_id', {
       type: Sequelize.INTEGER,
       allowNull: true,
       references: {
-        model: 'phases',
+        model: 'questions',
         key: 'id'
       },
       onUpdate: 'CASCADE',
