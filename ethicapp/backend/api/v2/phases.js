@@ -11,13 +11,13 @@ router.use(bodyParser.json());
 
 // Read
 router.get('/phases', async (req, res) => {
-    try {
-      const phases = await Phase.findAll();
-      res.status(200).json({ status: 'success', data: phases });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ status: 'error', message: 'Internal server error' });
-    }
+  try {
+    const phases = await Phase.findAll();
+    res.status(200).json({ status: 'success', data: phases });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
 });
 
 // Create
@@ -53,33 +53,33 @@ router.post('/phases', authenticateToken, async (req, res) => {
 router.put('/phases/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   try {
-      const phase = await Phase.findByPk(id);
-      if (!phase) {
-          return res.status(404).json({ status: 'error', message: 'Phase not found' });
-      }
-      await phase.update(req.body);
-      res.json({ status: 'success', data: phase });
+    const phase = await Phase.findByPk(id);
+    if (!phase) {
+      return res.status(404).json({ status: 'error', message: 'Phase not found' });
+    }
+    await phase.update(req.body);
+    res.json({ status: 'success', data: phase });
   } catch (err) {
-      console.error(err);
-      res.status(500).json({ status: 'error', message: 'Internal server error' });
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 });
 
 
 // Delete
 router.delete('/phases/:id', async (req, res) => {
-    const { id } = req.params;
-    try {
-      const phase = await Phase.findByPk(id);
-      if (!phase) {
-        return res.status(404).json({ status: 'error', message: 'Phase not found' });
-      }
-      await phase.destroy();
-      res.status(204).end();
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ status: 'error', message: 'Internal server error' });
+  const { id } = req.params;
+  try {
+    const phase = await Phase.findByPk(id);
+    if (!phase) {
+      return res.status(404).json({ status: 'error', message: 'Phase not found' });
     }
+    await phase.destroy();
+    res.status(204).end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
 });
 
 //one phase
@@ -102,13 +102,13 @@ router.post('/phases/design', async (req, res) => {
     if (!activity) {
       return res.status(400).json({ status: 'error', message: 'Activity not found' });
     }
-    
+
     designId = activity.design
     const design = await Design.findByPk(designId);
     numberPhases = design.design.phases
     const phaseNumber = numberPhases.find(d => d.number === number)
     //console.log(phaseNumber)
-    if(phaseNumber){
+    if (phaseNumber) {
       return res.status(400).json({ status: 'error', message: 'phase number is exist in the design' });
     }
     const phase = await Phase.create({ number, type, anon, chat, prev_ans, activity_id });
@@ -160,7 +160,7 @@ router.get('/phases/:id/questions', authenticateToken, async (req, res) => {
     if (!phase) {
       return res.status(400).json({ status: 'error', message: 'Phase not found' });
     }
-
+    console.log(phase.questions)
     res.status(200).json({ status: 'success', data: phase.questions });
   } catch (err) {
     console.error(err);

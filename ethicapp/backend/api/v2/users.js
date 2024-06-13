@@ -21,8 +21,8 @@ router.get('/users', async (req, res) => {
 
 // Create
 router.post('/users', async (req, res) => {
-    const { pass, pass_confirmation } = req.body;
-    
+    const { pass, pass_confirmation, mail } = req.body;
+
     // Validate password length
     if (pass.length < 8) {
         return res.status(400).json({ status: 'error', message: 'Password must be at least 8 characters long' });
@@ -34,6 +34,14 @@ router.post('/users', async (req, res) => {
     }
 
     try {
+        const existingUser = await User.findOne({
+            where: {
+                mail: mail,
+            }
+        })
+        if (existingUser) {
+            //console.log("este usuario ya existe")
+        }
         const user = await User.create(req.body);
         res.status(201).json({ status: 'success', data: user });
     } catch (err) {

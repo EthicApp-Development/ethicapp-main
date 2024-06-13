@@ -1,5 +1,5 @@
 const express = require('express');
-const bodyParser = require('body-parser'); 
+const bodyParser = require('body-parser');
 const router = express.Router();
 const authenticateToken = require('../../api/v2/middleware/authenticateToken');
 // Import Model
@@ -81,17 +81,17 @@ router.delete('/questions/:id', async (req, res) => {
 router.get('/questions/:phaseId', async (req, res) => {
     const { phaseId } = req.params
     try {
-        const existingQuestionPhase = await Question.findOne({ where: { phases_id: phaseId} });
-        
-        if(!existingQuestionPhase) {
-          return res.status(400).json({ status: 'error', message: "Not Phase in the Question" });
+        const existingQuestionPhase = await Question.findOne({ where: { phases_id: phaseId } });
+
+        if (!existingQuestionPhase) {
+            return res.status(400).json({ status: 'error', message: "Not Phase in the Question" });
         }
         res.status(201).json({ status: 'success', data: existingQuestionPhase });
-      } catch (err) {
+    } catch (err) {
         console.error(err);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
-      }
-    
+    }
+
 });
 
 router.post('/questions/design', async (req, res) => {
@@ -167,7 +167,6 @@ router.post('/questions/:id/responses', authenticateToken, async (req, res) => {
         if (!phase) {
             return res.status(404).json({ status: 'error', message: 'Phase not found' });
         }
-
         const activity = await Activity.findByPk(phase.activity_id);
         if (!activity) {
             return res.status(404).json({ status: 'error', message: 'Activity not found' });

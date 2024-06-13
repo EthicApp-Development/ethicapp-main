@@ -22,7 +22,11 @@ router.get('/sessions', async (req, res) => {
 });
 
 // Create
-router.post('/sessions', async (req, res) => {
+router.post('/sessions', authenticateToken, async (req, res) => {
+    const { role } = req.user;
+    if (role === 'E') {
+        return res.status(403).json({ status: 'error', message: 'Only professors or administrator can create sessions' });
+    }
     try {
         const code = crypto.randomBytes(3).toString('hex');
         
@@ -32,10 +36,28 @@ router.post('/sessions', async (req, res) => {
         };
 
         const session = await Session.create(sessionData);
+        const creatorSession = session.creator
+        // const design = await Design.findOne({
+        //     where: {
+        //       creator: creatorSession // Assuming the user ID is stored in req.user.id after authentication
+        //     }
+        //   });
+        const activity = await Activity.create({
+            design: 1, // Ajustar según el diseño predeterminado
+            session: session.id
+        });
         const sessionDescriptor = {
             id: session.id,
+            name: session.name,
+            creator: session.creator,
             code: session.code,
-            status: session.status
+            status: session.status,
+            type: session.type,
+            activity: {
+                id: activity.id,
+                design: activity.design,
+                session: activity.session,
+            }
         };
 
         res.status(201).json({ status: 'success', data: sessionDescriptor });
@@ -175,54 +197,6 @@ router.get('/sessionsUsers/:id/users', authenticateToken, async (req, res) => {
         const userIds = sessionUsers.map(user => user.user_id);
         //console.log("userIds -=>", userIds)
         res.status(200).json({ status: 'success', data: userIds });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
-    }
-});
-
-router.post('/sessions2', authenticateToken, async (req, res) => {
-    const { role } = req.user;
-
-    if (role !== 'P') {
-        return res.status(403).json({ status: 'error', message: 'Only professors can create sessions' });
-    }
-
-    try {
-        const code = crypto.randomBytes(3).toString('hex');
-        const sessionData = {
-            ...req.body,
-            code,
-        };
-
-        const session = await Session.create(sessionData);
-        const creatorSession = session.creator
-        const design = await Design.findOne({
-            where: {
-              creator: creatorSession // Assuming the user ID is stored in req.user.id after authentication
-            }
-          });
-        // Crear automáticamente la primera actividad
-        const activity = await Activity.create({
-            design: design.id || 1, // Ajustar según el diseño predeterminado
-            session: session.id
-        });
-
-        const sessionDescriptor = {
-            id: session.id,
-            name: session.name,
-            creator: session.creator,
-            code: session.code,
-            status: session.status,
-            type: session.type,
-            activity: {
-                id: activity.id,
-                design: activity.design,
-                session: activity.session,
-            }
-        };
-
-        res.status(201).json({ status: 'success', data: sessionDescriptor });
     } catch (err) {
         console.error(err);
         res.status(500).json({ status: 'error', message: 'Internal server error' });

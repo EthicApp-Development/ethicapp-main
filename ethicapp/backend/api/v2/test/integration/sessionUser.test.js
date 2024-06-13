@@ -77,7 +77,8 @@ describe('POST /api-v2/sessions/users', () => {
         // Create a session first
         const sessionRes = await request(app)
             .post(`${API_VERSION_PATH_PREFIX}/sessions`)
-            .send({ name: 'Test Session', descr: 'A session for testing',time: new Date(), creator: 1, type: 'A', status: 1 });
+            .send({ name: 'Test Session', descr: 'A session for testing',time: new Date(), creator: 1, type: 'A', status: 1 })
+            .set('Authorization', `Bearer ${token}`)
 
         const sessionCode = sessionRes.body.data.code;
         // Add a user to the session

@@ -55,7 +55,7 @@ describe('Session Creation', () => {
         // }));
 
         const res = await request(app)
-            .post(`${API_VERSION_PATH_PREFIX}/sessions2`)
+            .post(`${API_VERSION_PATH_PREFIX}/sessions`)
             .send({
                 name: 'Test Session',
                 descr: 'A test session',
@@ -91,7 +91,7 @@ describe('Session Creation', () => {
             // }));
 
             const res = await request(app)
-                .post(`${API_VERSION_PATH_PREFIX}/sessions2`)
+                .post(`${API_VERSION_PATH_PREFIX}/sessions`)
                 .send({
                     name: `Test Session ${i + 1}`,
                     descr: `A test session ${generatedCode}`,

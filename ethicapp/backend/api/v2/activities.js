@@ -4,7 +4,6 @@ const router = express.Router();
 const auth = require('../v2/middleware/authenticateToken')
 
 const { Activity, Design, Session, Phase } = require('../../api/v2/models');
-const authenticateToken = require('../../api/v2/middleware/authenticateToken');
 
 // Configure body-parser to process the body of requests in JSON format.
 router.use(bodyParser.json());
@@ -25,16 +24,24 @@ router.get('/activity', async (req, res) => {
 
 // Create
 router.post('/activity', auth, async (req, res) => {
-    const { design, session } = req.body
+    const { design, session } = req.body;
+    const { id, role } = req.user;
+    if (role !== 'P') {
+        return res.status(403).json({ status: 'error', message: 'Only professors can create activities' });
+    }
+
     try {
         const designActivity = await Design.findByPk(design)
-        if(!designActivity){
+        if (!designActivity) {
             return res.status(400).json({ status: 'error', message: 'Design not found' });
         }
         const sessionActivity = await Session.findByPk(session)
-        if(!sessionActivity){
+        if (!sessionActivity) {
             return res.status(400).json({ status: 'error', message: 'Session not found' });
         }
+        // if (sessionActivity.creator !== id) {
+        //     return res.status(403).json({ status: 'error', message: 'You do not own this session' });
+        // }
         const activity = await Activity.create({ design, session });
         res.status(201).json({ status: 'success', data: activity });
     } catch (err) {
@@ -44,31 +51,31 @@ router.post('/activity', auth, async (req, res) => {
 });
 
 //create activity post session
-router.post('/activity/postsession', authenticateToken, async (req, res) => {
-    const { design, session } = req.body;
-    const { id, role } = req.user;
-  
-    if (role !== 'P') {
-      return res.status(403).json({ status: 'error', message: 'Only professors can create activities' });
-    }
-  
-    try {
-      const sessionActivity = await Session.findByPk(session);
-      if (!sessionActivity) {
-        return res.status(400).json({ status: 'error', message: 'Session not found' });
-      }
-  
-      if (sessionActivity.creator !== id) {
-        return res.status(403).json({ status: 'error', message: 'You do not own this session' });
-      }
-  
-      const activity = await Activity.create({ design, session });
-      res.status(201).json({ status: 'success', data: activity });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ status: 'error', message: 'Internal server error' });
-    }
-  });
+// router.post('/activity/postsession', auth, async (req, res) => {
+//     const { design, session } = req.body;
+//     const { id, role } = req.user;
+
+//     if (role !== 'P') {
+//         return res.status(403).json({ status: 'error', message: 'Only professors can create activities' });
+//     }
+
+//     try {
+//         const sessionActivity = await Session.findByPk(session);
+//         if (!sessionActivity) {
+//             return res.status(400).json({ status: 'error', message: 'Session not found' });
+//         }
+
+//         if (sessionActivity.creator !== id) {
+//             return res.status(403).json({ status: 'error', message: 'You do not own this session' });
+//         }
+
+//         const activity = await Activity.create({ design, session });
+//         res.status(201).json({ status: 'success', data: activity });
+//     } catch (err) {
+//         console.error(err);
+//         res.status(500).json({ status: 'error', message: 'Internal server error' });
+//     }
+// });
 
 // Update
 router.put('/activity/:id', async (req, res) => {
@@ -102,10 +109,9 @@ router.delete('/activity/:id', async (req, res) => {
     }
 });
 
-router.post('/activities/:id/init_next_phase', authenticateToken, async (req, res) => {
+router.post('/activities/:id/init_next_phase', auth, async (req, res) => {
     const { id } = req.params;
     const { role } = req.user;
-
     if (role !== 'P') {
         return res.status(403).json({ status: 'error', message: 'Only professors can initiate the next phase' });
     }
@@ -120,18 +126,19 @@ router.post('/activities/:id/init_next_phase', authenticateToken, async (req, re
             return res.status(400).json({ status: 'error', message: 'Session not found' });
         }
         if (session.creator !== req.user.id) {
-            return res.status(403).json({ status: 'error', message: 'You do not own this session' });
+            //return res.status(403).json({ status: 'error', message: 'You do not own this session' });
         }
-        
+        // console.log(session.creator) 
+        // console.log(req.user.id)
         const design = await Design.findByPk(activity.design);
         if (!design) {
             return res.status(400).json({ status: 'error', message: 'Design not found' });
         }
-        
+
         const phases = await Phase.findAll({ where: { activity_id: activity.id } });
         const nextPhaseNumber = phases.length + 1;
         const nextPhaseDesign = design.design.phases.find(p => p.number === nextPhaseNumber);
-
+        console.log(phases)
         if (!nextPhaseDesign) {
             return res.status(400).json({ status: 'error', message: 'No more phases available in the design' });
         }
@@ -147,7 +154,7 @@ router.post('/activities/:id/init_next_phase', authenticateToken, async (req, re
             prev_ans: nextPhaseDesign.prev_ans || '',
             activity_id: activity.id
         });
-
+        //console.log(phase)
         res.status(201).json({ status: 'success', data: phase });
     } catch (err) {
         console.error(err);

@@ -28,8 +28,10 @@ describe('POST /questions/testing', () => {
         // Crear una sesión
         const sessionRes = await request(app)
             .post(`${API_VERSION_PATH_PREFIX}/sessions`)
-            .send({ name: 'Test Session', descr: 'A session for testing', time: new Date(), creator: userId, type: 'A' });
-        sessionId = sessionRes.body.data.id;
+            .send({ name: 'Test Session', descr: 'A session for testing', time: new Date(), creator: userId, type: 'A' })
+            .set('Authorization', `Bearer ${professorToken}`)
+        
+            sessionId = sessionRes.body.data.id;
         
 
     });
