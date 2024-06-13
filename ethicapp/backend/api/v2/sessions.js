@@ -151,7 +151,7 @@ router.delete('/sessions/:id', async (req, res) => {
     }
 });
 
-// Add User to Session
+// Add User to Session with code session
 router.post('/sessions/users', authenticateToken, async (req, res) => {
     const { code, user_id } = req.body;
 

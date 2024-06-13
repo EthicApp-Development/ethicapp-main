@@ -29,7 +29,7 @@ describe('Phase Model', () => {
 
     // Login to get the token
     const loginRes = await request(app)
-        .post(`${API_VERSION_PATH_PREFIX}/login/user_session`)
+        .post(`${API_VERSION_PATH_PREFIX}/login_user`)
         .send({ mail: `testuserphase@example.com`, pass: `passphase` });
 
     token = loginRes.body.token;

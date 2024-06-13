@@ -77,23 +77,6 @@ router.delete('/questions/:id', async (req, res) => {
     }
 });
 
-//one question:
-router.get('/questions/:phaseId', async (req, res) => {
-    const { phaseId } = req.params
-    try {
-        const existingQuestionPhase = await Question.findOne({ where: { phases_id: phaseId } });
-
-        if (!existingQuestionPhase) {
-            return res.status(400).json({ status: 'error', message: "Not Phase in the Question" });
-        }
-        res.status(201).json({ status: 'success', data: existingQuestionPhase });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
-    }
-
-});
-
 router.post('/questions/design', async (req, res) => {
     const { text, content, additional_info, type, session_id, number } = req.body;
     let boolQuestionNumber = false;
@@ -109,7 +92,6 @@ router.post('/questions/design', async (req, res) => {
         if (!design) {
             return res.status(400).json({ status: 'error', message: 'Design not found for this question' });
         }
-        //console.log(design.dataValues.design.phases)
         //console.log(design.dataValues)
         if (!design.dataValues.design.phases) {
             return res.status(400).json({ status: 'error', message: 'Design is missing phases' });
