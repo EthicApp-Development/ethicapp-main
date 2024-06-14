@@ -3,13 +3,15 @@
 let express = require("express");
 let Redis = require("ioredis"); 
 const fetch = require('node-fetch');
+var pg = require("pg");
 let router = express.Router();
 let rpg = require("../db/rest-pg");
 let pass = require("../config/keys-n-secrets");
 let socket = require("../config/socket.config");
 
-let sesStatusCache = {};
 
+let sesStatusCache = {};
+var DB = null;
 //redis Client connection
 let redisClient = new Redis({
     host: "RedisContainer", // Redis server host
@@ -349,23 +351,59 @@ router.post("/get-answers", rpg.multiSQL({
 }));
 
 
-async function handleQuestionCounter(redisKey) {
+async function handleQuestionCounter(redisKey, req, res,) {
     try {
+        
+        const boolean = {
+            "true": 1,
+            "false": 2
+        }
+        
+        const redisUserKey = `${redisKey}_${req.session.uid}`;
+
         const exists = await redisClient.exists(redisKey);
         
-        if (exists === 0) {
-            await redisClient.set(redisKey, 1);
-        } else {
-            
-            await redisClient.incr(redisKey);
-            const updatedValue = await redisClient.get(redisKey);
-            
-            if (parseInt(updatedValue) >= 10) {
-                return true;
+        if (exists === 0 ){
+            rpg.multiSQL({
+                dbcon: pass.dbcon,
+                sql:   `
+                SELECT *
+                FROM sessions AS q
+                LEFT JOIN Stages AS qa
+                    ON q.current_stage = qa.id
+                LEFT JOIN differential AS qb
+                    ON q.id = qb.sesid AND qa.id = qb.stageid
+                LEFT JOIN differential_selection AS qc
+                    ON qb.id = qc.did
+                WHERE q.id = $1 AND qb.id = ${req.body.did}
+                `,
+                sqlParams:   [rpg.param("ses", "ses")],
+                preventResEnd: true,
+                onEnd: async (req, res, result) => {
+                    const itemsCounter = result.length;
+                    const userAnswered = await redisClient.get(redisUserKey);
+                    if (!userAnswered || userAnswered === 0){
+                        await redisClient.set(redisKey, itemsCounter);
+                        await redisClient.set(redisUserKey, boolean["true"]);
+                    }
+                }
+            })(req,res);
+        }
+        else{
+            const userAnswered = await redisClient.get(redisUserKey);
+            if (!userAnswered || parseInt(userAnswered) === 0){
+                await redisClient.incr(redisKey);
+                await redisClient.set(redisUserKey, boolean["true"]);
             }
-            else {
-                return false;
-            }
+        }
+
+        const counterInRedis = await redisClient.get(redisKey);
+
+        if (parseInt(counterInRedis) >= 10) {
+            return true;
+        }
+        else {
+            return false;
         }
     } catch (error) {
         console.error('Error al manejar el contador de redis:', error);
@@ -379,12 +417,13 @@ async function buildContentAnalysisUnit(req, res) {
             dbcon: pass.dbcon,
             sql:    `
                 SELECT q.session AS session_id,
-                    qc.number AS phase_id,
+                    qc.id AS phase_id,
                     qa.path AS case_url,
                     qd.title AS question,
                     qd.id AS question_id,
                     qe.id AS response_id,
-                    qe.comment AS response_text
+                    qe.comment AS response_text,
+                    qe.uid AS user_id
                 FROM activity AS q
                     LEFT JOIN designs_documents AS qa
                         ON q.design = qa.dsgnid
@@ -409,7 +448,7 @@ async function buildContentAnalysisUnit(req, res) {
                     return acc;
                   }, {});
                 
-                const nodeHostName = process.env.NODE_HOST_NAME;
+                const nodeHostName = process.env.ETHICAPP_HOSTNAME;
                 const nodePort = process.env.NODE_PORT;
                 const sessionURL = `http://${nodeHostName}:${nodePort}/${result[0].case_url}`;
 
@@ -427,7 +466,8 @@ async function buildContentAnalysisUnit(req, res) {
                             question_id: group[0].question_id,
                             responses: group.map(item => ({
                                 response_id: item.response_id,
-                                response_text: item.response_text
+                                response_text: item.response_text,
+                                user_id: item.user_id
                             }))
                         }))
                     }
@@ -458,86 +498,107 @@ async function sendContentAnalysisWorkunit(workunit){
     }
 }
 
+function getDBInstance(dbcon) {
+    if (DB == null) {
+        DB = new pg.Client(dbcon);
+        DB.connect();
+        DB.on("error", function(err){
+            console.error(err);
+            DB = null;
+        });
+        return DB;
+    }
+    return DB;
+}
+
 router.post('/content-analysis-callback', async (req, res) => {
     try {
-    
+        
         const data = req.body;
         
-        const stageNumber = data.context.phase_id;
-        req.body.stage_number = stageNumber;
+        const stageId = data.context.phase_id;
+        req.body.stage_id = stageId;
         req.body.sesid = data.context.session_id;
 
-        rpg.execSQL({
-            dbcon: pass.dbcon,
-            sql:   `
-            WITH ROWS AS (
-                UPDATE content_analysis
-                SET response_selections = $1,
-                    context = $2
-                WHERE sesid = $3
-                    AND stage_number = $4
-                RETURNING 1
+        var sql = `
+            INSERT INTO content_analysis(response_selections, context, sesid, stage_id)
+            VALUES (
+                '${JSON.stringify(req.body.response_selections)}', 
+                '${JSON.stringify(req.body.context)}',
+                ${data.context.session_id},
+                ${stageId}
             )
-            INSERT INTO content_analysis(response_selections, context, sesid, stage_number)
-            SELECT $5,
-                $6,
-                $7,
-                $8
-            WHERE 1 NOT IN (
-                SELECT *
-                FROM ROWS
-            )
-            `,
-            preventResEnd: true,
-            sesReqData:  ["ses"],
-            postReqData: ["response_selections", "context", "stage_number"],
-            sqlParams:   [
-                rpg.param("post", "response_selections"), rpg.param("post", "context"), rpg.param("post", "sesid"),
-                rpg.param("post", "stage_number"), rpg.param("post", "response_selections"), rpg.param("post", "context"),
-                rpg.param("post", "sesid"), rpg.param("post", "stage_number")
-            ]
-        })(req,res);
+            ON CONFLICT (id) DO UPDATE
+            SET response_selections = EXCLUDED.response_selections,
+                context = EXCLUDED.context,
+                stage_id = EXCLUDED.stage_id;
+        `;
+        var db = getDBInstance(pass.dbcon);
+        var qry;
+        qry = db.query(sql);
+        qry.on("end", function () {
+            socket.contentUpdate(req.session.ses, data);
+            res.status(200).json({ status: 'success'});
+        });
+        qry.on("error", function(err){
+            console.error(err);
+            res.end('{"status":"err"}');
+        });
 
-        socket.contentUpdate(req.session.ses, data);
         
     } catch (error) {
         console.error('Error al procesar el callback:', error);
+        res.end('{"status":"err"}');
     }
   });
 
+router.post("/get-content-analysis", (req, res, next) => {
+    return rpg.multiSQL({
+        dbcon: pass.dbcon,
+        sql: `
+            SELECT *
+            FROM content_analysis
+            WHERE stage_id = ${req.body.stageid}
+        `,
+    })(req, res, next);
+});
+
 router.post("/send-diff-selection", (req, res, next) => {
     
-    rpg.singleSQL({
-        dbcon: pass.dbcon,
-        sql:   `
-        SELECT qa.number as stage_id, qb.id as question_id
-        FROM sessions AS q
-        LEFT JOIN Stages AS qa
-        ON q.current_stage = qa.id
-        LEFT JOIN differential AS qb
-        ON q.id = qb.sesid AND qa.id = qb.stageid
-        WHERE q.id = $1 AND qb.id = ${req.body.did}
-        `,
-        sqlParams:   [rpg.param("ses", "ses")],
-        preventResEnd: true,
-        onEnd: async (req, res, result) => {
-            const redisKey = `${req.session.ses}_${result.stage_id}_${result.question_id}`;
-
-            handleQuestionCounter(redisKey).then(isCounterTenOrMore => {
-                if (true) { // MODIFICAR A "isCounterTenOrMore" PARA SU FUNCIONAMIENTO
-                    buildContentAnalysisUnit(req, res).then(workUnitJson => {
-                        sendContentAnalysisWorkunit(workUnitJson);
-                    })
-                    .catch(error => {
-                        console.error("Error al llamar a buildContentAnalysisUnit:", error);
-                    });
-                }
-            }).catch(error => {
-                console.error('Error fetching data from Redis database:', error);
-            });
-        }
-    })(req,res);
-    
+    if (req.body.comment){
+        rpg.singleSQL({
+            dbcon: pass.dbcon,
+            sql:   `
+            SELECT qa.number as stage_id, qb.id as question_id, qc.uid
+            FROM sessions AS q
+            LEFT JOIN Stages AS qa
+            ON q.current_stage = qa.id
+            LEFT JOIN differential AS qb
+            ON q.id = qb.sesid AND qa.id = qb.stageid
+            LEFT JOIN differential_selection AS qc
+            ON qb.id = qc.did
+            WHERE q.id = $1 AND qb.id = ${req.body.did} AND qc.uid = ${req.session.uid}
+            `,
+            sqlParams:   [rpg.param("ses", "ses")],
+            preventResEnd: true,
+            onEnd: async (req, res, result) => {
+                const redisKey = `${req.session.ses}_${result.stage_id}_${result.question_id}`;
+                handleQuestionCounter(redisKey, req, res).then(isCounterTenOrMore => {
+                    if (isCounterTenOrMore) { // MODIFICAR A "isCounterTenOrMore" PARA SU FUNCIONAMIENTO
+                        buildContentAnalysisUnit(req, res).then(workUnitJson => {
+                            sendContentAnalysisWorkunit(workUnitJson);
+                        })
+                        .catch(error => {
+                            console.error("Error al llamar a buildContentAnalysisUnit:", error);
+                        });
+                    }
+                }).catch(error => {
+                    console.error('Error fetching data from Redis database:', error);
+                });
+            }
+        })(req,res);
+    }
+    console.log("skip");
     return rpg.execSQL({
         dbcon: pass.dbcon,
         sql: `

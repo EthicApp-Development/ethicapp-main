@@ -9,52 +9,72 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
     self.dataDF = [];
     self.dataChatCount = {};
     self.activityState = ActivityStateService;
+    
+
+    self.formatContentAnalysis = function (data) {
+        const stageId = data.stage_id;
+        if (!self.contentAnalysis) {
+            self.contentAnalysis = {};
+        }
+        
+        if (!self.contentAnalysis[stageId]) {
+            self.contentAnalysis[stageId] = {};
+        }
+
+        data.response_selections.forEach((selection) => {
+            const questionId = selection.question_id;
+        
+            if (!self.contentAnalysis[stageId][questionId]) {
+                self.contentAnalysis[stageId][questionId] = {
+                    top: [],
+                    worst: []
+                };
+            }
+        
+            selection.responses.forEach((response) => {
+
+                const responseDict = {
+                    response_text: response.response_text,
+                    did: questionId,
+                    uid: response.user_id
+                };
+
+                if (response.ranking_type === 'top') {
+                    self.contentAnalysis[stageId][questionId].top[response.ranking - 1] = responseDict;
+                } else if (response.ranking_type === 'worst') {
+                    self.contentAnalysis[stageId][questionId].worst[response.ranking - 1] = responseDict;
+                }
+            });
+        });
+    };
 
     self.init = self.init = function () {
-        console.log("iteracion:", self.iterationIndicator);
-        console.log("session id:", self.selectedSes.id)
+        /*
+        var _postdata2;
+        _postdata2 = {
+            stageid: self.iterationIndicator
+        };
+        $http({
+            url: "get-content-analysis", method: "post", data: _postdata2
+        }).success(function (dataArray) {
+            dataArray.forEach(function(data) {
+                self.formatContentAnalysis(data);
+                console.log(self.contentAnalysis)
+            });
+        });
+        */
+        // CONTENT ANALYSIS SOCKET
         $socket.on("contentUpdate", (data) => {
             if(data.data.sesid === self.selectedSes.id){
-                console.log("Datos coinciden con la sesión actual:", data);
-                self.contentAnalysis = data;
-                const questionId = data.data.response_selections[0].question_id;
-
-                if (!self.contentAnalysis[self.selectedSes.id]) {
-                    self.contentAnalysis[self.selectedSes.id] = {};
-                }
-
-                if (!self.contentAnalysis[self.selectedSes.id][questionId]) {
-                    self.contentAnalysis[self.selectedSes.id][questionId] = {
-                        top: [],
-                        worst: []
-                    };
-                }
-                /*
-                if (!self.contentAnalysis[self.selectedSes.id]) {
-                  self.contentAnalysis[self.selectedSes.id] = {
-                        top: [],
-                        worst: []
-                    };
-                }
-                */
-                angular.forEach(data.data.response_selections, function(selection) {
-                    angular.forEach(selection.responses, function(response) {
-                        if (response.ranking_type === 'top') {
-                            self.contentAnalysis[self.selectedSes.id][questionId].top[response.ranking - 1] = response.response_text;
-                        } else if (response.ranking_type === 'worst') {
-                            self.contentAnalysis[self.selectedSes.id][questionId].worst[response.ranking - 1] = response.response_text;
-                        }
-                    });
-                });
-
-                console.log(self.contentAnalysis)
-
+                self.formatContentAnalysis(data.data);
             } else {
                 console.log("Datos no coinciden con la sesión actual:");
             }
         });
+    };
 
-        console.log("DashboardController inicializado.");
+    self.selectCurrentQuestion = function(did) {
+        self.selectQuestion = did;
     };
 
     self.shared.resetGraphs = function () { //THIS HAS TO BE CALLED ON ADMIN
@@ -126,14 +146,12 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
     self.shared.updateState = self.updateState;
 
     self.shared.setIterationIndicator = function(i){
-        console.log("Set iteration Indicatior:",i);
         self.iterationIndicator = i;
         self.updateState();
     };
 
     self.updateStateIni = function () {
         var _postdata2;
-        console.log(self.iterationIndicator);
         self.alumTime = {};
         if (self.selectedSes.type == "R") {
             _postdata2 = {
@@ -228,6 +246,14 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
                     self.shared.chatByTeam[c.did][c.tmid] += +c.count;
                 });
             });
+            $http({
+                url: "get-content-analysis", method: "post", data: _postdata2
+            }).success(function (dataArray) {
+                dataArray.forEach(function(data) {
+                    self.formatContentAnalysis(data);
+                    console.log(self.contentAnalysis)
+                });
+            });
         }
         else if (self.selectedSes.type == "J"){
             _postdata2 = {
@@ -282,6 +308,7 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
                 });
             });
         }
+        console.log(self.shared);
     };
 
     self.getFreqColor = function(aid, pos){
