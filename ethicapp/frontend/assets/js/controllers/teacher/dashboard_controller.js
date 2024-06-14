@@ -49,26 +49,9 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
     };
 
     self.init = self.init = function () {
-        /*
-        var _postdata2;
-        _postdata2 = {
-            stageid: self.iterationIndicator
-        };
-        $http({
-            url: "get-content-analysis", method: "post", data: _postdata2
-        }).success(function (dataArray) {
-            dataArray.forEach(function(data) {
-                self.formatContentAnalysis(data);
-                console.log(self.contentAnalysis)
-            });
-        });
-        */
-        // CONTENT ANALYSIS SOCKET
-        $socket.on("contentUpdate", (data) => {
+        $socket.on("contentUpdate", (data) => { // Content Analysis callback socket
             if(data.data.sesid === self.selectedSes.id){
                 self.formatContentAnalysis(data.data);
-            } else {
-                console.log("Datos no coinciden con la sesión actual:");
             }
         });
     };
@@ -252,7 +235,6 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
             }).success(function (dataArray) {
                 dataArray.forEach(function(data) {
                     self.formatContentAnalysis(data);
-                    console.log(self.contentAnalysis)
                 });
             });
         }
@@ -309,7 +291,6 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
                 });
             });
         }
-        console.log(self.shared);
     };
 
     self.getFreqColor = function(aid, pos){
@@ -890,8 +871,6 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
 
                         data.stage = self.shared.stagesMap[self.iterationIndicator];
                         if(data.stage.type == "team"){
-                            console.log(self.shared.difTable)
-                            console.log(group)
                             if (group){
                                 data.arr = self.shared.difTable.filter(e =>
                                     e.tmid == group && !e.group
@@ -902,8 +881,6 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
                                     e.uid == uid && !e.group
                                 );
                             }
-                            
-                            console.log("array",data.arr);
                         }
                         else {
                             data.arr = self.shared.difTable.filter(e => e.uid == uid && !e.group);
