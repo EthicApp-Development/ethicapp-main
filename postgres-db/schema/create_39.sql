@@ -1,25 +1,28 @@
-CREATE TABLE IF NOT EXISTS topics (
-   topic_id serial,
+CREATE TABLE IF NOT EXISTS topic_tags (
+   topic_tag_id serial,
    name text,
-   PRIMARY KEY (topic_id)
+   PRIMARY KEY (topic_tag_id)
 );
 
 
 CREATE TABLE IF NOT EXISTS cases (
    case_id serial,
    title text,
-   external_case_url text NULL,
    description text,
-   PRIMARY KEY (case_id)
+   is_public BOOLEAN,
+   external_case_url text NULL,
+   user_id INT,
+   PRIMARY KEY (case_id),
+   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 
-CREATE TABLE IF NOT EXISTS cases_topics (
+CREATE TABLE IF NOT EXISTS cases_topic_tags (
    case_topic_id serial,
-   topic_id INT,
+   topic_tag_id INT,
    case_id INT,
    PRIMARY KEY (case_topic_id),
-   FOREIGN KEY (topic_id) REFERENCES topics(topic_id),
+   FOREIGN KEY (topic_tag_id) REFERENCES topic_tags(topic_tag_id),
    FOREIGN KEY (case_id) REFERENCES cases(case_id)
 );
 
@@ -35,5 +38,9 @@ CREATE TABLE IF NOT EXISTS cases_designs (
 );
 
 
-ALTER TABLE documents
+
+ALTER TABLE designs_documents
+ADD COLUMN case_id INTEGER REFERENCES cases(case_id);
+
+ALTER TABLE designs
 ADD COLUMN case_id INTEGER REFERENCES cases(case_id);
