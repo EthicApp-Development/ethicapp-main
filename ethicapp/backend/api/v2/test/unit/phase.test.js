@@ -29,7 +29,7 @@ describe('Phase Model', () => {
 
     // Login to get the token
     const loginRes = await request(app)
-        .post(`${API_VERSION_PATH_PREFIX}/login_user`)
+        .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
         .send({ mail: `testuserphase@example.com`, pass: `passphase` });
 
     token = loginRes.body.token;
@@ -72,7 +72,7 @@ describe('Phase Model', () => {
       .post(`${API_VERSION_PATH_PREFIX}/phases/design`)
       .send({ number: 2, type: `Test activity duplicated${activityId.id-1}`, anon: true, chat: false, prev_ans: 'None', activity_id: 6 })
     
-      console.log("resPhaseDesign", resPhaseDesign.body)
+      //console.log("resPhaseDesign", resPhaseDesign.body)
       expect(resPhaseDesign.status).toBe(400)
       expect(resPhaseDesign.body).toHaveProperty('status','error')
       expect(resPhaseDesign.body.message).toBe('phase number is exist in the design')

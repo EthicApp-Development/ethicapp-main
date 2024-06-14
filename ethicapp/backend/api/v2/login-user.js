@@ -14,7 +14,7 @@ router.use(bodyParser.json());
 const JWT_SECRET = 'your_secret_key';
 
 // Authentication route
-router.post('/login_user', async (req, res) => {
+router.post('/authenticate_client', async (req, res) => {
   const { mail, pass } = req.body;
 
   try {

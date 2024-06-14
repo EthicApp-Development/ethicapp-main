@@ -14,7 +14,7 @@ describe('Responses API', () => {
         .send(profesorExample)
     // Autenticar al usuario
     const loginRes = await request(app)
-      .post(`${API_VERSION_PATH_PREFIX}/login_user`)
+      .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
       .send({ mail: profesorExample.mail , pass: profesorExample.pass });
 
     token = loginRes.body.token;

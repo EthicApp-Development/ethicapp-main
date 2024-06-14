@@ -11,9 +11,9 @@ describe('Activities and Phases API', () => {
 
         // Autenticar al profesor
         const loginRes = await request(app)
-            .post(`${API_VERSION_PATH_PREFIX}/login_user`)
+            .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
             .send({ mail: userData[9].mail, pass: userData[9].pass });
-        console.log(loginRes.body)
+        //console.log(loginRes.body)
         token = loginRes.body.token;
 
         // Crear una actividad para la sesión
@@ -23,7 +23,7 @@ describe('Activities and Phases API', () => {
             .send({ name: 'Test Session', descr: 'Description', status: 1, type: 'A' });
 
         activityId = sessionRes.body.data.activity;
-        console.log(activityId)
+        //console.log(activityId)
     });
     it('should list all phases in an activity', async () => {
         const res = await request(app)

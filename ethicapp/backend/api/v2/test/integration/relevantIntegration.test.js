@@ -27,7 +27,7 @@ describe('Integration Test', () => {
     profesorId = professorId.body.data.id
     // Login to get the token Professor
     const loginResProfessor = await request(app)
-      .post(`${API_VERSION_PATH_PREFIX}/login_user`)
+      .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
       .send({ mail: professorExample.mail, pass: professorExample.pass });
 
     professorToken = loginResProfessor.body.token;
@@ -42,7 +42,7 @@ describe('Integration Test', () => {
 
     // Login to get the token Student
     const loginResStudent = await request(app)
-      .post(`${API_VERSION_PATH_PREFIX}/login_user`)
+      .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
       .send({ mail: studentExample.mail, pass: studentExample.pass });
 
     studentToken = loginResStudent.body.token;
@@ -70,7 +70,6 @@ describe('Integration Test', () => {
       .post(`${API_VERSION_PATH_PREFIX}/designs`)
       .send({
         creator: profesorId,
-        question_id: 1,
         design: {
           phases: [{
             number: 1,
@@ -181,10 +180,9 @@ describe('Integration Test', () => {
   });
 
   it('Student can get the current phase and question', async () => {
-    console.log("question_id ->", question_id)
+    //console.log("question_id ->", question_id)
     const dataDesign = {
       creator: profesorId,
-      question_id: question_id,
       design: {
         phases: [{
           number: 1,
@@ -254,7 +252,7 @@ describe('Integration Test', () => {
   });
 
   it('Student can create a response and send', async () => {
-    console.log(student.id)
+    //console.log(student.id)
     const responseData = {
       user_id: student.id,
       content: { answer: 'Spiderman' },

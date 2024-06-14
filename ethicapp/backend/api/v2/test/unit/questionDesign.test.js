@@ -21,7 +21,7 @@ describe('POST /questions/testing', () => {
 
         // Autenticar al profesor y obtener un token
         const loginRes = await request(app)
-            .post(`${API_VERSION_PATH_PREFIX}/login_user`)
+            .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
             .send({ mail: 'ProfessorQuestion@example.com', pass: 'passwordQuestion' });
         professorToken = loginRes.body.token;
 
@@ -48,7 +48,6 @@ describe('POST /questions/testing', () => {
         };
         const designsData = {
             creator: userId,
-            question_id: 1,
             design: {
                 phases: [{
                     number: 1,

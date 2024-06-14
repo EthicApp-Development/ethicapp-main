@@ -9,7 +9,7 @@ describe('Phases and Questions API', () => {
   beforeAll(async () => {
     // Autenticar al profesor
     const loginRes = await request(app)
-      .post(`${API_VERSION_PATH_PREFIX}/login_user`)
+      .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
       .send({ mail:  userData[9].mail, pass: userData[9].pass  });
 
     token = loginRes.body.token;

@@ -23,7 +23,7 @@ describe('User Authentication', () => {
         User.findOne.mockResolvedValue(null);   
         const userNotExist = loginData[0]
         const res = await request(app)
-            .post(`${API_VERSION_PATH_PREFIX}/login_user`)
+            .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
             .send(userNotExist)
 
         expect(res.statusCode).toEqual(401);
@@ -45,7 +45,7 @@ describe('User Authentication', () => {
         });
 
         const res = await request(app)
-            .post(`${API_VERSION_PATH_PREFIX}/login_user`)
+            .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
             .send(invalidPassword)
 
         expect(res.statusCode).toEqual(401);
@@ -68,7 +68,7 @@ describe('User Authentication', () => {
         });
 
         const res = await request(app)
-            .post(`${API_VERSION_PATH_PREFIX}/login_user`)
+            .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
             .send(successUser)
         expect(res.statusCode).toEqual(200);
         expect(res.body).toHaveProperty('token');

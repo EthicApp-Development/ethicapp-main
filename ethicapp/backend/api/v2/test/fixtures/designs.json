@@ -1,7 +1,6 @@
 [
     {
       "creator": 1,
-      "question_id": 1,
       "design": {
         "phase": [{
           "number": 1,
@@ -24,7 +23,6 @@
     },
     {
       "creator": 3,
-      "question_id": 2,
       "design": {
         "phase": [{
           "number": 1,
@@ -62,7 +60,6 @@
     },
     {
       "creator": 2,
-      "question_id": 2,
       "design": {
         "phase": [{
           "number": 2,
@@ -100,7 +97,6 @@
     },
     {
       "creator": 2,
-      "question_id": 2,
       "design": {
       },
       "public": false,

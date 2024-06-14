@@ -65,7 +65,7 @@ describe('POST /api-v2/sessions/users', () => {
 
         // Login to get the token
         const loginRes = await request(app)
-            .post(`${API_VERSION_PATH_PREFIX}/login_user`)
+            .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
             .send({ mail: `testuser${randomString}@example.com`, pass: `pass${randomStringShort}` });
 
         token = loginRes.body.token;
