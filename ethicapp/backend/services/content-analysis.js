@@ -159,48 +159,74 @@ async function sendContentAnalysisWorkunit(workunit){
     }
 }
 
-function contentAnalysis(req, res){
-    if (req.body.comment){
-        rpg.singleSQL({
-            dbcon: pass.dbcon,
-            sql:   `
-            SELECT qa.number as stage_id, qb.id as question_id, qc.uid
-            FROM sessions AS q
-            LEFT JOIN Stages AS qa
-            ON q.current_stage = qa.id
-            LEFT JOIN differential AS qb
-            ON q.id = qb.sesid AND qa.id = qb.stageid
-            LEFT JOIN differential_selection AS qc
-            ON qb.id = qc.did
-            WHERE q.id = $1 AND qb.id = ${req.body.did} AND qc.uid = ${req.session.uid}
-            `,
-            sqlParams:   [rpg.param("ses", "ses")],
-            preventResEnd: true,
-            onEnd: async (req, res, result) => {
-                const redisKey = `${req.session.ses}_${result.stage_id}_${result.question_id}`;
-                handleQuestionCounter(redisKey, req, res).then(isCounterTenOrMore => {
-                    if (isCounterTenOrMore) {
-                        buildContentAnalysisUnit(req, res).then(workUnitJson => {
-                            sendContentAnalysisWorkunit(workUnitJson);
-                        })
-                        .catch(error => {
-                            console.error("Error building content analysis work unit", error);
-                        });
+async function contentAnalysis(req, res) {
+    if (req.body.comment) {
+        try {
+            const result = await new Promise((resolve, reject) => {
+                rpg.singleSQL({
+                    dbcon: pass.dbcon,
+                    sql: `
+                        SELECT qa.number as stage_id, qb.id as question_id, qc.uid
+                        FROM sessions AS q
+                        LEFT JOIN Stages AS qa
+                        ON q.current_stage = qa.id
+                        LEFT JOIN differential AS qb
+                        ON q.id = qb.sesid AND qa.id = qb.stageid
+                        LEFT JOIN differential_selection AS qc
+                        ON qb.id = qc.did
+                        WHERE q.id = $1 AND qb.id = ${req.body.did} AND qc.uid = ${req.session.uid}
+                    `,
+                    sqlParams: [rpg.param("ses", "ses")],
+                    preventResEnd: true,
+                    onEnd: (req, res, result) => {
+                        resolve(result);
+                    },
+                    onError: (err) => {
+                        reject(err);
                     }
-                }).catch(error => {
-                    console.error('Error fetching data from Redis database:', error);
-                });
+                })(req, res);
+            });
+
+            const redisKey = `${req.session.ses}_${result.stage_id}_${result.question_id}`;
+            const isCounterTenOrMore = await handleQuestionCounter(redisKey, req, res);
+
+            if (isCounterTenOrMore) {
+                const workUnitJson = await buildContentAnalysisUnit(req, res);
+                await sendContentAnalysisWorkunit(workUnitJson);
             }
-        })(req,res);
+        } catch (error) {
+            console.error("Error processing content analysis:", error);
+        }
+    } else {
+        res.status(400).send('No comment provided');
     }
 }
 
-async function initializeContentAnalysis(req, res){
+
+function isContentAnalysisAvailable(){
+
+    const trueOrFalse = {
+        "True": true,
+        "False": false
+    }
+    const value = process.env.CONTENT_ANALYSIS_SERVICE;
+    return trueOrFalse[value]
+}
+
+function initializeContentAnalysis(req, res) {
     try {
-        await contentAnalysis(req, res);
+        if (isContentAnalysisAvailable()) {
+            contentAnalysis(req, res);
+        } else {
+            res.status(503).send('Content analysis not available');
+        }
     } catch (error) {
         console.error('Error running content analysis:', error);
+        res.status(500).send('Internal Server Error');
     }
 }
 
-module.exports = initializeContentAnalysis;
+module.exports = {
+    initializeContentAnalysis,
+    isContentAnalysisAvailable
+};

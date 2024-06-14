@@ -1,0 +1,43 @@
+# --------------------------------------------------------------------------------------------------
+# DEVELOPMENT docker-compose.
+# --------------------------------------------------------------------------------------------------
+
+version: "3.9"
+
+networks:
+  default:
+
+secrets:
+  jwt_token:
+    file: ./secrets/jwt_token
+
+services:
+  # ---------------------- content-analysis Service ---------------------- #
+  content-analysis:
+    build: 
+      context: ./content-analysis
+    container_name: content-analysis
+    ports:
+      - "${CONTENT_ANALYSIS_PORT}:${CONTENT_ANALYSIS_PORT}"
+    volumes:
+      - .:/app
+    environment:
+      REDIS_HOST_NAME: ${REDIS_HOST_NAME}
+      ETHICAPP_API_KEY: ${ETHICAPP_API_KEY}
+    depends_on:
+      - RedisContainer
+
+  # ---------------------- Celery Worker ---------------------- #
+  worker:
+    build: 
+      context: ./content-analysis
+    container_name: celery-worker
+    volumes:
+      - .:/app
+    command: ['celery', '-A', 'content-analysis.app.celery', 'worker', '-P', 'solo', '-l', 'info', '-Q', 'celery', '-n', '"celery"']
+    environment:
+      REDIS_HOST_NAME: ${REDIS_HOST_NAME}
+      ETHICAPP_API_KEY: ${ETHICAPP_API_KEY}
+    depends_on:
+      - content-analysis
+      - RedisContainer
