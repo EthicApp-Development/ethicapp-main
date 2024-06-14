@@ -23,7 +23,7 @@ router.get('/sessions', async (req, res) => {
 
 // Create
 router.post('/sessions', authenticateToken, async (req, res) => {
-    const { role } = req.user;
+    const { role } = req.user; //from authenticateToken
     if (role === 'E') {
         return res.status(403).json({ status: 'error', message: 'Only professors or administrator can create sessions' });
     }
@@ -37,13 +37,13 @@ router.post('/sessions', authenticateToken, async (req, res) => {
 
         const session = await Session.create(sessionData);
         const creatorSession = session.creator
-        // const design = await Design.findOne({
-        //     where: {
-        //       creator: creatorSession // Assuming the user ID is stored in req.user.id after authentication
-        //     }
-        //   });
+        const design = await Design.findOne({
+            where: {
+              creator: creatorSession // Assuming the user ID is stored in req.user.id after authentication
+            }
+          });
         const activity = await Activity.create({
-            design: 1, // Ajustar según el diseño predeterminado
+            design: design.id, // Ajustar según el diseño predeterminado
             session: session.id
         });
         const sessionDescriptor = {
@@ -69,7 +69,7 @@ router.post('/sessions', authenticateToken, async (req, res) => {
 
 //generate a new session by professor
 router.post('/sessions/creator/:numberDesign', authenticateToken, async (req, res) => {
-    const { role, id } = req.user;
+    const { role, id } = req.user; // from authenticateToken
     const { numberDesign } = req.params;
     if (role !== 'P') {
       return res.status(403).json({ status: 'error', message: 'Only professors can create sessions' });

@@ -21,10 +21,46 @@ describe('Responses API', () => {
     userId = profesorExampleId.body.data.id;
 
     // Crear una pregunta para la prueba
+    const designRes = await request(app)
+      .post(`${API_VERSION_PATH_PREFIX}/designs`)
+      .send({
+        creator: userId,
+        design: {
+          "phase": [{
+            "number": 1,
+            "question": [{
+              "content": {
+                "question": "¿Cuantos oceanos hay actualmente",
+                "options": ["5", "7", "10","11","1"],
+                "correct_answer": "5"
+            },
+            "additional_info": "Geografia",
+            "type": "choice",
+            "text": "preguntas sobre el oceano",
+            "session_id": 1,
+            "number": 1
+            }]
+          }]
+        },
+        public: true,
+        locked: false
+      })
+    
+    const sessionRes = await request(app)
+     .post(`${API_VERSION_PATH_PREFIX}/sessions`)
+     .set('Authorization', `Bearer ${token}`)
+     .send({
+        name: "prueba de session en questionAndResponse test",
+        descr: "lorem impsum Extendido",
+        status: 1,
+        time: new Date(),
+        creator: userId
+     })
+    console.log(sessionRes.body)
     const phaseRes = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/phases`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ number: 1, type: 'discussion', anon: false, chat: true, prev_ans: 'Lorem Ipsum', activity_id: 1 });
+      .send({ number: 1, type: 'discussion', anon: false, chat: true, prev_ans: 'Lorem Ipsum', activity_id: sessionRes.body.data.activity.id });
 
     phaseId = phaseRes.body.data.id;
 
@@ -36,7 +72,7 @@ describe('Responses API', () => {
         content: { question: '¿Cuál es tu película favorita?', options: ['Dune', 'Alien', 'Thor'], correct_answer: 'Thor' },
         additional_info: 'Películas',
         type: 'choice',
-        session_id: 1,
+        session_id: sessionRes.body.data.id,
         number: 1,
         phase_id: phaseId
       });

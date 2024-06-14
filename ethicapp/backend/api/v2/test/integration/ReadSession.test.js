@@ -30,7 +30,32 @@ describe('GET /sessions/:sessionId/users', () => {
     professorToken = jwt.sign({ id: professor.id, role: professor.role }, 'your_secret_key');
     professorFalseToken = jwt.sign({ id: professorFalso.id, role: professorFalso.role }, 'your_secret_key');
     studentToken = jwt.sign({ id: student.id, role: student.role }, 'your_secret_key');
-
+    
+    const designRes = await request(app)
+      .post(`${API_VERSION_PATH_PREFIX}/designs`)
+      .send({
+        creator: professor.id,
+        design: {
+          "phase": [{
+            "number": 1,
+            "question": [{
+              "content": {
+                "question": "¿Cuantos oceanos hay actualmente",
+                "options": ["5", "7", "10","11","1"],
+                "correct_answer": "5"
+            },
+            "additional_info": "Geografia",
+            "type": "choice",
+            "text": "preguntas sobre el oceano",
+            "session_id": 1,
+            "number": 1
+            }]
+          }]
+        },
+        public: true,
+        locked: false
+      })
+    
     // Crea una sesión y asigna al profesor como creador
     const session = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/sessions`)

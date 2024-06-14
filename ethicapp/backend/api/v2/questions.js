@@ -22,20 +22,8 @@ router.get('/questions', async (req, res) => {
 
 // Create
 router.post('/questions', async (req, res) => {
-    // const { text, /*phases_id*/ } = req.body;
-    // if (!phases_id) {
-    //     return res.status(400).json({ status: 'error', message: 'phases_id is required' });
-    // }
-    try {
-        // const phase = await Phase.findByPk(phases_id);
-        // if (!phase) {
-        //     return res.status(400).json({ status: 'error', message: 'Phase not found' });
-        // }
 
-        // const existingQuestion = await Question.findOne({ where: { /*phases_id, */ text } });
-        // if (existingQuestion) {
-        //     return res.status(400).json({ status: 'error', message: 'Question already exists for this phase' });
-        // }
+    try {
 
         const question = await Question.create(req.body);
         res.status(201).json({ status: 'success', data: question });
@@ -137,7 +125,7 @@ router.post('/questions/design', async (req, res) => {
 router.post('/questions/:id/responses', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { content, type } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.id; // from authenticateToken
 
     try {
         const question = await Question.findByPk(id);
@@ -158,7 +146,7 @@ router.post('/questions/:id/responses', authenticateToken, async (req, res) => {
         if (!session) {
             return res.status(404).json({ status: 'error', message: 'Session not found' });
         }
-        console.log(session)
+        //console.log(session)
         const existingResponse = await Response.findOne({ where: { user_id: userId, question_id: id } });
         if (existingResponse) {
             return res.status(400).json({ status: 'error', message: 'You have already responded to this question' });
@@ -182,7 +170,7 @@ router.post('/questions/:id/responses', authenticateToken, async (req, res) => {
 router.put('/questions/:id/responses', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { content, type } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.id; //from authenticateToken
 
     try {
         const response = await Response.findOne({ where: { user_id: userId, question_id: id } });
@@ -201,7 +189,7 @@ router.put('/questions/:id/responses', authenticateToken, async (req, res) => {
 // Get all responses for a question
 router.get('/questions/:id/responses', authenticateToken, async (req, res) => {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.user.id; // from authenticateToken
 
     try {
         const question = await Question.findByPk(id);
@@ -223,10 +211,11 @@ router.get('/questions/:id/responses', authenticateToken, async (req, res) => {
         if (!session) {
             return res.status(404).json({ status: 'error', message: 'Session not found' });
         }
-
-        // if (session.creator !== userId) {
-        //     return res.status(403).json({ status: 'error', message: 'Only the professor who owns the session can view responses' });
-        // }
+        console.log(session.creator)
+        console.log(userId)
+        if (session.creator !== userId) {
+            return res.status(403).json({ status: 'error', message: 'Only the professor who owns the session can view responses' });
+        }
 
         const responses = await Response.findAll({ where: { question_id: id } });
 

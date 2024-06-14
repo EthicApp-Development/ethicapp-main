@@ -21,7 +21,7 @@ router.get('/users', async (req, res) => {
 
 // Create
 router.post('/users', async (req, res) => {
-    const { pass, pass_confirmation, mail } = req.body;
+    const { pass, pass_confirmation, mail, rut } = req.body;
 
     // Validate password length
     if (pass.length < 8) {
@@ -37,16 +37,20 @@ router.post('/users', async (req, res) => {
         const existingUser = await User.findOne({
             where: {
                 mail: mail,
+                rut: rut
             }
         })
+
         if (existingUser) {
-            //console.log("este usuario ya existe")
+            //console.log("Existe en la base de datos")
+            return res.status(201).json({ status: 'success', data:  existingUser, message: 'User already exist' });
         }
+        //console.log("no existe")
         const user = await User.create(req.body);
-        res.status(201).json({ status: 'success', data: user });
+        return res.status(201).json({ status: 'success', data: user });
     } catch (err) {
         console.error(err);
-        res.status(400).json({ status: 'error', message: 'invalid field' });
+        return res.status(400).json({ status: 'error', message: 'invalid field' });
     }
 });
 

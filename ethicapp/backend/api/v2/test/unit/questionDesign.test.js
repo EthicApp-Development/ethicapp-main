@@ -26,6 +26,58 @@ describe('POST /questions/testing', () => {
         professorToken = loginRes.body.token;
 
         // Crear una sesión
+        await request(app)
+        .post(`${API_VERSION_PATH_PREFIX}/designs`)
+        .send({
+          creator: userId,
+          design: {
+            phases: [{
+              number: 1,
+              question: [
+                {
+                  content: {
+                    question: "¿Cuantos oceanos hay actualmente",
+                    options: ["5", "7", "10", "11", "1"],
+                    correct_answer: "5"
+                  },
+                  additional_info: "Geografia",
+                  type: "choice",
+                  text: "preguntas sobre el oceano",
+                  session_id: 1,
+                  number: 1
+                },
+                {
+                  content: {
+                    question: "¿Cuantos continentes hay actualmente",
+                    options: ["5", "7", "10", "11", "1"],
+                    correct_answer: "5"
+                  },
+                  additional_info: "Geografia",
+                  type: "choice",
+                  text: "preguntas sobre los continentes",
+                  session_id: 1,
+                  number: 2
+                }]
+            }, {
+              number: 2,
+              question: [{
+                content: {
+                  question: "¿asdffasd dsffds sd fsdf",
+                  options: ["dsf", "qw", "1wer", "1er1", "1e"],
+                  correct_answer: "qw"
+                },
+                additional_info: "cosas",
+                type: "choice",
+                text: "preguntas sobre las cosas",
+                session_id: 1,
+                number: 1
+              }]
+            }]
+          },
+          public: true,
+          locked: false
+        })
+  
         const sessionRes = await request(app)
             .post(`${API_VERSION_PATH_PREFIX}/sessions`)
             .send({ name: 'Test Session', descr: 'A session for testing', time: new Date(), creator: userId, type: 'A' })

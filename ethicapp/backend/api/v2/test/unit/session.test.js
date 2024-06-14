@@ -37,7 +37,7 @@ describe('Session Creation', () => {
           profesorId = professorId.body.data.id
           // Login to get the token Professor
           const loginResProfessor = await request(app)
-              .post(`${API_VERSION_PATH_PREFIX}/login_user`)
+              .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
               .send({ mail: professorExample.mail, pass: professorExample.pass });
           
           professorToken = loginResProfessor.body.token;    
@@ -66,7 +66,7 @@ describe('Session Creation', () => {
             })
             .set('Authorization', `Bearer ${professorToken}`)
         
-        console.log(res.body)
+        //console.log(res.body)
         expect(res.statusCode).toEqual(201);
         expect(res.body.data).toHaveProperty('code');
         expect(res.body.data.code).toHaveLength(6);
