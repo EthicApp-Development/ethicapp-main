@@ -23,7 +23,7 @@ router.get('/phases', async (req, res) => {
 // Create
 router.post('/phases', authenticateToken, async (req, res) => {
   const { number, type, anon, chat, prev_ans, activity_id } = req.body;
-  const { role } = req.user;
+  const { role } = req.user; //from authenticateToken
   if (role !== 'P') {
     return res.status(403).json({ status: 'error', message: 'Only professors can create sessions' });
   }
@@ -94,30 +94,6 @@ router.get('/phases/:id', async (req, res) => {
   }
 });
 
-router.post('/phases/design', async (req, res) => {
-  const { number, type, anon, chat, prev_ans, activity_id } = req.body;
-  let designId, numberPhases
-  try {
-    const activity = await Activity.findByPk(activity_id);
-    if (!activity) {
-      return res.status(400).json({ status: 'error', message: 'Activity not found' });
-    }
-
-    designId = activity.design
-    const design = await Design.findByPk(designId);
-    numberPhases = design.design.phases
-    const phaseNumber = numberPhases.find(d => d.number === number)
-    //console.log(phaseNumber)
-    if (phaseNumber) {
-      return res.status(400).json({ status: 'error', message: 'phase number is exist in the design' });
-    }
-    const phase = await Phase.create({ number, type, anon, chat, prev_ans, activity_id });
-    return res.status(201).json({ status: 'success', data: phase });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ status: 'error', message: 'Internal server error' });
-  }
-});
 
 // POST /api/v2/phases/:id/questions
 router.post('/phases/:id/questions', authenticateToken, async (req, res) => {
@@ -160,7 +136,7 @@ router.get('/phases/:id/questions', authenticateToken, async (req, res) => {
     if (!phase) {
       return res.status(400).json({ status: 'error', message: 'Phase not found' });
     }
-    console.log(phase.questions)
+    //console.log(phase.questions)
     res.status(200).json({ status: 'success', data: phase.questions });
   } catch (err) {
     console.error(err);

@@ -139,7 +139,7 @@ describe('POST /questions/testing', () => {
           .send(designsData)
           .expect(201);
         const res = await request(app)
-            .post(`${API_VERSION_PATH_PREFIX}/questions/design`)
+            .post(`${API_VERSION_PATH_PREFIX}/designs/${1}/phases/${1}/questions`)
             .send(questionData)
         
         expect(res.status).toBe(400);
@@ -169,7 +169,7 @@ describe('POST /questions/testing', () => {
           .send(designsData)
           .expect(201);
           const res = await request(app)
-            .post(`${API_VERSION_PATH_PREFIX}/questions/design`)
+            .post(`${API_VERSION_PATH_PREFIX}/designs/${1}/phases/${1}/questions`)
             .send(questionData)
 
         expect(res.body.status).toBe('error');

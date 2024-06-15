@@ -28,10 +28,10 @@ router.post('/authenticate_client', async (req, res) => {
       if (!isPasswordValid) {
           return res.status(401).json({ status: 'error', message: 'Invalid password' });
       }
-
+      const userId = user.id
       const token = jwt.sign({ id: user.id, mail: user.mail }, JWT_SECRET, { expiresIn: '1h' });
       //console.log("token ->", token)
-      res.status(200).json({ status: 'success', token });
+      res.status(200).json({ status: 'success', token, userId });
   } catch (err) {
       console.error(err);
       res.status(500).json({ status: 'error', message: 'Internal server error' });
