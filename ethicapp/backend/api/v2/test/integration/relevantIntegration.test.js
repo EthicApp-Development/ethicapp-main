@@ -186,6 +186,7 @@ describe('Integration Test', () => {
         number: 1,
         phase_id: phaseId
       })
+      .set('Authorization', `Bearer ${professorToken}`)
       .expect(201);
     console.log('questionResponse:', questionResponse.body);
     question_id = questionResponse.body.data?.id;

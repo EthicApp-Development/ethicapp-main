@@ -131,7 +131,7 @@ router.post('/sessions/creator/:numberDesign', authenticateToken, checkAbility('
 });
 
 // Update
-router.put('/sessions/:id', async (req, res) => {
+router.put('/sessions/:id', checkAbility('update', 'Session'), async (req, res) => {
     const { id } = req.params;
     try {
         const session = await Session.findByPk(id);
@@ -147,7 +147,7 @@ router.put('/sessions/:id', async (req, res) => {
 });
 
 // Delete
-router.delete('/sessions/:id', async (req, res) => {
+router.delete('/sessions/:id', checkAbility('delete', 'Session'), async (req, res) => {
     const { id } = req.params;
     try {
         const session = await Session.findByPk(id);

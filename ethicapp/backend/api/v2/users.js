@@ -1,7 +1,8 @@
 const express = require('express');
 const bodyParser = require('body-parser'); // Importa body-parser
 const router = express.Router();
-
+const checkAbility = require('../v2/middleware/checkAbility')
+const auth = require('../v2/middleware/authenticateToken');
 // Import Model
 const { User } = require('../../api/v2/models');
 
@@ -33,7 +34,7 @@ router.post('/users', async (req, res) => {
         return res.status(400).json({ status: 'error', message: 'Passwords do not match' });
     }
 
-    try {
+    try { // This was put in place to avoid creating an infinite number of identical users, with different id's, so that they could be reused.
         const existingUser = await User.findOne({
             where: {
                 mail: mail,
@@ -43,7 +44,7 @@ router.post('/users', async (req, res) => {
 
         if (existingUser) {
             //console.log("Existe en la base de datos")
-            return res.status(201).json({ status: 'success', data:  existingUser, message: 'User already exist' });
+            return res.status(201).json({ status: 'success', data: existingUser, message: 'User already exist' });
         }
         //console.log("no existe")
         const user = await User.create(req.body);
@@ -55,7 +56,7 @@ router.post('/users', async (req, res) => {
 });
 
 // Update
-router.put('/users/:id', async (req, res) => {
+router.put('/users/:id', auth, checkAbility('delete', 'Activity'), async (req, res) => {
     const { id } = req.params;
     try {
         const user = await User.findByPk(id);

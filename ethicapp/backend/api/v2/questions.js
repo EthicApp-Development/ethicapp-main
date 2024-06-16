@@ -22,7 +22,7 @@ router.get('/questions', async (req, res) => {
 });
 
 // Create
-router.post('/questions', async (req, res) => {
+router.post('/questions', authenticateToken, checkAbility('create', 'Question'), async (req, res) => {
 
     try {
 
@@ -35,7 +35,7 @@ router.post('/questions', async (req, res) => {
 });
 
 // Update
-router.put('/questions/:id', async (req, res) => {
+router.put('/questions/:id', authenticateToken, checkAbility('update', 'Question'), async (req, res) => {
     const { id } = req.params;
     try {
         const question = await Question.findByPk(id);
@@ -51,7 +51,7 @@ router.put('/questions/:id', async (req, res) => {
 });
 
 // Delete
-router.delete('/questions/:id', async (req, res) => {
+router.delete('/questions/:id', authenticateToken, checkAbility('delete', 'Question'), async (req, res) => {
     const { id } = req.params;
     try {
         const question = await Question.findByPk(id);

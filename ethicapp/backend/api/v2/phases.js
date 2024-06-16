@@ -52,7 +52,7 @@ router.post('/phases', authenticateToken, checkAbility('create', 'Phase'), async
 });
 
 // Update
-router.put('/phases/:id', authenticateToken, async (req, res) => {
+router.put('/phases/:id', authenticateToken, checkAbility('update', 'Phase'), async (req, res) => {
   const { id } = req.params;
   try {
     const phase = await Phase.findByPk(id);
@@ -69,7 +69,7 @@ router.put('/phases/:id', authenticateToken, async (req, res) => {
 
 
 // Delete
-router.delete('/phases/:id', async (req, res) => {
+router.delete('/phases/:id', checkAbility('delete', 'Phase'), async (req, res) => {
   const { id } = req.params;
   try {
     const phase = await Phase.findByPk(id);
