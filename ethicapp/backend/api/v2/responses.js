@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const router = express.Router();
+const checkAbility = require('../v2/middleware/checkAbility');
 
 // Import Model
 const { Response } = require('../../api/v2/models');
@@ -11,62 +12,62 @@ router.use(bodyParser.json());
 
 // Read
 router.get('/responses', async (req, res) => {
-    try {
-      const responses = await Response.findAll();
-      res.status(200).json({ status: 'success', data: responses });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ status: 'error', message: 'Internal server error' });
-    }
+  try {
+    const responses = await Response.findAll();
+    res.status(200).json({ status: 'success', data: responses });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
 });
 
 // Create
 router.post('/responses', async (req, res) => {
   const { user_id, question_id } = req.body;
   try {
-      const existingResponse = await Response.findOne({ where: { user_id, question_id } });
-      if (existingResponse) {
-          return res.status(400).json({ status: 'error', message: "Only one response allowed per user and question" });
-      }
-      const response = await Response.create(req.body);
-      res.status(201).json({ status: 'success', data: response });
+    const existingResponse = await Response.findOne({ where: { user_id, question_id } });
+    if (existingResponse) {
+      return res.status(400).json({ status: 'error', message: "Only one response allowed per user and question" });
+    }
+    const response = await Response.create(req.body);
+    res.status(201).json({ status: 'success', data: response });
   } catch (err) {
-      console.error(err);
-      res.status(500).json({ status: 'error', message: 'Internal server error' });
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 });
 
 
 // Update
 router.put('/responses/:id', async (req, res) => {
-    const { id } = req.params;
-    try {
-      const response = await Response.findByPk(id);
-      if (!response) {
-        return res.status(404).json({ status: 'error', message: 'Response not found' });
-      }
-      await response.update(req.body);
-      res.json({ status: 'success', data: response });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ status: 'error', message: 'Internal server error' });
+  const { id } = req.params;
+  try {
+    const response = await Response.findByPk(id);
+    if (!response) {
+      return res.status(404).json({ status: 'error', message: 'Response not found' });
     }
+    await response.update(req.body);
+    res.json({ status: 'success', data: response });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
 });
 
 // Delete
 router.delete('/responses/:id', async (req, res) => {
-    const { id } = req.params;
-    try {
-      const response = await Response.findByPk(id);
-      if (!response) {
-        return res.status(404).json({ status: 'error', message: 'Response not found' });
-      }
-      await response.destroy();
-      res.status(204).end();
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ status: 'error', message: 'Internal server error' });
+  const { id } = req.params;
+  try {
+    const response = await Response.findByPk(id);
+    if (!response) {
+      return res.status(404).json({ status: 'error', message: 'Response not found' });
     }
+    await response.destroy();
+    res.status(204).end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
 });
 
 module.exports = router;

@@ -10,12 +10,17 @@ describe('Activities and Phases API', () => {
     beforeAll(async () => {
 
         // Autenticar al profesor
+        const professorExample = userData[9]
+        await request(app)
+            .post(`${API_VERSION_PATH_PREFIX}/users`)
+            .send(professorExample)
+
         const loginRes = await request(app)
             .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
             .send({ mail: userData[9].mail, pass: userData[9].pass });
         //console.log(loginRes.body)
         token = loginRes.body.token;
-        console.log(loginRes.body.userId)
+        console.log(loginRes.body)
         await request(app)
             .post(`${API_VERSION_PATH_PREFIX}/designs`)
             .send({

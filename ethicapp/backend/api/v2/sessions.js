@@ -3,6 +3,7 @@ const bodyParser = require('body-parser'); // Importa body-parser
 const router = express.Router();
 const crypto = require('crypto');
 const authenticateToken = require('../../api/v2/middleware/authenticateToken');
+const checkAbility = require('../v2/middleware/checkAbility');
 
 // Import Model
 const { Session, SessionsUsers, User, Activity, Design, Phase } = require('../../api/v2/models');
@@ -22,14 +23,14 @@ router.get('/sessions', async (req, res) => {
 });
 
 // Create
-router.post('/sessions', authenticateToken, async (req, res) => {
+router.post('/sessions', authenticateToken, checkAbility('create', 'sessions'), async (req, res) => {
     const { role } = req.user; //from authenticateToken
-    if (role === 'E') {
-        return res.status(403).json({ status: 'error', message: 'Only professors or administrator can create sessions' });
-    }
+    // if (role === 'E') {
+    //     return res.status(403).json({ status: 'error', message: 'Only professors or administrator can create sessions' });
+    // }
     try {
         const code = crypto.randomBytes(3).toString('hex');
-        
+
         const sessionData = {
             ...req.body,
             code: code,
@@ -39,11 +40,21 @@ router.post('/sessions', authenticateToken, async (req, res) => {
         const creatorSession = session.creator
         const design = await Design.findOne({
             where: {
-              creator: creatorSession // Assuming the user ID is stored in req.user.id after authentication
+                creator: creatorSession // Assuming the user ID is stored in req.user.id after authentication
             }
-          });
+        });
+        //   // Crear la primera fase basada en el diseño
+        //   const firstPhaseDesign = design.design.phase[0];
+        //   const phase = await Phase.create({
+        //       number: firstPhaseDesign.number,
+        //       type: 'initial',
+        //       anon: false,
+        //       chat: false,
+        //       prev_ans: '',
+        //       activity_id: activity.id
+        //   });
         const activity = await Activity.create({
-            design: design.id, // Ajustar según el diseño predeterminado
+            design: design.id || 1, // Ajustar según el diseño predeterminado
             session: session.id
         });
         const sessionDescriptor = {
@@ -65,59 +76,59 @@ router.post('/sessions', authenticateToken, async (req, res) => {
         console.error(err);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
-}); 
+});
 
 //generate a new session by professor
-router.post('/sessions/creator/:numberDesign', authenticateToken, async (req, res) => {
+router.post('/sessions/creator/:numberDesign', authenticateToken, checkAbility('create', 'sessions'), async (req, res) => {
     const { role, id } = req.user; // from authenticateToken
     const { numberDesign } = req.params;
-    if (role !== 'P') {
-      return res.status(403).json({ status: 'error', message: 'Only professors can create sessions' });
-    }
-  
-    try {
-      const code = crypto.randomBytes(3).toString('hex');
-      const sessionData = {
-        ...req.body,
-        code,
-        creator: id
-      };
-      const session = await Session.create(sessionData);
-  
-      // Crear automáticamente la primera actividad
-      const activity = await Activity.create({
-        design: numberDesign, // Ajustar según el diseño predeterminado
-        session: session.id
-      });
-    //   const design = await Design.findByPk(numberDesign);
-    //   if (!design) {
-    //       return res.status(400).json({ status: 'error', message: 'Design not found' });
-    //   }
+    // if (role !== 'P') {
+    //     return res.status(403).json({ status: 'error', message: 'Only professors can create sessions' });
+    // }
 
-    //   // Crear la primera fase basada en el diseño
-    //   const firstPhaseDesign = design.design.phase[0];
-    //   const phase = await Phase.create({
-    //       number: firstPhaseDesign.number,
-    //       type: 'initial',
-    //       anon: false,
-    //       chat: false,
-    //       prev_ans: '',
-    //       activity_id: activity.id
-    //   });
-      const sessionDescriptor = {
-        id: session.id,
-        code: session.code,
-        status: session.status,
-        activity: activity.id, // Incluir la actividad creada
-        design: parseInt(numberDesign)
-      };
-  
-      res.status(201).json({ status: 'success', data: sessionDescriptor });
+    try {
+        const code = crypto.randomBytes(3).toString('hex');
+        const sessionData = {
+            ...req.body,
+            code,
+            creator: id
+        };
+        const session = await Session.create(sessionData);
+
+        // Crear automáticamente la primera actividad
+        const activity = await Activity.create({
+            design: numberDesign, // Ajustar según el diseño predeterminado
+            session: session.id
+        });
+        //   const design = await Design.findByPk(numberDesign);
+        //   if (!design) {
+        //       return res.status(400).json({ status: 'error', message: 'Design not found' });
+        //   }
+
+        //   // Crear la primera fase basada en el diseño
+        //   const firstPhaseDesign = design.design.phase[0];
+        //   const phase = await Phase.create({
+        //       number: firstPhaseDesign.number,
+        //       type: 'initial',
+        //       anon: false,
+        //       chat: false,
+        //       prev_ans: '',
+        //       activity_id: activity.id
+        //   });
+        const sessionDescriptor = {
+            id: session.id,
+            code: session.code,
+            status: session.status,
+            activity: activity.id, // Incluir la actividad creada
+            design: parseInt(numberDesign)
+        };
+
+        res.status(201).json({ status: 'success', data: sessionDescriptor });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ status: 'error', message: 'Internal server error' });
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
-  });
+});
 
 // Update
 router.put('/sessions/:id', async (req, res) => {

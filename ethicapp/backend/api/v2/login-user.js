@@ -5,7 +5,6 @@ const bodyParser = require('body-parser');
 const authenticateToken = require('./middleware/authenticateToken');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-
 // Import Model
 // Configure body-parser to process the body of requests in JSON format.
 router.use(bodyParser.json());
@@ -18,23 +17,23 @@ router.post('/authenticate_client', async (req, res) => {
   const { mail, pass } = req.body;
 
   try {
-      const user = await User.findOne({ where: { mail } });
+    const user = await User.findOne({ where: { mail } });
 
-      if (!user) {
-          return res.status(401).json({ status: 'error', message: 'User not found' });
-      }
+    if (!user) {
+      return res.status(401).json({ status: 'error', message: 'User not found' });
+    }
 
-      const isPasswordValid = bcrypt.compareSync(pass, user.pass);
-      if (!isPasswordValid) {
-          return res.status(401).json({ status: 'error', message: 'Invalid password' });
-      }
-      const userId = user.id
-      const token = jwt.sign({ id: user.id, mail: user.mail }, JWT_SECRET, { expiresIn: '1h' });
-      //console.log("token ->", token)
-      res.status(200).json({ status: 'success', token, userId });
+    const isPasswordValid = bcrypt.compareSync(pass, user.pass);
+    if (!isPasswordValid) {
+      return res.status(401).json({ status: 'error', message: 'Invalid password' });
+    }
+    const userId = user.id
+    const token = jwt.sign({ id: user.id, mail: user.mail }, JWT_SECRET, { expiresIn: '1h' });
+    //console.log("token ->", token)
+    res.status(200).json({ status: 'success', token, userId });
   } catch (err) {
-      console.error(err);
-      res.status(500).json({ status: 'error', message: 'Internal server error' });
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 });
 

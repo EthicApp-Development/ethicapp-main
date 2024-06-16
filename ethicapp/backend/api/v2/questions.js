@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const router = express.Router();
 const authenticateToken = require('../../api/v2/middleware/authenticateToken');
+const checkAbility = require('../v2/middleware/checkAbility');
 // Import Model
 
 const { Question, Response, Session, Phase, User, Design, Activity } = require('../../api/v2/models');

@@ -1,11 +1,11 @@
 const request = require('supertest');
-const app = require('../../testApi'); // Asegúrate de que apunta a tu aplicación Express
+const app = require('../../testApi');
 const { User, Session } = require('../../models');
 const jwt = require('jsonwebtoken');
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
-// fixtures
-const userData = require('../fixtures/users.json')
+const userData = require('../fixtures/users.json');
+
 describe('Integration Test', () => {
   let professorToken;
   let studentToken;
@@ -13,45 +13,107 @@ describe('Integration Test', () => {
   let phaseId;
   let student;
   let profesorId;
-  let question_id
+  let question_id;
 
   beforeAll(async () => {
     // Create a user
-    const professorExample = userData[7]
-    const professorId = await request(app)
+    const professorExample = userData[7];
+    const professorIdResponse = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/users`)
-      .send(professorExample)
-    //await User.create(professorExample);
+      .send(professorExample);
+    //console.log('professorIdResponse:', professorIdResponse.body);
+    profesorId = professorIdResponse.body.data?.id;
 
-    //console.log(professorId.body.data)
-    profesorId = professorId.body.data.id
+    if (!profesorId) {
+      throw new Error('Failed to create professor');
+    }
+
     // Login to get the token Professor
     const loginResProfessor = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
       .send({ mail: professorExample.mail, pass: professorExample.pass });
-
     professorToken = loginResProfessor.body.token;
 
+    if (!professorToken) {
+      throw new Error('Failed to authenticate professor');
+    }
 
-    const studentExample = userData[8]
-    const userId = await request(app)
+    const studentExample = userData[8];
+    const studentResponse = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/users`)
-      .send(studentExample)
-
-    student = userId.body.data
+      .send(studentExample);
+    student = studentResponse.body.data;
 
     // Login to get the token Student
     const loginResStudent = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
       .send({ mail: studentExample.mail, pass: studentExample.pass });
-
     studentToken = loginResStudent.body.token;
 
-    //console.log('token studentToken-->', studentToken);
-    //console.log('token Professor-->', professorToken);
-
+    if (!studentToken) {
+      throw new Error('Failed to authenticate student');
+    }
+    // create a Design
+    const designResponse = await request(app)
+      .post(`${API_VERSION_PATH_PREFIX}/designs`)
+      .send({
+        creator: profesorId,
+        design: {
+          phases: [
+            {
+              number: 1,
+              question: [
+                {
+                  content: {
+                    question: "¿Cuantos oceanos hay actualmente",
+                    options: ["5", "7", "10", "11", "1"],
+                    correct_answer: "5"
+                  },
+                  additional_info: "Geografia",
+                  type: "choice",
+                  text: "preguntas sobre el oceano",
+                  session_id: 1,
+                  number: 1
+                },
+                {
+                  content: {
+                    question: "¿Cuantos continentes hay actualmente",
+                    options: ["5", "7", "10", "11", "1"],
+                    correct_answer: "5"
+                  },
+                  additional_info: "Geografia",
+                  type: "choice",
+                  text: "preguntas sobre los continentes",
+                  session_id: 1,
+                  number: 2
+                }
+              ]
+            },
+            {
+              number: 2,
+              question: [
+                {
+                  content: {
+                    question: "¿asdffasd dsffds sd fsdf",
+                    options: ["dsf", "qw", "1wer", "1er1", "1e"],
+                    correct_answer: "qw"
+                  },
+                  additional_info: "cosas",
+                  type: "choice",
+                  text: "preguntas sobre las cosas",
+                  session_id: 1,
+                  number: 1
+                }
+              ]
+            }
+          ]
+        },
+        public: true,
+        locked: false
+      });
     // Create an activity
-    const sessionId = await request(app)
+
+    const sessionResponse = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/sessions`)
       .send({
         name: 'Session de integracion relevante',
@@ -61,72 +123,36 @@ describe('Integration Test', () => {
         type: 'E',
         time: new Date(),
       })
-      .set('Authorization', `Bearer ${professorToken}`)
+      .set('Authorization', `Bearer ${professorToken}`);
+    console.log(loginResStudent.body)
+    console.log('sessionResponse:', sessionResponse.body);
+    const sessionId = sessionResponse.body.data.id;
+    console.log(sessionResponse.body)
+    if (!sessionId) {
+      throw new Error('Failed to create session');
+    }
 
 
+    console.log('designResponse:', designResponse.body);
+    const designId = designResponse.body.data?.id;
 
+    if (!designId) {
+      throw new Error('Failed to create design');
+    }
 
-    const designId = await request(app)
-      .post(`${API_VERSION_PATH_PREFIX}/designs`)
-      .send({
-        creator: profesorId,
-        design: {
-          phases: [{
-            number: 1,
-            question: [
-              {
-                content: {
-                  question: "¿Cuantos oceanos hay actualmente",
-                  options: ["5", "7", "10", "11", "1"],
-                  correct_answer: "5"
-                },
-                additional_info: "Geografia",
-                type: "choice",
-                text: "preguntas sobre el oceano",
-                session_id: 1,
-                number: 1
-              },
-              {
-                content: {
-                  question: "¿Cuantos continentes hay actualmente",
-                  options: ["5", "7", "10", "11", "1"],
-                  correct_answer: "5"
-                },
-                additional_info: "Geografia",
-                type: "choice",
-                text: "preguntas sobre los continentes",
-                session_id: 1,
-                number: 2
-              }]
-          }, {
-            number: 2,
-            question: [{
-              content: {
-                question: "¿asdffasd dsffds sd fsdf",
-                options: ["dsf", "qw", "1wer", "1er1", "1e"],
-                correct_answer: "qw"
-              },
-              additional_info: "cosas",
-              type: "choice",
-              text: "preguntas sobre las cosas",
-              session_id: 1,
-              number: 1
-            }]
-          }]
-        },
-        public: true,
-        locked: false
-      })
-
-    const activity = await request(app)
+    const activityResponse = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/activity`)
-      .send({ design: designId.body.data.id, session: sessionId.body.data.id })
-      .set('Authorization', `Bearer ${professorToken}`)
-    activityId = activity.body.data.id
+      .send({ design: designId, session: sessionId })
+      .set('Authorization', `Bearer ${professorToken}`);
+    console.log('activityResponse:', activityResponse.body);
+    activityId = activityResponse.body.data?.id;
 
+    if (!activityId) {
+      throw new Error('Failed to create activity');
+    }
 
-    //create phase
-    const phase = await request(app)
+    // Create phase
+    const phaseResponse = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/phases`)
       .send({
         number: 1,
@@ -136,11 +162,16 @@ describe('Integration Test', () => {
         prev_ans: 'test de integracion',
         activity_id: activityId
       })
-      .set('Authorization', `Bearer ${professorToken}`)
+      .set('Authorization', `Bearer ${professorToken}`);
+    console.log('phaseResponse:', phaseResponse.body);
+    phaseId = phaseResponse.body.data?.id;
 
-    phaseId = phase.body.data.id
+    if (!phaseId) {
+      throw new Error('Failed to create phase');
+    }
+
     // Create Question
-    const questionId = await request(app)
+    const questionResponse = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/questions`)
       .send({
         content: {
@@ -151,24 +182,20 @@ describe('Integration Test', () => {
         additional_info: "Geografia",
         type: "choice",
         text: "preguntas sobre el oceano",
-        session_id: sessionId.body.data.id,
+        session_id: sessionId,
         number: 1,
         phase_id: phaseId
       })
       .expect(201);
-    question_id = questionId.body.data.id
+    console.log('questionResponse:', questionResponse.body);
+    question_id = questionResponse.body.data?.id;
+
+    if (!question_id) {
+      throw new Error('Failed to create question');
+    }
   });
 
-
   it('Professor can go to the next phase', async () => {
-    // const res = await request(app)
-    //   .post(`${API_VERSION_PATH_PREFIX}/phases`)
-    //   .set('Authorization', `Bearer ${professorToken}`)
-    //   .send({ number: 2, type: 'discussion', anon: false, chat: true, prev_ans: 'Lorem Impusm', activity_id: activityId });
-
-    // expect(res.status).toBe(201);
-    // expect(res.body.status).toBe('success');
-
     const res = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/activities/${activityId}/init_next_phase`)
       .set('Authorization', `Bearer ${professorToken}`)
@@ -180,68 +207,6 @@ describe('Integration Test', () => {
   });
 
   it('Student can get the current phase and question', async () => {
-    //console.log("question_id ->", question_id)
-    const dataDesign = {
-      creator: profesorId,
-      design: {
-        phases: [{
-          number: 1,
-          question: [
-            {
-              content: {
-                question: "¿Cuantos oceanos hay actualmente",
-                options: ["5", "7", "10", "11", "1"],
-                correct_answer: "5"
-              },
-              additional_info: "Geografia",
-              type: "choice",
-              text: "preguntas sobre el oceano",
-              session_id: 1,
-              number: 1
-            },
-            {
-              content: {
-                question: "¿Cuantos continentes hay actualmente",
-                options: ["5", "7", "10", "11", "1"],
-                correct_answer: "5"
-              },
-              additional_info: "Geografia",
-              type: "choice",
-              text: "preguntas sobre los continentes",
-              session_id: 1,
-              number: 2
-            }]
-        }, {
-          number: 2,
-          question: [{
-            content: {
-              question: "¿asdffasd dsffds sd fsdf",
-              options: ["dsf", "qw", "1wer", "1er1", "1e"],
-              correct_answer: "qw"
-            },
-            additional_info: "cosas",
-            type: "choice",
-            text: "preguntas sobre las cosas",
-            session_id: 1,
-            number: 1
-          }]
-        }]
-      },
-      public: true,
-      locked: true
-    }
-    // const response = await request(app)
-    //   .post(`${API_VERSION_PATH_PREFIX}/designs`)
-    //   .send(dataDesign)
-    //   .expect(201);
-
-    // const createdDesignId = response.body.data
-    // //console.log(createdDesignId)
-    // const designRes = await request(app)
-    //   .get(`${API_VERSION_PATH_PREFIX}/designs/${profesorId}/${1}/${1}`)
-
-    // expect(designRes.status).toBe(200);
-    // expect(designRes.body.status).toBe('success');
     const res = await request(app)
       .get(`${API_VERSION_PATH_PREFIX}/phases/${phaseId}/questions`)
       .set('Authorization', `Bearer ${professorToken}`)
@@ -252,7 +217,6 @@ describe('Integration Test', () => {
   });
 
   it('Student can create a response and send', async () => {
-    //console.log(student.id)
     const responseData = {
       user_id: student.id,
       content: { answer: 'Spiderman' },
@@ -268,17 +232,5 @@ describe('Integration Test', () => {
 
     expect(res.body.status).toBe('success');
     expect(res.body.data).toHaveProperty('id');
-    // const responseByUser = await request(app)
-    //   .post(`${API_VERSION_PATH_PREFIX}/responses`)
-    //   .send({
-    //     user_id: student.id,
-    //     content: { autor: student.name, responses: "A" },
-    //     type: "Choice",
-    //     question_id: question_id
-    //   })
-    //   .expect(201);
-
-    // expect(responseByUser.status).toBe(201);
-    // expect(responseByUser.body.status).toBe('success');
   });
 });

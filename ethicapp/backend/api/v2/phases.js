@@ -1,10 +1,12 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const router = express.Router();
-const { Phase, Activity, Design, Question } = require('../../api/v2/models');
 const authenticateToken = require('../../api/v2/middleware/authenticateToken')
-// Import Model
+const checkAbility = require('../v2/middleware/checkAbility');
 
+
+// Import Model
+const { Phase, Activity, Design, Question } = require('../../api/v2/models');
 // Configure body-parser to process the body of requests in JSON format.
 
 router.use(bodyParser.json());
@@ -21,12 +23,12 @@ router.get('/phases', async (req, res) => {
 });
 
 // Create
-router.post('/phases', authenticateToken, async (req, res) => {
+router.post('/phases', authenticateToken, checkAbility('create', 'Phase'), async (req, res) => {
   const { number, type, anon, chat, prev_ans, activity_id } = req.body;
   const { role } = req.user; //from authenticateToken
-  if (role !== 'P') {
-    return res.status(403).json({ status: 'error', message: 'Only professors can create sessions' });
-  }
+  // if (role !== 'P') {
+  //   return res.status(403).json({ status: 'error', message: 'Only professors can create sessions' });
+  // }
   try {
 
     const activity = await Activity.findByPk(activity_id);

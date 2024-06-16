@@ -64,7 +64,7 @@ describe('Integration Tests for Session and Activity Creation', () => {
       pass_confirmation: `New${randomStringShort}`,
       mail: `NewUser${randomString}@example.com`,
       sex: 'M',
-      role: 'A',
+      role: 'E',
     });
 
     professorToken = jwt.sign({ id: professor.id, role: professor.role }, 'your_secret_key');
@@ -86,8 +86,8 @@ describe('Integration Tests for Session and Activity Creation', () => {
     expect(sessionRes.body.data).toHaveProperty('code');
 
     sessionId = sessionRes.body.data.id;
-    console.log("countDesign ->", countDesign)
-    console.log("sessionRes.body", sessionRes.body)
+    //console.log("countDesign ->", countDesign)
+    //console.log("sessionRes.body", sessionRes.body)
 
   });
 
