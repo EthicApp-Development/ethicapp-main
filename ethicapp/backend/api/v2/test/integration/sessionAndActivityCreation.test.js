@@ -112,24 +112,24 @@ describe('Integration Tests for Session and Activity Creation', () => {
     expect(activityRes.body.data).toHaveProperty('session', sessionId);
   });
 
-  // it('should not allow a professor to create an activity in a session they do not own', async () => {
-  //   const anotherProfessor = await User.create({
-  //     name: 'Professor Other',
-  //     rut: "87654123-k",
-  //     pass: "ProfessorOther",
-  //     pass_confirmation: "ProfessorOther",
-  //     mail: 'ProfessorOther@example.com',
-  //     sex: 'M',
-  //     role: 'P'
-  //   });
-  //   const anotherProfessorToken = jwt.sign({ id: anotherProfessor.id, role: anotherProfessor.role }, 'your_secret_key');
+  it('should not allow a professor to create an activity in a session they do not own', async () => {
+    const anotherProfessor = await User.create({
+      name: 'Professor Other',
+      rut: "87654123-k",
+      pass: "ProfessorOther",
+      pass_confirmation: "ProfessorOther",
+      mail: 'ProfessorOther@example.com',
+      sex: 'M',
+      role: 'P'
+    });
+    const anotherProfessorToken = jwt.sign({ id: anotherProfessor.id, role: anotherProfessor.role }, 'your_secret_key');
 
-  //   const activityRes = await request(app)
-  //     .post(`${API_VERSION_PATH_PREFIX}/activity`)
-  //     .set('Authorization', `Bearer ${anotherProfessorToken}`)
-  //     .send({ design: 2, session: sessionId });
+    const activityRes = await request(app)
+      .post(`${API_VERSION_PATH_PREFIX}/activity`)
+      .set('Authorization', `Bearer ${anotherProfessorToken}`)
+      .send({ design: 2, session: sessionId });
 
-  //   expect(activityRes.status).toBe(403);
-  //   expect(activityRes.body).toHaveProperty('status', 'error');
-  // });
+    expect(activityRes.status).toBe(403);
+    expect(activityRes.body).toHaveProperty('status', 'error');
+  });
 });

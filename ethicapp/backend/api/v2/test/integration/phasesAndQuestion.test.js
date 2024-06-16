@@ -44,12 +44,6 @@ describe('Phases and Questions API', () => {
     console.log(sessionRes.body.data)
     sessionId = sessionRes.body.data.id;
 
-    //activity is not necessary at this stage as the session creates the activity
-    // const activityRes = await request(app)
-    //   .post(`${API_VERSION_PATH_PREFIX}/activity`)
-    //   .set('Authorization', `Bearer ${token}`)
-    //   .send({ design: 1, session: sessionId });
-
     const phaseRes = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/phases`)
       .set('Authorization', `Bearer ${token}`)

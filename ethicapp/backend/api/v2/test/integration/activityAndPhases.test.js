@@ -110,15 +110,7 @@ describe('Activities and Phases API', () => {
         expect(res.body.data).toHaveProperty('id');
         phaseId = res.body.data.id;
     });
-    // it('should not initiate the same phase twice', async () => {
-    //     const res = await request(app)
-    //         .post(`${API_VERSION_PATH_PREFIX}/activities/${activityId}/init_next_phase`)
-    //         .set('Authorization', `Bearer ${token}`)
-    //         .expect(400);
 
-    //     expect(res.body.status).toBe('error');
-    //     expect(res.body.message).toBe('Phase already initiated');
-    // });
 
     it('should update an existing phase', async () => {
         const res = await request(app)

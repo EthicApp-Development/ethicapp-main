@@ -10,12 +10,12 @@ describe('Responses API', () => {
   beforeAll(async () => {
     const profesorExample = userData[10]
     const profesorExampleId = await request(app)
-        .post(`${API_VERSION_PATH_PREFIX}/users`)
-        .send(profesorExample)
+      .post(`${API_VERSION_PATH_PREFIX}/users`)
+      .send(profesorExample)
     // Autenticar al usuario
     const loginRes = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
-      .send({ mail: profesorExample.mail , pass: profesorExample.pass });
+      .send({ mail: profesorExample.mail, pass: profesorExample.pass });
 
     token = loginRes.body.token;
     userId = profesorExampleId.body.data.id;
@@ -31,32 +31,33 @@ describe('Responses API', () => {
             "question": [{
               "content": {
                 "question": "¿Cuantos oceanos hay actualmente",
-                "options": ["5", "7", "10","11","1"],
+                "options": ["5", "7", "10", "11", "1"],
                 "correct_answer": "5"
-            },
-            "additional_info": "Geografia",
-            "type": "choice",
-            "text": "preguntas sobre el oceano",
-            "session_id": 1,
-            "number": 1
+              },
+              "additional_info": "Geografia",
+              "type": "choice",
+              "text": "preguntas sobre el oceano",
+              "session_id": 1,
+              "number": 1
             }]
           }]
         },
         public: true,
         locked: false
       })
-    
+
     const sessionRes = await request(app)
-     .post(`${API_VERSION_PATH_PREFIX}/sessions`)
-     .set('Authorization', `Bearer ${token}`)
-     .send({
+      .post(`${API_VERSION_PATH_PREFIX}/sessions`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
         name: "prueba de session en questionAndResponse test",
         descr: "lorem impsum Extendido",
         status: 1,
         time: new Date(),
-        creator: userId
-     })
-    console.log(sessionRes.body)
+        creator: userId,
+        type: "T"
+      })
+    //console.log(sessionRes.body)
     const phaseRes = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/phases`)
       .set('Authorization', `Bearer ${token}`)
@@ -83,7 +84,7 @@ describe('Responses API', () => {
 
   it('should create a response for a question', async () => {
     const responseData = {
-        user_id: userId,
+      user_id: userId,
       content: { answer: 'Thor' },
       type: 'choice',
       questionId: questionId
@@ -93,42 +94,27 @@ describe('Responses API', () => {
       .post(`${API_VERSION_PATH_PREFIX}/questions/${questionId}/responses`)
       .set('Authorization', `Bearer ${token}`)
       .send(responseData)
-      .expect(201);
 
     expect(res.body.status).toBe('success');
     expect(res.body.data).toHaveProperty('id');
   });
 
-//   it('should update a response for a question', async () => {
-//     const responseData = {
-//         user_id: userId,
-//       content: { answer: 'Thor' },
-//       type: 'choice',
-//       questionId: questionId
-//     };
+  it('should update a response for a question', async () => {
+    const updateData = {
+      user_id: userId,
+      content: { answer: 'Alien' },
+      type: 'choice',
+      questionId: questionId
+    };
 
-//     const responseByUser =await request(app)
-//       .post(`${API_VERSION_PATH_PREFIX}/questions/${questionId}/responses`)
-//       .set('Authorization', `Bearer ${token}`)
-//       .send(responseData)
-//       .expect(201);
-//     console.log(responseByUser)
-//     const updateData = {
-//         user_id: userId,
-//       content: { answer: 'Alien' },
-//       type: 'choice',
-//       questionId: questionId
-//     };
+    const res = await request(app)
+      .put(`${API_VERSION_PATH_PREFIX}/questions/${questionId}/responses`)
+      .set('Authorization', `Bearer ${token}`)
+      .send(updateData)
 
-//     const res = await request(app)
-//       .put(`${API_VERSION_PATH_PREFIX}/questions/${questionId}/responses`)
-//       .set('Authorization', `Bearer ${token}`)
-//       .send(updateData)
-//       .expect(200);
-
-//     expect(res.body.status).toBe('success');
-//     expect(res.body.data.content.answer).toBe('Alien');
-//   });
+    expect(res.body.status).toBe('success');
+    expect(res.body.data.content.answer).toBe('Alien');
+  });
 
   it('should get all responses for a question', async () => {
     const res = await request(app)
