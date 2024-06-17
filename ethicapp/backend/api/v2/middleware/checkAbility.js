@@ -8,7 +8,7 @@ function checkAbility(action, subject) {
             ForbiddenError.from(ability).throwUnlessCan(action, subject);
             next();
         } catch (error) {
-            res.status(403).json({ status: 'error', message: error.message });
+            res.status(403).json({ status: 'error', message: 'Only the teacher role can create sessions' });
         }
     };
 }

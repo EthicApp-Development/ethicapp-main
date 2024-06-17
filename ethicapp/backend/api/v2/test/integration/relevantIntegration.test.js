@@ -155,7 +155,7 @@ describe('Integration Test', () => {
     const phaseResponse = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/phases`)
       .send({
-        number: 1,
+        number: 3,
         type: 'intento de test',
         anon: true,
         chat: false,
@@ -216,7 +216,22 @@ describe('Integration Test', () => {
     expect(res.body.status).toBe('success');
     expect(res.body.data).toBeInstanceOf(Array);
   });
-
+  it('error when using duplicate a phase with the same number', async () => {
+    const errorPhase = await request(app)
+      .post(`${API_VERSION_PATH_PREFIX}/phases`)
+      .send({
+        number: 2,
+        type: 'intento de test',
+        anon: true,
+        chat: false,
+        prev_ans: 'test de integracion',
+        activity_id: activityId
+      })
+      .set('Authorization', `Bearer ${professorToken}`);
+    //console.log(errorPhase.body)
+    expect(errorPhase.body.status).toBe('error')
+    expect(errorPhase.body.message).toBe('Phase number already exists in the design')
+  })
   it('Student can create a response and send', async () => {
     const responseData = {
       user_id: student.id,

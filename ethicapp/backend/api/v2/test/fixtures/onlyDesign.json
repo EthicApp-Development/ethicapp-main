@@ -64,5 +64,24 @@
                 "number": 1
             }]
         }]
+    },
+    {
+        "phases": [{
+            "number": 1,
+            "question": [
+                {
+                    "content": {
+                        "question": "¿Cuantos oceanos sdahay actualmente",
+                        "options": ["5", "s7", "10a", "11", "1"],
+                        "correct_answer": "5s"
+                    },
+                    "additional_info": "Geodagrafia",
+                    "type": "choice",
+                    "text": "preguntasdas sobre el oceano",
+                    "session_id": 1,
+                    "number": 1
+                }
+            ]
+        }]
     }
 ]

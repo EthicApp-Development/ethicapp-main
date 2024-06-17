@@ -26,9 +26,6 @@ router.get('/phases', async (req, res) => {
 router.post('/phases', authenticateToken, checkAbility('create', 'Phase'), async (req, res) => {
   const { number, type, anon, chat, prev_ans, activity_id } = req.body;
   const { role } = req.user; //from authenticateToken
-  // if (role !== 'P') {
-  //   return res.status(403).json({ status: 'error', message: 'Only professors can create sessions' });
-  // }
   try {
 
     const activity = await Activity.findByPk(activity_id);
@@ -36,14 +33,19 @@ router.post('/phases', authenticateToken, checkAbility('create', 'Phase'), async
       return res.status(400).json({ status: 'error', message: 'Activity not found' });
     }
 
-    const designTable = await Design.findByPk(activity.design)
-    if (!designTable) {
+    const design = await Design.findByPk(activity.design);
+    if (!design) {
       return res.status(400).json({ status: 'error', message: 'Design not found' });
     }
-    else {
-      const phase = await Phase.create({ number, type, anon, chat, prev_ans, activity_id });
-      return res.status(201).json({ status: 'success', data: phase });
+
+    // Validate that the phase number is not duplicated in the design
+    const phaseNumbers = design.design.phases.map(phase => phase.number);
+    if (phaseNumbers.includes(number)) {
+      return res.status(400).json({ status: 'error', message: 'Phase number already exists in the design' });
     }
+
+    const phase = await Phase.create({ number, type, anon, chat, prev_ans, activity_id });
+    return res.status(201).json({ status: 'success', data: phase });
 
   } catch (err) {
     console.error(err);

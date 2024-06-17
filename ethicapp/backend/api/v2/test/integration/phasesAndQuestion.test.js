@@ -9,14 +9,14 @@ describe('Phases and Questions API', () => {
 
   beforeAll(async () => {
     // Autenticar al profesor
-    const professorExample = userData[9]
+    const professorExample = userData[11]
     await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/users`)
       .send(professorExample)
 
     const loginRes = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
-      .send({ mail: userData[9].mail, pass: userData[9].pass });
+      .send({ mail: userData[11].mail, pass: userData[11].pass });
 
     token = loginRes.body.token;
 
@@ -48,14 +48,14 @@ describe('Phases and Questions API', () => {
       .post(`${API_VERSION_PATH_PREFIX}/phases`)
       .set('Authorization', `Bearer ${token}`)
       .send({
-        number: 1,
+        number: 3,
         type: 'discussion',
         anon: false,
         chat: true,
         prev_ans: 'Lorem Ipsum',
         activity_id: sessionRes.body.data.activity.id
       });
-
+    console.log(phaseRes.body)
     phaseId = phaseRes.body.data.id;
   });
 

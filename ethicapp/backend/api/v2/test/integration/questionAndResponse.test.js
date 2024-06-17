@@ -21,24 +21,24 @@ describe('Responses API', () => {
     userId = profesorExampleId.body.data.id;
 
     // Crear una pregunta para la prueba
-    const designRes = await request(app)
+    await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/designs`)
       .send({
         creator: userId,
         design: {
-          "phase": [{
-            "number": 1,
-            "question": [{
-              "content": {
-                "question": "¿Cuantos oceanos hay actualmente",
-                "options": ["5", "7", "10", "11", "1"],
-                "correct_answer": "5"
+          phases: [{
+            number: 1,
+            question: [{
+              content: {
+                question: "¿Cuantos oceanos hay actualmente",
+                options: ["5", "7", "10", "11", "1"],
+                correct_answer: "5"
               },
-              "additional_info": "Geografia",
-              "type": "choice",
-              "text": "preguntas sobre el oceano",
-              "session_id": 1,
-              "number": 1
+              additional_info: "Geografia",
+              type: "choice",
+              text: "preguntas sobre el oceano",
+              session_id: 1,
+              number: 1
             }]
           }]
         },
@@ -61,7 +61,7 @@ describe('Responses API', () => {
     const phaseRes = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/phases`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ number: 1, type: 'discussion', anon: false, chat: true, prev_ans: 'Lorem Ipsum', activity_id: sessionRes.body.data.activity.id });
+      .send({ number: 2, type: 'discussion', anon: false, chat: true, prev_ans: 'Lorem Ipsum', activity_id: sessionRes.body.data.activity.id });
 
     phaseId = phaseRes.body.data.id;
 

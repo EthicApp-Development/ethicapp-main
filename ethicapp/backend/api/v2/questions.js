@@ -157,8 +157,8 @@ router.get('/questions/:id/responses', authenticateToken, async (req, res) => {
         if (!session) {
             return res.status(404).json({ status: 'error', message: 'Session not found' });
         }
-        console.log(session.creator)
-        console.log(userId)
+        // console.log(session.creator)
+        // console.log(userId)
         if (session.creator !== userId) {
             return res.status(403).json({ status: 'error', message: 'Only the professor who owns the session can view responses' });
         }
