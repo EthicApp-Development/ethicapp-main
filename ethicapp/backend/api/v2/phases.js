@@ -25,7 +25,6 @@ router.get('/phases', async (req, res) => {
 // Create
 router.post('/phases', authenticateToken, checkAbility('create', 'Phase'), async (req, res) => {
   const { number, type, anon, chat, prev_ans, activity_id } = req.body;
-  const { role } = req.user; //from authenticateToken
   try {
 
     const activity = await Activity.findByPk(activity_id);
@@ -43,6 +42,10 @@ router.post('/phases', authenticateToken, checkAbility('create', 'Phase'), async
     if (phaseNumbers.includes(number)) {
       return res.status(400).json({ status: 'error', message: 'Phase number already exists in the design' });
     }
+    // const repeatNumber = await Phase.findOne({ where: { number: number } });
+    // if (repeatNumber) {
+    //   return res.status(400).json({ status: 'error', message: 'Phase number already exists in Phase table' });
+    // }
 
     const phase = await Phase.create({ number, type, anon, chat, prev_ans, activity_id });
     return res.status(201).json({ status: 'success', data: phase });
@@ -102,12 +105,39 @@ router.get('/phases/:id', async (req, res) => {
 // POST /api/v2/phases/:id/questions
 router.post('/phases/:id/questions', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { text, content, additional_info, type, session_id, number } = req.body;
+  const { text, content, additional_info, type, session_id, number, phase_id } = req.body;
 
   try {
     const phase = await Phase.findByPk(id);
     if (!phase) {
       return res.status(400).json({ status: 'error', message: 'Phase not found' });
+    }
+    //console.log(phase)
+    const activity = await Activity.findByPk(phase.activity_id);
+    //console.log(activity)
+    if (!activity) {
+      return res.status(400).json({ status: 'error', message: 'Activity not found' });
+    }
+    const design = await Design.findByPk(activity.design);
+    //console.log(design)
+    if (!design) {
+      return res.status(400).json({ status: 'error', message: 'Design not found' });
+    }
+    //console.log(design.design.phases.length)
+    const amountQuestionNumber = design.design.phases.length
+    const phaseNumbers = design.design.phases.map(phase => phase.number);
+    console.log(phaseNumbers)
+    //console.log(questionsNumbers)
+    for (let pos = 0; pos < amountQuestionNumber; pos++) {
+      const questionsNumbers = design.design.phases[pos].question.map(questionNumber => questionNumber.number)
+      //console.log(`position -> ${pos} <-`, questionsNumbers)
+      if (questionsNumbers.includes(number)) {
+        console.log('ya incluye esta pregunta')
+        return res.status(400).json({ status: 'error', message: `question number already exists in the phase in Design, is in ${pos + 1} question in phase` });
+      }
+      else {
+        console.log('no la incluye')
+      }
     }
 
     const question = await Question.create({

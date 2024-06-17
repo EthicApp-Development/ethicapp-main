@@ -41,7 +41,7 @@ describe('Phases and Questions API', () => {
         time: new Date()
       });
 
-    console.log(sessionRes.body.data)
+    //console.log(sessionRes.body.data)
     sessionId = sessionRes.body.data.id;
 
     const phaseRes = await request(app)
@@ -55,7 +55,7 @@ describe('Phases and Questions API', () => {
         prev_ans: 'Lorem Ipsum',
         activity_id: sessionRes.body.data.activity.id
       });
-    console.log(phaseRes.body)
+    //console.log(phaseRes.body)
     phaseId = phaseRes.body.data.id;
   });
 
@@ -66,7 +66,8 @@ describe('Phases and Questions API', () => {
       additional_info: 'Películas',
       type: 'choice',
       session_id: sessionId,
-      number: 1
+      number: 3,
+      phase_id: phaseId
     };
 
     const res = await request(app)
@@ -77,6 +78,26 @@ describe('Phases and Questions API', () => {
 
     expect(res.body.status).toBe('success');
     expect(res.body.data).toHaveProperty('id');
+  });
+
+  it('proof that the number of the question cannot be duplicated in a design', async () => {
+    const questionData = {
+      text: '¿Cuál es tu película favorita?',
+      content: { question: '¿Cuál es tu película favorita?', options: ['Dune', 'Alien', 'Thor'], correct_answer: 'Thor' },
+      additional_info: 'Películas',
+      type: 'choice',
+      session_id: sessionId,
+      number: 1,
+      phase_id: phaseId
+    };
+
+    const res = await request(app)
+      .post(`${API_VERSION_PATH_PREFIX}/phases/${phaseId}/questions`)
+      .set('Authorization', `Bearer ${token}`)
+      .send(questionData)
+
+    expect(res.body.status).toBe('error');
+    expect(res.status).toBe(400);
   });
 
   it('should get questions in the phase', async () => {

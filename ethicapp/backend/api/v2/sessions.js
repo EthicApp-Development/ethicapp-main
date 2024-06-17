@@ -79,9 +79,9 @@ router.post('/sessions', authenticateToken, checkAbility('create', 'sessions'), 
 });
 
 //generate a new session by professor
-router.post('/sessions/creator/:numberDesign', authenticateToken, checkAbility('create', 'sessions'), async (req, res) => {
+router.post('/sessions/creator/:number_design', authenticateToken, checkAbility('create', 'sessions'), async (req, res) => {
     const { role, id } = req.user; // from authenticateToken
-    const { numberDesign } = req.params;
+    const { number_design } = req.params;
     // if (role !== 'P') {
     //     return res.status(403).json({ status: 'error', message: 'Only professors can create sessions' });
     // }
@@ -97,10 +97,10 @@ router.post('/sessions/creator/:numberDesign', authenticateToken, checkAbility('
 
         // Crear automáticamente la primera actividad
         const activity = await Activity.create({
-            design: numberDesign, // Ajustar según el diseño predeterminado
+            design: number_design, // Ajustar según el diseño predeterminado
             session: session.id
         });
-        //   const design = await Design.findByPk(numberDesign);
+        //   const design = await Design.findByPk(number_design);
         //   if (!design) {
         //       return res.status(400).json({ status: 'error', message: 'Design not found' });
         //   }
@@ -120,7 +120,7 @@ router.post('/sessions/creator/:numberDesign', authenticateToken, checkAbility('
             code: session.code,
             status: session.status,
             activity: activity.id, // Incluir la actividad creada
-            design: parseInt(numberDesign)
+            design: parseInt(number_design)
         };
 
         res.status(201).json({ status: 'success', data: sessionDescriptor });
