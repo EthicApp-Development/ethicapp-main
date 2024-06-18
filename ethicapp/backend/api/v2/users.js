@@ -2,7 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser'); // Importa body-parser
 const router = express.Router();
 const checkAbility = require('../v2/middleware/checkAbility')
-const auth = require('../v2/middleware/authenticateToken');
+const auth = require('../v2/middleware/authenticateToken')
 // Import Model
 const { User } = require('../../api/v2/models');
 
@@ -10,7 +10,7 @@ const { User } = require('../../api/v2/models');
 router.use(bodyParser.json());
 
 // Read
-router.get('/users', async (req, res) => {
+router.get('/users',auth,checkAbility('get', 'User'), async (req, res) => {
     try {
         const users = await User.findAll();
         res.status(200).json({ status: 'success', data: users });
