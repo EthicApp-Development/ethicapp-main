@@ -1,8 +1,9 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const router = express.Router();
+const auth = require('../v2/middleware/authenticateToken')
 
-const { Activity } = require('../../api/v2/models');
+const { Activity, Design, Session } = require('../../api/v2/models');
 
 // Configure body-parser to process the body of requests in JSON format.
 router.use(bodyParser.json());
@@ -19,9 +20,18 @@ router.get('/activity', async (req, res) => {
 });
 
 // Create
-router.post('/activity', async (req, res) => {
+router.post('/activity', auth, async (req, res) => {
+    const { design, session } = req.body
     try {
-        const activity = await Activity.create(req.body);
+        const designActivity = await Design.findByPk(design)
+        if(!designActivity){
+            return res.status(400).json({ status: 'error', message: 'Design not found' });
+        }
+        const sessionActivity = await Session.findByPk(session)
+        if(!sessionActivity){
+            return res.status(400).json({ status: 'error', message: 'Session not found' });
+        }
+        const activity = await Activity.create({ design, session });
         res.status(201).json({ status: 'success', data: activity });
     } catch (err) {
         console.error(err);

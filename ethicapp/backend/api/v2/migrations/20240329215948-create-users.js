@@ -21,6 +21,10 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull:true
       },
+      pass_confirmation: {
+        type: Sequelize.STRING,
+        allowNull:true
+      },
       mail: {
         type: Sequelize.STRING,
         allowNull:true

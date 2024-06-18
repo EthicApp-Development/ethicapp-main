@@ -1,9 +1,11 @@
 const express = require('express');
 const bodyParser = require('body-parser'); // Importa body-parser
 const router = express.Router();
+const crypto = require('crypto');
+const authenticateToken = require('../../api/v2/middleware/authenticateToken');
 
 // Import Model
-const { Session, SessionsUsers } = require('../../api/v2/models');
+const { Session, SessionsUsers, User } = require('../../api/v2/models');
 
 // Configure body-parser to process the body of requests in JSON format.
 router.use(bodyParser.json());
@@ -22,13 +24,27 @@ router.get('/sessions', async (req, res) => {
 // Create
 router.post('/sessions', async (req, res) => {
     try {
-        const session = await Session.create(req.body);
-        res.status(201).json({ status: 'success', data: session });
+        const code = crypto.randomBytes(3).toString('hex');
+        
+        const sessionData = {
+            ...req.body,
+            code: code,
+        };
+
+        const session = await Session.create(sessionData);
+        const sessionDescriptor = {
+            id: session.id,
+            code: session.code,
+            status: session.status
+        };
+
+        res.status(201).json({ status: 'success', data: sessionDescriptor });
     } catch (err) {
         console.error(err);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
-});
+}); 
+
 
 // Update
 router.put('/sessions/:id', async (req, res) => {
@@ -62,55 +78,57 @@ router.delete('/sessions/:id', async (req, res) => {
     }
 });
 
-// CRUD operations for SessionsUsers
+// Add User to Session
+router.post('/sessions/users', authenticateToken, async (req, res) => {
+    const { code, user_id } = req.body;
 
-// Create session user
-router.post('/sessions/:sessionId/users', async (req, res) => {
-    const { sessionId } = req.params;
     try {
-        const session = await Session.findByPk(sessionId);
+        const session = await Session.findOne({ where: { code } });
+        if (!session) {
+            return res.status(404).json({ status: 'error', message: 'Invalid session code' });
+        }
+        const user = await User.findByPk(user_id);
+        if (!user) {
+            return res.status(404).json({ status: 'error', message: 'User not found' });
+        }
+
+        const sessionUser = await SessionsUsers.create({
+            session_id: session.id,
+            user_id: user.id
+        });
+
+        res.status(201).json({ status: 'success', data: { session_id: sessionUser.session_id, user_id: sessionUser.user_id } });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+});
+
+// Get Users in a Session
+router.get('/sessionsUsers/:id/users', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const session = await Session.findByPk(id);
         if (!session) {
             return res.status(404).json({ status: 'error', message: 'Session not found' });
         }
-        console.log("req.body.user_id -> ", req.body.user_id)
-        const sessionUser = await SessionsUsers.create({ session_id: sessionId, user_id: req.body.user_id });
-        res.status(201).json({ status: 'success', data: sessionUser });
+
+        // Busca los usuarios asociados a la sesión usando la tabla intermedia SessionsUsers
+        const sessionUsers = await SessionsUsers.findAll({
+            where: { session_id: id },
+            attributes: ['user_id'] // Obtén solo los IDs de los usuarios
+        });
+
+        // Mapea los IDs de los usuarios
+        const userIds = sessionUsers.map(user => user.user_id);
+        //console.log("userIds -=>", userIds)
+        res.status(200).json({ status: 'success', data: userIds });
     } catch (err) {
         console.error(err);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 });
 
-// Read session users
-router.get('/sessions/:sessionId/users', async (req, res) => {
-    const { sessionId } = req.params;
-    try {
-        const sessionUsers = await SessionsUsers.findAll({ where: { session_id: sessionId } });
-        res.status(200).json({ status: 'success', data: sessionUsers });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
-    }
-});
-
-// Delete session user
-router.delete('/sessions/:sessionId/users/:userId', async (req, res) => {
-    const { sessionId, userId } = req.params;
-    try {
-        const session = await Session.findByPk(sessionId);
-        if (!session) {
-            return res.status(404).json({ status: 'error', message: 'Session not found' });
-        }
-        const sessionUser = await SessionsUsers.findOne({ where: { session_id: sessionId, user_id: userId } });
-        if (!sessionUser) {
-            return res.status(404).json({ status: 'error', message: 'Session user not found' });
-        }
-        await sessionUser.destroy();
-        res.status(204).end();
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
-    }
-});
 
 module.exports = router;

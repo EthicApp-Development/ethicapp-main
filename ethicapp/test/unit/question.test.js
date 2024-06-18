@@ -1,5 +1,6 @@
 const request = require('supertest');
 const app = require('../../backend/api/v2/testApi'); 
+const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
 const questionData = require('../fixtures/questions.json');
 describe('CRUD Operations for Questions API', () => {
@@ -11,7 +12,7 @@ describe('CRUD Operations for Questions API', () => {
     const newQuestionData = questionData[0]
 
     const response = await request(app)
-      .post('/questions')
+      .post(`${API_VERSION_PATH_PREFIX}/questions`)
       .send(newQuestionData)
       .expect(201);
 
@@ -22,7 +23,7 @@ describe('CRUD Operations for Questions API', () => {
   it('should retrieve all questions', async () => {
     console.log("READ")
     await request(app)
-      .get('/questions')
+      .get(`${API_VERSION_PATH_PREFIX}/questions`)
       .expect(200);
   });
 
@@ -32,7 +33,7 @@ describe('CRUD Operations for Questions API', () => {
     const updatedQuestionData = questionData[1]
 
     await request(app)
-      .put(`/questions/${createdQuestionId}`)
+      .put(`${API_VERSION_PATH_PREFIX}/questions/${createdQuestionId}`)
       .send(updatedQuestionData)
       .expect(200);
   });
@@ -41,7 +42,18 @@ describe('CRUD Operations for Questions API', () => {
   it('should delete an existing question', async () => {
     console.log("DELETE")
     await request(app)
-      .delete(`/questions/${createdQuestionId}`)
+      .delete(`${API_VERSION_PATH_PREFIX}/questions/${createdQuestionId}`)
       .expect(204);
+  });
+
+  it('should return an error if phases_id is missing', async () => {
+    const questionDataWithOutPhase = questionData[2]
+    const response = await request(app)
+      .post(`${API_VERSION_PATH_PREFIX}/questions`)
+      .send(questionDataWithOutPhase)
+      .expect(400);
+
+    expect(response.body).toHaveProperty('status', 'error');
+    expect(response.body).toHaveProperty('message', 'phases_id is required');
   });
 });

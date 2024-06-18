@@ -8,7 +8,9 @@
     "additional_info": "Colores",
     "type": "choice",
     "text": "¿Cuál es tu color favorito?",
-    "sesion_id": 1
+    "sesion_id": 1,
+    "phases_id": 2,
+    "number_phase": 2
     },
     {
     "content": {
@@ -18,6 +20,44 @@
     "additional_info": "Pregunta sobre química",
     "type": "text",
     "text": "Escriba la fórmula química del agua.",
-    "sesion_id": 2
+    "sesion_id": 2,
+    "phase_id": 1
+    },
+    {
+        "content": {
+            "question": "¿Cuál es tu color favorito?",
+            "options": ["Violeta", "Negro", "Azul"],
+            "correct_answer": "Azul"
+        },
+        "additional_info": "Colores",
+        "type": "choice",
+        "text": "¿Cuál es tu color favorito?",
+        "sesion_id": 1,
+        "number_phase": 2
+    },
+    {
+        "content": {
+            "question": "¿Cuál es tu color favorito?",
+            "options": ["Violeta", "Negro", "Azul"],
+            "correct_answer": "Azul"
+        },
+        "additional_info": "responses",
+        "type": "choice",
+        "text": "¿Cuál es tu color favorito?",
+        "sesion_id": 1,
+        "phases_id": 2,
+        "number_phase": 2
+    },
+    {
+        "content": {
+            "question": "¿Cuantos oceanos hay actualmente",
+            "options": ["5", "7", "10","11","1"],
+            "correct_answer": "5"
+        },
+        "additional_info": "Geografia",
+        "type": "choice",
+        "text": "preguntas sobre el oceano",
+        "sesion_id": 1,
+        "number_phase": 2
     }
 ]

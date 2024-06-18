@@ -12,6 +12,7 @@ module.exports = (sequelize) => {
     name: DataTypes.STRING,
     rut: DataTypes.STRING,
     pass: DataTypes.STRING,
+    pass_confirmation: DataTypes.STRING,
     mail: DataTypes.STRING,
     sex: DataTypes.CHAR(1),
     role: DataTypes.CHAR(1),

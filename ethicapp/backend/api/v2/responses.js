@@ -22,7 +22,14 @@ router.get('/responses', async (req, res) => {
 
 // Create
 router.post('/responses', async (req, res) => {
+    const { user_id, phase_id } = req.body;
+    console.log("user_id", user_id)
     try {
+      const existingResponse = await Response.findOne({ where: { user_id, phase_id } });
+      
+      if(existingResponse) {
+        return res.status(400).json({ status: 'error', message: "Only one response allowed per user and phase" });
+      }
       const response = await Response.create(req.body);
       res.status(201).json({ status: 'success', data: response });
     } catch (err) {

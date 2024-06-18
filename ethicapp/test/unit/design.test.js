@@ -1,16 +1,17 @@
 const request = require('supertest');
 const app = require('../../backend/api/v2/testApi'); 
+const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
 const designsData = require('../fixtures/designs.json');
 describe('CRUD Operations for Designs API', () => {
   let createdDesignId;
-  console.log("--- CRUD testing Design ---")
+  //console.log("--- CRUD testing Design ---")
   // Test Create Operation
   it('should create a new design', async () => {
     const newDesignData = designsData[0]
 
     const response = await request(app)
-      .post('/designs')
+      .post(`${API_VERSION_PATH_PREFIX}/designs`)
       .send(newDesignData)
       .expect(201);
 
@@ -21,7 +22,7 @@ describe('CRUD Operations for Designs API', () => {
   // Test Read Operation
   it('should retrieve all designs', async () => {
     await request(app)
-      .get('/designs')
+      .get(`${API_VERSION_PATH_PREFIX}/designs`)
       .expect(200);
   });
 
@@ -30,7 +31,7 @@ describe('CRUD Operations for Designs API', () => {
     const updatedDesignData = designsData[1]
 
     await request(app)
-      .put(`/designs/${createdDesignId}`)
+      .put(`${API_VERSION_PATH_PREFIX}/designs/${createdDesignId}`)
       .send(updatedDesignData)
       .expect(200);
   });
@@ -38,7 +39,7 @@ describe('CRUD Operations for Designs API', () => {
   // Test Delete Operation
   it('should delete an existing design', async () => {
     await request(app)
-      .delete(`/designs/${createdDesignId}`)
+      .delete(`${API_VERSION_PATH_PREFIX}/designs/${createdDesignId}`)
       .expect(204);
   });
   

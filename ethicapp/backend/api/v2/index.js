@@ -8,18 +8,23 @@ const loginUserRouter = require('./login-user')
 const groupRouter = require('./groups')
 const chatroomRouter = require('./chatrooms')
 const activityRouter = require('./activities')
+const sessionUserRouter = require('./sessions-users')
+const phaseRouter = require('./phases')
 const app = express();
+const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 const PORT = process.env.PORT || 3000;
 
-app.use('/',questionRouter);
-app.use('/',designRouter);
-app.use('/',responseRouter);
-app.use('/',userRouter);
-app.use('/',sessionRouter);
-app.use('/',groupRouter);
-app.use('/',chatroomRouter);
-app.use('/',activityRouter);
-app.use('/login',loginUserRouter);
+app.use(`${API_VERSION_PATH_PREFIX}`,questionRouter);
+app.use(`${API_VERSION_PATH_PREFIX}`,designRouter);
+app.use(`${API_VERSION_PATH_PREFIX}`,phaseRouter);
+app.use(`${API_VERSION_PATH_PREFIX}`,responseRouter);
+app.use(`${API_VERSION_PATH_PREFIX}`,userRouter);
+app.use(`${API_VERSION_PATH_PREFIX}`,sessionRouter);
+app.use(`${API_VERSION_PATH_PREFIX}`,groupRouter);
+app.use(`${API_VERSION_PATH_PREFIX}`,chatroomRouter);
+app.use(`${API_VERSION_PATH_PREFIX}`,activityRouter);
+app.use(`${API_VERSION_PATH_PREFIX}`,loginUserRouter);
+app.use(`${API_VERSION_PATH_PREFIX}`,sessionUserRouter)
 
 
 app.listen(PORT, () => {
