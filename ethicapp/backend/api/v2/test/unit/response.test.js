@@ -60,4 +60,11 @@ describe('CRUD Operations for Responses API', () => {
       .delete(`${API_VERSION_PATH_PREFIX}/responses/${createdResponseId}`)
       .expect(204);
   });
+
+  // Test Error Delete Operation
+  it('should delete an existing response', async () => {
+    await request(app)
+      .delete(`${API_VERSION_PATH_PREFIX}/responses/999999`)
+      .expect(404);
+  });
 });

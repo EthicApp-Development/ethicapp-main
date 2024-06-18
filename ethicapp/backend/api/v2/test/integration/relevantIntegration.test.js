@@ -124,16 +124,16 @@ describe('Integration Test', () => {
         time: new Date(),
       })
       .set('Authorization', `Bearer ${professorToken}`);
-    console.log(loginResStudent.body)
-    console.log('sessionResponse:', sessionResponse.body);
+    //console.log(loginResStudent.body)
+    //console.log('sessionResponse:', sessionResponse.body);
     const sessionId = sessionResponse.body.data.id;
-    console.log(sessionResponse.body)
+    //console.log(sessionResponse.body)
     if (!sessionId) {
       throw new Error('Failed to create session');
     }
 
 
-    console.log('designResponse:', designResponse.body);
+    //console.log('designResponse:', designResponse.body);
     const designId = designResponse.body.data?.id;
 
     if (!designId) {
@@ -144,7 +144,7 @@ describe('Integration Test', () => {
       .post(`${API_VERSION_PATH_PREFIX}/activity`)
       .send({ design: designId, session: sessionId })
       .set('Authorization', `Bearer ${professorToken}`);
-    console.log('activityResponse:', activityResponse.body);
+    //console.log('activityResponse:', activityResponse.body);
     activityId = activityResponse.body.data?.id;
 
     if (!activityId) {
@@ -163,7 +163,7 @@ describe('Integration Test', () => {
         activity_id: activityId
       })
       .set('Authorization', `Bearer ${professorToken}`);
-    console.log('phaseResponse:', phaseResponse.body);
+    //console.log('phaseResponse:', phaseResponse.body);
     phaseId = phaseResponse.body.data?.id;
 
     if (!phaseId) {
@@ -188,7 +188,7 @@ describe('Integration Test', () => {
       })
       .set('Authorization', `Bearer ${professorToken}`)
       .expect(201);
-    console.log('questionResponse:', questionResponse.body);
+    //console.log('questionResponse:', questionResponse.body);
     question_id = questionResponse.body.data?.id;
 
     if (!question_id) {

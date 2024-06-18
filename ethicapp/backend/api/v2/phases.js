@@ -126,7 +126,7 @@ router.post('/phases/:id/questions', authenticateToken, async (req, res) => {
     //console.log(design.design.phases.length)
     const amountQuestionNumber = design.design.phases.length
     const phaseNumbers = design.design.phases.map(phase => phase.number);
-    console.log(phaseNumbers)
+    //console.log(phaseNumbers)
     //console.log(questionsNumbers)
     for (let pos = 0; pos < amountQuestionNumber; pos++) {
       const questionsNumbers = design.design.phases[pos].question.map(questionNumber => questionNumber.number)

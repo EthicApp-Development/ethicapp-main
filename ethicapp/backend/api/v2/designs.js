@@ -145,39 +145,7 @@ router.post('/designs/:id/phases/:phase_number/questions', async (req, res) => {
   }
 });
 
-// design one | used in one test
-// router.get('/designs/:profeId/:numberphase/:numberquestion', async (req, res) => {
-//   const { numberphase, numberquestion, profeId } = req.params;
-//   //console.log("llega")
-//   try {
-//     const design = await Design.findOne({
-//       where: {
-//         creator: profeId // Assuming the user ID is stored in req.user.id after authentication
-//       }
-//     });
-//     if (!design) {
-//       return res.status(404).json({ status: 'error', message: 'Design not found' });
-//     }
 
-//     const phases = design.design.phases;
-//     const phase = phases.find(p => p.number === parseInt(numberphase));
-
-//     if (!phase) {
-//       return res.status(404).json({ status: 'error', message: 'Phase not found' });
-//     }
-
-//     const question = phase.question.find(q => q.number === parseInt(numberquestion));
-
-//     if (!question) {
-//       return res.status(404).json({ status: 'error', message: 'Question not found' });
-//     }
-
-//     res.status(200).json({ status: 'success', data: question });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ status: 'error', message: 'Internal server error' });
-//   }
-// });
 
 
 module.exports = router;

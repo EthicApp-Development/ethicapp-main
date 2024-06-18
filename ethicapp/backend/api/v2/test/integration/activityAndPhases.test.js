@@ -20,7 +20,7 @@ describe('Activities and Phases API', () => {
             .send({ mail: userData[9].mail, pass: userData[9].pass });
         //console.log(loginRes.body)
         token = loginRes.body.token;
-        console.log(loginRes.body)
+        //console.log(loginRes.body)
         await request(app)
             .post(`${API_VERSION_PATH_PREFIX}/designs`)
             .send({
@@ -110,7 +110,6 @@ describe('Activities and Phases API', () => {
         expect(res.body.data).toHaveProperty('id');
         phaseId = res.body.data.id;
     });
-
 
     it('should update an existing phase', async () => {
         const res = await request(app)

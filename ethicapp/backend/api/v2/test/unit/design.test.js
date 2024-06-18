@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('../../testApi'); 
+const app = require('../../testApi');
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
 const designsData = require('../fixtures/designs.json');
@@ -42,5 +42,11 @@ describe('CRUD Operations for Designs API', () => {
       .delete(`${API_VERSION_PATH_PREFIX}/designs/${createdDesignId}`)
       .expect(204);
   });
-  
+
+  // Test Error Delete Operation
+  it('should error in design', async () => {
+    await request(app)
+      .delete(`${API_VERSION_PATH_PREFIX}/designs/9999999`)
+      .expect(404);
+  });
 });

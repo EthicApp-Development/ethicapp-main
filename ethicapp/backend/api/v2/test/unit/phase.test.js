@@ -8,11 +8,7 @@ describe('Phase Model', () => {
   let activityId
   let userId
   let token;
-  let designId
-  function getRandomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
-  const random_number = getRandomInt(0, 9999)
+
   beforeAll(async () => {
     await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/users`)
@@ -65,7 +61,7 @@ describe('Phase Model', () => {
 
   it('should create a phase associated with an activity', async () => {
     const phase = await Phase.create({
-      number: random_number,
+      number: 999,
       type: `Test activity ${activityId.id}`,
       anon: true,
       chat: false,
@@ -77,27 +73,11 @@ describe('Phase Model', () => {
   });
 
   it('should not create a phase without an activity', async () => {
-    await expect(Phase.create({ number: random_number + 1, type: `Test with not activity`, anon: true, chat: false, prev_ans: 'None' }))
+    await expect(Phase.create({ number: 999 + 1, type: `Test with not activity`, anon: true, chat: false, prev_ans: 'None' }))
       .rejects
       .toThrow();
   });
 
-  // it('should not create a duplicate phase for the same activity', async () => {
-  //     await request(app)
-  //   .post(`${API_VERSION_PATH_PREFIX}/phases`)
-  //   .send({ number: random_number+2, type: `Test activity duplicated${activityId.id-1}`, anon: true, chat: false, prev_ans: 'None', activity_id: activityId.id-1 })
-  //   .set('Authorization', `Bearer ${token}`);
-
-  //   const phaseRes = await request(app)
-  //   .post(`${API_VERSION_PATH_PREFIX}/phases`)
-  //   .send({ number: random_number+2, type: `Test activity duplicated${activityId.id-1}`, anon: true, chat: false, prev_ans: 'None', activity_id: activityId.id-1 })
-  //   .set('Authorization', `Bearer ${token}`);
-
-  //   expect(phaseRes.status).toBe(400);
-  //   expect(phaseRes.body).toHaveProperty('status', 'error');
-
-
-  // });
   it('should not create a duplicate phase for the same design', async () => {
 
     const resPhaseDesign = await request(app)

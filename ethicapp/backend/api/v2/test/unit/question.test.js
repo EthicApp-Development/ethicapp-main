@@ -63,4 +63,12 @@ describe('CRUD Operations for Questions API', () => {
       .expect(204);
   });
 
+  // Test Error Delete Operation
+  it('should delete an existing question', async () => {
+    //console.log("DELETE")
+    await request(app)
+      .delete(`${API_VERSION_PATH_PREFIX}/questions/99999999`)
+      .set('Authorization', `Bearer ${userToken}`)
+      .expect(404);
+  });
 });
