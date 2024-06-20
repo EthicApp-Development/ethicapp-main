@@ -112,10 +112,18 @@ describe('Activities and Phases API', () => {
     });
 
     it('should update an existing phase', async () => {
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
         const res = await request(app)
             .put(`${API_VERSION_PATH_PREFIX}/phases/${phaseId}`)
             .set('Authorization', `Bearer ${token}`)
-            .send({ anon: true })
+            .send({ 
+                number: getRandomInt(1, 999999),
+                anon: true,
+                chat: true,
+                type: "testing",
+             })
             .expect(200);
 
         expect(res.body.status).toBe('success');

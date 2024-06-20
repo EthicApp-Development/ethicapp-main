@@ -59,10 +59,17 @@ router.post('/phases', authenticateToken, checkAbility('create', 'Phase'), async
 // Update
 router.put('/phases/:id', authenticateToken, checkAbility('update', 'Phase'), async (req, res) => {
   const { id } = req.params;
+  const { number } = req.body
+  if(!number){
+    return res.status(404).json({ status: 'error', message: 'number not provided' });
+  }
   try {
     const phase = await Phase.findByPk(id);
     if (!phase) {
       return res.status(404).json({ status: 'error', message: 'Phase not found' });
+    }
+    if(phase.number === number){
+      return res.status(404).json({ status: 'error', message: 'Phase number already exists' });
     }
     await phase.update(req.body);
     res.json({ status: 'success', data: phase });
@@ -132,11 +139,11 @@ router.post('/phases/:id/questions', authenticateToken, async (req, res) => {
       const questionsNumbers = design.design.phases[pos].question.map(questionNumber => questionNumber.number)
       //console.log(`position -> ${pos} <-`, questionsNumbers)
       if (questionsNumbers.includes(number)) {
-        console.log('ya incluye esta pregunta')
+        //console.log('ya incluye esta pregunta')
         return res.status(400).json({ status: 'error', message: `question number already exists in the phase in Design, is in ${pos + 1} question in phase` });
       }
       else {
-        console.log('no la incluye')
+        //console.log('no la incluye')
       }
     }
 
