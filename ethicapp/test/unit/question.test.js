@@ -5,18 +5,18 @@ const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2'
 const questionData = require('../fixtures/questions.json');
 describe('CRUD Operations for Questions API', () => {
   let createdQuestionId;
-
+  let design
   // Test Create Operation
   it('should create a new question', async () => {
     console.log("CREATE")
     const newQuestionData = questionData[0]
 
-    const response = await request(app)
+    const question = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/questions`)
       .send(newQuestionData)
       .expect(201);
 
-    createdQuestionId = response.body.data.id;
+    createdQuestionId = question.body.data.id;
   });
 
   // Test Read Operation
@@ -46,14 +46,4 @@ describe('CRUD Operations for Questions API', () => {
       .expect(204);
   });
 
-  it('should return an error if phases_id is missing', async () => {
-    const questionDataWithOutPhase = questionData[2]
-    const response = await request(app)
-      .post(`${API_VERSION_PATH_PREFIX}/questions`)
-      .send(questionDataWithOutPhase)
-      .expect(400);
-
-    expect(response.body).toHaveProperty('status', 'error');
-    expect(response.body).toHaveProperty('message', 'phases_id is required');
-  });
 });

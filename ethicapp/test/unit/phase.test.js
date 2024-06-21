@@ -1,12 +1,14 @@
-const { Phase, Activity, User } = require('../../backend/api/v2/models');
+const { Phase, Activity, User, Design } = require('../../backend/api/v2/models');
 const request = require('supertest');
 const app = require('../../backend/api/v2/testApi');
+const designData = require('../fixtures/designs.json')
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
 describe('Phase Model', () => {
     let activityId
     let userId
     let token;
+    let designId
     function getRandomInt(min, max) {
       return Math.floor(Math.random() * (max - min + 1)) + min;
     }
@@ -32,7 +34,7 @@ describe('Phase Model', () => {
 
     token = loginRes.body.token;
 
-    console.log('token -->', token);
+    //console.log('token -->', token);
         activityId = await Activity.create({ design: 1, session: 1 });
     });
   
@@ -48,20 +50,33 @@ describe('Phase Model', () => {
         .toThrow();
     });
   
-    it('should not create a duplicate phase for the same activity', async () => {
-        await request(app)
-      .post(`${API_VERSION_PATH_PREFIX}/phases`)
-      .send({ number: random_number+2, type: `Test activity duplicated${activityId.id-1}`, anon: true, chat: false, prev_ans: 'None', activity_id: activityId.id-1 })
-      .set('Authorization', `Bearer ${token}`);
+    // it('should not create a duplicate phase for the same activity', async () => {
+    //     await request(app)
+    //   .post(`${API_VERSION_PATH_PREFIX}/phases`)
+    //   .send({ number: random_number+2, type: `Test activity duplicated${activityId.id-1}`, anon: true, chat: false, prev_ans: 'None', activity_id: activityId.id-1 })
+    //   .set('Authorization', `Bearer ${token}`);
 
-      const phaseRes = await request(app)
-      .post(`${API_VERSION_PATH_PREFIX}/phases`)
-      .send({ number: random_number+2, type: `Test activity duplicated${activityId.id-1}`, anon: true, chat: false, prev_ans: 'None', activity_id: activityId.id-1 })
-      .set('Authorization', `Bearer ${token}`);
+    //   const phaseRes = await request(app)
+    //   .post(`${API_VERSION_PATH_PREFIX}/phases`)
+    //   .send({ number: random_number+2, type: `Test activity duplicated${activityId.id-1}`, anon: true, chat: false, prev_ans: 'None', activity_id: activityId.id-1 })
+    //   .set('Authorization', `Bearer ${token}`);
 
-      expect(phaseRes.status).toBe(400);
-      expect(phaseRes.body).toHaveProperty('status', 'error');
+    //   expect(phaseRes.status).toBe(400);
+    //   expect(phaseRes.body).toHaveProperty('status', 'error');
     
 
-    });
+    // });
+    it('should not create a duplicate phase for the same design', async () => {
+
+      const resPhaseDesign = await request(app)
+      .post(`${API_VERSION_PATH_PREFIX}/phases/design`)
+      .send({ number: 2, type: `Test activity duplicated${activityId.id-1}`, anon: true, chat: false, prev_ans: 'None', activity_id: 6 })
+    
+      console.log("resPhaseDesign", resPhaseDesign.body)
+      expect(resPhaseDesign.status).toBe(400)
+      expect(resPhaseDesign.body).toHaveProperty('status','error')
+      expect(resPhaseDesign.body.message).toBe('phase number is exist in the design')
+    
+    })
+
   });

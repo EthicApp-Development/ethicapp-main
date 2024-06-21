@@ -1,0 +1,125 @@
+const request = require('supertest');
+const app = require('../../backend/api/v2/testApi');
+const { Session, User, Question } = require('../../backend/api/v2/models');
+const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
+
+describe('POST /questions/testing', () => {
+    let sessionId;
+    let professorToken;
+    let userId;
+
+    beforeAll(async () => {
+        // Crear un usuario profesor
+        const user = await User.create({ name: 'ProfessorQuestion',
+             rut: "99111222-k",
+             mail: 'ProfessorQuestion@example.com', 
+             pass: 'passwordQuestion',
+             pass_confirmation: "passwordQuestion",
+             sex: "M",
+             role: 'P' });
+        userId = user.id;
+
+        // Autenticar al profesor y obtener un token
+        const loginRes = await request(app)
+            .post(`${API_VERSION_PATH_PREFIX}/login_user`)
+            .send({ mail: 'ProfessorQuestion@example.com', pass: 'passwordQuestion' });
+        professorToken = loginRes.body.token;
+
+        // Crear una sesión
+        const sessionRes = await request(app)
+            .post(`${API_VERSION_PATH_PREFIX}/sessions`)
+            .send({ name: 'Test Session', descr: 'A session for testing', time: new Date(), creator: userId, type: 'A' });
+        sessionId = sessionRes.body.data.id;
+        
+
+    });
+
+    it('should not allow creating duplicate questions in the same phase', async () => {
+        console.log('should not allow creating duplicate questions in the same phase')
+        const questionData = {
+            text: '¿Cuál es tu pelicula favorito?',
+            content: { question: '¿Cuál es tu pelicula favorito?', options: ['dune', 'alien', 'thor'], correct_answer: 'thor' },
+            additional_info: 'peliculas',
+            type: 'choice',
+            session_id: sessionId,
+            number: 2
+        };
+        const designsData = {
+            creator: userId,
+            question_id: 1,
+            design: {
+                phases: [{
+                    number: 1,
+                    question: [{
+                        text: '¿Cuál es tu color favorito?',
+                        content: { question: '¿Cuál es tu color favorito?', options: ['Violeta', 'Negro', 'Azul'], correct_answer: 'Azul' },
+                        additional_info: 'Colores',
+                        type: 'choice',
+                        session_id: sessionId,
+                        number: 2
+                            },
+                            {
+                        text: '¿Cuál es tu pais favorito?',
+                        content: { question: '¿Cuál es tu  pais favorito?', options: ['Chile','Ecuador','Japon'], correct_answer: 'Chile' },
+                        additional_info: 'paises',
+                        type: 'choice',
+                        session_id: sessionId,
+                        number: 1
+                              }]
+                        },{
+                    number: 2,
+                    question: [{
+                            text: '¿Cuál es tu animal favorito?',
+                            content: { question: '¿Cuál es tu  animal favorito?', options: ['vaca','leon','tigre'], correct_answer: 'vaca' },
+                            additional_info: 'animales',
+                            type: 'choice',
+                            session_id: sessionId,
+                            number: 2
+                          }]
+                        }]
+            },
+            public: true,
+            locked: false
+        }
+        await request(app)
+          .post(`${API_VERSION_PATH_PREFIX}/designs`)
+          .send(designsData)
+          .expect(201);
+        const res = await request(app)
+            .post(`${API_VERSION_PATH_PREFIX}/questions/design`)
+            .send(questionData)
+        
+        expect(res.status).toBe(400);
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toBe('Question already exists for this phase');
+    });
+
+    it('should return an error if the design is missing phases', async () => {
+        console.log("should return an error if the design is missing phases")
+        const questionData = {
+            text: '¿Cuál es tu pelicula favorito?',
+            content: { question: '¿Cuál es tu pelicula favorito?', options: ['dune', 'alien', 'thor'], correct_answer: 'thor' },
+            additional_info: 'peliculas',
+            type: 'choice',
+            session_id: 5,
+            number: 1
+        };
+        const designsData = {
+            creator: 5,
+            question_id: 1,
+            design: {},
+            public: true,
+            locked: false
+        }
+        await request(app)
+          .post(`${API_VERSION_PATH_PREFIX}/designs`)
+          .send(designsData)
+          .expect(201);
+          const res = await request(app)
+            .post(`${API_VERSION_PATH_PREFIX}/questions/design`)
+            .send(questionData)
+
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toBe('Design is missing phases');
+    });
+});

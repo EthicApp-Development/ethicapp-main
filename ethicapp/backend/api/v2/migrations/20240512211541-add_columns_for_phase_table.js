@@ -42,11 +42,11 @@ module.exports = {
       }
     });
 
-    await queryInterface.addConstraint('phases', {
-      fields: ['activity_id', 'number'],
-      type: 'unique',
-      name: 'unique_activity_phase'
-    });
+    // await queryInterface.addConstraint('phases', {
+    //   fields: ['activity_id', 'number'],
+    //   type: 'unique',
+    //   name: 'unique_activity_phase'
+    // });
   },
 
   async down (queryInterface, Sequelize) {

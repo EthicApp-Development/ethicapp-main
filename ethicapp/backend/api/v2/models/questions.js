@@ -23,8 +23,8 @@ module.exports = (sequelize, DataTypes) => {
     // comment: DataTypes.TEXT,
     // other: DataTypes.TEXT,
     session_id: DataTypes.INTEGER,
-    phases_id:DataTypes.INTEGER,
-    number_phase: DataTypes.INTEGER
+    //phases_id:DataTypes.INTEGER,
+    number: DataTypes.INTEGER
   }, {
     sequelize,
     modelName: 'Question',//class

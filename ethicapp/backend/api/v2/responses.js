@@ -23,7 +23,7 @@ router.get('/responses', async (req, res) => {
 // Create
 router.post('/responses', async (req, res) => {
     const { user_id, phase_id } = req.body;
-    console.log("user_id", user_id)
+    //console.log("user_id", user_id)
     try {
       const existingResponse = await Response.findOne({ where: { user_id, phase_id } });
       

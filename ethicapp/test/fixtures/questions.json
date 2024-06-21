@@ -1,27 +1,26 @@
 [
     {
-    "content": {
-        "question": "¿Cuál es tu color favorito?",
-        "options": ["Violeta", "Negro", "Azul"],
-        "correct_answer": "Azul"
-    },
-    "additional_info": "Colores",
-    "type": "choice",
-    "text": "¿Cuál es tu color favorito?",
-    "sesion_id": 1,
-    "phases_id": 2,
-    "number_phase": 2
+        "content": {
+            "question": "¿Cuál es tu color favorito?",
+            "options": ["Violeta", "Negro", "Azul"],
+            "correct_answer": "Azul"
+        },
+        "additional_info": "Colores",
+        "type": "choice",
+        "text": "¿Cuál es tu color favorito?",
+        "session_id": 1,
+        "number": 2
+        
     },
     {
-    "content": {
-        "question": "¿Cuál es la fórmula química del agua?",
-        "correct_answer": "H2O"
-    },
-    "additional_info": "Pregunta sobre química",
-    "type": "text",
-    "text": "Escriba la fórmula química del agua.",
-    "sesion_id": 2,
-    "phase_id": 1
+        "content": {
+            "question": "¿Cuál es la fórmula química del agua?",
+            "correct_answer": "H2O"
+        },
+        "additional_info": "Pregunta sobre química",
+        "type": "text",
+        "text": "Escriba la fórmula química del agua.",
+        "session_id": 2
     },
     {
         "content": {
@@ -32,8 +31,8 @@
         "additional_info": "Colores",
         "type": "choice",
         "text": "¿Cuál es tu color favorito?",
-        "sesion_id": 1,
-        "number_phase": 2
+        "session_id": 1,
+        "number": 2
     },
     {
         "content": {
@@ -44,9 +43,8 @@
         "additional_info": "responses",
         "type": "choice",
         "text": "¿Cuál es tu color favorito?",
-        "sesion_id": 1,
-        "phases_id": 2,
-        "number_phase": 2
+        "session_id": 1,
+        "number": 2
     },
     {
         "content": {
@@ -57,7 +55,7 @@
         "additional_info": "Geografia",
         "type": "choice",
         "text": "preguntas sobre el oceano",
-        "sesion_id": 1,
-        "number_phase": 2
+        "session_id": 1,
+        "number": 2
     }
 ]

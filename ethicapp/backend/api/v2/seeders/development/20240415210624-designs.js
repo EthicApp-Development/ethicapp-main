@@ -4,17 +4,35 @@ module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.bulkInsert('designs', [
       {
-        creator: 1,
+        creator: 1, 
+        question_id: 1,
         design: JSON.stringify({ 
-          title: 'Design 1', 
-          description: 'This is the first design', 
-          elements: [{ type: 'rectangle', color: 'red', width: 100, height: 50, x: 10, y: 10 }] 
+          phases: [{
+            number: 1,
+            question: [{
+              text: '¿cuales son los signos de exclamacion?',
+              content: { question: '¿selecciones los signos de exclamacion?', options: ['¿?', '¡!', '{}'], correct_answer: '¡!' },
+              additional_info: 'signos',
+              type: 'choice',
+              session_id: 4,
+              number: 1
+            }]
+          },{
+            number: 2,
+            question: [{
+              text: '¿cuales son los signos de preguntas?',
+              content: { question: '¿selecciones los signos de preguntas?', options: ['¿?', '¡!', '{}'], correct_answer: '¿?' },
+              additional_info: 'signos',
+              type: 'choice',
+              session_id: 4,
+              number: 1
+            }]
+          }]
         }),
         public: true,
         locked: false,
         createdAt: new Date(),
-        updatedAt: new Date(),
-        question_id: 2
+        updatedAt: new Date()
       },
       {
         creator: 2,
@@ -43,17 +61,35 @@ module.exports = {
         question_id: 3
       },
       {
-        creator: 1,
+        creator: 1, 
+        question_id: 1,
         design: JSON.stringify({ 
-          title: 'Design 4', 
-          description: 'This is the fourth design', 
-          elements: [{ type: 'ellipse', color: 'yellow', rx: 60, ry: 30, x: 70, y: 70 }] 
+          phases: [{
+            number: 1,
+            question: [{
+              text: '¿cuales son los signos de exclamacion?',
+              content: { question: '¿selecciones los signos de exclamacion?', options: ['¿?', '¡!', '{}'], correct_answer: '¡!' },
+              additional_info: 'signos',
+              type: 'choice',
+              session_id: 4,
+              number: 1
+            }]
+          },{
+            number: 2,
+            question: [{
+              text: '¿cuales son los signos de preguntas?',
+              content: { question: '¿selecciones los signos de preguntas?', options: ['¿?', '¡!', '{}'], correct_answer: '¿?' },
+              additional_info: 'signos',
+              type: 'choice',
+              session_id: 4,
+              number: 1
+            }]
+          }]
         }),
-        public: false,
+        public: true,
         locked: false,
         createdAt: new Date(),
-        updatedAt: new Date(),
-        question_id: 1
+        updatedAt: new Date()
       },
       {
         creator: 2,
@@ -70,7 +106,101 @@ module.exports = {
       }
     ], {});
   },
-
+/*      {
+        creator: 1, 
+        question_id: 1,
+        design: JSON.stringify({ 
+          phases: [{
+            number: 1,
+            question: [{
+              text: 'TEXTO',
+              content: { question: 'QUESTION', options: ['OPTION1', 'OPTION2', 'OPTION3'], correct_answer: 'OPTION1' },
+              additional_info: 'MAYUSCULAS',
+              type: 'choice',
+              session_id: 1,
+              number: 1
+            }]
+          }]
+        }),
+        public: true,
+        locked: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+       
+      },
+      {
+        creator: 1, 
+        question_id: 2,
+        design: JSON.stringify({ 
+          phases: [{
+            number: 1,
+            question: [{
+              text: '¿Cuál es tu color favorito?',
+              content: { question: '¿Cuál es tu color favorito?', options: ['Violeta', 'Negro', 'Azul'], correct_answer: 'Azul' },
+              additional_info: 'Colores',
+              type: 'choice',
+              session_id: 2,
+              number: 1
+            }]
+          }]
+        }),
+        public: true,
+        locked: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        creator: 1, 
+        question_id: 3,
+        design: JSON.stringify({ 
+          phases: [{
+            number: 1,
+            question: [{
+              text: '¿cuales son los signos de exclamacion?',
+              content: { question: '¿selecciones los signos de exclamacion?', options: ['¿?', '¡!', '{}'], correct_answer: '¡!' },
+              additional_info: 'signos',
+              type: 'choice',
+              session_id: 4,
+              number: 1
+            }]
+          },{
+            number: 2,
+            question: [{
+              text: '¿cuales son los signos de preguntas?',
+              content: { question: '¿selecciones los signos de preguntas?', options: ['¿?', '¡!', '{}'], correct_answer: '¿?' },
+              additional_info: 'signos',
+              type: 'choice',
+              session_id: 4,
+              number: 1
+            }]
+          }]
+        }),
+        public: true,
+        locked: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        creator: 1, 
+        question_id: 2,
+        design: JSON.stringify({ 
+          phases: [{
+            number: 1,
+            question: [{
+              text: 'letras en español',
+              content: { question: '¿Cuál es la unica letra que solo esta en el español?', options: ['H', 'W', 'Ñ'], correct_answer: 'Ñ' },
+              additional_info: 'Colores',
+              type: 'choice',
+              session_id: 5,
+              number: 1
+            }]
+          }]
+        }),
+        public: true,
+        locked: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      } */
   down: async (queryInterface, Sequelize) => {
     await queryInterface.bulkDelete('designs', null, {});
   }
