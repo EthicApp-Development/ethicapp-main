@@ -78,7 +78,6 @@ router.delete('/activity/:id', auth, checkAbility('delete', 'Activity'), async (
 
 router.post('/activities/:id/init_next_phase', auth, checkAbility('update', 'Phase'), async (req, res) => {
     const { id } = req.params;
-    const { role } = req.user;
 
     try {
         const activity = await Activity.findByPk(id);

@@ -73,7 +73,7 @@ describe('GET /sessions/:sessionId/users', () => {
 
   it('should return 401 if no token is provided', async () => {
     const res = await request(app).get(`${API_VERSION_PATH_PREFIX}/sessions/${sessionId}/users`);
-    console.log('should return 401 if no token is provided')
+    //console.log('should return 401 if no token is provided')
     expect(res.status).toBe(401);
   });
 
@@ -81,16 +81,17 @@ describe('GET /sessions/:sessionId/users', () => {
     const res = await request(app)
       .get(`${API_VERSION_PATH_PREFIX}/sessions/${sessionId}/users`)
       .set('Authorization', `Bearer ${adminToken}`);
-    console.log('should allow admin to access the session users')
+    //console.log('should allow admin to access the session users')
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(2); // Profesor y estudiante
   });
 
   it('should allow the creator professor to access the session users', async () => {
+    
     const res = await request(app)
       .get(`${API_VERSION_PATH_PREFIX}/sessions/${sessionId}/users`)
       .set('Authorization', `Bearer ${professorToken}`);
-    console.log('should allow the creator professor to access the session users')
+    //console.log('should allow the creator professor to access the session users')
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(2); // Profesor y estudiante
   });
@@ -99,7 +100,7 @@ describe('GET /sessions/:sessionId/users', () => {
     const res = await request(app)
       .get(`${API_VERSION_PATH_PREFIX}/sessions/${sessionId}/users`)
       .set('Authorization', `Bearer ${studentToken}`);
-    console.log('should return 403 for a student trying to access session users')
+    //console.log('should return 403 for a student trying to access session users')
     expect(res.status).toBe(403);
   });
 
@@ -107,7 +108,7 @@ describe('GET /sessions/:sessionId/users', () => {
     const res = await request(app)
       .get(`${API_VERSION_PATH_PREFIX}/sessions/${sessionId}/users`)
       .set('Authorization', `Bearer ${professorFalseToken}`);
-    console.log('should not allow the teacher who is not from this session to access the users of the session')
+    //console.log('should not allow the teacher who is not from this session to access the users of the session')
     expect(res.status).toBe(403);
   });
 });

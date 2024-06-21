@@ -25,9 +25,6 @@ router.get('/sessions', async (req, res) => {
 // Create
 router.post('/sessions', authenticateToken, checkAbility('create', 'sessions'), async (req, res) => {
     const { role } = req.user; //from authenticateToken
-    // if (role === 'E') {
-    //     return res.status(403).json({ status: 'error', message: 'Only professors or administrator can create sessions' });
-    // }
     try {
         const code = crypto.randomBytes(3).toString('hex');
 
@@ -82,9 +79,6 @@ router.post('/sessions', authenticateToken, checkAbility('create', 'sessions'), 
 router.post('/sessions/creator/:number_design', authenticateToken, checkAbility('create', 'sessions'), async (req, res) => {
     const { role, id } = req.user; // from authenticateToken
     const { number_design } = req.params;
-    // if (role !== 'P') {
-    //     return res.status(403).json({ status: 'error', message: 'Only professors can create sessions' });
-    // }
 
     try {
         const code = crypto.randomBytes(3).toString('hex');

@@ -89,7 +89,7 @@ describe('POST /questions/testing', () => {
     });
 
     it('should not allow creating duplicate questions in the same phase', async () => {
-        console.log('should not allow creating duplicate questions in the same phase')
+        //console.log('should not allow creating duplicate questions in the same phase')
         const questionData = {
             text: '¿Cuál es tu pelicula favorito?',
             content: { question: '¿Cuál es tu pelicula favorito?', options: ['dune', 'alien', 'thor'], correct_answer: 'thor' },
@@ -148,7 +148,7 @@ describe('POST /questions/testing', () => {
     });
 
     it('should return an error if the design is missing phases', async () => {
-        console.log("should return an error if the design is missing phases")
+        //console.log("should return an error if the design is missing phases")
         const questionData = {
             text: '¿Cuál es tu pelicula favorito?',
             content: { question: '¿Cuál es tu pelicula favorito?', options: ['dune', 'alien', 'thor'], correct_answer: 'thor' },

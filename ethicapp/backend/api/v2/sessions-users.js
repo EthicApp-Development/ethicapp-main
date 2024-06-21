@@ -31,7 +31,7 @@ router.post('/sessions/:sessionId/users', async (req, res) => {
 });
 
 // Read session users | the auth order is the left to right
-router.get('/sessions/:sessionId/users', authenticateToken, checkAbility('Get', 'Session'), async (req, res) => {
+router.get('/sessions/:sessionId/users', authenticateToken, checkAbility('get', 'Session'), async (req, res) => {
     //console.log("> LLEGA <")
     const { sessionId } = req.params;
 
@@ -41,7 +41,8 @@ router.get('/sessions/:sessionId/users', authenticateToken, checkAbility('Get', 
         if (!session) {
             return res.status(404).json({ status: 'error', message: 'Session not found' });
         }
-        if (session.creator !== req.user.id && (req.user.role !== 'A' || req.user.role === 'E')) {
+        //console.log(req.user)
+        if (session.creator !== req.user.id && req.user.role !== 'A') {
             return res.status(403).json({ status: 'error', message: 'Access forbidden: not the creator' });
         }
         // Busca los usuarios asociados a la sesión usando la tabla intermedia SessionsUsers
@@ -53,10 +54,10 @@ router.get('/sessions/:sessionId/users', authenticateToken, checkAbility('Get', 
         // Mapea los IDs de los usuarios
         const userIds = sessionUsers.map(user => user.user_id);
         //console.log("userIds -=>", userIds)
-        res.status(200).json({ status: 'success', data: userIds });
+        return res.status(200).json({ status: 'success', data: userIds });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        return res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 });
 
