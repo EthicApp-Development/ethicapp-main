@@ -55,6 +55,7 @@ describe('GET /sessions/:sessionId/users', () => {
         public: true,
         locked: false
       })
+      .set('Authorization', `Bearer ${professorToken}`)
 
     // Crea una sesión y asigna al profesor como creador
     const session = await request(app)

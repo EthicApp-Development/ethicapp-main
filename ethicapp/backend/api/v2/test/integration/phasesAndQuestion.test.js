@@ -29,6 +29,8 @@ describe('Phases and Questions API', () => {
         public: true,
         locked: false
       })
+      .set('Authorization', `Bearer ${token}`)
+      
     const sessionRes = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/sessions`)
       .set('Authorization', `Bearer ${token}`)

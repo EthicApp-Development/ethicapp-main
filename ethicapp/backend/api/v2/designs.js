@@ -1,16 +1,18 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const router = express.Router();
+const authenticateToken = require('../v2/middleware/authenticateToken')
+const checkAbility = require('../v2/middleware/checkAbility');
 
 // Import Model
-const { Question, Response, Session, Phase, User, Design, Activity } = require('../../api/v2/models');
+const { Question, Session, Phase, Design, Activity } = require('../../api/v2/models');
 
 // Configure body-parser to process the body of requests in JSON format.
 
 router.use(bodyParser.json());
 
 // Read
-router.get('/designs', async (req, res) => {
+router.get('/designs',authenticateToken, checkAbility('get', 'Design'), async (req, res) => {
   try {
     const designs = await Design.findAll();
     res.status(200).json({ status: 'success', data: designs });
@@ -21,7 +23,7 @@ router.get('/designs', async (req, res) => {
 });
 
 // Create
-router.post('/designs', async (req, res) => {
+router.post('/designs',authenticateToken, checkAbility('create', 'Design'), async (req, res) => {
   try {
     const design = await Design.create(req.body);
     res.status(201).json({ status: 'success', data: design });
@@ -32,7 +34,7 @@ router.post('/designs', async (req, res) => {
 });
 
 // Update
-router.put('/designs/:id', async (req, res) => {
+router.put('/designs/:id',authenticateToken, checkAbility('update', 'Design'), async (req, res) => {
   const { id } = req.params;
   try {
     const design = await Design.findByPk(id);
@@ -48,7 +50,7 @@ router.put('/designs/:id', async (req, res) => {
 });
 
 // Delete
-router.delete('/designs/:id', async (req, res) => {
+router.delete('/designs/:id',authenticateToken, checkAbility('delete', 'Design'), async (req, res) => {
   const { id } = req.params;
   try {
     const design = await Design.findByPk(id);

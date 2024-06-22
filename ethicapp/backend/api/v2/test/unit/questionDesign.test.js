@@ -77,6 +77,7 @@ describe('POST /questions/testing', () => {
           public: true,
           locked: false
         })
+        .set('Authorization', `Bearer ${professorToken}`)
   
         const sessionRes = await request(app)
             .post(`${API_VERSION_PATH_PREFIX}/sessions`)
@@ -137,6 +138,7 @@ describe('POST /questions/testing', () => {
         await request(app)
           .post(`${API_VERSION_PATH_PREFIX}/designs`)
           .send(designsData)
+          .set('Authorization', `Bearer ${professorToken}`)
           .expect(201);
         const res = await request(app)
             .post(`${API_VERSION_PATH_PREFIX}/designs/${1}/phases/${1}/questions`)
@@ -167,6 +169,7 @@ describe('POST /questions/testing', () => {
         await request(app)
           .post(`${API_VERSION_PATH_PREFIX}/designs`)
           .send(designsData)
+          .set('Authorization', `Bearer ${professorToken}`)
           .expect(201);
           const res = await request(app)
             .post(`${API_VERSION_PATH_PREFIX}/designs/${1}/phases/${1}/questions`)

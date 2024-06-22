@@ -164,6 +164,7 @@ describe('POST /sessions/users with invalid session code', () => { //
         public: true,
         locked: false
       })
+      .set('Authorization', `Bearer ${token}`);
 
     // Crea una sesión válida
     await request(app)

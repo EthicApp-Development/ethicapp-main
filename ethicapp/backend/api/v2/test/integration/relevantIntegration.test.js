@@ -110,7 +110,8 @@ describe('Integration Test', () => {
         },
         public: true,
         locked: false
-      });
+      })
+      .set('Authorization', `Bearer ${professorToken}`);
     // Create an activity
 
     const sessionResponse = await request(app)

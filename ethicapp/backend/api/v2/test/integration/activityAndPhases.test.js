@@ -61,6 +61,7 @@ describe('Activities and Phases API', () => {
                 public: true,
                 locked: false
             })
+            .set('Authorization', `Bearer ${token}`)
         // Crear una actividad para la sesión
         const sessionRes = await request(app)
             .post(`${API_VERSION_PATH_PREFIX}/sessions`)
