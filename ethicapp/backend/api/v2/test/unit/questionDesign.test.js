@@ -10,14 +10,17 @@ describe('POST /questions/testing', () => {
 
     beforeAll(async () => {
         // Crear un usuario profesor
-        const user = await User.create({ name: 'ProfessorQuestion',
+        const user = await request(app)
+        .post(`${API_VERSION_PATH_PREFIX}/users`)
+        .send({ name: 'ProfessorQuestion',
              rut: "99111222-k",
              mail: 'ProfessorQuestion@example.com', 
              pass: 'passwordQuestion',
              pass_confirmation: "passwordQuestion",
              sex: "M",
              role: 'P' });
-        userId = user.id;
+        
+        userId = user.body.data.id;
 
         // Autenticar al profesor y obtener un token
         const loginRes = await request(app)

@@ -56,7 +56,7 @@ router.post('/users', async (req, res) => {
 });
 
 // Update
-router.put('/users/:id', auth, checkAbility('delete', 'Activity'), async (req, res) => {
+router.put('/users/:id', auth, checkAbility('update', 'User'), async (req, res) => {
     const { id } = req.params;
     try {
         const user = await User.findByPk(id);
