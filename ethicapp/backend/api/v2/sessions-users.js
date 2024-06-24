@@ -41,6 +41,7 @@ router.get('/sessions/:sessionId/users', authenticateToken, checkAbility('get', 
         if (!session) {
             return res.status(404).json({ status: 'error', message: 'Session not found' });
         }
+        //console.log(session)
         //console.log(req.user)
         if (session.creator !== req.user.id && req.user.role !== 'A') {
             return res.status(403).json({ status: 'error', message: 'Access forbidden: not the creator' });
@@ -50,7 +51,6 @@ router.get('/sessions/:sessionId/users', authenticateToken, checkAbility('get', 
             where: { session_id: sessionId },
             attributes: ['user_id'] // Obtén solo los IDs de los usuarios
         });
-
         // Mapea los IDs de los usuarios
         const userIds = sessionUsers.map(user => user.user_id);
         //console.log("userIds -=>", userIds)

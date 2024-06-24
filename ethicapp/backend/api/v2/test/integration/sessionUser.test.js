@@ -109,9 +109,15 @@ describe('POST /sessions/users with invalid session code', () => { //
 
   beforeAll(async () => {
     // Crea un usuario y genera un token
-    const user = await User.create(addUser[0]);
-    userId = user.id;
-    token = jwt.sign({ id: user.id, role: user.role }, 'your_secret_key');
+    const user = await request(app)
+    .post(`${API_VERSION_PATH_PREFIX}/users`)
+    .send(addUser[0]);
+    
+    const loginResUser =await request(app)
+    .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
+    .send({ mail: addUser[0].mail, pass: addUser[0].pass });
+    token = loginResUser.body.token
+    userId = user.body.data.id;
 
     await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/designs`)
@@ -169,7 +175,7 @@ describe('POST /sessions/users with invalid session code', () => { //
     // Crea una sesión válida
     await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/sessions`)
-      .send({ name: 'Valid Test Session', descr: 'A valid session for testing', time: new Date(), creator: user.id, type: 'A', status: 1 })
+      .send({ name: 'Valid Test Session', descr: 'A valid session for testing', time: new Date(), creator: userId, type: 'A', status: 1 })
       .set('Authorization', `Bearer ${token}`);
   });
 

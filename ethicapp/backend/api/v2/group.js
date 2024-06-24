@@ -3,16 +3,16 @@ const bodyParser = require('body-parser');
 const router = express.Router();
 const checkAbility = require('./middleware/checkAbility');
 
-const { Team } = require('./models');
+const { Group } = require('./models')
 
 // Configure body-parser to process the body of requests in JSON format.
 router.use(bodyParser.json());
 
 // Read
-router.get('/team', async (req, res) => {
+router.get('/group', async (req, res) => {
     try {
-        const teams = await Team.findAll();
-        res.status(200).json({ status: 'success', data: teams });
+        const groups = await Group.findAll();
+        res.status(200).json({ status: 'success', data: groups });
     } catch (err) {
         console.error(err);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
@@ -20,10 +20,10 @@ router.get('/team', async (req, res) => {
 });
 
 // Create
-router.post('/team', checkAbility('create', 'Team'), async (req, res) => {
+router.post('/group', checkAbility('create', 'group'), async (req, res) => {
     try {
-        const team = await Team.create(req.body);
-        res.status(201).json({ status: 'success', data: team });
+        const group = await Group.create(req.body);
+        res.status(201).json({ status: 'success', data: group });
     } catch (err) {
         console.error(err);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
@@ -31,15 +31,15 @@ router.post('/team', checkAbility('create', 'Team'), async (req, res) => {
 });
 
 // Update
-router.put('/team/:id', checkAbility('update', 'Team'), async (req, res) => {
+router.put('/group/:id', checkAbility('update', 'group'), async (req, res) => {
     const { id } = req.params;
     try {
-        const team = await Team.findByPk(id);
-        if (!team) {
-            return res.status(404).json({ status: 'error', message: 'team not found' });
+        const group = await Group.findByPk(id);
+        if (!group) {
+            return res.status(404).json({ status: 'error', message: 'group not found' });
         }
-        await team.update(req.body);
-        res.json({ status: 'success', data: team });
+        await group.update(req.body);
+        res.json({ status: 'success', data: group });
     } catch (err) {
         console.error(err);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
@@ -47,14 +47,14 @@ router.put('/team/:id', checkAbility('update', 'Team'), async (req, res) => {
 });
 
 // Delete
-router.delete('/team/:id', checkAbility('delete', 'Team'), async (req, res) => {
+router.delete('/group/:id', checkAbility('delete', 'group'), async (req, res) => {
     const { id } = req.params;
     try {
-        const team = await Team.findByPk(id);
-        if (!team) {
-            return res.status(404).json({ status: 'error', message: 'team not found' });
+        const group = await Group.findByPk(id);
+        if (!group) {
+            return res.status(404).json({ status: 'error', message: 'group not found' });
         }
-        await team.destroy();
+        await group.destroy();
         res.status(204).end();
     } catch (err) {
         console.error(err);

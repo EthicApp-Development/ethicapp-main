@@ -10,31 +10,58 @@ describe('GET /sessions/:sessionId/users', () => {
 
   beforeAll(async () => {
     // Crea un usuario administrador
-    const adminUser = addUser[0];
-    const admin = await User.create(adminUser);
 
+    const adminUser = addUser[0];
+    const admin = await request(app)
+    .post(`${API_VERSION_PATH_PREFIX}/users`)
+    .send(adminUser);
+    //console.log(admin.body.data)
     // Crea un usuario profesor
     const profesorUser = addUser[4];
-    const professor = await User.create(profesorUser);
-
+    //console.log(adminUser)
+    //console.log(profesorUser)
+    const professor = await request(app)
+    .post(`${API_VERSION_PATH_PREFIX}/users`)
+    .send(profesorUser)
+    //console.log(professor.body)
     // profesor falso
     const ProfesorUserFalse = addUser[5];
-    const professorFalso = await User.create(ProfesorUserFalse);
+    const professorFalso = await request(app)
+    .post(`${API_VERSION_PATH_PREFIX}/users`)
+    .send(ProfesorUserFalse)
 
     // Crea un usuario estudiante
     const estudentUser = addUser[3];
-    const student = await User.create(estudentUser);
+    const student = await request(app)
+    .post(`${API_VERSION_PATH_PREFIX}/users`)
+    .send(estudentUser)
 
+    // login para cada usuario
+    const loginResAdmin =await request(app)
+    .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
+    .send({ mail: addUser[0].mail, pass: addUser[0].pass });
+
+    const loginResProfessor =await request(app)
+    .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
+    .send({ mail: addUser[4].mail, pass: addUser[4].pass });
+
+    const loginResProfessorFalso =await request(app)
+    .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
+    .send({ mail: addUser[5].mail, pass: addUser[5].pass });
+
+    const loginResStudent =await request(app)
+    .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
+    .send({ mail: addUser[3].mail, pass: addUser[3].pass });
     // Genera tokens para cada usuario
-    adminToken = jwt.sign({ id: admin.id, role: admin.role }, 'your_secret_key');
-    professorToken = jwt.sign({ id: professor.id, role: professor.role }, 'your_secret_key');
-    professorFalseToken = jwt.sign({ id: professorFalso.id, role: professorFalso.role }, 'your_secret_key');
-    studentToken = jwt.sign({ id: student.id, role: student.role }, 'your_secret_key');
-
-    const designRes = await request(app)
+    adminToken = loginResAdmin.body.token
+    professorToken = loginResProfessor.body.token
+    professorFalseToken = loginResProfessorFalso.body.token
+    studentToken = loginResStudent.body.token
+    //console.log(adminToken)
+    await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/designs`)
       .send({
-        creator: professor.id,
+        creator: professor.body.data.id,
         design: {
           "phase": [{
             "number": 1,
@@ -61,32 +88,49 @@ describe('GET /sessions/:sessionId/users', () => {
     const session = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/sessions`)
       .set('Authorization', `Bearer ${professorToken}`)
-      .send({ name: `Test Session Read ${professor.name}-${professor.id}`, descr: 'A session for testing Read', time: new Date(), creator: professor.id, type: 'A', status: 1 });
+      .send({ name: `Test Session Read ${professor.body.data.name}-${professor.body.data.id}`, descr: 'A session for testing Read', time: new Date(), creator: professor.body.data.id, type: 'A', status: 1 });
 
     sessionId = session.body.data.id;
-
+    //console.log(professor.body.data.id )
+    //console.log(student.body.data)
     // Añade al profesor y al estudiante a la sesión
-    await SessionsUsers.bulkCreate([
-      { session_id: sessionId, user_id: professor.id },
-      { session_id: sessionId, user_id: student.id },
+    const sessionuser =await SessionsUsers.bulkCreate([
+      { session_id: sessionId, user_id: professor.body.data.id },
+      { session_id: sessionId, user_id: student.body.data.id },
     ]);
+    //console.log(sessionuser)
   });
 
   it('should return 401 if no token is provided', async () => {
-    const res = await request(app).get(`${API_VERSION_PATH_PREFIX}/sessions/${sessionId}/users`);
+    const res = await request(app)
+    .get(`${API_VERSION_PATH_PREFIX}/sessions/${sessionId}/users`)
+    //console.log(res)
     //console.log('should return 401 if no token is provided')
     expect(res.status).toBe(401);
   });
 
   it('should allow admin to access the session users', async () => {
+    // Verificar que adminToken esté definido
+    if (!adminToken) {
+      throw new Error('Admin token is not defined');
+    }
+  
+    // Imprimir adminToken para debugging
+    //console.log('Admin Token:', adminToken);
+  
+    // Ejecutar la petición de prueba
     const res = await request(app)
       .get(`${API_VERSION_PATH_PREFIX}/sessions/${sessionId}/users`)
       .set('Authorization', `Bearer ${adminToken}`);
-    //console.log('should allow admin to access the session users')
+  
+    // Imprimir el estado de la respuesta y el cuerpo de la respuesta para debugging
+    //console.log('Response Status:', res.status);
+    //console.log('Response Body:', res.body);
+  
+    // Validar la respuesta
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(2); // Profesor y estudiante
   });
-
   it('should allow the creator professor to access the session users', async () => {
     
     const res = await request(app)

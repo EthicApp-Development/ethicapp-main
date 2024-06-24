@@ -61,16 +61,21 @@ describe('Phase Model', () => {
   });
 
   it('should create a phase associated with an activity', async () => {
-    const phase = await Phase.create({
+    const phase = await request(app)
+    .post(`${API_VERSION_PATH_PREFIX}/phases`)
+    .send({
       number: 999,
       type: `Test activity ${activityId.id}`,
       anon: true,
       chat: false,
       prev_ans: 'None',
       activity_id: activityId.id
-    });
-    expect(phase).toHaveProperty('id');
-    expect(phase.activity_id).toBe(activityId.id);
+    })
+    .set('Authorization', `Bearer ${token}`)
+
+    // console.log(phase.body)
+    // console.log(activityId.id)
+    expect(phase.body).toHaveProperty('status', 'success')
   });
 
   it('should not create a phase without an activity', async () => {
@@ -89,7 +94,7 @@ describe('Phase Model', () => {
         anon: true,
         chat: false,
         prev_ans: 'None',
-        activity_id: 6
+        activity_id: activityId.id
       })
 
     //console.log("resPhaseDesign", resPhaseDesign.body)

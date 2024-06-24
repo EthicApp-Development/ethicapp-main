@@ -48,7 +48,9 @@ describe('Integration Tests for Session and Activity Creation', () => {
   const randomString = getRandomString(10);
   const randomStringShort = getRandomString(5);
   beforeAll(async () => {
-    const professor = await User.create({
+    const professor = await  request(app)
+    .post(`${API_VERSION_PATH_PREFIX}/users`)
+    .send({
       name: `New profesor ${randomString}`,
       rut: `${generateRandomRut()}`,
       pass: `NewProfesor${randomStringShort}`,
@@ -57,7 +59,9 @@ describe('Integration Tests for Session and Activity Creation', () => {
       sex: 'M',
       role: 'P',
     });
-    const student = await User.create({
+    const student = await request(app)
+    .post(`${API_VERSION_PATH_PREFIX}/users`)
+    .send({
       name: `New User ${randomString}`,
       rut: `${generateRandomRut()}`,
       pass: `New${randomStringShort}`,
@@ -66,11 +70,18 @@ describe('Integration Tests for Session and Activity Creation', () => {
       sex: 'M',
       role: 'E',
     });
-
-    professorToken = jwt.sign({ id: professor.id, role: professor.role }, 'your_secret_key');
-    studentToken = jwt.sign({ id: student.id, role: student.role }, 'your_secret_key');
-    profesorId = professor
-    studentId = student
+    const loginResProfessor =await request(app)
+    .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
+    .send({ mail: `NewProfesor${randomString}@example.com`, pass: `NewProfesor${randomStringShort}` });
+    
+    const loginResUser =await request(app)
+    .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
+    .send({ mail: `NewUser${randomString}@example.com`, pass: `New${randomStringShort}` });
+    
+    professorToken = loginResProfessor.body.token
+    studentToken = loginResUser.body.token
+    profesorId = professor.body.data
+    studentId = student.body.data
     countDesign = await Design.count();
 
   });
@@ -113,7 +124,9 @@ describe('Integration Tests for Session and Activity Creation', () => {
   });
 
   it('should not allow a professor to create an activity in a session they do not own', async () => {
-    const anotherProfessor = await User.create({
+    const anotherProfessor = await request(app)
+    .post(`${API_VERSION_PATH_PREFIX}/users`)
+    .send({
       name: 'Professor Other',
       rut: "87654123-k",
       pass: "ProfessorOther",
@@ -122,7 +135,10 @@ describe('Integration Tests for Session and Activity Creation', () => {
       sex: 'M',
       role: 'P'
     });
-    const anotherProfessorToken = jwt.sign({ id: anotherProfessor.id, role: anotherProfessor.role }, 'your_secret_key');
+    const loginResOtherProfessor =await request(app)
+    .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
+    .send({ mail: 'ProfessorOther@example.com', pass: "ProfessorOther"});
+    const anotherProfessorToken = loginResOtherProfessor.body.token
 
     const activityRes = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/activity`)

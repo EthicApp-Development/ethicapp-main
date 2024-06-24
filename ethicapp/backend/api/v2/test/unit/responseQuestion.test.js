@@ -53,8 +53,10 @@ describe('Response API', () => {
 
   it('should not allow creating more than one response for the same user and question', async () => {
     // Crear una respuesta para la misma fase y usuario
-    await Response.create({ user_id: userId, content: { answer: 'Previous answer' }, type: 'Text', question_id: questionId});
-
+    //await Response.create({ user_id: userId, content: { answer: 'Previous answer' }, type: 'Text', question_id: questionId});
+    await request(app)
+    .post(`${API_VERSION_PATH_PREFIX}/responses`)
+    .send({ user_id: userId, content: { answer: 'Previous answer' }, type: 'Text', question_id: questionId})
     // Intentar crear otra respuesta para la misma fase y usuario
     const response = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/responses`)

@@ -162,9 +162,9 @@ module.exports = {
       {}
     );
 
-    // Seed data for teams table
+    // Seed data for groups table
     await queryInterface.bulkInsert(
-      'teams',
+      'groups',
       [
         {
           id: 1,
@@ -172,23 +172,23 @@ module.exports = {
           created_at: new Date(),
           updated_at: new Date()
         },
-        // Add more teams as needed
+        // Add more groups as needed
       ],
       {}
     );
 
-    // Seed data for teamusers table
+    // Seed data for groupusers table
     await queryInterface.bulkInsert(
-      'teamusers',
+      'groupusers',
       [
         {
           id: 1,
-          team_id: 1, // Assuming team 1
+          group_id: 1, // Assuming group 1
           user_id: 1, // Assuming user 1
           created_at: new Date(),
           updated_at: new Date()
         },
-        // Add more teamusers as needed
+        // Add more groupusers as needed
       ],
       {}
     );
@@ -197,8 +197,8 @@ module.exports = {
   async down(queryInterface, Sequelize) {
     // You might want to implement a down function to remove the seeded data
     // For example, you can use bulkDelete for each table
-    await queryInterface.bulkDelete('teamusers', null, {});
-    await queryInterface.bulkDelete('teams', null, {});
+    await queryInterface.bulkDelete('groupusers', null, {});
+    await queryInterface.bulkDelete('groups', null, {});
     await queryInterface.bulkDelete('selections', null, {});
     await queryInterface.bulkDelete('questions', null, {});
     await queryInterface.bulkDelete('sessions_users', null, {});

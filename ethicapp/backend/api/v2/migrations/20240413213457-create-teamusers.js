@@ -2,17 +2,17 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('teams_users', {
+    await queryInterface.createTable('groups_users', {
       id: {
         allowNull: false,
         autoIncrement: true,
         type: Sequelize.INTEGER
       },
-      team_id: {
+      group_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'teams',
+          model: 'groups',
           key: 'id'
         }
       },
@@ -36,6 +36,6 @@ module.exports = {
   },
   async down(queryInterface, Sequelize) {
     await queryInterface.dropAllTables();
-    //await queryInterface.dropTable('teams_users');
+    //await queryInterface.dropTable('groups_users');
   }
 };
