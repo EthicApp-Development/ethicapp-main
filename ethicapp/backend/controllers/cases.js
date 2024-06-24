@@ -9,8 +9,6 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-// const dbcon = 'postgres://ethicapp:ethicapp@postgres:5432/ethicapp_dev'
-// var DB = null;
 const dbcon = pass.dbcon
 var DB = null;
 
@@ -28,6 +26,8 @@ function getDBInstance(dbcon) {
     }
     return DB;
 }
+
+// TODO: With req.user
 
 router.get("/topic-tags", (req, res) => {
     const sql = `
@@ -51,7 +51,6 @@ router.get("/topic-tags", (req, res) => {
         res.end('{"status":"err"}');
     });
 });
-
 
 
 router.get("/topic-tags/:id", (req, res) => {
@@ -93,6 +92,7 @@ router.post("/topic-tags", (req, res) => {
     })(req, res);
 });
 
+
 router.delete("/topic-tags/:id", (req, res) => {
     const topicTagId = req.params.id;
     const sql = `
@@ -119,9 +119,6 @@ router.delete("/topic-tags/:id", (req, res) => {
 });
 
 
-
-
-
 router.get("/cases-topic-tags", (req, res) => {
     const sql = `
     SELECT * FROM cases_topic_tags
@@ -144,32 +141,6 @@ router.get("/cases-topic-tags", (req, res) => {
         res.end('{"status":"err"}');
     });
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 router.get("/users/:userId/cases", (req, res) => {
@@ -214,8 +185,10 @@ router.get("/users/:userId/cases", (req, res) => {
 });
 
 
-
 router.get("/cases", (req, res) => {
+
+    console.log(req)
+
     const sql = `
     SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id,
            ARRAY_AGG(DISTINCT jsonb_build_object('id', tt.topic_tag_id, 'name', tt.name)) AS topic_tags, 
@@ -316,6 +289,7 @@ router.post("/cases", (req, res) => {
         });
 });
 
+
 router.patch("/cases/:caseId", (req, res) => {
     const caseId = req.params.caseId;
     const { title, description, external_case_url, is_public, topic_tag_ids, user_id } = req.body;
@@ -364,8 +338,6 @@ router.patch("/cases/:caseId", (req, res) => {
             res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
         });
 });
-
-
 
 
 router.post("/cases/:caseId/documents", (req, res) => {
@@ -455,13 +427,6 @@ router.get("/designs/:id/case", (req, res) => {
             res.status(500).json({ status: 'error', message: 'Error en la base de datos' });
         });
 });
-
-
-
-
-
-
-
 
 
 router.delete("/cases/:caseId/documents/:documentId", (req, res) => {
@@ -590,9 +555,6 @@ router.delete("/cases/:caseId", (req, res) => {
 });
 
 
-
-
-
 router.post("/cases/:caseId/clone", (req, res) => {
     const caseId = req.params.caseId;
     const db = getDBInstance(dbcon);
@@ -675,79 +637,5 @@ router.post("/cases/:caseId/clone", (req, res) => {
             res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
         });
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-router.get("/cases/all/documents", (req, res) => {
-    const sql = `
-    SELECT * FROM designs_documents
-    `;
-    const db = getDBInstance(dbcon);
-
-    db.query(sql)
-        .then(result => {
-            res.status(200).json({ status: 'ok', result: result.rows });
-        })
-        .catch(err => {
-            console.error(`Fatal error on the SQL query "${sql}"`);
-            console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error en la base de datos' });
-        });
-});
-
-router.get("/users/", (req, res) => {
-    const sql = `
-    SELECT * FROM users
-    `;
-    const db = getDBInstance(dbcon);
-
-    db.query(sql)
-        .then(result => {
-            res.status(200).json({ status: 'ok', result: result.rows });
-        })
-        .catch(err => {
-            console.error(`Fatal error on the SQL query "${sql}"`);
-            console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error en la base de datos' });
-        });
-});
-
-
-
 
 module.exports = router;
