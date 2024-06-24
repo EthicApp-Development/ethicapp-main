@@ -24,7 +24,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db, compare_type=True)
 #from models import Comments, Process, Topics
 
-validation_api_key = os.environ.get("ETHICAPP_API_KEY")
+validation_api_key = os.environ.get("CONTENT_ANALYSIS_API_KEY")
 redis_host_name = os.environ.get("REDIS_HOST_NAME")
 if not redis_host_name:
     redis_host_name = 'localhost' 

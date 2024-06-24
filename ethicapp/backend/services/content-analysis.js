@@ -206,8 +206,8 @@ async function contentAnalysis(req, res) {
 function isContentAnalysisAvailable(){
 
     const trueOrFalse = {
-        "True": true,
-        "False": false
+        "true": true,
+        "false": false
     }
     const value = process.env.CONTENT_ANALYSIS_SERVICE;
     return trueOrFalse[value]
