@@ -120,7 +120,7 @@ export let ActivityController = ($scope, ActivitiesService,
 
     self.openActivity = (activityId) => {
         let promises = [];
-        
+
         // Step 1: look up the activity
         promises.push(() => {
             return ActivitiesService.lookUpActivity(activityId);
@@ -133,7 +133,7 @@ export let ActivityController = ($scope, ActivitiesService,
 
         // Step 3: set the current design
         promises.push(() => {
-            const designId = ActivitiesService.currentActivity.designId;
+            const designId = ActivitiesService.currentActivity.dsgnid;
             return DesignsService.loadUserDesignById(designId);
         });
 
