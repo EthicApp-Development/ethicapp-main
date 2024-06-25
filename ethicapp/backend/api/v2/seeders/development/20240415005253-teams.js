@@ -2,7 +2,7 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkInsert('teams', [
+    await queryInterface.bulkInsert('groups', [
       {
         session_id: 1,
         createdAt: new Date(),
@@ -32,6 +32,6 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkDelete('teams', null, {});
+    await queryInterface.bulkDelete('groups', null, {});
   }
 };

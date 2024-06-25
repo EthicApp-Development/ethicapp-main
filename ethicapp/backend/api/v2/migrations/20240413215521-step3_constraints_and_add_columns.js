@@ -26,7 +26,7 @@ module.exports = {
     await queryInterface.addColumn('users', 'aprendizaje', {
       type: Sequelize.ENUM('Reflexivo', 'Activo', 'Teorico', 'Pragmatico')
     });
-    await queryInterface.addColumn('teams', 'leader', {
+    await queryInterface.addColumn('groups', 'leader', {
       type: Sequelize.INTEGER,
       allowNull: true,
       references: {
@@ -35,7 +35,7 @@ module.exports = {
       }
     });
     // Asegúrate de crear el índice para la clave externa después de añadir la columna
-    await queryInterface.addConstraint('teams', {
+    await queryInterface.addConstraint('groups', {
       type: 'foreign key',
       fields: ['leader'],
       references: {

@@ -1,4 +1,4 @@
-const { Activity, Design } = require('../../backend/api/v2/models');
+const { Activity, Design } = require('../../models');
 const designs = require('../fixtures/designs.json')
 
 describe('Activity Model', () => {

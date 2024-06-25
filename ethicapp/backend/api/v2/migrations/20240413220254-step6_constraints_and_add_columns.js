@@ -4,7 +4,7 @@
 module.exports = {
   async up (queryInterface, Sequelize) {
     //create_09.sql
-    await queryInterface.addColumn('teams', 'progress', {
+    await queryInterface.addColumn('groups', 'progress', {
       type: Sequelize.INTEGER,
       allowNull: false,
       defaultValue: 0

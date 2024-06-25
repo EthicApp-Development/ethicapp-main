@@ -1,0 +1,18 @@
+[
+    {
+        "user_id": 2,
+        "content": {
+            "respuesta": "Esta es la respuesta a la pregunta"
+        },
+        "type": "Example",
+        "question_id": 3
+    },
+    {
+        "user_id": 2,
+        "content": {
+            "respuesta": "Esta es otra respuesta a otra pregunta"
+        },
+        "type": "Example",
+        "question_id": 4
+    }
+]

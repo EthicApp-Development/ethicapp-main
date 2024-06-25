@@ -1,8 +1,8 @@
 const request = require('supertest');
 const express = require('express');
 const bodyParser = require('body-parser');
-const { User } = require('../../backend/api/v2/models');
-const registerUserRouter = require('../../backend/api/v2/users');
+const { User } = require('../../models');
+const registerUserRouter = require('../../users');
 const userData = require('../fixtures/users.json')
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2/';
 

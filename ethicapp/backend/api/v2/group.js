@@ -1,8 +1,9 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const router = express.Router();
+const checkAbility = require('./middleware/checkAbility');
 
-const { Team } = require('../../api/v2/models');
+const { Group } = require('./models')
 
 // Configure body-parser to process the body of requests in JSON format.
 router.use(bodyParser.json());
@@ -10,7 +11,7 @@ router.use(bodyParser.json());
 // Read
 router.get('/group', async (req, res) => {
     try {
-        const groups = await Team.findAll();
+        const groups = await Group.findAll();
         res.status(200).json({ status: 'success', data: groups });
     } catch (err) {
         console.error(err);
@@ -19,9 +20,9 @@ router.get('/group', async (req, res) => {
 });
 
 // Create
-router.post('/group', async (req, res) => {
+router.post('/group', checkAbility('create', 'group'), async (req, res) => {
     try {
-        const group = await Team.create(req.body);
+        const group = await Group.create(req.body);
         res.status(201).json({ status: 'success', data: group });
     } catch (err) {
         console.error(err);
@@ -30,12 +31,12 @@ router.post('/group', async (req, res) => {
 });
 
 // Update
-router.put('/group/:id', async (req, res) => {
+router.put('/group/:id', checkAbility('update', 'group'), async (req, res) => {
     const { id } = req.params;
     try {
-        const group = await Team.findByPk(id);
+        const group = await Group.findByPk(id);
         if (!group) {
-            return res.status(404).json({ status: 'error', message: 'Group not found' });
+            return res.status(404).json({ status: 'error', message: 'group not found' });
         }
         await group.update(req.body);
         res.json({ status: 'success', data: group });
@@ -46,12 +47,12 @@ router.put('/group/:id', async (req, res) => {
 });
 
 // Delete
-router.delete('/group/:id', async (req, res) => {
+router.delete('/group/:id', checkAbility('delete', 'group'), async (req, res) => {
     const { id } = req.params;
     try {
-        const group = await Team.findByPk(id);
+        const group = await Group.findByPk(id);
         if (!group) {
-            return res.status(404).json({ status: 'error', message: 'Group not found' });
+            return res.status(404).json({ status: 'error', message: 'group not found' });
         }
         await group.destroy();
         res.status(204).end();

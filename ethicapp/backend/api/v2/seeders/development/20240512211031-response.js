@@ -9,7 +9,7 @@ module.exports = {
         type: "Ejemplo",
         createdAt: new Date(),
         updatedAt: new Date(),
-        phase_id: 1
+        question_id: 1
       },
       {
         user_id: 2,
@@ -17,7 +17,7 @@ module.exports = {
         type: "Ejemplo 2",
         createdAt: new Date(),
         updatedAt: new Date(),
-        phase_id: 1
+        question_id: 1
       },
       {
         user_id: 3,
@@ -25,7 +25,7 @@ module.exports = {
         type: "Ejemplo 3",
         createdAt: new Date(),
         updatedAt: new Date(),
-        phase_id: 1
+        question_id: 1
       },
       {
         user_id: 4,
@@ -33,7 +33,7 @@ module.exports = {
         type: "Ejemplo 4",
         createdAt: new Date(),
         updatedAt: new Date(),
-        phase_id:2
+        question_id:2
       },
       {
         user_id: 5,
@@ -41,7 +41,7 @@ module.exports = {
         type: "Ejemplo 5",
         createdAt: new Date(),
         updatedAt: new Date(),
-        phase_id:3
+        question_id:3
       }
     ], {});
   },

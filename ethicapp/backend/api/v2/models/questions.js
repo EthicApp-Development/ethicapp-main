@@ -11,6 +11,7 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+      Question.belongsTo(models.Phase, { foreignKey: 'phase_id' });
     }
   }
   Question.init({
@@ -23,7 +24,7 @@ module.exports = (sequelize, DataTypes) => {
     // comment: DataTypes.TEXT,
     // other: DataTypes.TEXT,
     session_id: DataTypes.INTEGER,
-    //phases_id:DataTypes.INTEGER,
+    phase_id:DataTypes.INTEGER,
     number: DataTypes.INTEGER
   }, {
     sequelize,

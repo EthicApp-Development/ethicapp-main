@@ -3,7 +3,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up (queryInterface, Sequelize) {
-    await queryInterface.addColumn('teams', 'original_leader', {
+    await queryInterface.addColumn('groups', 'original_leader', {
       type: Sequelize.INTEGER,
       allowNull: true,
       references: {
@@ -16,7 +16,7 @@ module.exports = {
     //   allowNull: false,
     //   defaultValue: true
     // });    
-    await queryInterface.addConstraint('teams', {
+    await queryInterface.addConstraint('groups', {
       type: 'foreign key',
       fields: ['original_leader'],
       references: {

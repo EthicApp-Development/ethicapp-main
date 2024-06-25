@@ -1,6 +1,6 @@
 const request = require('supertest');
-const app = require('../../backend/api/v2/testApi');
-const { Session, User, Question } = require('../../backend/api/v2/models');
+const app = require('../../testApi');
+const { Session, User, Question } = require('../../models');
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
 describe('POST /questions/testing', () => {
@@ -10,32 +10,90 @@ describe('POST /questions/testing', () => {
 
     beforeAll(async () => {
         // Crear un usuario profesor
-        const user = await User.create({ name: 'ProfessorQuestion',
+        const user = await request(app)
+        .post(`${API_VERSION_PATH_PREFIX}/users`)
+        .send({ name: 'ProfessorQuestion',
              rut: "99111222-k",
              mail: 'ProfessorQuestion@example.com', 
              pass: 'passwordQuestion',
              pass_confirmation: "passwordQuestion",
              sex: "M",
              role: 'P' });
-        userId = user.id;
+        
+        userId = user.body.data.id;
 
         // Autenticar al profesor y obtener un token
         const loginRes = await request(app)
-            .post(`${API_VERSION_PATH_PREFIX}/login_user`)
+            .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
             .send({ mail: 'ProfessorQuestion@example.com', pass: 'passwordQuestion' });
         professorToken = loginRes.body.token;
 
         // Crear una sesión
+        await request(app)
+        .post(`${API_VERSION_PATH_PREFIX}/designs`)
+        .send({
+          creator: userId,
+          design: {
+            phases: [{
+              number: 1,
+              question: [
+                {
+                  content: {
+                    question: "¿Cuantos oceanos hay actualmente",
+                    options: ["5", "7", "10", "11", "1"],
+                    correct_answer: "5"
+                  },
+                  additional_info: "Geografia",
+                  type: "choice",
+                  text: "preguntas sobre el oceano",
+                  session_id: 1,
+                  number: 1
+                },
+                {
+                  content: {
+                    question: "¿Cuantos continentes hay actualmente",
+                    options: ["5", "7", "10", "11", "1"],
+                    correct_answer: "5"
+                  },
+                  additional_info: "Geografia",
+                  type: "choice",
+                  text: "preguntas sobre los continentes",
+                  session_id: 1,
+                  number: 2
+                }]
+            }, {
+              number: 2,
+              question: [{
+                content: {
+                  question: "¿asdffasd dsffds sd fsdf",
+                  options: ["dsf", "qw", "1wer", "1er1", "1e"],
+                  correct_answer: "qw"
+                },
+                additional_info: "cosas",
+                type: "choice",
+                text: "preguntas sobre las cosas",
+                session_id: 1,
+                number: 1
+              }]
+            }]
+          },
+          public: true,
+          locked: false
+        })
+        .set('Authorization', `Bearer ${professorToken}`)
+  
         const sessionRes = await request(app)
             .post(`${API_VERSION_PATH_PREFIX}/sessions`)
-            .send({ name: 'Test Session', descr: 'A session for testing', time: new Date(), creator: userId, type: 'A' });
-        sessionId = sessionRes.body.data.id;
+            .send({ name: 'Test Session', descr: 'A session for testing', time: new Date(), creator: userId, type: 'A' })
+            .set('Authorization', `Bearer ${professorToken}`)
+        
+            sessionId = sessionRes.body.data.id;
         
 
     });
 
     it('should not allow creating duplicate questions in the same phase', async () => {
-        console.log('should not allow creating duplicate questions in the same phase')
+        //console.log('should not allow creating duplicate questions in the same phase')
         const questionData = {
             text: '¿Cuál es tu pelicula favorito?',
             content: { question: '¿Cuál es tu pelicula favorito?', options: ['dune', 'alien', 'thor'], correct_answer: 'thor' },
@@ -46,7 +104,6 @@ describe('POST /questions/testing', () => {
         };
         const designsData = {
             creator: userId,
-            question_id: 1,
             design: {
                 phases: [{
                     number: 1,
@@ -84,9 +141,10 @@ describe('POST /questions/testing', () => {
         await request(app)
           .post(`${API_VERSION_PATH_PREFIX}/designs`)
           .send(designsData)
+          .set('Authorization', `Bearer ${professorToken}`)
           .expect(201);
         const res = await request(app)
-            .post(`${API_VERSION_PATH_PREFIX}/questions/design`)
+            .post(`${API_VERSION_PATH_PREFIX}/designs/${1}/phases/${1}/questions`)
             .send(questionData)
         
         expect(res.status).toBe(400);
@@ -95,7 +153,7 @@ describe('POST /questions/testing', () => {
     });
 
     it('should return an error if the design is missing phases', async () => {
-        console.log("should return an error if the design is missing phases")
+        //console.log("should return an error if the design is missing phases")
         const questionData = {
             text: '¿Cuál es tu pelicula favorito?',
             content: { question: '¿Cuál es tu pelicula favorito?', options: ['dune', 'alien', 'thor'], correct_answer: 'thor' },
@@ -114,9 +172,10 @@ describe('POST /questions/testing', () => {
         await request(app)
           .post(`${API_VERSION_PATH_PREFIX}/designs`)
           .send(designsData)
+          .set('Authorization', `Bearer ${professorToken}`)
           .expect(201);
           const res = await request(app)
-            .post(`${API_VERSION_PATH_PREFIX}/questions/design`)
+            .post(`${API_VERSION_PATH_PREFIX}/designs/${1}/phases/${1}/questions`)
             .send(questionData)
 
         expect(res.body.status).toBe('error');
