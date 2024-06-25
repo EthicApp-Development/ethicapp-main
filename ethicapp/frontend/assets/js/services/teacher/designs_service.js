@@ -93,7 +93,7 @@ export let DesignsService = ($rootScope, $http) => {
         });
     };
 
-    self.loadPublicDesigns = () => {
+    service.loadPublicDesigns = () => {
         // Get all public designs
         return $http.get("get-public-designs").then((data) => {
             if (data.status == "ok") {
@@ -105,7 +105,7 @@ export let DesignsService = ($rootScope, $http) => {
         });
     };
 
-    self.loadUserDesignById = (designId) => {
+    service.loadUserDesignById = (designId) => {
         var postdata = { id: designId };
         return $http.post("get-design", postdata)
             .then((data) => {
@@ -120,14 +120,14 @@ export let DesignsService = ($rootScope, $http) => {
             }).catch((error) => {
                 console.log(`[Designs Service] Failed to load design by id:'${designId}'`);
                 throw new Error(error);
-            });        
+            });
     };
 
-    self.importPublicDesignById = (designId) => {
+    service.importPublicDesignById = (designId) => {
         // TODO: implement
     };
 
-    self.createDesign = (design) => {
+    service.createDesign = (design) => {
         return $http.post("upload-design", design)
             .then(function (data) {
                 if (data.status == "ok") {
@@ -142,7 +142,7 @@ export let DesignsService = ($rootScope, $http) => {
             });
     };
 
-    self.updateDesign = (designId, design) => {
+    service.updateDesign = (designId, design) => {
         var postdata = { 
             "design": design, 
             "id":     designId
@@ -157,7 +157,7 @@ export let DesignsService = ($rootScope, $http) => {
             });
     };
 
-    self.deleteDesign = (designId) => {
+    service.deleteDesign = (designId) => {
         var postdata = { id: designId };
         return $http.post("delete-design", postdata).then((data) => {
             if (data.status == "ok") {
