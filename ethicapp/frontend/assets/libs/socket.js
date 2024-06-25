@@ -711,8 +711,5 @@ class Socket extends typed_events_1.StrictEventEmitter {
         return new broadcast_operator_1.BroadcastOperator(this.adapter, new Set(), new Set([this.id]), flags);
     }
 }
-<<<<<<< HEAD
+
 exports.Socket = Socket;
-=======
-exports.Socket = Socket;
->>>>>>> frontend_controllers_refactoring
