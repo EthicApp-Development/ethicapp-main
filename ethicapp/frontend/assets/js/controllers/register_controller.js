@@ -105,19 +105,18 @@ export let RegisterController = ($scope, $http, $translate,apiParams) => {
 
         console.log(userData);
 
-        // $http.post("/register", userData)
-        //     .then(function (response) {
-        //         console.log(response);
-        //         if (response.data.success) {
-        //             console.log("Registro exitoso");
-        //         } else {
-        //             console.error("Error en el registro: ");
-        //         }
-        //     })
-        //     .catch(function (error) {
-        //         console.error("Error en la solicitud al backend: " + error);
-        //     });
-        
+        $http.post("/register", userData)
+            .then(function (response) {
+                console.log(response);
+                if (response.data.success) {
+                    console.log("Registro exitoso");
+                } else {
+                    console.error("Error en el registro: ");
+                }
+            })
+            .catch(function (error) {
+                console.error("Error en la solicitud al backend: " + error);
+            });
     };
 
     if (lang.startsWith('es')) {
@@ -140,36 +139,25 @@ export let RegisterController = ($scope, $http, $translate,apiParams) => {
         self.getcountries();
     };
 
-    self.activate_user = function(){
-        var url_string = window.location;
-        var url = new URL(url_string);
-        var token = url.searchParams.get("tok");
-        //console.log(token);
-        $http({ url: "activate_user", method: "post",data: {token} }).success(function () {
-        });
-    };
-
     self.getcountries = function(){
         $http.get("https://restcountries.com/v3.1/all").success(function (data) {
             var list = [];
-            
+ 
             for(var i = 0;i< data.length;i++){ 
                 list.push(data[i].name.common);
             }
             list.sort();
-            if(lang[0] == "e" && lang[1] == "s"){
+            if(self.lang == "ES_CL/spanish"){
                 list.unshift("Elige un Pais");
             }
             else{
                 list.unshift("Choose Country");
             }
-            
+
             self.countries = list;
-            
+
         });
     };
-
-    
 
     self.init();
 };
