@@ -26,7 +26,7 @@ export let DocumentsService = ($rootScope, $http) => {
     };
 
     service.loadDesignDocuments = (designId) => {
-        var postdata = { dsgnid: designId };
+        var postdata = { designId: designId };
         return $http({
             url: "designs-documents", method: "post", data: postdata
         }).then(function (data) {
@@ -36,7 +36,7 @@ export let DocumentsService = ($rootScope, $http) => {
 
     service.uploadDesignDocument = (documentData) => {
         // NOTE: documentData is actually formData from which the file has been submitted
-        // The formData object must include a variable containing the design id (dsgnid).
+        // The formData object must include a variable containing the design id (designId).
         return $http.post("upload-design-file", documentData, {
             transformRequest: angular.identity,
             headers:          { "Content-Type": undefined }
@@ -47,7 +47,7 @@ export let DocumentsService = ($rootScope, $http) => {
     };
 
     service.deleteDesignDocument = (designId) => {
-        let postdata = { dsgnid: designId };
+        let postdata = { designId: designId };
         return $http({
             url: "delete-design-document", method: "post", data: postdata
         }).then(function () {

@@ -133,7 +133,7 @@ export let ActivityController = ($scope, ActivitiesService,
 
         // Step 3: set the current design
         promises.push(() => {
-            const designId = ActivitiesService.currentActivity.dsgnid;
+            const designId = ActivitiesService.currentActivity.designId;
             return DesignsService.loadUserDesignById(designId);
         });
 

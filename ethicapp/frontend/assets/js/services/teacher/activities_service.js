@@ -97,7 +97,7 @@ export let ActivitiesService = ($rootScope, $http) => {
     };
 
     service.createActivity = (sessionId, designId, setAsCurrent = true) => {
-        var postdata = { sesid: sessionId, dsgnid: designId};
+        var postdata = { sesid: sessionId, designId: designId};
         return $http({ url: "add-activity", method: "post", data: postdata })
             .then(result => {
                 if (setAsCurrent) {
