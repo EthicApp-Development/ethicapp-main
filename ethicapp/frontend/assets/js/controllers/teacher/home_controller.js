@@ -1,31 +1,10 @@
 /*eslint func-style: ["error", "expression"]*/
 export let HomeController = ($scope, 
-    TabStateService, DesignsService, ActivitiesService,
-    $http, $uibModal, $location, $locale, 
-    $filter, $socket, $route, $translate) => {
+    TabStateService, ActivitiesService,
+    $socket, $route, $translate) => {
     
     var self = $scope;
     self.shared = {};
-    // [DEPRECATED] self.misc = {};
-    // [DEPRECATED] self.temp = "";
-    // [DEPRECATED] self.sessions = [];    
-    // [DEPRECATED] self.currentActivity = {}; //current Activity
-    // [DEPRECATED] self.design = null;
-    // [DEPRECATED] self.selectedSes = null;
-    // [DEPRECATED] self.documents = [];
-    // [DEPRECATED] self.questions = [];
-    // [DEPRECATED] self.questionTexts = [];
-    // [DEPRECATED] self.newUsers = [];
-    // [DEPRECATED] self.users = {};
-    // [DEPRECATED] self.selectedId = -1;
-    // [DEPRECATED] self.role = "A";
-    // [DEPRECATED] self.sesStatusses = ["notPublicada", "reading", "personal", "anon", "teamWork", "finished"];
-    // [DEPRECATED] self.optConfidence = [0, 25, 50, 75, 100];
-    // [DEPRECATED] self.iterationNames = [];
-    // [DEPRECATED] self.showSeslist = true;
-    // [DEPRECATED] self.superBar = false;
-    // [DEPRECATED] self.institution = false;
-    // [DEPRECATED] self.inst_id = 0;
 
     self.init = function () {
         self.tabSel = TabStateService.sharedTabState;
@@ -78,20 +57,19 @@ export let HomeController = ($scope,
         if(tab != self.selectedView){
             self.selectedView = tab;
             $route.reload();
-            /*
-            if (tab != "editDesign" && tab != "viewDesign"){
-                // Avoids making designs-documents request
-                self.designId.id = null;
-            } 
-            if (tab != "launchActivity") {
-                self.launchId.id = null; 
-                self.launchId.title = null; 
-                self.launchId.type = null;
-            }
-            if (tab == "designs") {
-                if(type != null) self.tabSel.type = type;
-                else self.tabSel.type = 0;
-            }*/
+            // if (tab != "editDesign" && tab != "viewDesign"){
+            //     // Avoids making designs-documents request
+            //     self.designId.id = null;
+            // } 
+            // if (tab != "launchActivity") {
+            //     self.launchId.id = null; 
+            //     self.launchId.title = null; 
+            //     self.launchId.type = null;
+            // }
+            // if (tab == "designs") {
+            //     if(type != null) self.tabSel.type = type;
+            //     else self.tabSel.type = 0;
+            // }
         }
     };
 

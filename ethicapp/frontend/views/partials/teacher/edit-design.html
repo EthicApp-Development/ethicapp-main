@@ -25,7 +25,7 @@
                 <form id="doc-form" class="row" ng-submit="uploadDesignDocument($event)" enctype="multipart/form-data">
                     <div class="col-sm-4">
                         <input type="file" class="form-control" name="pdf" ng-disabled="busy" required>
-                        <input type="text" ng-value="getDesignId()" name="dsgnid" hidden> <!-- design id is passed as hidden -->
+                        <input type="text" ng-value="getDesignId()" name="designId" hidden> <!-- design id is passed as hidden -->
                     </div>
                     <div class="col-sm-2">
                         <button class="form-control btn btn-default" ng-disabled="busy">{{'add'|translate}}<i

@@ -1,5 +1,5 @@
-import * as apiMod from "./activities_service/factories/api_object_factory.js";
-import * as cp from "./activities_service/plugins/content_plugin_registry.js";
+import * as apiMod from "/js/services/teacher/activities_service_plugins/factories/api_object_factories.js";
+import * as cp from "/js/services/teacher/activities_service_plugins/plugins/content_plugin_registry.js";
 
 export let ActivitiesService = ($rootScope, $http) => {
     let service = { };
@@ -36,20 +36,19 @@ export let ActivitiesService = ($rootScope, $http) => {
 
         service.currentActivity = activity;
         // Set the current content plugin
-        service.setContentPlugin(activity.design.metainfo.type);
-
+        service.setContentPlugin(activity.design.type);
         $rootScope.$broadcast("ActivitiesService_currentActivityUpdated", 
             service.currentActivity);
     };
 
     service.setContentPlugin = (designType) => {
-        if (!(designType in cp.contentPluginRegistry)) {
+        if (!(designType in cp.contentPluginRegistry())) {
             let err = `No content plugin found for design type '${designType}'`;
             console.error(`[ActivitiesService.setContentPlugin] ${err}`);
             throw new Error(err);
         }
 
-        service.contentPlugin = cp.contentPluginRegistry[designType];
+        service.contentPlugin = cp.contentPluginRegistry(designType);
     };    
 
     service.setActivities =  (activities) => {
@@ -63,10 +62,10 @@ export let ActivitiesService = ($rootScope, $http) => {
             method: "post",
             data:   {}
         }).then((data) => {
-            data.activities.map(activity => {
+            data.data.activities.map(activity => {
                 activity.title = activity.design.metainfo.title;
             });
-            service.setActivities(data.activities);
+            service.setActivities(data.data.activities);
         }).catch((error) => {
             console.log("[ActivitiesService.loadActivities] Error loading activities.");
             throw error;
@@ -98,7 +97,7 @@ export let ActivitiesService = ($rootScope, $http) => {
     };
 
     service.createActivity = (sessionId, designId, setAsCurrent = true) => {
-        var postdata = { sesid: sessionId, dsgnid: designId};
+        var postdata = { sesid: sessionId, designId: designId};
         return $http({ url: "add-activity", method: "post", data: postdata })
             .then(result => {
                 if (setAsCurrent) {

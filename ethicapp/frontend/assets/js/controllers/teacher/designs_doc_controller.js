@@ -45,7 +45,7 @@ export let DesignsDocController = ($scope, DesignsService, DocumentsService,
     };
     
     self.requestDesignDocuments = () => {
-        var postdata = { dsgnid: DesignsService.workingDesignId };
+        var postdata = { designId: DesignsService.workingDesignId };
         $http({
             url: "designs-documents", method: "post", data: postdata
         }).success(function (data) {
@@ -54,7 +54,7 @@ export let DesignsDocController = ($scope, DesignsService, DocumentsService,
     };
 
     self.deleteDesignDocument = (designId) => {
-        let postdata = { dsgnid: designId };
+        let postdata = { designId: designId };
         $http({
             url: "delete-design-document", method: "post", data: postdata
         }).success(function () {

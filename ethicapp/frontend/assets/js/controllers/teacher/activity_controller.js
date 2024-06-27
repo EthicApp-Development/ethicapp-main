@@ -120,7 +120,7 @@ export let ActivityController = ($scope, ActivitiesService,
 
     self.openActivity = (activityId) => {
         let promises = [];
-        
+
         // Step 1: look up the activity
         promises.push(() => {
             return ActivitiesService.lookUpActivity(activityId);

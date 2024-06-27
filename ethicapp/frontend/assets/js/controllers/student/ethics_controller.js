@@ -185,7 +185,7 @@ app.controller(
             // };   
 
             self.loadDocuments = function () {
-                var postdata = { dsgnid: self.designId};
+                var postdata = { designId: self.designId};
                 $http({
                     url: "designs-documents", method: "post", data: postdata
                 }).success(function (data) {
