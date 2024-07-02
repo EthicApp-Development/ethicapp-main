@@ -5,7 +5,7 @@ const userData = require('../fixtures/users.json')
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
 describe('Responses API', () => {
-  let token, questionId, phaseId, userId;
+  let token,tokenFalse, questionId, phaseId, userId;
 
   beforeAll(async () => {
     const profesorExample = userData[10]
@@ -16,8 +16,17 @@ describe('Responses API', () => {
     const loginRes = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
       .send({ mail: profesorExample.mail, pass: profesorExample.pass });
+    
+    const profesorFalseExample = userData[9]
+    await request(app)
+      .post(`${API_VERSION_PATH_PREFIX}/users`)
+      .send(profesorFalseExample)
+    const loginFalseRes = await request(app)
+      .post(`${API_VERSION_PATH_PREFIX}/authenticate_client`)
+      .send({ mail: profesorFalseExample.mail, pass: profesorFalseExample.pass });
 
     token = loginRes.body.token;
+    tokenFalse = loginFalseRes.body.token;
     userId = profesorExampleId.body.data.id;
 
     // Crear una pregunta para la prueba
@@ -125,5 +134,13 @@ describe('Responses API', () => {
 
     expect(res.body.status).toBe('success');
     expect(res.body.data).toBeInstanceOf(Array);
+  });
+
+  it('should not get all responses for a question why a different creator', async () => {
+    const res = await request(app)
+      .get(`${API_VERSION_PATH_PREFIX}/questions/${questionId}/responses`)
+      .set('Authorization', `Bearer ${tokenFalse}`)
+
+    expect(res.body.status).toBe('error');
   });
 });

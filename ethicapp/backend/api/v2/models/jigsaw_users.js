@@ -14,8 +14,8 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   JigsawUserRole.init({
-    stage_id: DataTypes.INTEGER,
-    user__id: DataTypes.INTEGER,
+    phase_id: DataTypes.INTEGER,
+    user_id: DataTypes.INTEGER,
     role_id: DataTypes.INTEGER
   }, {
     sequelize,

@@ -103,5 +103,22 @@ describe('Phase Model', () => {
     expect(resPhaseDesign.body.message).toBe('phase number is exist in the design')
 
   })
+  it('should create phase for different number', async () => {
+
+    const resPhaseDesign = await request(app)
+      .post(`${API_VERSION_PATH_PREFIX}/designs/${1}/phases`)
+      .send({
+        number: 3,
+        type: `Test activity duplicated${activityId.id - 1}`,
+        anon: true,
+        chat: false,
+        prev_ans: 'None',
+        activity_id: activityId.id
+      })
+
+    //console.log("resPhaseDesign", resPhaseDesign.body)
+    expect(resPhaseDesign.status).toBe(201)
+    expect(resPhaseDesign.body).toHaveProperty('status', 'success')
+  })
 
 });

@@ -7,7 +7,10 @@ describe('POST /questions/testing', () => {
     let sessionId;
     let professorToken;
     let userId;
-
+    function getRandomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+    let randomNumber = getRandomInt(1, 999999)
     beforeAll(async () => {
         // Crear un usuario profesor
         const user = await request(app)
@@ -181,4 +184,64 @@ describe('POST /questions/testing', () => {
         expect(res.body.status).toBe('error');
         expect(res.body.message).toBe('Design is missing phases');
     });
+
+    it('should  creating questions in phase', async () => {
+      //console.log('should not allow creating duplicate questions in the same phase')
+      const questionDataCorrect = {
+          text: `¿Cuál es tu pelicula favorito? ${randomNumber}`,
+          content: { question: '¿Cuál es tu pelicula favorito?', options: ['dune', 'alien', 'thor'], correct_answer: 'thor' },
+          additional_info: `peliculas  ${randomNumber}`,
+          type: 'choice',
+          session_id: sessionId,
+          number: randomNumber
+      };
+      const designsData = {
+          creator: userId,
+          design: {
+              phases: [{
+                  number: 1,
+                  question: [{
+                      text: '¿Cuál es tu color favorito?',
+                      content: { question: '¿Cuál es tu color favorito?', options: ['Violeta', 'Negro', 'Azul'], correct_answer: 'Azul' },
+                      additional_info: 'Colores',
+                      type: 'choice',
+                      session_id: sessionId,
+                      number: 2
+                          },
+                          {
+                      text: '¿Cuál es tu pais favorito?',
+                      content: { question: '¿Cuál es tu  pais favorito?', options: ['Chile','Ecuador','Japon'], correct_answer: 'Chile' },
+                      additional_info: 'paises',
+                      type: 'choice',
+                      session_id: sessionId,
+                      number: 1
+                            }]
+                      },{
+                  number: 2,
+                  question: [{
+                          text: '¿Cuál es tu animal favorito?',
+                          content: { question: '¿Cuál es tu  animal favorito?', options: ['vaca','leon','tigre'], correct_answer: 'vaca' },
+                          additional_info: 'animales',
+                          type: 'choice',
+                          session_id: sessionId,
+                          number: 2
+                        }]
+                      }]
+          },
+          public: true,
+          locked: false
+      }
+      await request(app)
+        .post(`${API_VERSION_PATH_PREFIX}/designs`)
+        .send(designsData)
+        .set('Authorization', `Bearer ${professorToken}`)
+        .expect(201);
+      const res = await request(app)
+          .post(`${API_VERSION_PATH_PREFIX}/designs/${1}/phases/${1}/questions`)
+          .send(questionDataCorrect)
+      
+      expect(res.status).toBe(201);
+      expect(res.body.status).toBe('success');
+      
+  });
 });
