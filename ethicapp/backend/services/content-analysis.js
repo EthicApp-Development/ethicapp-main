@@ -4,7 +4,7 @@ let pass = require("../config/keys-n-secrets");
 const fetch = require('node-fetch');
 
 let redisClient = new Redis({
-    host: "RedisContainer", // Redis server host
+    host: "redis", // Redis server host
     port: 6379,       // Redis server port
 });
 
