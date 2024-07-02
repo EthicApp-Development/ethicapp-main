@@ -10,7 +10,6 @@ networks:
 services:
   # ---------------------- Node web app ---------------------- #
   node:
-    container_name: "ethicapp-node"
     build:
       context: ethicapp/
       dockerfile: image-renewal.Dockerfile

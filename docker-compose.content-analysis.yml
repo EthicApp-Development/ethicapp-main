@@ -16,7 +16,6 @@ services:
   content-analysis:
     build: 
       context: ./content-analysis
-    container_name: content-analysis
     ports:
       - "${CONTENT_ANALYSIS_PORT}:${CONTENT_ANALYSIS_PORT}"
     volumes:
@@ -25,13 +24,12 @@ services:
       REDIS_HOST_NAME: ${REDIS_HOST_NAME}
       ETHICAPP_API_KEY: ${ETHICAPP_API_KEY}
     depends_on:
-      - RedisContainer
+      - redis
 
   # ---------------------- Celery Worker ---------------------- #
   worker:
     build: 
       context: ./content-analysis
-    container_name: celery-worker
     volumes:
       - .:/app
     command: ['celery', '-A', 'content-analysis.app.celery', 'worker', '-P', 'solo', '-l', 'info', '-Q', 'celery', '-n', '"celery"']
@@ -40,4 +38,4 @@ services:
       ETHICAPP_API_KEY: ${ETHICAPP_API_KEY}
     depends_on:
       - content-analysis
-      - RedisContainer
+      - redis
