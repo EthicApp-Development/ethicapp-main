@@ -25,7 +25,7 @@ services:
       NODE_PORT: ${NODE_PORT}
       ETHICAPP_DOMAIN_NAME: ${ETHICAPP_DOMAIN_NAME}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
-      REDIS_HOST: RedisContainer
+      REDIS_HOST: ethicapp-redis
     restart: "no"
     networks:
       default:
@@ -35,13 +35,13 @@ services:
     volumes:
       - shared-volume:/home/app:rw
     depends_on:
-      - RedisContainer
+      - redis
       - postgres
 
   # ---------------------- Redis Cache Server ---------------------- #
-  RedisContainer:
+  redis:
     image: redis
-    container_name: ethicapp-redis
+    container_name: "ethicapp-redis"
 
   # ---------------------- Admin Panel ---------------------- #
   admin-panel:

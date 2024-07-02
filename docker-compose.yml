@@ -28,7 +28,7 @@ services:
       NODE_PORT: ${NODE_PORT}
       ETHICAPP_DOMAIN_NAME: ${ETHICAPP_DOMAIN_NAME}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
-      REDIS_HOST: RedisContainer
+      REDIS_HOST: ethicapp-redis
       CONTENT_ANALYSIS_HOST_NAME: ${CONTENT_ANALYSIS_HOST_NAME}
       CONTENT_ANALYSIS_PORT: ${CONTENT_ANALYSIS_PORT}
       ETHICAPP_HOSTNAME: ${ETHICAPP_HOSTNAME}
@@ -43,7 +43,7 @@ services:
     volumes:
       - "./ethicapp:/home/app:rw"
     depends_on:
-      - RedisContainer
+      - redis
       - postgres
 
  # ---------------------- Admin Panel ---------------------- #
@@ -60,12 +60,12 @@ services:
       default:
     depends_on:
       - node
-      - RedisContainer
+      - redis
 
   # ---------------------- Redis Cache Server ---------------------- #
-  RedisContainer:
+  redis:
     image: redis
-    container_name: ethicapp-redis
+    container_name: "ethicapp-redis"
     ports:
       - "6379:6379"
 
