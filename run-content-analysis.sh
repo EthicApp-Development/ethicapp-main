@@ -2,7 +2,9 @@
 
 # Load environment variables from a .env file if it exists.
 if [ -f .env ]; then
-  export $(cat .env | xargs)
+  set -a
+  . .env
+  set +a
 fi
 
 # See that ETHICAPP_PROJECT_NAME is defined
