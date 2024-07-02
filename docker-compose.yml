@@ -14,7 +14,6 @@ secrets:
 services:
   # ---------------------- Node web app ---------------------- #
   node:
-    container_name: "ethicapp-node"
     build:
       context: ethicapp/
       args:
@@ -48,7 +47,6 @@ services:
 
  # ---------------------- Admin Panel ---------------------- #
   admin-panel:
-    container_name: "ethicapp-admin-panel"
     build:
       context: admin-panel/
       args:
@@ -65,13 +63,11 @@ services:
   # ---------------------- Redis Cache Server ---------------------- #
   redis:
     image: redis
-    container_name: "ethicapp-redis"
     ports:
       - "6379:6379"
 
   # ---------------------- Database ---------------------- #
   postgres:
-    container_name: "ethicapp-postgres"
     build:
       context: postgres-db/
       args:
@@ -100,7 +96,6 @@ services:
 
   # ---------------------- PGAdmin ---------------------- #
   pgadmin:
-    container_name: "ethicapp-pgadmin"
     build:
       context: pgadmin/
       args:

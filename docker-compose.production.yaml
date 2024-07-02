@@ -16,7 +16,6 @@ secrets:
 services:
   # ---------------------- Node web app ---------------------- #
   node:
-    container_name: "ethicapp-node"
     build:
       context: ethicapp/
       dockerfile: production.Dockerfile
@@ -41,11 +40,9 @@ services:
   # ---------------------- Redis Cache Server ---------------------- #
   redis:
     image: redis
-    container_name: "ethicapp-redis"
 
   # ---------------------- Admin Panel ---------------------- #
   admin-panel:
-    container_name: "ethicapp-admin-panel"
     build:
       context: admin-panel/
       dockerfile: production.Dockerfile
@@ -57,7 +54,6 @@ services:
         
   # ---------------------- Nginx ---------------------- #
   nginx:
-    container_name: "ethicapp-nginx"
     build:
       context: web-nginx/
     ports:
@@ -77,7 +73,6 @@ services:
   
   # ---------------------- Database ---------------------- #
   postgres:
-    container_name: "ethicapp-postgres"
     build:
       context: postgres-db/
       args:
