@@ -143,7 +143,7 @@ async function sendContentAnalysisWorkunit(workunit){
     try {
         const contentAnalysisHostName = process.env.CONTENT_ANALYSIS_HOST_NAME;
         const contentAnalysisPort = process.env.CONTENT_ANALYSIS_PORT;
-        const apiKey = process.env.ETHICAPP_API_KEY;
+        const apiKey = process.env.CONTENT_ANALYSIS_API_KEY;
 
         const response = await fetch(`http://${contentAnalysisHostName}:${contentAnalysisPort}/top-worst`, {
             method: 'POST',
@@ -209,8 +209,8 @@ async function contentAnalysis(req, res) {
 function isContentAnalysisAvailable(){
 
     const trueOrFalse = {
-        "True": true,
-        "False": false
+        "true": true,
+        "false": false
     }
     const value = process.env.CONTENT_ANALYSIS_SERVICE;
     return trueOrFalse[value]
