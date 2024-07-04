@@ -39,7 +39,7 @@ def init_worker(**kwargs):
 
 def client_callback(result):
     url = result['context']['callback_url']
-    headers = {'x-api-key': os.environ.get("ETHICAPP_API_KEY")}
+    headers = {'x-api-key': os.environ.get("CONTENT_ANALYSIS_API_KEY")}
     try:
         response = requests.post(url, json=result, headers=headers)
         response.raise_for_status()
