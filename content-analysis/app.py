@@ -24,7 +24,7 @@ celery = make_celery(app)
 def top_worst_embeddings():
     api_key = request.headers.get('x-api-key')
 
-    if api_key is None or api_key != os.environ.get("ETHICAPP_API_KEY"):
+    if api_key is None or api_key != os.environ.get("CONTENT_ANALYSIS_API_KEY"):
         return jsonify({"error": "Unauthorized"}), 401
     
     params = request.get_json()
