@@ -143,10 +143,13 @@ async function sendContentAnalysisWorkunit(workunit){
     try {
         const contentAnalysisHostName = process.env.CONTENT_ANALYSIS_HOST_NAME;
         const contentAnalysisPort = process.env.CONTENT_ANALYSIS_PORT;
+        const apiKey = process.env.ETHICAPP_API_KEY;
+
         const response = await fetch(`http://${contentAnalysisHostName}:${contentAnalysisPort}/top-worst`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'x-api-key': apiKey,
             },
             body: JSON.stringify(workunit)
         });

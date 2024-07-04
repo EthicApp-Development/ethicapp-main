@@ -11,15 +11,20 @@ secrets:
   jwt_token:
     file: ./secrets/jwt_token
 
+volumes:
+  model_data:
+
 services:
   # ---------------------- content-analysis Service ---------------------- #
   content-analysis:
     build: 
       context: ./content-analysis
+      dockerfile: Dockerfile.content-analysis
     ports:
       - "${CONTENT_ANALYSIS_PORT}:${CONTENT_ANALYSIS_PORT}"
     volumes:
       - .:/app
+      - model_data:/app/models
     environment:
       REDIS_HOST_NAME: ${REDIS_HOST_NAME}
       ETHICAPP_API_KEY: ${ETHICAPP_API_KEY}
@@ -30,9 +35,10 @@ services:
   worker:
     build: 
       context: ./content-analysis
+      dockerfile: Dockerfile.worker
     volumes:
       - .:/app
-    command: ['celery', '-A', 'content-analysis.app.celery', 'worker', '-P', 'solo', '-l', 'info', '-Q', 'celery', '-n', '"celery"']
+      - model_data:/app/models
     environment:
       REDIS_HOST_NAME: ${REDIS_HOST_NAME}
       ETHICAPP_API_KEY: ${ETHICAPP_API_KEY}
