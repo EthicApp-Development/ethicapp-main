@@ -81,14 +81,14 @@ describe('POST /api-v2/sessions/users', () => {
       .post(`${API_VERSION_PATH_PREFIX}/sessions`)
       .send({ name: 'Test Session', descr: 'A session for testing', time: new Date(), creator: 1, type: 'A', status: 1 })
       .set('Authorization', `Bearer ${token}`)
-
+    //console.log(sessionRes.body)
     const sessionCode = sessionRes.body.data.code;
     // Add a user to the session
     const userRes = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/sessions/users`)
       .send({ code: sessionCode, user_id: userId })
       .set('Authorization', `Bearer ${token}`);
-
+    //console.log(userRes.body)
     expect(userRes.status).toBe(201);
     expect(userRes.body.data).toHaveProperty('session_id');
     expect(userRes.body.data).toHaveProperty('user_id');
@@ -101,6 +101,7 @@ describe('POST /api-v2/sessions/users', () => {
 
     expect(usersRes.status).toBe(200);
     expect(usersRes.body.data).toContain(userId);
+    //console.log(usersRes.body)
   });
 });
 

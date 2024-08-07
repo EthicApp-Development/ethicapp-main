@@ -46,7 +46,7 @@ router.post('/users', async (req, res) => {
             //console.log("Existe en la base de datos")
             return res.status(201).json({ status: 'success', data: existingUser, message: 'User already exist' });
         }
-        //console.log("no existe")
+        /////////
         const user = await User.create(req.body);
         return res.status(201).json({ status: 'success', data: user });
     } catch (err) {
