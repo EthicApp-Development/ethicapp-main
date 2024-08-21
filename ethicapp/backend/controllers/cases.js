@@ -8,6 +8,7 @@ const pass = require("../config/keys-n-secrets");
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const authorize = require("../middleware/case-manager");
 
 const dbcon = pass.dbcon
 var DB = null;
@@ -485,7 +486,7 @@ router.delete("/cases/:caseId/documents/:documentId", (req, res) => {
 });
 
 
-router.delete("/cases/:caseId", (req, res) => {
+router.delete("/cases/:caseId", authorize("delete", "Case"), (req, res) => {
     const caseId = req.params.caseId;
 
     const getDocumentsQuery = `
@@ -638,4 +639,92 @@ router.post("/cases/:caseId/clone", (req, res) => {
         });
 });
 
+router.get("/desings_docs/", (req, res) => {
+    const sql = `
+    SELECT * FROM designs_documents
+    `;
+    const db = getDBInstance(dbcon);
+
+    let result;
+    const qry = db.query(sql,(err,res) =>{
+        if(res != null){
+            result = JSON.stringify(res.rows);  
+        }
+    });;
+
+    qry.on("end", function () {
+        res.end('{"status":"ok", "result":'+result+"}");
+    });
+    qry.on("error", function(err){
+        console.error(`Fatal error on the SQL query "${sql}"`);
+        console.error(err);
+        res.end('{"status":"err"}');
+    });
+
+});
+
+
+router.get("/users/", (req, res) => {
+    const sql = `
+    SELECT * FROM users
+    `;
+    const db = getDBInstance(dbcon);
+
+    let result;
+    const qry = db.query(sql,(err,res) =>{
+        if(res != null){
+            result = JSON.stringify(res.rows);  
+        }
+    });;
+
+    qry.on("end", function () {
+        res.end('{"status":"ok", "result":'+result+"}");
+    });
+    qry.on("error", function(err){
+        console.error(`Fatal error on the SQL query "${sql}"`);
+        console.error(err);
+        res.end('{"status":"err"}');
+    });
+
+});
+
+
+router.post("/users/", (req, res) => {
+    const { rut, pass, name, lastname, mail, sex, role } = req.body;
+    
+    // Crear un hash de la contraseña
+    const passcr = crypto.createHash("md5").update(pass).digest("hex");
+    
+    const fullname = `${name} ${lastname}`;
+    
+    const sql = `
+    INSERT INTO users (rut, pass, name, mail, sex, role)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING *
+    `;
+    
+    const db = getDBInstance(dbcon);
+    
+    const values = [rut, passcr, fullname, mail, sex, role];
+    
+    let result;
+    const qry = db.query(sql, values, (err, res) => {
+        if (res != null) {
+            result = JSON.stringify(res.rows[0]);
+        }
+    });
+
+    qry.on("end", function () {
+        res.end('{"status":"ok", "result":' + result + "}");
+    });
+    
+    qry.on("error", function(err) {
+        console.error(`Fatal error on the SQL query "${sql}"`);
+        console.error(err);
+        res.end('{"status":"err"}');
+    });
+});
+
+
+    
 module.exports = router;
