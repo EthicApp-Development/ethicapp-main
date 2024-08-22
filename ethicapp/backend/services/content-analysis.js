@@ -201,7 +201,7 @@ async function contentAnalysis(req, res) {
             console.error("Error processing content analysis:", error);
         }
     } else {
-        res.status(400).send('No comment provided');
+        console.warn('No comment provided for content analysis');
     }
 }
 
@@ -218,14 +218,9 @@ function isContentAnalysisAvailable(){
 
 function initializeContentAnalysis(req, res) {
     try {
-        if (isContentAnalysisAvailable()) {
-            contentAnalysis(req, res);
-        } else {
-            res.status(503).send('Content analysis not available');
-        }
+        contentAnalysis(req, res);
     } catch (error) {
         console.error('Error running content analysis:', error);
-        res.status(500).send('Internal Server Error');
     }
 }
 

@@ -5,7 +5,7 @@ let router = express.Router();
 let rpg = require("../db/rest-pg");
 let pass = require("../config/keys-n-secrets");
 let socket = require("../config/socket.config");
-const {initializeContentAnalysis} = require("../services/content-analysis");
+const {initializeContentAnalysis, isContentAnalysisAvailable} = require("../services/content-analysis");
 
 let sesStatusCache = {};
 
@@ -339,7 +339,9 @@ router.post("/get-answers", rpg.multiSQL({
 
 router.post("/send-diff-selection", (req, res, next) => {
     
-    initializeContentAnalysis(req, res);
+    if (isContentAnalysisAvailable()){
+        initializeContentAnalysis(req, res);
+    }    
 
     return rpg.execSQL({
         dbcon: pass.dbcon,
