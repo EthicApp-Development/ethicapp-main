@@ -9,6 +9,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const authorize = require("../middleware/case-manager");
+const { get } = require("http");
+const { on } = require("events");
 
 const dbcon = pass.dbcon
 var DB = null;
@@ -188,8 +190,6 @@ router.get("/users/:userId/cases", (req, res) => {
 
 router.get("/cases", (req, res) => {
 
-    console.log(req)
-
     const sql = `
     SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id,
            ARRAY_AGG(DISTINCT jsonb_build_object('id', tt.topic_tag_id, 'name', tt.name)) AS topic_tags, 
@@ -203,8 +203,10 @@ router.get("/cases", (req, res) => {
     `;
     const db = getDBInstance(dbcon);
 
+    console.log(db);
     db.query(sql)
         .then(result => {
+            console.log(result);
             const _cases = result.rows.map(row => {
                 return {
                     case_id: row.case_id,
@@ -665,27 +667,12 @@ router.get("/desings_docs/", (req, res) => {
 
 
 router.get("/users/", (req, res) => {
-    const sql = `
-    SELECT * FROM users
-    `;
-    const db = getDBInstance(dbcon);
 
-    let result;
-    const qry = db.query(sql,(err,res) =>{
-        if(res != null){
-            result = JSON.stringify(res.rows);  
-        }
-    });;
-
-    qry.on("end", function () {
-        res.end('{"status":"ok", "result":'+result+"}");
-    });
-    qry.on("error", function(err){
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.end('{"status":"err"}');
-    });
-
+    res.status(200).send("Hello, world!");
+    rpg.multiSQL({
+        dbcon: dbcon,
+        sql: "SELECT * FROM users",
+    })(req, res);
 });
 
 
@@ -724,6 +711,17 @@ router.post("/users/", (req, res) => {
         res.end('{"status":"err"}');
     });
 });
+
+
+
+// const pg = require('pg'); // Asegúrate de requerir el módulo pg
+
+router.get("/hello", (req, res) => {
+   res.send("Hello, world!");
+    
+});
+
+
 
 
     

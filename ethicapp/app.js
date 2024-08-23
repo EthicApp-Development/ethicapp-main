@@ -14,7 +14,7 @@ let assetVersions = require("express-asset-versions");
 
 let index = require("./backend/controllers/index");
 let users = require("./backend/controllers/users");
-let admin_api = require("./backend/controllers/admin-panel-api");
+// let admin_api = require("./backend/controllers/admin-panel-api");
 let sessions = require("./backend/controllers/sessions");
 let visor = require("./backend/controllers/visor");
 let analysis = require("./backend/controllers/analysis");
@@ -26,14 +26,17 @@ let middleware = require("./backend/middleware/validate-session");
 let cases = require("./backend/controllers/cases");
 require("serve-favicon");
 require("./backend/controllers/passport-setup");
-require("dotenv").config();
+require('dotenv').config({ path: '../.env' });
+
 
 let app = express();
 
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
 const corsOptions = {
-    origin:      allowedOrigins,
+    origin: function (origin, callback) {
+        callback(null, true); // Permite todos los orígenes
+    },
     credentials: true,
 };
 
@@ -69,14 +72,14 @@ app.use(session({
     resave:            false,
     store:             new FileStore()
 }));
-app.use("/stats",sss());
+// app.use("/stats",sss());
 app.use(json2xls.middleware);
 
 app.use("/", index);
 app.use("/", users);
-app.use("/", admin_api);
-// app.use("/", cases);
-app.use("/", middleware.verifySession, cases);
+// app.use("/", admin_api);
+app.use("/", cases);
+// app.use("/", middleware.verifySession, cases);
 app.use("/", middleware.verifySession, sessions);
 app.use("/", middleware.verifySession, visor);
 app.use("/", middleware.verifySession, analysis);
