@@ -40,7 +40,8 @@ CREATE TABLE IF NOT EXISTS cases_designs (
 
 
 ALTER TABLE designs_documents
-ADD COLUMN case_id INTEGER REFERENCES cases(case_id);
+ADD COLUMN case_id INTEGER REFERENCES cases(case_id),
+ADD COLUMN name TEXT;
 
 ALTER TABLE designs
 ADD COLUMN case_id INTEGER REFERENCES cases(case_id);
