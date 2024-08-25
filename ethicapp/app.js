@@ -14,7 +14,7 @@ let assetVersions = require("express-asset-versions");
 
 let index = require("./backend/controllers/index");
 let users = require("./backend/controllers/users");
-// let admin_api = require("./backend/controllers/admin-panel-api");
+let adminApi = require("./backend/controllers/admin-panel-api");
 let sessions = require("./backend/controllers/sessions");
 let visor = require("./backend/controllers/visor");
 let analysis = require("./backend/controllers/analysis");
@@ -77,9 +77,8 @@ app.use(json2xls.middleware);
 
 app.use("/", index);
 app.use("/", users);
-// app.use("/", admin_api);
+app.use("/", adminApi);
 app.use("/", cases);
-// app.use("/", middleware.verifySession, cases);
 app.use("/", middleware.verifySession, sessions);
 app.use("/", middleware.verifySession, visor);
 app.use("/", middleware.verifySession, analysis);
