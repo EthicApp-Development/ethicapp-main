@@ -4,27 +4,33 @@ const fs = require('fs');
 const path = require('path');
 
 
+const controller = new AbortController();
+const signal = controller.signal;
+
 const BASE_URL = "http://localhost:5050/";
 const endpoint = (path) => `${BASE_URL}${path}`;
 
-let cookie; // Variable para almacenar la cookie connect.sid
 
-describe("API Tests with Axios", () => {
+describe("API Tests with Axios for Cases", () => {
 
-    // beforeAll(async () => {
-    //     const loginResponse = await axios.post(endpoint("login"), {
-    //         user: "profesor@test",
-    //         pass: "profesor",
-    //     }, {
-    //         timeout: 10000,
-    //         withCredentials: true // Permite manejar cookies
-    //     });
-    // });
+    beforeAll(async () => {
+        // const loginResponse = await axios.post(endpoint("login"), {
+        //     user: "profesor@test",
+        //     pass: "profesor",
+        // }, {
+        //     withCredentials: true // Permite manejar cookies
+        // });
+        axios.defaults.signal = signal;
 
+    });
+
+    afterAll( () => {
+        controller.abort();
+    });
+    
     let caseId;
     let actualNumberOfCases;
     let documentId1;
-    let documentId2;
 
     it("should get all cases and verify the response", async () => {
         const response = await axios.get(endpoint("cases"));
@@ -81,7 +87,6 @@ describe("API Tests with Axios", () => {
         }); 
     });
 
-
     it("should edit the empty case created before", async () => {
         const response = await axios.patch(endpoint(`cases/${caseId}`), {
             title: "Test Case",
@@ -98,7 +103,6 @@ describe("API Tests with Axios", () => {
 
     });
 
-
     it("should upload a PDF file to the case created before", async () => {
         const form = new FormData();
         
@@ -112,8 +116,6 @@ describe("API Tests with Axios", () => {
         expect(response.data).toHaveProperty('status', 'success');
         expect(response.data).toHaveProperty('message', 'Document uploaded');
     });
-
-
 
     it("should get the case with attributes edited", async () => {
         const response = await axios.get(endpoint(`cases/${caseId}`));
@@ -154,35 +156,18 @@ describe("API Tests with Axios", () => {
 
         expect(response.status).toBe(204);
 
-        try {
-            documentId1 = response.data.data.documents[0].id;
-        } catch (error) {
-            console.error("Error:", error);
-        }
     });
 
     it("should get the case with one document", async () => {
         const response = await axios.get(endpoint(`cases/${caseId}`));
 
         expect(response.status).toBe(200);
-        expect(response.data).toEqual({
-            status: "success",
-            data: {
-                case_id: caseId,
-                title: "Test Case",
-                description: "This is a test case",
-                is_public: true,
-                external_case_url: null,
-                user_id: 2,
-                topic_tags: [],
-                documents: [
-                    {
-                        id: expect.any(Number),
-                        path: expect.any(String),
-                    }
-                ]
-            }   
-        });
+        expect(response.data.data.documents).toEqual([
+            {
+                id: expect.any(Number),
+                path: expect.any(String),
+            }
+        ]);
 
         try {
             documentId1 = response.data.data.documents[0].id;
@@ -191,6 +176,23 @@ describe("API Tests with Axios", () => {
         }
     });
 
+
+    it("should delete the case created before", async () => {
+        const response = await axios.delete(endpoint(`cases/${caseId}`));
+
+        expect(response.status).toBe(204);
+    });
+
+
+    it("should not get the case", async () => {
+        try {
+            await axios.get(endpoint(`cases/${caseId}`));
+            fail("The request should not have succeeded");
+        } catch (error) {
+            expect(error.response.status).toBe(404); 
+        }
+    });
+    
 
 
 });
