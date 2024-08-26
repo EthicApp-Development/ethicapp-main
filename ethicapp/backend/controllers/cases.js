@@ -9,8 +9,6 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const authorize = require("../middleware/case-manager");
-const { get } = require("http");
-const { on } = require("events");
 
 const dbcon = pass.dbcon
 var DB = null;
@@ -68,7 +66,7 @@ router.get("/topic-tags/:id", (req, res) => {
 
     qry.on("end", function (result) {
         if (result.rows.length === 0) {
-            res.status(404).json({ status: 'error', message: 'No se encontró el Topico con el ID proporcionado' });
+            res.status(404).json({ status: 'error', message: 'could not find the topic id' });
         } else {
             res.status(200).json({ status: 'success', data: result.rows[0] });
         }
@@ -77,7 +75,7 @@ router.get("/topic-tags/:id", (req, res) => {
     qry.on("error", function (err) {
         console.error(`Fatal error on the SQL query "${sql}"`);
         console.error(err);
-        res.status(500).json({ status: 'error', message: 'Error en la base de datos' });
+        res.status(500).json({ status: 'error', message: '' });
     });
 });
 
@@ -108,16 +106,16 @@ router.delete("/topic-tags/:id", (req, res) => {
 
     qry.on("end", function (result) {
         if (result.rowCount === 0) {
-            res.status(404).json({ status: 'error', message: 'No se encontró el Topico con el ID proporcionado' });
+            res.status(404).json({ status: 'error', message: 'could not find the topic id' });
         } else {
-            res.status(200).json({ status: 'success', message: 'Topico eliminado exitosamente' });
+            res.status(200).json({ status: 'success', message: 'Topic deleted' });
         }
     });
 
     qry.on("error", function (err) {
         console.error(`Fatal error on the SQL query "${sql}"`);
         console.error(err);
-        res.status(500).json({ status: 'error', message: 'Error en la base de datos' });
+        res.status(500).json({ status: 'error', message: 'Error in the DB' });
     });
 });
 
@@ -141,7 +139,7 @@ router.get("/cases-topic-tags", (req, res) => {
     qry.on("error", function(err){
         console.error(`Fatal error on the SQL query "${sql}"`);
         console.error(err);
-        res.end('{"status":"err"}');
+        res.status(500).json({ status: 'error', message: 'Error in the DB' });
     });
 });
 
@@ -183,7 +181,7 @@ router.get("/users/:userId/cases", (req, res) => {
         .catch(err => {
             console.error(`Fatal error on the SQL query "${sql}"`);
             console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error en la base de datos' });
+            res.status(500).json({ status: 'error', message: 'Error in the DB' });
         });
 });
 
@@ -225,7 +223,7 @@ router.get("/cases", (req, res) => {
         .catch(err => {
             console.error(`Fatal error on the SQL query "${sql}"`);
             console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error en la base de datos' });
+            res.status(500).json({ status: 'error', message: 'Error in the DB' });
         });
 });
 
@@ -249,7 +247,7 @@ router.get("/cases/:id", (req, res) => {
     db.query(sql, [caseId])
         .then(result => {
             if (result.rows.length === 0) {
-                res.status(404).json({ status: 'error', message: 'No se encontró el Caso con el ID proporcionado' });
+                res.status(404).json({ status: 'error', message: 'Could not find case with id' });
             } else {
                 const row = result.rows[0];
                 const _case = {
@@ -269,14 +267,15 @@ router.get("/cases/:id", (req, res) => {
         .catch(err => {
             console.error(`Fatal error on the SQL query "${sql}"`);
             console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error en la base de datos' });
+            res.status(500).json({ status: 'error', message: 'Error in the DB' });
         });
 });
 
 
 router.post("/cases", (req, res) => {
     const caseInsertQuery = `
-    INSERT INTO cases DEFAULT VALUES
+    INSERT INTO cases (is_public)
+    VALUES (false)
     RETURNING case_id
     `;
     const db = getDBInstance(dbcon);
@@ -284,11 +283,11 @@ router.post("/cases", (req, res) => {
     db.query(caseInsertQuery)
         .then(result => {
             const caseId = result.rows[0].case_id;
-            res.status(201).json({ status: 'success', message: 'Caso creado exitosamente', caseId: caseId });
+            res.status(201).json({ status: 'success', message: 'Case created', caseId: caseId });
         })
         .catch(err => {
-            console.error("Error al insertar el caso:", err);
-            res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
+            console.error("Error creating case:", err);
+            res.status(500).json({ status: 'error', message: 'Internal server error' });
         });
 });
 
@@ -334,11 +333,11 @@ router.patch("/cases/:caseId", (req, res) => {
             return db.query(caseTopicsInsertQuery, [caseId, ...topic_tag_ids]);
         })
         .then(() => {
-            res.status(200).json({ status: 'success', message: 'Caso actualizado exitosamente' });
+            res.status(200).json({ status: 'success', message: 'Case updated' });
         })
         .catch(err => {
-            console.error("Error al actualizar el caso:", err);
-            res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
+            console.error("Error updating case:", err);
+            res.status(500).json({ status: 'error', message: 'Internal server error' });
         });
 });
 
@@ -354,11 +353,11 @@ router.post("/cases/:caseId/documents", (req, res) => {
     db.query(checkCaseQuery, [caseId])
         .then(result => {
             if (result.rows.length === 0) {
-                return res.status(404).json({ status: 'error', message: 'El caso especificado no existe' });
+                return res.status(404).json({ status: 'error', message: 'Case do not exist' });
             }
             
             if (req.files == null || req.files.pdf == null) {
-                return res.status(400).json({ status: 'error', message: 'No se proporcionó un archivo' });
+                return res.status(400).json({ status: 'error', message: 'No file passed' });
             }
 
             if (!Array.isArray(req.files.pdf)) {
@@ -378,11 +377,11 @@ router.post("/cases/:caseId/documents", (req, res) => {
             
         })
         .then(() => {
-            res.status(201).json({ status: 'success', message: 'Documento creado exitosamente' });
+            res.status(201).json({ status: 'success', message: 'Document uploaded' });
         })
         .catch(err => {
-            console.error("Error al crear el documento:", err);
-            res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
+            console.error("Error creating document: ", err);
+            res.status(500).json({ status: 'error', message: 'Internal server error' });
         });
 });
 
@@ -407,7 +406,8 @@ router.get("/designs/:id/case", (req, res) => {
     db.query(sql, [designId])
         .then(result => {
             if (result.rows.length === 0) {
-                res.status(404).json({ status: 'error', message: 'No se encontró un Caso asociado al diseño con el ID proporcionado' });
+                res.status(404).json({ status: 'error', message: 'Could not find a case associated with the design with the provided ID' });
+                    
             } else {
                 const row = result.rows[0];
                 const _case = {
@@ -427,7 +427,7 @@ router.get("/designs/:id/case", (req, res) => {
         .catch(err => {
             console.error(`Fatal error on the SQL query "${sql}"`);
             console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error en la base de datos' });
+            res.status(500).json({ status: 'error', message: 'Error in the DB' });
         });
 });
 
@@ -450,15 +450,14 @@ router.delete("/cases/:caseId/documents/:documentId", (req, res) => {
     db.query(getDocumentPathQuery, [caseId, documentId])
         .then(result => {
             if (result.rows.length === 0) {
-                res.status(404).json({ status: 'error', message: 'No se encontró el documento con el ID proporcionado' });
-                console.log("No se encontró el documento con el ID proporcionado");
+                res.status(404).json({ status: 'error', message: 'Could not find the document with the provided ID' });
                 return null;
             } else {
                 const documentPath = result.rows[0].path;
                 return db.query(deleteDocumentQuery, [caseId, documentId])
                     .then(deleteResult => {
                         if (deleteResult.rowCount === 0) {
-                            res.status(500).json({ status: 'error', message: 'No se pudo eliminar el documento de la base de datos' });
+                            res.status(500).json({ status: 'error', message: 'Could not delete document from DB' });
                             return null;
                         } else {
                             return documentPath;
@@ -473,22 +472,22 @@ router.delete("/cases/:caseId/documents/:documentId", (req, res) => {
 
                 fs.rmdir(folderPath, { recursive: true }, (err) => {
                     if (err) {
-                        console.error("Error al eliminar la carpeta:", err);
-                        res.status(500).json({ status: 'error', message: 'Error al eliminar la carpeta' });
+                        console.error("Error deleting folder:", err);
+                        res.status(500).json({ status: 'error', message: 'Error deleting folder' });
                     } else {
-                        res.status(200).json({ status: 'success', message: 'Carpeta y sus archivos eliminada exitosamente' });
+                        res.status(204).end();
                     }
                 });
             }
         })
         .catch(err => {
-            console.error("Error al eliminar el documento:", err);
-            res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
+            console.error("Error deleting document:", err);
+            res.status(500).json({ status: 'error', message: 'Internal server error' });
         });
 });
 
 
-router.delete("/cases/:caseId", authorize("delete", "Case"), (req, res) => {
+router.delete("/cases/:caseId", (req, res) => {
     const caseId = req.params.caseId;
 
     const getDocumentsQuery = `
@@ -517,7 +516,7 @@ router.delete("/cases/:caseId", authorize("delete", "Case"), (req, res) => {
             return db.query(deleteDocumentsQuery, [caseId])
                 .then(deleteResult => {
                     if (deleteResult.rowCount === 0 && documentPaths.length > 0) {
-                        res.status(500).json({ status: 'error', message: 'No se pudieron eliminar los documentos de la base de datos' });
+                        res.status(500).json({ status: 'error', message: 'Could not delete document from DB' });
                         return null;
                     } else {
                         return documentPaths;
@@ -531,9 +530,9 @@ router.delete("/cases/:caseId", authorize("delete", "Case"), (req, res) => {
 
                     fs.rmdir(folderPath, { recursive: true }, (err) => {
                         if (err) {
-                            console.error("Error al eliminar la carpeta:", err);
+                            console.error("Error when deleting folder", err);
                         } else {
-                            console.log('Carpeta y sus archivos eliminada exitosamente');
+                            console.log('Folder deleted successfully');
                         }
                     });
                 });
@@ -545,15 +544,15 @@ router.delete("/cases/:caseId", authorize("delete", "Case"), (req, res) => {
             return db.query(deleteCaseQuery, [caseId])
                 .then(deleteResult => {
                     if (deleteResult.rowCount === 0) {
-                        res.status(500).json({ status: 'error', message: 'No se pudo eliminar el caso de la base de datos' });
+                        res.status(500).json({ status: 'error', message: 'Could not delete case' });
                     } else {
-                        res.status(200).json({ status: 'success', message: 'Caso y sus documentos eliminados exitosamente' });
+                        res.status(204).end();
                     }
                 });
         })
         .catch(err => {
-            console.error("Error al eliminar el caso:", err);
-            res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
+            console.error("Error deleting case:", err);
+            res.status(500).json({ status: 'error', message: 'Internal server error' });
         });
 });
 
@@ -623,21 +622,21 @@ router.post("/cases/:caseId/clone", (req, res) => {
 
                             db.query(insertDocumentQuery, [newRelativePath, newCaseId]);
                         } else {
-                            console.error(`El archivo no existe: ${oldFullPath}`);
+                            console.error(`The file do not exist: ${oldFullPath}`);
                         }
                     });
                 })
                 .then(() => {
-                    res.status(201).json({ status: 'success', message: 'Caso clonado exitosamente', newCaseId });
+                    res.status(201).json({ status: 'success', message: 'Case cloned successfully', newCaseId });
                 })
                 .catch(err => {
-                    console.error("Error al clonar los documentos:", err);
-                    res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
+                    console.error("Error cloning documents", err);
+                    res.status(500).json({ status: 'error', message: 'Internal server error' });
                 });
         })
         .catch(err => {
-            console.error("Error al clonar el caso:", err);
-            res.status(500).json({ status: 'error', message: 'Error interno del servidor' });
+            console.error("Error cloning case", err);
+            res.status(500).json({ status: 'error', message: 'Internal server error' });
         });
 });
 
@@ -666,55 +665,6 @@ router.get("/desings_docs/", (req, res) => {
 });
 
 
-router.get("/users/", (req, res) => {
-
-    res.status(200).send("Hello, world!");
-    rpg.multiSQL({
-        dbcon: dbcon,
-        sql: "SELECT * FROM users",
-    })(req, res);
-});
-
-
-router.post("/users/", (req, res) => {
-    const { rut, pass, name, lastname, mail, sex, role } = req.body;
-    
-    // Crear un hash de la contraseña
-    const passcr = crypto.createHash("md5").update(pass).digest("hex");
-    
-    const fullname = `${name} ${lastname}`;
-    
-    const sql = `
-    INSERT INTO users (rut, pass, name, mail, sex, role)
-    VALUES ($1, $2, $3, $4, $5, $6)
-    RETURNING *
-    `;
-    
-    const db = getDBInstance(dbcon);
-    
-    const values = [rut, passcr, fullname, mail, sex, role];
-    
-    let result;
-    const qry = db.query(sql, values, (err, res) => {
-        if (res != null) {
-            result = JSON.stringify(res.rows[0]);
-        }
-    });
-
-    qry.on("end", function () {
-        res.end('{"status":"ok", "result":' + result + "}");
-    });
-    
-    qry.on("error", function(err) {
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.end('{"status":"err"}');
-    });
-});
-
-
-
-// const pg = require('pg'); // Asegúrate de requerir el módulo pg
 
 router.get("/hello", (req, res) => {
    res.send("Hello, world!");
