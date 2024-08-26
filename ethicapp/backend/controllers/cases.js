@@ -385,6 +385,52 @@ router.post("/cases/:caseId/documents", (req, res) => {
         });
 });
 
+router.patch("/designs/:id/case", (req, res) => {
+    const designId = req.params.id;
+    const { caseId } = req.body;
+
+    if (!caseId) {
+        res.status(400).json({ status: 'error', message: 'Case ID is required' });
+    }
+
+    const updateDesignQuery = `
+    UPDATE designs
+    SET case_id = $2
+    WHERE id = $1
+    `;
+    const db = getDBInstance(dbcon);
+
+    db.query(updateDesignQuery, [designId, caseId])
+        .then(() => {
+            res.status(200).json({ status: 'success', message: 'Design updated' });
+        })
+        .catch(err => {
+            console.error("Error updating design:", err);
+            res.status(500).json({ status: 'error', message: 'Internal server error' });
+        });
+});
+
+router.get("/designs/:id", (req, res) => {
+    const designId = req.params.id;
+    const sql = `
+    select * from designs where id = $1
+    `;
+    const db = getDBInstance(dbcon);
+
+    db.query(sql, [designId])
+        .then(result => {
+            if (result.rows.length === 0) {
+                res.status(404).json({ status: 'error', message: 'Could not find a design with the provided ID' });
+            } else {
+                res.status(200).json({ status: 'success', data: result.rows[0] });
+            }
+        })
+        .catch(err => {
+            console.error(`Fatal error on the SQL query "${sql}"`);
+            console.error(err);
+            res.status(500).json({ status: 'error', message: 'Error in the DB' });
+        }); 
+});
 
 router.get("/designs/:id/case", (req, res) => {
     const designId = req.params.id;
@@ -487,7 +533,7 @@ router.delete("/cases/:caseId/documents/:documentId", (req, res) => {
 });
 
 
-router.delete("/cases/:caseId", (req, res) => {
+router.delete("/cases/:caseId", async (req, res) => {
     const caseId = req.params.caseId;
 
     const getDocumentsQuery = `
@@ -507,54 +553,55 @@ router.delete("/cases/:caseId", (req, res) => {
     DELETE FROM cases
     WHERE case_id = $1
     `;
+    const updateDesignsQuery = `
+    UPDATE designs
+    SET case_id = NULL
+    WHERE case_id = $1
+    `;
     const db = getDBInstance();
 
-    db.query(getDocumentsQuery, [caseId])
-        .then(result => {
-            const documentPaths = result.rows.map(row => row.path);
+    try {
+        // Verificar y actualizar los diseños
+        await db.query(updateDesignsQuery, [caseId]);
 
-            return db.query(deleteDocumentsQuery, [caseId])
-                .then(deleteResult => {
-                    if (deleteResult.rowCount === 0 && documentPaths.length > 0) {
-                        res.status(500).json({ status: 'error', message: 'Could not delete document from DB' });
-                        return null;
-                    } else {
-                        return documentPaths;
-                    }
-                });
-        })
-        .then(documentPaths => {
-            if (documentPaths) {
-                documentPaths.forEach(documentPath => {
-                    const folderPath = path.join(pass.uploadPath, path.dirname(documentPath)).split("pdf")[0];
+        // Obtener los documentos asociados al caso
+        const result = await db.query(getDocumentsQuery, [caseId]);
+        const documentPaths = result.rows.map(row => row.path);
 
-                    fs.rmdir(folderPath, { recursive: true }, (err) => {
-                        if (err) {
-                            console.error("Error when deleting folder", err);
-                        } else {
-                            console.log('Folder deleted successfully');
-                        }
-                    });
-                });
+        // Eliminar los documentos asociados al caso
+        const deleteDocumentsResult = await db.query(deleteDocumentsQuery, [caseId]);
+        if (deleteDocumentsResult.rowCount === 0 && documentPaths.length > 0) {
+            return res.status(500).json({ status: 'error', message: 'Could not delete document from DB' });
+        }
 
-                return db.query(deleteCaseTagsQuery, [caseId]);
-            }
-        })
-        .then(() => {
-            return db.query(deleteCaseQuery, [caseId])
-                .then(deleteResult => {
-                    if (deleteResult.rowCount === 0) {
-                        res.status(500).json({ status: 'error', message: 'Could not delete case' });
-                    } else {
-                        res.status(204).end();
-                    }
-                });
-        })
-        .catch(err => {
-            console.error("Error deleting case:", err);
-            res.status(500).json({ status: 'error', message: 'Internal server error' });
+        // Eliminar las carpetas de los documentos
+        documentPaths.forEach(documentPath => {
+            const folderPath = path.join(pass.uploadPath, path.dirname(documentPath)).split("pdf")[0];
+            fs.rmdir(folderPath, { recursive: true }, err => {
+                if (err) {
+                    console.error("Error when deleting folder", err);
+                } else {
+                    console.log('Folder deleted successfully');
+                }
+            });
         });
+
+        // Eliminar las etiquetas del caso
+        await db.query(deleteCaseTagsQuery, [caseId]);
+
+        // Eliminar el caso
+        const deleteCaseResult = await db.query(deleteCaseQuery, [caseId]);
+        if (deleteCaseResult.rowCount === 0) {
+            return res.status(500).json({ status: 'error', message: 'Could not delete case' });
+        }
+
+        res.status(204).end();
+    } catch (err) {
+        console.error("Error deleting case:", err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
 });
+
 
 
 router.post("/cases/:caseId/clone", (req, res) => {
@@ -627,7 +674,7 @@ router.post("/cases/:caseId/clone", (req, res) => {
                     });
                 })
                 .then(() => {
-                    res.status(201).json({ status: 'success', message: 'Case cloned successfully', newCaseId });
+                    res.status(201).json({ status: 'success', message: 'Case cloned', newCaseId });
                 })
                 .catch(err => {
                     console.error("Error cloning documents", err);
