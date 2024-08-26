@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "start": "node ./backend/ethicapp",
-    "test": "jest --detectOpenHandles"
+    "test": "jest --no-cache"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.185.0",
