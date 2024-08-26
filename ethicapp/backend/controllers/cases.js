@@ -687,30 +687,6 @@ router.post("/cases/:caseId/clone", (req, res) => {
         });
 });
 
-router.get("/desings_docs/", (req, res) => {
-    const sql = `
-    SELECT * FROM designs_documents
-    `;
-    const db = getDBInstance(dbcon);
-
-    let result;
-    const qry = db.query(sql,(err,res) =>{
-        if(res != null){
-            result = JSON.stringify(res.rows);  
-        }
-    });;
-
-    qry.on("end", function () {
-        res.end('{"status":"ok", "result":'+result+"}");
-    });
-    qry.on("error", function(err){
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.end('{"status":"err"}');
-    });
-
-});
-
 
 
 router.get("/hello", (req, res) => {
