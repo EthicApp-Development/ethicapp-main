@@ -1,6 +1,10 @@
-const axios = require("axios");
-const exp = require("constants");
-const e = require("express");
+const axios = require('axios');
+const { wrapper } = require('axios-cookiejar-support');
+const { CookieJar } = require('tough-cookie');
+
+const jar = new CookieJar();
+const client = wrapper(axios.create({ jar }));
+
 const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');
@@ -16,13 +20,13 @@ const endpoint = (path) => `${BASE_URL}${path}`;
 describe("API Tests with Axios for Cases", () => {
 
     beforeAll(async () => {
-        // const loginResponse = await axios.post(endpoint("login"), {
-        //     user: "profesor@test",
-        //     pass: "profesor",
-        // }, {
-        //     withCredentials: true // Permite manejar cookies
-        // });
-        axios.defaults.signal = signal;
+        const loginResponse = await client.post(endpoint("login"), {
+            user: "profesor@test",
+            pass: "profesor",
+        }, {
+            withCredentials: true // Permite manejar cookies
+        });
+        client.defaults.signal = signal;
 
     });
 
@@ -39,7 +43,7 @@ describe("API Tests with Axios for Cases", () => {
     let caseUpdated;
 
     it("Should get all cases n1", async () => {
-        const response = await axios.get(endpoint("cases"));
+        const response = await client.get(endpoint("cases"));
 
         expect(response.status).toBe(200);
         expect(response.data).toEqual({
@@ -56,7 +60,7 @@ describe("API Tests with Axios for Cases", () => {
     });
 
     it("Should create an empty case", async () => {
-        const response = await axios.post(endpoint("cases"));
+        const response = await client.post(endpoint("cases"));
 
         expect(response.status).toBe(201); // Verifica que el código de estado sea 200
         expect(response.data).toEqual({
@@ -74,7 +78,7 @@ describe("API Tests with Axios for Cases", () => {
     });
 
     it("Should get the empty case", async () => {
-        const response = await axios.get(endpoint(`cases/${caseId}`));
+        const response = await client.get(endpoint(`cases/${caseId}`));
 
         expect(response.status).toBe(200); // Verifica que el código de estado sea 200
         expect(response.data).toEqual({
@@ -93,7 +97,7 @@ describe("API Tests with Axios for Cases", () => {
     });
 
     it("Should edit the empty case created", async () => {
-        const response = await axios.patch(endpoint(`cases/${caseId}`), {
+        const response = await client.patch(endpoint(`cases/${caseId}`), {
             title: "Test Case",
             description: "This is a test case",
             is_public: true,
@@ -111,10 +115,10 @@ describe("API Tests with Axios for Cases", () => {
     it("Should upload a PDF file to the case created", async () => {
         const form = new FormData();
         
-        form.append('pdf', fs.createReadStream(path.join(__dirname, 'lorem-ipsum-1.pdf'))); 
-        form.append('pdf', fs.createReadStream(path.join(__dirname, 'lorem-ipsum-2.pdf')));
+        form.append('pdf', fs.createReadStream(path.join(__dirname, '../fixtures/static/lorem-ipsum-1.pdf')));
+form.append('pdf', fs.createReadStream(path.join(__dirname, '../fixtures/static/lorem-ipsum-2.pdf')));
 
-        const response = await axios.post(endpoint(`cases/${caseId}/documents`), form);
+        const response = await client.post(endpoint(`cases/${caseId}/documents`), form);
 
         expect(response.status).toBe(201);
         expect(response.data).toHaveProperty('status', 'success');
@@ -122,7 +126,7 @@ describe("API Tests with Axios for Cases", () => {
     });
 
     it("Should get the case with attributes edited", async () => {
-        const response = await axios.get(endpoint(`cases/${caseId}`));
+        const response = await client.get(endpoint(`cases/${caseId}`));
 
         expect(response.status).toBe(200);
         expect(response.data).toEqual({
@@ -156,14 +160,14 @@ describe("API Tests with Axios for Cases", () => {
     });
 
     it("Should delete one document attached to the case", async () => {
-        const response = await axios.delete(endpoint(`cases/${caseId}/documents/${documentId1}`));
+        const response = await client.delete(endpoint(`cases/${caseId}/documents/${documentId1}`));
 
         expect(response.status).toBe(204);
 
     });
 
     it("Should get the case with one document", async () => {
-        const response = await axios.get(endpoint(`cases/${caseId}`));
+        const response = await client.get(endpoint(`cases/${caseId}`));
 
         expect(response.status).toBe(200);
         expect(response.data.data.documents).toEqual([
@@ -182,7 +186,7 @@ describe("API Tests with Axios for Cases", () => {
     });
 
     it("Should clone the case created", async () => {
-        const response = await axios.post(endpoint(`cases/${caseId}/clone`));
+        const response = await client.post(endpoint(`cases/${caseId}/clone`));
 
         expect(response.status).toBe(201);
         expect(response.data).toEqual({
@@ -200,14 +204,14 @@ describe("API Tests with Axios for Cases", () => {
 
 
     it("Should get design seeded", async () => {
-        const response = await axios.get(endpoint(`designs/${designId}`)); // Seeded design
+        const response = await client.get(endpoint(`designs/${designId}`)); // Seeded design
 
         expect(response.status).toBe(200);
     });
 
 
     it("Should associate case to design", async () => {
-        const response = await axios.patch(endpoint(`designs/${designId}/case`), {
+        const response = await client.patch(endpoint(`designs/${designId}/case`), {
             caseId: caseId
         });
 
@@ -220,7 +224,7 @@ describe("API Tests with Axios for Cases", () => {
 
 
     it("Should get the case from design", async () => {
-        const response = await axios.get(endpoint(`designs/${designId}/case`));
+        const response = await client.get(endpoint(`designs/${designId}/case`));
 
         expect(response.status).toBe(200);
         expect(response.data).toEqual({
@@ -231,20 +235,20 @@ describe("API Tests with Axios for Cases", () => {
 
 
     it("Should delete the case created", async () => {
-        const response = await axios.delete(endpoint(`cases/${caseId}`));
+        const response = await client.delete(endpoint(`cases/${caseId}`));
 
         expect(response.status).toBe(204);
     });
 
     it("Should delete the case cloned", async () => {
-        const response = await axios.delete(endpoint(`cases/${caseClonedId}`));
+        const response = await client.delete(endpoint(`cases/${caseClonedId}`));
 
         expect(response.status).toBe(204);
     });
 
     it("Should not get the case created", async () => {
         try {
-            await axios.get(endpoint(`cases/${caseId}`));
+            await client.get(endpoint(`cases/${caseId}`));
             fail("The request Should not have succeeded");
         } catch (error) {
             expect(error.response.status).toBe(404); 
@@ -253,7 +257,7 @@ describe("API Tests with Axios for Cases", () => {
 
     it("Should not get the case cloned", async () => {
         try {
-            await axios.get(endpoint(`cases/${caseClonedId}`));
+            await client.get(endpoint(`cases/${caseClonedId}`));
             fail("The request Should not have succeeded");
         } catch (error) {
             expect(error.response.status).toBe(404); 
@@ -261,7 +265,7 @@ describe("API Tests with Axios for Cases", () => {
     });
 
     it("Should get all cases n2", async () => {
-        const response = await axios.get(endpoint("cases"));
+        const response = await client.get(endpoint("cases"));
 
         expect(response.status).toBe(200);
         expect(response.data).toEqual({
