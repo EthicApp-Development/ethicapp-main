@@ -12,6 +12,7 @@
     "@casl/ability": "^6.7.1",
     "aws-sdk": "^2.1230.0",
     "axios": "^1.7.5",
+    "axios-cookiejar-support": "^5.0.2",
     "body-parser": "^1.20.0",
     "checklist-model": "1.0.0",
     "cookie-parser": "~1.4.6",
@@ -37,7 +38,8 @@
     "serve-favicon": "^2.5.0",
     "session-file-store": "^1.5.0",
     "simple-stats-server": "0.0.5",
-    "socket.io": "4.5.2"
+    "socket.io": "4.5.2",
+    "tough-cookie": "^4.1.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
