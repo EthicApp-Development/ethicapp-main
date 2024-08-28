@@ -121,6 +121,13 @@ function TeacherAccountRequests(props) {
                             {translation("teacherAccountRequests.see_account")}
                           </Button>
                         </TableCell>
+                        <TableCell>
+                        <Link to={`/admin/teacher_account_request/${request.id}`} style={{ textDecoration: 'none' }}>
+                          <Button variant="contained" color="primary">
+                            {translation("teacherAccountRequests.see_request")}
+                          </Button>
+                        </Link>
+                        </TableCell>
                       </>
                     )}
                   </TableRow>
