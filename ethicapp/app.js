@@ -70,7 +70,7 @@ app.use(session({
     secret:            "ssshhh",
     saveUninitialized: false,
     resave:            false,
-    store:             new FileStore()
+    store:             new FileStore(),
 }));
 // app.use("/stats",sss());
 app.use(json2xls.middleware);
@@ -78,7 +78,7 @@ app.use(json2xls.middleware);
 app.use("/", index);
 app.use("/", users);
 app.use("/", adminApi);
-app.use("/", cases);
+app.use("/", middleware.verifySession, cases);
 app.use("/", middleware.verifySession, sessions);
 app.use("/", middleware.verifySession, visor);
 app.use("/", middleware.verifySession, analysis);
