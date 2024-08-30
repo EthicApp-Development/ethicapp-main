@@ -1,0 +1,49 @@
+# --------------------------------------------------------------------------------------------------
+# DEVELOPMENT docker-compose.
+# --------------------------------------------------------------------------------------------------
+
+version: "3.9"
+
+networks:
+  default:
+
+secrets:
+  jwt_token:
+    file: ./secrets/jwt_token
+
+volumes:
+  model_data:
+
+services:
+  # ---------------------- content-analysis Service ---------------------- #
+  content-analysis:
+    container_name: content-analysis
+    build: 
+      context: ./content-analysis
+      dockerfile: Dockerfile.content-analysis
+    ports:
+      - "${CONTENT_ANALYSIS_PORT}:${CONTENT_ANALYSIS_PORT}"
+    volumes:
+      - .:/app
+      - model_data:/app/models
+    environment:
+      REDIS_HOST_NAME: ${REDIS_HOST_NAME}
+      CONTENT_ANALYSIS_API_KEY: ${CONTENT_ANALYSIS_API_KEY}
+    depends_on:
+      - redis
+
+  # ---------------------- Celery Worker ---------------------- #
+  worker:
+    container_name: celery-worker
+    build: 
+      context: ./content-analysis
+      dockerfile: Dockerfile.worker
+    volumes:
+      - .:/app
+      - model_data:/app/models
+    environment:
+      REDIS_HOST_NAME: ${REDIS_HOST_NAME}
+      CONTENT_ANALYSIS_API_KEY: ${CONTENT_ANALYSIS_API_KEY}
+    depends_on:
+      - content-analysis
+      - redis

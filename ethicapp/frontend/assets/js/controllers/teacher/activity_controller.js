@@ -9,11 +9,15 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
     self.init =function(){
         self.selectedSes = {};
         self.launchDesignId = self.launchId.id;
+        self.checkContentAnalysisAvailability();
     };
 
     //Create Activity from launch activity
-    self.createSession = function(dsgnName, dsgndescr, dsgntype, dsgnid){
-
+    self.createSession = function(dsgnName, dsgndescr, dsgntype, dsgnid, additionalConfig){
+        console.log("config", additionalConfig);
+        if (!additionalConfig){
+            additionalConfig = {}
+        }
         self.showSpinner = true;
 
         $http({
@@ -22,7 +26,7 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
             self.error = !data.result;
             console.log(self.error);
             if(data.result){
-                var postdata = { name: dsgnName, descr: dsgndescr, type: dsgntype};
+                var postdata = { name: dsgnName, descr: dsgndescr, type: dsgntype, additionalConfig: additionalConfig};
                 $http({
                     url: "add-session-activity", method: "post", data: postdata
                 }).success(function (data) {
@@ -95,8 +99,6 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
                     self.acceptGroups(stageid);
                 }
                 */
-                    console.log(self.selectedSes);
-                    console.log("TYPE:",self.selectedSes.type);
                     if (design.type == "semantic_differential") {
                         var counter = 1;
                         for(var question of phase.questions){
@@ -196,5 +198,20 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
         self.shared.updateSesData();
         Notification.success("Actividad copiada!");
     };
+
+    self.checkContentAnalysisAvailability = function() {
+    $http.post('/content-analysis-availability')
+        .then(function(response) {
+            if (response.status === 200) {
+                self.isContentAnalysisEnable = true;
+            } else {
+                self.isContentAnalysisEnable = false;
+            }
+        })
+        .catch(function(error) {
+            self.isContentAnalysisEnable = false;
+        });
+    };
+
     self.init();
 };

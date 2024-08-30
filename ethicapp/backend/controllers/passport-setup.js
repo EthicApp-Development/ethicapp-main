@@ -112,7 +112,7 @@ let callbackURL;
 if (domain_name === 'localhost') {
     callbackURL = `http://localhost:${process.env.NODE_PORT}/google/callback`;
 } else {
-    callbackURL = `http://${domain_name}/google/callback`;
+    callbackURL = `https://${domain_name}/google/callback`;
 }
 
 passport.use(

@@ -1,0 +1,5 @@
+ethicapp/
+admin-panel/
+postgres-db/
+pgadmin/
+docker-compose.yml
