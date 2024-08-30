@@ -33,6 +33,7 @@ const LoginForm = (props) =>{
             type="submit"
             fullWidth
             variant="contained"
+            style={{textTransform:"none"}}
             sx={{ mt: 3, mb: 2 }}
             >
                 {translation("loginForm.submit")}

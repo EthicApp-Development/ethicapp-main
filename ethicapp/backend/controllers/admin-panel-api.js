@@ -103,7 +103,7 @@ router.post("/report/:type", async (req, res) => {
         const date1 = new Date(initialDate);
         const date2 = new Date(endDate);
         const differenceInMilliseconds = date2 - date1;
-        const millisecondsInMonth = 30.44 * 24 * 60 * 60 * 1000;
+        const millisecondsInMonth = 31 * 24 * 60 * 60 * 1000;
         const differenceInMonths = differenceInMilliseconds / millisecondsInMonth;
         
         switch(type) {

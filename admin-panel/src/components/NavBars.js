@@ -3,6 +3,9 @@ import React, {useState} from "react"
 import {useLocation, Link} from "react-router-dom"
 import Cookies from 'js-cookie';
 
+//ASSETS
+import logo from '../assets/ethicapp-logo.png'
+
 //MUI
 import {styled} from '@mui/material/styles';
 import MuiDrawer from '@mui/material/Drawer';
@@ -129,7 +132,7 @@ export default function NavBar(props){
                   {translation("navbar.title")}
                 </Typography>
                 <Tooltip title={translation("navbar.changeLanguageTooltip")}>
-                  <Button variant="contained" style={{ marginRight: '2rem' }}size="medium" color="success" onClick={()=> handleChangeLanguage()}>
+                  <Button variant="contained" style={{ marginRight: '2rem', textTransform:"none"}}size="medium" color="success" onClick={()=> handleChangeLanguage()}>
                     {translation("navbar.counterLang")}
                   </Button>
                 </Tooltip>
@@ -149,6 +152,7 @@ export default function NavBar(props){
                   px: [1],
                 }}
               >
+                <img src={logo} alt="Logo" style={{height:"40px", right:"25%"}}/>
                 <Tooltip title={translation("navbar.closeBar")}>
                   <IconButton onClick={toggleDrawer}>
                     <ChevronLeftIcon />

@@ -1,4 +1,4 @@
-import React, { useEffect} from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 //Components
@@ -8,9 +8,9 @@ import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
 import LoginForm from '../components/LoginForm';
 import Cookies from 'js-cookie';
-import { useHistory } from 'react-router-dom';
 import { Grid } from '@mui/material';
 import { ApiLogin } from '../components/APICommunication';
+import Toast from '../components/Toast';
 
 //Icons
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
@@ -19,13 +19,16 @@ function Login(props) {
   const translation = props.translation;
   const navigate = useNavigate();
 
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
   useEffect(() => {
     const sessionIdAux = Cookies.get('connect.admin.sid');
 
     if (sessionIdAux) {
       navigate('/admin/');
     }
-  }, []);
+  });
  
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -37,13 +40,15 @@ function Login(props) {
     };
 
     ApiLogin(loginJson).then((response) => {
-      if (response.data["sessionID"]=="ErrorCredential") {
-        alert("Incorrect Credentials");
+      if (response.data["sessionID"]==="ErrorCredential") {
+        setToastMessage(translation("login.error"));
+        setShowToast(true);
         return;
       }
 
-      if (response.data["sessionID"]=="Unauthorized") {
-        alert("User does not have access to Admin Panel");
+      if (response.data["sessionID"]==="Unauthorized") {
+        setToastMessage(translation("login.noAdmin"));
+        setShowToast(true);
         return;
       }
 
@@ -55,6 +60,14 @@ function Login(props) {
     .catch((error) => {
       console.error('Error fetching items:', error);
     });
+  };
+
+  const handleCloseToast = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+
+    setShowToast(false);
   };
 
 
@@ -86,6 +99,7 @@ function Login(props) {
         </Grid>
 
       </Box>
+      <Toast open={showToast} message={toastMessage} onClose={handleCloseToast} severity={0} />
     </Container>
   );
 }

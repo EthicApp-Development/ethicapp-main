@@ -5,8 +5,23 @@ import Container from '@mui/material/Container';
 import PageBase from '../components/PageBase';
 import InstitutionForm from '../components/InstitutionForm';
 import { GetInstitutionForm, UpdateInstitutionForm, UploadInstitutionImage} from '../components/APICommunication';
+import Toast from '../components/Toast';
+
+
 
 function Institution(props) {
+
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastSeverity, setToastSeverity] = useState(0);
+
+  const handleCloseToast = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+  
+    setShowToast(false);
+  };
 
   const translation = props.translation;
 
@@ -47,13 +62,11 @@ function Institution(props) {
 
     const isEmailValid = (email) => {
       // Regular expression for a simple email format validation
-      try {
-        const auxChecker = email.length;
-      } catch (error) {
-        return true;
+      if (email.length) {
+        const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+        return emailRegex.test(email)
       }
-      const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
-      return emailRegex.test(email);
+      return true;
     };
 
     const handleSubmit = (e) => {
@@ -69,14 +82,19 @@ function Institution(props) {
         UpdateInstitutionForm(formData)
         .then((response) => {
           if (response.status === 200) {
-            alert('Success: Form updated successfully');
+            setToastMessage(translation("institution.success"));
+            setToastSeverity(1)
           } else {
-            alert('Error: Form update failed');
+            setToastMessage(translation("institution.error"));
+            setToastSeverity(0)
           }
+          setShowToast(true);
         })
         .catch((error) => {
           console.error('Error updating form:', error);
-          alert('Error: An error occurred while updating the form');
+          setToastMessage(translation("institution.error"));
+          setToastSeverity(0)
+          setShowToast(true);
         });
       } else {
         const formDataFileAux = new FormData();
@@ -93,20 +111,27 @@ function Institution(props) {
           UpdateInstitutionForm(formData)
           .then((response) => {
             if (response.status === 200) {
-              alert('Success: Form updated successfully');
+              setToastMessage(translation("institution.success"));
+              setToastSeverity(1)
             } else {
-              alert('Error: Form update failed');
+              setToastMessage(translation("institution.error"));
+              setToastSeverity(0)
             }
+            setShowToast(true);
           })
           .catch((error) => {
             console.error('Error updating form:', error);
-            alert('Error: An error occurred while updating the form');
+            setToastMessage(translation("institution.error"));
+            setToastSeverity(0)
+            setShowToast(true);
           });
 
         })
         .catch((error) => {
           console.error('Error updating form:', error);
-          alert('Error: An error occurred while updating the form');
+          setToastMessage(translation("institution.error"));
+          setToastSeverity(0)
+          setShowToast(true);
         });
       }
     };
@@ -122,6 +147,7 @@ function Institution(props) {
         handleFileChange={handleFileChange}
         translation={translation}
         />
+        <Toast open={showToast} message={toastMessage} onClose={handleCloseToast} severity={toastSeverity} />
     </Container>
     }/>
   );
