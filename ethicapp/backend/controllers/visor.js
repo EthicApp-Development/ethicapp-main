@@ -5,8 +5,10 @@ let router = express.Router();
 let rpg = require("../db/rest-pg");
 let pass = require("../config/keys-n-secrets");
 let socket = require("../config/socket.config");
+const {initializeContentAnalysis, isContentAnalysisAvailable} = require("../services/content-analysis");
 
 let sesStatusCache = {};
+
 
 function doRedirect (status, res, call){
     console.log(status);
@@ -335,41 +337,47 @@ router.post("/get-answers", rpg.multiSQL({
     sqlParams:   [rpg.param("ses", "ses"), rpg.param("ses", "uid"), rpg.param("post","iteration")]
 }));
 
+router.post("/send-diff-selection", (req, res, next) => {
+    
+    if (isContentAnalysisAvailable()){
+        initializeContentAnalysis(req, res);
+    }    
 
-router.post("/send-diff-selection", rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    WITH ROWS AS (
-        UPDATE differential_selection
-        SET sel = $1,
-            comment = $2,
-            stime = now()
-        WHERE did = $3
-            AND UID = $4
-            AND iteration = $5
-        RETURNING 1
-    )
-    INSERT INTO differential_selection(UID, did, sel, comment, iteration, stime)
-    SELECT $6,
-        $7,
-        $8,
-        $9,
-        $10,
-        now()
-    WHERE 1 not in (
-        SELECT *
-        FROM ROWS
-    )
-    `,
-    sesReqData:  ["uid", "ses"],
-    postReqData: ["did", "sel", "comment", "iteration"],
-    sqlParams:   [
-        rpg.param("post", "sel"), rpg.param("post", "comment"), rpg.param("post", "did"),
-        rpg.param("ses", "uid"), rpg.param("post", "iteration"), rpg.param("ses", "uid"),
-        rpg.param("post", "did"), rpg.param("post", "sel"), rpg.param("post", "comment"),
-        rpg.param("post", "iteration")
-    ]
-}));
+    return rpg.execSQL({
+        dbcon: pass.dbcon,
+        sql: `
+            WITH ROWS AS (
+                UPDATE differential_selection
+                SET sel = $1,
+                    comment = $2,
+                    stime = now()
+                WHERE did = $3
+                    AND UID = $4
+                    AND iteration = $5
+                RETURNING 1
+            )
+            INSERT INTO differential_selection(UID, did, sel, comment, iteration, stime)
+            SELECT $6,
+                $7,
+                $8,
+                $9,
+                $10,
+                now()
+            WHERE 1 not in (
+                SELECT *
+                FROM ROWS
+            )
+        `,
+        sesReqData: ["uid", "ses"],
+        postReqData: ["did", "sel", "comment", "iteration"],
+        sqlParams: [
+            rpg.param("post", "sel"), rpg.param("post", "comment"), rpg.param("post", "did"),
+            rpg.param("ses", "uid"), rpg.param("post", "iteration"), rpg.param("ses", "uid"),
+            rpg.param("post", "did"), rpg.param("post", "sel"), rpg.param("post", "comment"),
+            rpg.param("post", "iteration")
+        ]
+    })(req, res, next);
+});
 
 
 router.post("/get-diff-selection", rpg.multiSQL({

@@ -8,7 +8,7 @@ var debug = require("debug")("ethicapp:server");
 const DEFAULT_PORT = "8080";
 
 // Set web server port
-var port = normalizePort(process.env.PORT || DEFAULT_PORT);
+var port = normalizePort(process.env.NODE_PORT || DEFAULT_PORT);
 app.set("port", port);
 
 // Listen on provided port, on all network interfaces

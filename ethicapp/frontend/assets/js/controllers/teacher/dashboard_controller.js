@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export let DashboardController = ($scope, ActivityStateService,
+export let DashboardController = ($scope, $socket,ActivityStateService,
     $http, $timeout, $uibModal, Notification) => {
     
     var self = $scope;
@@ -9,6 +9,56 @@ export let DashboardController = ($scope, ActivityStateService,
     self.dataDF = [];
     self.dataChatCount = {};
     self.activityState = ActivityStateService;
+    
+
+    self.formatContentAnalysis = function (data) {
+        const stageId = data.stage_id;
+        if (!self.contentAnalysis) {
+            self.contentAnalysis = {};
+        }
+        
+        if (!self.contentAnalysis[stageId]) {
+            self.contentAnalysis[stageId] = {};
+        }
+
+        data.response_selections.forEach((selection) => {
+            const questionId = selection.question_id;
+        
+            if (!self.contentAnalysis[stageId][questionId]) {
+                self.contentAnalysis[stageId][questionId] = {
+                    top: [],
+                    worst: []
+                };
+            }
+        
+            selection.responses.forEach((response) => {
+
+                const responseDict = {
+                    response_text: response.response_text,
+                    did: questionId,
+                    uid: response.user_id
+                };
+
+                if (response.ranking_type === 'top') {
+                    self.contentAnalysis[stageId][questionId].top[response.ranking - 1] = responseDict;
+                } else if (response.ranking_type === 'worst') {
+                    self.contentAnalysis[stageId][questionId].worst[response.ranking - 1] = responseDict;
+                }
+            });
+        });
+    };
+
+    self.init = self.init = function () {
+        $socket.on("contentUpdate", (data) => { // Content Analysis callback socket
+            if(data.data.sesid === self.selectedSes.id){
+                self.formatContentAnalysis(data.data);
+            }
+        });
+    };
+
+    self.selectCurrentQuestion = function(did) {
+        self.selectQuestion = did;
+    };
 
     self.shared.resetGraphs = function () { //THIS HAS TO BE CALLED ON ADMIN
         if (
@@ -79,14 +129,12 @@ export let DashboardController = ($scope, ActivityStateService,
     self.shared.updateState = self.updateState;
 
     self.shared.setIterationIndicator = function(i){
-        console.log("Set iteration Indicatior:",i);
         self.iterationIndicator = i;
         self.updateState();
     };
 
     self.updateStateIni = function () {
         var _postdata2;
-        console.log(self.iterationIndicator);
         self.alumTime = {};
         if (self.selectedSes.type == "R") {
             _postdata2 = {
@@ -141,6 +189,7 @@ export let DashboardController = ($scope, ActivityStateService,
             _postdata2 = {
                 stageid: self.iterationIndicator
             };
+            console.log("datos", _postdata2)
             self.dfsStage = [];
             $http.post("get-differentials-stage", _postdata2).success(function(data) {
                 self.dfsStage = data;
@@ -179,6 +228,13 @@ export let DashboardController = ($scope, ActivityStateService,
                         self.shared.chatByTeam[c.did][c.tmid] = 0;
                     }
                     self.shared.chatByTeam[c.did][c.tmid] += +c.count;
+                });
+            });
+            $http({
+                url: "get-content-analysis", method: "post", data: _postdata2
+            }).success(function (dataArray) {
+                dataArray.forEach(function(data) {
+                    self.formatContentAnalysis(data);
                 });
             });
         }
@@ -800,7 +856,6 @@ export let DashboardController = ($scope, ActivityStateService,
 
                         data.anonNames = {};
                         data.sesid = self.selectedSes.id;
-
                         data.chat = res;
                         let i = 0;
                         let abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -815,11 +870,17 @@ export let DashboardController = ($scope, ActivityStateService,
                         });
 
                         data.stage = self.shared.stagesMap[self.iterationIndicator];
-
                         if(data.stage.type == "team"){
-                            data.arr = self.shared.difTable.filter(e =>
-                                e.tmid == group && !e.group
-                            );
+                            if (group){
+                                data.arr = self.shared.difTable.filter(e =>
+                                    e.tmid == group && !e.group
+                                );
+                            }
+                            else{
+                                data.arr = self.shared.difTable.filter(e =>
+                                    e.uid == uid && !e.group
+                                );
+                            }
                         }
                         else {
                             data.arr = self.shared.difTable.filter(e => e.uid == uid && !e.group);
@@ -1030,4 +1091,5 @@ export let DashboardController = ($scope, ActivityStateService,
         return self.shared.groupByUid[a].index - self.shared.groupByUid[b].index;
     };
 
+    self.init();
 };

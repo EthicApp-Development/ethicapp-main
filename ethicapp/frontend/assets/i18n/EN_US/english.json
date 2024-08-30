@@ -329,7 +329,16 @@
 	"confirmation": "Confirmation",
 	"cancel": "Cancel",
 	"endActivity": "End Activity",
-	"openInNewTab": "Load document in new tab"
+	"openInNewTab": "Load document in new tab",
+	"answers": "Responses",
+	"contentAnalysisTop": "Better justifications",
+	"contentAnalysisWorst": "Worst justifications",
+	"allResponses": "All",
+	"relevantResponses": "Notable",
+	"showOptions": "Show Advanced Options",
+	"hideOptions": "Hide Advanced Options",
+	"contentAnalysis": "Content Analysis",
+	"chooseQuestion": "Select a Question"
 }
 
 

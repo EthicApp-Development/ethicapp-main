@@ -1,9 +1,19 @@
+
+CREATE TABLE content_analysis (
+    id SERIAL PRIMARY KEY,
+    response_selections JSONB,
+    context JSONB,
+    sesid integer REFERENCES sessions(id),
+    stage_id integer
+);
+
+ALTER TABLE sessions ADD COLUMN additional_config JSONB NULL;
+
 CREATE TABLE IF NOT EXISTS topic_tags (
    topic_tag_id serial,
    name text,
    PRIMARY KEY (topic_tag_id)
 );
-
 
 CREATE TABLE IF NOT EXISTS cases (
    case_id serial,
@@ -16,7 +26,6 @@ CREATE TABLE IF NOT EXISTS cases (
    FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
-
 CREATE TABLE IF NOT EXISTS cases_topic_tags (
    case_topic_id serial,
    topic_tag_id INT,
@@ -26,8 +35,6 @@ CREATE TABLE IF NOT EXISTS cases_topic_tags (
    FOREIGN KEY (case_id) REFERENCES cases(case_id)
 );
 
-
-
 CREATE TABLE IF NOT EXISTS cases_designs (
     case_design_id serial,
     case_id INT,
@@ -36,8 +43,6 @@ CREATE TABLE IF NOT EXISTS cases_designs (
     FOREIGN KEY (design_id) REFERENCES designs (id),
     FOREIGN KEY (case_id) REFERENCES cases(case_id)
 );
-
-
 
 ALTER TABLE designs_documents
 ADD COLUMN case_id INTEGER REFERENCES cases(case_id),

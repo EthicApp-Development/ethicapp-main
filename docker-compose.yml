@@ -14,33 +14,39 @@ secrets:
 services:
   # ---------------------- Node web app ---------------------- #
   node:
-    container_name: "ethicapp-node"
     build:
       context: ethicapp/
       args:
         NODE_VERSION: ${NODE_VERSION}
     secrets:
       - jwt_token
+    env_file:
+      - .env
     environment:
       NODE_ENV: development
       NODE_PORT: ${NODE_PORT}
       ETHICAPP_DOMAIN_NAME: ${ETHICAPP_DOMAIN_NAME}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
-      REDIS_HOST: RedisContainer
+      REDIS_HOST: redis
+      CONTENT_ANALYSIS_HOST_NAME: ${CONTENT_ANALYSIS_HOST_NAME}
+      CONTENT_ANALYSIS_PORT: ${CONTENT_ANALYSIS_PORT}
+      ETHICAPP_HOSTNAME: ${ETHICAPP_HOSTNAME}
+      CONTENT_ANALYSIS_API_KEY: ${CONTENT_ANALYSIS_API_KEY}
+      CONTENT_ANALYSIS_SERVICE: ${CONTENT_ANALYSIS_SERVICE}
     restart: "no"
     networks:
       default:
     ports:
       - "${NODE_PORT}:${NODE_PORT}"
+      - "${NODE_DEBUG_PORT}:${NODE_DEBUG_PORT}"
     volumes:
       - "./ethicapp:/home/app:rw"
     depends_on:
-      - RedisContainer
+      - redis
       - postgres
 
  # ---------------------- Admin Panel ---------------------- #
   admin-panel:
-    container_name: "ethicapp-admin-panel"
     build:
       context: admin-panel/
       args:
@@ -52,18 +58,16 @@ services:
       default:
     depends_on:
       - node
-      - RedisContainer
+      - redis
 
   # ---------------------- Redis Cache Server ---------------------- #
-  RedisContainer:
+  redis:
     image: redis
-    container_name: ethicapp-redis
     ports:
       - "6379:6379"
 
   # ---------------------- Database ---------------------- #
   postgres:
-    container_name: "ethicapp-postgres"
     build:
       context: postgres-db/
       args:
@@ -92,7 +96,6 @@ services:
 
   # ---------------------- PGAdmin ---------------------- #
   pgadmin:
-    container_name: "ethicapp-pgadmin"
     build:
       context: pgadmin/
       args:

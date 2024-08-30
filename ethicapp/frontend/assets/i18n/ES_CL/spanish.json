@@ -331,8 +331,16 @@
 	"confirmation": "Confirmación",
 	"cancel": "Cancelar",
 	"endActivity": "Terminar Actividad",
-	"openInNewTab": "Cargar documento en otra pestaña"
-
+	"openInNewTab": "Cargar documento en otra pestaña",
+	"answers": "Respuestas",
+	"contentAnalysisTop": "Mejores justificaciones",
+	"contentAnalysisWorst": "Peores justificaciones",
+	"allResponses": "Todas",
+	"relevantResponses": "Relevantes",
+	"showOptions": "Mostrar Opciones Avanzadas",
+	"hideOptions": "Ocultar Opciones Avanzadas",
+	"contentAnalysis": "Análisis de Contenido",
+	"chooseQuestion": "Selecciona una pregunta"
 
 }
 

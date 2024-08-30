@@ -105,7 +105,7 @@ adpp.controller("SesEditorController",
 adpp.controller("NewUsersController", 
     ["$scope", "$http", "Notification", IncomingUsersController]);
 adpp.controller("DashboardController", 
-    ["$scope", "ActivityStateService", "$http", "$timeout", "$uibModal", "Notification", DashboardController]);
+    ["$scope", "$socket","ActivityStateService", "$http", "$timeout", "$uibModal", "Notification", DashboardController]);
 adpp.controller("MapSelectionModalController", 
     ["$scope", "$uibModalInstance", MapSelectionModalController]);
 adpp.controller("ConfirmModalController", 
