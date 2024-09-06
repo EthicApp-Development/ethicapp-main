@@ -66,15 +66,26 @@ docker-compose up --detach postgres
 
 # Initialise Sequelize
 echo "Inicializando Sequelize..."
-npx sequelize-cli init
 
-# Execute migrations
+cd ./ethicapp   # Cambia a la carpeta ethicapp
+echo "cambiando a la carpeta ethicapp"
+
+echo "instalando paquetes en la carpeta ethicapp"
+npm install
+#npx sequelize-cli --help # verifica que la instalacion sea correcta
+
 echo "Ejecutando migraciones de Sequelize..."
+cd ./backend/api/v2
+
+npx sequelize-cli db:migrate:undo
 npx sequelize-cli db:migrate
 
-# Insert initial data
 echo "Insertando datos iniciales..."
-# Puedes escribir un script de inserción de datos en SQL o usar herramientas de Sequelize para insertar datos programáticamente.
+npx sequelize-cli db:seed:all
+
+# Volver a la carpeta original (opcional)
+cd ./../../../..
+# ./ethicapp/backend/api/v2/
 
 
 rm ${TempComposeFilePath}
