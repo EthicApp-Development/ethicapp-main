@@ -527,27 +527,32 @@ router.post("/design-lock", rpg.multiSQL({
 }));
 
 
-router.post("/update-design", (req, res) => {
-    var uid = req.session.uid;
-    var id = req.body.id;
-    var sql = `
-    UPDATE DESIGNS
-    SET design = '${JSON.stringify(req.body.design)}'
-    WHERE creator = ${uid}
-        AND id = ${id}
-    `;
-    var db = getDBInstance(pass.dbcon);
-    var qry;
-    qry = db.query(sql);
-    qry.on("end", function () {
-        res.end('{"status":"ok"}');
-    });
-    qry.on("error", function(err){
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.end('{"status":"err"}');
-    });
+router.post("/update-design", async (req, res) => {
+    try {
+        const uid = req.session.uid;
+        const id = req.body.id;
+        const case_id = req.body.case_id;
+        const design = JSON.stringify(req.body.design);
+        
+        const sql = `
+        UPDATE DESIGNS
+        SET design = $1, case_id = $2
+        WHERE creator = $3
+          AND id = $4
+        `;
+
+        const db = getDBInstance(pass.dbcon);
+        
+        // Ejecutamos la consulta usando parámetros preparados
+        await db.query(sql, [design, case_id, uid, id]);
+
+        res.json({ status: "ok" });
+    } catch (err) {
+        console.error(`Error fatal en la consulta SQL: ${err.message}`);
+        res.json({ status: "err" });
+    }
 });
+
 
 
 router.post("/delete-design", (req, res) => {

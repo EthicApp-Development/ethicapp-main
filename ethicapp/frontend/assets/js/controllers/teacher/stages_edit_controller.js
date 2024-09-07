@@ -1,7 +1,10 @@
 /*eslint func-style: ["error", "expression"]*/
+
+import { formatDate as _formatDate} from "../../helpers/date-formatter.js"
+
 export let StagesEditController = ($scope, DesignStateService,
     ActivityStateService, 
-    $filter, $http, Notification, $timeout) => {
+    $filter, $http, Notification, $timeout, $uibModal, $window, CaseService) => {
     console.log("StagesEditController Initializated");
     var self = $scope;
     self.designId = DesignStateService.designState;
@@ -14,6 +17,72 @@ export let StagesEditController = ($scope, DesignStateService,
             //name: self.flang(k1) + (k2 == null ? "" : " " + self.flang(k2)) FIX TRANSLATION BUG
         };
     };
+
+    self.case = null;
+
+
+    self.saveMe = function () {
+      console.log("saveMe");
+    };
+
+    self.formatDate = function(date) {
+        return _formatDate(date);
+    };
+
+    self.initCase = () => {
+      console.log("initCase");
+      CaseService.getCaseFromDesign(self.designId.id).then((response) => {
+        if (!response || !response.data || !response.data.result) {
+          return;
+        }
+        self.case = response.data.result;
+      })
+    };
+
+    self.viewFile = ($event, path) => {
+        $event.preventDefault();
+        const url = path;
+        $window.open(url, '_blank');
+    }
+
+    self.viewCase = (caseId) => {
+      CaseService.readOnly = true;
+      CaseService.getCase(caseId).then((response) => {
+          self.selectView("caseEditor");
+      });
+    }
+
+    self.removeCase = () => {
+      self.case = null;
+    }
+
+
+
+    self.openModalCase = function () {
+      var modalInstance = $uibModal.open({
+        templateUrl: "views/partials/teacher/modal-select-case.html",
+        controller: "CasesModalController",
+        controllerAs: "$ctrl",
+      });
+
+      modalInstance.result.then(
+        function (result) {
+          console.log("Modal cerrado con resultado:", result);
+        //   CaseService.attachCaseToDesign(result, self.designId.id).then(
+        //     (response) => {}
+        //   );
+          CaseService.getCase(result).then((response) => {
+            self.case = response.data.result;
+          });
+        },
+        function () {
+          console.log("Modal cerrado");
+        }
+      );
+    };
+  
+
+
 
     self.currentStage = 0; //index of stage
     self.currentQuestion = 0; //index of current question
@@ -294,7 +363,7 @@ export let StagesEditController = ($scope, DesignStateService,
     self.updateDesign = function() {
         self.error = self.checkDesign();
         if (!self.error) {
-            var postdata = {"design": self.design, "id": self.designId.id};
+            var postdata = {"design": self.design, "id": self.designId.id, case_id: self.case ? self.case.case_id : null};
             $http.post("update-design", postdata).then(function(response) {
                 if (response.data.status == "ok") {
                     self.saved = true;

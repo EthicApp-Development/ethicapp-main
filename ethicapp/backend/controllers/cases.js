@@ -1,20 +1,18 @@
 "use strict";
 
 const express = require("express");
-const rpg = require("../db/rest-pg");
 const pg = require("pg");
 const router = express.Router();
 const pass = require("../config/keys-n-secrets");
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const authorize = require("../middleware/case-manager");
+const authorize = require("../middleware/case-abilities");
+
 
 const dbcon = pass.dbcon
 var DB = null;
 
-
-var DB = null;
 function getDBInstance(dbcon) {
     if(DB == null) {
         DB = new pg.Client(dbcon);
@@ -30,252 +28,305 @@ function getDBInstance(dbcon) {
 
 // TODO: With req.user
 
-router.get("/topic-tags", (req, res) => {
-    const sql = `
-    SELECT * FROM topic_tags
-    `;
-    const db = getDBInstance(dbcon);
+// router.get("/topic-tags", (req, res) => {
+//     const sql = `
+//     SELECT * FROM topic_tags
+//     `;
+//     const db = getDBInstance(dbcon);
 
-    let result;
-    const qry = db.query(sql,(err,res) =>{
-        if(res != null){
-            result = JSON.stringify(res.rows);  
-        }
-    });;
+//     let result;
+//     const qry = db.query(sql,(err,res) =>{
+//         if(res != null){
+//             result = JSON.stringify(res.rows);  
+//         }
+//     });;
 
-    qry.on("end", function () {
-        res.end('{"status":"ok", "result":'+result+"}");
-    });
-    qry.on("error", function(err){
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.end('{"status":"err"}');
-    });
-});
-
-
-router.get("/topic-tags/:id", (req, res) => {
-    const topicTagId = req.params.id;
-    const sql = `
-    SELECT * FROM topic_tags
-    WHERE topic_tag_id = $1
-    `;
-    const db = getDBInstance(dbcon);
-
-    const qry = db.query(sql, [topicTagId]);
-
-    qry.on("end", function (result) {
-        if (result.rows.length === 0) {
-            res.status(404).json({ status: 'error', message: 'could not find the topic id' });
-        } else {
-            res.status(200).json({ status: 'success', data: result.rows[0] });
-        }
-    });
-
-    qry.on("error", function (err) {
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.status(500).json({ status: 'error', message: '' });
-    });
-});
+//     qry.on("end", function () {
+//         res.end('{"status":"ok", "result":'+result+"}");
+//     });
+//     qry.on("error", function(err){
+//         console.error(`Fatal error on the SQL query "${sql}"`);
+//         console.error(err);
+//         res.end('{"status":"err"}');
+//     });
+// });
 
 
-router.post("/topic-tags", (req, res) => {
-    const { name } = req.body;
-    const sql = `
-    INSERT INTO topic_tags (name)
-    VALUES ('${name}')
-    `;
+// router.get("/topic-tags/:id", (req, res) => {
+//     const topicTagId = req.params.id;
+//     const sql = `
+//     SELECT * FROM topic_tags
+//     WHERE topic_tag_id = $1
+//     `;
+//     const db = getDBInstance(dbcon);
 
-    rpg.execSQL({
-        dbcon: dbcon,
-        sql:   sql
-    })(req, res);
-});
+//     const qry = db.query(sql, [topicTagId]);
 
+//     qry.on("end", function (result) {
+//         if (result.rows.length === 0) {
+//             res.status(404).json({ status: 'error', message: 'could not find the topic id' });
+//         } else {
+//             res.status(200).json({ status: 'success', result: result.rows[0] });
+//         }
+//     });
 
-router.delete("/topic-tags/:id", (req, res) => {
-    const topicTagId = req.params.id;
-    const sql = `
-    DELETE FROM topic_tags
-    WHERE topic_tag_id = $1
-    `;
-    const db = getDBInstance(dbcon);
-
-    const qry = db.query(sql, [topicTagId]);
-
-    qry.on("end", function (result) {
-        if (result.rowCount === 0) {
-            res.status(404).json({ status: 'error', message: 'could not find the topic id' });
-        } else {
-            res.status(200).json({ status: 'success', message: 'Topic deleted' });
-        }
-    });
-
-    qry.on("error", function (err) {
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.status(500).json({ status: 'error', message: 'Error in the DB' });
-    });
-});
+//     qry.on("error", function (err) {
+//         console.error(`Fatal error on the SQL query "${sql}"`);
+//         console.error(err);
+//         res.status(500).json({ status: 'error', message: '' });
+//     });
+// });
 
 
-router.get("/cases-topic-tags", (req, res) => {
-    const sql = `
-    SELECT * FROM cases_topic_tags
-    `;
-    const db = getDBInstance(dbcon);
+// router.post("/topic-tags", (req, res) => {
+//     const { name } = req.body;
+//     const sql = `
+//     INSERT INTO topic_tags (name)
+//     VALUES ('${name}')
+//     `;
 
-    let result;
-    const qry = db.query(sql,(err,res) =>{
-        if(res != null){
-            result = JSON.stringify(res.rows);  
-        }
-    });;
-
-    qry.on("end", function () {
-        res.end('{"status":"ok", "result":'+result+"}");
-    });
-    qry.on("error", function(err){
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.status(500).json({ status: 'error', message: 'Error in the DB' });
-    });
-});
+//     rpg.execSQL({
+//         dbcon: dbcon,
+//         sql:   sql
+//     })(req, res);
+// });
 
 
-router.get("/users/:userId/cases", (req, res) => {
-    const userId = req.params.userId;
+// router.delete("/topic-tags/:id", (req, res) => {
+//     const topicTagId = req.params.id;
+//     const sql = `
+//     DELETE FROM topic_tags
+//     WHERE topic_tag_id = $1
+//     `;
+//     const db = getDBInstance(dbcon);
 
-    const sql = `
-    SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id,
-           ARRAY_AGG(DISTINCT jsonb_build_object('id', tt.topic_tag_id, 'name', tt.name)) AS topic_tags, 
-           ARRAY_AGG(DISTINCT dd.id) AS document_ids, 
-           ARRAY_AGG(DISTINCT dd.path) AS document_paths
+//     const qry = db.query(sql, [topicTagId]);
+
+//     qry.on("end", function (result) {
+//         if (result.rowCount === 0) {
+//             res.status(404).json({ status: 'error', message: 'could not find the topic id' });
+//         } else {
+//             res.status(200).json({ status: 'success', message: 'Topic deleted' });
+//         }
+//     });
+
+//     qry.on("error", function (err) {
+//         console.error(`Fatal error on the SQL query "${sql}"`);
+//         console.error(err);
+//         res.status(500).json({ status: 'error', message: 'Error in the DB' });
+//     });
+// });
+
+
+// router.get("/cases-topic-tags", (req, res) => {
+//     const sql = `
+//     SELECT * FROM cases_topic_tags
+//     `;
+//     const db = getDBInstance(dbcon);
+
+//     let result;
+//     const qry = db.query(sql,(err,res) =>{
+//         if(res != null){
+//             result = JSON.stringify(res.rows);  
+//         }
+//     });;
+
+//     qry.on("end", function () {
+//         res.end('{"status":"ok", "result":'+result+"}");
+//     });
+//     qry.on("error", function(err){
+//         console.error(`Fatal error on the SQL query "${sql}"`);
+//         console.error(err);
+//         res.status(500).json({ status: 'error', message: 'Error in the DB' });
+//     });
+// });
+
+
+router.get("/users/:userId/cases", 
+    authorize('read', 'Case', (req) => ({ user_id: req.params.userId })), 
+    (req, res) => {
+        const userId = req.params.userId;
+
+        const sql = `
+        SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id,
+               ARRAY_AGG(DISTINCT jsonb_build_object('id', tt.topic_tag_id, 'name', tt.name)) AS topic_tags, 
+               ARRAY_AGG(DISTINCT dd.id) AS document_ids, 
+               ARRAY_AGG(DISTINCT dd.path) AS document_paths
+        FROM cases c
+        LEFT JOIN cases_topic_tags ct ON c.case_id = ct.case_id
+        LEFT JOIN designs_documents dd ON c.case_id = dd.case_id
+        LEFT JOIN topic_tags tt ON ct.topic_tag_id = tt.topic_tag_id
+        WHERE c.user_id = $1
+        GROUP BY c.case_id
+        `;
+        const db = getDBInstance();
+
+        db.query(sql, [userId])
+            .then(result => {
+                const _cases = result.rows.map(row => {
+                    return {
+                        case_id: row.case_id,
+                        title: row.title,
+                        description: row.description,
+                        is_public: row.is_public,
+                        external_case_url: row.external_case_url,
+                        user_id: row.user_id,
+                        topic_tags: row.topic_tags.filter(tag => tag.id !== null), // Filtrar los tags que no existen
+                        documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
+                    };
+                });
+
+                res.status(200).json({ status: 'ok', result: _cases });
+            })
+            .catch(err => {
+                console.error(`Fatal error on the SQL query "${sql}"`);
+                console.error(err);
+                res.status(500).json({ status: 'error', message: 'Error in the DB' });
+            });
+    }
+);
+
+module.exports = router;
+
+
+router.get("/cases", async (req, res) => {
+    const userId = req.user.id;
+
+    // Consulta actualizada para obtener los casos, incluyendo el nombre del creador
+    const sqlCases = `
+    SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id, c.created_at, c.updated_at, c.rich_text,
+           ARRAY_AGG(DISTINCT jsonb_build_object('name', tt.name)) AS topic_tags, 
+           ARRAY_AGG(DISTINCT jsonb_build_object('id', dd.id, 'path', dd.path, 'name', dd.name)) AS documents,
+           u.name AS creator -- Obtener el nombre del creador
     FROM cases c
     LEFT JOIN cases_topic_tags ct ON c.case_id = ct.case_id
     LEFT JOIN designs_documents dd ON c.case_id = dd.case_id
-    LEFT JOIN topic_tags tt ON ct.topic_tag_id = tt.topic_tag_id
-    WHERE c.user_id = $1
-    GROUP BY c.case_id
+    LEFT JOIN topic_tags tt ON ct.topic_tag_name = tt.name
+    LEFT JOIN users u ON c.user_id = u.id -- Unión con la tabla de usuarios
+    GROUP BY c.case_id, u.name
     `;
-    const db = getDBInstance();
 
-    db.query(sql, [userId])
-        .then(result => {
-            const _cases = result.rows.map(row => {
-                return {
-                    case_id: row.case_id,
-                    title: row.title,
-                    description: row.description,
-                    is_public: row.is_public,
-                    external_case_url: row.external_case_url,
-                    user_id: row.user_id,
-                    topic_tags: row.topic_tags.filter(tag => tag.id !== null), // Filtrar los tags que no existen
-                    documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
-                };
-            });
+    // Consulta para obtener los diseños bloqueados
+    const sqlDesigns = `
+    SELECT case_id, COUNT(*) FILTER (WHERE locked = true) AS locked_count
+    FROM designs
+    GROUP BY case_id
+    `;
 
-            res.status(200).json({ status: 'ok', result: _cases });
-        })
-        .catch(err => {
-            console.error(`Fatal error on the SQL query "${sql}"`);
-            console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error in the DB' });
+    try {
+        const db = getDBInstance(dbcon);
+
+        // Ejecutar las dos consultas SQL en paralelo
+        const [casesResult, designsResult] = await Promise.all([db.query(sqlCases), db.query(sqlDesigns)]);
+
+        // Crear un mapa con los casos bloqueados
+        const designsMap = new Map(designsResult.rows.map(row => [row.case_id, row.locked_count > 0]));
+
+        // Listas para almacenar "mis casos" y "casos públicos"
+        const myCases = [];
+        const publicCases = [];
+
+        // Procesar los casos
+        casesResult.rows.forEach(row => {
+            const _case = {
+                case_id: row.case_id,
+                title: row.title,
+                description: row.description,
+                rich_text: row.rich_text,
+                is_public: row.is_public,
+                external_case_url: row.external_case_url,
+                user_id: row.user_id,
+                creator: row.creator, // Añadir el campo creator
+                topic_tags: row.topic_tags.filter(tag => tag.name !== null), // Filtrar tags nulos
+                documents: row.documents.filter(doc => doc.id !== null), // Filtrar documentos nulos
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+                locked: designsMap.get(row.case_id) || false // Añadir la propiedad locked
+            };
+
+            if (row.user_id === userId) {
+                myCases.push(_case); // Añadir a "mis casos"
+            } else if (row.is_public) {
+                publicCases.push(_case); // Añadir a "casos públicos"
+            }
         });
+
+        // Enviar la respuesta con los casos
+        res.status(200).json({
+            status: 'ok',
+            result: {
+                my_cases: myCases,
+                public_cases: publicCases
+            }
+        });
+
+    } catch (err) {
+        console.error(`Fatal error on the SQL queries`);
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Error in the DB' });
+    }
 });
 
 
-router.get("/cases", (req, res) => {
-
-    const sql = `
-    SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id,
-           ARRAY_AGG(DISTINCT jsonb_build_object('id', tt.topic_tag_id, 'name', tt.name)) AS topic_tags, 
-           ARRAY_AGG(DISTINCT dd.id) AS document_ids, 
-           ARRAY_AGG(DISTINCT dd.path) AS document_paths
-    FROM cases c
-    LEFT JOIN cases_topic_tags ct ON c.case_id = ct.case_id
-    LEFT JOIN designs_documents dd ON c.case_id = dd.case_id
-    LEFT JOIN topic_tags tt ON ct.topic_tag_id = tt.topic_tag_id
-    GROUP BY c.case_id
-    `;
-    const db = getDBInstance(dbcon);
-
-    console.log(db);
-    db.query(sql)
-        .then(result => {
-            console.log(result);
-            const _cases = result.rows.map(row => {
-                return {
-                    case_id: row.case_id,
-                    title: row.title,
-                    description: row.description,
-                    is_public: row.is_public,
-                    external_case_url: row.external_case_url,
-                    user_id: row.user_id,
-                    topic_tags: row.topic_tags.filter(tag => tag.id !== null), // Filtrar los tags que no existen
-                    documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
-                };
-            });
-
-            res.status(200).json({ status: 'ok', result: _cases });
-        })
-        .catch(err => {
-            console.error(`Fatal error on the SQL query "${sql}"`);
-            console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error in the DB' });
-        });
-});
 
 
-router.get("/cases/:id", (req, res) => {
+
+
+router.get("/cases/:id", async (req, res) => {
     const caseId = req.params.id;
     const sql = `
-    SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id,
-           ARRAY_AGG(DISTINCT jsonb_build_object('id', tt.topic_tag_id, 'name', tt.name)) AS topic_tags, 
-           ARRAY_AGG(DISTINCT dd.id) AS document_ids, 
-           ARRAY_AGG(DISTINCT dd.path) AS document_paths
+    SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id, c.created_at, c.updated_at, c.rich_text,
+           ARRAY_AGG(DISTINCT jsonb_build_object('name', tt.name)) AS topic_tags, 
+           ARRAY_AGG(DISTINCT jsonb_build_object('id', dd.id, 'path', dd.path, 'name', dd.name)) AS documents
     FROM cases c
     LEFT JOIN cases_topic_tags ct ON c.case_id = ct.case_id
     LEFT JOIN designs_documents dd ON c.case_id = dd.case_id
-    LEFT JOIN topic_tags tt ON ct.topic_tag_id = tt.topic_tag_id
+    LEFT JOIN topic_tags tt ON ct.topic_tag_name = tt.name
     WHERE c.case_id = $1
     GROUP BY c.case_id
     `;
-    const db = getDBInstance(dbcon);
     
-    db.query(sql, [caseId])
-        .then(result => {
-            if (result.rows.length === 0) {
-                res.status(404).json({ status: 'error', message: 'Could not find case with id' });
-            } else {
-                const row = result.rows[0];
-                const _case = {
-                    case_id: row.case_id,
-                    title: row.title,
-                    description: row.description,
-                    is_public: row.is_public,
-                    external_case_url: row.external_case_url,
-                    user_id: row.user_id,
-                    topic_tags: row.topic_tags.filter(tag => tag.id !== null), // Filtrar los tags que no existen
-                    documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
-                };
+    const db = getDBInstance(dbcon);
 
-                res.status(200).json({ status: 'success', data: _case });
-            }
-        })
-        .catch(err => {
-            console.error(`Fatal error on the SQL query "${sql}"`);
-            console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error in the DB' });
-        });
+    try {
+        // Ejecución de la consulta usando await
+        const result = await db.query(sql, [caseId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Could not find case with id' });
+        }
+
+        const row = result.rows[0];
+        const _case = {
+            case_id: row.case_id,
+            title: row.title,
+            description: row.description,
+            rich_text: row.rich_text,
+            is_public: row.is_public,
+            external_case_url: row.external_case_url,
+            user_id: row.user_id,
+            topic_tags: row.topic_tags.filter(tag => tag.name !== null), // Filtrar los tags nulos
+            documents: row.documents.filter(doc => doc.id !== null), // Filtrar documentos nulos
+            created_at: row.created_at,
+            updated_at: row.updated_at
+        };
+
+        // Respuesta exitosa con el caso
+        res.status(200).json({ status: 'success', result: _case });
+    } catch (err) {
+        console.error(`Fatal error on the SQL query "${sql}"`);
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Error in the DB' });
+    }
 });
+
+
 
 
 router.post("/cases", (req, res) => {
     const caseInsertQuery = `
-    INSERT INTO cases (is_public)
-    VALUES (false)
+    INSERT INTO cases (user_id)
+    VALUES (${req.user.id})
     RETURNING case_id
     `;
     const db = getDBInstance(dbcon);
@@ -292,105 +343,130 @@ router.post("/cases", (req, res) => {
 });
 
 
-router.patch("/cases/:caseId", (req, res) => {
+router.patch("/cases/:caseId", async (req, res) => {
     const caseId = req.params.caseId;
-    const { title, description, external_case_url, is_public, topic_tag_ids, user_id } = req.body;
+    const { title, description, external_case_url, is_public, topic_tags, rich_text } = req.body;
 
-    const updateCaseQuery = `
-    UPDATE cases 
-    SET title = COALESCE($2, title), 
-        description = COALESCE($3, description), 
-        external_case_url = COALESCE($4, external_case_url),
-        is_public = COALESCE($5, is_public),
-        user_id = COALESCE($6, user_id)
-    WHERE case_id = $1
-    `;
     const db = getDBInstance(dbcon);
 
-    db.query(updateCaseQuery, [caseId, title, description, external_case_url, is_public, user_id])
-        .then(() => {
-            if (!topic_tag_ids) {
-                return; // No cambiar los topic tags existentes
-            }
+    try {
+        // Actualizar el caso
+        const updateCaseQuery = `
+        UPDATE cases 
+        SET title = COALESCE($2, title), 
+            description = COALESCE($3, description), 
+            external_case_url = COALESCE($4, external_case_url),
+            is_public = COALESCE($5, is_public),
+            rich_text = COALESCE($6, rich_text)
+        WHERE case_id = $1
+        `;
+        await db.query(updateCaseQuery, [caseId, title, description, external_case_url, is_public, rich_text]);
 
-            // Eliminar todos los topic tags existentes para este caso
-            const deletePreviousTopicsQuery = `
-            DELETE FROM cases_topic_tags 
-            WHERE case_id = $1
-            `;
-            return db.query(deletePreviousTopicsQuery, [caseId]);
-        })
-        .then(() => {
-            if (!topic_tag_ids|| topic_tag_ids.length === 0) {
-                return; // No agregar nuevos topic tags si topic_tag_ids es null o una lista vacía
-            }
+        // Eliminar todos los topic tags existentes para este caso
+        const deletePreviousTopicsQuery = `
+        DELETE FROM cases_topic_tags 
+        WHERE case_id = $1
+        `;
+        await db.query(deletePreviousTopicsQuery, [caseId]);
 
-            // Insertar los nuevos topic tags
-            const caseTopicsInsertQuery = `
-            INSERT INTO cases_topic_tags (case_id, topic_tag_id)
-            VALUES ${topic_tag_ids.map((_, index) => `($1, $${index + 2})`).join(', ')}
-            `;
-            return db.query(caseTopicsInsertQuery, [caseId, ...topic_tag_ids]);
-        })
-        .then(() => {
-            res.status(200).json({ status: 'success', message: 'Case updated' });
-        })
-        .catch(err => {
-            console.error("Error updating case:", err);
-            res.status(500).json({ status: 'error', message: 'Internal server error' });
-        });
-});
-
-
-router.post("/cases/:caseId/documents", (req, res) => {
-    const caseId = req.params.caseId;
-
-    const checkCaseQuery = `
-    SELECT * FROM cases WHERE case_id = $1
-    `;
-    const db = getDBInstance(dbcon);
-
-    db.query(checkCaseQuery, [caseId])
-        .then(result => {
-            if (result.rows.length === 0) {
-                return res.status(404).json({ status: 'error', message: 'Case do not exist' });
-            }
-            
-            if (req.files == null || req.files.pdf == null) {
-                return res.status(400).json({ status: 'error', message: 'No file passed' });
-            }
-
-            if (!Array.isArray(req.files.pdf)) {
-                req.files.pdf = [req.files.pdf]; 
-            } 
-
-            req.files.pdf.forEach(fileData => {
-                const path = fileData.file.split("uploads")[1];
-        
-                const insertDocumentQuery = `
-                INSERT INTO designs_documents (path, case_id)
-                VALUES ($1, $2)
+        if (topic_tags && topic_tags.length > 0) {
+            // Verificar y agregar tags
+            for (const tag of topic_tags) {
+                const tagName = tag.name; // Obtener el nombre del tag
+                // Primero, verificar si el tag ya existe
+                const checkTagQuery = `
+                SELECT name FROM topic_tags 
+                WHERE name = $1
                 `;
-        
-                db.query(insertDocumentQuery, [path, caseId]);
-            });
-            
-        })
-        .then(() => {
-            res.status(201).json({ status: 'success', message: 'Document uploaded' });
-        })
-        .catch(err => {
-            console.error("Error creating document: ", err);
-            res.status(500).json({ status: 'error', message: 'Internal server error' });
-        });
+                let result = await db.query(checkTagQuery, [tagName]);
+
+                // Si no existe, crear el tag
+                if (result.rowCount === 0) {
+                    const insertTagQuery = `
+                    INSERT INTO topic_tags (name)
+                    VALUES ($1)
+                    `;
+                    await db.query(insertTagQuery, [tagName]);
+                }
+            }
+
+            // Insertar los nuevos topic tags en el caso
+            const caseTopicsInsertQuery = `
+            INSERT INTO cases_topic_tags (case_id, topic_tag_name)
+            VALUES ${topic_tags.map((_, index) => `($1, $${index + 2})`).join(', ')}
+            `;
+            await db.query(caseTopicsInsertQuery, [caseId, ...topic_tags.map(tag => tag.name)]);
+        }
+
+        res.status(200).json({ status: 'success', message: 'Case updated' });
+
+    } catch (err) {
+        console.error("Error updating case:", err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
 });
 
-router.patch("/designs/:id/case", (req, res) => {
+
+
+
+router.post("/cases/:caseId/documents", async (req, res) => {
+    const caseId = req.params.caseId;
+    const db = getDBInstance(dbcon);
+
+    try {
+        // Verificamos si el caso existe
+        const checkCaseQuery = `SELECT * FROM cases WHERE case_id = $1`;
+        const caseResult = await db.query(checkCaseQuery, [caseId]);
+
+        if (caseResult.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Case does not exist' });
+        }
+
+        // Verificamos si hay archivos en la solicitud
+        if (!req.files || !req.files.pdf) {
+            return res.status(400).json({ status: 'error', message: 'No file passed' });
+        }
+
+        // Aseguramos que req.files.pdf sea un array
+        const pdfFiles = Array.isArray(req.files.pdf) ? req.files.pdf : [req.files.pdf];
+
+        const insertedDocuments = [];
+
+        // Recorremos cada archivo y lo insertamos en la base de datos
+        for (const fileData of pdfFiles) {
+            console.log("fileData", fileData);
+            const path = fileData.file.split("frontend")[1];
+            const name = path.split("pdf/").pop();
+
+
+            const insertDocumentQuery = `
+                INSERT INTO designs_documents (path, case_id, name)
+                VALUES ($1, $2, $3)
+                RETURNING id, path, name
+            `;
+
+            const insertResult = await db.query(insertDocumentQuery, [path, caseId, name]);
+
+            // Agregamos el documento insertado a la lista de respuestas
+            insertedDocuments.push(insertResult.rows[0]);
+        }
+
+        // Devolvemos la lista de documentos insertados
+        res.status(201).json({ status: 'success', result: insertedDocuments });
+
+    } catch (err) {
+        console.error("Error creating document: ", err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+});
+
+
+router.patch("/designs/:id/case", async (req, res) => {
     const designId = req.params.id;
     const { caseId } = req.body;
 
     if (!caseId) {
-        res.status(400).json({ status: 'error', message: 'Case ID is required' });
+        return res.status(400).json({ status: 'error', message: 'Case ID is required' });
     }
 
     const updateDesignQuery = `
@@ -400,81 +476,86 @@ router.patch("/designs/:id/case", (req, res) => {
     `;
     const db = getDBInstance(dbcon);
 
-    db.query(updateDesignQuery, [designId, caseId])
-        .then(() => {
-            res.status(200).json({ status: 'success', message: 'Design updated' });
-        })
-        .catch(err => {
-            console.error("Error updating design:", err);
-            res.status(500).json({ status: 'error', message: 'Internal server error' });
-        });
+    try {
+        await db.query(updateDesignQuery, [designId, caseId]);
+        res.status(200).json({ status: 'success', message: 'Design updated' });
+    } catch (err) {
+        console.error("Error updating design:", err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
 });
 
-router.get("/designs/:id", (req, res) => {
+
+router.get("/designs/:id", async (req, res) => {
     const designId = req.params.id;
     const sql = `
-    select * from designs where id = $1
+    SELECT * FROM designs WHERE id = $1
     `;
     const db = getDBInstance(dbcon);
 
-    db.query(sql, [designId])
-        .then(result => {
-            if (result.rows.length === 0) {
-                res.status(404).json({ status: 'error', message: 'Could not find a design with the provided ID' });
-            } else {
-                res.status(200).json({ status: 'success', data: result.rows[0] });
-            }
-        })
-        .catch(err => {
-            console.error(`Fatal error on the SQL query "${sql}"`);
-            console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error in the DB' });
-        }); 
+    try {
+        const result = await db.query(sql, [designId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Could not find a design with the provided ID' });
+        }
+
+        res.status(200).json({ status: 'success', result: result.rows[0] });
+    } catch (err) {
+        console.error(`Fatal error on the SQL query "${sql}"`);
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Error in the DB' });
+    }
 });
 
-router.get("/designs/:id/case", (req, res) => {
+
+router.get("/designs/:id/case", async (req, res) => {
     const designId = req.params.id;
     const sql = `
-    SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id,
-           ARRAY_AGG(DISTINCT jsonb_build_object('id', tt.topic_tag_id, 'name', tt.name)) AS topic_tags, 
-           ARRAY_AGG(DISTINCT dd.id) AS document_ids, 
-           ARRAY_AGG(DISTINCT dd.path) AS document_paths
+    SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id, c.created_at, c.updated_at, c.rich_text,
+           ARRAY_AGG(DISTINCT jsonb_build_object('name', tt.name)) AS topic_tags, 
+           ARRAY_AGG(DISTINCT jsonb_build_object('id', dd.id, 'path', dd.path, 'name', dd.name)) AS documents,
+           u.name AS creator -- Obtener el nombre del creador
     FROM cases c
     LEFT JOIN cases_topic_tags ct ON c.case_id = ct.case_id
     LEFT JOIN designs_documents dd ON c.case_id = dd.case_id
-    LEFT JOIN topic_tags tt ON ct.topic_tag_id = tt.topic_tag_id
+    LEFT JOIN topic_tags tt ON ct.topic_tag_name = tt.name
+    LEFT JOIN users u ON c.user_id = u.id -- Unión con la tabla de usuarios para obtener el creador
     LEFT JOIN designs d ON c.case_id = d.case_id
     WHERE d.id = $1
-    GROUP BY c.case_id
+    GROUP BY c.case_id, u.name
     `;
     const db = getDBInstance(dbcon);
-    
-    db.query(sql, [designId])
-        .then(result => {
-            if (result.rows.length === 0) {
-                res.status(404).json({ status: 'error', message: 'Could not find a case associated with the design with the provided ID' });
-                    
-            } else {
-                const row = result.rows[0];
-                const _case = {
-                    case_id: row.case_id,
-                    title: row.title,
-                    description: row.description,
-                    is_public: row.is_public,
-                    external_case_url: row.external_case_url,
-                    user_id: row.user_id,
-                    topic_tags: row.topic_tags.filter(tag => tag.id !== null), // Filtrar los tags que no existen
-                    documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
-                };
 
-                res.status(200).json({ status: 'success', data: _case });
-            }
-        })
-        .catch(err => {
-            console.error(`Fatal error on the SQL query "${sql}"`);
-            console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error in the DB' });
-        });
+    try {
+        const result = await db.query(sql, [designId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Could not find a case associated with the design with the provided ID' });
+        }
+
+        const row = result.rows[0];
+        const _case = {
+            case_id: row.case_id,
+            title: row.title,
+            description: row.description,
+            is_public: row.is_public,
+            rich_text: row.rich_text,
+            external_case_url: row.external_case_url,
+            user_id: row.user_id,
+            creator: row.creator, // Agregar el creador al objeto
+            topic_tags: row.topic_tags.filter(tag => tag.name !== null), // Filtrar los tags nulos
+            documents: row.documents.filter(doc => doc.id !== null), // Filtrar documentos nulos
+            created_at: row.created_at,
+            updated_at: row.updated_at
+        };
+
+        res.status(200).json({ status: 'success', result: _case });
+    } catch (err) {
+        console.error(`Fatal error on the SQL query "${sql}"`);
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Error in the DB' });
+    }
 });
 
 
@@ -514,13 +595,14 @@ router.delete("/cases/:caseId/documents/:documentId", (req, res) => {
         .then(documentPath => {
             if (documentPath) {
                 // Ruta de la carpeta que contiene el archivo
-                const folderPath = path.join(pass.uploadPath, path.dirname(documentPath)).split("pdf")[0];
-
+                const folderPath = path.join("frontend", path.dirname(documentPath)).split("pdf")[0];
+                console.log("folderPath", folderPath);
                 fs.rmdir(folderPath, { recursive: true }, (err) => {
                     if (err) {
                         console.error("Error deleting folder:", err);
                         res.status(500).json({ status: 'error', message: 'Error deleting folder' });
                     } else {
+                        console.log(folderPath, 'deleted successfully');
                         res.status(204).end();
                     }
                 });
@@ -547,7 +629,7 @@ router.delete("/cases/:caseId", async (req, res) => {
     `;
     const deleteCaseTagsQuery = `
     DELETE FROM cases_topic_tags
-    WHERE case_topic_id = $1
+    WHERE case_id = $1
     `;
     const deleteCaseQuery = `
     DELETE FROM cases
@@ -576,7 +658,7 @@ router.delete("/cases/:caseId", async (req, res) => {
 
         // Eliminar las carpetas de los documentos
         documentPaths.forEach(documentPath => {
-            const folderPath = path.join(pass.uploadPath, path.dirname(documentPath)).split("pdf")[0];
+            const folderPath = path.join("frontend", path.dirname(documentPath)).split("pdf")[0];
             fs.rmdir(folderPath, { recursive: true }, err => {
                 if (err) {
                     console.error("Error when deleting folder", err);
@@ -604,94 +686,136 @@ router.delete("/cases/:caseId", async (req, res) => {
 
 
 
-router.post("/cases/:caseId/clone", (req, res) => {
-    const caseId = req.params.caseId;
+router.post("/cases/:case_id/clone", async (req, res) => {
+    const caseId = req.params.case_id;
+    const userId = req.user.id;  // Obtener el user_id del usuario que realiza la petición
     const db = getDBInstance(dbcon);
 
-    // Paso 1: Copiar el caso
+    // Primero, obtener los detalles del caso original y sus documentos y topic tags
     const caseQuery = `
-        INSERT INTO cases (title, description, is_public, external_case_url, user_id)
-        SELECT title, description, is_public, external_case_url, user_id
-        FROM cases
-        WHERE case_id = $1
-        RETURNING case_id
+    SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id, c.rich_text, c.created_at, c.updated_at,
+       ARRAY_AGG(DISTINCT jsonb_build_object('id', dd.id, 'path', dd.path, 'name', dd.name)) AS documents,
+       COALESCE(ARRAY_REMOVE(ARRAY_AGG(DISTINCT ct.topic_tag_name), NULL), '{}') AS topic_tags
+    FROM cases c
+    LEFT JOIN designs_documents dd ON c.case_id = dd.case_id
+    LEFT JOIN cases_topic_tags ct ON c.case_id = ct.case_id
+    WHERE c.case_id = $1
+    GROUP BY c.case_id
+
     `;
 
-    db.query(caseQuery, [caseId])
-        .then(caseResult => {
-            const newCaseId = caseResult.rows[0].case_id;
+    try {
+        // Obtener el caso original
+        const caseResult = await db.query(caseQuery, [caseId]);
+        if (caseResult.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Case not found' });
+        }
 
-            // Paso 2: Copiar las etiquetas
-            const tagsQuery = `
-                INSERT INTO cases_topic_tags (case_id, topic_tag_id)
-                SELECT $2, topic_tag_id
-                FROM cases_topic_tags
-                WHERE case_id = $1
-            `;
+        const originalCase = caseResult.rows[0];
 
-            return db.query(tagsQuery, [caseId, newCaseId])
-                .then(() => newCaseId);
-        })
-        .then(newCaseId => {
-            // Paso 3: Copiar los documentos
-            const documentsQuery = `
-                SELECT id, path
-                FROM designs_documents
-                WHERE case_id = $1
-            `;
+        // Clonar los datos del caso en la tabla 'cases'
+        const newCaseQuery = `
+        INSERT INTO cases (title, description, is_public, external_case_url, user_id, rich_text, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+        RETURNING case_id
+        `;
+        
+        const newCaseResult = await db.query(newCaseQuery, [
+            originalCase.title,
+            originalCase.description,
+            originalCase.is_public,
+            originalCase.external_case_url,
+            userId,  // Usar el user_id del usuario que realiza la petición
+            originalCase.rich_text
+        ]);
 
-            db.query(documentsQuery, [caseId])
-                .then(documentsResult => {
-                    documentsResult.rows.forEach(doc => {
-                        const oldRelativePath = doc.path;
-                        const oldFullPath = path.join('frontend/assets/uploads', oldRelativePath);
+        const newCaseId = newCaseResult.rows[0].case_id;
 
-                        const newHash = crypto.randomBytes(16).toString('hex'); // Generar un nuevo hash para cada archivo
-                        const newDirectory = path.join('frontend/assets/uploads', newHash, 'pdf');
-                        const newRelativePath = path.join(newHash, 'pdf', path.basename(oldRelativePath));
-                        const newFullPath = path.join(newDirectory, path.basename(oldRelativePath));
+        // Clonar los documentos asociados
+        for (const doc of originalCase.documents) {
+            if (doc.id && doc.path) {
+                // Crear una nueva ruta para el archivo
+                const oldRelativePath = doc.path;
+                const oldFullPath = path.join('frontend', oldRelativePath);
 
-                        // Crear el nuevo directorio si no existe
-                        if (!fs.existsSync(newDirectory)) {
-                            fs.mkdirSync(newDirectory, { recursive: true });
-                        }
+                // Generar un nuevo hash para crear una ruta única
+                const newHash = crypto.randomBytes(16).toString('hex');
+                const newDirectory = path.join(pass.uploadPath, newHash, 'pdf');
+                const newRelativePath = path.join("assets", "uploads", newHash, 'pdf', path.basename(oldRelativePath));
+                const newFullPath = path.join(newDirectory, path.basename(oldRelativePath));
 
-                        // Verificar si el archivo existe antes de copiarlo
-                        if (fs.existsSync(oldFullPath)) {
-                            // Clonar el archivo físico
-                            fs.copyFileSync(oldFullPath, newFullPath);
 
-                            // Insertar la nueva ruta del documento en la base de datos
-                            const insertDocumentQuery = `
-                                INSERT INTO designs_documents (path, case_id)
-                                VALUES ($1, $2)
-                            `;
+                console.log('oldRelativePath:', oldRelativePath);
+                console.log('oldFullPath:', oldFullPath);
+                console.log('newDirectory:', newDirectory);
+                console.log('newRelativePath:', newRelativePath);
+                console.log('newFullPath:', newFullPath);
 
-                            db.query(insertDocumentQuery, [newRelativePath, newCaseId]);
-                        } else {
-                            console.error(`The file do not exist: ${oldFullPath}`);
-                        }
-                    });
-                })
-                .then(() => {
-                    res.status(201).json({ status: 'success', message: 'Case cloned', newCaseId });
-                })
-                .catch(err => {
-                    console.error("Error cloning documents", err);
-                    res.status(500).json({ status: 'error', message: 'Internal server error' });
-                });
-        })
-        .catch(err => {
-            console.error("Error cloning case", err);
-            res.status(500).json({ status: 'error', message: 'Internal server error' });
+
+                // Crear el directorio si no existe
+                if (!fs.existsSync(newDirectory)) {
+                    fs.mkdirSync(newDirectory, { recursive: true });
+                }
+
+                // Copiar el archivo al nuevo directorio
+                fs.copyFileSync(oldFullPath, newFullPath);
+
+                // Insertar el documento clonado en la base de datos, asociado al nuevo case_id
+                const insertDocumentQuery = `
+                INSERT INTO designs_documents (case_id, path, name)
+                VALUES ($1, $2, $3)
+                `;
+                
+                await db.query(insertDocumentQuery, [newCaseId, newRelativePath, doc.name]);
+            }
+        }
+
+        // Clonar las relaciones de topic tags
+        const topicTags = originalCase.topic_tags;
+        console.log('topicTags:', topicTags);
+        if (topicTags && topicTags.length > 0) {
+            for (const tagName of topicTags) {
+                const insertTopicTagQuery = `
+                INSERT INTO cases_topic_tags (case_id, topic_tag_name)
+                VALUES ($1, $2)
+                `;
+                
+                await db.query(insertTopicTagQuery, [newCaseId, tagName]);
+            }
+        }
+
+        // Respuesta exitosa, devolviendo solo el nuevo case_id
+        res.status(200).json({ 
+            status: 'success', 
+            newCaseId 
         });
+
+    } catch (err) {
+        console.error('Error cloning the case:', err);
+        res.status(500).json({ status: 'error', message: 'Error cloning the case' });
+    }
 });
 
 
+router.patch("/documents/:documentId", (req, res) => {
+    const documentId = req.params.documentId;
+    const { name } = req.body;
 
-router.get("/hello", (req, res) => {
-   res.send("Hello, world!");
-    
+    const updateDocumentQuery = `
+    UPDATE designs_documents
+    SET name = $2
+    WHERE id = $1
+    `;
+    const db = getDBInstance(dbcon);
+
+    db.query(updateDocumentQuery, [documentId, name])
+        .then(() => {
+            res.status(200).json({ status: 'success', message: 'Document updated' });
+        })
+        .catch(err => {
+            console.error("Error updating document:", err);
+            res.status(500).json({ status: 'error', message: 'Internal server error' });
+        });
 });
 
 
