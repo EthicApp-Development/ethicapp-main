@@ -1967,3 +1967,52 @@ h2{
     margin-top: -2rem;
 }
 
+/* FOR TAGS IN CASES */
+
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    max-width: 600px;
+}
+
+.tag-container {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+}
+
+.tag-text {
+    display: flex;
+    align-items: center;
+    background-color: #3498db;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 20px;
+    transition: background-color 0.3s ease;
+}
+
+.tag-text:hover {
+    background-color: #2980b9;
+}
+
+.tag-text p {
+    margin: 0;
+    margin-right: 5px;
+}
+
+.remove-tag {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+    padding: 0 5px;
+    transition: color 0.3s, transform 0.3s; /* Añadido para una transición suave */
+}
+
+.remove-tag:hover {
+    /* color: #e74c3c; */
+    transform: scale(1.4); /* Aumenta el tamaño en un 20% */
+}
