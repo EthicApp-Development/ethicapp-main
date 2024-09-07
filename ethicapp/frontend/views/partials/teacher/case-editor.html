@@ -1,0 +1,87 @@
+<div  ng-if="selectedView=='caseEditor'" ng-controller="CasesController">
+    <br>
+    <br>
+    <a ng-click="selectView('cases')">{{'back'|translate}}</a>
+    <br>
+    <h2>{{'actCreateCase'|translate}}</h2>
+    <div>
+        <div class="modal-header pl-0">
+            <h4>{{'createCaseMsgInfo'|translate}}</h4>
+        </div>
+        <form class="modal-body form-new-design" name="formCase" ng-submit="saveAndExit()">
+            <div class="wrapper_nd">
+                <div class="line-form-nd">
+                    <div class="line-row-nd">
+                        <label>{{'title'|translate}}:</label>
+                        <input type="text" class="form-control line_input" name="title" ng-model="case.title" ng-required="true" ng-disabled="caseReadOnly">
+                    </div>
+                </div>
+            </div>
+            <div class="wrapper_nd">
+                <div class="line-form-nd">
+                    <div class="line-row-nd">
+                        <label>{{'description'|translate}}:</label>
+                        <input type="text" class="form-control line_input" name="description" ng-model="case.description" ng-required="true" ng-disabled="caseReadOnly">
+                    </div>
+                </div>
+            </div>
+            <div class="wrapper_nd">
+                <div class="line-form-nd">
+                    <div class="line-row-nd">
+                        <label>{{'tags'|translate}}:</label>
+                        <input type="text" class="form-control line_input" name="tags" ng-model="tagInput" ng-required="false" ng-disabled="caseReadOnly" ng-keypress="manageEnterTag($event)">
+                    </div>
+                </div>
+            </div>
+
+            <div class="tags-container" >
+                <div class="tag-container" ng-repeat="tag in case.topic_tags track by $index">
+                    <span class="tag-text">
+                        <p>{{tag.name}}</p>
+                        <button type="button" class="remove-tag" ng-click="removeTag(tag.name)">x</button>
+                    </span>
+                </div>
+            </div>
+        
+            <br>
+            <hr class="mt-1medio">
+            <br>
+            <div ng-init="initEditor(caseReadOnly)">
+                {{ caseViewMode}}
+                <div class="main-container">
+                    <div class="editor-container editor-container_document-editor" id="editor-container">
+                        <div class="editor-container__menu-bar" id="editor-menu-bar"></div>
+                        <div class="editor-container__toolbar" id="editor-toolbar"></div>
+                        <div class="editor-container__editor-wrapper">
+                            <div class="editor-container__editor">
+                                <div id="editor">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <br>
+            <hr class="mt-1medio">
+            <br>
+            <p>Antes de continuar, eliga si desea compartir el caso con otros usuarios o no,</p>
+            <div style="display: flex; align-items: center;">
+                <label class="switch" style="margin-right: 10px;">
+                    <input type="checkbox" ng-model="case.is_public" ng-disabled="caseReadOnly">
+                    <span class="slider round"></span>
+                </label>
+                <p class="share-paragraph" style="margin: 0;">{{'share'|translate}}</p>
+            </div>
+            <br>
+            <hr class="mt-1medio">
+            <br>
+            <div class="new-design-bottom">
+                <button class="btn btn-primary" type="submit">
+                    {{'save'|translate}}
+                </button>
+            </div>
+    
+        </form>
+
+    </div>
+</div>

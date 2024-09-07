@@ -12,5 +12,7 @@ export let RoutingController = function($scope) {
         "viewDesign":     "views/partials/teacher/view-design.html",
         "activity":       "views/partials/teacher/activity.html",
         "profile":        "views/partials/profile.html",
+        "cases":          "views/partials/teacher/cases.html",
+        "caseEditor":     "views/partials/teacher/case-editor.html",
     };
 };
