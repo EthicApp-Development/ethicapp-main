@@ -56,7 +56,8 @@ import { SesEditorController } from "../../controllers/teacher/ses_editor_contro
 import { StagesEditController } from "../../controllers/teacher/stages_edit_controller.js";
 import { DashboardRubricaController } from "../../controllers/teacher/dashboard_rubrica_controller.js";
 import { ngQuillConfigProvider } from "../../helpers/util.js";
-
+import { CasesController } from "../../controllers/teacher/cases_controller.js";
+import { caseService } from "../../services/case-service.js";
 adpp.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
@@ -154,4 +155,95 @@ adpp.controller("DialogCtrl", function($scope, DialogService) {
     $scope.closeDialog = DialogService.closeDialog;
 });
 
+adpp.service("CaseService", function($http) {
 
+    this.actualCase = {};
+    this.readOnly = false;
+
+    // Obtener todos los casos
+    this.getCases = () => {
+        return $http.get("/cases")
+            .then((response) => {
+                return response;
+            })
+            .catch((error) => {
+                console.error("Error fetching cases:", error);
+                throw error;
+            });
+    };
+
+    // Obtener un caso específico por ID
+    this.getCase = (caseId) => {
+        return $http.get(`/cases/${caseId}`)
+            .then((response) => {
+                this.actualCase = response.data.result;
+                return response;
+            })
+            .catch((error) => {
+                console.error(`Error fetching case ${caseId}:`, error);
+                throw error;
+            });
+    };
+
+    // Crear un nuevo caso vacío
+    this.createCaseEmpty = () => {
+        return $http.post("/cases")
+            .then((response) => {
+                const newCaseId = response.data.caseId;
+                return this.getCase(newCaseId); // Devuelve la promesa de getCase
+            })
+            .then((response) => {
+                // Se resuelve el caso actual después de obtenerlo
+                return response;
+            })
+            .catch((error) => {
+                console.error("Error creating case:", error);
+                throw error;
+            });
+    };
+
+    // Editar un caso existente por ID
+    this.editCase = (caseId, data) => {
+        return $http.patch(`/cases/${caseId}`, data)
+            .then(() => {
+                return this.getCase(caseId); // Devuelve la promesa de getCase
+            })
+            .then((response) => {
+                // Se resuelve el caso actual después de obtenerlo
+                return response;
+            })
+            .catch((error) => {
+                console.error(`Error editing case ${caseId}:`, error);
+                throw error;
+            });
+    };
+
+    // Eliminar un caso por ID
+    this.deleteCase = (caseId) => {
+        return $http.delete(`/cases/${caseId}`)
+            .then((response) => {
+                this.actualCase = {};
+                return response;
+            })
+            .catch((error) => {
+                console.error(`Error deleting case ${caseId}:`, error);
+                throw error;
+            });
+    };
+
+    this.setIsPublic = (caseId, bool) => {
+        return $http.patch(`/cases/${caseId}`, { is_public: bool })
+            .then((response) => {
+                return response;
+            })
+            .catch((error) => {
+                console.error(`Error toggling case ${caseId} public status:`, error);
+                throw error;
+            });
+    }
+
+});
+
+
+
+adpp.controller("CasesController", ["$scope", "$window","$http", "Notification", "CaseService", CasesController]);
