@@ -8,13 +8,12 @@ const pass = require("../config/keys-n-secrets");
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const authorize = require("../middleware/case-manager");
+const authorize = require("../middleware/case-abilities");
+const { create } = require("domain");
 
 const dbcon = pass.dbcon
 var DB = null;
 
-
-var DB = null;
 function getDBInstance(dbcon) {
     if(DB == null) {
         DB = new pg.Client(dbcon);
@@ -30,215 +29,255 @@ function getDBInstance(dbcon) {
 
 // TODO: With req.user
 
-router.get("/topic-tags", (req, res) => {
-    const sql = `
-    SELECT * FROM topic_tags
-    `;
-    const db = getDBInstance(dbcon);
+// router.get("/topic-tags", (req, res) => {
+//     const sql = `
+//     SELECT * FROM topic_tags
+//     `;
+//     const db = getDBInstance(dbcon);
 
-    let result;
-    const qry = db.query(sql,(err,res) =>{
-        if(res != null){
-            result = JSON.stringify(res.rows);  
-        }
-    });;
+//     let result;
+//     const qry = db.query(sql,(err,res) =>{
+//         if(res != null){
+//             result = JSON.stringify(res.rows);  
+//         }
+//     });;
 
-    qry.on("end", function () {
-        res.end('{"status":"ok", "result":'+result+"}");
-    });
-    qry.on("error", function(err){
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.end('{"status":"err"}');
-    });
-});
-
-
-router.get("/topic-tags/:id", (req, res) => {
-    const topicTagId = req.params.id;
-    const sql = `
-    SELECT * FROM topic_tags
-    WHERE topic_tag_id = $1
-    `;
-    const db = getDBInstance(dbcon);
-
-    const qry = db.query(sql, [topicTagId]);
-
-    qry.on("end", function (result) {
-        if (result.rows.length === 0) {
-            res.status(404).json({ status: 'error', message: 'could not find the topic id' });
-        } else {
-            res.status(200).json({ status: 'success', data: result.rows[0] });
-        }
-    });
-
-    qry.on("error", function (err) {
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.status(500).json({ status: 'error', message: '' });
-    });
-});
+//     qry.on("end", function () {
+//         res.end('{"status":"ok", "result":'+result+"}");
+//     });
+//     qry.on("error", function(err){
+//         console.error(`Fatal error on the SQL query "${sql}"`);
+//         console.error(err);
+//         res.end('{"status":"err"}');
+//     });
+// });
 
 
-router.post("/topic-tags", (req, res) => {
-    const { name } = req.body;
-    const sql = `
-    INSERT INTO topic_tags (name)
-    VALUES ('${name}')
-    `;
+// router.get("/topic-tags/:id", (req, res) => {
+//     const topicTagId = req.params.id;
+//     const sql = `
+//     SELECT * FROM topic_tags
+//     WHERE topic_tag_id = $1
+//     `;
+//     const db = getDBInstance(dbcon);
 
-    rpg.execSQL({
-        dbcon: dbcon,
-        sql:   sql
-    })(req, res);
-});
+//     const qry = db.query(sql, [topicTagId]);
 
+//     qry.on("end", function (result) {
+//         if (result.rows.length === 0) {
+//             res.status(404).json({ status: 'error', message: 'could not find the topic id' });
+//         } else {
+//             res.status(200).json({ status: 'success', result: result.rows[0] });
+//         }
+//     });
 
-router.delete("/topic-tags/:id", (req, res) => {
-    const topicTagId = req.params.id;
-    const sql = `
-    DELETE FROM topic_tags
-    WHERE topic_tag_id = $1
-    `;
-    const db = getDBInstance(dbcon);
-
-    const qry = db.query(sql, [topicTagId]);
-
-    qry.on("end", function (result) {
-        if (result.rowCount === 0) {
-            res.status(404).json({ status: 'error', message: 'could not find the topic id' });
-        } else {
-            res.status(200).json({ status: 'success', message: 'Topic deleted' });
-        }
-    });
-
-    qry.on("error", function (err) {
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.status(500).json({ status: 'error', message: 'Error in the DB' });
-    });
-});
+//     qry.on("error", function (err) {
+//         console.error(`Fatal error on the SQL query "${sql}"`);
+//         console.error(err);
+//         res.status(500).json({ status: 'error', message: '' });
+//     });
+// });
 
 
-router.get("/cases-topic-tags", (req, res) => {
-    const sql = `
-    SELECT * FROM cases_topic_tags
-    `;
-    const db = getDBInstance(dbcon);
+// router.post("/topic-tags", (req, res) => {
+//     const { name } = req.body;
+//     const sql = `
+//     INSERT INTO topic_tags (name)
+//     VALUES ('${name}')
+//     `;
 
-    let result;
-    const qry = db.query(sql,(err,res) =>{
-        if(res != null){
-            result = JSON.stringify(res.rows);  
-        }
-    });;
-
-    qry.on("end", function () {
-        res.end('{"status":"ok", "result":'+result+"}");
-    });
-    qry.on("error", function(err){
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.status(500).json({ status: 'error', message: 'Error in the DB' });
-    });
-});
+//     rpg.execSQL({
+//         dbcon: dbcon,
+//         sql:   sql
+//     })(req, res);
+// });
 
 
-router.get("/users/:userId/cases", (req, res) => {
-    const userId = req.params.userId;
+// router.delete("/topic-tags/:id", (req, res) => {
+//     const topicTagId = req.params.id;
+//     const sql = `
+//     DELETE FROM topic_tags
+//     WHERE topic_tag_id = $1
+//     `;
+//     const db = getDBInstance(dbcon);
 
-    const sql = `
-    SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id,
-           ARRAY_AGG(DISTINCT jsonb_build_object('id', tt.topic_tag_id, 'name', tt.name)) AS topic_tags, 
+//     const qry = db.query(sql, [topicTagId]);
+
+//     qry.on("end", function (result) {
+//         if (result.rowCount === 0) {
+//             res.status(404).json({ status: 'error', message: 'could not find the topic id' });
+//         } else {
+//             res.status(200).json({ status: 'success', message: 'Topic deleted' });
+//         }
+//     });
+
+//     qry.on("error", function (err) {
+//         console.error(`Fatal error on the SQL query "${sql}"`);
+//         console.error(err);
+//         res.status(500).json({ status: 'error', message: 'Error in the DB' });
+//     });
+// });
+
+
+// router.get("/cases-topic-tags", (req, res) => {
+//     const sql = `
+//     SELECT * FROM cases_topic_tags
+//     `;
+//     const db = getDBInstance(dbcon);
+
+//     let result;
+//     const qry = db.query(sql,(err,res) =>{
+//         if(res != null){
+//             result = JSON.stringify(res.rows);  
+//         }
+//     });;
+
+//     qry.on("end", function () {
+//         res.end('{"status":"ok", "result":'+result+"}");
+//     });
+//     qry.on("error", function(err){
+//         console.error(`Fatal error on the SQL query "${sql}"`);
+//         console.error(err);
+//         res.status(500).json({ status: 'error', message: 'Error in the DB' });
+//     });
+// });
+
+
+router.get("/users/:userId/cases", 
+    authorize('read', 'Case', (req) => ({ user_id: req.params.userId })), 
+    (req, res) => {
+        const userId = req.params.userId;
+
+        const sql = `
+        SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id,
+               ARRAY_AGG(DISTINCT jsonb_build_object('id', tt.topic_tag_id, 'name', tt.name)) AS topic_tags, 
+               ARRAY_AGG(DISTINCT dd.id) AS document_ids, 
+               ARRAY_AGG(DISTINCT dd.path) AS document_paths
+        FROM cases c
+        LEFT JOIN cases_topic_tags ct ON c.case_id = ct.case_id
+        LEFT JOIN designs_documents dd ON c.case_id = dd.case_id
+        LEFT JOIN topic_tags tt ON ct.topic_tag_id = tt.topic_tag_id
+        WHERE c.user_id = $1
+        GROUP BY c.case_id
+        `;
+        const db = getDBInstance();
+
+        db.query(sql, [userId])
+            .then(result => {
+                const _cases = result.rows.map(row => {
+                    return {
+                        case_id: row.case_id,
+                        title: row.title,
+                        description: row.description,
+                        is_public: row.is_public,
+                        external_case_url: row.external_case_url,
+                        user_id: row.user_id,
+                        topic_tags: row.topic_tags.filter(tag => tag.id !== null), // Filtrar los tags que no existen
+                        documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
+                    };
+                });
+
+                res.status(200).json({ status: 'ok', result: _cases });
+            })
+            .catch(err => {
+                console.error(`Fatal error on the SQL query "${sql}"`);
+                console.error(err);
+                res.status(500).json({ status: 'error', message: 'Error in the DB' });
+            });
+    }
+);
+
+module.exports = router;
+
+
+router.get("/cases", async (req, res) => {
+    const userId = req.user.id;
+
+    // Consulta actualizada para usar topic_tag_name
+    const sqlCases = `
+    SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id, c.created_at, c.updated_at, c.rich_text,
+           ARRAY_AGG(DISTINCT jsonb_build_object('name', tt.name)) AS topic_tags, 
            ARRAY_AGG(DISTINCT dd.id) AS document_ids, 
            ARRAY_AGG(DISTINCT dd.path) AS document_paths
     FROM cases c
     LEFT JOIN cases_topic_tags ct ON c.case_id = ct.case_id
     LEFT JOIN designs_documents dd ON c.case_id = dd.case_id
-    LEFT JOIN topic_tags tt ON ct.topic_tag_id = tt.topic_tag_id
-    WHERE c.user_id = $1
+    LEFT JOIN topic_tags tt ON ct.topic_tag_name = tt.name
     GROUP BY c.case_id
     `;
-    const db = getDBInstance();
 
-    db.query(sql, [userId])
-        .then(result => {
-            const _cases = result.rows.map(row => {
-                return {
-                    case_id: row.case_id,
-                    title: row.title,
-                    description: row.description,
-                    is_public: row.is_public,
-                    external_case_url: row.external_case_url,
-                    user_id: row.user_id,
-                    topic_tags: row.topic_tags.filter(tag => tag.id !== null), // Filtrar los tags que no existen
-                    documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
-                };
-            });
+    const sqlDesigns = `
+    SELECT case_id, COUNT(*) FILTER (WHERE locked = true) AS locked_count
+    FROM designs
+    GROUP BY case_id
+    `;
 
-            res.status(200).json({ status: 'ok', result: _cases });
-        })
-        .catch(err => {
-            console.error(`Fatal error on the SQL query "${sql}"`);
-            console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error in the DB' });
+    try {
+        const db = getDBInstance(dbcon);
+
+        const casesResult = await db.query(sqlCases);
+        const designsResult = await db.query(sqlDesigns);
+
+        const designsMap = new Map(designsResult.rows.map(row => [row.case_id, row.locked_count > 0]));
+
+        const myCases = [];
+        const publicCases = [];
+
+        casesResult.rows.forEach(row => {
+            const _case = {
+                case_id: row.case_id,
+                title: row.title,
+                description: row.description,
+                rich_text: row.rich_text,
+                is_public: row.is_public,
+                external_case_url: row.external_case_url,
+                user_id: row.user_id,
+                topic_tags: row.topic_tags.filter(tag => tag.name !== null), // Filtrar los tags que no existen
+                documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null), // Crear una lista de objetos { id, path }
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+                locked: designsMap.get(row.case_id) || false // Agregar la propiedad locked
+            };
+
+            if (row.user_id === userId) {
+                // Añadir a "mis casos"
+                myCases.push(_case);
+            } else if (row.is_public) {
+                // Añadir a "casos públicos"
+                publicCases.push(_case);
+            }
         });
+
+        res.status(200).json({
+            status: 'ok',
+            result: {
+                my_cases: myCases,
+                public_cases: publicCases
+            }
+        });
+
+    } catch (err) {
+        console.error(`Fatal error on the SQL queries`);
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Error in the DB' });
+    }
 });
 
 
-router.get("/cases", (req, res) => {
 
-    const sql = `
-    SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id,
-           ARRAY_AGG(DISTINCT jsonb_build_object('id', tt.topic_tag_id, 'name', tt.name)) AS topic_tags, 
-           ARRAY_AGG(DISTINCT dd.id) AS document_ids, 
-           ARRAY_AGG(DISTINCT dd.path) AS document_paths
-    FROM cases c
-    LEFT JOIN cases_topic_tags ct ON c.case_id = ct.case_id
-    LEFT JOIN designs_documents dd ON c.case_id = dd.case_id
-    LEFT JOIN topic_tags tt ON ct.topic_tag_id = tt.topic_tag_id
-    GROUP BY c.case_id
-    `;
-    const db = getDBInstance(dbcon);
-
-    console.log(db);
-    db.query(sql)
-        .then(result => {
-            console.log(result);
-            const _cases = result.rows.map(row => {
-                return {
-                    case_id: row.case_id,
-                    title: row.title,
-                    description: row.description,
-                    is_public: row.is_public,
-                    external_case_url: row.external_case_url,
-                    user_id: row.user_id,
-                    topic_tags: row.topic_tags.filter(tag => tag.id !== null), // Filtrar los tags que no existen
-                    documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
-                };
-            });
-
-            res.status(200).json({ status: 'ok', result: _cases });
-        })
-        .catch(err => {
-            console.error(`Fatal error on the SQL query "${sql}"`);
-            console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error in the DB' });
-        });
-});
 
 
 router.get("/cases/:id", (req, res) => {
     const caseId = req.params.id;
     const sql = `
-    SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id,
-           ARRAY_AGG(DISTINCT jsonb_build_object('id', tt.topic_tag_id, 'name', tt.name)) AS topic_tags, 
+    SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id, c.created_at, c.updated_at, c.rich_text,
+           ARRAY_AGG(DISTINCT jsonb_build_object('name', tt.name)) AS topic_tags, 
            ARRAY_AGG(DISTINCT dd.id) AS document_ids, 
            ARRAY_AGG(DISTINCT dd.path) AS document_paths
     FROM cases c
     LEFT JOIN cases_topic_tags ct ON c.case_id = ct.case_id
     LEFT JOIN designs_documents dd ON c.case_id = dd.case_id
-    LEFT JOIN topic_tags tt ON ct.topic_tag_id = tt.topic_tag_id
+    LEFT JOIN topic_tags tt ON ct.topic_tag_name = tt.name
     WHERE c.case_id = $1
     GROUP BY c.case_id
     `;
@@ -254,14 +293,17 @@ router.get("/cases/:id", (req, res) => {
                     case_id: row.case_id,
                     title: row.title,
                     description: row.description,
+                    rich_text: row.rich_text,
                     is_public: row.is_public,
                     external_case_url: row.external_case_url,
                     user_id: row.user_id,
-                    topic_tags: row.topic_tags.filter(tag => tag.id !== null), // Filtrar los tags que no existen
-                    documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
-                };
+                    topic_tags: row.topic_tags.filter(tag => tag.name !== null), // Filtrar los tags que no existen
+                    documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null), // Crear una lista de objetos { id, path }
+                    created_at: row.created_at,
+                    updated_at: row.updated_at
+                };  
 
-                res.status(200).json({ status: 'success', data: _case });
+                res.status(200).json({ status: 'success', result: _case });
             }
         })
         .catch(err => {
@@ -272,10 +314,11 @@ router.get("/cases/:id", (req, res) => {
 });
 
 
+
 router.post("/cases", (req, res) => {
     const caseInsertQuery = `
-    INSERT INTO cases (is_public)
-    VALUES (false)
+    INSERT INTO cases (user_id)
+    VALUES (${req.user.id})
     RETURNING case_id
     `;
     const db = getDBInstance(dbcon);
@@ -292,54 +335,70 @@ router.post("/cases", (req, res) => {
 });
 
 
-router.patch("/cases/:caseId", (req, res) => {
+router.patch("/cases/:caseId", async (req, res) => {
     const caseId = req.params.caseId;
-    const { title, description, external_case_url, is_public, topic_tag_ids, user_id } = req.body;
+    const { title, description, external_case_url, is_public, topic_tags, rich_text } = req.body;
 
-    const updateCaseQuery = `
-    UPDATE cases 
-    SET title = COALESCE($2, title), 
-        description = COALESCE($3, description), 
-        external_case_url = COALESCE($4, external_case_url),
-        is_public = COALESCE($5, is_public),
-        user_id = COALESCE($6, user_id)
-    WHERE case_id = $1
-    `;
     const db = getDBInstance(dbcon);
 
-    db.query(updateCaseQuery, [caseId, title, description, external_case_url, is_public, user_id])
-        .then(() => {
-            if (!topic_tag_ids) {
-                return; // No cambiar los topic tags existentes
+    try {
+        // Actualizar el caso
+        const updateCaseQuery = `
+        UPDATE cases 
+        SET title = COALESCE($2, title), 
+            description = COALESCE($3, description), 
+            external_case_url = COALESCE($4, external_case_url),
+            is_public = COALESCE($5, is_public),
+            rich_text = COALESCE($6, rich_text)
+        WHERE case_id = $1
+        `;
+        await db.query(updateCaseQuery, [caseId, title, description, external_case_url, is_public, rich_text]);
+
+        // Eliminar todos los topic tags existentes para este caso
+        const deletePreviousTopicsQuery = `
+        DELETE FROM cases_topic_tags 
+        WHERE case_id = $1
+        `;
+        await db.query(deletePreviousTopicsQuery, [caseId]);
+
+        if (topic_tags && topic_tags.length > 0) {
+            // Verificar y agregar tags
+            for (const tag of topic_tags) {
+                const tagName = tag.name; // Obtener el nombre del tag
+                // Primero, verificar si el tag ya existe
+                const checkTagQuery = `
+                SELECT name FROM topic_tags 
+                WHERE name = $1
+                `;
+                let result = await db.query(checkTagQuery, [tagName]);
+
+                // Si no existe, crear el tag
+                if (result.rowCount === 0) {
+                    const insertTagQuery = `
+                    INSERT INTO topic_tags (name)
+                    VALUES ($1)
+                    `;
+                    await db.query(insertTagQuery, [tagName]);
+                }
             }
 
-            // Eliminar todos los topic tags existentes para este caso
-            const deletePreviousTopicsQuery = `
-            DELETE FROM cases_topic_tags 
-            WHERE case_id = $1
-            `;
-            return db.query(deletePreviousTopicsQuery, [caseId]);
-        })
-        .then(() => {
-            if (!topic_tag_ids|| topic_tag_ids.length === 0) {
-                return; // No agregar nuevos topic tags si topic_tag_ids es null o una lista vacía
-            }
-
-            // Insertar los nuevos topic tags
+            // Insertar los nuevos topic tags en el caso
             const caseTopicsInsertQuery = `
-            INSERT INTO cases_topic_tags (case_id, topic_tag_id)
-            VALUES ${topic_tag_ids.map((_, index) => `($1, $${index + 2})`).join(', ')}
+            INSERT INTO cases_topic_tags (case_id, topic_tag_name)
+            VALUES ${topic_tags.map((_, index) => `($1, $${index + 2})`).join(', ')}
             `;
-            return db.query(caseTopicsInsertQuery, [caseId, ...topic_tag_ids]);
-        })
-        .then(() => {
-            res.status(200).json({ status: 'success', message: 'Case updated' });
-        })
-        .catch(err => {
-            console.error("Error updating case:", err);
-            res.status(500).json({ status: 'error', message: 'Internal server error' });
-        });
+            await db.query(caseTopicsInsertQuery, [caseId, ...topic_tags.map(tag => tag.name)]);
+        }
+
+        res.status(200).json({ status: 'success', message: 'Case updated' });
+
+    } catch (err) {
+        console.error("Error updating case:", err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
 });
+
+
 
 
 router.post("/cases/:caseId/documents", (req, res) => {
@@ -422,7 +481,7 @@ router.get("/designs/:id", (req, res) => {
             if (result.rows.length === 0) {
                 res.status(404).json({ status: 'error', message: 'Could not find a design with the provided ID' });
             } else {
-                res.status(200).json({ status: 'success', data: result.rows[0] });
+                res.status(200).json({ status: 'success', result: result.rows[0] });
             }
         })
         .catch(err => {
@@ -467,7 +526,7 @@ router.get("/designs/:id/case", (req, res) => {
                     documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
                 };
 
-                res.status(200).json({ status: 'success', data: _case });
+                res.status(200).json({ status: 'success', result: _case });
             }
         })
         .catch(err => {
