@@ -1,23 +1,5 @@
 const { AbilityBuilder, createMongoAbility, ForbiddenError } = require('@casl/ability');
-const pg = require("pg");
-const pass = require("../config/keys-n-secrets");
 
-const dbcon = pass.dbcon;
-var DB = null;
-
-// Función para obtener la instancia de la base de datos
-function getDBInstance() {
-    if (DB == null) {
-        DB = new pg.Client(dbcon);
-        DB.connect();
-        DB.on("error", function (err) {
-            console.error(err);
-            DB = null;
-        });
-        return DB;
-    }
-    return DB;
-}
 
 // Definición de las habilidades según el rol del usuario
 function defineAbilitiesForCasesAndTags(user) {
@@ -53,7 +35,7 @@ function defineAbilitiesForCasesAndTags(user) {
             break;
 
         case 'A':
-            // Administrador
+            // Alumno
             can('read', 'Case', { is_public: true });
             cannot('create', 'Case');
             cannot('update', 'Case');
