@@ -1,16 +1,18 @@
 import { decoupledEditor, editorConfig, classicEditor } from "../../helpers/ckeditor/main.js";
-export const CasesController = ($scope, $window, $http, Notification, CaseService) => {
+export const CasesController = ($scope, $window, $http, $timeout, Notification, CaseService) => {
     const self = $scope;
     self.ownCases = [];
     self.publicCases = [];
-    self.tab = 0;
+    self.tabListCases = "ownCases";
+    self.tabEditorDocuments = "editorTab";
     self.caseReadOnly = CaseService.readOnly;
     self.case = CaseService.actualCase;
     self.ckeditor = null;
     self.intervalAutoSave = null;
     self.tagInput = "";
-
-
+    self.formFiles = [];
+    self.isDragOver = false;
+    
 
     self.initCasesView = () => {
         CaseService.getCases().then((response) => {
@@ -25,28 +27,28 @@ export const CasesController = ($scope, $window, $http, Notification, CaseServic
         CaseService.getCase(caseId).then((response) => {
             self.selectView("caseEditor");
         });
-    };
+    }
 
     self.editCase = (caseId) => {
         CaseService.readOnly = false;
         CaseService.getCase(caseId).then((response) => {
             self.selectView("caseEditor");
         });
-    };
+    }
 
     self.createCase = () => {
         CaseService.readOnly = false;
         CaseService.createCaseEmpty().then((response) => {
             self.selectView("caseEditor");
         });
-    };
+    }
 
     self.deleteCase = (caseId) => {
         CaseService.deleteCase(caseId).then((response) => {
             // Notification.success("Case deleted");
             self.initCasesView();
         });
-    };
+    }
 
 
     self.saveCase = () => {
@@ -57,7 +59,7 @@ export const CasesController = ($scope, $window, $http, Notification, CaseServic
         CaseService.editCase(caseId, data).then((response) => {
             // Notification.success("Case saved");
         });
-    };
+    }
 
     self.initEditor = () => {
         decoupledEditor.create(document.querySelector('#editor'), editorConfig).then(editor => {
@@ -83,7 +85,7 @@ export const CasesController = ($scope, $window, $http, Notification, CaseServic
     self.saveAndExit = () => {
         self.saveCase();
         self.selectView("cases");
-    };
+    }
 
     self.toggleIsPublic = (case_id, is_public) => {
         CaseService.setIsPublic(case_id, !is_public).then((response) => {
@@ -113,4 +115,105 @@ export const CasesController = ($scope, $window, $http, Notification, CaseServic
     self.removeTag = (tag) => {
         self.case.topic_tags = self.case.topic_tags.filter((item) => item.name !== tag);
     }
+
+    self.setTabEditorDocuments = (event) => {
+        event.preventDefault();
+        self.tabEditorDocuments = event.target.id;
+
+    }
+
+
+    self.initDragDrop = () => {
+        const uploadContainer = document.getElementById('upload-container');
+
+        if (!uploadContainer) return;
+        
+        uploadContainer.addEventListener('dragover', self.handleDragOver, false);
+        uploadContainer.addEventListener('dragleave', self.handleDragLeave, false);
+        uploadContainer.addEventListener('drop', self.handleDrop, false);
+
+    }
+    
+    
+    self.triggerFileInput = () => {
+        const input = document.getElementById('file-input');
+        
+        input.onchange = (event) => {
+            const files = event.target.files;
+            self.addFiles(files);
+            self.$apply(); // Asegura que AngularJS actualice la vista
+        };
+        
+        input.click();
+    }
+    
+
+    self.handleFileSelect = (event) => {
+        const files = event.target.files;
+        self.addFiles(files);
+        self.$apply();
+    }
+
+    self.handleDragOver = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        self.isDragOver = true;
+    }
+
+    self.handleDragLeave = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        self.isDragOver = false;
+        self.$apply();
+    }
+
+    self.handleDrop = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const files = event.dataTransfer.files;
+        self.addFiles(files);
+        self.isDragOver = false;
+        self.$apply();
+    }
+
+    self.addFiles = (files) => {
+        Array.from(files).forEach(file => {
+            if (file.type === 'application/pdf') {
+                self.formFiles.push(file);
+            } else {
+                alert('Solo se permiten archivos PDF');
+            }
+            
+        });
+
+        CaseService.uploadDocuments(self.case.case_id, self.formFiles).then((response) => {
+            const files = response.data.result;
+            files.forEach((file) => {
+                if (self.case.documents.some((document) => document.path === file.path)) {
+                    return
+                } else {
+                    self.case.documents.push(file);
+                }
+            });
+        });
+        self.formFiles = [];
+        self.$apply();
+    }
+    
+
+    self.removeFile = ($event, documentId) => {
+        $event.preventDefault();
+        const index = $event.target.id;
+        self.formFiles.splice(index, 1);
+        CaseService.deleteDocument(self.case.case_id, documentId).then((response) => {
+            self.case.documents = self.case.documents.filter((document) => document.id !== documentId);
+        });
+    };
+
+    self.viewFile = ($event, path) => {
+        $event.preventDefault();
+        const url = "/assets/uploads" + path;
+        $window.open(url, '_blank');
+    }
+
 };
