@@ -53,9 +53,7 @@
                     </div>
                 </div>
 
-
                 <div class="list-group-item" ng-repeat="case in publicCases | filter:userSearch" ng-if="tabListCases == 'publicCases'">
-                    <!--UPDATE IT CORRECTLY-->
                     <div>
                         <h4 class="list-group-item-heading" ng-bind="case.title || ('untitled' | translate)"></h4>
                         <h6 class="list-group-item-heading" ng-bind="case.description"></h6>
@@ -71,6 +69,17 @@
                     </div>
                 </div>
             </div>
+        </div>
+        <div class="help_panel">
+            <img src="../../assets/images/iconsets/exclamation-mark.png" alt="signoExclamacion"
+                class="exclamation-mark-image">
+            <div class="help-container">
+                <p class="help-paragraph">
+                    {{'casesPanel1' | translate}}
+                </p>
+                <p class="help-paragraph">
+                    {{'casesPanel2' | translate}}
+                </p>
             </div>
         </div>
     </div>
