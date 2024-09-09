@@ -33,28 +33,64 @@
                     </div>
                 </div>
             </div>
-
             <div class="tags-container" >
                 <div class="tag-container" ng-repeat="tag in case.topic_tags track by $index">
                     <span class="tag-text">
                         <p>{{tag.name}}</p>
-                        <button type="button" class="remove-tag" ng-click="removeTag(tag.name)">x</button>
+                        <button type="button" class="remove-tag" ng-click="removeTag(tag.name)" ng-if="!caseReadOnly">x</button>
                     </span>
                 </div>
             </div>
-        
             <br>
             <hr class="mt-1medio">
             <br>
-            <div ng-init="initEditor(caseReadOnly)">
-                {{ caseViewMode}}
-                <div class="main-container">
-                    <div class="editor-container editor-container_document-editor" id="editor-container">
-                        <div class="editor-container__menu-bar" id="editor-menu-bar"></div>
-                        <div class="editor-container__toolbar" id="editor-toolbar"></div>
-                        <div class="editor-container__editor-wrapper">
-                            <div class="editor-container__editor">
-                                <div id="editor">
+            <div class="tab_cs">
+                <button class="tab_cs" ng-click="setTabEditorDocuments($event)" ng-class="{'btn_selected': tabEditorDocuments == 'editorTab'}" id="editorTab">
+                    {{'editor'|translate}}
+                </button>
+                <button class="tab_cs" ng-click="setTabEditorDocuments($event)" ng-class="{'btn_selected': tabEditorDocuments == 'documentsTab'}" id="documentsTab">
+                    {{'documents'|translate}}
+                </button>
+                <div style="float: left;display: flex;justify-content: left;align-items: center;" ng-if="tabEditorDocuments == 'documentsTab'">
+                    <input class="form-control text-left search-input fontAwesome" type="text"
+                        placeholder="{{'search'|translate}}  &#xF002;" ng-model="userSearch">
+                </div>
+            </div>
+            <div class="wrapper">
+                <div class="container" style="overflow: scroll; max-height: 40em; min-height: 10em; border: #bbb 1px solid;">
+                    <div class="activities_container" style="margin-top: 2em;">
+                        <div class="list-group pad-content">
+                            <div ng-if="tabEditorDocuments == 'editorTab'">
+                                <div ng-init="initEditor(caseReadOnly)">
+                                    <div class="main-container">
+                                        <div class="editor-container editor-container_document-editor" id="editor-container">
+                                            <div class="editor-container__menu-bar" id="editor-menu-bar"></div>
+                                            <div class="editor-container__toolbar" id="editor-toolbar"></div>
+                                            <div class="editor-container__editor-wrapper">
+                                                <div class="editor-container__editor">
+                                                    <div id="editor">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="list-group pad-content">
+                            <div ng-if="tabEditorDocuments == 'documentsTab'" ng-init="initDragDrop()">
+                                <input type="file" id="file-input" multiple style="display: none;" ng-change="handleFileSelect($event)" ng-model="files" accept="application/pdf" ng-if="!caseReadOnly"/>
+                                <div class="upload-container" id="upload-container" ng-click="triggerFileInput()" ng-class="{ 'dragover': isDragOver == true}" ng-if="!caseReadOnly">
+                                    <p>{{'dragDropMsg' | translate}}</p>
+                                </div>
+                                <div id="file-list">
+                                    <div class="file-item" ng-repeat="document in case.documents track by $index">
+                                        <span>{{ document.path.split("/").pop() }}</span>
+                                        <div>
+                                            <button class="btn btn-primary ml-1" ng-click="viewFile($event, document.path)" ng-id="btn-view-file-{{$index}}">{{'view' | translate}}</button>
+                                            <button class="btn btn-danger btn-smaller ml-1" ng-click="removeFile($event, document.id)" ng-id="btn-remove-file-{{$index}}" ng-if="!caseReadOnly">{{'delete' | translate}}</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -64,24 +100,22 @@
             <br>
             <hr class="mt-1medio">
             <br>
-            <p>Antes de continuar, eliga si desea compartir el caso con otros usuarios o no,</p>
+            <p ng-if="!caseReadOnly">{{'caseEditorBeforeContinue' | translate }}</p>
             <div style="display: flex; align-items: center;">
                 <label class="switch" style="margin-right: 10px;">
                     <input type="checkbox" ng-model="case.is_public" ng-disabled="caseReadOnly">
-                    <span class="slider round"></span>
+                    <span class="slider round" ng-class="{'slider-blocked': caseReadOnly == true}"></span>
                 </label>
                 <p class="share-paragraph" style="margin: 0;">{{'share'|translate}}</p>
             </div>
             <br>
             <hr class="mt-1medio">
             <br>
-            <div class="new-design-bottom">
+            <div class="new-design-bottom" ng-if="!caseReadOnly">
                 <button class="btn btn-primary" type="submit">
                     {{'save'|translate}}
                 </button>
             </div>
-    
         </form>
-
     </div>
 </div>
