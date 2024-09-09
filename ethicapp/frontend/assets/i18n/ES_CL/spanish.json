@@ -339,5 +339,7 @@
     "actCreateCase": "Crear caso de estudio",
     "createCaseMsgInfo": "Empiece a crear su caso de estudio, ingresa un título que permita identificarlo, una breve descripción y algunas etiquetas si lo desea.",
     "untitled": "Sin título",
-    "tags": "Etiquetas"
+    "tags": "Etiquetas",
+    "dragDropMsg": "Arrastra y suelta tus archivos aquí o haz click para subir",
+    "caseEditorBeforeContinue": "Antes de continuar, eliga si desea compartir el caso con otros usuarios o no."
 }

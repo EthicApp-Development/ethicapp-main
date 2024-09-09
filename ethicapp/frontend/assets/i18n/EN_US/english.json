@@ -337,5 +337,7 @@
     "actCreateCase": "Create case study",
     "createCaseMsgInfo": "Start creating your case study by entering a title that allows it to be identified, a brief description, and some tags if you wish.",
     "untitled": "Untitled",
-    "tags": "Tags"
+    "tags": "Tags",
+    "dragDropMsg": "Drag and drop your files here or click to upload",
+    "caseEditorBeforeContinue": "Before continuing, choose whether you want to share the case with other users or not."
 }
