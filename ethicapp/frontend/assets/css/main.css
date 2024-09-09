@@ -2016,3 +2016,29 @@ h2{
     /* color: #e74c3c; */
     transform: scale(1.4); /* Aumenta el tamaño en un 20% */
 }
+
+.slider-blocked::before {
+    position: absolute;
+    content: "";
+    height: 13px;
+    width: 13px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+  
+input:checked + .slider-blocked {
+    background-color: #888888;
+}
+  
+input:focus + .slider-blocked {
+    box-shadow: 0 0 1px #888888;
+}
+  
+input:checked + .slider-blocked::before {
+    -webkit-transform: translateX(26px);
+    -ms-transform: translateX(26px);
+    transform: translateX(26px);
+}
