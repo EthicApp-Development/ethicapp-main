@@ -1,7 +1,6 @@
 "use strict";
 
 const express = require("express");
-const rpg = require("../db/rest-pg");
 const pg = require("pg");
 const router = express.Router();
 const pass = require("../config/keys-n-secrets");
@@ -9,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const authorize = require("../middleware/case-abilities");
-const { create } = require("domain");
+
 
 const dbcon = pass.dbcon
 var DB = null;
@@ -401,48 +400,55 @@ router.patch("/cases/:caseId", async (req, res) => {
 
 
 
-router.post("/cases/:caseId/documents", (req, res) => {
+router.post("/cases/:caseId/documents", async (req, res) => {
     const caseId = req.params.caseId;
-
-    const checkCaseQuery = `
-    SELECT * FROM cases WHERE case_id = $1
-    `;
     const db = getDBInstance(dbcon);
 
-    db.query(checkCaseQuery, [caseId])
-        .then(result => {
-            if (result.rows.length === 0) {
-                return res.status(404).json({ status: 'error', message: 'Case do not exist' });
-            }
-            
-            if (req.files == null || req.files.pdf == null) {
-                return res.status(400).json({ status: 'error', message: 'No file passed' });
-            }
+    try {
+        // Verificamos si el caso existe
+        const checkCaseQuery = `SELECT * FROM cases WHERE case_id = $1`;
+        const caseResult = await db.query(checkCaseQuery, [caseId]);
 
-            if (!Array.isArray(req.files.pdf)) {
-                req.files.pdf = [req.files.pdf]; 
-            } 
+        if (caseResult.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Case does not exist' });
+        }
 
-            req.files.pdf.forEach(fileData => {
-                const path = fileData.file.split("uploads")[1];
-        
-                const insertDocumentQuery = `
-                INSERT INTO designs_documents (path, case_id)
-                VALUES ($1, $2)
-                `;
-        
-                db.query(insertDocumentQuery, [path, caseId]);
-            });
-            
-        })
-        .then(() => {
-            res.status(201).json({ status: 'success', message: 'Document uploaded' });
-        })
-        .catch(err => {
-            console.error("Error creating document: ", err);
-            res.status(500).json({ status: 'error', message: 'Internal server error' });
-        });
+        // Verificamos si hay archivos en la solicitud
+        if (!req.files || !req.files.pdf) {
+            return res.status(400).json({ status: 'error', message: 'No file passed' });
+        }
+
+        // Aseguramos que req.files.pdf sea un array
+        const pdfFiles = Array.isArray(req.files.pdf) ? req.files.pdf : [req.files.pdf];
+
+        const insertedDocuments = [];
+
+        // Recorremos cada archivo y lo insertamos en la base de datos
+        for (const fileData of pdfFiles) {
+            const path = fileData.file.split("uploads")[1];
+            const name = fileData.name;
+
+            const insertDocumentQuery = `
+                INSERT INTO designs_documents (path, case_id, name)
+                VALUES ($1, $2, $3)
+                RETURNING id, path, name
+            `;
+
+            const insertResult = await db.query(insertDocumentQuery, [path, caseId, name]);
+
+            // Agregamos el documento insertado a la lista de respuestas
+            insertedDocuments.push(insertResult.rows[0]);
+        }
+
+        // Devolvemos la lista de documentos insertados
+        res.status(201).json({ status: 'success', result: insertedDocuments });
+
+    } catch (err) {
+        console.error("Error creating document: ", err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
 });
+
 
 router.patch("/designs/:id/case", (req, res) => {
     const designId = req.params.id;
@@ -606,7 +612,7 @@ router.delete("/cases/:caseId", async (req, res) => {
     `;
     const deleteCaseTagsQuery = `
     DELETE FROM cases_topic_tags
-    WHERE case_topic_id = $1
+    WHERE case_id = $1
     `;
     const deleteCaseQuery = `
     DELETE FROM cases
