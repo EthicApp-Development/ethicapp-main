@@ -62,11 +62,7 @@ import {
 	TodoList,
 	Underline,
 	Undo
-} from './ckeditor5.js';
-
-// import 'ckeditor5/ckeditor5.css';
-
-// import './styles.css';
+} from 'ckeditor5';
 
 export const editorConfig = {
 	toolbar: {

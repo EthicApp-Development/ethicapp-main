@@ -62,15 +62,18 @@
                         <div class="list-group pad-content">
                             <div ng-if="tabEditorDocuments == 'editorTab'">
                                 <div ng-init="initEditor(caseReadOnly)">
-                                    <div class="main-container">
-                                        <div class="editor-container editor-container_document-editor" id="editor-container">
+                                    <div class="main-container-ckeditor">
+                                        <div
+                                            class="editor-container editor-container_document-editor editor-container_include-minimap editor-container_include-style"
+                                            id="editor-container"
+                                        >
                                             <div class="editor-container__menu-bar" id="editor-menu-bar"></div>
                                             <div class="editor-container__toolbar" id="editor-toolbar"></div>
-                                            <div class="editor-container__editor-wrapper">
-                                                <div class="editor-container__editor">
-                                                    <div id="editor">
-                                                    </div>
+                                            <div class="editor-container__minimap-wrapper">
+                                                <div class="editor-container__editor-wrapper">
+                                                    <div class="editor-container__editor"><div id="editor"></div></div>
                                                 </div>
+                                                <div class="editor-container__sidebar editor-container__sidebar_minimap"><div id="editor-minimap"></div></div>
                                             </div>
                                         </div>
                                     </div>
