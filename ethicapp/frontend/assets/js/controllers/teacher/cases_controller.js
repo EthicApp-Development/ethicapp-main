@@ -94,23 +94,25 @@ export const CasesController = ($scope, $window, $http, $timeout, Notification, 
     }
 
     self.manageEnterTag = (event) => {  
-        if (event.key === "Enter") {
-            event.preventDefault();
-            if (self.tagInput.trim() === "") {
-                return
-            } 
-            
-            self.case.topic_tags.some((tag) => { tag.name === self.tagInput.trim() });
-            if (self.case.topic_tags.some((tag) => { tag.name === self.tagInput.trim() })) {
-                self.tagInput = "";
-                return;
-            }
-            
-            self.case.topic_tags.push({name: self.tagInput.trim()});
+        if (event.key !== "Enter") return;
+        
+        event.preventDefault();
+        
+        const trimmedInput = self.tagInput.trim();
+        
+        if (!trimmedInput) return;
+    
+        const tagExists = self.case.topic_tags.some(tag => tag.name.trim() === trimmedInput);
+        
+        if (tagExists) {
             self.tagInput = "";
-
+            return;
         }
+    
+        self.case.topic_tags.push({ name: trimmedInput });
+        self.tagInput = "";
     }
+    
 
     self.removeTag = (tag) => {
         self.case.topic_tags = self.case.topic_tags.filter((item) => item.name !== tag);
@@ -214,6 +216,23 @@ export const CasesController = ($scope, $window, $http, $timeout, Notification, 
         $event.preventDefault();
         const url = "/assets/uploads" + path;
         $window.open(url, '_blank');
+    }
+
+
+    self.truncateTextName = (textName, length) => {
+        if (!textName) return;
+
+
+        const arrayName = textName.split('.');
+        if (arrayName.length == 2) {
+            
+            const name = arrayName[0];
+            const extension = arrayName[1];
+            if (name.length > length) {
+                return name.substring(0, length) + '... .' + extension;
+            }
+        }
+        return textName.substring(0, length);
     }
 
 };
