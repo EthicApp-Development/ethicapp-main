@@ -235,4 +235,20 @@ export const CasesController = ($scope, $window, $http, $timeout, Notification, 
         return textName.substring(0, length);
     }
 
+
+    self.renameDocument = ($event, documentId, newName) => {
+        $event.preventDefault();
+        CaseService.renameDocument(documentId, newName).then((response) => {
+            console.log(`Document ${documentId} renamed to ${newName}`);
+        });
+    }
+
+    self.renameDocumentOnEnter = ($event, documentId) => {
+        if ($event.key === 'Enter') {
+            const newName = $event.target.value;
+            self.renameDocument($event, documentId, newName);
+            $event.target.blur();
+        }
+    }
+
 };

@@ -87,9 +87,12 @@
                                     <p>{{'dragDropMsg' | translate}}</p>
                                 </div>
                                 <div id="file-list">
-                                    <div class="file-item" ng-repeat="document in case.documents track by $index">
-                                        <span data-toggle="tooltip" data-placement="top" title="Deberia ir el nombre completo">{{ truncateTextName(document.path.split("/").at(-1), 60) }}</span>
-                                        
+                                    <div class="file-item" ng-repeat="document in case.documents | orderBy:'id' track by $index">
+                                        <div class="line-form-nd">
+                                            <div class="line-row-nd">
+                                                <input type="text" class="form-control line_input" name="title" ng-model="document.name" ng-disabled="caseReadOnly" ng-keypress="renameDocumentOnEnter($event, document.id)" ng-id="input-name-{{document.id}}">
+                                            </div>
+                                        </div>
                                         <div>
                                             <button class="btn btn-primary ml-1" ng-click="viewFile($event, document.path)" ng-id="btn-view-file-{{$index}}">{{'view' | translate}}</button>
                                             <button class="btn btn-danger btn-smaller ml-1" ng-click="removeFile($event, document.id)" ng-id="btn-remove-file-{{$index}}" ng-if="!caseReadOnly">{{'delete' | translate}}</button>

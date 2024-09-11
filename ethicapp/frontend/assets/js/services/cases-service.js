@@ -117,5 +117,16 @@ export class casesService {
                 });
         };
 
+        this.renameDocument = (documentId, newName) => {
+            return $http.patch(`/documents/${documentId}`, { name: newName })
+                .then((response) => {
+                    return response;
+                })
+                .catch((error) => {
+                    console.error(`Error renaming document ${documentId}:`, error);
+                    throw error;
+                });
+        }
+
     }
 }
