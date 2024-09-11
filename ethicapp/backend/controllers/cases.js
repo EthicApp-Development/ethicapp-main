@@ -192,12 +192,11 @@ module.exports = router;
 router.get("/cases", async (req, res) => {
     const userId = req.user.id;
 
-    // Consulta actualizada para usar topic_tag_name
+    // Consulta actualizada para obtener los casos
     const sqlCases = `
     SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id, c.created_at, c.updated_at, c.rich_text,
            ARRAY_AGG(DISTINCT jsonb_build_object('name', tt.name)) AS topic_tags, 
-           ARRAY_AGG(DISTINCT dd.id) AS document_ids, 
-           ARRAY_AGG(DISTINCT dd.path) AS document_paths
+           ARRAY_AGG(DISTINCT jsonb_build_object('id', dd.id, 'path', dd.path, 'name', dd.name)) AS documents
     FROM cases c
     LEFT JOIN cases_topic_tags ct ON c.case_id = ct.case_id
     LEFT JOIN designs_documents dd ON c.case_id = dd.case_id
@@ -205,6 +204,7 @@ router.get("/cases", async (req, res) => {
     GROUP BY c.case_id
     `;
 
+    // Consulta para obtener los diseños bloqueados
     const sqlDesigns = `
     SELECT case_id, COUNT(*) FILTER (WHERE locked = true) AS locked_count
     FROM designs
@@ -214,14 +214,17 @@ router.get("/cases", async (req, res) => {
     try {
         const db = getDBInstance(dbcon);
 
-        const casesResult = await db.query(sqlCases);
-        const designsResult = await db.query(sqlDesigns);
+        // Ejecutar las dos consultas SQL en paralelo
+        const [casesResult, designsResult] = await Promise.all([db.query(sqlCases), db.query(sqlDesigns)]);
 
+        // Crear un mapa con los casos bloqueados
         const designsMap = new Map(designsResult.rows.map(row => [row.case_id, row.locked_count > 0]));
 
+        // Listas para almacenar "mis casos" y "casos públicos"
         const myCases = [];
         const publicCases = [];
 
+        // Procesar los casos
         casesResult.rows.forEach(row => {
             const _case = {
                 case_id: row.case_id,
@@ -231,22 +234,21 @@ router.get("/cases", async (req, res) => {
                 is_public: row.is_public,
                 external_case_url: row.external_case_url,
                 user_id: row.user_id,
-                topic_tags: row.topic_tags.filter(tag => tag.name !== null), // Filtrar los tags que no existen
-                documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null), // Crear una lista de objetos { id, path }
+                topic_tags: row.topic_tags.filter(tag => tag.name !== null), // Filtrar tags nulos
+                documents: row.documents.filter(doc => doc.id !== null), // Filtrar documentos nulos
                 created_at: row.created_at,
                 updated_at: row.updated_at,
-                locked: designsMap.get(row.case_id) || false // Agregar la propiedad locked
+                locked: designsMap.get(row.case_id) || false // Añadir la propiedad locked
             };
 
             if (row.user_id === userId) {
-                // Añadir a "mis casos"
-                myCases.push(_case);
+                myCases.push(_case); // Añadir a "mis casos"
             } else if (row.is_public) {
-                // Añadir a "casos públicos"
-                publicCases.push(_case);
+                publicCases.push(_case); // Añadir a "casos públicos"
             }
         });
 
+        // Enviar la respuesta con los casos
         res.status(200).json({
             status: 'ok',
             result: {
@@ -266,13 +268,13 @@ router.get("/cases", async (req, res) => {
 
 
 
-router.get("/cases/:id", (req, res) => {
+
+router.get("/cases/:id", async (req, res) => {
     const caseId = req.params.id;
     const sql = `
     SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id, c.created_at, c.updated_at, c.rich_text,
            ARRAY_AGG(DISTINCT jsonb_build_object('name', tt.name)) AS topic_tags, 
-           ARRAY_AGG(DISTINCT dd.id) AS document_ids, 
-           ARRAY_AGG(DISTINCT dd.path) AS document_paths
+           ARRAY_AGG(DISTINCT jsonb_build_object('id', dd.id, 'path', dd.path, 'name', dd.name)) AS documents
     FROM cases c
     LEFT JOIN cases_topic_tags ct ON c.case_id = ct.case_id
     LEFT JOIN designs_documents dd ON c.case_id = dd.case_id
@@ -280,37 +282,41 @@ router.get("/cases/:id", (req, res) => {
     WHERE c.case_id = $1
     GROUP BY c.case_id
     `;
-    const db = getDBInstance(dbcon);
     
-    db.query(sql, [caseId])
-        .then(result => {
-            if (result.rows.length === 0) {
-                res.status(404).json({ status: 'error', message: 'Could not find case with id' });
-            } else {
-                const row = result.rows[0];
-                const _case = {
-                    case_id: row.case_id,
-                    title: row.title,
-                    description: row.description,
-                    rich_text: row.rich_text,
-                    is_public: row.is_public,
-                    external_case_url: row.external_case_url,
-                    user_id: row.user_id,
-                    topic_tags: row.topic_tags.filter(tag => tag.name !== null), // Filtrar los tags que no existen
-                    documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null), // Crear una lista de objetos { id, path }
-                    created_at: row.created_at,
-                    updated_at: row.updated_at
-                };  
+    const db = getDBInstance(dbcon);
 
-                res.status(200).json({ status: 'success', result: _case });
-            }
-        })
-        .catch(err => {
-            console.error(`Fatal error on the SQL query "${sql}"`);
-            console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error in the DB' });
-        });
+    try {
+        // Ejecución de la consulta usando await
+        const result = await db.query(sql, [caseId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Could not find case with id' });
+        }
+
+        const row = result.rows[0];
+        const _case = {
+            case_id: row.case_id,
+            title: row.title,
+            description: row.description,
+            rich_text: row.rich_text,
+            is_public: row.is_public,
+            external_case_url: row.external_case_url,
+            user_id: row.user_id,
+            topic_tags: row.topic_tags.filter(tag => tag.name !== null), // Filtrar los tags nulos
+            documents: row.documents.filter(doc => doc.id !== null), // Filtrar documentos nulos
+            created_at: row.created_at,
+            updated_at: row.updated_at
+        };
+
+        // Respuesta exitosa con el caso
+        res.status(200).json({ status: 'success', result: _case });
+    } catch (err) {
+        console.error(`Fatal error on the SQL query "${sql}"`);
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Error in the DB' });
+    }
 });
+
 
 
 
@@ -426,7 +432,8 @@ router.post("/cases/:caseId/documents", async (req, res) => {
         // Recorremos cada archivo y lo insertamos en la base de datos
         for (const fileData of pdfFiles) {
             const path = fileData.file.split("uploads")[1];
-            const name = fileData.name;
+            const name = path.split("pdf/").pop();
+
 
             const insertDocumentQuery = `
                 INSERT INTO designs_documents (path, case_id, name)
@@ -752,11 +759,25 @@ router.post("/cases/:caseId/clone", (req, res) => {
         });
 });
 
+router.patch("/documents/:documentId", (req, res) => {
+    const documentId = req.params.documentId;
+    const { name } = req.body;
 
+    const updateDocumentQuery = `
+    UPDATE designs_documents
+    SET name = $2
+    WHERE id = $1
+    `;
+    const db = getDBInstance(dbcon);
 
-router.get("/hello", (req, res) => {
-   res.send("Hello, world!");
-    
+    db.query(updateDocumentQuery, [documentId, name])
+        .then(() => {
+            res.status(200).json({ status: 'success', message: 'Document updated' });
+        })
+        .catch(err => {
+            console.error("Error updating document:", err);
+            res.status(500).json({ status: 'error', message: 'Internal server error' });
+        });
 });
 
 
