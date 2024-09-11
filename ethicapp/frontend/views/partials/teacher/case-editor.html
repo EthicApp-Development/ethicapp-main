@@ -51,9 +51,9 @@
                 <button class="tab_cs" ng-click="setTabEditorDocuments($event)" ng-class="{'btn_selected': tabEditorDocuments == 'documentsTab'}" id="documentsTab">
                     {{'documents'|translate}}
                 </button>
-                <div style="float: left;display: flex;justify-content: left;align-items: center;" ng-if="tabEditorDocuments == 'documentsTab'">
+                <div style="float: left;display: flex;justify-content: left;align-items: center;" ng-show="tabEditorDocuments == 'documentsTab'">
                     <input class="form-control text-left search-input fontAwesome" type="text"
-                        placeholder="{{'search'|translate}}  &#xF002;" ng-model="userSearch">
+                        placeholder="{{'search'|translate}}  &#xF002;" ng-model="userSearchDocs">
                 </div>
             </div>
             <div class="wrapper">
@@ -87,7 +87,7 @@
                                     <p>{{'dragDropMsg' | translate}}</p>
                                 </div>
                                 <div id="file-list">
-                                    <div class="file-item" ng-repeat="document in case.documents | orderBy:'id' track by $index">
+                                    <div class="file-item list-group-item" ng-repeat="document in case.documents | orderBy: 'id' | filter:{name: userSearchDocs} track by $index">
                                         <div class="line-form-nd">
                                             <div class="line-row-nd">
                                                 <input type="text" class="form-control line_input" name="title" ng-model="document.name" ng-disabled="caseReadOnly" ng-keypress="renameDocumentOnEnter($event, document.id)" ng-id="input-name-{{document.id}}">
