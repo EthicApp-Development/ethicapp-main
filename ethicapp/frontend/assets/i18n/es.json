@@ -326,5 +326,6 @@
     "dragDropMsg": "Arrastra y suelta tus archivos aquí o haz click para subir",
     "caseEditorBeforeContinue": "Antes de continuar, eliga si desea compartir el caso con otros usuarios o no.",
     "casesPanel1": "Puedes crear un nuevo caso o continuar con la edición de uno dentro de tu colección, siempre y cuando no se haya realizado una actividad con él.\n",
-    "casesPanel2": "También puedes importar un caso externo desde otra aplicación, o bien agregar a tu colección casos compartidos por otros usuarios."
+    "casesPanel2": "También puedes importar un caso externo desde otra aplicación, o bien agregar a tu colección casos compartidos por otros usuarios.",
+    "rename": "Renombrar"
 }

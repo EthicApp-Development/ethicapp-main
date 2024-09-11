@@ -341,5 +341,6 @@
     "dragDropMsg": "Drag and drop your files here or click to upload",
     "caseEditorBeforeContinue": "Before continuing, choose whether you want to share the case with other users or not.",
     "casesPanel1": "You can create a new case or continue editing one within your collection, as long as no activity has been performed with it.",
-    "casesPanel2": "You can also import an external case from another application, or add cases shared by other users to your collection."
+    "casesPanel2": "You can also import an external case from another application, or add cases shared by other users to your collection.",
+    "rename": "Rename"
 }
