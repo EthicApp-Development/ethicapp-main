@@ -20,35 +20,59 @@
             <div class="activities_container" style="margin-top: 2em;">
                 <div class="list-group pad-content">
 
-                    <div class="list-group-item" ng-repeat="case in ownCases | filter:userSearch" ng-if="tabListCases == 'ownCases'">
-                        <!--UPDATE IT CORRECTLY-->
-                        <div>
-                            <h4 class="list-group-item-heading" ng-bind="case.title || ('untitled' | translate)"></h4>
-                            <h6 class="list-group-item-heading" ng-bind="case.description"></h6>
-                            <p class="list-group-item-text"></p>
-                            <p class="list-group-item-text">{{'created' | translate}} {{case.created_at | date}}</p>
-                        </div>
-                        <div class="text-right vertical-align">
-                            <img class="locked-svg" ng-show="case.locked"
-                                src="../../assets/images/iconsets/gray-lineart/design-lock-active.svg" alt="SVGLocked">
-                            <button class="btn btn-primary btn-smaller ml-1" ng-click="editCase(case.case_id)"
-                                ng-hide="case.locked">{{'edit' |
-                                translate}}</button>
-                            <button class="btn btn-primary btn-smaller ml-1" ng-click="viewCase(case.case_id)">{{'view' |
-                                translate}}</button>
-                            <button class="btn btn-danger btn-smaller ml-1" ng-click="deleteCase(case.case_id)"
-                                ng-hide="case.locked">{{'delete' |
-                                translate}}</button>
-                            <div class="ml-1">
-                                <label class="switch">
-                                    <input type="checkbox" ng-checked="case.is_public"
-                                        ng-click="toggleIsPublic(case.case_id, case.is_public)">
-                                    <span class="slider round"></span>
+                    <div style="position:relative;
+                    display: flex;
+                    flex-direction: column;
+                    padding:10px 15px;
+                    margin-bottom:-1px;
+                    background-color:#fff;
+                    border:1px solid #ddd;
+                    width: 100%;" ng-repeat="case in ownCases | filter:customFilter" ng-if="tabListCases == 'ownCases'">
+  
 
-                                </label>
-                                <p class="share-paragraph">{{'share'|translate}}</p>
+                        <div style="display: inline-flex; justify-content: space-between">
+                            <div>
+                                <h4 class="list-group-item-heading" ng-bind="case.title || ('untitled' | translate)"></h4>
+                                <h6 class="list-group-item-heading" ng-bind="case.description"></h6>
+                                <p class="list-group-item-text"></p>
+                                <p class="list-group-item-text">{{'creationDate' | translate}}: {{formatDate(case.created_at)}}</p>
+                                <p class="list-group-item-text">{{'lastModificationDate' | translate}}: {{formatDate(case.updated_at)  }}</p>
                             </div>
-
+                            <div class="text-right vertical-align">
+                                <img class="locked-svg" ng-show="case.locked"
+                                    src="../../assets/images/iconsets/gray-lineart/design-lock-active.svg" alt="SVGLocked">
+                                <button class="btn btn-primary btn-smaller ml-1" ng-click="editCase(case.case_id)"
+                                    ng-hide="case.locked">{{'edit' |
+                                    translate}}</button>
+                                <button class="btn btn-primary btn-smaller ml-1" ng-click="viewCase(case.case_id)">{{'view' |
+                                    translate}}</button>
+                                <button class="btn btn-danger btn-smaller ml-1" ng-click="deleteCase(case.case_id)"
+                                    ng-hide="case.locked">{{'delete' |
+                                    translate}}</button>
+                                <div class="ml-1">
+                                    <label class="switch">
+                                        <input type="checkbox" ng-checked="case.is_public"
+                                            ng-click="toggleIsPublic(case.case_id, case.is_public)">
+                                        <span class="slider round"></span>
+    
+                                    </label>
+                                    <p class="share-paragraph">{{'share'|translate}}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div ng-if="case.topic_tags.length > 0">
+                            <hr class="mt-1medio">
+                            <div>
+                                <p class="list-group-item-text">{{'tags' | translate}}:</p>
+    
+                                <div class="tags-container" >
+                                    <div class="tag-container" ng-repeat="tag in case.topic_tags track by $index">
+                                        <span class="tag-text">
+                                            <p>{{tag.name}}</p>
+                                        </span>
+                                    </div>
+                                </div> 
+                            </div>
                         </div>
                     </div>
                 </div>

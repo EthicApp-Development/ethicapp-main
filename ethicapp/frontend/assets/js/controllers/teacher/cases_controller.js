@@ -12,6 +12,7 @@ export const CasesController = ($scope, $window, $http, $timeout, Notification, 
     self.tagInput = "";
     self.formFiles = [];
     self.isDragOver = false;
+    self.userSearch = "";
     
 
     self.initCasesView = () => {
@@ -250,5 +251,31 @@ export const CasesController = ($scope, $window, $http, $timeout, Notification, 
             $event.target.blur();
         }
     }
+
+    self.customFilter = (anyCase) => {
+        const search = self.userSearch.toLowerCase();
+        if (search === "") return anyCase
+        return (
+            anyCase.title?.toLowerCase().includes(search) ||
+            anyCase.description?.toLowerCase().includes(search) ||
+            anyCase.created_at?.toLowerCase().includes(search) ||
+            anyCase.updated_at?.toLowerCase().includes(search) ||
+            anyCase.topic_tags?.some(tag => tag.name.toLowerCase().includes(search))
+        )
+    }
+
+    self.formatDate = function(date) {
+        if (!date) return '';
+        var options = {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        };
+        return new Intl.DateTimeFormat('en-GB', options).format(new Date(date));
+    };
 
 };
