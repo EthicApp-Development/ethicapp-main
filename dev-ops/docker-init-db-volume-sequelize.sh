@@ -45,6 +45,10 @@ docker-compose ${ComposeRewriteFlags} up --detach postgres pgadmin
 docker exec ethicapp-postgres /bin/bash -c \
     "psql postgresql://$DB_USER_NAME:$DB_USER_PASSWORD@localhost:5432/$DB_NAME -c '\conninfo'"
 
+# Create test database
+docker exec ethicapp-postgres /bin/bash -c \
+    "psql postgresql://$DB_TEST_USER_NAME:$DB_TEST_USER_PASSWORD@localhost:5432/$DB_TEST_NAME -c '\conninfo'"
+
 #* ---
 #* Step (2): export database files directly into host.
 #* ---
