@@ -44,6 +44,7 @@ ARG DB_USER_NAME
 ARG DB_USER_PASSWORD
 ARG DB_NAME
 
+
 RUN chmod +x init-db.sh \
     && ./init-db.sh
 
