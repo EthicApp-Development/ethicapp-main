@@ -7,7 +7,7 @@
     "start": "node ./backend/ethicapp",
     "test-case": "jest --no-cache",
     "debug": "node --inspect=0.0.0.0:9229 --nolazy ./backend/ethicapp",
-    "test": "mocha tests"
+    "test": "jest --no-cache"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.185.0",
