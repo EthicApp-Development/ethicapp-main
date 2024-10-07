@@ -117,47 +117,53 @@ router.post("/add-session", rpg.execSQL({
     }
 }));
 
+router.post("/add-session-activity", async (req, res) => {
+    const uid = req.session.uid;
+    const { name, descr, type, additionalConfig } = req.body;
+    const config = additionalConfig || {};
+    
+    const db = getDBInstance(pass.dbcon);
+    
+    try {
+        // Step 1: Insert into the `sessions` table and get the id returned.
+        const sessionInsertSQL = `
+            INSERT INTO sessions(name, descr, creator, time, status, type, additional_config)
+            VALUES ($1, $2, $3, now(), 1, $4, $5)
+            RETURNING id;
+        `;
+        const sessionValues = [name, descr, uid, type, config];
+        const sessionResult = await db.query(sessionInsertSQL, sessionValues);
+        const sessionId = sessionResult.rows[0].id;
 
-router.post("/add-session-activity", (req, res) => {
-    var uid = req.session.uid;
-    var name =req.body.name;
-    var descr = req.body.descr;
-    var type = req.body.type;
-    var additionalConfig = JSON.stringify(req.body.additionalConfig);
-    var sql = `
-    WITH ROWS AS (
-        INSERT INTO sessions(name, descr, creator, TIME, status, TYPE, additional_config)
-        VALUES (
-            '${name}', '${descr}', ${uid}, now(), 1, '${type}', '${additionalConfig}'
-        )
-        RETURNING id
-    )
-    INSERT INTO sesusers(sesid, UID)
-    SELECT id, ${uid}
-    FROM ROWS;
-    SELECT max(id)
-    FROM sessions
-    WHERE creator = ${uid};
+        // Step 2: Insert into the `sesusers` using the obtained id.
+        const sesusersInsertSQL = `
+            INSERT INTO sesusers(sesid, uid)
+            VALUES ($1, $2);
+        `;
+        const sesusersValues = [sessionId, uid];
+        await db.query(sesusersInsertSQL, sesusersValues);
 
-    SELECT UpdateOrInsertActivityRecord(${uid})
-    `;
-    var db = getDBInstance(pass.dbcon);
-    var qry;
-    var result;
-    qry = db.query(sql,(err,res) =>{
-        if(res != null) result = res.rows[0].max;
-    });
-    qry.on("end", function () {
-        res.json({status: 200, id: result});
-    });
-    qry.on("error", function(err){
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.json({status: 400, });
+        // Step 3: Get the highest id for the current creator.
+        const maxIdSQL = `
+            SELECT max(id) FROM sessions WHERE creator = $1;
+        `;
+        const maxIdResult = await db.query(maxIdSQL, [uid]);
+        const maxId = maxIdResult.rows[0].max;
 
-    });
+        // Step 4: Execute stored procedure.
+        const updateSQL = `
+            SELECT UpdateOrInsertActivityRecord($1);
+        `;
+        await db.query(updateSQL, [uid]);
+
+        // Generate response.
+        res.json({ status: 200, id: maxId });
+
+    } catch (err) {
+        console.error('Error in SQL query while creating a session:', err);
+        res.status(400).json({ status: 400, message: 'Error creating session' });
+    }
 });
-
 
 router.post("/add-activity", (req, res) => {
     var sesid =req.body.sesid;
