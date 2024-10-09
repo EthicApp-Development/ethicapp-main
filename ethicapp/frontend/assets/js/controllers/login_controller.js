@@ -1,4 +1,3 @@
-/*eslint func-style: ["error", "expression"]*/
 export let LoginController = ($scope, $http, $translate) => {
     var self = $scope;
     const lang = navigator.language;

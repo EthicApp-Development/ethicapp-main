@@ -1,175 +1,100 @@
-export let RegisterController = ($scope, $http, $translate,apiParams) => {
+export let RegisterController = ($scope, $http, $translate, apiParams) => {
     var self = $scope;
-    const lang = navigator.language;
     self.reCaptchaSiteKey = apiParams.reCaptchaSiteKey;
+    self.user = {};
+    self.emailAlreadyExists = false; // Flag to track if email is already used
 
-    //Registro Usuario Normal
-    self.name = "";
-    self.lastname = "";
-    self.email = "";
-    self.pass = "";
-    self.confPass = "";
-    self.sex = "";
-
-    //Mensajes de Error
-    self.errorMessagesES = {
-        nameRequired: "El campo nombre es obligatorio.",
-        lastnameRequired: "El campo apellido es obligatorio.",
-        emailRequired: "El campo correo electrónico es obligatorio.",
-        passwordRequired: "El campo contraseña es obligatorio.",
-        passwordsMismatch: "Las contraseñas no coinciden.",
-        genderRequired: "Por favor, selecciona tu género.",
-        recaptchaRequired: "Por favor, completa el recaptcha."
-    };
-
-    self.errorMessagesEN = {
-        nameRequired: "The name field is required.",
-        lastnameRequired: "The last name field is required.",
-        emailRequired: "The email field is required.",
-        passwordRequired: "The password field is required.",
-        passwordsMismatch: "Passwords do not match.",
-        genderRequired: "Please select your gender.",
-        recaptchaRequired: "Please complete the reCaptcha."
-    };
-
-    self.validateRecaptcha = function() {
-        var response = grecaptcha.getResponse(); 
+    self.validateRecaptcha = function () {
+        var response = grecaptcha.getResponse();
         if (response.length === 0) {
-            return false; 
+            return false;
         } else {
             self.recaptchaError = "";
-            return true; 
+            return true;
         }
     };
 
-    self.registerUser = function () {
-        self.nameError = "";
-        self.lastnameError = "";
-        self.emailError = "";
-        self.passwordError = "";
-        self.confirmPasswordError = "";
-        self.genderError = "";
-        self.recaptchaError = "";
-
-        var errorMessages; 
-
-        if (self.lang === 'EN_US/english') {
-            errorMessages = self.errorMessagesEN;
-        } else {
-            errorMessages = self.errorMessagesES;
-        }
-
-        if (!self.name) {
-            self.nameError = errorMessages.nameRequired;
-        }
-
-        if (!self.lastname) {
-            self.lastnameError = errorMessages.lastnameRequired;
-        }
-
-        if (!self.email) {
-            self.emailError = errorMessages.emailRequired;
-        }
-
-        if (!self.pass) {
-            self.passwordError = errorMessages.passwordRequired;
-        }
-
-        if (self.pass !== self.confPass) {
-            self.confirmPasswordError = errorMessages.passwordsMismatch;
-        }
-
-        if (!self.sex) {
-            self.genderError = errorMessages.genderRequired;
-        }
-
+    self.registerUser = () => {        
         if (!self.validateRecaptcha()) {
-            self.recaptchaError = errorMessages.recaptchaRequired;
-        }
-
-        if (self.nameError || self.lastnameError || self.emailError || 
-            self.passwordError || self.confirmPasswordError || self.genderError ||
-            self.recaptchaError) {
+            self.recaptchaError = "Captcha validation is required.";
             return;
         }
 
-        //Si no hay errores de validación, llamar a API 
-        var userData = {
-            name:                   self.name,
-            lastname:               self.lastname,
-            email:                  self.email,
-            pass:                   self.pass,
-            sex:                    self.sex,
-            g_recaptcha_response: grecaptcha.getResponse() 
+        const userData = {
+            name: self.user.firstname,
+            lastname: self.user.lastname,
+            email: self.user.email,
+            pass: self.user.password,
+            sex: self.user.gender,
+            g_recaptcha_response: grecaptcha.getResponse()
         };
 
-        console.log(userData);
+        if (self.user.accountType === 'Teacher') {
+            userData.institution = self.user.institution;
+            $http.post("/teacher_account_request", userData)
+                .then(function (response) {
+                    if (response.data.success) {
+                        console.log("Successful teacher account request");
+                        window.location.href = "/login?rc=6";
+                        
+                    } else {
+                        console.error("Error in teacher account request: ", response.data.message);
+                    }
+                })
+                .catch(function (error) {
+                    // Detect and handle different types of errors
+                    if (error.status === 409) {
+                        // Email is already registered
+                        console.error("The email is already registered. Please use another one or log in.");
+                        self.emailAlreadyExists = true; // Set the flag to display the error message
+                    } else if (error.status === 400 && error.data.message === "Error in captcha verification.") {
+                        console.error("Error in captcha verification. Please try again.");
+                        self.errorMessage = "Error in captcha verification. Please try again.";
+                    } else if (error.status === 500) {
+                        console.error("An error occurred on the server. Please try again later.");
+                        self.errorMessage = "An error occurred on the server. Please try again later.";
+                    } else {
+                        console.error("Unknown error. Please try again.");
+                        self.errorMessage = "Unknown error. Please try again.";
+                    }
+                });
 
-        // $http.post("/register", userData)
-        //     .then(function (response) {
-        //         console.log(response);
-        //         if (response.data.success) {
-        //             console.log("Registro exitoso");
-        //         } else {
-        //             console.error("Error en el registro: ");
-        //         }
-        //     })
-        //     .catch(function (error) {
-        //         console.error("Error en la solicitud al backend: " + error);
-        //     });
-        
-    };
-
-    if (lang.startsWith('es')) {
-        self.lang = 'ES_CL/spanish';
-    } else {
-        self.lang = 'EN_US/english';
-    }
-
-    self.updateLang = function (langKey) {
-        $translate.use(langKey);
-    };
-
-    self.changeLang = function () {
-        self.lang = self.lang == "EN_US/english" ? "ES_CL/spanish" : "EN_US/english";
-        self.updateLang(self.lang);
+        } else if (self.user.accountType === 'Student') {
+            $http.post("/register", userData)
+                .then(function (response) {
+                    if (response.data.success) {
+                        console.log("Successful registration");
+                        window.location.href = "/login?rc=1";
+                    } else {
+                        console.error("Error in registration: ", response.data.message);
+                    }
+                })
+                .catch(function (error) {
+                    // Detect and handle different types of errors
+                    if (error.status === 409) {
+                        // Email is already registered
+                        console.error("The email is already registered. Please use another one or log in.");
+                        self.emailAlreadyExists = true; // Set the flag to display the error message
+                    } else if (error.status === 400 && error.data.message === "Error in captcha verification.") {
+                        console.error("Error in captcha verification. Please try again.");
+                        self.errorMessage = "Error in captcha verification. Please try again.";
+                    } else if (error.status === 500) {
+                        console.error("An error occurred on the server. Please try again later.");
+                        self.errorMessage = "An error occurred on the server. Please try again later.";
+                    } else {
+                        console.error("Unknown error. Please try again.");
+                        self.errorMessage = "Unknown error. Please try again.";
+                    }
+                });
+        }
     };
 
     self.init = function () {
-        self.updateLang(self.lang);
-        self.getcountries();
+        const browserLanguage = navigator.language;
+        const appLanguage = browserLanguage.startsWith('es') ? 'ES_CL/spanish' : 'EN_US/english';
+        console.log(appLanguage);
+        $translate.use(appLanguage);
     };
-
-    self.activate_user = function(){
-        var url_string = window.location;
-        var url = new URL(url_string);
-        var token = url.searchParams.get("tok");
-        //console.log(token);
-        $http({ url: "activate_user", method: "post",data: {token} }).success(function () {
-        });
-    };
-
-    self.getcountries = function(){
-        $http.get("https://restcountries.com/v3.1/all").success(function (data) {
-            var list = [];
-            
-            for(var i = 0;i< data.length;i++){ 
-                list.push(data[i].name.common);
-            }
-            list.sort();
-            if(lang[0] == "e" && lang[1] == "s"){
-                list.unshift("Elige un Pais");
-            }
-            else{
-                list.unshift("Choose Country");
-            }
-            
-            self.countries = list;
-            
-        });
-    };
-
-    
 
     self.init();
 };

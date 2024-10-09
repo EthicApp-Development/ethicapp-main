@@ -16,6 +16,27 @@ require("../../app");
 router.use(passport.initialize());
 router.use(passport.session());
 
+const Yup = require("yup");
+
+const registerSchema = Yup.object().shape({
+    name: Yup.string().required("requiredName"),
+    lastname: Yup.string().required("requiredLastName"),
+    email: Yup.string().email("invalidEmail").required("requiredEmail"),
+    pass: Yup.string().min(6, "minLengthPassword").required("requiredPassword"),
+    sex: Yup.string().oneOf(["M", "F", "O"], "invalidSex").required("requiredSex"),
+    g_recaptcha_response: Yup.string().required("requiredCaptcha")
+});
+
+const teacherAccountRequestSchema = Yup.object().shape({
+    name: Yup.string().required("requiredName"),
+    lastname: Yup.string().required("requiredLastName"),
+    email: Yup.string().email("invalidEmail").required("requiredEmail"),
+    pass: Yup.string().min(6, "minLengthPassword").required("requiredPassword"),
+    sex: Yup.string().oneOf(["M", "F", "O"], "invalidSex").required("requiredSex"),
+    institution: Yup.string().required("requiredInstitution"),
+    g_recaptcha_response: Yup.string().required("requiredCaptcha")
+});
+
 
 mailer.createTransport({
     sendmail: true,
@@ -175,54 +196,84 @@ function smartArrayConvert(sqlParams) {
 
 
 router.post("/register", async (req, res) => {
-    const response_key = req.body["g-recaptcha-response"];
-    const secret_key = pass.Captcha_Secret;
     try {
+        await registerSchema.validate(req.body); // Validar el cuerpo de la solicitud
+
+        const response_key = req.body["g_recaptcha_response"];
+        const secret_key = pass.Captcha_Secret;
+
         const response = await fetch(
             "https://www.google.com/recaptcha/api/siteverify?" +
             `secret=${secret_key}&response=${response_key}`
         );
         const data = await response.json();
-        if (data.success == true) {
+
+        if (data.success) {
             try {
-                var passcr = crypto.createHash("md5").update(req.body.pass).digest("hex");
-                var fullname = (req.body.name + " " + req.body.lastname);
-                var db = getDBInstance(pass.dbcon);
+                const passcr = crypto.createHash("md5").update(req.body.pass).digest("hex");
+                const fullname = `${req.body.name} ${req.body.lastname}`;
+                const db = getDBInstance(pass.dbcon);
 
-                var sql = `
+                const sql = `
                     INSERT INTO users (rut, pass, name, mail, sex, ROLE) 
-                    VALUES ('${req.body.rut}','${passcr}','${fullname}'
-                    ,'${req.body.mail}','${req.body.sex}','A')
+                    VALUES ($1, $2, $3, $4, $5, $6)
                 `;
+                const values = ['N/A', passcr, fullname, req.body.email, req.body.sex, 'A'];
 
-                db.query(sql,(err) =>{
-                    if(err){
-                        console.error(err);
-                        res.redirect("register");
-                    }else{
+                db.query(sql, values, (err) => {
+                    if (err) {
+                        if (err.code === '23505' && err.detail.includes('Key (mail)')) {
+                            return res.status(409).json({
+                                success: false,
+                                message: "El correo electrónico ya está registrado.",
+                            });
+                        }
+
+                        console.error("DB error", err);
+                        return res.status(500).json({
+                            success: false,
+                            message: "Error al registrar el usuario en la base de datos.",
+                        });
+                    } else {
                         const sqlQuery = "SELECT UpdateOrInsertCreateAccountRecord(0)";
-                        db.query(sqlQuery,(dbErr) =>{
+                        db.query(sqlQuery, (dbErr) => {
                             if (dbErr) {
-                                res.redirect("register");
+                                return res.status(500).json({
+                                    success: false,
+                                    message: "Error al actualizar o insertar registro de cuenta.",
+                                });
                             }
-                            res.redirect("login?rc=1");
+
+                            return res.status(200).json({
+                                success: true,
+                                message: "Usuario registrado exitosamente.",
+                            });
                         });
                     }
                 });
             } catch (err) {
                 console.error("Error al registrar el usuario", err);
-                res.redirect("register");
+                return res.status(500).json({
+                    success: false,
+                    message: "Error al registrar el usuario.",
+                });
             }
-        }
-        else {
+        } else {
             console.error("Error recaptcha", data);
-            res.redirect("register");
+            return res.status(400).json({
+                success: false,
+                message: "Error en la verificación del captcha.",
+            });
         }
-    } catch(error) {
+    } catch (error) {
         console.error("Error en post /register", error);
-        res.redirect("register");
+        return res.status(500).json({
+            success: false,
+            message: "Error en el servidor.",
+        });
     }
 });
+
 
 
 router.post("/register_institucion", (req, res) => {
@@ -457,51 +508,53 @@ router.get("/teacher_account_requests/:id", (req, res) => {
 
 router.post("/teacher_account_request", async (req, res) => {
     try {
-        let response_key = req.body["g-recaptcha-response"];
+        await teacherAccountRequestSchema.validate(req.body); // Validar el cuerpo de la solicitud
+        
+        let response_key = req.body["g_recaptcha_response"];
         let secret_key = pass.Captcha_Secret;
         let captchaResponse = await fetch(
             "https://www.google.com/recaptcha/api/siteverify?" +
             `secret=${secret_key}&response=${response_key}`
         );
         let captchaData = await captchaResponse.json();
+        console.log("Captcha log", captchaData);
 
         if (captchaData.success) {
-            if (req.body.pass == req.body["conf-pass"]) {
-                var passcr = crypto.createHash("md5").update(req.body.pass).digest("hex");
-                var fullname = req.body.name + " " + req.body.lastname;
-                var db = getDBInstance(pass.dbcon);
-                var existingUserRole = await checkIfUserExists(db, req.body.mail);
+            var passcr = crypto.createHash("md5").update(req.body.pass).digest("hex");
+            var fullname = `${req.body.name} ${req.body.lastname}`;
+            var db = getDBInstance(pass.dbcon);
+            var existingUserRole = await checkIfUserExists(db, req.body.email);
 
-                if (existingUserRole === false) {
-                    await insertTeacherAccountRequest(db, req.body.rut, passcr, fullname, req.body.mail, req.body.sex, req.body.inst_name, 0, false);
-                    res.redirect("login?rc=6");
-                } else {
-                    if (existingUserRole === "A") {
-                        await insertTeacherAccountRequest(db, req.body.rut, passcr, fullname, req.body.mail, req.body.sex, req.body.inst_name, 0, true);
-                        res.redirect("login?rc=8");
-                    } else {
-                        res.redirect("login?rc=7");
-                    }
-                }
+            if (existingUserRole === false) {
+                await insertTeacherAccountRequest(db, req.body.rut, passcr, fullname, req.body.email, req.body.sex, req.body.institution, 0, false);
+                return res.status(200).json({ success: true, message: "Solicitud de cuenta de profesor enviada." });
             } else {
-                res.redirect("login?rc=9");
+                if (existingUserRole === "A") {
+                    await insertTeacherAccountRequest(db, req.body.rut, passcr, fullname, req.body.email, req.body.sex, req.body.institution, 0, true);
+                    return res.status(200).json({ success: true, message: "Solicitud de modificación de cuenta a profesor enviada." });
+                } else {
+                    return res.status(409).json({ success: false, message: "El correo electrónico ya está registrado." });
+                }
             }
         } else {
-            res.redirect("login?rc=10");
+            console.log("Error en la verificación del captcha.");
+            return res.status(400).json({ success: false, message: "Error en la verificación del captcha." });
         }
     } catch (err) {
-        res.redirect("login?rc=11");
+        console.error("Error en el controlador:", err);
+        return res.status(500).json({ success: false });
     }
 });
 
 async function checkIfUserExists(db, email) {
     return new Promise((resolve, reject) => {
-        var sql = `
+        const sql = `
         SELECT *
         FROM users
-        WHERE mail = '${email}'
+        WHERE mail = $1
         `;
-        db.query(sql, (err, qry_res) => {
+
+        db.query(sql, [email], (err, qry_res) => {
             if (err) {
                 reject(err);
             } else {
@@ -517,11 +570,14 @@ async function checkIfUserExists(db, email) {
 
 async function insertTeacherAccountRequest(db, rut, pass, name, mail, sex, institution, status, upgrade_flag) {
     return new Promise((resolve, reject) => {
-        var sql = `
+        const sql = `
         INSERT INTO teacher_account_requests(rut, pass, name, mail, gender, institution, status, upgrade_flag)
-        VALUES ('${rut}', '${pass}', '${name}', '${mail}', '${sex}', '${institution}', ${status}, '${upgrade_flag}')
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         `;
-        db.query(sql, (err, qry_res) => {
+
+        const values = ['N/A', pass, name, mail, sex, institution, status, upgrade_flag];
+
+        db.query(sql, values, (err, qry_res) => {
             if (err) {
                 reject(err);
             } else {
@@ -530,8 +586,6 @@ async function insertTeacherAccountRequest(db, rut, pass, name, mail, sex, insti
         });
     });
 }
-
-
 
 router.put("/teacher_account_requests/:id", async (req, res) => {
     try {
