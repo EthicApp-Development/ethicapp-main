@@ -338,7 +338,20 @@
 	"showOptions": "Show Advanced Options",
 	"hideOptions": "Hide Advanced Options",
 	"contentAnalysis": "Content Analysis",
-	"chooseQuestion": "Select a Question"
+	"chooseQuestion": "Select a Question",
+	"requiredInstiution": "An institution is required",
+	"minLengthInstiution": "The institution name is too short",
+	"requiredName": "Name is required",
+	"minLengthName": "The name is too short",
+	"requiredLastName": "A valid last name is required",
+	"requiredEmail": "A valid email is required",
+	"alreadyRegistredEmail": "This email is already registered",
+	"requiredGender": "Your gender is required",
+	"requiredPassword": "Enter a password",
+	"minLengthPassword": "Your password must be at least eight characters long",
+	"requiredConfirmPassword": "Confirm your password",
+	"passwordsDontMatch": "Passwords do not match"
+	
 }
 
 
