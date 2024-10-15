@@ -340,7 +340,19 @@
 	"showOptions": "Mostrar Opciones Avanzadas",
 	"hideOptions": "Ocultar Opciones Avanzadas",
 	"contentAnalysis": "Análisis de Contenido",
-	"chooseQuestion": "Selecciona una pregunta"
+	"chooseQuestion": "Selecciona una pregunta",
+	"requiredInstiution": "Se requiere una institución",
+	"minLengthInstiution": "El nombre de la institución es demasiado corto",
+	"requiredName": "Se requiere un nombre",
+	"minLengthName": "El nombre es demasiado corto",
+	"requiredLastName": "Se requiere un apellido",
+	"requiredEmail": "Se requiere un correo electrónico válido",
+	"alreadyRegistredEmail": "Este correo electrónico ya está registrado",
+	"requiredGender": "Se requiere tu género",
+	"requiredPassword": "Ingresa una contraseña",
+	"minLengthPassword": "Tu contraseña debe tener al menos ocho caracteres",
+	"requiredConfirmPassword": "Confirma tu contraseña",
+	"passwordsDontMatch": "Las contraseñas no coinciden"
 
 }
 
