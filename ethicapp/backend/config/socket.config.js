@@ -1,4 +1,4 @@
-module.exports.configSocket = function(io){
+const configSocket = function(io) {
     module.exports.stateChange = function(sesid){
         io.of("/").emit("stateChange", {ses: sesid});
     };
@@ -27,3 +27,5 @@ module.exports.configSocket = function(io){
         io.of("/").emit("contentUpdate", {data: data});
     };
 };
+
+export default configSocket;

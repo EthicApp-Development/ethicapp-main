@@ -46,22 +46,6 @@ services:
       - redis
       - postgres
 
- # ---------------------- Admin Panel ---------------------- #
-  admin-panel:
-    container_name: "ethicapp-admin-panel"
-    build:
-      context: admin-panel/
-      args:
-        REACT_APP_API_PORT: ${NODE_PORT}
-        REACT_APP_DOMAIN: ${ETHICAPP_DOMAIN_NAME}
-    ports:
-      - "3000:3000"
-    networks:
-      default:
-    depends_on:
-      - node
-      - redis
-
   # ---------------------- Redis Cache Server ---------------------- #
   redis:
     image: redis

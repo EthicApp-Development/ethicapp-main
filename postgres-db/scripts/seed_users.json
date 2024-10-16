@@ -1,0 +1,9 @@
+[
+    { "name": "Admin", "rut": "N/A", "password": "admin", "mail": "admin@admin", "sex": null, "role": "S", "aprendizaje": null },
+    { "name": "profesor1", "rut": "16308816-9", "password": "profesor1", "mail": "profesor1@test", "sex": "M", "role": "P", "aprendizaje": "Reflexivo" },
+    { "name": "profesor2", "rut": "18530564-3", "password": "profesor2", "mail": "profesor2@test", "sex": "M", "role": "P", "aprendizaje": "Reflexivo" },
+    { "name": "alumno 1", "rut": "20884663-9", "password": "alumno1", "mail": "alumno1@test", "sex": "M", "role": "A", "aprendizaje": "Reflexivo" },
+    { "name": "alumno 2", "rut": "22651377-9", "password": "alumno2", "mail": "alumno2@test", "sex": "F", "role": "A", "aprendizaje": "Teorico" },
+    { "name": "alumno 3", "rut": "19994794-k", "password": "alumno3", "mail": "alumno3@test", "sex": "F", "role": "A", "aprendizaje": "Activo" },
+    { "name": "banned-user", "rut": "N/A", "password": "banned", "mail": "banned@test", "sex": "M", "role": "A", "aprendizaje": "Activo" }
+]

@@ -5,14 +5,13 @@ const rpg = require("../db/rest-pg");
 const pg = require("pg");
 const router = express.Router();
 const pass = require("../config/keys-n-secrets");
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
 const authorize = require("../middleware/case-manager");
 
-const dbcon = pass.dbcon
+const dbcon = pass.dbcon;
 var DB = null;
-
 
 var DB = null;
 function getDBInstance(dbcon) {
@@ -41,7 +40,7 @@ router.get("/topic-tags", (req, res) => {
         if(res != null){
             result = JSON.stringify(res.rows);  
         }
-    });;
+    });
 
     qry.on("end", function () {
         res.end('{"status":"ok", "result":'+result+"}");
@@ -66,16 +65,16 @@ router.get("/topic-tags/:id", (req, res) => {
 
     qry.on("end", function (result) {
         if (result.rows.length === 0) {
-            res.status(404).json({ status: 'error', message: 'could not find the topic id' });
+            res.status(404).json({ status: "error", message: "could not find the topic id" });
         } else {
-            res.status(200).json({ status: 'success', data: result.rows[0] });
+            res.status(200).json({ status: "success", data: result.rows[0] });
         }
     });
 
     qry.on("error", function (err) {
         console.error(`Fatal error on the SQL query "${sql}"`);
         console.error(err);
-        res.status(500).json({ status: 'error', message: '' });
+        res.status(500).json({ status: "error", message: "" });
     });
 });
 
@@ -106,16 +105,16 @@ router.delete("/topic-tags/:id", (req, res) => {
 
     qry.on("end", function (result) {
         if (result.rowCount === 0) {
-            res.status(404).json({ status: 'error', message: 'could not find the topic id' });
+            res.status(404).json({ status: "error", message: "could not find the topic id" });
         } else {
-            res.status(200).json({ status: 'success', message: 'Topic deleted' });
+            res.status(200).json({ status: "success", message: "Topic deleted" });
         }
     });
 
     qry.on("error", function (err) {
         console.error(`Fatal error on the SQL query "${sql}"`);
         console.error(err);
-        res.status(500).json({ status: 'error', message: 'Error in the DB' });
+        res.status(500).json({ status: "error", message: "Error in the DB" });
     });
 });
 
@@ -131,7 +130,7 @@ router.get("/cases-topic-tags", (req, res) => {
         if(res != null){
             result = JSON.stringify(res.rows);  
         }
-    });;
+    });
 
     qry.on("end", function () {
         res.end('{"status":"ok", "result":'+result+"}");
@@ -139,7 +138,7 @@ router.get("/cases-topic-tags", (req, res) => {
     qry.on("error", function(err){
         console.error(`Fatal error on the SQL query "${sql}"`);
         console.error(err);
-        res.status(500).json({ status: 'error', message: 'Error in the DB' });
+        res.status(500).json({ status: "error", message: "Error in the DB" });
     });
 });
 
@@ -165,23 +164,23 @@ router.get("/users/:userId/cases", (req, res) => {
         .then(result => {
             const _cases = result.rows.map(row => {
                 return {
-                    case_id: row.case_id,
-                    title: row.title,
-                    description: row.description,
-                    is_public: row.is_public,
+                    case_id:           row.case_id,
+                    title:             row.title,
+                    description:       row.description,
+                    is_public:         row.is_public,
                     external_case_url: row.external_case_url,
-                    user_id: row.user_id,
-                    topic_tags: row.topic_tags.filter(tag => tag.id !== null), // Filtrar los tags que no existen
-                    documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
+                    user_id:           row.user_id,
+                    topic_tags:        row.topic_tags.filter(tag => tag.id !== null), // Filtrar los tags que no existen
+                    documents:         row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
                 };
             });
 
-            res.status(200).json({ status: 'ok', result: _cases });
+            res.status(200).json({ status: "ok", result: _cases });
         })
         .catch(err => {
             console.error(`Fatal error on the SQL query "${sql}"`);
             console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error in the DB' });
+            res.status(500).json({ status: "error", message: "Error in the DB" });
         });
 });
 
@@ -207,23 +206,23 @@ router.get("/cases", (req, res) => {
             console.log(result);
             const _cases = result.rows.map(row => {
                 return {
-                    case_id: row.case_id,
-                    title: row.title,
-                    description: row.description,
-                    is_public: row.is_public,
+                    case_id:           row.case_id,
+                    title:             row.title,
+                    description:       row.description,
+                    is_public:         row.is_public,
                     external_case_url: row.external_case_url,
-                    user_id: row.user_id,
-                    topic_tags: row.topic_tags.filter(tag => tag.id !== null), // Filtrar los tags que no existen
-                    documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
+                    user_id:           row.user_id,
+                    topic_tags:        row.topic_tags.filter(tag => tag.id !== null), // Filtrar los tags que no existen
+                    documents:         row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
                 };
             });
 
-            res.status(200).json({ status: 'ok', result: _cases });
+            res.status(200).json({ status: "ok", result: _cases });
         })
         .catch(err => {
             console.error(`Fatal error on the SQL query "${sql}"`);
             console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error in the DB' });
+            res.status(500).json({ status: "error", message: "Error in the DB" });
         });
 });
 
@@ -247,27 +246,27 @@ router.get("/cases/:id", (req, res) => {
     db.query(sql, [caseId])
         .then(result => {
             if (result.rows.length === 0) {
-                res.status(404).json({ status: 'error', message: 'Could not find case with id' });
+                res.status(404).json({ status: "error", message: "Could not find case with id" });
             } else {
                 const row = result.rows[0];
                 const _case = {
-                    case_id: row.case_id,
-                    title: row.title,
-                    description: row.description,
-                    is_public: row.is_public,
+                    case_id:           row.case_id,
+                    title:             row.title,
+                    description:       row.description,
+                    is_public:         row.is_public,
                     external_case_url: row.external_case_url,
-                    user_id: row.user_id,
-                    topic_tags: row.topic_tags.filter(tag => tag.id !== null), // Filtrar los tags que no existen
-                    documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
+                    user_id:           row.user_id,
+                    topic_tags:        row.topic_tags.filter(tag => tag.id !== null), // Filtrar los tags que no existen
+                    documents:         row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
                 };
 
-                res.status(200).json({ status: 'success', data: _case });
+                res.status(200).json({ status: "success", data: _case });
             }
         })
         .catch(err => {
             console.error(`Fatal error on the SQL query "${sql}"`);
             console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error in the DB' });
+            res.status(500).json({ status: "error", message: "Error in the DB" });
         });
 });
 
@@ -283,11 +282,11 @@ router.post("/cases", (req, res) => {
     db.query(caseInsertQuery)
         .then(result => {
             const caseId = result.rows[0].case_id;
-            res.status(201).json({ status: 'success', message: 'Case created', caseId: caseId });
+            res.status(201).json({ status: "success", message: "Case created", caseId: caseId });
         })
         .catch(err => {
             console.error("Error creating case:", err);
-            res.status(500).json({ status: 'error', message: 'Internal server error' });
+            res.status(500).json({ status: "error", message: "Internal server error" });
         });
 });
 
@@ -328,16 +327,16 @@ router.patch("/cases/:caseId", (req, res) => {
             // Insertar los nuevos topic tags
             const caseTopicsInsertQuery = `
             INSERT INTO cases_topic_tags (case_id, topic_tag_id)
-            VALUES ${topic_tag_ids.map((_, index) => `($1, $${index + 2})`).join(', ')}
+            VALUES ${topic_tag_ids.map((_, index) => `($1, $${index + 2})`).join(", ")}
             `;
             return db.query(caseTopicsInsertQuery, [caseId, ...topic_tag_ids]);
         })
         .then(() => {
-            res.status(200).json({ status: 'success', message: 'Case updated' });
+            res.status(200).json({ status: "success", message: "Case updated" });
         })
         .catch(err => {
             console.error("Error updating case:", err);
-            res.status(500).json({ status: 'error', message: 'Internal server error' });
+            res.status(500).json({ status: "error", message: "Internal server error" });
         });
 });
 
@@ -353,11 +352,11 @@ router.post("/cases/:caseId/documents", (req, res) => {
     db.query(checkCaseQuery, [caseId])
         .then(result => {
             if (result.rows.length === 0) {
-                return res.status(404).json({ status: 'error', message: 'Case do not exist' });
+                return res.status(404).json({ status: "error", message: "Case do not exist" });
             }
             
             if (req.files == null || req.files.pdf == null) {
-                return res.status(400).json({ status: 'error', message: 'No file passed' });
+                return res.status(400).json({ status: "error", message: "No file passed" });
             }
 
             if (!Array.isArray(req.files.pdf)) {
@@ -377,11 +376,11 @@ router.post("/cases/:caseId/documents", (req, res) => {
             
         })
         .then(() => {
-            res.status(201).json({ status: 'success', message: 'Document uploaded' });
+            res.status(201).json({ status: "success", message: "Document uploaded" });
         })
         .catch(err => {
             console.error("Error creating document: ", err);
-            res.status(500).json({ status: 'error', message: 'Internal server error' });
+            res.status(500).json({ status: "error", message: "Internal server error" });
         });
 });
 
@@ -390,7 +389,7 @@ router.patch("/designs/:id/case", (req, res) => {
     const { caseId } = req.body;
 
     if (!caseId) {
-        res.status(400).json({ status: 'error', message: 'Case ID is required' });
+        res.status(400).json({ status: "error", message: "Case ID is required" });
     }
 
     const updateDesignQuery = `
@@ -402,11 +401,11 @@ router.patch("/designs/:id/case", (req, res) => {
 
     db.query(updateDesignQuery, [designId, caseId])
         .then(() => {
-            res.status(200).json({ status: 'success', message: 'Design updated' });
+            res.status(200).json({ status: "success", message: "Design updated" });
         })
         .catch(err => {
             console.error("Error updating design:", err);
-            res.status(500).json({ status: 'error', message: 'Internal server error' });
+            res.status(500).json({ status: "error", message: "Internal server error" });
         });
 });
 
@@ -420,15 +419,15 @@ router.get("/designs/:id", (req, res) => {
     db.query(sql, [designId])
         .then(result => {
             if (result.rows.length === 0) {
-                res.status(404).json({ status: 'error', message: 'Could not find a design with the provided ID' });
+                res.status(404).json({ status: "error", message: "Could not find a design with the provided ID" });
             } else {
-                res.status(200).json({ status: 'success', data: result.rows[0] });
+                res.status(200).json({ status: "success", data: result.rows[0] });
             }
         })
         .catch(err => {
             console.error(`Fatal error on the SQL query "${sql}"`);
             console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error in the DB' });
+            res.status(500).json({ status: "error", message: "Error in the DB" });
         }); 
 });
 
@@ -452,28 +451,28 @@ router.get("/designs/:id/case", (req, res) => {
     db.query(sql, [designId])
         .then(result => {
             if (result.rows.length === 0) {
-                res.status(404).json({ status: 'error', message: 'Could not find a case associated with the design with the provided ID' });
+                res.status(404).json({ status: "error", message: "Could not find a case associated with the design with the provided ID" });
                     
             } else {
                 const row = result.rows[0];
                 const _case = {
-                    case_id: row.case_id,
-                    title: row.title,
-                    description: row.description,
-                    is_public: row.is_public,
+                    case_id:           row.case_id,
+                    title:             row.title,
+                    description:       row.description,
+                    is_public:         row.is_public,
                     external_case_url: row.external_case_url,
-                    user_id: row.user_id,
-                    topic_tags: row.topic_tags.filter(tag => tag.id !== null), // Filtrar los tags que no existen
-                    documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
+                    user_id:           row.user_id,
+                    topic_tags:        row.topic_tags.filter(tag => tag.id !== null), // Filtrar los tags que no existen
+                    documents:         row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
                 };
 
-                res.status(200).json({ status: 'success', data: _case });
+                res.status(200).json({ status: "success", data: _case });
             }
         })
         .catch(err => {
             console.error(`Fatal error on the SQL query "${sql}"`);
             console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error in the DB' });
+            res.status(500).json({ status: "error", message: "Error in the DB" });
         });
 });
 
@@ -496,14 +495,14 @@ router.delete("/cases/:caseId/documents/:documentId", (req, res) => {
     db.query(getDocumentPathQuery, [caseId, documentId])
         .then(result => {
             if (result.rows.length === 0) {
-                res.status(404).json({ status: 'error', message: 'Could not find the document with the provided ID' });
+                res.status(404).json({ status: "error", message: "Could not find the document with the provided ID" });
                 return null;
             } else {
                 const documentPath = result.rows[0].path;
                 return db.query(deleteDocumentQuery, [caseId, documentId])
                     .then(deleteResult => {
                         if (deleteResult.rowCount === 0) {
-                            res.status(500).json({ status: 'error', message: 'Could not delete document from DB' });
+                            res.status(500).json({ status: "error", message: "Could not delete document from DB" });
                             return null;
                         } else {
                             return documentPath;
@@ -519,7 +518,7 @@ router.delete("/cases/:caseId/documents/:documentId", (req, res) => {
                 fs.rmdir(folderPath, { recursive: true }, (err) => {
                     if (err) {
                         console.error("Error deleting folder:", err);
-                        res.status(500).json({ status: 'error', message: 'Error deleting folder' });
+                        res.status(500).json({ status: "error", message: "Error deleting folder" });
                     } else {
                         res.status(204).end();
                     }
@@ -528,7 +527,7 @@ router.delete("/cases/:caseId/documents/:documentId", (req, res) => {
         })
         .catch(err => {
             console.error("Error deleting document:", err);
-            res.status(500).json({ status: 'error', message: 'Internal server error' });
+            res.status(500).json({ status: "error", message: "Internal server error" });
         });
 });
 
@@ -571,7 +570,7 @@ router.delete("/cases/:caseId", async (req, res) => {
         // Eliminar los documentos asociados al caso
         const deleteDocumentsResult = await db.query(deleteDocumentsQuery, [caseId]);
         if (deleteDocumentsResult.rowCount === 0 && documentPaths.length > 0) {
-            return res.status(500).json({ status: 'error', message: 'Could not delete document from DB' });
+            return res.status(500).json({ status: "error", message: "Could not delete document from DB" });
         }
 
         // Eliminar las carpetas de los documentos
@@ -581,7 +580,7 @@ router.delete("/cases/:caseId", async (req, res) => {
                 if (err) {
                     console.error("Error when deleting folder", err);
                 } else {
-                    console.log('Folder deleted successfully');
+                    console.log("Folder deleted successfully");
                 }
             });
         });
@@ -592,13 +591,13 @@ router.delete("/cases/:caseId", async (req, res) => {
         // Eliminar el caso
         const deleteCaseResult = await db.query(deleteCaseQuery, [caseId]);
         if (deleteCaseResult.rowCount === 0) {
-            return res.status(500).json({ status: 'error', message: 'Could not delete case' });
+            return res.status(500).json({ status: "error", message: "Could not delete case" });
         }
 
         res.status(204).end();
     } catch (err) {
         console.error("Error deleting case:", err);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: "error", message: "Internal server error" });
     }
 });
 
@@ -644,11 +643,11 @@ router.post("/cases/:caseId/clone", (req, res) => {
                 .then(documentsResult => {
                     documentsResult.rows.forEach(doc => {
                         const oldRelativePath = doc.path;
-                        const oldFullPath = path.join('frontend/assets/uploads', oldRelativePath);
+                        const oldFullPath = path.join("frontend/assets/uploads", oldRelativePath);
 
-                        const newHash = crypto.randomBytes(16).toString('hex'); // Generar un nuevo hash para cada archivo
-                        const newDirectory = path.join('frontend/assets/uploads', newHash, 'pdf');
-                        const newRelativePath = path.join(newHash, 'pdf', path.basename(oldRelativePath));
+                        const newHash = crypto.randomBytes(16).toString("hex"); // Generar un nuevo hash para cada archivo
+                        const newDirectory = path.join("frontend/assets/uploads", newHash, "pdf");
+                        const newRelativePath = path.join(newHash, "pdf", path.basename(oldRelativePath));
                         const newFullPath = path.join(newDirectory, path.basename(oldRelativePath));
 
                         // Crear el nuevo directorio si no existe
@@ -674,23 +673,23 @@ router.post("/cases/:caseId/clone", (req, res) => {
                     });
                 })
                 .then(() => {
-                    res.status(201).json({ status: 'success', message: 'Case cloned', newCaseId });
+                    res.status(201).json({ status: "success", message: "Case cloned", newCaseId });
                 })
                 .catch(err => {
                     console.error("Error cloning documents", err);
-                    res.status(500).json({ status: 'error', message: 'Internal server error' });
+                    res.status(500).json({ status: "error", message: "Internal server error" });
                 });
         })
         .catch(err => {
             console.error("Error cloning case", err);
-            res.status(500).json({ status: 'error', message: 'Internal server error' });
+            res.status(500).json({ status: "error", message: "Internal server error" });
         });
 });
 
 
 
 router.get("/hello", (req, res) => {
-   res.send("Hello, world!");
+    res.send("Hello, world!");
     
 });
 
