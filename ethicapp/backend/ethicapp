@@ -7,7 +7,8 @@ import app from "../app.js";
 import http from "http";
 import debugLib from "debug";
 import { Server as SocketIO } from "socket.io";
-import socketConfig from "./config/socket.config.js";
+import configSocket from "./config/socket.config.js";
+import { fileURLToPath } from "url";
 
 const debug = debugLib("ethicapp:server");
 
@@ -18,7 +19,7 @@ const port = normalizePort(process.env.NODE_PORT || DEFAULT_PORT);
 app.set("port", port);
 
 // Listen on provided port, on all network interfaces
-if (!module.parent) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const server = http.createServer(app);
     server.listen(port);
     server.on("error", onError);
@@ -26,7 +27,7 @@ if (!module.parent) {
 
     // Set up socket.io
     const io = new SocketIO(server);
-    socketConfig.configSocket(io);
+    configSocket(io);
 }
 
 /**

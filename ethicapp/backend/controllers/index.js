@@ -1,7 +1,7 @@
 "use strict";
 
-let express = require("express");
-let middleware = require("../middleware/validate-session");
+import express from "express";
+import { validateSession } from "../middleware/validate-session.js";
 let router = express.Router();
 
 router.get("/", (req, res) => {
@@ -28,7 +28,7 @@ router.get("/", (req, res) => {
 });
 
 
-router.get("/super", middleware.verifySession ,(req,res) => {
+router.get("/super", validateSession ,(req,res) => {
     if(req.session.uid && req.session.role == "S"){
         res.render("super");
     }
@@ -37,4 +37,4 @@ router.get("/super", middleware.verifySession ,(req,res) => {
     }
 });
 
-module.exports = router;
+export default router;
