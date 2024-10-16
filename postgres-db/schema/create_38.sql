@@ -70,25 +70,25 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION UpdateOrInsertActivityRecord(professor_id int)
 RETURNS void AS $$
 DECLARE
-    current_date date;
+    current_date_value date;
     current_count int;
 BEGIN
-    current_date := current_date; -- Get the current date
+    current_date_value := current_date; -- Get the current date
 
     -- Check if a row with the given professor_id and current_date exists
     SELECT INTO current_count count
     FROM report_activity
-    WHERE creation_date = current_date AND professor = professor_id;
+    WHERE creation_date = current_date_value AND professor = professor_id;
 
     IF current_count IS NULL THEN
         -- If no row exists, insert a new row with counter initialized to 1
         INSERT INTO report_activity (creation_date, professor, count)
-        VALUES (current_date, professor_id, 1);
+        VALUES (current_date_value, professor_id, 1);
     ELSE
         -- If a row exists, increment the counter and update the row
         UPDATE report_activity
         SET count = current_count + 1
-        WHERE creation_date = current_date AND professor = professor_id;
+        WHERE creation_date = current_date_value AND professor = professor_id;
     END IF;
 END;
 $$ LANGUAGE plpgsql;

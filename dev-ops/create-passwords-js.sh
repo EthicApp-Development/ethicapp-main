@@ -6,7 +6,7 @@
 
 source .env
 
-echo "module.exports.dbcon = \"tcp://$DB_USER_NAME:$DB_USER_PASSWORD@postgres:5432/$DB_NAME\";
+echo "module.exports.dbcon = \"tcp://$DB_USERNAME:$DB_PASSWORD@postgres:5432/$DB_NAME\";
 module.exports.uploadPath = \"frontend/assets/uploads\";
 
 module.exports.GOOGLE_CLIENT_ID = \"foo.apps.googleusercontent.com\";

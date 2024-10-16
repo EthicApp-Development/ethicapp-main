@@ -7,4 +7,4 @@
 source .env
 
 docker exec -it ethicapp-postgres /bin/bash -c \
-    "psql postgresql://$DB_USER_NAME:$DB_USER_PASSWORD@localhost:5432/$DB_NAME"
+    "psql postgresql://$DB_USERNAME:$DB_PASSWORD@localhost:5432/$DB_NAME"
