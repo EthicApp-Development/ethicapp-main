@@ -80,5 +80,6 @@
     // Avoiding project words to be marked as typos by the "Code Spell Chcker" vscode extension
     "cSpell.words": [
         "ethicapp"
-    ]
+    ],
+    "r.lsp.promptToInstall": false
 }

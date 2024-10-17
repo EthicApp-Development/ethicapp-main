@@ -8,7 +8,6 @@ let logger = require("morgan");
 let cookieParser = require("cookie-parser");
 let FileStore = require("session-file-store")(session);
 let busboy = require("express-busboy");
-let json2xls = require("json2xls");
 let assetVersions = require("express-asset-versions");
 
 //let index = require("./backend/controllers/index");
@@ -37,6 +36,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createClient } from "redis";
 import connectRedis from "connect-redis";
+import RedisStore from "connect-redis";
 
 let app = express();
 
@@ -75,31 +75,25 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "frontend")));
 app.use("/uploads",express.static(path.join(__dirname, "frontend/assets")));
 
-/*
-app.use(session({
-    secret:            "ssshhh",
-    saveUninitialized: false,
-    resave:            false,
-    store:             new FileStore({
-        path:  path.join(__dirname, "sessions"),
-        logFn: function (msg) { console.log(msg); },
-    }),
-}));
-*/
-
-const RedisStore = connectRedis(session);
-const redisClient = createClient();
+// Initialize redis for session storage
+let redisClient = createClient({
+    url: "redis://redis:6379"
+});
 
 redisClient.connect().catch(console.error);
 
+// Initialize store
+let redisStore = new RedisStore({
+    client: redisClient,
+    prefix: "myapp:",
+});
+
 app.use(session({
-    store:             new RedisStore({ client: redisClient }),
+    store:             redisStore,
     secret:            "ssshhh",
     resave:            false,
     saveUninitialized: false
 }));
-
-app.use(json2xls.middleware);
 
 app.use("/", index);
 app.use("/", users);

@@ -6,5 +6,5 @@
 
 source .env
 
-docker exec -it ethicapp-postgres /bin/bash -c \
+docker exec -it $DB_CONTAINER_NAME /bin/bash -c \
     "psql postgresql://$DB_USERNAME:$DB_PASSWORD@localhost:5432/$DB_NAME"

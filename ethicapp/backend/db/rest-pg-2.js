@@ -1,9 +1,31 @@
-// Import the `pg` module using `import` (modern JS)
 import pkg from "pg";
-const { Client } = pkg;
+const { Pool } = pkg;
 
-// Declare `DB` as `let` to allow reassignment
-let DB = null;
+// Declare `pool` globally
+let pool = null;
+
+async function getDBInstance(dbcon) {
+    if (pool === null) {
+        pool = new Pool({
+            connectionString: dbcon
+        });
+        // Handle pool errors
+        pool.on("error", (err) => {
+            console.error("Unexpected error on idle client", err);
+            process.exit(-1);
+        });
+    }
+    try {
+        const client = await pool.connect();
+        // Optionally, release the client when done
+        client.release(); // Releases the client to the pool
+        return pool;
+    } catch (err) {
+        console.error("Error connecting to the database:", err);
+        pool = null;
+        throw err;
+    }
+}
 
 // Use `const` for variables that will not be reassigned
 function smartArrayConvert(sqlParams, ses, data, calc) {
@@ -21,25 +43,6 @@ function smartArrayConvert(sqlParams, ses, data, calc) {
             arr.push(data[p.name]);
     }
     return arr;
-}
-
-// Convert `getDBInstance` to an asynchronous function
-async function getDBInstance(dbcon) {
-    if (DB === null) {
-        DB = new Client(dbcon);
-        try {
-            await DB.connect();
-            // Handle the `error` event
-            DB.on("error", (err) => {
-                console.error(err);
-                DB = null;
-            });
-        } catch (err) {
-            console.error("Error connecting to the database:", err);
-            DB = null;
-        }
-    }
-    return DB;
 }
 
 /**
@@ -63,315 +66,163 @@ function paramsOfType(t, arr) {
 }
 
 /**
- * Execute a single SQL statement with ok / err response.
+ * Execute a single SQL statement with result handling.
  * @param {Object} params - Parameters including:
- *   - sql (required): String SQL to be executed.
- *   - dbcon (required): String of database connection.
- *   - sesReqData: List of session required data.
- *   - postReqData: List of post request required data.
- *   - sqlParams: List of SQL statement parameters.
- *   - onStart: Function to be executed just before SQL execution.
- *   - onEnd: Function to be executed just before sending the end result.
- * @return {Function} - Express middleware function to execute the SQL statement.
+ *   - sql (required): String SQL query to be executed.
+ *   - dbcon (required): String containing the database connection string.
+ *   - sqlParams: (optional) Array of SQL statement parameters to be passed with the query.
+ *   - onStart: (optional) Function to modify the SQL query or parameters just before execution.
+ *   - onEnd: (optional) Function to be executed with the query result after execution.
+ * @throws {Error} If there is a database query error or if required parameters are missing.
+ * @return {Promise<Array>} - Resolves with the rows of the SQL query result.
  */
-function execSQL(params) {
+async function execSQL(params) {
     if (!params.sql || !params.dbcon) {
-        return null;
+        throw new Error("Missing required parameters: 'sql' or 'dbcon'.");
     }
 
-    return async function (req, res) {
-        const ses = req.session;
+    const db = await getDBInstance(params.dbcon);
+    let sql = params.sql;
 
-        if (params.sesReqData) {
-            for (let i = 0; i < params.sesReqData.length; i++) {
-                if (!ses[params.sesReqData[i]]) {
-                    console.error(`[Req Error] Missing session data: ${params.sesReqData[i]}`);
-                    res.status(400).json({ status: "err" });
-                    return;
-                }
-            }
-        }
+    try {
+        // Prepare SQL parameters
+        const sqlParams = params.sqlParams ? smartArrayConvert(params.sqlParams) : [];
 
-        const data = req.body;
-        const calc = {};
-
-        if (params.postReqData) {
-            for (let i = 0; i < params.postReqData.length; i++) {
-                if (!data[params.postReqData[i]]) {
-                    console.error(`[Req Error] Missing body data: ${params.postReqData[i]}`);
-                    res.status(400).json({ status: "err" });
-                    return;
-                }
-            }
-        }
-
-        const db = await getDBInstance(params.dbcon);
-        let sql = params.sql;
-
+        // If an onStart function is provided, modify SQL before execution
         if (params.onStart) {
-            sql = params.onStart(ses, data, calc) || params.sql;
+            sql = params.onStart() || params.sql;
         }
 
-        try {
-            const sqlParams = params.sqlParams ? smartArrayConvert(params.sqlParams, ses, data, calc) : [];
-            const result = await db.query(sql, sqlParams);
+        const result = await db.query(sql, sqlParams);
 
-            if (params.onEnd) {
-                params.onEnd(req, res);
-            } else {
-                res.json({ status: "ok", result: result.rows });
-            }
-
-            if (!params.preventResEnd) {
-                res.end();
-            }
-        } catch (err) {
-            console.error("[DB Error]:", err);
-            res.status(500).json({ status: "err" });
+        // If an onEnd callback is provided, execute it with the result
+        if (params.onEnd) {
+            params.onEnd(result.rows);
         }
-    };
+
+        return result.rows;
+    } catch (err) {
+        console.error("[DB Error]:", err);
+        throw new Error("Error executing SQL query.");
+    }
 }
 
 /**
- * Execute multiple SQL statements with ok / err response at the end of all.
+ * Execute a single SQL statement.
  * @param {Object} params - Parameters including:
- *   - nsql (required): List of SQL strings to be executed.
- *   - dbcon (required): String of database connection.
- *   - sesReqData: List of session required data.
- *   - postReqData: List of post request required data.
- *   - nsqlParams: List of lists of SQL statement parameters.
- *   - onStart: Function to be executed just before SQL execution.
- *   - onEnd: Function to be executed just before sending the end result.
- * @return {Function} - Express middleware function to execute the SQL statements.
+ *   - sql (required): String SQL query to be executed.
+ *   - dbcon (required): String containing the database connection string.
+ *   - sqlParams: (optional) Array of SQL statement parameters to be passed with the query.
+ *   - onSelect: (optional) Function to handle the first result row after the SQL query is executed. 
+ *     It replaces the default return behavior.
+ *   - onEnd: (optional) Function to be executed just after the SQL query result is obtained.
+ *     Receives the final result as a parameter.
+ * @throws {Error} If there is a database query error or if required parameters are missing.
+ * @return {Promise<Object>} - Resolves with the final result of the SQL query.
  */
-function nExecSQL(params) {
-    if (!params.nsql || !params.dbcon) {
-        return null;
-    }
-
-    return async function (req, res) {
-        const ses = req.session;
-        const total = params.nsql.length;
-        let completed = 0;
-
-        if (params.sesReqData) {
-            for (let i = 0; i < params.sesReqData.length; i++) {
-                if (!ses[params.sesReqData[i]]) {
-                    console.error(`[Req Error] Missing session data: ${params.sesReqData[i]}`);
-                    res.status(400).json({ status: "err" });
-                    return;
-                }
-            }
-        }
-
-        const data = req.body;
-        const calc = {};
-
-        if (params.postReqData) {
-            for (let i = 0; i < params.postReqData.length; i++) {
-                if (!data[params.postReqData[i]]) {
-                    console.error(`[Req Error] Missing body data: ${params.postReqData[i]}`);
-                    res.status(400).json({ status: "err" });
-                    return;
-                }
-            }
-        }
-
-        const db = await getDBInstance(params.dbcon);
-
-        for (let i = 0; i < total; i++) {
-            let sql = params.nsql[i];
-
-            if (params.onStart) {
-                sql = params.onStart(ses, data, calc, i) || params.nsql[i];
-            }
-
-            try {
-                const sqlParams = params.nsqlParams && params.nsqlParams[i] ? smartArrayConvert(params.nsqlParams[i], ses, data, calc) : [];
-                await db.query(sql, sqlParams);
-                completed++;
-
-                if (completed >= total) {
-                    if (params.onEnd) {
-                        params.onEnd(req, res);
-                    } else {
-                        res.json({ status: "ok" });
-                    }
-                    res.end();
-                }
-            } catch (err) {
-                console.error("[DB Error]:", err);
-                res.status(500).json({ status: "err" });
-                return;
-            }
-        }
-    };
-}
-
-/**
- * Execute a select single SQL statement.
- * @param {Object} params - Parameters including:
- *   - sql (required): String SQL to be executed.
- *   - dbcon (required): String of database connection.
- *   - sesReqData: List of session required data.
- *   - postReqData: List of post request required data.
- *   - sqlParams: List of SQL statement parameters.
- *   - onStart: Function to be executed just before SQL execution.
- *   - onEnd: Function to be executed just before sending the end result.
- *   - onSelect: Function handled after SQL statement is executed. It replaces the normal return behavior.
- * @return {Function} - Express middleware function to execute the SQL statement.
- */
-function singleSQL(params) {
+async function singleSQL(params) {
     if (!params.sql || !params.dbcon) {
-        return null;
+        throw new Error("Missing required parameters: 'sql' or 'dbcon'.");
     }
 
-    return async function (req, res) {
-        const ses = req.session;
-        res.header("Content-type", "application/json");
+    const db = await getDBInstance(params.dbcon);
 
-        if (params.sesReqData) {
-            for (let i = 0; i < params.sesReqData.length; i++) {
-                if (!ses[params.sesReqData[i]]) {
-                    console.error(`[Req Error] Missing session data: ${params.sesReqData[i]}`);
-                    res.status(400).json({ status: "err" });
-                    return;
-                }
-            }
-        }
+    try {
+        // Prepare SQL parameters
+        const sqlParams = params.sqlParams ? smartArrayConvert(params.sqlParams) : [];
+        const result = await db.query(params.sql, sqlParams);
 
-        const data = req.body;
-        const calc = {};
-
-        if (params.postReqData) {
-            for (let i = 0; i < params.postReqData.length; i++) {
-                if (!data[params.postReqData[i]]) {
-                    console.error(`[Req Error] Missing body data: ${params.postReqData[i]}`);
-                    res.status(400).json({ status: "err" });
-                    return;
-                }
-            }
-        }
-
-        const db = await getDBInstance(params.dbcon);
-
-        if (params.onStart) {
-            params.onStart(ses, data, calc);
-        }
-
-        let sql = params.sql;
-        try {
-            const sqlParams = params.sqlParams ? smartArrayConvert(params.sqlParams, ses, data, calc) : [];
-            const result = await db.query(sql, sqlParams);
-
-            let finalResult = {};
-            if (result.rows.length > 0) {
-                if (params.onSelect) {
-                    finalResult = params.onSelect(result.rows[0]);
-                } else {
-                    finalResult = result.rows[0];
-                }
-            }
-
-            if (params.onEnd) {
-                params.onEnd(req, res, finalResult);
+        let finalResult = {};
+        if (result.rows.length > 0) {
+            if (params.onSelect) {
+                finalResult = params.onSelect(result.rows[0]);
             } else {
-                finalResult["status"] = "ok";
-                res.json(finalResult);
+                finalResult = result.rows[0];
             }
-
-            if (!params.preventResEnd) {
-                res.end();
-            }
-        } catch (err) {
-            console.error("[DB Error]:", err);
-            res.status(500).json({ status: "err" });
         }
-    };
+
+        // If there is an onEnd callback, execute it with the result
+        if (params.onEnd) {
+            params.onEnd(finalResult);
+        }
+
+        return finalResult;
+    } catch (err) {
+        console.error("[DB Error]:", err);
+        throw new Error("Error executing SQL query.");
+    }
 }
 
 /**
  * Execute a select multiple SQL statement.
  * @param {Object} params - Parameters including:
- *   - sql (required): String SQL to be executed.
- *   - dbcon (required): String of database connection.
- *   - sesReqData: List of session required data.
- *   - postReqData: List of post request required data.
- *   - sqlParams: List of SQL statement parameters.
- *   - onStart: Function to be executed just before SQL execution.
- *   - onEnd: Function to be executed just before sending the end result.
- *   - onRow: Function handled every fetched row. It replaces the normal row behavior.
- * @return {Function} - Express middleware function to execute the SQL statement.
+ *   - sql (required): String SQL query to be executed.
+ *   - dbcon (required): String containing the database connection string.
+ *   - sesReqData: (optional) Array of session keys required for the query. If any are missing, an error is thrown.
+ *   - postReqData: (optional) Array of request body keys required for the query. If any are missing, an error is thrown.
+ *   - sqlParams: (optional) Array of SQL parameters to be passed with the query. The parameters can reference session data, request body data, or calculated data.
+ *   - onStart: (optional) Function to be executed before the SQL query is executed. Receives session data, request body data, and a calculation object for passing data between functions.
+ *   - onRow: (optional) Function to process each row of the query result. The function should return the transformed row or `null` to exclude the row from the final result.
+ *   - onEnd: (optional) Function to be executed with the final result after all rows have been processed.
+ * @throws {Error} If required parameters are missing or the query fails.
+ * @return {Promise<Array>} - Resolves with the final processed result array.
  */
-function multiSQL(params) {
+async function multiSQL(params) {
     if (!params.sql || !params.dbcon) {
-        return null;
+        throw new Error("Missing required parameters: 'sql' or 'dbcon'.");
     }
 
-    return async function (req, res) {
-        const ses = req.session;
-        res.header("Content-type", "application/json");
+    const db = await getDBInstance(params.dbcon);
 
-        if (params.sesReqData) {
-            for (let i = 0; i < params.sesReqData.length; i++) {
-                if (!ses[params.sesReqData[i]]) {
-                    console.error(`[Req Error] Missing session data: ${params.sesReqData[i]}`);
-                    res.status(400).json([]);
-                    return;
-                }
-            }
-        }
-
-        const data = req.body;
+    return async function executeMultiSQL(sessionData, bodyData = {}) {
         const calc = {};
 
-        if (params.postReqData) {
-            for (let i = 0; i < params.postReqData.length; i++) {
-                if (!data[params.postReqData[i]]) {
-                    console.error(`[Req Error] Missing body data: ${params.postReqData[i]}`);
-                    res.status(400).json([]);
-                    return;
+        // Validate session-required data
+        if (params.sesReqData) {
+            params.sesReqData.forEach((key) => {
+                if (!sessionData[key]) {
+                    console.error(`[Req Error] Missing session data: ${key}`);
+                    throw new Error(`Missing session data: ${key}`);
                 }
-            }
+            });
         }
 
-        const db = await getDBInstance(params.dbcon);
+        // Validate body-required data
+        if (params.postReqData) {
+            params.postReqData.forEach((key) => {
+                if (!bodyData[key]) {
+                    console.error(`[Req Error] Missing body data: ${key}`);
+                    throw new Error(`Missing body data: ${key}`);
+                }
+            });
+        }
 
         if (params.onStart) {
-            params.onStart(ses, data, calc);
+            params.onStart(sessionData, bodyData, calc);
         }
 
-        let sql = params.sql;
         try {
-            const sqlParams = params.sqlParams ? smartArrayConvert(params.sqlParams, ses, data, calc) : [];
-            const result = await db.query(sql, sqlParams);
+            const sqlParams = params.sqlParams ? smartArrayConvert(params.sqlParams, sessionData, bodyData, calc) : [];
+            const result = await db.query(params.sql, sqlParams);
             const rows = result.rows;
 
-            const finalResult = [];
-            for (const row of rows) {
-                if (params.onRow) {
-                    const transformedRow = params.onRow(row);
-                    if (transformedRow != null) finalResult.push(transformedRow);
-                } else {
-                    finalResult.push(row);
-                }
-            }
+            // Use map to process rows and optionally apply the onRow transformation
+            const finalResult = rows.map(row => {
+                return params.onRow ? params.onRow(row) : row;
+            }).filter(row => row !== null); // Filter out any null rows if onRow returns null
 
             if (params.onEnd) {
-                params.onEnd(req, res, finalResult);
-            } else {
-                res.json(finalResult);
+                params.onEnd(finalResult);
             }
 
-            if (!params.preventResEnd) {
-                res.end();
-            }
+            return finalResult;
         } catch (err) {
             console.error("[DB Error]:", err);
-            res.status(500).json([]);
+            throw new Error("Error executing multiSQL query");
         }
     };
 }
 
+
 // Exports
-export { smartArrayConvert, param, getDBInstance, execSQL, nExecSQL, singleSQL, multiSQL };
+export { smartArrayConvert, param, getDBInstance, execSQL, singleSQL, multiSQL };

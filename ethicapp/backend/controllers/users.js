@@ -56,24 +56,34 @@ router.get("/admin-profile", function(req,res){
 
 router.get("/logout", (req, res) => {
     req.logout(function (err) {
-        if (err) { console.log(err); }
-        req.session.uid = null;
-        req.session.role = null;
-        req.session.ses = null;
-        req.session.prevUid = null;
-        res.redirect("login");
+        if (err) { 
+            console.error("Error during logout:", err);
+            return res.status(500).json({ message: "Logout failed" });
+        }
+
+        // Optionally destroy the session instead of nulling specific properties
+        req.session.destroy((sessionErr) => {
+            if (sessionErr) {
+                console.error("Error destroying session:", sessionErr);
+                return res.status(500).json({ message: "Failed to destroy session" });
+            }
+
+            // Redirect to login after logout and session destruction
+            res.redirect("login");
+        });
     });
 });
 
 router.post("/login", (req, res, next) => {
-    passport.authenticate("local", (err, user) => {
+    passport.authenticate("local", async (err, user) => {
         const { source } = req.body;
+
         if (source === "admin-panel") {
             if (!user) {
                 return res.status(200).json({ sessionID: "ErrorCredential" });
             }
 
-            if (user["role"] != "S") {
+            if (user["role"] !== "S") {
                 return res.status(200).json({ sessionID: "Unauthorized" });
             }
 
@@ -88,28 +98,34 @@ router.post("/login", (req, res, next) => {
             return res.redirect("login?rc=2");
         }
 
-        var is_teacher = (user["role"] === "P" || user["role"] === "S") ? 1 : 0;
+        const is_teacher = (user["role"] === "P" || user["role"] === "S") ? 1 : 0;
 
-        // Log the user access
+        // Log the user access into the database
         const sqlParams = [param("plain", is_teacher.toString())];
         const dbParams = {
-            sql:       "SELECT UpdateOrInsertLoginRecord($1)",  
-            dbcon:     pass.dbcon,  
-            sqlParams: sqlParams,  
-            onEnd:     (req, res) => {
-                req.logIn(user, (err) => {
-                    if (err) {
-                        return next(err);
-                    }
-                    return res.redirect("/seslist");
-                });
-            }
+            sql:       "SELECT UpdateOrInsertLoginRecord($1)",
+            dbcon:     pass.dbcon,
+            sqlParams: sqlParams
         };
 
-        const executeQuery = execSQL(dbParams);
-        executeQuery(req, res);
+        try {
+            // Execute the query using the new executeSQL function
+            await execSQL(dbParams);
+
+            // Log the user in and redirect to "/seslist"
+            req.logIn(user, (err) => {
+                if (err) {
+                    return next(err);
+                }
+                return res.redirect("/seslist");
+            });
+        } catch (err) {
+            console.error("Error logging user access:", err);
+            return res.status(500).json({ message: "Database error during login" });
+        }
     })(req, res, next);
 });
+
 
 router.get("/register", (req, res) => {
     res.render("register",{rc: req.query.rc});
@@ -150,11 +166,11 @@ router.post("/register", async (req, res) => {
     try {
         // Validate request body with schema
         await registerSchema.validate(req.body);
-    
+
         // Verify captcha
         const response_key = req.body["g_recaptcha_response"];
-        const secret_key = pass.Captcha_Secret;
-    
+        const secret_key = pass.RECAPTCHA_SECRET;
+
         const response = await axios.post("https://www.google.com/recaptcha/api/siteverify", null, {
             params: {
                 secret:   secret_key,
@@ -162,71 +178,68 @@ router.post("/register", async (req, res) => {
             }
         });
         const data = response.data;
-          
-        if (data.success) {
-            // Continue with user registration if captcha verification is successful
-            try {
-                // Hash the password using bcrypt
-                const saltRounds = 10; // Define the number of salt rounds for bcrypt
-                const passwordHash = await bcrypt.hash(req.body.pass, saltRounds);
-    
-                const fullname = `${req.body.name} ${req.body.lastname}`;
-                const sqlParams = [
-                    param("plain", req.body.rut || "N/A"), // Use 'N/A' if no RUT is provided
-                    param("plain", passwordHash),  // Hashed password
-                    param("plain", fullname),
-                    param("plain", req.body.email),
-                    param("plain", req.body.sex || "U"),  // Undefined gender if not provided
-                    param("plain", "A"), // Default role, e.g., 'A' for student
-                ];
-    
-                const dbParams = {
-                    sql:       "INSERT INTO users (rut, pass, name, mail, sex, ROLE) VALUES ($1, $2, $3, $4, $5, $6)",
-                    dbcon:     pass.dbcon,
-                    sqlParams: sqlParams,
-                };
-    
-                // Use execSQL to execute the insertion in the database
-                await new Promise((resolve, reject) => {
-                    const executeInsert = execSQL(dbParams);
-                    executeInsert(req, {
-                        json:   resolve,
-                        status: (code) => reject(new Error(`Insert failed with status code: ${code}`)),
-                        end:    () => {}
-                    });
-                });
-    
-                // Register account record after inserting the user
-                const db = getDBInstance(pass.dbcon);
-                const sqlQuery = "SELECT UpdateOrInsertCreateAccountRecord(0)";
-                db.query(sqlQuery, (dbErr) => {
-                    if (dbErr) {
-                        return res.status(500).json({
-                            success: false,
-                            message: "Error updating or inserting account record.",
-                        });
-                    }
-    
-                    return res.status(200).json({
-                        success: true,
-                        message: "User successfully registered.",
-                    });
-                });
-    
-            } catch (err) {
-                console.error("Error registering the user", err);
-                return res.status(500).json({
-                    success: false,
-                    message: "Error registering the user.",
-                });
-            }
-        } else {
+
+        if (!data.success) {
             console.error("Captcha verification error", data);
             return res.status(400).json({
                 success: false,
                 message: "Captcha verification failed.",
             });
         }
+
+        // Check if the email is already registered
+        const emailCheckQuery = {
+            sql:       "SELECT COUNT(*) FROM users WHERE mail = $1",
+            dbcon:     pass.dbcon,
+            sqlParams: [param("plain", req.body.email)]
+        };
+
+        const emailExists = await execSQL(emailCheckQuery);
+
+        if (emailExists[0].count > 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Email already registered.",
+            });
+        }
+
+        // Continue with user registration
+        const saltRounds = 10;
+        const passwordHash = await bcrypt.hash(req.body.pass, saltRounds);
+
+        const fullname = `${req.body.name} ${req.body.lastname}`;
+        const sqlParams = [
+            param("plain", req.body.rut || "N/A"),
+            param("plain", passwordHash),
+            param("plain", fullname),
+            param("plain", req.body.email),
+            param("plain", req.body.sex || "U"),
+            param("plain", "A"), // Default role
+        ];
+
+        const dbParams = {
+            sql:       "INSERT INTO users (rut, pass, name, mail, sex, ROLE) VALUES ($1, $2, $3, $4, $5, $6)",
+            dbcon:     pass.dbcon,
+            sqlParams: sqlParams
+        };
+
+        // Execute the SQL insert using execSQL
+        await execSQL(dbParams);
+
+        // Register account record after inserting the user
+        const updateAccountQuery = {
+            sql:   "SELECT UpdateOrInsertCreateAccountRecord(0)",
+            dbcon: pass.dbcon
+        };
+
+        await execSQL(updateAccountQuery);
+
+        // Respond with success
+        return res.status(200).json({
+            success: true,
+            message: "User successfully registered.",
+        });
+
     } catch (error) {
         console.error("Error in POST /register", error);
         return res.status(500).json({
@@ -235,6 +248,7 @@ router.post("/register", async (req, res) => {
         });
     }
 });
+
   
 router.get("/teacher_account_requests", multiSQL({
     dbcon: pass.dbcon,
@@ -361,8 +375,10 @@ async function insertTeacherAccountRequest(
 router.put("/teacher_account_requests/:id", async (req, res) => {
     try {
         const newStatus = req.body.status;
+        const requestId = req.params.id;
 
         if (newStatus === "2") {
+            // Execute SQL to update status and reject reason
             await execSQL({
                 dbcon: pass.dbcon,
                 sql:   `
@@ -370,18 +386,15 @@ router.put("/teacher_account_requests/:id", async (req, res) => {
                     SET status = $1, reject_reason = $2
                     WHERE id = $3
                 `,
-                onStart: (ses, data, calc) => {
-                    calc.id = req.params.id;
-                },
-                postReqData: ["status", "reject_reason"],
-                sqlParams:   [
-                    param("post", "status"), 
-                    param("post", "reject_reason"), 
-                    param("calc", "id")]
-            })(req, res);
-        }
-        else {
-            // Actualizar el estado en la base de datos
+                sqlParams: [
+                    param("plain", newStatus), 
+                    param("plain", req.body.reject_reason), 
+                    param("plain", requestId)
+                ]
+            });
+
+        } else {
+            // Execute SQL to update only the status
             await execSQL({
                 dbcon: pass.dbcon,
                 sql:   `
@@ -389,90 +402,123 @@ router.put("/teacher_account_requests/:id", async (req, res) => {
                     SET status = $1
                     WHERE id = $2
                 `,
-                onStart: (ses, data, calc) => {
-                    calc.id = req.params.id;
-                },
-                postReqData: ["status"],
-                sqlParams:   [param("post", "status"), param("calc", "id")]
-            })(req, res);
+                sqlParams: [
+                    param("plain", newStatus), 
+                    param("plain", requestId)
+                ]
+            });
 
             if (newStatus === "1") {
-                // Consulta para obtener datos del profesor
-                const teacherDataQuery = `
-                    SELECT *
-                    FROM teacher_account_requests
-                    WHERE id = $1
-                `;
+                // Query teacher data from the request
+                const teacherDataQuery = {
+                    sql: `
+                        SELECT *
+                        FROM teacher_account_requests
+                        WHERE id = $1
+                    `,
+                    dbcon:     pass.dbcon,
+                    sqlParams: [param("plain", requestId)]
+                };
 
-                var db = getDBInstance(pass.dbcon);
+                const teacherDataResult = await execSQL(teacherDataQuery);
 
-                const { rows } = await db.query(teacherDataQuery, [req.params.id]);
-
-                if (rows.length === 0) {
-                    return res.status(404).json({ error: "Profesor no encontrado" });
+                if (teacherDataResult.length === 0) {
+                    return res.status(404).json({ error: "Teacher not found" });
                 }
 
-                const teacherData = rows[0];
+                const teacherData = teacherDataResult[0];
 
-                // Consulta para insertar el profesor como usuario
-                const insertUserQuery = `
-                    INSERT INTO users(rut, pass, name, mail, sex, ROLE)
-                    VALUES ($1, $2, $3, $4, $5, 'P')
-                `;
+                // Insert teacher into users table
+                const insertUserQuery = {
+                    sql: `
+                        INSERT INTO users(rut, pass, name, mail, sex, ROLE)
+                        VALUES ($1, $2, $3, $4, $5, 'P')
+                    `,
+                    dbcon:     pass.dbcon,
+                    sqlParams: [
+                        param("plain", teacherData.rut),
+                        param("plain", teacherData.pass),
+                        param("plain", teacherData.name),
+                        param("plain", teacherData.mail),
+                        param("plain", teacherData.gender)
+                    ]
+                };
 
-                const userParams = [
-                    teacherData.rut,
-                    teacherData.pass,
-                    teacherData.name,
-                    teacherData.mail,
-                    teacherData.gender
-                ];
+                await execSQL(insertUserQuery);
 
-                await db.query(insertUserQuery, userParams);
-
-                // Enviar una respuesta de éxito
-                res.status(200).json(
-                    { message: "Solicitud aceptada y profesor agregado como usuario" });
+                // Send success response
+                return res.status(200).json({
+                    message: "Request accepted and teacher added as user"
+                });
             }
         }
     } catch (error) {
-        console.error("Error en el controlador:", error);
+        console.error("Error in the controller:", error);
 
-        // Enviar una respuesta de error
-        res.status(500).json({ error: "Error interno del servidor" });
+        // Send error response
+        return res.status(500).json({ error: "Internal server error" });
     }
 });
 
-router.post("/get-my-name", singleSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    SELECT name,
-        role,
-        lang,
-        mail
-    FROM users
-    WHERE id = $1
-    `,
-    sesReqData: ["uid"],
-    sqlParams:  [param("ses", "uid")]
-}));
 
-router.post("/update-lang", singleSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    UPDATE users
-    SET lang = $1
-    WHERE id = $2
-    `,
-    sesReqData:  ["uid"],
-    postReqData: ["lang"],
-    sqlParams:   [param("post", "lang"), param("ses", "uid")]
-}));
+// Route to get the user's name and other details
+router.post("/get-my-name", async (req, res) => {
+    try {
+        // Execute SQL query to fetch user's name, role, lang, and mail based on session uid
+        const result = await execSQL({
+            dbcon: pass.dbcon,
+            sql:   `
+                SELECT name,
+                    role,
+                    lang,
+                    mail
+                FROM users
+                WHERE id = $1
+            `,
+            sqlParams: [param("plain", req.session.uid)]  // Use session uid as the parameter
+        });
 
+        if (result.length > 0) {
+            return res.status(200).json(result[0]);  // Return the first row
+        } else {
+            return res.status(404).json({ error: "User not found" });
+        }
+    } catch (error) {
+        console.error("Error in /get-my-name:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+// Route to update the user's language
+router.post("/update-lang", async (req, res) => {
+    try {
+        // Execute SQL update to modify the user's language based on session uid
+        await execSQL({
+            dbcon: pass.dbcon,
+            sql:   `
+                UPDATE users
+                SET lang = $1
+                WHERE id = $2
+            `,
+            sqlParams: [
+                param("plain", req.body.lang),  // Language from the request body
+                param("plain", req.session.uid)  // Session uid
+            ]
+        });
+
+        // Return success message
+        return res.status(200).json({ message: "Language updated successfully" });
+    } catch (error) {
+        console.error("Error in /update-lang:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+/*
 router.post("/resetpassword", (req, res) => {
     var SES_CONFIG = {
-        accessKeyId:     pass.accessKeyId,
-        secretAccessKey: pass.secretAccessKey,
+        accessKeyId:     pass.AWS_APIKEY,
+        secretAccessKey: pass.AWS_SECRET,
         region:          "us-east-1",
     };
     var AWS_SES = new AWS.SES(SES_CONFIG);
@@ -619,35 +665,49 @@ router.post("/resetpassword", (req, res) => {
     }
     mail();
 });
+*/
 
 router.get("/new-pass/:token", (req, res) => {
     res.render("newpass", { token: req.params.token });
 });
 
-router.post("/newpassword", execSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    UPDATE users AS u
-    SET pass = $1
-    FROM pass_reset AS r
-    WHERE r.token = $2
-        AND r.mail = u.mail
-    `,
-    postReqData: ["token", "pass"],
-    onStart:     async (ses, data, calc) => {
-        if (data.pass.length < 8) return "SELECT 1";  // Ensure password is long enough
-        
-        // Define salt rounds for bcrypt
+router.post("/newpassword", async (req, res) => {
+    try {
+        const { token, pass } = req.body;
+
+        // Ensure the password meets the minimum length requirement
+        if (pass.length < 8) {
+            return res.status(400).json({ error: "Password must be at least 8 characters long." });
+        }
+
+        // Define salt rounds for bcrypt and hash the password
         const saltRounds = 10;
-        
-        // Hashed password stored in calc.passcr
-        calc.passcr = await bcrypt.hash(data.pass, saltRounds);
-    },
-    sqlParams: [param("calc", "passcr"), param("post", "token")],
-    onEnd:     (req, res) => {
-        res.redirect("login?rc=4");
+        const hashedPassword = await bcrypt.hash(pass, saltRounds);
+
+        // Execute the SQL query to update the password
+        await execSQL({
+            dbcon: pass.dbcon,
+            sql:   `
+                UPDATE users AS u
+                SET pass = $1
+                FROM pass_reset AS r
+                WHERE r.token = $2
+                  AND r.mail = u.mail
+            `,
+            sqlParams: [
+                param("plain", hashedPassword), // Hashed password
+                param("plain", token)  // Token from the request body
+            ]
+        });
+
+        // Redirect to the login page with a success code
+        return res.redirect("login?rc=4");
+    } catch (error) {
+        console.error("Error in /newpassword:", error);
+        return res.status(500).json({ error: "Internal server error" });
     }
-}));
+});
+
 
 router.post("/super-login-as", (req, res) => {
     if (req.session.role != "S" || req.body.uid == null) {
@@ -690,85 +750,106 @@ router.get("/profile", (req, res) => {
 
 router.post("/changepassword", async (req, res) => {
     try {
+        const { pass, "pass-conf": passConf, mail } = req.body;
+
         // Check if passwords match
-        if (req.body.pass === req.body["pass-conf"]) {
-            const db = getDBInstance(pass.dbcon);
-
-            // Hash the password using bcrypt
-            const saltRounds = 10;
-            const passcr = await bcrypt.hash(req.body.pass, saltRounds);
-
-            // Use parameterized query to prevent SQL injection
-            const sql = `
-            UPDATE users
-            SET pass = $1
-            WHERE mail = $2
-            `;
-            const sqlParams = [passcr, req.body.mail];
-
-            // Execute the query with parameters
-            const qry = db.query(sql, sqlParams);
-
-            // Handle query success
-            qry.on("end", function () {
-                res.redirect("login?rc=4");
-            });
-
-            // Handle query errors
-            qry.on("error", function () {
-                res.status(500).json({ status: "err" });
-            });
-        } else {
-            res.status(400).json({ status: "error", message: "Passwords do not match" });
+        if (pass !== passConf) {
+            return res.status(400).json({ status: "error", message: "Passwords do not match" });
         }
+
+        // Hash the password using bcrypt
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(pass, saltRounds);
+
+        // Execute the SQL query to update the password
+        await execSQL({
+            dbcon: pass.dbcon,
+            sql:   `
+                UPDATE users
+                SET pass = $1
+                WHERE mail = $2
+            `,
+            sqlParams: [
+                param("plain", hashedPassword),  // Hashed password
+                param("plain", mail)  // User email from request body
+            ]
+        });
+
+        // Redirect to the login page with a success code
+        return res.redirect("login?rc=4");
     } catch (err) {
         console.error("Error changing password:", err);
-        res.status(500).json({ status: "err" });
+        return res.status(500).json({ status: "err", message: "Internal server error" });
     }
 });
 
-router.post("/getuserinfo", (req, res) => {
-    var db = getDBInstance(pass.dbcon);
-    var sql = `
-    SELECT *
-    FROM users
-    WHERE id = '${req.session.uid}'
-    LIMIT 1
-    `;
-    var qry;
-    var result;
-    qry = db.query(sql, (err,res) => {
-        if (res != null)
-            result = res.rows;
-    });
-    qry.on("end", function () {
-        res.json({ "data": result });
-    });
+router.post("/getuserinfo", async (req, res) => {
+    try {
+        // Execute the SQL query to get user information based on session uid
+        const result = await execSQL({
+            dbcon: pass.dbcon,
+            sql:   `
+                SELECT *
+                FROM users
+                WHERE id = $1
+                LIMIT 1
+            `,
+            sqlParams: [param("plain", req.session.uid)]  // Use session uid as a parameter
+        });
+
+        // Return user data if found, else return empty object
+        if (result.length > 0) {
+            return res.status(200).json({ data: result[0] });
+        } else {
+            return res.status(404).json({ error: "User not found" });
+        }
+    } catch (error) {
+        console.error("Error in /getuserinfo:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
 });
 
-router.post("/make_prof", (req) => {
-    var db = getDBInstance(pass.dbcon);
-    var sql = `
-    UPDATE users
-    SET role = 'P'
-    WHERE mail = '${req.body.mail}'
-    `;
-    var qry;
-    qry = db.query(sql,() =>{});
-    qry.on("end",function(){});
+router.post("/make_prof", async (req, res) => {
+    try {
+        // Execute the SQL query to update the user's role to 'P' (professor)
+        await execSQL({
+            dbcon: pass.dbcon,
+            sql:   `
+                UPDATE users
+                SET role = 'P'
+                WHERE mail = $1
+            `,
+            sqlParams: [param("plain", req.body.mail)]  // Use email from request body
+        });
+
+        // Respond with success message
+        return res.status(200).json({ message: "User role updated to professor" });
+    } catch (error) {
+        console.error("Error in /make_prof:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
 });
 
+router.post("/make_alum", async (req, res) => {
+    try {
+        // Execute the SQL query to update the user's role to 'A' (student)
+        await execSQL({
+            dbcon: pass.dbcon,
+            sql:   `
+                UPDATE users
+                SET role = 'A'
+                WHERE mail = $1
+            `,
+            sqlParams: [param("plain", req.body.mail)]  // Use email from request body
+        });
 
-router.post("/make_alum", (req) => {
-    var db = getDBInstance(pass.dbcon);
-    var sql = `
-    UPDATE users
-    SET role = 'A'
-    WHERE mail = '${req.body.mail}'
-    `;
-    var qry;
-    qry = db.query(sql,() =>{});
-    qry.on("end",function(){});
+        // Respond with success message
+        return res.status(200).json({ message: "User role updated to student" });
+    } catch (error) {
+        console.error("Error in /make_alum:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
 });
+
 
 export default router;

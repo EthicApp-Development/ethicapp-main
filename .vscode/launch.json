@@ -7,8 +7,9 @@
             "name": "Attach to Docker",
             "address": "localhost",
             "port": 9229,
-            "localRoot": "${workspaceFolder}",
-            "remoteRoot": "/home/app"
+            "localRoot": "${workspaceFolder}/ethicapp",
+            "remoteRoot": "/home/app",
+            "skipFiles": ["<node_internals>/**"]
         }
     ]
 }
