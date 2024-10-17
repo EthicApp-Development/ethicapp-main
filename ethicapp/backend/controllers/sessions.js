@@ -160,8 +160,8 @@ router.post("/add-session-activity", async (req, res) => {
         res.json({ status: 200, id: maxId });
 
     } catch (err) {
-        console.error('Error in SQL query while creating a session:', err);
-        res.status(400).json({ status: 400, message: 'Error creating session' });
+        console.error("Error in SQL query while creating a session:", err);
+        res.status(400).json({ status: 400, message: "Error creating session" });
     }
 });
 
@@ -1240,44 +1240,6 @@ router.post("/duplicate-session", (req, res) => {
         res.end('{"status":"err"}');
     }
 });
-
-
-router.get("/export-session-data-sel", (req,res) => {
-    let id = req.query.id;
-    if (!isNaN(id)) {
-        rpg.multiSQL({
-            dbcon: pass.dbcon,
-            sql:   `
-            SELECT u.name AS nombre,
-                q.content AS pregunta,
-                substring(
-                    'ABCDE'
-                    FROM s.answer + 1
-                    FOR 1
-                ) AS alternativa,
-                s.answer = q.answer AS correcta,
-                s.iteration AS iteracion,
-                s.comment AS comentario,
-                s.confidence AS confianza,
-                s.stime AS hora_respuesta
-            FROM selection AS s
-            INNER JOIN users AS u
-            ON s.uid = u.id
-            INNER JOIN questions AS q
-            ON s.qid = q.id
-            WHERE q.sesid = ${id}
-            ORDER BY s.stime
-            `,
-            onEnd: (req, res, arr) => {
-                res.xls("resultados.xlsx", arr);
-            }
-        })(req,res);
-    }
-    else {
-        res.end("Bad Request");
-    }
-});
-
 
 router.post("/generate-session-code", rpg.singleSQL({
     dbcon: pass.dbcon,

@@ -42,11 +42,6 @@ router.get("/login", (req, res) => {
     res.render("login", {rc: req.query.rc, tok: req.query.rc});
 });
 
-
-router.get("/institucion", (req, res) => {
-    res.render("institucion", { rc: req.query.rc });
-});
-
 router.get("/passreset", (req, res) => {
     res.render("passreset", { rc: req.query.rc });
 });

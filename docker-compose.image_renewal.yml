@@ -12,7 +12,7 @@ services:
   node:
     build:
       context: ethicapp/
-      dockerfile: image-renewal.Dockerfile
+      dockerfile: Dockerfile.image-rebuild
       args:
         NODE_VERSION: ${NODE_VERSION}
     environment:

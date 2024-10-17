@@ -37,7 +37,7 @@ jobs:
           context: "{{defaultContext}}:ethicapp"
           build-args: |
             "NODE_VERSION=12.22.9-buster"
-          file: ./image-renewal.Dockerfile
+          file: ./image-rebuild.Dockerfile
           push: true
           tags:
             ethicapp/stable-2:latest

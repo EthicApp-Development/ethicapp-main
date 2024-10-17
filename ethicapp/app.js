@@ -4,7 +4,6 @@ const require = createRequire(import.meta.url);
 
 let express = require("express");
 let cors = require("cors");
-let session = require("express-session");
 let logger = require("morgan");
 let cookieParser = require("cookie-parser");
 let FileStore = require("session-file-store")(session);
@@ -27,13 +26,17 @@ let assetVersions = require("express-asset-versions");
 require("serve-favicon");
 require("dotenv").config({ path: "../.env" });
 
+import session from "express-session";
 import passport from "./backend/controllers/passport-setup.js";
 import index from "./backend/controllers/index.js";
 import users from "./backend/controllers/users.js";
+//import sessions from "./backend/controllers/sessions.js";
 import { uploadsPath } from "./backend/config/config.js";
 import { validateSession } from "./backend/middleware/validate-session.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import { createClient } from "redis";
+import connectRedis from "connect-redis";
 
 let app = express();
 
@@ -72,20 +75,37 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "frontend")));
 app.use("/uploads",express.static(path.join(__dirname, "frontend/assets")));
 
+/*
 app.use(session({
     secret:            "ssshhh",
     saveUninitialized: false,
     resave:            false,
-    store:             new FileStore(),
+    store:             new FileStore({
+        path:  path.join(__dirname, "sessions"),
+        logFn: function (msg) { console.log(msg); },
+    }),
+}));
+*/
+
+const RedisStore = connectRedis(session);
+const redisClient = createClient();
+
+redisClient.connect().catch(console.error);
+
+app.use(session({
+    store:             new RedisStore({ client: redisClient }),
+    secret:            "ssshhh",
+    resave:            false,
+    saveUninitialized: false
 }));
 
 app.use(json2xls.middleware);
 
 app.use("/", index);
 app.use("/", users);
+// app.use("/", validateSession, sessions);
 // app.use("/", adminApi);
 // app.use("/", validateSession, cases);
-// app.use("/", validateSession, sessions);
 // app.use("/", validateSession, visor);
 // app.use("/", validateSession, analysis);
 // app.use("/", validateSession, teams);

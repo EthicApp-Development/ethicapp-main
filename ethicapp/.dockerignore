@@ -9,8 +9,8 @@ sessions/
 package-lock.json
 
 Dockerfile
-production.Dockerfile
-image-renewal.Dockerfile
+Dockerfile.production
+Dockerfile.image-renewal
 
 .gitignore
 .gitkeep
