@@ -5,6 +5,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>EthicApp</title>
+    <script type="importmap">
+        {
+          "imports": {
+            "ckeditor5": "https://cdn.ckeditor.com/ckeditor5/43.1.0/ckeditor5.js",
+            "ckeditor5/": "https://cdn.ckeditor.com/ckeditor5/43.1.0/"
+          }
+        }
+    </script>
+    <link rel="stylesheet" href="../assets/js/helpers/ckeditor/styles.css">
+    <link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/43.1.0/ckeditor5.css">
+
+    <script type="module" src="assets/js/helpers/ckeditor/main.js"></script>
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
     <script src="assets/libs/angular.min.js"></script>
     <script src="assets/libs/angular-sanitize.min.js"></script>
@@ -16,7 +28,8 @@
     <script src="assets/libs/angular-glue.min.js"></script>
     <script src="assets/libs/intro.min.js"></script>
     <script src="assets/libs/angular-intro.min.js"></script>
-    <script src="assets/js/controllers/student/ethics_controller.js"></script>
+    <!-- <script src="assets/js/controllers/student/ethics_controller.js"></script> -->
+    <script type="module" src="assets/js/controllers/student/ethics_controller.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="assets/css/bootstrap.min.css" />
     <link rel="stylesheet" href="assets/css/font-awesome.min.css">
@@ -71,17 +84,54 @@
 
         <div class="scrollable-container blue">
             <div class="mid-container qs-content simple-pad">
-                <div class="boxed" ng-show="iteration > 0 && showDoc" ng-if="documents.length>0">
+                <div ng-show="iteration > 0 && showDoc" ng-if="documents.length>0">
                     <div>
-                        <h3>{{documents[selectedDocument].title}}</h3>
+                        <!-- <h3>{{documents[selectedDocument].title}}</h3>
                         <div class="flex-justify-center mt-n2 mb-medio">
                             <button class="btn btn-sm text-white bg-ethicapp"
                                 ng-click="openPDFInNewTab(documents[selectedDocument].path)">{{'openInNewTab'|lang}}</button>
-                        </div>
+                        </div> -->
                         <div>
-                            <iframe ng-src="{{getDocURL()}}" class="pdf-embed">
-                            </iframe>
+                            <!-- {{ case }} -->
+                            <div class="pdf-embedss">
+                                <div ng-init="initEditor(caseReadOnly)">
+                                    <div class="main-container-ckeditor">
+                                        <div
+                                            class="editor-container editor-container_document-editor editor-container_include-minimap editor-container_include-style"
+                                            id="editor-container"
+                                        >
+                                            <div class="editor-container__menu-bar" id="editor-menu-bar"></div>
+                                            <div class="editor-container__toolbar" id="editor-toolbar"></div>
+                                            <div class="holaeditor-container__minimap-wrapper">
+                                                <div class="editor-container__editor-wrapper">
+                                                    <div class="editor-container__editor"><div id="editor"></div></div>
+                                                </div>
+                                                <div class="editor-container__sidebar editor-container__sidebar_minimap"><div id="editor-minimap"></div></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- <iframe ng-src="{{getDocURL()}}" class="pdf-embed">
+                            </iframe> -->
                         </div>
+                        <div ng-if="case.documents.length > 0">
+                            <hr class="mt-1medio">
+                            <p class="list-group-item-text">{{'documents' | lang}}:</p>
+                            <div>
+                                <div class="file-item list-group-item" ng-repeat="document in case.documents | orderBy: 'id' | filter:{name: userSearchDocs} track by $index">
+                                    <div class="line-form-nd">
+                                        <div class="line-row-nd">
+                                            <input type="text" class="form-control line_input" name="title" ng-model="document.name" disabled ng-id="input-name-{{document.id}}">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-primary ml-1" ng-click="openPDFInNewTab(document.path)" ng-id="btn-view-file-{{$index}}">{{'view' | lang}}</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+    
                     </div>
                 </div>
                 <h4 ng-show="finished" style="text-align: center;margin: auto;color:red">

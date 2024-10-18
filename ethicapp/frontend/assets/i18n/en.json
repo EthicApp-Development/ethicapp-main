@@ -327,5 +327,8 @@
     "casesPanel2": "You can also import an external case from another application, or add cases shared by other users to your collection.",
     "rename": "Rename",
     "creationDate": "Creation date",
-    "lastModificationDate": "Las modified"
+    "lastModificationDate": "Las modified",
+    "noDescription": "No description",
+    "create": "Create",
+    "changeCase": "Change case"
 }

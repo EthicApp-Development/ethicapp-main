@@ -57,7 +57,8 @@ import { StagesEditController } from "../../controllers/teacher/stages_edit_cont
 import { DashboardRubricaController } from "../../controllers/teacher/dashboard_rubrica_controller.js";
 import { ngQuillConfigProvider } from "../../helpers/util.js";
 import { CasesController } from "../../controllers/teacher/cases_controller.js";
-import { casesService } from "../../services/cases-service.js";
+import { CasesModalController } from "../../controllers/teacher/cases_modal_controller.js";
+import { CasesService } from "../../services/cases-service.js";
 
 adpp.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
@@ -128,8 +129,6 @@ adpp.controller("MonitorActivityController",
     ["$scope", "$filter", "$http", "$window", "Notification","$uibModal", MonitorActivityController]);
 adpp.controller("BrowseDesignsController", 
     ["$scope", "TabStateService", "DesignStateService", "ActivityStateService", "$filter", "$http", BrowseDesignsController]);
-adpp.controller("StagesEditController", 
-    ["$scope", "DesignStateService", "ActivityStateService", "$filter", "$http", "Notification", "$timeout", StagesEditController]);
 adpp.controller("OptionsController", 
     ["$scope", "$http", "Notification", OptionsController]);
 adpp.controller("DashboardRubricaController", 
@@ -156,6 +155,10 @@ adpp.controller("DialogCtrl", function($scope, DialogService) {
     $scope.closeDialog = DialogService.closeDialog;
 });
 
-adpp.service("CaseService", casesService);
+adpp.service("CaseService", CasesService);
 
 adpp.controller("CasesController", ["$scope", "$window", "$http", "$timeout", "Notification", "CaseService", CasesController]);
+adpp.controller("CasesModalController", ["$scope","$window","$http","$timeout","$uibModalInstance","Notification","CaseService", CasesModalController,
+]);
+adpp.controller("StagesEditController", 
+  ["$scope", "DesignStateService", "ActivityStateService", "$filter", "$http", "Notification", "$timeout", "$uibModal", "$window", "CaseService", StagesEditController]);

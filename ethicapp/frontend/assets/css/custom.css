@@ -15,7 +15,7 @@ body {
     height: 100%;
     width: 14em;
     position: fixed;
-    z-index: 9999;
+    z-index: 1000;
     top: 0;
     left: 0;
     overflow-x: hidden;
@@ -330,4 +330,16 @@ input:checked + .slider::before {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+
+.box-item {
+    position:relative;
+    display: flex;
+    flex-direction: column;
+    padding:10px 15px;
+    margin-bottom:-1px;
+    background-color:#fff;
+    border:1px solid #ddd;
+    width: 100%;
 }

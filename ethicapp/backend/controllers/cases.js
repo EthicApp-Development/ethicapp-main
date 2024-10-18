@@ -192,16 +192,18 @@ module.exports = router;
 router.get("/cases", async (req, res) => {
     const userId = req.user.id;
 
-    // Consulta actualizada para obtener los casos
+    // Consulta actualizada para obtener los casos, incluyendo el nombre del creador
     const sqlCases = `
     SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id, c.created_at, c.updated_at, c.rich_text,
            ARRAY_AGG(DISTINCT jsonb_build_object('name', tt.name)) AS topic_tags, 
-           ARRAY_AGG(DISTINCT jsonb_build_object('id', dd.id, 'path', dd.path, 'name', dd.name)) AS documents
+           ARRAY_AGG(DISTINCT jsonb_build_object('id', dd.id, 'path', dd.path, 'name', dd.name)) AS documents,
+           u.name AS creator -- Obtener el nombre del creador
     FROM cases c
     LEFT JOIN cases_topic_tags ct ON c.case_id = ct.case_id
     LEFT JOIN designs_documents dd ON c.case_id = dd.case_id
     LEFT JOIN topic_tags tt ON ct.topic_tag_name = tt.name
-    GROUP BY c.case_id
+    LEFT JOIN users u ON c.user_id = u.id -- Unión con la tabla de usuarios
+    GROUP BY c.case_id, u.name
     `;
 
     // Consulta para obtener los diseños bloqueados
@@ -234,6 +236,7 @@ router.get("/cases", async (req, res) => {
                 is_public: row.is_public,
                 external_case_url: row.external_case_url,
                 user_id: row.user_id,
+                creator: row.creator, // Añadir el campo creator
                 topic_tags: row.topic_tags.filter(tag => tag.name !== null), // Filtrar tags nulos
                 documents: row.documents.filter(doc => doc.id !== null), // Filtrar documentos nulos
                 created_at: row.created_at,
@@ -431,7 +434,8 @@ router.post("/cases/:caseId/documents", async (req, res) => {
 
         // Recorremos cada archivo y lo insertamos en la base de datos
         for (const fileData of pdfFiles) {
-            const path = fileData.file.split("uploads")[1];
+            console.log("fileData", fileData);
+            const path = fileData.file.split("frontend")[1];
             const name = path.split("pdf/").pop();
 
 
@@ -457,12 +461,12 @@ router.post("/cases/:caseId/documents", async (req, res) => {
 });
 
 
-router.patch("/designs/:id/case", (req, res) => {
+router.patch("/designs/:id/case", async (req, res) => {
     const designId = req.params.id;
     const { caseId } = req.body;
 
     if (!caseId) {
-        res.status(400).json({ status: 'error', message: 'Case ID is required' });
+        return res.status(400).json({ status: 'error', message: 'Case ID is required' });
     }
 
     const updateDesignQuery = `
@@ -472,81 +476,86 @@ router.patch("/designs/:id/case", (req, res) => {
     `;
     const db = getDBInstance(dbcon);
 
-    db.query(updateDesignQuery, [designId, caseId])
-        .then(() => {
-            res.status(200).json({ status: 'success', message: 'Design updated' });
-        })
-        .catch(err => {
-            console.error("Error updating design:", err);
-            res.status(500).json({ status: 'error', message: 'Internal server error' });
-        });
+    try {
+        await db.query(updateDesignQuery, [designId, caseId]);
+        res.status(200).json({ status: 'success', message: 'Design updated' });
+    } catch (err) {
+        console.error("Error updating design:", err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
 });
 
-router.get("/designs/:id", (req, res) => {
+
+router.get("/designs/:id", async (req, res) => {
     const designId = req.params.id;
     const sql = `
-    select * from designs where id = $1
+    SELECT * FROM designs WHERE id = $1
     `;
     const db = getDBInstance(dbcon);
 
-    db.query(sql, [designId])
-        .then(result => {
-            if (result.rows.length === 0) {
-                res.status(404).json({ status: 'error', message: 'Could not find a design with the provided ID' });
-            } else {
-                res.status(200).json({ status: 'success', result: result.rows[0] });
-            }
-        })
-        .catch(err => {
-            console.error(`Fatal error on the SQL query "${sql}"`);
-            console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error in the DB' });
-        }); 
+    try {
+        const result = await db.query(sql, [designId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Could not find a design with the provided ID' });
+        }
+
+        res.status(200).json({ status: 'success', result: result.rows[0] });
+    } catch (err) {
+        console.error(`Fatal error on the SQL query "${sql}"`);
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Error in the DB' });
+    }
 });
 
-router.get("/designs/:id/case", (req, res) => {
+
+router.get("/designs/:id/case", async (req, res) => {
     const designId = req.params.id;
     const sql = `
-    SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id,
-           ARRAY_AGG(DISTINCT jsonb_build_object('id', tt.topic_tag_id, 'name', tt.name)) AS topic_tags, 
-           ARRAY_AGG(DISTINCT dd.id) AS document_ids, 
-           ARRAY_AGG(DISTINCT dd.path) AS document_paths
+    SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id, c.created_at, c.updated_at, c.rich_text,
+           ARRAY_AGG(DISTINCT jsonb_build_object('name', tt.name)) AS topic_tags, 
+           ARRAY_AGG(DISTINCT jsonb_build_object('id', dd.id, 'path', dd.path, 'name', dd.name)) AS documents,
+           u.name AS creator -- Obtener el nombre del creador
     FROM cases c
     LEFT JOIN cases_topic_tags ct ON c.case_id = ct.case_id
     LEFT JOIN designs_documents dd ON c.case_id = dd.case_id
-    LEFT JOIN topic_tags tt ON ct.topic_tag_id = tt.topic_tag_id
+    LEFT JOIN topic_tags tt ON ct.topic_tag_name = tt.name
+    LEFT JOIN users u ON c.user_id = u.id -- Unión con la tabla de usuarios para obtener el creador
     LEFT JOIN designs d ON c.case_id = d.case_id
     WHERE d.id = $1
-    GROUP BY c.case_id
+    GROUP BY c.case_id, u.name
     `;
     const db = getDBInstance(dbcon);
-    
-    db.query(sql, [designId])
-        .then(result => {
-            if (result.rows.length === 0) {
-                res.status(404).json({ status: 'error', message: 'Could not find a case associated with the design with the provided ID' });
-                    
-            } else {
-                const row = result.rows[0];
-                const _case = {
-                    case_id: row.case_id,
-                    title: row.title,
-                    description: row.description,
-                    is_public: row.is_public,
-                    external_case_url: row.external_case_url,
-                    user_id: row.user_id,
-                    topic_tags: row.topic_tags.filter(tag => tag.id !== null), // Filtrar los tags que no existen
-                    documents: row.document_ids.map((id, index) => ({ id, path: row.document_paths[index] })).filter(doc => doc.id !== null) // Crear una lista de objetos { id, path }
-                };
 
-                res.status(200).json({ status: 'success', result: _case });
-            }
-        })
-        .catch(err => {
-            console.error(`Fatal error on the SQL query "${sql}"`);
-            console.error(err);
-            res.status(500).json({ status: 'error', message: 'Error in the DB' });
-        });
+    try {
+        const result = await db.query(sql, [designId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Could not find a case associated with the design with the provided ID' });
+        }
+
+        const row = result.rows[0];
+        const _case = {
+            case_id: row.case_id,
+            title: row.title,
+            description: row.description,
+            is_public: row.is_public,
+            rich_text: row.rich_text,
+            external_case_url: row.external_case_url,
+            user_id: row.user_id,
+            creator: row.creator, // Agregar el creador al objeto
+            topic_tags: row.topic_tags.filter(tag => tag.name !== null), // Filtrar los tags nulos
+            documents: row.documents.filter(doc => doc.id !== null), // Filtrar documentos nulos
+            created_at: row.created_at,
+            updated_at: row.updated_at
+        };
+
+        res.status(200).json({ status: 'success', result: _case });
+    } catch (err) {
+        console.error(`Fatal error on the SQL query "${sql}"`);
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Error in the DB' });
+    }
 });
 
 
@@ -676,88 +685,108 @@ router.delete("/cases/:caseId", async (req, res) => {
 
 
 
-router.post("/cases/:caseId/clone", (req, res) => {
-    const caseId = req.params.caseId;
+router.post("/cases/:case_id/clone", async (req, res) => {
+    const caseId = req.params.case_id;
+    const userId = req.user.id;  // Obtener el user_id del usuario que realiza la petición
     const db = getDBInstance(dbcon);
 
-    // Paso 1: Copiar el caso
+    // Primero, obtener los detalles del caso original y sus documentos y topic tags
     const caseQuery = `
-        INSERT INTO cases (title, description, is_public, external_case_url, user_id)
-        SELECT title, description, is_public, external_case_url, user_id
-        FROM cases
-        WHERE case_id = $1
-        RETURNING case_id
+    SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id, c.rich_text, c.created_at, c.updated_at,
+       ARRAY_AGG(DISTINCT jsonb_build_object('id', dd.id, 'path', dd.path, 'name', dd.name)) AS documents,
+       COALESCE(ARRAY_REMOVE(ARRAY_AGG(DISTINCT ct.topic_tag_name), NULL), '{}') AS topic_tags
+    FROM cases c
+    LEFT JOIN designs_documents dd ON c.case_id = dd.case_id
+    LEFT JOIN cases_topic_tags ct ON c.case_id = ct.case_id
+    WHERE c.case_id = $1
+    GROUP BY c.case_id
+
     `;
 
-    db.query(caseQuery, [caseId])
-        .then(caseResult => {
-            const newCaseId = caseResult.rows[0].case_id;
+    try {
+        // Obtener el caso original
+        const caseResult = await db.query(caseQuery, [caseId]);
+        if (caseResult.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Case not found' });
+        }
 
-            // Paso 2: Copiar las etiquetas
-            const tagsQuery = `
-                INSERT INTO cases_topic_tags (case_id, topic_tag_id)
-                SELECT $2, topic_tag_id
-                FROM cases_topic_tags
-                WHERE case_id = $1
-            `;
+        const originalCase = caseResult.rows[0];
 
-            return db.query(tagsQuery, [caseId, newCaseId])
-                .then(() => newCaseId);
-        })
-        .then(newCaseId => {
-            // Paso 3: Copiar los documentos
-            const documentsQuery = `
-                SELECT id, path
-                FROM designs_documents
-                WHERE case_id = $1
-            `;
+        // Clonar los datos del caso en la tabla 'cases'
+        const newCaseQuery = `
+        INSERT INTO cases (title, description, is_public, external_case_url, user_id, rich_text, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+        RETURNING case_id
+        `;
+        
+        const newCaseResult = await db.query(newCaseQuery, [
+            originalCase.title,
+            originalCase.description,
+            originalCase.is_public,
+            originalCase.external_case_url,
+            userId,  // Usar el user_id del usuario que realiza la petición
+            originalCase.rich_text
+        ]);
 
-            db.query(documentsQuery, [caseId])
-                .then(documentsResult => {
-                    documentsResult.rows.forEach(doc => {
-                        const oldRelativePath = doc.path;
-                        const oldFullPath = path.join('frontend/assets/uploads', oldRelativePath);
+        const newCaseId = newCaseResult.rows[0].case_id;
 
-                        const newHash = crypto.randomBytes(16).toString('hex'); // Generar un nuevo hash para cada archivo
-                        const newDirectory = path.join('frontend/assets/uploads', newHash, 'pdf');
-                        const newRelativePath = path.join(newHash, 'pdf', path.basename(oldRelativePath));
-                        const newFullPath = path.join(newDirectory, path.basename(oldRelativePath));
+        // Clonar los documentos asociados
+        for (const doc of originalCase.documents) {
+            if (doc.id && doc.path) {
+                // Crear una nueva ruta para el archivo
+                const oldRelativePath = doc.path;
+                const oldFullPath = path.join('frontend/assets/uploads', oldRelativePath);
 
-                        // Crear el nuevo directorio si no existe
-                        if (!fs.existsSync(newDirectory)) {
-                            fs.mkdirSync(newDirectory, { recursive: true });
-                        }
+                // Generar un nuevo hash para crear una ruta única
+                const newHash = crypto.randomBytes(16).toString('hex');
+                const newDirectory = path.join('frontend/assets/uploads', newHash, 'pdf');
+                const newRelativePath = path.join(newHash, 'pdf', path.basename(oldRelativePath));
+                const newFullPath = path.join(newDirectory, path.basename(oldRelativePath));
 
-                        // Verificar si el archivo existe antes de copiarlo
-                        if (fs.existsSync(oldFullPath)) {
-                            // Clonar el archivo físico
-                            fs.copyFileSync(oldFullPath, newFullPath);
+                // Crear el directorio si no existe
+                if (!fs.existsSync(newDirectory)) {
+                    fs.mkdirSync(newDirectory, { recursive: true });
+                }
 
-                            // Insertar la nueva ruta del documento en la base de datos
-                            const insertDocumentQuery = `
-                                INSERT INTO designs_documents (path, case_id)
-                                VALUES ($1, $2)
-                            `;
+                // Copiar el archivo al nuevo directorio
+                fs.copyFileSync(oldFullPath, newFullPath);
 
-                            db.query(insertDocumentQuery, [newRelativePath, newCaseId]);
-                        } else {
-                            console.error(`The file do not exist: ${oldFullPath}`);
-                        }
-                    });
-                })
-                .then(() => {
-                    res.status(201).json({ status: 'success', message: 'Case cloned', newCaseId });
-                })
-                .catch(err => {
-                    console.error("Error cloning documents", err);
-                    res.status(500).json({ status: 'error', message: 'Internal server error' });
-                });
-        })
-        .catch(err => {
-            console.error("Error cloning case", err);
-            res.status(500).json({ status: 'error', message: 'Internal server error' });
+                // Insertar el documento clonado en la base de datos, asociado al nuevo case_id
+                const insertDocumentQuery = `
+                INSERT INTO designs_documents (case_id, path, name)
+                VALUES ($1, $2, $3)
+                `;
+                
+                await db.query(insertDocumentQuery, [newCaseId, newRelativePath, doc.name]);
+            }
+        }
+
+        // Clonar las relaciones de topic tags
+        const topicTags = originalCase.topic_tags;
+        console.log('topicTags:', topicTags);
+        if (topicTags && topicTags.length > 0) {
+            for (const tagName of topicTags) {
+                const insertTopicTagQuery = `
+                INSERT INTO cases_topic_tags (case_id, topic_tag_name)
+                VALUES ($1, $2)
+                `;
+                
+                await db.query(insertTopicTagQuery, [newCaseId, tagName]);
+            }
+        }
+
+        // Respuesta exitosa, devolviendo solo el nuevo case_id
+        res.status(200).json({ 
+            status: 'success', 
+            newCaseId 
         });
+
+    } catch (err) {
+        console.error('Error cloning the case:', err);
+        res.status(500).json({ status: 'error', message: 'Error cloning the case' });
+    }
 });
+
 
 router.patch("/documents/:documentId", (req, res) => {
     const documentId = req.params.documentId;

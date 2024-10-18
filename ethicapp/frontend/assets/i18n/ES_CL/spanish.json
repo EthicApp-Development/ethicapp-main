@@ -346,5 +346,8 @@
     "casesPanel2": "También puedes importar un caso externo desde otra aplicación, o bien agregar a tu colección casos compartidos por otros usuarios.",
     "rename": "Renombrar",
     "creationDate": "Fecha creación",
-    "lastModificationDate": "Última modificación"
+    "lastModificationDate": "Última modificación",
+    "noDescription": "Sin descripción",
+    "create": "Crear",
+    "changeCase": "Cambiar caso"
 }

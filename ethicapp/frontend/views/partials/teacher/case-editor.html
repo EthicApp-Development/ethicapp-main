@@ -81,22 +81,20 @@
                             </div>
                         </div>
                         <div class="list-group pad-content">
-                            <div ng-if="tabEditorDocuments == 'documentsTab'" ng-init="initDragDrop()">
+                            <div ng-if="tabEditorDocuments == 'documentsTab'">
                                 <input type="file" id="file-input" multiple style="display: none;" ng-change="handleFileSelect($event)" ng-model="files" accept="application/pdf" ng-if="!caseReadOnly"/>
-                                <div class="upload-container" id="upload-container" ng-click="triggerFileInput()" ng-class="{ 'dragover': isDragOver == true}" ng-if="!caseReadOnly">
+                                <div class="upload-container" id="upload-container" ng-click="triggerFileInput()" ng-if="!caseReadOnly" ng-init="initDragDrop()">
                                     <p>{{'dragDropMsg' | translate}}</p>
                                 </div>
-                                <div id="file-list">
-                                    <div class="file-item list-group-item" ng-repeat="document in case.documents | orderBy: 'id' | filter:{name: userSearchDocs} track by $index">
-                                        <div class="line-form-nd">
-                                            <div class="line-row-nd">
-                                                <input type="text" class="form-control line_input" name="title" ng-model="document.name" ng-disabled="caseReadOnly" ng-keypress="renameDocumentOnEnter($event, document.id)" ng-id="input-name-{{document.id}}">
-                                            </div>
+                                <div class="file-item list-group-item" ng-repeat="document in case.documents | orderBy: 'id' | filter:{name: userSearchDocs} track by $index">
+                                    <div class="line-form-nd">
+                                        <div class="line-row-nd">
+                                            <input type="text" class="form-control line_input" name="title" ng-model="document.name" ng-disabled="caseReadOnly" ng-keypress="renameDocumentOnEnter($event, document.id)" ng-id="input-name-{{document.id}}">
                                         </div>
-                                        <div>
-                                            <button class="btn btn-primary ml-1" ng-click="viewFile($event, document.path)" ng-id="btn-view-file-{{$index}}">{{'view' | translate}}</button>
-                                            <button class="btn btn-danger btn-smaller ml-1" ng-click="removeFile($event, document.id)" ng-id="btn-remove-file-{{$index}}" ng-if="!caseReadOnly">{{'delete' | translate}}</button>
-                                        </div>
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-primary ml-1" ng-click="viewFile($event, document.path)" ng-id="btn-view-file-{{$index}}">{{'view' | translate}}</button>
+                                        <button class="btn btn-danger btn-smaller ml-1" ng-click="removeFile($event, $index)" ng-id="btn-remove-file-{{$index}}" ng-if="!caseReadOnly">{{'delete' | translate}}</button>
                                     </div>
                                 </div>
                             </div>

@@ -1,5 +1,7 @@
 "use strict";
 
+import { CasesService } from "../../services/cases-service.js";
+
 var BASE_APP = window.location.href.replace("ethics", "");
 
 var app = angular.module(
@@ -11,10 +13,12 @@ app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
 
+app.service("CaseService", CasesService);
+
 app.controller(
     "EthicssController",
-    ["$scope", "$http", "$timeout", "$socket", "Notification", "$sce", "$uibModal","ngIntroService",
-        function ($scope, $http, $timeout, $socket, Notification, $sce, $uibModal, ngIntroService) {
+    ["$scope", "$http", "$timeout", "$socket", "Notification", "$sce", "$uibModal","ngIntroService", "CaseService",
+        function ($scope, $http, $timeout, $socket, Notification, $sce, $uibModal, ngIntroService, CaseService) {
             var self = $scope;
             self.designId = -1;
             self.iteration = 1;
@@ -53,6 +57,7 @@ app.controller(
             self.selectedDF = null;
             self.selectedDFPrev = null;
 
+            self.caseReadOnly = true;
             
 
             self.init = function () {
@@ -127,10 +132,23 @@ app.controller(
                     })
                         .then(function (response) {
                             self.designId = response.data[0].design;
+                            console.log(self.designId);
+                            CaseService.getCaseFromDesign(self.designId).then((response) => {
+                                if (!response || !response.data || !response.data.result) {
+                                  return;
+                                }
+                                self.case = response.data.result;
+                                console.log(self.case);
+                                // $scope.$apply()
+                              })
                             resolve(); 
                         })
                         .catch(reject); 
                 });
+            };
+
+            self.initEditor = function () {
+                CaseService.initEditor(self.caseReadOnly, self.case);
             };
 
             function updateChat(count) {
