@@ -98,12 +98,15 @@ app.use("/uploads",express.static(path.join(__dirname, "frontend/assets")));
 
 app.use(session({
     store: new FileStore({
-        path:  path.join(__dirname, "/sessions"),
-        logFn: function(msg) { console.log("FileStore Log:", msg); }
+        path:     path.join(__dirname, "/sessions"),
+        retries:  0, // Desactivar reintentos temporales para identificar fallas inmediatas
+        logFn:    function(msg) { console.log("FileStore Log:", msg); },
+        fileMode: 0o600, // Cambia el modo de archivo para asegurar permisos mínimos necesarios
     }),
     secret:            process.env.SESSION_SECRET || "ssshhh",
     resave:            false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    cookie:            { maxAge: 24 * 60 * 60 * 1000 } // Cookie para 1 día
 }));
 
 app.use("/", index);

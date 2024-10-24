@@ -187,6 +187,7 @@ router.post("/reset/:token", async (req, res) => {
 });
 
 router.get("/logout", (req, res) => {
+    
     req.logout(function (err) {
         if (err) { 
             console.error("Error during logout:", err);
@@ -195,6 +196,8 @@ router.get("/logout", (req, res) => {
 
         // Optionally destroy the session instead of nulling specific properties
         req.session.destroy((sessionErr) => {
+            console.log("attempting to destroy session");
+            
             if (sessionErr) {
                 console.error("Error destroying session:", sessionErr);
                 return res.status(500).json({ message: "Failed to destroy session" });
