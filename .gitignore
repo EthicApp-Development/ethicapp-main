@@ -1,6 +1,8 @@
 .idea/
 .DS_store
 
+.env
+
 # Postgres dev volume(s)
 db-data-volume/
 db-data-volume*/

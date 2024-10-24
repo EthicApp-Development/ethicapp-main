@@ -11,6 +11,6 @@ export let RoutingController = function($scope) {
         "launchActivity": "views/partials/teacher/launch-activity.html",
         "viewDesign":     "views/partials/teacher/view-design.html",
         "activity":       "views/partials/teacher/activity.html",
-        "profile":        "views/partials/profile.html",
+        "profile":        "views/partials/teacher/profile.html",
     };
 };

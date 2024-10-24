@@ -1,88 +1,58 @@
-<!DOCTYPE html>
-<html ng-app="UserCommon">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>EthicApp</title>
-  <script src="assets/libs/angular.min.js" defer></script>
-  <script src="assets/libs/angular-sanitize.min.js" defer></script>
-  <script src="assets/libs/angular-translate-2.18.4.min.js" defer></script>
-  <script src="assets/libs/angular-translate-loader-static-files-2.18.4.min.js" defer></script>
-  <script src="/socket.io/socket.io.js" defer></script>
-  <script src="<%= asset('/js/assets-bundle.js') %>" defer></script>
-  <%- include('partials/favicon.ejs') %>
-    <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
-    <script src="assets/js/ngmodules/teacher/user_common.mjs" type="module" defer></script>
-</head>
-
-<body ng-controller="LoginController">
-  <div class="form-signin panel panel-default">
-    <div class="panel-body">
-      <div class="logo">
-        <img src="assets/images/logos/ethicapp-logo.png" alt="Logo">
-      </div>
-      <div class="row">
-        <% const messages = { 
-          1: { type: 'info', text: 'log1' }, 
-          2: { type: 'danger', text: 'log2' }, 
-          3: { type: 'info', text: 'log3' },
-          4: { type: 'info', text: 'log4' },
-          5: { type: 'info', text: 'log5', init: 'activate_user' },
-          6: { type: 'info', text: 'log6' },
-          7: { type: 'info', text: 'log7' },
-          8: { type: 'info', text: 'log8' },
-          9: { type: 'info', text: 'log9' },
-          10: { type: 'info', text: 'log10' },
-          11: { type: 'info', text: 'log11' } 
-        }; %>
-      
-        <% if (messages[rc]) { %>
-          <div class="alert alert-<%= messages[rc].type %>">
-            {{ "<%= messages[rc].text %>" | translate }}
-            <% if (messages[rc].init) { %>
-              <div ng-init="<%= messages[rc].init %>()"></div>
-            <% } %>
-          </div>
-        <% } %>
-        <br />
-        <form class="form-horizontal" action="login" method="POST" name="formLogin">
-          <div class="form-group">
-            <label for="email" class="col-sm-3 control-label">{{ "email" | translate }}</label>
-            <div class="col-sm-8">
-              <input class="form-control" type="text" name="user" id="email" required
-                autofocus />
+<div class="form-signin panel panel-default">
+  <div class="panel-body">
+    <div class="logo">
+      <img src="assets/images/logos/ethicapp-logo.png" alt="Logo">
+    </div>
+    <div class="row">
+      <form ng-submit="login()" class="form-horizontal" method="POST" name="formLogin" novalidate>
+        <div class="form-group">
+          <label for="email" class="col-sm-3 control-label">{{ "email" | translate }}</label>
+          <div class="col-sm-8">
+            <input class="form-control" ng-focus="clearErrors()" type="email" ng-model="user.email" name="email" id="email" ng-required="true" autofocus />
+            <div class="error-message" ng-show="formLogin.email.$error.required && formLogin.email.$touched" style="color: red;">
+              {{ "email_required" | translate }}
             </div>
-            <div class="col-sm-1"></div>
-          </div>
-          <div class="form-group">
-            <label for="password" class="col-sm-3 control-label">{{ "password" | translate
-              }}</label>
-            <div class="col-sm-8">
-              <input class="form-control" type="password" name="pass" id="password" required />
+            <div class="error-message" ng-show="formLogin.email.$error.email && formLogin.email.$touched" style="color: red;">
+              {{ "invalid_email" | translate }}
             </div>
-            <div class="col-sm-1"></div>
           </div>
-          <div class="form-group text-center">
-            <button type="submit" class="btn btn-primary"
-              style="margin: 0 auto; width:140px;">{{
-              "login" | translate }}</button>
-          </div>
-        </form>
-        <br />
-        <div class="row text-center">
-          <a href="register">{{ "register" | translate }} </a>|
-          <a href="forgot-pass">{{ "forgot_pass" | translate }}</a>
-          <br />
-          <a href="/google" role="button" class="btn btn-default" style="margin-top:1em;">
-            <img style="width: 20px; margin-bottom: 3px; margin-right: 5px" alt="Google sign-in"
-              src="assets/images/logos/google.png" />
-            {{ "glogin" | translate }}
-          </a>
+          <div class="col-sm-1"></div>
         </div>
+
+        <div class="form-group">
+          <label for="password" class="col-sm-3 control-label">{{ "password" | translate }}</label>
+          <div class="col-sm-8">
+            <input class="form-control" type="password" ng-model="user.password" name="password" id="password" ng-required="true" ng-minlength="8" />
+            <div class="error-message" ng-show="formLogin.password.$error.required && formLogin.password.$touched" style="color: red;">
+              {{ "requiredPassword" | translate }}
+            </div>
+            <div class="error-message" ng-show="formLogin.password.$error.minlength && formLogin.password.$touched" style="color: red;">
+              {{ "minLengthPassword" | translate }}
+            </div>
+          </div>
+          <div class="col-sm-1"></div>
+        </div>
+
+        <div class="form-group text-center">
+          <div class="error-message" ng-show="loginError" style="margin-bottom:1em; color: red;">
+            {{ "login_failed" | translate }}
+          </div>
+          <button type="submit" class="btn btn-primary" ng-disabled="formLogin.$invalid" style="margin: 0 auto; width:140px;">
+            {{ "login" | translate }}
+          </button>
+        </div>
+      </form>
+      <br />
+      <div class="row text-center">
+        <a href="/register">{{ "register" | translate }} </a> |
+        <a href="/forgot">{{ "forgot_pass" | translate }}</a>
+        <br />
+        <a href="/google" role="button" class="btn btn-default" style="margin-top:1em;">
+          <img style="width: 20px; margin-bottom: 3px; margin-right: 5px" alt="Google sign-in"
+            src="assets/images/logos/google.png" />
+          {{ "glogin" | translate }}
+        </a>
       </div>
     </div>
   </div>
-</body>
-
-</html>
+</div>

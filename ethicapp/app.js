@@ -1,14 +1,6 @@
 "use strict";
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
-
-let express = require("express");
-let cors = require("cors");
-let logger = require("morgan");
-let cookieParser = require("cookie-parser");
-let FileStore = require("session-file-store")(session);
-let busboy = require("express-busboy");
-let assetVersions = require("express-asset-versions");
+// import { createRequire } from "module";
+// const require = createRequire(import.meta.url);
 
 //let index = require("./backend/controllers/index");
 //let users = require("./backend/controllers/users");
@@ -22,23 +14,51 @@ let assetVersions = require("express-asset-versions");
 // let content_analysis = require("./backend/controllers/content-analysis-controller");
 // let pass = require("./backend/config/keys-n-secrets");
 // let cases = require("./backend/controllers/cases");
-require("serve-favicon");
-require("dotenv").config({ path: "../.env" });
+
+import dotenv from "dotenv";
+dotenv.config({ path: "../.env" });
+
+import express from "express";
+import cors from "cors";
+import logger from "morgan";
+import cookieParser from "cookie-parser";
+
+import busboy from "express-busboy";
+import assetVersions from "express-asset-versions";
 
 import session from "express-session";
-import passport from "./backend/controllers/passport-setup.js";
+import { default as fileStoreFactory } from "session-file-store"; 
+const FileStore = fileStoreFactory(session);
+
 import index from "./backend/controllers/index.js";
-import users from "./backend/controllers/users.js";
+import passport from "./backend/controllers/users/passport-setup.js";
+import users_core from "./backend/controllers/users/users-core.js";
+import users_registration from "./backend/controllers/users/users-registration.js";
+
 //import sessions from "./backend/controllers/sessions.js";
+
 import { uploadsPath } from "./backend/config/config.js";
 import { validateSession } from "./backend/middleware/validate-session.js";
+import i18n from "i18n";
 import path from "path";
 import { fileURLToPath } from "url";
-import { createClient } from "redis";
-import connectRedis from "connect-redis";
-import RedisStore from "connect-redis";
+import expressLayouts from "express-ejs-layouts";
 
 let app = express();
+
+// Configure assets 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+i18n.configure({
+    locales:        ["es_CL", "en_US"],
+    directory:      path.join(__dirname, "locales"),
+    defaultLocale:  "en_US",
+    queryParameter: "lang",
+    objectNotation: true,
+});
+
+app.use(i18n.init);
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
 const corsOptions = {
@@ -50,20 +70,21 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Configure assets 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const assetPath = path.join(__dirname, "/frontend/assets");
 app.use(express.static(assetPath));
 app.use(assetVersions("/assets", assetPath));
 
+// JSON handling for requests
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // view engine setup
 app.set("views", path.join(__dirname, "frontend/views"));
 app.set("view engine", "ejs");
+app.use(expressLayouts); // Usar express-ejs-layouts
+app.set("layout", "./layouts/basic-common"); 
 
 // uncomment after placing your favicon in /public
-//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 app.use(logger("[EthicApp] :method :url :status - :response-time ms"));
 busboy.extend(app, {
     upload:        true,
@@ -75,28 +96,19 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "frontend")));
 app.use("/uploads",express.static(path.join(__dirname, "frontend/assets")));
 
-// Initialize redis for session storage
-let redisClient = createClient({
-    url: "redis://redis:6379"
-});
-
-redisClient.connect().catch(console.error);
-
-// Initialize store
-let redisStore = new RedisStore({
-    client: redisClient,
-    prefix: "myapp:",
-});
-
 app.use(session({
-    store:             redisStore,
-    secret:            "ssshhh",
+    store: new FileStore({
+        path:  path.join(__dirname, "/sessions"),
+        logFn: function(msg) { console.log("FileStore Log:", msg); }
+    }),
+    secret:            process.env.SESSION_SECRET || "ssshhh",
     resave:            false,
     saveUninitialized: false
 }));
 
 app.use("/", index);
-app.use("/", users);
+app.use("/", users_core);
+app.use("/", users_registration);
 // app.use("/", validateSession, sessions);
 // app.use("/", adminApi);
 // app.use("/", validateSession, cases);

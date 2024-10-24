@@ -6,6 +6,8 @@ set -eux
 # Define the location of the flag
 FLAG_FILE="/home/app/.npm_installed"
 
+npm install --save-dev nodemon
+
 # Check if npm install has already been executed
 if [ ! -f "$FLAG_FILE" ]; then
     echo "npm install has not been executed previously. Running npm install..."
@@ -21,4 +23,4 @@ fi
 export JWT_SECRET=$(cat /run/secrets/jwt_token)
 
 # Run the application in debug mode
-npm run debug
+npm run dev

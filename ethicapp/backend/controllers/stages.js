@@ -6,7 +6,6 @@ let rpg = require("../db/rest-pg");
 let pass = require("../config/keys-n-secrets");
 let socket = require("../config/socket.config");
 
-
 router.post("/get-stages", rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `

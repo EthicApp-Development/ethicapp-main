@@ -47,7 +47,7 @@ import { EthicsModalController } from "../../controllers/teacher/ethics_modal_co
 import { GroupController } from "../../controllers/teacher/group_controller.js";
 import { IncomingUsersController } from "../../controllers/teacher/incoming_users_controller.js";
 import { ManagementController } from "../../controllers/teacher/management_controller.js";
-import { TabsController } from "../../controllers/tabs_controller.js";
+import { TabsController } from "../../controllers/teacher/tabs_controller.js";
 import { MapSelectionModalController } from "../../controllers/teacher/map_selection_modal_controller.js";
 import { MonitorActivityController } from "../../controllers/teacher/monitor_activity_controller.js";
 import { OptionsController } from "../../controllers/teacher/options_controller.js";

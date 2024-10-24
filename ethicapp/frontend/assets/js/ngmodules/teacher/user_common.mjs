@@ -11,24 +11,24 @@ ngapp_user_common.config(function($compileProvider) {
 
 // Translations
 ngapp_user_common.config(function($translateProvider) {
-    $translateProvider.useSanitizeValueStrategy('sanitizeParameters');
+    $translateProvider.useSanitizeValueStrategy("sanitizeParameters");
 
     $translateProvider.useStaticFilesLoader({
-        prefix: 'assets/i18n/', 
-        suffix: '.json'
+        prefix: "assets/i18n/", 
+        suffix: ".json"
     });
 
     // Set default language
-    $translateProvider.preferredLanguage('es');
+    $translateProvider.preferredLanguage("es");
 });
 
-ngapp_user_common.directive('matchField', MatchFieldDirective);
-ngapp_user_common.directive('institutionRequired', InstitutionRequired);
+ngapp_user_common.directive("matchField", MatchFieldDirective);
+ngapp_user_common.directive("institutionRequired", InstitutionRequired);
 
 import { LoginController } from "../../controllers/login_controller.js";
 import { RegisterController } from "../../controllers/register_controller.js";
 
-ngapp_user_common.controller("LoginController", ['$scope', '$http', '$translate', LoginController]);
+ngapp_user_common.controller("LoginController", ["$scope", "$http", "$translate", LoginController]);
 ngapp_user_common.controller("RegisterController", 
-    ['$scope', '$http', '$translate', 'apiParams', RegisterController]);
+    ["$scope", "$http", "$translate", "apiParams", RegisterController]);
 

@@ -1,15 +1,22 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-    <title>EthicApp</title>
-    <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
-</head>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <title>EthicApp</title>
+        <script src="assets/libs/angular.min.js" defer></script>
+        <script src="assets/libs/angular-sanitize.min.js" defer></script>
+        <script src="assets/libs/angular-translate-2.18.4.min.js" defer></script>
+        <script src="assets/libs/angular-translate-loader-static-files-2.18.4.min.js" defer></script>
+        <script src="/socket.io/socket.io.js" defer></script>
+        <script src="<%= asset('/js/assets-bundle.js') %>" defer></script>
+        <%- include('partials/favicon.ejs') %>
+        <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
+        <script src="assets/js/ngmodules/common/user_common.mjs" type="module" defer></script>
+      </head>
 <body>
 
 <div class="middle-box large-box">
-
     <div class="logo">
         <img src="assets/images/logos/logo.png" alt="logo">
     </div>
@@ -31,15 +38,6 @@
         </button>
     </form>
     <br>
-
-
 </div>
-<!--<small>Do have a FEN account?</small>
-    <a href="login-fen">Login with FEN</a><br>-->
-    <!--<small>Registro:</small>-->
-    <!--<br>
-    <a href="#">Nueva cuenta de profesor</a>-->
-
-
 </body>
 </html>

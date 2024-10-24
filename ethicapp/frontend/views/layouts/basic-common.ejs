@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html ng-app="UserCommon">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title><%= typeof title !== 'undefined' ? title : "EthicApp" %></title>
+  <script src="/assets/libs/angular.min.js" defer></script>
+  <script src="/assets/libs/angular-sanitize.min.js" defer></script>
+  <script src="/assets/libs/angular-translate-2.18.4.min.js" defer></script>
+  <script src="/assets/libs/angular-translate-loader-static-files-2.18.4.min.js" defer></script>
+  <script src="/socket.io/socket.io.js" defer></script>
+  <script src="<%= asset('/js/assets-bundle.js') %>" defer></script>
+  <%- include('../partials/favicon.ejs') %>
+  <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
+  <script src="/assets/js/ngmodules/common/user_common.mjs" type="module" defer></script>
+  <%- typeof extraScripts !== 'undefined' ? extraScripts : '' %>
+</head>
+<body ng-controller="LocalesController">
+  <div class="loading-overlay" ng-if="!translationsLoaded" ng-class="{'loading': !translationsLoaded}">
+    <p>Loading...</p>
+  </div>
+  <div ng-if="translationsLoaded" ng-controller="<%= typeof controller !== 'undefined' ? controller : 'LoginController' %>">
+  <%- body %>
+  </div>
+</body>
+</html>

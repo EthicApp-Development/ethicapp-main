@@ -1,11 +1,11 @@
-import * as pass from "../config/keys-n-secrets.js";
+import { dbconnString } from "../../config/config.js";
 import passport from "passport";
 import bcrypt from "bcrypt"; 
-import { param, execSQL } from  "../db/rest-pg-2.js";
+import { param, execSQL } from  "../../db/rest-pg-2.js";
 import { Strategy as GoogleStrategy } from "passport-google-oauth2";
 import { Strategy as LocalStrategy } from "passport-local";
 
-passport.serializeUser( (user, done) => {
+passport.serializeUser( (user, done) => {    
     done(null, user);
 });
 
@@ -16,7 +16,7 @@ passport.deserializeUser(async (user, done) => {
             const sqlParams = [param("plain", email)];
             const dbParams = {
                 sql:       "SELECT * FROM users WHERE mail = $1",
-                dbcon:     pass.dbcon,
+                dbcon:     dbconnString,
                 sqlParams: sqlParams,
             };
 
@@ -46,7 +46,7 @@ passport.deserializeUser(async (user, done) => {
 
                 const dbParams = {
                     sql:       "INSERT INTO users (name, mail, pass, rut, sex, role) VALUES ($1, $2, $3, $4, $5, $6)",
-                    dbcon:     pass.dbcon,
+                    dbcon:     dbconnString,
                     sqlParams: sqlParams,
                 };
 
@@ -86,7 +86,6 @@ passport.deserializeUser(async (user, done) => {
     }
 });
 
-
 const domain_name = process.env.NODE_ENV === "development" ? 
     "localhost" : process.env.DOMAIN_NAME;
 const callbackURL = domain_name === "localhost"
@@ -111,8 +110,8 @@ passport.use(
 
 passport.use(new LocalStrategy(
     {
-        usernameField: "user",
-        passwordField: "pass",
+        usernameField: "email",
+        passwordField: "password",
     },
     async (email, password, done) => {
         try {
@@ -120,7 +119,7 @@ passport.use(new LocalStrategy(
             const sqlParams = [param("plain", email)];
             const dbParams = {
                 sql:       "SELECT * FROM users WHERE mail = $1",
-                dbcon:     pass.dbcon,
+                dbcon:     dbconnString,
                 sqlParams: sqlParams
             };
 

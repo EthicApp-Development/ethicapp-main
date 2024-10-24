@@ -1,21 +1,21 @@
 
 INSERT INTO users (name, rut, pass, mail, sex, role, aprendizaje)
-VALUES ('Admin', 'N/A', '$2b$10$Ej1QoW0NJ1CG6juzANh4..zww/qSc4rTGLETZv98nSJW3cGbbvF/2', 'admin@admin', NULL, 'S', NULL);
+VALUES ('Admin', 'N/A', '$2b$10$cTckRpM2gtKedZ80p8KkF.A6fUq2hgq19/4GQCRg91ME2OKmGUUq2', 'admin@admin', NULL, 'S', NULL);
 
 INSERT INTO users (name, rut, pass, mail, sex, role, aprendizaje)
-VALUES ('profesor1', '16308816-9', '$2b$10$tOJsKUzpbSlLluZPQxPeK.AQV7SrDqbeN2Xa3AqZTRUkqjUaKXNDK', 'profesor1@test', 'M', 'P', 'Reflexivo');
+VALUES ('profesor1', '16308816-9', '$2b$10$F0k7v3zGs2o0N.e/dISM0.M/0NT6JRWbgdPv6SLLDpg7iabLYawLO', 'profesor1@test', 'M', 'P', 'Reflexivo');
 
 INSERT INTO users (name, rut, pass, mail, sex, role, aprendizaje)
-VALUES ('profesor2', '18530564-3', '$2b$10$P8kYU1ObYEtFQwQj8aOqSecmsHLdQ4/6TMwh41/7Hnf8GuJchso3C', 'profesor2@test', 'M', 'P', 'Reflexivo');
+VALUES ('profesor2', '18530564-3', '$2b$10$npQWU4vBrxyKi7Sm/5MEL.3GdxfNWzy0JmwvnOco0xCorQLRQBIwG', 'profesor2@test', 'M', 'P', 'Reflexivo');
 
 INSERT INTO users (name, rut, pass, mail, sex, role, aprendizaje)
-VALUES ('alumno 1', '20884663-9', '$2b$10$BE.Bihx9J2bTjC5m3j0iAO7Ln.XTGUli3M1PIluFXbGmBpjLdlph2', 'alumno1@test', 'M', 'A', 'Reflexivo');
+VALUES ('alumno 1', '20884663-9', '$2b$10$zxmnH2yoY4l3Ne.Ek.c4oug6gZOmiuFmrKXoszEJ5KtxZnP1Z2J0i', 'alumno1@test', 'M', 'A', 'Reflexivo');
 
 INSERT INTO users (name, rut, pass, mail, sex, role, aprendizaje)
-VALUES ('alumno 2', '22651377-9', '$2b$10$E77q/MTBFlPGcMYKrYd.Oug4Y6cea/XNdZ0Aq6yUDcvLV2q9xsszK', 'alumno2@test', 'F', 'A', 'Teorico');
+VALUES ('alumno 2', '22651377-9', '$2b$10$gZ1oG2qy2Na/lxcjAF9eR.Ji.ebbgsbvsmYAkx/iTNx/.ZJLq5A4G', 'alumno2@test', 'F', 'A', 'Teorico');
 
 INSERT INTO users (name, rut, pass, mail, sex, role, aprendizaje)
-VALUES ('alumno 3', '19994794-k', '$2b$10$mCWpP13uwxvcbxR4y6eN7.X/YEyX.QRVNE8Q9RRNroxROyVGAqvU.', 'alumno3@test', 'F', 'A', 'Activo');
+VALUES ('alumno 3', '19994794-k', '$2b$10$JIlHBqV30Lf9yttkbW9FAeW2uyj.rab0/UixGlIxB.SJCA5M9XMdu', 'alumno3@test', 'F', 'A', 'Activo');
 
 INSERT INTO users (name, rut, pass, mail, sex, role, aprendizaje)
-VALUES ('banned-user', 'N/A', '$2b$10$RpF2LndcsklYy2mniv4PPey8c5NkeJdw8p1Yxo/FUcke3y1L3cp2e', 'banned@test', 'M', 'A', 'Activo');
+VALUES ('banned-user', 'N/A', '$2b$10$Na/b3V0SZBK.8jKNl8AS5.ozLE4ongly2ELAsJj0hmL2McitwpiUu', 'banned@test', 'M', 'A', 'Activo');
