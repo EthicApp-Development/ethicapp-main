@@ -3,11 +3,17 @@ export let LoginController = ($scope, $http, $window) => {
 
     self.loginError = false;
 
-    const welcomeMessageElement = document.getElementById("welcome-message");
-    
-    if (welcomeMessageElement) {
-        $scope.welcomeMessage = welcomeMessageElement.getAttribute("data-welc");
-    }
+    setTimeout(() => {
+        const welcomeMessageElement = document.getElementById("welcome-message");
+        if (welcomeMessageElement) {
+            $scope.$apply(() => {
+                $scope.welcomeMessage = welcomeMessageElement.getAttribute("data-welc");
+            });
+            console.debug("AngularJS: welcomeMessage set to:", $scope.welcomeMessage);
+        } else {
+            console.debug("AngularJS: welcomeMessage element not found");
+        }
+    }, 0);
 
     self.clearErrors = function () {
         self.loginError = false;

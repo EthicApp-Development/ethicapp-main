@@ -203,6 +203,7 @@
 	"registration_complete": "Registro Completo. Ingresa con tus datos",
 	"login_failed": "Email o contraseña incorrecta",
 	"pass_recovery_directions" : "Te enviaremos un correo electrónico para restablecer tu contraseña. Si no lo ves en tu inbox, recuerda revisar tu carpeta SPAM para encontrarlo.",
+	"pass_recovery_token_expired" : "El token para recuperación de la contraseña expiró. Por favor ingrese nuevamente su correo para restablecer su contraseña.",
 	"password_recovery_email_sent": "Se ha enviado un correo con la información para recuperar la contraseña.\n Este correo podría haber llegado a spam.",
 	"password_updated": "Contraseña cambiada correctamente. Ingresa con tus datos.",
 	"account_activated":"Tu cuenta ha sido activada",

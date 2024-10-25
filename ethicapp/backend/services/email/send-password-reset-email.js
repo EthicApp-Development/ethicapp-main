@@ -15,7 +15,7 @@ const sesClient = new SESClient({
     },
 });
 
-async function sendPasswordResetEmail(email, locale, subject, resetUrl) {
+export async function sendPasswordResetEmail(email, locale, subject, resetUrl) {
     const templatePath = path.join(__dirname, 
         "templates", locale, "reset-password.ejs");
     const htmlContent = await ejs.renderFile(templatePath, { resetUrl });
@@ -46,5 +46,3 @@ async function sendPasswordResetEmail(email, locale, subject, resetUrl) {
         throw err;
     }
 }
-
-export default { sendPasswordResetEmail };

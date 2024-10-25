@@ -14,10 +14,12 @@ let validateRecaptcha = () => {
 
 export let getRecaptchaResponse = () => {
     try {
-        if (!validateRecaptcha()) {
+        let valid = validateRecaptcha();
+        if (!valid) {
             throw new Error("Could not validate recaptcha.");
         }
-        return grecaptcha.getResponse();
+        let response = grecaptcha.getResponse();
+        return response;
     } catch (error) {
         console.error(error);
         return null;

@@ -1,10 +1,23 @@
-import { getRecaptchaResponse } from "./recaptcha_api";
+import { getRecaptchaResponse } from "./recaptcha_api.js";
 
 export let CredentialsController = ($scope, $http, $window) => {
     let self = $scope;
+    self.user = {};
 
     self.emailSent = false;
     self.backendError = false;
+
+    setTimeout(() => {
+        const welcomeMessageElement = document.getElementById("welcome-message");
+        if (welcomeMessageElement) {
+            $scope.$apply(() => {
+                $scope.welcomeMessage = welcomeMessageElement.getAttribute("data-welc");
+            });
+            console.debug("AngularJS: welcomeMessage set to:", $scope.welcomeMessage);
+        } else {
+            console.debug("AngularJS: welcomeMessage element not found");
+        }
+    }, 0);
 
     self.clearErrors = function () {
         self.backendError = false;
@@ -18,7 +31,7 @@ export let CredentialsController = ($scope, $http, $window) => {
         } catch(error) {
             console.error(error);
             self.backendError = true;
-            self.backendErorMessage = "captcha_error";
+            self.backendErrorMessage = "captcha_error";
             return;
         }
 
@@ -29,52 +42,18 @@ export let CredentialsController = ($scope, $http, $window) => {
 
         $http.post("/forgot", params)
             .then(response => {
-                if (response.data.status === "success") {
+                if (response.status === 200) {
+                    console.log("password change success!");
                     self.emailSent = true;
                 } else {
-                    self.backendError = response.data.message;
+                    self.backendError = true;
+                    self.backendErrorMessage = response.data.message;
                 }
             })
             .catch(error => {
                 console.error(error);
-                self.backendError = "An unexpected error occurred.";
-            });
-    };
-
-    self.resetPassword = function () {
-        let recaptchaResponse = null;
-        
-        try {
-            recaptchaResponse = getRecaptchaResponse();
-        } catch(error) {
-            console.error(error);
-            self.backendError = true;
-            self.backendErorMessage = "captcha_error";
-            return;
-        }
-
-        if (self.user.newPassword !== self.user.confirmPassword) {
-            return;
-        }
-
-        const resetData = {
-            email:                self.user.username,
-            pass:                 self.user.newPassword,
-            cpass:                self.user.confirmPassword,
-            g_recaptcha_response: recaptchaResponse
-        };
-
-        $http.post("/reset-password", resetData)
-            .then(response => {
-                if (response.data.status === "success") {
-                    $window.location.href = "/login?rc=password_updated";
-                } else {
-                    self.backendError = response.data.message;
-                }
-            })
-            .catch(error => {
-                console.error(error);
-                self.backendError = "An unexpected error occurred.";
+                self.backendError = true;
+                self.backendErrorMessage = "An unexpected error occurred.";
             });
     };
 };

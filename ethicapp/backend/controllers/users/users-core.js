@@ -5,13 +5,15 @@ import path from "path";
 import express from "express";
 import passport from "passport";
 import { VIEWS_PREFIX } from "./users-common.js";
-import sendPasswordResetEmail from "../../services/email/send-password-reset-email.js";
+import { sendPasswordResetEmail } from "../../services/email/send-password-reset-email.js";
 import bcrypt from "bcrypt";
 
+import * as crypto from "crypto";
 import { param, execSQL } from  "../../db/rest-pg-2.js";
 import { fileURLToPath } from "url";
 import * as UserSchemas from "../request-schemas/user-schemas.js";
-import * as RecaptchaHelper from "../helpers/recaptcha-helper.js";
+import * as RecaptchaHelper from "../../helpers/recaptcha-helper.js";
+import * as TokenHelper from "../../helpers/token-helper.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -91,12 +93,14 @@ router.get("/forgot", async (req, res) => {
         captchaScript = captchaScript.replace("{{RECAPTCHA_SITE_KEY}}", 
             process.env.RECAPTCHA_SITE_KEY);
 
+        const welc = req.query.welc;
+
         // Render the view
         res.render("recover-password", {
             title:        "EthicApp",
             controller:   "CredentialsController",
             extraScripts: `${captchaScript}`,
-            rc:           req.query.rc
+            welc:         welc,
         });
     } catch (error) {
         console.error("Error loading extra scripts:", error);
@@ -107,20 +111,21 @@ router.get("/forgot", async (req, res) => {
 router.post("/forgot", async (req, res) => {
     async function requestPasswordReset(email, dbcon) {
         const token = crypto.randomBytes(20).toString("hex");
-        const expires = new Date(Date.now() + 3600000 * 24); // 24 horas
+        const expires = new Date(Date.now() + 3600000 * 24);
     
         const sql = `
             UPDATE users 
             SET reset_password_token = $1, reset_password_expires = $2 
-            WHERE email = $3
+            WHERE mail = $3
         `;
-        const sqlParams = [token, expires, email];
-    
+
+        const sqlParams = [token, expires, email];  // No proceses sqlParams como JSON
+
         try {
             await execSQL({
                 sql,
                 dbcon,
-                sqlParams: sqlParams.map((param, index) => param("plain", `param${index}`))
+                sqlParams  // Pasar sqlParams directamente
             });
     
             return token;
@@ -131,19 +136,19 @@ router.post("/forgot", async (req, res) => {
     }
 
     try {
-        UserSchemas.passwordRecoverySchema.validate(req.body);
+        await UserSchemas.passwordRecoverySchema.validate(req.body);
 
         const responseKey = req.body["g_recaptcha_response"];
-
-        const recaptchaResult = RecaptchaHelper.validateRecaptcha(responseKey);
+        const recaptchaResult = await RecaptchaHelper.validateRecaptcha(responseKey);
+        
         if (!recaptchaResult) {
             console.log("Captcha verification failed.");
-            return res.status(400).json(
-                { success: false, message: "Captcha verification failed." });
+            return res.status(400).json({
+                success: false, message: "Captcha verification failed."
+            });
         }
 
         const { email, lang } = req.body;
-
         const locale = lang || "en_US";
         const token = await requestPasswordReset(email, config.dbconnString);
         const resetUrl = `http://${req.headers.host}/reset/${token}`;
@@ -154,24 +159,54 @@ router.post("/forgot", async (req, res) => {
         await sendPasswordResetEmail(email, locale, subject, resetUrl);
         res.status(200).send("Recovery email sent.");
     } catch (err) {
+        console.error("Error handling password reset request:", err);
         res.status(500).send("Error sending recovery email.");
     }
 });
 
 router.get("/reset-password", async (req, res) => {
     try {
+        // Validate request
+        await UserSchemas.passwordRecoveryPageSchema.validate(req.query);
+
+        const { token } = req.query;
+
+        // Check if the token is valid and get the associated email
+        let email;
+        try {
+            const sql = `
+                SELECT mail 
+                FROM users 
+                WHERE reset_password_token = $1 
+                AND reset_password_expires > NOW()
+            `;
+            const result = await execSQL({
+                sql,
+                dbcon:     config.dbconnString,
+                sqlParams: [token]
+            });
+
+            if (result.length === 0) {
+                console.error("Invalid or expired token");
+                return res.redirect("/forgot?welc=pass_recovery_token_expired");
+            }
+
+            email = result[0].mail;
+        } catch (error) {
+            console.error("Error retrieving email by token:", error);
+            return res.redirect("/forgot?welc=pass_recovery_token_expired");
+        }
+
         // Load recaptcha partial view from file
         const scriptPath = path.join(__dirname, 
             VIEWS_PREFIX, "partials", "recaptcha.ejs");
         let captchaScript = await fs.promises.readFile(scriptPath, "utf-8");
 
         // Replace placeholder with actual site key
-        captchaScript = captchaScript.replace("{{RECAPTCHA_SITE_KEY}}", 
-            process.env.RECAPTCHA_SITE_KEY);
+        captchaScript = captchaScript.replace(
+            "{{RECAPTCHA_SITE_KEY}}", process.env.RECAPTCHA_SITE_KEY);
 
-        const email = "somemail@test.com";
-
-        // Render the view
+        // Render the view with the retrieved email
         res.render("reset-password", {
             title:        "EthicApp",
             controller:   "CredentialsController",
@@ -180,38 +215,12 @@ router.get("/reset-password", async (req, res) => {
             rc:           req.query.rc
         });
     } catch (error) {
-        console.error("Error loading extra scripts:", error);
+        console.error("Error rendering password reset view:", error);
         res.status(500).send("Server error");
     }
 });
 
 router.post("/reset-password/:token", async (req, res) => {
-    async function verifyToken(token, dbcon) {
-        const sql = `
-            SELECT * FROM users 
-            WHERE reset_password_token = $1 
-            AND reset_password_expires > NOW()
-        `;
-        const sqlParams = [token];
-    
-        try {
-            const users = await execSQL({
-                sql,
-                dbcon,
-                sqlParams: sqlParams.map((param, index) => param("plain", `param${index}`))
-            });
-    
-            if (users.length === 0) {
-                throw new Error("Invalid or expired token.");
-            }
-    
-            return users[0];
-        } catch (err) {
-            console.error("Error verifying reset token:", err);
-            throw new Error("Error verifying reset token.");
-        }
-    }
-
     async function updatePassword(token, email, newPassword, dbcon) {
         const hashedPassword = await bcrypt.hash(newPassword, 10);
     
@@ -239,14 +248,14 @@ router.post("/reset-password/:token", async (req, res) => {
 
     try {
         // Validate request
-        UserSchemas.passwordResetSchema.validate(req.body);
+        await UserSchemas.passwordResetSchema.validate(req.body);
 
         const { token } = req.params;
         const { email, pass } = req.body;
  
         // Validate recaptcha token
         const responseKey = req.body["g_recaptcha_response"];
-        const recaptchaResult = RecaptchaHelper.validateRecaptcha(responseKey);
+        const recaptchaResult = await RecaptchaHelper.validateRecaptcha(responseKey);
 
         if (!recaptchaResult) {
             console.log("Captcha verification failed.");
@@ -255,7 +264,7 @@ router.post("/reset-password/:token", async (req, res) => {
         }
 
         // Step 1: Verify token validity
-        await verifyToken(token, config.dbconnString);
+        //await TokenHelper.validateToken(token, config.dbconnString);
 
         // Step 2: Update the password
         await updatePassword(token, email, pass, config.dbconnString);

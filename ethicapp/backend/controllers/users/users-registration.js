@@ -10,7 +10,7 @@ import { fileURLToPath } from "url";
 import "./passport-setup.js";
 import { VIEWS_PREFIX } from "./users-common.js";
 import * as UserSchemas from "../request-schemas/user-schemas.js";
-import * as RecaptchaHelper from "../helpers/recaptcha-helper.js";
+import * as RecaptchaHelper from "../../helpers/recaptcha-helper.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

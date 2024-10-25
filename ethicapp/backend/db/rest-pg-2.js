@@ -85,21 +85,26 @@ async function execSQL(params) {
     let sql = params.sql;
 
     try {
-        // Prepare SQL parameters
-        const sqlParams = params.sqlParams ? smartArrayConvert(params.sqlParams) : [];
+        // Determine if sqlParams needs to be processed by smartArrayConvert
+        const sqlParams = params.sqlParams && params.sqlParams.
+            every(param => typeof param === "string" && param.startsWith("{"))
+            ? smartArrayConvert(params.sqlParams)
+            : params.sqlParams;
 
         // If an onStart function is provided, modify SQL before execution
         if (params.onStart) {
             sql = params.onStart() || params.sql;
         }
 
+        // Execute the SQL query with the provided or converted parameters
         const result = await db.query(sql, sqlParams);
 
-        // If an onEnd callback is provided, execute it with the result
+        // If an onEnd function is provided, call it with the result rows after execution
         if (params.onEnd) {
             params.onEnd(result.rows);
         }
 
+        // Return the rows from the SQL query result
         return result.rows;
     } catch (err) {
         console.error("[DB Error]:", err);
