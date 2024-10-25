@@ -58,3 +58,12 @@
     </div>
   </div>
 </div>
+<% if (ETHICAPP_BUILD_HASH) { %>
+<div class="container mt-5">
+  <div class="row">
+    <div class="col text-center">
+      <p class="build-hash small text-muted mt-3">EthicApp Build: <%= ETHICAPP_BUILD_HASH %></p>
+    </div>
+  </div>
+</div>
+<% } %>

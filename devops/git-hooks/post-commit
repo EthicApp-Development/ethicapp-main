@@ -1,14 +1,19 @@
-
 #!/bin/bash
 
-# Get hash of the latest commit
+# Get the hash of the most recent commit
 commit_hash=$(git rev-parse --short HEAD)
 
 # Get the current branch name
 branch_name=$(git rev-parse --abbrev-ref HEAD)
 
-# Concatenate the branch name and the commit hash
-build_hash="${branch_name}-${commit_hash}"
+# Create the full build hash with the actual commit hash and branch name
+build_hash="${commit_hash}-${branch_name}"
 
-# Keep this in a JSON file
+# Update build_hash.json with the actual commit hash
 echo "{\"build_hash\": \"$build_hash\"}" > ethicapp/build_hash.json
+
+# Add the updated build_hash.json to the staging area
+git add ethicapp/build_hash.json
+
+# Commit the updated build_hash.json with a specific commit message
+git commit -m "Update build hash to ${build_hash}"

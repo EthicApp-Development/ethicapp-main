@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Get the current branch name
+branch_name=$(git rev-parse --abbrev-ref HEAD)
+
+# Use a placeholder for the commit hash, to be updated in post-commit
+build_hash="PENDING-${branch_name}"
+
+# Create the JSON file with the placeholder value
+echo "{\"build_hash\": \"$build_hash\"}" > ethicapp/build_hash.json
+
+# Add build_hash.json to the commit
+git add ethicapp/build_hash.json

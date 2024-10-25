@@ -34,6 +34,7 @@ import index from "./backend/controllers/index.js";
 import passport from "./backend/controllers/users/passport-setup.js";
 import users_core from "./backend/controllers/users/users-core.js";
 import users_registration from "./backend/controllers/users/users-registration.js";
+import fs from "fs";
 
 //import sessions from "./backend/controllers/sessions.js";
 
@@ -84,7 +85,6 @@ app.set("view engine", "ejs");
 app.use(expressLayouts); // Usar express-ejs-layouts
 app.set("layout", "./layouts/basic-common"); 
 
-// uncomment after placing your favicon in /public
 app.use(logger("[EthicApp] :method :url :status - :response-time ms"));
 busboy.extend(app, {
     upload:        true,
@@ -92,6 +92,7 @@ busboy.extend(app, {
     path:          uploadsPath,
     limits:        { fileSize: 5*1024*1024 }
 });
+
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "frontend")));
 app.use("/uploads",express.static(path.join(__dirname, "frontend/assets")));
@@ -99,15 +100,29 @@ app.use("/uploads",express.static(path.join(__dirname, "frontend/assets")));
 app.use(session({
     store: new FileStore({
         path:     path.join(__dirname, "/sessions"),
-        retries:  0, // Desactivar reintentos temporales para identificar fallas inmediatas
+        retries:  0,
         logFn:    function(msg) { console.log("FileStore Log:", msg); },
-        fileMode: 0o600, // Cambia el modo de archivo para asegurar permisos mínimos necesarios
+        fileMode: 0o600,
     }),
     secret:            process.env.SESSION_SECRET || "ssshhh",
     resave:            false,
     saveUninitialized: false,
     cookie:            { maxAge: 24 * 60 * 60 * 1000 } // Cookie para 1 día
 }));
+
+// Load build_hash.json
+const buildHashPath = path.join(__dirname, "build_hash.json");
+let ETHICAPP_BUILD_HASH = "";
+
+try {
+    const buildData = JSON.parse(fs.readFileSync(buildHashPath, "utf8"));
+    ETHICAPP_BUILD_HASH = buildData.build_hash;
+} catch (error) {
+    console.error("Error loading build_hash.json:", error);
+}
+
+// Make ETHICAPP_BUILD_HASH available in the entire application
+app.locals.ETHICAPP_BUILD_HASH = ETHICAPP_BUILD_HASH;
 
 app.use("/", index);
 app.use("/", users_core);
