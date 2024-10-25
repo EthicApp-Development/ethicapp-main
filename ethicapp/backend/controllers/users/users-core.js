@@ -4,13 +4,14 @@ import fs from "fs";
 import path from "path";
 import express from "express";
 import passport from "passport";
-
 import { VIEWS_PREFIX } from "./users-common.js";
 import sendPasswordResetEmail from "../../services/email/send-password-reset-email.js";
 import bcrypt from "bcrypt";
 
 import { param, execSQL } from  "../../db/rest-pg-2.js";
 import { fileURLToPath } from "url";
+import * as UserSchemas from "../request-schemas/user-schemas.js";
+import * as RecaptchaHelper from "../helpers/recaptcha-helper.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -130,6 +131,17 @@ router.post("/forgot", async (req, res) => {
     }
 
     try {
+        UserSchemas.passwordRecoverySchema.validate(req.body);
+
+        const responseKey = req.body["g_recaptcha_response"];
+
+        const recaptchaResult = RecaptchaHelper.validateRecaptcha(responseKey);
+        if (!recaptchaResult) {
+            console.log("Captcha verification failed.");
+            return res.status(400).json(
+                { success: false, message: "Captcha verification failed." });
+        }
+
         const { email, lang } = req.body;
 
         const locale = lang || "en_US";
@@ -157,11 +169,14 @@ router.get("/reset-password", async (req, res) => {
         captchaScript = captchaScript.replace("{{RECAPTCHA_SITE_KEY}}", 
             process.env.RECAPTCHA_SITE_KEY);
 
+        const email = "somemail@test.com";
+
         // Render the view
         res.render("reset-password", {
             title:        "EthicApp",
             controller:   "CredentialsController",
             extraScripts: `${captchaScript}`,
+            email:        email,
             rc:           req.query.rc
         });
     } catch (error) {
@@ -197,15 +212,16 @@ router.post("/reset-password/:token", async (req, res) => {
         }
     }
 
-    async function updatePassword(token, newPassword, dbcon) {
+    async function updatePassword(token, email, newPassword, dbcon) {
         const hashedPassword = await bcrypt.hash(newPassword, 10);
     
         const sql = `
             UPDATE users 
             SET password = $1, reset_password_token = NULL, reset_password_expires = NULL 
-            WHERE reset_password_token = $2
+            WHERE reset_password_token = $2 AND
+            mail = $3
         `;
-        const sqlParams = [hashedPassword, token];
+        const sqlParams = [hashedPassword, token, email];
     
         try {
             await execSQL({
@@ -221,19 +237,28 @@ router.post("/reset-password/:token", async (req, res) => {
         }
     }
 
-    const { token } = req.params;
-    const { password, confirm_password } = req.body;
-
-    if (password !== confirm_password) {
-        return res.status(400).send("Passwords do not match.");
-    }
-
     try {
-        // Step 1: Verify the token
+        // Validate request
+        UserSchemas.passwordResetSchema.validate(req.body);
+
+        const { token } = req.params;
+        const { email, pass } = req.body;
+ 
+        // Validate recaptcha token
+        const responseKey = req.body["g_recaptcha_response"];
+        const recaptchaResult = RecaptchaHelper.validateRecaptcha(responseKey);
+
+        if (!recaptchaResult) {
+            console.log("Captcha verification failed.");
+            return res.status(400).json(
+                { success: false, message: "Captcha verification failed." });
+        }
+
+        // Step 1: Verify token validity
         await verifyToken(token, config.dbconnString);
 
         // Step 2: Update the password
-        await updatePassword(token, password, config.dbconnString);
+        await updatePassword(token, email, pass, config.dbconnString);
         res.status(200).send("Password has been reset.");
     } catch (err) {
         return res.status(500).send("An error ocurred when updating the password.");

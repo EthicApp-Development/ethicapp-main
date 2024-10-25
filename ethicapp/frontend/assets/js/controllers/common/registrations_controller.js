@@ -1,23 +1,11 @@
+import { getRecaptchaResponse } from "./recaptcha_api";
+
 export let RegistrationsController = ($scope, $http) => {
     var self = $scope;
     self.user = {};
 
     self.backendErrors = false;
     self.teacherAccountRequested = false;
-
-    self.validateRecaptcha = function () {
-        try {
-            let response = grecaptcha.getResponse();
-            if (response.length === 0) {
-                return false;
-            } else {
-                self.recaptchaError = "";
-                return true;
-            }    
-        } catch (error) {
-            return false;
-        }
-    };
 
     let commonBackendErrorHandler = (error) => {
         // Set the flag to display the error message
@@ -41,26 +29,19 @@ export let RegistrationsController = ($scope, $http) => {
         }
     };
 
-    self.testing = () => {
-        console.log("just testing");
-    };
-
     self.registerUser = () => {
-        console.debug("registration attempt");           
         let recaptchaResponse = null;
         try {
-            if (!self.validateRecaptcha()) {
-                throw new Error("Could not validate recaptcha.");
+            recaptchaResponse = getRecaptchaResponse();
+            if (recaptchaResponse === null) {
+                throw new Error("Got null recaptcha response");
             }
-            recaptchaResponse = grecaptcha.getResponse();
         } catch (error) {
             console.error(error);
             self.recaptchaError = "captcha_error";
             console.debug("captcha validation failed");           
             return;
         }
-
-        console.debug("validated captcha");           
 
         const userData = {
             name:                 self.user.firstname,
@@ -85,8 +66,6 @@ export let RegistrationsController = ($scope, $http) => {
                 })
                 .catch(commonBackendErrorHandler);
         } else if (self.user.accountType === "Student") {
-            console.debug("begin student account registration");           
-
             $http.post("/register", userData)
                 .then(function (response) {
                     if (response.data.success) {

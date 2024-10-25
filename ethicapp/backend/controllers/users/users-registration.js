@@ -2,7 +2,6 @@
 import fs from "fs";
 import path from "path";
 import * as config from "../../config/config.js";
-import * as Yup from "yup";
 import express from "express";
 import passport from "passport";
 import axios from "axios";
@@ -10,6 +9,8 @@ import bcrypt from "bcrypt";
 import { fileURLToPath } from "url";
 import "./passport-setup.js";
 import { VIEWS_PREFIX } from "./users-common.js";
+import * as UserSchemas from "../request-schemas/user-schemas.js";
+import * as RecaptchaHelper from "../helpers/recaptcha-helper.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,24 +20,6 @@ import { param, getDBInstance, execSQL } from  "../../db/rest-pg-2.js";
 const router = express.Router();
 router.use(passport.initialize());
 router.use(passport.session());
-
-const registerSchema = Yup.object().shape({
-    name:                 Yup.string().required("requiredName"),
-    lastname:             Yup.string().required("requiredLastName"),
-    email:                Yup.string().email("invalidEmail").required("requiredEmail"),
-    pass:                 Yup.string().min(6, "minLengthPassword").required("requiredPassword"),
-    sex:                  Yup.string().oneOf(["M", "F", "O"], "invalidSex").required("requiredSex"),
-    g_recaptcha_response: Yup.string().required("requiredCaptcha")
-});
-
-const teacherAccountRequestSchema = Yup.object().shape({
-    name:        Yup.string().required("requiredName"),
-    lastname:    Yup.string().required("requiredLastName"),
-    email:       Yup.string().email("invalidEmail").required("requiredEmail"),
-    pass:        Yup.string().min(6, "minLengthPassword").required("requiredPassword"),
-    sex:         Yup.string().oneOf(["M", "F", "O"], "invalidSex").required("requiredSex"),
-    institution: Yup.string().required("requiredInstitution")
-});
 
 router.get("/register", async (req, res) => {
     try {
@@ -65,7 +48,7 @@ router.get("/register", async (req, res) => {
 router.post("/register", async (req, res) => {
     try {
         // Validate request body with schema
-        await registerSchema.validate(req.body);
+        await UserSchemas.registerSchema.validate(req.body);
 
         // Verify captcha
         const response_key = req.body["g_recaptcha_response"];
@@ -262,17 +245,13 @@ router.put("/teacher_account_requests/:id", async (req, res) => {
 router.post("/teacher_account_request", async (req, res) => {
     try {
         // Validate the request body
-        await teacherAccountRequestSchema.validate(req.body);
+        await UserSchemas.teacherAccountRequestSchema.validate(req.body);
 
         // Captcha verification
         const responseKey = req.body["g_recaptcha_response"];
-        const secretKey = process.env.RECAPTCHA_SECRET;
-        const captchaResponse = await fetch(
-            `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${responseKey}`
-        );
-        const captchaData = await captchaResponse.json();
 
-        if (!captchaData.success) {
+        const recaptchaResult = RecaptchaHelper.validateRecaptcha(responseKey);
+        if (!recaptchaResult) {
             console.log("Captcha verification failed.");
             return res.status(400).json(
                 { success: false, message: "Captcha verification failed." });

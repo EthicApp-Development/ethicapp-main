@@ -1,3 +1,5 @@
+import { getRecaptchaResponse } from "./recaptcha_api";
+
 export let CredentialsController = ($scope, $http, $window) => {
     let self = $scope;
 
@@ -9,11 +11,23 @@ export let CredentialsController = ($scope, $http, $window) => {
     };
 
     self.requestPasswordChange = function () {
-        const emailData = {
-            email: self.user.email
+        let recaptchaResponse = null;
+        
+        try {
+            recaptchaResponse = getRecaptchaResponse();
+        } catch(error) {
+            console.error(error);
+            self.backendError = true;
+            self.backendErorMessage = "captcha_error";
+            return;
+        }
+
+        const params = {
+            email:                self.user.email,
+            g_recaptcha_response: recaptchaResponse
         };
 
-        $http.post("/forgot", emailData)
+        $http.post("/forgot", params)
             .then(response => {
                 if (response.data.status === "success") {
                     self.emailSent = true;
@@ -28,20 +42,32 @@ export let CredentialsController = ($scope, $http, $window) => {
     };
 
     self.resetPassword = function () {
+        let recaptchaResponse = null;
+        
+        try {
+            recaptchaResponse = getRecaptchaResponse();
+        } catch(error) {
+            console.error(error);
+            self.backendError = true;
+            self.backendErorMessage = "captcha_error";
+            return;
+        }
+
         if (self.user.newPassword !== self.user.confirmPassword) {
             return;
         }
 
         const resetData = {
-            username:        self.user.username,
-            newPassword:     self.user.newPassword,
-            confirmPassword: self.user.confirmPassword
+            email:                self.user.username,
+            pass:                 self.user.newPassword,
+            cpass:                self.user.confirmPassword,
+            g_recaptcha_response: recaptchaResponse
         };
 
         $http.post("/reset-password", resetData)
             .then(response => {
                 if (response.data.status === "success") {
-                    $window.location.href = "/login?rc=welc";
+                    $window.location.href = "/login?rc=password_updated";
                 } else {
                     self.backendError = response.data.message;
                 }
