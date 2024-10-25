@@ -6,11 +6,11 @@
   <!-- Account type selection -->
   <div class="row" style="padding:16px" ng-init="user.accountType='Student'">
     <div class="form-group text-center">
-      <p>{{ "accounttype" | translate }}</p>
+      <p>{{ "account_type" | translate }}</p>
       <input type="radio" id="rad_student" name="user.accountType" value="Student" ng-model="user.accountType" ng-checked="true"/>
-      <label for="rad_student">{{ "student" | translate }}</label>
+      <label for="rad_student">{{ "student_account_type" | translate }}</label>
       <input type="radio" id="rad_teacher" name="user.accountType" value="Teacher" ng-model="user.accountType" />
-      <label for="rad_teacher">{{ "teachers" | translate }}</label>
+      <label for="rad_teacher">{{ "teacher_account_type" | translate }}</label>
     </div>
   </div>
 
@@ -23,10 +23,10 @@
         <div class="col-sm-10">
           <input type="text" class="form-control" name="institution" ng-model="user.institution" ng-required="true" autofocus ng-minlength="3" />
           <div class="error-message" ng-show="formUser.institution.$error.required && formUser.institution.$touched" style="color: red;">
-            {{ "requiredInstiution" | translate }}
+            {{ "institution_required" | translate }}
           </div>
           <div class="error-message" ng-show="formUser.institution.$error.minlength" style="color: red;">
-            {{ "minLengthInstiution" | translate }}
+            {{ "institution_min_length" | translate }}
           </div>
         </div>
       </div>
@@ -37,10 +37,10 @@
         <div class="col-sm-10">
           <input type="text" class="form-control" name="firstname" ng-model="user.firstname" ng-required="true" ng-minlength="3" />
           <div class="error-message" ng-show="formUser.firstname.$error.required && formUser.firstname.$touched" style="color: red;">
-            {{ "requiredName" | translate }}
+            {{ "name_required" | translate }}
           </div>
           <div class="error-message" ng-show="formUser.firstname.$error.minlength" style="color: red;">
-            {{ "minLengthName" | translate }}
+            {{ "name_min_length" | translate }}
           </div>
         </div>
       </div>
@@ -50,7 +50,7 @@
         <div class="col-sm-10">
           <input type="text" class="form-control" name="lastname" ng-model="user.lastname" ng-required="true" />
           <div class="error-message" ng-show="formUser.lastname.$error.required && formUser.lastname.$touched" style="color: red;">
-            {{ "requiredLastName" | translate }}
+            {{ "lastname_required" | translate }}
           </div>
         </div>
       </div>
@@ -62,10 +62,10 @@
         <div class="col-sm-10">
           <input type="email" class="form-control" name="email" ng-model="user.email" ng-required="true"  ng-change="emailAlreadyExists = false"/>
           <div class="error-message" ng-show="formUser.email.$error.required && formUser.email.$touched" style="color: red;">
-            {{ "requiredEmail" | translate }}
+            {{ "email_required" | translate }}
           </div>
           <div class="error-message" ng-show="emailAlreadyExists" style="color: red;">
-            {{ "alreadyRegistredEmail" | translate }}
+            {{ "email_already_registered" | translate }}
           </div>
         </div>
       </div>
@@ -82,7 +82,7 @@
             <option value="O">{{ "other" | translate }}</option>
           </select>
           <div class="error-message" ng-show="formUser.gender.$error.required && formUser.gender.$invalid && (formUser.gender.$touched || formUser.gender.$dirty)" style="color: red;">
-            {{ "requiredGender" | translate }}
+            {{ "gender_required" | translate }}
           </div>
         </div>
       </div>
@@ -93,10 +93,10 @@
         <div class="col-sm-9">
           <input type="password" class="form-control" name="password" ng-minlength="8" ng-model="user.password" ng-required="true" />
           <div class="error-message" ng-show="formUser.password.$error.required && formUser.password.$invalid && (formUser.password.$touched || formUser.password.$dirty)" style="color: red;">
-            {{ "requiredPassword" | translate }}
+            {{ "password_required" | translate }}
           </div>
           <div class="error-message" ng-show="formUser.password.$error.minlength && formUser.password.$invalid && (formUser.password.$touched || formUser.password.$dirty)" style="color: red;">
-            {{ "minLengthPassword" | translate }}
+            {{ "min_length_password" | translate }}
           </div>
         </div>
       </div>
@@ -106,10 +106,10 @@
         <div class="col-sm-9">
           <input type="password" class="form-control" name="confirm_password" ng-minlength="8" ng-model="user.confirm_password" match-field="user.password" ng-required="true" />
           <div class="error-message" ng-show="formUser.confirm_password.$error.required && formUser.confirm_password.$invalid && (formUser.confirm_password.$touched || formUser.confirm_password.$dirty)" style="color: red;">
-            {{ "requiredConfirmPassword" | translate }}
+            {{ "confirm_password_error" | translate }}
           </div>
           <div class="error-message" ng-show="formUser.confirm_password.$error.matchField && formUser.confirm_password.$invalid && (formUser.confirm_password.$touched || formUser.confirm_password.$dirty)" style="color: red;">
-            {{ "passwordsDontMatch" | translate }}
+            {{ "passwords_not_match" | translate }}
           </div>
         </div>
       </div>

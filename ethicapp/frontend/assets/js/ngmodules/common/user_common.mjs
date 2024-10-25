@@ -5,6 +5,7 @@ import { InstitutionRequired } from "../../directives/institution-required.direc
 import { LoginController } from "../../controllers/common/login_controller.js";
 import { RegisterController } from "../../controllers/common/register_controller.js";
 import { ProfileController } from "../../controllers/common/profile_controller.js";
+import { CredentialsController } from "../../controllers/common/credentials_controller.js";
 import { LocalesController } from "../../controllers/common/locales_controller.js";
 
 let ngapp_user_common = angular.module("UserCommon", 
@@ -42,5 +43,7 @@ ngapp_user_common.controller("RegisterController",
     ["$scope", "$http", RegisterController]);
 ngapp_user_common.controller("ProfileController",
     ["$scope", "$http", ProfileController]);
-
+ngapp_user_common.controller("CredentialsController",
+    ["$scope", "$http", CredentialsController]);
+    
 export default ngapp_user_common;

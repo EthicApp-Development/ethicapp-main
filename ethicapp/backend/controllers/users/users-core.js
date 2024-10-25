@@ -70,7 +70,21 @@ router.post("/login", (req, res, next) => {
 });
 
 router.get("/forgot", (req, res) => {
-    res.render("forgot");
+    res.render("recover-password", {
+        title:        "EthicApp",
+        controller:   "CredentialsController",
+        extraScripts: `
+          <script type="text/javascript">
+            window.onloadCallback = function() {
+              grecaptcha.render("captcha", {
+                sitekey: "${process.env.RECAPTCHA_SITE_KEY}"
+              });
+            };
+          </script>
+          <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit" async defer></script>
+        `,
+        rc: req.query.rc
+    });
 });
 
 router.post("/forgot", async (req, res) => {
@@ -116,7 +130,25 @@ router.post("/forgot", async (req, res) => {
     }
 });
 
-router.post("/reset/:token", async (req, res) => {
+router.get("/reset-password", (req, res) => {
+    res.render("recover-password", {
+        title:        "EthicApp",
+        controller:   "CredentialsController",
+        extraScripts: `
+          <script type="text/javascript">
+            window.onloadCallback = function() {
+              grecaptcha.render("captcha", {
+                sitekey: "${process.env.RECAPTCHA_SITE_KEY}"
+              });
+            };
+          </script>
+          <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit" async defer></script>
+        `,
+        rc: req.query.rc
+    });
+});
+
+router.post("/reset-password/:token", async (req, res) => {
     async function verifyToken(token, dbcon) {
         const sql = `
             SELECT * FROM users 
