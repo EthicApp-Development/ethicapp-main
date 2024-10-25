@@ -18,14 +18,14 @@ services:
     build:
       context: ethicapp/
       args:
-        NODE_VERSION: ${NODE_VERSION}
+        ETHICAPP_NODE_VERSION: ${ETHICAPP_NODE_VERSION}
     secrets:
       - jwt_token
     env_file:
       - .env
     environment:
       NODE_ENV: development
-      NODE_PORT: ${NODE_PORT}
+      ETHICAPP_NODE_PORT: ${ETHICAPP_NODE_PORT}
       ETHICAPP_DOMAIN_NAME: ${ETHICAPP_DOMAIN_NAME}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
       REDIS_HOST: redis
@@ -38,7 +38,7 @@ services:
     networks:
       default:
     ports:
-      - "${NODE_PORT}:${NODE_PORT}"
+      - "${ETHICAPP_NODE_PORT}:${ETHICAPP_NODE_PORT}"
       - "${NODE_DEBUG_PORT}:${NODE_DEBUG_PORT}"
     volumes:
       - "./ethicapp:/home/app:rw"

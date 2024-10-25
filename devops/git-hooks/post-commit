@@ -1,0 +1,14 @@
+
+#!/bin/bash
+
+# Get hash of the latest commit
+commit_hash=$(git rev-parse --short HEAD)
+
+# Get the current branch name
+branch_name=$(git rev-parse --abbrev-ref HEAD)
+
+# Concatenate the branch name and the commit hash
+build_hash="${branch_name}-${commit_hash}"
+
+# Keep this in a JSON file
+echo "{\"build_hash\": \"$build_hash\"}" > ../../ethicapp/build_hash.json

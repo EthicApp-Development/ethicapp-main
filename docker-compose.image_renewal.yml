@@ -9,18 +9,18 @@ networks:
 
 services:
   # ---------------------- Node web app ---------------------- #
-  node:
+  ethicapp:
     build:
       context: ethicapp/
       dockerfile: Dockerfile.image-rebuild
       args:
-        NODE_VERSION: ${NODE_VERSION}
+        ETHICAPP_NODE_VERSION: ${NODE_VERSION}
     environment:
       NODE_ENV: release
-      NODE_PORT: ${NODE_PORT}
+      ETHICAPP_NODE_PORT: ${ETHICAPP_NODE_PORT}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
     restart: "no"
     networks:
       default:
     ports:
-      - "${NODE_PORT}:${NODE_PORT}"
+      - "${ETHICAPP_NODE_PORT}:${ETHICAPP_NODE_PORT}"

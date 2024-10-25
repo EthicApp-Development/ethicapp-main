@@ -109,7 +109,7 @@ async function buildContentAnalysisUnit(req, res) {
                 }, {});
                 
                 const nodeHostName = process.env.ETHICAPP_HOSTNAME;
-                const nodePort = process.env.NODE_PORT;
+                const nodePort = process.env.ETHICAPP_NODE_PORT;
                 const sessionURL = `http://${nodeHostName}:${nodePort}/${result[0].case_url}`;
 
                 const workUnitJson = {

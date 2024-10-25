@@ -11,8 +11,8 @@ services:
       - "${NGINX_PORT}:80"
     environment:
       NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
-      NODE_PORT: ${NODE_PORT}
-      NODE_SERVER: node
+      ETHICAPP_NODE_PORT: ${ETHICAPP_NODE_PORT}
+      ETHICAPP_HOSTNAME: ethicapp
     networks:
       default:
     volumes:

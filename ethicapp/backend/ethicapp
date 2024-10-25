@@ -12,10 +12,10 @@ import { fileURLToPath } from "url";
 
 const debug = debugLib("ethicapp:server");
 
-const DEFAULT_PORT = "8080";
+const DEFAULT_PORT = "3000";
 
 // Set web server port
-const port = normalizePort(process.env.NODE_PORT || DEFAULT_PORT);
+const port = normalizePort(process.env.ETHICAPP_NODE_PORT || DEFAULT_PORT);
 app.set("port", port);
 
 // Listen on provided port, on all network interfaces
