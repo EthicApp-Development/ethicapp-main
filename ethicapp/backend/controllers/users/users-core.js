@@ -21,7 +21,10 @@ router.use(passport.session());
 import "./passport-setup.js";
 
 router.get("/login", (req, res) => {
-    res.render("login", {rc: req.query.rc, tok: req.query.rc});
+    res.render("login", {
+        title: "Login - EthicApp",
+        welc:  req.query.welc
+    });
 });
 
 router.post("/login", (req, res, next) => {

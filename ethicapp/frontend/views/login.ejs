@@ -1,8 +1,11 @@
 <div class="form-signin panel panel-default">
   <div class="panel-body">
-    <div class="logo">
-      <img src="assets/images/logos/ethicapp-logo.png" alt="Logo">
+    <%- include("partials/logo") %>
+    <% if (welc) { %>
+    <div class="row mb-1em" ng-show="welcomeMessage" id="welcome-message" data-welc="<%= welc %>">
+      <p class="welcome-message">{{ welcomeMessage | translate }}</p>
     </div>
+    <% } %>
     <div class="row">
       <form ng-submit="login()" class="form-horizontal" method="POST" name="formLogin" novalidate>
         <div class="form-group">

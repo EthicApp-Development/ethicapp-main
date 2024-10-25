@@ -41,7 +41,12 @@ export let RegistrationsController = ($scope, $http) => {
         }
     };
 
-    self.registerUser = () => {    
+    self.testing = () => {
+        console.log("just testing");
+    };
+
+    self.registerUser = () => {
+        console.debug("registration attempt");           
         let recaptchaResponse = null;
         try {
             if (!self.validateRecaptcha()) {
@@ -51,8 +56,11 @@ export let RegistrationsController = ($scope, $http) => {
         } catch (error) {
             console.error(error);
             self.recaptchaError = "captcha_error";
+            console.debug("captcha validation failed");           
             return;
         }
+
+        console.debug("validated captcha");           
 
         const userData = {
             name:                 self.user.firstname,
@@ -77,11 +85,13 @@ export let RegistrationsController = ($scope, $http) => {
                 })
                 .catch(commonBackendErrorHandler);
         } else if (self.user.accountType === "Student") {
+            console.debug("begin student account registration");           
+
             $http.post("/register", userData)
                 .then(function (response) {
                     if (response.data.success) {
                         console.log("Successful registration");
-                        window.location.href = "/login?rc=welc";
+                        window.location.href = "/login?welc=registration_complete";
                     } else {
                         throw new Error(`Error in registration: ${response.data.message}`);
                     }

@@ -3,6 +3,12 @@ export let LoginController = ($scope, $http, $window) => {
 
     self.loginError = false;
 
+    const welcomeMessageElement = document.getElementById("welcome-message");
+    
+    if (welcomeMessageElement) {
+        $scope.welcomeMessage = welcomeMessageElement.getAttribute("data-welc");
+    }
+
     self.clearErrors = function () {
         self.loginError = false;
         if (self.formLogin) {

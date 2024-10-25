@@ -52,7 +52,7 @@ router.get("/register", async (req, res) => {
         // Render the view
         res.render("register", {
             title:        "EthicApp",
-            controller:   "CredentialsController",
+            controller:   "RegistrationsController",
             extraScripts: `${captchaScript}`,
             rc:           req.query.rc
         });
