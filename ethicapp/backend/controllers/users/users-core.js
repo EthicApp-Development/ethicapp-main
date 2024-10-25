@@ -1,12 +1,19 @@
 "use strict";
 import * as config from "../../config/config.js";
+import fs from "fs";
+import path from "path";
 import express from "express";
 import passport from "passport";
 
+import { VIEWS_PREFIX } from "./users-common.js";
 import sendPasswordResetEmail from "../../services/email/send-password-reset-email.js";
 import bcrypt from "bcrypt";
 
 import { param, execSQL } from  "../../db/rest-pg-2.js";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 router.use(passport.initialize());
@@ -69,23 +76,28 @@ router.post("/login", (req, res, next) => {
     })(req, res, next);
 });
 
-router.get("/forgot", (req, res) => {
-    res.render("recover-password", {
-        title:            "EthicApp",
-        controller:       "CredentialsController",
-        recaptchaSiteKey: `"${process.env.RECAPTCHA_SITE_KEY}"`,
-        extraScripts:     `
-          <script type="text/javascript">
-            window.onloadCallback = function() {
-              grecaptcha.render("captcha", {
-                sitekey: "${process.env.RECAPTCHA_SITE_KEY}"
-              });
-            };
-          </script>
-          <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit" async defer></script>
-        `,
-        rc: req.query.rc
-    });
+router.get("/forgot", async (req, res) => {
+    try {
+        // Load recaptcha partial view from file
+        const scriptPath = path.join(__dirname, 
+            VIEWS_PREFIX, "partials", "recaptcha.ejs");
+        let captchaScript = await fs.promises.readFile(scriptPath, "utf-8");
+
+        // Replace placeholder with actual site key
+        captchaScript = captchaScript.replace("{{RECAPTCHA_SITE_KEY}}", 
+            process.env.RECAPTCHA_SITE_KEY);
+
+        // Render the view
+        res.render("recover-password", {
+            title:        "EthicApp",
+            controller:   "CredentialsController",
+            extraScripts: `${captchaScript}`,
+            rc:           req.query.rc
+        });
+    } catch (error) {
+        console.error("Error loading extra scripts:", error);
+        res.status(500).send("Server error");
+    }
 });
 
 router.post("/forgot", async (req, res) => {
@@ -131,23 +143,28 @@ router.post("/forgot", async (req, res) => {
     }
 });
 
-router.get("/reset-password", (req, res) => {
-    res.render("reset-password", {
-        title:            "EthicApp",
-        controller:       "CredentialsController",
-        recaptchaSiteKey: `"${process.env.RECAPTCHA_SITE_KEY}"`,
-        extraScripts:     `
-          <script type="text/javascript">
-            window.onloadCallback = function() {
-              grecaptcha.render("captcha", {
-                sitekey: "${process.env.RECAPTCHA_SITE_KEY}"
-              });
-            };
-          </script>
-          <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit" async defer></script>
-        `,
-        rc: req.query.rc
-    });
+router.get("/reset-password", async (req, res) => {
+    try {
+        // Load recaptcha partial view from file
+        const scriptPath = path.join(__dirname, 
+            VIEWS_PREFIX, "partials", "recaptcha.ejs");
+        let captchaScript = await fs.promises.readFile(scriptPath, "utf-8");
+
+        // Replace placeholder with actual site key
+        captchaScript = captchaScript.replace("{{RECAPTCHA_SITE_KEY}}", 
+            process.env.RECAPTCHA_SITE_KEY);
+
+        // Render the view
+        res.render("reset-password", {
+            title:        "EthicApp",
+            controller:   "CredentialsController",
+            extraScripts: `${captchaScript}`,
+            rc:           req.query.rc
+        });
+    } catch (error) {
+        console.error("Error loading extra scripts:", error);
+        res.status(500).send("Server error");
+    }
 });
 
 router.post("/reset-password/:token", async (req, res) => {

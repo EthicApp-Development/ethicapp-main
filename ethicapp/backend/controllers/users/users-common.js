@@ -1,0 +1,1 @@
+export const VIEWS_PREFIX = "../../../frontend/views";
