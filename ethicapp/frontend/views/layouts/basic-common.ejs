@@ -22,5 +22,6 @@
   <div ng-if="translationsLoaded" ng-controller="<%= typeof controller !== 'undefined' ? controller : 'LoginController' %>">
   <%- body %>
   </div>
+  <%- typeof bottomScripts !== 'undefined' ? bottomScripts : '' %>
 </body>
 </html>

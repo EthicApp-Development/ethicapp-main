@@ -41,10 +41,8 @@ export let CredentialsController = ($scope, $http, $window) => {
         $http.post("/reset-password", resetData)
             .then(response => {
                 if (response.data.status === "success") {
-                    // Redirigir al usuario tras el éxito
-                    $window.location.href = "/login?flash=welc";
+                    $window.location.href = "/login?rc=welc";
                 } else {
-                    // Mostrar mensaje de error del backend
                     self.backendError = response.data.message;
                 }
             })

@@ -22,13 +22,12 @@ const registerSchema = Yup.object().shape({
 });
 
 const teacherAccountRequestSchema = Yup.object().shape({
-    name:                 Yup.string().required("requiredName"),
-    lastname:             Yup.string().required("requiredLastName"),
-    email:                Yup.string().email("invalidEmail").required("requiredEmail"),
-    pass:                 Yup.string().min(6, "minLengthPassword").required("requiredPassword"),
-    sex:                  Yup.string().oneOf(["M", "F", "O"], "invalidSex").required("requiredSex"),
-    institution:          Yup.string().required("requiredInstitution"),
-    g_recaptcha_response: Yup.string().required("requiredCaptcha")
+    name:        Yup.string().required("requiredName"),
+    lastname:    Yup.string().required("requiredLastName"),
+    email:       Yup.string().email("invalidEmail").required("requiredEmail"),
+    pass:        Yup.string().min(6, "minLengthPassword").required("requiredPassword"),
+    sex:         Yup.string().oneOf(["M", "F", "O"], "invalidSex").required("requiredSex"),
+    institution: Yup.string().required("requiredInstitution")
 });
 
 router.get("/register", (req, res) => {
@@ -37,14 +36,32 @@ router.get("/register", (req, res) => {
         controller:       "RegistrationsController",
         recaptchaSiteKey: `"${process.env.RECAPTCHA_SITE_KEY}"`,
         extraScripts:     `
-          <script type="text/javascript">
+            <script type="text/javascript">
+            function loadRecaptcha() {
+                return new Promise((resolve, reject) => {
+                const script = document.createElement("script");
+                script.src = "https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit";
+                script.async = true;
+                script.defer = true;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.body.appendChild(script);
+                });
+            }
+
             window.onloadCallback = function() {
-              grecaptcha.render("captcha", {
+                grecaptcha.render("captcha", {
                 sitekey: "${process.env.RECAPTCHA_SITE_KEY}"
-              });
+                });
             };
-          </script>
-          <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit" async defer></script>
+
+            // Cargar reCAPTCHA cuando la página esté completamente lista
+            window.addEventListener("load", () => {
+                loadRecaptcha().catch(error => {
+                console.error("Error loading reCAPTCHA:", error);
+                });
+            });
+            </script>
         `,
         rc: req.query.rc
     });
@@ -85,7 +102,7 @@ router.post("/register", async (req, res) => {
         const emailExists = await execSQL(emailCheckQuery);
 
         if (emailExists[0].count > 0) {
-            return res.status(400).json({
+            return res.status(409).json({
                 success: false,
                 message: "Email already registered.",
             });
@@ -249,51 +266,74 @@ router.put("/teacher_account_requests/:id", async (req, res) => {
 
 router.post("/teacher_account_request", async (req, res) => {
     try {
-        // Validate the request body using the schema
+        // Validate the request body
         await teacherAccountRequestSchema.validate(req.body);
 
         // Captcha verification
-        let response_key = req.body["g_recaptcha_response"];
-        let secret_key = process.env.RECAPTCHA_SECRET;
-        let captchaResponse = await fetch(
-            "https://www.google.com/recaptcha/api/siteverify?" +
-            `secret=${secret_key}&response=${response_key}`
+        const responseKey = req.body["g_recaptcha_response"];
+        const secretKey = process.env.RECAPTCHA_SECRET;
+        const captchaResponse = await fetch(
+            `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${responseKey}`
         );
-        let captchaData = await captchaResponse.json();
-        console.log("Captcha log", captchaData);
+        const captchaData = await captchaResponse.json();
 
-        if (captchaData.success) {
-            // Use bcrypt to hash the password instead of MD5
-            const saltRounds = 10;  // Define salt rounds for bcrypt
-            const passcr = await bcrypt.hash(req.body.pass, saltRounds);  // Hashed password
-
-            const fullname = `${req.body.name} ${req.body.lastname}`;
-            const db = getDBInstance(config.dbconnString);
-            const existingUserRole = await checkIfUserExists(db, req.body.email);
-
-            if (existingUserRole === false) {
-                // Insert the teacher account request into the database
-                await insertTeacherAccountRequest(db, req.body.rut, 
-                    passcr, fullname, req.body.email, req.body.sex, req.body.institution, 0, false);
-                return res.status(200).json({ success: true, 
-                    message: "Teacher account request submitted." });
-            } else {
-                if (existingUserRole === "A") {
-                    // Request to modify the account to a teacher account
-                    await insertTeacherAccountRequest(db, req.body.rut, passcr, 
-                        fullname, req.body.email, req.body.sex, req.body.institution, 0, true);
-                    return res.status(200).json({ success: true, 
-                        message: "Request to modify the account to a teacher account submitted." });
-                } else {
-                    // Email is already registered with a different role
-                    return res.status(409).json({ success: false,
-                        message: "The email is already registered." });
-                }
-            }
-        } else {
+        if (!captchaData.success) {
             console.log("Captcha verification failed.");
-            return res.status(400).json({ success: false, 
-                message: "Captcha verification failed." });
+            return res.status(400).json(
+                { success: false, message: "Captcha verification failed." });
+        }
+
+        // Hash the password using bcrypt
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(req.body.pass, saltRounds);
+
+        // Check if the user exists in the database
+        const userEmail = req.body.email;
+        const checkUserSQL = "SELECT role FROM users WHERE mail = $1";
+        const dbParams = { 
+            sql:       checkUserSQL, 
+            dbcon:     config.dbconnString, 
+            sqlParams: [param("plain", "userEmail")]
+        };
+
+        let userExists = false;
+        let existingUserRole = null;
+
+        // Execute the query to check if the user already exists and retrieve the role
+        const result = await execSQL(dbParams);
+        if (result.length > 0) {
+            userExists = true;
+            existingUserRole = result[0].role;
+        }
+
+        const fullname = `${req.body.name} ${req.body.lastname}`;
+        const db = await getDBInstance(config.dbconnString);
+
+        if (!userExists) {
+            // If the user does not exist, insert the teacher account request
+            await insertTeacherAccountRequest(
+                db, req.body.rut, hashedPassword, fullname, 
+                userEmail, req.body.sex, req.body.institution, 0, false);
+            return res.status(200).json(
+                { success: true, message: "Teacher account request submitted." });
+        } else {
+            // If the user already exists, act according to their role
+            if (existingUserRole === "A") {
+                // Request to modify the account to a teacher account
+                await insertTeacherAccountRequest(
+                    db, req.body.rut, hashedPassword, 
+                    fullname, userEmail, req.body.sex, 
+                    req.body.institution, 0, true);
+                return res.status(200).json(
+                    { 
+                        success: true, 
+                        message: "Request to modify the account to a teacher account submitted." 
+                    });
+            } else {
+                // The email is already registered with a different role
+                return res.status(409).json(
+                    { success: false, message: "The email is already registered." });
+            }
         }
     } catch (err) {
         console.error("Error in the controller:", err);
@@ -344,27 +384,5 @@ router.get("/teacher_account_requests/:id", (req, res) => {
         sqlParams: [param("calc", "id")]
     })(req, res);
 });
-
-async function checkIfUserExists(db, email) {
-    return new Promise((resolve, reject) => {
-        const sql = `
-        SELECT *
-        FROM users
-        WHERE mail = $1
-        `;
-
-        db.query(sql, [email], (err, qry_res) => {
-            if (err) {
-                reject(err);
-            } else {
-                if (qry_res.rowCount > 0) {
-                    resolve(qry_res.rows[0].role);
-                } else {
-                    resolve(false);
-                }
-            }
-        });
-    });
-}
 
 export default router;

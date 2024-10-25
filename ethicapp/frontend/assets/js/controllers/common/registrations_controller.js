@@ -41,7 +41,7 @@ export let RegistrationsController = ($scope, $http) => {
         }
     };
 
-    self.registerUser = () => {        
+    self.registerUser = () => {    
         let recaptchaResponse = null;
         try {
             if (!self.validateRecaptcha()) {
@@ -60,7 +60,7 @@ export let RegistrationsController = ($scope, $http) => {
             email:                self.user.email,
             pass:                 self.user.password,
             sex:                  self.user.gender,
-            g_recaptcha_response: recaptchaResponse
+            g_recaptcha_response: recaptchaResponse  
         };
 
         if (self.user.accountType === "Teacher") {
@@ -81,7 +81,7 @@ export let RegistrationsController = ($scope, $http) => {
                 .then(function (response) {
                     if (response.data.success) {
                         console.log("Successful registration");
-                        window.location.href = "/login?rc=1";
+                        window.location.href = "/login?rc=welc";
                     } else {
                         throw new Error(`Error in registration: ${response.data.message}`);
                     }
@@ -90,7 +90,7 @@ export let RegistrationsController = ($scope, $http) => {
         }
     };
 
-    self.clearBackendErrors = function() {
+    self.clearErrors = function() {
         self.errorMessage = "";
         self.backendErrors = false;
     };
