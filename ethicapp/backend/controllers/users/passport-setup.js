@@ -89,9 +89,33 @@ passport.deserializeUser(async (user, done) => {
 const domain_name = process.env.NODE_ENV === "development" ? 
     "localhost" : process.env.DOMAIN_NAME;
 const callbackURL = domain_name === "localhost"
-    ? `http://localhost:${process.env.NODE_PORT}/google/callback`
+    ? `http://localhost:${process.env.ETHICAPP_NODE_PORT}/google/callback`
     : `https://${domain_name}/google/callback`;
 
+console.log(callbackURL);
+
+passport.use(
+    new GoogleStrategy({
+        clientID:          process.env.GOOGLE_CLIENT_ID,
+        clientSecret:      process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL:       callbackURL,
+        passReqToCallback: true
+    },
+    (req, accessToken, refreshToken, profile, done) => {
+        console.log("Access Token:", accessToken);
+        console.log("Refresh Token:", refreshToken);
+        console.log("Profile:", profile);
+        if (!accessToken) {
+            return done(new Error("No access token received"));
+        }
+        const { id, role } = profile;
+        req.session.uid = id;
+        req.session.role = role;
+        return done(null, profile);
+    })
+);
+
+/*
 passport.use(
     new GoogleStrategy({
         clientID:          process.env.GOOGLE_CLIENT_ID,
@@ -106,7 +130,7 @@ passport.use(
         // req.session.ses = null;
         return done(null, profile);
     })
-);
+);*/
 
 passport.use(new LocalStrategy(
     {

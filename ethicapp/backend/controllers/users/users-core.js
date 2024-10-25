@@ -57,7 +57,7 @@ router.post("/login", (req, res, next) => {
         const is_teacher = (user["role"] === "P" || user["role"] === "S") ? 1 : 0;
 
         // Log the user access into the database
-        const sqlParams = [param("plain", is_teacher.toString())];
+        const sqlParams = [0];
         const dbParams = {
             sql:       "SELECT UpdateOrInsertLoginRecord($1)",
             dbcon:     config.dbconnString,
@@ -312,18 +312,15 @@ router.get("/google/callback",
         failureRedirect: "/register"
     }),
     async (req, res) => {
-      
-        const sqlParams = [param("plain", "0")];
+        const sqlParams = [0];
         const dbParams = {
             sql:       "SELECT UpdateOrInsertLoginRecord($1)",
             dbcon:     config.dbconnString,
             sqlParams: sqlParams,
         };
   
-        try {
-            const executeQuery = execSQL(dbParams);
-            await executeQuery(req, res);
-  
+        try {                        
+            await execSQL(dbParams);
             res.redirect("/seslist");
         } catch (error) {
             console.error(error);
@@ -337,7 +334,7 @@ router.post("/get-my-name", async (req, res) => {
     try {
         // Execute SQL query to fetch user's name, role, lang, and mail based on session uid
         const result = await execSQL({
-            dbcon: pass.dbcon,
+            dbcon: config.dbconnString,
             sql:   `
                 SELECT name,
                     role,
@@ -365,7 +362,7 @@ router.post("/update-lang", async (req, res) => {
     try {
         // Execute SQL update to modify the user's language based on session uid
         await execSQL({
-            dbcon: pass.dbcon,
+            dbcon: config.dbconnString,
             sql:   `
                 UPDATE users
                 SET lang = $1
@@ -389,7 +386,7 @@ router.post("/getuserinfo", async (req, res) => {
     try {
         // Execute the SQL query to get user information based on session uid
         const result = await execSQL({
-            dbcon: pass.dbcon,
+            dbcon: config.dbconnString,
             sql:   `
                 SELECT *
                 FROM users
