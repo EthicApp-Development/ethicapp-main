@@ -1,25 +1,24 @@
 let Redis = require("ioredis");
 let rpg = require("../db/rest-pg");
 let pass = require("../config/keys-n-secrets");
-const fetch = require('node-fetch');
+const fetch = require("node-fetch");
 
 let redisClient = new Redis({
     host: "redis", // Redis server host
-    port: 6379,       // Redis server port
+    port: 6379,    // Redis server port
 });
-
 
 redisClient.on("error", function (error) {
     console.error(error);
-  });
+});
 
 async function handleQuestionCounter(redisKey, req, res,) {
     try {
         
         const boolean = {
-            "true": 1,
+            "true":  1,
             "false": 2
-        }
+        };
         
         const redisUserKey = `${redisKey}_${req.session.uid}`;
 
@@ -38,9 +37,9 @@ async function handleQuestionCounter(redisKey, req, res,) {
                     ON qb.id = qc.did
                 WHERE q.id = $1 AND qb.id = ${req.body.did}
                 `,
-                sqlParams:   [rpg.param("ses", "ses")],
+                sqlParams:     [rpg.param("ses", "ses")],
                 preventResEnd: true,
-                onEnd: async (req, res, result) => {
+                onEnd:         async (req, res, result) => {
                     const itemsCounter = result.length;
                     const userAnswered = await redisClient.get(redisUserKey);
                     if (!userAnswered || userAnswered === 0){
@@ -67,7 +66,7 @@ async function handleQuestionCounter(redisKey, req, res,) {
             return false;
         }
     } catch (error) {
-        console.error('Error handling redis counter:', error);
+        console.error("Error handling redis counter:", error);
         return false;
     }
 }
@@ -76,7 +75,7 @@ async function buildContentAnalysisUnit(req, res) {
     return new Promise((resolve, reject) => {
         rpg.multiSQL({
             dbcon: pass.dbcon,
-            sql:    `
+            sql:   `
                 SELECT q.session AS session_id,
                     qc.id AS phase_id,
                     qa.path AS case_url,
@@ -98,16 +97,16 @@ async function buildContentAnalysisUnit(req, res) {
                         ON qd.id = qe.did
                 WHERE q.session = $1 AND qd.id = ${req.body.did}
             `,
-            sqlParams:   [rpg.param("ses", "ses")],
+            sqlParams:     [rpg.param("ses", "ses")],
             preventResEnd: true,
-            onEnd: async (req, res, result) => {
+            onEnd:         async (req, res, result) => {
                 const groupedResults = result.reduce((acc, cur) => {
                     if (!acc[cur.question_id]) {
-                      acc[cur.question_id] = [];
+                        acc[cur.question_id] = [];
                     }
                     acc[cur.question_id].push(cur);
                     return acc;
-                  }, {});
+                }, {});
                 
                 const nodeHostName = process.env.ETHICAPP_HOSTNAME;
                 const nodePort = process.env.NODE_PORT;
@@ -115,20 +114,20 @@ async function buildContentAnalysisUnit(req, res) {
 
                 const workUnitJson = {
                     context: {
-                        session_id: result[0].session_id,
-                        phase_id: result[0].phase_id,
+                        session_id:   result[0].session_id,
+                        phase_id:     result[0].phase_id,
                         callback_url: `http://${nodeHostName}:${nodePort}/content-analysis-callback`, 
-                        timestamp: Date.now(),
+                        timestamp:    Date.now(),
                     },
                     content: {
-                        case_url: sessionURL,
+                        case_url:      sessionURL,
                         phase_content: Object.values(groupedResults).map(group => ({
-                            question: group[0].question,
+                            question:    group[0].question,
                             question_id: group[0].question_id,
-                            responses: group.map(item => ({
-                                response_id: item.response_id,
+                            responses:   group.map(item => ({
+                                response_id:   item.response_id,
                                 response_text: item.response_text,
-                                user_id: item.user_id
+                                user_id:       item.user_id
                             }))
                         }))
                     }
@@ -146,19 +145,19 @@ async function sendContentAnalysisWorkunit(workunit){
         const apiKey = process.env.CONTENT_ANALYSIS_API_KEY;
 
         const response = await fetch(`http://${contentAnalysisHostName}:${contentAnalysisPort}/top-worst`, {
-            method: 'POST',
+            method:  "POST",
             headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': apiKey,
+                "Content-Type": "application/json",
+                "x-api-key":    apiKey,
             },
             body: JSON.stringify(workunit)
         });
         if (!response.ok) {
-            throw new Error('The server response was not successful');
+            throw new Error("The server response was not successful");
         }
-            const responseData = await response.json();
+        const responseData = await response.json();
     } catch (error) {
-        console.error('Error sending content analysis work unit', error);
+        console.error("Error sending content analysis work unit", error);
     }
 }
 
@@ -168,7 +167,7 @@ async function contentAnalysis(req, res) {
             const result = await new Promise((resolve, reject) => {
                 rpg.singleSQL({
                     dbcon: pass.dbcon,
-                    sql: `
+                    sql:   `
                         SELECT qa.number as stage_id, qb.id as question_id, qc.uid
                         FROM sessions AS q
                         LEFT JOIN Stages AS qa
@@ -179,9 +178,9 @@ async function contentAnalysis(req, res) {
                         ON qb.id = qc.did
                         WHERE q.id = $1 AND qb.id = ${req.body.did} AND qc.uid = ${req.session.uid}
                     `,
-                    sqlParams: [rpg.param("ses", "ses")],
+                    sqlParams:     [rpg.param("ses", "ses")],
                     preventResEnd: true,
-                    onEnd: (req, res, result) => {
+                    onEnd:         (req, res, result) => {
                         resolve(result);
                     },
                     onError: (err) => {
@@ -201,7 +200,7 @@ async function contentAnalysis(req, res) {
             console.error("Error processing content analysis:", error);
         }
     } else {
-        console.warn('No comment provided for content analysis');
+        console.warn("No comment provided for content analysis");
     }
 }
 
@@ -209,18 +208,18 @@ async function contentAnalysis(req, res) {
 function isContentAnalysisAvailable(){
 
     const trueOrFalse = {
-        "true": true,
+        "true":  true,
         "false": false
-    }
+    };
     const value = process.env.CONTENT_ANALYSIS_SERVICE;
-    return trueOrFalse[value]
+    return trueOrFalse[value];
 }
 
 function initializeContentAnalysis(req, res) {
     try {
         contentAnalysis(req, res);
     } catch (error) {
-        console.error('Error running content analysis:', error);
+        console.error("Error running content analysis:", error);
     }
 }
 

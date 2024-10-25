@@ -33,8 +33,8 @@ export let CredentialsController = ($scope, $http, $window) => {
         }
 
         const resetData = {
-            username: self.user.username,
-            newPassword: self.user.newPassword,
+            username:        self.user.username,
+            newPassword:     self.user.newPassword,
             confirmPassword: self.user.confirmPassword
         };
 

@@ -33,11 +33,11 @@ const teacherAccountRequestSchema = Yup.object().shape({
 
 router.get("/register", (req, res) => {
     res.render("register", {
-        title:        "Registro - EthicApp",
-        controller:   "RegisterController",
-        extraScripts: `
+        title:            "Registro - EthicApp",
+        controller:       "RegistrationsController",
+        recaptchaSiteKey: `"${process.env.RECAPTCHA_SITE_KEY}"`,
+        extraScripts:     `
           <script type="text/javascript">
-            // Definir onloadCallback globalmente en window
             window.onloadCallback = function() {
               grecaptcha.render("captcha", {
                 sitekey: "${process.env.RECAPTCHA_SITE_KEY}"

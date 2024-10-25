@@ -13,7 +13,7 @@ secrets:
 
 services:
   # ---------------------- Node web app ---------------------- #
-  node:
+  ethicapp:
     container_name: "ethicapp-node"
     build:
       context: ethicapp/

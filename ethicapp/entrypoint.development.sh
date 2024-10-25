@@ -22,4 +22,4 @@ fi
 export JWT_SECRET=$(cat /run/secrets/jwt_token)
 
 # Run the application in debug mode
-npm run debug
+npm run dev

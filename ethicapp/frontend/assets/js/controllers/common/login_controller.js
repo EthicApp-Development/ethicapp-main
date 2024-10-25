@@ -27,9 +27,8 @@ export let LoginController = ($scope, $http, $window) => {
                 if (sessionID === "ErrorCredential") {
                     self.loginError = true;
                 } else if (sessionID === "Unauthorized") {
-                    self.loginError = true; // Mensaje de no autorizado
+                    self.loginError = true;
                 } else {
-                    // Si todo es exitoso, redirige al usuario
                     $window.location.href = "/seslist";
                 }
             })

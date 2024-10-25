@@ -18,31 +18,30 @@
           </div>
           <div class="col-sm-1"></div>
         </div>
-
         <div class="form-group">
           <label for="password" class="col-sm-3 control-label">{{ "password" | translate }}</label>
           <div class="col-sm-8">
-            <input class="form-control" type="password" ng-model="user.password" name="password" id="password" ng-required="true" ng-minlength="8" />
+            <input class="form-control" ng-focus="clearErrors()" type="password" ng-model="user.password" name="password" id="password" autocomplete="new-password" ng-required="true" ng-minlength="8" />
             <div class="error-message" ng-show="formLogin.password.$error.required && formLogin.password.$touched" style="color: red;">
-              {{ "requiredPassword" | translate }}
+              {{ "password_required" | translate }}
             </div>
             <div class="error-message" ng-show="formLogin.password.$error.minlength && formLogin.password.$touched" style="color: red;">
-              {{ "minLengthPassword" | translate }}
+              {{ "min_length_password" | translate }}
             </div>
           </div>
           <div class="col-sm-1"></div>
         </div>
-
-        <div class="form-group text-center">
-          <div class="error-message" ng-show="loginError" style="margin-bottom:1em; color: red;">
-            {{ "login_failed" | translate }}
+        <div class="form-group">
+          <div class="alert alert-danger" style="color: red;" ng-show="errorMessageKey">
+            {{ errorMessageKey | translate }} <!-- Mostrar el mensaje traducido correspondiente -->
           </div>
-          <button type="submit" class="btn btn-primary" ng-disabled="formLogin.$invalid" style="margin: 0 auto; width:140px;">
-            {{ "login" | translate }}
+        </div>
+        <div class="form-group text-center mb-1em">
+          <button type="submit" ng-disabled="formUser.$invalid" class="btn btn-primary" style="width:200px" id="register-btn">
+            {{ "register" | translate }}
           </button>
         </div>
       </form>
-      <br />
       <div class="row text-center">
         <a href="/register">{{ "register" | translate }} </a> |
         <a href="/forgot">{{ "forgot_pass" | translate }}</a>

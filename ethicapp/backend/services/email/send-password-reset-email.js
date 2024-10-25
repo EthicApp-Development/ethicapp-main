@@ -1,4 +1,3 @@
-
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 import ejs from "ejs";
 import path from "path";
@@ -7,10 +6,18 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const sesClient = new SESClient({ region: "us-west-2" });
+// Create AWS SES client
+const sesClient = new SESClient({
+    region:      process.env.AWS_REGION, 
+    credentials: {
+        accessKeyId:     process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+});
 
 async function sendPasswordResetEmail(email, locale, subject, resetUrl) {
-    const templatePath = path.join(__dirname, "templates", "locale", "reset-password.ejs");
+    const templatePath = path.join(__dirname, 
+        "templates", locale, "reset-password.ejs");
     const htmlContent = await ejs.renderFile(templatePath, { resetUrl });
 
     const params = {
@@ -33,7 +40,7 @@ async function sendPasswordResetEmail(email, locale, subject, resetUrl) {
     try {
         const command = new SendEmailCommand(params);
         await sesClient.send(command);
-        console.log("Email sent successfully.");
+        console.debug("Email sent successfully.");
     } catch (err) {
         console.error("Error sending email: ", err);
         throw err;

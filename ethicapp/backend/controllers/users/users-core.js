@@ -71,9 +71,10 @@ router.post("/login", (req, res, next) => {
 
 router.get("/forgot", (req, res) => {
     res.render("recover-password", {
-        title:        "EthicApp",
-        controller:   "CredentialsController",
-        extraScripts: `
+        title:            "EthicApp",
+        controller:       "CredentialsController",
+        recaptchaSiteKey: `"${process.env.RECAPTCHA_SITE_KEY}"`,
+        extraScripts:     `
           <script type="text/javascript">
             window.onloadCallback = function() {
               grecaptcha.render("captcha", {
@@ -131,10 +132,11 @@ router.post("/forgot", async (req, res) => {
 });
 
 router.get("/reset-password", (req, res) => {
-    res.render("recover-password", {
-        title:        "EthicApp",
-        controller:   "CredentialsController",
-        extraScripts: `
+    res.render("reset-password", {
+        title:            "EthicApp",
+        controller:       "CredentialsController",
+        recaptchaSiteKey: `"${process.env.RECAPTCHA_SITE_KEY}"`,
+        extraScripts:     `
           <script type="text/javascript">
             window.onloadCallback = function() {
               grecaptcha.render("captcha", {

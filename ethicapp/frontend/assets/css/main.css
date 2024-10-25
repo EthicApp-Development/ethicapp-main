@@ -75,6 +75,27 @@ hr{
     border-color: #102AA0;
 }
 
+.btn-primary:hover {
+    background-color: #102AA0;
+    border-color: #102AA0;
+}
+
+.btn-primary.disabled.focus,
+.btn-primary.disabled:focus,
+.btn-primary.disabled:hover,
+.btn-primary[disabled].focus,
+.btn-primary[disabled]:focus,
+.btn-primary[disabled]:hover,
+fieldset[disabled],
+.btn-primary.focus,
+fieldset[disabled],
+.btn-primary:focus,
+fieldset[disabled],
+.btn-primary:hover {
+    background-color: #777;
+    border-color: #999;    
+}
+
 a {
     color: #2649EC;
 }
@@ -2106,4 +2127,8 @@ h2{
 
 .custom-switch:hover input:not(:checked) + .custom-slider {
     background-color: #b3d9ff;
+}
+
+.mb-1em {
+    margin-bottom: 1em;
 }
