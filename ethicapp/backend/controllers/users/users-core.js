@@ -303,7 +303,8 @@ router.get("/profile", (req, res) => {
 
 router.get("/google",
     passport.authenticate("google", {
-        scope: ["email", "profile"]
+        scope: ["email", "profile"],
+        prompt: "consent"
     })
 );
 
@@ -311,23 +312,28 @@ router.get("/google/callback",
     passport.authenticate("google", {
         failureRedirect: "/register"
     }),
-    async (req, res) => {
-        const sqlParams = [0];
-        const dbParams = {
-            sql:       "SELECT UpdateOrInsertLoginRecord($1)",
-            dbcon:     config.dbconnString,
-            sqlParams: sqlParams,
-        };
-  
-        try {                        
-            await execSQL(dbParams);
-            res.redirect("/seslist");
-        } catch (error) {
-            console.error(error);
-            res.redirect("/error");
-        }
+    (req, res) => {
+        console.log("Authentication successful:", req.user);
+        res.redirect("/login_record");
     }
 );
+
+router.get("/login_record", async (req, res) => {
+    const sqlParams = [0];
+    const dbParams = {
+        sql:       "SELECT UpdateOrInsertLoginRecord($1)",
+        dbcon:     config.dbconnString,
+        sqlParams: sqlParams,
+    };
+
+    try {                        
+        await execSQL(dbParams);
+        res.redirect("/seslist");
+    } catch (error) {
+        console.error(error);
+        res.redirect("/error");
+    }
+});
   
 // Route to get the user's name and other details
 router.post("/get-my-name", async (req, res) => {
