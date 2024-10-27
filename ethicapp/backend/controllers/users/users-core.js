@@ -281,11 +281,26 @@ router.post("/reset-password/:token", async (req, res) => {
     }
 
     try {
-        // Validate request
+        // Validate request parameter syntax
         await UserSchemas.passwordResetSchema.validate(req.body);
 
         const { token } = req.params;
-        const { email, pass } = req.body;
+        const { email, pass, cpass } = req.body;
+
+        // The user must exist
+        const userExists = await checkUserExists(email, config.dbconnString);
+        if (!userExists) {
+            return res.status(409).json({
+                success: false,
+                message: "User not found."
+            });
+        }
+
+        // Passwords must match
+        if (pass != cpass) {
+            return res.status(400).json(
+                { success: false, message: "Passwords don't match." }); 
+        }
  
         // Validate recaptcha token
         const responseKey = req.body["g_recaptcha_response"];

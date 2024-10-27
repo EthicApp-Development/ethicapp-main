@@ -44,6 +44,6 @@ ngapp_user_common.controller("RegistrationsController",
 ngapp_user_common.controller("ProfileController",
     ["$scope", "$http", ProfileController]);
 ngapp_user_common.controller("CredentialsController",
-    ["$scope", "$http", CredentialsController]);
-    
+    ["$scope", "$http", "$window", CredentialsController]);
+
 export default ngapp_user_common;
