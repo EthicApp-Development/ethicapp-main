@@ -1,7 +1,7 @@
 {
 	"email": {
 		"reset": {
-			"subject": "email.reset.subject"
+			"subject": "Recover your EthicApp password"
 		}
 	}
 }

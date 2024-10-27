@@ -56,4 +56,8 @@ export let CredentialsController = ($scope, $http, $window) => {
                 self.backendErrorMessage = "An unexpected error occurred.";
             });
     };
+
+    self.resetPassword = function() {
+
+    };
 };

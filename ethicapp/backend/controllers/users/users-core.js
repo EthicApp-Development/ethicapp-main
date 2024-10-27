@@ -5,7 +5,8 @@ import path from "path";
 import express from "express";
 import passport from "passport";
 import { VIEWS_PREFIX } from "./users-common.js";
-import { sendPasswordResetEmail } from "../../services/email/send-password-reset-email.js";
+import { sendEmail } from "../../services/email/email-sender.js";
+import { buildEmail } from "../../services/email/email-builder.js";
 import bcrypt from "bcrypt";
 
 import * as crypto from "crypto";
@@ -151,12 +152,19 @@ router.post("/forgot", async (req, res) => {
         const { email, lang } = req.body;
         const locale = lang || "en_US";
         const token = await requestPasswordReset(email, config.dbconnString);
-        const resetUrl = `http://${req.headers.host}/reset/${token}`;
+        const resetUrl = `http://${req.headers.host}/reset-password?token=${token}`;
 
         req.setLocale(locale);
         const subject = req.__("email.reset.subject");
 
-        await sendPasswordResetEmail(email, locale, subject, resetUrl);
+        const emailText = await buildEmail(locale, "reset-password.ejs", { resetUrl });
+        const attachments = [{
+            filename: 'ethicapp-logo-email.png',
+            cid: 'ethicappLogo'
+        }];
+
+        await sendEmail(email, subject, emailText, attachments);
+
         res.status(200).send("Recovery email sent.");
     } catch (err) {
         console.error("Error handling password reset request:", err);
@@ -264,7 +272,7 @@ router.post("/reset-password/:token", async (req, res) => {
         }
 
         // Step 1: Verify token validity
-        //await TokenHelper.validateToken(token, config.dbconnString);
+        TokenHelper.validateToken(token, config.dbconnString);
 
         // Step 2: Update the password
         await updatePassword(token, email, pass, config.dbconnString);

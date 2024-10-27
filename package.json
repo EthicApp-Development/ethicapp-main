@@ -3,8 +3,11 @@
   "description": "Core node packages for developing (and initializing) the EthicApp project",
   "private": true,
   "scripts": {
-    "init-passwords-js": "./devops/create-passwords-js.sh",
+    "init-credentials": "./devops/init-credentials.mjs",
+    "encrypt-gmail-credentials": "./devops/encrypt-gmail-credentials.mjs",
     "init-db": "./devops/docker-init-db-volume.sh",
+    "reset-db-seeds-flag": "./devops/reset-db-seeds-flag.sh",
+    "reset-npm-flag": "./devops/reset-db-seeds-flag.sh",
     "build-and-push": "./devops/build-and-push.sh",
     "lint-js": "npx eslint './ethicapp/**/*.js' ./ethicapp/backend/ethicapp",
     "lint-html": "npx htmlhint './ethicapp/frontend/static/**/*.html'",
@@ -37,6 +40,7 @@
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5"
   }
 }

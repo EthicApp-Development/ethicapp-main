@@ -1,1 +1,7 @@
-{}
+{
+	"email": {
+		"reset": {
+			"subject": "Restablece tu contraseña de EthicApp"
+		}
+	}
+}
