@@ -41,20 +41,23 @@ export let CredentialsController = ($scope, $http, $window) => {
         };
 
         $http.post("/forgot", params)
-            .then(response => {
-                if (response.status === 200) {
-                    console.log("password change success!");
-                    self.emailSent = true;
-                } else {
-                    self.backendError = true;
-                    self.backendErrorMessage = response.data.message;
-                }
-            })
-            .catch(error => {
-                console.error(error);
+        .then(response => {
+            if (response.status === 200) {
+                console.debug("password reset request success!");
+                self.emailSent = true;
+            }
+        })
+        .catch(error => {
+            if (error.status === 409) {
+                console.debug("user does not exist!");
+                self.emailSent = false;
                 self.backendError = true;
-                self.backendErrorMessage = "An unexpected error occurred.";
-            });
+                self.backendErrorMessage = "email_doesnt_exist";
+            } else {
+                self.backendError = true;
+                self.backendErrorMessage = "complete_request_error";
+            }
+        });
     };
 
     self.resetPassword = function() {

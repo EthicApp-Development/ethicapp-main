@@ -53,7 +53,6 @@ export const sendEmail = async (to, subject, htmlContent, attachments = []) => {
   });
 
   try {
-    console.log(JSON.stringify(attachments));
     await transporter.sendMail({
       from: process.env.FROM_EMAIL,
       to,
@@ -61,7 +60,6 @@ export const sendEmail = async (to, subject, htmlContent, attachments = []) => {
       html: htmlContent,
       attachments, // Optional array of attachments
     });
-    console.log('Email sent successfully');
   } catch (error) {
     console.error('Error sending email:', error);
   }

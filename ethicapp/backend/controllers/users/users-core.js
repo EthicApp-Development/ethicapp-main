@@ -136,6 +136,23 @@ router.post("/forgot", async (req, res) => {
         }
     }
 
+    async function checkUserExists(email, dbcon) {
+        const sql = `SELECT 1 FROM users WHERE mail = $1 LIMIT 1`;
+        const sqlParams = [email];
+
+        try {
+            const result = await execSQL({
+                sql,
+                dbcon,
+                sqlParams
+            });
+            return result.length > 0; // Devuelve true si el usuario existe
+        } catch (err) {
+            console.error("Error checking user existence:", err);
+            throw new Error("Error checking user existence.");
+        }
+    }    
+
     try {
         await UserSchemas.passwordRecoverySchema.validate(req.body);
 
@@ -151,6 +168,15 @@ router.post("/forgot", async (req, res) => {
 
         const { email, lang } = req.body;
         const locale = lang || "en_US";
+
+        const userExists = await checkUserExists(email, config.dbconnString);
+        if (!userExists) {
+            return res.status(409).json({
+                success: false,
+                message: "User not found."
+            });
+        }
+
         const token = await requestPasswordReset(email, config.dbconnString);
         const resetUrl = `http://${req.headers.host}/reset-password?token=${token}`;
 
