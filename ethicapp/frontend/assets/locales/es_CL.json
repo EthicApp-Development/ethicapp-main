@@ -190,7 +190,7 @@
 	"institution_required": "Se requiere una institución.",
 	"institution_min_length": "El nombre de la institución es demasiado corto.",
 	"name_required": "Se requiere un nombre.",
-	"min_length_name": "El nombre es demasiado corto.",
+	"min_length_name": "El nombre ingresado es demasiado corto.",
 	"lastname_required": "Se requiere un apellido.",
 	"email_required": "Se requiere una dirección de correo electrónico.",
 	"email_already_registered": "Este correo electrónico ya está registrado.",

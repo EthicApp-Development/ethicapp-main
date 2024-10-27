@@ -35,8 +35,8 @@
           <div class="col-sm-1"></div>
         </div>
         <div class="form-group">
-          <div class="alert alert-danger" style="color: red;" ng-show="errorMessageKey">
-            {{ errorMessageKey | translate }}
+          <div class="error-message text-center" ng-show="backendError" style="color: red;">
+            {{ backendErrorMessage | translate }}
           </div>
         </div>
         <div class="form-group text-center mb-1em">

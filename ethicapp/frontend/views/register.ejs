@@ -45,7 +45,7 @@
               {{ "name_required" | translate }}
             </div>
             <div class="error-message" ng-show="formUser.firstname.$error.minlength" style="color: red;">
-              {{ "name_min_length" | translate }}
+              {{ "min_length_name" | translate }}
             </div>
           </div>
         </div>
@@ -128,7 +128,7 @@
 
         <div class="form-group" ng-show="backendErrors" id="backend-errors">
           <div class="col-sm-12">
-            <div class="error-message" style="color: red;">
+            <div class="error-message text-center" style="color: red;">
               {{ backendErrorMessage | translate  }}
             </div>
           </div>
@@ -164,6 +164,11 @@
     <div class="row mb-1em">
       <div class="col-sm-12">
         <p>{{ "teacher_account_request_sent" | translate }}</p>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-sm-12 text-center">
+        <a href="/login" style="margin-top: 8px">{{ "back_to_login" | translate }}</a>
       </div>
     </div>
   </div>

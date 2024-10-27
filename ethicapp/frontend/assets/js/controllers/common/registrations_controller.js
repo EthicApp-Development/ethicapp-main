@@ -15,17 +15,17 @@ export let RegistrationsController = ($scope, $http) => {
         if (error.status === 409) {
             // Email is already registered
             console.error("The email is already registered.");
-            self.errorMessage = "account_already_exists"; // Duplicate email
+            self.backendErrorMessage = "account_already_exists"; // Duplicate email
         } else if (error.status === 400 && 
                 error.data.message === "Error in captcha verification.") {
             console.error("Error in captcha verification.");
-            self.errorMessage = "captcha_error"; // Captcha error
+            self.backendErrorMessage = "captcha_error"; // Captcha error
         } else if (error.status === 500) {
             console.error("An error occurred on the server.");
-            self.errorMessage = "registration_error"; // Generic server error;
+            self.backendErrorMessage = "registration_error"; // Generic server error;
         } else {
             console.error("Unknown error. Please try again.");
-            self.errorMessage = "registration_error"; // Unknown error
+            self.backendErrorMessage = "registration_error"; // Unknown error
         }
     };
 
@@ -80,7 +80,7 @@ export let RegistrationsController = ($scope, $http) => {
     };
 
     self.clearErrors = function() {
-        self.errorMessage = "";
+        self.backendErrorMessage = "";
         self.backendErrors = false;
     };
 };

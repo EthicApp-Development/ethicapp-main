@@ -149,7 +149,7 @@
 	"institution_required": "An institution is required.",
 	"institution_min_length": "The institution name is too short.",
 	"name_required": "Your name is required.",
-	"min_length_name": "The name is too short.",
+	"min_length_name": "The name entered is too short.",
 	"lastname_required": "Your last name is required.",
 	"email_required": "A valid email is required.",
 	"email_already_registered": "This email is already registered.",

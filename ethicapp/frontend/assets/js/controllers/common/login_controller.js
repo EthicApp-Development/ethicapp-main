@@ -1,7 +1,7 @@
 export let LoginController = ($scope, $http, $window) => {
     let self = $scope;
 
-    self.loginError = false;
+    self.backendError = false;
 
     setTimeout(() => {
         const welcomeMessageElement = document.getElementById("welcome-message");
@@ -16,7 +16,7 @@ export let LoginController = ($scope, $http, $window) => {
     }, 0);
 
     self.clearErrors = function () {
-        self.loginError = false;
+        self.backendError = false;
         if (self.formLogin) {
             angular.forEach(self.formLogin.$error, (errorField) => {
                 angular.forEach(errorField, (field) => {
@@ -34,19 +34,18 @@ export let LoginController = ($scope, $http, $window) => {
 
         $http.post("/login", credentials)
             .then(response => {
-                const sessionID = response.data.sessionID;
-
-                if (sessionID === "ErrorCredential") {
-                    self.loginError = true;
-                } else if (sessionID === "Unauthorized") {
-                    self.loginError = true;
-                } else {
+                if (response.status === 200) {
                     $window.location.href = "/seslist";
                 }
             })
             .catch(error => {
-                console.error(error);
-                self.loginError = true;
+                if (error.status === 401) {
+                    self.backendError = true;
+                    self.backendErrorMessage = "login_failed";
+                } else {
+                    self.backendError = true;
+                    self.backendErrorMessage = "complete_request_error";
+                }
             });
     };
 };
