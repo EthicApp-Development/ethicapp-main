@@ -12,6 +12,7 @@ export const registerSchema = Yup.object().shape({
 export const teacherAccountRequestSchema = Yup.object().shape({
     name:                 Yup.string().required("requiredName"),
     lastname:             Yup.string().required("requiredLastName"),
+    rut:                  Yup.string().optional(),
     email:                Yup.string().email("invalidEmail").required("requiredEmail"),
     pass:                 Yup.string().min(8, "minLengthPassword").required("requiredPassword"),
     sex:                  Yup.string().oneOf(["M", "F", "O"], "invalidSex").required("requiredSex"),

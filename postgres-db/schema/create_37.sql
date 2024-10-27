@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS teacher_account_requests (
     gender char(1),
     institution text NOT NULL,
     date timestamp DEFAULT now(),
-    status char(1) NOT NULL,
+    status char(1) DEFAULT '0' NOT NULL,
     reject_reason text NULL,
     upgrade_flag boolean NULL DEFAULT false,
     PRIMARY KEY (id)

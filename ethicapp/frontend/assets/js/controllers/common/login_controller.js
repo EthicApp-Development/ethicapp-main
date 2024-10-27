@@ -1,6 +1,5 @@
 export let LoginController = ($scope, $http, $window) => {
     let self = $scope;
-
     self.backendError = false;
 
     setTimeout(() => {
@@ -15,15 +14,9 @@ export let LoginController = ($scope, $http, $window) => {
         }
     }, 0);
 
-    self.clearErrors = function () {
+    self.clearBackendErrors = function () {
         self.backendError = false;
-        if (self.formLogin) {
-            angular.forEach(self.formLogin.$error, (errorField) => {
-                angular.forEach(errorField, (field) => {
-                    field.$setUntouched();
-                });
-            });
-        }
+        self.backendErrorMessage = "";
     };    
 
     self.login = () => {

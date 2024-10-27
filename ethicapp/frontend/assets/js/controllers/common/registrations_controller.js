@@ -8,23 +8,25 @@ export let RegistrationsController = ($scope, $http) => {
     self.teacherAccountRequested = false;
 
     let commonBackendErrorHandler = (error) => {
+        console.debug(JSON.stringify(error));
+
         // Set the flag to display the error message
         self.backendErrors = true;
 
         // Detect and handle different types of errors
         if (error.status === 409) {
-            // Email is already registered
-            console.error("The email is already registered.");
-            self.backendErrorMessage = "account_already_exists"; // Duplicate email
+            console.debug(
+                "There is an issue with the email address provided.");
+            self.backendErrorMessage = error.data.message; 
         } else if (error.status === 400 && 
                 error.data.message === "Error in captcha verification.") {
-            console.error("Error in captcha verification.");
+            console.debug("Error in captcha verification.");
             self.backendErrorMessage = "captcha_error"; // Captcha error
         } else if (error.status === 500) {
-            console.error("An error occurred on the server.");
+            console.debug("An error occurred on the server.");
             self.backendErrorMessage = "registration_error"; // Generic server error;
         } else {
-            console.error("Unknown error. Please try again.");
+            console.debug("Unknown error. Please try again.");
             self.backendErrorMessage = "registration_error"; // Unknown error
         }
     };
@@ -54,14 +56,18 @@ export let RegistrationsController = ($scope, $http) => {
 
         if (self.user.accountType === "Teacher") {
             userData.institution = self.user.institution;
+            console.debug("attempting to request teacher account");
+
             $http.post("/teacher_account_request", userData)
                 .then(function (response) {
+                    console.debug("requested teacher account");
+                    console.debug(JSON.stringify(response));
                     if (response.data.success) {
-                        console.log("Successful teacher account request");
+                        console.debug("Successful teacher account request");
                         self.teacherAccountRequested = true;
                     } else {
-                        throw new Error(
-                            `Error handling teacher account request ${response.data.message}`);
+                        console.debug("error requesting teacher account");
+                        throw new Error(response.data.message);
                     }
                 })
                 .catch(commonBackendErrorHandler);
@@ -69,7 +75,7 @@ export let RegistrationsController = ($scope, $http) => {
             $http.post("/register", userData)
                 .then(function (response) {
                     if (response.data.success) {
-                        console.log("Successful registration");
+                        console.debug("Successful registration");
                         window.location.href = "/login?welc=registration_complete";
                     } else {
                         throw new Error(`Error in registration: ${response.data.message}`);

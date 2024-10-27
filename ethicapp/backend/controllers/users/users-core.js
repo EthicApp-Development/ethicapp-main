@@ -52,7 +52,7 @@ router.post("/login", (req, res, next) => {
             return next(err);
         }
         if (!user) {
-            return res.status(401).json({ message: "Invalid credentials" });
+            return res.status(401).json({ message: "login_failed" });
         }
 
         const is_teacher = (user["role"] === "P" || user["role"] === "S") ? 1 : 0;
@@ -74,11 +74,11 @@ router.post("/login", (req, res, next) => {
                 if (err) {
                     return next(err);
                 }
-                return res.status(200).json({ message: "Login successful" });
+                return res.status(200).json({ message: "login_succeeded" });
             });
         } catch (err) {
             console.error("Error logging user access:", err);
-            return res.status(500).json({ message: "Login error" });
+            return res.status(500).json({ message: "login_failed" });
         }
     })(req, res, next);
 });
@@ -105,7 +105,7 @@ router.get("/forgot", async (req, res) => {
         });
     } catch (error) {
         console.error("Error loading extra scripts:", error);
-        res.status(500).send("Server error");
+        res.status(500).send("complete_request_error");
     }
 });
 
@@ -146,7 +146,7 @@ router.post("/forgot", async (req, res) => {
                 dbcon,
                 sqlParams
             });
-            return result.length > 0; // Devuelve true si el usuario existe
+            return result.length > 0;
         } catch (err) {
             console.error("Error checking user existence:", err);
             throw new Error("Error checking user existence.");
@@ -162,7 +162,7 @@ router.post("/forgot", async (req, res) => {
         if (!recaptchaResult) {
             console.log("Captcha verification failed.");
             return res.status(400).json({
-                success: false, message: "Captcha verification failed."
+                success: false, message: "captcha_error"
             });
         }
 
@@ -173,7 +173,7 @@ router.post("/forgot", async (req, res) => {
         if (!userExists) {
             return res.status(409).json({
                 success: false,
-                message: "User not found."
+                message: "user_not_found"
             });
         }
 
@@ -194,7 +194,7 @@ router.post("/forgot", async (req, res) => {
         res.status(200).send("Recovery email sent.");
     } catch (err) {
         console.error("Error handling password reset request:", err);
-        res.status(500).send("Error sending recovery email.");
+        res.status(500).send("email_transport_failed");
     }
 });
 
@@ -250,7 +250,7 @@ router.get("/reset-password", async (req, res) => {
         });
     } catch (error) {
         console.error("Error rendering password reset view:", error);
-        res.status(500).send("Server error");
+        res.status(500).send("complete_request_error");
     }
 });
 
@@ -292,14 +292,14 @@ router.post("/reset-password/:token", async (req, res) => {
         if (!userExists) {
             return res.status(409).json({
                 success: false,
-                message: "User not found."
+                message: "user_not_found"
             });
         }
 
         // Passwords must match
         if (pass != cpass) {
             return res.status(400).json(
-                { success: false, message: "Passwords don't match." }); 
+                { success: false, message: "passwords_do_not_match" }); 
         }
  
         // Validate recaptcha token
@@ -309,7 +309,7 @@ router.post("/reset-password/:token", async (req, res) => {
         if (!recaptchaResult) {
             console.log("Captcha verification failed.");
             return res.status(400).json(
-                { success: false, message: "Captcha verification failed." });
+                { success: false, message: "captcha_error" });
         }
 
         // Step 1: Verify token validity
@@ -317,9 +317,9 @@ router.post("/reset-password/:token", async (req, res) => {
 
         // Step 2: Update the password
         await updatePassword(token, email, pass, config.dbconnString);
-        res.status(200).send("Password has been reset.");
+        res.status(200).send({ message: "password_reset_success"});
     } catch (err) {
-        return res.status(500).send("An error ocurred when updating the password.");
+        return res.status(500).send("password_reset_failure");
     }
 });
 
@@ -328,7 +328,7 @@ router.get("/logout", (req, res) => {
     req.logout(function (err) {
         if (err) { 
             console.error("Error during logout:", err);
-            return res.status(500).json({ message: "Logout failed" });
+            return res.status(500).json({ message: "logout_failed" });
         }
 
         // Optionally destroy the session instead of nulling specific properties
@@ -337,7 +337,7 @@ router.get("/logout", (req, res) => {
             
             if (sessionErr) {
                 console.error("Error destroying session:", sessionErr);
-                return res.status(500).json({ message: "Failed to destroy session" });
+                return res.status(500).json({ message: "logout_failed" });
             }
 
             // Redirect to login after logout and session destruction
@@ -404,15 +404,14 @@ router.post("/get-my-name", async (req, res) => {
         if (result.length > 0) {
             return res.status(200).json(result[0]);  // Return the first row
         } else {
-            return res.status(404).json({ error: "User not found" });
+            return res.status(404).json({ error: "user_not_found" });
         }
     } catch (error) {
         console.error("Error in /get-my-name:", error);
-        return res.status(500).json({ error: "Internal server error" });
+        return res.status(500).json({ error: "complete_request_error" });
     }
 });
 
-// Route to update the user's language
 router.post("/update-lang", async (req, res) => {
     try {
         // Execute SQL update to modify the user's language based on session uid
@@ -430,10 +429,10 @@ router.post("/update-lang", async (req, res) => {
         });
 
         // Return success message
-        return res.status(200).json({ message: "Language updated successfully" });
+        return res.status(200).json({ message: "language_updated_successfully" });
     } catch (error) {
         console.error("Error in /update-lang:", error);
-        return res.status(500).json({ error: "Internal server error" });
+        return res.status(500).json({ error: "language_update_failed" });
     }
 });
 
@@ -455,11 +454,11 @@ router.post("/getuserinfo", async (req, res) => {
         if (result.length > 0) {
             return res.status(200).json({ data: result[0] });
         } else {
-            return res.status(404).json({ error: "User not found" });
+            return res.status(404).json({ error: "user_information_lookup_failure" });
         }
     } catch (error) {
         console.error("Error in /getuserinfo:", error);
-        return res.status(500).json({ error: "Internal server error" });
+        return res.status(500).json({ error: "user_information_failure" });
     }
 });
 

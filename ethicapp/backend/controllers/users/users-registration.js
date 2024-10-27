@@ -41,7 +41,7 @@ router.get("/register", async (req, res) => {
         });
     } catch (error) {
         console.error("Error loading extra scripts:", error);
-        res.status(500).send("Server error");
+        res.status(500).send({ success: false, message: "complete_request_error" });
     }
 });
 
@@ -66,7 +66,7 @@ router.post("/register", async (req, res) => {
             console.error("Captcha verification error", data);
             return res.status(400).json({
                 success: false,
-                message: "Captcha verification failed.",
+                message: "captcha_error",
             });
         }
 
@@ -82,7 +82,7 @@ router.post("/register", async (req, res) => {
         if (emailExists[0].count > 0) {
             return res.status(409).json({
                 success: false,
-                message: "Email already registered.",
+                message: "account_already_exists",
             });
         }
 
@@ -101,7 +101,10 @@ router.post("/register", async (req, res) => {
         ];
 
         const dbParams = {
-            sql:       "INSERT INTO users (rut, pass, name, mail, sex, ROLE) VALUES ($1, $2, $3, $4, $5, $6)",
+            sql:       
+                `INSERT INTO 
+                    users (rut, pass, name, mail, sex, ROLE) 
+                VALUES ($1, $2, $3, $4, $5, $6)`,
             dbcon:     config.dbconnString,
             sqlParams: sqlParams
         };
@@ -120,45 +123,72 @@ router.post("/register", async (req, res) => {
         // Respond with success
         return res.status(200).json({
             success: true,
-            message: "User successfully registered.",
+            message: "user_account_created_successfully",
         });
 
     } catch (error) {
         console.error("Error in POST /register", error);
         return res.status(500).json({
             success: false,
-            message: "Server error.",
+            message: "complete_request_error",
         });
     }
 });
 
 async function insertTeacherAccountRequest(
-    db, rut, pass, name, mail, sex, institution, status, upgrade_flag) {
-    return new Promise((resolve, reject) => {
-        const sql = `
+    dbcon, rut, pass, name, mail, sex, institution, status, upgrade_flag
+) {
+    const sql = `
         INSERT INTO teacher_account_requests(
             rut, pass, name, mail, gender, 
-            institution, status, upgrade_flag)
+            institution, status, upgrade_flag
+        )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        `;
+    `;
+    const values = [rut, pass, name, mail, sex, institution, status, upgrade_flag];
 
-        const values = ["N/A", pass, name, mail, sex, institution, status, upgrade_flag];
-
-        db.query(sql, values, (err, qry_res) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve();
-            }
-        });
-    });
+    try {
+        const db = await getDBInstance(dbcon);
+        await db.query(sql, values);
+    } catch (error) {
+        console.error("Error inserting teacher account request:", error);
+        throw new Error("Failed to insert teacher account request");
+    }
 }
+
+async function checkPendingRequestByEmail(dbcon, email) {
+    const sql = `
+        SELECT 1
+        FROM teacher_account_requests
+        WHERE mail = $1 AND status = $2
+        LIMIT 1
+    `;
+    const values = [email, '0'];
+
+    try {
+        // Get the database instance
+        const db = await getDBInstance(dbcon);
+        const result = await db.query(sql, values);
+        
+        if (result.rows.length > 0) {
+            console.debug(`Pending teacher account request found for email '${email}'`);
+        }
+
+        // Return true if at least one row meets the criteria, otherwise false
+        return result.rows.length > 0;
+    } catch (error) {
+        console.error("Error checking pending request by email:", error);
+        // Exception handling: return false as a safe case in error
+        return false;
+    }}
+
 
 router.put("/teacher_account_requests/:id", async (req, res) => {
     try {
         const newStatus = req.body.status;
         const requestId = req.params.id;
 
+        // Status 2: Rejected
         if (newStatus === "2") {
             // Execute SQL to update status and reject reason
             await execSQL({
@@ -189,7 +219,7 @@ router.put("/teacher_account_requests/:id", async (req, res) => {
                     param("plain", requestId)
                 ]
             });
-
+            // Status 1: Accepted
             if (newStatus === "1") {
                 // Query teacher data from the request
                 const teacherDataQuery = {
@@ -205,7 +235,7 @@ router.put("/teacher_account_requests/:id", async (req, res) => {
                 const teacherDataResult = await execSQL(teacherDataQuery);
 
                 if (teacherDataResult.length === 0) {
-                    return res.status(404).json({ error: "Teacher not found" });
+                    return res.status(404).json({ error: "teacher_account_request_not_found" });
                 }
 
                 const teacherData = teacherDataResult[0];
@@ -230,7 +260,7 @@ router.put("/teacher_account_requests/:id", async (req, res) => {
 
                 // Send success response
                 return res.status(200).json({
-                    message: "Request accepted and teacher added as user"
+                    message: "teacher_account_request_processed_successfully"
                 });
             }
         }
@@ -247,14 +277,28 @@ router.post("/teacher_account_request", async (req, res) => {
         // Validate the request body
         await UserSchemas.teacherAccountRequestSchema.validate(req.body);
 
+        // Check whether there is a teacher account request already for
+        // the given email
+        const userEmail = req.body.email;
+        const pendingRequestExists = await checkPendingRequestByEmail(
+            config.dbconnString, userEmail);
+        
+        if (pendingRequestExists) {
+            return res.status(409).json(
+                { 
+                    success: false, 
+                    message: "duplicate_teacher_account_request" }
+                );
+        }
+
         // Captcha verification
         const responseKey = req.body["g_recaptcha_response"];
 
         const recaptchaResult = RecaptchaHelper.validateRecaptcha(responseKey);
         if (!recaptchaResult) {
-            console.log("Captcha verification failed.");
+            console.debug("Captcha verification failed.");
             return res.status(400).json(
-                { success: false, message: "Captcha verification failed." });
+                { success: false, message: "captcha_error" });
         }
 
         // Hash the password using bcrypt
@@ -262,8 +306,7 @@ router.post("/teacher_account_request", async (req, res) => {
         const hashedPassword = await bcrypt.hash(req.body.pass, saltRounds);
 
         // Check if the user exists in the database
-        const userEmail = req.body.email;
-        const checkUserSQL = "SELECT role FROM users WHERE mail = $1";
+        const checkUserSQL = "SELECT role FROM users WHERE mail = $1 LIMIT 1";
         const dbParams = { 
             sql:       checkUserSQL, 
             dbcon:     config.dbconnString, 
@@ -283,35 +326,38 @@ router.post("/teacher_account_request", async (req, res) => {
         const fullname = `${req.body.name} ${req.body.lastname}`;
         const db = await getDBInstance(config.dbconnString);
 
+        const rut = req.body.rut || "N/A";
+
         if (!userExists) {
             // If the user does not exist, insert the teacher account request
             await insertTeacherAccountRequest(
-                db, req.body.rut, hashedPassword, fullname, 
+                db, rut, hashedPassword, fullname, 
                 userEmail, req.body.sex, req.body.institution, 0, false);
             return res.status(200).json(
-                { success: true, message: "Teacher account request submitted." });
+                { success: true, message: "teacher_account_request_sent" });
         } else {
             // If the user already exists, act according to their role
             if (existingUserRole === "A") {
                 // Request to modify the account to a teacher account
                 await insertTeacherAccountRequest(
-                    db, req.body.rut, hashedPassword, 
+                    db, rut, hashedPassword, 
                     fullname, userEmail, req.body.sex, 
                     req.body.institution, 0, true);
                 return res.status(200).json(
                     { 
                         success: true, 
-                        message: "Request to modify the account to a teacher account submitted." 
+                        message: "teacher_account_request_sent" 
                     });
             } else {
-                // The email is already registered with a different role
-                return res.status(409).json(
-                    { success: false, message: "The email is already registered." });
+                // Unable to complete this request
+                return res.status(400).json(
+                    { success: false, message: "complete_request_error" });
             }
         }
     } catch (err) {
         console.error("Error in the controller:", err);
-        return res.status(500).json({ success: false });
+        return res.status(500).json({ success: false, 
+            message: "complete_request_error" });
     }
 });
 
@@ -340,7 +386,7 @@ router.get("/teacher_account_requests", async (req, res) => {
         res.status(200).json(result);
     } catch (error) {
         console.error("Error fetching teacher account requests:", error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "complete_request_error" });
     }
 });
 
