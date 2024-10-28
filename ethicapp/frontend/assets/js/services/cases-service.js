@@ -1,5 +1,5 @@
 import { formatDate as _formatDate } from "../helpers/date-formatter.js";
-import { decoupledEditor, editorConfig, classicEditor } from "../helpers/ckeditor/main.js";
+import { editorConfig, classicEditor } from "../helpers/ckeditor/main.js";
 
 export class CasesService {
   constructor($http) {
@@ -214,9 +214,7 @@ export class CasesService {
     };
 
     this.initEditor = (caseReadOnly, _case) => {
-      decoupledEditor.create(document.querySelector('#editor'), editorConfig).then(editor => {
-          document.querySelector('#editor-toolbar').appendChild(editor.ui.view.toolbar.element);
-          document.querySelector('#editor-menu-bar').appendChild(editor.ui.view.menuBarView.element);
+      classicEditor.create(document.querySelector('#editor'), editorConfig).then(editor => {
           self.ckeditor = editor;
           self.ckeditor.setData(_case.rich_text);
 
