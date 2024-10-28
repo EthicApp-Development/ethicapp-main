@@ -57,49 +57,39 @@
                 </div>
             </div>
             <div class="wrapper">
-                <div class="container" style="overflow: scroll; max-height: 40em; min-height: 10em; border: #bbb 1px solid;">
-                    <div class="activities_container" style="margin-top: 2em;">
-                        <div class="list-group pad-content">
-                            <div ng-if="tabEditorDocuments == 'editorTab'">
-                                <div ng-init="initEditor(caseReadOnly)">
-                                    <div class="main-container-ckeditor">
-                                        <div
-                                            class="editor-container editor-container_document-editor editor-container_include-minimap editor-container_include-style"
-                                            id="editor-container"
-                                        >
-                                            <div class="editor-container__menu-bar" id="editor-menu-bar"></div>
-                                            <div class="editor-container__toolbar" id="editor-toolbar"></div>
-                                            <div class="editor-container__minimap-wrapper">
-                                                <div class="editor-container__editor-wrapper">
-                                                    <div class="editor-container__editor"><div id="editor"></div></div>
-                                                </div>
-                                                <div class="editor-container__sidebar editor-container__sidebar_minimap"><div id="editor-minimap"></div></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="list-group pad-content">
-                            <div ng-if="tabEditorDocuments == 'documentsTab'">
-                                <input type="file" id="file-input" multiple style="display: none;" ng-change="handleFileSelect($event)" ng-model="files" accept="application/pdf" ng-if="!caseReadOnly"/>
-                                <div class="upload-container" id="upload-container" ng-click="triggerFileInput()" ng-if="!caseReadOnly" ng-init="initDragDrop()">
-                                    <p>{{'dragDropMsg' | translate}}</p>
-                                </div>
-                                <div class="file-item list-group-item" ng-repeat="document in case.documents | orderBy: 'id' | filter:{name: userSearchDocs} track by $index">
-                                    <div class="line-form-nd">
-                                        <div class="line-row-nd">
-                                            <input type="text" class="form-control line_input" name="title" ng-model="document.name" ng-disabled="caseReadOnly" ng-keypress="renameDocumentOnEnter($event, document.id)" ng-id="input-name-{{document.id}}">
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <button class="btn btn-primary ml-1" ng-click="viewFile($event, document.path)" ng-id="btn-view-file-{{$index}}">{{'view' | translate}}</button>
-                                        <button class="btn btn-danger btn-smaller ml-1" ng-click="removeFile($event, $index)" ng-id="btn-remove-file-{{$index}}" ng-if="!caseReadOnly">{{'delete' | translate}}</button>
+                <div class="containersdfsdfsd" style="overflow: auto; max-height: 40em; min-height: 10em; border: #bbb 1px solid;">
+                    <!-- <div class="containersdfsdfsd" style="overflow: scroll; max-height: 40em; min-height: 10em; border: #bbb 1px solid;"> -->
+                    <div class="list-group">
+                        <div ng-if="tabEditorDocuments == 'editorTab'">
+                            <div ng-init="initEditor(caseReadOnly)">
+                                <div class="main-container-ckeditor">
+                                    <div class="editor-container editor-container_classic-editor editor-container_include-style" id="editor-container">
+                                        <div class="editor-container__editor"><div id="editor"></div></div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                    <div class="list-group pad-content">
+                        <div ng-if="tabEditorDocuments == 'documentsTab'">
+                            <input type="file" id="file-input" multiple style="display: none;" ng-change="handleFileSelect($event)" ng-model="files" accept="application/pdf" ng-if="!caseReadOnly"/>
+                            <div class="upload-container" id="upload-container" ng-click="triggerFileInput()" ng-if="!caseReadOnly" ng-init="initDragDrop()">
+                                <p>{{'dragDropMsg' | translate}}</p>
+                            </div>
+                            <div class="file-item list-group-item" ng-repeat="document in case.documents | orderBy: 'id' | filter:{name: userSearchDocs} track by $index">
+                                <div class="line-form-nd">
+                                    <div class="line-row-nd">
+                                        <input type="text" class="form-control line_input" name="title" ng-model="document.name" ng-disabled="caseReadOnly" ng-keypress="renameDocumentOnEnter($event, document.id)" ng-id="input-name-{{document.id}}">
+                                    </div>
+                                </div>
+                                <div>
+                                    <button class="btn btn-primary ml-1" ng-click="viewFile($event, document.path)" ng-id="btn-view-file-{{$index}}">{{'view' | translate}}</button>
+                                    <button class="btn btn-danger btn-smaller ml-1" ng-click="removeFile($event, $index)" ng-id="btn-remove-file-{{$index}}" ng-if="!caseReadOnly">{{'delete' | translate}}</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                
                 </div>
             </div>
             <br>
