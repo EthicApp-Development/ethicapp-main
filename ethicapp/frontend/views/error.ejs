@@ -1,3 +1,15 @@
-<h1><%= message %></h1>
-<h2><%= error.status %></h2>
-<pre><%= error.stack %></pre>
+<div class="form-signin panel panel-default">
+    <div class="panel-body">
+        <%- include("partials/logo") %>
+        <div class="row mb-1em">
+            <p class="error-message">{{ "<%=message_key %>" | translate }}</p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-12 text-center">
+          <a href="/login" style="margin-top: 8px">{{ "login" | translate }}</a> | 
+          <a href="/register" style="margin-top: 8px">{{ "register" | translate }}</a> 
+        </div>
+    </div>    
+</div>
+  

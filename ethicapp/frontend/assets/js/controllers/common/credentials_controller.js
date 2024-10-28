@@ -43,6 +43,7 @@ export let CredentialsController = ($scope, $http, $window) => {
 
         const params = {
             email:                self.user.email,
+            locale:               self.currentLanguage,
             g_recaptcha_response: recaptchaResponse
         };
 

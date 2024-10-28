@@ -42,10 +42,14 @@ passport.deserializeUser(async (user, done) => {
                     param("plain", "11111111-1"),
                     param("plain", "U"), // Undefined gender
                     param("plain", "A"), // Student role
+                    param("verified_email", "TRUE") // Verification by Google
                 ];
 
                 const dbParams = {
-                    sql:       "INSERT INTO users (name, mail, pass, rut, sex, role) VALUES ($1, $2, $3, $4, $5, $6)",
+                    sql:       
+                        `INSERT INTO users (
+                            name, mail, pass, rut, sex, role, verified_email) 
+                            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
                     dbcon:     dbconnString,
                     sqlParams: sqlParams,
                 };
@@ -102,9 +106,6 @@ passport.use(
         passReqToCallback: true
     },
     (req, accessToken, refreshToken, profile, done) => {
-        console.log("Access Token:", accessToken);
-        console.log("Refresh Token:", refreshToken);
-        console.log("Profile:", profile);
         if (!accessToken) {
             return done(new Error("No access token received"));
         }
@@ -114,23 +115,6 @@ passport.use(
         return done(null, profile);
     })
 );
-
-/*
-passport.use(
-    new GoogleStrategy({
-        clientID:          process.env.GOOGLE_CLIENT_ID,
-        clientSecret:      process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL:       callbackURL,
-        passReqToCallback: true
-    },
-    (req, accessToken, refreshToken, profile, done) => {
-        const { id, role } = profile;  // Destructuración de profile
-        req.session.uid = id;
-        req.session.role = role;
-        // req.session.ses = null;
-        return done(null, profile);
-    })
-);*/
 
 passport.use(new LocalStrategy(
     {

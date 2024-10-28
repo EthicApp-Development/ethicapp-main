@@ -7,15 +7,17 @@ import passport from "passport";
 import axios from "axios";
 import bcrypt from "bcrypt";
 import { fileURLToPath } from "url";
-import "./passport-setup.js";
 import { VIEWS_PREFIX } from "./users-common.js";
 import * as UserSchemas from "../request-schemas/user-schemas.js";
 import * as RecaptchaHelper from "../../helpers/recaptcha-helper.js";
+import * as TokenHelper from "../../helpers/token-helper.js";
+import * as EmailHelper from "../../helpers/email-helper.js";
+import "./passport-setup.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-import { param, getDBInstance, execSQL } from  "../../db/rest-pg-2.js";
+import { param, getDBInstance, execSQL, singleSQL } from  "../../db/rest-pg-2.js";
 
 const router = express.Router();
 router.use(passport.initialize());
@@ -45,10 +47,87 @@ router.get("/register", async (req, res) => {
     }
 });
 
+router.get("/verify-email", async (req, res) => {
+    try {
+        const { token, type } = req.query;
+        const table = type === "student" ? "users" : "teacher_account_requests";
+
+        const selectSQL = `
+            SELECT 1
+            FROM ${table}
+            WHERE token = $1 AND verified_email = FALSE
+            LIMIT 1
+        `;
+        
+        const values = [token];
+
+        // Execute the SELECT query
+        const db = await getDBInstance(config.dbconnString);
+        const result = await db.query(selectSQL, values);
+        
+        if (result.rows.length === 1) {
+            // Update the verified_email field to TRUE for the matched token
+            const updateSQL = `UPDATE ${table} SET verified_email = TRUE WHERE token = $1`;
+            await db.query(updateSQL, values);
+
+            const welcKey = type === "student" ? "email_verification_succeeded" : 
+                "email_verification_succeeded_teacher";
+            return res.redirect(`/login?welc=${welcKey}`);
+        } else {
+            // Render the error view if no matching entry was found
+            res.status(400).render("error", {
+                title:       "EthicApp",
+                controller:  "ErrorsController",
+                message_key: "email_verification_failed",
+            });
+        }
+    } catch (error) {
+        console.error("Error in verify-email endpoint:", error);
+        // Render the view for server errors
+        res.status(500).render("error", {
+            title:       "EthicApp",
+            controller:  "ErrorsController",
+            message_key: "complete_request_error",
+        });
+    }
+});
+
+
+async function setEmailVerificationToken(email, table, dbcon) {
+    const { token, expires } = TokenHelper.generateToken();
+
+    const sql = `
+        UPDATE ${table} 
+        SET validate_email_token = $1, validate_email_expires = $2 
+        WHERE mail = $3
+    `;
+
+    const sqlParams = [token, expires, email]; 
+
+    try {
+        await execSQL({
+            sql,
+            dbcon,
+            sqlParams
+        });
+
+        return token;
+    } catch (err) {
+        console.error("Error setting email verification token:", err);
+        throw new Error("Error setting email verification token.");
+    }
+}
+
 router.post("/register", async (req, res) => {
     try {
         // Validate request body with schema
         await UserSchemas.registerSchema.validate(req.body);
+
+        // Retrieve user's email and language preference
+        const { lang, email, name } = req.body;
+        const locale = lang || "en_US";
+
+        req.setLocale(locale);
 
         // Verify captcha
         const response_key = req.body["g_recaptcha_response"];
@@ -74,7 +153,7 @@ router.post("/register", async (req, res) => {
         const emailCheckQuery = {
             sql:       "SELECT COUNT(*) FROM users WHERE mail = $1",
             dbcon:     config.dbconnString,
-            sqlParams: [param("plain", req.body.email)]
+            sqlParams: [param("plain", email)]
         };
 
         const emailExists = await execSQL(emailCheckQuery);
@@ -120,6 +199,19 @@ router.post("/register", async (req, res) => {
 
         await execSQL(updateAccountQuery);
 
+        // Set the email verification token for the newly created user
+        const token = await setEmailVerificationToken(email, "users", config.dbconnString);
+        const verificationUrl = `${req.protocol}://${req.headers.host}/verify-email?token=${token}&type=student`;
+
+        const subject = req.__("email.verification.subject");
+
+        await EmailHelper.sendEthicAppEmail(
+            locale, email, subject,
+            "verify-email.ejs", { 
+                verificationUrl: verificationUrl, 
+                firstName:       name 
+            });
+
         // Respond with success
         return res.status(200).json({
             success: true,
@@ -156,18 +248,18 @@ async function insertTeacherAccountRequest(
     }
 }
 
-async function checkPendingRequestByEmail(dbcon, email) {
+async function checkPendingRequestByEmail(email) {
     const sql = `
         SELECT 1
         FROM teacher_account_requests
         WHERE mail = $1 AND status = $2
         LIMIT 1
     `;
-    const values = [email, '0'];
+    const values = [email, "0"];
 
     try {
         // Get the database instance
-        const db = await getDBInstance(dbcon);
+        const db = await getDBInstance(config.dbconnString);
         const result = await db.query(sql, values);
         
         if (result.rows.length > 0) {
@@ -180,8 +272,25 @@ async function checkPendingRequestByEmail(dbcon, email) {
         console.error("Error checking pending request by email:", error);
         // Exception handling: return false as a safe case in error
         return false;
-    }}
+    }
+}
 
+async function IsEmailVerified(email) {
+    const sql = `
+        SELECT 1
+        FROM users
+        WHERE mail = $1 AND verified_email = TRUE
+        LIMIT 1
+    `;
+    const values = [email, "0"];
+
+    // Get the database instance
+    const db = await getDBInstance(config.dbconnString);
+    const result = await db.query(sql, values);
+    
+    // Return true if at least one row meets the criteria, otherwise false
+    return result.rows.length > 0;    
+}
 
 router.put("/teacher_account_requests/:id", async (req, res) => {
     try {
@@ -279,16 +388,17 @@ router.post("/teacher_account_request", async (req, res) => {
 
         // Check whether there is a teacher account request already for
         // the given email
-        const userEmail = req.body.email;
-        const pendingRequestExists = await checkPendingRequestByEmail(
-            config.dbconnString, userEmail);
+        const email = req.body.mail;
+        const { locale, name } = req.body;
+        
+        const pendingRequestExists = await checkPendingRequestByEmail(email);
         
         if (pendingRequestExists) {
             return res.status(409).json(
                 { 
                     success: false, 
                     message: "duplicate_teacher_account_request" }
-                );
+            );
         }
 
         // Captcha verification
@@ -310,7 +420,7 @@ router.post("/teacher_account_request", async (req, res) => {
         const dbParams = { 
             sql:       checkUserSQL, 
             dbcon:     config.dbconnString, 
-            sqlParams: [param("plain", "userEmail")]
+            sqlParams: [email]
         };
 
         let userExists = false;
@@ -328,11 +438,30 @@ router.post("/teacher_account_request", async (req, res) => {
 
         const rut = req.body.rut || "N/A";
 
+        let sendVerificationEmail = async () => {
+            // Set the email verification token for the newly created user
+            const token = await setEmailVerificationToken(email, "users", config.dbconnString);
+            let verificationUrl = `${req.protocol}://${req.headers.host}/verify-email?token=${token}&type=teacher`;
+
+            const subject = req.__("email.verification.subject");
+
+            await EmailHelper.sendEthicAppEmail(
+                locale, email, subject,
+                "verify-email.ejs", { 
+                    verificationUrl: verificationUrl,
+                    firstName:       name 
+                });
+    
+        };
+    
         if (!userExists) {
             // If the user does not exist, insert the teacher account request
             await insertTeacherAccountRequest(
                 db, rut, hashedPassword, fullname, 
-                userEmail, req.body.sex, req.body.institution, 0, false);
+                email, req.body.sex, req.body.institution, 0, false);
+            
+            await sendVerificationEmail();
+                
             return res.status(200).json(
                 { success: true, message: "teacher_account_request_sent" });
         } else {
@@ -341,8 +470,15 @@ router.post("/teacher_account_request", async (req, res) => {
                 // Request to modify the account to a teacher account
                 await insertTeacherAccountRequest(
                     db, rut, hashedPassword, 
-                    fullname, userEmail, req.body.sex, 
+                    fullname, email, req.body.sex, 
                     req.body.institution, 0, true);
+                
+                // Request email verification if necessary
+                const emailVerified = await IsEmailVerified();
+                if (!emailVerified) {
+                    await sendVerificationEmail();
+                }
+
                 return res.status(200).json(
                     { 
                         success: true, 
@@ -363,7 +499,8 @@ router.post("/teacher_account_request", async (req, res) => {
 
 router.get("/teacher_account_requests", async (req, res) => {
     try {
-        // Execute the SQL query to fetch all teacher account requests, ordered by date descending
+        // Execute the SQL query to fetch all teacher account requests, 
+        // ordered by date descending
         await execSQL({
             dbcon: config.dbconnString,
             sql:   `
@@ -390,19 +527,27 @@ router.get("/teacher_account_requests", async (req, res) => {
     }
 });
 
-router.get("/teacher_account_requests/:id", (req, res) => {
-    singleSQL({
-        dbcon: pass.dbcon,
-        sql:   `
-          SELECT *
-          FROM teacher_account_requests
-          WHERE id = $1
-      `,
-        onStart: (ses, data, calc) => {
-            calc.id = req.params.id;
-        },
-        sqlParams: [param("calc", "id")]
-    })(req, res);
+router.get("/teacher_account_requests/:id", async (req, res) => {
+    try {
+        const result = await singleSQL({
+            dbcon: config.dbconnString,
+            sql:   `
+                SELECT *
+                FROM teacher_account_requests
+                WHERE id = $1
+            `,
+            sqlParams: [param("calc", "id")],
+            onStart:   (ses, data, calc) => {
+                calc.id = req.params.id;
+            }
+        });
+
+        res.json(result);
+    } catch (err) {
+        console.error("Error fetching teacher account request:", err);
+        res.status(500).json({ error: "Error fetching teacher account request." });
+    }
 });
+
 
 export default router;

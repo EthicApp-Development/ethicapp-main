@@ -1,8 +1,10 @@
 {
-    "email": {
-      "reset": {
-        "subject": "Reset your password - EthicApp"
-      }
-    }
-  }
-  
+	"email": {
+		"reset": {
+			"subject": "Reset your password - EthicApp"
+		},
+		"verification": {
+			"subject": "Verify your email address - EthicApp"
+		}
+	}
+}

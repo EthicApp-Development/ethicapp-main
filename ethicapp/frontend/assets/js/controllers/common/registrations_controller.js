@@ -51,6 +51,7 @@ export let RegistrationsController = ($scope, $http) => {
             email:                self.user.email,
             pass:                 self.user.password,
             sex:                  self.user.gender,
+            locale:               self.currentLanguage,
             g_recaptcha_response: recaptchaResponse  
         };
 

@@ -46,6 +46,7 @@ import { fileURLToPath } from "url";
 import expressLayouts from "express-ejs-layouts";
 
 let app = express();
+app.set("trust proxy", true); // i.e., trust headers from a reverse proxy
 
 // Configure assets 
 const __filename = fileURLToPath(import.meta.url);

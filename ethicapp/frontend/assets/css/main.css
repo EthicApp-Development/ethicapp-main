@@ -2133,6 +2133,6 @@ h2{
     margin-bottom: 1em;
 }
 
-.welcome-message {
+.welcome-message, .error-message {
     text-align: center;
 }

@@ -5,16 +5,14 @@ import path from "path";
 import express from "express";
 import passport from "passport";
 import { VIEWS_PREFIX } from "./users-common.js";
-import { sendEmail } from "../../services/email/email-sender.js";
-import { buildEmail } from "../../services/email/email-builder.js";
 import bcrypt from "bcrypt";
 
-import * as crypto from "crypto";
 import { param, execSQL } from  "../../db/rest-pg-2.js";
 import { fileURLToPath } from "url";
 import * as UserSchemas from "../request-schemas/user-schemas.js";
 import * as RecaptchaHelper from "../../helpers/recaptcha-helper.js";
 import * as TokenHelper from "../../helpers/token-helper.js";
+import * as EmailHelper from "../../helpers/email-helper.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -131,8 +129,7 @@ async function checkUserExists(email, dbcon) {
 
 router.post("/forgot", async (req, res) => {
     async function requestPasswordReset(email, dbcon) {
-        const token = crypto.randomBytes(20).toString("hex");
-        const expires = new Date(Date.now() + 3600000 * 24);
+        const { token, expires } = TokenHelper.generateToken();
     
         const sql = `
             UPDATE users 
@@ -181,18 +178,14 @@ router.post("/forgot", async (req, res) => {
         }
 
         const token = await requestPasswordReset(email, config.dbconnString);
-        const resetUrl = `http://${req.headers.host}/reset-password?token=${token}`;
+        const resetUrl = `${req.protocol}://${req.headers.host}/reset-password?token=${token}`;
 
         req.setLocale(locale);
         const subject = req.__("email.reset.subject");
 
-        const emailText = await buildEmail(locale, "reset-password.ejs", { resetUrl });
-        const attachments = [{
-            filename: "ethicapp-logo-email.png",
-            cid:      "ethicappLogo"
-        }];
-
-        await sendEmail(email, subject, emailText, attachments);
+        await EmailHelper.sendEthicAppEmail(
+            locale, email, subject,
+            "reset-password.ejs", { resetUrl });
 
         res.status(200).send("Recovery email sent.");
     } catch (err) {
@@ -315,7 +308,7 @@ router.post("/reset-password", async (req, res) => {
         }
 
         // Step 1: Verify token validity (throws exception on error)
-        await TokenHelper.validateToken(token, config.dbconnString);
+        await TokenHelper.validatePasswordResetToken(token, config.dbconnString);
 
         // Step 2: Update the password
         const updateResult = await updatePassword(token, email, pass, config.dbconnString);

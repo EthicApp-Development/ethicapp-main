@@ -2,7 +2,10 @@
     "email": {
       "reset": {
         "subject": "Restablece tu contraseña - EthicApp"
-      }
+      },
+      "verification": {
+        "subject": "Verifica tu dirección de correo electrónico - EthicApp"
+      }      
     }
   }
   
