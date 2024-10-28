@@ -61,7 +61,6 @@ export let RegistrationsController = ($scope, $http) => {
 
             $http.post("/teacher_account_request", userData)
                 .then(function (response) {
-                    console.debug("requested teacher account");
                     console.debug(JSON.stringify(response));
                     if (response.data.success) {
                         console.debug("Successful teacher account request");
@@ -77,7 +76,7 @@ export let RegistrationsController = ($scope, $http) => {
                 .then(function (response) {
                     if (response.data.success) {
                         console.debug("Successful registration");
-                        window.location.href = "/login?welc=registration_complete";
+                        window.location.href = "/login?welc=email_validation_notice";
                     } else {
                         throw new Error(`Error in registration: ${response.data.message}`);
                     }

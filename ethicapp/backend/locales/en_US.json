@@ -5,6 +5,9 @@
 		},
 		"verification": {
 			"subject": "Verify your email address - EthicApp"
-		}
+		},
+    "teacher_account_activated": {
+      "subject": "Your teacher account is now active - EthicApp"
+    }
 	}
 }

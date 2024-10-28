@@ -7,6 +7,7 @@ import { RegistrationsController } from "../../controllers/common/registrations_
 import { ProfileController } from "../../controllers/common/profile_controller.js";
 import { CredentialsController } from "../../controllers/common/credentials_controller.js";
 import { LocalesController } from "../../controllers/common/locales_controller.js";
+import { ErrorsController } from "../../controllers/common/errors_controller.js";
 
 let ngapp_user_common = angular.module("UserCommon", 
     ["ui.bootstrap", "ngRoute", "pascalprecht.translate"]);
@@ -43,6 +44,8 @@ ngapp_user_common.controller("RegistrationsController",
     ["$scope", "$http", RegistrationsController]);
 ngapp_user_common.controller("ProfileController",
     ["$scope", "$http", ProfileController]);
+ngapp_user_common.controller("ErrorsController",
+    ["$scope", "$http", ErrorsController]);    
 ngapp_user_common.controller("CredentialsController",
     ["$scope", "$http", "$window", CredentialsController]);
 

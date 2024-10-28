@@ -13,6 +13,7 @@ import * as UserSchemas from "../request-schemas/user-schemas.js";
 import * as RecaptchaHelper from "../../helpers/recaptcha-helper.js";
 import * as TokenHelper from "../../helpers/token-helper.js";
 import * as EmailHelper from "../../helpers/email-helper.js";
+import * as UsersHelper from "../../helpers/users-helper.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,7 +54,7 @@ router.post("/login", (req, res, next) => {
             return res.status(401).json({ message: "login_failed" });
         }
 
-        const is_teacher = (user["role"] === "P" || user["role"] === "S") ? 1 : 0;
+        // const is_teacher = (user["role"] === "P" || user["role"] === "S") ? 1 : 0;
 
         // Log the user access into the database
         const sqlParams = [0];
@@ -110,23 +111,6 @@ router.get("/forgot", async (req, res) => {
     }
 });
 
-async function checkUserExists(email, dbcon) {
-    const sql = "SELECT 1 FROM users WHERE mail = $1 LIMIT 1";
-    const sqlParams = [email];
-
-    try {
-        const result = await execSQL({
-            sql,
-            dbcon,
-            sqlParams
-        });
-        return result.length > 0;
-    } catch (err) {
-        console.error("Error checking user existence:", err);
-        throw new Error("Error checking user existence.");
-    }
-}    
-
 router.post("/forgot", async (req, res) => {
     async function requestPasswordReset(email, dbcon) {
         const { token, expires } = TokenHelper.generateToken();
@@ -169,7 +153,7 @@ router.post("/forgot", async (req, res) => {
         const { email, lang } = req.body;
         const locale = lang || "en_US";
 
-        const userExists = await checkUserExists(email, config.dbconnString);
+        const userExists = await UsersHelper.checkIfUserExists(email);
         if (!userExists) {
             return res.status(409).json({
                 success: false,
@@ -283,7 +267,7 @@ router.post("/reset-password", async (req, res) => {
         const { email, pass, cpass, token } = req.body;
         
         // The user must exist
-        const userExists = await checkUserExists(email, config.dbconnString);
+        const userExists = await UsersHelper.checkIfUserExists(email);
         if (!userExists) {
             return res.status(409).json({
                 success: false,

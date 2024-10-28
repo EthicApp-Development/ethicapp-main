@@ -61,7 +61,8 @@ passport.deserializeUser(async (user, done) => {
             }
         };
 
-        // Check if user is being deserialized from Google OAuth (has `email`) or from local (has `mail`)
+        // Check if user is being deserialized from Google OAuth (has `email`) 
+        // or from local (has `mail`)
         const email = user.email || user.mail;
 
         // Query the user by email
