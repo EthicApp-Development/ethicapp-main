@@ -33,5 +33,6 @@ export const passwordResetSchema = Yup.object().shape({
     email:                Yup.string().email("invalidEmail").required("requiredEmail"),
     pass:                 Yup.string().min(8, "minLengthPassword").required("requiredPassword"),
     cpass:                Yup.string().min(8, "minLengthPassword").required("requiredPassword"),
+    token:                Yup.string().min(32, "minTokenLength").required("requiredToken"),
     g_recaptcha_response: Yup.string().required("requiredCaptcha")
 });

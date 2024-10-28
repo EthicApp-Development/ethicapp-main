@@ -53,7 +53,7 @@ const __dirname = path.dirname(__filename);
 
 i18n.configure({
     locales:        ["es_CL", "en_US"],
-    directory:      path.join(__dirname, "locales"),
+    directory:      path.join(__dirname, "backend/locales"),
     defaultLocale:  "en_US",
     queryParameter: "lang",
     objectNotation: true,

@@ -12,7 +12,7 @@ export async function validateToken(token, dbcon) {
         const users = await pglib.execSQL({
             sql,
             dbcon,
-            sqlParams: sqlParams.map((param, index) => pglib.param("plain", `param${index}`))
+            sqlParams: sqlParams
         });
 
         if (users.length === 0) {

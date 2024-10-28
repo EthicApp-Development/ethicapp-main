@@ -72,17 +72,21 @@ export let CredentialsController = ($scope, $http, $window) => {
             return;
         } 
 
-        const emailElement = document.getElementById('user-email');
-        self.user.email = emailElement.getAttribute('data-email') || '';        
+        const emailElement = document.getElementById("user-email");
+        self.user.email = emailElement.getAttribute("data-email") || "";        
+
+        const tokenElement = document.getElementById("user-token");
+        self.user.token = tokenElement.getAttribute("data-token") || "";        
 
         const params = {
             email:                self.user.email,
             pass:                 self.user.password,
             cpass:                self.user.passwordConfirmation,
+            token:                self.user.token,
             g_recaptcha_response: recaptchaResponse
         };
 
-        $http.post("/forgot", params)
+        $http.post("/reset-password", params)
             .then(response => {
                 if (response.status === 200) {
                     console.debug("password reset operation succeeded!");

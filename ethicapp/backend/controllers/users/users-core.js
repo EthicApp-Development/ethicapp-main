@@ -66,14 +66,17 @@ router.post("/login", (req, res, next) => {
         };
 
         try {
+            console.debug("Pre query");
             // Execute the query using the new executeSQL function
             await execSQL(dbParams);
 
+            console.debug("Pre login");
             // Log the user
             req.logIn(user, (err) => {
                 if (err) {
                     return next(err);
                 }
+                console.debug("Succeeded");
                 return res.status(200).json({ message: "login_succeeded" });
             });
         } catch (err) {
@@ -109,6 +112,23 @@ router.get("/forgot", async (req, res) => {
     }
 });
 
+async function checkUserExists(email, dbcon) {
+    const sql = "SELECT 1 FROM users WHERE mail = $1 LIMIT 1";
+    const sqlParams = [email];
+
+    try {
+        const result = await execSQL({
+            sql,
+            dbcon,
+            sqlParams
+        });
+        return result.length > 0;
+    } catch (err) {
+        console.error("Error checking user existence:", err);
+        throw new Error("Error checking user existence.");
+    }
+}    
+
 router.post("/forgot", async (req, res) => {
     async function requestPasswordReset(email, dbcon) {
         const token = crypto.randomBytes(20).toString("hex");
@@ -135,23 +155,6 @@ router.post("/forgot", async (req, res) => {
             throw new Error("Error processing password reset request.");
         }
     }
-
-    async function checkUserExists(email, dbcon) {
-        const sql = `SELECT 1 FROM users WHERE mail = $1 LIMIT 1`;
-        const sqlParams = [email];
-
-        try {
-            const result = await execSQL({
-                sql,
-                dbcon,
-                sqlParams
-            });
-            return result.length > 0;
-        } catch (err) {
-            console.error("Error checking user existence:", err);
-            throw new Error("Error checking user existence.");
-        }
-    }    
 
     try {
         await UserSchemas.passwordRecoverySchema.validate(req.body);
@@ -185,8 +188,8 @@ router.post("/forgot", async (req, res) => {
 
         const emailText = await buildEmail(locale, "reset-password.ejs", { resetUrl });
         const attachments = [{
-            filename: 'ethicapp-logo-email.png',
-            cid: 'ethicappLogo'
+            filename: "ethicapp-logo-email.png",
+            cid:      "ethicappLogo"
         }];
 
         await sendEmail(email, subject, emailText, attachments);
@@ -246,6 +249,7 @@ router.get("/reset-password", async (req, res) => {
             controller:   "CredentialsController",
             extraScripts: `${captchaScript}`,
             email:        email,
+            token:        token,
             rc:           req.query.rc
         });
     } catch (error) {
@@ -254,13 +258,13 @@ router.get("/reset-password", async (req, res) => {
     }
 });
 
-router.post("/reset-password/:token", async (req, res) => {
+router.post("/reset-password", async (req, res) => {
     async function updatePassword(token, email, newPassword, dbcon) {
         const hashedPassword = await bcrypt.hash(newPassword, 10);
     
         const sql = `
             UPDATE users 
-            SET password = $1, reset_password_token = NULL, reset_password_expires = NULL 
+            SET pass = $1, reset_password_token = NULL, reset_password_expires = NULL 
             WHERE reset_password_token = $2 AND
             mail = $3
         `;
@@ -270,7 +274,7 @@ router.post("/reset-password/:token", async (req, res) => {
             await execSQL({
                 sql,
                 dbcon,
-                sqlParams: sqlParams.map((param, index) => param("plain", `param${index}`))
+                sqlParams: sqlParams
             });
     
             return true;
@@ -283,10 +287,8 @@ router.post("/reset-password/:token", async (req, res) => {
     try {
         // Validate request parameter syntax
         await UserSchemas.passwordResetSchema.validate(req.body);
-
-        const { token } = req.params;
-        const { email, pass, cpass } = req.body;
-
+        const { email, pass, cpass, token } = req.body;
+        
         // The user must exist
         const userExists = await checkUserExists(email, config.dbconnString);
         if (!userExists) {
@@ -312,11 +314,18 @@ router.post("/reset-password/:token", async (req, res) => {
                 { success: false, message: "captcha_error" });
         }
 
-        // Step 1: Verify token validity
-        TokenHelper.validateToken(token, config.dbconnString);
+        // Step 1: Verify token validity (throws exception on error)
+        await TokenHelper.validateToken(token, config.dbconnString);
 
         // Step 2: Update the password
-        await updatePassword(token, email, pass, config.dbconnString);
+        const updateResult = await updatePassword(token, email, pass, config.dbconnString);
+        
+        if (!updateResult) {
+            const error = "Failed to update password";
+            console.error(error); 
+            throw new Error(error);
+        }
+
         res.status(200).send({ message: "password_reset_success"});
     } catch (err) {
         return res.status(500).send("password_reset_failure");
@@ -352,7 +361,7 @@ router.get("/profile", (req, res) => {
 
 router.get("/google",
     passport.authenticate("google", {
-        scope: ["email", "profile"],
+        scope:  ["email", "profile"],
         prompt: "consent"
     })
 );
