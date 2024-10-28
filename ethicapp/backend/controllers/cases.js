@@ -595,13 +595,14 @@ router.delete("/cases/:caseId/documents/:documentId", (req, res) => {
         .then(documentPath => {
             if (documentPath) {
                 // Ruta de la carpeta que contiene el archivo
-                const folderPath = path.join(pass.uploadPath, path.dirname(documentPath)).split("pdf")[0];
-
+                const folderPath = path.join("frontend", path.dirname(documentPath)).split("pdf")[0];
+                console.log("folderPath", folderPath);
                 fs.rmdir(folderPath, { recursive: true }, (err) => {
                     if (err) {
                         console.error("Error deleting folder:", err);
                         res.status(500).json({ status: 'error', message: 'Error deleting folder' });
                     } else {
+                        console.log(folderPath, 'deleted successfully');
                         res.status(204).end();
                     }
                 });
@@ -657,7 +658,7 @@ router.delete("/cases/:caseId", async (req, res) => {
 
         // Eliminar las carpetas de los documentos
         documentPaths.forEach(documentPath => {
-            const folderPath = path.join(pass.uploadPath, path.dirname(documentPath)).split("pdf")[0];
+            const folderPath = path.join("frontend", path.dirname(documentPath)).split("pdf")[0];
             fs.rmdir(folderPath, { recursive: true }, err => {
                 if (err) {
                     console.error("Error when deleting folder", err);
@@ -735,13 +736,21 @@ router.post("/cases/:case_id/clone", async (req, res) => {
             if (doc.id && doc.path) {
                 // Crear una nueva ruta para el archivo
                 const oldRelativePath = doc.path;
-                const oldFullPath = path.join('frontend/assets/uploads', oldRelativePath);
+                const oldFullPath = path.join('frontend', oldRelativePath);
 
                 // Generar un nuevo hash para crear una ruta única
                 const newHash = crypto.randomBytes(16).toString('hex');
-                const newDirectory = path.join('frontend/assets/uploads', newHash, 'pdf');
-                const newRelativePath = path.join(newHash, 'pdf', path.basename(oldRelativePath));
+                const newDirectory = path.join(pass.uploadPath, newHash, 'pdf');
+                const newRelativePath = path.join("assets", "uploads", newHash, 'pdf', path.basename(oldRelativePath));
                 const newFullPath = path.join(newDirectory, path.basename(oldRelativePath));
+
+
+                console.log('oldRelativePath:', oldRelativePath);
+                console.log('oldFullPath:', oldFullPath);
+                console.log('newDirectory:', newDirectory);
+                console.log('newRelativePath:', newRelativePath);
+                console.log('newFullPath:', newFullPath);
+
 
                 // Crear el directorio si no existe
                 if (!fs.existsSync(newDirectory)) {
