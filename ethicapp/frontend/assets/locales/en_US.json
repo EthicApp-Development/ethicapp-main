@@ -1,4 +1,10 @@
 {
+	"400_bad_request" : "400 - Nos has enviado una solicitud errónea.",
+	"401_unauthorized": "401 - No estás autorizado a acceder al recurso solicitado.",
+	"403_forbidden" : "403 - Estás accediendo a una zona resguardada.",
+	"404_not_found" : "404 - No es posible encontrar lo solicitado.",
+	"500_internal_server_error" : "500 - Ha ocurrido un error en nuestra aplicación. Puedes intentar nuevamente más tarde.",
+	"xxx_unknown_error" : "An unknown error has transpired. Please try again later.",
 	"Av": "Av",
 	"Back": "Back",
 	"Enter_the_users": "Enter the users data",

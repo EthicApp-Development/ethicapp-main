@@ -1,4 +1,10 @@
 {
+	"400_bad_request": "400 - You have sent us a bad request.",
+	"401_unauthorized": "401 - You are not authorized to access the requested resource.",
+	"403_forbidden": "403 - You are attempting to access a restricted area.",
+	"404_not_found": "404 - The requested item could not be found.",
+	"500_internal_server_error": "500 - An error occurred in our application. You may try again later.",
+	"xxx_unknown_error" : "Ocurrió un error desconocido. Intenta nuevamente más tarde.",
 	"adminPanel": "Panel de Administración",
 	"new": "Nueva",
 	"session": "Sessión",

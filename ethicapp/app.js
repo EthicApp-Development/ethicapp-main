@@ -38,12 +38,13 @@ import fs from "fs";
 
 //import sessions from "./backend/controllers/sessions.js";
 
-import { uploadsPath } from "./backend/config/config.js";
+import * as config from "./backend/config/config.js";
 import { validateSession } from "./backend/middleware/validate-session.js";
 import i18n from "i18n";
 import path from "path";
 import { fileURLToPath } from "url";
 import expressLayouts from "express-ejs-layouts";
+import { ErrorReply } from "redis";
 
 let app = express();
 app.set("trust proxy", true); // i.e., trust headers from a reverse proxy
@@ -72,13 +73,13 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// Asset handling
 const assetPath = path.join(__dirname, "/frontend/assets");
 app.use(express.static(assetPath));
 app.use(assetVersions("/assets", assetPath));
 
-// JSON handling for requests
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Uploads
+app.use("/uploads", express.static(path.join(__dirname, "frontend/assets")));
 
 // view engine setup
 app.set("views", path.join(__dirname, "frontend/views"));
@@ -86,18 +87,31 @@ app.set("view engine", "ejs");
 app.use(expressLayouts); // Usar express-ejs-layouts
 app.set("layout", "./layouts/basic-common"); 
 
+// Initialize passport for authentication
+const router = express.Router();
+router.use(passport.initialize());
+router.use(passport.session());
+
+// JSON handling for requests
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Initialize the logger
 app.use(logger("[EthicApp] :method :url :status - :response-time ms"));
+
+// Setup busboy for uploads
 busboy.extend(app, {
     upload:        true,
     mimeTypeLimit: ["application/pdf", "image/png"],
-    path:          uploadsPath,
+    path:          config.uploadsPath,
     limits:        { fileSize: 5*1024*1024 }
 });
 
-app.use(cookieParser());
+// Static path for frontend files
 app.use(express.static(path.join(__dirname, "frontend")));
-app.use("/uploads",express.static(path.join(__dirname, "frontend/assets")));
 
+// Set up cookies and session management
+app.use(cookieParser());
 app.use(session({
     store: new FileStore({
         path:     path.join(__dirname, "/sessions"),
@@ -138,23 +152,43 @@ app.use("/", users_registration);
 // app.use("/", validateSession, stages);
 // app.use("/", validateSession, content_analysis);
 
-// catch 404 and forward to error handler
+// Catch 404 and forward to error handler
 app.use((req, res, next) => {
-    console.log(`[app.use error] req.path: '${req.path}'`);
-    let err = new Error("Not Found");
+    console.log(`[404 error] Request path: '${req.path}'`);
+    const err = new Error("Not Found");
     err.status = 404;
     next(err);
 });
 
-// error handler
-app.use((err, req, res) => {
-    // set locals, only providing error in development
-    res.locals.message = err.message;
-    res.locals.error = req.app.get("env") === "development" ? err : {};
+// Error handler
+app.use((err, req, res, next) => {
+    const env = req.app.get("ETHICAPP_ENV") || "production";
 
-    // render the error page
-    res.status(err.status || 500);
-    res.render("error");
+    // Log the error for debugging (if not production)
+    if (env === "development" || env === "test") {
+        console.error(`[${err.status || 500}] ${err.message}`);
+    }
+
+    // Determine error message key based on status
+    const statusCode = err.status || 500;
+    const messageKeys = {
+        400: "400_bad_request",
+        401: "401_unauthorized",
+        403: "403_forbidden",
+        404: "404_not_found",
+        500: "500_internal_server_error",
+    };
+    const messageKey = messageKeys[statusCode] || "xxx_unknown_error";
+
+    // Set locals for error rendering
+    res.locals.error = env === "production" ? {} : err;
+    res.locals.message = err.message;
+    
+    // Render the error page
+    res.status(statusCode).render("error", {
+        message_key: messageKey,
+        error:       res.locals.error,
+    });
 });
 
 export default app;
