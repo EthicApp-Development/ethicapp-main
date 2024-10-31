@@ -1,0 +1,15 @@
+FROM python:3.9-slim
+
+WORKDIR /app/content-analysis
+
+COPY requirements-worker.txt requirements.txt
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+CMD ["celery", "-A", "tasks", "worker", "-P", "solo", "-l", "info", "-Q", "celery", "-n", "celery"]

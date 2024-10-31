@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS users (
     name text NOT NULL,
     rut text NOT NULL,
     pass text NOT NULL,
-    mail text NOT NULL,
+    mail text NOT NULL UNIQUE,
     sex char(1),
     role char(1),
     PRIMARY KEY (id)
