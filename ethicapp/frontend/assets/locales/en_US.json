@@ -173,6 +173,7 @@
 	"login_failed": "Wrong email or password.",
 	"pass_recovery_directions" : "We will send you an email to recover your password. Please check your SPAM folder if you do not find it in your inbox.",
 	"pass_recovery_token_expired" : "Your password recovery token has expired. Please enter your email address again to recover your password.",
+	"password_reset_instructions" : "Please enter a strong password to protect your identity and data.",
 	"password_recovery_email_sent": "An email has been sent to you to recover your password. If you do not see it in your inbox, check your SPAM folder.",
 	"password_updated": "Password change succesfully. Log in in your account.",
 	"account_activated":"Your account is now active.",

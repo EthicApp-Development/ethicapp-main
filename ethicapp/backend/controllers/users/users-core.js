@@ -14,6 +14,7 @@ import * as RecaptchaHelper from "../../helpers/recaptcha-helper.js";
 import * as TokenHelper from "../../helpers/token-helper.js";
 import * as EmailHelper from "../../helpers/email-helper.js";
 import * as UsersHelper from "../../helpers/users-helper.js";
+import * as EthicAppEventLogger from "../stats/event-logger.js"
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,50 +33,29 @@ router.get("/login", (req, res) => {
 
 router.post("/login", (req, res, next) => {
     passport.authenticate("local", async (err, user) => {
-        const { source } = req.body;
-
-        if (source === "admin-panel") {
-            if (!user) {
-                return res.status(200).json({ sessionID: "ErrorCredential" });
-            }
-
-            if (user["role"] !== "S") {
-                return res.status(200).json({ sessionID: "Unauthorized" });
-            }
-
-            const sessionID = req.sessionID;
-            return res.status(200).json({ sessionID });
-        }
-
-        if (err) {
-            return next(err);
-        }
-        if (!user) {
-            return res.status(401).json({ message: "login_failed" });
-        }
-
-        // const is_teacher = (user["role"] === "P" || user["role"] === "S") ? 1 : 0;
-
-        // Log the user access into the database
-        const sqlParams = [0];
-        const dbParams = {
-            sql:       "SELECT UpdateOrInsertLoginRecord($1)",
-            dbcon:     config.dbconnString,
-            sqlParams: sqlParams
-        };
-
         try {
-            console.debug("Pre query");
-            // Execute the query using the new executeSQL function
-            await execSQL(dbParams);
+            if (!user) {
+                return res.status(401).json({ message: "login_failed" });
+            }
 
-            console.debug("Pre login");
-            // Log the user
+            if (err) {
+                return next(err);
+            }
+    
+            if (await UsersHelper.hasTheUserRole(user.mail, 'S')) {
+                return res.status(401).json({ message: "login_failed" });
+            }
+
+            // Record the login event
+            EthicAppEventLogger.userLogin();
+
+            console.log("post logger");
+
+            // Create a session for the user
             req.logIn(user, (err) => {
                 if (err) {
                     return next(err);
                 }
-                console.debug("Succeeded");
                 return res.status(200).json({ message: "login_succeeded" });
             });
         } catch (err) {
@@ -83,6 +63,30 @@ router.post("/login", (req, res, next) => {
             return res.status(500).json({ message: "login_failed" });
         }
     })(req, res, next);
+});
+
+router.post("/login/admin", async (req, res, next) => {
+    const { source } = req.body;
+
+    const isAdmin = await UsersHelper.hasTheUserRole(user.mail, 'S');
+    if (!isAdmin) {
+        return res.status(401).json({ message: "login_failed" });
+    }
+
+    if (source === "admin-panel") {
+        if (!user) {
+            return res.status(200).json({ sessionID: "ErrorCredential" });
+        }
+    
+        if (user["role"] !== "S") {
+            return res.status(200).json({ sessionID: "Unauthorized" });
+        }
+    
+        const sessionID = req.sessionID;
+        return res.status(200).json({ sessionID });
+    }
+
+    return res.status(400);
 });
 
 router.get("/forgot", async (req, res) => {
@@ -112,24 +116,10 @@ router.get("/forgot", async (req, res) => {
 });
 
 router.post("/forgot", async (req, res) => {
-    async function requestPasswordReset(email, dbcon) {
-        const { token, expires } = TokenHelper.generateToken();
-    
-        const sql = `
-            UPDATE users 
-            SET reset_password_token = $1, reset_password_expires = $2 
-            WHERE mail = $3
-        `;
-
-        const sqlParams = [token, expires, email];  // No proceses sqlParams como JSON
-
+    async function requestPasswordReset(email, dbcon) {        
         try {
-            await execSQL({
-                sql,
-                dbcon,
-                sqlParams  // Pasar sqlParams directamente
-            });
-    
+            const { token, expires } = TokenHelper.generateToken();
+            await UsersHelper.setPasswordResetToken(token, expires, email);
             return token;
         } catch (err) {
             console.error("Error updating password reset token:", err);
@@ -236,31 +226,6 @@ router.get("/reset-password", async (req, res) => {
 });
 
 router.post("/reset-password", async (req, res) => {
-    async function updatePassword(token, email, newPassword, dbcon) {
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-    
-        const sql = `
-            UPDATE users 
-            SET pass = $1, reset_password_token = NULL, reset_password_expires = NULL 
-            WHERE reset_password_token = $2 AND
-            mail = $3
-        `;
-        const sqlParams = [hashedPassword, token, email];
-    
-        try {
-            await execSQL({
-                sql,
-                dbcon,
-                sqlParams: sqlParams
-            });
-    
-            return true;
-        } catch (err) {
-            console.error("Error updating password:", err);
-            throw new Error("Error updating password.");
-        }
-    }
-
     try {
         // Validate request parameter syntax
         await UserSchemas.passwordResetSchema.validate(req.body);
@@ -295,7 +260,7 @@ router.post("/reset-password", async (req, res) => {
         await TokenHelper.validatePasswordResetToken(token, config.dbconnString);
 
         // Step 2: Update the password
-        const updateResult = await updatePassword(token, email, pass, config.dbconnString);
+        const updateResult = await UsersHelper.updatePassword(token, email, pass);
         
         if (!updateResult) {
             const error = "Failed to update password";
@@ -354,15 +319,8 @@ router.get("/google/callback",
 );
 
 router.get("/login_record", async (req, res) => {
-    const sqlParams = [0];
-    const dbParams = {
-        sql:       "SELECT UpdateOrInsertLoginRecord($1)",
-        dbcon:     config.dbconnString,
-        sqlParams: sqlParams,
-    };
-
     try {                        
-        await execSQL(dbParams);
+        EthicAppEventLogger.userLogin();
         res.redirect("/seslist");
     } catch (error) {
         console.error(error);

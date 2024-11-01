@@ -1,9 +1,7 @@
-import { dbconnString } from "../../config/config.js";
 import passport from "passport";
-import bcrypt from "bcrypt"; 
-import { param, execSQL } from  "../../db/rest-pg-2.js";
 import { Strategy as GoogleStrategy } from "passport-google-oauth2";
 import { Strategy as LocalStrategy } from "passport-local";
+import * as UsersHelper from '../../helpers/users-helper.js';
 
 passport.serializeUser( (user, done) => {    
     done(null, user);
@@ -11,72 +9,27 @@ passport.serializeUser( (user, done) => {
 
 passport.deserializeUser(async (user, done) => {
     try {
-        // Function to query user by email
-        const queryUser = async (email) => {
-            const sqlParams = [param("plain", email)];
-            const dbParams = {
-                sql:       "SELECT * FROM users WHERE mail = $1",
-                dbcon:     dbconnString,
-                sqlParams: sqlParams,
-            };
-
-            try {
-                const result = await execSQL(dbParams);
-                return result;
-            } catch (err) {
-                console.error("Error querying user:", err);
-                throw new Error("Failed to query user");
-            }
-        };
-
-        // Function to insert a new user
-        const insertNewUser = async (displayName, email) => {
-            try {
-                const saltRounds = 10; 
-                const passwordHash = await bcrypt.hash(displayName, saltRounds);
-
-                const sqlParams = [
-                    param("plain", displayName),
-                    param("plain", email),
-                    param("plain", passwordHash),
-                    param("plain", "11111111-1"),
-                    param("plain", "U"), // Undefined gender
-                    param("plain", "A"), // Student role
-                    param("verified_email", "TRUE") // Verification by Google
-                ];
-
-                const dbParams = {
-                    sql:       
-                        `INSERT INTO users (
-                            name, mail, pass, rut, sex, role, verified_email) 
-                            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-                    dbcon:     dbconnString,
-                    sqlParams: sqlParams,
-                };
-
-                await execSQL(dbParams);  // No need for Promise wrapping
-            } catch (err) {
-                console.error("Error during user insertion:", err);
-                throw new Error("Failed to insert new user");
-            }
-        };
-
         // Check if user is being deserialized from Google OAuth (has `email`) 
         // or from local (has `mail`)
         const email = user.email || user.mail;
 
+        if (!UsersHelper.isEmailVerified(email)) {
+            throw new Error("The user's email account is not verified.");
+        }
+
         // Query the user by email
-        const existingUser = await queryUser(email);
+        const existingUser = await UsersHelper.getUserByEmail(email);
 
         if (existingUser.length > 0) {
             const foundUser = existingUser[0];
             done(null, foundUser);
         } else if (user.email) {
-            // If it's a Google user and no user is found, insert a new user
-            await insertNewUser(user.displayName, user.email);
+            // If it's an OAuth (e.g., Google) user and no user 
+            // is found, insert a new user
+            await UsersHelper.insertNewUser(user.displayName, user.email);
             
             // Query the newly inserted user
-            const newUser = await queryUser(user.email);
+            const newUser = await UsersHelper.getUserByEmail(user.email);
             if (newUser.length > 0) {
                 done(null, newUser[0]);
             } else {
@@ -124,24 +77,15 @@ passport.use(new LocalStrategy(
     },
     async (email, password, done) => {
         try {
-            // Prepare SQL parameters
-            const sqlParams = [param("plain", email)];
-            const dbParams = {
-                sql:       "SELECT * FROM users WHERE mail = $1",
-                dbcon:     dbconnString,
-                sqlParams: sqlParams
-            };
-
-            const result = await execSQL(dbParams);
+            // Get the user by email
+            const userRecord = await UsersHelper.getUserByEmail(email);
 
             // Check if the user exists
-            if (result.length > 0) {
-                const user = result[0];
+            if (userRecord.length > 0) {
+                const user = userRecord[0];
+                const match = await UsersHelper.validatePassword(password, user.pass);
 
-                // Compare passwords using bcrypt
-                const passwordMatch = await bcrypt.compare(password, user.pass);
-
-                if (passwordMatch) {
+                if (match) {
                     // If the password matches, return the user
                     return done(null, user);
                 } else {
