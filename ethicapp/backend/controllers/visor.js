@@ -5,10 +5,9 @@ let router = express.Router();
 let rpg = require("../db/rest-pg");
 let pass = require("../config/keys-n-secrets");
 let socket = require("../config/socket.config");
-const {initializeContentAnalysis, isContentAnalysisAvailable} = require("../services/content-analysis");
+const {initializeContentAnalysis, isContentAnalysisAvailable} = require("../services/content-analysis/content-analysis");
 
 let sesStatusCache = {};
-
 
 function doRedirect (status, res, call){
     console.log(status);
@@ -25,7 +24,6 @@ function doRedirect (status, res, call){
         break;
     }
 }
-
 
 router.get("/to-visor", (req, res) => {
     if (req.session.uid && !isNaN(req.query.sesid)) {

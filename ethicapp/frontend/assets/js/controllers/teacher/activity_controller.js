@@ -9,6 +9,7 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
     self.init =function(){
         self.selectedSes = {};
         self.launchDesignId = self.launchId.id;
+        self.shared.getActivities();
         self.checkContentAnalysisAvailability();
     };
 
@@ -177,15 +178,22 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
     };
 
     self.currentActivities = function(type){
-        if (type == 0) return self.activities.filter(function(activity) {
-            return activity.status != 3 && activity.archived == false;
-        });
-        if (type == 1) return self.activities.filter(function(activity) {
-            return activity.status == 3 && activity.archived == false;
-        });
-        if (type == 2) return self.activities.filter(function(activity) {
-            return activity.archived;
-        });
+        try {
+            if (!self.activities) {
+                return;
+            }
+            if (type == 0) return self.activities.filter(function(activity) {
+                return activity.status != 3 && activity.archived == false;
+            });
+            if (type == 1) return self.activities.filter(function(activity) {
+                return activity.status == 3 && activity.archived == false;
+            });
+            if (type == 2) return self.activities.filter(function(activity) {
+                return activity.archived;
+            });    
+        } catch (error) {
+            
+        }
     };
 
     self.designSelected = function(){
@@ -200,17 +208,17 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
     };
 
     self.checkContentAnalysisAvailability = function() {
-    $http.post('/content-analysis-availability')
-        .then(function(response) {
-            if (response.status === 200) {
-                self.isContentAnalysisEnable = true;
-            } else {
+        $http.post('/content-analysis-availability')
+            .then(function(response) {
+                if (response.status === 200) {
+                    self.isContentAnalysisEnable = true;
+                } else {
+                    self.isContentAnalysisEnable = false;
+                }
+            })
+            .catch(function(error) {
                 self.isContentAnalysisEnable = false;
-            }
-        })
-        .catch(function(error) {
-            self.isContentAnalysisEnable = false;
-        });
+            });
     };
 
     self.init();

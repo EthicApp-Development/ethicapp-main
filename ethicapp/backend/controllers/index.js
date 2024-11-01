@@ -1,7 +1,6 @@
 "use strict";
 
 import express from "express";
-import { validateSession } from "../middleware/validate-session.js";
 let router = express.Router();
 
 router.get("/", (req, res) => {
@@ -25,16 +24,6 @@ router.get("/", (req, res) => {
     }
     else
         res.redirect("login");
-});
-
-
-router.get("/super", validateSession ,(req,res) => {
-    if(req.session.uid && req.session.role == "S"){
-        res.render("super");
-    }
-    else{
-        res.redirect("/login");
-    }
 });
 
 export default router;

@@ -10,8 +10,8 @@
 window.DIC = null;
 window.warnDIC = {};
 
-var adpp = angular.module("Admin", ["ngSanitize", "btford.socket-io", 
-    "api-params", "ui.bootstrap", "ui.multiselect", "nvd3", "timer",
+var adpp = angular.module("TeacherApp", ["ngSanitize", "btford.socket-io",
+    "ui.bootstrap", "ui.multiselect", "timer",
     "ui-notification", "ngQuill", "tableSort", "pascalprecht.translate", 
     "ngRoute", "checklist-model", "ngDialog"]
 ).factory("TabStateService", function() {
@@ -34,6 +34,7 @@ var adpp = angular.module("Admin", ["ngSanitize", "btford.socket-io",
     return service;
 });
 
+import { LocalesController } from "../../controllers/common/locales_controller.js";
 import { ActivityController } from "../../controllers/teacher/activity_controller.js";
 import { StagesController } from "../../controllers/teacher/stages_controller.js";
 import { BrowseDesignsController } from "../../controllers/teacher/browse_designs_controller.js";
@@ -80,7 +81,7 @@ adpp.config(function($translateProvider) {
     $translateProvider.useSanitizeValueStrategy("sanitizeParameters");
 
     $translateProvider.useStaticFilesLoader({
-        prefix: "assets/i18n/", 
+        prefix: "assets/locales/", 
         suffix: ".json"
     });
 
@@ -89,6 +90,8 @@ adpp.config(function($translateProvider) {
 });
 
 // Inject controllers into application
+adpp.controller("LocalesController", 
+    ["$translate", "$scope", "$rootScope", LocalesController]);   
 adpp.controller("RoutingController", 
     ["$scope", RoutingController]);
 adpp.controller("ManagementController",

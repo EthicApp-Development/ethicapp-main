@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html ng-app="TeacherApp">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title><%= typeof title !== 'undefined' ? title : "EthicApp" %></title>
+  <script src="/assets/libs/angular.min.js" defer></script>
+  <script src="/assets/libs/angular-sanitize.min.js" defer></script>
+  <script src="/assets/libs/angular-translate-2.18.4.min.js" defer></script>
+  <script src="/assets/libs/angular-timer.min.js" defer></script>
+  <script src="/assets/libs/angular-translate-loader-static-files-2.18.4.min.js" defer></script>
+  <script src="/socket.io/socket.io.js" defer></script>
+  <script src="<%= asset('/js/assets-bundle.js') %>" defer></script>
+  <%- include('../partials/favicon.ejs') %>
+  <script type="module" 
+    src="<%= asset('/js/ngmodules/teacher/teacher_admin.mjs','/js/ngmodules/teacher/bundled-teacher-admin.min.js') %>"
+    defer></script>
+  <script src="assets/libs/ng-quill.min.js" defer></script>
+  <script src="assets/libs/save-csv.min.js" defer></script>
+  <script src="assets/libs/ngDialog.min.js" defer></script>
+  <script src="assets/libs/socket.min.js" defer></script>
+  <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css" />
+  <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
+  <%- typeof extraScripts !== 'undefined' ? extraScripts : '' %>
+</head>
+<body ng-controller="LocalesController">
+  <div class="loading-overlay" ng-if="!translationsLoaded" ng-class="{'loading': !translationsLoaded}">
+    <p>Loading...</p>
+  </div>
+  <div ng-if="translationsLoaded" ng-controller="<%= typeof controller !== 'undefined' ? controller : 'VoidController' %>">
+  <%- body %>
+  </div>
+  <%- typeof bottomScripts !== 'undefined' ? bottomScripts : '' %>
+</body>
+</html>

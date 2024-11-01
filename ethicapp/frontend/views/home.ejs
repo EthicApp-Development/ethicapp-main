@@ -1,32 +1,3 @@
-<!DOCTYPE html>
-<html ng-app="Admin">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>EthicApp</title>
-  <script src="assets/libs/angular.js"></script>
-  <script src="assets/libs/angular-nvd3.min.js"></script>
-  <script src="assets/libs/ng-quill.min.js"></script>
-  <script src="assets/libs/angular-sanitize.min.js"></script>
-  <script src="assets/libs/angular-translate-2.18.4.min.js"></script>
-  <script src="assets/libs/angular-translate-loader-static-files-2.18.4.min.js"></script>
-  <script src="assets/libs/save-csv.min.js"></script>
-  <script src="assets/libs/ngDialog.min.js"></script>
-  <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"
-    integrity="sha384-c79GN5VsunZvi+Q/WObgk2in0CbZsHnjEqvFxC5DxHn9lTfNce2WW6h2pH6u/kF+"
-    crossorigin="anonymous"></script>
-  <script src="assets/libs/socket.min.js"></script>
-  <script rel="stylesheet"
-    src="<%= asset('/js/ngmodules/teacher/teacher_admin.mjs','/js/ngmodules/teacher/bundled-teacher-admin.min.js') %>"
-    type="module" defer></script>
-  <script src="<%= asset('/js/assets-bundle.js') %>"></script>
-  <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
-  <link rel="stylesheet" href="//cdn.quilljs.com/1.2.0/quill.snow.css" />
-  <%- include('partials/favicon.ejs') %>
-</head>
-
-<body ng-controller="ManagementController">
   <div class="top-bar-mini cflex" ng-hide="false">
     <div class="cf1">
       <a href="seslist" class="simple-margin-left">
@@ -39,7 +10,7 @@
         <i class="fa fa-globe"></i>
         <i class="fa fa-angle-down"></i>
         <ul class="language-options" ng-show="showLanguageDropdown">
-          <li ng-repeat="languageKey in ['ES_CL/spanish', 'EN_US/english']" ng-click="changeLang(languageKey)">
+          <li ng-repeat="languageKey in ['es_CL', 'en_US']" ng-click="changeLang(languageKey)">
             <span ng-if="languageKey === lang" class="selected-language">{{ getTranslatedLanguageName(languageKey) }} <i
                 class="fa fa-check"></i></span>
             <span ng-if="languageKey !== lang" class="not-selected-language">{{ getTranslatedLanguageName(languageKey)
@@ -74,6 +45,3 @@
       </div>
     </div>
   </div>
-</body>
-
-</html>

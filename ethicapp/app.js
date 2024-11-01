@@ -34,6 +34,8 @@ import index from "./backend/controllers/index.js";
 import passport from "./backend/controllers/users/passport-setup.js";
 import users_core from "./backend/controllers/users/users-core.js";
 import users_registration from "./backend/controllers/users/users-registration.js";
+import sessions from "./backend/controllers/sessions.js";
+import content_analysis from "./backend/controllers/content-analysis-controller.js";
 import fs from "fs";
 
 //import sessions from "./backend/controllers/sessions.js";
@@ -85,7 +87,7 @@ app.use("/uploads", express.static(path.join(__dirname, "frontend/assets")));
 app.set("views", path.join(__dirname, "frontend/views"));
 app.set("view engine", "ejs");
 app.use(expressLayouts); // Usar express-ejs-layouts
-app.set("layout", "./layouts/basic-common"); 
+app.set("layout", "./layouts/user-common"); 
 
 // Initialize passport for authentication
 const router = express.Router();
@@ -97,7 +99,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Initialize the logger
-app.use(logger("[EthicApp] :method :url :status - :response-time ms"));
+// Get UTC date and time
+logger.token('utc-date', function () {
+    return new Date().toISOString();
+  });
+  
+
+app.use(logger("[:utc-date | EthicApp] :method :url :status - :response-time ms"));
 
 // Setup busboy for uploads
 busboy.extend(app, {
@@ -142,7 +150,9 @@ app.locals.ETHICAPP_BUILD_HASH = ETHICAPP_BUILD_HASH;
 app.use("/", index);
 app.use("/", users_core);
 app.use("/", users_registration);
-// app.use("/", validateSession, sessions);
+app.use("/", validateSession, sessions);
+app.use("/", validateSession, content_analysis);
+
 // app.use("/", adminApi);
 // app.use("/", validateSession, cases);
 // app.use("/", validateSession, visor);

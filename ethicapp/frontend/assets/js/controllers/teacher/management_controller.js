@@ -33,9 +33,9 @@ export let ManagementController = ($scope,
     self.launchId = ActivityStateService.activityState;
 
     if (lang.startsWith('es')) {
-        self.lang = 'ES_CL/spanish';
+        self.lang = 'es_CL';
     } else {
-        self.lang = 'EN_US/english';
+        self.lang = 'en_US';
     }
 
     self.showLanguageDropdown = false;
@@ -56,8 +56,8 @@ export let ManagementController = ($scope,
 
     self.getTranslatedLanguageName = function (languageKey) {
         const languageNames = {
-            'ES_CL/spanish': $translate.instant('spanish'),
-            'EN_US/english': $translate.instant('english')
+            'es_CL': $translate.instant('spanish'),
+            'en_US': $translate.instant('english')
         };
 
         return languageNames[languageKey] || languageKey;
@@ -113,6 +113,7 @@ export let ManagementController = ($scope,
     };
 
     self.getMe = function(){
+        /*
         $http.get("is-super").success(data => {
             if(data.status == "ok"){
                 self.superBar = true;
@@ -121,8 +122,7 @@ export let ManagementController = ($scope,
         });
         $http.get("is-institution").success(data => {
             self.institution = data.status;
-        });
-
+        });*/
     };
 
     self.selectSession = function (ses, id) {
@@ -226,8 +226,9 @@ export let ManagementController = ($scope,
                 method: "post",
                 data:   postdata
             }).success(function(data) {
-                for (var index = 0; index < data.activities.length; index++)
+                for (var index = 0; index < data.activities.length; index++) {
                     data.activities[index].title = data.activities[index].design.metainfo.title;
+                }
                 self.activities = data.activities;
                 resolve(self.activities);
             }).error(function(error) {
@@ -376,7 +377,6 @@ export let ManagementController = ($scope,
 
     self.flang = function (key) {
         return $filter("translate")(key);
-        //return $filter("lang")(key);
     };
 
     self.init();

@@ -1,6 +1,8 @@
 "use strict";
 
-var adpp = angular.module("SesList", ["ui.bootstrap", "btford.socket-io", "angular-intro"]);
+import { LocalesController } from "../common/locales_controller.js";
+let adpp = angular.module("SesList", 
+    ["ui.bootstrap", "btford.socket-io", "angular-intro", "pascalprecht.translate"]);
 
 adpp.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
@@ -20,6 +22,24 @@ adpp.filter("mylang", function () {
         return label;
     }
 });
+
+adpp.config(function($translateProvider) {
+    $translateProvider.useStaticFilesLoader({
+        prefix: "assets/locales/", 
+        suffix: ".json",
+    });
+
+    // Detect browser language
+    $translateProvider.determinePreferredLanguage();
+    
+    // Set default language
+    $translateProvider.fallbackLanguage("en");
+
+    $translateProvider.useSanitizeValueStrategy("escape"); 
+});
+
+adpp.controller("LocalesController", 
+    ["$translate", "$scope", "$rootScope", LocalesController]);
 
 adpp.controller("SesListController",
     ["$scope", "$http", "$socket", "$uibModal", "ngIntroService",
@@ -79,11 +99,10 @@ adpp.controller("SesListController",
                     self.rol = data.role;
                     self.username = data.name;
                     // self.mylang = data.lang;
-                    self.mylang = data.lang == "spanish" ? "ES_CL/spanish" : "EN_US/english";
+                    self.mylang = data.lang == "spanish" ? "es_CL" : "en_US";
                     self.updateLang(self.mylang);
                 });
             };
-
 
             self.updateSessions = function () {
                 $http({ url: "get-session-list", method: "post" }).success(function (data) {
@@ -129,13 +148,13 @@ adpp.controller("SesListController",
             };
 
             self.updateLang = function (lang) {
-                $http.get("assets/i18n/" + lang + ".json").success(function (data) {
+                $http.get("assets/locales/" + lang + ".json").success(function (data) {
                     window.DIC = data;
                 });
             };
 
             self.changeLang = function () {
-                var newlang = self.mylang == "EN_US/english" ? "spanish" : "english";
+                var newlang = self.mylang == "EN_US/english" ? "es_CL" : "en_US";
                 $http.post("update-lang", { lang: newlang }).success(function () {
                     self.showName();
                 });
@@ -192,3 +211,5 @@ adpp.controller("SesListController",
         }
     ]
 );
+
+export default adpp;

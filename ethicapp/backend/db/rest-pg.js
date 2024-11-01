@@ -1,9 +1,30 @@
-/**
- * Created by sergio on 09-02-16.
- */
+import pg from "pg";
+const { Pool } = pg;
 
-var pg = require("pg");
-var DB = null;
+// Declare `pool` globally
+let pool = null;
+
+async function getDBInstance(dbcon) {
+    if (pool === null) {
+        pool = new Pool({
+            connectionString: dbcon
+        });
+        // Handle pool errors
+        pool.on("error", (err) => {
+            console.error("Unexpected error on idle client", err);
+            process.exit(-1);
+        });
+    }
+    try {
+        const client = await pool.connect();
+        client.release(); // Releases the client to the pool
+        return pool;
+    } catch (err) {
+        console.error("Error connecting to the database:", err);
+        pool = null;
+        throw err;
+    }
+}
 
 function smartArrayConvert(sqlParams, ses, data, calc) {
     var arr = [];
@@ -22,27 +43,12 @@ function smartArrayConvert(sqlParams, ses, data, calc) {
     return arr;
 }
 
-
-function getDBInstance(dbcon) {
-    if(DB == null) {
-        DB = new pg.Client(dbcon);
-        DB.connect();
-        DB.on("error", function(err){
-            console.error(err);
-            DB = null;
-        });
-        return DB;
-    }
-    return DB;
-}
-
-
 /**
  * Returns a sql statement parameter
  * @param t type of parameter (plain, post or ses)
  * @param n name of the parameter.
  */
-module.exports.param = function (t, n) {
+export function param(t, n) {
     return JSON.stringify({name: n, type: t});
 };
 
@@ -53,7 +59,7 @@ module.exports.param = function (t, n) {
  * @param {Array<String>} arr - list of parameters names
  * @return {Array<SqlParam>}
  */
-module.exports.paramsOfType = (t, arr) => {
+export function paramsOfType(t, arr) {
     return arr.map(p => module.exports.param(t,p));
 };
 
@@ -69,64 +75,57 @@ module.exports.paramsOfType = (t, arr) => {
  * <li> onStart: Function to be executed just before sql execution.
  * <li> onEnd: Function to be executed just before send end result.
  */
-module.exports.execSQL = function (params) {
-    if (params.sql == null || params.sql == "" || params.dbcon == null || params.dbcon == "")
-        return null;
+export function execSQL(params) {
+    if (!params.sql || !params.dbcon) return null;
 
-    return function (req, res) {
-        var ses;
-        ses = req.session;
-        //res.header("Content-type","application/json");
-        if (params.sesReqData != null) {
-            for (let i = 0; i < params.sesReqData.length; i++) {
-                if (ses[params.sesReqData[i]] === null) {
-                    console.error("[Req Error] Falta dato de sesión: " + params.sesReqData[i]);
-                    res.end('{"status":"err"}');
-                    return;
+    return async function (req, res) {
+        try {
+            const ses = req.session;
+            const data = req.body;
+            const calc = {};
+
+            // Validación de datos requeridos en la sesión
+            if (params.sesReqData) {
+                for (const reqData of params.sesReqData) {
+                    if (!ses[reqData]) {
+                        console.error("[Req Error] Falta dato de sesión: " + reqData);
+                        res.status(400).json({ status: "err" });
+                        return;
+                    }
                 }
             }
-        }
-        var data = req.body;
-        var calc = {};
-        if (params.postReqData != null) {
-            for (let i = 0; i < params.postReqData.length; i++) {
-                if (data[params.postReqData[i]] === null || data[params.postReqData[i]] === "") {
-                    console.error("[Req Error] Falta dato de body: " + params.postReqData[i]);
-                    res.end('{"status":"err"}');
-                    return;
+
+            // Validación de datos requeridos en el cuerpo de la solicitud
+            if (params.postReqData) {
+                for (const reqData of params.postReqData) {
+                    if (!data[reqData]) {
+                        console.error("[Req Error] Falta dato de body: " + reqData);
+                        res.status(400).json({ status: "err" });
+                        return;
+                    }
                 }
             }
-        }
-        var db = getDBInstance(params.dbcon);
-        var sql = "";
-        if (params.onStart != null)
-            sql = params.onStart(ses, data, calc) || params.sql;
-        else
-            sql = params.sql;
-        var qry;
-        if (params.sqlParams != null) {
-            var sqlarr = smartArrayConvert(params.sqlParams, ses, data, calc);
-            qry = db.query(sql, sqlarr);
-        }
-        else {
-            qry = db.query(sql);
-        }
-        qry.on("end", function () {
-            if (params.onEnd != null)
-                params.onEnd(req, res);
-            else
-                res.send('{"status":"ok"}');
-            if (!params.preventResEnd)
-                res.end();
-                // db.end();
-        });
-        qry.on("error", function(err){
+
+            // Obtención de conexión a la base de datos desde el pool
+            const pool = await getDBInstance(params.dbcon);
+            const sql = params.onStart ? params.onStart(ses, data, calc) || params.sql : params.sql;
+            const sqlParams = params.sqlParams ? smartArrayConvert(params.sqlParams, ses, data, calc) : [];
+
+            // Ejecución de la consulta con pool.query
+            const result = await pool.query(sql, sqlParams);
+            const rows = result.rows.map(row => (params.onRow ? params.onRow(row) : row));
+
+            if (params.onEnd) {
+                params.onEnd(req, res, rows);
+            } else {
+                res.json({ status: "ok", data: rows });
+            }
+        } catch (err) {
             console.error("[DB Error]: ", err);
-            res.end('{"status":"err"}');
-        });
+            res.status(500).json({ status: "err" });
+        }
     };
-};
-
+}
 
 /**
  * Execute a n sql statements with ok / err response at the end of all.
@@ -139,65 +138,58 @@ module.exports.execSQL = function (params) {
  * <li> onStart: Function to be executed just before sql execution.
  * <li> onEnd: Function to be executed just before send end result.
  */
-module.exports.nExecSQL = function (params) {
-    if (params.nsql == null || params.dbcon == null || params.dbcon == "")
-        return null;
+export function nExecSQL(params) {
+    if (!params.nsql || !params.dbcon) return null;
 
-    return function (req, res) {
-        var ses;
-        var total = params.nsql.length;
-        var completed = 0;
-        ses = req.session;
-        if (params.sesReqData != null) {
-            for (let i = 0; i < params.sesReqData.length; i++) {
-                if (ses[params.sesReqData[i]] === null) {
-                    console.error("[Req Error] Falta dato de sesión: " + params.sesReqData[i]);
-                    res.end('{"status":"err"}');
-                    return;
+    return async function (req, res) {
+        try {
+            const ses = req.session;
+            const data = req.body;
+            const calc = {};
+
+            if (params.sesReqData) {
+                for (const reqData of params.sesReqData) {
+                    if (!ses[reqData]) {
+                        console.error("[Req Error] Falta dato de sesión: " + reqData);
+                        res.status(400).json({ status: "err" });
+                        return;
+                    }
                 }
             }
-        }
-        var data = req.body;
-        var calc = {};
-        if (params.postReqData != null) {
-            for (let i = 0; i < params.postReqData.length; i++) {
-                if (data[params.postReqData[i]] === null || data[params.postReqData[i]] === "") {
-                    console.error("[Req Error] Falta dato de body: " + params.postReqData[i]);
-                    res.end('{"status":"err"}');
-                    return;
+
+            if (params.postReqData) {
+                for (const reqData of params.postReqData) {
+                    if (!data[reqData]) {
+                        console.error("[Req Error] Falta dato de body: " + reqData);
+                        res.status(400).json({ status: "err" });
+                        return;
+                    }
                 }
             }
-        }
-        var db = getDBInstance(params.dbcon);
-        for(let i = 0; i < total; i++){
-            var sql = "";
-            if (params.onStart != null)
-                sql = params.onStart(ses, data, calc, i) || params.nsql[i];
-            else
-                sql = params.nsql[i];
-            var qry;
-            if (params.nsqlParams[i] != null) {
-                var sqlarr = smartArrayConvert(params.nsqlParams[i], ses, data, calc);
-                qry = db.query(sql, sqlarr);
-            }
-            else {
-                qry = db.query(sql);
-            }
-            qry.on("end", function () {
-                completed++;
-                if(completed>=total){
-                    if (params.onEnd != null)
-                        params.onEnd(req, res);
-                    else
-                        res.send('{"status":"ok"}');
-                    res.end();
-                    // db.end();
-                }
+
+            const pool = await getDBInstance(params.dbcon);
+
+            const queries = params.nsql.map((sql, i) => {
+                const currentSQL = params.onStart ? params.onStart(ses, data, calc, i) || sql : sql;
+                const sqlParams = params.nsqlParams && params.nsqlParams[i] 
+                    ? smartArrayConvert(params.nsqlParams[i], ses, data, calc) 
+                    : [];
+                return pool.query(currentSQL, sqlParams);
             });
+
+            await Promise.all(queries);
+
+            if (params.onEnd) {
+                params.onEnd(req, res);
+            } else {
+                res.json({ status: "ok" });
+            }
+        } catch (err) {
+            console.error("[DB Error]: ", err);
+            res.status(500).json({ status: "err" });
         }
     };
-};
-
+}
 
 /**
  * Execute a select single sql statement.
@@ -212,73 +204,64 @@ module.exports.nExecSQL = function (params) {
  * <li> onSelect: Function handled after sql statement is executed. It replaces the normal return
  * behavior.
  */
-module.exports.singleSQL = function (params) {
-    if (params.sql == null || params.sql == "" || params.dbcon == null || params.dbcon == "")
-        return null;
+export async function singleSQL(params) {
+    if (!params.sql || !params.dbcon) return null; // Return null if essential parameters are missing
 
-    return function (req, res) {
-        var ses;
-        ses = req.session;
-        res.header("Content-type", "application/json");
-        if (params.sesReqData != null) {
-            for (let i = 0; i < params.sesReqData.length; i++) {
-                if (ses[params.sesReqData[i]] === null) {
-                    console.error("[Req Error] Falta dato de sesión: " + params.sesReqData[i]);
-                    res.end('{"status":"err"}');
-                    return;
+    return async function (req, res) {
+        try {
+            const ses = req.session; // Session object
+            const data = req.body;   // Request body data
+            const calc = {};         // Placeholder object for additional calculations
+            res.header("Content-type", "application/json");
+
+            // Validate required session data
+            if (params.sesReqData) {
+                for (const reqData of params.sesReqData) {
+                    if (!ses[reqData]) {
+                        console.error("[Req Error] Missing session data: " + reqData);
+                        res.status(400).json({ status: "err" });
+                        return;
+                    }
                 }
             }
-        }
-        var data = req.body;
-        var calc = {};
-        if (params.postReqData != null) {
-            for (let i = 0; i < params.postReqData.length; i++) {
-                if (data[params.postReqData[i]] === null || data[params.postReqData[i]] === "") {
-                    console.error("[Req Error] Falta dato de body: " + params.postReqData[i]);
-                    res.end('{"status":"err"}');
-                    return;
+
+            // Validate required body data
+            if (params.postReqData) {
+                for (const reqData of params.postReqData) {
+                    if (!data[reqData]) {
+                        console.error("[Req Error] Missing body data: " + reqData);
+                        res.status(400).json({ status: "err" });
+                        return;
+                    }
                 }
             }
-        }
-        var db = getDBInstance(params.dbcon);
-        if (params.onStart != null)
-            params.onStart(ses, data, calc);
-        var sql = params.sql;
-        var qry;
-        if (params.sqlParams != null) {
-            var sqlarr = smartArrayConvert(params.sqlParams, ses, data, calc);
-            qry = db.query(sql, sqlarr);
-        }
-        else {
-            qry = db.query(sql);
-        }
-        var result = {};
-        qry.on("row", function (row) {
-            if (params.onSelect != null) {
-                result = params.onSelect(row);
+
+            const pool = await getDBInstance(params.dbcon); // Retrieve the database pool
+
+            // Execute `onStart` if defined, potentially modifying SQL or parameters
+            if (params.onStart) params.onStart(ses, data, calc);
+
+            // Set up SQL query and parameters
+            const sqlParams = params.sqlParams ? smartArrayConvert(params.sqlParams, ses, data, calc) : [];
+            const result = await pool.query(params.sql, sqlParams);
+
+            // Process the result row (if any), using `onSelect` if provided
+            const row = result.rows[0] || {};
+            const processedRow = params.onSelect ? params.onSelect(row) : row;
+
+            // Send final response or execute `onEnd` callback if defined
+            if (params.onEnd) {
+                params.onEnd(req, res, processedRow);
+            } else {
+                res.json({ ...processedRow, status: "ok" });
             }
-            else {
-                result = row;
-            }
-        });
-        qry.on("end", function () {
-            if (params.onEnd != null)
-                params.onEnd(req, res, result);
-            else {
-                result["status"] = "ok";
-                res.end(JSON.stringify(result));
-            }
-            if (!params.preventResEnd)
-                res.end();
-            // db.end();
-        });
-        qry.on("error", function(err){
+        } catch (err) {
+            // Handle any errors from the database or logic
             console.error("[DB Error]: ", err);
-            res.end('{"status":"err"}');
-        });
+            res.status(500).json({ status: "err" });
+        }
     };
-};
-
+}
 
 /**
  * Execute a select multiple sql statement.
@@ -292,68 +275,43 @@ module.exports.singleSQL = function (params) {
  * <li> onEnd: Function to be executed just before send end result.
  * <li> onRow: Function handled every fetched row. It replaces the normal row behavior.
  */
-module.exports.multiSQL = function (params) {
-    if (params.sql == null || params.sql == "" || params.dbcon == null || params.dbcon == "")
-        return null;
+export async function multiSQL(params) {
+    return async function (req, res) {
+        try {
+            const pool = await getDBInstance(params.dbcon);
 
-    return function (req, res) {
-        var ses;
-        ses = req.session;
-        res.header("Content-type", "application/json");
-        if (params.sesReqData != null) {
-            for (let i = 0; i < params.sesReqData.length; i++) {
-                if (ses[params.sesReqData[i]] === null) {
-                    console.error("[Req Error] Falta dato de sesión: " + params.sesReqData[i]);
-                    res.end("[]");
-                    return;
+            const ses = req.session;
+            if (params.sesReqData) {
+                for (const reqData of params.sesReqData) {
+                    if (!ses[reqData]) {
+                        console.error("[Req Error] Falta dato de sesión: " + reqData);
+                        res.status(400).json({ status: "err" });
+                        return;
+                    }
                 }
             }
-        }
-        var data = req.body;
-        var calc = {};
-        if (params.postReqData != null) {
-            for (let i = 0; i < params.postReqData.length; i++) {
-                if (data[params.postReqData[i]] === null || data[params.postReqData[i]] === "") {
-                    console.error("[Req Error] Falta dato de body: " + params.postReqData[i]);
-                    res.end("[]");
-                    return;
+
+            const data = req.body;
+            if (params.postReqData) {
+                for (const reqData of params.postReqData) {
+                    if (!data[reqData]) {
+                        console.error("[Req Error] Falta dato de body: " + reqData);
+                        res.status(400).json({ status: "err" });
+                        return;
+                    }
                 }
             }
-        }
-        var db = getDBInstance(params.dbcon);
-        if (params.onStart != null)
-            params.onStart(ses, data, calc);
-        var sql = params.sql;
-        var qry;
-        if (params.sqlParams != null) {
-            var sqlarr = smartArrayConvert(params.sqlParams, ses, data, calc);
-            qry = db.query(sql, sqlarr);
-        }
-        else {
-            qry = db.query(sql);
-        }
-        var arr = [];
-        qry.on("row", function (row) {
-            if (params.onRow != null) {
-                var k = params.onRow(row);
-                if (k != null) arr.push(k);
-            }
-            else {
-                arr.push(row);
-            }
-        });
-        qry.on("end", function () {
-            if (params.onEnd != null)
-                params.onEnd(req, res, arr);
-            else
-                res.send(JSON.stringify(arr));
-            if (!params.preventResEnd)
-                res.end();
-            // db.end();
-        });
-        qry.on("error", function(err){
+            let calc = {}
+            const sql = params.onStart ? params.onStart(ses, data, calc) || params.sql : params.sql;
+            const sqlParams = params.sqlParams ? smartArrayConvert(params.sqlParams, ses, data, calc
+            ) : [];
+            const result = await pool.query(sql, sqlParams);
+
+            const rows = result.rows.map(row => (params.onRow ? params.onRow(row) : row));
+            res.json(rows);
+        } catch (err) {
             console.error("[DB Error]: ", err);
-            res.end("[]");
-        });
+            res.status(500).json({ status: "err" });
+        }
     };
-};
+}

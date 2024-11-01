@@ -1,42 +1,41 @@
 "use strict";
 
-let express = require("express");
+import express from "express";
+import pass from "../helpers/compat-helper.js"
+import { getDBInstance } from "../db/rest-pg-2.js"; 
+import * as rpg from "../db/rest-pg.js";
 let router = express.Router();
-let rpg = require("../db/rest-pg");
-let pass = require("../config/keys-n-secrets");
-let pg = require("pg");
-require("../middleware/validate-session");
-
-var DB = null;
-
-
-function getDBInstance(dbcon) {
-    if (DB == null) {
-        DB = new pg.Client(dbcon);
-        DB.connect();
-        DB.on("error", function(err){
-            console.error(err);
-            DB = null;
-        });
-        return DB;
-    }
-    return DB;
-}
-
 
 router.get("/seslist", (req, res) => {
     if (req.session.uid) {
-        if (req.session.role == "P")
+        if (req.session.role == "P") {
+            console.debug("will redirect to /home");
             res.redirect("home");
-        else
-            res.render("seslist");
+        }
+        else {
+            console.debug("rendering seslist");
+            res.render("seslist", {
+                title: "EthicApp",
+                ngApp: "SesList",
+                controller:  "SesListController",
+                extraScripts : `
+                <script src="assets/libs/socket.min.js" defer></script>
+                <script src="assets/libs/intro.min.js" defer></script>
+                <script src="assets/libs/ui-bootstrap-tpls-1.1.2.min.js" defer></script>
+                <script src="assets/libs/angular-intro.min.js" defer></script>
+                <script src="assets/libs/ua-parser.min.js" defer></script>
+                <script type="module" src="assets/js/controllers/student/sessions.mjs" defer></script>
+                `
+            });
+        }
     }
-    else
+    else {
+        console.warn("No user id in session.");
         res.redirect(".");
+    }
 });
 
-
-router.post("/get-session-list", rpg.multiSQL({
+router.post("/get-session-list", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT *
@@ -260,45 +259,38 @@ router.post("/check-design", (req, res) => {
 });
 
 
-router.post("/get-activities", (req, res) => {
-    var uid = req.session.uid;
-    var sql = `
-    SELECT activity.id,
-        activity.session,
-        sessions.creator,
-        sessions.name,
-        sessions.descr,
-        sessions.time,
-        sessions.code,
-        sessions.archived,
-        designs.design,
-        sessions.status,
-        sessions.type,
-        designs.id AS dsgnid
-    FROM activity
-    INNER JOIN sessions
-    ON activity.session = sessions.id
-    INNER JOIN designs
-    ON activity.design = designs.id
-    WHERE sessions.creator = ${uid};
-    `;
-    var db = getDBInstance(pass.dbcon);
-    var qry;
-    var result;
-    qry = db.query(sql,(err,res) =>{
-        if (res != null)
-            result = res.rows;
-    });
-    qry.on("end", function () {
-        res.json({status: 200, activities: result});
-    });
-    qry.on("error", function(err){
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.json({status: 400, });
-    });
-});
-
+router.post("/get-activities", await rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: `
+        SELECT activity.id,
+            activity.session,
+            sessions.creator,
+            sessions.name,
+            sessions.descr,
+            sessions.time,
+            sessions.code,
+            sessions.archived,
+            designs.design,
+            sessions.status,
+            sessions.type,
+            designs.id AS dsgnid
+        FROM activity
+        INNER JOIN sessions
+            ON activity.session = sessions.id
+        INNER JOIN designs
+            ON activity.design = designs.id
+        WHERE sessions.creator = $1;
+    `,
+    sesReqData: ["uid"],
+    sqlParams: [rpg.param("ses", "uid")],
+    onEnd: async (req, res, result) => {
+        res.json({ status: 200, activities: result });
+    },
+    onError: async (err, req, res) => {
+        console.error("Error in /get-activities query:", err);
+        res.status(400).json({ status: 400, error: "Error retrieving activities." });
+    }
+}));
 
 router.get("/admin", (req, res) => {
     if (req.session.role == "P")
@@ -307,15 +299,21 @@ router.get("/admin", (req, res) => {
         res.redirect(".");
 });
 
-
-//TEST ROUTE DELETE LATER
-router.get("/home", function(req,res){
-    if (req.session.role == "P" || req.session.role == "I" || req.session.role == "S")
-        res.render("home");
-    else
+router.get("/home", function(req,res) {
+    if (req.session.role == "P")
+        try {
+            res.render("home", {
+                layout: "./layouts/teacher-app",
+                ngApp: "TeacherApp",
+                controller: "ManagementController"      
+            });        
+        } catch (error) {
+            return res.status(500);
+        }
+    else {
         res.redirect(".");
+    }
 });
-
 
 router.post("/update-session", rpg.execSQL({
     dbcon: pass.dbcon,
@@ -454,65 +452,65 @@ router.post("/get-design", (req, res) => {
     });
 });
 
+router.get("/get-user-designs", await rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: `
+        SELECT id, design, public, locked
+        FROM DESIGNS
+        WHERE creator = $1
+        ORDER BY id DESC;
+    `,
+    sesReqData: ["uid"],
+    sqlParams: [rpg.param("ses", "uid")],
+    onEnd: (req, res, result) => {
+        // Ensure result is an array
+        const rows = Array.isArray(result) ? result : [result];
 
-router.get("/get-user-designs", (req, res) => {
-    var uid = req.session.uid;
-    var sql = `
-    SELECT *
-    FROM DESIGNS
-    WHERE creator = ${uid}
-    ORDER BY id DESC;
-    `;
-    var db = getDBInstance(pass.dbcon);
-    var qry;
-    var result = [];
-    qry = db.query(sql,(err,res) =>{
-        if(res != null){
-            for (let i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
-            for (let i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
-            for (let i=0; i<result.length;i++) result[i].public= res.rows[i].public; //add id to to design
-            for (let i=0; i<result.length;i++) result[i].locked= res.rows[i].locked; //add id to to design
-        }
-    });
-    qry.on("end", function () {
-        res.json({"status": "ok", "result": result});
-    });
-    qry.on("error", function(err){
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.end('{"status":"err"}');
-    });
-});
+        const designs = rows.map(row => ({
+            ...row.design,
+            id: row.id,
+            public: row.public,
+            locked: row.locked
+        }));
 
-router.get("/get-public-designs", (req, res) => {
-    var uid = req.session.uid;
-    var sql = `
-    SELECT *
-    FROM DESIGNS
-    WHERE public = true
-        AND creator != ${uid}
-    ORDER BY id DESC;
-    `;
-    var db = getDBInstance(pass.dbcon);
-    var qry;
-    var result = [];
-    qry = db.query(sql,(err,res) =>{
-        if(res != null){
-            for (let i=0; i<res.rows.length;i++) result.push(res.rows[i].design);
-            for (let i=0; i<result.length;i++) result[i].id= res.rows[i].id; //add id to to design
-        }
-    });
-    qry.on("end", function () {
-        res.json({"status": "ok", "result": result});
-    });
-    qry.on("error", function(err){
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.end('{"status":"err"}');
-    });
-});
+        res.json({ status: "ok", result: designs });
+    },
+    onError: (err, req, res) => {
+        console.error("Error in /get-user-designs query:", err);
+        res.status(400).json({ status: "err", error: "Error retrieving user designs." });
+    }
+}));
 
-router.post("/design-public", rpg.multiSQL({
+router.get("/get-public-designs", await rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: `
+        SELECT id, design
+        FROM DESIGNS
+        WHERE public = true
+            AND creator != $1
+        ORDER BY id DESC;
+    `,
+    sesReqData: ["uid"],
+    sqlParams: [rpg.param("ses", "uid")],
+    onEnd: (req, res, result) => {
+        // Ensure result is an array
+        const rows = Array.isArray(result) ? result : [result];
+
+        const designs = rows.map(row => ({
+            ...row.design,
+            id: row.id
+        }));
+
+        res.json({ status: "ok", result: designs });
+    },
+    onError: (err, req, res) => {
+        console.error("Error in /get-public-designs query:", err);
+        res.status(400).json({ status: "err", error: "Error retrieving public designs." });
+    }
+}));
+
+
+router.post("/design-public", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     UPDATE DESIGNS
@@ -523,7 +521,7 @@ router.post("/design-public", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "dsgnid")]
 }));
 
-router.post("/design-lock", rpg.multiSQL({
+router.post("/design-lock", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     UPDATE DESIGNS
@@ -534,52 +532,53 @@ router.post("/design-lock", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "dsgnid")]
 }));
 
+router.post("/update-design", await rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: `
+        UPDATE DESIGNS
+        SET design = $1
+        WHERE creator = $2
+            AND id = $3
+    `,
+    sesReqData: ["uid"],
+    postReqData: ["id", "design"],
+    sqlParams: [
+        rpg.param("post", "design", JSON.stringify), // Serializamos `design` como JSON
+        rpg.param("ses", "uid"),
+        rpg.param("post", "id")
+    ],
+    onEnd: (req, res) => {
+        res.json({ status: "ok" });
+    },
+    onError: (err, req, res) => {
+        console.error("Error in /update-design query:", err);
+        res.status(400).json({ status: "err", error: "Error updating design." });
+    }
+}));
 
-router.post("/update-design", (req, res) => {
-    var uid = req.session.uid;
-    var id = req.body.id;
-    var sql = `
-    UPDATE DESIGNS
-    SET design = '${JSON.stringify(req.body.design)}'
-    WHERE creator = ${uid}
-        AND id = ${id}
-    `;
-    var db = getDBInstance(pass.dbcon);
-    var qry;
-    qry = db.query(sql);
-    qry.on("end", function () {
-        res.end('{"status":"ok"}');
-    });
-    qry.on("error", function(err){
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.end('{"status":"err"}');
-    });
-});
+router.post("/delete-design", await rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: `
+        DELETE FROM DESIGNS
+        WHERE creator = $1
+            AND id = $2
+    `,
+    sesReqData: ["uid"],
+    postReqData: ["id"],
+    sqlParams: [
+        rpg.param("ses", "uid"),
+        rpg.param("post", "id")
+    ],
+    onEnd: (req, res) => {
+        res.json({ status: "ok" });
+    },
+    onError: (err, req, res) => {
+        console.error("Error in /delete-design query:", err);
+        res.status(400).json({ status: "err", error: "Error deleting design." });
+    }
+}));
 
-
-router.post("/delete-design", (req, res) => {
-    var uid = req.session.uid;
-    var id = req.body.id;
-    var sql = `
-    DELETE FROM DESIGNS
-    WHERE creator = ${uid}
-        AND id = ${id}
-    `;
-    var db = getDBInstance(pass.dbcon);
-    var qry;
-    qry = db.query(sql);
-    qry.on("end", function () {
-        res.end('{"status":"ok"}');
-    });
-    qry.on("error", function(err){
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.end('{"status":"err"}');
-    });
-});
-
-router.post("/designs-documents", rpg.multiSQL({
+router.post("/designs-documents", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT id,
@@ -594,7 +593,7 @@ router.post("/designs-documents", rpg.multiSQL({
 
 
 //############################################
-router.post("/documents-session", rpg.multiSQL({
+router.post("/documents-session", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT id,
@@ -608,7 +607,7 @@ router.post("/documents-session", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "sesid")]
 }));
 
-router.post("/questions-session", rpg.multiSQL({
+router.post("/questions-session", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT id,
@@ -628,7 +627,7 @@ router.post("/questions-session", rpg.multiSQL({
 }));
 
 
-router.post("/get-new-users", rpg.multiSQL({
+router.post("/get-new-users", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT id,
@@ -647,7 +646,7 @@ router.post("/get-new-users", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "sesid")]
 }));
 
-router.post("/get-ses-users", rpg.multiSQL({
+router.post("/get-ses-users", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT u.id,
@@ -666,7 +665,7 @@ router.post("/get-ses-users", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "sesid")]
 }));
 
-router.post("/add-ses-users", (req, res) => {
+router.post("/add-ses-users", async (req, res) => {
     let sql = `
     INSERT INTO sesusers(UID, sesid)
     VALUES
@@ -676,13 +675,13 @@ router.post("/add-ses-users", (req, res) => {
             sql += `(${uid},${req.body.sesid}), `;
     });
     sql = sql.substring(0, sql.length - 2); // removing trailing comma
-    rpg.execSQL({
+    await rpg.execSQL({
         dbcon: pass.dbcon,
         sql:   sql
     })(req, res);
 });
 
-router.post("/get-all-users", rpg.multiSQL({
+router.post("/get-all-users", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT u.id,
@@ -698,7 +697,7 @@ router.post("/get-all-users", rpg.multiSQL({
     },
 }));
 
-router.post("/convert-prof", rpg.execSQL({
+router.post("/convert-prof", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     UPDATE users
@@ -712,7 +711,7 @@ router.post("/convert-prof", rpg.execSQL({
     },
 }));
 
-router.post("/remove-prof", rpg.execSQL({
+router.post("/remove-prof", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     UPDATE users
@@ -726,7 +725,7 @@ router.post("/remove-prof", rpg.execSQL({
     },
 }));
 
-router.post("/get-question-text", rpg.multiSQL({
+router.post("/get-question-text", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT id,
@@ -739,7 +738,7 @@ router.post("/get-question-text", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "sesid")]
 }));
 
-router.post("/delete-ses-user", rpg.execSQL({
+router.post("/delete-ses-user", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     DELETE
@@ -752,7 +751,7 @@ router.post("/delete-ses-user", rpg.execSQL({
 }));
 
 
-router.post("/get-selection-comment", rpg.singleSQL({
+router.post("/get-selection-comment", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT answer,
@@ -770,7 +769,7 @@ router.post("/get-selection-comment", rpg.singleSQL({
 }));
 
 
-router.post("/get-selection-team-comment", rpg.multiSQL({
+router.post("/get-selection-team-comment", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT s.answer,
@@ -790,7 +789,7 @@ router.post("/get-selection-team-comment", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "tmid"), rpg.param("post", "qid")]
 }));
 
-router.post("/semantic-documents", rpg.multiSQL({
+router.post("/semantic-documents", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT id,
@@ -804,7 +803,7 @@ router.post("/semantic-documents", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "sesid")]
 }));
 
-router.post("/get-semantic-documents", rpg.multiSQL({
+router.post("/get-semantic-documents", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT id,
@@ -819,7 +818,7 @@ router.post("/get-semantic-documents", rpg.multiSQL({
 }));
 
 
-router.post("/add-semantic-unit", rpg.singleSQL({
+router.post("/add-semantic-unit", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
     INSERT INTO semantic_unit(sentences, docs, COMMENT, UID, sesid, iteration)
@@ -834,7 +833,7 @@ router.post("/add-semantic-unit", rpg.singleSQL({
     ]
 }));
 
-router.post("/add-sync-semantic-unit", rpg.singleSQL({
+router.post("/add-sync-semantic-unit", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
     INSERT INTO semantic_unit(sentences, docs, COMMENT, UID, sesid, iteration)
@@ -850,7 +849,7 @@ router.post("/add-sync-semantic-unit", rpg.singleSQL({
 }));
 
 
-router.post("/update-semantic-unit", rpg.execSQL({
+router.post("/update-semantic-unit", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     UPDATE semantic_unit
@@ -867,7 +866,7 @@ router.post("/update-semantic-unit", rpg.execSQL({
 }));
 
 
-router.post("/get-semantic-units", rpg.multiSQL({
+router.post("/get-semantic-units", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT u.id,
@@ -891,7 +890,7 @@ router.post("/get-semantic-units", rpg.multiSQL({
 }));
 
 
-router.post("/get-team-sync-units", rpg.multiSQL({
+router.post("/get-team-sync-units", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT u.id,
@@ -917,7 +916,7 @@ router.post("/get-team-sync-units", rpg.multiSQL({
 }));
 
 
-router.post("/delete-semantic-unit", rpg.multiSQL({
+router.post("/delete-semantic-unit", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     DELETE
@@ -929,7 +928,7 @@ router.post("/delete-semantic-unit", rpg.multiSQL({
 }));
 
 
-router.post("/update-ses-options", rpg.execSQL({
+router.post("/update-ses-options", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     UPDATE sessions
@@ -941,7 +940,7 @@ router.post("/update-ses-options", rpg.execSQL({
 }));
 
 
-router.post("/differentials", rpg.multiSQL({
+router.post("/differentials", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT *
@@ -955,7 +954,7 @@ router.post("/differentials", rpg.multiSQL({
 }));
 
 
-router.post("/get-differentials", rpg.multiSQL({
+router.post("/get-differentials", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT *
@@ -968,7 +967,7 @@ router.post("/get-differentials", rpg.multiSQL({
 }));
 
 
-router.post("/get-differentials-stage", rpg.multiSQL({
+router.post("/get-differentials-stage", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT *
@@ -982,7 +981,7 @@ router.post("/get-differentials-stage", rpg.multiSQL({
 }));
 
 
-router.post("/add-differential", rpg.execSQL({
+router.post("/add-differential", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     INSERT INTO differential(title, tleft, tright, orden, creator, sesid)
@@ -1008,8 +1007,7 @@ router.post("/add-differential", rpg.execSQL({
     ]
 }));
 
-
-router.post("/add-differential-stage", rpg.execSQL({
+router.post("/add-differential-stage", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     INSERT INTO differential(
@@ -1027,7 +1025,7 @@ router.post("/add-differential-stage", rpg.execSQL({
 }));
 
 
-router.post("/update-differential", rpg.execSQL({
+router.post("/update-differential", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     UPDATE differential
@@ -1045,13 +1043,13 @@ router.post("/update-differential", rpg.execSQL({
 }));
 
 
-router.post("/duplicate-session", (req, res) => {
+router.post("/duplicate-session", async (req, res) => {
     if (
         req.session.uid != null && req.session.role == "P" && req.body.name != null
         && req.body.name != "" && req.body.tipo != null && req.body.descr != null
         && req.body.originalSesid != null
     ) {
-        rpg.singleSQL({
+            await rpg.singleSQL({
             dbcon: pass.dbcon,
             sql:   `
             INSERT INTO sessions(name, descr, creator, TIME, status, TYPE)
@@ -1063,11 +1061,11 @@ router.post("/duplicate-session", (req, res) => {
                 rpg.param("post", "name"), rpg.param("post", "descr"), rpg.param("ses", "uid"),
                 rpg.param("post", "tipo")
             ],
-            onEnd: (req, res, result) => {
+            onEnd: async (req, res, result) => {
                 let sesid = result.id;
                 let oldsesid = req.body.originalSesid;
                 if (req.body.copyUsers) {
-                    rpg.execSQL({
+                    await rpg.execSQL({
                         dbcon: pass.dbcon,
                         sql:   `
                         INSERT INTO sesusers(sesid, UID)
@@ -1080,7 +1078,7 @@ router.post("/duplicate-session", (req, res) => {
                     })(req,res);
                 }
                 else {
-                    rpg.execSQL({
+                    await rpg.execSQL({
                         dbcon: pass.dbcon,
                         sql:   `
                         INSERT INTO sesusers(sesid, UID)
@@ -1090,43 +1088,8 @@ router.post("/duplicate-session", (req, res) => {
                         onEnd:         () => {}
                     })(req,res);
                 }
-                if (req.body.copySemDocs) {
-                    rpg.execSQL({
-                        dbcon: pass.dbcon,
-                        sql:   `
-                        INSERT INTO semantic_document(sesid, title, content, orden)
-                        SELECT ${sesid} AS sesid,
-                            title,
-                            content,
-                            orden
-                        FROM semantic_document
-                        WHERE sesid = ${oldsesid}
-                        `,
-                        preventResEnd: true,
-                        onEnd:         () => {}
-                    })(req,res);
-                }
-                if (req.body.copySemUnits) {
-                    rpg.execSQL({
-                        dbcon: pass.dbcon,
-                        sql:   `
-                        INSERT INTO semantic_unit(sesid, sentences, COMMENT, UID, iteration, docs)
-                        SELECT ${sesid} AS sesid,
-                            sentences,
-                            COMMENT,
-                            UID,
-                            0 AS iteration,
-                            docs
-                        FROM semantic_unit
-                        WHERE sesid = ${oldsesid}
-                            AND iteration <= 0
-                        `,
-                        preventResEnd: true,
-                        onEnd:         () => {}
-                    })(req,res);
-                }
                 if (req.body.copyDocuments) {
-                    rpg.execSQL({
+                    await rpg.execSQL({
                         dbcon: pass.dbcon,
                         sql:   `
                         INSERT INTO documents(sesid, title, PATH, uploader, active)
@@ -1143,7 +1106,7 @@ router.post("/duplicate-session", (req, res) => {
                     })(req,res);
                 }
                 if (req.body.copyDifferentials) {
-                    rpg.execSQL({
+                    await rpg.execSQL({
                         dbcon: pass.dbcon,
                         sql:   `
                         INSERT INTO differential(sesid, title, tleft, tright, orden, creator)
@@ -1161,7 +1124,7 @@ router.post("/duplicate-session", (req, res) => {
                     })(req,res);
                 }
                 if (req.body.copyQuestions) {
-                    rpg.execSQL({
+                    await rpg.execSQL({
                         dbcon: pass.dbcon,
                         sql:   `
                         INSERT INTO questions(
@@ -1183,7 +1146,7 @@ router.post("/duplicate-session", (req, res) => {
                         `,
                         preventResEnd: true
                     })(req,res);
-                    rpg.execSQL({
+                    await rpg.execSQL({
                         dbcon: pass.dbcon,
                         sql:   `
                         INSERT INTO question_text(sesid, content, title)
@@ -1197,42 +1160,6 @@ router.post("/duplicate-session", (req, res) => {
                         onEnd:         () => {}
                     })(req,res);
                 }
-                if (req.body.copyIdeas) {
-                    console.log("Copy Ideas is not implemented yet"); //?
-                }
-                if (req.body.copyRubrica) {
-                    rpg.singleSQL({
-                        dbcon: pass.dbcon,
-                        sql:   `
-                        INSERT INTO rubricas(sesid)
-                        VALUES (${sesid})
-                        RETURNING id
-                        `,
-                        onEnd: (req, res, result) => {
-                            rpg.execSQL({
-                                dbcon: pass.dbcon,
-                                sql:   `
-                                INSERT INTO criteria(
-                                    name, pond, inicio, proceso, competente, avanzado, rid
-                                )
-                                SELECT c.name,
-                                    c.pond,
-                                    c.inicio,
-                                    c.proceso,
-                                    c.competente,
-                                    c.avanzado, ${result.id} AS rid
-                                FROM criteria AS c
-                                INNER JOIN rubricas AS r
-                                ON r.id = c.rid
-                                WHERE r.sesid = ${oldsesid}
-                                `,
-                                onEnd:         () => {},
-                                preventResEnd: true
-                            })(req,res);
-                        },
-                        preventResEnd: true
-                    })(req,res);
-                }
             }
         })(req,res);
     }
@@ -1241,7 +1168,7 @@ router.post("/duplicate-session", (req, res) => {
     }
 });
 
-router.post("/generate-session-code", rpg.singleSQL({
+router.post("/generate-session-code", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
     UPDATE sessions
@@ -1258,7 +1185,7 @@ router.post("/generate-session-code", rpg.singleSQL({
 }));
 
 
-router.post("/archive-session", rpg.singleSQL({
+router.post("/archive-session", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
     UPDATE sessions
@@ -1270,7 +1197,7 @@ router.post("/archive-session", rpg.singleSQL({
 }));
 
 
-router.post("/enter-session-code", rpg.singleSQL({
+router.post("/enter-session-code", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
     INSERT INTO sesusers(UID, sesid, device)
@@ -1303,13 +1230,13 @@ router.post("/enter-session-code", rpg.singleSQL({
         rpg.param("ses", "uid"), rpg.param("post", "code"), rpg.param("post", "code")
     ],
     preventResEnd: true,
-    onEnd:         (req, res, result) => {
+    onEnd:         async (req, res, result) => {
         if(result.sesid == null){
             res.end('{"status": "end"}');
         }
         else{
             let id = result.sesid;
-            rpg.singleSQL({
+            await rpg.singleSQL({
                 dbcon: pass.dbcon,
                 sql:   `
                 SELECT TYPE
@@ -1334,7 +1261,7 @@ router.post("/enter-session-code", rpg.singleSQL({
     }
 }));
 
-router.post("/stage-state-df", rpg.multiSQL({
+router.post("/stage-state-df", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT COUNT(*), query1.stage_id1 as id FROM (SELECT 
@@ -1374,7 +1301,7 @@ router.post("/stage-state-df", rpg.multiSQL({
     sqlParams: [rpg.param("post", "sesid")]
 }));
 
-router.post("/stage-state-r", rpg.multiSQL({
+router.post("/stage-state-r", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT COUNT(act.id), s.id FROM actor_selection act 
@@ -1397,5 +1324,4 @@ function generateCode(id) {
     return "k00000".substring(0, 6 - s.length) + s;
 }
 
-
-module.exports = router;
+export default router;

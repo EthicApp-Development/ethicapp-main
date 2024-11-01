@@ -1,83 +1,80 @@
 "use strict";
 
-let pg = require("pg");
-let express = require("express");
+import express from "express";
+import pass from "../helpers/compat-helper.js"
+import configSocket from "../config/socket.config.js";
+import * as rpg from "../db/rest-pg.js";
+import { isContentAnalysisAvailable } from "../services/content-analysis/content-analysis.js";
+
 let router = express.Router();
-let rpg = require("../db/rest-pg");
-let pass = require("../config/keys-n-secrets");
-let socket = require("../config/socket.config");
-const {isContentAnalysisAvailable} = require("../services/content-analysis");
 
-var DB = null;
-function getDBInstance(dbcon) {
-    if (DB == null) {
-        DB = new pg.Client(dbcon);
-        DB.connect();
-        DB.on("error", function(err){
-            console.error(err);
-            DB = null;
-        });
-        return DB;
-    }
-    return DB;
-}
-
-router.post('/content-analysis-callback', async (req, res) => {
-    if(!isContentAnalysisAvailable()){
-        return res.status(503).json({ error: "Content analysis is not available" });
-    }
-    try {
-    
-        const data = req.body;
+router.post('/content-analysis-callback', await rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: `
+        INSERT INTO content_analysis(response_selections, context, sesid, stage_id)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (id) DO UPDATE
+        SET response_selections = EXCLUDED.response_selections,
+            context = EXCLUDED.context,
+            stage_id = EXCLUDED.stage_id;
+    `,
+    postReqData: ["response_selections", "context"],
+    sqlParams: [
+        rpg.param("post", "response_selections", JSON.stringify),
+        rpg.param("post", "context", JSON.stringify),
+        rpg.param("post", "sesid"),
+        rpg.param("post", "stage_id")
+    ],
+    onStart: (ses, data, calc) => {
+        // Prepare necessary data in `req.body`
+        if (!isContentAnalysisAvailable()) {
+            throw new Error("Content analysis is not available");
+        }
         
-        const stageId = data.context.phase_id;
-        req.body.stage_id = stageId;
-        req.body.sesid = data.context.session_id;
-
-        var sql = `
-            INSERT INTO content_analysis(response_selections, context, sesid, stage_id)
-            VALUES (
-                '${JSON.stringify(req.body.response_selections)}', 
-                '${JSON.stringify(req.body.context)}',
-                ${data.context.session_id},
-                ${stageId}
-            )
-            ON CONFLICT (id) DO UPDATE
-            SET response_selections = EXCLUDED.response_selections,
-                context = EXCLUDED.context,
-                stage_id = EXCLUDED.stage_id;
-        `;
-        var db = getDBInstance(pass.dbcon);
-        var qry;
-        qry = db.query(sql);
-        qry.on("end", function () {
-            socket.contentUpdate(data);
-            res.status(200).json({ status: 'success'});
-        });
-        qry.on("error", function(err){
-            console.error(err);
+        // Add stage and session IDs to the request body for sqlParams
+        data.stage_id = data.context.phase_id;
+        data.sesid = data.context.session_id;
+    },
+    onEnd: (req, res) => {
+        configSocket.contentUpdate(req.body);
+        res.status(200).json({ status: 'success' });
+    },
+    onError: (err, req, res) => {
+        if (err.message === "Content analysis is not available") {
+            res.status(503).json({ error: "Content analysis is not available" });
+        } else {
+            console.error("Error in /content-analysis-callback:", err);
             res.status(500).json({ error: "Internal server error" });
-        });
-
-        
-    } catch (error) {
-        res.status(500).json({ error: "Internal server error" });
+        }
     }
-});
+}));
 
-router.post("/get-content-analysis", (req, res, next) => {
-    if(!isContentAnalysisAvailable()){
-        return res.status(503).json({ error: "Content analysis is not available" });
+router.post("/get-content-analysis", await rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: `
+        SELECT *
+        FROM content_analysis
+        WHERE stage_id = $1
+    `,
+    postReqData: ["stageid"],
+    sqlParams: [rpg.param("post", "stageid")],
+    onStart: (ses, data, calc) => {
+        if (!isContentAnalysisAvailable()) {
+            throw new Error("Content analysis is not available");
+        }
+    },
+    onEnd: (req, res, result) => {
+        res.status(200).json({ status: "success", data: result });
+    },
+    onError: (err, req, res) => {
+        if (err.message === "Content analysis is not available") {
+            res.status(503).json({ error: "Content analysis is not available" });
+        } else {
+            console.error("Error in /get-content-analysis query:", err);
+            res.status(500).json({ error: "Internal server error" });
+        }
     }
-    return rpg.multiSQL({
-        dbcon: pass.dbcon,
-        sql: `
-            SELECT *
-            FROM content_analysis
-            WHERE stage_id = ${req.body.stageid}
-        `,
-    })(req, res, next);
-});
+}));
 
 router.post("/content-analysis-availability", (req, res, next) => {
     if(isContentAnalysisAvailable()){
@@ -88,4 +85,4 @@ router.post("/content-analysis-availability", (req, res, next) => {
     }
 });
 
-module.exports = router;
+export default router;

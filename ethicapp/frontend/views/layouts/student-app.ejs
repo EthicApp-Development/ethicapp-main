@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html ng-app="UserCommon">
+<html ng-app="<%= typeof ngApp !== 'undefined'? ngApp : 'UserCommon' %>">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -19,7 +19,7 @@
   <div class="loading-overlay" ng-if="!translationsLoaded" ng-class="{'loading': !translationsLoaded}">
     <p>Loading...</p>
   </div>
-  <div ng-if="translationsLoaded" ng-controller="<%= typeof controller !== 'undefined' ? controller : 'LoginController' %>">
+  <div ng-if="translationsLoaded" ng-controller="<%= typeof controller !== 'undefined' ? controller : 'VoidController' %>">
   <%- body %>
   </div>
   <%- typeof bottomScripts !== 'undefined' ? bottomScripts : '' %>

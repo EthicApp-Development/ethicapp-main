@@ -79,8 +79,6 @@ function defineAbilitiesForCasesAndTags(user) {
     return build();
 }
 
-
-
 function authorize(action, subject, caseData) {
     return (req, res, next) => {
         const ability = defineAbilitiesForCasesAndTags(req.user);
@@ -96,6 +94,5 @@ function authorize(action, subject, caseData) {
         }
     };
 }
-
 
 module.exports = authorize;

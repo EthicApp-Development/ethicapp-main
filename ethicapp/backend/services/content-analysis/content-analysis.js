@@ -1,7 +1,7 @@
-let Redis = require("ioredis");
-let rpg = require("../db/rest-pg");
-let pass = require("../config/keys-n-secrets");
-const fetch = require("node-fetch");
+import Redis from "ioredis";
+import * as rpg from "../../db/rest-pg.js";
+import { pass } from "../../helpers/compat-helper.js";
+import axios from "axios";
 
 let redisClient = new Redis({
     host: "redis", // Redis server host
@@ -144,14 +144,16 @@ async function sendContentAnalysisWorkunit(workunit){
         const contentAnalysisPort = process.env.CONTENT_ANALYSIS_PORT;
         const apiKey = process.env.CONTENT_ANALYSIS_API_KEY;
 
-        const response = await fetch(`http://${contentAnalysisHostName}:${contentAnalysisPort}/top-worst`, {
-            method:  "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "x-api-key":    apiKey,
-            },
-            body: JSON.stringify(workunit)
-        });
+        const response = await axios.post(`http://${contentAnalysisHostName}:${contentAnalysisPort}/top-worst`, 
+            workunit, 
+            {
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": apiKey,
+                }
+            }
+        );
+        
         if (!response.ok) {
             throw new Error("The server response was not successful");
         }
@@ -223,7 +225,4 @@ function initializeContentAnalysis(req, res) {
     }
 }
 
-module.exports = {
-    initializeContentAnalysis,
-    isContentAnalysisAvailable
-};
+export { initializeContentAnalysis, isContentAnalysisAvailable };

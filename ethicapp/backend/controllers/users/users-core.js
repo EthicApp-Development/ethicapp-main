@@ -5,8 +5,6 @@ import path from "path";
 import express from "express";
 import passport from "passport";
 import { VIEWS_PREFIX } from "./users-common.js";
-import bcrypt from "bcrypt";
-
 import { param, execSQL } from  "../../db/rest-pg-2.js";
 import { fileURLToPath } from "url";
 import * as UserSchemas from "../request-schemas/user-schemas.js";
@@ -27,6 +25,7 @@ import "./passport-setup.js";
 router.get("/login", (req, res) => {
     res.render("login", {
         title: "Login - EthicApp",
+        controller: "LoginController",
         welc:  req.query.welc
     });
 });
@@ -34,6 +33,9 @@ router.get("/login", (req, res) => {
 router.post("/login", (req, res, next) => {
     passport.authenticate("local", async (err, user) => {
         try {
+            console.log("begin login");
+            console.log(`user: ${user}`);
+
             if (!user) {
                 return res.status(401).json({ message: "login_failed" });
             }
@@ -50,12 +52,18 @@ router.post("/login", (req, res, next) => {
             EthicAppEventLogger.userLogin();
 
             console.log("post logger");
+            console.log(`logged in user: ${JSON.stringify(user)}`);
 
             // Create a session for the user
             req.logIn(user, (err) => {
+                
+                req.session.uid = user.id;
+                req.session.role = user.role;
+
                 if (err) {
                     return next(err);
                 }
+                
                 return res.status(200).json({ message: "login_succeeded" });
             });
         } catch (err) {
