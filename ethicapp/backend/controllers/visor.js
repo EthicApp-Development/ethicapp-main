@@ -1,12 +1,12 @@
 "use strict";
 
-let express = require("express");
-let router = express.Router();
-let rpg = require("../db/rest-pg");
-let pass = require("../config/keys-n-secrets");
-let socket = require("../config/socket.config");
-const {initializeContentAnalysis, isContentAnalysisAvailable} = require("../services/content-analysis/content-analysis");
+import express from "express";
+import pass from "../helpers/compat-helper.js"
+import * as rpg from "../db/rest-pg.js";
+import socket from "../config/socket.config.js";
+import {initializeContentAnalysis, isContentAnalysisAvailable} from "../services/content-analysis/content-analysis.js";
 
+let router = express.Router();
 let sesStatusCache = {};
 
 function doRedirect (status, res, call){
@@ -25,11 +25,11 @@ function doRedirect (status, res, call){
     }
 }
 
-router.get("/to-visor", (req, res) => {
+router.get("/to-visor", async (req, res) => {
     if (req.session.uid && !isNaN(req.query.sesid)) {
         req.session.ses = req.query.sesid;
         if(sesStatusCache[req.query.sesid] == null) {
-            rpg.singleSQL({
+            await rpg.singleSQL({
                 dbcon: pass.dbcon,
                 sql:   `
                 SELECT status
@@ -50,12 +50,11 @@ router.get("/to-visor", (req, res) => {
         res.redirect(".");
 });
 
-
-router.get("/to-pauta", (req, res) => {
+router.get("/to-pauta", async (req, res) => {
     if (req.session.uid && !isNaN(req.query.sesid) && req.session.role == "P") {
         req.session.ses = req.query.sesid;
         if(sesStatusCache[req.query.sesid] == null) {
-            rpg.singleSQL({
+            await rpg.singleSQL({
                 dbcon: pass.dbcon,
                 sql:   `
                 SELECT status
@@ -76,12 +75,11 @@ router.get("/to-pauta", (req, res) => {
         res.redirect(".");
 });
 
-
-router.get("/to-rubrica", (req, res) => {
+router.get("/to-rubrica", async (req, res) => {
     if (req.session.uid && !isNaN(req.query.sesid) && req.session.role == "P") {
         req.session.ses = req.query.sesid;
         if(sesStatusCache[req.query.sesid] == null) {
-            rpg.singleSQL({
+            await rpg.singleSQL({
                 dbcon: pass.dbcon,
                 sql:   `
                 SELECT status
@@ -102,7 +100,6 @@ router.get("/to-rubrica", (req, res) => {
         res.redirect(".");
 });
 
-
 router.get("/visor", (req, res) => {
     if (req.session.uid && req.session.ses)
         res.render("visor");
@@ -110,14 +107,12 @@ router.get("/visor", (req, res) => {
         res.redirect(".");
 });
 
-
 router.get("/pauta", (req, res) => {
     if (req.session.uid && req.session.ses && req.session.role == "P")
         res.render("visor-pauta");
     else
         res.redirect(".");
 });
-
 
 router.get("/to-select", (req, res) => {
     if (req.session.uid) {
@@ -128,14 +123,12 @@ router.get("/to-select", (req, res) => {
         res.redirect(".");
 });
 
-
 router.get("/select", (req, res) => {
     if (req.session.uid && req.session.ses)
         res.render("select");
     else
         res.redirect(".");
 });
-
 
 router.get("/to-semantic", (req, res) => {
     if (req.session.uid) {
@@ -146,14 +139,12 @@ router.get("/to-semantic", (req, res) => {
         res.redirect(".");
 });
 
-
 router.get("/semantic", (req, res) => {
     if (req.session.uid && req.session.ses)
         res.render("semantic");
     else
         res.redirect(".");
 });
-
 
 router.get("/to-differential", (req, res) => {
     if (req.session.uid) {
@@ -164,14 +155,12 @@ router.get("/to-differential", (req, res) => {
         res.redirect(".");
 });
 
-
 router.get("/differential", (req, res) => {
     if (req.session.uid && req.session.ses)
         res.render("differential");
     else
         res.redirect(".");
 });
-
 
 router.get("/to-role", (req, res) => {
     if (req.session.uid) {
@@ -182,14 +171,36 @@ router.get("/to-role", (req, res) => {
         res.redirect(".");
 });
 
-
 router.get("/role-playing", (req, res) => {
     if (req.session.uid && req.session.ses)
-        res.render("roles");
+        // TODO: properly bundle scripts and assets...
+        res.render("roles",
+        {
+            title: "EthicApp",
+            ngApp: "StudentRolePlaying",
+            controller:  "RolePlayingController",
+            extraScripts : `            
+            <script src="assets/libs/ui-bootstrap-tpls-1.1.2.min.js" defer></script>
+            <script src="assets/libs/intro.min.js" defer></script>
+            <script src="assets/libs/angular-intro.min.js" defer></script>
+            <script src="assets/libs/ua-parser.min.js" defer></script>
+            <script src="assets/libs/angular-ui-tree.min.js" defer></script>
+            <script src="assets/libs/angular-timer.min.js" defer></script>
+            <script src="assets/libs/angular-ui-notification.min.js" defer></script>
+            <script src="assets/libs/angular-glue.min.js" defer></script>
+            <script type="module" src="assets/js/modules/student/role-playing.mjs" defer></script>
+            <link rel="stylesheet" href="assets/css/bootstrap.min.css" />
+            <link rel="stylesheet" href="assets/css/font-awesome.min.css">
+            <link rel="stylesheet" href="assets/css/minimal.css">
+            <link rel="stylesheet" href="assets/css/angular-ui-tree.min.css">
+            <link rel="stylesheet" href="assets/css/angular-ui-notification.min.css">
+            <link rel="stylesheet" href="assets/css/introjs.css">
+            <link rel="stylesheet" href="assets/css/main.css" />            
+            `
+        });
     else
         res.redirect(".");
 });
-
 
 router.get("/to-diff", (req, res) => {
     if (req.session.uid) {
@@ -208,16 +219,36 @@ router.get("/to-diff", (req, res) => {
     }
 });
 
-
 router.get("/ethics", (req, res) => {
     if (req.session.uid && req.session.ses)
-        res.render("ethics");
+        res.render("ethics", {
+            title: "EthicApp",
+            ngApp: "StudentEthics",
+            controller:  "EthicsController",
+            extraScripts : `            
+            <script src="assets/libs/ui-bootstrap-tpls-1.1.2.min.js" defer></script>
+            <script src="assets/libs/intro.min.js" defer></script>
+            <script src="assets/libs/angular-intro.min.js" defer></script>
+            <script src="assets/libs/ua-parser.min.js" defer></script>
+            <script src="assets/libs/angular-ui-tree.min.js" defer></script>
+            <script src="assets/libs/angular-timer.min.js" defer></script>
+            <script src="assets/libs/angular-ui-notification.min.js" defer></script>
+            <script src="assets/libs/angular-glue.min.js" defer></script>
+            <script type="module" src="assets/js/modules/student/ethics.mjs" defer></script>
+            <link rel="stylesheet" href="assets/css/bootstrap.min.css" />
+            <link rel="stylesheet" href="assets/css/font-awesome.min.css">
+            <link rel="stylesheet" href="assets/css/minimal.css">
+            <link rel="stylesheet" href="assets/css/angular-ui-tree.min.css">
+            <link rel="stylesheet" href="assets/css/angular-ui-notification.min.css">
+            <link rel="stylesheet" href="assets/css/introjs.css">
+            <link rel="stylesheet" href="assets/css/main.css" />            
+            `
+        });
     else
         res.redirect(".");
 });
 
-
-router.post("/get-documents", rpg.multiSQL({
+router.post("/get-documents", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT id,
@@ -231,8 +262,7 @@ router.post("/get-documents", rpg.multiSQL({
     sqlParams:  [rpg.param("ses", "ses")]
 }));
 
-
-router.post("/delete-document", rpg.execSQL({
+router.post("/delete-document", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     UPDATE documents
@@ -243,8 +273,7 @@ router.post("/delete-document", rpg.execSQL({
     sqlParams:   [rpg.param("post", "docid")]
 }));
 
-
-router.post("/get-questions", rpg.multiSQL({
+router.post("/get-questions", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT q.id,
@@ -262,8 +291,7 @@ router.post("/get-questions", rpg.multiSQL({
     sqlParams:  [rpg.param("ses", "ses")]
 }));
 
-
-router.post("/get-anskey", rpg.multiSQL({
+router.post("/get-anskey", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT id,
@@ -276,8 +304,7 @@ router.post("/get-anskey", rpg.multiSQL({
     sqlParams:  [rpg.param("ses", "ses")]
 }));
 
-
-router.post("/send-answer", rpg.execSQL({
+router.post("/send-answer", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     WITH ROWS AS (
@@ -315,8 +342,7 @@ router.post("/send-answer", rpg.execSQL({
     ]
 }));
 
-
-router.post("/get-answers", rpg.multiSQL({
+router.post("/get-answers", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT s.qid,
@@ -335,13 +361,13 @@ router.post("/get-answers", rpg.multiSQL({
     sqlParams:   [rpg.param("ses", "ses"), rpg.param("ses", "uid"), rpg.param("post","iteration")]
 }));
 
-router.post("/send-diff-selection", (req, res, next) => {
+router.post("/send-diff-selection", async (req, res, next) => {
     
     if (isContentAnalysisAvailable()){
         initializeContentAnalysis(req, res);
     }    
 
-    return rpg.execSQL({
+    return await rpg.execSQL({
         dbcon: pass.dbcon,
         sql: `
             WITH ROWS AS (
@@ -377,8 +403,7 @@ router.post("/send-diff-selection", (req, res, next) => {
     })(req, res, next);
 });
 
-
-router.post("/get-diff-selection", rpg.multiSQL({
+router.post("/get-diff-selection", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT s.did,
@@ -396,8 +421,7 @@ router.post("/get-diff-selection", rpg.multiSQL({
     sqlParams:   [rpg.param("ses", "ses"), rpg.param("ses", "uid"), rpg.param("post","iteration")]
 }));
 
-
-router.post("/get-diff-selection-stage", rpg.multiSQL({
+router.post("/get-diff-selection-stage", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT s.did,
@@ -414,8 +438,7 @@ router.post("/get-diff-selection-stage", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "stageid"), rpg.param("ses", "uid")]
 }));
 
-
-router.post("/get-chat-msgs", rpg.multiSQL({
+router.post("/get-chat-msgs", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT s.id,
@@ -446,8 +469,7 @@ router.post("/get-chat-msgs", rpg.multiSQL({
     sqlParams:  [rpg.param("ses", "ses"), rpg.param("ses", "ses"), rpg.param("ses","uid")]
 }));
 
-
-router.post("/get-chat-stage", rpg.multiSQL({
+router.post("/get-chat-stage", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT s.id,
@@ -479,8 +501,7 @@ router.post("/get-chat-stage", rpg.multiSQL({
     ]
 }));
 
-
-router.post("/get-diff-chat-stage", rpg.multiSQL({
+router.post("/get-diff-chat-stage", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT s.id,
@@ -514,8 +535,7 @@ router.post("/get-diff-chat-stage", rpg.multiSQL({
     ]
 }));
 
-
-router.post("/get-team-chat", rpg.multiSQL({
+router.post("/get-team-chat", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT s.id,
@@ -540,8 +560,7 @@ router.post("/get-team-chat", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "sesid"), rpg.param("post","tmid"), rpg.param("post","orden")]
 }));
 
-
-router.post("/get-team-chat-stage-df", rpg.multiSQL({
+router.post("/get-team-chat-stage-df", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT s.id,
@@ -566,8 +585,7 @@ router.post("/get-team-chat-stage-df", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "stageid"), rpg.param("post","tmid"), rpg.param("post","did")]
 }));
 
-
-router.post("/get-team-chat-stage", rpg.multiSQL({
+router.post("/get-team-chat-stage", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT s.id,
@@ -588,8 +606,7 @@ router.post("/get-team-chat-stage", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "stageid"), rpg.param("post","tmid")]
 }));
 
-
-router.post("/add-chat-msg", rpg.execSQL({
+router.post("/add-chat-msg", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     INSERT INTO differential_chat(UID, did, content, parent_id)
@@ -606,8 +623,7 @@ router.post("/add-chat-msg", rpg.execSQL({
     }
 }));
 
-
-router.post("/add-chat-msg-stage", rpg.execSQL({
+router.post("/add-chat-msg-stage", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     INSERT INTO chat(UID, stageid, content, parent_id)
@@ -624,8 +640,7 @@ router.post("/add-chat-msg-stage", rpg.execSQL({
     }
 }));
 
-
-router.post("/send-idea", rpg.singleSQL({
+router.post("/send-idea", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
     INSERT INTO ideas(content, descr,serial,docid, UID, iteration, stime)
@@ -640,8 +655,7 @@ router.post("/send-idea", rpg.singleSQL({
     ]
 }));
 
-
-router.post("/send-team-idea", rpg.singleSQL({
+router.post("/send-team-idea", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
     INSERT INTO ideas(content, descr,serial,docid, UID, iteration, stime)
@@ -656,8 +670,7 @@ router.post("/send-team-idea", rpg.singleSQL({
     ]
 }));
 
-
-router.post("/send-pauta-idea", rpg.singleSQL({
+router.post("/send-pauta-idea", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
     INSERT INTO ideas(content, descr,serial,docid, UID, iteration, orden)
@@ -673,8 +686,7 @@ router.post("/send-pauta-idea", rpg.singleSQL({
     ]
 }));
 
-
-router.post("/update-idea", rpg.execSQL({
+router.post("/update-idea", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     UPDATE ideas
@@ -692,8 +704,7 @@ router.post("/update-idea", rpg.execSQL({
     ]
 }));
 
-
-router.post("/update-pauta-idea", rpg.execSQL({
+router.post("/update-pauta-idea", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     UPDATE ideas
@@ -711,8 +722,7 @@ router.post("/update-pauta-idea", rpg.execSQL({
     ]
 }));
 
-
-router.post("/pauta-editable", rpg.singleSQL({
+router.post("/pauta-editable", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT status = 1 AS editable
@@ -723,8 +733,7 @@ router.post("/pauta-editable", rpg.singleSQL({
     sqlParams:  [rpg.param("ses","ses")]
 }));
 
-
-router.post("/get-ideas", rpg.multiSQL({
+router.post("/get-ideas", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT i.id,
@@ -746,8 +755,7 @@ router.post("/get-ideas", rpg.multiSQL({
     sqlParams:   [rpg.param("ses", "uid"), rpg.param("ses", "ses"), rpg.param("post", "iteration")]
 }));
 
-
-router.post("/set-ideas-orden", (req, res) => {
+router.post("/set-ideas-orden", async (req, res) => {
     res.header("Content-type", "application/json");
     let uid = req.session.uid;
     let ses = req.session.ses;
@@ -755,9 +763,9 @@ router.post("/set-ideas-orden", (req, res) => {
         res.end('{"status":"err"}');
         return;
     }
-    req.body.orden.forEach((ideaId, i) => {
+    req.body.orden.forEach(async (ideaId, i) => {
         if (!isNaN(ideaId)) {
-            rpg.execSQL({
+            await rpg.execSQL({
                 dbcon: pass.dbcon,
                 sql:   `
                 UPDATE ideas
@@ -771,8 +779,7 @@ router.post("/set-ideas-orden", (req, res) => {
     res.end('{"status":"ok"}');
 });
 
-
-router.post("/change-state-session", rpg.execSQL({
+router.post("/change-state-session", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     WITH rows AS (
@@ -797,8 +804,7 @@ router.post("/change-state-session", rpg.execSQL({
     }
 }));
 
-
-router.post("/force-state-session", rpg.execSQL({
+router.post("/force-state-session", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     WITH rows AS (
@@ -823,8 +829,7 @@ router.post("/force-state-session", rpg.execSQL({
     }
 }));
 
-
-router.post("/record-finish", rpg.execSQL({
+router.post("/record-finish", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     WITH rows AS (
@@ -853,8 +858,7 @@ router.post("/record-finish", rpg.execSQL({
     ]
 }));
 
-
-router.post("/get-finished", rpg.singleSQL({
+router.post("/get-finished", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT $1 in (
@@ -868,8 +872,7 @@ router.post("/get-finished", rpg.singleSQL({
     sqlParams:  [rpg.param("ses","uid"),rpg.param("ses","ses"),rpg.param("post","status")]
 }));
 
-
-router.post("/delete-idea", rpg.execSQL({
+router.post("/delete-idea", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     DELETE
@@ -882,8 +885,7 @@ router.post("/delete-idea", rpg.execSQL({
     sqlParams:   [rpg.param("ses", "uid"), rpg.param("post", "id")]
 }));
 
-
-router.post("/get-chat-data-csv", rpg.multiSQL({
+router.post("/get-chat-data-csv", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT c.id,
@@ -920,8 +922,7 @@ router.post("/get-chat-data-csv", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "sesid"), rpg.param("post", "sesid")]
 }));
 
-
-router.post("/get-sel-data-csv", rpg.multiSQL({
+router.post("/get-sel-data-csv", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT s.id,
@@ -959,8 +960,7 @@ router.post("/get-sel-data-csv", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "sesid"), rpg.param("post", "sesid")]
 }));
 
-
-router.post("/get-sel-data-csv-ethics", rpg.multiSQL({
+router.post("/get-sel-data-csv-ethics", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT DISTINCT s.id,
@@ -1008,8 +1008,7 @@ router.post("/get-sel-data-csv-ethics", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "sesid")]
 }));
 
-
-router.post("/get-chat-data-csv-ethics", rpg.multiSQL({
+router.post("/get-chat-data-csv-ethics", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT DISTINCT s.id,
@@ -1056,8 +1055,7 @@ router.post("/get-chat-data-csv-ethics", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "sesid")]
 }));
 
-
-router.post("/get-sel-data-csv-role", rpg.multiSQL({
+router.post("/get-sel-data-csv-role", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT DISTINCT s.id,
@@ -1101,8 +1099,7 @@ router.post("/get-sel-data-csv-role", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "sesid")]
 }));
 
-
-router.post("/get-chat-data-csv-role", rpg.multiSQL({
+router.post("/get-chat-data-csv-role", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT DISTINCT s.id,
@@ -1143,8 +1140,7 @@ router.post("/get-chat-data-csv-role", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "sesid")]
 }));
 
-
-router.post("/get-sel-data-csv-jigsaw", rpg.multiSQL({
+router.post("/get-sel-data-csv-jigsaw", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT DISTINCT s.id,
@@ -1193,8 +1189,7 @@ router.post("/get-sel-data-csv-jigsaw", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "sesid")]
 }));
 
-
-router.post("/get-chat-data-csv-jigsaw", rpg.multiSQL({
+router.post("/get-chat-data-csv-jigsaw", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT DISTINCT s.id,
@@ -1240,5 +1235,4 @@ router.post("/get-chat-data-csv-jigsaw", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "sesid")]
 }));
 
-
-module.exports = router;
+export default router;

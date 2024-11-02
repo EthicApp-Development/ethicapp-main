@@ -1,6 +1,6 @@
 #!/bin/bash -exu
 
-cd "$(dirname "$0")/../ethicapp/frontend/assets/js/ngmodules/teacher"
+cd "$(dirname "$0")/../ethicapp/frontend/assets/js/modules/teacher"
 
 npx esbuild teacher_admin.mjs --bundle --outfile=bundled-teacher-admin.js
 

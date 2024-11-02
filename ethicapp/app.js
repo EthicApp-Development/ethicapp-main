@@ -1,19 +1,4 @@
 "use strict";
-// import { createRequire } from "module";
-// const require = createRequire(import.meta.url);
-
-//let index = require("./backend/controllers/index");
-//let users = require("./backend/controllers/users");
-//let adminApi = require("./backend/controllers/admin-panel-api");
-// let sessions = require("./backend/controllers/sessions");
-// let visor = require("./backend/controllers/visor");
-// let analysis = require("./backend/controllers/analysis");
-// let teams = require("./backend/controllers/teams");
-// let rubrica = require("./backend/controllers/rubrica");
-// let stages = require("./backend/controllers/stages");
-// let content_analysis = require("./backend/controllers/content-analysis-controller");
-// let pass = require("./backend/config/keys-n-secrets");
-// let cases = require("./backend/controllers/cases");
 
 import dotenv from "dotenv";
 dotenv.config({ path: "../.env" });
@@ -36,9 +21,12 @@ import users_core from "./backend/controllers/users/users-core.js";
 import users_registration from "./backend/controllers/users/users-registration.js";
 import sessions from "./backend/controllers/sessions.js";
 import content_analysis from "./backend/controllers/content-analysis-controller.js";
+import teams from "./backend/controllers/teams.js";
+import stages from "./backend/controllers/stages.js";
+import visor from "./backend/controllers/visor.js";
+import analysis from "./backend/controllers/analysis.js";
+import admin_panel from "./backend/controllers/admin-panel-api.js";
 import fs from "fs";
-
-//import sessions from "./backend/controllers/sessions.js";
 
 import * as config from "./backend/config/config.js";
 import { validateSession } from "./backend/middleware/validate-session.js";
@@ -84,7 +72,7 @@ app.use(assetVersions("/assets", assetPath));
 app.use("/uploads", express.static(path.join(__dirname, "frontend/assets")));
 
 // view engine setup
-app.set("views", path.join(__dirname, "frontend/views"));
+app.set("views", path.join(__dirname, "backend/views"));
 app.set("view engine", "ejs");
 app.use(expressLayouts); // Usar express-ejs-layouts
 app.set("layout", "./layouts/user-common"); 
@@ -152,15 +140,14 @@ app.use("/", users_core);
 app.use("/", users_registration);
 app.use("/", validateSession, sessions);
 app.use("/", validateSession, content_analysis);
+app.use("/", validateSession, teams);
+app.use("/", validateSession, stages);
+app.use("/", validateSession, visor);
+app.use("/", validateSession, analysis);
+//app.use("/", validateSession, cases);
+app.use("/", admin_panel);
 
-// app.use("/", adminApi);
-// app.use("/", validateSession, cases);
-// app.use("/", validateSession, visor);
-// app.use("/", validateSession, analysis);
-// app.use("/", validateSession, teams);
 // app.use("/", validateSession, rubrica);
-// app.use("/", validateSession, stages);
-// app.use("/", validateSession, content_analysis);
 
 // Catch 404 and forward to error handler
 app.use((req, res, next) => {

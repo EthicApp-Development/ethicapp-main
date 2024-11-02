@@ -2,7 +2,6 @@
 export let StagesEditController = ($scope, DesignStateService,
     ActivityStateService, 
     $filter, $http, Notification, $timeout) => {
-    console.log("StagesEditController Initializated");
     var self = $scope;
     self.designId = DesignStateService.designState;
     self.launchId = ActivityStateService.activityState;
@@ -350,19 +349,19 @@ export let StagesEditController = ($scope, DesignStateService,
         return error;
     };
 
-
-
-    self.getDesign = function (ID) {
-        $http.post("get-design", ID).success(function (data) {
+    self.getDesign = function (id) {
+        $http.post("get-design", { id: id }, {
+            headers: { 'Content-Type': 'application/json' }
+        }).success(function (data) {
             if (data.status == "ok") {
                 self.changeDesign(data.result);
-                DesignStateService.designState.id = ID;
-                self.designId.id = DesignStateService.designState.id; //use variable from admin later
+                DesignStateService.designState.id = id;
+                self.designId.id = DesignStateService.designState.id;
                 self.selectView("newDesignExt");
             }
         });
     };
-
+    
 
     self.getID = function(){
         return self.designId.id;

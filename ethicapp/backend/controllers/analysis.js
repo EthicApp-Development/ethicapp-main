@@ -1,12 +1,11 @@
 "use strict";
 
-let express = require("express");
+import express from "express";
+import pass from "../helpers/compat-helper.js"
+import * as rpg from "../db/rest-pg.js";
 let router = express.Router();
-let rpg = require("../db/rest-pg");
-let pass = require("../config/keys-n-secrets");
-let middleware = require("../middleware/validate-session");
 
-router.post("/get-alum-state-sel", middleware.verifySession, rpg.multiSQL({
+router.post("/get-alum-state-sel", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT uid, SUM(correct) AS score, COUNT(correct) AS answered
@@ -28,7 +27,7 @@ router.post("/get-alum-state-sel", middleware.verifySession, rpg.multiSQL({
     sqlParams: [rpg.param("post", "sesid"),rpg.param("post", "iteration")]
 }));
 
-router.post("/get-alum-full-state-sel", rpg.multiSQL({
+router.post("/get-alum-full-state-sel", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT s.uid, q.id AS qid, (s.answer = q.answer)::int AS correct
@@ -47,12 +46,12 @@ router.post("/get-alum-full-state-sel", rpg.multiSQL({
     sqlParams: [rpg.param("post", "sesid"),rpg.param("post", "iteration")]
 }));
 
-router.post("/group-proposal-sel", (req, res) => {
+router.post("/group-proposal-sel", async (req, res) => {
     if (req.session.role != "P") {
         res.end("[]");
         return;
     }
-    rpg.multiSQL({
+    await rpg.multiSQL({
         dbcon: pass.dbcon,
         sql:   `
         SELECT t.id AS team, u.id AS uid
@@ -60,9 +59,9 @@ router.post("/group-proposal-sel", (req, res) => {
         WHERE t.id = tu.tmid AND u.id = tu.uid AND t.sesid = ${req.body.sesid}
         `,
         preventResEnd: true,
-        onEnd:         (req,res,arr) => {
+        onEnd:         async (req,res,arr) => {
             if (arr.length == 0) {
-                rpg.multiSQL({
+                await rpg.multiSQL({
                     dbcon: pass.dbcon,
                     sql:   `
                     SELECT uid, SUM(correct) AS score, COUNT(correct) AS answered
@@ -107,12 +106,12 @@ router.post("/group-proposal-sel", (req, res) => {
     })(req,res);
 });
 
-router.post("/group-proposal-stage", (req, res) => {
+router.post("/group-proposal-stage", async (req, res) => {
     if (req.session.role != "P") {
         res.end("[]");
         return;
     }
-    rpg.multiSQL({
+    await rpg.multiSQL({
         dbcon: pass.dbcon,
         sql:   `
         SELECT t.id AS team, u.id AS uid
@@ -136,7 +135,7 @@ router.post("/group-proposal-stage", (req, res) => {
     })(req,res);
 });
 
-router.post("/get-alum-state-lect", rpg.multiSQL({
+router.post("/get-alum-state-lect", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT DISTINCT a.uid, a.orden, a.serial, a.content, a.docid, p.serial AS serial_ans,
@@ -161,8 +160,8 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
     },
     preventResEnd: true,
     sqlParams:     [rpg.param("post", "sesid"), rpg.param("post", "iteration")],
-    onEnd:         (req,res,arr) => {
-        rpg.singleSQL({
+    onEnd:         async (req,res,arr) => {
+        await rpg.singleSQL({
             dbcon: pass.dbcon,
             sql:   `
             SELECT Max(orden) AS total
@@ -217,7 +216,7 @@ router.post("/get-alum-state-lect", rpg.multiSQL({
     }
 }));
 
-router.post("/get-alum-state-semantic", rpg.multiSQL({
+router.post("/get-alum-state-semantic", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT
@@ -286,12 +285,12 @@ router.post("/get-alum-state-semantic", rpg.multiSQL({
     }
 }));
 
-router.post("/group-proposal-lect", (req,res) => {
+router.post("/group-proposal-lect", async (req, res) => {
     if (req.session.role != "P") {
         res.end("[]");
         return;
     }
-    rpg.multiSQL({
+    await rpg.multiSQL({
         dbcon: pass.dbcon,
         sql:   `
         SELECT
@@ -307,9 +306,9 @@ router.post("/group-proposal-lect", (req,res) => {
             AND t.sesid = ${req.body.sesid}
         `,
         preventResEnd: true,
-        onEnd:         (req,res,arr) => {
+        onEnd:         async (req,res,arr) => {
             if(arr.length == 0) {
-                rpg.multiSQL({
+                await rpg.multiSQL({
                     dbcon: pass.dbcon,
                     sql:   `
                     SELECT DISTINCT a.uid,
@@ -350,8 +349,8 @@ router.post("/group-proposal-lect", (req,res) => {
                     },
                     preventResEnd: true,
                     sqlParams:     [rpg.param("post", "sesid")],
-                    onEnd:         (req,res,arr) => {
-                        rpg.singleSQL({
+                    onEnd:         async (req,res,arr) => {
+                        await rpg.singleSQL({
                             dbcon: pass.dbcon,
                             sql:   `
                             SELECT max(orden) AS total
@@ -429,12 +428,12 @@ router.post("/group-proposal-lect", (req,res) => {
     })(req,res);
 });
 
-router.post("/group-proposal-hab", (req, res) => {
+router.post("/group-proposal-hab", async (req, res) => {
     if (req.session.role != "P") {
         res.end("[]");
         return;
     }
-    rpg.multiSQL({
+    await rpg.multiSQL({
         dbcon: pass.dbcon,
         sql:   `
         SELECT t.id AS team,
@@ -447,9 +446,9 @@ router.post("/group-proposal-hab", (req, res) => {
         AND t.sesid = ${req.body.sesid}
         `,
         preventResEnd: true,
-        onEnd:         (req,res,arr) => {
+        onEnd:         async (req,res,arr) => {
             if(arr.length == 0) {
-                rpg.multiSQL({
+                await rpg.multiSQL({
                     dbcon: pass.dbcon,
                     sql:   `
                     SELECT u.id AS UID,
@@ -485,12 +484,12 @@ router.post("/group-proposal-hab", (req, res) => {
     })(req,res);
 });
 
-router.post("/group-proposal-rand", (req, res) => {
+router.post("/group-proposal-rand", async (req, res) => {
     if (req.session.role != "P") {
         res.end("[]");
         return;
     }
-    rpg.multiSQL({
+    await rpg.multiSQL({
         dbcon: pass.dbcon,
         sql:   `
         SELECT t.id AS team,
@@ -503,9 +502,9 @@ router.post("/group-proposal-rand", (req, res) => {
         AND t.sesid = ${req.body.sesid}
         `,
         preventResEnd: true,
-        onEnd:         (req,res,arr) => {
+        onEnd:        async (req,res,arr) => {
             if(arr.length == 0) {
-                rpg.multiSQL({
+                await rpg.multiSQL({
                     dbcon: pass.dbcon,
                     sql:   `
                     SELECT u.id AS UID,
@@ -572,87 +571,132 @@ function habMetric (u) {
     return 0;
 }
 
-router.post("/set-groups", (req, res) => {
-    if (req.session.role != "P" || req.body.sesid == null || req.body.groups == null) {
-        res.end('{"status":"err"}');
-        return;
+router.post("/set-groups", async (req, res) => {
+    if (req.session.role !== "P" || !req.body.sesid || !req.body.groups) {
+        return res.status(400).json({ status: "err" });
     }
-    let sql = `
-    DELETE
-    FROM teamusers AS tu USING teams AS t
-    WHERE tu.tmid = t.id
-    AND t.sesid = ${req.body.sesid};
 
-    DELETE
-    FROM teams
-    WHERE sesid = ${req.body.sesid}:
-    `;
-    let grupos = JSON.parse(req.body.groups);
-    grupos.forEach((team) => {
-        sql += `
-        WITH ROWS AS (
-            INSERT INTO teams(sesid, leader, original_leader)
-            VALUES (
-                ${req.body.sesid}, ${team[0]}, ${team[0]}
-            ) RETURNING id
-        )
-            INSERT INTO teamusers(tmid, UID)
-            SELECT id,
-                unnest(
-                    '{${team.join(",")}}'::int[]
-                )
-            FROM ROWS;
-        `;
-    });
-    rpg.execSQL({
-        dbcon: pass.dbcon,
-        sql:   sql,
-        onEnd: () => {
-            res.end('{"status":"ok"}');
+    const sesid = req.body.sesid;
+    const groups = JSON.parse(req.body.groups);
+
+    try {
+        // First query: Delete entries in `teamusers` linked to the session
+        await rpg.singleSQL({
+            dbcon: pass.dbcon,
+            sql: `
+                DELETE FROM teamusers AS tu
+                USING teams AS t
+                WHERE tu.tmid = t.id AND t.sesid = $1
+            `,
+            sqlParams: [sesid]
+        })(req, res);
+
+        // Second query: Delete teams related to the session in `teams`
+        await rpg.singleSQL({
+            dbcon: pass.dbcon,
+            sql: `
+                DELETE FROM teams
+                WHERE sesid = $1
+            `,
+            sqlParams: [sesid]
+        })(req, res);
+
+        // Third query: Insert new teams and their members
+        for (const team of groups) {
+            // Insert a team and retrieve the generated ID
+            const result = await rpg.singleSQL({
+                dbcon: pass.dbcon,
+                sql: `
+                    INSERT INTO teams(sesid, leader, original_leader)
+                    VALUES ($1, $2, $2)
+                    RETURNING id
+                `,
+                sqlParams: [sesid, team[0]]
+            })(req, res);
+
+            const teamId = result[0].id;
+
+            // Insert team members into `teamusers`
+            await rpg.singleSQL({
+                dbcon: pass.dbcon,
+                sql: `
+                    INSERT INTO teamusers(tmid, UID)
+                    SELECT $1, unnest($2::int[])
+                `,
+                sqlParams: [teamId, `{${team.join(",")}}`]
+            })(req, res);
         }
-    })(req,res);
+
+        // Successful response after all queries complete
+        res.status(200).json({ status: "ok" });
+    } catch (error) {
+        console.error("Error in /set-groups:", error);
+        res.status(500).json({ status: "err", error: "Internal server error" });
+    }
 });
 
-router.post("/set-groups-stage", (req, res) => {
-    if (req.session.role != "P" || req.body.stageid == null || req.body.groups == null) {
-        res.end('{"status":"err"}');
-        return;
+router.post("/set-groups-stage", async (req, res) => {
+    if (req.session.role !== "P" || req.body.stageid == null || req.body.groups == null) {
+        return res.status(400).json({ status: "err" });
     }
-    let sql = `
-    DELETE
-    FROM teamusers AS tu USING teams AS t
-    WHERE tu.tmid = t.id
-    AND t.stageid = ${req.body.stageid};
 
-    DELETE
-    FROM teams
-    WHERE stageid = ${req.body.stageid};
-    `;
-    let grupos = JSON.parse(req.body.groups);
-    grupos.forEach((team) => {
-        sql += `
-        WITH ROWS AS (
-            INSERT INTO teams(stageid, leader, original_leader)
-            VALUES (
-                ${req.body.stageid}, ${team[0]}, ${team[0]}
-            )
-            RETURNING id
-        )
-        INSERT INTO teamusers(tmid, UID)
-        SELECT id,
-            unnest(
-                '{${team.join(",")}}'::int[]
-            )
-        FROM ROWS;
-        `;
-    });
-    rpg.execSQL({
-        dbcon: pass.dbcon,
-        sql:   sql,
-        onEnd: () => {
-            res.end('{"status":"ok"}');
+    const stageId = req.body.stageid;
+    const groups = JSON.parse(req.body.groups);
+
+    try {
+        // First query: Delete entries in `teamusers` linked to the stage
+        await rpg.singleSQL({
+            dbcon: pass.dbcon,
+            sql: `
+                DELETE FROM teamusers AS tu
+                USING teams AS t
+                WHERE tu.tmid = t.id AND t.stageid = $1
+            `,
+            sqlParams: [stageId]
+        })(req, res);
+
+        // Second query: Delete teams related to the stage in `teams`
+        await rpg.singleSQL({
+            dbcon: pass.dbcon,
+            sql: `
+                DELETE FROM teams
+                WHERE stageid = $1
+            `,
+            sqlParams: [stageId]
+        })(req, res);
+
+        // Third query: Insert new teams and their members
+        for (const team of groups) {
+            // Insert a team and retrieve the generated ID
+            const result = await rpg.singleSQL({
+                dbcon: pass.dbcon,
+                sql: `
+                    INSERT INTO teams(stageid, leader, original_leader)
+                    VALUES ($1, $2, $2)
+                    RETURNING id
+                `,
+                sqlParams: [stageId, team[0]]
+            })(req, res);
+
+            const teamId = result[0].id;
+
+            // Insert team members into `teamusers`
+            await rpg.singleSQL({
+                dbcon: pass.dbcon,
+                sql: `
+                    INSERT INTO teamusers(tmid, UID)
+                    SELECT $1, unnest($2::int[])
+                `,
+                sqlParams: [teamId, `{${team.join(",")}}`]
+            })(req, res);
         }
-    })(req, res);
+
+        // Successful response after all queries complete
+        res.status(200).json({ status: "ok" });
+    } catch (error) {
+        console.error("Error in /set-groups-stage:", error);
+        res.status(500).json({ status: "err", error: "Internal server error" });
+    }
 });
 
 function generateTeams (alumArr, scFun, n, different)  {
@@ -678,107 +722,88 @@ function generateTeams (alumArr, scFun, n, different)  {
     return groups;
 }
 
-router.post("/assign-pairs", (req, res) => {
+router.post("/assign-pairs", async (req, res) => {
     res.header("Content-type", "application/json");
-    if (req.session.role != "P" || req.body.sesid == null || req.body.rnum == null) {
+    if (req.session.role !== "P" || req.body.sesid == null || req.body.rnum == null) {
         console.error("Data not provided");
-        res.end('{"status":"err", "msg":"No hay datos suficientes"}');
-        return;
+        return res.status(400).json({ status: "err", msg: "Insufficient data provided" });
     }
-    let ses = req.body.sesid;
-    let m = req.body.rnum;
-    rpg.multiSQL({
-        dbcon: pass.dbcon,
-        sql:   `
-        SELECT r.id,
-            r.uid
-        FROM reports AS r
-        INNER JOIN rubricas AS k
-        ON r.rid = k.id
-        WHERE r.example = FALSE
-        AND k.sesid = ${ses}
-        `,
-        onEnd: (req, res, arr) => {
-            let n = arr.length;
-            let msg = "No hay suficientes reportes completos para asignar pares";
-            if (m >= n) {
-                console.error("More pairs than reports");
-                res.end(
-                    `{"status":"err", "msg":"${msg}"}`
-                );
-                return;
-            }
 
-            let uids = arr.map(e => e.uid);
-            let rids = arr.map(e => e.id);
+    const ses = req.body.sesid;
+    const m = req.body.rnum;
 
-            let counter = {};
-            uids.forEach(u => {
-                counter[u] = m;
-            });
+    try {
+        // First query to retrieve report IDs and user IDs related to the session
+        const reports = await rpg.singleSQL({
+            dbcon: pass.dbcon,
+            sql: `
+                SELECT r.id, r.uid
+                FROM reports AS r
+                INNER JOIN rubricas AS k ON r.rid = k.id
+                WHERE r.example = FALSE AND k.sesid = $1
+            `,
+            sqlParams: [ses]
+        })(req, res);
 
-            let pairs = [];
-            rids.forEach((ri,i) => {
-                let k = m;
-                while(k > 0){
-                    let sel = Object.keys(counter);
-                    // console.log("Seleccionable son: " + sel);
-                    if(sel.length == 0 || sel.length == 1 && sel[0] == uids[i]){
-                        let msg = "Error de consistencia de los pares formados. Intente nuevamente";
-                        console.error("Infinite loop");
-                        res.end(
-                            `{"status":"err", "msg":"${msg}"}`
-                        );
-                        return;
-                    }
-                    let r = ~~(Math.random()*sel.length);
-                    // console.log("Indice random es: " + r + ", rid es: " + ri);
-                    if (sel[r] != uids[i]){
-                        k -= 1;
-                        pairs.push({uid: sel[r], rid: ri});
-                        counter[sel[r]] -= 1;
-                        if(counter[sel[r]] <= 0){
-                            delete counter[sel[r]];
-                        }
+        const n = reports.length;
+        if (m >= n) {
+            const msg = "Not enough completed reports to assign pairs";
+            console.error("More pairs than reports");
+            return res.status(400).json({ status: "err", msg });
+        }
+
+        const uids = reports.map(e => e.uid);
+        const rids = reports.map(e => e.id);
+        const counter = {};
+        uids.forEach(u => (counter[u] = m));
+
+        const pairs = [];
+        rids.forEach((ri, i) => {
+            let k = m;
+            while (k > 0) {
+                const selectable = Object.keys(counter);
+                if (selectable.length === 0 || (selectable.length === 1 && selectable[0] === uids[i])) {
+                    const msg = "Inconsistent pairs formed. Please try again";
+                    console.error("Infinite loop");
+                    return res.status(400).json({ status: "err", msg });
+                }
+                const r = Math.floor(Math.random() * selectable.length);
+                if (selectable[r] !== uids[i]) {
+                    k -= 1;
+                    pairs.push({ uid: selectable[r], rid: ri });
+                    counter[selectable[r]] -= 1;
+                    if (counter[selectable[r]] <= 0) {
+                        delete counter[selectable[r]];
                     }
                 }
-            });
-
-            let pairstr = pairs.map(e => "("+e.uid+","+e.rid+")");
-            if(pairs.length != n*m){
-                let msg = "Error de consistencia de los pares formados. Intente nuevamente";
-                res.end(
-                    `{"status":"err", "msg":"${msg}"}`
-                );
-                return;
             }
-            if(hasDuplicates(pairstr)){
-                let msg = "Error de duplicación de pares asignados. Intente nuevamente";
-                console.error("Se encontraron duplicados");
-                res.end(
-                    `{"status":"err", "msg":"${msg}"}`
-                );
-                return;
-            }
-            console.log("Pairs formed: " + pairstr.join(" "));
+        });
 
-            let sql = `
-            INSERT INTO report_pair(sesid, uid, repid) VALUES
-            `;
-            sql += pairs.map(e => `(${ses}, ${e.uid}, ${e.rid})`).join(",");
-            rpg.execSQL({
-                dbcon:         pass.dbcon,
-                sql:           sql,
-                onEnd:         () => {},
-                preventResEnd: true
-            })(req,res);
-
-            res.end('{"status":"ok"}');
+        // Check for consistency
+        if (pairs.length !== n * m || hasDuplicates(pairs)) {
+            const msg = "Error in pair formation consistency. Please try again";
+            console.error("Consistency error or duplicates found in pairs");
+            return res.status(400).json({ status: "err", msg });
         }
-    })(req,res);
+
+        // Insert pairs using prepared statements
+        const values = pairs.map(pair => `(${ses}, ${pair.uid}, ${pair.rid})`).join(",");
+        await rpg.singleSQL({
+            dbcon: pass.dbcon,
+            sql: `
+                INSERT INTO report_pair(sesid, uid, repid)
+                VALUES ${values}
+            `
+        })(req, res);
+
+        return res.status(200).json({ status: "ok" });
+    } catch (error) {
+        console.error("Error in /assign-pairs:", error);
+        return res.status(500).json({ status: "err", error: "Internal server error" });
+    }
 });
 
-router.post("/get-ideas-progress", rpg.multiSQL({
+router.post("/get-ideas-progress", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT i.uid,
@@ -799,7 +824,7 @@ router.post("/get-ideas-progress", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "iteration"), rpg.param("post", "sesid")]
 }));
 
-router.post("/get-alum-done-time", rpg.multiSQL({
+router.post("/get-alum-done-time", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT f.uid, extract(epoch FROM f.stime - s.stime) AS dtime
@@ -814,37 +839,34 @@ router.post("/get-alum-done-time", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "iteration"), rpg.param("post", "sesid")]
 }));
 
-router.post("/get-ideas-progress", async (req, res) => {
-    try {
-        const { iteration, sesid } = req.body; // Assuming the POST data is in the request body
-
-        // Execute the SQL query
-        const result = await pass.dbcon.query(`
-            SELECT i.uid,
-                count(*) AS COUNT
-            FROM ideas AS i
-            INNER JOIN users AS u
-            ON i.uid = u.id
-            WHERE iteration = $1
-            AND u.role = 'A'
-            AND i.docid in (
-                SELECT id
-                FROM documents
-                WHERE sesid = $2
-            )
-            GROUP BY UID
-        `, [iteration, sesid]);
-
-        // Extract the data from the result
-        const data = result.rows;
-
+router.post("/get-ideas-progress", await rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: `
+        SELECT i.uid,
+               count(*) AS count
+        FROM ideas AS i
+        INNER JOIN users AS u ON i.uid = u.id
+        WHERE iteration = $1
+          AND u.role = 'A'
+          AND i.docid IN (
+              SELECT id
+              FROM documents
+              WHERE sesid = $2
+          )
+        GROUP BY i.uid
+    `,
+    postReqData: ["iteration", "sesid"],
+    sqlParams: [rpg.param("post", "iteration"), rpg.param("post", "sesid")],
+    onEnd: (req, res, result) => {
         // Send the data as JSON in the response
-        res.json({ data });
-    } catch (error) {
-        // Handle any errors that occur during the execution or response
+        res.json({ data: result });
+    },
+    onError: (err, req, res) => {
+        console.error("Error in /get-ideas-progress query:", err);
         res.status(500).json({ error: "Internal Server Error" });
     }
-});
+}));
+
 
 function hasDuplicates (arr) {
     let dict = {};
@@ -866,4 +888,4 @@ function getSemanticScore (pauta, alum) {
     return r/Math.max(pauta.sentences.length, alum.sentences.length);
 }
 
-module.exports = router;
+export default router;

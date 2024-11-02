@@ -1,14 +1,4 @@
-"use strict";
-
-var BASE_APP = window.location.href.replace("role-playing", "");
-
-var app = angular.module("Role", ["ngSanitize", "ui.bootstrap", "ui.tree", "btford.socket-io", "angular-intro", "ui-notification", "luegg.directives"]);
-
-app.factory("$socket", ["socketFactory", function (socketFactory) {
-    return socketFactory();
-}]);
-
-app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Notification", "$sce", "$uibModal", "ngIntroService", function ($scope, $http, $timeout, $socket, Notification, $sce, $uibModal, ngIntroService) {
+export function RolePlayingController($scope, $http, $timeout, $socket, Notification, $sce, $uibModal, ngIntroService) {
     var self = $scope;
     self.designId = -1;
     self.iteration = 1;
@@ -73,7 +63,8 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
 
                 $socket.on("chatMsgStage", function (data) {
                     console.log("SOCKET.IO", data);
-                    if (data.stageid == self.currentStageId && data.tmid == self.tmId && self.currentStage.chat) {
+                    if (data.stageid == self.currentStageId && 
+                        data.tmid == self.tmId && self.currentStage.chat) {
                         updateChat();
                     }
                 });
@@ -716,86 +707,4 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
         window.open(pdfPath, "_blank");
     };
     self.init();
-}]);
-
-app.controller("DirectContentController", [
-    "$scope", "$uibModalInstance", "data", function ($scope, $uibModalInstance, data) {
-        var vm = this;
-        vm.data = data;
-        vm.data.title = "Respuesta recibida";
-
-        setTimeout(function () {
-            console.log(vm);
-            document.getElementById("modal-content").innerHTML = vm.data.content;
-        }, 500);
-
-        vm.cancel = function () {
-            $uibModalInstance.dismiss("cancel");
-        };
-    }
-]);
-
-window.DIC = null;
-window.warnDIC = {};
-
-app.filter("lang", function () {
-    filt.$stateful = true;
-    return filt;
-
-    function filt(label) {
-        if (window.DIC == null) return;
-        if (window.DIC[label]) return window.DIC[label];
-        if (!window.warnDIC[label]) {
-            console.warn("Cannot find translation for ", label);
-            window.warnDIC[label] = true;
-        }
-        return label;
-    }
-});
-
-function indexById(arr, id) {
-    return arr.findIndex(function (e) {
-        return e.id == id;
-    });
-}
-
-app.directive("bindHtmlCompile", ["$compile", function ($compile) {
-    return {
-        restrict: "A",
-        link:     function link(scope, element, attrs) {
-            scope.$watch(function () {
-                return scope.$eval(attrs.bindHtmlCompile);
-            }, function (value) {
-                element.html(value && value.toString());
-                var compileScope = scope;
-                if (attrs.bindHtmlScope) {
-                    compileScope = scope.$eval(attrs.bindHtmlScope);
-                }
-                $compile(element.contents())(compileScope);
-            });
-        }
-    };
-}]);
-
-app.filter("linkfy", function () {
-    var replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
-    var replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
-    var replacePattern3 = /(\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,6})/gim;
-
-    return function (text, target, otherProp) {
-        if (text == null) return text;
-        angular.forEach(text.match(replacePattern1), function (url) {
-            text = text.replace(replacePattern1, "<a href=\"$1\" target=\"_blank\">$1</a>");
-        });
-        angular.forEach(text.match(replacePattern2), function (url) {
-            text = text.replace(
-                replacePattern2, "$1<a href=\"http://$2\" target=\"_blank\">$2</a>"
-            );
-        });
-        angular.forEach(text.match(replacePattern3), function (url) {
-            text = text.replace(replacePattern3, "<a href=\"mailto:$1\">$1</a>");
-        });
-        // console.log("HOLA");
-        return text;
-    };
-});
+};

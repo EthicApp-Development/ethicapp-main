@@ -1,8 +1,7 @@
 "use strict";
 
 import express from "express";
-import pass from "../helpers/compat-helper.js"
-import { getDBInstance } from "../db/rest-pg-2.js"; 
+import pass from "../helpers/compat-helper.js" 
 import * as rpg from "../db/rest-pg.js";
 let router = express.Router();
 
@@ -13,18 +12,18 @@ router.get("/seslist", (req, res) => {
             res.redirect("home");
         }
         else {
-            console.debug("rendering seslist");
             res.render("seslist", {
                 title: "EthicApp",
-                ngApp: "SesList",
-                controller:  "SesListController",
+                ngApp: "SessionsList",
+                controller:  "SessionsListController",
                 extraScripts : `
-                <script src="assets/libs/socket.min.js" defer></script>
-                <script src="assets/libs/intro.min.js" defer></script>
-                <script src="assets/libs/ui-bootstrap-tpls-1.1.2.min.js" defer></script>
-                <script src="assets/libs/angular-intro.min.js" defer></script>
-                <script src="assets/libs/ua-parser.min.js" defer></script>
-                <script type="module" src="assets/js/controllers/student/sessions.mjs" defer></script>
+                <script src="/socket.io/socket.io.js" defer></script>                
+                <script src="/assets/libs/socket.min.js" defer></script>
+                <script src="/assets/libs/intro.min.js" defer></script>
+                <script src="/assets/libs/ui-bootstrap-tpls-1.1.2.min.js" defer></script>
+                <script src="/assets/libs/angular-intro.min.js" defer></script>
+                <script src="/assets/libs/ua-parser.min.js" defer></script>
+                <script type="module" src="/assets/js/modules/student/sessions.mjs" defer></script>
                 `
             });
         }
@@ -78,7 +77,7 @@ router.post("/get-session-list", await rpg.multiSQL({
 }));
 
 
-router.post("/add-session", rpg.execSQL({
+router.post("/add-session", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     WITH ROWS AS (
@@ -120,42 +119,56 @@ router.post("/add-session-activity", async (req, res) => {
     const uid = req.session.uid;
     const { name, descr, type, additionalConfig } = req.body;
     const config = additionalConfig || {};
-    
-    const db = getDBInstance(pass.dbcon);
-    
+
     try {
-        // Step 1: Insert into the `sessions` table and get the id returned.
-        const sessionInsertSQL = `
-            INSERT INTO sessions(name, descr, creator, time, status, type, additional_config)
-            VALUES ($1, $2, $3, now(), 1, $4, $5)
-            RETURNING id;
-        `;
-        const sessionValues = [name, descr, uid, type, config];
-        const sessionResult = await db.query(sessionInsertSQL, sessionValues);
-        const sessionId = sessionResult.rows[0].id;
+        // Step 1: Insert into `sessions` table and get the id returned.
+        const sessionResult = await rpg.singleSQL({
+            dbcon: pass.dbcon,
+            sql: `
+                INSERT INTO sessions(name, descr, creator, time, status, type, additional_config)
+                VALUES ($1, $2, $3, now(), 1, $4, $5)
+                RETURNING id;
+            `,
+            sqlParams: [name, descr, uid, type, config]
+        })(req, res);
 
-        // Step 2: Insert into the `sesusers` using the obtained id.
-        const sesusersInsertSQL = `
-            INSERT INTO sesusers(sesid, uid)
-            VALUES ($1, $2);
-        `;
-        const sesusersValues = [sessionId, uid];
-        await db.query(sesusersInsertSQL, sesusersValues);
+        const sessionId = sessionResult?.rows?.[0]?.id;
 
-        // Step 3: Get the highest id for the current creator.
-        const maxIdSQL = `
-            SELECT max(id) FROM sessions WHERE creator = $1;
-        `;
-        const maxIdResult = await db.query(maxIdSQL, [uid]);
-        const maxId = maxIdResult.rows[0].max;
+        if (!sessionId) {
+            throw new Error("Failed to retrieve session ID");
+        }
 
-        // Step 4: Execute stored procedure.
-        const updateSQL = `
-            SELECT UpdateOrInsertActivityRecord($1);
-        `;
-        await db.query(updateSQL, [uid]);
+        // Step 2: Insert into `sesusers` table with the obtained session ID.
+        await rpg.singleSQL({
+            dbcon: pass.dbcon,
+            sql: `
+                INSERT INTO sesusers(sesid, uid)
+                VALUES ($1, $2);
+            `,
+            sqlParams: [sessionId, uid]
+        })(req, res);
 
-        // Generate response.
+        // Step 3: Get the highest ID for the current creator.
+        const maxIdResult = await rpg.singleSQL({
+            dbcon: pass.dbcon,
+            sql: `
+                SELECT max(id) AS max FROM sessions WHERE creator = $1;
+            `,
+            sqlParams: [uid]
+        })(req, res);
+
+        const maxId = maxIdResult?.rows?.[0]?.max;
+
+        // Step 4: Execute stored procedure to update or insert activity record.
+        await rpg.singleSQL({
+            dbcon: pass.dbcon,
+            sql: `
+                SELECT UpdateOrInsertActivityRecord($1);
+            `,
+            sqlParams: [uid]
+        })(req, res);
+
+        // Generate a successful response.
         res.json({ status: 200, id: maxId });
 
     } catch (err) {
@@ -164,100 +177,101 @@ router.post("/add-session-activity", async (req, res) => {
     }
 });
 
-router.post("/add-activity", (req, res) => {
-    var sesid =req.body.sesid;
-    var dsgnid = req.body.dsgnid;
-    var sql = `
-    INSERT INTO ACTIVITY (design, SESSION)
-    VALUES (${dsgnid}, ${sesid});
 
-    UPDATE designs
-    SET locked = TRUE
-    WHERE id = ${dsgnid};
+router.post("/add-activity", async (req, res) => {
+    const sesid = req.body.sesid;
+    const dsgnid = req.body.dsgnid;
 
-    SELECT design
-    FROM DESIGNS
-    WHERE id = ${dsgnid};
-    `;
-    var db = getDBInstance(pass.dbcon);
-    var qry;
-    var result;
-    qry = db.query(sql, (err,res) =>{
-        if(res!= null) result = res.rows[0].design;
-    });
-    qry.on("end", function () {
-        res.json({status: 200, "result": result});
-    });
-    qry.on("error", function(err){
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.json({status: 400, });
+    try {
+        // Insert into ACTIVITY table
+        await rpg.singleSQL({
+            dbcon: pass.dbcon,
+            sql: `
+                INSERT INTO ACTIVITY (design, SESSION)
+                VALUES ($1, $2)
+            `,
+            sqlParams: [dsgnid, sesid]
+        })(req, res);
 
-    });
-});
+        // Update the designs table to lock the design
+        await rpg.singleSQL({
+            dbcon: pass.dbcon,
+            sql: `
+                UPDATE designs
+                SET locked = TRUE
+                WHERE id = $1
+            `,
+            sqlParams: [dsgnid]
+        })(req, res);
 
-router.post("/check-design", (req, res) => {
-    var dsgnid = req.body.dsgnid;
-    var sql = `
-    SELECT design
-    FROM DESIGNS
-    WHERE id = ${dsgnid};
-    `;
-    var db = getDBInstance(pass.dbcon);
-    var qry;
-    var result = true;
-    var phases;
-    qry = db.query(sql, (err,res) =>{
-        if(res!= null) {
-            phases = res.rows[0].design.phases;
-            for(let i =0; i< phases.length; i++){
-                var phase = phases[i];
-                if(res.rows[0].design.type == "semantic_differential"){
-                    var questions = phase.questions;
-                    for(let j=0; j<questions.length; j++){
-                        var question = questions[j];
-        
-                        question.q_text = (
-                            question.q_text === "" || question.q_text === "-->>N/A<<--"
-                        ) ? result = false : result;
-                        question.ans_format.l_pole = (
-                            question.ans_format.l_pole === "" |
-                            question.ans_format.l_pole === "-->>N/A<<--"
-                        ) ? result = false : result;
-                        question.ans_format.r_pole = (
-                            question.ans_format.r_pole === "" |
-                            question.ans_format.l_pole === "-->>N/A<<--"
-                        ) ? result = false : result;
-                    }
-                }
-                else if(res.rows[0].design.type == "ranking"){
-                    phase.q_text = (
-                        phase.q_text === "" || phase.q_text === "-->>N/A<<--"
-                    ) ? result = false : result;
-                    var roles = phase.roles;
-                    for(let j=0; j<roles.length; j++){
-                        var role = roles[j];      
-                        role.name = (
-                            role.name === "" || role.name === "-->>N/A<<--"
-                        ) ? result = false : result;
-
-                    }
-                }
+        // Select the updated design to return as the result
+        const result = await rpg.singleSQL({
+            dbcon: pass.dbcon,
+            sql: `
+                SELECT design
+                FROM DESIGNS
+                WHERE id = $1
+            `,
+            sqlParams: [dsgnid],
+            onEnd: (req, res, result) => {
+                res.json({ status: 200, result: result.design });
             }
-            return;
-        }
-    });
-    qry.on("end", function () {
-        res.json({status: 200, "result": result});
-    });
-    qry.on("error", function(err){
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.json({status: 400, });
-
-    });
+        })(req, res);
+    } catch (error) {
+        console.error("Error in /add-activity endpoint:", error);
+        res.status(400).json({ status: 400, error: "Error processing activity addition" });
+    }
 });
 
+router.post("/check-design", await rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: `
+        SELECT design
+        FROM DESIGNS
+        WHERE id = $1;
+    `,
+    sqlParams: [rpg.param("body", "dsgnid")],
+    onEnd: (req, res, result) => {
+        if (!result || !result.design) {
+            return res.status(404).json({ status: "err", message: "Design not found" });
+        }
+
+        const design = result.design;
+        let isValid = true;
+
+        design.phases?.forEach(phase => {
+            if (design.type === "semantic_differential") {
+                phase.questions?.forEach(question => {
+                    if (
+                        !question.q_text ||
+                        question.q_text === "-->>N/A<<--" ||
+                        !question.ans_format.l_pole ||
+                        question.ans_format.l_pole === "-->>N/A<<--" ||
+                        !question.ans_format.r_pole ||
+                        question.ans_format.r_pole === "-->>N/A<<--"
+                    ) {
+                        isValid = false;
+                    }
+                });
+            } else if (design.type === "ranking") {
+                if (!phase.q_text || phase.q_text === "-->>N/A<<--") {
+                    isValid = false;
+                }
+                phase.roles?.forEach(role => {
+                    if (!role.name || role.name === "-->>N/A<<--") {
+                        isValid = false;
+                    }
+                });
+            }
+        });
+
+        res.json({ status: 200, result: isValid });
+    },
+    onError: (err, req, res) => {
+        console.error("Error in /check-design query:", err);
+        res.status(500).json({ status: "err", message: "Internal Server Error" });
+    }
+}));
 
 router.post("/get-activities", await rpg.singleSQL({
     dbcon: pass.dbcon,
@@ -315,7 +329,7 @@ router.get("/home", function(req,res) {
     }
 });
 
-router.post("/update-session", rpg.execSQL({
+router.post("/update-session", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     UPDATE sessions
@@ -330,13 +344,13 @@ router.post("/update-session", rpg.execSQL({
 }));
 
 
-router.post("/upload-file", (req, res) => {
+router.post("/upload-file", async (req, res) => {
     if (
         req.session.uid != null && req.body.title != null && req.body.title != "" &&
         req.files.pdf != null && req.files.pdf.mimetype == "application/pdf" &&
         req.body.sesid != null
     ) {
-        rpg.execSQL({
+        await rpg.execSQL({
             dbcon: pass.dbcon,
             sql:   `
             INSERT INTO documents(title, PATH, sesid, uploader)
@@ -358,12 +372,12 @@ router.post("/upload-file", (req, res) => {
 });
 
 
-router.post("/upload-design-file", (req, res) => {
+router.post("/upload-design-file", async (req, res) => {
     if (
         req.session.uid != null  && req.files.pdf != null
         && req.files.pdf.mimetype == "application/pdf"
     ) {
-        rpg.execSQL({
+        await rpg.execSQL({
             dbcon: pass.dbcon,
             sql:   `
             INSERT INTO designs_documents(PATH, dsgnid, uploader)
@@ -384,7 +398,7 @@ router.post("/upload-design-file", (req, res) => {
 });
 
 
-router.post("/delete-design-document", rpg.execSQL({
+router.post("/delete-design-document", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     UPDATE designs_documents
@@ -395,62 +409,60 @@ router.post("/delete-design-document", rpg.execSQL({
     sqlParams:   [rpg.param("post", "dsgnid")]
 }));
 
-
-router.post("/upload-design", (req, res) => {
-    var id = req.session.uid;
-    var sql = `
-    INSERT INTO DESIGNS(creator, design)
-    VALUES (${id}, '${JSON.stringify(req.body)}')
-    `;
-    var sql2 = "SELECT max(id) FROM DESIGNS WHERE creator = "+id;
-    var db = getDBInstance(pass.dbcon);
-    var qry;
-    var qry2;
-    var result;
-    qry = db.query(sql);
-    qry.on("end", function () {
-        qry2 = db.query(sql2,(err,res) =>{
-            if(res!= null){
-                result = res.rows[0].max;
-            }
-        });
-        qry2.on("end", function () {
-            res.end('{"status":"ok", "id":'+result+"}");   
-        });
-            
-    });
-    qry.on("error", function(err){
-        console.error(err);
-        res.end('{"status":"err"}');
-    });
-});
-
-
-router.post("/get-design", (req, res) => {
-    // var uid = req.session.uid;
-    var id = req.body;
-    var sql = `
-    SELECT *
-    FROM DESIGNS
-    WHERE id = ${id}
-    `;
-    var db = getDBInstance(pass.dbcon);
-    var qry;
-    var result;
-    qry = db.query(sql,(err,res) =>{
-        if(res != null){
-            result = JSON.stringify(res.rows[0].design);   
+router.post("/upload-design", await rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: `
+        INSERT INTO DESIGNS (creator, design)
+        VALUES ($1, $2)
+        RETURNING id
+    `,
+    sqlParams: [
+        rpg.param("session", "uid"),
+        rpg.param("body")
+    ],
+    onEnd: (req, res, result) => {
+        if (result && result.id) {
+            const newDesignId = result.id;
+            res.json({ status: "ok", id: newDesignId });
+        } else {
+            res.status(500).json({ status: "err", message: "Failed to retrieve design ID" });
         }
-    });
-    qry.on("end", function () {
-        res.end('{"status":"ok", "result":'+result+"}");
-    });
-    qry.on("error", function(err){
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.end('{"status":"err"}');
-    });
-});
+    },
+    onError: (err, req, res) => {
+        console.error("Error in /upload-design query:", err);
+        res.status(500).json({ status: "err", message: "Internal Server Error" });
+    }
+}));
+
+router.post("/get-design", await rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: `
+        SELECT design
+        FROM DESIGNS
+        WHERE id = $1
+    `,
+    sqlParams: [rpg.param("body", "id")],
+    onStart: (req, res) => { 
+        console.log("Received request body:", JSON.stringify(req.body));
+        const id = req.body?.id || "undefined";
+        console.log("Fetching design with ID:", id);
+    },
+    onEnd: (req, res, result) => {
+        if (result && result.design) {
+            const design = JSON.stringify(result.design);
+            res.json({ status: "ok", result: design });
+        } else {
+            console.log("Design not found for ID:", req.body?.id);
+            res.status(404).json({ status: "err", message: "Design not found" });
+        }
+    },
+    onError: (err, req, res) => {
+        console.error("Error in /get-design query:", err);
+        res.status(500).json({ status: "err", message: "Internal Server Error" });
+    }
+}));
+
+
 
 router.get("/get-user-designs", await rpg.singleSQL({
     dbcon: pass.dbcon,

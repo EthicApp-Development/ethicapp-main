@@ -20,4 +20,4 @@ Dockerfile.image-renewal
 !frontend/assets/js/assets-bundle.js
 !frontend/assets/css/assets-bundle.css
 !frontend/assets/css/assets-bundle.css.map
-!frontend/assets/js/ngmodules/teacher/bundled-teacher-admin.min.js
+!frontend/assets/js/modules/teacher/bundled-teacher-admin.min.js

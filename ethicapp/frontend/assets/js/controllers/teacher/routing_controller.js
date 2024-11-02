@@ -1,6 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
 export let RoutingController = function($scope) {
-    console.log("Routing Controller Initialized");
     $scope.template = {      
         "home":           "views/partials/teacher/home.html",
         "newDesign":      "views/partials/teacher/new-design.html",

@@ -1,12 +1,11 @@
 "use strict";
 
-let express = require("express");
+import express from "express";
+import pass from "../helpers/compat-helper.js"
+import * as rpg from "../db/rest-pg.js";
 let router = express.Router();
-let rpg = require("../db/rest-pg");
-let pass = require("../config/keys-n-secrets");
-let socket = require("../config/socket.config");
 
-router.post("/get-stages", rpg.multiSQL({
+router.post("/get-stages", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT id,
@@ -24,7 +23,7 @@ router.post("/get-stages", rpg.multiSQL({
 }));
 
 
-router.post("/get-admin-stages", rpg.multiSQL({
+router.post("/get-admin-stages", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT id,
@@ -43,7 +42,7 @@ router.post("/get-admin-stages", rpg.multiSQL({
 }));
 
 
-router.post("/get-current-stage", rpg.multiSQL({
+router.post("/get-current-stage", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT number
@@ -57,7 +56,7 @@ router.post("/get-current-stage", rpg.multiSQL({
 }));
 
 
-router.post("/add-stage", rpg.singleSQL({
+router.post("/add-stage", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
     INSERT INTO stages (number, type, anon, chat, sesid, prev_ans, question, grouping)
@@ -73,7 +72,7 @@ router.post("/add-stage", rpg.singleSQL({
 }));
 
 
-router.post("/add-actor", rpg.execSQL({
+router.post("/add-actor", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     INSERT INTO actors (name, jorder, stageid, justified, word_count)
@@ -87,7 +86,7 @@ router.post("/add-actor", rpg.execSQL({
 }));
 
 
-router.post("/get-actors", rpg.multiSQL({
+router.post("/get-actors", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT id,
@@ -103,7 +102,7 @@ router.post("/get-actors", rpg.multiSQL({
 }));
 
 
-router.post("/get-my-actor-sel", rpg.multiSQL({
+router.post("/get-my-actor-sel", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT id,
@@ -120,7 +119,7 @@ router.post("/get-my-actor-sel", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "stageid"), rpg.param("ses", "uid")]
 }));
 
-router.post("/get-role-sel-all", rpg.multiSQL({
+router.post("/get-role-sel-all", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT id,
@@ -137,7 +136,7 @@ router.post("/get-role-sel-all", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "stageid")]
 }));
 
-router.post("/session-start-stage", rpg.execSQL({
+router.post("/session-start-stage", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     UPDATE sessions
@@ -154,7 +153,7 @@ router.post("/session-start-stage", rpg.execSQL({
     }
 }));
 
-router.post("/session-finish-stages", rpg.execSQL({
+router.post("/session-finish-stages", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     UPDATE sessions
@@ -171,7 +170,7 @@ router.post("/session-finish-stages", rpg.execSQL({
     }
 }));
 
-router.post("/send-actor-selection", rpg.execSQL({
+router.post("/send-actor-selection", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     WITH ROWS AS (
@@ -207,7 +206,7 @@ router.post("/send-actor-selection", rpg.execSQL({
 }));
 
 
-router.post("/add-jigsaw-role", rpg.execSQL({
+router.post("/add-jigsaw-role", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     INSERT INTO jigsaw_role (name, description, sesid)
@@ -219,8 +218,7 @@ router.post("/add-jigsaw-role", rpg.execSQL({
     ]
 }));
 
-
-router.post("/get-jigsaw-roles", rpg.multiSQL({
+router.post("/get-jigsaw-roles", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT id,
@@ -234,8 +232,7 @@ router.post("/get-jigsaw-roles", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "sesid")]
 }));
 
-
-router.post("/get-my-jigsaw-roles", rpg.multiSQL({
+router.post("/get-my-jigsaw-roles", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT id,
@@ -249,8 +246,7 @@ router.post("/get-my-jigsaw-roles", rpg.multiSQL({
     sqlParams:  [rpg.param("ses", "ses")]
 }));
 
-
-router.post("/assign-jigsaw-role", rpg.execSQL({
+router.post("/assign-jigsaw-role", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     INSERT INTO jigsaw_users (stageid, userid, roleid)
@@ -262,8 +258,7 @@ router.post("/assign-jigsaw-role", rpg.execSQL({
     ]
 }));
 
-
-router.post("/get-assigned-jigsaw-role", rpg.multiSQL({
+router.post("/get-assigned-jigsaw-role", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT ju.roleid,
@@ -279,7 +274,7 @@ router.post("/get-assigned-jigsaw-role", rpg.multiSQL({
     sqlParams:  [rpg.param("ses", "ses"), rpg.param("ses", "uid")]
 }));
 
-router.post("/assign-cyclic-jigsaw-role", rpg.execSQL({
+router.post("/assign-cyclic-jigsaw-role", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     WITH ROWS AS (
@@ -307,7 +302,7 @@ router.post("/assign-cyclic-jigsaw-role", rpg.execSQL({
     ]
 }));
 
-router.post("/get-assigned-jigsaw-roles", rpg.multiSQL({
+router.post("/get-assigned-jigsaw-roles", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT ju.userid,
@@ -323,7 +318,7 @@ router.post("/get-assigned-jigsaw-roles", rpg.multiSQL({
 }));
 
 
-router.post("/get-draft", rpg.singleSQL({
+router.post("/get-draft", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT id,
@@ -336,7 +331,7 @@ router.post("/get-draft", rpg.singleSQL({
 }));
 
 
-router.post("/save-draft", rpg.execSQL({
+router.post("/save-draft", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     WITH ROWS AS (
@@ -360,5 +355,4 @@ router.post("/save-draft", rpg.execSQL({
     ]
 }));
 
-
-module.exports = router;
+export default router;

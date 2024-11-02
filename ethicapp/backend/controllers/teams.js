@@ -1,13 +1,13 @@
 "use strict";
 
-let express = require("express");
+import express from "express";
+import pass from "../helpers/compat-helper.js"
+import * as rpg from "../db/rest-pg.js";
+import socket from "../config/socket.config.js";
+
 let router = express.Router();
-let rpg = require("../db/rest-pg");
-let pass = require("../config/keys-n-secrets");
-let socket = require("../config/socket.config");
 
-
-router.post("/get-team-selection",rpg.multiSQL({
+router.post("/get-team-selection", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT DISTINCT s.answer,
@@ -41,7 +41,7 @@ router.post("/get-team-selection",rpg.multiSQL({
 }));
 
 
-router.post("/get-team-ideas",rpg.multiSQL({
+router.post("/get-team-ideas", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT i.id,
@@ -78,7 +78,7 @@ router.post("/get-team-ideas",rpg.multiSQL({
 }));
 
 
-router.post("/get-team-semantic-units",rpg.multiSQL({
+router.post("/get-team-semantic-units", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT u.id,
@@ -113,7 +113,7 @@ router.post("/get-team-semantic-units",rpg.multiSQL({
 }));
 
 
-router.post("/get-team-diff-selection",rpg.multiSQL({
+router.post("/get-team-diff-selection", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT DISTINCT s.sel,
@@ -146,8 +146,7 @@ router.post("/get-team-diff-selection",rpg.multiSQL({
     ]
 }));
 
-
-router.post("/get-team-actor-selection",rpg.multiSQL({
+router.post("/get-team-actor-selection", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT DISTINCT s.orden,
@@ -185,7 +184,7 @@ router.post("/get-team-actor-selection",rpg.multiSQL({
 }));
 
 
-router.post("/get-team-differential-selection",rpg.multiSQL({
+router.post("/get-team-differential-selection", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT DISTINCT s.sel,
@@ -226,8 +225,7 @@ router.post("/get-team-differential-selection",rpg.multiSQL({
     sqlParams: [rpg.param("calc","prevarr"), rpg.param("post","stageid"), rpg.param("ses","uid")]
 }));
 
-
-router.post("/get-ses-info",rpg.singleSQL({
+router.post("/get-ses-info", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT greatest(-1, least(7, s.status-2)) AS iteration,
@@ -250,7 +248,7 @@ router.post("/get-ses-info",rpg.singleSQL({
 }));
 
 
-router.post("/get-team-leader",rpg.singleSQL({
+router.post("/get-team-leader", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT leader,
@@ -267,7 +265,7 @@ router.post("/get-team-leader",rpg.singleSQL({
 }));
 
 
-router.post("/get-team-sync-ideas", rpg.multiSQL({
+router.post("/get-team-sync-ideas", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT i.id,
@@ -295,7 +293,7 @@ router.post("/get-team-sync-ideas", rpg.multiSQL({
 }));
 
 
-router.post("/check-team-answer",rpg.multiSQL({
+router.post("/check-team-answer", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT t.uid,
@@ -357,7 +355,7 @@ router.post("/check-team-answer",rpg.multiSQL({
 }));
 
 
-router.post("/get-team", rpg.multiSQL({
+router.post("/get-team", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT u.name,
@@ -388,7 +386,7 @@ router.post("/get-team", rpg.multiSQL({
 }));
 
 
-router.post("/get-team-stage", rpg.multiSQL({
+router.post("/get-team-stage", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT u.name,
@@ -413,7 +411,7 @@ router.post("/get-team-stage", rpg.multiSQL({
 }));
 
 
-router.post("/get-anon-team", rpg.multiSQL({
+router.post("/get-anon-team", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT u.id,
@@ -442,7 +440,7 @@ router.post("/get-anon-team", rpg.multiSQL({
 }));
 
 
-router.post("/send-team-progress", rpg.execSQL({
+router.post("/send-team-progress", await rpg.execSQL({
     dbcon:       pass.dbcon,
     sql:         "update teams set progress = $1 where id = $2",
     sesReqData:  ["ses","uid"],
@@ -453,7 +451,7 @@ router.post("/send-team-progress", rpg.execSQL({
     }
 }));
 
-router.post("/update-my-team", rpg.singleSQL({
+router.post("/update-my-team", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT id
@@ -471,7 +469,7 @@ router.post("/update-my-team", rpg.singleSQL({
 }));
 
 
-router.post("/take-team-control", rpg.execSQL({
+router.post("/take-team-control", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
     UPDATE teams
@@ -486,7 +484,7 @@ router.post("/take-team-control", rpg.execSQL({
 }));
 
 
-router.post("/get-original-leaders", rpg.multiSQL({
+router.post("/get-original-leaders", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT t.original_leader AS leader,
@@ -503,7 +501,7 @@ router.post("/get-original-leaders", rpg.multiSQL({
 }));
 
 
-router.post("/get-differential-all", rpg.multiSQL({
+router.post("/get-differential-all", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT tmid,
@@ -531,7 +529,7 @@ router.post("/get-differential-all", rpg.multiSQL({
 }));
 
 
-router.post("/get-differential-all-stage", rpg.multiSQL({
+router.post("/get-differential-all-stage", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT d.stageid,
@@ -562,7 +560,7 @@ router.post("/get-differential-all-stage", rpg.multiSQL({
 }));
 
 
-router.post("/get-differential-indv", rpg.multiSQL({
+router.post("/get-differential-indv", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT s.uid AS tmid,
@@ -585,7 +583,7 @@ router.post("/get-differential-indv", rpg.multiSQL({
 }));
 
 
-router.post("/get-chat-count", rpg.multiSQL({
+router.post("/get-chat-count", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT c.did,
@@ -610,7 +608,7 @@ router.post("/get-chat-count", rpg.multiSQL({
 }));
 
 
-router.post("/get-dif-chat-count", rpg.multiSQL({
+router.post("/get-dif-chat-count", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT c.did,
@@ -635,7 +633,7 @@ router.post("/get-dif-chat-count", rpg.multiSQL({
 }));
 
 
-router.post("/get-chat-count-stage", rpg.multiSQL({
+router.post("/get-chat-count-stage", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT u.uid,
@@ -655,7 +653,7 @@ router.post("/get-chat-count-stage", rpg.multiSQL({
     sqlParams:   [rpg.param("post", "stageid"), rpg.param("post", "stageid")]
 }));
 
-router.post("/get-design-by-sesid", rpg.multiSQL({
+router.post("/get-design-by-sesid", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT a.design
@@ -667,4 +665,4 @@ router.post("/get-design-by-sesid", rpg.multiSQL({
 }));
 
 
-module.exports = router;
+export default router;

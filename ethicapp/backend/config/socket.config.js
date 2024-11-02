@@ -1,4 +1,4 @@
-const configSocket = function(io) {
+const socket = function(io) {
     const stateChange = function(sesid) {
         io.of("/").emit("stateChange", { ses: sesid });
     };
@@ -48,4 +48,4 @@ const configSocket = function(io) {
     };
 };
 
-export default configSocket;
+export default socket;
