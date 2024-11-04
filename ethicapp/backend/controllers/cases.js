@@ -350,14 +350,15 @@ router.patch("/cases/:caseId", async (req, res) => {
     const db = getDBInstance(dbcon);
 
     try {
-        // Actualizar el caso
+        // Actualizar el caso y el campo updated_at
         const updateCaseQuery = `
         UPDATE cases 
         SET title = COALESCE($2, title), 
             description = COALESCE($3, description), 
             external_case_url = COALESCE($4, external_case_url),
             is_public = COALESCE($5, is_public),
-            rich_text = COALESCE($6, rich_text)
+            rich_text = COALESCE($6, rich_text),
+            updated_at = CURRENT_TIMESTAMP  -- Actualiza el campo updated_at
         WHERE case_id = $1
         `;
         await db.query(updateCaseQuery, [caseId, title, description, external_case_url, is_public, rich_text]);
@@ -405,6 +406,7 @@ router.patch("/cases/:caseId", async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 });
+
 
 
 
