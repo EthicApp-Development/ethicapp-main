@@ -232,12 +232,8 @@ export class CasesService {
       });
     }
 
-    this.isCkeditorContentEmpty = (content) => {
-      const emptyPattern = /^<p>(&nbsp;|\s)*<\/p>$/;
-      return emptyPattern.test(content);
-    }
 
-    this. contieneAlgoMasQueEspacios = (texto) => {
+    this.ckeditorIsNotEmpty = (texto) => {
       const regex = /^(?!<p>&nbsp;<\/p>(<p>&nbsp;<\/p>)*$).+/;
       return regex.test(texto);
     }

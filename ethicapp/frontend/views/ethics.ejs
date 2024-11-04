@@ -93,34 +93,31 @@
 
         <div class="scrollable-container blue" style="overflow: hidden;">
             <div class="mid-container qs-content simple-pad">
-                <div ng-show="iteration > 0 && showDoc">
-                    <div>
-                       
-                    
-                        <!-- <div class="center-container">
+                <div ng-if="case" ng-show="iteration > 0 && showDoc && case">
+
+                 
+
+                    <div ng-if="ckeditorIsEmpty()">
+                        <div class="center-ckeditor">
                             <div class="dropdown" style="width: 100%; max-width: 800px; margin-bottom: 1rem;" ng-if="case.documents.length>0">
                                 <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 100%;">
                                     {{ 'documents' | lang }}
                                 </button>
-                                <ul class="dropdown-menu w-100" ng-repeat="document in case.documents" >
-                                    <li><a class="dropdown-item" ng-click="openPDFInNewTab(document.path)">{{ document.name }}</a></li>
+                                <ul class="dropdown-menu w-100">
+                                    <li ng-repeat="document in case.documents" > 
+                                        <a class="dropdown-item" ng-click="selectCaseDocument(document)">{{ document.name }}</a>
+                                    </li>
                             
                                 </ul>
                             </div>
-                        
                             <div class="container-ckeditor">
-                                <div class="main-container-ckeditor">
-                                    <div class="editor-container editor-container_classic-editor editor-container_include-style" id="editor-container">
-                                        <div class="editor-container__editor" >
-                                            <div id="editor"></div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <iframe  style="width: 100%; height: 100%;" ng-src="{{ selectedCaseDocument.path}}" frameborder="0"></iframe>
+
                             </div>
-                        </div> -->
-
-                        <div class="center-ckeditor" ng-init="initEditor(caseReadOnly)">
-
+                        </div>
+                    </div>
+                    <div ng-if="!ckeditorIsEmpty()">
+                        <div class="center-ckeditor" ng-init="initEditor(case)">
                             <div class="dropdown" style="width: 100%; max-width: 800px; margin-bottom: 1rem;" ng-if="case.documents.length>0">
                                 <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 100%;">
                                     {{ 'documents' | lang }}
@@ -132,19 +129,18 @@
                             </div>
                             <div class="container-ckeditor">
                                 <div class="ckeditor">
-
                                     <div id="editor">
-                                        <!-- Aquí se carga el contenido del CKEditor -->
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
+            
 
                         
                         
                           
-                 
-                    </div>
+      
                 </div>
                 <h4 ng-show="finished" style="text-align: center;margin: auto;color:red">
                     <strong>{{'sessionFinish'|lang}}</strong></h4>

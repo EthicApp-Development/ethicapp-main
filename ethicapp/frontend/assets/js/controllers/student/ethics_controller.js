@@ -56,17 +56,19 @@ app.controller(
             self.lang = "ES_CL/spanish";
             self.selectedDF = null;
             self.selectedDFPrev = null;
-
-            self.caseReadOnly = true;
             
-            self.initEditor = () => {
-                self.ckeditor = CaseService.initEditor(self.caseReadOnly, self.case);
+            self.initEditor = (_case) => {
+                self.ckeditor = CaseService.initEditor(true, _case);
             };
             
+            self.ckeditorIsEmpty = () => {
+                return !CaseService.ckeditorIsNotEmpty(self.case.rich_text);
+            }
 
-
-            
-
+            self.selectCaseDocument = (document) => {
+                self.selectedCaseDocument = document;
+                self.showDoc = true;
+            }
             self.init = function () {
                 self.getSesInfo()
                     .then(function () {
@@ -145,9 +147,8 @@ app.controller(
                                   return;
                                 }
                                 self.case = response.data.result;
-                                CaseService.initEditor(self.caseReadOnly, self.case);
-                                self
-                                // $scope.$apply()
+                                
+                                self.selectedCaseDocument = self.case?.documents?.[0];
                               })
                             resolve(); 
                         })
