@@ -44,7 +44,7 @@ export let RegistrationsController = ($scope, $http) => {
             console.debug("captcha validation failed");           
             return;
         }
-
+    
         const userData = {
             name:                 self.user.firstname,
             lastname:             self.user.lastname,
@@ -54,11 +54,11 @@ export let RegistrationsController = ($scope, $http) => {
             locale:               self.currentLanguage,
             g_recaptcha_response: recaptchaResponse  
         };
-
+    
         if (self.user.accountType === "Teacher") {
             userData.institution = self.user.institution;
             console.debug("attempting to request teacher account");
-
+    
             $http.post("/teacher_account_request", userData)
                 .then(function (response) {
                     console.debug(JSON.stringify(response));
@@ -84,7 +84,7 @@ export let RegistrationsController = ($scope, $http) => {
                 .catch(commonBackendErrorHandler);
         }
     };
-
+    
     self.clearErrors = function() {
         self.backendErrorMessage = "";
         self.backendErrors = false;

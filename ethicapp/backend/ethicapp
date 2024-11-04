@@ -3,7 +3,7 @@ import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 require("log-timestamp");
 
-import app from "../app.js";
+import app from "./app.js";
 import http from "http";
 import debugLib from "debug";
 import { Server as SocketIO } from "socket.io";

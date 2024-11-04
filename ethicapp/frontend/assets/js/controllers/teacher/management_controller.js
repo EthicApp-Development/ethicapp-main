@@ -97,13 +97,19 @@ export let ManagementController = ($scope,
         });
     };
 
-    self.updatelangdata = function() {
-        $http({ url: "updatelangdata", method: "post", data: {lang} }).success(function (data) {
-            console.log(data);
-
-        });
+    self.updatelangdata = async function () {
+        try {
+            const response = await $http({
+                url: "updatelangdata",
+                method: "post",
+                data: { lang }
+            });
+            console.log(response.data);
+        } catch (error) {
+            console.error("Error updating language data:", error);
+        }
     };
-
+    
     self.set_id = function(id) {
         self.inst_id = id;
     };
@@ -218,25 +224,30 @@ export let ManagementController = ($scope,
         self.design = selectedDesign;
     };
 
-    self.shared.getActivities = function() {
-        return new Promise(function(resolve, reject) {
-            var postdata = {};
-            $http({
-                url:    "get-activities",
+    self.shared.getActivities = async function () {
+        const postdata = {};
+    
+        try {
+            const response = await $http({
+                url: "get-activities",
                 method: "post",
-                data:   postdata
-            }).success(function(data) {
-                for (var index = 0; index < data.activities.length; index++) {
-                    data.activities[index].title = data.activities[index].design.metainfo.title;
-                }
-                self.activities = data.activities;
-                resolve(self.activities);
-            }).error(function(error) {
-                reject(error);
+                data: postdata
             });
-        });
+            
+            // Map titles from design metadata
+            response.data.activities.forEach(activity => {
+                activity.title = activity.design.metainfo.title;
+            });
+    
+            self.activities = response.data.activities;
+            return self.activities;
+    
+        } catch (error) {
+            console.error("Error fetching activities:", error);
+            throw error;
+        }
     };
-
+    
     self.sesFromURL = function () {
         var sesid = +$location.path().substring(1);
         var ses = self.sessions.find(function (e) {
@@ -245,68 +256,121 @@ export let ManagementController = ($scope,
         if (ses != null) self.selectSession(ses, sesid);
     };
 
-    self.requestDocuments = function () {
-        var postdata = { sesid: self.selectedSes.id };
-        $http({
-            url: "documents-session", method: "post", data: postdata
-        }).success(function (data) {
-            self.documents = data;
-        });
+    self.requestDocuments = async function () {
+        const postdata = { sesid: self.selectedSes.id };
+    
+        try {
+            const response = await $http({
+                url: "documents-session",
+                method: "post",
+                data: postdata
+            });
+            self.documents = response.data;
+        } catch (error) {
+            console.error("Error fetching documents:", error);
+        }
     };
+    
 
     self.shared.updateDocuments = self.requestDocuments;
 
-    self.deleteDocument = function (docid) {
-        var postdata = { docid: docid };
-        $http({ url: "delete-document", method: "post", data: postdata }).success(function () {
-            self.requestDocuments();
-        });
+    self.deleteDocument = async function (docid) {
+        const postdata = { docid: docid };
+    
+        try {
+            await $http({
+                url: "delete-document",
+                method: "post",
+                data: postdata
+            });
+            
+            // Refresh documents list after deletion
+            await self.requestDocuments();
+        } catch (error) {
+            console.error("Error deleting document:", error);
+        }
     };
-
-    self.requestQuestions = function () {
-        var postdata = { sesid: self.selectedSes.id };
-        $http({
-            url: "questions-session", method: "post", data: postdata
-        }).success(function (data) {
-            self.questions = data.map(function (e) {
+    
+    self.requestQuestions = async function () {
+        const postdata = { sesid: self.selectedSes.id };
+    
+        try {
+            // Step 1: Fetch questions for the session
+            const questionsResponse = await $http({
+                url: "questions-session",
+                method: "post",
+                data: postdata
+            });
+            
+            self.questions = questionsResponse.data.map(e => {
                 e.options = e.options.split("\n");
                 return e;
             });
-        });
-        $http({
-            url: "get-question-text", method: "post", data: postdata
-        }).success(function (data) {
-            self.questionTexts = data;
-        });
+    
+            // Step 2: Fetch question texts for the session
+            const textsResponse = await $http({
+                url: "get-question-text",
+                method: "post",
+                data: postdata
+            });
+    
+            self.questionTexts = textsResponse.data;
+    
+        } catch (error) {
+            console.error("Error fetching questions and question texts:", error);
+        }
     };
-
-    self.requestSemDocuments = function () {
-        var postdata = { sesid: self.selectedSes.id };
-        $http({
-            url: "semantic-documents", method: "post", data: postdata
-        }).success(function (data) {
-            self.semDocs = data;
-        });
+    
+    self.requestSemDocuments = async function () {
+        const postdata = { sesid: self.selectedSes.id };
+    
+        try {
+            const response = await $http({
+                url: "semantic-documents",
+                method: "post",
+                data: postdata
+            });
+            self.semDocs = response.data;
+        } catch (error) {
+            console.error("Error fetching semantic documents:", error);
+        }
     };
-
-    self.getNewUsers = function () {
-        var postdata = { sesid: self.selectedSes.id };
-        $http({ url: "get-new-users", method: "post", data: postdata }).success(function (data) {
-            self.newUsers = data;
-        });
+    
+    self.getNewUsers = async function () {
+        const postdata = { sesid: self.selectedSes.id };
+    
+        try {
+            const response = await $http({
+                url: "get-new-users",
+                method: "post",
+                data: postdata
+            });
+            self.newUsers = response.data;
+        } catch (error) {
+            console.error("Error fetching new users:", error);
+        }
     };
-
-    self.getMembers = function () {
-        var postdata = { sesid: self.selectedSes.id };
-        $http({ url: "get-ses-users", method: "post", data: postdata }).success(function (data) {
-            self.usersArr = data;
+    
+    self.getMembers = async function () {
+        const postdata = { sesid: self.selectedSes.id };
+    
+        try {
+            const response = await $http({
+                url: "get-ses-users",
+                method: "post",
+                data: postdata
+            });
+    
+            self.usersArr = response.data;
             self.users = {};
-            data.forEach(function (d) {
+            response.data.forEach(d => {
                 self.users[d.id] = d;
             });
-        });
+        } catch (error) {
+            console.error("Error fetching session members:", error);
+        }
     };
-
+    
     self.openNewSes = function () {
         $uibModal.open({
             templateUrl: "static/new-ses.html"
@@ -366,14 +430,19 @@ export let ManagementController = ($scope,
     };
 
 
-    self.generateCode = function () {
-        var postdata = {
-            id: self.selectedSes.id
-        };
-        $http.post("generate-session-code", postdata).success(function (data) {
-            if (data.code != null) self.selectedSes.code = data.code;
-        });
+    self.generateCode = async function () {
+        const postdata = { id: self.selectedSes.id };
+    
+        try {
+            const response = await $http.post("generate-session-code", postdata);
+            if (response.data.code != null) {
+                self.selectedSes.code = response.data.code;
+            }
+        } catch (error) {
+            console.error("Error generating session code:", error);
+        }
     };
+    
 
     self.flang = function (key) {
         return $filter("translate")(key);

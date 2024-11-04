@@ -3,7 +3,7 @@ export let IncomingUsersController = ($scope, $http, Notification) => {
     var self = $scope;
 
     self.addToSession = function () {
-        if (self.newMembs.length == 0) {
+        if (self.newMembs.length === 0) {
             Notification.error("No hay usuarios seleccionados para agregar");
             return;
         }
@@ -13,26 +13,32 @@ export let IncomingUsersController = ($scope, $http, Notification) => {
             }),
             sesid: self.selectedSes.id
         };
-        $http({ url: "add-ses-users", method: "post", data: postdata }).success(function (data) {
-            if (data.status == "ok") {
-                self.refreshUsers();
-            }
-        });
+        $http({ url: "add-ses-users", method: "post", data: postdata })
+            .then(function (response) {
+                if (response.data.status === "ok") {
+                    self.refreshUsers();
+                }
+            })
+            .catch(function (error) {
+                console.error("Error adding users to session:", error);
+            });
     };
-
+    
     self.removeUser = function (uid) {
         if (self.selectedSes.status <= 2) {
             var postdata = { uid: uid, sesid: self.selectedSes.id };
-            $http({
-                url: "delete-ses-user", method: "post", data: postdata
-            }).success(function (data) {
-                if (data.status == "ok") {
-                    self.refreshUsers();
-                }
-            });
+            $http({ url: "delete-ses-user", method: "post", data: postdata })
+                .then(function (response) {
+                    if (response.data.status === "ok") {
+                        self.refreshUsers();
+                    }
+                })
+                .catch(function (error) {
+                    console.error("Error removing user from session:", error);
+                });
         }
     };
-
+    
     self.refreshUsers = function () {
         self.getNewUsers();
         self.getMembers();

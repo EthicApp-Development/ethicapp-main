@@ -3,8 +3,10 @@
 # Set bash to exit immediately if any command fails and to print all commands
 set -eux
 
+cd /home/app/backend/
+
 # Define the location of the flag
-FLAG_FILE="/home/app/.npm_installed"
+FLAG_FILE="/home/app/backend/.npm_installed"
 
 # Check if npm install has already been executed
 if [ ! -f "$FLAG_FILE" ]; then

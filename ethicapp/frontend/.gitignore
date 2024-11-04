@@ -1,0 +1,12 @@
+**/node_modules/
+**/package-lock.json
+
+assets/uploads/
+
+# Generated frontend asset bundles
+assets/css/dist/*
+assets/js/dist/*
+
+#assets/css/assets-bundle.css
+#assets/css/assets-bundle.css.map
+#assets/js/assets-bundle.js

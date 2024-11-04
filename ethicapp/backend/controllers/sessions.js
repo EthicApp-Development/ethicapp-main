@@ -319,7 +319,11 @@ router.get("/home", function(req,res) {
             res.render("home", {
                 layout: "./layouts/teacher-app",
                 ngApp: "TeacherApp",
-                controller: "ManagementController"      
+                controller: "ManagementController",
+                extraScripts: `
+                <script src="assets/libs/angular-glue.min.js" defer></script>
+                <script src="assets/js/dist/teacher-admin.min.js" defer></script>
+                `
             });        
         } catch (error) {
             return res.status(500);

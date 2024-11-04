@@ -23,9 +23,13 @@ export let DuplicateSesModalController = ($scope, $http, $uibModalInstance, data
 
     vm.sendDuplicate = function () {
         console.log(vm.nses);
-        $http({ url: "duplicate-session", method: "post", data: vm.nses }).success(function (data) {
-            console.log(data);
-            window.location.replace("admin");
-        });
-    };
+        $http({ url: "duplicate-session", method: "post", data: vm.nses })
+            .then(function (response) {
+                console.log(response.data);
+                window.location.replace("admin");
+            })
+            .catch(function (error) {
+                console.error("Error duplicating session:", error);
+            });
+    };    
 };

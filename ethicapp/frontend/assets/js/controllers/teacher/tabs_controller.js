@@ -32,15 +32,20 @@ export let TabsController = ($scope, $http) => {
                 sesid: self.selectedSes.id
             };
             console.log("POSTDATA:", pd); //ESTO DEBERIA APARECER
-            $http({ url: "get-admin-stages", method: "post", data: pd }).success(function (data) {
-                self.stages = data;
-                data.forEach(st => {
+            $http({ url: "get-admin-stages", method: "post", data: pd })
+            .then(function (response) {
+                self.stages = response.data;
+                response.data.forEach(st => {
                     self.iterationNames.push({
-                        name: self.flang("stage") + " " + st.number, val: st.id
+                        name: self.flang("stage") + " " + st.number,
+                        val: st.id
                     });
-                    console.log("iteration NAMES:",self.iterationNames);
+                    console.log("iteration NAMES:", self.iterationNames);
                 });
-            });
+            })
+            .catch(function (error) {
+                console.error("Error fetching admin stages:", error);
+            });        
         }
         if (self.selectedSes.status > 1) {
             self.selectedTab = "dashboard";
@@ -77,35 +82,51 @@ export let TabsController = ($scope, $http) => {
         return self.sessions.filter(e => !!e.archived == self.archivedTab);
     };
 
-    self.archiveSes = function(ses, $event){
+    self.archiveSes = function (ses, $event) {
         $event.stopPropagation();
         var postdata = { sesid: ses.id, val: true };
-        $http({ url: "archive-session", method: "post", data: postdata }).success(function () {
-            ses.archived = true;
-        });
+        $http({ url: "archive-session", method: "post", data: postdata })
+            .then(function () {
+                ses.archived = true;
+            })
+            .catch(function (error) {
+                console.error("Error archiving session:", error);
+            });
     };
-
-    self.restoreSes = function(ses, $event){
+    
+    self.restoreSes = function (ses, $event) {
         $event.stopPropagation();
         var postdata = { sesid: ses.id, val: false };
-        $http({ url: "archive-session", method: "post", data: postdata }).success(function () {
-            ses.archived = false;
-        });
+        $http({ url: "archive-session", method: "post", data: postdata })
+            .then(function () {
+                ses.archived = false;
+            })
+            .catch(function (error) {
+                console.error("Error restoring session:", error);
+            });
     };
-
-    self.archiveActivity = function(ses, $event){
+    
+    self.archiveActivity = function (ses, $event) {
         $event.stopPropagation();
         var postdata = { sesid: ses.session, val: true };
-        $http({ url: "archive-session", method: "post", data: postdata }).success(function () {
-            ses.archived = true;
-        });
+        $http({ url: "archive-session", method: "post", data: postdata })
+            .then(function () {
+                ses.archived = true;
+            })
+            .catch(function (error) {
+                console.error("Error archiving activity:", error);
+            });
     };
-
-    self.restoreActivity = function(ses, $event){
+    
+    self.restoreActivity = function (ses, $event) {
         $event.stopPropagation();
         var postdata = { sesid: ses.session, val: false };
-        $http({ url: "archive-session", method: "post", data: postdata }).success(function () {
-            ses.archived = false;
-        });
-    };
+        $http({ url: "archive-session", method: "post", data: postdata })
+            .then(function () {
+                ses.archived = false;
+            })
+            .catch(function (error) {
+                console.error("Error restoring activity:", error);
+            });
+    };    
 };

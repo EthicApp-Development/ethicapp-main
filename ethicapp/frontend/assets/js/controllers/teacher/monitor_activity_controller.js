@@ -10,25 +10,33 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
         }
     };
 
-    self.ActivityState = function(stageId){
-        if(self.design.type == "semantic_differential"){
-            $http({
-                url: "stage-state-df", method: "post", data: {sesid: self.selectedSes.id}
-            }).success(function (data) {
-                self.stagesState = data;
+    self.ActivityState = async function (stageId) {
+        const postdata = { sesid: self.selectedSes.id };
+    
+        try {
+            if (self.design.type === "semantic_differential") {
+                const response = await $http({
+                    url: "stage-state-df",
+                    method: "post",
+                    data: postdata
+                });
+                self.stagesState = response.data;
                 self.ActivityCompletion(stageId);
-            });
-        }
-        else if (self.design.type == "ranking") {
-            $http({
-                url: "stage-state-r", method: "post", data: {sesid: self.selectedSes.id}
-            }).success(function (data) {
-                self.stagesState = data;
+    
+            } else if (self.design.type === "ranking") {
+                const response = await $http({
+                    url: "stage-state-r",
+                    method: "post",
+                    data: postdata
+                });
+                self.stagesState = response.data;
                 self.ActivityCompletion(stageId);
-            });
+            }
+        } catch (error) {
+            console.error("Error fetching activity state:", error);
         }
     };
-
+    
     self.test = function(xd, xd2){
         console.log(xd2[0]);
         console.log(xd2);
@@ -72,106 +80,120 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
         return temp.map(e => e.id).join(",");
     };
 
-    self.nextActivityDesign = function () {//check for race condition
-        var stageCounter = self.currentActivity.stage + 1;
-        var sesid = self.selectedSes.id;
-        var current_phase = self.design.phases[stageCounter];
-        var postdata = {
-            number:   stageCounter + 1,
-            question: current_phase.q_text !== undefined ? current_phase.q_text : "",
-            grouping: current_phase.mode == "team" ?
-                current_phase.stdntAmount + ":" + current_phase.grouping_algorithm :
-                null,
-            type:     current_phase.mode,
-            anon:     current_phase.anonymous,
-            chat:     current_phase.chat,
-            sesid:    sesid,
-            prev_ans: self.getPrevAns(current_phase)
-        };
-        console.debug(postdata);
-        if(current_phase.mode == "team"){
-            self.generateGroups(null,self.currentActivity.stage +1 ); //<-------------update value
-        }
-        
-        $http({url: "add-stage", method: "post", data: postdata}).success(function (data) {
-            let stageid = data.id;
+    self.nextActivityDesign = async function () {
+        try {
+            const stageCounter = self.currentActivity.stage + 1;
+            const sesid = self.selectedSes.id;
+            const current_phase = self.design.phases[stageCounter];
+            
+            const postdata = {
+                number: stageCounter + 1,
+                question: current_phase.q_text !== undefined ? current_phase.q_text : "",
+                grouping: current_phase.mode === "team"
+                    ? `${current_phase.stdntAmount}:${current_phase.grouping_algorithm}`
+                    : null,
+                type: current_phase.mode,
+                anon: current_phase.anonymous,
+                chat: current_phase.chat,
+                sesid: sesid,
+                prev_ans: self.getPrevAns(current_phase)
+            };
+            
+            console.debug(postdata);
+
+            // Step 1: Generate groups if needed
+            if (current_phase.mode === "team") {
+                await self.generateGroups(null, self.currentActivity.stage + 1);
+            }
+
+            // Step 2: Add stage
+            const addStageResponse = await $http({
+                url: "add-stage",
+                method: "post",
+                data: postdata
+            });
+            
+            const stageid = addStageResponse.data.id;
+
             if (stageid != null) {
-      
-                if (postdata.type == "team") {
-                    self.acceptGroups(stageid);
+                // Step 3: Accept groups if type is "team"
+                if (postdata.type === "team") {
+                    await self.acceptGroups(stageid);
                 }
 
-                //console.log("TYPE:",self.selectedSes.type);
-                if (self.design.type == "semantic_differential") {
-                    var counter = 1;
-                    for(var question of current_phase.questions){
-                        var content = question.ans_format;
-                        let p = {
-                            name:       question.q_text,
-                            tleft:      content.l_pole,
-                            tright:     content.r_pole,
-                            num:        content.values,
-                            orden:      counter,
-                            justify:    content.just_required,
-                            stageid:    stageid,
-                            sesid:      sesid,
+                // Step 4: Handle different design types
+                if (self.design.type === "semantic_differential") {
+                    // Add differential questions sequentially
+                    for (const [index, question] of current_phase.questions.entries()) {
+                        const content = question.ans_format;
+                        const differentialData = {
+                            name: question.q_text,
+                            tleft: content.l_pole,
+                            tright: content.r_pole,
+                            num: content.values,
+                            orden: index + 1,
+                            justify: content.just_required,
+                            stageid: stageid,
+                            sesid: sesid,
                             word_count: content.min_just_length
                         };
-                        //console.log(p);
-                        $http({
-                            url: "add-differential-stage", method: "post", data: p
-                        }).success(function () {    });
-                        counter++;
-                    }
-                    let pp = {sesid: sesid, stageid: stageid};
-                    $http({
-                        url: "session-start-stage", method: "post", data: pp
-                    }).success(function (data) {
-                        Notification.success("Etapa creada correctamente");
-                        //window.location.reload()
-                        self.currentStage(); // <--------Actualiza la data del current stage
-                        self.shared.verifyTabs();
-                        self.getStages();
-                        self.selectedSes.current_stage = stageid;
-                        //call request to change activity currentstage 
-                    });
-                }
-                else if (self.design.type == "ranking") {
-                    let c = current_phase.roles.length;
-                    for (let i = 0; i < current_phase.roles.length; i++) {
-                        const role = current_phase.roles[i];
-                        let p = {
-                            name:       role.name,
-                            jorder:     role.type == "order",
-                            justified:  role.type != null,
-                            word_count: role.wc,
-                            stageid:    stageid,
-                        };
-                        $http({url: "add-actor", method: "post", data: p}).success(function (data) {
-                            //console.log("Actor added");
-                            c -= 1;
-                            if (c == 0) {
-                                let pp = {sesid: sesid, stageid: stageid};
-                                $http({
-                                    url: "session-start-stage", method: "post", data: pp
-                                }).success(function (data) {
-                                    Notification.success("Etapa creada correctamente");
-                                    //window.location.reload()
-                                    self.shared.verifyTabs();
-                                    self.currentStage();
-                                    self.selectedSes.current_stage = stageid;
-                                    //call request to change activity currentstage 
-                                });
-                            }
+                        await $http({
+                            url: "add-differential-stage",
+                            method: "post",
+                            data: differentialData
                         });
                     }
+
+                    // Start session stage
+                    const sessionStartData = { sesid: sesid, stageid: stageid };
+                    await $http({
+                        url: "session-start-stage",
+                        method: "post",
+                        data: sessionStartData
+                    });
+
+                    Notification.success("Fase creada correctamente");
+                    self.currentStage();
+                    self.shared.verifyTabs();
+                    self.getStages();
+                    self.selectedSes.current_stage = stageid;
+                } else if (self.design.type === "ranking") {
+                    // Add ranking roles sequentially
+                    for (const role of current_phase.roles) {
+                        const roleData = {
+                            name: role.name,
+                            jorder: role.type === "order",
+                            justified: role.type != null,
+                            word_count: role.wc,
+                            stageid: stageid
+                        };
+                        await $http({
+                            url: "add-actor",
+                            method: "post",
+                            data: roleData
+                        });
+                    }
+
+                    // Start session stage
+                    const sessionStartData = { sesid: sesid, stageid: stageid };
+                    await $http({
+                        url: "session-start-stage",
+                        method: "post",
+                        data: sessionStartData
+                    });
+
+                    Notification.success("Fase creada correctamente");
+                    self.shared.verifyTabs();
+                    self.currentStage();
+                    self.selectedSes.current_stage = stageid;
                 }
+            } else {
+                Notification.error("Error al crear la fase");
             }
-            else {
-                Notification.error("Error al crear la etapa");
-            }
-        });
-   
+        } catch (error) {
+            console.error("Error in nextActivityDesign:", error);
+            Notification.error("An error occurred while progressing to the next activity design");
+        }
     };
 
     self.currentStage = function() {
@@ -184,24 +206,25 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
     };
 
     self.openFinishConfirmationModal = function () {
-       
-
-        var modalInstance = $uibModal.open({
+        const modalInstance = $uibModal.open({
             templateUrl: "static/end-activity-dialog.html",
             controller: "ConfirmModalController",
-            controllerAs: "vm",
-            
+            controllerAs: "vm"
         });
-
-        modalInstance.result.then(function () {
-            $http.post("session-finish-stages", { sesid: self.selectedSes.id }).success(function (data) {
+    
+        modalInstance.result.then(async function () {
+            try {
+                await $http.post("session-finish-stages", { sesid: self.selectedSes.id });
                 window.location.reload();
-            });
+            } catch (error) {
+                console.error("Error finishing session stages:", error);
+                Notification.error("Error al finalizar la actividad");
+            }
         }, function () {
+            // Optional: handle the case when the modal is dismissed
         });
     };
-
-
+    
     self.copyToClipboard = function() {
         var codeElement = document.querySelector('.code-div strong');
         var codeToCopy = codeElement.textContent;

@@ -44,21 +44,33 @@ export function SessionsListController($scope, $http, $socket, $uibModal, ngIntr
     };
 
     self.showName = function () {
-        $http.post("get-my-name").success(function (data) {
-            self.mail = data.mail;
-            self.rol = data.role;
-            self.username = data.name;
-            self.mylang = data.lang == "spanish" ? "es_CL" : "en_US";
-            self.updateLang(self.mylang);
-        });
+        $http.post("get-my-name")
+            .then(function (response) {
+                // Set user information based on the response data
+                self.mail = response.data.mail;
+                self.rol = response.data.role;
+                self.username = response.data.name;
+                self.mylang = response.data.lang === "spanish" ? "es_CL" : "en_US";
+                self.updateLang(self.mylang); // Update language based on user's preference
+            })
+            .catch(function (error) {
+                console.error("Error retrieving user information:", error);
+                // Optional: handle the error when fetching user data here
+            });
     };
-
+    
     self.updateSessions = function () {
-        $http({ url: "get-session-list", method: "post" }).success(function (data) {
-            self.sessions = data;
-        });
+        $http({ url: "get-session-list", method: "post" })
+            .then(function (response) {
+                // Update sessions list with the data received
+                self.sessions = response.data;
+            })
+            .catch(function (error) {
+                console.error("Error updating session list:", error);
+                // Optional: handle the error when fetching session data here
+            });
     };
-
+    
     self.openSes = function () {
         self.sesOpen = true;
     };
@@ -69,20 +81,26 @@ export function SessionsListController($scope, $http, $socket, $uibModal, ngIntr
                 code:   self.invCode.toLowerCase(),
                 device: self.getDeviceInfo()
             };
-            $http.post("enter-session-code", postdata).success(function (data) {
-                if (data.status == "ok") {
-                    window.location.replace(data.redirect);
-                } else {
-                    $uibModal.open({
-                        template: 
-                        '<div><div class="modal-header"><h4>Error</h4></div>' + 
-                        '<div class="modal-body"><p>El código ingresado no es válido' +
-                        " o la sesión no admite nuevos usuarios</p></div></div>"
-                    });
-                }
-            });
+    
+            $http.post("enter-session-code", postdata)
+                .then(function (response) {
+                    if (response.data.status === "ok") {
+                        window.location.replace(response.data.redirect);
+                    } else {
+                        $uibModal.open({
+                            template: 
+                                '<div><div class="modal-header"><h4>Error</h4></div>' + 
+                                '<div class="modal-body"><p>El código ingresado no es válido' +
+                                " o la sesión no admite nuevos usuarios</p></div></div>"
+                        });
+                    }
+                })
+                .catch(function (error) {
+                    console.error("Error en la solicitud:", error);
+                    // Manejo opcional de errores adicionales
+                });
         }
-    };
+    };   
 
     self.checkCode = function (code) {
         var s = self.sessions.find(function (e) {
@@ -99,18 +117,30 @@ export function SessionsListController($scope, $http, $socket, $uibModal, ngIntr
     };
 
     self.updateLang = function (lang) {
-        $http.get("assets/locales/" + lang + ".json").success(function (data) {
-            window.DIC = data;
-        });
+        $http.get("assets/locales/" + lang + ".json")
+            .then(function (response) {
+                // Set the global dictionary with the loaded language data
+                window.DIC = response.data;
+            })
+            .catch(function (error) {
+                console.error("Error loading language file:", error);
+                // Optional: handle the error when loading the language file here
+            });
     };
-
+    
     self.changeLang = function () {
-        var newlang = self.mylang == "EN_US/english" ? "es_CL" : "en_US";
-        $http.post("update-lang", { lang: newlang }).success(function () {
-            self.showName();
-        });
+        var newlang = self.mylang === "EN_US/english" ? "es_CL" : "en_US";
+        $http.post("update-lang", { lang: newlang })
+            .then(function () {
+                // Call showName after the language update succeeds
+                self.showName();
+            })
+            .catch(function (error) {
+                console.error("Error updating language:", error);
+                // Optional: handle the error when updating the language here
+            });
     };
-
+        
     var introOptions = {
         steps: [{
             element: "#seslistdiv",

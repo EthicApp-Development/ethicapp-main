@@ -27,28 +27,36 @@ export let SesEditorController = ($scope, $http, Notification) => {
             return;
         }
         var postdata = {
-            name: self.selectedSes.name, descr: self.selectedSes.descr, id: self.selectedSes.id
+            name: self.selectedSes.name,
+            descr: self.selectedSes.descr,
+            id: self.selectedSes.id
         };
-        $http({ url: "update-session", method: "post", data: postdata }).success(function () {
-            console.log("Session updated");
-        });
+        $http({ url: "update-session", method: "post", data: postdata })
+            .then(function () {
+                console.log("Session updated");
+            })
+            .catch(function (error) {
+                console.error("Error updating session:", error);
+            });
     };
-
+    
     self.shared.changeState = function () {
-        var confirm = window.confirm("¿Esta seguro que quiere ir al siguiente estado?");
+        var confirm = window.confirm("¿Está seguro que quiere ir al siguiente estado?");
         if (confirm) {
-            if (self.selectedSes.status == 1) {
+            if (self.selectedSes.status === 1) {
                 self.updateSession();
             }
             var _postdata = { sesid: self.selectedSes.id };
-            $http({
-                url: "change-state-session", method: "post", data: _postdata
-            }).success(function () {
-                self.shared.updateSesData();
-            });
+            $http({ url: "change-state-session", method: "post", data: _postdata })
+                .then(function () {
+                    self.shared.updateSesData();
+                })
+                .catch(function (error) {
+                    console.error("Error changing session state:", error);
+                });
         }
     };
-
+    
     /*self.exportData = () => {
         let postdata = {id: self.selectedSes.id};
         $http.post("export-session-data-sel", postdata).success((data) => {

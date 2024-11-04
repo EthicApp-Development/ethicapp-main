@@ -58,6 +58,12 @@ import { StagesEditController } from "../../controllers/teacher/stages_edit_cont
 import { DashboardRubricaController } from "../../controllers/teacher/dashboard_rubrica_controller.js";
 import { ngQuillConfigProvider } from "../../helpers/util.js";
 
+angular.module('app').factory('mySocket', ['socketFactory', function(socketFactory) {
+    return socketFactory({
+        ioSocket: window.io()  // asegura que use el io global
+    });
+}]);
+
 adpp.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);

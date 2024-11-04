@@ -35,76 +35,102 @@ export let BrowseDesignsController = ($scope,
 
     self.designPublic = function (dsgnid) {
         var postdata = { dsgnid: dsgnid };
-        $http({ url: "design-public", method: "post", data: postdata }).success(function () {
-
-        });
+        $http({ url: "design-public", method: "post", data: postdata })
+            .then(function () {
+                // Manejo exitoso si es necesario
+            })
+            .catch(function (error) {
+                console.error("Error making design public:", error);
+            });
     };
-
+    
     self.designLock = function (dsgnid) {
         var postdata = { dsgnid: dsgnid };
-        $http({ url: "design-lock", method: "post", data: postdata }).success(function () {
-  
-        });
+        $http({ url: "design-lock", method: "post", data: postdata })
+            .then(function () {
+                // Manejo exitoso si es necesario
+            })
+            .catch(function (error) {
+                console.error("Error locking design:", error);
+            });
     };
-
-    self.getDesigns = function(){
-        $http.get("get-user-designs").success(function (data) {
-            
-            if (data.status == "ok") {
-                self.designs = data.result;
-            }
-            
-        });
+    
+    self.getDesigns = function () {
+        $http.get("get-user-designs")
+            .then(function (response) {
+                var data = response.data;
+                if (data.status === "ok") {
+                    self.designs = data.result;
+                }
+            })
+            .catch(function (error) {
+                console.error("Error fetching user designs:", error);
+            });
     };
-
-    self.getPublicDesigns = function(){
-        $http.get("get-public-designs").success(function (data) {
-            
-            if (data.status == "ok") {
-                self.public = data.result;
-            }
-            
-        });
+    
+    self.getPublicDesigns = function () {
+        $http.get("get-public-designs")
+            .then(function (response) {
+                var data = response.data;
+                if (data.status === "ok") {
+                    self.public = data.result;
+                }
+            })
+            .catch(function (error) {
+                console.error("Error fetching public designs:", error);
+            });
     };
-
+    
     self.deleteDesign = function (ID) {
         console.log(ID);
-        var postdata = {"id": ID};
-        $http.post("delete-design", postdata).success(function (data) {
-            
-            if (data.status == "ok") {
-                self.getDesigns(); //get current Designs 
-            }
-            
-        });
-
+        var postdata = { "id": ID };
+        $http.post("delete-design", postdata)
+            .then(function (response) {
+                var data = response.data;
+                if (data.status === "ok") {
+                    self.getDesigns(); // Actualizar diseños actuales
+                }
+            })
+            .catch(function (error) {
+                console.error("Error deleting design:", error);
+            });
     };
-
-
+    
     self.getDesign = function (ID) {
-        $http.post("get-design", ID).success(function (data) {
-            if (data.status == "ok") {
-                self.changeDesign(data.result);
-
-            }
-        });
+        $http.post("get-design", ID)
+            .then(function (response) {
+                var data = response.data;
+                if (data.status === "ok") {
+                    self.changeDesign(data.result);
+                }
+            })
+            .catch(function (error) {
+                console.error("Error fetching design:", error);
+            });
     };
-
-    self.goToDesign = function(ID, type){
+    
+    self.goToDesign = function (ID, type) {
         console.log(ID);
-        $http.post("get-design", ID).success(function (data) {
-            if (data.status == "ok") {
-                self.changeDesign(data.result);
-                if(type=="E") self.selectView("newDesignExt");
-                else self.selectView("viewDesign");
-                DesignStateService.designState.id = ID;
-                self.designId.id = DesignStateService.designState.id;
-                console.log(self.designId);
-
-            }
-        });        
+        $http.post("get-design", ID)
+            .then(function (response) {
+                var data = response.data;
+                if (data.status === "ok") {
+                    self.changeDesign(data.result);
+                    if (type === "E") {
+                        self.selectView("newDesignExt");
+                    } else {
+                        self.selectView("viewDesign");
+                    }
+                    DesignStateService.designState.id = ID;
+                    self.designId.id = DesignStateService.designState.id;
+                    console.log(self.designId);
+                }
+            })
+            .catch(function (error) {
+                console.error("Error going to design:", error);
+            });
     };
-
+    
     self.launchDesign = function(ID, Title, Type){
         self.launchId.id = ID;
         self.launchId.title = Title;

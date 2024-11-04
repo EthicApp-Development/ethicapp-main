@@ -35,14 +35,21 @@ export let GroupController = ($scope, $http, Notification) => {
         console.log("Generate groups AdminController");
         if (self.selectedSes.grouped) {
             $http({
-                url: "group-proposal-sel", method: "post", data: { sesid: self.selectedSes.id }
-            }).success(function (data) {
-                self.groups = data;
+                url: "group-proposal-sel",
+                method: "post",
+                data: { sesid: self.selectedSes.id }
+            })
+            .then(function (response) {
+                self.groups = response.data;
                 self.shared.groups = self.groups;
                 //self.groupsProp = angular.copy(self.groups);
-                console.log("G", data);
+                console.log("G", response.data);
                 //self.groupNames = [];
+            })
+            .catch(function (error) {
+                console.error("Error fetching group proposal selection:", error);
             });
+            
             return;
         }
         if (key == null && (self.groupNum < 1 || self.groupNum > self.users.length)) {
@@ -109,13 +116,17 @@ export let GroupController = ($scope, $http, Notification) => {
             }))
         };
         console.log(postdata);
-        $http({ url: "set-groups", method: "post", data: postdata }).success(function (data) {
-            if (data.status == "ok") {
+        $http({ url: "set-groups", method: "post", data: postdata })
+        .then(function (response) {
+            if (response.data.status === "ok") {
                 console.log("Groups accepted");
                 self.selectedSes.grouped = true;
                 self.shared.verifyGroups();
             }
-        });
+        })
+        .catch(function (error) {
+            console.error("Error setting groups:", error);
+        });    
     };
 
     self.swapTable = function (i, j) {

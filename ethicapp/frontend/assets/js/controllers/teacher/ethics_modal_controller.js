@@ -20,8 +20,13 @@ export let EthicsModalController = function($scope, $http, $uibModalInstance, No
             sesid:   vm.data.sesid,
             content: content
         };
-        $http({ url: "broadcast-diff", method: "post", data: postdata }).success(function () {
+        $http({ url: "broadcast-diff", method: "post", data: postdata })
+        .then(function () {
             Notification.success("Diferencial enviado exitosamente");
+        })
+        .catch(function (error) {
+            console.error("Error broadcasting differential:", error);
         });
+    
     };
 };

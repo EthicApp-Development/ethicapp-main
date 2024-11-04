@@ -20,9 +20,10 @@ export let DesignsDocController = ($scope, DesignStateService, $http, Notificati
                 var fd = new FormData(event.target);
                 $http.post("upload-design-file", fd, {
                     transformRequest: angular.identity,
-                    headers:          { "Content-Type": undefined }
-                }).success(function (data) {
-                    if (data.status == "ok") {
+                    headers: { "Content-Type": undefined }
+                })
+                .then(function (response) {
+                    if (response.data.status === "ok") {
                         $timeout(function () {
                             //Notification.success("Documento cargado correctamente");
                             event.target.reset();
@@ -31,7 +32,10 @@ export let DesignsDocController = ($scope, DesignStateService, $http, Notificati
                             self.requestDesignDocuments();
                         }, 2000);
                     }
-                });
+                })
+                .catch(function (error) {
+                    console.error("Error uploading design file:", error);
+                });                
             }
             else{
                 Notification.error("Documento muy grande. El tamaño máximo permitido es 20 MB.");
@@ -40,25 +44,36 @@ export let DesignsDocController = ($scope, DesignStateService, $http, Notificati
         }
     };
     
-    self.requestDesignDocuments = function ( ) {
+    self.requestDesignDocuments = function () {
         console.log(self.designId);
-        var postdata = { dsgnid: self.designId.id};
+        var postdata = { dsgnid: self.designId.id };
         $http({
-            url: "designs-documents", method: "post", data: postdata
-        }).success(function (data) {
-            self.documents = data;
+            url: "designs-documents",
+            method: "post",
+            data: postdata
+        })
+        .then(function (response) {
+            self.documents = response.data;
+        })
+        .catch(function (error) {
+            console.error("Error fetching design documents:", error);
         });
     };
-
-
+    
     self.deleteDesignDocument = function (dsgnid) {
         var postdata = { dsgnid: dsgnid };
         $http({
-            url: "delete-design-document", method: "post", data: postdata
-        }).success(function () {
+            url: "delete-design-document",
+            method: "post",
+            data: postdata
+        })
+        .then(function () {
             self.requestDesignDocuments();
+        })
+        .catch(function (error) {
+            console.error("Error deleting design document:", error);
         });
-    };
+    };    
 
     self.getPathname = function(path){
         var split = path.split("/");

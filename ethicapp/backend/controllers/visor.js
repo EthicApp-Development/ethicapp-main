@@ -180,22 +180,8 @@ router.get("/role-playing", (req, res) => {
             ngApp: "StudentRolePlaying",
             controller:  "RolePlayingController",
             extraScripts : `            
-            <script src="assets/libs/ui-bootstrap-tpls-1.1.2.min.js" defer></script>
-            <script src="assets/libs/intro.min.js" defer></script>
-            <script src="assets/libs/angular-intro.min.js" defer></script>
-            <script src="assets/libs/ua-parser.min.js" defer></script>
-            <script src="assets/libs/angular-ui-tree.min.js" defer></script>
-            <script src="assets/libs/angular-timer.min.js" defer></script>
-            <script src="assets/libs/angular-ui-notification.min.js" defer></script>
             <script src="assets/libs/angular-glue.min.js" defer></script>
-            <script type="module" src="assets/js/modules/student/role-playing.mjs" defer></script>
-            <link rel="stylesheet" href="assets/css/bootstrap.min.css" />
-            <link rel="stylesheet" href="assets/css/font-awesome.min.css">
-            <link rel="stylesheet" href="assets/css/minimal.css">
-            <link rel="stylesheet" href="assets/css/angular-ui-tree.min.css">
-            <link rel="stylesheet" href="assets/css/angular-ui-notification.min.css">
-            <link rel="stylesheet" href="assets/css/introjs.css">
-            <link rel="stylesheet" href="assets/css/main.css" />            
+            <script src="assets/js/modules/student/role-playing.min.js" defer></script>
             `
         });
     else
@@ -226,22 +212,8 @@ router.get("/ethics", (req, res) => {
             ngApp: "StudentEthics",
             controller:  "EthicsController",
             extraScripts : `            
-            <script src="assets/libs/ui-bootstrap-tpls-1.1.2.min.js" defer></script>
-            <script src="assets/libs/intro.min.js" defer></script>
-            <script src="assets/libs/angular-intro.min.js" defer></script>
-            <script src="assets/libs/ua-parser.min.js" defer></script>
-            <script src="assets/libs/angular-ui-tree.min.js" defer></script>
-            <script src="assets/libs/angular-timer.min.js" defer></script>
-            <script src="assets/libs/angular-ui-notification.min.js" defer></script>
             <script src="assets/libs/angular-glue.min.js" defer></script>
-            <script type="module" src="assets/js/modules/student/ethics.mjs" defer></script>
-            <link rel="stylesheet" href="assets/css/bootstrap.min.css" />
-            <link rel="stylesheet" href="assets/css/font-awesome.min.css">
-            <link rel="stylesheet" href="assets/css/minimal.css">
-            <link rel="stylesheet" href="assets/css/angular-ui-tree.min.css">
-            <link rel="stylesheet" href="assets/css/angular-ui-notification.min.css">
-            <link rel="stylesheet" href="assets/css/introjs.css">
-            <link rel="stylesheet" href="assets/css/main.css" />            
+            <script src="assets/js/dist/ethics.min.js" defer></script>          
             `
         });
     else

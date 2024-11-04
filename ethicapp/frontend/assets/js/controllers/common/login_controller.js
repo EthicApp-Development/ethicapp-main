@@ -20,6 +20,7 @@ export let LoginController = ($scope, $http, $window) => {
     };    
 
     self.login = () => {
+        console.log("howdt");
         const credentials = {
             email:    self.user.email,
             password: self.user.password

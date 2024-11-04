@@ -14,14 +14,19 @@ export let OptionsController = ($scope, $http, Notification) => {
             sesid:   self.selectedSes.id,
             options: self.buildConfStr()
         };
-        $http.post("update-ses-options", postdata).success(function (data) {
-            if (data.status == "ok") {
+        $http.post("update-ses-options", postdata)
+        .then(function (response) {
+            if (response.data.status === "ok") {
                 Notification.success("Opciones actualizadas");
                 self.selectedSes.options = postdata.options;
                 self.selectedSes.conf = null;
                 self.shared.updateConf();
             }
+        })
+        .catch(function (error) {
+            console.error("Error updating session options:", error);
         });
+    
     };
 
     self.shared.saveConfs = self.saveConfs;

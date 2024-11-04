@@ -3,24 +3,46 @@
 # Script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Build teacher-side dependencies
+# Teacher App
 cd "$SCRIPT_DIR/../ethicapp/frontend/assets/js/modules/teacher"
-npx esbuild teacher_admin.mjs --bundle --outfile=bundled-teacher-admin.js
-npx terser bundled-teacher-admin.js --output bundled-teacher-admin.min.js
-rm bundled-teacher-admin.js
+npx esbuild teacher-admin.mjs --bundle --sourcemap --outdir=../../dist
+npx terser ../../dist/teacher-admin.js --output ../../dist/teacher-admin.min.js
+rm ../../dist/teacher-admin.js
 
-# Build common dependencies
+# UserCommon App
 cd "$SCRIPT_DIR/../ethicapp/frontend/assets/js/modules/common"
-npx esbuild user_common.mjs --bundle --outfile=bundled-user-common.js
-npx terser bundled-user-common.js --output bundled-user-common.min.js
-rm bundled-user-common.js
+npx esbuild user-common.mjs --bundle --sourcemap --outdir=../../dist
+npx terser ../../dist/user-common.js --output ../../dist/user-common.min.js
+rm ../../dist/user-common.js
+
+# Students' Sessions App
+cd "$SCRIPT_DIR/../ethicapp/frontend/assets/js/modules/student"
+npx esbuild sessions.mjs --bundle --sourcemap --outdir=../../dist
+npx terser ../../dist/sessions.js --output ../../dist/sessions.min.js
+rm ../../dist/sessions.js
+
+# StudentEthics App
+cd "$SCRIPT_DIR/../ethicapp/frontend/assets/js/modules/student"
+npx esbuild ethics.mjs --bundle --sourcemap --outdir=../../dist
+npx terser ../../dist/ethics.js --output ../../dist/ethics.min.js
+rm ../../dist/ethics.js
+
+# RolePlaying App
+cd "$SCRIPT_DIR/../ethicapp/frontend/assets/js/modules/student"
+npx esbuild role-playing.mjs --bundle --sourcemap --outdir=../../dist
+npx terser ../../dist/role-playing.js --output ../../dist/role-playing.min.js
+rm ../../dist/role-playing.js
 
 # Build CSS dependencies
 cd "$SCRIPT_DIR/../ethicapp/frontend/assets/css"
-sass styles.scss assets-bundle.css
+sass styles.scss dist/assets-bundle.css
 
 # Build JS dependencies
 cd "$SCRIPT_DIR/../ethicapp/frontend/assets/js"
-esbuild main.js --bundle --outfile=assets-bundle.js --minify
+npx esbuild common-ethicapp-deps.js --bundle --outdir=dist
+npx terser dist/common-ethicapp-deps.js \
+  --output dist/common-ethicapp-deps.min.js \
+  --source-map "filename='common-ethicapp-deps.min.js.map',url='common-ethicapp-deps.min.js.map'"
+rm dist/common-ethicapp-deps.js
 
 echo "Build complete"

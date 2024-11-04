@@ -56,113 +56,158 @@ app.controller("SelectController", [
             self.getMe();
         };
 
-        self.getSesInfo = () => {
-            $http({url: "get-ses-info", method: "post"}).success((data) => {
+        self.getSesInfo = async () => {
+            try {
+                // Fetch session information
+                const sesInfoResponse = await $http({ url: "get-ses-info", method: "post" });
+                const data = sesInfoResponse.data;
+        
+                // Update session information
                 self.iteration = data.iteration + 1;
                 self.myUid = data.uid;
                 self.sesName = data.name;
                 self.sesId = data.id;
                 self.sesSTime = data.stime;
                 self.sesDescr = data.descr;
-                self.useConfidence = (data.options != null && data.options.includes("C"));
-                self.useHints = (data.options != null && data.options.includes("H"));
-                self.useComments = (data.options != null && data.options.includes("J"));
-                let set = new Set();
+                self.useConfidence = data.options?.includes("C");
+                self.useHints = data.options?.includes("H");
+                self.useComments = data.options?.includes("J");
+        
+                const set = new Set();
+        
+                // Load team selection for iteration 1 if applicable
                 if (self.iteration > 1) {
-                    $http({
-                        url: "get-team-selection", method: "post", data: { iteration: 1 }
-                    }).success((data) => {
-                        data.forEach((ans) => {
-                            self.ansIter1[ans.qid] = self.ansIter1[ans.qid] || {};
-                            self.ansIter1[ans.qid][ans.uid] = {
-                                answer: ans.answer, comment: ans.comment
-                            };
-                            set.add(ans.uid);
-                        });
-                        self.teamUids = Array.from(set);
+                    const teamSelection1 = await $http({
+                        url: "get-team-selection",
+                        method: "post",
+                        data: { iteration: 1 }
                     });
+        
+                    teamSelection1.data.forEach((ans) => {
+                        self.ansIter1[ans.qid] = self.ansIter1[ans.qid] || {};
+                        self.ansIter1[ans.qid][ans.uid] = { answer: ans.answer, comment: ans.comment };
+                        set.add(ans.uid);
+                    });
+                    self.teamUids = Array.from(set);
                 }
+        
+                // Load team selection for iteration 2 if applicable
                 if (self.iteration > 2) {
-                    $http({
-                        url: "get-team-selection", method: "post", data: { iteration: 2 }
-                    }).success((data) => {
-                        data.forEach((ans) => {
-                            self.ansIter2[ans.qid] = self.ansIter2[ans.qid] || {};
-                            self.ansIter2[ans.qid][ans.uid] = {
-                                answer: ans.answer, comment: ans.comment
-                            };
-                            set.add(ans.uid);
-                        });
-                        self.teamUids = Array.from(set);
+                    const teamSelection2 = await $http({
+                        url: "get-team-selection",
+                        method: "post",
+                        data: { iteration: 2 }
                     });
-                    self.updateTeam();
+        
+                    teamSelection2.data.forEach((ans) => {
+                        self.ansIter2[ans.qid] = self.ansIter2[ans.qid] || {};
+                        self.ansIter2[ans.qid][ans.uid] = { answer: ans.answer, comment: ans.comment };
+                        set.add(ans.uid);
+                    });
+                    self.teamUids = Array.from(set);
+        
+                    // Update team based on the latest selection
+                    await self.updateTeam();
                 }
+        
+                // Set finished state and load answer key if iteration threshold is met
                 if (self.iteration >= 4) {
                     self.finished = true;
-                    self.loadAnskey();
+                    await self.loadAnskey();
                 }
-                if(self.iteration > 0) {
-                    self.loadQuestions();
-                    self.loadAnswers();
+        
+                // Load questions and answers if there are iterations
+                if (self.iteration > 0) {
+                    await self.loadQuestions();
+                    await self.loadAnswers();
                 }
-            });
+        
+            } catch (error) {
+                console.error("Error fetching session information:", error);
+                Notification.error("Failed to load session information");
+            }
         };
 
-        self.getMe = () => {
-            $http.post("get-my-name").success((data) => {
-                //self.lang = data.lang;
-                self.lang = data.lang == "spanish" ? "ES_CL/spanish" : "EN_US/english";
-                self.updateLang(self.lang);
-            });
+        self.getMe = async () => {
+            try {
+                const response = await $http.post("get-my-name");
+                self.lang = response.data.lang === "spanish" ? "ES_CL/spanish" : "EN_US/english";
+                await self.updateLang(self.lang);
+            } catch (error) {
+                console.error("Error fetching user language:", error);
+                Notification.error("Failed to load user language");
+            }
         };
-
-        self.updateTeam = () => {
-            $http({url: "get-team", method: "post"}).success((data) => {
+        
+        self.updateTeam = async () => {
+            try {
+                const response = await $http({ url: "get-team", method: "post" });
+                const data = response.data;
+        
                 self.team = {};
                 self.teamstr = data.map(e => e.name).join(", ");
                 data.forEach((tm) => {
                     self.team[tm.id] = tm.name;
                 });
+        
                 if (data.length > 0) {
                     self.teamId = data[0].tmid;
                     self.teamProgress = data[0].progress;
-                    if (self.iteration == 3)
-                        self.selectQuestion(self.teamProgress);
+                    if (self.iteration === 3) {
+                        await self.selectQuestion(self.teamProgress);
+                    }
                 }
-            });
+            } catch (error) {
+                console.error("Error updating team data:", error);
+                Notification.error("Failed to update team data");
+            }
         };
-
-        self.loadQuestions = () => {
-            $http({url: "get-questions", method: "post"}).success((data) => {
-                self.questions = data;
+        
+        self.loadQuestions = async () => {
+            try {
+                const response = await $http({ url: "get-questions", method: "post" });
+                self.questions = response.data;
                 self.questions.forEach((qs) => {
                     qs.options = qs.options.split("\n");
                 });
-            });
+            } catch (error) {
+                console.error("Error loading questions:", error);
+                Notification.error("Failed to load questions");
+            }
         };
-
-        self.loadAnskey = () => {
-            $http({url: "get-anskey", method: "post"}).success((data) => {
+        
+        self.loadAnskey = async () => {
+            try {
+                const response = await $http({ url: "get-anskey", method: "post" });
                 self.anskey = {};
-                data.forEach((qs) => {
+                response.data.forEach((qs) => {
                     self.anskey[qs.id] = qs;
                 });
-            });
+            } catch (error) {
+                console.error("Error loading answer key:", error);
+                Notification.error("Failed to load answer key");
+            }
         };
-
-        self.loadAnswers = () => {
-            $http({
-                url: "get-answers", method: "post", data: { iteration: Math.min(3, self.iteration) }
-            }).success((data) => {
-                data.forEach((ans) => {
+        
+        self.loadAnswers = async () => {
+            try {
+                const response = await $http({
+                    url: "get-answers",
+                    method: "post",
+                    data: { iteration: Math.min(3, self.iteration) }
+                });
+                response.data.forEach((ans) => {
                     self.answers[ans.qid] = ans.answer;
                     self.comments[ans.qid] = ans.comment;
                     self.confidences[ans.qid] = ans.confidence;
                     self.sent[ans.qid] = true;
                 });
-            });
+            } catch (error) {
+                console.error("Error loading answers:", error);
+                Notification.error("Failed to load answers");
+            }
         };
-
+        
         self.setAnswer = (qs, ans) => {
             self.answers[qs.id] = ans;
             qs.dirty = true;
@@ -172,101 +217,89 @@ app.controller("SelectController", [
             self.selectedQs = idx;
         };
 
-        self.selectQuestionTab = (idx) => {
-            if (self.iteration == 3) {
-                console.log("Checking team answers");
-                let postdata = {qid: self.questions[self.selectedQs].id};
-                $http({
-                    url: "check-team-answer", method: "post", data: postdata
-                }).success((data) => {
-                    if (data.status == "ok") {
-                        self.sendTeamProgress(idx);
-                    // self.bottomMsg = "";
-                    }
-                    else if (data.status == "incomplete") {
-                        notify(
-                            "Error", "Debe esperar a que todos los miembros del equipo respondan"
-                        );
-                    }
-                    else if (data.status == "different") {
+        self.selectQuestionTab = async (idx) => {
+            try {
+                if (self.iteration === 3) {
+                    console.log("Checking team answers");
+                    const postdata = { qid: self.questions[self.selectedQs].id };
+                    const response = await $http.post("check-team-answer", postdata);
+                    const data = response.data;
+        
+                    if (data.status === "ok") {
+                        await self.sendTeamProgress(idx);
+                    } else if (data.status === "incomplete") {
+                        notify("Error", "Debe esperar a que todos los miembros del equipo respondan");
+                    } else if (data.status === "different") {
                         notify("Error", "Las respuestas de los miembros del equipo no coinciden");
-                    }
-                    else if (
-                        data.status == "incorrect" &&
-                        !self.questions[self.selectedQs].hinted && self.useHints
-                    ) {
+                    } else if (data.status === "incorrect" && !self.questions[self.selectedQs].hinted && self.useHints) {
                         notify("Comentario", data.msg);
                         self.questions[self.selectedQs].hinted = true;
-                    }
-                    else if (self.questions[self.selectedQs].hinted || !self.useHints) {
-                        self.sendTeamProgress(idx);
-                    }
-                    else {
+                    } else if (self.questions[self.selectedQs].hinted || !self.useHints) {
+                        await self.sendTeamProgress(idx);
+                    } else {
                         notify("Actividad", "Se alcanzó el final de la actividad");
                     }
-                });
-            }
-            else if (self.questions[self.selectedQs].dirty) {
-                notify("Error", "No se ha enviado una respuesta a la pregunta");
-            }
-            else {
-                self.selectQuestion(idx);
+                } else if (self.questions[self.selectedQs].dirty) {
+                    notify("Error", "No se ha enviado una respuesta a la pregunta");
+                } else {
+                    self.selectQuestion(idx);
+                }
+            } catch (error) {
+                console.error("Error in selectQuestionTab:", error);
+                Notification.error("Failed to check team answers");
             }
         };
-
-        self.nextQuestion = () => {
-            if (self.iteration == 3) {
-                console.log("Checking team answers");
-                let postdata = {qid: self.questions[self.selectedQs].id};
-                $http({
-                    url: "check-team-answer", method: "post", data: postdata
-                }).success((data) => {
-                    if (data.status == "ok") {
-                        self.sendTeamProgress(self.selectedQs + 1);
+        
+        self.nextQuestion = async () => {
+            try {
+                if (self.iteration === 3) {
+                    console.log("Checking team answers");
+                    const postdata = { qid: self.questions[self.selectedQs].id };
+                    const response = await $http.post("check-team-answer", postdata);
+                    const data = response.data;
+        
+                    if (data.status === "ok") {
+                        await self.sendTeamProgress(self.selectedQs + 1);
                         self.bottomMsg = "";
-                    }
-                    else if (data.status == "incomplete") {
-                        notify(
-                            "Error", "Debe esperar a que todos los miembros del equipo respondan"
-                        );
-                    }
-                    else if (data.status == "different") {
+                    } else if (data.status === "incomplete") {
+                        notify("Error", "Debe esperar a que todos los miembros del equipo respondan");
+                    } else if (data.status === "different") {
                         notify("Error", "Las respuestas de los miembros del equipo no coinciden");
-                    }
-                    else if (
-                        data.status == "incorrect" &&
-                        !self.questions[self.selectedQs].hinted && self.useHints
-                    ) {
+                    } else if (data.status === "incorrect" && !self.questions[self.selectedQs].hinted && self.useHints) {
                         notify("Comentario", data.msg);
                         self.questions[self.selectedQs].hinted = true;
-                    }
-                    else if (self.questions[self.selectedQs].hinted || !self.useHints) {
-                        self.sendTeamProgress(self.selectedQs + 1);
+                    } else if (self.questions[self.selectedQs].hinted || !self.useHints) {
+                        await self.sendTeamProgress(self.selectedQs + 1);
                         self.bottomMsg = "";
-                    }
-                    else {
+                    } else {
                         notify("Actividad", "Se alcanzó el final de la actividad");
                     }
-                });
-            }
-            else if (self.questions[self.selectedQs].dirty) {
-                notify("Error", "No se ha enviado una respuesta a la pregunta");
-            }
-            else if (self.selectedQs >= self.questions.length - 1 && self.iteration != 3) {
-                notify("Actividad", "Se alcanzó el final de la actividad");
-            }
-            else {
-                self.selectQuestion(self.selectedQs + 1);
+                } else if (self.questions[self.selectedQs].dirty) {
+                    notify("Error", "No se ha enviado una respuesta a la pregunta");
+                } else if (self.selectedQs >= self.questions.length - 1 && self.iteration !== 3) {
+                    notify("Actividad", "Se alcanzó el final de la actividad");
+                } else {
+                    self.selectQuestion(self.selectedQs + 1);
+                }
+            } catch (error) {
+                console.error("Error in nextQuestion:", error);
+                Notification.error("Failed to check team answers");
             }
         };
-
-        self.sendTeamProgress = (pg) => {
-            let postdata = {tmid: self.teamId, progress: pg};
-            $http({url: "send-team-progress", method: "post", data: postdata}).success((data) => {
-                if (data.status == "ok")
+        
+        self.sendTeamProgress = async (pg) => {
+            try {
+                const postdata = { tmid: self.teamId, progress: pg };
+                const response = await $http.post("send-team-progress", postdata);
+                if (response.data.status === "ok") {
                     console.log("Progress sent");
-            });
+                }
+            } catch (error) {
+                console.error("Error sending team progress:", error);
+                Notification.error("Failed to send team progress");
+            }
         };
+        
 
         self.prevQuestion = () => {
             if (self.selectedQs <= 0) {
@@ -281,34 +314,47 @@ app.controller("SelectController", [
             }
         };
 
-        self.sendAnswer = (qs) => {
-            if (self.answers[qs.id] == null || self.answers[qs.id] == -1) {
-                notify("Error", "Debe seleccionar una alternativa");
-                return;
-            }
-            if (self.useComments && (self.comments[qs.id] == null || self.comments[qs.id] == "")) {
-                notify("Error", "Debe agregar un comentario");
-                return;
-            }
-            if (self.useConfidence && (self.confidences[qs.id] == null)) {
-                notify("Error", "Debe agregar un grado de certeza");
-                return;
-            }
-            let postdata = {
-                qid:        qs.id,
-                answer:     self.answers[qs.id],
-                comment:    self.comments[qs.id],
-                confidence: self.confidences[qs.id],
-                iteration:  self.iteration
-            };
-            $http({url: "send-answer", method: "post", data: postdata}).success((data) => {
-                if (data.status == "ok") {
+        self.sendAnswer = async (qs) => {
+            try {
+                // Verificar si una respuesta fue seleccionada
+                if (self.answers[qs.id] == null || self.answers[qs.id] === -1) {
+                    notify("Error", "Debe seleccionar una alternativa");
+                    return;
+                }
+        
+                // Verificar si se requiere un comentario
+                if (self.useComments && (!self.comments[qs.id] || self.comments[qs.id].trim() === "")) {
+                    notify("Error", "Debe agregar un comentario");
+                    return;
+                }
+        
+                // Verificar si se requiere grado de certeza
+                if (self.useConfidence && self.confidences[qs.id] == null) {
+                    notify("Error", "Debe agregar un grado de certeza");
+                    return;
+                }
+        
+                // Preparar los datos para enviar
+                const postdata = {
+                    qid:        qs.id,
+                    answer:     self.answers[qs.id],
+                    comment:    self.comments[qs.id],
+                    confidence: self.confidences[qs.id],
+                    iteration:  self.iteration
+                };
+        
+                // Enviar la respuesta
+                const response = await $http.post("send-answer", postdata);
+                if (response.data.status === "ok") {
                     self.sent[postdata.qid] = true;
                     qs.dirty = false;
                 }
-            });
+            } catch (error) {
+                console.error("Error sending answer:", error);
+                Notification.error("Failed to send answer");
+            }
         };
-
+        
         function notify (title, message) {
             $uibModal.open({
                 template: `
@@ -333,12 +379,16 @@ app.controller("SelectController", [
             notify("Factor Detonante", self.sesDescr, false);
         };
 
-        self.updateLang = (lang) => {
-            $http.get("assets/i18n/" + lang + ".json").success((data) => {
-                window.DIC = data;
-            });
+        self.updateLang = async (lang) => {
+            try {
+                const response = await $http.get(`assets/i18n/${lang}.json`);
+                window.DIC = response.data;
+            } catch (error) {
+                console.error("Error updating language:", error);
+                Notification.error("Failed to update language settings");
+            }
         };
-
+        
         self.changeLang = () => {
             self.lang = (self.lang == "EN_US/english") ? "ES_CL/spanish" : "EN_US/english";
             self.updateLang(self.lang);

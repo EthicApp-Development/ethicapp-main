@@ -15,21 +15,21 @@ import session from "express-session";
 import { default as fileStoreFactory } from "session-file-store"; 
 const FileStore = fileStoreFactory(session);
 
-import index from "./backend/controllers/index.js";
-import passport from "./backend/controllers/users/passport-setup.js";
-import users_core from "./backend/controllers/users/users-core.js";
-import users_registration from "./backend/controllers/users/users-registration.js";
-import sessions from "./backend/controllers/sessions.js";
-import content_analysis from "./backend/controllers/content-analysis-controller.js";
-import teams from "./backend/controllers/teams.js";
-import stages from "./backend/controllers/stages.js";
-import visor from "./backend/controllers/visor.js";
-import analysis from "./backend/controllers/analysis.js";
-import admin_panel from "./backend/controllers/admin-panel-api.js";
+import index from "./controllers/index.js";
+import passport from "./controllers/users/passport-setup.js";
+import users_core from "./controllers/users/users-core.js";
+import users_registration from "./controllers/users/users-registration.js";
+import sessions from "./controllers/sessions.js";
+import content_analysis from "./controllers/content-analysis-controller.js";
+import teams from "./controllers/teams.js";
+import stages from "./controllers/stages.js";
+import visor from "./controllers/visor.js";
+import analysis from "./controllers/analysis.js";
+import admin_panel from "./controllers/admin-panel-api.js";
 import fs from "fs";
 
-import * as config from "./backend/config/config.js";
-import { validateSession } from "./backend/middleware/validate-session.js";
+import * as config from "./config/config.js";
+import { validateSession } from "./middleware/validate-session.js";
 import i18n from "i18n";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -45,7 +45,7 @@ const __dirname = path.dirname(__filename);
 
 i18n.configure({
     locales:        ["es_CL", "en_US"],
-    directory:      path.join(__dirname, "backend/locales"),
+    directory:      path.join(__dirname, "locales"),
     defaultLocale:  "en_US",
     queryParameter: "lang",
     objectNotation: true,
@@ -64,15 +64,15 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Asset handling
-const assetPath = path.join(__dirname, "/frontend/assets");
+const assetPath = path.join(__dirname, "../frontend/assets");
 app.use(express.static(assetPath));
 app.use(assetVersions("/assets", assetPath));
 
 // Uploads
-app.use("/uploads", express.static(path.join(__dirname, "frontend/assets")));
+app.use("/uploads", express.static(path.join(__dirname, "../frontend/assets/uploads")));
 
 // view engine setup
-app.set("views", path.join(__dirname, "backend/views"));
+app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
 app.use(expressLayouts); // Usar express-ejs-layouts
 app.set("layout", "./layouts/user-common"); 
@@ -104,7 +104,7 @@ busboy.extend(app, {
 });
 
 // Static path for frontend files
-app.use(express.static(path.join(__dirname, "frontend")));
+app.use(express.static(path.join(__dirname, "../frontend")));
 
 // Set up cookies and session management
 app.use(cookieParser());

@@ -16,7 +16,7 @@
     "fix-js": "npx eslint --fix './ethicapp/**/*.js' ./ethicapp/backend/ethicapp",
     "fix-css": "npx stylelint --fix './ethicapp/frontend/assets/css/**/*.css'",
     "fix-sql": "sqlfluff fix --show-lint-violations --force ./postgres-db/",
-    "clear-sessions": "sudo rm -f -v ./ethicapp/sessions/*",
+    "clear-sessions": "sudo rm -f -v ./ethicapp/backend/sessions/*",
     "pgdump": "./devops/docker-pgdump.sh",
     "pgrestore": "./devops/docker-pgrestore.sh",
     "psql": "./devops/docker-psql.sh",
@@ -25,6 +25,7 @@
     "build-assets": "npm run build-js & npm run build-css",
     "bundle-teacher-module": "./devops/bundle-teacher-module.sh",
     "build": "./devops/build-application.sh",
+    "build-devel": "./devops/build-application-development.sh",
     "admin-panel": "./devops/admin-panel.sh"
   },
   "devDependencies": {
@@ -40,6 +41,7 @@
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
+    "concurrently": "^9.0.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5"
   }

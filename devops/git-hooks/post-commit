@@ -10,4 +10,4 @@ branch_name=$(git rev-parse --abbrev-ref HEAD)
 build_hash="${commit_hash}-${branch_name}"
 
 # Update build_hash.json without committing it
-echo "{\"build_hash\": \"$build_hash\"}" > ethicapp/build_hash.json
+echo "{\"build_hash\": \"$build_hash\"}" > ethicapp/backend/build_hash.json

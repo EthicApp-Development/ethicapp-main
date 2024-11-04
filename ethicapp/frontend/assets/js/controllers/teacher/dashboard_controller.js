@@ -133,165 +133,142 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
         self.updateState();
     };
 
-    self.updateStateIni = function () {
-        var _postdata2;
+    self.updateStateIni = async function () {
+        const _postdata2 = { stageid: self.iterationIndicator };
         self.alumTime = {};
-        if (self.selectedSes.type == "R") {
-            _postdata2 = {
-                stageid: self.iterationIndicator
-            };
-            $http.post("get-actors", _postdata2).success(function(data){
-                self.rawActors = data;
+        
+        try {
+            if (self.selectedSes.type === "R") {
+                // Step 1: Fetch actors
+                const actorsResponse = await $http.post("get-actors", _postdata2);
+                self.rawActors = actorsResponse.data;
                 self.actorMap = {};
-                data.forEach(a => {
+                actorsResponse.data.forEach(a => {
                     self.actorMap[a.id] = a;
                 });
-                $http.post("get-role-sel-all", _postdata2).success(function (data) {
-                    self.rawRoleData = data;
-                    self.posFreqTable = window.computePosFreqTable(data, self.rawActors);
-                    if(self.posFreqTable != null) {
-                        self.freqMax = Object.values(self.posFreqTable)
-                            .reduce(
-                                (v, e) => Math.max(v, Object.values(e)
-                                    .reduce((v2, e2) => Math.max(e2, v2), 0)), 0
-                            );
+                
+                // Step 2: Fetch role selections
+                const roleSelResponse = await $http.post("get-role-sel-all", _postdata2);
+                self.rawRoleData = roleSelResponse.data;
+                self.posFreqTable = window.computePosFreqTable(roleSelResponse.data, self.rawActors);
+                if (self.posFreqTable) {
+                    self.freqMax = Object.values(self.posFreqTable)
+                        .reduce((v, e) => Math.max(v, Object.values(e).reduce((v2, e2) => Math.max(e2, v2), 0)), 0);
+                }
+                self.indvTable = window.computeIndTable(roleSelResponse.data, self.rawActors);
+                self.shared.roleIndTable = self.indvTable;
+                self.indvTableSorted = window.sortIndTable(self.indvTable, self.users);
+                
+                // Step 3: Group proposal
+                const groupProposalResponse = await $http.post("group-proposal-stage", _postdata2);
+                self.shared.groupByUid = {};
+                groupProposalResponse.data.forEach((s, i) => {
+                    s.forEach(u => {
+                        self.shared.groupByUid[u.uid] = { index: i + 1, tmid: u.tmid };
+                    });
+                });
+    
+                // Step 4: Count chat messages by stage
+                const chatCountResponse = await $http.post("get-chat-count-stage", _postdata2);
+                self.shared.chatByUid = {};
+                self.shared.chatByTeam = {};
+                chatCountResponse.data.forEach(c => {
+                    self.shared.chatByUid[c.uid] = +c.count;
+                    if (!self.shared.chatByTeam[c.tmid]) {
+                        self.shared.chatByTeam[c.tmid] = 0;
                     }
-                    self.indvTable = window.computeIndTable(data, self.rawActors);
-                    self.shared.roleIndTable = self.indvTable;
-                    self.indvTableSorted = window.sortIndTable(self.indvTable, self.users);
+                    self.shared.chatByTeam[c.tmid] += +c.count;
                 });
-                $http({
-                    url: "group-proposal-stage", method: "post", data: _postdata2
-                }).success(function (data) {
-                    self.shared.groupByUid = {};
-                    data.forEach(function (s, i) {
-                        s.forEach(function (u) {
-                            self.shared.groupByUid[u.uid] = { index: i + 1, tmid: u.tmid };
-                        });
-                    });
-                });
-                $http({
-                    url: "get-chat-count-stage", method: "post", data: _postdata2
-                }).success(function (data) {
-                    self.shared.chatByUid = {};
-                    self.shared.chatByTeam = {};
-                    data.forEach(function(c) {
-                        self.shared.chatByUid[c.uid] = +c.count;
-                        if(!self.shared.chatByTeam[c.tmid]){
-                            self.shared.chatByTeam[c.tmid] = 0;
-                        }
-                        self.shared.chatByTeam[c.tmid] += +c.count;
-                    });
-                });
-            });
-        }
-        else if (self.selectedSes.type == "T"){
-            _postdata2 = {
-                stageid: self.iterationIndicator
-            };
-            console.log("datos", _postdata2)
-            self.dfsStage = [];
-            $http.post("get-differentials-stage", _postdata2).success(function(data) {
-                self.dfsStage = data;
-                console.log("DIFFERENTIAL DEBUG DATA:",data);
-                $http.post("get-differential-all-stage", _postdata2).success(function (data) {
-                    self.shared.difTable = window.buildDifTable(
-                        data, self.users, self.dfsStage, self.shared.groupByUid
-                    );
-                    self.shared.difTableUsers = self.shared.difTable.filter(e => !e.group).length;
-                });
-            });
-            $http({
-                url: "group-proposal-stage", method: "post", data: _postdata2
-            }).success(function (data) {
+            } else if (self.selectedSes.type === "T") {
+                // Step 1: Fetch differentials for the stage
+                const diffStageResponse = await $http.post("get-differentials-stage", _postdata2);
+                self.dfsStage = diffStageResponse.data;
+    
+                // Step 2: Fetch all stage differentials
+                const allDiffStageResponse = await $http.post("get-differential-all-stage", _postdata2);
+                self.shared.difTable = window.buildDifTable(allDiffStageResponse.data, self.users, self.dfsStage, self.shared.groupByUid);
+                self.shared.difTableUsers = self.shared.difTable.filter(e => !e.group).length;
+                
+                // Step 3: Group proposal
+                const groupProposalResponse = await $http.post("group-proposal-stage", _postdata2);
                 self.shared.groupByUid = {};
                 self.shared.groupByTmid = {};
-                data.forEach(function (s, i) {
-                    s.forEach(function (u) {
+                groupProposalResponse.data.forEach((s, i) => {
+                    s.forEach(u => {
                         self.shared.groupByUid[u.uid] = { index: i + 1, tmid: u.tmid };
                         self.shared.groupByTmid[u.tmid] = { index: i + 1, tmid: u.tmid };
                     });
                 });
-            });
-            $http({
-                url: "get-dif-chat-count", method: "post", data: _postdata2
-            }).success(function (data) {
+    
+                // Step 4: Count chat messages by differential stage
+                const diffChatCountResponse = await $http.post("get-dif-chat-count", _postdata2);
                 self.shared.chatByUid = {};
                 self.shared.chatByTeam = {};
-                data.forEach(function(c) {
-                    if(!self.shared.chatByUid[c.did])
-                        self.shared.chatByUid[c.did] = {};
+                diffChatCountResponse.data.forEach(c => {
+                    if (!self.shared.chatByUid[c.did]) self.shared.chatByUid[c.did] = {};
                     self.shared.chatByUid[c.did][c.uid] = +c.count;
-                    if(!self.shared.chatByTeam[c.did])
-                        self.shared.chatByTeam[c.did] = {};
-                    if(!self.shared.chatByTeam[c.did][c.tmid]){
-                        self.shared.chatByTeam[c.did][c.tmid] = 0;
-                    }
+    
+                    if (!self.shared.chatByTeam[c.did]) self.shared.chatByTeam[c.did] = {};
+                    if (!self.shared.chatByTeam[c.did][c.tmid]) self.shared.chatByTeam[c.did][c.tmid] = 0;
                     self.shared.chatByTeam[c.did][c.tmid] += +c.count;
                 });
-            });
-            $http({
-                url: "get-content-analysis", method: "post", data: _postdata2
-            }).success(function (dataArray) {
-                dataArray.forEach(function(data) {
+    
+                // Step 5: Fetch content analysis data
+                const contentAnalysisResponse = await $http.post("get-content-analysis", _postdata2);
+                contentAnalysisResponse.data.forEach(data => {
                     self.formatContentAnalysis(data);
                 });
-            });
-        }
-        else if (self.selectedSes.type == "J"){
-            _postdata2 = {
-                stageid: self.iterationIndicator
-            };
-            if(self.shared.inputAssignedRoles) {
-                self.shared.inputAssignedRoles();
-            }
-            $http.post("get-actors", _postdata2).success(function(data){
-                self.rawActors = data;
+            } else if (self.selectedSes.type === "J") {
+                // Step 1: Fetch actors
+                if (self.shared.inputAssignedRoles) {
+                    self.shared.inputAssignedRoles();
+                }
+    
+                const actorsResponse = await $http.post("get-actors", _postdata2);
+                self.rawActors = actorsResponse.data;
                 self.actorMap = {};
-                data.forEach(a => {
+                actorsResponse.data.forEach(a => {
                     self.actorMap[a.id] = a;
                 });
-                $http.post("get-role-sel-all", _postdata2).success(function (data) {
-                    self.rawRoleData = data;
-                    self.posFreqTable = window.computePosFreqTable(data, self.rawActors);
-                    if(self.posFreqTable != null) {
-                        self.freqMax = Object.values(self.posFreqTable)
-                            .reduce(
-                                (v, e) => Math.max(v, Object.values(e)
-                                    .reduce((v2, e2) => Math.max(e2, v2), 0)),
-                                0
-                            );
+    
+                // Step 2: Fetch role selections
+                const roleSelResponse = await $http.post("get-role-sel-all", _postdata2);
+                self.rawRoleData = roleSelResponse.data;
+                self.posFreqTable = window.computePosFreqTable(roleSelResponse.data, self.rawActors);
+                if (self.posFreqTable) {
+                    self.freqMax = Object.values(self.posFreqTable)
+                        .reduce((v, e) => Math.max(v, Object.values(e).reduce((v2, e2) => Math.max(e2, v2), 0)), 0);
+                }
+                self.indvTable = window.computeIndTable(roleSelResponse.data, self.rawActors);
+                self.shared.roleIndTable = self.indvTable;
+                self.indvTableSorted = window.sortIndTable(self.indvTable, self.users);
+    
+                // Step 3: Group proposal
+                const groupProposalResponse = await $http.post("group-proposal-stage", _postdata2);
+                self.shared.groupByUid = {};
+                groupProposalResponse.data.forEach((s, i) => {
+                    s.forEach(u => {
+                        self.shared.groupByUid[u.uid] = { index: i + 1, tmid: u.tmid };
+                    });
+                });
+    
+                // Step 4: Count chat messages by stage
+                const chatCountResponse = await $http.post("get-chat-count-stage", _postdata2);
+                self.shared.chatByUid = {};
+                self.shared.chatByTeam = {};
+                chatCountResponse.data.forEach(c => {
+                    self.shared.chatByUid[c.uid] = +c.count;
+                    if (!self.shared.chatByTeam[c.tmid]) {
+                        self.shared.chatByTeam[c.tmid] = 0;
                     }
-                    self.indvTable = window.computeIndTable(data, self.rawActors);
-                    self.shared.roleIndTable = self.indvTable;
-                    self.indvTableSorted = window.sortIndTable(self.indvTable, self.users);
+                    self.shared.chatByTeam[c.tmid] += +c.count;
                 });
-                $http({
-                    url: "group-proposal-stage", method: "post", data: _postdata2
-                }).success(function (data) {
-                    self.shared.groupByUid = {};
-                    data.forEach(function (s, i) {
-                        s.forEach(function (u) {
-                            self.shared.groupByUid[u.uid] = { index: i + 1, tmid: u.tmid };
-                        });
-                    });
-                });
-                $http({
-                    url: "get-chat-count-stage", method: "post", data: _postdata2
-                }).success(function (data) {
-                    self.shared.chatByUid = {};
-                    self.shared.chatByTeam = {};
-                    data.forEach(function(c) {
-                        self.shared.chatByUid[c.uid] = +c.count;
-                        if(!self.shared.chatByTeam[c.tmid]){
-                            self.shared.chatByTeam[c.tmid] = 0;
-                        }
-                        self.shared.chatByTeam[c.tmid] += +c.count;
-                    });
-                });
-            });
+            }
+        } catch (error) {
+            console.error("Error in updateStateIni:", error);
         }
     };
+    
 
     self.getFreqColor = function(aid, pos){
         if(self.posFreqTable && self.posFreqTable[aid]) {
@@ -447,18 +424,27 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
         else return "bg-yellow";
     };
 
-    self.getAlumDoneTime = function (postdata) {
-        $http({
-            url: "get-alum-done-time", method: "post", data: postdata
-        }).success(function (data) {
-            self.numComplete = 0;
-            data.forEach(function (row) {
-                self.numComplete += 1;
-                if (self.alumState[row.uid] == null)
-                    self.alumState[row.uid] = row;else self.alumState[row.uid].dtime = ~~row.dtime;
+    self.getAlumDoneTime = async function (postdata) {
+        try {
+            const response = await $http({
+                url: "get-alum-done-time",
+                method: "post",
+                data: postdata
             });
-        });
-    };
+            
+            self.numComplete = 0;
+            response.data.forEach(function (row) {
+                self.numComplete += 1;
+                if (self.alumState[row.uid] == null) {
+                    self.alumState[row.uid] = row;
+                } else {
+                    self.alumState[row.uid].dtime = ~~row.dtime;
+                }
+            });
+        } catch (error) {
+            console.error("Error fetching alum done time:", error);
+        }
+    };    
 
     self.buildBarData = function (data) {
         var N = 5;
@@ -485,55 +471,80 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
         else return report.id + " - " + self.flang("reportOf") + " " + self.users[report.uid].name;
     };
 
-    self.shared.getReports = function () {
-        var postdata = { sesid: self.selectedSes.id };
-        $http({ url: "get-report-list", method: "post", data: postdata }).success(function (data) {
-            self.reports = data;
-            self.exampleReports = data.filter(function (e) {
+    self.shared.getReports = async function () {
+        try {
+            const postdata = { sesid: self.selectedSes.id };
+            const response = await $http({ url: "get-report-list", method: "post", data: postdata });
+            
+            self.reports = response.data;
+            self.exampleReports = response.data.filter(function (e) {
                 return e.example;
             });
-        });
+        } catch (error) {
+            console.error("Error fetching report list:", error);
+        }
     };
-
-    self.getReportResult = function () {
-        var postdata = { repid: self.selectedReport.id };
-        $http({
-            url: "get-report-result", method: "post", data: postdata
-        }).success(function (data) {
-            self.result = data;
+    
+    self.getReportResult = async function () {
+        try {
+            const postdata = { repid: self.selectedReport.id };
+            const response = await $http({ url: "get-report-result", method: "post", data: postdata });
+            
+            self.result = response.data;
             self.updateState();
-        });
+        } catch (error) {
+            console.error("Error fetching report result:", error);
+        }
     };
-
-    self.getAllReportResult = function () {
-        var postdata = { sesid: self.selectedSes.id };
-        $http({
-            url: "get-report-result-all", method: "post", data: postdata
-        }).success(function (data) {
+    
+    self.getAllReportResult = async function () {
+        try {
+            const postdata = { sesid: self.selectedSes.id };
+            const response = await $http({
+                url: "get-report-result-all",
+                method: "post",
+                data: postdata
+            });
+            
             self.resultAll = {};
-            var n = data.length;
-            for (var uid in self.users) {
-                if (self.users[uid].role == "A") self.resultAll[uid] = { reviews: 0, data: [] };
+            const data = response.data;
+            const n = data.length;
+    
+            // Initialize resultAll for users with role "A"
+            for (const uid in self.users) {
+                if (self.users[uid].role === "A") {
+                    self.resultAll[uid] = { reviews: 0, data: [] };
+                }
             }
+    
+            // Process data
             data.forEach(function (d) {
-                if (d != null && d.length > 0) {
-                    var _uid = self.getReportAuthor(d[0].rid);
-                    if (_uid != -1 && self.resultAll[_uid].data == null) {
-                        self.resultAll[_uid].data = d;
-                    } else if (_uid != -1) {
-                        self.resultAll[_uid].data = d;
+                if (d && d.length > 0) {
+                    const _uid = self.getReportAuthor(d[0].rid);
+                    
+                    if (_uid !== -1) {
+                        self.resultAll[_uid].data = d;  // Set or update data for the user
                     }
+    
+                    // Update reviews count for each event
                     d.forEach(function (ev) {
-                        self.resultAll[ev.uid].reviews += n;
+                        if (self.resultAll[ev.uid]) {
+                            self.resultAll[ev.uid].reviews += n;
+                        }
                     });
                 }
             });
+    
+            // Initialize pairArr based on the length of data[0]
             self.pairArr = data[0] ? new Array(data[0].length) : [];
-            //console.log(self.resul);
+            
+            // Build the rubric bar data
             self.buildRubricaBarData(data);
-        });
+        } catch (error) {
+            console.error("Error fetching all report results:", error);
+        }
     };
-
+    
     self.buildRubricaBarData = function (data) {
         var N = 3;
         var rubnms = ["1 - 2", "2 - 3", "3 - 4"];
@@ -613,474 +624,557 @@ export let DashboardController = ($scope, $socket,ActivityStateService,
         return new Array(n);
     };
 
-    self.showReport = function (rid) {
-        var postdata = { rid: rid };
-        $http({ url: "get-report", method: "post", data: postdata }).success(function (data) {
-            var modalData = { report: data, criterios: self.shared.obtainCriterios() };
-            modalData.report.author = self.users[data.uid];
-            var postdata = { repid: data.id };
-            $http({
-                url: "get-report-result", method: "post", data: postdata
-            }).success(function (data) {
-                modalData.answers = data;
-                $http.post("get-criteria-selection-by-report", postdata).success(function (data) {
-                    modalData.answersRubrica = {};
-                    data.forEach(function (row) {
-                        if (modalData.answersRubrica[row.uid] == null)
-                            modalData.answersRubrica[row.uid] = {};
-                        modalData.answersRubrica[row.uid][row.cid] = row.selection;
-                    });
-                    $http.post("get-report-evaluators", postdata).success(function (data) {
-                        data.forEach(function (row) {
-                            var i = modalData.answers.findIndex(function (e) {
-                                return e.uid == row.uid;
-                            });
-                            if (i == -1) modalData.answers.push({
-                                uid: row.uid, evaluatorName: self.users[row.uid].name
-                            });
-                            else modalData.answers[i].evaluatorName = self.users[row.uid].name;
-                        });
-                        $uibModal.open({
-                            templateUrl:  "static/report-details.html",
-                            controller:   "ReportModalController",
-                            controllerAs: "vm",
-                            size:         "lg",
-                            scope:        self,
-                            resolve:      {
-                                data: function data() {
-                                    return modalData;
-                                }
-                            }
-                        });
-                    });
-                });
+    self.showReport = async function (rid) {
+        try {
+            // Step 1: Fetch the report data
+            let postdata = { rid: rid };
+            const reportResponse = await $http({ url: "get-report", method: "post", data: postdata });
+            
+            const modalData = { 
+                report: reportResponse.data, 
+                criterios: self.shared.obtainCriterios() 
+            };
+            modalData.report.author = self.users[reportResponse.data.uid];
+    
+            // Step 2: Fetch report results
+            postdata = { repid: reportResponse.data.id };
+            const reportResultResponse = await $http({
+                url: "get-report-result",
+                method: "post",
+                data: postdata
             });
-        });
-    };
-
-    self.showReportByUid = function (uid) {
-        console.log(uid);
-        var postdata = { uid: uid, sesid: self.selectedSes.id };
-        $http({ url: "get-report-uid", method: "post", data: postdata }).success(function (data) {
-            var modalData = { report: data };
-            modalData.report.author = self.users[uid];
+            modalData.answers = reportResultResponse.data;
+    
+            // Step 3: Fetch criteria selection by report
+            const criteriaSelectionResponse = await $http.post("get-criteria-selection-by-report", postdata);
+            modalData.answersRubrica = {};
+            criteriaSelectionResponse.data.forEach(row => {
+                if (!modalData.answersRubrica[row.uid]) {
+                    modalData.answersRubrica[row.uid] = {};
+                }
+                modalData.answersRubrica[row.uid][row.cid] = row.selection;
+            });
+    
+            // Step 4: Fetch report evaluators
+            const evaluatorsResponse = await $http.post("get-report-evaluators", postdata);
+            evaluatorsResponse.data.forEach(row => {
+                const i = modalData.answers.findIndex(e => e.uid === row.uid);
+                if (i === -1) {
+                    modalData.answers.push({
+                        uid: row.uid,
+                        evaluatorName: self.users[row.uid].name
+                    });
+                } else {
+                    modalData.answers[i].evaluatorName = self.users[row.uid].name;
+                }
+            });
+    
+            // Step 5: Open the modal with the report details
             $uibModal.open({
-                templateUrl:  "static/report-details.html",
-                controller:   "ReportModalController",
+                templateUrl: "static/report-details.html",
+                controller: "ReportModalController",
                 controllerAs: "vm",
-                scope:        self,
-                resolve:      {
-                    data: function data() {
+                size: "lg",
+                scope: self,
+                resolve: {
+                    data: function () {
                         return modalData;
                     }
                 }
             });
-        });
+        } catch (error) {
+            console.error("Error in showReport:", error);
+        }
     };
-
-    self.broadcastReport = function (rid) {
-        var postdata = { sesid: self.selectedSes.id, rid: rid };
-        $http({ url: "set-eval-report", method: "post", data: postdata }).success(function () {
+    
+    self.showReportByUid = async function (uid) {
+        try {
+            console.log(uid);
+            const postdata = { uid: uid, sesid: self.selectedSes.id };
+            const response = await $http({ url: "get-report-uid", method: "post", data: postdata });
+    
+            const modalData = { report: response.data };
+            modalData.report.author = self.users[uid];
+    
+            $uibModal.open({
+                templateUrl: "static/report-details.html",
+                controller: "ReportModalController",
+                controllerAs: "vm",
+                scope: self,
+                resolve: {
+                    data: function () {
+                        return modalData;
+                    }
+                }
+            });
+        } catch (error) {
+            console.error("Error in showReportByUid:", error);
+        }
+    };
+    
+    self.broadcastReport = async function (rid) {
+        try {
+            const postdata = { sesid: self.selectedSes.id, rid: rid };
+            await $http({ url: "set-eval-report", method: "post", data: postdata });
+            
             Notification.success("Reporte enviado a alumnos");
-        });
+        } catch (error) {
+            console.error("Error in broadcastReport:", error);
+        }
     };
-
-    self.showDetailAnswer = function (qid, uid, it) {
-        var opts = ["A", "B", "C", "D", "E"];
-        var postdata = { uid: uid, qid: qid, iteration: it };
-        var qs = self.questions.reduce(function (e, v) {
-            return v.id == qid ? v : e;
-        }, null);
-        if (it < 3) {
-            $http({
-                url: "get-selection-comment", method: "post", data: postdata
-            }).success(function (_data) {
-                if (_data == null || _data.answer == null) {
+    
+    self.showDetailAnswer = async function (qid, uid, it) {
+        const opts = ["A", "B", "C", "D", "E"];
+        const postdata = { uid: uid, qid: qid, iteration: it };
+        const qs = self.questions.find(v => v.id === qid);
+    
+        try {
+            if (it < 3) {
+                // Step 1: Fetch individual selection comment
+                const response = await $http({
+                    url: "get-selection-comment",
+                    method: "post",
+                    data: postdata
+                });
+                const _data = response.data;
+    
+                if (!_data || !_data.answer) {
                     Notification.warning("No hay respuesta registrada para el alumno");
                     return;
                 }
-                var alt = opts[_data.answer] + ". " + qs.options[_data.answer];
-                var qstxt = qs.content;
+    
+                // Prepare answer content for the modal
+                const alt = `${opts[_data.answer]}. ${qs.options[_data.answer]}`;
+                const qstxt = qs.content;
+    
                 $uibModal.open({
-                    templateUrl:  "static/content-dialog.html",
-                    controller:   "ContentModalController",
+                    templateUrl: "static/content-dialog.html",
+                    controller: "ContentModalController",
                     controllerAs: "vm",
-                    scope:        self,
-                    resolve:      {
-                        data: function data() {
-                            _data.title = self.flang("answerOf") + " " + self.users[uid].name;
-                            _data.content = self.flang("question") + ":\n" + qstxt + "\n\n" +
-                                self.flang("answer") + ":\n" + alt + "\n\n" + self.flang("comment")
-                                + ":\n" + (_data.comment ? _data.comment : "");
+                    scope: self,
+                    resolve: {
+                        data: function () {
+                            _data.title = `${self.flang("answerOf")} ${self.users[uid].name}`;
+                            _data.content = `${self.flang("question")}:\n${qstxt}\n\n` +
+                                `${self.flang("answer")}:\n${alt}\n\n${self.flang("comment")}:\n` +
+                                (_data.comment || "");
                             if (_data.confidence) {
-                                _data.content += "\n\n" + self.flang("confidenceLevel") + ": " +
-                                    _data.confidence + "%";
+                                _data.content += `\n\n${self.flang("confidenceLevel")}: ${_data.confidence}%`;
                             }
                             return _data;
                         }
                     }
                 });
-            });
-        } else {
-            postdata.tmid = self.leaderTeamId[uid];
-            $http({
-                url: "get-selection-team-comment", method: "post", data: postdata
-            }).success(function (res) {
-                if (res == null || res.length == 0) {
+            } else {
+                // Team-based selection (Step 2)
+                postdata.tmid = self.leaderTeamId[uid];
+                const teamResponse = await $http({
+                    url: "get-selection-team-comment",
+                    method: "post",
+                    data: postdata
+                });
+                const res = teamResponse.data;
+    
+                if (!res || res.length === 0) {
                     Notification.warning("No hay respuesta registrada para el grupo");
                     return;
                 }
-                var alt = opts[res[0].answer] + ". " + qs.options[res[0].answer];
-                var qstxt = qs.content;
+    
+                // Prepare team answer content for the modal
+                const alt = `${opts[res[0].answer]}. ${qs.options[res[0].answer]}`;
+                const qstxt = qs.content;
+    
                 $uibModal.open({
-                    templateUrl:  "static/content-dialog.html",
-                    controller:   "ContentModalController",
+                    templateUrl: "static/content-dialog.html",
+                    controller: "ContentModalController",
                     controllerAs: "vm",
-                    scope:        self,
-                    resolve:      {
-                        data: function data() {
-                            var data = {};
-                            data.title = self.flang("answerOf") + " " + self.leaderTeamStr[uid];
-                            data.content = self.flang("question") + ":\n" + qstxt + "\n\n" +
-                                self.flang("answer") + ":\n" + alt + "\n\n";
-                            res.forEach(function (r) {
-                                data.content += self.flang("comment") + " " + r.uname + ":\n" +
-                                    (r.comment != null ? r.comment : "") + "\n";
-                                if (r.confidence != null) {
-                                    data.content += self.flang("confidenceLevel") + ": " +
-                                        r.confidence + "%\n";
+                    scope: self,
+                    resolve: {
+                        data: function () {
+                            let data = {};
+                            data.title = `${self.flang("answerOf")} ${self.leaderTeamStr[uid]}`;
+                            data.content = `${self.flang("question")}:\n${qstxt}\n\n` +
+                                `${self.flang("answer")}:\n${alt}\n\n`;
+                            res.forEach(r => {
+                                data.content += `${self.flang("comment")} ${r.uname}:\n${r.comment || ""}\n`;
+                                if (r.confidence) {
+                                    data.content += `${self.flang("confidenceLevel")}: ${r.confidence}%\n`;
                                 }
                                 data.content += "\n";
                             });
-
+    
                             return data;
                         }
                     }
                 });
-            });
+            }
+        } catch (error) {
+            console.error("Error in showDetailAnswer:", error);
         }
     };
-
-    self.openDFDetails = function (group, orden) {
-        var postdata = {
+    
+    self.openDFDetails = async function (group, orden) {
+        const postdata = {
             sesid: self.selectedSes.id,
-            tmid:  group,
+            tmid: group,
             orden: orden
         };
-        $http.post("get-team-chat", postdata).success(function (res) {
+    
+        try {
+            // Step 1: Fetch team chat
+            const response = await $http.post("get-team-chat", postdata);
+            const res = response.data;
+    
             $uibModal.open({
-                templateUrl:  "static/differential-group.html",
-                controller:   "EthicsModalController",
+                templateUrl: "static/differential-group.html",
+                controller: "EthicsModalController",
                 controllerAs: "vm",
-                scope:        self,
-                resolve:      {
-                    data: function data() {
-                        var data = {};
+                scope: self,
+                resolve: {
+                    data: function () {
+                        const data = {};
                         data.names = [
-                            self.flang("individual"), self.flang("anon"), self.flang("teamWork")
+                            self.flang("individual"),
+                            self.flang("anon"),
+                            self.flang("teamWork")
                         ];
                         data.orden = orden;
                         data.group = group;
                         data.users = self.users;
-                        var dfgr = self.dataDF.find(function (e) {
-                            return e.tmid == group;
-                        });
-                        // console.log(self.shared);
-                        if (dfgr.ind.some(function (e) {
-                            return e.orden == orden;
-                        })) {
-                            var dfgri = dfgr.ind.find(function (e) {
-                                return e.orden == orden;
-                            });
-                            data.master = self.shared.dfs.filter(function (e) {
-                                return e.id;
-                            }).find(function (e) {
-                                return e.id == dfgri.did;
-                            });
+    
+                        // Find group data for differential
+                        const dfgr = self.dataDF.find(e => e.tmid === group);
+    
+                        // Identify master data
+                        const individualDF = dfgr.ind.find(e => e.orden === orden);
+                        if (individualDF) {
+                            data.master = self.shared.dfs.find(e => e.id === individualDF.did);
                         }
-                        data.dfIters = [];
-                        data.dfIters.push(dfgr.ind.filter(function (e) {
-                            return e.orden == orden;
-                        }));
-                        data.dfIters.push(dfgr.anon.filter(function (e) {
-                            return e.orden == orden;
-                        }));
-                        data.dfIters.push(dfgr.team.filter(function (e) {
-                            return e.orden == orden;
-                        }));
+    
+                        // Organize differential iterations
+                        data.dfIters = [
+                            dfgr.ind.filter(e => e.orden === orden),
+                            dfgr.anon.filter(e => e.orden === orden),
+                            dfgr.team.filter(e => e.orden === orden)
+                        ];
+    
+                        // Generate anonymous names
                         data.anonNames = {};
                         data.sesid = self.selectedSes.id;
-                        var abcd = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-                        var c = 0;
-                        data.dfIters.flat().forEach(function (e) {
+                        const abcd = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                        let c = 0;
+                        data.dfIters.flat().forEach(e => {
                             if (!data.anonNames[e.uid]) {
                                 data.anonNames[e.uid] = abcd[c];
                                 c++;
                             }
                         });
+    
+                        // Process chat messages to link parent messages
                         data.chat = res;
-                        data.chat.forEach(function (msg) {
-                            if (msg.parent_id) msg.parent = data.chat.find(function (e) {
-                                return e.id == msg.parent_id;
-                            });
+                        data.chat.forEach(msg => {
+                            if (msg.parent_id) {
+                                msg.parent = data.chat.find(e => e.id === msg.parent_id);
+                            }
                         });
+    
                         console.log(data);
                         return data;
                     }
                 }
             });
-        });
+        } catch (error) {
+            console.error("Error in openDFDetails:", error);
+        }
     };
-
-    self.openDF2Details = function (group, did, uid) {
-        console.log(group, did, uid);   
-        var postdata = {
+    
+    self.openDF2Details = async function (group, did, uid) {
+        console.log(group, did, uid);
+        const postdata = {
             stageid: self.iterationIndicator,
-            tmid:    group,
-            did:     did
+            tmid: group,
+            did: did
         };
-        $http.post("get-team-chat-stage-df", postdata).success(function (res) {
+    
+        try {
+            // Step 1: Fetch team chat for the differential stage
+            const response = await $http.post("get-team-chat-stage-df", postdata);
+            const res = response.data;
+    
             $uibModal.open({
-                templateUrl:  "static/differential-group-2.html",
-                controller:   "EthicsModalController",
+                templateUrl: "static/differential-group-2.html",
+                controller: "EthicsModalController",
                 controllerAs: "vm",
-                scope:        self,
-                resolve:      {
-                    data: function data() {
-                        var data = {};
+                scope: self,
+                resolve: {
+                    data: function () {
+                        const data = {};
                         data.names = [self.flang("answer")];
                         data.group = group;
                         data.users = self.users;
-
-                        data.df = self.dfsStage.find(e => e.id == did);
-
+                        data.df = self.dfsStage.find(e => e.id === did);
                         data.anonNames = {};
                         data.sesid = self.selectedSes.id;
                         data.chat = res;
+    
+                        // Generate anonymous names for each user in chat
                         let i = 0;
-                        let abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-                        data.chat.forEach(function (msg) {
-                            if (msg.parent_id) msg.parent = data.chat.find(function (e) {
-                                return e.id == msg.parent_id;
-                            });
-                            if(!data.anonNames[msg.uid]){
+                        const abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                        data.chat.forEach(msg => {
+                            if (msg.parent_id) {
+                                msg.parent = data.chat.find(e => e.id === msg.parent_id);
+                            }
+                            if (!data.anonNames[msg.uid]) {
                                 data.anonNames[msg.uid] = abc[i];
                                 i += 1;
                             }
                         });
-
+    
+                        // Retrieve stage type and differential data
                         data.stage = self.shared.stagesMap[self.iterationIndicator];
-                        if(data.stage.type == "team"){
-                            if (group){
-                                data.arr = self.shared.difTable.filter(e =>
-                                    e.tmid == group && !e.group
-                                );
-                            }
-                            else{
-                                data.arr = self.shared.difTable.filter(e =>
-                                    e.uid == uid && !e.group
-                                );
-                            }
+                        if (data.stage.type === "team") {
+                            data.arr = group
+                                ? self.shared.difTable.filter(e => e.tmid === group && !e.group)
+                                : self.shared.difTable.filter(e => e.uid === uid && !e.group);
+                        } else {
+                            data.arr = self.shared.difTable.filter(e => e.uid === uid && !e.group);
                         }
-                        else {
-                            data.arr = self.shared.difTable.filter(e => e.uid == uid && !e.group);
-                        }
-
+    
+                        // Assign selection and comments to differential array
                         data.arr.forEach(e => {
-                            let el = e.arr.find(e => e && e.did == did);
+                            const el = e.arr.find(item => item && item.did === did);
                             e.sel = el ? el.sel : null;
                             e.comment = el ? el.comment : null;
-                            if(!data.anonNames[e.uid]){
+                            if (!data.anonNames[e.uid]) {
                                 data.anonNames[e.uid] = abc[i];
                                 i += 1;
                             }
                         });
-
+    
+                        // Build the array for displaying the differential options
                         data.dfarr = self.shared.buildArray(data.df.num);
-
+    
                         return data;
                     }
                 }
             });
-        });
+        } catch (error) {
+            console.error("Error in openDF2Details:", error);
+        }
     };
-
-    self.openActorDetails = function  (uid, stageid) {
-
-        let group = self.shared.groupByUid ? self.shared.groupByUid[uid] ?
-            self.shared.groupByUid[uid].tmid : null : null;
-        var postdata = {
+    
+    self.openActorDetails = async function (uid, stageid) {
+        // Determine the group ID for the user
+        const group = self.shared.groupByUid && self.shared.groupByUid[uid] 
+            ? self.shared.groupByUid[uid].tmid 
+            : null;
+    
+        const postdata = {
             stageid: stageid,
-            tmid:    group
+            tmid: group
         };
-        $http.post("get-team-chat-stage", postdata).success(function (res) {
+    
+        try {
+            // Step 1: Fetch team chat for the actor
+            const response = await $http.post("get-team-chat-stage", postdata);
+            const res = response.data;
+    
             $uibModal.open({
-                templateUrl:  "static/actor-dialog.html",
-                controller:   "EthicsModalController",
+                templateUrl: "static/actor-dialog.html",
+                controller: "EthicsModalController",
                 controllerAs: "vm",
-                scope:        self,
-                resolve:      {
-                    data: function data() {
-                        var data = {};
+                scope: self,
+                resolve: {
+                    data: function () {
+                        const data = {};
                         data.group = group;
                         data.users = self.users;
                         data.actorMap = self.actorMap;
-
                         data.anonNames = {};
                         data.sesid = self.selectedSes.id;
-
                         data.chat = res;
+    
+                        // Generate anonymous names for users in the chat
                         let i = 0;
-                        let abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-                        data.chat.forEach(function (msg) {
-                            if (msg.parent_id) msg.parent = data.chat.find(function (e) {
-                                return e.id == msg.parent_id;
-                            });
-                            if(!data.anonNames[msg.uid]){
+                        const abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                        data.chat.forEach(msg => {
+                            if (msg.parent_id) {
+                                msg.parent = data.chat.find(e => e.id === msg.parent_id);
+                            }
+                            if (!data.anonNames[msg.uid]) {
                                 data.anonNames[msg.uid] = abc[i];
                                 i += 1;
                             }
                         });
-
+    
+                        // Retrieve the stage information
                         data.stage = self.shared.stagesMap[stageid];
-
-                        if(data.stage.type == "team"){
+    
+                        // Select the relevant entries based on the stage type
+                        if (data.stage.type === "team") {
                             data.sel = self.indvTableSorted.filter(e =>
-                                self.shared.groupByUid[e.uid].index ==
+                                self.shared.groupByUid[e.uid].index ===
                                 self.shared.groupByUid[uid].index
                             );
+                        } else {
+                            data.sel = self.indvTableSorted.filter(e => e.uid === uid);
                         }
-                        else {
-                            data.sel = self.indvTableSorted.filter(e => e.uid == uid);
-                        }
-
+    
+                        // Assign anonymous names for each user in the selection
                         data.sel.forEach(e => {
-                            if(!data.anonNames[e.uid]){
+                            if (!data.anonNames[e.uid]) {
                                 data.anonNames[e.uid] = abc[i];
                                 i += 1;
                             }
                         });
+    
                         return data;
                     }
                 }
             });
-        });
+        } catch (error) {
+            console.error("Error in openActorDetails:", error);
+        }
     };
 
-
-
-    self.exportCSV = function(){
-        var postdata = {
+    self.exportCSV = async function () {
+        const postdata = {
             sesid: self.selectedSes.id
         };
-        $http.post("get-sel-data-csv", postdata).success(function (res) {
-            if(res != null && res.length > 0) {
-                saveCsv(res, {
-                    filename:  "seleccion_" + self.selectedSes.id + ".csv",
-                    formatter: function(v){
-                        if(v == null){
+    
+        try {
+            // Step 1: Fetch selection data for CSV export
+            const selectionResponse = await $http.post("get-sel-data-csv", postdata);
+            const selectionData = selectionResponse.data;
+    
+            if (selectionData && selectionData.length > 0) {
+                saveCsv(selectionData, {
+                    filename: "seleccion_" + self.selectedSes.id + ".csv",
+                    formatter: function (v) {
+                        if (v == null) {
                             return "";
                         }
-                        if(typeof(v) == "string"){
+                        if (typeof v === "string") {
                             v = v.replace(/"/g, "'").replace(/\n/g, "");
                             return '"' + v + '"';
                         }
                         return "" + v;
                     }
                 });
-            }
-            else {
+            } else {
                 Notification.error("No hay datos de selección para exportar");
             }
-        });
-        $http.post("get-chat-data-csv", postdata).success(function (res) {
-            if(res != null && res.length > 0) {
-                saveCsv(res, {
-                    filename:  "chat_" + self.selectedSes.id + ".csv",
-                    formatter: function(v){
-                        if(v == null){
+    
+            // Step 2: Fetch chat data for CSV export
+            const chatResponse = await $http.post("get-chat-data-csv", postdata);
+            const chatData = chatResponse.data;
+    
+            if (chatData && chatData.length > 0) {
+                saveCsv(chatData, {
+                    filename: "chat_" + self.selectedSes.id + ".csv",
+                    formatter: function (v) {
+                        if (v == null) {
                             return "";
                         }
-                        if(typeof(v) == "string"){
+                        if (typeof v === "string") {
                             v = v.replace(/"/g, "'").replace(/\n/g, "");
                             return '"' + v + '"';
                         }
                         return "" + v;
                     }
                 });
-            }
-            else {
+            } else {
                 Notification.error("No hay datos de chat para exportar");
             }
-        });
+        } catch (error) {
+            console.error("Error exporting CSV data:", error);
+            Notification.error("Error al exportar datos CSV");
+        }
     };
-
-    self.exportChatCSV = function(){
-        var postdata = {
+    
+    self.exportChatCSV = async function () {
+        const postdata = {
             sesid: self.selectedSes.id
         };
-        let url = self.selectedSes.type == "T" ? "get-chat-data-csv-ethics" :
-            self.selectedSes.type == "R" ? "get-chat-data-csv-role" : null;
-        if(url == null){
+        const url = self.selectedSes.type === "T" ? "get-chat-data-csv-ethics" :
+                    self.selectedSes.type === "R" ? "get-chat-data-csv-role" : null;
+    
+        if (!url) {
             Notification.error("No se puede exportar los datos");
             return;
         }
-        $http.post(url, postdata).success(function (res) {
-            if(res != null && res.length > 0) {
+    
+        try {
+            // Step 1: Fetch chat data based on session type
+            const response = await $http.post(url, postdata);
+            const res = response.data;
+    
+            if (res && res.length > 0) {
                 saveCsv(res, {
-                    filename:  "chat_" + self.selectedSes.id + ".csv",
-                    formatter: function(v){
-                        if(v == null){
+                    filename: "chat_" + self.selectedSes.id + ".csv",
+                    formatter: function (v) {
+                        if (v == null) {
                             return "";
                         }
-                        if(typeof(v) == "string"){
+                        if (typeof v === "string") {
                             v = v.replace(/"/g, "'").replace(/\n/g, "");
                             return '"' + v + '"';
                         }
                         return "" + v;
                     }
                 });
-            }
-            else {
+            } else {
                 Notification.error("No hay datos para exportar");
             }
-        });
+        } catch (error) {
+            console.error("Error exporting chat CSV data:", error);
+            Notification.error("Error al exportar datos de chat");
+        }
     };
-
-    self.exportSelCSV = function(){
-        var postdata = {
+    
+    self.exportSelCSV = async function () {
+        const postdata = {
             sesid: self.selectedSes.id
         };
-        let url = self.selectedSes.type == "T" ? "get-sel-data-csv-ethics" :
-            self.selectedSes.type == "R" ? "get-sel-data-csv-role" :
-                self.selectedSes.type == "J" ? "get-sel-data-csv-jigsaw" : null;
+        const url = self.selectedSes.type === "T" ? "get-sel-data-csv-ethics" :
+                    self.selectedSes.type === "R" ? "get-sel-data-csv-role" :
+                    self.selectedSes.type === "J" ? "get-sel-data-csv-jigsaw" : null;
+    
         console.log(self.selectedSes);
-        if(url == null){
+    
+        if (!url) {
             Notification.error("No se puede exportar los datos");
             return;
         }
-        $http.post(url, postdata).success(function (res) {
-            if(res != null && res.length > 0) {
+    
+        try {
+            // Step 1: Fetch selection data based on session type
+            const response = await $http.post(url, postdata);
+            const res = response.data;
+    
+            if (res && res.length > 0) {
                 saveCsv(res, {
-                    filename:  "sel_" + self.selectedSes.id + ".csv",
-                    formatter: function(v){
-                        if(v == null){
+                    filename: "sel_" + self.selectedSes.id + ".csv",
+                    formatter: function (v) {
+                        if (v == null) {
                             return "";
                         }
-                        if(typeof(v) == "string"){
+                        if (typeof v === "string") {
                             v = v.replace(/"/g, "'").replace(/\n/g, "");
                             return '"' + v + '"';
                         }
                         return "" + v;
                     }
                 });
-            }
-            else {
+            } else {
                 Notification.error("No hay datos para exportar");
             }
-        });
+        } catch (error) {
+            console.error("Error exporting selection CSV data:", error);
+            Notification.error("Error al exportar datos de selección");
+        }
     };
-
+    
     self.sortByAutorName = (a, b) => {
         let ua = self.users[a] ? self.users[a].name : a;
         let ub = self.users[b] ? self.users[b].name : b;

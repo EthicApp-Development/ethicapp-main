@@ -249,11 +249,15 @@ export let StagesEditController = ($scope, DesignStateService,
                 postdata = ranking;
             }
 
-            $http.post("upload-design", postdata).success(function (data) {
-                if (data.status == "ok") {
-                    self.getDesign(data.id);
+            $http.post("upload-design", postdata)
+            .then(function (response) {
+                if (response.data.status === "ok") {
+                    self.getDesign(response.data.id);
                 }
-            });
+            })
+            .catch(function (error) {
+                console.error("Error uploading design:", error);
+            });        
         }
         
     };
@@ -352,16 +356,20 @@ export let StagesEditController = ($scope, DesignStateService,
     self.getDesign = function (id) {
         $http.post("get-design", { id: id }, {
             headers: { 'Content-Type': 'application/json' }
-        }).success(function (data) {
-            if (data.status == "ok") {
+        })
+        .then(function (response) {
+            var data = response.data;
+            if (data.status === "ok") {
                 self.changeDesign(data.result);
                 DesignStateService.designState.id = id;
                 self.designId.id = DesignStateService.designState.id;
                 self.selectView("newDesignExt");
             }
+        })
+        .catch(function (error) {
+            console.error("Error fetching design:", error);
         });
     };
-    
 
     self.getID = function(){
         return self.designId.id;

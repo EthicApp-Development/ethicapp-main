@@ -6,13 +6,12 @@ ARG DEBIAN_FRONTEND=noninteractive
 # Application files
 COPY backend /home/app/backend
 COPY frontend /home/app/frontend
-COPY app.js /home/app
-COPY package.json /home/app
-COPY nodemon.json /home/app
-COPY build_hash.json /home/app
+#COPY package.json /home/app
+#COPY nodemon.json /home/app
+#COPY build_hash.json /home/app
 
 # Entrypoint script
-COPY entrypoint.development.sh /usr/local/bin/entrypoint.development.sh
+COPY backend/entrypoint.development.sh /usr/local/bin/entrypoint.development.sh
 RUN chmod +x /usr/local/bin/entrypoint.development.sh
 
 # Set the working directory

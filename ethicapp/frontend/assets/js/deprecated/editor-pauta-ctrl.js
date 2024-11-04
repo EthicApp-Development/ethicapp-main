@@ -27,24 +27,33 @@ app.controller("EditorController", [
             self.getSesInfo();
         };
 
-        self.getSesInfo = () => {
-            $http({url: "get-ses-info", method: "post"}).success((data) => {
-                self.iteration = data.iteration;
-                self.sesSTime = (data.stime != null) ? new Date(data.stime) : null;
+        self.getSesInfo = async () => {
+            try {
+                // Get session information
+                const sesInfoResponse = await $http({ url: "get-ses-info", method: "post" });
+                const sesInfoData = sesInfoResponse.data;
+                self.iteration = sesInfoData.iteration;
+                self.sesSTime = sesInfoData.stime ? new Date(sesInfoData.stime) : null;
                 console.log(self.sesSTime);
-                $http({url: "get-documents", method: "post"}).success((data) => {
-                    self.documents = data;
-                    data.forEach((doc, i) => {
-                        self.docIdx[doc.id] = i;
-                    });
-                    self.renderAll();
+        
+                // Get session documents
+                const documentsResponse = await $http({ url: "get-documents", method: "post" });
+                self.documents = documentsResponse.data;
+                self.documents.forEach((doc, i) => {
+                    self.docIdx[doc.id] = i;
                 });
-                $http({url: "pauta-editable", method: "post"}).success((data) => {
-                    self.editable = data.editable;
-                });
-            });
+                self.renderAll();
+        
+                // See if the "pauta" thing is editable
+                const pautaResponse = await $http({ url: "pauta-editable", method: "post" });
+                self.editable = pautaResponse.data.editable;
+        
+            } catch (error) {
+                console.error("Error loading session information:", error);
+                Notification.error("Error al cargar la información de la sesión");
+            }
         };
-
+        
         self.selectText = () => {
             let selection = window.getSelection();
             let serial = rangy.serializeSelection(
@@ -100,13 +109,18 @@ app.controller("EditorController", [
             self.selectedDocument = idx;
         };
 
-        self.getIdeas = () => {
-            let postdata = {iteration: 1};
-            let url = "get-ideas";
-            $http({url: url, method: "post", data: postdata}).success((data) => {
-                self.selections = [];
-                data.forEach((idea) => {
-                    let textDef = {
+        self.getIdeas = async () => {
+            try {
+                const postdata = { iteration: 1 };
+                const url = "get-ideas";
+                
+                // Realizar solicitud para obtener ideas
+                const response = await $http({ url: url, method: "post", data: postdata });
+                const ideasData = response.data;
+                
+                // Procesar las ideas recibidas
+                self.selections = ideasData.map((idea) => {
+                    return {
                         id:       idea.id,
                         text:     idea.content,
                         serial:   idea.serial,
@@ -116,14 +130,15 @@ app.controller("EditorController", [
                         order:    idea.orden + 1,
                         status:   "saved"
                     };
-                    //self.highlightSerial(textDef.serial, textDef.document);
-                    self.selections.push(textDef);
                 });
-            });
+            } catch (error) {
+                console.error("Error fetching ideas:", error);
+                Notification.error("Error al cargar las ideas");
+            }
         };
-
-        self.sendIdea = (sel) => {
-            let postadata = {
+        
+        self.sendIdea = async (sel) => {
+            const postdata = {
                 text:      sel.text,
                 comment:   sel.comment,
                 serial:    sel.serial,
@@ -132,42 +147,53 @@ app.controller("EditorController", [
                 order:     sel.order - 1
             };
             self.order = sel.order;
-            if (sel.status == "unsaved") {
-                $http({url: "send-pauta-idea", method: "post", data: postadata}).success((data) => {
-                    if (data.status == "ok") {
+        
+            try {
+                if (sel.status === "unsaved") {
+                    // Enviar una nueva idea
+                    const response = await $http({ url: "send-pauta-idea", method: "post", data: postdata });
+                    if (response.data.status === "ok") {
                         sel.expanded = false;
                         sel.status = "saved";
-                        sel.id = data.id;
+                        sel.id = response.data.id;
                     }
-                });
-            }
-            else if (sel.status == "dirty" && sel.id != null) {
-                postadata.id = sel.id;
-                $http({
-                    url: "update-pauta-idea", method: "post", data: postadata
-                }).success((data) => {
-                    if (data.status == "ok") {
+                } else if (sel.status === "dirty" && sel.id != null) {
+                    // Actualizar una idea existente
+                    postdata.id = sel.id;
+                    const response = await $http({ url: "update-pauta-idea", method: "post", data: postdata });
+                    if (response.data.status === "ok") {
                         sel.expanded = false;
                         sel.status = "saved";
                     }
-                });
+                }
+            } catch (error) {
+                console.error("Error sending or updating idea:", error);
+                Notification.error("Error al guardar la idea");
             }
         };
-
-        self.deleteIdea = (sel, index) => {
-            if (sel.id != null) {
-                let postadata = {id: sel.id};
-                $http({url: "delete-idea", method: "post", data: postadata}).success((data) => {
-                    if(data.status == "ok") {
+        
+        self.deleteIdea = async (sel, index) => {
+            try {
+                // Si la idea ya tiene un id, la eliminamos en el backend
+                if (sel.id != null) {
+                    const postdata = { id: sel.id };
+                    const response = await $http({ url: "delete-idea", method: "post", data: postdata });
+        
+                    if (response.data.status === "ok") {
                         self.selections.splice(index, 1);
+                    } else {
+                        Notification.error("Error al eliminar la idea");
                     }
-                });
-            }
-            else{
-                self.selections.splice(index, 1);
+                } else {
+                    // Si no tiene id, simplemente la eliminamos localmente
+                    self.selections.splice(index, 1);
+                }
+            } catch (error) {
+                console.error("Error deleting idea:", error);
+                Notification.error("No se pudo eliminar la idea");
             }
         };
-
+        
         self.selTextChange = (sel) => {
             sel.status = (sel.status == "saved") ? "dirty" : sel.status;
         };
@@ -176,17 +202,28 @@ app.controller("EditorController", [
             return self.selections.filter(e => e.status != "saved").length == 0;
         };
 
-        self.setSelOrder = () => {
+        self.setSelOrder = async () => {
+            // Verifica si todas las selecciones están sincronizadas antes de proceder
             if (!self.checkAllSync()) return;
-            let order = self.selections.map(e => e.id);
-            let postdata = {orden: order};
-            $http({url: "set-ideas-orden", method: "post", data: postdata}).success((data) => {
-                if (data.status == "ok") {
+        
+            const order = self.selections.map(e => e.id);
+            const postdata = { orden: order };
+        
+            try {
+                const response = await $http({ url: "set-ideas-orden", method: "post", data: postdata });
+        
+                if (response.data.status === "ok") {
                     console.log("Order saved");
+                    Notification.success("El orden se ha guardado correctamente");
+                } else {
+                    Notification.error("Error al guardar el orden");
                 }
-            });
+            } catch (error) {
+                console.error("Error saving order:", error);
+                Notification.error("No se pudo guardar el orden de las ideas");
+            }
         };
-
+        
         function arrayIndexOfId (arr, id)  {
             return arr.reduce((prev, cur, i) => (cur.id == id) ? i : prev, -1);
         }

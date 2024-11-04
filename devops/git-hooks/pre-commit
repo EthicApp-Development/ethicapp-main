@@ -7,7 +7,7 @@ branch_name=$(git rev-parse --abbrev-ref HEAD)
 build_hash="PENDING-${branch_name}"
 
 # Write the placeholder to build_hash.json
-echo "{\"build_hash\": \"$build_hash\"}" > ethicapp/build_hash.json
+echo "{\"build_hash\": \"$build_hash\"}" > ethicapp/backend/build_hash.json
 
 # Stage build_hash.json for the commit
-git add ethicapp/build_hash.json
+git add ethicapp/backend/build_hash.json

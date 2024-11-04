@@ -36,173 +36,189 @@ export let StagesController = function ($scope, $http, Notification, $uibModal) 
 
     self.currentStage = -1;
 
-    self.setCurrentStage = function (i) {
-        if (i != -1) {
+    self.setCurrentStage = async function (i) {
+        if (i !== -1) {
             self.readonly = true;
-            var postdata = {
-                stageid: self.stages[i].id
-            };
-            if (self.selectedSes.type == "R") {
-                $http({url: "get-actors", method: "post", data: postdata}).success(function (data) {
-                    self.roles = data;
+            const postdata = { stageid: self.stages[i].id };
+    
+            try {
+                // Fetch roles or differentials based on session type
+                if (self.selectedSes.type === "R") {
+                    const rolesResponse = await $http({
+                        url: "get-actors",
+                        method: "post",
+                        data: postdata
+                    });
+                    self.roles = rolesResponse.data;
                     self.roles.forEach(r => {
-                        if(r.justified && r.jorder){
+                        if (r.justified && r.jorder) {
                             r.type = "order";
-                        }
-                        else if(r.justified){
+                        } else if (r.justified) {
                             r.type = "role";
                         }
                         r.wc = r.word_count;
                     });
-                });
-            }
-            else if (self.selectedSes.type == "T") {
-                $http({
-                    url: "get-differentials-stage", method: "post", data: postdata
-                }).success(function (data) {
-                    self.dfs = data;
+                } else if (self.selectedSes.type === "T") {
+                    const dfsResponse = await $http({
+                        url: "get-differentials-stage",
+                        method: "post",
+                        data: postdata
+                    });
+                    self.dfs = dfsResponse.data;
                     self.dfs.forEach(df => {
                         df.wc = df.word_count;
                         df.name = df.title;
                     });
-                });
-            }
-            else if (self.selectedSes.type == "J") {
-                $http({
-                    url: "get-actors", method: "post", data: postdata
-                }).success(function (data) {
-                    self.roles = data;
+                } else if (self.selectedSes.type === "J") {
+                    const rolesResponse = await $http({
+                        url: "get-actors",
+                        method: "post",
+                        data: postdata
+                    });
+                    self.roles = rolesResponse.data;
                     self.roles.forEach(r => {
-                        if(r.justified && r.jorder){
+                        if (r.justified && r.jorder) {
                             r.type = "order";
-                        }
-                        else if(r.justified){
+                        } else if (r.justified) {
                             r.type = "role";
                         }
                         r.wc = r.word_count;
                     });
+                }
+    
+                // Fetch groups proposal
+                const groupsResponse = await $http({
+                    url: "group-proposal-stage",
+                    method: "post",
+                    data: postdata
                 });
+                self.groups = groupsResponse.data;
+    
+                // Set current stage
+                self.stage = self.stages[i];
+            } catch (error) {
+                console.error("Error setting current stage:", error);
+                Notification.error("Error al configurar la etapa actual");
             }
-            $http({
-                url: "group-proposal-stage", method: "post", data: postdata
-            }).success(function (data) {
-                self.groups = data;
-            });
-            self.stage = self.stages[i];
-        }
-        else {
+        } else {
             self.readonly = false;
             self.stage = {
-                type:          null,
-                anon:          false,
-                chat:          false,
-                question:      self.stage.question,
+                type: null,
+                anon: false,
+                chat: false,
+                question: self.stage.question,
                 prevResponses: []
             };
         }
+    
         self.currentStage = i;
     };
-
-    self.getStages = function () {
-        var postdata = {
-            sesid: self.selectedSes.id
-        };
-        $http({
-            url: "get-admin-stages", method: "post", data: postdata
-        }).success(function (data) {
-            self.stages = data;
+    
+    self.getStages = async function () {
+        try {
+            const postdata = { sesid: self.selectedSes.id };
+            
+            // Step 1: Fetch all stages
+            const stagesResponse = await $http({
+                url: "get-admin-stages",
+                method: "post",
+                data: postdata
+            });
+            self.stages = stagesResponse.data;
             self.shared.stagesMap = {};
-            data.forEach(function (s) {
+            
+            self.stages.forEach(s => {
                 self.shared.stagesMap[s.id] = s;
             });
-            self.stage.question = self.stages.length > 0 ?
-                self.stages[self.stages.length - 1].question :
-                "";
-            var postdata = {
-                stageid: self.selectedSes.current_stage
-            };
-            if(self.stages.length == 0){
-                let postdata = {
-                    sesid: self.selectedSes.id
-                };
-                $http.post("get-draft", postdata).success((data) => {
-                    let d = JSON.parse(data.data);
-                    self.dfs = d.dfs;
-                    self.roles = d.roles;
-                    self.jroles = d.jroles;
-                });
-            }
-            else if (self.selectedSes.type == "R") {
-                $http({
-                    url: "get-actors", method: "post", data: postdata
-                }).success(function (data) {
-                    self.roles = data;
+            
+            self.stage.question = self.stages.length > 0
+                ? self.stages[self.stages.length - 1].question
+                : "";
+    
+            // Step 2: Fetch draft if no stages exist
+            if (self.stages.length === 0) {
+                const draftResponse = await $http.post("get-draft", postdata);
+                const draftData = JSON.parse(draftResponse.data.data);
+                self.dfs = draftData.dfs;
+                self.roles = draftData.roles;
+                self.jroles = draftData.jroles;
+            } else {
+                const stagePostData = { stageid: self.selectedSes.current_stage };
+                
+                // Step 3: Fetch data based on session type
+                if (self.selectedSes.type === "R") {
+                    const rolesResponse = await $http({
+                        url: "get-actors",
+                        method: "post",
+                        data: stagePostData
+                    });
+                    self.roles = rolesResponse.data;
                     self.roles.forEach(r => {
-                        if(r.justified && r.jorder){
-                            r.type = "order";
-                        }
-                        else if(r.justified){
-                            r.type = "role";
-                        }
+                        r.type = r.justified && r.jorder ? "order" : r.justified ? "role" : null;
                         r.wc = r.word_count;
                     });
-                });
-            }
-            else if (self.selectedSes.type == "T") {
-                $http({
-                    url: "get-differentials-stage", method: "post", data: postdata
-                }).success(function (data) {
-                    self.dfs = data;
+                } else if (self.selectedSes.type === "T") {
+                    const dfsResponse = await $http({
+                        url: "get-differentials-stage",
+                        method: "post",
+                        data: stagePostData
+                    });
+                    self.dfs = dfsResponse.data;
                     self.dfs.forEach(df => {
                         df.wc = df.word_count;
                         df.name = df.title;
                     });
-                });
-            }
-            else if (self.selectedSes.type == "J") {
-                $http({
-                    url: "get-actors", method: "post", data: postdata
-                }).success(function (data) {
-                    self.roles = data;
+                } else if (self.selectedSes.type === "J") {
+                    const rolesResponse = await $http({
+                        url: "get-actors",
+                        method: "post",
+                        data: stagePostData
+                    });
+                    self.roles = rolesResponse.data;
                     self.roles.forEach(r => {
-                        if(r.justified && r.jorder){
-                            r.type = "order";
-                        }
-                        else if(r.justified){
-                            r.type = "role";
-                        }
+                        r.type = r.justified && r.jorder ? "order" : r.justified ? "role" : null;
                         r.wc = r.word_count;
                     });
-                });
-                $http({
-                    url: "get-jigsaw-roles", method: "post", data: { sesid: self.selectedSes.id }
-                }).success(function (data) {
-                    self.jroles = data;
+    
+                    const jigsawRolesResponse = await $http({
+                        url: "get-jigsaw-roles",
+                        method: "post",
+                        data: { sesid: self.selectedSes.id }
+                    });
+                    self.jroles = jigsawRolesResponse.data;
                     self.inputAssignedRoles();
+                }
+    
+                // Step 4: Fetch group proposals
+                const groupsResponse = await $http({
+                    url: "group-proposal-stage",
+                    method: "post",
+                    data: stagePostData
                 });
-            }
-            $http({
-                url: "group-proposal-stage", method: "post", data: postdata
-            }).success(function (data) {
-                self.groups = data;
-                if (data.length > 0) {
+                self.groups = groupsResponse.data;
+                if (self.groups.length > 0) {
                     self.groupopt.num = self.groups[0].length;
                 }
                 self.shared.groups = self.groups;
                 self.shared.groupByUid = {};
-                data.forEach(function (s, i) {
-                    s.forEach(u => {
-                        self.shared.groupByUid[u.uid] = {index: i + 1, tmid: u.tmid};
+                self.groups.forEach((group, i) => {
+                    group.forEach(u => {
+                        self.shared.groupByUid[u.uid] = { index: i + 1, tmid: u.tmid };
                     });
                 });
-            });
-            if (self.selectedSes.status >= 3) {
-                self.shared.setIterationIndicator(data[data.length - 1].id);
-                self.setCurrentStage(data.length - 1);
+    
+                // Step 5: Set current stage and iteration indicator if session is active
+                if (self.selectedSes.status >= 3) {
+                    self.shared.setIterationIndicator(self.stages[self.stages.length - 1].id);
+                    self.setCurrentStage(self.stages.length - 1);
+                }
             }
-        });
+        } catch (error) {
+            console.error("Error fetching stages:", error);
+            Notification.error("Error al obtener las etapas");
+        }
     };
-
+    
     self.changeStage = function (i) { 
         self.currentStage = i;
     };
@@ -276,161 +292,120 @@ export let StagesController = function ($scope, $http, Notification, $uibModal) 
         }
     };
 
-    self.sendStage = function () {
-        var s = self.stage;
-        let arr = self.selectedSes.type == "R" || self.selectedSes.type == "J" ?
-            self.roles : self.dfs;
-        let isFirst = self.stages.length == 0;
-        if (s.type == null || arr.length == 0 || s.type == "team" && (
-            self.groups == null || self.groups.length == 0
-        )) {
-            Notification.error("Hay datos de configuración faltantes");
-            return;
-        }
-        let a = self.checkStage();
-        if(a){
-            Notification.error(a);
-            return;
-        }
-        var postdata = {
-            number:   self.stages.length + 1,
-            question: s.question,
-            grouping: s.type == "team" ? self.groupopt.num + ":" + self.groupopt.met : null,
-            type:     s.type,
-            anon:     s.anon,
-            chat:     s.chat,
-            sesid:    self.selectedSes.id,
-            prev_ans: s.prevResponses.map(e => e.id).join(",")
-        };
-        var confirm = window.confirm(
-            "¿Está seguro que quiere ir a la siguiente etapa? (Etapa " + (self.stages.length + 1) +
-            ")"
-        );
-        if (!confirm) {
-            return;
-        }
-
-        $http({url: "add-stage", method: "post", data: postdata}).success(function (data) {
-            let stageid = data.id;
-            if (stageid != null) {
-                if (postdata.type == "team") {
-                    self.acceptGroups(stageid);
-                }
-                if (self.selectedSes.type == "R") {
-                    let c = self.roles.length;
-                    for (let i = 0; i < self.roles.length; i++) {
-                        const role = self.roles[i];
-                        let p = {
-                            name:       role.name,
-                            jorder:     role.type == "order",
-                            justified:  role.type != null,
-                            word_count: role.wc,
-                            stageid:    stageid,
-                        };
-                        $http({url: "add-actor", method: "post", data: p}).success(function () {
-                            console.debug("Actor added");
-                            c -= 1;
-                            if (c == 0) {
-                                let pp = {sesid: self.selectedSes.id, stageid: stageid};
-                                $http({
-                                    url: "session-start-stage", method: "post", data: pp
-                                }).success(function () {
-                                    Notification.success("Etapa creada correctamente");
-                                    window.location.reload();
-                                });
-                            }
-                        });
-                    }
-                }
-                else if (self.selectedSes.type == "T") {
-                    let c = self.dfs.length;
-                    for (let i = 0; i < self.dfs.length; i++) {
-                        const df = self.dfs[i];
-                        let p = {
-                            name:       df.name,
-                            tleft:      df.tleft,
-                            tright:     df.tright,
-                            num:        df.num,
-                            orden:      df.orden,
-                            justify:    df.justify,
-                            stageid:    stageid,
-                            sesid:      self.selectedSes.id,
-                            word_count: df.wc
-                        };
-                        $http({
-                            url: "add-differential-stage", method: "post", data: p
-                        }).success(function () {
-                            c -= 1;
-                            if (c == 0) {
-                                let pp = {sesid: self.selectedSes.id, stageid: stageid};
-                                $http({
-                                    url: "session-start-stage", method: "post", data: pp
-                                }).success(function () {
-                                    Notification.success("Etapa creada correctamente");
-                                    window.location.reload();
-                                });
-                            }
-                        });
-                    }
-                }
-                else if (self.selectedSes.type == "J") {
-                    let c = self.roles.length + (isFirst ? self.jroles.length : 0);
-                    for (let i = 0; i < self.roles.length; i++) {
-                        const role = self.roles[i];
-                        let p = {
-                            name:       role.name,
-                            jorder:     role.type == "order",
-                            justified:  role.type != null,
-                            word_count: role.wc,
-                            stageid:    stageid,
-                        };
-                        $http({url: "add-actor", method: "post", data: p}).success(function () {
-                            console.debug("Actor added");
-                            c -= 1;
-                            if (c == 0) {
-                                let pp = {sesid: self.selectedSes.id, stageid: stageid};
-                                $http({
-                                    url: "session-start-stage", method: "post", data: pp
-                                }).success(function () {
-                                    Notification.success("Etapa creada correctamente");
-                                });
-                            }
-                        });
-                    }
-                    if(isFirst){
-                        for (let i = 0; i < self.jroles.length; i++) {
-                            const jrole = self.jroles[i];
-                            let p = {
-                                name:        jrole.name,
-                                sesid:       self.selectedSes.id,
-                                description: jrole.description
-                            };
-                            $http({
-                                url: "add-jigsaw-role", method: "post", data: p
-                            }).success(function () {
-                                console.debug("JRole added");
-                                c -= 1;
-                                if (c == 0) {
-                                    let pp = {sesid: self.selectedSes.id, stageid: stageid};
-                                    $http({
-                                        url:    "session-start-stage",
-                                        method: "post",
-                                        data:   pp
-                                    }).success(function () {
-                                        Notification.success("Etapa creada correctamente");
-                                    });
-                                }
-                            });
-                        }
-                    }
-                }
+    self.sendStage = async function () {
+        try {
+            const s = self.stage;
+            const arr = (self.selectedSes.type === "R" || self.selectedSes.type === "J") ? self.roles : self.dfs;
+            const isFirst = self.stages.length === 0;
+            
+            if (!s.type || arr.length === 0 || (s.type === "team" && (!self.groups || self.groups.length === 0))) {
+                Notification.error("Hay datos de configuración faltantes");
+                return;
             }
-            else {
+    
+            const a = self.checkStage();
+            if (a) {
+                Notification.error(a);
+                return;
+            }
+    
+            const confirm = window.confirm(
+                `¿Está seguro que quiere ir a la siguiente etapa? (Etapa ${self.stages.length + 1})`
+            );
+            if (!confirm) return;
+    
+            const postdata = {
+                number: self.stages.length + 1,
+                question: s.question,
+                grouping: s.type === "team" ? `${self.groupopt.num}:${self.groupopt.met}` : null,
+                type: s.type,
+                anon: s.anon,
+                chat: s.chat,
+                sesid: self.selectedSes.id,
+                prev_ans: s.prevResponses.map(e => e.id).join(",")
+            };
+    
+            const addStageResponse = await $http.post("add-stage", postdata);
+            const stageid = addStageResponse.data.id;
+    
+            if (!stageid) {
                 Notification.error("Error al crear la etapa");
+                return;
             }
-        });
+    
+            // Handle 'team' type stages
+            if (postdata.type === "team") {
+                await self.acceptGroups(stageid);
+            }
+    
+            if (self.selectedSes.type === "R") {
+                await self.addRoles(stageid);
+            } else if (self.selectedSes.type === "T") {
+                await self.addDifferentials(stageid);
+            } else if (self.selectedSes.type === "J") {
+                await self.addRoles(stageid);
+                if (isFirst) {
+                    await self.addJigsawRoles(stageid);
+                }
+            }
+    
+            await $http.post("session-start-stage", { sesid: self.selectedSes.id, stageid });
+            Notification.success("Etapa creada correctamente");
+            window.location.reload();
+            
+        } catch (error) {
+            console.error("Error in sendStage:", error);
+            Notification.error("Error al crear la etapa");
+        }
     };
-
+    
+    // Helper methods for managing roles and differentials
+    self.addRoles = async function (stageid) {
+        const roles = self.roles;
+        for (const role of roles) {
+            const p = {
+                name: role.name,
+                jorder: role.type === "order",
+                justified: role.type != null,
+                word_count: role.wc,
+                stageid
+            };
+            await $http.post("add-actor", p);
+            console.debug("Actor added");
+        }
+    };
+    
+    self.addDifferentials = async function (stageid) {
+        const dfs = self.dfs;
+        for (const df of dfs) {
+            const p = {
+                name: df.name,
+                tleft: df.tleft,
+                tright: df.tright,
+                num: df.num,
+                orden: df.orden,
+                justify: df.justify,
+                stageid,
+                sesid: self.selectedSes.id,
+                word_count: df.wc
+            };
+            await $http.post("add-differential-stage", p);
+        }
+    };
+    
+    self.addJigsawRoles = async function (stageid) {
+        const jroles = self.jroles;
+        for (const jrole of jroles) {
+            const p = {
+                name: jrole.name,
+                sesid: self.selectedSes.id,
+                description: jrole.description
+            };
+            await $http.post("add-jigsaw-role", p);
+            console.debug("JRole added");
+        }
+    };
+    
     self.setGroupal = function () {
         self.stage.type = "team";
         self.methods = [
@@ -442,188 +417,158 @@ export let StagesController = function ($scope, $http, Notification, $uibModal) 
         }
     };
 
-    self.generateGroups = function (key, stage) {
-        if(stage != null){
-            self.groupopt.num = self.design.phases[stage].stdntAmount;
-            self.groupopt.met = self.design.phases[stage].grouping_algorithm;
-        }
-        console.log(self.groupopt.met, self.selectedSes.grouped, self.groups);
-        if (self.groupopt.met == "previous") {
-            console.log("Ignore, keeps groups");
-            return;
-        }
-        // 1 ignore
-        if (self.selectedSes.grouped && self.groupopt.met == "previous") {
-            $http({
-                url:    "group-proposal-sel",
-                method: "post",
-                data:   {sesid: self.selectedSes.id}
-            }).success(function (data) {
-                self.groups = data;
+    self.generateGroups = async function (key, stage) {
+        try {
+            if (stage != null) {
+                self.groupopt.num = self.design.phases[stage].stdntAmount;
+                self.groupopt.met = self.design.phases[stage].grouping_algorithm;
+            }
+            
+            console.log(self.groupopt.met, self.selectedSes.grouped, self.groups);
+            
+            if (self.groupopt.met === "previous") {
+                console.log("Ignore, keeps groups");
+                return;
+            }
+            
+            if (self.selectedSes.grouped && self.groupopt.met === "previous") {
+                const data = await $http.post("group-proposal-sel", { sesid: self.selectedSes.id });
+                self.groups = data.data;
                 self.shared.groups = self.groups;
-            });
-            return;
-        }
-        if (key == null && (self.groupopt.num < 1 || self.groupopt.num > self.users.length)) {
-            console.log("Error, low users");
-            Notification.error("Error en los parámetros de formación de grupos");
-            return;
-        }
-        console.log(self.groupopt.met);
-        // *1 ignore
-        var postdata = {
-            sesid:  self.selectedSes.id,
-            gnum:   self.groupopt.num,
-            method: self.groupopt.met
-        };
-
-        var users = Object.values(self.users).filter(function (e) {
-            return e.role == "A";
-        });
-
-        if (
-            self.groupopt.met == "knowledgeType homog" ||
-            self.groupopt.met == "knowledgeType heterg"
-        ) {
-            self.groups = generateTeams(
-                users, habMetric, self.groupopt.num, isDifferent(self.groupopt.met)
-            );
-        }
-        else if (self.groupopt.met == "random") {
-            var arr = users.map(function (e) {
-                e.rnd = Math.random();
-                return e;
-            });
-            self.groups = generateTeams(arr, function (s) {
-                return s.rnd;
-            }, self.groupopt.num, false);
-        }
-        else if (self.selectedSes.type == "T"){
-            let d = self.shared.difTable.filter(e => !e.group);
-            let dfd = users.map(e => {
-                let r = d.find(dd => dd.uid == e.id);
-                return {
-                    uid:   e.id,
-                    score: (r && r.arr && r.arr.length > 0) ? (
-                        r.arr.reduce((v, p) => v + (p.sel != null ? p.sel : -1), 0) / r.arr.length
-                    ) : -1,
-                    aprendizaje: e.aprendizaje
-                };
-            });
-            self.groups = generateTeams(
-                dfd, s => s.score, self.groupopt.num, isDifferent(self.groupopt.met)
-            );
-        }
-        else if (self.selectedSes.type == "R") {
-            let dfd = users.map(e => {
-                return {
-                    uid:   e.id,
-                    score: self.shared.roleIndTable[e.id] ?
-                        self.shared.roleIndTable[e.id].lnum : -1,
-                    aprendizaje: e.aprendizaje
-                };
-            });
-            self.groups = generateTeams(
-                dfd, function (s) {
-                    return s.score;
-                },
-                self.groupopt.num,
-                isDifferent(self.groupopt.met)
-            );
-        }
-        else if(self.groupopt.met == "expert"){
-            let s = {};
-            users.forEach(u => {
-                if(!s[u.jigsawId])
-                    s[u.jigsawId] = [];
-                s[u.jigsawId].push(u);
-            });
-            self.groups = Object.values(s);
-        }
-        else if(self.groupopt.met == "wjigsaw"){
-            let s = {};
-            users.forEach(u => {
-                if(!s[u.jigsawId])
-                    s[u.jigsawId] = [];
-                s[u.jigsawId].push(u);
-            });
-            let roles = Object.keys(s);
-            let gs = [];
-            let hasData = true;
-            for (let i = 0; hasData; i++) {
-                hasData = false;
-                let g = [];
-                roles.forEach(r => {
-                    if(s[r][i]){
-                        hasData = true;
-                        g.push(s[r][i]);
-                    }
-                });
-                if(hasData){
-                    gs.push(g);
-                }
+                return;
             }
-            self.groups = gs;
-        }
-        else if(self.groupopt.met == "wjigsawrep"){
-            let s = {};
-            users.forEach(u => {
-                if(!s[u.jigsawId])
-                    s[u.jigsawId] = [];
-                s[u.jigsawId].push(u);
-            });
-            let roles = Object.keys(s);
-            let gs = [];
-            let hasData = true;
-            for (let i = 0; hasData; i++) {
-                hasData = false;
-                let g = [];
-                roles.forEach(r => {
-                    if(s[r][i]){
-                        hasData = true;
-                        g.push(s[r][i]);
-                    }
-                });
-                if(hasData){
-                    gs.push(g);
-                }
+            
+            if (key == null && (self.groupopt.num < 1 || self.groupopt.num > self.users.length)) {
+                console.log("Error, low users");
+                Notification.error("Error en los parámetros de formación de grupos");
+                return;
             }
-            // CHECK MISSING ROLES IN LAST GROUP
-            if(gs[0].length != gs[gs.length - 1].length){
-                let lastgroup = gs.pop();
-                for (let i = 0; i < lastgroup.length; i++) {
-                    gs[i % gs.length].push(lastgroup[i]);
-                }
+    
+            const postdata = {
+                sesid: self.selectedSes.id,
+                gnum: self.groupopt.num,
+                method: self.groupopt.met
+            };
+    
+            const users = Object.values(self.users).filter(user => user.role === "A");
+            
+            switch (self.groupopt.met) {
+                case "knowledgeType homog":
+                case "knowledgeType heterg":
+                    self.groups = generateTeams(users, habMetric, self.groupopt.num, isDifferent(self.groupopt.met));
+                    break;
+                
+                case "random":
+                    const randomUsers = users.map(user => ({ ...user, rnd: Math.random() }));
+                    self.groups = generateTeams(randomUsers, s => s.rnd, self.groupopt.num, false);
+                    break;
+    
+                case "expert":
+                    self.groups = groupByJigsawId(users);
+                    break;
+    
+                case "wjigsaw":
+                case "wjigsawrep":
+                    self.groups = await generateWeightedJigsawGroups(users, self.groupopt.met === "wjigsawrep");
+                    break;
+    
+                default:
+                    await handleSpecialGrouping(users);
             }
-            self.groups = gs;
-        }
-
-        if (self.groups != null) {
-            self.groupsProp = angular.copy(self.groups);
-            self.groupNames = [];
+    
+            if (self.groups) {
+                self.groupsProp = angular.copy(self.groups);
+                self.groupNames = [];
+            }
+    
+        } catch (error) {
+            console.error("Error in generateGroups:", error);
+            Notification.error("Error al formar los grupos");
         }
     };
-
-    self.acceptGroups = function (stid) {
+    
+    // Helper functions
+    function groupByJigsawId(users) {
+        const grouped = users.reduce((acc, user) => {
+            if (!acc[user.jigsawId]) acc[user.jigsawId] = [];
+            acc[user.jigsawId].push(user);
+            return acc;
+        }, {});
+        return Object.values(grouped);
+    }
+    
+    async function generateWeightedJigsawGroups(users, redistributeLastGroup) {
+        const grouped = groupByJigsawId(users);
+        const roles = Object.keys(grouped);
+        let groups = [];
+        let hasData = true;
+    
+        for (let i = 0; hasData; i++) {
+            hasData = false;
+            let group = roles.reduce((acc, role) => {
+                if (grouped[role][i]) {
+                    hasData = true;
+                    acc.push(grouped[role][i]);
+                }
+                return acc;
+            }, []);
+            if (hasData) groups.push(group);
+        }
+    
+        if (redistributeLastGroup && groups[0].length !== groups[groups.length - 1].length) {
+            const lastGroup = groups.pop();
+            lastGroup.forEach((member, index) => groups[index % groups.length].push(member));
+        }
+        
+        return groups;
+    }
+    
+    async function handleSpecialGrouping(users) {
+        if (self.selectedSes.type === "T") {
+            const filteredData = self.shared.difTable.filter(e => !e.group);
+            const scores = users.map(user => {
+                const result = filteredData.find(d => d.uid === user.id);
+                return {
+                    uid: user.id,
+                    score: (result && result.arr && result.arr.length > 0)
+                        ? result.arr.reduce((sum, entry) => sum + (entry.sel != null ? entry.sel : -1), 0) / result.arr.length
+                        : -1,
+                    aprendizaje: user.aprendizaje
+                };
+            });
+            self.groups = generateTeams(scores, s => s.score, self.groupopt.num, isDifferent(self.groupopt.met));
+        } else if (self.selectedSes.type === "R") {
+            const scores = users.map(user => ({
+                uid: user.id,
+                score: self.shared.roleIndTable[user.id] ? self.shared.roleIndTable[user.id].lnum : -1,
+                aprendizaje: user.aprendizaje
+            }));
+            self.groups = generateTeams(scores, s => s.score, self.groupopt.num, isDifferent(self.groupopt.met));
+        }
+    }
+    
+    self.acceptGroups = async function (stid) {
         if (self.groups == null) {
             Notification.error("No hay propuesta de grupos para fijar");
             return;
         }
-        var postdata = {
+    
+        const postdata = {
             stageid: stid,
-            groups:  JSON.stringify(self.groups.map(function (e) {
-                return e.map(function (f) {
-                    return f.uid || f.id;
-                });
-            }))
+            groups: JSON.stringify(self.groups.map(group => group.map(user => user.uid || user.id)))
         };
-        $http({url: "set-groups-stage", method: "post", data: postdata}).success(function (data) {
-            if (data.status == "ok") {
+    
+        try {
+            const response = await $http.post("set-groups-stage", postdata);
+            if (response.data.status === "ok") {
                 self.selectedSes.grouped = true;
             }
-        });
+        } catch (error) {
+            console.error("Error setting groups:", error);
+            Notification.error("Error al fijar los grupos");
+        }
     };
-
+    
     self.formatStageNames = (idstr) => {
         if (idstr == null || idstr == "")
             return;
@@ -637,39 +582,38 @@ export let StagesController = function ($scope, $http, Notification, $uibModal) 
     self.shared.openNextModal = () => {
         $uibModal.open({
             templateUrl: "../../frontend/static/next-dialog.html",
-            controller:  function ($scope, $http, $uibModalInstance, Notification, data) {
-                var vm = this;
+            controller: function ($scope, $http, $uibModalInstance, Notification, data) {
+                const vm = this;
                 vm.data = data;
                 vm.radioval = null;
-
+    
                 vm.cancel = function () {
                     $uibModalInstance.dismiss("cancel");
                 };
-
-                vm.accept = function () {
-                    if (vm.radioval == "F") {
-                        $http.post(
-                            "session-finish-stages", { sesid: self.selectedSes.id }
-                        ).success((data) => {
-                            console.debug(data);
-                        });
-                    }
-                    else if (vm.radioval == "N") {
-                        self.setTab("editor");
-                        $uibModalInstance.dismiss("cancel");
+    
+                vm.accept = async function () {
+                    try {
+                        if (vm.radioval === "F") {
+                            const response = await $http.post("session-finish-stages", { sesid: self.selectedSes.id });
+                            console.debug(response.data);
+                        } else if (vm.radioval === "N") {
+                            self.setTab("editor");
+                            $uibModalInstance.dismiss("cancel");
+                        }
+                    } catch (error) {
+                        console.error("Error processing request:", error);
+                        Notification.error("There was an error processing your request.");
                     }
                 };
             },
             controllerAs: "vm",
-            scope:        self,
-            resolve:      {
-                data: function data() {
-                    return {};
-                }
+            scope: self,
+            resolve: {
+                data: () => ({})
             }
         });
     };
-
+    
     self.getGrouping = (gstr) => {
         if (gstr == null || gstr == "") {
             return self.flang("prevGroups");
@@ -702,35 +646,46 @@ export let StagesController = function ($scope, $http, Notification, $uibModal) 
         return a;
     };
 
-    self.inputAssignedRoles = () => {
-        $http.post("get-assigned-jigsaw-roles", {
-            sesid: self.selectedSes.id
-        }).success((data) => {
+    self.inputAssignedRoles = async () => {
+        try {
+            const response = await $http.post("get-assigned-jigsaw-roles", {
+                sesid: self.selectedSes.id
+            });
+            const data = response.data;
+    
             data.forEach(d => {
-                let u = self.users[d.userid];
-                if(u){
-                    u.jigsaw = self.jroles.find(e => e.id == d.roleid);
-                    u.jigsawId = d.roleid;
+                const user = self.users[d.userid];
+                if (user) {
+                    user.jigsaw = self.jroles.find(role => role.id === d.roleid);
+                    user.jigsawId = d.roleid;
                 }
             });
-        });
+        } catch (error) {
+            console.error("Error retrieving assigned jigsaw roles:", error);
+        }
     };
-
-    self.saveDraft = () => {
-        let data = {
-            dfs:    self.dfs,
-            roles:  self.roles,
+    
+    self.saveDraft = async () => {
+        const data = {
+            dfs: self.dfs,
+            roles: self.roles,
             jroles: self.jroles,
         };
-        let postdata = {
+    
+        const postdata = {
             sesid: self.selectedSes.id,
-            data:  JSON.stringify(data),
+            data: JSON.stringify(data),
         };
-        $http.post("save-draft", postdata).success(() => {
+    
+        try {
+            await $http.post("save-draft", postdata);
             Notification.success("Datos guardados");
-        });
+        } catch (error) {
+            console.error("Error saving draft:", error);
+            Notification.error("Error al guardar los datos");
+        }
     };
-
+    
     self.shared.inputAssignedRoles = self.inputAssignedRoles;
     self.shared.buildArray = self.buildArray;
     self.shared.getStages = self.getStages;
@@ -801,7 +756,6 @@ function lehmerCode(arr, acts) {
     return w;
 }
 
-
 function lehmerNum(code) {
     let n = 0;
     for (let i = 0; i < code.length; i++) {
@@ -812,7 +766,6 @@ function lehmerNum(code) {
     return n;
 }
 
-
 function simpleNum(code) {
     let n = 0;
     for (let i = 0; i < code.length; i++) {
@@ -822,7 +775,6 @@ function simpleNum(code) {
     }
     return n;
 }
-
 
 window.computeIndTable = function (data, actors) {
     let udata = groupByUser(data, actors);
@@ -841,7 +793,6 @@ window.computeIndTable = function (data, actors) {
 
     return udata;
 };
-
 
 window.sortIndTable = function (table, users) {
     var us = Object.values(users).filter(function (e) {
@@ -864,7 +815,6 @@ window.sortIndTable = function (table, users) {
     });
     return arr;
 };
-
 
 window.buildDifTable = function(data, users, dfs, gbu) {
     let res = [];
