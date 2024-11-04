@@ -59,6 +59,13 @@ app.controller(
 
             self.caseReadOnly = true;
             
+            self.initEditor = () => {
+                self.ckeditor = CaseService.initEditor(self.caseReadOnly, self.case);
+            };
+            
+
+
+            
 
             self.init = function () {
                 self.getSesInfo()
@@ -138,17 +145,14 @@ app.controller(
                                   return;
                                 }
                                 self.case = response.data.result;
-                                console.log(self.case);
+                                CaseService.initEditor(self.caseReadOnly, self.case);
+                                self
                                 // $scope.$apply()
                               })
                             resolve(); 
                         })
                         .catch(reject); 
                 });
-            };
-
-            self.initEditor = function () {
-                CaseService.initEditor(self.caseReadOnly, self.case);
             };
 
             function updateChat(count) {
