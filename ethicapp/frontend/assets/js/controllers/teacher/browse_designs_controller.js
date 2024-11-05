@@ -97,6 +97,7 @@ export let BrowseDesignsController = ($scope,
     };
     
     self.getDesign = function (id) {
+        console.log(`[getDesign] id: ${id}`);
         $http.post("get-design", { id: id })
             .then(function (response) {
                 var data = response.data;
@@ -109,8 +110,7 @@ export let BrowseDesignsController = ($scope,
             });
     };
     
-    self.goToDesign = function (ID, type) {
-        console.log(ID);
+    self.goToDesign = function (id, type) {
         $http.post("get-design", { id: id })
             .then(function (response) {
                 var data = response.data;
@@ -121,7 +121,7 @@ export let BrowseDesignsController = ($scope,
                     } else {
                         self.selectView("viewDesign");
                     }
-                    DesignStateService.designState.id = ID;
+                    DesignStateService.designState.id = id;
                     self.designId.id = DesignStateService.designState.id;
                     console.log(self.designId);
                 }
@@ -131,8 +131,8 @@ export let BrowseDesignsController = ($scope,
             });
     };
     
-    self.launchDesign = function(ID, Title, Type){
-        self.launchId.id = ID;
+    self.launchDesign = function(id, Title, Type){
+        self.launchId.id = id;
         self.launchId.title = Title;
         self.launchId.type = Type;
         //set title and type

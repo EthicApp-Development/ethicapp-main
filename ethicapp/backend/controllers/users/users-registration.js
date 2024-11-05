@@ -11,16 +11,13 @@ import * as RecaptchaHelper from "../../helpers/recaptcha-helper.js";
 import * as TokenHelper from "../../helpers/token-helper.js";
 import * as EmailHelper from "../../helpers/email-helper.js";
 import * as UsersHelper from "../../helpers/users-helper.js";
+import * as ViewsHelper from "../../helpers/views-helper.js";
 import { param, getDBInstance, execSQL, singleSQL } from  "../../db/rest-pg-2.js";
-
-import "./passport-setup.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const router = express.Router();
-router.use(passport.initialize());
-router.use(passport.session());
 
 router.get("/register", async (req, res) => {
     try {
@@ -37,7 +34,10 @@ router.get("/register", async (req, res) => {
         res.render("register", {
             title:        "EthicApp",
             controller:   "RegistrationsController",
-            extraScripts: `${captchaScript}`,
+            scripts:    [
+                ["js/dist/user-common.js", "js/dist/user-common.min.js"],
+            ],
+            renderScripts: (scripts) => ViewsHelper.renderScripts(scripts, res),
             rc:           req.query.rc
         });
     } catch (error) {
@@ -429,6 +429,4 @@ async function sendVerificationEmail(email, locale, req, token, type) {
         firstName:       req.body.name
     });
 }
-
-
 export default router;

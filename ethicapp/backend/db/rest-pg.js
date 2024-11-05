@@ -233,18 +233,18 @@ export function singleSQL(params) {
 
             const pool = await getDBInstance(params.dbcon); // Retrieve the database pool
 
-            // Execute `onStart` if defined, potentially modifying SQL or parameters
+            // Execute onStart if defined, potentially modifying SQL or parameters
             if (params.onStart) params.onStart(ses, data, calc);
 
             // Set up SQL query and parameters
             const sqlParams = params.sqlParams ? smartArrayConvert(params.sqlParams, ses, data, calc) : [];
             const result = await pool.query(params.sql, sqlParams);
 
-            // Process the result row (if any), using `onSelect` if provided
+            // Process the result row (if any), using onSelect if provided
             const row = result.rows[0] || {};
             const processedRow = params.onSelect ? params.onSelect(row) : row;
 
-            // Send final response or execute `onEnd` callback if defined
+            // Send final response or execute onEnd callback if defined
             if (params.onEnd) {
                 params.onEnd(req, res, processedRow);
             } else {

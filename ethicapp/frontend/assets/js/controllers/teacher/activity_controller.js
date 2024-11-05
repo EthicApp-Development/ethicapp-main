@@ -18,6 +18,8 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
         self.showSpinner = true;
     
         try {
+            console.debug(`[createSession] dsgnid: ${dsgnid}`);
+            
             // Check the design
             const checkResponse = await $http({
                 url:    "check-design",
@@ -96,8 +98,6 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
                     sesid:    sesid,
                     prev_ans: ""
                 };
-
-                console.debug(`[startActivityDesign] ${JSON.stringify(postdata)}`)
     
                 const stageResponse = await $http(
                     {
@@ -154,9 +154,9 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
         }
     };
     
-    self.generateCodeActivity = function (ID) { // use it to generate the code
+    self.generateCodeActivity = function (id) {
         var postdata = {
-            id: ID
+            id: id
         };
         $http.post("generate-session-code", postdata)
             .then(function (response) {

@@ -12,20 +12,22 @@ import * as RecaptchaHelper from "../../helpers/recaptcha-helper.js";
 import * as TokenHelper from "../../helpers/token-helper.js";
 import * as EmailHelper from "../../helpers/email-helper.js";
 import * as UsersHelper from "../../helpers/users-helper.js";
-import * as EthicAppEventLogger from "../stats/event-logger.js"
+import * as ViewsHelper from "../../helpers/views-helper.js";
+import * as EthicAppEventLogger from "../stats/event-logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const router = express.Router();
-router.use(passport.initialize());
-router.use(passport.session());
-import "./passport-setup.js";
 
 router.get("/login", (req, res) => {
     res.render("login", {
         title: "Login - EthicApp",
         controller: "LoginController",
+        scripts:    [
+            ["js/dist/user-common.js", "js/dist/user-common.min.js"],
+        ],
+        renderScripts: (scripts) => ViewsHelper.renderScripts(scripts, res),
         welc:  req.query.welc
     });
 });
@@ -114,7 +116,10 @@ router.get("/forgot", async (req, res) => {
         res.render("recover-password", {
             title:        "EthicApp",
             controller:   "CredentialsController",
-            extraScripts: `${captchaScript}`,
+            scripts:    [
+                ["js/dist/user-common.js", "js/dist/user-common.min.js"],
+            ],
+            renderScripts: (scripts) => ViewsHelper.renderScripts(scripts, res),
             welc:         welc,
         });
     } catch (error) {
@@ -413,6 +418,5 @@ router.post("/getuserinfo", async (req, res) => {
         return res.status(500).json({ error: "user_information_failure" });
     }
 });
-
 
 export default router;

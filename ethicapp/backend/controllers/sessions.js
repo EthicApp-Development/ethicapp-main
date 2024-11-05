@@ -4,30 +4,24 @@ import express from "express";
 import pass from "../helpers/compat-helper.js"; 
 import * as rpg from "../db/rest-pg.js";
 import * as rpg2 from "../db/rest-pg-2.js";
-import * as ViewsHelper from "../helpers/views-helper.js"
+import * as ViewsHelper from "../helpers/views-helper.js";
 
-let router = express.Router();
+const router = express.Router();
 
 router.get("/seslist", (req, res) => {
     if (req.session.uid) {
         if (req.session.role == "P") {
-            console.debug("will redirect to /home");
-            res.redirect("home");
+            res.redirect("/home");
         }
         else {
             res.render("seslist", {
                 title:        "EthicApp",
                 ngApp:        "SessionsList",
                 controller:   "SessionsListController",
-                extraScripts: `
-                <script src="/socket.io/socket.io.js" defer></script>                
-                <script src="/assets/libs/socket.min.js" defer></script>
-                <script src="/assets/libs/intro.min.js" defer></script>
-                <script src="/assets/libs/ui-bootstrap-tpls-1.1.2.min.js" defer></script>
-                <script src="/assets/libs/angular-intro.min.js" defer></script>
-                <script src="/assets/libs/ua-parser.min.js" defer></script>
-                <script type="module" src="/assets/js/modules/student/sessions.mjs" defer></script>
-                `
+                scripts:    [
+                    ["js/dist/user-common.js", "js/dist/user-common.min.js"],
+                ],
+                renderScripts: (scripts) => ViewsHelper.renderScripts(scripts, res)
             });
         }
     }
@@ -244,6 +238,8 @@ router.post("/check-design", await rpg.singleSQL({
     `,
     sqlParams: [rpg.param("body", "dsgnid")],
     onEnd:     (req, res, result) => {
+        console.log(`[check design] ${JSON.stringify(result)}`);
+
         if (!result || !result.design) {
             return res.status(404).json({ status: "err", message: "Design not found" });
         }
@@ -285,7 +281,7 @@ router.post("/check-design", await rpg.singleSQL({
     }
 }));
 
-router.post("/get-activities", await rpg.singleSQL({
+router.post("/get-activities", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
         SELECT activity.id,
@@ -328,6 +324,7 @@ router.get("/admin", (req, res) => {
 router.get("/home", function(req, res) {
     if (req.session.role == "P")
         try {
+            console.log("Attempting to render /home.");
             res.render("home", {
                 layout:     "./layouts/teacher-app",
                 ngApp:      "TeacherApp",
@@ -439,15 +436,10 @@ router.post("/upload-design", await rpg.singleSQL({
         rpg.param("session", "uid"),
         rpg.param("body")
     ],
-    onStart: (ses, data, calc) => {
-        console.debug(`/upload-design onStart:
-            ses: ${JSON.stringify(ses)},
-            data: ${JSON.stringify(data)},
-            calc: ${JSON.stringify(data)})`);
-    },
     onEnd: (req, res, result) => {
         if (result && result.id) {
             const newDesignId = result.id;
+            console.log(`[upload-design] new design id: ${newDesignId}`);
             res.json({ status: "ok", id: newDesignId });
         } else {
             res.status(500).json({ status: "err", message: "Failed to retrieve design ID" });
@@ -487,7 +479,7 @@ router.post("/get-design", await rpg.singleSQL({
     }
 }));
 
-router.get("/get-user-designs", await rpg.singleSQL({
+router.get("/get-user-designs", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
         SELECT id, design, public, locked
@@ -516,7 +508,7 @@ router.get("/get-user-designs", await rpg.singleSQL({
     }
 }));
 
-router.get("/get-public-designs", await rpg.singleSQL({
+router.get("/get-public-designs", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
         SELECT id, design
@@ -578,7 +570,7 @@ router.post("/update-design", await rpg.singleSQL({
     sesReqData:  ["uid"],
     postReqData: ["id", "design"],
     sqlParams:   [
-        rpg.param("post", "design", JSON.stringify), // Serializamos `design` como JSON
+        rpg.param("post", "design", JSON.stringify),
         rpg.param("ses", "uid"),
         rpg.param("post", "id")
     ],

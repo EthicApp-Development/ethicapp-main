@@ -24,7 +24,6 @@ router.post("/get-stages", await rpg.multiSQL({
     sqlParams:  [rpg.param("ses", "ses")]
 }));
 
-
 router.post("/get-admin-stages", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `

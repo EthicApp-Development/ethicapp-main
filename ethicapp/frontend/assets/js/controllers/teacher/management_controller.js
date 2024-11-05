@@ -238,6 +238,8 @@ export let ManagementController = ($scope,
                 method: "POST",
                 data:   postdata
             });
+
+            console.debug(`[getActivities] ${JSON.stringify(response)}`);
     
             // Ensure activities is an array, or initialize as an empty array
             self.activities = Array.isArray(response.data.activities) ? 

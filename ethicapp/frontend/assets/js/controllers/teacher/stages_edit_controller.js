@@ -252,6 +252,7 @@ export let StagesEditController = ($scope, DesignStateService,
             $http.post("/upload-design", postdata)
                 .then(function (response) {
                     if (response.data.status === "ok") {
+                        console.log(`[uploadDesign] ${JSON.stringify(response)}`);
                         self.getDesign(response.data.id);
                     }
                 })
@@ -353,24 +354,25 @@ export let StagesEditController = ($scope, DesignStateService,
         return error;
     };
 
-    self.getDesign = function (id) {
-        $http.post("get-design", { id: id }, {
-            headers: { "Content-Type": "application/json" }
-        })
-            .then(function (response) {
-                var data = response.data;
-                console.debug(`getDesign: ${JSON.stringify(response)}`);
-                if (data.status === "ok") {
-                    self.changeDesign(data.result);
-                    DesignStateService.designState.id = id;
-                    self.designId.id = DesignStateService.designState.id;
-                    self.selectView("newDesignExt");
-                }
-            })
-            .catch(function (error) {
-                console.error("Error fetching design:", error);
+    self.getDesign = async function (id) {
+        try {
+            const response = await $http.post("get-design", { id: id }, {
+                headers: { "Content-Type": "application/json" }
             });
-    };
+            
+            const data = response.data;
+            console.debug(`getDesign: ${JSON.stringify(response)}`);
+            
+            if (data.status === "ok") {
+                self.changeDesign(data.result);
+                DesignStateService.designState.id = id;
+                self.designId.id = DesignStateService.designState.id;
+                self.selectView("newDesignExt");
+            }
+        } catch (error) {
+            console.error("Error fetching design:", error);
+        }
+    };    
 
     self.getID = function(){
         return self.designId.id;

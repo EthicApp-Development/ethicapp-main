@@ -16,7 +16,6 @@ import { default as fileStoreFactory } from "session-file-store";
 const FileStore = fileStoreFactory(session);
 
 import index from "./controllers/index.js";
-import passport from "./controllers/users/passport-setup.js";
 import users_core from "./controllers/users/users-core.js";
 import users_registration from "./controllers/users/users-registration.js";
 import sessions from "./controllers/sessions.js";
@@ -78,11 +77,6 @@ app.set("view engine", "ejs");
 app.use(expressLayouts); // Usar express-ejs-layouts
 app.set("layout", "./layouts/user-common"); 
 
-// Initialize passport for authentication
-const router = express.Router();
-router.use(passport.initialize());
-router.use(passport.session());
-
 // JSON handling for requests
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -92,7 +86,6 @@ app.use(express.urlencoded({ extended: true }));
 logger.token("utc-date", function () {
     return new Date().toISOString();
 });
-  
 
 app.use(logger("[:utc-date | EthicApp] :method :url :status - :response-time ms"));
 
@@ -160,6 +153,13 @@ app.use((req, res, next) => {
 
 // Error handler
 app.use((err, req, res, next) => {
+    if (!err || typeof err !== "object") {
+        err = new Error("Unknown error occurred");
+        err.status = 500; // Establece un estado predeterminado si no existe
+    }
+
+    console.error(`GENERIC ERROR HANDLER: Status ${err.status || 500}, Message: ${err.message || "No message available"}`);
+    
     const env = req.app.get("NODE_ENV") || "production";
 
     // Log the error for debugging (if not production)
