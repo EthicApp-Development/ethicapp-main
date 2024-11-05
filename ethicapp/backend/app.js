@@ -34,6 +34,7 @@ import i18n from "i18n";
 import path from "path";
 import { fileURLToPath } from "url";
 import expressLayouts from "express-ejs-layouts";
+import { renderScripts } from "./helpers/views-helper.js";
 import { ErrorReply } from "redis";
 
 let app = express();
@@ -88,9 +89,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Initialize the logger
 // Get UTC date and time
-logger.token('utc-date', function () {
+logger.token("utc-date", function () {
     return new Date().toISOString();
-  });
+});
   
 
 app.use(logger("[:utc-date | EthicApp] :method :url :status - :response-time ms"));
@@ -159,7 +160,7 @@ app.use((req, res, next) => {
 
 // Error handler
 app.use((err, req, res, next) => {
-    const env = req.app.get("ETHICAPP_ENV") || "production";
+    const env = req.app.get("NODE_ENV") || "production";
 
     // Log the error for debugging (if not production)
     if (env === "development" || env === "test") {

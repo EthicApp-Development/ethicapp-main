@@ -50,7 +50,7 @@ function smartArrayConvert(sqlParams, ses, data, calc) {
  */
 export function param(t, n) {
     return JSON.stringify({name: n, type: t});
-};
+}
 
 
 /**
@@ -61,7 +61,7 @@ export function param(t, n) {
  */
 export function paramsOfType(t, arr) {
     return arr.map(p => module.exports.param(t,p));
-};
+}
 
 
 /**
@@ -84,10 +84,9 @@ export function execSQL(params) {
             const data = req.body;
             const calc = {};
 
-            // Validación de datos requeridos en la sesión
             if (params.sesReqData) {
                 for (const reqData of params.sesReqData) {
-                    if (!ses[reqData]) {
+                    if (ses[reqData] === undefined) { // Validar solo si es undefined
                         console.error("[Req Error] Falta dato de sesión: " + reqData);
                         res.status(400).json({ status: "err" });
                         return;
@@ -95,10 +94,9 @@ export function execSQL(params) {
                 }
             }
 
-            // Validación de datos requeridos en el cuerpo de la solicitud
             if (params.postReqData) {
                 for (const reqData of params.postReqData) {
-                    if (!data[reqData]) {
+                    if (data[reqData] === undefined) { // Validar solo si es undefined
                         console.error("[Req Error] Falta dato de body: " + reqData);
                         res.status(400).json({ status: "err" });
                         return;
@@ -106,12 +104,10 @@ export function execSQL(params) {
                 }
             }
 
-            // Obtención de conexión a la base de datos desde el pool
             const pool = await getDBInstance(params.dbcon);
             const sql = params.onStart ? params.onStart(ses, data, calc) || params.sql : params.sql;
             const sqlParams = params.sqlParams ? smartArrayConvert(params.sqlParams, ses, data, calc) : [];
 
-            // Ejecución de la consulta con pool.query
             const result = await pool.query(sql, sqlParams);
             const rows = result.rows.map(row => (params.onRow ? params.onRow(row) : row));
 
@@ -204,9 +200,8 @@ export function nExecSQL(params) {
  * <li> onSelect: Function handled after sql statement is executed. It replaces the normal return
  * behavior.
  */
-export async function singleSQL(params) {
+export function singleSQL(params) {
     if (!params.sql || !params.dbcon) return null; // Return null if essential parameters are missing
-
     return async function (req, res) {
         try {
             const ses = req.session; // Session object
@@ -217,7 +212,7 @@ export async function singleSQL(params) {
             // Validate required session data
             if (params.sesReqData) {
                 for (const reqData of params.sesReqData) {
-                    if (!ses[reqData]) {
+                    if (ses[reqData] === undefined) {
                         console.error("[Req Error] Missing session data: " + reqData);
                         res.status(400).json({ status: "err" });
                         return;
@@ -225,11 +220,11 @@ export async function singleSQL(params) {
                 }
             }
 
-            // Validate required body data
+            // Validate body parameters
             if (params.postReqData) {
                 for (const reqData of params.postReqData) {
-                    if (!data[reqData]) {
-                        console.error("[Req Error] Missing body data: " + reqData);
+                    if (data[reqData] === undefined) {
+                        console.error(`[Req Error] Missing body data: ${reqData}`);
                         res.status(400).json({ status: "err" });
                         return;
                     }
@@ -275,7 +270,7 @@ export async function singleSQL(params) {
  * <li> onEnd: Function to be executed just before send end result.
  * <li> onRow: Function handled every fetched row. It replaces the normal row behavior.
  */
-export async function multiSQL(params) {
+export function multiSQL(params) {
     return async function (req, res) {
         try {
             const pool = await getDBInstance(params.dbcon);
@@ -301,7 +296,7 @@ export async function multiSQL(params) {
                     }
                 }
             }
-            let calc = {}
+            let calc = {};
             const sql = params.onStart ? params.onStart(ses, data, calc) || params.sql : params.sql;
             const sqlParams = params.sqlParams ? smartArrayConvert(params.sqlParams, ses, data, calc
             ) : [];

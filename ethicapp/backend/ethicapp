@@ -28,6 +28,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     // Set up socket.io
     const io = new SocketIO(server);
     configSocket(io);
+    app.locals.io = io;
 }
 
 /**

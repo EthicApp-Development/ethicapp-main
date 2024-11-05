@@ -32,10 +32,10 @@ export let ManagementController = ($scope,
     self.designId = DesignStateService.designState;
     self.launchId = ActivityStateService.activityState;
 
-    if (lang.startsWith('es')) {
-        self.lang = 'es_CL';
+    if (lang.startsWith("es")) {
+        self.lang = "es_CL";
     } else {
-        self.lang = 'en_US';
+        self.lang = "en_US";
     }
 
     self.showLanguageDropdown = false;
@@ -56,8 +56,8 @@ export let ManagementController = ($scope,
 
     self.getTranslatedLanguageName = function (languageKey) {
         const languageNames = {
-            'es_CL': $translate.instant('spanish'),
-            'en_US': $translate.instant('english')
+            "es_CL": $translate.instant("spanish"),
+            "en_US": $translate.instant("english")
         };
 
         return languageNames[languageKey] || languageKey;
@@ -81,7 +81,7 @@ export let ManagementController = ($scope,
     self.misc = {};
 
     self.init = function () {
-        console.log("[ManagementController] init.");
+        //console.debug("[ManagementController] init.");
         //self.updatelangdata();
         self.getMe();
         
@@ -100,9 +100,9 @@ export let ManagementController = ($scope,
     self.updatelangdata = async function () {
         try {
             const response = await $http({
-                url: "updatelangdata",
+                url:    "updatelangdata",
                 method: "post",
-                data: { lang }
+                data:   { lang }
             });
             console.log(response.data);
         } catch (error) {
@@ -187,7 +187,7 @@ export let ManagementController = ($scope,
     self.selectView = function(tab, type){
         if(tab != self.selectedView){
             self.selectedView = tab;
-            console.log(self.selectedView);
+            // console.debug(self.selectedView);
             $route.reload();
             if (tab != "newDesignExt" && tab != "viewDesign"){
                 self.designId.id = null; //avoids making designs-documents request
@@ -201,23 +201,28 @@ export let ManagementController = ($scope,
                 if(type != null) self.tabSel.type = type;
                 else self.tabSel.type = 0;
             }
-            console.log(self.selectedView);
+            //console.debug(self.selectedView);
         }
     };
 
     self.shared.updateSesData = function () {
-        $http({ url: "get-session-list", method: "post" }).success(function (data) {
-            console.log("Session data updated");
-            self.sessions = data;
-            if (self.selectedId != -1) {
-                var ses = self.sessions.find(function (e) {
-                    return e.id == self.selectedId;
-                });
-                if (ses != null) self.selectSession(ses, self.selectedId);
-            } else {
-                self.sesFromURL();
-            }
-        });
+        $http({ url: "get-session-list", method: "POST" })
+            .then(function (response) {
+                self.sessions = response.data;
+                if (self.selectedId !== -1) {
+                    var ses = self.sessions.find(function (e) {
+                        return e.id === self.selectedId;
+                    });
+                    if (ses != null) {
+                        self.selectSession(ses, self.selectedId);
+                    }
+                } else {
+                    self.sesFromURL();
+                }
+            })
+            .catch(function (error) {
+                console.error("Error updating session data:", error);
+            });
     };
 
     self.changeDesign = function(selectedDesign){
@@ -226,25 +231,30 @@ export let ManagementController = ($scope,
 
     self.shared.getActivities = async function () {
         const postdata = {};
-    
+
         try {
             const response = await $http({
-                url: "get-activities",
-                method: "post",
-                data: postdata
-            });
-            
-            // Map titles from design metadata
-            response.data.activities.forEach(activity => {
-                activity.title = activity.design.metainfo.title;
+                url:    "get-activities",
+                method: "POST",
+                data:   postdata
             });
     
-            self.activities = response.data.activities;
+            // Ensure activities is an array, or initialize as an empty array
+            self.activities = Array.isArray(response.data.activities) ? 
+                response.data.activities : [];
+    
+            // Map titles from design metadata if activities are present
+            self.activities.forEach(activity => {
+                if (activity.design && activity.design.metainfo) {
+                    activity.title = activity.design.metainfo.title;
+                }
+            });
+    
             return self.activities;
     
         } catch (error) {
             console.error("Error fetching activities:", error);
-            throw error;
+            return []; // Return an empty array on error
         }
     };
     
@@ -261,9 +271,9 @@ export let ManagementController = ($scope,
     
         try {
             const response = await $http({
-                url: "documents-session",
+                url:    "documents-session",
                 method: "post",
-                data: postdata
+                data:   postdata
             });
             self.documents = response.data;
         } catch (error) {
@@ -279,9 +289,9 @@ export let ManagementController = ($scope,
     
         try {
             await $http({
-                url: "delete-document",
+                url:    "delete-document",
                 method: "post",
-                data: postdata
+                data:   postdata
             });
             
             // Refresh documents list after deletion
@@ -297,9 +307,9 @@ export let ManagementController = ($scope,
         try {
             // Step 1: Fetch questions for the session
             const questionsResponse = await $http({
-                url: "questions-session",
+                url:    "questions-session",
                 method: "post",
-                data: postdata
+                data:   postdata
             });
             
             self.questions = questionsResponse.data.map(e => {
@@ -309,9 +319,9 @@ export let ManagementController = ($scope,
     
             // Step 2: Fetch question texts for the session
             const textsResponse = await $http({
-                url: "get-question-text",
+                url:    "get-question-text",
                 method: "post",
-                data: postdata
+                data:   postdata
             });
     
             self.questionTexts = textsResponse.data;
@@ -326,9 +336,9 @@ export let ManagementController = ($scope,
     
         try {
             const response = await $http({
-                url: "semantic-documents",
+                url:    "semantic-documents",
                 method: "post",
-                data: postdata
+                data:   postdata
             });
             self.semDocs = response.data;
         } catch (error) {
@@ -341,9 +351,9 @@ export let ManagementController = ($scope,
     
         try {
             const response = await $http({
-                url: "get-new-users",
+                url:    "get-new-users",
                 method: "post",
-                data: postdata
+                data:   postdata
             });
             self.newUsers = response.data;
         } catch (error) {
@@ -356,9 +366,9 @@ export let ManagementController = ($scope,
     
         try {
             const response = await $http({
-                url: "get-ses-users",
+                url:    "get-ses-users",
                 method: "post",
-                data: postdata
+                data:   postdata
             });
     
             self.usersArr = response.data;

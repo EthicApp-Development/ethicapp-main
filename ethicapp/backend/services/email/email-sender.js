@@ -43,7 +43,7 @@ const transporters = {
 };
 
 const createTransporter = () => {
-    const env = process.env.ETHICAPP_ENV || "development";
+    const env = process.env.NODE_ENV || "development";
     return (transporters[env] || transporters["development"])();
 };
 

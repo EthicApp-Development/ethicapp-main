@@ -78,10 +78,10 @@ router.post("/get-content-analysis", await rpg.singleSQL({
 
 router.post("/content-analysis-availability", (req, res, next) => {
     if(isContentAnalysisAvailable()){
-        return res.status(200).json({ status: 'Content analysis is available'});
+        return res.status(200).json({ status: 'ok', message: 'Content analysis is available'});
     }
     else{
-        return res.status(503).json({ error: "Content analysis is not available" });
+        return res.status(200).json({ status: 'error', error: "Content analysis is not available" });
     }
 });
 

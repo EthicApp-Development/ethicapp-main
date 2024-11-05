@@ -1,8 +1,11 @@
 "use strict";
 
 import express from "express";
-import pass from "../helpers/compat-helper.js" 
+import pass from "../helpers/compat-helper.js"; 
 import * as rpg from "../db/rest-pg.js";
+import * as rpg2 from "../db/rest-pg-2.js";
+import * as ViewsHelper from "../helpers/views-helper.js"
+
 let router = express.Router();
 
 router.get("/seslist", (req, res) => {
@@ -13,10 +16,10 @@ router.get("/seslist", (req, res) => {
         }
         else {
             res.render("seslist", {
-                title: "EthicApp",
-                ngApp: "SessionsList",
-                controller:  "SessionsListController",
-                extraScripts : `
+                title:        "EthicApp",
+                ngApp:        "SessionsList",
+                controller:   "SessionsListController",
+                extraScripts: `
                 <script src="/socket.io/socket.io.js" defer></script>                
                 <script src="/assets/libs/socket.min.js" defer></script>
                 <script src="/assets/libs/intro.min.js" defer></script>
@@ -120,53 +123,62 @@ router.post("/add-session-activity", async (req, res) => {
     const { name, descr, type, additionalConfig } = req.body;
     const config = additionalConfig || {};
 
+    console.log(`add-session-activity: ${name}, ${descr}, ${type}, ${additionalConfig}`);
+
     try {
         // Step 1: Insert into `sessions` table and get the id returned.
-        const sessionResult = await rpg.singleSQL({
+        const sessionResult = await rpg2.singleSQL({
             dbcon: pass.dbcon,
-            sql: `
+            sql:   `
                 INSERT INTO sessions(name, descr, creator, time, status, type, additional_config)
                 VALUES ($1, $2, $3, now(), 1, $4, $5)
                 RETURNING id;
             `,
-            sqlParams: [name, descr, uid, type, config]
-        })(req, res);
-
-        const sessionId = sessionResult?.rows?.[0]?.id;
+            sqlParams: [rpg2.param('plain', name), 
+                        rpg2.param('plain', descr), 
+                        rpg2.param('plain', uid), 
+                        rpg2.param('plain', type),
+                        rpg2.param('plain', JSON.stringify(config))]
+        });
+        
+        console.debug(`[add-session-activity] Session result: ${JSON.stringify(sessionResult)}`);
+        const sessionId = sessionResult.id;
 
         if (!sessionId) {
+            console.error("[add-session-activity] sessionId not found");
             throw new Error("Failed to retrieve session ID");
         }
 
         // Step 2: Insert into `sesusers` table with the obtained session ID.
-        await rpg.singleSQL({
+        await rpg2.singleSQL({
             dbcon: pass.dbcon,
-            sql: `
+            sql:   `
                 INSERT INTO sesusers(sesid, uid)
                 VALUES ($1, $2);
             `,
-            sqlParams: [sessionId, uid]
-        })(req, res);
+            sqlParams: [rpg2.param('plain', sessionId), 
+                rpg2.param('plain', uid)]
+        });
 
         // Step 3: Get the highest ID for the current creator.
-        const maxIdResult = await rpg.singleSQL({
+        const maxIdResult = await rpg2.singleSQL({
             dbcon: pass.dbcon,
-            sql: `
+            sql:   `
                 SELECT max(id) AS max FROM sessions WHERE creator = $1;
             `,
-            sqlParams: [uid]
-        })(req, res);
+            sqlParams: [rpg2.param('plain', uid)]
+        });
 
-        const maxId = maxIdResult?.rows?.[0]?.max;
+        const maxId = maxIdResult.max;
 
         // Step 4: Execute stored procedure to update or insert activity record.
-        await rpg.singleSQL({
+        await rpg2.singleSQL({
             dbcon: pass.dbcon,
-            sql: `
+            sql:   `
                 SELECT UpdateOrInsertActivityRecord($1);
             `,
-            sqlParams: [uid]
-        })(req, res);
+            sqlParams: [rpg2.param('plain', uid)]
+        });
 
         // Generate a successful response.
         res.json({ status: 200, id: maxId });
@@ -177,46 +189,46 @@ router.post("/add-session-activity", async (req, res) => {
     }
 });
 
-
 router.post("/add-activity", async (req, res) => {
     const sesid = req.body.sesid;
     const dsgnid = req.body.dsgnid;
 
     try {
         // Insert into ACTIVITY table
-        await rpg.singleSQL({
+        await rpg2.singleSQL({
             dbcon: pass.dbcon,
-            sql: `
+            sql:   `
                 INSERT INTO ACTIVITY (design, SESSION)
                 VALUES ($1, $2)
             `,
-            sqlParams: [dsgnid, sesid]
-        })(req, res);
+            sqlParams: [
+                rpg2.param('plain', dsgnid), 
+                rpg2.param('plain', sesid)]
+        });
 
         // Update the designs table to lock the design
-        await rpg.singleSQL({
+        await rpg2.singleSQL({
             dbcon: pass.dbcon,
-            sql: `
+            sql:   `
                 UPDATE designs
                 SET locked = TRUE
                 WHERE id = $1
             `,
-            sqlParams: [dsgnid]
-        })(req, res);
+            sqlParams: [rpg2.param('plain', dsgnid)]
+        });
 
         // Select the updated design to return as the result
-        const result = await rpg.singleSQL({
+        const result = await rpg2.singleSQL({
             dbcon: pass.dbcon,
-            sql: `
+            sql:   `
                 SELECT design
                 FROM DESIGNS
                 WHERE id = $1
             `,
-            sqlParams: [dsgnid],
-            onEnd: (req, res, result) => {
-                res.json({ status: 200, result: result.design });
-            }
-        })(req, res);
+            sqlParams: [rpg2.param('plain', dsgnid)]
+        });
+        
+        res.status(200).json({ status: 'ok', result: result.design });
     } catch (error) {
         console.error("Error in /add-activity endpoint:", error);
         res.status(400).json({ status: 400, error: "Error processing activity addition" });
@@ -225,13 +237,13 @@ router.post("/add-activity", async (req, res) => {
 
 router.post("/check-design", await rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: `
+    sql:   `
         SELECT design
         FROM DESIGNS
         WHERE id = $1;
     `,
     sqlParams: [rpg.param("body", "dsgnid")],
-    onEnd: (req, res, result) => {
+    onEnd:     (req, res, result) => {
         if (!result || !result.design) {
             return res.status(404).json({ status: "err", message: "Design not found" });
         }
@@ -275,7 +287,7 @@ router.post("/check-design", await rpg.singleSQL({
 
 router.post("/get-activities", await rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: `
+    sql:   `
         SELECT activity.id,
             activity.session,
             sessions.creator,
@@ -296,8 +308,8 @@ router.post("/get-activities", await rpg.singleSQL({
         WHERE sessions.creator = $1;
     `,
     sesReqData: ["uid"],
-    sqlParams: [rpg.param("ses", "uid")],
-    onEnd: async (req, res, result) => {
+    sqlParams:  [rpg.param("ses", "uid")],
+    onEnd:      async (req, res, result) => {
         res.json({ status: 200, activities: result });
     },
     onError: async (err, req, res) => {
@@ -313,19 +325,22 @@ router.get("/admin", (req, res) => {
         res.redirect(".");
 });
 
-router.get("/home", function(req,res) {
+router.get("/home", function(req, res) {
     if (req.session.role == "P")
         try {
             res.render("home", {
-                layout: "./layouts/teacher-app",
-                ngApp: "TeacherApp",
+                layout:     "./layouts/teacher-app",
+                ngApp:      "TeacherApp",
                 controller: "ManagementController",
-                extraScripts: `
-                <script src="assets/libs/angular-glue.min.js" defer></script>
-                <script src="assets/js/dist/teacher-admin.min.js" defer></script>
-                `
+                scripts:    [
+                    ["libs/angular-glue.min.js"],
+                    ["js/dist/teacher-admin.js", "js/dist/teacher-admin.min.js"],
+                    ["libs/save-csv.min.js"]
+                ],
+                renderScripts: (scripts) => ViewsHelper.renderScripts(scripts, res)
             });        
         } catch (error) {
+            console.error(error);
             return res.status(500);
         }
     else {
@@ -415,7 +430,7 @@ router.post("/delete-design-document", await rpg.execSQL({
 
 router.post("/upload-design", await rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: `
+    sql:   `
         INSERT INTO DESIGNS (creator, design)
         VALUES ($1, $2)
         RETURNING id
@@ -424,6 +439,12 @@ router.post("/upload-design", await rpg.singleSQL({
         rpg.param("session", "uid"),
         rpg.param("body")
     ],
+    onStart: (ses, data, calc) => {
+        console.debug(`/upload-design onStart:
+            ses: ${JSON.stringify(ses)},
+            data: ${JSON.stringify(data)},
+            calc: ${JSON.stringify(data)})`);
+    },
     onEnd: (req, res, result) => {
         if (result && result.id) {
             const newDesignId = result.id;
@@ -440,13 +461,13 @@ router.post("/upload-design", await rpg.singleSQL({
 
 router.post("/get-design", await rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: `
+    sql:   `
         SELECT design
         FROM DESIGNS
         WHERE id = $1
     `,
     sqlParams: [rpg.param("body", "id")],
-    onStart: (req, res) => { 
+    onStart:   (req, res) => { 
         console.log("Received request body:", JSON.stringify(req.body));
         const id = req.body?.id || "undefined";
         console.log("Fetching design with ID:", id);
@@ -466,25 +487,23 @@ router.post("/get-design", await rpg.singleSQL({
     }
 }));
 
-
-
 router.get("/get-user-designs", await rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: `
+    sql:   `
         SELECT id, design, public, locked
         FROM DESIGNS
         WHERE creator = $1
         ORDER BY id DESC;
     `,
     sesReqData: ["uid"],
-    sqlParams: [rpg.param("ses", "uid")],
-    onEnd: (req, res, result) => {
+    sqlParams:  [rpg.param("ses", "uid")],
+    onEnd:      (req, res, result) => {
         // Ensure result is an array
         const rows = Array.isArray(result) ? result : [result];
 
         const designs = rows.map(row => ({
             ...row.design,
-            id: row.id,
+            id:     row.id,
             public: row.public,
             locked: row.locked
         }));
@@ -499,7 +518,7 @@ router.get("/get-user-designs", await rpg.singleSQL({
 
 router.get("/get-public-designs", await rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: `
+    sql:   `
         SELECT id, design
         FROM DESIGNS
         WHERE public = true
@@ -507,8 +526,8 @@ router.get("/get-public-designs", await rpg.singleSQL({
         ORDER BY id DESC;
     `,
     sesReqData: ["uid"],
-    sqlParams: [rpg.param("ses", "uid")],
-    onEnd: (req, res, result) => {
+    sqlParams:  [rpg.param("ses", "uid")],
+    onEnd:      (req, res, result) => {
         // Ensure result is an array
         const rows = Array.isArray(result) ? result : [result];
 
@@ -550,15 +569,15 @@ router.post("/design-lock", await rpg.multiSQL({
 
 router.post("/update-design", await rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: `
+    sql:   `
         UPDATE DESIGNS
         SET design = $1
         WHERE creator = $2
             AND id = $3
     `,
-    sesReqData: ["uid"],
+    sesReqData:  ["uid"],
     postReqData: ["id", "design"],
-    sqlParams: [
+    sqlParams:   [
         rpg.param("post", "design", JSON.stringify), // Serializamos `design` como JSON
         rpg.param("ses", "uid"),
         rpg.param("post", "id")
@@ -574,14 +593,14 @@ router.post("/update-design", await rpg.singleSQL({
 
 router.post("/delete-design", await rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql: `
+    sql:   `
         DELETE FROM DESIGNS
         WHERE creator = $1
             AND id = $2
     `,
-    sesReqData: ["uid"],
+    sesReqData:  ["uid"],
     postReqData: ["id"],
-    sqlParams: [
+    sqlParams:   [
         rpg.param("ses", "uid"),
         rpg.param("post", "id")
     ],
@@ -1023,23 +1042,25 @@ router.post("/add-differential", await rpg.execSQL({
     ]
 }));
 
-router.post("/add-differential-stage", await rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    INSERT INTO differential(
-        title, tleft, tright, orden, creator, stageid, num, justify, sesid, word_count
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-    `,
-    postReqData: ["orden", "tleft", "tright", "name", "stageid", "num", "justify", "sesid"],
-    sesReqData:  ["uid"],
-    sqlParams:   [
-        rpg.param("post", "name"), rpg.param("post", "tleft"), rpg.param("post", "tright"),
-        rpg.param("post", "orden"), rpg.param("ses", "uid"), rpg.param("post", "stageid"),
-        rpg.param("post", "num"), rpg.param("post", "justify"), rpg.param("post", "sesid"),
-        rpg.param("post", "word_count")
-    ]
-}));
-
+router.post("/add-differential-stage", async (req, res) => { 
+    console.log(`/add-differential-stage: ${JSON.stringify(req.body)}`)
+    await rpg.execSQL({
+        dbcon: pass.dbcon,
+        sql:   `
+        INSERT INTO differential(
+            title, tleft, tright, orden, creator, stageid, num, justify, sesid, word_count
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        `,
+        postReqData: ["orden", "tleft", "tright", "name", "stageid", "num", "justify", "sesid"],
+        sesReqData:  ["uid"],
+        sqlParams:   [
+            rpg.param("post", "name"), rpg.param("post", "tleft"), rpg.param("post", "tright"),
+            rpg.param("post", "orden"), rpg.param("ses", "uid"), rpg.param("post", "stageid"),
+            rpg.param("post", "num"), rpg.param("post", "justify"), rpg.param("post", "sesid"),
+            rpg.param("post", "word_count")
+        ]
+    })(req, res);
+});
 
 router.post("/update-differential", await rpg.execSQL({
     dbcon: pass.dbcon,
@@ -1065,7 +1086,7 @@ router.post("/duplicate-session", async (req, res) => {
         && req.body.name != "" && req.body.tipo != null && req.body.descr != null
         && req.body.originalSesid != null
     ) {
-            await rpg.singleSQL({
+        await rpg.singleSQL({
             dbcon: pass.dbcon,
             sql:   `
             INSERT INTO sessions(name, descr, creator, TIME, status, TYPE)

@@ -83,7 +83,7 @@ export let BrowseDesignsController = ($scope,
     
     self.deleteDesign = function (ID) {
         console.log(ID);
-        var postdata = { "id": ID };
+        var postdata = { id: ID };
         $http.post("delete-design", postdata)
             .then(function (response) {
                 var data = response.data;
@@ -96,8 +96,8 @@ export let BrowseDesignsController = ($scope,
             });
     };
     
-    self.getDesign = function (ID) {
-        $http.post("get-design", ID)
+    self.getDesign = function (id) {
+        $http.post("get-design", { id: id })
             .then(function (response) {
                 var data = response.data;
                 if (data.status === "ok") {
@@ -111,7 +111,7 @@ export let BrowseDesignsController = ($scope,
     
     self.goToDesign = function (ID, type) {
         console.log(ID);
-        $http.post("get-design", ID)
+        $http.post("get-design", { id: id })
             .then(function (response) {
                 var data = response.data;
                 if (data.status === "ok") {

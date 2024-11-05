@@ -15,7 +15,7 @@ COPY backend/entrypoint.development.sh /usr/local/bin/entrypoint.development.sh
 RUN chmod +x /usr/local/bin/entrypoint.development.sh
 
 # Set the working directory
-WORKDIR /home/app
+WORKDIR /home/app/backend
 
 # Define the entrypoint
 ENTRYPOINT ["/usr/local/bin/entrypoint.development.sh"]

@@ -9,7 +9,7 @@
   <%- include('../partials/favicon.ejs') %>
   <script src="assets/libs/save-csv.min.js" defer></script>
   <link rel="stylesheet" href="<%= asset('/css/assets-bundle.css') %>">
-  <%- typeof extraScripts !== 'undefined' ? extraScripts : '' %>
+  <%- renderScripts(scripts) %>
 </head>
 <body ng-controller="LocalesController">
   <div class="loading-overlay" ng-if="!translationsLoaded" ng-class="{'loading': !translationsLoaded}">

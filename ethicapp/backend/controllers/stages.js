@@ -3,6 +3,8 @@
 import express from "express";
 import pass from "../helpers/compat-helper.js"
 import * as rpg from "../db/rest-pg.js";
+import configSocket from "../config/socket.config.js";
+
 let router = express.Router();
 
 router.post("/get-stages", await rpg.multiSQL({
@@ -55,22 +57,24 @@ router.post("/get-current-stage", await rpg.multiSQL({
     sqlParams:   [rpg.param("post", "sesid")]
 }));
 
+router.post("/add-stage", async (req, res) => {
+    console.log(`/add-stage: ${JSON.stringify(req.body)}`);
 
-router.post("/add-stage", await rpg.singleSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    INSERT INTO stages (number, type, anon, chat, sesid, prev_ans, question, grouping)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    RETURNING id
-    `,
-    postReqData: ["number", "type", "anon", "chat", "sesid"],
-    sqlParams:   [
-        rpg.param("post", "number"), rpg.param("post", "type"), rpg.param("post", "anon"),
-        rpg.param("post", "chat"), rpg.param("post", "sesid"), rpg.param("post", "prev_ans"),
-        rpg.param("post", "question"), rpg.param("post", "grouping")
-    ]
-}));
-
+    await rpg.singleSQL({
+        dbcon: pass.dbcon,
+        sql:   `
+        INSERT INTO stages (number, type, anon, chat, sesid, prev_ans, question, grouping)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id
+        `,
+        postReqData: ["number", "type", "anon", "chat", "sesid"],
+        sqlParams:   [
+            rpg.param("post", "number"), rpg.param("post", "type"), rpg.param("post", "anon"),
+            rpg.param("post", "chat"), rpg.param("post", "sesid"), rpg.param("post", "prev_ans"),
+            rpg.param("post", "question"), rpg.param("post", "grouping")
+        ]
+    })(req, res);
+});
 
 router.post("/add-actor", await rpg.execSQL({
     dbcon: pass.dbcon,
@@ -148,8 +152,10 @@ router.post("/session-start-stage", await rpg.execSQL({
     postReqData: ["stageid", "sesid"],
     sqlParams:   [rpg.param("post", "stageid"), rpg.param("post", "sesid")],
     onEnd:       (req,res) => {
-        res.send('{"status":"ok"}');
+        const io = req.app.locals.io;
+        const socket = configSocket(io);
         socket.stateChange(req.body.sesid);
+        res.send('{"status":"ok"}');
     }
 }));
 
