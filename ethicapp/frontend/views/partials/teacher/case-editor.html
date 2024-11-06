@@ -72,7 +72,7 @@
                     </div>
                     <div class="list-group pad-content">
                         <div ng-if="tabEditorDocuments == 'documentsTab'">
-                            <input type="file" id="file-input" multiple style="display: none;" ng-change="handleFileSelect($event)" ng-model="files" accept="application/pdf" ng-if="!caseReadOnly"/>
+                            <input type="file" id="file-input" multiple style="display: none;" accept="application/pdf" ng-if="!caseReadOnly"/>
                             <div class="upload-container" id="upload-container" ng-click="triggerFileInput()" ng-if="!caseReadOnly" ng-init="initDragDrop()">
                                 <p>{{'dragDropMsg' | translate}}</p>
                             </div>

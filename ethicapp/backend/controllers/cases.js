@@ -323,30 +323,29 @@ router.get("/cases/:id", async (req, res) => {
 
 
 
-router.post("/cases", (req, res) => {
+router.post("/cases", async (req, res) => {
     const caseInsertQuery = `
     INSERT INTO cases (user_id)
-    VALUES (${req.user.id})
+    VALUES ($1)
     RETURNING case_id
     `;
     const db = getDBInstance(dbcon);
 
-    db.query(caseInsertQuery)
-        .then(result => {
-            const caseId = result.rows[0].case_id;
-            res.status(201).json({ status: 'success', message: 'Case created', caseId: caseId });
-        })
-        .catch(err => {
-            console.error("Error creating case:", err);
-            res.status(500).json({ status: 'error', message: 'Internal server error' });
-        });
+    try {
+        const result = await db.query(caseInsertQuery, [req.user.id]);
+        const caseId = result.rows[0].case_id;
+        res.status(201).json({ status: 'success', message: 'Case created', caseId: caseId });
+    } catch (err) {
+        console.error("Error creating case:", err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
 });
+
 
 
 router.patch("/cases/:caseId", async (req, res) => {
     const caseId = req.params.caseId;
     const { title, description, external_case_url, is_public, topic_tags, rich_text } = req.body;
-
     const db = getDBInstance(dbcon);
 
     try {
@@ -370,37 +369,29 @@ router.patch("/cases/:caseId", async (req, res) => {
         await db.query(deletePreviousTopicsQuery, [caseId]);
 
         if (topic_tags && topic_tags.length > 0) {
-            // Verificar y agregar tags
-            for (const tag of topic_tags) {
-                const tagName = tag.name; // Obtener el nombre del tag
-                // Primero, verificar si el tag ya existe
-                const checkTagQuery = `
-                SELECT name FROM topic_tags 
-                WHERE name = $1
-                `;
-                let result = await db.query(checkTagQuery, [tagName]);
-
-                // Si no existe, crear el tag
-                if (result.rowCount === 0) {
-                    const insertTagQuery = `
-                    INSERT INTO topic_tags (name)
-                    VALUES ($1)
-                    `;
-                    await db.query(insertTagQuery, [tagName]);
-                }
-            }
+            // Crear los nuevos tags si no existen
+            const uniqueTags = [...new Set(topic_tags.map(tag => tag.name))];
+            const checkAndInsertTagsQuery = `
+            INSERT INTO topic_tags (name)
+            VALUES ${uniqueTags.map((_, i) => `($${i + 1})`).join(', ')}
+            ON CONFLICT (name) DO NOTHING
+            `;
+            await db.query(checkAndInsertTagsQuery, uniqueTags);
 
             // Insertar los nuevos topic tags en el caso
             const caseTopicsInsertQuery = `
             INSERT INTO cases_topic_tags (case_id, topic_tag_name)
-            VALUES ${topic_tags.map((_, index) => `($1, $${index + 2})`).join(', ')}
+            VALUES ${uniqueTags.map((_, i) => `($1, $${i + 2})`).join(', ')}
             `;
-            await db.query(caseTopicsInsertQuery, [caseId, ...topic_tags.map(tag => tag.name)]);
+            await db.query(caseTopicsInsertQuery, [caseId, ...uniqueTags]);
         }
+
+        await db.query('COMMIT'); // Confirma la transacción
 
         res.status(200).json({ status: 'success', message: 'Case updated' });
 
     } catch (err) {
+        await db.query('ROLLBACK'); // Revierte la transacción en caso de error
         console.error("Error updating case:", err);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }

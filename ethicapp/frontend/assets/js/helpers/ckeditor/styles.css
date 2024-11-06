@@ -148,11 +148,9 @@
 
 
 
-/* Own */
-
-.center-container {
+.center-ckeditor {
 	width: 100%;
-	max-height: 99vh;
+	height: 100%;
 	display: flex;
 	justify-content: center;
 	align-items: center;
@@ -166,7 +164,7 @@
 	height: 80vh; /* Limita la altura del contenedor */
 	border: 1px solid #ccc;
 	box-sizing: border-box;
-	overflow: hidden;
+	overflow: hidden; /* Evita que el contenido se extienda fuera del contenedor */
 }
 
 .ckeditor {
