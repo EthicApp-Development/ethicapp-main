@@ -2205,8 +2205,4 @@ input:checked + .slider-blocked::before {
 
 .custom-switch:hover input:not(:checked) + .custom-slider {
     background-color: #b3d9ff;
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 52418bf (Fix merge)
