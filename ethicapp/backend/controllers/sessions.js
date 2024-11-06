@@ -427,19 +427,21 @@ router.post("/delete-design-document", await rpg.execSQL({
 
 router.post("/upload-design", await rpg.singleSQL({
     dbcon: pass.dbcon,
-    sql:   `
+    sql: `
         INSERT INTO DESIGNS (creator, design)
         VALUES ($1, $2)
         RETURNING id
     `,
     sqlParams: [
-        rpg.param("session", "uid"),
-        rpg.param("body")
+        rpg.param("ses", "uid"),
+        rpg.param("post", "design")
     ],
     onEnd: (req, res, result) => {
+        //console.log(`[upload-design] new design: ${JSON.stringify(req.session)}`);
+        //console.log(`[upload-design] new design: ${JSON.stringify(req.body.design)}`);
         if (result && result.id) {
             const newDesignId = result.id;
-            console.log(`[upload-design] new design id: ${newDesignId}`);
+            //console.log(`[upload-design] new design id: ${newDesignId}`);
             res.json({ status: "ok", id: newDesignId });
         } else {
             res.status(500).json({ status: "err", message: "Failed to retrieve design ID" });
@@ -460,21 +462,23 @@ router.post("/get-design", await rpg.singleSQL({
     `,
     sqlParams: [rpg.param("body", "id")],
     onStart:   (req, res) => { 
-        console.log("Received request body:", JSON.stringify(req.body));
-        const id = req.body?.id || "undefined";
-        console.log("Fetching design with ID:", id);
+        //console.log(`[get-design] onStart - Received request body: ${JSON.stringify(req)}`);
+        // const id = req.body?.id || "undefined";
+        // console.log(`[get-design] Fetching design with id: ${id}`);
     },
     onEnd: (req, res, result) => {
+        // console.log(`[get-design] onEnd - Design is: ${JSON.stringify(result.design)}`);
         if (result && result.design) {
+            // console.log(`Found design for id: ${req.body?.id}`);
             const design = JSON.stringify(result.design);
             res.json({ status: "ok", result: design });
         } else {
-            console.log("Design not found for ID:", req.body?.id);
+            // console.log("Design not found for id:", req.body?.id);
             res.status(404).json({ status: "err", message: "Design not found" });
         }
     },
     onError: (err, req, res) => {
-        console.error("Error in /get-design query:", err);
+        // console.error("Error in /get-design query:", err);
         res.status(500).json({ status: "err", message: "Internal Server Error" });
     }
 }));
@@ -499,6 +503,8 @@ router.get("/get-user-designs", await rpg.execSQL({
             public: row.public,
             locked: row.locked
         }));
+
+        console.log(`[get-user-designs] ${JSON.stringify(designs)}`);
 
         res.json({ status: "ok", result: designs });
     },
@@ -544,7 +550,6 @@ router.post("/design-public", await rpg.multiSQL({
     SET PUBLIC = NOT PUBLIC
     WHERE id = $1;
     `,
-    postReqData: ["sesid"],
     sqlParams:   [rpg.param("post", "dsgnid")]
 }));
 
@@ -555,7 +560,6 @@ router.post("/design-lock", await rpg.multiSQL({
     SET locked = NOT locked
     WHERE id = $1;
     `,
-    postReqData: ["sesid"],
     sqlParams:   [rpg.param("post", "dsgnid")]
 }));
 
@@ -570,7 +574,7 @@ router.post("/update-design", await rpg.singleSQL({
     sesReqData:  ["uid"],
     postReqData: ["id", "design"],
     sqlParams:   [
-        rpg.param("post", "design", JSON.stringify),
+        rpg.param("post", "design"),
         rpg.param("ses", "uid"),
         rpg.param("post", "id")
     ],
@@ -614,7 +618,6 @@ router.post("/designs-documents", await rpg.multiSQL({
     WHERE dsgnid = $1
         AND active = TRUE
     `,
-    postReqData: ["sesid"],
     sqlParams:   [rpg.param("post", "dsgnid")]
 }));
 

@@ -32,22 +32,27 @@ export let StagesEditController = ($scope, DesignStateService,
     self.errorList = [];
     self.selectedOption = "";
     self.roles = [];
-    /*
-        BACKEND FUNCTIONS
-    */
-    self.init = function(){
-        //resetValues();
-        if(self.selectedView == "newDesign") self.changeDesign(null);
+
+    self.init = function() {
+        if(self.selectedView == "newDesign") {
+            self.changeDesign(null);
+        }
         if(self.design != null){
+            if (typeof self.design === "string") {
+                self.design = JSON.parse(self.design);
+            }
             self.stageType = self.design.type;
-            if(self.design.type == "semantic_differential") self.num = self.design.phases[0].questions[0].ans_format.values;
+            if(self.design.type == "semantic_differential") {
+                self.num = self.design.phases[0].questions[0].ans_format.values;
+            }
             resetValues();
             self.CleanEmptyValues();
             self.CreateErrorList();
         }
     };
 
-    self.CleanEmptyValues = function(){
+    self.CleanEmptyValues = function() {
+        console.log(`CleanEmptyValues self.design: '${JSON.stringify(self.design)}'`);
         var phases = self.design.phases;
         for(let i =0; i< phases.length; i++){
             var phase = phases[i];
@@ -241,18 +246,19 @@ export let StagesEditController = ($scope, DesignStateService,
             ]
         };
         if(type){
-            var postdata;
+            let postdata = {};
+
             if(type === "semantic_differential"){
-                postdata = semantic;
+                postdata = { design: semantic };
             }
             else if(type== "ranking"){
-                postdata = ranking;
+                postdata = { design: ranking };
             }
 
             $http.post("/upload-design", postdata)
                 .then(function (response) {
                     if (response.data.status === "ok") {
-                        console.log(`[uploadDesign] ${JSON.stringify(response)}`);
+                        //console.log(`[uploadDesign] ${JSON.stringify(response)}`);
                         self.getDesign(response.data.id);
                     }
                 })
@@ -320,10 +326,9 @@ export let StagesEditController = ($scope, DesignStateService,
     self.checkDesign = function(){ 
         var error = false;
         var phases = self.design.phases;
-        //console.log(self.design);
-        for(let i =0; i< phases.length; i++){
+        
+        for(let i = 0; i< phases.length; i++){
             var phase = self.design.phases[i];
-
 
             if(self.design.metainfo.title === "") error = true;
 
@@ -361,10 +366,13 @@ export let StagesEditController = ($scope, DesignStateService,
             });
             
             const data = response.data;
-            console.debug(`getDesign: ${JSON.stringify(response)}`);
             
             if (data.status === "ok") {
-                self.changeDesign(data.result);
+                let design = data.result;
+                if (typeof data.result === "string") {
+                    design = JSON.parse(design);
+                }
+                self.changeDesign(design);
                 DesignStateService.designState.id = id;
                 self.designId.id = DesignStateService.designState.id;
                 self.selectView("newDesignExt");
@@ -383,7 +391,9 @@ export let StagesEditController = ($scope, DesignStateService,
         self.currentStage = 0; 
         self.currentQuestion = 0; 
         self.stageType = self.design.type;
-        if(self.design.type == "semantic_differential") self.design.phases[0].questions[0].ans_format.values;
+        if(self.design.type == "semantic_differential") {
+            self.design.phases[0].questions[0].ans_format.values;
+        }
         self.busy = false; 
         self.extraOpts = false;
         self.prevStages = false;

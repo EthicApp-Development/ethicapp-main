@@ -33,26 +33,24 @@ export let BrowseDesignsController = ($scope,
         self.dsgntype = (type == "semantic_differential" ? "T": "R");
     };
 
-    self.designPublic = function (dsgnid) {
+    self.designPublic = async function (dsgnid) {
         var postdata = { dsgnid: dsgnid };
-        $http({ url: "design-public", method: "post", data: postdata })
-            .then(function () {
-                // Manejo exitoso si es necesario
-            })
-            .catch(function (error) {
-                console.error("Error making design public:", error);
-            });
+        try {
+            await $http({ url: "design-public", method: "post", data: postdata });
+        }
+        catch (error) {
+            console.log(`Failed to change public property of design with id:'${dsgnid}'`);
+        }
     };
     
-    self.designLock = function (dsgnid) {
+    self.designLock = async function (dsgnid) {
         var postdata = { dsgnid: dsgnid };
-        $http({ url: "design-lock", method: "post", data: postdata })
-            .then(function () {
-                // Manejo exitoso si es necesario
-            })
-            .catch(function (error) {
-                console.error("Error locking design:", error);
-            });
+        try {
+            await $http({ url: "design-lock", method: "post", data: postdata });
+        }
+        catch (error) {
+            console.log(`Failed to lock design with id:'${dsgnid}'`);
+        }
     };
     
     self.getDesigns = function () {
@@ -81,9 +79,9 @@ export let BrowseDesignsController = ($scope,
             });
     };
     
-    self.deleteDesign = function (ID) {
-        console.log(ID);
-        var postdata = { id: ID };
+    self.deleteDesign = function (id) {
+        // console.log(ID);
+        var postdata = { id: id };
         $http.post("delete-design", postdata)
             .then(function (response) {
                 var data = response.data;
@@ -97,10 +95,15 @@ export let BrowseDesignsController = ($scope,
     };
     
     self.getDesign = function (id) {
-        console.log(`[getDesign] id: ${id}`);
+        // console.log(`[getDesign] id: ${id}`);
         $http.post("get-design", { id: id })
             .then(function (response) {
-                var data = response.data;
+                let data = response.data;
+                let design = data.result;
+
+                if (typeof design === "string") {
+                    design = JSON.parse(design);
+                }
                 if (data.status === "ok") {
                     self.changeDesign(data.result);
                 }
@@ -114,8 +117,12 @@ export let BrowseDesignsController = ($scope,
         $http.post("get-design", { id: id })
             .then(function (response) {
                 var data = response.data;
+                let design = data.result;
+                if (typeof design == "string") {
+                    design = JSON.parse(design);
+                }
                 if (data.status === "ok") {
-                    self.changeDesign(data.result);
+                    self.changeDesign(design);
                     if (type === "E") {
                         self.selectView("newDesignExt");
                     } else {
@@ -123,7 +130,6 @@ export let BrowseDesignsController = ($scope,
                     }
                     DesignStateService.designState.id = id;
                     self.designId.id = DesignStateService.designState.id;
-                    console.log(self.designId);
                 }
             })
             .catch(function (error) {
@@ -137,7 +143,7 @@ export let BrowseDesignsController = ($scope,
         self.launchId.type = Type;
         //set title and type
         self.selectView("launchActivity");
-        console.log(self.launchId);
+        //console.log(self.launchId);
     };
 
     self.init();

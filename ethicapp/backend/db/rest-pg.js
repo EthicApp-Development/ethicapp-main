@@ -27,18 +27,24 @@ async function getDBInstance(dbcon) {
 }
 
 function smartArrayConvert(sqlParams, ses, data, calc) {
-    var arr = [];
+    const arr = [];
     for (let i = 0; i < sqlParams.length; i++) {
-        var p = sqlParams[i];
+        let p = sqlParams[i];
         p = JSON.parse(p);
-        if (p.type == "plain")
-            arr.push(p.name);
-        else if (p.type == "ses")
-            arr.push(ses[p.name]);
-        else if (p.type == "calc")
-            arr.push(calc[p.name]);
-        else
-            arr.push(data[p.name]);
+
+        let value;
+        if (p.type === "plain") {
+            value = p.name;
+        } else if (p.type === "ses") {
+            value = ses[p.name];
+        } else if (p.type === "calc") {
+            value = calc[p.name];
+        } else {
+            value = data[p.name];
+        }
+
+        //console.log(`Converted parameter: ${p.name} =`, value);
+        arr.push(value);
     }
     return arr;
 }
@@ -86,8 +92,8 @@ export function execSQL(params) {
 
             if (params.sesReqData) {
                 for (const reqData of params.sesReqData) {
-                    if (ses[reqData] === undefined) { // Validar solo si es undefined
-                        console.error("[Req Error] Falta dato de sesión: " + reqData);
+                    if (ses[reqData] === undefined) {
+                        console.error(`[execSQL, Req Error] Session parameter is missing: ${req.path} ${reqData}`);
                         res.status(400).json({ status: "err" });
                         return;
                     }
@@ -96,8 +102,8 @@ export function execSQL(params) {
 
             if (params.postReqData) {
                 for (const reqData of params.postReqData) {
-                    if (data[reqData] === undefined) { // Validar solo si es undefined
-                        console.error("[Req Error] Falta dato de body: " + reqData);
+                    if (data[reqData] === undefined) {
+                        console.error(`[execSQL, Req Error] Body parameter is missing: ${req.path} ${reqData}`);
                         res.status(400).json({ status: "err" });
                         return;
                     }
@@ -146,7 +152,7 @@ export function nExecSQL(params) {
             if (params.sesReqData) {
                 for (const reqData of params.sesReqData) {
                     if (!ses[reqData]) {
-                        console.error("[Req Error] Falta dato de sesión: " + reqData);
+                        console.error("[nExecSQL, Req Error] Session parameter is missing: " + reqData);
                         res.status(400).json({ status: "err" });
                         return;
                     }
@@ -156,7 +162,7 @@ export function nExecSQL(params) {
             if (params.postReqData) {
                 for (const reqData of params.postReqData) {
                     if (!data[reqData]) {
-                        console.error("[Req Error] Falta dato de body: " + reqData);
+                        console.error("[nExecSQL, Req Error] Body parameter is missing: " + reqData);
                         res.status(400).json({ status: "err" });
                         return;
                     }
@@ -213,7 +219,7 @@ export function singleSQL(params) {
             if (params.sesReqData) {
                 for (const reqData of params.sesReqData) {
                     if (ses[reqData] === undefined) {
-                        console.error("[Req Error] Missing session data: " + reqData);
+                        console.error(`[singleSQL, Req Error] Session parameter is missing: ${req.path} ${reqData}`);
                         res.status(400).json({ status: "err" });
                         return;
                     }
@@ -224,7 +230,7 @@ export function singleSQL(params) {
             if (params.postReqData) {
                 for (const reqData of params.postReqData) {
                     if (data[reqData] === undefined) {
-                        console.error(`[Req Error] Missing body data: ${reqData}`);
+                        console.error(`[singleSQL, Req Error] Body is missing: ${req.path} ${reqData}`);
                         res.status(400).json({ status: "err" });
                         return;
                     }
@@ -279,7 +285,7 @@ export function multiSQL(params) {
             if (params.sesReqData) {
                 for (const reqData of params.sesReqData) {
                     if (!ses[reqData]) {
-                        console.error("[Req Error] Falta dato de sesión: " + reqData);
+                        console.error(`[multiSQL, Req Error] Missing session parameter: ${req.path} ${reqData}`);
                         res.status(400).json({ status: "err" });
                         return;
                     }
@@ -290,7 +296,7 @@ export function multiSQL(params) {
             if (params.postReqData) {
                 for (const reqData of params.postReqData) {
                     if (!data[reqData]) {
-                        console.error("[Req Error] Falta dato de body: " + reqData);
+                        console.error(`[multiSQL, Req Error] Missing body parameter: ${req.path} ${reqData}`);
                         res.status(400).json({ status: "err" });
                         return;
                     }
