@@ -67,16 +67,11 @@ export let StagesEditController = ($scope, DesignStateService,
 
       modalInstance.result.then(
         function (result) {
-          console.log("Modal cerrado con resultado:", result);
-        //   CaseService.attachCaseToDesign(result, self.designId.id).then(
-        //     (response) => {}
-        //   );
           CaseService.getCase(result).then((response) => {
             self.case = response.data.result;
           });
         },
         function () {
-          console.log("Modal cerrado");
         }
       );
     };

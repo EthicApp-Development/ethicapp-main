@@ -64,7 +64,7 @@
                     </div>
     
                     <div ng-if="tabSelectCase == 'createCase'">     
-                        <input type="file" id="file-input" multiple style="display: none;" ng-change="handleFileSelect($event)" ng-model="files" accept="application/pdf"/>
+                        <input type="file" id="file-input" multiple style="display: none;" accept="application/pdf"/>
                         <div class="upload-container" id="upload-container" ng-click="triggerFileInput()" ng-init="initDragDrop()">
                             <p>{{'dragDropMsg' | translate}}</p>
                         </div>         
@@ -89,7 +89,6 @@
 
 
     <div class="modal-footer">
-        
-        <button type="button" class="btn btn-primary" ng-if="tabSelectCase == 'createCase'" ng-click="createCaseFromDocs($event)" ng-disabled="formFiles.length == 20">{{'createCase' | translate}}</button>
+        <button type="button" class="btn btn-primary" ng-if="tabSelectCase == 'createCase' && formFiles.length > 0" ng-click="createCaseFromDocs($event)" ng-disabled="formFiles.length == 20">{{'createCase' | translate}}</button>
     </div>
 </div>

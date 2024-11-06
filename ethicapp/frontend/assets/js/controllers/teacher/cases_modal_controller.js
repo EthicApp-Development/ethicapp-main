@@ -82,7 +82,6 @@ export function CasesModalController($scope, $window, $http, $timeout, $uibModal
     }
 
     self.handleDragOver = (event) => {
-        console.log("llamando a handleDragOver");
         event.preventDefault();
         event.stopPropagation();
     }
@@ -102,14 +101,8 @@ export function CasesModalController($scope, $window, $http, $timeout, $uibModal
     }
 
     self.addFiles = (files) => {
-
-        console.log("llamando a addFIles");
         Array.from(files).forEach(file => {
             if (file.type === 'application/pdf') {
-                // self.formFiles.push({
-                //     file: file,
-                //     name: file.name
-                // });
                 self.formFiles.push(file);
             } else {
                 alert('Solo se permiten archivos PDF');
@@ -118,7 +111,6 @@ export function CasesModalController($scope, $window, $http, $timeout, $uibModal
         });
 
         self.$apply();
-        console.log(self.formFiles);
     }
     
 
@@ -136,7 +128,6 @@ export function CasesModalController($scope, $window, $http, $timeout, $uibModal
     self.renameDocument = ($event, documentId, newName) => {
         $event.preventDefault();
         CaseService.renameDocument(documentId, newName).then((response) => {
-            console.log(`Document ${documentId} renamed to ${newName}`);
         });
     }
 
@@ -150,20 +141,16 @@ export function CasesModalController($scope, $window, $http, $timeout, $uibModal
 
     self.createCaseFromDocs = (event) => {
         event.preventDefault();
-        console.log("Create from document");
         
         CaseService.createCaseEmpty().then((response) => {
             const newCaseId = response.data.result.case_id;
-            $uibModalInstance.close(newCaseId);
-            console.log(self.case)
-
+            
             CaseService.uploadDocuments(newCaseId, self.formFiles).then((response) => {
                 const result = response.data.result;
-                console.log(result);
                 
+                $uibModalInstance.close(newCaseId);
             })
         });
         
-
     }
 }

@@ -151,117 +151,105 @@ export const CasesController = (
         self.handleDrop(event);
         uploadContainer.classList.remove('over'); 
     })
-}
+  }
 
 
-self.triggerFileInput = () => {
+  self.triggerFileInput = () => {
     const input = document.getElementById('file-input');
-    
     input.onchange = (event) => {
         const files = event.target.files;
         self.addFiles(files);
-        self.$apply(); // Asegura que AngularJS actualice la vista
+        input.value = ''; // Restablece el valor del input
+        self.$apply(); 
     };
     
     input.click();
-}
+  }
 
 
-self.handleFileSelect = (event) => {
-    const files = event.target.files;
-    self.addFiles(files);
-    self.$apply();
-}
 
-self.handleDragOver = (event) => {
-    console.log("llamando a handleDragOver");
-    event.preventDefault();
-    event.stopPropagation();
-}
+  self.handleFileSelect = (event) => {
+      const files = event.target.files;
+      self.addFiles(files);
+      self.$apply();
+  }
 
-self.handleDragLeave = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    self.$apply();
-}
+  self.handleDragOver = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+  }
 
-self.handleDrop = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const files = event.dataTransfer.files;
-    self.addFiles(files);
-    self.$apply();
-}
+  self.handleDragLeave = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      self.$apply();
+  }
 
-self.addFiles = (files) => {
+  self.handleDrop = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const files = event.dataTransfer.files;
+      self.addFiles(files);
+      self.$apply();
+  }
 
-    console.log("llamando a addFIles");
-    Array.from(files).forEach(file => {
-        if (file.type === 'application/pdf') {
-            // self.formFiles.push({
-            //     file: file,
-            //     name: file.name
-            // });
-            self.formFiles.push(file);
-        } else {
-            alert('Solo se permiten archivos PDF');
-        }
-        
-    });
+  self.addFiles = (files) => {
+      Array.from(files).forEach(file => {
+          if (file.type === 'application/pdf') {
+              self.formFiles.push(file);
+          } else {
+              alert('Solo se permiten archivos PDF');
+          }
+          
+      });
 
-    if (self.formFiles.length === 0) {
-        return;
-    }
+      if (self.formFiles.length === 0) {
+          return;
+      }
 
-    CaseService.uploadDocuments(self.case.case_id, self.formFiles).then((response) => {
-        const files = response.data.result;
-        files.forEach((file) => {
-            if (self.case.documents.some((document) => document.path === file.path)) {
-                return
-            } else {
-                self.case.documents.push(file);
-            }
-        });
-    })
+      CaseService.uploadDocuments(self.case.case_id, self.formFiles).then((response) => {
+          const files = response.data.result;
+          files.forEach((file) => {
+              if (self.case.documents.some((document) => document.path === file.path)) {
+                  return
+              } else {
+                  self.case.documents.push(file);
+              }
+          });
+      })
 
-    self.$apply();
-    console.log(self.formFiles);
-}
+      self.formFiles = [];
+      self.$apply();
+  }
 
 
-self.removeFile = ($event, index) => {
-    $event.preventDefault();
-    // self.formFiles.splice(index, 1);
-    console.log("index", index);
-    CaseService.deleteDocument(self.case.case_id, self.case.documents[index].id).then((response) => {
-        console.log("Document deleted");
-    })
-    self.case.documents.splice(index, 1);
+  self.removeFile = ($event, index) => {
+      $event.preventDefault();
+      CaseService.deleteDocument(self.case.case_id, self.case.documents[index].id).then((response) => {
+      })
+      self.case.documents.splice(index, 1);
+  };
+
+  self.viewFile = ($event, path) => {
+      $event.preventDefault();
+      const url = path;
+      $window.open(url, '_blank');
+  }
 
 
-};
+  self.renameDocument = ($event, documentId, newName) => {
+      $event.preventDefault();
+      CaseService.renameDocument(documentId, newName).then((response) => {
+      });
+  }
 
-self.viewFile = ($event, path) => {
-    $event.preventDefault();
-    const url = path;
-    $window.open(url, '_blank');
-}
-
-
-self.renameDocument = ($event, documentId, newName) => {
-    $event.preventDefault();
-    CaseService.renameDocument(documentId, newName).then((response) => {
-        console.log(`Document ${documentId} renamed to ${newName}`);
-    });
-}
-
-self.renameDocumentOnEnter = ($event, documentId) => {
-    if ($event.key === 'Enter') {
-        const newName = $event.target.value;
-        self.renameDocument($event, documentId, newName);
-        $event.target.blur();
-    }
-}
+  self.renameDocumentOnEnter = ($event, documentId) => {
+      if ($event.key === 'Enter') {
+          const newName = $event.target.value;
+          self.renameDocument($event, documentId, newName);
+          $event.target.blur();
+      }
+  }
 
   self.customFilter = (anyCase) => {
     return CaseService.customFilter(anyCase, self.userSearch);

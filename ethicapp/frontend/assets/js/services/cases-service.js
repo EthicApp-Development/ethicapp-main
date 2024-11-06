@@ -108,8 +108,6 @@ export class CasesService {
       const formData = new FormData();
 
       files.forEach((file) => {
-        console.log("file", file);
-        console.log("file.type", file.type);
         if (file.type === "application/pdf") {
           formData.append("pdf", file);
         } else {
@@ -230,7 +228,14 @@ export class CasesService {
 
           return editor;
       });
-  }
+    }
+
+
+    this.ckeditorIsNotEmpty = (texto) => {
+      const regex = /^(?!<p>&nbsp;<\/p>(<p>&nbsp;<\/p>)*$).+/;
+      return regex.test(texto);
+    }
     
+  
   }
 }
