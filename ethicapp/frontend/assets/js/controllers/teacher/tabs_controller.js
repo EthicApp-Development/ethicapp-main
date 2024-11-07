@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export let TabsController = ($scope, $http) => {
+export let TabsController = ($scope, $http, ActivityStateService) => {
     var self = $scope;
     self.tabOptions = [];
     self.tabConfig = ["users", "groups"];
@@ -20,37 +20,54 @@ export let TabsController = ($scope, $http) => {
     };
 
     self.shared.verifyTabs = function () {
+        // Check session type to determine available tabs and stages
         if (
-            (self.selectedSes.type == "R") || (self.selectedSes.type == "T") ||
-            (self.selectedSes.type == "J")
+            self.selectedSes.type === "R" || 
+            self.selectedSes.type === "T" || 
+            self.selectedSes.type === "J"
         ) {
-            self.iterationNames = [];
-            self.tabOptions = ["editor", "users", "dashboard"];
-            // self.sesStatusses = ["configuration"];
-            var pd = {
-                sesid: self.selectedSes.id
-            };
-            console.log("POSTDATA:", pd); //ESTO DEBERIA APARECER
-            $http({ url: "get-admin-stages", method: "post", data: pd })
+            console.log(`[TabsController::verifyTabs] begin`);
+            
+            self.iterationNames = []; // Initialize array for iteration names
+            self.tabOptions = ["editor", "users", "dashboard"]; // Set tab options based on session type
+    
+            // Prepare the request payload
+            const postData = { sesid: self.selectedSes.id };
+            console.log(`[TabsController::verifyTabs] postData: ${JSON.stringify(postData)}`);
+    
+            // Make HTTP request to get admin stages and process response
+            $http({
+                url: "get-admin-stages",
+                method: "post",
+                data: postData
+            })
             .then(function (response) {
+                console.log(`[TabsController::verifyTabs] response: ${JSON.stringify(response)}`);
+    
+                // Assign received stages to `self.stages`
                 self.stages = response.data;
-                response.data.forEach(st => {
+    
+                // Populate `iterationNames` with stage information
+                response.data.forEach(stage => {
                     self.iterationNames.push({
-                        name: self.flang("stage") + " " + st.number,
-                        val: st.id
+                        name: `${self.flang("stage")} ${stage.number}`,
+                        val: stage.id
                     });
-                    console.log("iteration NAMES:", self.iterationNames);
+                    console.log(`[TabsController::verifyTabs] iterationNames: ${JSON.stringify(self.iterationNames)}`);
                 });
             })
             .catch(function (error) {
+                // Log any errors encountered during the HTTP request
                 console.error("Error fetching admin stages:", error);
-            });        
+            });
         }
+    
+        // Set the default tab to "dashboard" if the session status is above 1
         if (self.selectedSes.status > 1) {
             self.selectedTab = "dashboard";
         }
     };
-
+    
     self.setTab = function (idx) {
         self.selectedTab = idx;
     };

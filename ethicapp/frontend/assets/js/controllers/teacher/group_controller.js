@@ -1,7 +1,7 @@
 /*eslint func-style: ["error", "expression"]*/
 import { generateTeams, habMetric } from "../../helpers/util.js";
 
-export let GroupController = ($scope, $http, Notification) => {
+export let GroupController = ($scope, $http, ActivityStateService, Notification) => {
     var self = $scope;
     self.methods = [];
     self.lastI = -1;

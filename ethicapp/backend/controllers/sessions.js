@@ -504,7 +504,7 @@ router.get("/get-user-designs", await rpg.execSQL({
             locked: row.locked
         }));
 
-        console.log(`[get-user-designs] ${JSON.stringify(designs)}`);
+        // console.log(`[get-user-designs] ${JSON.stringify(designs)}`);
 
         res.json({ status: "ok", result: designs });
     },

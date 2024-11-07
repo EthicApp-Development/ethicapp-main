@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export let OptionsController = ($scope, $http, Notification) => {
+export let OptionsController = ($scope, $http, Notification, ActivityStateService) => {
     var self = $scope;
     self.conf = {};
     self.sesidConfig = -1;

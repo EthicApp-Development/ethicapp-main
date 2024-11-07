@@ -1,10 +1,11 @@
 /*eslint func-style: ["error", "expression"]*/
-export let ActivityController = ($scope, ActivityStateService, $filter, $http, Notification, $timeout) => {
+export let ActivityController = ($scope, $filter, $http, Notification, $timeout,
+    ActivityStateService) => {
     var self = $scope;
     self.selectedSes = {};
     self.error = false;
     self.showSpinner = false;
-    self.launchId = ActivityStateService.activityState;
+    self.launchId = ActivityStateService.activityDescriptor;
     
     self.init =function(){
         self.selectedSes = {};
@@ -13,13 +14,11 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
         self.checkContentAnalysisAvailability();
     };
 
-    //Create Activity from launch activity
+    // Create Activity from launch activity
     self.createSession = async function (dsgnName, dsgndescr, dsgntype, dsgnid, additionalConfig = {}) {
         self.showSpinner = true;
     
         try {
-            console.debug(`[createSession] dsgnid: ${dsgnid}`);
-            
             // Check the design
             const checkResponse = await $http({
                 url:    "check-design",
@@ -42,12 +41,18 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
                 const id = sessionResponse.data.id;
     
                 // Call additional functions for activity creation and code generation
+                console.log("[ActivityController::createSession] pre createActivity");
                 await self.createActivity(id, dsgnid);
+                console.log("[ActivityController::createSession] pre generateCodeActivity");
                 await self.generateCodeActivity(id);
                 
                 // Refresh activities and session data
+                console.log("[ActivityController::createSession] pre getActivities");
                 await self.shared.getActivities();
+
+                console.log("[ActivityController::createSession] pre updateSesData");
                 await self.shared.updateSesData();
+                console.log("[ActivityController::createSession] post updateSesData");
             }
         } catch (error) {
             console.error("Error creating session:", error);
@@ -62,18 +67,26 @@ export let ActivityController = ($scope, ActivityStateService, $filter, $http, N
     self.createActivity = async function (sesID, dsgnID) {
         try {
             const postdata = { sesid: sesID, dsgnid: dsgnID };            
+            
+            console.debug(`[ActivityController::createActivity] pre add activity sesId: '${sesID}' dsgnID: '${dsgnID}'`);
             const response = await $http({ url: "add-activity", 
                 method: "post", data: postdata });
             
             const dsng = response.data.result;
             self.startActivityDesign(dsng, sesID);
+
+            console.debug(`[ActivityController::createActivity] post start activity design response: ${JSON.stringify(response)
+            } design: ${dsng}`);
             
             const activities = await self.shared.getActivities();
             const filteredObj = activities.find(item => item.session === sesID);
     
             if (filteredObj) {
-                console.log(filteredObj);
+                console.log(`[ActivityController::createActivity] found activity ${JSON.stringify(filteredObj)}`);
+                // Note that the following method is implemented by 
+                // ManagementController!
                 self.selectActivity(filteredObj.id, sesID, dsng);
+                console.log(`[ActivityController::createActivity] post selectActivity call.`);
             } else {
                 console.warn("No activity found for session:", sesID);
             }

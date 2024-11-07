@@ -1,10 +1,9 @@
 /*eslint func-style: ["error", "expression"]*/
-export let StagesEditController = ($scope, DesignStateService,
-    ActivityStateService, 
-    $filter, $http, Notification, $timeout) => {
+export let StagesEditController = ($scope, DesignStateService, 
+    $filter, $http, Notification, $timeout, ActivityStateService) => {
     var self = $scope;
     self.designId = DesignStateService.designState;
-    self.launchId = ActivityStateService.activityState;
+    self.launchId = ActivityStateService.activityDescriptor;
 
     self.keyGroups = function (k1, k2) {
         return {
@@ -181,11 +180,11 @@ export let StagesEditController = ($scope, DesignStateService,
                 self.launchId.title = self.design.metainfo.title;
                 self.launchId.type = self.design.type;
 
-                // ActivityStateService.activityState.id = self.designId.id;
-                // ActivityStateService.activityState.title = self.design.metainfo.title;
-                // ActivityStateService.activityState.type = self.design.type;
+                // ActivityStateService.activityDescriptor.id = self.designId.id;
+                // ActivityStateService.activityDescriptor.title = self.design.metainfo.title;
+                // ActivityStateService.activityDescriptor.type = self.design.type;
                 
-                // self.launchId = ActivityStateService.activityState;
+                // self.launchId = ActivityStateService.activityDescriptor;
                 self.selectView("launchActivity");
             }
         });

@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export let SesEditorController = ($scope, $http, Notification) => {
+export let SesEditorController = ($scope, $http, Notification, ActivityStateService) => {
     var self = $scope;
 
     self.mTransition = { 1: 3, 3: 5, 5: 6, 6: 8, 8: 9 };

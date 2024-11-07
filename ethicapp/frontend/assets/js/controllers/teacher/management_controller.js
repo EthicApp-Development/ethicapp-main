@@ -30,7 +30,7 @@ export let ManagementController = ($scope,
     self.inst_id = 0;
     self.tabSel = TabStateService.sharedTabState;
     self.designId = DesignStateService.designState;
-    self.launchId = ActivityStateService.activityState;
+    self.launchId = ActivityStateService.activityDescriptor;
 
     if (lang.startsWith("es")) {
         self.lang = "es_CL";
@@ -97,6 +97,10 @@ export let ManagementController = ($scope,
         });
     };
 
+    self.selectedSes = function () {
+        return ActivityStateService.sessionDescriptor;
+    }
+
     self.updatelangdata = async function () {
         try {
             const response = await $http({
@@ -132,6 +136,7 @@ export let ManagementController = ($scope,
     };
 
     self.selectSession = function (ses, id) {
+        console.log("[ManagementController::selectSession]");
         self.selectedId = id;
         self.selectedSes = ses;
         self.requestDocuments();
@@ -141,7 +146,13 @@ export let ManagementController = ($scope,
         self.getMembers();
         self.shared.verifyGroups();
         self.shared.resetGraphs();
-        self.shared.verifyTabs();
+
+        ActivityStateService.loadActivityPhases(ses);
+        self.stages = ActivityStateService.phases;
+        self.iterationNames = ActivityStateService.phaseInformation;
+
+        //self.shared.verifyTabs();
+        
         self.shared.resetTab();
         self.shared.updateConf();
         $location.path(self.selectedSes.id);
@@ -152,15 +163,16 @@ export let ManagementController = ($scope,
 
     //Select activity from Activities
     self.selectActivity = function(activityId, sesId, design){
+        console.log("[ManagementController::selectActivity]");
         self.selectView("activity");
         self.currentActivity.id = activityId;
         self.selectedId = sesId;
         self.selectedSes = getSession(sesId)[0];
         console.log(self.selectedSes);
         self.design = design;
-        console.log("Activity ID:",self.currentActivity);
-        console.log("Session ID:",self.selectedId);
-        console.log("Design:",self.design); 
+        console.log(`[ManagementController::selectActivity] Activity ID:'${JSON.stringify(self.currentActivity)}'`);
+        console.log(`[ManagementController::selectActivity] Session ID:'${self.selectedId}'`);
+        console.log(`[ManagementController::selectActivity] Design:'${JSON.stringify(self.design)}'`);
         //------------------------
         self.requestDocuments();
         //self.shared.updateState();
@@ -169,22 +181,31 @@ export let ManagementController = ($scope,
         self.getNewUsers();
         self.getMembers();
         //self.shared.verifyGroups(); //GroupController
-        self.shared.verifyTabs(); //TabsController
-        self.shared.resetTab(); //TabsController
+        console.log("[ManagementController::selectActivity] pre verifyTabs");
+        ActivityStateService.loadActivityPhases(sesId);
+        self.stages = ActivityStateService.phases;
+        self.iterationNames = ActivityStateService.phaseInformation;
+
+        // self.shared.verifyTabs(); //TabsController
+        console.log("[ManagementController::selectActivity] post verifyTabs");
+        //self.shared.resetTab(); //TabsController
+        console.log("[ManagementController::selectActivity] post resetTab");
         //self.shared.updateConf(); //OptionsController
         //$location.path(self.selectedSes.id);
         if(self.shared.getStages)
             self.shared.getStages();
-        
+        console.log("[ManagementController::selectActivity] end reached");        
     };
 
     function getSession(id) {
+        console.log("[ManagementController::getSession]");
         return self.sessions.filter(
             function(sessions){ return sessions.id == id; }
         );
     }
 
-    self.selectView = function(tab, type){
+    self.selectView = function(tab, type) {
+        console.log("[ManagementController::selectView]");
         if(tab != self.selectedView){
             self.selectedView = tab;
             // console.debug(self.selectedView);
@@ -206,6 +227,7 @@ export let ManagementController = ($scope,
     };
 
     self.shared.updateSesData = function () {
+        console.log("[ManagementController::updateSesData]");
         $http({ url: "get-session-list", method: "POST" })
             .then(function (response) {
                 self.sessions = response.data;
@@ -230,6 +252,7 @@ export let ManagementController = ($scope,
     };
 
     self.shared.getActivities = async function () {
+        console.log("[ManagementController::getActivities]");
         const postdata = {};
 
         try {

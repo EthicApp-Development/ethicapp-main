@@ -1,5 +1,6 @@
 /*eslint func-style: ["error", "expression"]*/
-export let MonitorActivityController = ($scope, $filter, $http, $window, Notification, $uibModal) => {
+export let MonitorActivityController = ($scope, $filter, $http, $window, Notification, $uibModal,
+    ActivityStateService) => {
     var self = $scope;
     self.stagesState = null;
     self.completion = null;
