@@ -57,21 +57,23 @@
                 </div>
             </div>
             <div class="wrapper">
-                <div class="containersdfsdfsd" style="overflow: auto; max-height: 40em; min-height: 10em; border: #bbb 1px solid;">
-                    <!-- <div class="containersdfsdfsd" style="overflow: scroll; max-height: 40em; min-height: 10em; border: #bbb 1px solid;"> -->
-                    <div class="list-group">
-                        <div ng-if="tabEditorDocuments == 'editorTab'">
-                            <div ng-init="initEditor(caseReadOnly)">
-                                <div class="main-container-ckeditor">
-                                    <div class="editor-container editor-container_classic-editor editor-container_include-style" id="editor-container">
-                                        <div class="editor-container__editor"><div id="editor"></div></div>
+                <div style="overflow: auto; max-height: 40em; min-height: 10em; width: 100%;" >
+                    <div ng-if="tabEditorDocuments == 'editorTab'" style="width: 100%;">
+                        <div class="list-group" style="width: 100%;">
+                            <div ng-init="initEditor(caseReadOnly)" style="width: 100%;">
+                                <div class="main-container-ckeditor" style="width: 100%;">
+                                    <div class="editor-container editor-container_include-style" id="editor-container" style="width: 100%;">
+                                        <div class="editor-container__editor" style="width: 100%;">
+                                            <div id="editor" style="width: 100%;">
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="list-group pad-content">
-                        <div ng-if="tabEditorDocuments == 'documentsTab'">
+                    <div ng-if="tabEditorDocuments == 'documentsTab'">
+                        <div class="list-group pad-content" style="border: #bbb 1px solid; ">    
                             <input type="file" id="file-input" multiple style="display: none;" accept="application/pdf" ng-if="!caseReadOnly"/>
                             <div class="upload-container" id="upload-container" ng-click="triggerFileInput()" ng-if="!caseReadOnly" ng-init="initDragDrop()">
                                 <p>{{'dragDropMsg' | translate}}</p>
