@@ -13,7 +13,6 @@ export let ManagementController = ($scope,
     self.activities = []; //activities
     self.currentActivity = {}; //current Activity
     self.design = null;
-    self.selectedSes = null;
     self.documents = [];
     self.questions = [];
     self.questionTexts = [];
@@ -97,7 +96,7 @@ export let ManagementController = ($scope,
         });
     };
 
-    self.selectedSes = function () {
+    self.selectedSes = () => {
         return ActivityStateService.sessionDescriptor;
     }
 
@@ -138,7 +137,9 @@ export let ManagementController = ($scope,
     self.selectSession = function (ses, id) {
         console.log("[ManagementController::selectSession]");
         self.selectedId = id;
-        self.selectedSes = ses;
+        ActivityStateService.setSessionDescriptor(ses);
+        ActivityStateService.loadActivityPhases();
+
         self.requestDocuments();
         self.requestSemDocuments();
         self.requestQuestions();
@@ -147,7 +148,6 @@ export let ManagementController = ($scope,
         self.shared.verifyGroups();
         self.shared.resetGraphs();
 
-        ActivityStateService.loadActivityPhases(ses);
         self.stages = ActivityStateService.phases;
         self.iterationNames = ActivityStateService.phaseInformation;
 
@@ -155,7 +155,7 @@ export let ManagementController = ($scope,
         
         self.shared.resetTab();
         self.shared.updateConf();
-        $location.path(self.selectedSes.id);
+        $location.path(ActivityStateService.sessionDescriptor.id);
         if(self.shared.getStages)
             self.shared.getStages();
     };
@@ -167,8 +167,11 @@ export let ManagementController = ($scope,
         self.selectView("activity");
         self.currentActivity.id = activityId;
         self.selectedId = sesId;
-        self.selectedSes = getSession(sesId)[0];
-        console.log(self.selectedSes);
+        
+        const sessionDescriptor = getSession(sesId)[0];
+        ActivityStateService.setSessionDescriptor(sessionDescriptor);
+        ActivityStateService.loadActivityPhases();
+
         self.design = design;
         console.log(`[ManagementController::selectActivity] Activity ID:'${JSON.stringify(self.currentActivity)}'`);
         console.log(`[ManagementController::selectActivity] Session ID:'${self.selectedId}'`);
@@ -290,7 +293,7 @@ export let ManagementController = ($scope,
     };
 
     self.requestDocuments = async function () {
-        const postdata = { sesid: self.selectedSes.id };
+        const postdata = { sesid: ActivityStateService.sessionDescriptor.id };
     
         try {
             const response = await $http({
@@ -325,7 +328,7 @@ export let ManagementController = ($scope,
     };
     
     self.requestQuestions = async function () {
-        const postdata = { sesid: self.selectedSes.id };
+        const postdata = { sesid: ActivityStateService.sessionDescriptor.id };
     
         try {
             // Step 1: Fetch questions for the session
@@ -355,7 +358,7 @@ export let ManagementController = ($scope,
     };
     
     self.requestSemDocuments = async function () {
-        const postdata = { sesid: self.selectedSes.id };
+        const postdata = { sesid: ActivityStateService.sessionDescriptor.id };
     
         try {
             const response = await $http({
@@ -370,7 +373,7 @@ export let ManagementController = ($scope,
     };
     
     self.getNewUsers = async function () {
-        const postdata = { sesid: self.selectedSes.id };
+        const postdata = { sesid: ActivityStateService.sessionDescriptor.id };
     
         try {
             const response = await $http({
@@ -385,7 +388,7 @@ export let ManagementController = ($scope,
     };
     
     self.getMembers = async function () {
-        const postdata = { sesid: self.selectedSes.id };
+        const postdata = { sesid: ActivityStateService.sessionDescriptor.id };
     
         try {
             const response = await $http({
@@ -420,8 +423,8 @@ export let ManagementController = ($scope,
     };
 
     self.openDuplicateSes = function () {
-        if (self.selectedSes == null) return;
-        var ses = angular.copy(self.selectedSes);
+        if (ActivityStateService.sessionDescriptor == null) return;
+        let ses = angular.copy(ActivityStateService.sessionDescriptor);
         $uibModal.open({
             templateUrl:  "static/duplicate-ses.html",
             controller:   "DuplicateSesModalController",
@@ -456,27 +459,23 @@ export let ManagementController = ($scope,
         self.shared.updateState();
     };
 
-    
-
     self.shared.resetSesId = function () {
         self.selectedId = -1;
     };
 
-
     self.generateCode = async function () {
-        const postdata = { id: self.selectedSes.id };
+        const postdata = { id: ActivityStateService.sessionDescriptor.id };
     
         try {
             const response = await $http.post("generate-session-code", postdata);
             if (response.data.code != null) {
-                self.selectedSes.code = response.data.code;
+                ActivityStateService.sessionDescriptor.code = response.data.code;
             }
         } catch (error) {
             console.error("Error generating session code:", error);
         }
     };
     
-
     self.flang = function (key) {
         return $filter("translate")(key);
     };

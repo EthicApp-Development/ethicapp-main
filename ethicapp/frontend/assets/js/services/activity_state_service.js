@@ -18,13 +18,20 @@ let ActivityStateService = ($http) => {
         type: '' 
     };
 
+    service.setSessionDescriptor = (sd) => {
+        service.sessionDescriptor = { ...service.sessionDescriptor, ...sd };
+    }
+
     // Method to load activity phases based on session id
-    service.loadActivityPhases = function(sesid) {
+    service.loadActivityPhases = () => {
+        const sesid = service.sessionDescriptor.id;
+
         // Log the beginning of the function call
         console.log(`[ActivityStateService::loadActivityPhases] start with sesid: ${sesid}`);
 
         // Prepare request payload
-        const postData = { sesid: sesid };
+        console.debug(`[ActivityStateService::loadActivityPhases] sessionDescriptor.id: ${service.sessionDescriptor.id}`);
+        const postData = { sesid: service.sessionDescriptor.id };
 
         // Make HTTP request to fetch admin stages
         return $http({
@@ -37,18 +44,18 @@ let ActivityStateService = ($http) => {
                 `[ActivityStateService::loadActivityPhases] response: ${JSON.stringify(response)}`);
 
             // Assign received stages data to `service.activityState.phases`
-            service.activityState.phases = response.data;
+            service.activityDescriptor.phases = response.data;
 
             // Populate `phaseInformation` within `activityState` with stage details
-            service.activityState.phaseInformation = response.data.map(stage => ({
+            service.activityDescriptor.phaseInformation = response.data.map(stage => ({
                 name: `Stage ${stage.number}`,
                 val: stage.id
             }));
             
-            console.log(`[ActivityStateService::loadActivityPhases] phaseInformation: ${JSON.stringify(service.activityState.phaseInformation)}`);
+            console.log(`[ActivityStateService::loadActivityPhases] phaseInformation: ${JSON.stringify(service.activityDescriptor.phaseInformation)}`);
 
             // Return phases data if further handling is required
-            return service.activityState.phases;
+            return service.activityDescriptor.phases;
         })
         .catch((error) => {
             console.error("[ActivityStateService::loadActivityPhases] Error fetching admin stages:",

@@ -2,13 +2,11 @@
 export let ActivityController = ($scope, $filter, $http, Notification, $timeout,
     ActivityStateService) => {
     var self = $scope;
-    self.selectedSes = {};
     self.error = false;
     self.showSpinner = false;
     self.launchId = ActivityStateService.activityDescriptor;
     
     self.init =function(){
-        self.selectedSes = {};
         self.launchDesignId = self.launchId.id;
         self.shared.getActivities();
         self.checkContentAnalysisAvailability();

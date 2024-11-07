@@ -12,7 +12,7 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
     };
 
     self.ActivityState = async function (stageId) {
-        const postdata = { sesid: self.selectedSes.id };
+        const postdata = { sesid: ActivityStateService.sessionDescriptor.id };
     
         try {
             if (self.design.type === "semantic_differential") {
@@ -84,7 +84,7 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
     self.nextActivityDesign = async function () {
         try {
             const stageCounter = self.currentActivity.stage + 1;
-            const sesid = self.selectedSes.id;
+            const sesid = ActivityStateService.sessionDescriptor.id;
             const current_phase = self.design.phases[stageCounter];
             
             const postdata = {
@@ -157,7 +157,8 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
                     self.currentStage();
                     self.shared.verifyTabs();
                     self.getStages();
-                    self.selectedSes.current_stage = stageid;
+                    ActivityStateService.sessionDescriptor.current_stage = stageid;
+
                 } else if (self.design.type === "ranking") {
                     // Add ranking roles sequentially
                     for (const role of current_phase.roles) {
@@ -186,7 +187,7 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
                     Notification.success("Fase creada correctamente");
                     self.shared.verifyTabs();
                     self.currentStage();
-                    self.selectedSes.current_stage = stageid;
+                    ActivityStateService.sessionDescriptor.current_stage = stageid;
                 }
             } else {
                 Notification.error("Error al crear la fase");
@@ -199,7 +200,7 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
 
     self.currentStage = function() {
         var pd = {
-            sesid: self.selectedSes.id
+            sesid: ActivityStateService.sessionDescriptor.id
         };
         return $http({ url: "get-current-stage", method: "post", data: pd }).then(function(response) {
             self.currentActivity.stage = response.data.length === 0 ? 0: response.data[0].number -1;
@@ -215,7 +216,8 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
     
         modalInstance.result.then(async function () {
             try {
-                await $http.post("session-finish-stages", { sesid: self.selectedSes.id });
+                await $http.post("session-finish-stages", 
+                    { sesid: ActivityStateService.sessionDescriptor.id });
                 window.location.reload();
             } catch (error) {
                 console.error("Error finishing session stages:", error);

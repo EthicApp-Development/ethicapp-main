@@ -11,15 +11,15 @@ export let OptionsController = ($scope, $http, Notification, ActivityStateServic
 
     self.saveConfs = function () {
         var postdata = {
-            sesid:   self.selectedSes.id,
+            sesid:   ActivityStateService.sessionDescriptor.id,
             options: self.buildConfStr()
         };
         $http.post("update-ses-options", postdata)
         .then(function (response) {
             if (response.data.status === "ok") {
                 Notification.success("Opciones actualizadas");
-                self.selectedSes.options = postdata.options;
-                self.selectedSes.conf = null;
+                ActivityStateService.sessionDescriptor.options = postdata.options;
+                ActivityStateService.sessionDescriptor.conf = null;
                 self.shared.updateConf();
             }
         })
@@ -32,21 +32,20 @@ export let OptionsController = ($scope, $http, Notification, ActivityStateServic
     self.shared.saveConfs = self.saveConfs;
 
     self.shared.updateConf = function () {
-        if (self.selectedSes.conf == null) {
-            self.selectedSes.conf = {};
-            var op = self.selectedSes.options || "";
+        if (ActivityStateService.sessionDescriptor.conf == null) {
+            ActivityStateService.sessionDescriptor.conf = {};
+            var op = ActivityStateService.sessionDescriptor.options || "";
             for (var i = 0; i < op.length; i++) {
-                self.selectedSes.conf[op[i]] = true;
+                ActivityStateService.sessionDescriptor.conf[op[i]] = true;
             }
-            //console.log(self.selectedSes);
         }
         return true;
     };
 
     self.buildConfStr = function () {
         var s = "";
-        for (var key in self.selectedSes.conf) {
-            if (self.selectedSes.conf[key]) s += key;
+        for (var key in ActivityStateService.sessionDescriptor.conf) {
+            if (ActivityStateService.sessionDescriptor.conf[key]) s += key;
         }
         return s;
     };

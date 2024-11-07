@@ -8,7 +8,7 @@ export let DocumentsController = ($scope, $http,
     self.shared.dfs = self.dfs;
 
     self.getDifferentials = function () {
-        $http.post("differentials", { sesid: self.selectedSes.id })
+        $http.post("differentials", { sesid: ActivityStateService.sessionDescriptor.id })
         .then(function (response) {
             response.data.forEach(function (df) {
                 df.name = df.title;
@@ -48,7 +48,7 @@ export let DocumentsController = ($scope, $http,
         self.dfs.forEach(function (df, i) {
             let url = df.id ? "update-differential" : "add-differential";
             df.orden = i;
-            df.sesid = self.selectedSes.id;
+            df.sesid = ActivityStateService.sessionDescriptor.id;
             $http.post(url, df)
             .then(function () {
                 k += 1;

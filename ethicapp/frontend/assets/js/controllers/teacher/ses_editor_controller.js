@@ -11,25 +11,26 @@ export let SesEditorController = ($scope, $http, Notification, ActivityStateServ
     self.toggleSplit = function () {
         self.splitDescr = !self.splitDescr;
         if (self.splitDescr) {
-            self.splDes1 = self.selectedSes.descr.split("\n")[0];
-            self.splDes2 = self.selectedSes.descr.split("\n")[1] || "";
+            self.splDes1 = ActivityStateService.sessionDescriptor.descr.split("\n")[0];
+            self.splDes2 = ActivityStateService.sessionDescriptor.descr.split("\n")[1] || "";
         } else {
-            self.selectedSes.descr = self.splDes1 + "\n" + self.splDes2;
+            ActivityStateService.sessionDescriptor.descr = self.splDes1 + "\n" + self.splDes2;
         }
     };
 
     self.updateSession = function () {
         if (self.splitDescr) {
-            self.selectedSes.descr = self.splDes1 + "\n" + self.splDes2;
+            ActivityStateService.sessionDescriptor.descr = self.splDes1 + "\n" + self.splDes2;
         }
-        if (self.selectedSes.name.length < 3 || self.selectedSes.descr.length < 5) {
+        if (ActivityStateService.sessionDescriptor.name.length < 3 || 
+            ActivityStateService.sessionDescriptor.descr.length < 5) {
             Notification.error("Datos de la sesión incorrectos o incompletos");
             return;
         }
         var postdata = {
-            name: self.selectedSes.name,
-            descr: self.selectedSes.descr,
-            id: self.selectedSes.id
+            name: ActivityStateService.sessionDescriptor.name,
+            descr: ActivityStateService.sessionDescriptor.descr,
+            id: ActivityStateService.sessionDescriptor.id
         };
         $http({ url: "update-session", method: "post", data: postdata })
             .then(function () {
@@ -43,10 +44,10 @@ export let SesEditorController = ($scope, $http, Notification, ActivityStateServ
     self.shared.changeState = function () {
         var confirm = window.confirm("¿Está seguro que quiere ir al siguiente estado?");
         if (confirm) {
-            if (self.selectedSes.status === 1) {
+            if (ActivityStateService.sessionDescriptor.status === 1) {
                 self.updateSession();
             }
-            var _postdata = { sesid: self.selectedSes.id };
+            var _postdata = { sesid: ActivityStateService.sessionDescriptor.id };
             $http({ url: "change-state-session", method: "post", data: _postdata })
                 .then(function () {
                     self.shared.updateSesData();

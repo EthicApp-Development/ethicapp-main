@@ -12,7 +12,7 @@ export let IncomingUsersController = ($scope, $http, ActivityStateService,
             users: self.newMembs.map(function (e) {
                 return e.id;
             }),
-            sesid: self.selectedSes.id
+            sesid: ActivityStateService.sessionDescriptor.id
         };
         $http({ url: "add-ses-users", method: "post", data: postdata })
             .then(function (response) {
@@ -26,8 +26,8 @@ export let IncomingUsersController = ($scope, $http, ActivityStateService,
     };
     
     self.removeUser = function (uid) {
-        if (self.selectedSes.status <= 2) {
-            var postdata = { uid: uid, sesid: self.selectedSes.id };
+        if (ActivityStateService.sessionDescriptor.status <= 2) {
+            var postdata = { uid: uid, sesid: ActivityStateService.sessionDescriptor.id };
             $http({ url: "delete-ses-user", method: "post", data: postdata })
                 .then(function (response) {
                     if (response.data.status === "ok") {

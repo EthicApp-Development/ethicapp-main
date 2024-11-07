@@ -1,3 +1,5 @@
+import { ActivityStateService } from "../../services/activity_state_service";
+
 /*eslint func-style: ["error", "expression"]*/
 export let RubricController = ($scope, $http) => {
     var self = $scope;
@@ -27,7 +29,7 @@ export let RubricController = ($scope, $http) => {
         self.criterios = [];
         self.newCriterio = {};
         self.editable = false;
-        var postdata = { sesid: self.selectedSes.id };
+        var postdata = { sesid: ActivityStateService.sessionDescriptor.id };
         $http({
             url: "get-admin-rubrica", method: "post", data: postdata
         }).success(function (data) {
@@ -49,7 +51,7 @@ export let RubricController = ($scope, $http) => {
             self.saveEditRubrica();
             return;
         }
-        var postdata = { sesid: self.selectedSes.id };
+        var postdata = { sesid: ActivityStateService.sessionDescriptor.id };
         $http({ url: "send-rubrica", method: "post", data: postdata }).success(function (data) {
             if (data.status == "ok") {
                 var rid = data.id;
@@ -89,7 +91,7 @@ export let RubricController = ($scope, $http) => {
 
     self.shared.getExampleReports = function () {
         self.exampleReports = [];
-        var postdata = { sesid: self.selectedSes.id };
+        var postdata = { sesid: ActivityStateService.sessionDescriptor.id };
         $http({
             url: "get-example-reports", method: "post", data: postdata
         }).success(function (data) {
@@ -99,7 +101,7 @@ export let RubricController = ($scope, $http) => {
 
     self.sendExampleReport = function () {
         var postdata = {
-            sesid:   self.selectedSes.id,
+            sesid:   ActivityStateService.sessionDescriptor.id,
             content: self.newExampleReport.text,
             title:   self.newExampleReport.title
         };
@@ -112,7 +114,7 @@ export let RubricController = ($scope, $http) => {
     };
 
     self.setActiveExampleReport = function (rep) {
-        var postdata = { sesid: self.selectedSes.id, rid: rep.id };
+        var postdata = { sesid: ActivityStateService.sessionDescriptor.id, rid: rep.id };
         $http({
             url: "set-active-example-report", method: "post", data: postdata
         }).success(function (data) {
@@ -127,15 +129,15 @@ export let RubricController = ($scope, $http) => {
 
     self.goToReport = function (rep) {
         self.setActiveExampleReport(rep);
-        window.location.href = "to-rubrica?sesid=" + self.selectedSes.id;
+        window.location.href = "to-rubrica?sesid=" + ActivityStateService.sessionDescriptor.id;
     };
 
     self.pairAssign = function () {
-        var postdata = { sesid: self.selectedSes.id, rnum: +self.pairNum || 3 };
+        var postdata = { sesid: ActivityStateService.sessionDescriptor.id, rnum: +self.pairNum || 3 };
         $http({ url: "assign-pairs", method: "post", data: postdata }).success(function (data) {
             if (data.status == "ok") {
                 // self.shared.updateSesData();
-                self.selectedSes.paired = self.pairNum;
+                ActivityStateService.sessionDescriptor.paired = self.pairNum;
                 self.errPairMsg = "";
             } else {
                 self.errPairMsg = data.msg;

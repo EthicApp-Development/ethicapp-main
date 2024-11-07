@@ -44,7 +44,7 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
     
             try {
                 // Fetch roles or differentials based on session type
-                if (self.selectedSes.type === "R") {
+                if (ActivityStateService.sessionDescriptor.type === "R") {
                     const rolesResponse = await $http({
                         url: "get-actors",
                         method: "post",
@@ -59,7 +59,7 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
                         }
                         r.wc = r.word_count;
                     });
-                } else if (self.selectedSes.type === "T") {
+                } else if (ActivityStateService.sessionDescriptor.type === "T") {
                     const dfsResponse = await $http({
                         url: "get-differentials-stage",
                         method: "post",
@@ -70,7 +70,7 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
                         df.wc = df.word_count;
                         df.name = df.title;
                     });
-                } else if (self.selectedSes.type === "J") {
+                } else if (ActivityStateService.sessionDescriptor.type === "J") {
                     const rolesResponse = await $http({
                         url: "get-actors",
                         method: "post",
@@ -117,7 +117,7 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
     
     self.getStages = async function () {
         try {
-            const postdata = { sesid: self.selectedSes.id };
+            const postdata = { sesid: ActivityStateService.sessionDescriptor.id };
             
             // Step 1: Fetch all stages
             const stagesResponse = await $http({
@@ -144,10 +144,10 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
                 self.roles = draftData.roles;
                 self.jroles = draftData.jroles;
             } else {
-                const stagePostData = { stageid: self.selectedSes.current_stage };
+                const stagePostData = { stageid: ActivityStateService.sessionDescriptor.current_stage };
                 
                 // Step 3: Fetch data based on session type
-                if (self.selectedSes.type === "R") {
+                if (ActivityStateService.sessionDescriptor.type === "R") {
                     const rolesResponse = await $http({
                         url: "get-actors",
                         method: "post",
@@ -158,7 +158,7 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
                         r.type = r.justified && r.jorder ? "order" : r.justified ? "role" : null;
                         r.wc = r.word_count;
                     });
-                } else if (self.selectedSes.type === "T") {
+                } else if (ActivityStateService.sessionDescriptor.type === "T") {
                     const dfsResponse = await $http({
                         url: "get-differentials-stage",
                         method: "post",
@@ -169,7 +169,7 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
                         df.wc = df.word_count;
                         df.name = df.title;
                     });
-                } else if (self.selectedSes.type === "J") {
+                } else if (ActivityStateService.sessionDescriptor.type === "J") {
                     const rolesResponse = await $http({
                         url: "get-actors",
                         method: "post",
@@ -184,7 +184,7 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
                     const jigsawRolesResponse = await $http({
                         url: "get-jigsaw-roles",
                         method: "post",
-                        data: { sesid: self.selectedSes.id }
+                        data: { sesid: ActivityStateService.sessionDescriptor.id }
                     });
                     self.jroles = jigsawRolesResponse.data;
                     self.inputAssignedRoles();
@@ -209,7 +209,7 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
                 });
     
                 // Step 5: Set current stage and iteration indicator if session is active
-                if (self.selectedSes.status >= 3) {
+                if (ActivityStateService.sessionDescriptor.status >= 3) {
                     self.shared.setIterationIndicator(self.stages[self.stages.length - 1].id);
                     self.setCurrentStage(self.stages.length - 1);
                 }
@@ -276,17 +276,17 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
     };
 
     self.checkStage = function(){
-        if(self.selectedSes.type == "T"){
+        if(ActivityStateService.sessionDescriptor.type == "T"){
             if(self.dfs.some(e => e.name == "" || e.tleft == "" || e.tright == "")){
                 return "Hay diferenciales con datos faltantes";
             }
         }
-        if(self.selectedSes.type == "R" || self.selectedSes.type == "J"){
+        if(ActivityStateService.sessionDescriptor.type == "R" || ActivityStateService.sessionDescriptor.type == "J"){
             if(self.roles.some(e => e.name == "")){
                 return "Hay roles o lineas de acción con datos faltantes";
             }
         }
-        if(self.selectedSes.type == "J"){
+        if(ActivityStateService.sessionDescriptor.type == "J"){
             if(self.jroles.some(e => e.name == "" || e.description == "")){
                 return "Hay roles con datos faltantes";
             }
@@ -296,10 +296,12 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
     self.sendStage = async function () {
         try {
             const s = self.stage;
-            const arr = (self.selectedSes.type === "R" || self.selectedSes.type === "J") ? self.roles : self.dfs;
+            const arr = ["R", "J"].includes(ActivityStateService.sessionDescriptor.type) ? 
+                self.roles : self.dfs;
             const isFirst = self.stages.length === 0;
             
-            if (!s.type || arr.length === 0 || (s.type === "team" && (!self.groups || self.groups.length === 0))) {
+            if (!s.type || arr.length === 0 || (s.type === "team" && 
+                    (!self.groups || self.groups.length === 0))) {
                 Notification.error("Hay datos de configuración faltantes");
                 return;
             }
@@ -322,7 +324,7 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
                 type: s.type,
                 anon: s.anon,
                 chat: s.chat,
-                sesid: self.selectedSes.id,
+                sesid: ActivityStateService.sessionDescriptor.id,
                 prev_ans: s.prevResponses.map(e => e.id).join(",")
             };
     
@@ -339,24 +341,23 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
                 await self.acceptGroups(stageid);
             }
     
-            if (self.selectedSes.type === "R") {
+            const { sessionType, sessionId } = ActivityStateService.sessionDescriptor;
+            
+            if (sessionType === "R") {
                 await self.addRoles(stageid);
-            } else if (self.selectedSes.type === "T") {
+            } else if (sessionType === "T") {
                 await self.addDifferentials(stageid);
-            } else if (self.selectedSes.type === "J") {
+            } else if (sessionType === "J") {
                 await self.addRoles(stageid);
                 if (isFirst) {
                     await self.addJigsawRoles(stageid);
                 }
             }
     
-            await $http.post("session-start-stage", { sesid: self.selectedSes.id, stageid });
-            Notification.success("Etapa creada correctamente");
+            await $http.post("session-start-stage", { sesid: sessionId, stageid });
             window.location.reload();
-            
         } catch (error) {
             console.error("Error in sendStage:", error);
-            Notification.error("Error al crear la etapa");
         }
     };
     
@@ -387,7 +388,7 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
                 orden: df.orden,
                 justify: df.justify,
                 stageid,
-                sesid: self.selectedSes.id,
+                sesid: ActivityStateService.sessionDescriptor.id,
                 word_count: df.wc
             };
             await $http.post("add-differential-stage", p);
@@ -399,7 +400,7 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
         for (const jrole of jroles) {
             const p = {
                 name: jrole.name,
-                sesid: self.selectedSes.id,
+                sesid: ActivityStateService.sessionDescriptor.id,
                 description: jrole.description
             };
             await $http.post("add-jigsaw-role", p);
@@ -425,15 +426,18 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
                 self.groupopt.met = self.design.phases[stage].grouping_algorithm;
             }
             
-            console.log(self.groupopt.met, self.selectedSes.grouped, self.groups);
+            console.log(self.groupopt.met, ActivityStateService.sessionDescriptor.grouped, 
+                self.groups);
             
             if (self.groupopt.met === "previous") {
                 console.log("Ignore, keeps groups");
                 return;
             }
             
-            if (self.selectedSes.grouped && self.groupopt.met === "previous") {
-                const data = await $http.post("group-proposal-sel", { sesid: self.selectedSes.id });
+            if (ActivityStateService.sessionDescriptor.grouped && 
+                    self.groupopt.met === "previous") {
+                const data = await $http.post("group-proposal-sel", 
+                    { sesid: ActivityStateService.sessionDescriptor.id });
                 self.groups = data.data;
                 self.shared.groups = self.groups;
                 return;
@@ -446,7 +450,7 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
             }
     
             const postdata = {
-                sesid: self.selectedSes.id,
+                sesid: ActivityStateService.sessionDescriptor.id,
                 gnum: self.groupopt.num,
                 method: self.groupopt.met
             };
@@ -525,7 +529,7 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
     }
     
     async function handleSpecialGrouping(users) {
-        if (self.selectedSes.type === "T") {
+        if (ActivityStateService.sessionDescriptor.type === "T") {
             const filteredData = self.shared.difTable.filter(e => !e.group);
             const scores = users.map(user => {
                 const result = filteredData.find(d => d.uid === user.id);
@@ -538,7 +542,7 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
                 };
             });
             self.groups = generateTeams(scores, s => s.score, self.groupopt.num, isDifferent(self.groupopt.met));
-        } else if (self.selectedSes.type === "R") {
+        } else if (ActivityStateService.sessionDescriptor.type === "R") {
             const scores = users.map(user => ({
                 uid: user.id,
                 score: self.shared.roleIndTable[user.id] ? self.shared.roleIndTable[user.id].lnum : -1,
@@ -562,7 +566,7 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
         try {
             const response = await $http.post("set-groups-stage", postdata);
             if (response.data.status === "ok") {
-                self.selectedSes.grouped = true;
+                ActivityStateService.sessionDescriptor.grouped = true;
             }
         } catch (error) {
             console.error("Error setting groups:", error);
@@ -595,7 +599,8 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
                 vm.accept = async function () {
                     try {
                         if (vm.radioval === "F") {
-                            const response = await $http.post("session-finish-stages", { sesid: self.selectedSes.id });
+                            const response = await $http.post("session-finish-stages", 
+                                { sesid: ActivityStateService.sessionDescriptor.id });
                             console.debug(response.data);
                         } else if (vm.radioval === "N") {
                             self.setTab("editor");
@@ -650,7 +655,7 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
     self.inputAssignedRoles = async () => {
         try {
             const response = await $http.post("get-assigned-jigsaw-roles", {
-                sesid: self.selectedSes.id
+                sesid: ActivityStateService.sessionDescriptor.id
             });
             const data = response.data;
     
@@ -674,7 +679,7 @@ export let StagesController = function ($scope, $http, Notification, $uibModal,
         };
     
         const postdata = {
-            sesid: self.selectedSes.id,
+            sesid: ActivityStateService.sessionDescriptor.id,
             data: JSON.stringify(data),
         };
     

@@ -50,7 +50,7 @@ export let DashboardController = ($scope, $socket, $http,
 
     self.init = self.init = function () {
         $socket.on("contentUpdate", (data) => { // Content Analysis callback socket
-            if(data.data.sesid === self.selectedSes.id){
+            if(data.data.sesid === ActivityStateService.sessionDescriptor.id){
                 self.formatContentAnalysis(data.data);
             }
         });
@@ -62,11 +62,11 @@ export let DashboardController = ($scope, $socket, $http,
 
     self.shared.resetGraphs = function () { //THIS HAS TO BE CALLED ON ADMIN
         if (
-            (self.selectedSes.type == "R") ||
-            (self.selectedSes.type == "T") ||
-            (self.selectedSes.type == "J")
+            (ActivityStateService.sessionDescriptor.type == "R") ||
+            (ActivityStateService.sessionDescriptor.type == "T") ||
+            (ActivityStateService.sessionDescriptor.type == "J")
         ) {
-            self.iterationIndicator = self.selectedSes.current_stage || -1;
+            self.iterationIndicator = ActivityStateService.sessionDescriptor.current_stage || -1;
         }
         self.alumState = null;
         self.barOpts = {
@@ -92,7 +92,8 @@ export let DashboardController = ($scope, $socket, $http,
         };
         self.barData = [{ key: self.flang("students"), color: "#0077c1", values: [] }];
         self.updateState();
-        if (self.activityState.dashboardAutoreload  && self.selectedSes.status < 9) {
+        if (ActivityStateService.activityDescriptor.dashboardAutoreload && 
+                ActivityStateService.sessionDescriptor.status < 9) {
             self.reload(true);
         }
     };
@@ -109,15 +110,11 @@ export let DashboardController = ($scope, $socket, $http,
     };
 
     self.updateState = function () {
-        if (self.selectedSes.status == 1) {
+        if (ActivityStateService.sessionDescriptor.status == 1) {
             self.shared.refreshUsers();
         }
-        else if (
-            (self.iterationIndicator <= 4) ||
-            (self.selectedSes.type == "R") ||
-            (self.selectedSes.type == "T") ||
-            (self.selectedSes.type == "J")
-        ) {
+        else if ( self.iterationIndicator <= 4 ||
+            ["R", "T", "J"].includes(ActivityStateService.sessionDescriptor.type)) {
             self.updateStateIni();
         }
         else {
@@ -138,7 +135,7 @@ export let DashboardController = ($scope, $socket, $http,
         self.alumTime = {};
         
         try {
-            if (self.selectedSes.type === "R") {
+            if (ActivityStateService.sessionDescriptor.type === "R") {
                 // Step 1: Fetch actors
                 const actorsResponse = await $http.post("get-actors", _postdata2);
                 self.rawActors = actorsResponse.data;
@@ -179,7 +176,7 @@ export let DashboardController = ($scope, $socket, $http,
                     }
                     self.shared.chatByTeam[c.tmid] += +c.count;
                 });
-            } else if (self.selectedSes.type === "T") {
+            } else if (ActivityStateService.sessionDescriptor.type === "T") {
                 // Step 1: Fetch differentials for the stage
                 const diffStageResponse = await $http.post("get-differentials-stage", _postdata2);
                 self.dfsStage = diffStageResponse.data;
@@ -218,7 +215,7 @@ export let DashboardController = ($scope, $socket, $http,
                 contentAnalysisResponse.data.forEach(data => {
                     self.formatContentAnalysis(data);
                 });
-            } else if (self.selectedSes.type === "J") {
+            } else if (ActivityStateService.sessionDescriptor.type === "J") {
                 // Step 1: Fetch actors
                 if (self.shared.inputAssignedRoles) {
                     self.shared.inputAssignedRoles();
@@ -473,7 +470,7 @@ export let DashboardController = ($scope, $socket, $http,
 
     self.shared.getReports = async function () {
         try {
-            const postdata = { sesid: self.selectedSes.id };
+            const postdata = { sesid: ActivityStateService.sessionDescriptor.id };
             const response = await $http({ url: "get-report-list", method: "post", data: postdata });
             
             self.reports = response.data;
@@ -499,7 +496,7 @@ export let DashboardController = ($scope, $socket, $http,
     
     self.getAllReportResult = async function () {
         try {
-            const postdata = { sesid: self.selectedSes.id };
+            const postdata = { sesid: ActivityStateService.sessionDescriptor.id };
             const response = await $http({
                 url: "get-report-result-all",
                 method: "post",
@@ -690,7 +687,7 @@ export let DashboardController = ($scope, $socket, $http,
     self.showReportByUid = async function (uid) {
         try {
             console.log(uid);
-            const postdata = { uid: uid, sesid: self.selectedSes.id };
+            const postdata = { uid: uid, sesid: ActivityStateService.sessionDescriptor.id };
             const response = await $http({ url: "get-report-uid", method: "post", data: postdata });
     
             const modalData = { report: response.data };
@@ -714,7 +711,7 @@ export let DashboardController = ($scope, $socket, $http,
     
     self.broadcastReport = async function (rid) {
         try {
-            const postdata = { sesid: self.selectedSes.id, rid: rid };
+            const postdata = { sesid: ActivityStateService.sessionDescriptor.id, rid: rid };
             await $http({ url: "set-eval-report", method: "post", data: postdata });
             
             Notification.success("Reporte enviado a alumnos");
@@ -815,7 +812,7 @@ export let DashboardController = ($scope, $socket, $http,
     
     self.openDFDetails = async function (group, orden) {
         const postdata = {
-            sesid: self.selectedSes.id,
+            sesid: ActivityStateService.sessionDescriptor.id,
             tmid: group,
             orden: orden
         };
@@ -860,7 +857,7 @@ export let DashboardController = ($scope, $socket, $http,
     
                         // Generate anonymous names
                         data.anonNames = {};
-                        data.sesid = self.selectedSes.id;
+                        data.sesid = ActivityStateService.sessionDescriptor.id;
                         const abcd = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
                         let c = 0;
                         data.dfIters.flat().forEach(e => {
@@ -914,7 +911,7 @@ export let DashboardController = ($scope, $socket, $http,
                         data.users = self.users;
                         data.df = self.dfsStage.find(e => e.id === did);
                         data.anonNames = {};
-                        data.sesid = self.selectedSes.id;
+                        data.sesid = ActivityStateService.sessionDescriptor.id;
                         data.chat = res;
     
                         // Generate anonymous names for each user in chat
@@ -991,7 +988,7 @@ export let DashboardController = ($scope, $socket, $http,
                         data.users = self.users;
                         data.actorMap = self.actorMap;
                         data.anonNames = {};
-                        data.sesid = self.selectedSes.id;
+                        data.sesid = ActivityStateService.sessionDescriptor.id;
                         data.chat = res;
     
                         // Generate anonymous names for users in the chat
@@ -1039,7 +1036,7 @@ export let DashboardController = ($scope, $socket, $http,
 
     self.exportCSV = async function () {
         const postdata = {
-            sesid: self.selectedSes.id
+            sesid: ActivityStateService.sessionDescriptor.id
         };
     
         try {
@@ -1049,7 +1046,7 @@ export let DashboardController = ($scope, $socket, $http,
     
             if (selectionData && selectionData.length > 0) {
                 saveCsv(selectionData, {
-                    filename: "seleccion_" + self.selectedSes.id + ".csv",
+                    filename: "seleccion_" + ActivityStateService.sessionDescriptor.id + ".csv",
                     formatter: function (v) {
                         if (v == null) {
                             return "";
@@ -1071,7 +1068,7 @@ export let DashboardController = ($scope, $socket, $http,
     
             if (chatData && chatData.length > 0) {
                 saveCsv(chatData, {
-                    filename: "chat_" + self.selectedSes.id + ".csv",
+                    filename: "chat_" + ActivityStateService.sessionDescriptor.id + ".csv",
                     formatter: function (v) {
                         if (v == null) {
                             return "";
@@ -1094,10 +1091,10 @@ export let DashboardController = ($scope, $socket, $http,
     
     self.exportChatCSV = async function () {
         const postdata = {
-            sesid: self.selectedSes.id
+            sesid: ActivityStateService.sessionDescriptor.id
         };
-        const url = self.selectedSes.type === "T" ? "get-chat-data-csv-ethics" :
-                    self.selectedSes.type === "R" ? "get-chat-data-csv-role" : null;
+        const url = ActivityStateService.sessionDescriptor.type === "T" ? "get-chat-data-csv-ethics" :
+            ActivityStateService.sessionDescriptor.type === "R" ? "get-chat-data-csv-role" : null;
     
         if (!url) {
             Notification.error("No se puede exportar los datos");
@@ -1111,7 +1108,7 @@ export let DashboardController = ($scope, $socket, $http,
     
             if (res && res.length > 0) {
                 saveCsv(res, {
-                    filename: "chat_" + self.selectedSes.id + ".csv",
+                    filename: "chat_" + ActivityStateService.sessionDescriptor.id + ".csv",
                     formatter: function (v) {
                         if (v == null) {
                             return "";
@@ -1134,14 +1131,12 @@ export let DashboardController = ($scope, $socket, $http,
     
     self.exportSelCSV = async function () {
         const postdata = {
-            sesid: self.selectedSes.id
+            sesid: ActivityStateService.sessionDescriptor.id
         };
-        const url = self.selectedSes.type === "T" ? "get-sel-data-csv-ethics" :
-                    self.selectedSes.type === "R" ? "get-sel-data-csv-role" :
-                    self.selectedSes.type === "J" ? "get-sel-data-csv-jigsaw" : null;
-    
-        console.log(self.selectedSes);
-    
+        const url = ActivityStateService.sessionDescriptor.type === "T" ? "get-sel-data-csv-ethics" :
+            ActivityStateService.sessionDescriptor.type === "R" ? "get-sel-data-csv-role" :
+            ActivityStateService.sessionDescriptor.type === "J" ? "get-sel-data-csv-jigsaw" : null;
+        
         if (!url) {
             Notification.error("No se puede exportar los datos");
             return;
@@ -1154,7 +1149,7 @@ export let DashboardController = ($scope, $socket, $http,
     
             if (res && res.length > 0) {
                 saveCsv(res, {
-                    filename: "sel_" + self.selectedSes.id + ".csv",
+                    filename: "sel_" + ActivityStateService.sessionDescriptor.id + ".csv",
                     formatter: function (v) {
                         if (v == null) {
                             return "";

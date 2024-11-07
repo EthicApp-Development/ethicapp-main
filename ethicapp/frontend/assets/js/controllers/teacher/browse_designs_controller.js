@@ -10,7 +10,7 @@ export let BrowseDesignsController = ($scope,
     self.tab = null;
     self.tabSel = TabStateService.sharedTabState;
     self.designId = DesignStateService.designState;
-    self.launchId = ActivityStateService.activityState;
+    self.launchId = ActivityStateService.activityDescriptor;
 
     self.init = function(){
         if(self.selectedView == "launchActivity") {self.getDesigns(); self.setValues();} //make request when on launchActivity view only
