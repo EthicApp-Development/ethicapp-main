@@ -6,7 +6,6 @@
     <div class="launchActivityDiv">
         <div ng-controller="BrowseDesignsController as vm">
             <div ng-init="vm.getDesigns(); retrieveInstanceData()" ng-show="vm.selectedDesign == null">
-                alt1
                 <div clas="col-lg-1">
                     <input class="form-control launchActivity-search fontAwesome" type="text" 
                         placeholder="{{'search'|translate}}  &#xF002;" ng-model="vm.userSearch">
@@ -25,10 +24,9 @@
             </div>
             <div ng-show="vm.selectedDesign != null">
                 <div class="container launchActivityContainer">
-                    alt2
-                    <div class="list-group-item dsgn" ng-repeat="design in vm.designs | filter:vm.selectedDesign"
+                    <div class="list-group-item dsgn" ng-repeat="design in vm.designs | filter:vm.filterById"
                         ng-click="vm.setInstanceData(design.id, design.metainfo.title, design.type)"
-                        ng-class="{'dsgn_sel': vm.dsgnid == design.id}">
+                        ng-class="{'dsgn_sel': vm.selectedDesign.id == design.id}">
                         <div>
                             <h4 class="list-group-item-heading" ng-bind="design.metainfo.title"></h4>
                             <p class="list-group-item-text">{{'created' | translate}} {{design.metainfo.creation_date |

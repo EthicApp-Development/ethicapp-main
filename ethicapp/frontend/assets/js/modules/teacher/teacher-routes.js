@@ -21,7 +21,7 @@ function TeacherRouter($routeProvider) {
         .when('/activities/new', {
             templateUrl: 'static/partials/teacher/activity.new.html',
         })        
-        .when('/activities/new/:design_id', {
+        .when('/activities/new/:designId', {
             templateUrl: 'static/partials/teacher/activity.new.html',
         })  
         .when('/activities/:id', {

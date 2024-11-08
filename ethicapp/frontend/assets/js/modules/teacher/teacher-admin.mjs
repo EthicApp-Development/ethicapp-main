@@ -127,7 +127,7 @@ app.controller("MonitorActivityController",
     ["$scope", "$filter", "$http", "$window", "Notification","$uibModal", "ActivityStateService",
         MonitorActivityController]);
 app.controller("BrowseDesignsController", 
-    ["$scope", "TabStateService", "DesignStateService", 
+    ["$scope", "$routeParams", "TabStateService", "DesignStateService", 
         "ActivityStateService", "DesignCatalogService", 
         "$filter", "$http", BrowseDesignsController]);
 app.controller("StagesEditController", 

@@ -8,6 +8,9 @@ let DesignCatalogService = ($http) => {
                 
                 if (response.data.status === "ok" && Array.isArray(response.data.result)) {
                     service.designs = response.data.result;
+                    if (typeof service.designs === "string") {
+                        service.designs = JSON.parse(service.designs);
+                    }
                 } else {
                     console.error("Error: Unexpected response format", response.data);
                 }
@@ -43,6 +46,7 @@ let DesignCatalogService = ($http) => {
             if (reload || service.designs.length === 0) {
                 await service.loadDesigns();
             }
+            
             // Find the design by id
             return service.designs.find(design => design.id === id) || null;
         },

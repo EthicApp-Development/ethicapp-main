@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export function BrowseDesignsController($scope, 
+export function BrowseDesignsController($scope, $routeParams,
     TabStateService, DesignStateService, ActivityStateService, 
     DesignCatalogService, $filter, $http) {
 
@@ -18,6 +18,15 @@ export function BrowseDesignsController($scope,
     vm.init = async function() {
         console.log(`[BrowseDesignsController::init]`);
         await vm.forceFetchDesigns();
+
+        try {
+            const selectedDesignId = Number($routeParams.designId);
+            if (selectedDesignId !== undefined) {
+                vm.selectedDesign = await DesignCatalogService.getDesignById(selectedDesignId);
+            }    
+        } catch(error) {
+            console.error("[BrowseDesignsController::init] Failed to retrieve designId route parameter");
+        }
 
         if(vm.selectedView == "launchActivity") {
             vm.setInstanceData();
@@ -78,6 +87,10 @@ export function BrowseDesignsController($scope,
     vm.getDesign = async function(id) {
         const design = await DesignCatalogService.getDesignById(id);
         ActivityStateService.setDesign(id, design);
+    };
+
+    vm.filterById = function(design) {
+        return vm.selectedDesign && design.id === vm.selectedDesign.id;
     };
     
     vm.goToDesign = function(id, operationType) {
