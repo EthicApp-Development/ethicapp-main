@@ -2,7 +2,7 @@
 <button class="btn btn-primary createDesignBtn" ng-click="navigateTo('/designs/new')">{{'createDesign' | translate}}</button>
 <p class="designContext">{{'designContext' | translate}}</p>
 <div ng-controller="BrowseDesignsController as vm">
-    <div class="tab_cs" ng-init="dsgnMode=tab; dsgnMode=0">
+    <div class="tab_cs" ng-init="vm.forceFetchDesigns(); dsgnMode=tab; dsgnMode=0">
         <button class="tab_cs" ng-click="dsgnMode=0; vm.getUserDesigns()" ng-class="{'btn_selected': dsgnMode == 0}">
             {{'yours'|translate}}
         </button>

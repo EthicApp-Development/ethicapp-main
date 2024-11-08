@@ -17,19 +17,23 @@ export function BrowseDesignsController($scope,
 
     vm.init = async function() {
         console.log(`[BrowseDesignsController::init]`);
-        
-        await DesignCatalogService.loadDesigns();
-        vm.userDesigns = await DesignCatalogService.getUserDesigns();
-        vm.publicDesigns = await DesignCatalogService.getPublicDesigns();
-        vm.designs = await DesignCatalogService.getDesigns(); 
+        await vm.forceFetchDesigns();
 
         if(vm.selectedView == "launchActivity") {
             vm.setInstanceData();
         }
-        else if(vm.selectedView == "designs") {
+        if(vm.selectedView == "designs") {
             vm.tab = vm.tabSel.type;
         }
     };
+
+    vm.forceFetchDesigns = async function() {
+        vm.userDesigns = await DesignCatalogService.getUserDesigns();
+        vm.publicDesigns = await DesignCatalogService.getPublicDesigns();
+        vm.designs = await DesignCatalogService.getDesigns();
+
+        $scope.$apply();
+    }
 
     vm.launchDesign = async function(id, title, type) {
         DesignStateService.setInstanceData(id, title, type);
