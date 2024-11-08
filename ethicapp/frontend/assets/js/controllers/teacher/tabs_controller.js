@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export let TabsController = ($scope, $http, ActivityStateService) => {
+export function TabsController($scope, $http, ActivityStateService) {
     var self = $scope;
     self.tabOptions = [];
     self.tabConfig = ["users", "groups"];

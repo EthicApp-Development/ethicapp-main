@@ -1,7 +1,5 @@
-import { ActivityStateService } from "../../services/activity_state_service";
-
 /*eslint func-style: ["error", "expression"]*/
-export let RubricController = ($scope, $http) => {
+export function RubricController($scope, $http) {
     var self = $scope;
     self.criterios = [];
     self.newCriterio = {};

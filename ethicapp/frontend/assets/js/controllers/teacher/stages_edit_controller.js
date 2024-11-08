@@ -1,9 +1,11 @@
 /*eslint func-style: ["error", "expression"]*/
-export let StagesEditController = ($scope, DesignStateService, 
-    $filter, $http, Notification, $timeout, ActivityStateService) => {
+export function StagesEditController($scope, DesignStateService, 
+    $filter, $http, Notification, $timeout, ActivityStateService,
+    DesignCatalogService) {
     var self = $scope;
-    self.designId = DesignStateService.designState;
     self.launchId = ActivityStateService.activityDescriptor;
+
+    const vm = this;
 
     self.keyGroups = function (k1, k2) {
         return {
@@ -32,17 +34,18 @@ export let StagesEditController = ($scope, DesignStateService,
     self.selectedOption = "";
     self.roles = [];
 
-    self.init = function() {
+    vm.init = function() {
         if(self.selectedView == "newDesign") {
-            self.changeDesign(null);
+            DesignStateService.resetDesign();
+            DesignStateService.clearInstanceData();
         }
-        if(self.design != null){
-            if (typeof self.design === "string") {
-                self.design = JSON.parse(self.design);
-            }
-            self.stageType = self.design.type;
-            if(self.design.type == "semantic_differential") {
-                self.num = self.design.phases[0].questions[0].ans_format.values;
+        
+        vm.designObj = DesignStateService.getDesignObj();
+
+        if(self.designObj != null){
+            self.stageType = vm.designObj.type;
+            if(self.designObj.type == "semantic_differential") {
+                self.num = vm.designObj.phases[0].questions[0].ans_format.values;
             }
             resetValues();
             self.CleanEmptyValues();
@@ -51,8 +54,8 @@ export let StagesEditController = ($scope, DesignStateService,
     };
 
     self.CleanEmptyValues = function() {
-        console.log(`CleanEmptyValues self.design: '${JSON.stringify(self.design)}'`);
-        var phases = self.design.phases;
+        console.log(`CleanEmptyValues vm.designObj: '${JSON.stringify(vm.designObj)}'`);
+        var phases = vm.designObj.phases;
         for(let i =0; i< phases.length; i++){
             var phase = phases[i];
             if(self.stageType == "semantic_differential"){
@@ -80,7 +83,7 @@ export let StagesEditController = ($scope, DesignStateService,
 
     self.CreateErrorList = function(){
         //[[{q:false, l:false, t:true}]]
-        var phases = self.design.phases;
+        var phases = self.designObj.phases;
         for(let i =0; i< phases.length; i++){
             var phase = phases[i];
             if(self.stageType == "semantic_differential"){
@@ -129,7 +132,7 @@ export let StagesEditController = ($scope, DesignStateService,
         else if(self.stageType == "ranking"){
             const roles = self.errorList[phase];
             let error = false;
-            if(self.design.phases[phase].q_text == "") error = true;
+            if(vm.designObj.phases[phase].q_text == "") error = true;
             for(let role=0; role<roles.length; role++){
 
                 if(self.errorList[phase][role]) error = true;
@@ -180,11 +183,6 @@ export let StagesEditController = ($scope, DesignStateService,
                 self.launchId.title = self.design.metainfo.title;
                 self.launchId.type = self.design.type;
 
-                // ActivityStateService.activityDescriptor.id = self.designId.id;
-                // ActivityStateService.activityDescriptor.title = self.design.metainfo.title;
-                // ActivityStateService.activityDescriptor.type = self.design.type;
-                
-                // self.launchId = ActivityStateService.activityDescriptor;
                 self.selectView("launchActivity");
             }
         });
@@ -269,7 +267,7 @@ export let StagesEditController = ($scope, DesignStateService,
     };
 
     self.addRole = function(){
-        self.design.phases[self.currentStage].roles.push({
+        vm.designObj.phases[self.currentStage].roles.push({
             name: "",
             type: "role", //order
             wc:   5
@@ -321,7 +319,6 @@ export let StagesEditController = ($scope, DesignStateService,
         }, 500);
     };
     
-
     self.checkDesign = function(){ 
         var error = false;
         var phases = self.design.phases;
@@ -562,6 +559,5 @@ export let StagesEditController = ($scope, DesignStateService,
             .values = self.num;
     };
 
-    self.init(); //init
-
+    vm.init();
 };

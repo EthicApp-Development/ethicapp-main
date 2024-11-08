@@ -1,4 +1,5 @@
 import 'angular';
+import 'angular-route';
 import 'angular-ui-bootstrap';
 import 'angular-sanitize';
 import 'angular-translate';

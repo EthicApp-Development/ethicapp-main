@@ -1,8 +1,10 @@
 /*eslint func-style: ["error", "expression"]*/
-export let ManagementController = ($scope, 
-    TabStateService, DesignStateService, ActivityStateService,
+export function ManagementController($scope, 
+    TabStateService, DesignStateService, 
     $http, $uibModal, $location, $locale, 
-    $filter, $socket, $route, $translate) => {
+    $filter, $socket, $route, $translate,
+    ActivityStateService, ActivityCatalogService,
+    DesignCatalogService) {
     var self = $scope;
     self.temp = "";
     const lang = navigator.language;
@@ -10,9 +12,6 @@ export let ManagementController = ($scope,
     self.shared = {};
     self.sessions = [];
     self.selectedView = ""; //current view
-    self.activities = []; //activities
-    self.currentActivity = {}; //current Activity
-    self.design = null;
     self.documents = [];
     self.questions = [];
     self.questionTexts = [];
@@ -30,6 +29,8 @@ export let ManagementController = ($scope,
     self.tabSel = TabStateService.sharedTabState;
     self.designId = DesignStateService.designState;
     self.launchId = ActivityStateService.activityDescriptor;
+
+    const vm = this;
 
     if (lang.startsWith("es")) {
         self.lang = "es_CL";
@@ -79,13 +80,11 @@ export let ManagementController = ($scope,
 
     self.misc = {};
 
-    self.init = function () {
-        //console.debug("[ManagementController] init.");
-        //self.updatelangdata();
-        self.getMe();
-        
+    vm.init = async function() {
+        console.log("[ManagementController] init");
         self.shared.updateSesData();
-        self.shared.getActivities();
+        await ActivityCatalogService.loadActivities();
+        await DesignCatalogService.loadDesigns();
         self.updateLang(self.lang);
         
         $socket.on("stateChange", (data) => {
@@ -96,8 +95,12 @@ export let ManagementController = ($scope,
         });
     };
 
-    self.selectedSes = () => {
+    self.selectedSes = function() {
         return ActivityStateService.sessionDescriptor;
+    }
+
+    self.getCurrentActivity = function() {
+        return ActivityStateService.activityDescriptor;
     }
 
     self.updatelangdata = async function () {
@@ -119,19 +122,6 @@ export let ManagementController = ($scope,
     self.reset_inst_id = function() {
         self.inst_id = 0;
         self.selectView("institution_admin");
-    };
-
-    self.getMe = function(){
-        /*
-        $http.get("is-super").success(data => {
-            if(data.status == "ok"){
-                self.superBar = true;
-                self.super = true;
-            }
-        });
-        $http.get("is-institution").success(data => {
-            self.institution = data.status;
-        });*/
     };
 
     self.selectSession = function (ses, id) {
@@ -160,51 +150,75 @@ export let ManagementController = ($scope,
             self.shared.getStages();
     };
 
-
     //Select activity from Activities
-    self.selectActivity = function(activityId, sesId, design){
-        console.log("[ManagementController::selectActivity]");
-        self.selectView("activity");
-        self.currentActivity.id = activityId;
-        self.selectedId = sesId;
-        
-        const sessionDescriptor = getSession(sesId)[0];
-        ActivityStateService.setSessionDescriptor(sessionDescriptor);
-        ActivityStateService.loadActivityPhases();
+    self.selectActivity = function(activityId, sesId, designId) {
+        try {
+            console.log(`[ManagementController::selectActivity] activityId: ${activityId} sesId: ${sesId} design: ${designId}`);
+            self.selectView("activity");
+            ActivityStateService.activityDescriptor.id = activityId;
+            self.selectedId = sesId;
+            
+            // Set the session descriptor for the current activity
+            const sessionDescriptor = self.getSession(sesId);
+            ActivityStateService.setSessionDescriptor(sessionDescriptor);
+            
+            // Load the phases of the activity
+            ActivityStateService.loadActivityPhases();
+            self.stages = ActivityStateService.phases;
+            self.iterationNames = ActivityStateService.phaseInformation;
+            
+            const designObj = DesignCatalogService.getDesignById(designId);
+            ActivityStateService.activityDescriptor.designDescriptor.designObject = designObj;
 
-        self.design = design;
-        console.log(`[ManagementController::selectActivity] Activity ID:'${JSON.stringify(self.currentActivity)}'`);
-        console.log(`[ManagementController::selectActivity] Session ID:'${self.selectedId}'`);
-        console.log(`[ManagementController::selectActivity] Design:'${JSON.stringify(self.design)}'`);
-        //------------------------
-        self.requestDocuments();
-        //self.shared.updateState();
-        self.requestSemDocuments();
-        self.requestQuestions();
-        self.getNewUsers();
-        self.getMembers();
-        //self.shared.verifyGroups(); //GroupController
-        console.log("[ManagementController::selectActivity] pre verifyTabs");
-        ActivityStateService.loadActivityPhases(sesId);
-        self.stages = ActivityStateService.phases;
-        self.iterationNames = ActivityStateService.phaseInformation;
+            // console.log(`[ManagementController::selectActivity] Activity ID:'${JSON.stringify(self.getCurrentActivity().id)}'`);
+            // console.log(`[ManagementController::selectActivity] Session ID:'${self.selectedId}'`);
+            // console.log(`[ManagementController::selectActivity] Design:'${JSON.stringify(self.design)}'`);
+            
+            //------------------------
+            
+            self.requestDocuments();            
+            self.requestSemDocuments();
+            self.requestQuestions();
+            self.getNewUsers();
+            self.getMembers();
 
-        // self.shared.verifyTabs(); //TabsController
-        console.log("[ManagementController::selectActivity] post verifyTabs");
-        //self.shared.resetTab(); //TabsController
-        console.log("[ManagementController::selectActivity] post resetTab");
-        //self.shared.updateConf(); //OptionsController
-        //$location.path(self.selectedSes.id);
-        if(self.shared.getStages)
-            self.shared.getStages();
-        console.log("[ManagementController::selectActivity] end reached");        
+            self.shared.verifyGroups(); //GroupController
+            console.log("[ManagementController::selectActivity] pre verifyTabs");
+    
+            // self.shared.verifyTabs(); //TabsController
+            console.log("[ManagementController::selectActivity] post verifyTabs");
+            self.shared.resetTab(); //TabsController
+            console.log("[ManagementController::selectActivity] post resetTab");
+            //self.shared.updateConf(); //OptionsController
+            //$location.path(self.selectedSes.id);
+            
+            if(self.shared.getStages)
+                self.shared.getStages();
+            console.log("[ManagementController::selectActivity] end reached");
+        }
+        catch (error) {
+            console.error("[ManagementController::selectActivity] Process failed.");
+        }
     };
 
-    function getSession(id) {
+    self.getSession = function(id) {
         console.log("[ManagementController::getSession]");
-        return self.sessions.filter(
-            function(sessions){ return sessions.id == id; }
-        );
+        
+        // Filter sessions array to find sessions with the specified id
+        const matchedSessions = self.sessions.filter(session => session.id === id);
+        
+        // Check if no session with the specified id was found
+        if (matchedSessions.length === 0) {
+            throw new Error(`Session with id ${id} not found`);
+        }
+        
+        // Check if multiple sessions with the specified id were found (should not occur)
+        if (matchedSessions.length > 1) {
+            throw new Error(`Multiple sessions found with id ${id}`);
+        }
+        
+        // Return the single session object found
+        return matchedSessions[0];
     }
 
     self.selectView = function(tab, type) {
@@ -214,15 +228,13 @@ export let ManagementController = ($scope,
             // console.debug(self.selectedView);
             $route.reload();
             if (tab != "newDesignExt" && tab != "viewDesign"){
-                self.designId.id = null; //avoids making designs-documents request
+                //self.designId.id = null; //avoids making designs-documents request
             } 
             if (tab != "launchActivity") {
-                self.launchId.id = null; 
-                self.launchId.title = null; 
-                self.launchId.type = null;
+                DesignStateService.setInstanceData(0, "", "U");
             }
             if (tab == "designs") {
-                if(type != null) self.tabSel.type = type;
+                if (type != null) self.tabSel.type = type;
                 else self.tabSel.type = 0;
             }
             //console.debug(self.selectedView);
@@ -250,40 +262,10 @@ export let ManagementController = ($scope,
             });
     };
 
-    self.changeDesign = function(selectedDesign){
+    self.changeDesign = function(selectedDesign) {
         self.design = selectedDesign;
     };
 
-    self.shared.getActivities = async function () {
-        console.log("[ManagementController::getActivities]");
-        const postdata = {};
-
-        try {
-            const response = await $http({
-                url:    "get-activities",
-                method: "POST",
-                data:   postdata
-            });
-    
-            // Ensure activities is an array, or initialize as an empty array
-            self.activities = Array.isArray(response.data.activities) ? 
-                response.data.activities : [];
-    
-            // Map titles from design metadata if activities are present
-            self.activities.forEach(activity => {
-                if (activity.design && activity.design.metainfo) {
-                    activity.title = activity.design.metainfo.title;
-                }
-            });
-    
-            return self.activities;
-    
-        } catch (error) {
-            console.error("Error fetching activities:", error);
-            return []; // Return an empty array on error
-        }
-    };
-    
     self.sesFromURL = function () {
         var sesid = +$location.path().substring(1);
         var ses = self.sessions.find(function (e) {
@@ -480,5 +462,5 @@ export let ManagementController = ($scope,
         return $filter("translate")(key);
     };
 
-    self.init();
+    vm.init();
 };

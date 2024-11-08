@@ -1,14 +1,15 @@
 /*eslint func-style: ["error", "expression"]*/
 export let ActivityController = ($scope, $filter, $http, Notification, $timeout,
-    ActivityStateService) => {
+    ActivityStateService, ActivityCatalogService) => {
     var self = $scope;
     self.error = false;
     self.showSpinner = false;
     self.launchId = ActivityStateService.activityDescriptor;
     
-    self.init =function(){
+    self.init =function() {
+        console.log("[ActivityController::init] initializing");
         self.launchDesignId = self.launchId.id;
-        self.shared.getActivities();
+        ActivityCatalogService.loadActivities();
         self.checkContentAnalysisAvailability();
     };
 
@@ -45,8 +46,8 @@ export let ActivityController = ($scope, $filter, $http, Notification, $timeout,
                 await self.generateCodeActivity(id);
                 
                 // Refresh activities and session data
-                console.log("[ActivityController::createSession] pre getActivities");
-                await self.shared.getActivities();
+                console.log("[ActivityController::createSession] pre loadActivities");
+                await ActivityCatalogService.loadActivities();
 
                 console.log("[ActivityController::createSession] pre updateSesData");
                 await self.shared.updateSesData();
@@ -76,7 +77,7 @@ export let ActivityController = ($scope, $filter, $http, Notification, $timeout,
             console.debug(`[ActivityController::createActivity] post start activity design response: ${JSON.stringify(response)
             } design: ${dsng}`);
             
-            const activities = await self.shared.getActivities();
+            const activities = await ActivityCatalogService.loadActivities();
             const filteredObj = activities.find(item => item.session === sesID);
     
             if (filteredObj) {
@@ -172,7 +173,7 @@ export let ActivityController = ($scope, $filter, $http, Notification, $timeout,
         $http.post("generate-session-code", postdata)
             .then(function (response) {
                 if (response.data.code != null) {
-                    self.selectedSes.code = response.data.code;
+                    ActivityStateService.sessionDescriptor.code = response.data.code;
                 }
             })
             .catch(function (error) {
@@ -182,20 +183,21 @@ export let ActivityController = ($scope, $filter, $http, Notification, $timeout,
     
     self.currentActivities = function(type){
         try {
-            if (!self.activities) {
+            let activities = ActivityCatalogService.getActivities();
+            if (!Array.isArray(activities) || activities.length === 0) {
                 return;
             }
-            if (type == 0) return self.activities.filter(function(activity) {
+            if (type == 0) return activities.filter(function(activity) {
                 return activity.status != 3 && activity.archived == false;
             });
-            if (type == 1) return self.activities.filter(function(activity) {
+            if (type == 1) return activities.filter(function(activity) {
                 return activity.status == 3 && activity.archived == false;
             });
-            if (type == 2) return self.activities.filter(function(activity) {
+            if (type == 2) return activities.filter(function(activity) {
                 return activity.archived;
             });    
         } catch (error) {
-            
+            console.error("[ActivityController::currentActivities] An error ocurred.");
         }
     };
 
@@ -205,7 +207,7 @@ export let ActivityController = ($scope, $filter, $http, Notification, $timeout,
 
     self.createCopy = function(ses){
         self.createSession(ses.name, ses.descr, ses.type, ses.dsgnid);
-        self.shared.getActivities();
+        ActivityCatalogService.loadActivities();
         self.shared.updateSesData();
         Notification.success("Actividad copiada!");
     };

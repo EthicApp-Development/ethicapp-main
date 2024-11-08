@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export let RoutingController = function($scope) {
+export function RoutingController($scope) {
     $scope.template = {      
         "home":           "views/partials/teacher/home.html",
         "newDesign":      "views/partials/teacher/new-design.html",

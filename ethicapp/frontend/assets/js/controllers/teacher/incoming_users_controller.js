@@ -1,6 +1,6 @@
 /*eslint func-style: ["error", "expression"]*/
-export let IncomingUsersController = ($scope, $http, ActivityStateService,
-    Notification) => {
+export function IncomingUsersController($scope, $http, ActivityStateService,
+    Notification) {
     var self = $scope;
 
     self.addToSession = function () {

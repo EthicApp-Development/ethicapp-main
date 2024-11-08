@@ -1,22 +1,23 @@
 /*eslint func-style: ["error", "expression"]*/
-export let DesignsDocController = ($scope, DesignStateService, $http, Notification, $timeout) => { 
-    var self = $scope;
-    self.busy = false;
-    self.documents = [];
-    self.designId = DesignStateService.designState;
+export function DesignsDocController($scope, DesignStateService, $http, Notification, $timeout) { 
+    const vm = this;
+    vm.busy = false;
+    vm.documents = [];
 
-    self.init = function(){
-        self.requestDesignDocuments();
+    vm.init = function(){
+        vm.designId = DesignStateService.getDesignId();
+        vm.designObj = DesignStateService.getDesignObj();
+        vm.requestDesignDocuments();
     };
 
-    self.uploadDesignDocument = function (event) { //Work in progress
+    vm.uploadDesignDocument = function (event) { //Work in progress
         var fileInput = event.target.querySelector('input[type="file"]');
         var file = fileInput.files[0];
 
-        if (file){
-            var maxSize = 20 * 1024 * 1024; // 20 MB
+        if (file) {
+            const maxSize = 20 * 1024 * 1024; // 20 MB
             if (file.size <= maxSize) {
-                self.busy = true;
+                vm.busy = true;
                 var fd = new FormData(event.target);
                 $http.post("upload-design-file", fd, {
                     transformRequest: angular.identity,
@@ -27,9 +28,9 @@ export let DesignsDocController = ($scope, DesignStateService, $http, Notificati
                         $timeout(function () {
                             //Notification.success("Documento cargado correctamente");
                             event.target.reset();
-                            self.busy = false;
+                            vm.busy = false;
                             //self.shared.updateDocuments();
-                            self.requestDesignDocuments();
+                            vm.requestDesignDocuments();
                         }, 2000);
                     }
                 })
@@ -44,23 +45,23 @@ export let DesignsDocController = ($scope, DesignStateService, $http, Notificati
         }
     };
     
-    self.requestDesignDocuments = function () {
-        console.log(self.designId);
-        var postdata = { dsgnid: self.designId.id };
+    vm.requestDesignDocuments = function () {
+        console.log(vm.designId);
+        var postdata = { dsgnid: vm.designId };
         $http({
             url: "designs-documents",
             method: "post",
             data: postdata
         })
         .then(function (response) {
-            self.documents = response.data;
+            vm.documents = response.data;
         })
         .catch(function (error) {
             console.error("Error fetching design documents:", error);
         });
     };
     
-    self.deleteDesignDocument = function (dsgnid) {
+    vm.deleteDesignDocument = function (dsgnid) {
         var postdata = { dsgnid: dsgnid };
         $http({
             url: "delete-design-document",
@@ -68,21 +69,21 @@ export let DesignsDocController = ($scope, DesignStateService, $http, Notificati
             data: postdata
         })
         .then(function () {
-            self.requestDesignDocuments();
+            vm.requestDesignDocuments();
         })
         .catch(function (error) {
             console.error("Error deleting design document:", error);
         });
     };    
 
-    self.getPathname = function(path){
+    vm.getPathname = function(path){
         var split = path.split("/");
         return split[split.length - 1];
     };
 
-    self.openPDFInNewTab = function (pdfPath) {
+    vm.openPDFInNewTab = function (pdfPath) {
         window.open(pdfPath, "_blank");
     };
 
-    self.init();
+    vm.init();
 };

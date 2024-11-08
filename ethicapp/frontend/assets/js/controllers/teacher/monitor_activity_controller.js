@@ -1,6 +1,6 @@
 /*eslint func-style: ["error", "expression"]*/
-export let MonitorActivityController = ($scope, $filter, $http, $window, Notification, $uibModal,
-    ActivityStateService) => {
+export function MonitorActivityController($scope, $filter, $http, $window, Notification, $uibModal,
+    ActivityStateService) {
     var self = $scope;
     self.stagesState = null;
     self.completion = null;
@@ -58,7 +58,6 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
             }
         }
         else{
-            var current_phase = self.design.phases[self.currentActivity.stage];
             if(self.design.type == "semantic_differential"){
                 self.completion = 0+"/" +  numUsers;
             } 
@@ -83,7 +82,7 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
 
     self.nextActivityDesign = async function () {
         try {
-            const stageCounter = self.currentActivity.stage + 1;
+            const stageCounter = ActivityStateService.activityDescriptor.activePhase + 1;
             const sesid = ActivityStateService.sessionDescriptor.id;
             const current_phase = self.design.phases[stageCounter];
             
@@ -104,7 +103,8 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
 
             // Step 1: Generate groups if needed
             if (current_phase.mode === "team") {
-                await self.generateGroups(null, self.currentActivity.stage + 1);
+                const nextPhaseNumber = ActivityStateService.activityDescriptor.activePhase + 1;
+                await self.generateGroups(null, nextPhaseNumber);
             }
 
             // Step 2: Add stage
@@ -202,8 +202,10 @@ export let MonitorActivityController = ($scope, $filter, $http, $window, Notific
         var pd = {
             sesid: ActivityStateService.sessionDescriptor.id
         };
-        return $http({ url: "get-current-stage", method: "post", data: pd }).then(function(response) {
-            self.currentActivity.stage = response.data.length === 0 ? 0: response.data[0].number -1;
+        return $http({ url: "get-current-stage", method: "post", data: pd }).
+            then(function(response) {
+                ActivityStateService.activityDescriptor.activePhase = response.data.length === 0 ? 
+                    0: response.data[0].number -1;
         });
     };
 

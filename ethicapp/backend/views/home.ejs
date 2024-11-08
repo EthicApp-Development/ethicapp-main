@@ -31,17 +31,15 @@
   <div>
     <div class="sidenav"> <!--Left side NAV BAR-->
       <div style="margin-top: 5em;">
-        <a ng-click="selectView('')">{{ 'home' | translate }}</a>
-        <a ng-click="selectView('launchActivity')">{{ 'launchActivity' | translate }}</a>
-        <a ng-click="selectView('activities')">{{ 'activities' | translate }}</a>
-        <a ng-click="selectView('designs')">{{ 'designs' | translate }}</a>
+        <a href="#!/home">{{ 'home' | translate }}</a>
+        <a href="#!/activities/new">{{ 'launchActivity' | translate }}</a>
+        <a href="#!/activities">{{ 'activities' | translate }}</a>
+        <a href="#!/designs">{{ 'designs' | translate }}</a>
       </div>
     </div>
     <div class="main_body vl"> <!--Right side-->
       <div class="container" style="margin-top: 3em;">
-        <div ng-view="" ng-controller="TabsController">
-          <!--Ng view templates-->
-        </div>
+        <div ng-view></div>
       </div>
     </div>
   </div>

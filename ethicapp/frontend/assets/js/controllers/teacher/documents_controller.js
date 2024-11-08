@@ -1,6 +1,6 @@
 /*eslint func-style: ["error", "expression"]*/
-export let DocumentsController = ($scope, $http, 
-    Notification, $timeout, ActivityStateService) => {
+export function DocumentsController($scope, $http, 
+    Notification, $timeout, ActivityStateService) {
     var self = $scope;
 
     self.busy = false;

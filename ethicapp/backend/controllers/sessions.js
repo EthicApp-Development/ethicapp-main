@@ -483,6 +483,38 @@ router.post("/get-design", await rpg.singleSQL({
     }
 }));
 
+router.get("/designs", rpg.singleSQL({
+    dbcon: pass.dbcon,
+    sql: `
+        SELECT DISTINCT ON (id) id, design, public, locked, 
+               CASE WHEN creator = $1 THEN TRUE ELSE FALSE END AS user_owned
+        FROM DESIGNS
+        WHERE creator = $1 OR public = TRUE
+        ORDER BY id DESC, user_owned DESC;
+    `,
+    sesReqData: ["uid"],
+    sqlParams: [rpg.param("ses", "uid")],
+    onEnd: (req, res, result) => {
+        // Ensure result is an array
+        const rows = Array.isArray(result) ? result : [result];
+
+        // Map rows to required structure
+        const designs = rows.map(row => ({
+            ...row.design,
+            id: row.id,
+            public: row.public,
+            locked: row.locked,
+            userOwned: row.user_owned
+        }));
+
+        res.json({ status: "ok", result: designs });
+    },
+    onError: (err, req, res) => {
+        console.error("Error in /designs query:", err);
+        res.status(400).json({ status: "err", error: "Error retrieving designs." });
+    }
+}));
+
 router.get("/get-user-designs", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `

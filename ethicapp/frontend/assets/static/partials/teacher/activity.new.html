@@ -3,7 +3,6 @@
 <p>{{'chooseDesignLaunch' | translate}}</p>
 <br>
 <div class="launchActivity-wrapper">
-    <!-- ng-if="selectedView=='launchActivity'" -->
     <div class="launchActivityDiv">
         <div ng-controller="BrowseDesignsController as vm">
             <div ng-init="vm.getDesigns(); retrieveInstanceData()" ng-show="vm.selectedDesign == null">

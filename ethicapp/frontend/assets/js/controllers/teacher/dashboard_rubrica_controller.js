@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export let DashboardRubricaController = ($scope) => {
+export function DashboardRubricaController($scope) {
     var self = $scope;
     self.reports = [];
     self.result = [];

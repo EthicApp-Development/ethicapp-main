@@ -41,8 +41,7 @@
             </div>
             
             <div class="text-right vertical-align">
-                <button class="btn btn-primary " ng-click="selectActivity(ses.id, ses.session, ses.dsgnid)">{{'gotoActivity' | translate}}</button>
-                <!--{{routes[ses.type]}}?sesid={{ses.id}}-->
+                <button class="btn btn-primary " ng-click="navigateTo('/activities/'+ses.id)">{{'gotoActivity' | translate}}</button>
             </div>
         </div>
     </div>

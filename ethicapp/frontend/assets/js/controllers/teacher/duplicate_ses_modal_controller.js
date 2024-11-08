@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export let DuplicateSesModalController = ($scope, $http, $uibModalInstance, data) => {
+export function DuplicateSesModalController($scope, $http, $uibModalInstance, data) {
     var vm = this;
     vm.data = data;
     vm.nses = {

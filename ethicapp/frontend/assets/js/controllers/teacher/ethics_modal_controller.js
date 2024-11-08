@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export let EthicsModalController = function($scope, $http, $uibModalInstance, Notification, data) {
+export function EthicsModalController($scope, $http, $uibModalInstance, Notification, data) {
     self = $scope;
     var vm = this;
     vm.data = data;

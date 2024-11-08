@@ -1,6 +1,6 @@
 /*eslint func-style: ["error", "expression"]*/
-export let DashboardController = ($scope, $socket, $http, 
-    $timeout, $uibModal, ActivityStateService, Notification) => {
+export function DashboardController($scope, $socket, $http, 
+    $timeout, $uibModal, ActivityStateService, Notification) {
     
     var self = $scope;
     self.iterationIndicator = 1;

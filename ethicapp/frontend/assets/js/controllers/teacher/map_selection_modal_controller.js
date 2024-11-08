@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export let MapSelectionModalController = ($scope, $uibModalInstance) => {
+export function MapSelectionModalController($scope, $uibModalInstance) {
     var vm = this;
 
     vm.nav = true;
