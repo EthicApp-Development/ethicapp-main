@@ -4,9 +4,9 @@ export function DesignsDocController($scope, DesignStateService, $http, Notifica
     vm.busy = false;
     vm.documents = [];
 
-    vm.init = function(){
-        vm.designId = DesignStateService.getDesignId();
-        vm.designObj = DesignStateService.getDesignObj();
+    vm.init = async function(){
+        vm.designId = await DesignStateService.getDesignId();
+        vm.designObj = await DesignStateService.getDesignObj();
         vm.requestDesignDocuments();
     };
 

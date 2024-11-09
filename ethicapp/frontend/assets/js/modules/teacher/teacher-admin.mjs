@@ -26,10 +26,11 @@ var app = angular.module("TeacherApp", ["ngSanitize", "btford.socket-io",
 
 import { LocalesController } from "../../controllers/common/locales_controller.js";
 import { ActivityController } from "../../controllers/teacher/activity_controller.js";
-import { StagesController } from "../../controllers/teacher/stages_controller.js";
+import { DesignEditorController } from "../../controllers/teacher/design_editor_controller.js";
 import { BrowseDesignsController } from "../../controllers/teacher/browse_designs_controller.js";
 import { ConfirmModalController } from "../../controllers/teacher/confirm_modal_controller.js";
 import { ContentModalController } from "../../controllers/teacher/content_modal_controller.js";
+import { CreateDesignController } from "../../controllers/teacher/create_design_controller.js";
 import { DashboardController } from "../../controllers/teacher/dashboard_controller.js";
 import { DesignsDocController } from "../../controllers/teacher/designs_doc_controller.js";
 import { DocumentsController } from "../../controllers/teacher/documents_controller.js";
@@ -44,7 +45,7 @@ import { MonitorActivityController } from "../../controllers/teacher/monitor_act
 import { OptionsController } from "../../controllers/teacher/options_controller.js";
 import { RoutingController } from "../../controllers/teacher/routing_controller.js";
 import { SesEditorController } from "../../controllers/teacher/ses_editor_controller.js";
-import { StagesEditController } from "../../controllers/teacher/stages_edit_controller.js";
+import { StagesController } from "../../controllers/teacher/stages_controller.js";
 import { DashboardRubricaController } from "../../controllers/teacher/dashboard_rubrica_controller.js";
 import { ngQuillConfigProvider } from "../../helpers/util.js";
 
@@ -57,7 +58,10 @@ app.config(TeacherRouter);
 
 app.run(function($rootScope, $location) {
     $rootScope.navigateTo = function(path) {
-        $location.path(path);
+        //console.log(`[navigateTo] navigating to ${path}`);
+        $rootScope.$applyAsync(() => {
+            $location.path(path);
+        });
     };
 });
 
@@ -94,6 +98,8 @@ app.controller("ManagementController",
         "$filter", "$socket", "$route", "$translate", "ActivityStateService",
         "ActivityCatalogService", "DesignCatalogService",
         ManagementController]);
+app.controller("CreateDesignController", 
+    ["$scope", "$http", "DesignCatalogService", CreateDesignController]);   
 app.controller("TabsController", 
     ["$scope", "$http", "Notification", TabsController]);
 app.controller("DocumentsController", 
@@ -130,9 +136,9 @@ app.controller("BrowseDesignsController",
     ["$scope", "$routeParams", "TabStateService", "DesignStateService", 
         "ActivityStateService", "DesignCatalogService", 
         "$filter", "$http", BrowseDesignsController]);
-app.controller("StagesEditController", 
-    ["$scope", "DesignStateService", "$filter", "$http", "Notification", 
-        "$timeout", "ActivityStateService", "DesignCatalogService", StagesEditController]);
+app.controller("DesignEditorController", 
+    ["$scope", "$routeParams", "DesignStateService", "$filter", "$http", "Notification", 
+        "$timeout", "ActivityStateService", "DesignCatalogService", DesignEditorController]);
 app.controller("OptionsController", 
     ["$scope", "$http", "Notification", "ActivityStateService", OptionsController]);
 app.controller("DashboardRubricaController", 

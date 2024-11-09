@@ -7,12 +7,12 @@
     <div class="modal-header pl-0">
         <h4>{{'designMsgInfo'|translate}}</h4>
     </div>
-    <form class="modal-body form-new-design" name="formDesign" ng-controller="StagesEditController">
+    <form class="modal-body form-new-design" name="formDesign" ng-controller="CreateDesignController as cdc">
         <div class="wrapper_nd">
             <div class="line-form-nd">
                 <div class="line-row-nd">
                     <label>{{'activityType'|translate}}</label>
-                    <select ng-model="selectedOption" class="form-control line_input w-22" ng-required="true">
+                    <select ng-model="cdc.selectedOption" class="form-control line_input w-22" ng-required="true">
                         <option value="" selected disabled>{{'selectActivityType'|translate}}</option>
                         <option value="semantic_differential">{{'semantic_differential'|translate}}</option>
                         <option value="ranking">{{'ranking_activity'|translate}}</option>
@@ -20,7 +20,8 @@
                 </div>
                 <div class="line-row-nd">
                     <label>{{'title'|translate}}:</label>
-                    <input type="text" class="form-control line_input" name="name" ng-model="title" ng-required="true">
+                    <input type="text" class="form-control line_input" name="name" 
+                        ng-model="cdc.title" ng-required="true">
                 </div>
             </div>
             <div class="vertical_help_panel" ng-show="selectedOption.length > 0">
@@ -38,7 +39,7 @@
         <br>
         <div class="new-design-bottom">
             <button class="btn btn-primary"
-                ng-click="formDesign.$valid && uploadDesign(title,'template', selectedOption)"
+                ng-click="formDesign.$valid && cdc.uploadDesign(cdc.title, 'template', cdc.selectedOption)"
                 type="submit">{{'next'|translate}}</button>
         </div>
     </form>
