@@ -1,5 +1,5 @@
 // Handles a single design currently being worked on.
-let DesignStateService = ($http) => {
+let DesignStateService = ($rootScope, $http) => {
     const service = {
         designObj: {},
         designId: 0,
@@ -7,10 +7,12 @@ let DesignStateService = ($http) => {
         setDesign(designId, designObj) {
             service.designId = designId;
             service.designObj = designObj;
+            service.notifySubscribers();
         },
         resetDesign() {
             service.designId = 0,
             service.designObj = null;
+            service.notifySubscribers();
         },
         getDesignObj() {
             return service.designObj;
@@ -35,7 +37,11 @@ let DesignStateService = ($http) => {
         },
         getInstanceData: () => {
             return service.instanceData;
-        }
+        },
+        notifySubscribers: function() {
+            $rootScope.$broadcast('workingDesignChanged', 
+                { designId: service.designId, designObj: service.designObj } );
+        }  
     };
 
     return service;

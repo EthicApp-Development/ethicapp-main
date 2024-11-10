@@ -1,4 +1,4 @@
-let DesignCatalogService = ($http) => {
+let DesignCatalogService = ($rootScope, $http) => {
     const service = {
         designs: [],
 
@@ -11,6 +11,7 @@ let DesignCatalogService = ($http) => {
                     if (typeof service.designs === "string") {
                         service.designs = JSON.parse(service.designs);
                     }
+                    service.notifySubscribers();
                 } else {
                     console.error("Error: Unexpected response format", response.data);
                 }
@@ -46,8 +47,6 @@ let DesignCatalogService = ($http) => {
             if (reload || service.designs.length === 0) {
                 await service.loadDesigns();
             }
-            
-            // Find the design by id
             return service.designs.find(design => design.id === id) || null;
         },
 
@@ -87,7 +86,28 @@ let DesignCatalogService = ($http) => {
             } catch (error) {
                 console.error("Error deleting design:", error);
             }
-        }
+        },
+
+        async updateDesign(designId, designObj) {
+            try {
+                const postdata = { "id": designId, "design": designObj };
+                const response = await $http.post("/update-design", postdata);
+        
+                if (response.data.status === "ok") {
+                    await service.loadDesigns();
+                    return true;
+                } else {
+                    throw new Error("Failed to update design");
+                }                
+            } catch (error) {
+                console.error("Error updating design: ", error);
+                return false;
+            }
+        },
+
+        notifySubscribers: function() {
+            $rootScope.$broadcast('designCatalogUpdated', service.designs);
+        }        
     };
 
     return service;

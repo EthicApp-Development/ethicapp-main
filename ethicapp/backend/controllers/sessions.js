@@ -400,7 +400,9 @@ router.post("/upload-design-file", async (req, res) => {
             VALUES ($1,$2,$3)
             `,
             sqlParams: [
-                rpg.param("calc", "path"), rpg.param("post", "dsgnid"), rpg.param("ses", "uid")
+                rpg.param("calc", "path"), 
+                rpg.param("post", "dsgnid"), 
+                rpg.param("ses", "uid")
             ],
             onStart: (ses, data, calc) => {
                 calc.path = "assets/uploads" + req.files.pdf.file.split("uploads")[1];
@@ -483,7 +485,7 @@ router.post("/get-design", await rpg.singleSQL({
     }
 }));
 
-router.get("/designs", rpg.singleSQL({
+router.get("/designs", rpg.execSQL({
     dbcon: pass.dbcon,
     sql: `
         SELECT DISTINCT ON (id) id, design, public, locked, 
@@ -494,11 +496,8 @@ router.get("/designs", rpg.singleSQL({
     `,
     sesReqData: ["uid"],
     sqlParams: [rpg.param("ses", "uid")],
-    onEnd: (req, res, result) => {
-        // Ensure result is an array
-        const rows = Array.isArray(result) ? result : [result];
-
-        // Map rows to required structure
+    onEnd: (req, res, rows) => {
+        // Process the rows to map to the desired structure
         const designs = rows.map(row => ({
             ...row.design,
             id: row.id,

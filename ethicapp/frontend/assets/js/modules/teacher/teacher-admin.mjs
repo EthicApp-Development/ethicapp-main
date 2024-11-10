@@ -12,7 +12,7 @@ import { DesignStateService } from "../../services/design-state-service.js";
 import { DesignCatalogService } from "../../services/design-catalog-service.js";
 
 var app = angular.module("TeacherApp", ["ngSanitize", "btford.socket-io",
-    "ui.bootstrap", "ui.multiselect", "timer",
+    "ui.bootstrap", "ui.multiselect", "timer", "ngFileUpload",
     "ui-notification", "ngQuill", "tableSort", "pascalprecht.translate", 
     "ngRoute", "checklist-model", "ngDialog"]
 ).factory("TabStateService", function() {

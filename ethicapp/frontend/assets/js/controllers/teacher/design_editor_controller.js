@@ -38,16 +38,19 @@ export function DesignEditorController($scope, $routeParams,
     vm.init = async function() {
         // Retrieve the design from the route path
         if ($routeParams.id !== undefined) {
+
             const designId = Number($routeParams.id);
             const designObj = await DesignCatalogService.getDesignById(designId);
-
+            
+            vm.designId = designId;
+            
             // Set the newly uploaded design as the current one
             await DesignStateService.setDesign(designId, designObj);
 
             // Necessary for the views...
             vm.designObj = designObj;
 
-            console.log(`[DesignEditorController::init] The design is as follows: ${JSON.stringify(vm.designObj)}`);
+            // console.log(`[DesignEditorController::init] The design is as follows: ${JSON.stringify(vm.designObj)}`);
         }
 
         if(vm.designObj != null){
@@ -55,14 +58,14 @@ export function DesignEditorController($scope, $routeParams,
             if(vm.designObj.type == "semantic_differential") {
                 vm.num = vm.designObj.phases[0].questions[0].ans_format.values;
             }
-            resetValues();
+            vm.resetValues();
             vm.cleanEmptyValues();
             vm.createErrorList();
         }
     };
 
     vm.cleanEmptyValues = function() {
-        console.log(`cleanEmptyValues vm.designObj: '${JSON.stringify(vm.designObj)}'`);
+        // console.log(`cleanEmptyValues vm.designObj: '${JSON.stringify(vm.designObj)}'`);
         let phases = vm.designObj.phases;
         for(let i =0; i< phases.length; i++){
             let phase = phases[i];
@@ -215,27 +218,33 @@ export function DesignEditorController($scope, $routeParams,
         }
     };
 
-    vm.updateDesign = function() {
-        vm.error = vm.checkDesign();
-        if (!vm.error) {
-            let postdata = { "design": vm.designObj, "id": vm.designId };
-            $http.post("update-design", postdata).then(function(response) {
-                if (response.data.status == "ok") {
-                    vm.saved = true;
-                } else {
-                    vm.saved = false;
-                }
-            }, function() {
+    vm.updateDesign = async function() {
+        try {
+            vm.error = vm.checkDesign();
+            if (vm.error) {
                 vm.saved = false;
-            });
-        } else {
+                return vm.saved;
+            }
+
+            // console.debug(`[DesignEditorController::updateDesign] designId: ${vm.designId} designObj: ${JSON.stringify(vm.designObj)}`);
+    
+            const designId = DesignStateService.getDesignId();
+            const result = await DesignCatalogService.updateDesign(designId, vm.designObj);
+
+            if (result) {
+                vm.saved = true;
+                $scope.$applyAsync();
+            } else {
+                vm.saved = false;
+            }
+        } catch (error) {
+            console.error("Error updating design: ", error);
             vm.saved = false;
         }
-        return $timeout(function() {
-            return vm.saved;
-        }, 500);
-    };
     
+        return vm.saved;
+    };
+        
     vm.checkDesign = function(){ 
         let error = false;
         let phases = vm.designObj.phases;
@@ -273,7 +282,7 @@ export function DesignEditorController($scope, $routeParams,
     };  
 
 
-    function resetValues() {
+    vm.resetValues = function() {
         // RESET VALUES
         vm.currentStage = 0; 
         vm.currentQuestion = 0; 

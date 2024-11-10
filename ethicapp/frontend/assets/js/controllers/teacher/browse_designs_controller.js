@@ -12,11 +12,7 @@ export function BrowseDesignsController($scope, $routeParams,
     vm.designs = [];
     vm.selectedDesign = null;
 
-    $scope.tab = null;
-    $scope.tabSel = TabStateService.sharedTabState;
-
     vm.init = async function() {
-        console.log(`[BrowseDesignsController::init]`);
         await vm.forceFetchDesigns();
 
         try {
@@ -34,6 +30,10 @@ export function BrowseDesignsController($scope, $routeParams,
         if(vm.selectedView == "designs") {
             vm.tab = vm.tabSel.type;
         }
+
+        $scope.$on('designCatalogUpdated', async function(event, data) {
+            await vm.forceFetchDesigns();
+        });
     };
 
     vm.forceFetchDesigns = async function() {

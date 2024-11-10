@@ -2136,3 +2136,19 @@ h2{
 .welcome-message {
     text-align: center;
 }
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 0px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap; /* Prevent the element from taking up space */
+    border: 0;
+}
+
+.file-upload {
+    width: 12em;
+}

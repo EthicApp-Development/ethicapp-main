@@ -17,5 +17,5 @@ import 'ng-quill';
 import '../libs/angular-bootstrap-multiselect.js';
 import 'angularjs-dropdown-multiselect';
 import 'angular-tablesort';
-import 'angular-route';
+import 'ng-file-upload';
 import 'checklist-model';

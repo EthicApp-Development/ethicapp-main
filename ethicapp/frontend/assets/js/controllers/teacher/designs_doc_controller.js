@@ -3,64 +3,80 @@ export function DesignsDocController($scope, DesignStateService, $http, Notifica
     const vm = this;
     vm.busy = false;
     vm.documents = [];
+    vm.designId = 0;
+    vm.designObj = null;
+    vm.selectedFile = null;
 
     vm.init = async function(){
-        vm.designId = await DesignStateService.getDesignId();
-        vm.designObj = await DesignStateService.getDesignObj();
-        vm.requestDesignDocuments();
+        console.debug("[DesignsDocController::init]");
+        $scope.$on('workingDesignChanged', async function(event, data) {
+            console.log("[DesignsDocController::workingDesignUpdated");
+            vm.designId = data.designId;
+            vm.designObj = data.designObj;
+
+            // Refresh the documents
+            await vm.requestDesignDocuments();
+        });
     };
-
-    vm.uploadDesignDocument = function (event) { //Work in progress
-        var fileInput = event.target.querySelector('input[type="file"]');
-        var file = fileInput.files[0];
-
+    
+    vm.uploadDesignDocument = async function (file) {
+        console.log("[DesignDocumentsController::uploadDesignDocument]");
+    
         if (file) {
             const maxSize = 20 * 1024 * 1024; // 20 MB
             if (file.size <= maxSize) {
                 vm.busy = true;
-                var fd = new FormData(event.target);
-                $http.post("upload-design-file", fd, {
-                    transformRequest: angular.identity,
-                    headers: { "Content-Type": undefined }
-                })
-                .then(function (response) {
-                    if (response.data.status === "ok") {
-                        $timeout(function () {
-                            //Notification.success("Documento cargado correctamente");
-                            event.target.reset();
-                            vm.busy = false;
-                            //self.shared.updateDocuments();
-                            vm.requestDesignDocuments();
-                        }, 2000);
-                    }
-                })
-                .catch(function (error) {
-                    console.error("Error uploading design file:", error);
-                });                
-            }
-            else{
-                Notification.error("Documento muy grande. El tamaño máximo permitido es 20 MB.");
-            }
 
+                const formData = new FormData();
+                formData.append('pdf', file);
+                formData.append('dsgnid', vm.designId);
+    
+                try {
+                    const response = await $http.post("upload-design-file", 
+                        formData, {
+                            transformRequest: angular.identity,
+                            headers: { "Content-Type": undefined }
+                        });
+                    
+                    if (response.data.status === "ok") {
+                        console.log("Document uploaded successfully.");
+                        vm.requestDesignDocuments(); // Update document list
+                    }
+                } catch (error) {
+                    console.error("Error uploading design file:", error);
+                } finally {
+                    vm.busy = false;
+                }
+            } else {
+                Notification.error("File is too large. Maximum size allowed is 20 MB.");
+            }
         }
     };
     
-    vm.requestDesignDocuments = function () {
-        console.log(vm.designId);
-        var postdata = { dsgnid: vm.designId };
-        $http({
-            url: "designs-documents",
-            method: "post",
-            data: postdata
-        })
-        .then(function (response) {
-            vm.documents = response.data;
-        })
-        .catch(function (error) {
-            console.error("Error fetching design documents:", error);
-        });
-    };
+    vm.requestDesignDocuments = async function() {
+        try {
+            // Prepare the request payload
+            const postdata = { dsgnid: vm.designId };
     
+            // Make an asynchronous HTTP POST request to fetch design documents
+            const response = await $http({
+                url: "designs-documents",
+                method: "post",
+                data: postdata
+            });
+    
+            // Assign the response data to `vm.documents`
+            vm.documents = response.data;
+
+            // Ensure the DOM is updated
+            $scope.$applyAsync(); 
+    
+        } catch (error) {
+            // Log any errors encountered during the HTTP request
+            console.error("Error fetching design documents:", error);
+        }
+    };
+        
     vm.deleteDesignDocument = function (dsgnid) {
         var postdata = { dsgnid: dsgnid };
         $http({
@@ -76,7 +92,7 @@ export function DesignsDocController($scope, DesignStateService, $http, Notifica
         });
     };    
 
-    vm.getPathname = function(path){
+    vm.getPathname = function(path) {
         var split = path.split("/");
         return split[split.length - 1];
     };
