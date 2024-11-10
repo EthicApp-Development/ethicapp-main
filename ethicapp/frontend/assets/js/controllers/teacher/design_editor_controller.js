@@ -42,6 +42,11 @@ export function DesignEditorController($scope, $routeParams,
             const designId = Number($routeParams.id);
             const designObj = await DesignCatalogService.getDesignById(designId);
             
+            if (designObj === null) {
+                console.error("[DesignEditorController::init] Design not found.");
+                $scope.navigateTo("/error/404/2");
+            }
+
             vm.designId = designId;
             
             // Set the newly uploaded design as the current one

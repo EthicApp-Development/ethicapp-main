@@ -385,6 +385,13 @@
 	"showOptions": "Mostrar Opciones Avanzadas",
 	"hideOptions": "Ocultar Opciones Avanzadas",
 	"contentAnalysis": "Análisis de Contenido",
-	"chooseQuestion": "Selecciona una pregunta"
+	"chooseQuestion": "Selecciona una pregunta",
+	"access_denied": "Acceso Denegado (403)",
+	"access_denied_explanation": "No tienes permisos para acceder a esta página.",
+	"resource_not_found": "Página No Encontrada (404)",
+	"resource_not_found_explanation": "Lo sentimos, la página que buscas no existe.",
+	"internal_server_error": "Error Interno del Servidor (500)",
+	"internal_server_error_explanation": "Algo salió mal, por favor intenta nuevamente más tarde.",
+	"go_back": "Volver a la página anterior"
 }
 

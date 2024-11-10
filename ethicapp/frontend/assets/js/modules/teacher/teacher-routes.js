@@ -33,8 +33,26 @@ function TeacherRouter($routeProvider) {
         .when('/users', {
             templateUrl: 'static/partials/teacher/users.html',
         })
+        .when('/error/:errorCode/:backSteps', {
+            templateUrl: function(params) {
+              return 'static/partials/teacher/error.' + params.errorCode + '.html';
+            },
+            controller: 'ErrorController'
+          })
+          .otherwise({
+            redirectTo: '/error/404'
+          })        
+        .when('/error/:errorCode', {
+            templateUrl: function(params) {
+              return 'static/partials/teacher/error.' + params.errorCode + '.html';
+            },
+            controller: 'ErrorController'
+          })
+          .otherwise({
+            redirectTo: '/error/404'
+          })
         .otherwise({
-            redirectTo: '/'
+            redirectTo: '/error/404'
         });
 };
 

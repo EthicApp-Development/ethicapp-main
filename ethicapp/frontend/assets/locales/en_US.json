@@ -374,7 +374,14 @@
 	"showOptions": "Show Advanced Options",
 	"hideOptions": "Hide Advanced Options",
 	"contentAnalysis": "Content Analysis",
-	"chooseQuestion": "Select a Question"
+	"chooseQuestion": "Select a Question",
+	"access_denied": "Access Denied (403)",
+	"access_denied_explanation": "You do not have permission to access this page.",
+	"resource_not_found": "Page Not Found (404)",
+	"resource_not_found_explanation": "Sorry, the page you are looking for does not exist.",
+	"internal_server_error": "Internal Server Error (500)",
+	"internal_server_error_explanation": "Something went wrong, please try again later.",
+	"go_back": "Go Back to the Previous Page"
 }
 
 

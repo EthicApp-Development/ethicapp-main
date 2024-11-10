@@ -36,6 +36,7 @@ import { DesignsDocController } from "../../controllers/teacher/designs_doc_cont
 import { DocumentsController } from "../../controllers/teacher/documents_controller.js";
 import { DuplicateSesModalController } from "../../controllers/teacher/duplicate_ses_modal_controller.js";
 import { EthicsModalController } from "../../controllers/teacher/ethics_modal_controller.js";
+import { ErrorController } from "../../controllers/teacher/error-controller.js";
 import { GroupController } from "../../controllers/teacher/group_controller.js";
 import { IncomingUsersController } from "../../controllers/teacher/incoming_users_controller.js";
 import { ManagementController } from "../../controllers/teacher/management_controller.js";
@@ -71,6 +72,7 @@ app.run(function($rootScope) {
     });
 });
 
+
 // Rich text editor configuration
 app.config(["ngQuillConfigProvider", ngQuillConfigProvider]);
 
@@ -105,6 +107,9 @@ app.controller("TabsController",
 app.controller("DocumentsController", 
     ["$scope", "$http", "Notification", "$timeout", "ActivityStateService",
         DocumentsController]);
+app.controller("ErrorController", 
+    ["$scope", "$window", "$routeParams",
+        ErrorController]);        
 app.controller("SesEditorController", 
     ["$scope", "$http", "Notification", "ActivityStateService", SesEditorController]);
 app.controller("NewUsersController", 

@@ -3,7 +3,7 @@
 <h3 style="margin-left: 12%;">{{'Institucional_Users' | lang}}</h3> <br>
 
 <button class="btn btn-primary inst" >{{'Import_Users' | lang}}</button><br><br>
-<div >
+<div>
     <div class="inst">
         <div class="tab_cs" ng-init="tab_view=0">
             <button class="tab_cs" ng-click= "tab_view=0" ng-class="{'btn_selected': tab_view == 0}">
@@ -16,7 +16,6 @@
             <input type="text" placeholder="{{ 'filter' | lang}}" class="input-inst" ng-model="UserSearch">
         </div>
     </div>
-
 
     <div class="scrollable-container blue" style="width: 100%;" id="box_alumnos">
         <div class="mid-container-inst  small-scrollable-container inst" id="container" >
