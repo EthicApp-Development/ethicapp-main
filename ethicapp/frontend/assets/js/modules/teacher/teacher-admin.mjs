@@ -6,6 +6,7 @@
 window.DIC = null;
 window.warnDIC = {};
 
+import "angular-toggle-switch";
 import { ActivityStateService } from "../../services/activity-state-service.js";
 import { ActivityCatalogService } from "../../services/activity-catalog-service.js";
 import { DesignStateService } from "../../services/design-state-service.js";
@@ -14,7 +15,7 @@ import { DesignCatalogService } from "../../services/design-catalog-service.js";
 var app = angular.module("TeacherApp", ["ngSanitize", "btford.socket-io",
     "ui.bootstrap", "ui.multiselect", "timer", "ngFileUpload",
     "ui-notification", "ngQuill", "tableSort", "pascalprecht.translate", 
-    "ngRoute", "checklist-model", "ngDialog"]
+    "ngRoute", "checklist-model", "ngDialog", "toggle-switch"]
 ).factory("TabStateService", function() {
     var service = {};
     service.sharedTabState = { type: 0 };
@@ -26,13 +27,14 @@ var app = angular.module("TeacherApp", ["ngSanitize", "btford.socket-io",
 
 import { LocalesController } from "../../controllers/common/locales_controller.js";
 import { ActivityController } from "../../controllers/teacher/activity_controller.js";
-import { DesignEditorController } from "../../controllers/teacher/design_editor_controller.js";
+import { DesignEditController } from "../../controllers/teacher/design-edit-controller.js";
 import { BrowseDesignsController } from "../../controllers/teacher/browse_designs_controller.js";
 import { ConfirmModalController } from "../../controllers/teacher/confirm_modal_controller.js";
 import { ContentModalController } from "../../controllers/teacher/content_modal_controller.js";
 import { CreateDesignController } from "../../controllers/teacher/create_design_controller.js";
 import { DashboardController } from "../../controllers/teacher/dashboard_controller.js";
-import { DesignsDocController } from "../../controllers/teacher/designs_doc_controller.js";
+import { DesignAttachmentsController } from "../../controllers/teacher/design-attachments-controller.js";
+import { DesignViewController } from "../../controllers/teacher/design-view-controller.js";
 import { DocumentsController } from "../../controllers/teacher/documents_controller.js";
 import { DuplicateSesModalController } from "../../controllers/teacher/duplicate_ses_modal_controller.js";
 import { EthicsModalController } from "../../controllers/teacher/ethics_modal_controller.js";
@@ -129,8 +131,8 @@ app.controller("DuplicateSesModalController",
     ["$scope", "$http", "$uibModalInstance", "data", DuplicateSesModalController]);
 app.controller("GroupController", 
     ["$scope", "$http", "Notification", "ActivityStateService", GroupController]);
-app.controller("DesignsDocController", 
-    ["$scope", "DesignStateService" ,"$http", "Notification", "$timeout", DesignsDocController]);
+app.controller("DesignAttachmentsController", 
+    ["$scope", "DesignStateService" ,"$http", "Notification", "$timeout", DesignAttachmentsController]);
 app.controller("ActivityController", 
     ["$scope", "$filter", "$http", "Notification", "$timeout", 
         "ActivityStateService", "ActivityCatalogService", ActivityController]);
@@ -141,9 +143,11 @@ app.controller("BrowseDesignsController",
     ["$scope", "$routeParams", "TabStateService", "DesignStateService", 
         "ActivityStateService", "DesignCatalogService", 
         "$filter", "$http", BrowseDesignsController]);
-app.controller("DesignEditorController", 
+app.controller("DesignEditController", 
     ["$scope", "$routeParams", "DesignStateService", "$filter", "$http", "Notification", 
-        "$timeout", "ActivityStateService", "DesignCatalogService", DesignEditorController]);
+        "$timeout", "ActivityStateService", "DesignCatalogService", DesignEditController]);
+app.controller("DesignViewController", 
+    ["$scope", "$routeParams", "DesignCatalogService", DesignViewController]);
 app.controller("OptionsController", 
     ["$scope", "$http", "Notification", "ActivityStateService", OptionsController]);
 app.controller("DashboardRubricaController", 

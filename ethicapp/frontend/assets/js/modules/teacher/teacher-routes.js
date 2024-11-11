@@ -4,17 +4,17 @@ function TeacherRouter($routeProvider) {
             templateUrl: 'static/partials/teacher/home.html',
         })
         .when('/designs', {
-            templateUrl: 'static/partials/teacher/designs.html',
+            templateUrl: 'static/partials/teacher/design.index.html',
         })
         .when('/designs/new', {
             templateUrl: 'static/partials/teacher/design.new.html',
         })
+        .when('/designs/:id', {
+            templateUrl: 'static/partials/teacher/design.view.html',
+        })        
         .when('/designs/:id/edit', {
             templateUrl: 'static/partials/teacher/design.edit.html',
         })              
-        .when('/designs/:id', {
-            templateUrl: 'static/partials/teacher/design.view.html',
-        })
         .when('/activities', {
             templateUrl: 'static/partials/teacher/activities.html',
         })

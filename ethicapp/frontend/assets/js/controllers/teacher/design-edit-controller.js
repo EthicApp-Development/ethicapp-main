@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export function DesignEditorController($scope, $routeParams, 
+export function DesignEditController($scope, $routeParams, 
     DesignStateService, $filter, $http, Notification, $timeout, 
     ActivityStateService, DesignCatalogService) {
 

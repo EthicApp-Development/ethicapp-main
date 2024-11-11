@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export function DesignsDocController($scope, DesignStateService, $http, Notification, $timeout) { 
+export function DesignAttachmentsController($scope, DesignStateService, $http, Notification, $timeout) { 
     const vm = this;
     vm.busy = false;
     vm.documents = [];
