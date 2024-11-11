@@ -4,8 +4,8 @@
         <button type="button" class="close" aria-label="Close" ng-click="dismiss()">
             <span aria-hidden="true">&times;</span>
         </button>
-        <h2 class="modal-title" id="exampleModalLongTitle">Elegir caso</h2>
-        <p>También puedes adjuntar documentos directamente.</p>
+        <h2 class="modal-title" id="exampleModalLongTitle">{{'chooseCase'|translate}}</h2>
+        <p>{{'orCanApplyDocuments'|translate}}.</p>
     </div>
 
     <div class="modal-body">
@@ -42,7 +42,7 @@
                                 </div>
                                 <div class="text-right vertical-align">
                                     <button class="btn btn-primary btn-smaller ml-1" ng-click="selectCase(case.case_id)">
-                                        {{'usar' | translate}}
+                                        {{'use' | translate}}
                                     </button>
                                 </div>
                             </div>
@@ -67,14 +67,15 @@
                         <input type="file" id="file-input" multiple style="display: none;" accept="application/pdf"/>
                         <div class="upload-container" id="upload-container" ng-click="triggerFileInput()" ng-init="initDragDrop()">
                             <p>{{'dragDropMsg' | translate}}</p>
-                        </div>         
-                        <div class="file-item list-group-item" ng-repeat="document in formFiles track by $index">                                <div class="line-form-nd">
+                        </div>    
+                        <div class="file-item list-group-item" ng-repeat="document in formFiles track by $index">                               
+                             <div class="line-form-nd">
                                 <div class="line-row-nd">
-                                    <input type="text" class="form-control line_input" name="fileName" ng-model="document.name" ng-keypress="renameDocumentOnEnter($event, document.id)" ng-id="input-name-{{$index}}">
+                                    <input type="text" class="form-control line_input" name="fileName" ng-model="document.name" ng-id="input-name-{{$index}}">
                                 </div>
                             </div>
                             <div>
-                                <button class="btn btn-primary ml-1" ng-click="viewFile($event, document.path)" ng-id="btn-view-file-{{$index}}">{{'view' | translate}}</button>
+                                <button class="btn btn-primary ml-1" ng-click="viewFile($event, document.file)" ng-id="btn-view-file-{{$index}}">{{'view' | translate}}</button>
                                 <button class="btn btn-danger btn-smaller ml-1" ng-click="removeFile($event, $index)" ng-id="btn-remove-file-{{$index}}">{{'delete' | translate}}</button>
                             </div>
                         </div>

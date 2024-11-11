@@ -370,5 +370,10 @@
     "requiredPassword": "Ingresa una contraseña",
     "minLengthPassword": "Tu contraseña debe tener al menos ocho caracteres",
     "requiredConfirmPassword": "Confirma tu contraseña",
-    "passwordsDontMatch": "Las contraseñas no coinciden"
+    "passwordsDontMatch": "Las contraseñas no coinciden",
+    "chooseCase": "Elegir un caso",
+    "orCanApplyDocuments": "También puedes adjuntar documentos PDF directamente",
+    "attachCase": "Adjuntar caso",
+    "attachCaseDescription": "A continuación, puedes buscar algun caso para asociarlo a este diseño. También puedes en el buscador crear uno a partir de un documento",
+    "use": "Usar"
 }

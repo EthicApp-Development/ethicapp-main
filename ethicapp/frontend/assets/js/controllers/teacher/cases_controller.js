@@ -52,7 +52,6 @@ export const CasesController = (
 
   self.deleteCase = (caseId) => {
     CaseService.deleteCase(caseId).then((response) => {
-      // Notification.success("Case deleted");
       self.initCasesView();
     });
   };
@@ -67,13 +66,8 @@ export const CasesController = (
     const caseId = self.case.case_id;
     const data = self.case;
     self.case.rich_text = ckeditor.getData();
-    // complicado hay que borrar los files que elimino, y subir los nuevos
 
-
-
-    // CaseService.
     CaseService.editCase(caseId, data).then((response) => {
-      // Notification.success("Case saved");
     });
   };
 
@@ -89,7 +83,6 @@ export const CasesController = (
 
   self.toggleIsPublic = (case_id, is_public) => {
     CaseService.setIsPublic(case_id, !is_public).then((response) => {
-      // Notification.success("Case saved");
     });
   };
 
@@ -159,7 +152,7 @@ export const CasesController = (
     input.onchange = (event) => {
         const files = event.target.files;
         self.addFiles(files);
-        input.value = ''; // Restablece el valor del input
+        input.value = '';
         self.$apply(); 
     };
     
@@ -195,11 +188,11 @@ export const CasesController = (
 
   self.addFiles = (files) => {
       Array.from(files).forEach(file => {
-          if (file.type === 'application/pdf') {
+            if (file.type === 'application/pdf') {
               self.formFiles.push(file);
-          } else {
-              alert('Solo se permiten archivos PDF');
-          }
+            } else {
+              alert('Only PDF files are allowed');
+            }
           
       });
 

@@ -104,16 +104,21 @@ export class CasesService {
         });
     };
 
-    this.uploadDocuments = (caseId, files) => {
+    this.uploadDocuments = (caseId, files, filesNames=null) => {
+
+      let changeName = true;
+      if (filesNames && filesNames.length !== files.length) {
+        changeName = false;
+        console.error("The number of filenames does not match the number of files.");
+      }
+
       const formData = new FormData();
 
-      files.forEach((file) => {
+      files.forEach((file, index) => {
         if (file.type === "application/pdf") {
           formData.append("pdf", file);
         } else {
-          console.error(
-            `El archivo ${file.name} no es un PDF válido y no será subido.`
-          );
+            console.error(`File ${file.name} is not a valid PDF and will not be uploaded.`);
         }
       });
 
@@ -123,6 +128,14 @@ export class CasesService {
             headers: { "Content-Type": undefined },
           })
           .then((response) => {
+              if (changeName) {
+                response.data.result.forEach((file, index) => {
+                  if (filesNames[index] !== file.name) {
+                    this.renameDocument(file.id, filesNames[index]);
+                  }
+                });
+              }
+
             return response;
           })
           .catch((error) => {
@@ -135,6 +148,7 @@ export class CasesService {
         );
       }
     };
+    
 
     this.deleteDocument = (caseId, documentId) => {
       return $http

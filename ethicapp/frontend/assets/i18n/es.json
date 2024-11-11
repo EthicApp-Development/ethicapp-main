@@ -332,5 +332,10 @@
     "lastModificationDate": "Última modificación",
     "noDescription": "Sin descripción",
     "create": "Crear",
-    "changeCase": "Cambiar caso"
+    "changeCase": "Cambiar caso",
+    "chooseCase": "Elegir un caso",
+    "orCanApplyDocuments": "También puedes adjuntar documentos PDF directamente",
+    "attachCase": "Adjuntar caso",
+    "attachCaseDescription": "A continuación, puedes buscar algun caso para asociarlo a este diseño. También puedes en el buscador crear uno a partir de un documento",
+    "use": "Usar"
 }

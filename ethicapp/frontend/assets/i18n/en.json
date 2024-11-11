@@ -330,5 +330,10 @@
     "lastModificationDate": "Las modified",
     "noDescription": "No description",
     "create": "Create",
-    "changeCase": "Change case"
+    "changeCase": "Change case",
+    "chooseCase": "Choose a case",
+    "orCanApplyDocuments": "You can also attach PDF documents directly",
+    "attachCase": "Attach case",
+    "attachCaseDescription": "Next, you can search for a case to associate with this design. You can also create one in the search engine from one or more PDF documents",
+    "use": "Use"
 }

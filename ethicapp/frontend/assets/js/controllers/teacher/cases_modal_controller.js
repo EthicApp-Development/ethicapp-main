@@ -68,7 +68,7 @@ export function CasesModalController($scope, $window, $http, $timeout, $uibModal
         input.onchange = (event) => {
             const files = event.target.files;
             self.addFiles(files);
-            self.$apply(); // Asegura que AngularJS actualice la vista
+            self.$apply();
         };
         
         input.click();
@@ -103,11 +103,15 @@ export function CasesModalController($scope, $window, $http, $timeout, $uibModal
     self.addFiles = (files) => {
         Array.from(files).forEach(file => {
             if (file.type === 'application/pdf') {
-                self.formFiles.push(file);
+                const _file = {
+                    name: file.name,
+                    file: file,
+                }
+                self.formFiles.push(_file);
+
             } else {
-                alert('Solo se permiten archivos PDF');
+                alert('Only PDF files are allowed');
             }
-            
         });
 
         self.$apply();
@@ -119,12 +123,19 @@ export function CasesModalController($scope, $window, $http, $timeout, $uibModal
         self.formFiles.splice(index, 1);
     };
 
-    self.viewFile = ($event, path) => {
+    self.viewFile = ($event, file) => {
         $event.preventDefault();
-        const url = path;
-        $window.open(url, '_blank');
-    }
-
+    
+        if (file && file instanceof File) {
+            const fileURL = URL.createObjectURL(file);
+            window.open(fileURL, '_blank');
+    
+            setTimeout(() => URL.revokeObjectURL(fileURL), 100);
+        } else {
+            console.error("El archivo no es válido o no se proporcionó.");
+        }
+    };
+    
     self.renameDocument = ($event, documentId, newName) => {
         $event.preventDefault();
         CaseService.renameDocument(documentId, newName).then((response) => {
@@ -132,11 +143,11 @@ export function CasesModalController($scope, $window, $http, $timeout, $uibModal
     }
 
     self.renameDocumentOnEnter = ($event, documentId) => {
-        if ($event.key === 'Enter') {
-            const newName = $event.target.value;
-            // self.renameDocument($event, documentId, newName);
-            $event.target.blur();
-        }
+        // if ($event.key === 'Enter') {
+        //     const newName = $event.target.value;
+        //     // self.renameDocument($event, documentId, newName);
+        //     $event.target.blur();
+        // }
     }
 
     self.createCaseFromDocs = (event) => {
@@ -144,8 +155,18 @@ export function CasesModalController($scope, $window, $http, $timeout, $uibModal
         
         CaseService.createCaseEmpty().then((response) => {
             const newCaseId = response.data.result.case_id;
+
+            let filesNames = [];
+            let files = [];
+
+            self.formFiles.forEach((file, index) => {
+                files.push(file.file);
+                filesNames.push(file.name);
+            });
+
+
             
-            CaseService.uploadDocuments(newCaseId, self.formFiles).then((response) => {
+            CaseService.uploadDocuments(newCaseId, files, filesNames).then((response) => {
                 const result = response.data.result;
                 
                 $uibModalInstance.close(newCaseId);
