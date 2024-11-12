@@ -12,6 +12,7 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       //Activity.belongsTo(models.Session, { foreignKey: 'session_id' });
+      Activity.hasMany(models.Phase, { foreignKey: 'activity_id', as: 'Phases' });
     }
   }
   Activity.init({
