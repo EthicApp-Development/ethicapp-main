@@ -4,37 +4,35 @@ export function BrowseDesignsController($scope, $routeParams,
     DesignCatalogService, $filter, $http) {
 
     const vm = this;
-    vm.dsgnid = 0;
+    vm.pickedDesignId = 0;
     vm.dsgntitle = "";
     vm.dsgntype = "";
     vm.userDesigns = [];
     vm.publicDesigns = [];
     vm.designs = [];
-    vm.selectedDesign = null;
+    vm.preSelectedDesign = null;
 
     vm.init = async function() {
         await vm.forceFetchDesigns();
 
         try {
-            const selectedDesignId = Number($routeParams.designId);
-            if (selectedDesignId !== undefined) {
-                vm.selectedDesign = await DesignCatalogService.getDesignById(selectedDesignId);
+            const preSelectedDesignId = Number($routeParams.designId);
+            if (preSelectedDesignId !== undefined) {
+                vm.pickedDesignId = preSelectedDesignId;
+                vm.preSelectedDesign = await DesignCatalogService.getDesignById(preSelectedDesignId);
             }    
         } catch(error) {
             console.error("[BrowseDesignsController::init] Failed to retrieve designId route parameter");
         }
 
-        if(vm.selectedView == "launchActivity") {
-            vm.setInstanceData();
-        }
-        if(vm.selectedView == "designs") {
-            vm.tab = vm.tabSel.type;
-        }
-
         $scope.$on('designCatalogUpdated', async function(event, data) {
             await vm.forceFetchDesigns();
         });
-    };
+    }
+
+    vm.setPickedDesignId = function(id) {
+        vm.pickedDesignId = id;
+    }
 
     vm.forceFetchDesigns = async function() {
         vm.userDesigns = await DesignCatalogService.getUserDesigns();

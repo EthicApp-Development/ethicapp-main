@@ -1,12 +1,17 @@
+import { DesignCatalogService } from "../../services/design-catalog-service";
+
 /*eslint func-style: ["error", "expression"]*/
-export let ActivityController = ($scope, $filter, $http, Notification, $timeout,
-    ActivityStateService, ActivityCatalogService) => {
+export function ActivityController($scope, $filter, $http, Notification, $timeout,
+    ActivityStateService, ActivityCatalogService, DesignCatalogService) {
     var self = $scope;
     self.error = false;
     self.showSpinner = false;
     self.launchId = ActivityStateService.activityDescriptor;
-    
-    self.init =function() {
+
+    const vm = this;
+    vm.activityDescription = "";
+
+    vm.init = function() {
         console.log("[ActivityController::init] initializing");
         self.launchDesignId = self.launchId.id;
         ActivityCatalogService.loadActivities();
@@ -14,22 +19,29 @@ export let ActivityController = ($scope, $filter, $http, Notification, $timeout,
     };
 
     // Create Activity from launch activity
-    self.createSession = async function (dsgnName, dsgndescr, dsgntype, dsgnid, additionalConfig = {}) {
+    vm.createSession = async function (designId) {
         self.showSpinner = true;
     
         try {
+            const designObj = await DesignCatalogService.getDesignById(designId);
+
             // Check the design
             const checkResponse = await $http({
                 url:    "check-design",
                 method: "post",
-                data:   { dsgnid: dsgnid }
+                data:   { dsgnid: designId }
             });
+
             const checkData = checkResponse.data;
             self.error = !checkData.result;
     
             if (checkData.result) {
-                const postdata = { name: dsgnName, descr: dsgndescr, type: dsgntype, additionalConfig: additionalConfig };
-    
+                const postdata = { 
+                    name: designObj.metadata.title, 
+                    descr: vm.activityDescription, 
+                    type: designObj.type, 
+                    additionalConfig: {} }; 
+                
                 // Add session activity
                 const sessionResponse = await $http({
                     url:    "add-session-activity",
@@ -226,5 +238,5 @@ export let ActivityController = ($scope, $filter, $http, Notification, $timeout,
             });
     };
 
-    self.init();
+    vm.init();
 };

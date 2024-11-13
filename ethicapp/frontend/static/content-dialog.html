@@ -1,12 +1,12 @@
 <div>
     <div class="modal-header">
-        <h4>{{vm.data.title}}</h4>
+        <h4>{{vmc.data.title}}</h4>
     </div>
     <div class="modal-body">
-        <p ng-bind="vm.data.content | htmlExtractText"></p>
+        <p ng-bind="vmc.data.content | htmlExtractText"></p>
         <hr>
         <div class="modal-footer">
-            <button class="btn btn-default" type="button" ng-click="vm.cancel()">Cerrar</button>
+            <button class="btn btn-default" type="button" ng-click="vmc.cancel()">Cerrar</button>
         </div>
     </div>
 </div>

@@ -52,6 +52,9 @@ import { StagesController } from "../../controllers/teacher/stages_controller.js
 import { DashboardRubricaController } from "../../controllers/teacher/dashboard_rubrica_controller.js";
 import { ngQuillConfigProvider } from "../../helpers/util.js";
 
+import { SessionSocketService } from "../../services/session-socket-service.js";
+app.factory('SessionSocketService', SessionSocketService);
+
 app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
@@ -175,4 +178,8 @@ app.controller("DialogCtrl", function($scope, DialogService) {
     $scope.closeDialog = DialogService.closeDialog;
 });
 
+import { connectedUsersDirective, ConnectedUsersDirectiveController } from "../../directives/connected-users.directive.js";
+app.directive("connectedUsers", connectedUsersDirective);
+app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateService", 
+    ConnectedUsersDirectiveController])
 

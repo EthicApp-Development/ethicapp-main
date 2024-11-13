@@ -1,0 +1,6 @@
+<div class="container" ng-controller="DashboardController as dc">
+    <h2>Usuarios Conectados a la Sesión {{ dc.sessionId }}</h2>
+    
+    <!-- Uso de la directiva connectedUsers, pasando el sessionId -->
+    <connected-users session-id="dc.sessionId"></connected-users>
+</div>

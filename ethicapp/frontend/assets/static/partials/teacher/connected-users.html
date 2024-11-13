@@ -1,0 +1,30 @@
+<div class="table-responsive">
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th ng-click="sortBy('name')">
+                    Nombre
+                    <span ng-if="orderByField === 'name'">
+                        <i ng-class="reverseSort ? 'glyphicon glyphicon-chevron-down' : 'glyphicon glyphicon-chevron-up'"></i>
+                    </span>
+                </th>
+                <th>Email</th>
+                <th ng-click="sortBy('role')">
+                    Rol
+                    <span ng-if="orderByField === 'role'">
+                        <i ng-class="reverseSort ? 'glyphicon glyphicon-chevron-down' : 'glyphicon glyphicon-chevron-up'"></i>
+                    </span>
+                </th>
+                <th>Dispositivo</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr ng-repeat="user in users | orderBy:orderByField:reverseSort">
+                <td>{{ user.name }}</td>
+                <td>{{ user.mail }}</td>
+                <td>{{ user.role }}</td>
+                <td>{{ user.device }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>

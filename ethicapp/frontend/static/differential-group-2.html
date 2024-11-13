@@ -1,49 +1,49 @@
 <div>
     <div class="modal-header">
-        <button class="btn btn-default pull-right" ng-click="vm.isAnon = !vm.isAnon"><i class="fa fa-eye"></i></button>
-        <button class="btn btn-default pull-right" ng-click="vm.shareDetails()"><i class="fa fa-share"></i></button>
-        <h4>Item{{vm.data.df.orden}}: {{vm.data.df.title}} - {{'stage' | translate}} {{vm.data.stage.orden}}</h4>
+        <button class="btn btn-default pull-right" ng-click="vmc.isAnon = !vmc.isAnon"><i class="fa fa-eye"></i></button>
+        <button class="btn btn-default pull-right" ng-click="vmc.shareDetails()"><i class="fa fa-share"></i></button>
+        <h4>Item{{vmc.data.df.orden}}: {{vmc.data.df.title}} - {{'stage' | translate}} {{vmc.data.stage.orden}}</h4>
     </div>
     <div class="modal-body">
         <div id="details-modal">
-            <div class="differential margin-top-8" ng-repeat="res in vm.data.arr">
+            <div class="differential margin-top-8" ng-repeat="res in vmc.data.arr">
                 <div class="row">
                     <div class="col-xs-3 text-right">
-                        <span>{{vm.data.df.tleft}}</span>
+                        <span>{{vmc.data.df.tleft}}</span>
                     </div>
                     <div class="dopts col-xs-6">
-                        <div class="option eq-space" ng-repeat="i in vm.data.dfarr"
+                        <div class="option eq-space" ng-repeat="i in vmc.data.dfarr"
                              ng-class="{selected: res.sel == i}">{{i}}</div>
                         <br>
                     </div>
                     <div class="col-xs-3">
-                        <span>{{vm.data.df.tright}}</span>
+                        <span>{{vmc.data.df.tright}}</span>
                     </div>
                 </div>
                 <div class="margin-top-28 bordered pad-content">
-                    <div class="anon-badge margin-left-n8" ng-if="!vm.isAnon">{{vm.data.users[res.uid].name}}</div>
-                    <div class="anon-badge margin-left-n8" ng-if="vm.isAnon">{{vm.data.anonNames[res.uid]}}</div>
+                    <div class="anon-badge margin-left-n8" ng-if="!vmc.isAnon">{{vmc.data.users[res.uid].name}}</div>
+                    <div class="anon-badge margin-left-n8" ng-if="vmc.isAnon">{{vmc.data.anonNames[res.uid]}}</div>
                     <span>{{res.comment}}</span>
                 </div>
                 <br>
             </div>
-            <hr class="bordered black" ng-if="vm.data.stage.chat">
+            <hr class="bordered black" ng-if="vmc.data.stage.chat">
             <h4 ng-if="stage.chat"><strong>Chat</strong></h4>
-            <div class="chat bordered" ng-if="vm.data.stage.chat">
+            <div class="chat bordered" ng-if="vmc.data.stage.chat">
                 <div class="chat-area" scroll-glue>
-                    <strong ng-show="vm.data.chat.length == 0">No hay mensajes</strong>
-                    <div class="chat-msg" ng-repeat="msg in vm.data.chat">
+                    <strong ng-show="vmc.data.chat.length == 0">No hay mensajes</strong>
+                    <div class="chat-msg" ng-repeat="msg in vmc.data.chat">
                         <div class="font-mini parent-msg" ng-show="msg.parent != null">
-                            <div class="anon-badge margin-left-n8" ng-if="!vm.isAnon">{{vm.data.users[msg.parent.uid].name}}</div>
-                            <div class="anon-badge margin-left-n8" ng-if="vm.isAnon">{{vm.data.anonNames[msg.parent.uid]}}</div>
+                            <div class="anon-badge margin-left-n8" ng-if="!vmc.isAnon">{{vmc.data.users[msg.parent.uid].name}}</div>
+                            <div class="anon-badge margin-left-n8" ng-if="vmc.isAnon">{{vmc.data.anonNames[msg.parent.uid]}}</div>
                             <span class="content">{{msg.parent.content | limitTo:100}}</span>
                         </div>
                         <i class="fa fa-reply" ng-show="msg.parent != null"></i>
-                        <div class="anon-badge" ng-if="vm.isAnon" ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">
-                            {{vm.data.anonNames[msg.uid]}}
+                        <div class="anon-badge" ng-if="vmc.isAnon" ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">
+                            {{vmc.data.anonNames[msg.uid]}}
                         </div>
-                        <div class="anon-badge" ng-if="!vm.isAnon" ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">
-                            {{vm.data.users[msg.uid].name}}
+                        <div class="anon-badge" ng-if="!vmc.isAnon" ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">
+                            {{vmc.data.users[msg.uid].name}}
                         </div>
                         <span class="pull-right font-mini text-right">
                             <span class="text-muted">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
@@ -56,7 +56,7 @@
 
         <!--<strong>Promedio: {{getAvg() | number:2}} / 4</strong>-->
         <div class="modal-footer">
-            <button class="btn btn-default" type="button" ng-click="vm.cancel()">Cerrar</button>
+            <button class="btn btn-default" type="button" ng-click="vmc.cancel()">Cerrar</button>
         </div>
     </div>
 </div>

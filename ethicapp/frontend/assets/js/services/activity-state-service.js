@@ -81,7 +81,11 @@ let ActivityStateService = ($http) => {
                 console.error("[ActivityStateService::loadActivityPhases] Error fetching admin stages:", error);
                 throw error;
             }
-        }
+        },
+
+        getSessionUsers: function() {
+            return $http.get('/session/' + service.sessionDescriptor.id + '/users');
+        },
     };
 
     return service; 
