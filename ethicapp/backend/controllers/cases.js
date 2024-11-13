@@ -41,6 +41,7 @@ router.get("/cases", async (req, res) => {
     LEFT JOIN topic_tags tt ON ct.topic_tag_name = tt.name
     LEFT JOIN users u ON c.user_id = u.id -- Unión con la tabla de usuarios
     GROUP BY c.case_id, u.name
+    ORDER BY c.updated_at DESC
     `;
 
     const sqlDesigns = `
@@ -178,7 +179,8 @@ router.patch("/cases/:caseId", async (req, res) => {
             description = COALESCE($3, description), 
             external_case_url = COALESCE($4, external_case_url),
             is_public = COALESCE($5, is_public),
-            rich_text = COALESCE($6, rich_text)
+            rich_text = COALESCE($6, rich_text),
+            updated_at = NOW()
         WHERE case_id = $1
         `;
         await db.query(updateCaseQuery, [caseId, title, description, external_case_url, is_public, rich_text]);
