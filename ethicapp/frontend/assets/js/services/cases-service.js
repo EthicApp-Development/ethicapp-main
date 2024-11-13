@@ -104,48 +104,48 @@ export class CasesService {
         });
     };
 
-    this.uploadDocuments = (caseId, files, filesNames=null) => {
+    this.uploadDocuments = (caseId, files, filesNames = null) => {
 
-      let changeName = true;
+      let changeName = filesNames && filesNames.length === files.length;
+
       if (filesNames && filesNames.length !== files.length) {
-        changeName = false;
-        console.error("The number of filenames does not match the number of files.");
+      console.error("The number of filenames does not match the number of files. Filenames will not be changed.");
       }
 
       const formData = new FormData();
 
       files.forEach((file, index) => {
-        if (file.type === "application/pdf") {
-          formData.append("pdf", file);
-        } else {
-            console.error(`File ${file.name} is not a valid PDF and will not be uploaded.`);
-        }
+      if (file.type === "application/pdf") {
+        formData.append("pdf", file);
+      } else {
+        console.error(`File ${file.name} is not a valid PDF and will not be uploaded.`);
+      }
       });
 
       if (formData.has("pdf")) {
-        return $http
-          .post(`/cases/${caseId}/documents`, formData, {
-            headers: { "Content-Type": undefined },
-          })
-          .then((response) => {
-              if (changeName) {
-                response.data.result.forEach((file, index) => {
-                  if (filesNames[index] !== file.name) {
-                    this.renameDocument(file.id, filesNames[index]);
-                  }
-                });
-              }
-
-            return response;
-          })
-          .catch((error) => {
-            console.error(`Error uploading files for case ${caseId}:`, error);
-            throw error;
+      return $http
+        .post(`/cases/${caseId}/documents`, formData, {
+        headers: { "Content-Type": undefined },
+        })
+        .then((response) => {
+          if (changeName) {
+          response.data.result.forEach((file, index) => {
+            if (filesNames[index] !== file.name) {
+            this.renameDocument(file.id, filesNames[index]);
+            }
           });
+          }
+
+        return response;
+        })
+        .catch((error) => {
+        console.error(`Error uploading files for case ${caseId}:`, error);
+        throw error;
+        });
       } else {
-        return Promise.reject(
-          new Error("No hay archivos PDF válidos para subir.")
-        );
+      return Promise.reject(
+        new Error("No hay archivos PDF válidos para subir.")
+      );
       }
     };
     
