@@ -47,6 +47,38 @@ export let BrowseDesignsController = ($scope,
         });
     };
 
+    self.cloneDesign = function (designId) {
+
+        console.log("Cloning design with id:", designId);
+        $http({
+            url: "/designs/" + designId + "/clone",
+            method: "POST",
+        }).success(function (response) {
+            if (response.status === "ok") {
+                console.log("Design cloned successfully:", response.result);
+                self.getDesigns();
+                self.getPublicDesigns();
+
+            } else {
+                console.error("Error cloning design:", response.message);
+            }
+        }).error(function (error) {
+            console.error("Request failed:", error);
+            // Puedes añadir lógica adicional para manejar errores de red u otros problemas
+        });
+    };
+    
+    self.handleMouseOverClone = function(event) {
+        event.target.src = "../../assets/images/iconsets/gray-lineart/design-clone-active.svg";
+        event.target.style.cursor = "pointer";
+      };
+      
+      self.handleMouseLeaveClone = function(event) {
+        event.target.src = "../../assets/images/iconsets/gray-lineart/design-clone.svg";
+        event.target.style.cursor = "default";
+      };
+    
+
     self.getDesigns = function(){
         $http.get("get-user-designs").success(function (data) {
             

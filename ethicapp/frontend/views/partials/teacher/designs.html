@@ -32,8 +32,17 @@
                         </div>
 
                         <div class="text-right vertical-align">
-                            <img class="locked-svg" ng-show="ses.locked"
-                                src="../../assets/images/iconsets/gray-lineart/design-lock-active.svg" alt="SVGLocked">
+                            
+                            <img class="locked-svg ml-1" ng-show="ses.locked"
+                            src="../../assets/images/iconsets/gray-lineart/design-lock-active.svg" alt="SVGLocked">
+                            <img class="locked-svg ml-1" ng-show="true"
+                                ng-mouseover="handleMouseOverClone($event)"
+                                ng-mouseleave="handleMouseLeaveClone($event)"
+                                ng-click="cloneDesign(ses.id)"
+                                src="../../assets/images/iconsets/gray-lineart/design-clone.svg" 
+                                alt="SVGClone"
+                                data-toggle="tooltip" title="Share"
+                            >
                             <button class="btn btn-primary btn-smaller ml-1"
                                 ng-click="launchDesign(ses.id, ses.metainfo.title, ses.type)">{{'launchActivity' |
                                 translate}}</button>

@@ -455,6 +455,52 @@ router.post("/get-design", (req, res) => {
 });
 
 
+router.post("/designs/:id/clone", async (req, res) => {
+    const uid = req.session.uid;
+    const designId = req.params.id;
+    const db = getDBInstance(pass.dbcon);
+
+    try {
+        const getDesignSql = `
+        SELECT design, public, locked, case_id
+        FROM DESIGNS
+        WHERE id = $1
+        `;
+        
+        const result = await db.query(getDesignSql, [designId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: "err", message: "Diseño no encontrado." });
+        }
+
+        const originalDesign = result.rows[0];
+
+        const insertDesignSql = `
+        INSERT INTO DESIGNS (creator, design, public, locked, case_id)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id;
+        `;
+        
+        const clonedDesignValues = [
+            uid,                  
+            originalDesign.design, 
+            originalDesign.public, 
+            false,               
+            originalDesign.case_id
+        ];
+
+        const insertResult = await db.query(insertDesignSql, clonedDesignValues);
+        const newDesignId = insertResult.rows[0].id;
+
+        res.json({ status: "ok", message: "Diseño clonado exitosamente", newDesignId });
+    } catch (err) {
+        console.error(`Error al clonar el diseño con id ${designId}:`, err);
+        res.status(500).json({ status: "err", message: "Error al clonar el diseño." });
+    }
+});
+
+
+
 router.get("/get-user-designs", (req, res) => {
     var uid = req.session.uid;
     var sql = `
