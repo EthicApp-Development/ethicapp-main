@@ -138,7 +138,7 @@ app.controller("DesignAttachmentsController",
     ["$scope", "DesignStateService" ,"$http", "Notification", "$timeout", DesignAttachmentsController]);
 app.controller("ActivityController", 
     ["$scope", "$filter", "$http", "Notification", "$timeout", 
-        "ActivityStateService", "ActivityCatalogService", ActivityController]);
+        "ActivityStateService", "ActivityCatalogService", "DesignCatalogService", ActivityController]);
 app.controller("MonitorActivityController", 
     ["$scope", "$filter", "$http", "$window", "Notification","$uibModal", "ActivityStateService",
         MonitorActivityController]);

@@ -105,6 +105,21 @@ let DesignCatalogService = ($rootScope, $http) => {
             }
         },
 
+        async validateDesign(designId) {
+        
+            const response = await $http({
+                url:    "check-design",
+                method: "post",
+                data:   { dsgnid: designId }
+            });
+            
+            if (!response.data.result) {
+                throw new Error("Could not validate the design.");
+            }
+            
+            return response.data.result; 
+        },
+
         notifySubscribers: function() {
             $rootScope.$broadcast('designCatalogUpdated', service.designs);
         }        

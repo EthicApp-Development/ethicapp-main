@@ -1,0 +1,87 @@
+<div class="container-fluid" ng-controller="ActivityController as ac">
+    <div class="row">
+        <div class="col-md-12">
+            <h2>{{'activities' | translate}}</h2>
+            <button class="btn btn-primary" ng-click="navigateTo('/activities/new')" 
+                style="margin-bottom: 2rem; margin-top: 1rem;">
+                {{'launchActivity' | translate}}
+            </button>        
+        </div>
+    </div>
+    <div class="row" ng-init="ac.dsgnMode = 0" style="position: relative;">
+        <!-- Tabs de navegación -->
+        <ul class="nav nav-tabs" style="display: inline-block;">
+            <li ng-class="{'active': ac.dsgnMode === 0}">
+                <a href="" ng-click="ac.dsgnMode = 0">{{'currentTab' | translate}}</a>
+            </li>
+            <li ng-class="{'active': ac.dsgnMode === 1}">
+                <a href="" ng-click="ac.dsgnMode = 1">{{'finishedTab' | translate}}</a>
+            </li>
+            <li ng-class="{'active': ac.dsgnMode === 2}">
+                <a href="" ng-click="ac.dsgnMode = 2">{{'archived' | translate}}</a>
+            </li>
+        </ul>
+
+        <!-- Caja de búsqueda posicionada manualmente -->
+        <div style="position: absolute; right: 400px; top: 6px; max-width: 200px;">
+            <input class="form-control search-input fontAwesome" type="text" 
+                   placeholder="{{'search' | translate}} &#xF002;" ng-model="ac.userSearch">
+        </div>
+    </div>
+    <div class="row" style="margin-top: 1rem;">
+        <div class="col-md-12">
+            <div style="overflow-y: auto; max-height: 40em; border: #bbb 1px solid; padding: 1rem;">
+                <div class="list-group-item"
+                     ng-repeat="ses in ac.currentActivities(0) | filter:{title: ac.userSearch} | orderBy: '-time'"
+                     ng-if="ac.dsgnMode === 0">
+                    <div>
+                        <a ng-href="#!/activities/{{ses.id}}"><h4 class="list-group-item-heading" ng-bind="ses.name"></h4></a>
+                        <p class="list-group-item-text" ng-if="ses.type === 'R'">{{'ranking_activity' | translate}}</p>
+                        <p class="list-group-item-text" ng-if="ses.type !== 'R'">{{'semantic_differential' | translate}}</p>
+                        <p class="list-group-item-text" ng-bind="ses.descr"></p>
+                        <p class="list-group-item-text">{{'launched' | translate}} {{ses.time | date}}</p>
+                        <p class="list-group-item-text">{{'code' | translate}}: {{ses.code}}</p>
+                    </div>
+                    <div class="text-right vertical-align">
+                        <button class="btn btn-default" ng-click="ac.createCopy(ses)" title="{{'copy' | translate}}"><i class="fa fa-copy"></i></button>
+                    </div>
+                </div>
+                <div class="list-group-item"
+                    ng-repeat="ses in ac.currentActivities(1) | filter:{title: ac.userSearch} | orderBy: '-time'"
+                    ng-if="ac.dsgnMode === 1">
+                    <div>
+                        <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
+                        <p class="list-group-item-text" ng-if="ses.type === 'R'">{{'ranking_activity' | translate}}</p>
+                        <p class="list-group-item-text" ng-if="ses.type !== 'R'">{{'semantic_differential' | translate}}</p>
+                        <p class="list-group-item-text" ng-bind="ses.descr"></p>
+                        <p class="list-group-item-text">{{'launched' | translate}} {{ses.time | date}}</p>
+                        <p class="list-group-item-text">{{'code' | translate}}: {{ses.code}}</p>
+                    </div>
+                    <div class="text-right vertical-align">
+                        <button class="btn btn-primary" title="{{'file' | translate}}" ng-click="ac.archiveActivity(ses, $event)"><i class="fa fa-inbox"></i></button>
+                        <button class="btn btn-default ml-1" ng-click="ac.createCopy(ses)" title="{{'copy' | translate}}"><i class="fa fa-copy"></i></button>
+                    </div>
+                </div>
+                <div class="list-group-item"
+                    ng-repeat="ses in ac.currentActivities(2) | filter:{title: ac.userSearch} | orderBy: '-time'"
+                    ng-if="ac.dsgnMode === 2">
+                    <div>
+                        <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
+                        <p class="list-group-item-text" ng-if="ses.type === 'R'">{{'ranking_activity' | translate}}</p>
+                        <p class="list-group-item-text" ng-if="ses.type !== 'R'">{{'semantic_differential' | translate}}</p>
+                        <p class="list-group-item-text" ng-bind="ses.descr"></p>
+                        <p class="list-group-item-text">{{'launched' | translate}} {{ses.time | date}}</p>
+                        <p class="list-group-item-text">{{'code' | translate}}: {{ses.code}}</p>
+                    </div>
+                    <div class="text-right vertical-align">
+                        <button class="btn btn-primary" title="{{'restore' | translate}}" ng-click="ac.restoreActivity(ses, $event)"><i class="fa fa-undo"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+

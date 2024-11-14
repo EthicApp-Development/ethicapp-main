@@ -3,111 +3,92 @@ import { DesignCatalogService } from "../../services/design-catalog-service";
 /*eslint func-style: ["error", "expression"]*/
 export function ActivityController($scope, $filter, $http, Notification, $timeout,
     ActivityStateService, ActivityCatalogService, DesignCatalogService) {
-    var self = $scope;
-    self.error = false;
-    self.showSpinner = false;
-    self.launchId = ActivityStateService.activityDescriptor;
-
+    
     const vm = this;
+
+    vm.error = false;
+    vm.showSpinner = false;
     vm.activityDescription = "";
 
-    vm.init = function() {
+    vm.init = async function() {
         console.log("[ActivityController::init] initializing");
-        self.launchDesignId = self.launchId.id;
-        ActivityCatalogService.loadActivities();
-        self.checkContentAnalysisAvailability();
+        await ActivityCatalogService.loadActivities();
+        vm.checkContentAnalysisAvailability();
     };
 
     // Create Activity from launch activity
     vm.createSession = async function (designId) {
-        self.showSpinner = true;
+        vm.showSpinner = true;
     
         try {
             const designObj = await DesignCatalogService.getDesignById(designId);
 
-            // Check the design
-            const checkResponse = await $http({
-                url:    "check-design",
+            // Ensure the design is valid
+            const result = await DesignCatalogService.validateDesign(designId);
+            vm.error = !result;
+    
+            // TODO: properly resolve the activity type
+            const postdata = { 
+                name: designObj.metainfo.title, 
+                descr: vm.activityDescription, 
+                type: designObj.type == "semantic_differential" ? "T" : "R", 
+                additionalConfig: {} }; 
+
+            console.debug(`[ActivityController::createSession] postdata: '${JSON.stringify(postdata)}'`);
+            
+            // TODO: move to service & refactor
+            // Add session activity
+            const sessionResponse = await $http({
+                url:    "add-session-activity",
                 method: "post",
-                data:   { dsgnid: designId }
+                data:   postdata
             });
 
-            const checkData = checkResponse.data;
-            self.error = !checkData.result;
-    
-            if (checkData.result) {
-                const postdata = { 
-                    name: designObj.metadata.title, 
-                    descr: vm.activityDescription, 
-                    type: designObj.type, 
-                    additionalConfig: {} }; 
-                
-                // Add session activity
-                const sessionResponse = await $http({
-                    url:    "add-session-activity",
-                    method: "post",
-                    data:   postdata
-                });
-    
-                const id = sessionResponse.data.id;
-    
-                // Call additional functions for activity creation and code generation
-                console.log("[ActivityController::createSession] pre createActivity");
-                await self.createActivity(id, dsgnid);
-                console.log("[ActivityController::createSession] pre generateCodeActivity");
-                await self.generateCodeActivity(id);
-                
-                // Refresh activities and session data
-                console.log("[ActivityController::createSession] pre loadActivities");
-                await ActivityCatalogService.loadActivities();
+            const sessionId = sessionResponse.data.id;
 
-                console.log("[ActivityController::createSession] pre updateSesData");
-                await self.shared.updateSesData();
-                console.log("[ActivityController::createSession] post updateSesData");
+            if (isNaN(sessionId) || sessionId == null || sessionId === undefined) {
+                throw new Error("Failed to create a session for the activity.");
             }
+
+            // Call additional functions for activity creation and code generation
+            console.debug("[ActivityController::createSession] pre createActivity");
+            await vm.createActivity(sessionId, designId);
+
+            console.debug("[ActivityController::createSession] pre generateAccessCode");
+            await vm.generateAccessCode(sessionId);
+
+            // Bootstrap the activity design in the activity session.
+            await vm.startActivityDesign(designObj, sessionId);            
+
+            // Switch to the page of the activity
+            $scope.navigateTo(`/activities/${sessionId}`);
         } catch (error) {
             console.error("Error creating session:", error);
         } finally {
-            // Hide spinner after delay
-            $timeout(() => {
-                self.showSpinner = false; 
-            }, 5000);
+            vm.showSpinner = false;
         }
     };
     
-    self.createActivity = async function (sesID, dsgnID) {
-        try {
-            const postdata = { sesid: sesID, dsgnid: dsgnID };            
-            
-            console.debug(`[ActivityController::createActivity] pre add activity sesId: '${sesID}' dsgnID: '${dsgnID}'`);
-            const response = await $http({ url: "add-activity", 
-                method: "post", data: postdata });
-            
-            const dsng = response.data.result;
-            self.startActivityDesign(dsng, sesID);
+    vm.createActivity = async function (sessionId, designId) {
+        try {            
+            console.debug(`[ActivityController::createActivity] pre add activity sesId: '${sessionId}' dsgnID: '${designId}'`);
 
-            console.debug(`[ActivityController::createActivity] post start activity design response: ${JSON.stringify(response)
-            } design: ${dsng}`);
+            // Create the activity with the design that is required.
+            await ActivityCatalogService.createActivity(sessionId, designId);
             
-            const activities = await ActivityCatalogService.loadActivities();
-            const filteredObj = activities.find(item => item.session === sesID);
-    
-            if (filteredObj) {
-                console.log(`[ActivityController::createActivity] found activity ${JSON.stringify(filteredObj)}`);
-                // Note that the following method is implemented by 
-                // ManagementController!
-                self.selectActivity(filteredObj.id, sesID, dsng);
-                console.log(`[ActivityController::createActivity] post selectActivity call.`);
-            } else {
-                console.warn("No activity found for session:", sesID);
-            }
-    
+            // The design is now locked. It must be refreshed.
+            // TODO: reload just the design that has been modified
+            await DesignCatalogService.loadDesigns();
+
+            // Refresh activities
+            console.debug("[ActivityController::createSession] pre loadActivities");
+            await ActivityCatalogService.loadActivities();   
         } catch (error) {
             console.error("Error creating activity:", error);
         }
     };
         
-    self.startActivityDesign = async function (design, sesid) {
+    vm.startActivityDesign = async function (design, sesid) {
         try {
             let stageCounter = 0;
             for (const phase of design.phases) {
@@ -178,22 +159,19 @@ export function ActivityController($scope, $filter, $http, Notification, $timeou
         }
     };
     
-    self.generateCodeActivity = function (id) {
-        var postdata = {
-            id: id
-        };
-        $http.post("generate-session-code", postdata)
-            .then(function (response) {
-                if (response.data.code != null) {
-                    ActivityStateService.sessionDescriptor.code = response.data.code;
-                }
-            })
-            .catch(function (error) {
-                console.error("Error generating session code:", error);
-            });
+    vm.generateAccessCode = async function (id) {
+        const postdata = { id: id };
+        try {
+            const response = await $http.post("generate-session-code", postdata);
+            if (response.data.code != null) {
+                ActivityStateService.sessionDescriptor.code = response.data.code;
+            }
+        } catch (error) {
+            console.error("Error generating session code:", error);
+        }
     };
     
-    self.currentActivities = function(type){
+    vm.currentActivities = function(type){
         try {
             let activities = ActivityCatalogService.getActivities();
             if (!Array.isArray(activities) || activities.length === 0) {
@@ -213,28 +191,23 @@ export function ActivityController($scope, $filter, $http, Notification, $timeou
         }
     };
 
-    self.designSelected = function(){
-        return self.launchId.id;
-    };
-
-    self.createCopy = function(ses){
-        self.createSession(ses.name, ses.descr, ses.type, ses.dsgnid);
+    vm.createCopy = function(ses){
+        vm.createSession(ses.name, ses.descr, ses.type, ses.dsgnid);
         ActivityCatalogService.loadActivities();
-        self.shared.updateSesData();
-        Notification.success("Actividad copiada!");
+        vm.shared.updateSesData();
     };
 
-    self.checkContentAnalysisAvailability = function() {
+    vm.checkContentAnalysisAvailability = function() {
         $http.post("/content-analysis-availability")
             .then(function(response) {
                 if (response.status === 200) {
-                    self.isContentAnalysisEnable = true;
+                    vm.isContentAnalysisEnabled = true;
                 } else {
-                    self.isContentAnalysisEnable = false;
+                    vm.isContentAnalysisEnabled = false;
                 }
             })
             .catch(function(error) {
-                self.isContentAnalysisEnable = false;
+                vm.isContentAnalysisEnabled = false;
             });
     };
 

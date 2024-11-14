@@ -17,7 +17,7 @@ export function BrowseDesignsController($scope, $routeParams,
 
         try {
             const preSelectedDesignId = Number($routeParams.designId);
-            if (preSelectedDesignId !== undefined) {
+            if (!isNaN(preSelectedDesignId)) {
                 vm.pickedDesignId = preSelectedDesignId;
                 vm.preSelectedDesign = await DesignCatalogService.getDesignById(preSelectedDesignId);
             }    

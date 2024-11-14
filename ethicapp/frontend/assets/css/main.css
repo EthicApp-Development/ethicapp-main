@@ -1460,7 +1460,8 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     margin-bottom: 2rem;
 }
 
-.launchActivity-search{
+.launch-activity-search,
+.launch-activity-description{
     width: 35rem;
     margin-bottom: 1rem;
 }
@@ -1514,21 +1515,22 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     justify-content: space-between;
 }
 
-.help_panel{
+.help-panel{
     border: #FFC107 2px solid; 
-    min-width: 12em; 
-    margin-left: 5em; 
-    display: flex; 
-    flex-direction: column; 
+    border-radius: 8px; 
     align-items: center; 
     padding: 1em;
-    margin-top: -5rem;
+    margin-top: 1em;
 }
 
-.exclamation-mark-image{
+.exclamation-mark-icon {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
     width: 1.2em; 
     height: 4em;
     margin-top: 1em;
+    margin-bottom: 1em;
 }
 
 .help-container {

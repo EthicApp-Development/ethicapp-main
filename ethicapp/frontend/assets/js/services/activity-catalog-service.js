@@ -6,6 +6,21 @@ let ActivityCatalogService = ($http) => {
             return service.activities;
         },
         
+        async createActivity(sessionId, designId) {
+            try {
+                const postdata = { sesid: sessionId, dsgnid: designId };            
+                const response = await $http({ 
+                    url: "add-activity", 
+                    method: "post", 
+                    data: postdata 
+                });
+            }
+            catch (error) {
+                const msg = "[ActivityCatalogService::createActivity] Error creating activity:";
+                throw new Error(msg);
+            }
+        },
+        
         async loadActivities() {
             console.log("[ActivityCatalogService::loadActivities]");
             

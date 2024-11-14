@@ -16,17 +16,17 @@ function TeacherRouter($routeProvider) {
             templateUrl: 'static/partials/teacher/design.edit.html',
         })              
         .when('/activities', {
-            templateUrl: 'static/partials/teacher/activities.html',
+            templateUrl: 'static/partials/teacher/activity.index.html',
         })
         .when('/activities/new', {
             templateUrl: 'static/partials/teacher/activity.new.html',
         })        
         .when('/activities/new/:designId', {
             templateUrl: 'static/partials/teacher/activity.new.html',
-        })  
-        .when('/activities/:id', {
-            templateUrl: 'static/partials/teacher/activity.html',
         })
+        .when('/activities/:id', {
+            templateUrl: 'static/partials/teacher/activity.view.html',
+        })                  
         .when('/profile', {
             templateUrl: 'static/partials/teacher/profile.html',
         })  

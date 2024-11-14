@@ -1,59 +1,59 @@
-<h2>{{'launch_activity_title' | translate}}</h2>
-<br>
-<p>{{'choose_design_for_new_activity' | translate}}</p>
-<br>
-<div class="launchActivity-wrapper">
-    <div class="launchActivityDiv">
-        <div ng-controller="BrowseDesignsController as bdc">
-            <div ng-init="bdc.getDesigns()" ng-show="bdc.preSelectedDesign == null">
-                <div clas="col-lg-1">
-                    <input class="form-control launchActivity-search fontAwesome" type="text" 
-                        placeholder="{{'search'|translate}}  &#xF002;" ng-model="bdc.userSearch">
-                </div>
-                <div class="container launchActivityContainer">
-                    <div class="list-group-item dsgn" ng-repeat="design in bdc.designs | filter:bdc.userSearch"
-                        ng-click="bdc.setPickedDesignId(design.id)"
-                        ng-class="{'dsgn_sel': bdc.pickedDesignId === design.id}">
-                        <div>
-                            <h4 class="list-group-item-heading" ng-bind="design.metainfo.title"></h4>
-                            <p class="list-group-item-text">{{'creation_date' | translate}} {{design.metainfo.creation_date |
-                                date}}</p>
-                        </div>
-                    </div>
-                </div>
+<div class="row">
+    <div class="col-md-12 mb-2">
+        <h2>{{'launch_activity_title' | translate}}</h2>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-10" ng-controller="BrowseDesignsController as bdc">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <label>{{'step_1_prepare_activity' | translate}}</label>
             </div>
-            <div ng-show="bdc.preSelectedDesign != null">
-                <div class="container launchActivityContainer">
-                    <div class="list-group-item dsgn" ng-repeat="design in bdc.designs | filter:bdc.filterById"
-                        ng-click="bdc.setPickedDesignId(design.id)"
-                        ng-class="{'dsgn_sel': bdc.preSelectedDesign.id === design.id}">
-                        <div>
-                            <h4 class="list-group-item-heading" ng-bind="design.metainfo.title"></h4>
-                            <p class="list-group-item-text">{{'creation_date' | translate}} {{design.metainfo.creation_date |
-                                date}}</p>
-                        </div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <p>{{'choose_design_for_new_activity' | translate}}</p>
+                        <input class="form-control launch-activity-search fontAwesome" type="text" 
+                            placeholder="{{'search'|translate}} &#xF002;" ng-model="bdc.userSearch">
                     </div>
                 </div>
-            </div>
-            <br>
-            <p>{{'enter_activity_description' | translate}}</p>
-            <div ng-controller="ActivityController as ac">
-                <form ng-submit="ac.createSession(bdc.pickedDesignId)">
-                    <div class="row">
-                        <div class="col-lg-6">
-                            <input type="text" class="form-control launchActivityInput" ng-model="ac.activityDescription" />
-                        </div>
-                    </div>
-                    <div ng-show="error">
-                        <div class="row">
-                            <div class="col-lg-6">
-                                <h4 style="color:red; text-align: center; ">
-                                    <strong>
-                                        {{ 'faulty_design' | translate }}
-                                    </strong>
-                                </h4>
+                <div class="row" ng-init="bdc.getDesigns()">
+                    <div class="col-md-12">
+                        <div class="panel panel-default">
+                            <div class="panel-body">
+                                <div class="panel panel-default" ng-if="bdc.preSelectedDesign == null" 
+                                    ng-repeat="design in bdc.designs | filter:bdc.userSearch"
+                                    ng-click="bdc.setPickedDesignId(design.id)"
+                                    ng-class="{'dsgn_sel': bdc.pickedDesignId === design.id}">
+                                    <div class="panel-body">
+                                        <h4 class="list-group-item-heading" ng-bind="design.metainfo.title"></h4>
+                                        <p class="list-group-item-text">{{'creation_date' | translate}} {{design.metainfo.creation_date | date}}</p>
+                                    </div>
+                                </div>
+                                <div class="panel panel-default" ng-if="bdc.preSelectedDesign != null" 
+                                    ng-repeat="design in bdc.designs | filter:bdc.filterById"
+                                    ng-click="bdc.setPickedDesignId(design.id)"
+                                    ng-class="{'dsgn_sel': bdc.preSelectedDesign.id === design.id}">
+                                    <div class="panel-body">
+                                        <h4 class="list-group-item-heading" ng-bind="design.metainfo.title"></h4>
+                                        <p class="list-group-item-text">{{'creation_date' | translate}} {{design.metainfo.creation_date | date}}</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="panel panel-default" ng-show="bdc.pickedDesignId != 0 && bdc.pickedDesignId != NaN" ng-controller="ActivityController as ac">
+            <div class="panel-heading">
+                <label>{{'step_2_prepare_activity' | translate}}</label>
+            </div>                
+            <div class="panel-body">
+                <form ng-submit="ac.createSession(bdc.pickedDesignId)">                    
+                    <div class="form-group">
+                        <p>{{'provide_activity_description' | translate}}</p>
+                        <input type="text" class="form-control launch-activity-description" ng-model="ac.activityDescription" />
                     </div>
                     <div class="row" style="margin-bottom: 1em;">
                         <div class="col-lg-6">
@@ -64,37 +64,46 @@
                         </div>
                     </div>
                     <div class="row" ng-show="showAdvanced">
-                        <div class="col-lg-4" style="text-align: right;">
+                        <div class="col-lg-12">
                             <div class="form-group">
-                                <label class="control-label" style="font-weight: bolder;">{{'content_analysis' | translate}}</label>
-                                <label class="custom-switch">
-                                    <input type="checkbox" ng-model="ac.additionalConfig.contentAnalysis" ng-disabled="!isContentAnalysisEnable">
-                                    <span class="custom-slider round"></span>
-                                </label>
+                                <div class="panel panel-default">
+                                    <div class="panel-body">
+                                        <label class="control-label" style="font-weight: bolder;">{{'content_analysis_title' | translate}}</label>
+                                        <p>{{'content_analysis_description' | translate}}</p>
+                                        <div class="ml-1">
+                                            <div toggle-switch ng-model="ac.additionalConfig.contentAnalysis" ng-disabled="!ac.isContentAnalysisEnabled" class="ats-switch switch-primary"></div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-lg-6">
-                            <button class="btn btn-primary" ng-disabled="bdc.getPickedDesignId() === 0">{{'launch_activity' |
-                            translate}}</button>
+                            <button class="btn btn-primary" ng-disabled="bdc.pickedDesignId == 0 && bdc.pickedDesignId != NaN">
+                                {{'launch_activity' | translate}}
+                            </button>
                         </div>
                     </div>
                     <div class="row">
-                        <div class="loading-container" ng-show="showSpinner">
+                        <div class="col-lg-6 loading-container" ng-show="showSpinner">
                             <i class="fa fa-spinner fa-spin"></i>
                             <p>{{ 'preparing_dashboard' | translate }}</p>
+                        </div>
+                    </div>                                        
+                    <div class="row" ng-show="error">
+                        <div class="col-lg-6">
+                            <h4 style="color:red; text-align: center; ">
+                                <strong>
+                                    {{ 'faulty_design' | translate }}
+                                </strong>
+                            </h4>
                         </div>
                     </div>
                 </form>
             </div>
         </div>
     </div>
-    <div class="help_panel">
-        <img src="../../assets/images/iconsets/exclamation-mark.png" alt="!" class="exclamation-mark-image">
-        <div class="help-container">
-            <p class="help-paragraph">{{'launch_activity_help_1' | translate}}</p>
-            <p class="help-paragraph">{{'launch_activity_help_2' | translate}}</p>
-        </div>
+    <div class="col-md-2">
     </div>
 </div>
