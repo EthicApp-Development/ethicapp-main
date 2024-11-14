@@ -335,5 +335,9 @@
     "orCanApplyDocuments": "You can also attach PDF documents directly",
     "attachCase": "Attach case",
     "attachCaseDescription": "Next, you can search for a case to associate with this design. You can also create one in the search engine from one or more PDF documents",
-    "use": "Use"
+    "use": "Use",
+    "attachedCase": "Attached case",
+    "attachedCaseInfo": "Below is the case associated with this design",
+    "caseIsNotAttachedIntoDesign": "This design does not have an associated case"
+
 }

@@ -337,5 +337,9 @@
     "orCanApplyDocuments": "También puedes adjuntar documentos PDF directamente",
     "attachCase": "Adjuntar caso",
     "attachCaseDescription": "A continuación, puedes buscar algun caso para asociarlo a este diseño. También puedes en el buscador crear uno a partir de un documento",
-    "use": "Usar"
+    "use": "Usar",
+    "attachedCase": "Caso adjunto",
+    "attachedCaseInfo": "A continuación se muestra el caso adjunto",
+    "caseIsNotAttachedIntoDesign": "A continuación se muestra el caso asociado a este diseño"
+
 }
