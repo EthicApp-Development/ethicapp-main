@@ -20,17 +20,45 @@ hr{
     background: #000;
 }
 
-.home-card-image {
+.home-card {
+    display: inline-block;
     width: 200px;
-    height: auto;
+    cursor: pointer;
+    position: relative;
+    margin-bottom: 20px;
 }
 
-.home-card-hover img {
+.home-card img {
+    width: 100%;
+    height: auto;
     transition: filter 0.3s ease;
 }
 
-.home-card-hover:hover img {
+.home-card:hover img {
     filter: brightness(1.2) saturate(1.3);
+}
+
+.home-card-caption {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    padding: 5px 0;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    text-align: center;
+}
+
+.home-card-container {
+    max-width: 800px;
+    margin-left: 0;
+}
+
+@media (max-width: 768px) {
+    .home-card-container {
+        width: 300px; /* Ancho completo en pantallas pequeñas */
+        max-width: 100%; /* No limita el ancho en pantallas pequeñas */
+        padding: 0 15px; /* Espacio lateral para que no toque los bordes de la pantalla */
+    }
 }
 
 ::-webkit-scrollbar-track {

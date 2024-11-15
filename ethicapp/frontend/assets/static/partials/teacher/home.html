@@ -1,83 +1,68 @@
-<h2>{{'home' | translate}}</h2>
-<p class="margin-top-24" style="width: 60em;">{{'homeMsg' | translate}}</p>
+<div class="row">
+    <div class="col-md-12 mb-2">
+        <h2>{{'teacher_workbench' | translate}}</h2>
+        <p class="margin-top-24" style="width: 60em;">{{'homeMsg' | translate}}</p>
+    </div>
+</row>
 
-<!--Choices-->
-<div class="container">
-    <div class="row d-flex justify-content-center">
-        <!-- Tarjeta 1 -->
-        <div class="col-md-4 col-12 mb-4 d-flex justify-content-center">
-            <div class="card home-card-image home-card-hover">
-                <img src="/assets/images/cards/design-activity.jpeg" class="home-card-image" alt="Design an activity">
-                <div class="card-img-overlay d-flex align-items-end">
-                    <h5 class="card-title text-white bg-dark p-2 w-100 text-center" style="opacity: 0.8;">Título 1</h5>
+<div class="container home-card-container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="panel panel-default" style="padding: 20px;">
+                <div class="panel-body">
+                    <div class="row">
+                        <!-- Tarjeta 1 -->
+                        <div class="col-md-4 col-sm-4 col-xs-12 text-center">
+                            <div ng-click="navigateTo('/designs/new')" class="home-card">
+                                <img src="/assets/images/cards/design-activity.jpeg" class="img-responsive center-block" alt="Design an activity">
+                                <div class="home-card-caption">
+                                    {{'designActivity' | translate}}
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Tarjeta 2 -->
+                        <div class="col-md-4 col-sm-4 col-xs-12 text-center">
+                            <div ng-click="navigateTo('/activities/new')" class="home-card">
+                                <img src="/assets/images/cards/launch-activity.jpeg" class="img-responsive center-block" alt="Launch an activity">
+                                <div class="home-card-caption">
+                                    {{'launchAnActivity' | translate}}
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Tarjeta 3 -->
+                        <div class="col-md-4 col-sm-4 col-xs-12 text-center">
+                            <div ng-click="navigateTo('/designs')" class="home-card">
+                                <img src="/assets/images/cards/search-designs.jpeg" class="img-responsive center-block" alt="Search designs">
+                                <div class="home-card-caption">
+                                    {{'searchDesigns' | translate}}
+                                </div>
+                            </div>
+                        </div>    
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- Tarjeta 2 -->
-        <div class="col-md-4 col-12 mb-4 d-flex justify-content-center">
-            <div class="card home-card-image home-card-hover">
-                <img src="/assets/images/cards/launch-activity.jpeg" class="home-card-image" alt="Launch an activity">
-                <div class="card-img-overlay d-flex align-items-end">
-                    <h5 class="card-title text-white bg-dark p-2 w-100 text-center" style="opacity: 0.8;">Título 2</h5>
+    </div>
+    <div class="row">
+        <div class="col-md-12" ng-controller= "ActivityController as ac">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    {{'recentActivity'|translate}}
                 </div>
-            </div>
-        </div>
-
-        <!-- Tarjeta 3 -->
-        <div class="col-md-4 col-12 mb-4 d-flex justify-content-center">
-            <div class="card home-card-image home-card-hover">
-                <img src="/assets/images/cards/search-designs.jpeg" class="home-card-image" alt="Search designs">
-                <div class="card-img-overlay d-flex align-items-end">
-                    <h5 class="card-title text-white bg-dark p-2 w-100 text-center" style="opacity: 0.8;">Título 3</h5>
+                <div class="panel-body">
+                    <div class="panel panel-default" ng-repeat="ses in ac.currentActivities(0) | limitTo: 3 | orderBy : '-time'">
+                        <div class="panel-body">
+                            <p><b>{{ 'description_colon' | translate }}</b> {{ses.descr === '' ? ('no_description' | translate) : ses.descr }}</p>
+                            <p><b>{{ 'design_colon' | translate }}</b> {{ses.design.metainfo.title}}</p>
+                            <p><b>{{ 'access_code_colon' | translate }}</b> {{ses.code}}</p>
+                            <p><b>{{ 'launch_date_colon' | translate }}</b> {{ ses.time | date:'dd-MM-yyyy HH:mm' }} (UTC)</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="flex_container" ng-init="path='assets/images/iconsets/gray-lineart/'">
-    <div ng-click="navigateTo('/designs/new')" 
-        ng-init="design = true"
-        ng-mouseover="design = false"
-        ng-mouseout="design = true">
-        <p class="box_text">{{'designActivity' | translate}}</p>
-        <div class="thumbnail_image" ng-show="design" style="background-image: url('{{path}}design-activity.svg');"></div>
-        <div class="thumbnail_image" ng-show="!design" style="background-image: url('{{path}}design-activity-active.svg');"></div>
-    </div>
-    <div ng-click="navigateTo('/activities/new')"
-        ng-init="launch = true"
-        ng-mouseover="launch = false"
-        ng-mouseout="launch = true">
-        <p class="box_text">{{'launchAnActivity' | translate}}</p>
-        <div class="thumbnail_image" ng-show="launch" style="background-image: url('{{path}}launch.svg');"></div>
-        <div class="thumbnail_image" ng-show="!launch" style="background-image: url('{{path}}launch-active.svg');"></div>
-    </div>
-    <div ng-click="navigateTo('/designs')"
-        ng-init="designSearch = true"
-        ng-mouseover="designSearch = false"
-        ng-mouseout="designSearch = true">
-        <p class="box_text">{{'searchDesigns' | translate}}</p>
-        <div class="thumbnail_image" ng-show="designSearch" style="background-image: url('{{path}}design-search.svg');"></div>
-        <div class="thumbnail_image" ng-show="!designSearch" style="background-image: url('{{path}}design-search-active.svg');"></div>
-    </div>
-</div>
 
-<h2>{{'recentActivity'|translate}}</h2>
-<div class="activities_home_container" ng-controller= "ActivityController as ac">
-    <div class="list-group pad-content">
-        <div class="list-group-item w-home" ng-repeat="ses in ac.currentActivities(0) | limitTo: 3 | orderBy : '-time'">
-            <div>
-                <h4 class="list-group-item-heading" ng-bind="ses.name"></h4>
-                <p class="list-group-item-text" ng-bind="ses.descr"></p>
-                <p class="list-group-item-text">{{'launched' | translate}} {{ses.time | date}}</p>
-                <p class="list-group-item-text">{{'code' | translate}}: {{ses.code}}</p>
-            </div>
-            
-            <div class="text-right vertical-align">
-                <button class="btn btn-primary " ng-click="navigateTo('/activities/'+ses.id)">{{'gotoActivity' | translate}}</button>
-            </div>
-        </div>
-    </div>
-</div>
 
