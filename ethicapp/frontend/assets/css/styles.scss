@@ -1,3 +1,10 @@
+@font-face {
+    font-family: 'Avenir';
+    src: url('../../fonts/Avenir-Book.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}
+
 @import '../ngDialog-theme-default.css';
 @import '../nv.d3.min.css';
 @import '../bootstrap.min.css';

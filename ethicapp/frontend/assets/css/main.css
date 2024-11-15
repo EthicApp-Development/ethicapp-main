@@ -8,7 +8,7 @@ html{
 }
 
 body{
-    font-family: Helvetica Neue, Helvetica, Verdana, sans-serif;
+    font-family: "Avenir", "Helvetica Neue", "Helvetica", "Verdana", sans-serif;
     padding: 0;
     margin: 0;
     height: 100%;
@@ -18,6 +18,19 @@ body{
 hr{
     margin: 0;
     background: #000;
+}
+
+.home-card-image {
+    width: 200px;
+    height: auto;
+}
+
+.home-card-hover img {
+    transition: filter 0.3s ease;
+}
+
+.home-card-hover:hover img {
+    filter: brightness(1.2) saturate(1.3);
 }
 
 ::-webkit-scrollbar-track {
@@ -149,7 +162,9 @@ a:hover{
 
 .top-bar-mini{
     /* height: 24px; */
-    background: #ddd;
+    /* background: #aaa; linear-gradient(to bottom, #fadf72 0%, #ffdb3f 75%, #ffd900 100%);*/
+    background: linear-gradient(to right, #eee 0%, #aaa 50%, #252728 100%); /* #a1a1a1 50%,*/
+    border-bottom: #3C3E3F solid 2px;
     color: white;
     position: fixed;
     top: 0;

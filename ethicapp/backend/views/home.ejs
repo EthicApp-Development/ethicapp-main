@@ -1,7 +1,7 @@
   <div class="top-bar-mini cflex" ng-hide="false">
     <div class="cf1">
-      <a href="seslist" class="simple-margin-left">
-        <img src="assets/images/logos/ethicapp-logo.png" class="logoEthicapp" alt="Logo">
+      <a href="/home" class="simple-margin-left">
+        <img src="assets/images/logos/ethicapp-logo-emboss.png" class="logoEthicapp" alt="Logo">
       </a>
     </div>
     <div class="cf1 text-right margin-right-8 simple-padding-top" id="topbtnlist">
@@ -29,17 +29,32 @@
     </div>
   </div>
   <div>
-    <div class="sidenav"> <!--Left side NAV BAR-->
-      <div style="margin-top: 5em;">
-        <a href="#!/">{{ 'home' | translate }}</a>
-        <a href="#!/activities/new">{{ 'launchActivity' | translate }}</a>
-        <a href="#!/activities">{{ 'activities' | translate }}</a>
-        <a href="#!/designs">{{ 'designs' | translate }}</a>
-      </div>
-    </div>
-    <div class="main_body vl"> <!--Right side-->
+  <div class="sidenav" style="margin-top: 5em;">
+    <ul class="nav nav-pills nav-stacked">
+        <li>
+            <a href="#!/">
+                <i class="fa fa-home" aria-hidden="true"></i> {{ 'home' | translate }}
+            </a>
+        </li>
+        <li>
+            <a href="#!/activities/new">
+                <i class="fa fa-rocket" aria-hidden="true"></i> {{ 'launchActivity' | translate }}
+            </a>
+        </li>
+        <li>
+            <a href="#!/activities">
+                <i class="fa fa-list" aria-hidden="true"></i> {{ 'activities' | translate }}
+            </a>
+        </li>
+        <li>
+            <a href="#!/designs">
+                <i class="fa fa-paint-brush" aria-hidden="true"></i> {{ 'designs' | translate }}
+            </a>
+        </li>
+    </ul>
+  </div>  
+  <div class="main_body vl"> <!--Right side-->
       <div class="container" style="margin-top: 3em;">
-        <div ng-view></div>
+          <div ng-view></div>
       </div>
-    </div>
   </div>

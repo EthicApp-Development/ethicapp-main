@@ -2,6 +2,40 @@
 <p class="margin-top-24" style="width: 60em;">{{'homeMsg' | translate}}</p>
 
 <!--Choices-->
+<div class="container">
+    <div class="row d-flex justify-content-center">
+        <!-- Tarjeta 1 -->
+        <div class="col-md-4 col-12 mb-4 d-flex justify-content-center">
+            <div class="card home-card-image home-card-hover">
+                <img src="/assets/images/cards/design-activity.jpeg" class="home-card-image" alt="Design an activity">
+                <div class="card-img-overlay d-flex align-items-end">
+                    <h5 class="card-title text-white bg-dark p-2 w-100 text-center" style="opacity: 0.8;">Título 1</h5>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta 2 -->
+        <div class="col-md-4 col-12 mb-4 d-flex justify-content-center">
+            <div class="card home-card-image home-card-hover">
+                <img src="/assets/images/cards/launch-activity.jpeg" class="home-card-image" alt="Launch an activity">
+                <div class="card-img-overlay d-flex align-items-end">
+                    <h5 class="card-title text-white bg-dark p-2 w-100 text-center" style="opacity: 0.8;">Título 2</h5>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta 3 -->
+        <div class="col-md-4 col-12 mb-4 d-flex justify-content-center">
+            <div class="card home-card-image home-card-hover">
+                <img src="/assets/images/cards/search-designs.jpeg" class="home-card-image" alt="Search designs">
+                <div class="card-img-overlay d-flex align-items-end">
+                    <h5 class="card-title text-white bg-dark p-2 w-100 text-center" style="opacity: 0.8;">Título 3</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="flex_container" ng-init="path='assets/images/iconsets/gray-lineart/'">
     <div ng-click="navigateTo('/designs/new')" 
         ng-init="design = true"

@@ -10,17 +10,17 @@ export function BrowseDesignsController($scope, $routeParams,
     vm.userDesigns = [];
     vm.publicDesigns = [];
     vm.designs = [];
-    vm.preSelectedDesign = null;
 
     vm.init = async function() {
         await vm.forceFetchDesigns();
 
         try {
-            const preSelectedDesignId = Number($routeParams.designId);
-            if (!isNaN(preSelectedDesignId)) {
-                vm.pickedDesignId = preSelectedDesignId;
-                vm.preSelectedDesign = await DesignCatalogService.getDesignById(preSelectedDesignId);
-            }    
+            const designIdParam = Number($routeParams.designId);
+            if (!isNaN(designIdParam)) {
+                vm.pickedDesignId = designIdParam;
+                const designObj = await DesignCatalogService.getDesignById(vm.pickedDesignId);
+                vm.userSearch = designObj.metainfo.title;
+            }
         } catch(error) {
             console.error("[BrowseDesignsController::init] Failed to retrieve designId route parameter");
         }
