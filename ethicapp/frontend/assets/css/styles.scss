@@ -1,6 +1,6 @@
 @font-face {
     font-family: 'Avenir';
-    src: url('../../fonts/Avenir-Book.woff2') format('woff2');
+    src: url('../../webfonts/Avenir-Book.woff2') format('woff2');
     font-weight: normal;
     font-style: normal;
 }
@@ -8,7 +8,8 @@
 @import '../ngDialog-theme-default.css';
 @import '../nv.d3.min.css';
 @import '../bootstrap.min.css';
-@import '../font-awesome.min.css';
+@import '../../fontawesome/css/all.min.css';
+//@import '../fontawesome.min.css';
 @import '../angular-ui-notification.min.css';
 @import '../tablesort.min.css';
 @import '../introjs.css';

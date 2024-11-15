@@ -1,6 +1,6 @@
 <div class="row">
     <div class="col-md-12 mb-2">
-        <h2>{{'teacher_workbench' | translate}}</h2>
+        <h2><i class="fa fa-home" aria-hidden="true"></i> {{'teacher_workbench' | translate}}</h2>
         <p class="margin-top-24" style="width: 60em;">{{'homeMsg' | translate}}</p>
     </div>
 </row>
@@ -52,10 +52,10 @@
                 <div class="panel-body">
                     <div class="panel panel-default" ng-repeat="ses in ac.currentActivities(0) | limitTo: 3 | orderBy : '-time'">
                         <div class="panel-body">
-                            <p><b>{{ 'description_colon' | translate }}</b> {{ses.descr === '' ? ('no_description' | translate) : ses.descr }}</p>
-                            <p><b>{{ 'design_colon' | translate }}</b> {{ses.design.metainfo.title}}</p>
-                            <p><b>{{ 'access_code_colon' | translate }}</b> {{ses.code}}</p>
-                            <p><b>{{ 'launch_date_colon' | translate }}</b> {{ ses.time | date:'dd-MM-yyyy HH:mm' }} (UTC)</p>
+                            <p><b><i class="fa-solid fa-info-circle" aria-hidden="true"></i> {{ 'activity_description_colon' | translate }}</b> {{ ses.descr === '' ? ('no_description' | translate) : ses.descr }}</p>
+                            <p><b><i class="fa-solid fa-paint-brush" aria-hidden="true"></i> {{ 'design_colon' | translate }}</b> {{ ses.design.metainfo.title }}</p>
+                            <p><b><i class="fa-solid fa-key" aria-hidden="true"></i> {{ 'access_code_colon' | translate }}</b> {{ ses.code }}</p>
+                            <p><b><i class="fa-solid fa-calendar-alt" aria-hidden="true"></i> {{ 'launch_date_colon' | translate }}</b> {{ ses.time | date:'dd-MM-yyyy HH:mm' }} (UTC)</p>
                         </div>
                     </div>
                 </div>

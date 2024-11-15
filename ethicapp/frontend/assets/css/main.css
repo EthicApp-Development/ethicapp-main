@@ -191,7 +191,7 @@ a:hover{
 .top-bar-mini{
     /* height: 24px; */
     /* background: #aaa; linear-gradient(to bottom, #fadf72 0%, #ffdb3f 75%, #ffd900 100%);*/
-    background: linear-gradient(to right, #eee 0%, #aaa 50%, #252728 100%); /* #a1a1a1 50%,*/
+    background: linear-gradient(to right, #eee 0%, #eee 16%, #252728 30%, #252728 100%); /* #a1a1a1 50%,*/
     border-bottom: #3C3E3F solid 2px;
     color: white;
     position: fixed;
