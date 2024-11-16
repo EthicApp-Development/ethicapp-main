@@ -22,15 +22,12 @@
                         <p>{{'available_designs' | translate}}</p>
                         <div class="panel panel-default">
                             <div class="panel-body">
-                                <div class="panel panel-default" 
-                                    ng-repeat="design in bdc.designs | filter:bdc.userSearch"
-                                    ng-click="bdc.setPickedDesignId(design.id)"
-                                    ng-class="{'dsgn_sel': bdc.pickedDesignId === design.id}">
-                                    <div class="panel-body">
-                                        <h4 class="list-group-item-heading" ng-bind="design.metainfo.title"></h4>
-                                        <p class="list-group-item-text">{{'creation_date' | translate}} {{design.metainfo.creation_date | date}}</p>
-                                    </div>
-                                </div>
+                                <design-description 
+                                    ng-repeat="design in bdc.designs | filter:bdc.userSearch" 
+                                    design="design" 
+                                    picked-design-id="bdc.pickedDesignId" 
+                                    on-select="bdc.setPickedDesignId(id)">
+                                </design-description>
                             </div>
                         </div>
                     </div>

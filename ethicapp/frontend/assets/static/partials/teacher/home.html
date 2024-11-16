@@ -50,19 +50,9 @@
                     {{'recentActivity'|translate}}
                 </div>
                 <div class="panel-body">
-                    <div class="panel panel-default" ng-repeat="ses in ac.currentActivities(0) | limitTo: 3 | orderBy : '-time'">
-                        <div class="panel-body">
-                            <p><b><i class="fa-solid fa-info-circle" aria-hidden="true"></i> {{ 'activity_description_colon' | translate }}</b> {{ ses.descr === '' ? ('no_description' | translate) : ses.descr }}</p>
-                            <p><b><i class="fa-solid fa-paint-brush" aria-hidden="true"></i> {{ 'design_colon' | translate }}</b> {{ ses.design.metainfo.title }}</p>
-                            <p><b><i class="fa-solid fa-key" aria-hidden="true"></i> {{ 'access_code_colon' | translate }}</b> {{ ses.code }}</p>
-                            <p><b><i class="fa-solid fa-calendar-alt" aria-hidden="true"></i> {{ 'launch_date_colon' | translate }}</b> {{ ses.time | date:'dd-MM-yyyy HH:mm' }} (UTC)</p>
-                        </div>
-                    </div>
+                    <activity-description ng-repeat="act in ac.currentActivities(0) | limitTo: 3 | orderBy : '-time'" activity="act"></activity-description>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
-
-

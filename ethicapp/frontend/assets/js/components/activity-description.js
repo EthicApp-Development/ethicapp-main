@@ -1,0 +1,17 @@
+let ActivityDescriptionComponent = {
+    bindings: {
+        activity: '<'
+    },
+    template: `
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <p><b><i class="fa-solid fa-info-circle" aria-hidden="true"></i> {{ 'activity_description_colon' | translate }}</b> <a ng-href="#!/activities/{{$ctrl.activity.id}}">{{ $ctrl.activity.descr === '' ? ('no_description' | translate) : $ctrl.activity.descr }}</a></p>
+                <p><b><i class="fa-solid fa-paint-brush" aria-hidden="true"></i> {{ 'design_used_colon' | translate }}</b> <a ng-href="#!/designs/{{$ctrl.activity.dsgnid}}">{{ $ctrl.activity.design.metainfo.title }}</a> <span class="small">({{$ctrl.activity.type === "R" ? ('ranking_activity' | translate ) : ('semantic_differential' | translate)}})</a></p>
+                <p><b><i class="fa-solid fa-key" aria-hidden="true"></i> {{ 'access_code_colon' | translate }}</b> {{ $ctrl.activity.code }}</p>
+                <p><b><i class="fa-solid fa-calendar-alt" aria-hidden="true"></i> {{ 'launch_date_colon' | translate }}</b> {{ $ctrl.activity.time | date:'dd-MM-yyyy HH:mm' }} (UTC)</p>
+            </div>
+        </div>
+    `
+};
+
+export { ActivityDescriptionComponent };

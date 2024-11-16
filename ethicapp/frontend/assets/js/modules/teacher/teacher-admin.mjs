@@ -183,3 +183,8 @@ app.directive("connectedUsers", connectedUsersDirective);
 app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateService", 
     ConnectedUsersDirectiveController])
 
+import { ActivityDescriptionComponent } from "../../components/activity-description.js"
+app.component('activityDescription', ActivityDescriptionComponent);
+
+import { DesignDescriptionComponent } from "../../components/design-description.js"
+app.component('designDescription', DesignDescriptionComponent);
