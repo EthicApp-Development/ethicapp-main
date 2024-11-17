@@ -1,29 +1,75 @@
-// ActivityStateService currently handles the state of a single activity, i.e.,
-// the one being monitored or worked on currently by the user.
 let ActivityStateService = ($http) => {
     const service = {
-        activityDescriptor: {
-            phaseInformation: [],
-            phases: [],
-            activePhase: 0,
-            id: null,
-            title: null,
-            type: null,
-            dashboardAutoreload: true,
-            dashboardAutoreloadTime: 15,
-            designDescriptor: 
-                {
-                    designId : 0,
-                    designObject: {}
-                }
+        activityStates: {},
+
+        loadActivityState: async function(sessionId) {
+            try {
+                // list of connected users
+                const users = await $http.get('/session/' + sessionId + '/users');
+
+                // design used in the activity
+                const designObj = await $http.get('/session/' + sessionId + '/design');
+
+                // Phases will contain all content (i.e., question items, responses, and chat messages)
+                const phases = await $http.get('/session/' + sessionId + '/phases');
+
+                service.activityStates[sessionId] = { 
+                    users: users, 
+                    design: designObj,
+                    phases: phases
+                };
+
+                return service.activityStates[sessionId];
+            }
+            catch (error) {
+                console.error(`Failed to load state for session with id ${sessionId}`);
+                return null;
+            }
         },
 
-        sessionDescriptor: {
-            id: 0,
-            name: "",
-            descr: "",
-            status: 0,
-            type: ''
+        getSessionUsers: async function(sessionId, refresh = false) {
+            return [];
+            if (!(sessionId in service.activityStates)) {
+                throw new Error(`Activity state not found for session with id '${sessionId}'`);
+            }
+
+            if (refresh) {
+                const users = await $http.get('/session/' + sessionId + '/users');
+                service.activityStates[sessionId].users = users;
+            }
+
+            return service.activityStates[sessionId].users;
+        },
+
+        getActivityState: async function(sessionId, refresh = false) {
+            // Mock de usuarios conectados
+            const users = [
+                { name: 'Juan Pérez', mail: 'juan.perez@example.com', role: 'Administrador', device: 'Desktop' },
+                { name: 'María López', mail: 'maria.lopez@example.com', role: 'Usuario', device: 'Mobile' },
+                { name: 'Carlos Martínez', mail: 'carlos.martinez@example.com', role: 'Moderador', device: 'Tablet' }
+            ];
+
+            // Mock de fases del diseño
+            const designPhases = [
+                { name: 'Fase 1: Análisis', description: 'Recopilación de requisitos y análisis del proyecto.', status: 'Completada' },
+                { name: 'Fase 2: Diseño', description: 'Diseño conceptual y técnico del sistema.', status: 'En Progreso' },
+                { name: 'Fase 3: Implementación', description: 'Desarrollo del sistema y pruebas iniciales.', status: 'Pendiente' },
+                { name: 'Fase 4: Validación', description: 'Pruebas finales y aceptación del cliente.', status: 'Pendiente' }
+            ];
+
+            return { 
+                users: users, 
+                design: designPhases,
+                phases: designPhases
+            };
+
+            if (refresh) {
+                await service.loadActivityPhases(sessionId);
+            }
+            if (!(sessionId in service.activityStates)) {
+                throw new Error(`Activity state not found for session with id '${sessionId}'`);
+            }
+            return service.activityStates[sessionId];
         },
 
         setSessionDescriptor: (sd) => {
@@ -81,11 +127,7 @@ let ActivityStateService = ($http) => {
                 console.error("[ActivityStateService::loadActivityPhases] Error fetching admin stages:", error);
                 throw error;
             }
-        },
-
-        getSessionUsers: function() {
-            return $http.get('/session/' + service.sessionDescriptor.id + '/users');
-        },
+        }
     };
 
     return service; 

@@ -50,6 +50,7 @@ import { RoutingController } from "../../controllers/teacher/routing_controller.
 import { SesEditorController } from "../../controllers/teacher/ses_editor_controller.js";
 import { StagesController } from "../../controllers/teacher/stages_controller.js";
 import { DashboardRubricaController } from "../../controllers/teacher/dashboard_rubrica_controller.js";
+import { VoidController } from "../../controllers/common/void_controller.js";
 import { ngQuillConfigProvider } from "../../helpers/util.js";
 
 import { SessionSocketService } from "../../services/session-socket-service.js";
@@ -81,17 +82,22 @@ app.run(function($rootScope) {
 // Rich text editor configuration
 app.config(["ngQuillConfigProvider", ngQuillConfigProvider]);
 
-// Translations
+// Set up language
 app.config(function($translateProvider) {
+    // Configure how values are sanitized
     $translateProvider.useSanitizeValueStrategy("sanitizeParameters");
 
+    // Load translation files from static assets
     $translateProvider.useStaticFilesLoader({
         prefix: "assets/locales/", 
         suffix: ".json"
     });
 
-    // Set default language
-    $translateProvider.preferredLanguage("es");
+    // Automatically determine the preferred language based on the browser
+    $translateProvider.determinePreferredLanguage();
+
+    // Fallback to a default language if the browser's language is not supported
+    $translateProvider.fallbackLanguage("en");
 });
 
 // Inject controllers into application
@@ -120,8 +126,8 @@ app.controller("SesEditorController",
 app.controller("NewUsersController", 
     ["$scope", "$http", "Notification", "ActivityStateService", IncomingUsersController]);
 app.controller("DashboardController", 
-    ["$scope", "$socket", "$http", "$timeout", "$uibModal", "ActivityStateService",
-        "Notification", DashboardController]);
+    ["$scope", "$routeParams", "$socket", "$http", "$timeout", "$uibModal", "ActivityStateService",
+        "ActivityCatalogService", "DesignCatalogService", "$translate", DashboardController]);
 app.controller("MapSelectionModalController", 
     ["$scope", "$uibModalInstance", MapSelectionModalController]);
 app.controller("ConfirmModalController", 
@@ -157,7 +163,8 @@ app.controller("DashboardRubricaController",
     ["$scope", DashboardRubricaController]);
 app.controller("StagesController", 
     ["$scope", "$http", "Notification", "$uibModal", "ActivityStateService", StagesController]);
-
+app.controller("VoidController", [VoidController]);
+    
 app.service("DialogService", function(ngDialog) {
     this.openDialog = function() {
         ngDialog.open({
@@ -179,7 +186,11 @@ app.controller("DialogCtrl", function($scope, DialogService) {
 });
 
 import { connectedUsersDirective, ConnectedUsersDirectiveController } from "../../directives/connected-users.directive.js";
+import { activityControlsDirective } from "../../directives/activity-controls-directive.js";
+
 app.directive("connectedUsers", connectedUsersDirective);
+app.directive("activityControls", activityControlsDirective);
+
 app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateService", 
     ConnectedUsersDirectiveController])
 

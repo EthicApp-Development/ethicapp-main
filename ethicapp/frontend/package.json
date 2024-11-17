@@ -24,6 +24,7 @@
     "angular-ui-notification": "^0.3.6",
     "angular-ui-tree": "^2.22.6",
     "angularjs-dropdown-multiselect": "^2.0.0-beta.10",
+    "bootstrap": "^3.4.1",
     "checklist-model": "^1.0.0",
     "esbuild": "^0.24.0",
     "ng-dialog": "^1.4.0",

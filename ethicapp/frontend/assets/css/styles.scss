@@ -5,9 +5,10 @@
     font-style: normal;
 }
 
+//@import '../bootstrap.min.css';
+@import '../../../node_modules/bootstrap/dist/css/bootstrap.min.css';
 @import '../ngDialog-theme-default.css';
 @import '../nv.d3.min.css';
-@import '../bootstrap.min.css';
 @import '../../fontawesome/css/all.min.css';
 //@import '../fontawesome.min.css';
 @import '../angular-ui-notification.min.css';

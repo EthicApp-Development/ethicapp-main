@@ -19,7 +19,7 @@
                 </div>
                 <div class="row" ng-init="bdc.getDesigns()">
                     <div class="col-md-12">
-                        <p>{{'available_designs' | translate}}</p>
+                        <p>{{'available_designs_colon' | translate}}</p>
                         <div class="panel panel-default">
                             <div class="panel-body">
                                 <design-description 
@@ -70,7 +70,7 @@
                     <div class="row">
                         <div class="col-lg-6">
                             <button class="btn btn-primary" ng-disabled="bdc.pickedDesignId == 0 && bdc.pickedDesignId != NaN">
-                                {{'launch_activity' | translate}}
+                                {{'launch_the_activity' | translate}}
                             </button>
                         </div>
                     </div>

@@ -10,7 +10,7 @@
         <i class="fa fa-globe"></i>
         <i class="fa fa-angle-down"></i>
         <ul class="language-options" ng-show="showLanguageDropdown">
-          <li ng-repeat="languageKey in ['es_CL', 'en_US']" ng-click="changeLang(languageKey)">
+          <li ng-repeat="languageKey in ['es_CL', 'en_US']" ng-click="changeLanguage(languageKey)">
             <span ng-if="languageKey === lang" class="selected-language">{{ getTranslatedLanguageName(languageKey) }} <i
                 class="fa fa-check"></i></span>
             <span ng-if="languageKey !== lang" class="not-selected-language">{{ getTranslatedLanguageName(languageKey)
@@ -33,22 +33,22 @@
     <ul class="nav nav-pills nav-stacked">
         <li>
             <a href="#!/">
-                <i class="fa fa-home" aria-hidden="true"></i> {{ 'home' | translate }}
+                <i class="fa fa-home" aria-hidden="true"></i> {{ 'nav_pill_title_home' | translate }}
             </a>
         </li>
         <li>
             <a href="#!/activities/new">
-                <i class="fa-brands fa-space-awesome"></i> {{ 'launchActivity' | translate }}
+                <i class="fa-brands fa-space-awesome"></i> {{ 'nav_pill_title_launch_activity' | translate }}
             </a>
         </li>
         <li>
             <a href="#!/activities">
-              <i class="fa-solid fa-drum"></i> {{ 'activities' | translate }}
+              <i class="fa-solid fa-drum"></i> {{ 'nav_pill_title_activities' | translate }}
             </a>
         </li>
         <li>
             <a href="#!/designs">
-                <i class="fa fa-paint-brush" aria-hidden="true"></i> {{ 'designs' | translate }}
+                <i class="fa fa-paint-brush" aria-hidden="true"></i> {{ 'nav_pill_title_designs' | translate }}
             </a>
         </li>
     </ul>

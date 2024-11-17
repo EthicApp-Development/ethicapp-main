@@ -328,7 +328,6 @@ router.get("/home", function(req, res) {
             res.render("home", {
                 layout:     "./layouts/teacher-app",
                 ngApp:      "TeacherApp",
-                controller: "ManagementController",
                 scripts:    [
                     ["libs/angular-glue.min.js"],
                     ["js/dist/teacher-admin.js", "js/dist/teacher-admin.min.js"],

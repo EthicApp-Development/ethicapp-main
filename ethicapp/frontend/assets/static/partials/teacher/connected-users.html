@@ -2,24 +2,24 @@
     <table class="table table-bordered table-striped">
         <thead>
             <tr>
-                <th ng-click="sortBy('name')">
+                <th ng-click="ctrl.sortBy('name')" class="sortable-header">
                     Nombre
-                    <span ng-if="orderByField === 'name'">
-                        <i ng-class="reverseSort ? 'glyphicon glyphicon-chevron-down' : 'glyphicon glyphicon-chevron-up'"></i>
+                    <span ng-if="ctrl.orderByField === 'name'">
+                        <i ng-class="ctrl.reverseSort ? 'fa fa-sort-desc' : 'fa fa-sort-asc'"></i>
                     </span>
                 </th>
                 <th>Email</th>
-                <th ng-click="sortBy('role')">
+                <th ng-click="ctrl.sortBy('role')" class="sortable-header">
                     Rol
-                    <span ng-if="orderByField === 'role'">
-                        <i ng-class="reverseSort ? 'glyphicon glyphicon-chevron-down' : 'glyphicon glyphicon-chevron-up'"></i>
+                    <span ng-if="ctrl.orderByField === 'role'">
+                        <i ng-class="ctrl.reverseSort ? 'fa fa-sort-desc' : 'fa fa-sort-asc'"></i>
                     </span>
                 </th>
                 <th>Dispositivo</th>
             </tr>
         </thead>
         <tbody>
-            <tr ng-repeat="user in users | orderBy:orderByField:reverseSort">
+            <tr ng-repeat="user in ctrl.users | orderBy:ctrl.orderByField:ctrl.reverseSort">
                 <td>{{ user.name }}</td>
                 <td>{{ user.mail }}</td>
                 <td>{{ user.role }}</td>
