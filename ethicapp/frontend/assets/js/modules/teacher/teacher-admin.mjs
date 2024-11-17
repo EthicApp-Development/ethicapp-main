@@ -187,15 +187,23 @@ app.controller("DialogCtrl", function($scope, DialogService) {
 
 import { connectedUsersDirective, ConnectedUsersDirectiveController } from "../../directives/connected-users.directive.js";
 import { activityControlsDirective } from "../../directives/activity-controls-directive.js";
+import { phaseStateDirective } from "../../directives/phase-state-directive.js";
+import { groupPhaseTableDirective } from "../../directives/group-phase-table-directive.js";
+import { individualPhaseTableDirective } from "../../directives/individual-phase-table-directive.js";
 
 app.directive("connectedUsers", connectedUsersDirective);
 app.directive("activityControls", activityControlsDirective);
+app.directive("phaseState", phaseStateDirective);
+app.directive("groupPhaseTable", groupPhaseTableDirective);
+app.directive("individualPhaseTable", individualPhaseTableDirective);
 
 app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateService", 
     ConnectedUsersDirectiveController])
 
-import { ActivityDescriptionComponent } from "../../components/activity-description.js"
-app.component('activityDescription', ActivityDescriptionComponent);
+import { activityDescriptionComponent } from "../../components/activity-description-component.js"
+import { designDescriptionComponent } from "../../components/design-description-component.js"
+import { phaseDescriptionComponent } from "../../components/phase-description-component.js"
 
-import { DesignDescriptionComponent } from "../../components/design-description.js"
-app.component('designDescription', DesignDescriptionComponent);
+app.component('activityDescription', activityDescriptionComponent);
+app.component('designDescription', designDescriptionComponent);
+app.component('phaseDescription', phaseDescriptionComponent);

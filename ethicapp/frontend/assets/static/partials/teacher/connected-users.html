@@ -3,19 +3,19 @@
         <thead>
             <tr>
                 <th ng-click="ctrl.sortBy('name')" class="sortable-header">
-                    Nombre
+                    {{'name_column_header' | translate}}
                     <span ng-if="ctrl.orderByField === 'name'">
                         <i ng-class="ctrl.reverseSort ? 'fa fa-sort-desc' : 'fa fa-sort-asc'"></i>
                     </span>
                 </th>
-                <th>Email</th>
+                <th>{{'email_column_header' | translate}}</th>
                 <th ng-click="ctrl.sortBy('role')" class="sortable-header">
-                    Rol
+                    {{'role_column_header' | translate}}
                     <span ng-if="ctrl.orderByField === 'role'">
                         <i ng-class="ctrl.reverseSort ? 'fa fa-sort-desc' : 'fa fa-sort-asc'"></i>
                     </span>
                 </th>
-                <th>Dispositivo</th>
+                <th>{{'device_column_header' | translate}}</th>
             </tr>
         </thead>
         <tbody>

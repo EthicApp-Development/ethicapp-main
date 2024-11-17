@@ -1467,7 +1467,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     position:absolute;
 }
 
-.list-group-item{
+/*.list-group-item {
     position:relative;
     display:inline-flex;
     padding:10px 15px;
@@ -1476,6 +1476,11 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     border:1px solid #ddd;
     width: 100%;
     justify-content: space-between;
+}*/
+
+.phase-details .list-group-item {
+    text-align: left;
+    vertical-align: middle;
 }
 
 .logoEthicapp{

@@ -1,4 +1,4 @@
-let DesignDescriptionComponent = {
+let designDescriptionComponent = {
     bindings: {
         design: '<',
         onSelect: '&',     
@@ -16,4 +16,4 @@ let DesignDescriptionComponent = {
     `
 };
 
-export { DesignDescriptionComponent };
+export { designDescriptionComponent };

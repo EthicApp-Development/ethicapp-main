@@ -1,4 +1,4 @@
-let ActivityDescriptionComponent = {
+let activityDescriptionComponent = {
     bindings: {
         activity: '<',
         titleText: '<'
@@ -17,4 +17,4 @@ let ActivityDescriptionComponent = {
 };
 
 
-export { ActivityDescriptionComponent };
+export { activityDescriptionComponent };
