@@ -31,13 +31,11 @@ router.get("/cases", async (req, res) => {
     const userId = req.user.id;
 
     const sqlCases = `
-    SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id, c.created_at, c.updated_at, c.rich_text,
+    SELECT c.case_id, c.title, c.description, c.is_public, c.external_case_url, c.user_id, c.created_at, c.updated_at,
            ARRAY_AGG(DISTINCT jsonb_build_object('name', tt.name)) AS topic_tags, 
-           ARRAY_AGG(DISTINCT jsonb_build_object('id', dd.id, 'path', dd.path, 'name', dd.name)) AS documents,
            u.name AS creator -- Obtener el nombre del creador
     FROM cases c
     LEFT JOIN cases_topic_tags ct ON c.case_id = ct.case_id
-    LEFT JOIN designs_documents dd ON c.case_id = dd.case_id
     LEFT JOIN topic_tags tt ON ct.topic_tag_name = tt.name
     LEFT JOIN users u ON c.user_id = u.id -- Unión con la tabla de usuarios
     GROUP BY c.case_id, u.name
@@ -65,13 +63,11 @@ router.get("/cases", async (req, res) => {
                 case_id: row.case_id,
                 title: row.title,
                 description: row.description,
-                rich_text: row.rich_text,
                 is_public: row.is_public,
                 external_case_url: row.external_case_url,
                 user_id: row.user_id,
                 creator: row.creator,
                 topic_tags: row.topic_tags.filter(tag => tag.name !== null),
-                documents: row.documents.filter(doc => doc.id !== null),
                 created_at: row.created_at,
                 updated_at: row.updated_at,
                 locked: designsMap.get(row.case_id) || false 
@@ -98,6 +94,7 @@ router.get("/cases", async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Error in the DB' });
     }
 });
+
 
 
 router.get("/cases/:id", async (req, res) => {
