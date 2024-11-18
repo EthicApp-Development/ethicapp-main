@@ -83,9 +83,14 @@ CREATE TABLE IF NOT EXISTS teams (
     FOREIGN KEY (sesid) REFERENCES sessions (id)
 );
 
+CREATE INDEX idx_teams_stageid ON teams(stageid);
+
 CREATE TABLE IF NOT EXISTS teamusers (
     tmid integer,
     uid integer,
     FOREIGN KEY (tmid) REFERENCES teams (id),
     FOREIGN KEY (uid) REFERENCES users (id)
 );
+
+CREATE INDEX idx_teamusers_tmid ON teamusers(tmid);
+CREATE INDEX idx_teamusers_uid ON teamusers(uid);
