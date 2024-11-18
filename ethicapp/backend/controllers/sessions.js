@@ -474,6 +474,8 @@ router.post("/designs/:id/clone", async (req, res) => {
         }
 
         const originalDesign = result.rows[0];
+        const design = originalDesign.design;
+        design.metainfo.creation_date = new Date().toISOString();
 
         const insertDesignSql = `
         INSERT INTO DESIGNS (creator, design, public, locked, case_id)
@@ -483,7 +485,7 @@ router.post("/designs/:id/clone", async (req, res) => {
         
         const clonedDesignValues = [
             uid,                  
-            originalDesign.design, 
+            design, 
             originalDesign.public, 
             false,               
             originalDesign.case_id
