@@ -4,18 +4,43 @@ import express from "express";
 import config from "../config/config.js"; 
 import * as rpg2 from "../db/rest-pg-2.js";
 
+const router = express.Router();
+
 const activityResponsesFetchHandlers = {
     "semantic-differential": fetchSemanticDifferentialResponses,
     ranking: fetchRankingResponses,
 };
 
-const phaseResponsesFetchHandlers = {
-    "semantic-differential": fetchSemanticDifferentialResponsesByStage,
-    ranking: fetchRankingResponsesByStage,
-};
-
-const router = express.Router();
-
+/**
+ * @route GET /activities/:session_id/current_phase_number
+ * @description Fetches the current phase number for a given activity session.
+ * @param {string} session_id - The ID of the session (from the URL path).
+ * @returns {Object} - A JSON object containing the current phase number for the session.
+ * 
+ * @example
+ * // Request
+ * GET /activities/123/current_phase_number
+ * 
+ * // Response (success)
+ * {
+ *   "current_phase": 2
+ * }
+ * 
+ * // Response (session_id missing)
+ * {
+ *   "error": "Missing required parameter: session_id."
+ * }
+ * 
+ * // Response (no current phase found)
+ * {
+ *   "error": "No current phase found for the given session."
+ * }
+ * 
+ * // Response (internal server error)
+ * {
+ *   "error": "Internal server error."
+ * }
+ */
 router.get("/activities/:session_id/current_phase_number", async (req, res) => {
     const { session_id } = req.params;
 
@@ -47,6 +72,65 @@ router.get("/activities/:session_id/current_phase_number", async (req, res) => {
     }
 });
 
+/**
+ * @route GET /activities/:session_id/responses
+ * @description Retrieves all responses for an activity session, grouped by phase.
+ *              The logic and structure of the responses depend on the design type of the activity.
+ * @param {string} session_id - The ID of the session (from the URL path).
+ * @returns {Object} - A JSON object containing responses grouped by phases.
+ * 
+ * @example
+ * // Request
+ * GET /activities/123/responses
+ * 
+ * // Response (success)
+ * {
+ *   "phases": [
+ *     {
+ *       "phase_number": 1,
+ *       "responses": [
+ *         {
+ *           "uid": 45,
+ *           "response_detail": "Example response data"
+ *         },
+ *         {
+ *           "uid": 67,
+ *           "response_detail": "Another response"
+ *         }
+ *       ]
+ *     },
+ *     {
+ *       "phase_number": 2,
+ *       "responses": [
+ *         {
+ *           "uid": 45,
+ *           "response_detail": "Example response for phase 2"
+ *         }
+ *       ]
+ *     }
+ *   ]
+ * }
+ * 
+ * // Response (session_id missing)
+ * {
+ *   "error": "Missing required parameter: session_id."
+ * }
+ * 
+ * // Response (unsupported design type)
+ * {
+ *   "error": "Unsupported design type: example_type."
+ * }
+ * 
+ * // Response (no responses found)
+ * {
+ *   "error": "No responses found for the given activity."
+ * }
+ * 
+ * // Response (internal server error)
+ * {
+ *   "error": "Internal server error."
+ * }
+ */
 router.get("/activities/:session_id/responses", async (req, res) => {
     const { session_id } = req.params;
 
@@ -92,6 +176,42 @@ router.get("/activities/:session_id/responses", async (req, res) => {
     }
 });
 
+/**
+ * @route POST /activities/:session_id/phase_transition
+ * @description Transitions an activity session to a new phase (stage) by updating the current stage in the session.
+ *              This also notifies connected clients of the state change via WebSocket.
+ * @param {string} session_id - The ID of the session (from the URL path).
+ * @param {number} stage_id - The ID of the new stage to transition to (from the request body).
+ * @returns {Object} - A JSON object indicating the success or failure of the transition.
+ * 
+ * @example
+ * // Request
+ * POST /activities/123/phase_transition
+ * {
+ *   "stage_id": 456
+ * }
+ * 
+ * // Response (success)
+ * {
+ *   "status": "ok",
+ *   "message": "Session transitioned to the new stage."
+ * }
+ * 
+ * // Response (missing parameters)
+ * {
+ *   "error": "Missing required parameters: session_id or stage_id."
+ * }
+ * 
+ * // Response (session not found or no update performed)
+ * {
+ *   "error": "Session not found or no update performed."
+ * }
+ * 
+ * // Response (internal server error)
+ * {
+ *   "error": "Internal server error."
+ * }
+ */
 router.post("/activities/:session_id/phase_transition", async (req, res) => {
     const { session_id } = req.params;
     const { stage_id } = req.body;
@@ -127,6 +247,38 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
     }
 });
 
+/**
+ * @route POST /activities/:session_id/finish
+ * @description Marks an activity session as finished by updating its status and clearing the current stage.
+ *              Notifies connected clients of the state change via WebSocket.
+ * @param {string} session_id - The ID of the session (from the URL path).
+ * @returns {Object} - A JSON object indicating the success or failure of the operation.
+ * 
+ * @example
+ * // Request
+ * POST /activities/123/finish
+ * 
+ * // Response (success)
+ * {
+ *   "status": "ok",
+ *   "message": "Activity session finished successfully."
+ * }
+ * 
+ * // Response (missing session_id)
+ * {
+ *   "error": "Missing required parameter: session_id."
+ * }
+ * 
+ * // Response (session not found or no update performed)
+ * {
+ *   "error": "Session not found or no update performed."
+ * }
+ * 
+ * // Response (internal server error)
+ * {
+ *   "error": "Internal server error."
+ * }
+ */
 router.post("/activities/:session_id/finish", async (req, res) => {
     const { session_id } = req.params;
 
@@ -161,6 +313,54 @@ router.post("/activities/:session_id/finish", async (req, res) => {
     }
 });
 
+/**
+ * @route POST /activities/:session_id/phases
+ * @description Adds a new phase to an activity session by inserting it into the database.
+ * @param {string} session_id - The ID of the session (from the URL path).
+ * @param {number} number - The number of the phase (from the request body).
+ * @param {string} type - The type of the phase (e.g., "semantic-differential") (from the request body).
+ * @param {boolean} [anon=false] - Whether the phase is anonymous (from the request body, optional).
+ * @param {boolean} [chat=false] - Whether chat is enabled for the phase (from the request body, optional).
+ * @param {string} [prev_ans=null] - References to previous answers if applicable (from the request body, optional).
+ * @param {string} [question=null] - The question associated with the phase (from the request body, optional).
+ * @param {string} [grouping=null] - The grouping algorithm used for the phase (from the request body, optional).
+ * @returns {Object} - A JSON object indicating the success or failure of the operation.
+ * 
+ * @example
+ * // Request
+ * POST /activities/123/phases
+ * {
+ *   "number": 1,
+ *   "type": "semantic-differential",
+ *   "anon": true,
+ *   "chat": false,
+ *   "prev_ans": null,
+ *   "question": "What is your opinion?",
+ *   "grouping": "random"
+ * }
+ * 
+ * // Response (success)
+ * {
+ *   "status": "ok",
+ *   "phase_id": 456,
+ *   "message": "Phase added successfully."
+ * }
+ * 
+ * // Response (missing required parameters)
+ * {
+ *   "error": "Missing required parameters: session_id, number, or type."
+ * }
+ * 
+ * // Response (insertion failed)
+ * {
+ *   "error": "Failed to add the phase. No rows were inserted."
+ * }
+ * 
+ * // Response (internal server error)
+ * {
+ *   "error": "Internal server error."
+ * }
+ */
 router.post("/activities/:session_id/phases", async (req, res) => {
     const { session_id } = req.params; // Extract session_id from URL parameters
     const {
@@ -220,183 +420,6 @@ router.post("/activities/:session_id/phases", async (req, res) => {
     }
 });
 
-router.get("/phases/:id/groups", async (req, res) => {
-    const { id } = req.params;
-
-    if (!id) {
-        return res.status(400).json({ error: "Missing required parameter: id" });
-    }
-
-    try {
-        const results = await rpg2.execSQL({
-            sql: `
-                SELECT t.id AS team_id,
-                       tu.uid AS user_id
-                FROM teams AS t
-                LEFT JOIN teamusers AS tu
-                    ON t.id = tu.tmid
-                WHERE t.stageid = $1
-                ORDER BY t.id, tu.uid
-            `,
-            dbcon: config.dbconnString,
-            sqlParams: [id],
-        });
-
-        if (results.length === 0) {
-            return res.status(404).json({ error: "No groups found for the given phase." });
-        }
-
-        const groupedTeams = results.reduce((acc, row) => {
-            const { team_id, user_id } = row;
-
-            if (!acc[team_id]) {
-                acc[team_id] = {
-                    id: team_id,
-                    number: Object.keys(acc).length + 1,
-                    participants: [],
-                };
-            }
-
-            if (user_id) {
-                acc[team_id].participants.push(user_id);
-            }
-
-            return acc;
-        }, {});
-
-        const responseArray = Object.values(groupedTeams);
-
-        res.status(200).json({ groups: responseArray });
-    } catch (err) {
-        console.error("Error fetching groups:", err);
-        res.status(500).json({ error: "Internal server error" });
-    }
-});
-
-router.get("/phases/:id/responses", async (req, res) => {
-    const { id } = req.params;
-
-    if (!id) {
-        return res.status(400).json({ error: "Missing required parameter: id" });
-    }
-
-    try {
-        // Determine the design type for the stage
-        const designType = await getDesignTypeByStageId(id);
-
-        // Fetch responses using the appropriate handler
-        const handler = phaseResponsesFetchHandlers[designType];
-        if (!handler) {
-            return res.status(400).json({ error: `Unsupported design type: ${designType}` });
-        }
-
-        const results = await handler(id);
-
-        if (results.length === 0) {
-            return res.status(404).json({ error: "No responses found for the given phase." });
-        }
-
-        res.status(200).json({ responses: results });
-    } catch (err) {
-        console.error("Error fetching phase responses:", err);
-        res.status(500).json({ error: "Internal server error" });
-    }
-});
-
-router.get("/phases/:id/message_count", async (req, res) => {
-    const { id } = req.params;
-
-    if (!id) {
-        return res.status(400).json({ error: "Missing required parameter: id" });
-    }
-
-    try {
-        const results = await rpg2.execSQL({
-            sql: `
-                SELECT c.did,
-                       u.uid,
-                       u.tmid,
-                       COUNT(*) AS message_count
-                FROM differential_chat AS c
-                INNER JOIN teamusers AS u
-                    ON u.uid = c.uid
-                INNER JOIN differential AS d
-                    ON d.id = c.did
-                INNER JOIN teams AS tm
-                    ON tm.id = u.tmid
-                WHERE d.stageid = $1
-                  AND tm.stageid = $1
-                GROUP BY c.did, u.uid, u.tmid
-            `,
-            dbcon: config.dbconnString,
-            sqlParams: [id],
-        });
-
-        if (results.length === 0) {
-            return res.status(404).json({ error: "No messages found for the given phase." });
-        }
-
-        const formattedResults = results.map(row => ({
-            question_id: row.did,
-            user_id: row.uid,
-            team_id: row.tmid,
-            message_count: parseInt(row.message_count, 10),
-        }));
-
-        res.status(200).json({ messages: formattedResults });
-    } catch (err) {
-        console.error("Error fetching messages:", err);
-        res.status(500).json({ error: "Internal server error" });
-    }
-});
-
-router.get("/phases/:id/group_messages/:user_id", async (req, res) => {
-    const { id, user_id } = req.params;
-
-    if (!id || !user_id) {
-        return res.status(400).json({ error: "Missing required parameters: id or user_id." });
-    }
-
-    try {
-        const results = await rpg2.execSQL({
-            sql: `
-                SELECT s.id,
-                       s.uid,
-                       s.content,
-                       s.stime,
-                       s.parent_id,
-                       s.stageid
-                FROM chat AS s
-                WHERE s.stageid = $1
-                  AND s.uid IN (
-                      SELECT tu.uid
-                      FROM teamusers AS tu
-                      WHERE tu.tmid = (
-                          SELECT t.id
-                          FROM teamusers AS tu,
-                               teams AS t
-                          WHERE t.stageid = $1
-                            AND tu.tmid = t.id
-                            AND tu.uid = $2
-                      )
-                  )
-                ORDER BY s.stime ASC
-            `,
-            dbcon: config.dbconnString,
-            sqlParams: [id, user_id], // `id` es el `stageid`, `user_id` es el identificador del usuario
-        });
-
-        if (results.length === 0) {
-            return res.status(404).json({ error: "No messages found for the user's group in the given phase." });
-        }
-
-        res.status(200).json({ group_messages: results });
-    } catch (err) {
-        console.error("Error fetching group messages:", err);
-        res.status(500).json({ error: "Internal server error" });
-    }
-});
-
 /**
  * Retrieves the design type for a given session ID.
  * @param {number} sessionId - The session ID.
@@ -429,6 +452,55 @@ async function getDesignTypeBySessionId(sessionId) {
     return designType;
 }
 
+/**
+ * Fetches responses for semantic-differential activities in a given session.
+ * This query retrieves data grouped by stage and includes details such as user IDs, team IDs, 
+ * selections, and comments. It also associates responses with their respective phase numbers.
+ * 
+ * @async
+ * @function fetchSemanticDifferentialResponses
+ * @param {string} sessionId - The ID of the session for which to fetch responses.
+ * @returns {Promise<Array>} - Resolves with an array of response objects, each containing:
+ *   - `stageid`: The ID of the stage (phase).
+ *   - `orden`: The order of the item.
+ *   - `uid`: The user ID of the respondent.
+ *   - `tmid`: The team ID of the respondent (if applicable).
+ *   - `did`: The differential ID of the item.
+ *   - `sel`: The user's selection.
+ *   - `comment`: Any comment associated with the response.
+ *   - `phase_number`: The number of the phase in the session.
+ * 
+ * @throws {Error} If the SQL query fails.
+ * 
+ * @example
+ * // Usage
+ * const responses = await fetchSemanticDifferentialResponses('12345');
+ * console.log(responses);
+ * 
+ * // Example response
+ * [
+ *   {
+ *     "stageid": 1,
+ *     "orden": 1,
+ *     "uid": 101,
+ *     "tmid": 7,
+ *     "did": 501,
+ *     "sel": "Agree",
+ *     "comment": "Good choice",
+ *     "phase_number": 2
+ *   },
+ *   {
+ *     "stageid": 2,
+ *     "orden": 2,
+ *     "uid": 102,
+ *     "tmid": 8,
+ *     "did": 502,
+ *     "sel": "Disagree",
+ *     "comment": null,
+ *     "phase_number": 3
+ *   }
+ * ]
+ */
 async function fetchSemanticDifferentialResponses(sessionId) {
     const results = await rpg2.execSQL({
         sql: `
@@ -462,6 +534,49 @@ async function fetchSemanticDifferentialResponses(sessionId) {
     return results;
 }
 
+/**
+ * Fetches responses for ranking activities in a given session.
+ * This query retrieves data related to user rankings, including item descriptions, order, and user selections.
+ * Responses are grouped by phase and include the phase number for context.
+ * 
+ * @async
+ * @function fetchRankingResponses
+ * @param {string} sessionId - The ID of the session for which to fetch ranking responses.
+ * @returns {Promise<Array>} - Resolves with an array of response objects, each containing:
+ *   - `id`: The ID of the ranking item.
+ *   - `description`: The description of the ranking item.
+ *   - `orden`: The order in which the item was ranked.
+ *   - `actorid`: The ID of the actor or choice being ranked.
+ *   - `uid`: The user ID of the respondent.
+ *   - `phase_number`: The number of the phase in the session.
+ * 
+ * @throws {Error} If the SQL query fails.
+ * 
+ * @example
+ * // Usage
+ * const responses = await fetchRankingResponses('12345');
+ * console.log(responses);
+ * 
+ * // Example response
+ * [
+ *   {
+ *     "id": 1,
+ *     "description": "Rank Item 1",
+ *     "orden": 1,
+ *     "actorid": 101,
+ *     "uid": 201,
+ *     "phase_number": 1
+ *   },
+ *   {
+ *     "id": 2,
+ *     "description": "Rank Item 2",
+ *     "orden": 2,
+ *     "actorid": 102,
+ *     "uid": 201,
+ *     "phase_number": 1
+ *   }
+ * ]
+ */
 async function fetchRankingResponses(sessionId) {
     const results = await rpg2.execSQL({
         sql: `
@@ -479,56 +594,6 @@ async function fetchRankingResponses(sessionId) {
         `,
         dbcon: config.dbconnString,
         sqlParams: [sessionId],
-    });
-
-    return results;
-}
-
-async function fetchSemanticDifferentialResponsesByStage(stageId) {
-    const results = await rpg2.execSQL({
-        sql: `
-            SELECT d.stageid,
-                   d.orden,
-                   s.uid,
-                   r.tmid,
-                   s.did,
-                   s.sel,
-                   s.comment
-            FROM differential_selection AS s
-            INNER JOIN differential AS d
-                ON s.did = d.id
-            LEFT JOIN (
-                SELECT tu.*
-                FROM teamusers AS tu
-                INNER JOIN teams AS t
-                    ON tu.tmid = t.id
-                    AND t.stageid = $1
-            ) AS r
-                ON r.uid = s.uid
-            WHERE d.stageid = $2
-            ORDER BY d.stageid, s.uid, d.orden
-        `,
-        dbcon: config.dbconnString,
-        sqlParams: [stageId, stageId],
-    });
-
-    return results;
-}
-
-async function fetchRankingResponsesByStage(stageId) {
-    const results = await rpg2.execSQL({
-        sql: `
-            SELECT id,
-                   description,
-                   orden,
-                   actorid,
-                   uid
-            FROM actor_selection
-            WHERE stageid = $1
-            ORDER BY uid, orden
-        `,
-        dbcon: config.dbconnString,
-        sqlParams: [stageId],
     });
 
     return results;
