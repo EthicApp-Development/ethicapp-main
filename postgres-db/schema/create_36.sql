@@ -36,3 +36,6 @@ CREATE TABLE IF NOT EXISTS activity (
     FOREIGN KEY (design) REFERENCES designs (id),
     FOREIGN KEY (session) REFERENCES sessions (id)
 );
+
+CREATE INDEX idx_activity_session ON activity(session);
+CREATE INDEX idx_activity_design ON activity(design);
