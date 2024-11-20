@@ -8,6 +8,7 @@
   <script src="<%= asset('/js/dist/user-common.min.js') %>" defer></script>
   <%- include('../partials/favicon.ejs') %>
   <link rel="stylesheet" href="<%= asset('/css/dist/assets-bundle.css') %>">
+  <%- typeof extraScripts !== 'undefined' ? extraScripts : '' %>
   <% if (typeof renderScripts === "function") { %>
     <%- renderScripts(scripts) %>
   <% } %>

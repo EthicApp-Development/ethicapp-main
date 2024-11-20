@@ -3,6 +3,8 @@
 import express from "express";
 import config from "../config/config.js"; 
 import * as rpg2 from "../db/rest-pg-2.js";
+import * as ActivitiesHelper from "../helpers/activities-helper.js"
+import * as StatusCodes from "../../common/modules/session-status.js"
 
 const router = express.Router();
 
@@ -12,62 +14,52 @@ const activityResponsesFetchHandlers = {
 };
 
 /**
- * @route GET /activities/:session_id/current_phase_number
- * @description Fetches the current phase number for a given activity session.
+ * Retrieves the descriptor object for an activity in a session.
+ * The descriptor includes the design ID, the activity status, 
+ * and a list of phases with their number, ID, and active state.
+ * 
  * @param {string} session_id - The ID of the session (from the URL path).
- * @returns {Object} - A JSON object containing the current phase number for the session.
- * 
- * @example
- * // Request
- * GET /activities/123/current_phase_number
- * 
- * // Response (success)
- * {
- *   "current_phase": 2
- * }
- * 
- * // Response (session_id missing)
- * {
- *   "error": "Missing required parameter: session_id."
- * }
- * 
- * // Response (no current phase found)
- * {
- *   "error": "No current phase found for the given session."
- * }
- * 
- * // Response (internal server error)
- * {
- *   "error": "Internal server error."
- * }
+ * @returns {Object} - A JSON object with the design ID, activity status, and phase information.
  */
-router.get("/activities/:session_id/current_phase_number", async (req, res) => {
+router.get("/activities/:session_id/descriptor", async (req, res) => {
     const { session_id } = req.params;
 
     if (!session_id) {
-        return res.status(400).json({ error: "Missing required parameter: session_id" });
+        return res.status(400).json({ error: "Missing required parameter: session_id." });
     }
 
     try {
-        const result = await rpg2.singleSQL({
-            sql: `
-                SELECT number
-                FROM stages
-                INNER JOIN sessions
-                ON stages.id = sessions.current_stage
-                WHERE sessions.id = $1
-            `,
+        // Step 1: Get the design ID and activity status for the session
+        const activityResult = await rpg2.singleSQL({
             dbcon: config.dbconnString,
+            sql: `
+                SELECT a.design, s.status
+                FROM activity AS a
+                INNER JOIN sessions AS s
+                    ON a.session = s.id
+                WHERE a.session = $1
+            `,
             sqlParams: [session_id],
         });
 
-        if (!result) {
-            return res.status(404).json({ error: "No current phase found for the given session." });
+        if (!activityResult) {
+            return res.status(404).json({ error: "No activity found for the given session." });
         }
 
-        res.status(200).json({ current_phase: result.number });
+        const { design: designId, status } = activityResult;
+
+        // Step 2: Get the list of phases for the session
+        const phases = await ActivitiesHelper.getPhasesForSession(session_id);
+        const statusName = StatusCodes.getNameByCode(status);
+
+        // Step 3: Construct and return the descriptor
+        res.status(200).json({
+            designId,
+            statusName,
+            phases,
+        });
     } catch (err) {
-        console.error("Error fetching current phase:", err);
+        console.error("Error fetching activity descriptor:", err);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -214,22 +206,25 @@ router.get("/activities/:session_id/responses", async (req, res) => {
  */
 router.post("/activities/:session_id/phase_transition", async (req, res) => {
     const { session_id } = req.params;
-    const { stage_id } = req.body;
+    const { phase_id } = req.body;
 
-    if (!session_id || !stage_id) {
-        return res.status(400).json({ error: "Missing required parameters: session_id or stage_id." });
+    if (!session_id || !phase_id) {
+        return res.status(400).json({ error: "Missing required parameters: session_id or phase_id." });
     }
+
+    // Get the status code for "in progress"
+    const status = StatusCodes.getStatusCode("in_progress");
 
     try {
         const result = await rpg.execSQL({
             sql: `
                 UPDATE sessions
-                SET status = 2,
-                    current_stage = $1
-                WHERE id = $2
+                SET status = $1,
+                    current_stage = $2
+                WHERE id = $3
             `,
             dbcon: config.dbconnString,
-            sqlParams: [stage_id, session_id],
+            sqlParams: [status, phase_id, session_id],
         });
 
         if (result.rowCount === 0) {
@@ -240,7 +235,7 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
         const socket = configSocket(io);
         socket.stateChange(session_id);
 
-        res.status(200).json({ status: "ok", message: "Session transitioned to the new stage." });
+        res.status(200).json({ status: "ok", message: "Session transitioned to the new phase." });
     } catch (err) {
         console.error("Error transitioning session stage:", err);
         res.status(500).json({ error: "Internal server error" });
@@ -286,16 +281,19 @@ router.post("/activities/:session_id/finish", async (req, res) => {
         return res.status(400).json({ error: "Missing required parameter: session_id" });
     }
 
+    // Get the status code for "finished"
+    const status = StatusCodes.getStatusCode("finished");
+
     try {
         const result = await rpg2.execSQL({
             sql: `
                 UPDATE sessions
-                SET status = 3,
+                SET status = $1,
                     current_stage = NULL
-                WHERE id = $1
+                WHERE id = $2
             `,
             dbcon: config.dbconnString,
-            sqlParams: [session_id],
+            sqlParams: [status, session_id],
         });
 
         if (result.rowCount === 0) {

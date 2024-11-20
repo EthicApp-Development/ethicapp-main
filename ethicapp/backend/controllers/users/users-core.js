@@ -119,6 +119,7 @@ router.get("/forgot", async (req, res) => {
             scripts:    [
                 ["js/dist/user-common.js", "js/dist/user-common.min.js"],
             ],
+            extraScripts: `${captchaScript}`,
             renderScripts: (scripts) => ViewsHelper.renderScripts(scripts, res),
             welc:         welc,
         });

@@ -34,6 +34,7 @@ router.get("/register", async (req, res) => {
         res.render("register", {
             title:        "EthicApp",
             controller:   "RegistrationsController",
+            extraScripts: `${captchaScript}`,
             scripts:    [
                 ["js/dist/user-common.js", "js/dist/user-common.min.js"],
             ],

@@ -9,6 +9,8 @@ import debugLib from "debug";
 import { Server as SocketIO } from "socket.io";
 import configSocket from "./config/socket.config.js";
 import { fileURLToPath } from "url";
+import { studentSocketInit } from "./sockets/student.socket.js";
+import { teacherSocketInit } from "./sockets/teacher.socket.js";
 
 const debug = debugLib("ethicapp:server");
 
@@ -27,6 +29,14 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 
     // Set up socket.io
     const io = new SocketIO(server);
+    const teacherSocket = io.of('/teacher');
+    teacherSocket.on('connection', teacherSocketInit);
+    app.locals.teacherSocket = teacherSocket;
+
+    const studentSocket = io.of('/student');
+    studentSocket.on('connection', teacherSocketInit);
+    app.locals.studentSocket = studentSocket;
+
     configSocket(io);
     app.locals.io = io;
 }

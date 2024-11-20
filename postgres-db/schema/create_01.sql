@@ -88,6 +88,7 @@ CREATE INDEX idx_teams_stageid ON teams(stageid);
 CREATE TABLE IF NOT EXISTS teamusers (
     tmid integer,
     uid integer,
+    anon_mask CHAR(1),
     FOREIGN KEY (tmid) REFERENCES teams (id),
     FOREIGN KEY (uid) REFERENCES users (id)
 );
