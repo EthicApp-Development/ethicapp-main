@@ -13,4 +13,20 @@ let teacherSocketInit = (socket) => {
     });
 };
 
-export { teacherSocketInit };
+// Teacher-Student socket notifications (from backend)
+const toTeacherNotifications = (socketNamespace) => {
+    return {
+        responseSubmitted: (sessionId, phaseId) => {
+            socketNamespace.to(`session-${sessionId}`).
+                emit("responseSubmitted", { sessionId: sessionId, phaseId: phaseId });
+        },
+
+        chatMessage: (sessionId, groupId, messages) => {
+            socketNamespace.to(`session-${sessionId}`).emit("onChatMessage", 
+                { groupId: groupId, messages: messages });
+        }
+    };
+};
+
+
+export { teacherSocketInit, toTeacherNotifications };

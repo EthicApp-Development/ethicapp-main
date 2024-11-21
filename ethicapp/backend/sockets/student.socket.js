@@ -19,10 +19,29 @@ let studentSocketInit = (socket) => {
     });
 }
 
-const phaseTransition = (socketNamespace, sessionId) => {
-    socketNamespace.to(`session-${sessionId}`).
-        emit("phaseTransition", { sessionId: sessionId });
+// Teacher-Student socket notifications (from backend)
+const toStudentsNotifications = (socketNamespace) => {
+    return {
+        phaseTransition: (sessionId, phaseId) => {
+            socketNamespace.to(`session-${sessionId}`).
+                emit("onPhaseTransition", { phaseId: phaseId });
+        },
+
+        chatMessage: (sessionId, groupId, messages) => {
+            socketNamespace.to(`group-${sessionId}-${groupId}`).
+                emit("onChatMessage", { messages: messages });            
+        },
+
+        shareResponse: (sessionId, content) => {
+            socketNamespace.to(`session-${sessionId}`).emit("onShareResponse", 
+                { content: content });
+        },
+
+        endSession:  (sessionId, content) => {
+            socketNamespace.to(`session-${sessionId}`).emit("onEndSession", 
+                { content: content });
+        }
+    };
 };
 
-
-export { studentSocketInit };
+export { studentSocketInit, toStudentsNotifications };

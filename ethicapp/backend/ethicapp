@@ -9,8 +9,8 @@ import debugLib from "debug";
 import { Server as SocketIO } from "socket.io";
 import configSocket from "./config/socket.config.js";
 import { fileURLToPath } from "url";
-import { studentSocketInit } from "./sockets/student.socket.js";
-import { teacherSocketInit } from "./sockets/teacher.socket.js";
+import { studentSocketInit, toStudentsNotifications } from "./sockets/student.socket.js";
+import { teacherSocketInit, toTeacherNotifications } from "./sockets/teacher.socket.js";
 
 const debug = debugLib("ethicapp:server");
 
@@ -32,11 +32,14 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const teacherSocket = io.of('/teacher');
     teacherSocket.on('connection', teacherSocketInit);
     app.locals.teacherSocket = teacherSocket;
+    app.locals.toTeacherNotifications = toTeacherNotifications(teacherSocket);
 
     const studentSocket = io.of('/student');
-    studentSocket.on('connection', teacherSocketInit);
+    studentSocket.on('connection', studentSocketInit);
     app.locals.studentSocket = studentSocket;
+    app.locals.toStudentNotifications = toStudentsNotifications(studentSocket);
 
+    // TODO: get rid of it
     configSocket(io);
     app.locals.io = io;
 }

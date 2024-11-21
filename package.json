@@ -2,6 +2,7 @@
   "name": "ethicapp-devops",
   "description": "Core node packages for developing (and initializing) the EthicApp project",
   "private": true,
+  "type": "module",
   "scripts": {
     "init-credentials": "./devops/init-credentials.mjs",
     "encrypt-gmail-credentials": "./devops/encrypt-gmail-credentials.mjs",

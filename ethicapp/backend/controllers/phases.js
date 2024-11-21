@@ -1,7 +1,7 @@
 "use strict";
 
 import express from "express";
-import config from "../config/config.js"; 
+import * as config from "../config/config.js"; 
 import * as rpg2 from "../db/rest-pg-2.js";
 
 const router = express.Router();
@@ -729,4 +729,6 @@ async function computeSemanticDifferentialStats(stageId) {
 
     return responseStats;
 }
+
+export default router;
 

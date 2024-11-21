@@ -1,4 +1,4 @@
-import config from "../config/config.js"; 
+import * as config from "../config/config.js"; 
 import * as rpg2 from "../db/rest-pg-2.js";
 
 export const groupingAlgorithms = { 

@@ -19,12 +19,18 @@ import index from "./controllers/index.js";
 import users_core from "./controllers/users/users-core.js";
 import users_registration from "./controllers/users/users-registration.js";
 import sessions from "./controllers/sessions.js";
+import activities from "./controllers/activities.js";
+import phases from "./controllers/phases.js";
+import groups from "./controllers/groups.js";
 import content_analysis from "./controllers/content-analysis-controller.js";
+import admin_panel from "./controllers/admin-panel-api.js";
+
+// Deprecated:
 import teams from "./controllers/teams.js";
 import stages from "./controllers/stages.js";
 import visor from "./controllers/visor.js";
 import analysis from "./controllers/analysis.js";
-import admin_panel from "./controllers/admin-panel-api.js";
+
 import fs from "fs";
 
 import * as config from "./config/config.js";
@@ -133,6 +139,10 @@ app.use("/", index);
 app.use("/", users_core);
 app.use("/", users_registration);
 app.use("/", validateSession, sessions);
+app.use("/", validateSession, activities);
+app.use("/", validateSession, phases);
+app.use("/", validateSession, groups);
+
 app.use("/", validateSession, content_analysis);
 app.use("/", validateSession, teams);
 app.use("/", validateSession, stages);

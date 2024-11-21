@@ -1,9 +1,10 @@
 "use strict";
 
 import express from "express";
-import config from "../config/config.js"; 
+import * as config from "../config/config.js"; 
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as GroupsHelper from "../helpers/groups-helper.js"
+import * as ActivitiesHelper from "../helpers/activities-helper.js";
 
 const router = express.Router();
 
@@ -104,11 +105,11 @@ router.get("/phases/:id/groups", async (req, res) => {
 });
 
 router.get("/phases/:id/user_group/:user_id", async (req, res) => {
-    const { id: stageId, user_id: userId } = req.params;
+    const { id: phaseId, user_id: userId } = req.params;
 
     // Validate that both required parameters are present
-    if (!stageId || !userId) {
-        return res.status(400).json({ error: "Missing required parameters: stage_id and/or user_id" });
+    if (!phaseId || !userId) {
+        return res.status(400).json({ error: "Missing required parameters: phase_id and/or user_id" });
     }
 
     try {
@@ -125,7 +126,7 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
                 ORDER BY tu.uid
             `,
             dbcon: config.dbconnString,
-            sqlParams: [stageId, userId],
+            sqlParams: [phaseId, userId],
         });
 
         // If no group is found for the user, return a 404 error
@@ -167,64 +168,79 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
 });
 
 /**
- * Endpoint to create groups for a specific phase in a session.
+ * Endpoint to create groups for a specific phase (stage).
  * Route: POST /phase/:id/groups
  */
 router.post("/phase/:id/groups", async (req, res) => {
-    const { id: sessionId } = req.params; // Get the session ID from the route parameter
+    const { id: phaseId } = req.params; // Get the stage ID from the route parameter
 
     try {
-        // Retrieve all phases for the session
-        const phases = await ActivitiesHelper.getPhasesForSession(sessionId);
-        if (phases.length === 0) {
-            return res.status(404).json({ error: "No phases found for the session." });
-        }
-
-        // Identify the active phase (the one requiring group creation)
-        const activePhase = phases.find(phase => phase.active);
-        if (!activePhase) {
-            return res.status(400).json({ error: "No active phase found for this session." });
-        }
-
-        // Start off by deleting any groups previously created in the current phase
-        await GroupsHelper.deleteGroupsForPhase(activePhase.id);
-
-        // Retrieve the design associated with the active phase
-        const design = await rpg2.execSQL({
+        // Retrieve the session ID associated with the stage
+        const sessionResult = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT design
-                FROM designs
-                WHERE id = (
-                    SELECT dsgnid
-                    FROM sessions
-                    WHERE id = $1
-                )
+                SELECT sesid
+                FROM stages
+                WHERE id = $1
+            `,
+            sqlParams: [phaseId],
+        });
+
+        if (sessionResult.length === 0) {
+            return res.status(404).json({ error: "Phase not found." });
+        }
+
+        const sessionId = sessionResult[0].sesid;
+
+        // Retrieve the design associated with the session
+        const designResult = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT d.design
+                FROM designs d
+                INNER JOIN activity a ON d.id = a.design
+                WHERE a.session = $1
             `,
             sqlParams: [sessionId],
         });
 
-        if (design.length === 0) {
+        if (designResult.length === 0) {
             return res.status(404).json({ error: "Design not found for the session." });
         }
 
-        // Extract phase-specific details from the design
-        const phaseDesign = design[0].design.phases[activePhase.number - 1];
+        const design = designResult[0].design;
+
+        // Get the phases for the session
+        const phases = await ActivitiesHelper.getPhasesForSession(sessionId);
+
+        // Match the phase ID to its corresponding phase in the design
+        const phase = phases.find(p => p.id === phaseId);
+        if (!phase) {
+            return res.status(404).json({ error: "Phase not found in the session." });
+        }
+
+        const phaseDesign = design.phases[phase.number - 1];
+        if (!phaseDesign) {
+            return res.status(404).json({ error: "Phase design not found in the instructional design." });
+        }
+
         const groupSize = phaseDesign.stdntAmount; // Expected group size
-        const groupingAlgorithm = phaseDesign.grouping_algorithm; // Grouping strategy (e.g., "random", "preserve_groups")
+        const groupingAlgorithm = phaseDesign.grouping_algorithm; // Grouping strategy
 
-        // Initialize groups based on the specified algorithm
-        let groups;
-        let algorithm = GroupsHelper.groupingAlgorithms[groupingAlgorithm];
+        // Delete any existing groups for the current phase
+        await GroupsHelper.deleteGroupsForPhase(phaseId);
 
+        // Select the appropriate grouping algorithm
+        const algorithm = GroupsHelper.groupingAlgorithms[groupingAlgorithm];
         if (!algorithm) {
             return res.status(400).json({ error: `Unsupported grouping algorithm: ${groupingAlgorithm}` });
         }
-        groups = await algorithm(sessionId, phases, groupSize)
+
+        // Compute groups using the selected algorithm
+        const groups = await algorithm(sessionId, phases, groupSize);
 
         // Save the created groups into the database
         for (const group of groups) {
-
             // Insert a new team record for each group
             const team = await rpg2.singleSQL({
                 dbcon: config.dbconnString,
@@ -233,16 +249,16 @@ router.post("/phase/:id/groups", async (req, res) => {
                     VALUES ($1, $2)
                     RETURNING id
                 `,
-                sqlParams: [sessionId, activePhase.id],
+                sqlParams: [sessionId, phaseId],
             });
 
             let maskCode = 'A'.charCodeAt(0);
 
             for (const userId of group) {
                 if (maskCode > 'Z'.charCodeAt(0)) {
-                    throw new Error("Exceeded allowed characters for anon_mask");
+                    throw new Error("Exceeded allowed characters for anon_mask.");
                 }
-            
+
                 const mask = String.fromCharCode(maskCode);
                 await rpg2.execSQL({
                     dbcon: config.dbconnString,
@@ -260,7 +276,7 @@ router.post("/phase/:id/groups", async (req, res) => {
         res.status(201).json({ message: "Groups successfully created." });
     } catch (error) {
         // Log and handle any errors that occur during group creation
-        console.error(error);
+        console.error("Error creating groups:", error);
         res.status(500).json({ error: "Error occurred while creating groups." });
     }
 });

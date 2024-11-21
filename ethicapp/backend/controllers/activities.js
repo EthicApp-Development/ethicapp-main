@@ -1,7 +1,7 @@
 "use strict";
 
 import express from "express";
-import config from "../config/config.js"; 
+import * as config from "../config/config.js"; 
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as ActivitiesHelper from "../helpers/activities-helper.js"
 import * as StatusCodes from "../../common/modules/session-status.js"
