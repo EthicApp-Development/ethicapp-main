@@ -2,7 +2,7 @@ import { TeacherRouter } from "../../modules/teacher/teacher-routes";
 import { ActivityCatalogService } from "../../services/activity-catalog-service";
 
 /*eslint func-style: ["error", "expression"]*/
-export function DashboardController($scope, $routeParams, $socket, $http, 
+export function DashboardController($scope, $routeParams, $http, 
     $timeout, $uibModal, ActivityStateService, ActivityCatalogService, 
     DesignCatalogService, $translate) {
 
@@ -56,12 +56,6 @@ export function DashboardController($scope, $routeParams, $socket, $http,
             { name: 'Fase 4: Validación', description: 'Pruebas finales y aceptación del cliente.', status: 'Pendiente' }
         ];
 
-        // Simulación de eventos del socket
-        $socket.on('contentUpdate', function (data) {
-            if (data.data.sesid === vm.sessionId) {
-                vm.updateContent(data.data);
-            }
-        });
     };
 
     // Método para actualizar contenido (mock)
@@ -94,13 +88,6 @@ export function DashboardController($scope, $routeParams, $socket, $http,
         vm.designObj = {};
         vm.phases = [{ name: "Phase 1", description: "Test", status: "Finished"},
             { name: "Phase 2", description: "Test", status: "In progress"}];
-
-        // TODO: redesign & reimplement
-        $socket.on("contentUpdate", (data) => {
-            if (data?.data?.sesid === ActivityStateService.sessionDescriptor?.id) {
-                vm.formatContentAnalysis(data.data);
-            }
-        });
     };
 
     vm.startNextPhase = function() {

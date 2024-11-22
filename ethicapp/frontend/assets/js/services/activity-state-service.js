@@ -1,4 +1,4 @@
-let ActivityStateService = ($http) => {
+let ActivityStateService = ($http, SocketService) => {
     const service = {
         activityStates: {},
 
@@ -30,6 +30,23 @@ let ActivityStateService = ($http) => {
                 console.error(`Failed to load state for session with id ${sessionId}`);
                 return null;
             }
+        },
+
+        subscribeToActivityEvents: (sessionId) => {
+            SocketService.joinRoom(sessionId);
+
+            const subscription = SocketService.fromEvent(`responseSubmitted`).subscribe({
+                next: (data) => {
+                    console.debug(`State update for ${sessionId}:`, data);
+                    if (!activityStates[sessionId]) {
+                        activityStates[sessionId] = {};
+                    }
+                    activityStates[sessionId].state = data;
+                },
+                error: (err) => console.error(`Websocket error for ${sessionId}:`, err),
+            });
+    
+            return () => subscription.unsubscribe();
         },
 
         getSessionUsers: async function(sessionId, refresh = false) {
