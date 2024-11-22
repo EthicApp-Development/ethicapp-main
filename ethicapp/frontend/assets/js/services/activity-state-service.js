@@ -1,5 +1,6 @@
 let ActivityStateService = ($http, SocketService) => {
     const service = {
+        subscriptionsMap: {},
         activityStates: {},
 
         loadActivityState: async function(sessionId) {
@@ -33,22 +34,54 @@ let ActivityStateService = ($http, SocketService) => {
         },
 
         subscribeToActivityEvents: (sessionId) => {
+            // Check if there are already subscriptions for this sessionId
+            if (service.subscriptionsMap.has(sessionId)) {
+                console.warn(`Subscriptions for session ${sessionId} already exist.`);
+                return service.subscriptionsMap.get(sessionId).unsubscribeAll; // Return the existing unsubscribe function
+            }
+        
+            // Join the room for the given sessionId
             SocketService.joinRoom(sessionId);
-
-            const subscription = SocketService.fromEvent(`responseSubmitted`).subscribe({
-                next: (data) => {
-                    console.debug(`State update for ${sessionId}:`, data);
-                    if (!activityStates[sessionId]) {
-                        activityStates[sessionId] = {};
-                    }
-                    activityStates[sessionId].state = data;
-                },
-                error: (err) => console.error(`Websocket error for ${sessionId}:`, err),
-            });
-    
-            return () => subscription.unsubscribe();
+        
+            const subscriptions = [];
+        
+            // Subscribe to `onResponseSubmitted`
+            subscriptions.push(
+                SocketService.fromEvent('onResponseSubmitted').subscribe({
+                    next: (data) => {
+                        console.debug(`Response submitted for session ${sessionId}:`, data);
+                        // Update the responses in activityStates
+                        service.activityStates[sessionId].responses = data;
+                    },
+                    error: (err) => console.error(`Websocket error for responseSubmitted in session ${sessionId}:`, err),
+                })
+            );
+        
+            // Subscribe to `onChatMessage`
+            subscriptions.push(
+                SocketService.fromEvent('onChatMessage').subscribe({
+                    next: (data) => {
+                        console.debug(`New chat message ${sessionId}:`, data);
+                        // Update the phase in activityStates
+                        service.activityStates[sessionId].currentPhase = data.phaseId;
+                    },
+                    error: (err) => console.error(`Websocket error for phaseChanged in session ${sessionId}:`, err),
+                })
+            );
+        
+            // Function to unsubscribe all subscriptions
+            const unsubscribeAll = () => {
+                subscriptions.forEach((subscription) => subscription.unsubscribe());
+                SocketService.leaveRoom(sessionId);
+                service.subscriptionsMap.delete(sessionId); // Remove from the map
+            };
+        
+            // Store the subscriptions in the map
+            service.subscriptionsMap.set(sessionId, { subscriptions, unsubscribeAll });
+        
+            return unsubscribeAll; // Return the unsubscribe function
         },
-
+        
         getSessionUsers: async function(sessionId, refresh = false) {
             if (!(sessionId in service.activityStates)) {
                 throw new Error(`Activity state not found for session with id '${sessionId}'`);
@@ -68,10 +101,10 @@ let ActivityStateService = ($http, SocketService) => {
             return service.activityStates[sessionId].users;
         },
 
-        getChatMessageCount: async function(phase_id) {
+        getChatMessageCount: async function(phaseId) {
             try {
                 // Make the HTTP GET request to the endpoint
-                const response = await $http.get(`/phases/${phase_id}/message_count`);
+                const response = await $http.get(`/phases/${phaseId}/message_count`);
                 
                 // Check if the response data is valid and contains the expected "messages" field
                 if (response && response.data && Array.isArray(response.data.messages)) {
@@ -87,10 +120,16 @@ let ActivityStateService = ($http, SocketService) => {
             }
         },
 
-        getChatMessages: async function(group_id, question_id) {
+        getPhaseStats: async function(phaseId) {
+            // Fetch statistics for the requested phase
+            const response = await $http.get(`/phases/${phaseId}/stats`);
+            return response;
+        },
+
+        getChatMessages: async function(groupId, questionId) {
             try {
                 // Make the HTTP GET request to the endpoint
-                const response = await $http.get(`/groups/${group_id}/question/${question_id}/chat`);
+                const response = await $http.get(`/groups/${groupId}/question/${questionId}/chat`);
                 
                 // Check if the response data is valid and contains the expected "chat_transcript" field
                 if (response && response.data && Array.isArray(response.data.chat_transcript)) {

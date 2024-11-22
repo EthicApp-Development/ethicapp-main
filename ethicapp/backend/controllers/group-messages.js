@@ -4,6 +4,7 @@ import express from "express";
 import config from "../config/config.js"; 
 import * as rpg2 from "../db/rest-pg-2.js";
 import { getDesignById, getDesignTypeByStageId } from "../helpers/designs-helper.js";
+import * as SessionsHelper from "../helpers/sessions-helper.js"
 
 const router = express.Router();
 
@@ -93,7 +94,7 @@ router.get("/phases/:id/message_count", async (req, res) => {
  * @param {string} question_id - The ID of the question to fetch messages for (from the URL path).
  * @returns {Object} - A JSON object containing the chat transcript or an error message.
  */
-router.get("/groups/:group_id/question/:question_id/chat", async (req, res) => {
+router.get("/groups/:group_id/question/:question_id/chat_messages", async (req, res) => {
     const { group_id: groupId, question_id: questionId } = req.params;
 
     if (!groupId || !questionId) {
@@ -166,9 +167,9 @@ router.get("/groups/:group_id/question/:question_id/chat", async (req, res) => {
  *   - `uid` {number} - The ID of the user posting the message (from session).
  * @returns {Object} - A JSON object indicating the success or failure of the operation.
  */
-router.post("/phases/:id/question/:question_id/chat", async (req, res) => {
+router.post("/phases/:id/question/:question_id/chat_messages", async (req, res) => {
     const { id: phaseId, question_id: questionId } = req.params; // Phase and question IDs
-    const { content, parent_id: parentId } = req.body; // Message details
+    const { content, parent_id: parentId, group_id: groupId } = req.body; // Message details
     const userId = req.session.uid; // User ID from session
 
     // Validate required parameters
@@ -200,10 +201,12 @@ router.post("/phases/:id/question/:question_id/chat", async (req, res) => {
             dbcon: config.dbconnString,
         });
 
+        // Get the session Id
+        const sessionId = await SessionsHelper.getSessionIdByPhaseId(phaseId);
+
         // Step 4: Notify clients about the new message
-        const io = req.app.locals.io;
-        const socket = configSocket(io);
-        socket.chatMsgStage(phaseId);
+        const notificationEmitter = req.app.locals.toTeacherNotifications;
+        notificationEmitter.chatMessage(sessionId, groupId, questionId, content);
 
         // Respond with success
         res.status(201).json({

@@ -65,7 +65,7 @@ app.factory("SocketService", function () {
 
     return {
         // Listen to generic events
-        fromEvent: (eventName) => new Observable(observer => {
+        fromEvent: (eventName) => new Rx.Observable(observer => {
             // Subscribe to the event
             socket.on(eventName, (data) => observer.next(data));
         

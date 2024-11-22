@@ -3,6 +3,7 @@
 import express from "express";
 import * as config from "../config/config.js"; 
 import * as rpg2 from "../db/rest-pg-2.js";
+import * as SessionsHelper from "../helpers/sessions-helper.js"
 
 const router = express.Router();
 
@@ -22,8 +23,8 @@ const phaseCreationHandlers = {
 };
 
 const phaseResponseSubmissionHandlers = {
-    semantic_differential: handleSemanticDifferentialResponses,
-    ranking: handleRankingResponses,
+    handleRankingResponse: handleSemanticDifferentialResponse,
+    ranking: handleRankingResponse,
 };
 
 const designStatistics = {
@@ -195,18 +196,21 @@ router.get("/phases/:id/stats", async (req, res) => {
 });
 
 router.post("/phases/:id/responses", async (req, res) => {
-    const { id } = req.params; // Phase (stage) ID
-    const { responses } = req.body; // Array of responses (for ranking, an array of actors with their ranks)
+    const { id: phaseId } = req.params; // Phase (stage) ID
+    const { response } = req.body; // Array of responses (for ranking, an array of actors with their ranks)
 
-    if (!id || !responses || !Array.isArray(responses)) {
+    if (!phaseId || !response || !Array.isArray(response)) {
         return res.status(400).json({
             error: "Missing required parameters: id or responses, or responses is not an array.",
         });
     }
 
     try {
+        // Get the session Id
+        const sessionId = await SessionsHelper.getSessionIdByPhaseId(phaseId);
+
         // Determine the design type for the phase
-        const designType = await getDesignTypeByPhaseId(id);
+        const designType = await getDesignTypeByPhaseId(phaseId);
 
         // Fetch the appropriate handler
         const handler = phaseResponseSubmissionHandlers[designType];
@@ -214,8 +218,10 @@ router.post("/phases/:id/responses", async (req, res) => {
             return res.status(400).json({ error: `Unsupported design type: ${designType}` });
         }
 
+        const notificationEmitter = req.app.locals.toTeacherNotifications;
+
         // Execute the handler
-        await handler(id, responses);
+        await handler(sessionId, phaseId, req.session.uid, response, notificationEmitter);
 
         res.status(201).json({
             status: "ok",
@@ -613,46 +619,60 @@ async function addRankingItem({ stageId, name, jorder, justified, word_count }) 
 }
 
 // Handler for semantic-differential responses
-async function handleSemanticDifferentialResponses(phaseId, responses) {
-    for (const response of responses) {
-        const { did, sel, comment, iteration } = response;
+async function handleSemanticDifferentialResponse(
+    sessionId, phaseId, userId, response, notificationEmitter) {
 
-        if (!did || sel === undefined || iteration === undefined) {
-            throw new Error("Invalid response format for semantic-differential.");
-        }
-
-        await rpg2.execSQL({
-            sql: `
-                WITH updated AS (
-                    UPDATE differential_selection
-                    SET sel = $1,
-                        comment = $2,
-                        stime = now()
-                    WHERE did = $3
-                        AND uid = $4
-                        AND iteration = $5
-                    RETURNING 1
-                )
-                INSERT INTO differential_selection (uid, did, sel, comment, iteration, stime)
-                SELECT $6, $7, $8, $9, $10, now()
-                WHERE NOT EXISTS (
-                    SELECT 1
-                    FROM updated
-                )
-            `,
-            dbcon: config.dbconnString,
-            sqlParams: [
-                sel, comment, did, req.session.uid, iteration, // Update params
-                req.session.uid, did, sel, comment, iteration, // Insert params
-            ],
-        });
+    if (!Array.isArray(response) || response.length > 1) {
+        throw new Error(
+            "Invalid response format. Either it is not an array, or its length is greater than 1");
     }
+    // Only one response is expected for a semantic differential question
+    const { did, sel, comment, iteration } = response[0];
+
+    if (!did || sel === undefined || iteration === undefined) {
+        throw new Error("Invalid response format for semantic-differential.");
+    }
+
+    await rpg2.execSQL({
+        sql: `
+            WITH updated AS (
+                UPDATE differential_selection
+                SET sel = $1,
+                    comment = $2,
+                    stime = now()
+                WHERE did = $3
+                    AND uid = $4
+                    AND iteration = $5
+                RETURNING 1
+            )
+            INSERT INTO differential_selection (uid, did, sel, comment, iteration, stime)
+            SELECT $6, $7, $8, $9, $10, now()
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM updated
+            )
+        `,
+        dbcon: config.dbconnString,
+        sqlParams: [
+            sel, comment, did, sessionId, iteration, // Update params
+            sessionId, did, sel, comment, iteration, // Insert params
+        ],
+    });
+
+    notificationEmitter.responseSubmitted(
+        { sessionId: sessionId,
+          phaseId: phaseId,
+          uid: userId,
+          did: did, 
+          sel: sel,
+          comment: comment});
 }
 
 // Handler for ranking responses
-async function handleRankingResponses(phaseId, responses) {
-    for (const response of responses) {
-        const { actorid, orden, description } = response;
+async function handleRankingResponse(
+    sessionId, phaseId, userId, response, notificationEmitter) {
+    for (const item of response) {
+        const { actorid, orden, description } = item;
 
         if (!actorid || orden === undefined) {
             throw new Error("Invalid response format for ranking.");
@@ -679,11 +699,19 @@ async function handleRankingResponses(phaseId, responses) {
             `,
             dbcon: config.dbconnString,
             sqlParams: [
-                orden, description, actorid, req.session.uid, phaseId, // Update params
-                req.session.uid, actorid, orden, description, phaseId, // Insert params
+                orden, description, actorid, userId, phaseId, // Update params
+                userId, actorid, orden, description, phaseId, // Insert params
             ],
         });
     }
+
+    notificationEmitter.responseSubmitted(
+        {
+          sessionId: sessionId,
+          phaseId: phaseId,
+          uid: userId,
+          items: response
+        });    
 }
 
 /**
