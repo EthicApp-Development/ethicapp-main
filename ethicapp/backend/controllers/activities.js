@@ -8,11 +8,6 @@ import * as StatusCodes from "../../common/modules/session-status.js"
 
 const router = express.Router();
 
-const activityResponsesFetchHandlers = {
-    "semantic-differential": fetchSemanticDifferentialResponses,
-    ranking: fetchRankingResponses,
-};
-
 /**
  * Retrieves the descriptor object for an activity in a session.
  * The descriptor includes the design ID, the activity status, 
@@ -29,11 +24,10 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
     }
 
     try {
-        // Step 1: Get the design ID and activity status for the session
         const activityResult = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT a.design, s.status
+                SELECT a.design, s.status, s.description
                 FROM activity AS a
                 INNER JOIN sessions AS s
                     ON a.session = s.id
@@ -46,17 +40,16 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
             return res.status(404).json({ error: "No activity found for the given session." });
         }
 
-        const { design: designId, status } = activityResult;
+        const { design: designId, status, description } = activityResult;
 
-        // Step 2: Get the list of phases for the session
-        const phases = await ActivitiesHelper.getPhasesForSession(session_id);
-        const statusName = StatusCodes.getNameByCode(status);
+        const phases = await getPhasesForSession(session_id);
 
-        // Step 3: Construct and return the descriptor
         res.status(200).json({
-            designId,
-            statusName,
-            phases,
+            description: description,
+            designId: designId,
+            status: StatusCodes.getNameByCode(status),
+            phases: phases,
+            currentPhase: phases[phases.length - 1],
         });
     } catch (err) {
         console.error("Error fetching activity descriptor:", err);
@@ -312,6 +305,52 @@ router.post("/activities/:session_id/finish", async (req, res) => {
 });
 
 /**
+ * @route GET /activities/:session_id/phases
+ * @description Retrieves the phases created in a given session.
+ * @param {string} session_id - The ID of the session (from the URL path).
+ * @returns {Object} - A JSON object containing a list of phases, each with detailed information.
+ */
+router.get("/activities/:session_id/phases", async (req, res) => {
+    const { session_id } = req.params;
+
+    // Validate required parameter
+    if (!session_id) {
+        return res.status(400).json({ error: "Missing required parameter: session_id." });
+    }
+
+    try {
+        // Execute the SQL query to fetch phases
+        const phases = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT id,
+                       number,
+                       type,
+                       anon,
+                       chat,
+                       prev_ans,
+                       question,
+                       grouping
+                FROM stages
+                WHERE sesid = $1
+            `,
+            sqlParams: [session_id],
+        });
+
+        // Check if any phases were found
+        if (phases.length === 0) {
+            return res.status(404).json({ error: "No phases found for the given session." });
+        }
+
+        // Return the phases as JSON
+        res.status(200).json({ phases });
+    } catch (err) {
+        console.error("Error fetching phases for session:", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+/**
  * @route POST /activities/:session_id/phases
  * @description Adds a new phase to an activity session by inserting it into the database.
  * @param {string} session_id - The ID of the session (from the URL path).
@@ -448,6 +487,34 @@ async function getDesignTypeBySessionId(sessionId) {
     }
 
     return designType;
+}
+
+export async function getPhasesForSession(sessionId) {
+    const results = await rpg2.execSQL({
+        dbcon: config.dbconnString,
+        sql: `
+            SELECT id, type
+            FROM stages
+            WHERE sesid = $1
+            ORDER BY id ASC
+        `,
+        sqlParams: [sessionId],
+    });
+
+    if (results.length === 0) {
+        return [];
+    }
+
+    return Promise.all(
+        results.map(async (row, index) => {
+            const questions = await getQuestionsByPhase(row.id, row.type);
+            return {
+                number: index + 1,  // Assign a sequential number to each phase
+                id: row.id,         // The ID of the phase (stage)
+                questions: questions, // Add the questions for this phase
+            };
+        })
+    );
 }
 
 /**
@@ -595,6 +662,59 @@ async function fetchRankingResponses(sessionId) {
     });
 
     return results;
+}
+
+const activityResponsesFetchHandlers = {
+    "semantic-differential": fetchSemanticDifferentialResponses,
+    ranking: fetchRankingResponses,
+};
+
+// Object mapping design types to their respective question-fetching functions
+const questionFetchHandlers = {
+    semantic_differential: async (phaseId) => {
+        const results = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT id
+                FROM differential
+                WHERE stageid = $1
+                ORDER BY id ASC
+            `,
+            sqlParams: [phaseId],
+        });
+
+        return results.map((row, index) => ({
+            number: index + 1, // Assign a sequential number to each question
+            id: row.id,        // The ID of the question
+        }));
+    },
+    ranking: async (phaseId) => {
+        const results = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT id
+                FROM actors
+                WHERE stageid = $1
+                ORDER BY id ASC
+            `,
+            sqlParams: [phaseId],
+        });
+
+        return results.map((row, index) => ({
+            number: index + 1, // Assign a sequential number to each question
+            id: row.id,        // The ID of the question
+        }));
+    },
+};
+
+// Main function to fetch questions based on design type
+async function getQuestionsByPhase(phaseId, type) {
+    const handler = questionFetchHandlers[type];
+    if (!handler) {
+        throw new Error(`Unsupported design type: ${type}`);
+    }
+
+    return await handler(phaseId);
 }
 
 export default router;

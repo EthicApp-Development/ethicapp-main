@@ -11,6 +11,11 @@ const phaseResponsesFetchHandlers = {
     ranking: fetchRankingResponsesByPhase,
 };
 
+const phaseStudentResponsesFetchHandlers = {
+    "semantic-differential": fetchSemanticDifferentialStudentResponsesByPhase,
+    ranking: fetchRankingStudentResponsesByPhase,
+};
+
 const phaseCreationHandlers = {
     "semantic-differential": addSemanticDifferentialItem,
     ranking: addRankingItem,
@@ -84,6 +89,36 @@ router.get("/phases/:id/responses", async (req, res) => {
 
         // Fetch responses using the appropriate handler
         const handler = phaseResponsesFetchHandlers[designType];
+        if (!handler) {
+            return res.status(400).json({ error: `Unsupported design type: ${designType}` });
+        }
+
+        const results = await handler(id);
+
+        if (results.length === 0) {
+            return res.status(404).json({ error: "No responses found for the given phase." });
+        }
+
+        res.status(200).json({ responses: results });
+    } catch (err) {
+        console.error("Error fetching phase responses:", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+router.get("/phases/:id/responses/:user_id", async (req, res) => {
+    const { id, user_id } = req.params;
+
+    if (!id || !user_id) {
+        return res.status(400).json({ error: "Missing required parameter, either id or user_id." });
+    }
+
+    try {
+        // Determine the design type for the stage
+        const designType = await getDesignTypeByPhaseId(id);
+
+        // Fetch responses using the appropriate handler
+        const handler = phaseStudentResponsesFetchHandlers[designType];
         if (!handler) {
             return res.status(400).json({ error: `Unsupported design type: ${designType}` });
         }
@@ -402,6 +437,65 @@ async function fetchRankingResponsesByPhase(phaseId) {
         `,
         dbcon: config.dbconnString,
         sqlParams: [phaseId],
+    });
+
+    return results;
+}
+
+/**
+ * Retrieves a student's responses to semantic differential questions in a given phase.
+ * 
+ * @param {number} phaseId - The ID of the phase (stage) in the database.
+ * @param {number} userId - The ID of the student whose responses are to be retrieved.
+ * @returns {Promise<Array<Object>>} - A list of responses including question and answer details.
+ * @throws {Error} - Throws an error if the database query fails.
+ */
+async function fetchSemanticDifferentialStudentResponsesByPhase(phaseId, userId) {
+    const results = await rpg2.execSQL({
+        dbcon: config.dbconnString,
+        sql: `
+            SELECT d.stageid,
+                   d.orden,
+                   s.uid,
+                   s.did,
+                   s.sel,
+                   s.comment
+            FROM differential_selection AS s
+            INNER JOIN differential AS d
+                ON s.did = d.id
+            WHERE d.stageid = $1
+              AND s.uid = $2
+            ORDER BY d.orden
+        `,
+        sqlParams: [phaseId, userId],
+    });
+
+    return results;
+}
+
+/**
+ * Retrieves a student's ranking responses for a given phase.
+ * 
+ * @param {number} phaseId - The ID of the phase (stage) in the database.
+ * @param {number} userId - The ID of the student whose responses are to be retrieved.
+ * @returns {Promise<Array<Object>>} - A list of ranking responses for the student.
+ * @throws {Error} - Throws an error if the database query fails.
+ */
+async function fetchRankingStudentResponsesByPhase(phaseId, userId) {
+    const results = await rpg2.execSQL({
+        sql: `
+            SELECT id,
+                   description,
+                   orden,
+                   actorid,
+                   uid
+            FROM actor_selection
+            WHERE stageid = $1
+              AND uid = $2
+            ORDER BY orden
+        `,
+        dbcon: config.dbconnString,
+        sqlParams: [phaseId, userId],
     });
 
     return results;

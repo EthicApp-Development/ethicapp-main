@@ -5,18 +5,23 @@ let ActivityStateService = ($http) => {
         loadActivityState: async function(sessionId) {
             try {
                 // list of connected users
-                const users = await $http.get('/session/' + sessionId + '/users');
+                const users = await $http.get('/sessions/' + sessionId + '/users');
 
-                // design used in the activity
-                const designObj = await $http.get('/session/' + sessionId + '/design');
+                // get the activity descriptor (description, designId, status, phases{number,id},
+                // and currentPhase)
+                const descriptor = await $http.get('/activities/' + sessionId + '/descriptor');
 
-                // Phases will contain all content (i.e., question items, responses, and chat messages)
-                const phases = await $http.get('/session/' + sessionId + '/phases');
+                // list of activity phases that have been run so far
+                const phaseInstances = await $http.get('/activities/' + sessionId + '/phases');
 
+                // load activity responses
+                const responses = await $http.get('/activities/' + sessionId + '/responses');
+                
                 service.activityStates[sessionId] = { 
                     users: users, 
-                    design: designObj,
-                    phases: phases
+                    descriptor: descriptor,
+                    phases: phaseInstances,
+                    responses: responses
                 };
 
                 return service.activityStates[sessionId];
@@ -28,106 +33,71 @@ let ActivityStateService = ($http) => {
         },
 
         getSessionUsers: async function(sessionId, refresh = false) {
-            return [];
             if (!(sessionId in service.activityStates)) {
                 throw new Error(`Activity state not found for session with id '${sessionId}'`);
             }
 
             if (refresh) {
-                const users = await $http.get('/session/' + sessionId + '/users');
-                service.activityStates[sessionId].users = users;
+                try {
+                    const users = await $http.get('/sessions/' + sessionId + '/users');
+                    service.activityStates[sessionId].users = users;
+                }
+                catch (error) {
+                    console.error(`Failed to get users in session ${sessionId}.`);
+                    throw new Error(error);
+                }
             }
 
             return service.activityStates[sessionId].users;
         },
 
+        getChatMessageCount: async function(phase_id) {
+            try {
+                // Make the HTTP GET request to the endpoint
+                const response = await $http.get(`/phases/${phase_id}/message_count`);
+                
+                // Check if the response data is valid and contains the expected "messages" field
+                if (response && response.data && Array.isArray(response.data.messages)) {
+                    return response.data.messages; // Return the list of message counts
+                } else {
+                    console.warn("Unexpected response format:", response);
+                    return []; // Return an empty array if the format is not as expected
+                }
+            } catch (error) {
+                // Log the error for debugging purposes
+                console.error("Error fetching chat message count:", error);
+                return []; // Return an empty array in case of an error
+            }
+        },
+
+        getChatMessages: async function(group_id, question_id) {
+            try {
+                // Make the HTTP GET request to the endpoint
+                const response = await $http.get(`/groups/${group_id}/question/${question_id}/chat`);
+                
+                // Check if the response data is valid and contains the expected "chat_transcript" field
+                if (response && response.data && Array.isArray(response.data.chat_transcript)) {
+                    return response.data.chat_transcript; // Return the list of chat messages
+                } else {
+                    console.warn("Unexpected response format:", response);
+                    return []; // Return an empty array if the format is not as expected
+                }
+            } catch (error) {
+                // Log the error for debugging purposes
+                console.error("Error fetching chat messages:", error);
+                return []; // Return an empty array in case of an error
+            }
+        },
+
         getActivityState: async function(sessionId, refresh = false) {
-            // Mock de usuarios conectados
-            const users = [
-                { name: 'Juan Pérez', mail: 'juan.perez@example.com', role: 'Administrador', device: 'Desktop' },
-                { name: 'María López', mail: 'maria.lopez@example.com', role: 'Usuario', device: 'Mobile' },
-                { name: 'Carlos Martínez', mail: 'carlos.martinez@example.com', role: 'Moderador', device: 'Tablet' }
-            ];
-
-            // Mock de fases del diseño
-            const designPhases = [
-                { name: 'Fase 1: Análisis', description: 'Recopilación de requisitos y análisis del proyecto.', status: 'Completada' },
-                { name: 'Fase 2: Diseño', description: 'Diseño conceptual y técnico del sistema.', status: 'En Progreso' },
-                { name: 'Fase 3: Implementación', description: 'Desarrollo del sistema y pruebas iniciales.', status: 'Pendiente' },
-                { name: 'Fase 4: Validación', description: 'Pruebas finales y aceptación del cliente.', status: 'Pendiente' }
-            ];
-
-            return { 
-                users: users, 
-                design: designPhases,
-                phases: designPhases
-            };
-
             if (refresh) {
-                await service.loadActivityPhases(sessionId);
+                await service.loadActivityState(sessionId);
             }
             if (!(sessionId in service.activityStates)) {
                 throw new Error(`Activity state not found for session with id '${sessionId}'`);
             }
             return service.activityStates[sessionId];
         },
-
-        setSessionDescriptor: (sd) => {
-            Object.keys(service.sessionDescriptor).forEach(key => {
-                delete service.sessionDescriptor[key];
-            });        
-            Object.keys(sd).forEach(key => {
-                service.sessionDescriptor[key] = sd[key];
-            });
-        },
-        
-        setDesign: (designId, designObj) => {
-            service.activityDescriptor.designDescriptor.designId = designId;
-            service.activityDescriptor.designDescriptor.designObject = designObj;
-        },
-
-        getDesignObj: () => {
-            return service.activityDescriptor.designDescriptor.designObject;
-        },
-
-        getDesignId: () => {
-            return service.activityDescriptor.designDescriptor.designId;
-        },
-
-        async loadActivityPhases() {
-            const sesid = service.sessionDescriptor.id;
-            console.log(`[ActivityStateService::loadActivityPhases] Starting with sesid: ${sesid}`);
-
-            // Prepare the request payload
-            const postData = { sesid };
-
-            try {
-                // Make HTTP request to fetch admin stages
-                const response = await $http({
-                    url: "get-admin-stages",
-                    method: "post",
-                    data: postData
-                });
-                
-                console.log(`[ActivityStateService::loadActivityPhases] Response received`);
-
-                // Assign the stages to `phases`
-                service.activityDescriptor.phases = response.data;
-
-                // Map stage details to `phaseInformation`
-                service.activityDescriptor.phaseInformation = response.data.map(stage => ({
-                    name: `Stage ${stage.number}`,
-                    val: stage.id
-                }));
-
-                console.log(`[ActivityStateService::loadActivityPhases] Updated phaseInformation: ${JSON.stringify(service.activityDescriptor.phaseInformation)}`);
-
-                return service.activityDescriptor.phases;
-            } catch (error) {
-                console.error("[ActivityStateService::loadActivityPhases] Error fetching admin stages:", error);
-                throw error;
-            }
-        }
     };
 
     return service; 

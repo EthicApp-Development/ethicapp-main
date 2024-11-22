@@ -2,6 +2,7 @@
 
 import express from "express";
 import pass from "../helpers/compat-helper.js"; 
+import * as config from "../config/config.js"; 
 import * as rpg from "../db/rest-pg.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as ViewsHelper from "../helpers/views-helper.js";
@@ -226,6 +227,74 @@ router.post("/add-activity", async (req, res) => {
     } catch (error) {
         console.error("Error in /add-activity endpoint:", error);
         res.status(400).json({ status: 400, error: "Error processing activity addition" });
+    }
+});
+
+/**
+ * @route GET /sessions/:id/users
+ * @description Retrieves a list of users in a session. Validates that the requesting user is 
+ *              the creator of the session and has the role of "P" (teacher/professor).
+ * @param {string} id - The ID of the session (from the URL path).
+ * @returns {Object} - A JSON object containing a list of users in the session.
+ */
+router.get("/sessions/:id/users", async (req, res) => {
+    const { id } = req.params; // Session ID
+    const { uid } = req.session; // User ID from session
+
+    // Validate required parameters
+    if (!id || !uid) {
+        return res.status(400).json({ error: "Missing required parameters: session id or user id." });
+    }
+
+    try {
+        // Verify the requesting user is the creator of the session and has the role of "P"
+        const validationResult = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT u.role
+                FROM users AS u
+                INNER JOIN sessions AS s
+                    ON s.creator = u.id
+                WHERE s.id = $1
+                  AND u.id = $2
+                  AND u.role = 'P'
+            `,
+            sqlParams: [id, uid],
+        });
+
+        if (validationResult.length === 0) {
+            return res.status(403).json({ error: "Access denied. User is not authorized for this session." });
+        }
+
+        // Retrieve the users in the session
+        const users = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT u.id,
+                       u.name,
+                       u.mail,
+                       u.aprendizaje,
+                       u.role,
+                       su.device
+                FROM users AS u
+                INNER JOIN sesusers AS su
+                    ON u.id = su.uid
+                WHERE su.sesid = $1
+                ORDER BY u.role DESC
+            `,
+            sqlParams: [id],
+        });
+
+        // Check if any users were found
+        if (users.length === 0) {
+            return res.status(404).json({ error: "No users found for the given session." });
+        }
+
+        // Respond with the list of users
+        res.status(200).json({ users });
+    } catch (err) {
+        console.error("Error fetching users for session:", err);
+        res.status(500).json({ error: "Internal server error" });
     }
 });
 
