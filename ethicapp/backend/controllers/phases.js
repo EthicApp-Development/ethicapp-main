@@ -660,12 +660,15 @@ async function handleSemanticDifferentialResponse(
     });
 
     notificationEmitter.responseSubmitted(
-        { sessionId: sessionId,
+        { 
+          type: "semantic-differential",
+          sessionId: sessionId,
           phaseId: phaseId,
           uid: userId,
           did: did, 
           sel: sel,
-          comment: comment});
+          comment: comment
+        });
 }
 
 // Handler for ranking responses
@@ -707,6 +710,7 @@ async function handleRankingResponse(
 
     notificationEmitter.responseSubmitted(
         {
+          type: "ranking",
           sessionId: sessionId,
           phaseId: phaseId,
           uid: userId,

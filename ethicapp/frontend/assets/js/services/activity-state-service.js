@@ -1,7 +1,8 @@
 let ActivityStateService = ($http, SocketService) => {
     const service = {
-        subscriptionsMap: {},
-        activityStates: {},
+        subscriptionsMap: {}, // Subscription to socket events
+        activityStates: {}, // Activity states
+        listeners: {}, // Subscribed listeners
 
         loadActivityState: async function(sessionId) {
             try {
@@ -48,10 +49,26 @@ let ActivityStateService = ($http, SocketService) => {
             // Subscribe to `onResponseSubmitted`
             subscriptions.push(
                 SocketService.fromEvent('onResponseSubmitted').subscribe({
-                    next: (data) => {
-                        console.debug(`Response submitted for session ${sessionId}:`, data);
-                        // Update the responses in activityStates
-                        service.activityStates[sessionId].responses = data;
+                    next: async (data) => {
+                        console.debug(`Response submitted for session ${sessionId}:`, 
+                            JSON.stringify(data));
+                        
+                        const handler = responseMergeHandlers[data.type];
+                        
+                        if (!handler) {
+                            const msg = "No handler available for the incoming response data";
+                            console.error(msg);
+                            throw new Error(msg);                           
+                        }
+
+                        handler(data, service.activityStates[sessionId].responses);
+
+                        // Get updated stats for the phase
+                        const stats = await service.getPhaseStats(data.phaseId);
+
+                        // Notify listeners
+                        service.notifyListeners("onResponseSubmitted", { 
+                            response: data, stats: stats });
                     },
                     error: (err) => console.error(`Websocket error for responseSubmitted in session ${sessionId}:`, err),
                 })
@@ -99,6 +116,19 @@ let ActivityStateService = ($http, SocketService) => {
             }
 
             return service.activityStates[sessionId].users;
+        },
+
+        registerListener: (eventName, callback) => {
+            if (!listeners[eventName]) {
+                listeners[eventName] = [];
+            }
+            listeners[eventName].push(callback);
+        },
+
+        notifyListeners: (eventName, data) => {
+            if (listeners[eventName]) {
+                listeners[eventName].forEach((callback) => callback(data));
+            }
         },
 
         getChatMessageCount: async function(phaseId) {
@@ -157,6 +187,39 @@ let ActivityStateService = ($http, SocketService) => {
     };
 
     return service; 
+};
+
+const responseMergeHandlers = {
+    ranking: rankingResponseMerger,
+    "semantic-differential" : semanticDifferentialResponseMerger
+};
+
+let rankingResponseMerger = (response, responses) => {
+    const existingResponse = responses.find(
+        (resp) => resp.phaseId === response.phaseId && resp.uid === response.uid
+    );
+
+    if (existingResponse) {
+        existingResponse.items = response.items;
+    } else {
+        const { type, ...responseWithoutType } = response;
+        responses.push(responseWithoutType);
+    }
+};
+
+let semanticDifferentialResponseMerger = (response, responses) => {
+    const existingResponse = responses.find(
+        (resp) => resp.phaseId === response.phaseId &&  resp.did == response.did && 
+            resp.uid === response.uid
+    );
+
+    if (existingResponse) {
+        existingResponse.comment = response.comment;
+        existingResponse.sel = response.sel;
+    } else {
+        const { type, ...responseWithoutType } = response;
+        responses.push(responseWithoutType);
+    }
 };
 
 export { ActivityStateService };
