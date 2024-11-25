@@ -198,10 +198,10 @@ router.get("/activities/:session_id/responses", async (req, res) => {
  * }
  */
 router.post("/activities/:session_id/phase_transition", async (req, res) => {
-    const { session_id } = req.params;
-    const { phase_id } = req.body;
+    const { session_id: sessionId } = req.params;
+    const { phase_id: phaseId } = req.body;
 
-    if (!session_id || !phase_id) {
+    if (!sessionId || !phaseId) {
         return res.status(400).json({ error: "Missing required parameters: session_id or phase_id." });
     }
 
@@ -209,7 +209,21 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
     const status = StatusCodes.getStatusCode("in_progress");
 
     try {
-        const result = await rpg.execSQL({
+        let result = await rpg.execSQL({
+            sql: `
+                SELECT COUNT(*) 
+                FROM stages
+                WHERE id = $1
+            `,
+            dbcon: config.dbconnString,
+            sqlParams: [phaseId],
+        });
+
+        if (!(result.length > 0 && result[0].count === 1)) {
+            return res.status(400).json({ error: "The phase does not exist." });
+        }        
+
+        result = await rpg.execSQL({
             sql: `
                 UPDATE sessions
                 SET status = $1,
@@ -217,16 +231,15 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
                 WHERE id = $3
             `,
             dbcon: config.dbconnString,
-            sqlParams: [status, phase_id, session_id],
+            sqlParams: [status, phaseId, sessionId],
         });
 
         if (result.rowCount === 0) {
             return res.status(404).json({ error: "Session not found or no update performed." });
         }
 
-        const io = req.app.locals.io;
-        const socket = configSocket(io);
-        socket.stateChange(session_id);
+        // Notify students the phase has changed!
+        req.app.locals.toStudentsNotifications.phaseTransition(sessionId, phaseId);
 
         res.status(200).json({ status: "ok", message: "Session transitioned to the new phase." });
     } catch (err) {
@@ -355,7 +368,7 @@ router.get("/activities/:session_id/phases", async (req, res) => {
  * @description Adds a new phase to an activity session by inserting it into the database.
  * @param {string} session_id - The ID of the session (from the URL path).
  * @param {number} number - The number of the phase (from the request body).
- * @param {string} type - The type of the phase (e.g., "semantic-differential") (from the request body).
+ * @param {string} type - The type of the phase (e.g., "semantic_differential") (from the request body).
  * @param {boolean} [anon=false] - Whether the phase is anonymous (from the request body, optional).
  * @param {boolean} [chat=false] - Whether chat is enabled for the phase (from the request body, optional).
  * @param {string} [prev_ans=null] - References to previous answers if applicable (from the request body, optional).
@@ -368,7 +381,7 @@ router.get("/activities/:session_id/phases", async (req, res) => {
  * POST /activities/123/phases
  * {
  *   "number": 1,
- *   "type": "semantic-differential",
+ *   "type": "semantic_differential",
  *   "anon": true,
  *   "chat": false,
  *   "prev_ans": null,
@@ -428,7 +441,7 @@ router.post("/activities/:session_id/phases", async (req, res) => {
             dbcon: config.dbconnString, // Database connection string
             sqlParams: [
                 number,    // The phase number
-                type,      // The phase type (e.g., "semantic-differential")
+                type,      // The phase type (e.g., "semantic_differential")
                 anon || false, // Whether the phase is anonymous (default: false)
                 chat || false, // Whether chat is enabled (default: false)
                 session_id,    // The session ID
@@ -460,7 +473,7 @@ router.post("/activities/:session_id/phases", async (req, res) => {
 /**
  * Retrieves the design type for a given session ID.
  * @param {number} sessionId - The session ID.
- * @returns {Promise<string>} - The design type (e.g., "ranking" or "semantic-differential").
+ * @returns {Promise<string>} - The design type (e.g., "ranking" or "semantic_differential").
  * @throws {Error} If the design type is invalid or not found.
  */
 async function getDesignTypeBySessionId(sessionId) {
@@ -493,7 +506,7 @@ export async function getPhasesForSession(sessionId) {
     const results = await rpg2.execSQL({
         dbcon: config.dbconnString,
         sql: `
-            SELECT id, type
+            SELECT id, type, number
             FROM stages
             WHERE sesid = $1
             ORDER BY id ASC
@@ -509,8 +522,8 @@ export async function getPhasesForSession(sessionId) {
         results.map(async (row, index) => {
             const questions = await getQuestionsByPhase(row.id, row.type);
             return {
-                number: index + 1,  // Assign a sequential number to each phase
                 id: row.id,         // The ID of the phase (stage)
+                number: row.number, // The number of the phase
                 questions: questions, // Add the questions for this phase
             };
         })
@@ -518,7 +531,7 @@ export async function getPhasesForSession(sessionId) {
 }
 
 /**
- * Fetches responses for semantic-differential activities in a given session.
+ * Fetches responses for semantic_differential activities in a given session.
  * This query retrieves data grouped by stage and includes details such as user IDs, team IDs, 
  * selections, and comments. It also associates responses with their respective phase numbers.
  * 
@@ -665,7 +678,7 @@ async function fetchRankingResponses(sessionId) {
 }
 
 const activityResponsesFetchHandlers = {
-    "semantic-differential": fetchSemanticDifferentialResponses,
+    semantic_differential: fetchSemanticDifferentialResponses,
     ranking: fetchRankingResponses,
 };
 

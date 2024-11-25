@@ -1,5 +1,4 @@
-import { TeacherRouter } from "../../modules/teacher/teacher-routes";
-import { ActivityCatalogService } from "../../services/activity-catalog-service";
+import * as PhaseCreationHelpers from "../../helpers/phase-creation-helpers.js";
 
 /*eslint func-style: ["error", "expression"]*/
 export function DashboardController($scope, $routeParams, $http, 
@@ -9,8 +8,8 @@ export function DashboardController($scope, $routeParams, $http,
     const vm = this;
     vm.designObj = null;
     vm.userList = [];
+    vm.reachedLastPhase = false;
 
-    // Inicialización del controlador
     vm.init = async function () {
         let id = $routeParams.id;
         console.log(`[DashboardController::init] ${id}`);
@@ -20,83 +19,130 @@ export function DashboardController($scope, $routeParams, $http,
             return; 
         }
 
-        // Display the info tab by default
-        vm.activeTab = 'info';
-
         // Session Id for this instance
         vm.sessionId = Number(id);
 
-        // Get the activity descriptor
-        vm.activityDescriptor = await ActivityCatalogService.getActivityBySessionId(vm.sessionId);
+        // Display the info tab by default
+        vm.activeTab = 'info';
 
+        // Load the entire activity state
+        vm.activityState = await ActivityStateService.loadActivityState(vm.sessionId);
+        vm.userList = vm.activityState.users;
+
+        // Get the activity descriptor
+        vm.activityDescriptor = vm.activityState.descriptor;
+        vm.isActivityFinished = vm.activityDescriptor.status === "finished";
+        vm.setActivityTitle();
+
+        console.debug(`[DashboardController::init] ${JSON.stringify(vm.activityDescriptor)}`);
+ 
+        // Get the design of the activity
+        vm.designObj = await DesignCatalogService.getDesignById(vm.activityDescriptor.designId);
+
+        // Have we reached the last phase?
+        vm.reachedLastPhase = vm.activityDescriptor.currentPhase.number == vm.designObj.phases.length;
+
+        // Keep the activity state service subscribed to state updates from the backend.
+        const unsubscribeHandler = ActivityStateService.subscribeToActivityEvents(vm.sessionId);
+
+        ActivityStateService.registerListener("onStudentJoined",
+            vm.studentJoinHandler);
+        ActivityStateService.registerListener("onResponseSubmitted",
+            vm.responseHandler);
+        ActivityStateService.registerListener("onChatMessage",
+            vm.chatMessageHandler);
+
+        $scope.$on("$destroy", () => {
+            ActivityStateService.unregisterListener("onStudentJoined",
+                vm.studentJoinHandler
+            );
+            ActivityStateService.unregisterListener("onResponseSubmitted",
+                vm.responseHandler
+            );
+            ActivityStateService.unregisterListener("onChatMessage",
+                vm.chatMessageHandler
+            );
+
+            // Stop ActivityStateService listening to events from the current session
+            unsubscribeHandler();
+        });
+    };
+
+    vm.setActivityTitle = function() {
         $translate('activity_details_dashboard_title').then((translation) => {
             vm.activityTitle = translation;
         }).catch((error) => {
             console.error('Translation error:', error);
         });
-
-        vm.activityStateDescriptor = await ActivityStateService.getActivityState(vm.sessionId, true);
-
-        vm.isActivityFinished = false;
-
-        console.debug(`[DashboardController::init] ${JSON.stringify(vm.activityDescriptor)}`);
-
-        // Mock de usuarios conectados
-        vm.users = [
-            { name: 'Juan Pérez', mail: 'juan.perez@example.com', role: 'Administrador', device: 'Desktop' },
-            { name: 'María López', mail: 'maria.lopez@example.com', role: 'Usuario', device: 'Mobile' },
-            { name: 'Carlos Martínez', mail: 'carlos.martinez@example.com', role: 'Moderador', device: 'Tablet' }
-        ];
-
-        // Mock de fases del diseño
-        vm.designPhases = [
-            { name: 'Fase 1: Análisis', description: 'Recopilación de requisitos y análisis del proyecto.', status: 'Completada' },
-            { name: 'Fase 2: Diseño', description: 'Diseño conceptual y técnico del sistema.', status: 'En Progreso' },
-            { name: 'Fase 3: Implementación', description: 'Desarrollo del sistema y pruebas iniciales.', status: 'Pendiente' },
-            { name: 'Fase 4: Validación', description: 'Pruebas finales y aceptación del cliente.', status: 'Pendiente' }
-        ];
-
     };
 
-    // Método para actualizar contenido (mock)
     vm.updateContent = function (data) {
         console.log('Contenido actualizado:', data);
-        // Aquí podrías agregar lógica para actualizar datos en la vista
     };
 
-    vm.init2 = async function () {
-        let id = $routeParams.id;
-        console.log(`[DashboardController::init] ${id}`);
+    vm.startNextPhase = async function() {
+        try {
+            const currentPhase = vm.activityDescriptor.currentPhase.number;
 
-        if (!id || isNaN(Number(id))) {
-            $scope.navigateTo("/error/404/2");
-            return; 
-        }
+            if (currentPhase == vm.designObj.phases.length) {
+                console.error("Cannot advance any further, reached the last phase already");
+                return;
+            }
 
-        // Session Id for this instance
-        vm.sessionId = Number(id);
+            const nextPhaseIndex = currentPhase.number;
+            const nextPhaseNumber = currentPhase.number + 1;
+            const phase = design.phases[nextPhaseIndex];
+            const requestObj = PhaseCreationHelpers.phaseCreationRequestObject(
+                phase, nextPhaseNumber, sessionId);
 
-        // Retrieve the state of the activity
-       /*try {
-            const activityState = await ActivityStateService.getActivityState(vm.sessionId, true);
-            vm.design = activityState.design; // Design of the activity
-            vm.phases = activityState.phases; // Actual phases that have been created, with their state    
+            const stageResponse = await $http({
+                url: `/activities/${sessionId}/phases`,
+                method: "post",
+                data: requestObj,
+            });
+            
+            const stageid = stageResponse.data.id;
+            
+            if (stageid) {
+                // Build the phase items
+                const builder = PhaseCreationHelpers.itemBuilders[design.type];
+
+                if (builder) {
+                    await builder(phase, stageid, sessionId);
+                } else {
+                    console.warn(`No handler found for design type: ${design.type}`);
+                }
+            } else {
+                console.error("Error creating activity phase");
+            }
+
+            await $http({ 
+                url: `/activities/${sessionId}/phase_transition`, 
+                method: "post", 
+                data: { phase_id: stageid }
+            });
+
+            // TODO: perform state update
+
+            // Have we reached the last phase?
+            vm.reachedLastPhase = vm.activityDescriptor.currentPhase.number == vm.designObj.phases.length;
+                
         } catch (error) {
-            console.error(`Could not load the state of the activity with id ${vm.sessionId}`);
-        }*/
-
-        vm.designObj = {};
-        vm.phases = [{ name: "Phase 1", description: "Test", status: "Finished"},
-            { name: "Phase 2", description: "Test", status: "In progress"}];
+            console.error("Error in startActivityDesign:", error);
+        }        
     };
 
-    vm.startNextPhase = function() {
-        console.log('Starting next phase...');
-    };
-
-    vm.endActivity = function() {
-        console.log('Ending activity...');
-        vm.isActivityFinished = true; // Update the state to finished
+    vm.endActivity = function() {    
+        $http.post('/activities/' + vm.sessionId + '/finish')
+            .then(response => {
+                console.log('Activity finished successfully:', response.data);
+                vm.isActivityFinished = true;
+            })
+            .catch(error => {
+                console.error('Error ending activity:', error);
+            });
+        
+        vm.isActivityFinished = true;
     };
 
     vm.downloadAnswersReport = function() {
@@ -105,7 +151,19 @@ export function DashboardController($scope, $routeParams, $http,
 
     vm.downloadChatLog = function() {
         console.log('Downloading chat log...');
-    };    
+    };
+
+    vm.studentJoinHandler = function () {
+        vm.userList = vm.activityState.users;
+    };
+
+    vm.responseHandler = function () {
+        
+    };
+
+    vm.chatMessageHandler = function () {
+
+    };
 
     vm.init();
 };

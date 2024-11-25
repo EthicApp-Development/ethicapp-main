@@ -1,4 +1,4 @@
-import { DesignCatalogService } from "../../services/design-catalog-service";
+import * as PhaseCreationHelpers from "../../helpers/phase-creation-helpers.js";
 
 /*eslint func-style: ["error", "expression"]*/
 export function ActivityController($scope, $filter, $http, Notification, $timeout,
@@ -87,73 +87,40 @@ export function ActivityController($scope, $filter, $http, Notification, $timeou
             console.error("Error creating activity:", error);
         }
     };
-        
-    vm.startActivityDesign = async function (design, sesid) {
-        try {
-            let stageCounter = 0;
-            for (const phase of design.phases) {
 
-                const postdata = {
-                    number:   stageCounter + 1,
-                    question: phase.q_text !== undefined ? phase.q_text : "",
-                    grouping: phase.mode === "team" ? `${phase.stdntAmount}:${phase.grouping_algorithm}` : null,
-                    type:     phase.mode,
-                    anon:     phase.anonymous,
-                    chat:     phase.chat,
-                    sesid:    sesid,
-                    prev_ans: ""
-                };
-    
-                const stageResponse = await $http(
-                    {
-                        url: "add-stage",
-                        method: "post",
-                        data: postdata 
-                    });
-                const stageid = stageResponse.data.id;
-    
-                if (stageid) {
-                    if (design.type === "semantic_differential") {
-                        let counter = 1;
-                        for (const question of phase.questions) {
-                            const content = question.ans_format;
-                            const p = {
-                                name:       question.q_text,
-                                tleft:      content.l_pole,
-                                tright:     content.r_pole,
-                                num:        content.values,
-                                orden:      counter,
-                                justify:    content.just_required,
-                                stageid:    stageid,
-                                sesid:      sesid,
-                                word_count: content.min_just_length
-                            };    
-                            await $http({ url: "add-differential-stage", method: "post", data: p });
-                            counter++;
-                        }
-    
-                        const pp = { sesid: sesid, stageid: stageid };
-                        await $http({ url: "session-start-stage", method: "post", data: pp });
-                    } else if (design.type === "ranking") {
-                        for (const role of phase.roles) {
-                            const p = {
-                                name:       role.name,
-                                jorder:     role.type === "order",
-                                justified:  role.type != null,
-                                word_count: role.wc,
-                                stageid:    stageid,
-                            };
-                            await $http({ url: "add-actor", method: "post", data: p });
-                        }
-    
-                        const pp = { sesid: sesid, stageid: stageid };
-                        await $http({ url: "session-start-stage", method: "post", data: pp });
-                    }
+    vm.startActivityDesign = async function (design, sessionId) {
+        try {
+            // Bootstrap the first phase of the design
+            const phase = design.phases[0];
+            const requestObj = PhaseCreationHelpers.phaseCreationRequestObject(phase, 1, sessionId);
+
+            const stageResponse = await $http({
+                url: `/activities/${sessionId}/phases`,
+                method: "post",
+                data: requestObj,
+            });
+            
+            const stageid = stageResponse.data.id;
+            
+            if (stageid) {
+                // Build the phase items
+                const builder = PhaseCreationHelpers.itemBuilders[design.type];
+
+                if (builder) {
+                    await builder(phase, stageid, sessionId);
                 } else {
-                    console.error("Error creating activity phase");
+                    console.warn(`No handler found for design type: ${design.type}`);
                 }
-                stageCounter++;
+            } else {
+                console.error("Error creating activity phase");
             }
+
+            await $http({ 
+                url: `/activities/${sessionId}/phase_transition`, 
+                method: "post", 
+                data: { phase_id: stageid }
+            });
+                
         } catch (error) {
             console.error("Error in startActivityDesign:", error);
         }

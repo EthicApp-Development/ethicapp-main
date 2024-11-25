@@ -1,9 +1,8 @@
-let individualPhaseTableDirective = function() {
+let sdIndividualPhaseTableDirective = function() {
     return {
         restrict: 'E',
         scope: {
-            phaseConfig: '<',
-            users: '<',
+            questions: '<',
             responses: '<'
         },
         // TODO: refactoring, so that the template is imported depending on the
@@ -13,13 +12,13 @@ let individualPhaseTableDirective = function() {
                 <thead>
                     <tr>
                         <th>{{ 'participant_column_header' | translate }}</th>
-                        <th ng-repeat="question in phaseConfig.questions">{{ question.text }}</th>
+                        <th ng-repeat="question in questions">{{ question.text }}</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr ng-repeat="user in users">
-                        <td>{{ user.name }}</td>
-                        <td ng-repeat="question in phaseConfig.questions">
+                    <tr ng-repeat="response in responses">
+                        <td>{{ responses.name }}</td>
+                        <td ng-repeat="question in questions">
                             {{ responses[user.id][question.id] || ('no_response' | translate) }}
                         </td>
                     </tr>
@@ -29,4 +28,4 @@ let individualPhaseTableDirective = function() {
     };
 };
 
-export { individualPhaseTableDirective };
+export { sdIndividualPhaseTableDirective };

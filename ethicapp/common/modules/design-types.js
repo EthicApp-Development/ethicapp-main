@@ -9,7 +9,7 @@ const designTypes = {
         description: "Ranking design type, used for prioritizing items.",
         identifier: "R",
     },
-    "semantic-differential": {
+    semantic_differential: {
         description: "Semantic differential design type, used for measuring attitudes.",
         identifier: "J",
     },

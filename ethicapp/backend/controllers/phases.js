@@ -8,17 +8,17 @@ import * as SessionsHelper from "../helpers/sessions-helper.js"
 const router = express.Router();
 
 const phaseResponsesFetchHandlers = {
-    "semantic-differential": fetchSemanticDifferentialResponsesByPhase,
+    semantic_differential: fetchSemanticDifferentialResponsesByPhase,
     ranking: fetchRankingResponsesByPhase,
 };
 
 const phaseStudentResponsesFetchHandlers = {
-    "semantic-differential": fetchSemanticDifferentialStudentResponsesByPhase,
+    semantic_differential: fetchSemanticDifferentialStudentResponsesByPhase,
     ranking: fetchRankingStudentResponsesByPhase,
 };
 
 const phaseCreationHandlers = {
-    "semantic-differential": addSemanticDifferentialItem,
+    semantic_differential: addSemanticDifferentialItem,
     ranking: addRankingItem,
 };
 
@@ -242,7 +242,7 @@ router.post("/phases/:id/responses", async (req, res) => {
  * @returns {Object} - A JSON object indicating the success or failure of the operation.
  * 
  * @example
- * // Request (for semantic-differential phase)
+ * // Request (for semantic_differential phase)
  * POST /phases/123/items
  * {
  *   "name": "Semantic Differential Example",
@@ -313,7 +313,7 @@ router.post("/phases/:id/items", async (req, res) => {
 });
 
 /**
- * Fetches responses for semantic-differential activities in a specific phase (stage).
+ * Fetches responses for semantic_differential activities in a specific phase (stage).
  * This query retrieves responses grouped by stage and includes details such as user IDs, team IDs,
  * selections, and comments. It focuses on responses within a single stage.
  * 
@@ -508,8 +508,8 @@ async function fetchRankingStudentResponsesByPhase(phaseId, userId) {
 }
 
 /**
- * Adds a new item to a semantic-differential phase.
- * This function inserts a new semantic-differential item into the `differential` table, associating it with a specific phase (stage).
+ * Adds a new item to a semantic_differential phase.
+ * This function inserts a new semantic_differential item into the `differential` table, associating it with a specific phase (stage).
  * 
  * @async
  * @function addSemanticDifferentialItem
@@ -618,7 +618,7 @@ async function addRankingItem({ stageId, name, jorder, justified, word_count }) 
     });
 }
 
-// Handler for semantic-differential responses
+// Handler for semantic_differential responses
 async function handleSemanticDifferentialResponse(
     sessionId, phaseId, userId, response, notificationEmitter) {
 
@@ -630,7 +630,7 @@ async function handleSemanticDifferentialResponse(
     const { did, sel, comment, iteration } = response[0];
 
     if (!did || sel === undefined || iteration === undefined) {
-        throw new Error("Invalid response format for semantic-differential.");
+        throw new Error("Invalid response format for semantic_differential.");
     }
 
     await rpg2.execSQL({
@@ -661,7 +661,7 @@ async function handleSemanticDifferentialResponse(
 
     notificationEmitter.responseSubmitted(
         { 
-          type: "semantic-differential",
+          type: "semantic_differential",
           sessionId: sessionId,
           phaseId: phaseId,
           uid: userId,
@@ -721,7 +721,7 @@ async function handleRankingResponse(
 /**
  * Retrieves the design type for a given phase ID.
  * @param {number} phaseId - The phase ID.
- * @returns {Promise<string>} - The design type (e.g., "ranking" or "semantic-differential").
+ * @returns {Promise<string>} - The design type (e.g., "ranking" or "semantic_differential").
  * @throws {Error} If the design type is invalid or not found.
  */
 async function getDesignTypeByPhaseId(phaseId) {

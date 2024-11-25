@@ -298,6 +298,105 @@ router.get("/sessions/:id/users", async (req, res) => {
     }
 });
 
+router.post("/sessions/join/:code", async (req, res) => {
+    const dbcon = pass.dbcon;
+    const { code } = req.params;
+    const { device } = req.body;
+    const { uid } = req.session;
+
+    if (!code || !device || !uid) {
+        return res.status(400).json({ status: "error", message: "Missing required parameters." });
+    }
+
+    try {
+        // Insertar al usuario en la sesión si las condiciones se cumplen
+        const insertResult = await execSQL({
+            dbcon,
+            sql: `
+                INSERT INTO sesusers(UID, sesid, device)
+                SELECT $1::int AS UID,
+                       id,
+                       $2 AS device
+                FROM sessions
+                WHERE code = $3
+                  AND NOT EXISTS (
+                      SELECT su.sesid
+                      FROM sesusers AS su,
+                           sessions AS s
+                      WHERE su.uid = $1
+                        AND s.code = $3
+                        AND su.sesid = s.id
+                  )
+                  AND NOT EXISTS (
+                      SELECT st.id
+                      FROM stages AS st,
+                           sessions AS ss
+                      WHERE st.sesid = ss.id
+                        AND ss.code = $3
+                        AND st.type = 'team'
+                  )
+                RETURNING sesid
+            `,
+            sqlParams: [uid, device, code],
+        });
+
+        if (insertResult.length === 0 || !insertResult[0].sesid) {
+            return res.status(400).json({ status: "end" });
+        }
+
+        const sesid = insertResult[0].sesid;
+
+        // Obtener información del usuario
+        const userResult = await execSQL({
+            dbcon,
+            sql: `
+                SELECT name, $1 AS device
+                FROM users
+                WHERE id = $2
+            `,
+            sqlParams: [device, uid],
+        });
+
+        if (userResult.length === 0) {
+            return res.status(404).json({ status: "error", message: "User not found." });
+        }
+
+        const { name } = userResult[0];
+
+        const notificationEmitter = req.app.locals.toTeacherNotifications;
+        notificationEmitter.studentJoined(sesid, uid, name, device);
+
+        const sessionResult = await execSQL({
+            dbcon,
+            sql: `
+                SELECT type
+                FROM sessions
+                WHERE id = $1
+            `,
+            sqlParams: [sesid],
+        });
+
+        if (sessionResult.length === 0 || !sessionResult[0].type) {
+            return res.status(400).json({ status: "end" });
+        }
+
+        const sessionType = sessionResult[0].type;
+        req.session.ses = sesid;
+
+        const redirectUrl =
+            sessionType === "R" || sessionType === "J"
+                ? "role-playing"
+                : sessionType === "T"
+                ? "ethics"
+                : "select";
+
+        return res.json({ status: "ok", redirect: redirectUrl });
+    } catch (err) {
+        console.error("Error joining session:", err);
+        return res.status(500).json({ status: "error", message: "Internal server error." });
+    }
+});
+    
 router.post("/check-design", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
@@ -1326,7 +1425,6 @@ router.post("/archive-session", await rpg.singleSQL({
     postReqData: ["sesid", "val"],
     sqlParams:   [rpg.param("post", "val"), rpg.param("post", "sesid")],
 }));
-
 
 router.post("/enter-session-code", await rpg.singleSQL({
     dbcon: pass.dbcon,

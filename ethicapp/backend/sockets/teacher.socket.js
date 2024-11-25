@@ -32,6 +32,15 @@ let teacherSocketInit = (socket) => {
 // Teacher-Student socket notifications (from backend)
 const toTeacherNotifications = (socketNamespace) => {
     return {
+        studentJoined: (sessionId, userId, name, device) => {
+            socketNamespace.to(`session-${sessionId}`).
+                emit("onStudentJoined", { 
+                    id: userId,
+                    name: name,
+                    device: device
+                });
+        },
+
         responseSubmitted: (sessionId, phaseId, repsonseObj) => {
             socketNamespace.to(`session-${sessionId}`).
                 emit("onResponseSubmitted", { 
@@ -40,11 +49,13 @@ const toTeacherNotifications = (socketNamespace) => {
                 });
         },
 
-        chatMessage: (sessionId, groupId, questionId, message) => {
+        chatMessage: (sessionId, phaseId, questionId, groupId, message) => {
+
             socketNamespace.to(`session-${sessionId}`).emit("onChatMessage", { 
-                  groupId: groupId, 
-                  questionId: questionId,
-                  message: message
+                    phaseId: phaseId,
+                    questionId: questionId,
+                    groupId: groupId, 
+                    message: message
                 });
         }
     };

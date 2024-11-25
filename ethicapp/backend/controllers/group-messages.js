@@ -206,7 +206,7 @@ router.post("/phases/:id/question/:question_id/chat_messages", async (req, res) 
 
         // Step 4: Notify clients about the new message
         const notificationEmitter = req.app.locals.toTeacherNotifications;
-        notificationEmitter.chatMessage(sessionId, groupId, questionId, content);
+        notificationEmitter.chatMessage(sessionId, phaseId, questionId, groupId, content);
 
         // Respond with success
         res.status(201).json({
