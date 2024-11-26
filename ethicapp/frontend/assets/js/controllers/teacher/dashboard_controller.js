@@ -1,4 +1,6 @@
 import * as PhaseCreationHelpers from "../../helpers/phase-creation-helpers.js";
+import * as DesignHelpers from "../../helpers/design-helpers.js";
+import * as DashboardDataJoiners from "../../helpers/dashboard-data-joiners.js";
 
 /*eslint func-style: ["error", "expression"]*/
 export function DashboardController($scope, $routeParams, $http, 

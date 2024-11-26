@@ -242,10 +242,10 @@ async function countSemanticDifferentialMessages(phaseId) {
     });
 
     return results.map(row => ({
-        question_id: row.did,
-        user_id: row.uid,
-        team_id: row.tmid,
-        message_count: parseInt(row.message_count, 10),
+        questionId: row.did,
+        userId: row.uid,
+        teamId: row.tmid,
+        messageCount: parseInt(row.message_count, 10),
     }));
 }
 
@@ -270,10 +270,10 @@ async function countRankingMessages(phaseId) {
     });
 
     return results.map(row => ({
-        phase_id: row.stageid,
-        user_id: row.uid,
-        team_id: row.tmid,
-        message_count: parseInt(row.message_count, 10),
+        phaseId: row.stageid,
+        userId: row.uid,
+        teamId: row.tmid,
+        messageCount: parseInt(row.message_count, 10),
     }));
 }
 
