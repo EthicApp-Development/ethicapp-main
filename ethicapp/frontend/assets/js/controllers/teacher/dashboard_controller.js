@@ -9,6 +9,10 @@ export function DashboardController($scope, $routeParams, $http,
     vm.designObj = null;
     vm.userList = [];
     vm.reachedLastPhase = false;
+    vm.loadingChatStats = false;
+    vm.loadingResponseStats = false;
+    vm.chatStats = {};
+    vm.responseStats = {};
 
     vm.init = async function () {
         let id = $routeParams.id;
@@ -29,14 +33,17 @@ export function DashboardController($scope, $routeParams, $http,
         vm.activityState = await ActivityStateService.loadActivityState(vm.sessionId);
         vm.userList = vm.activityState.users;
 
+        // Phase instances
+        vm.phaseInstances = await ActivityStateService.getInstancedPhases(vm.sessionId);
+
         // Get the activity descriptor
         vm.activityDescriptor = vm.activityState.descriptor;
+        console.debug(`[DashboardController::init] ${JSON.stringify(vm.activityDescriptor)}`);
+
         vm.isActivityFinished = vm.activityDescriptor.status === "finished";
         vm.setActivityTitle();
 
-        console.debug(`[DashboardController::init] ${JSON.stringify(vm.activityDescriptor)}`);
- 
-        // Get the design of the activity
+         // Get the design of the activity
         vm.designObj = await DesignCatalogService.getDesignById(vm.activityDescriptor.designId);
 
         // Have we reached the last phase?
@@ -76,10 +83,6 @@ export function DashboardController($scope, $routeParams, $http,
         });
     };
 
-    vm.updateContent = function (data) {
-        console.log('Contenido actualizado:', data);
-    };
-
     vm.startNextPhase = async function() {
         try {
             const currentPhase = vm.activityDescriptor.currentPhase.number;
@@ -93,22 +96,22 @@ export function DashboardController($scope, $routeParams, $http,
             const nextPhaseNumber = currentPhase.number + 1;
             const phase = design.phases[nextPhaseIndex];
             const requestObj = PhaseCreationHelpers.phaseCreationRequestObject(
-                phase, nextPhaseNumber, sessionId);
+                phase, nextPhaseNumber, vm.sessionId);
 
             const stageResponse = await $http({
-                url: `/activities/${sessionId}/phases`,
+                url: `/activities/${vm.sessionId}/phases`,
                 method: "post",
                 data: requestObj,
             });
             
-            const stageid = stageResponse.data.id;
+            const phaseId = stageResponse.data.id;
             
-            if (stageid) {
+            if (phaseId) {
                 // Build the phase items
                 const builder = PhaseCreationHelpers.itemBuilders[design.type];
 
                 if (builder) {
-                    await builder(phase, stageid, sessionId);
+                    await builder(phase, phaseId, vm.sessionId);
                 } else {
                     console.warn(`No handler found for design type: ${design.type}`);
                 }
@@ -117,16 +120,20 @@ export function DashboardController($scope, $routeParams, $http,
             }
 
             await $http({ 
-                url: `/activities/${sessionId}/phase_transition`, 
+                url: `/activities/${vm.sessionId}/phase_transition`, 
                 method: "post", 
-                data: { phase_id: stageid }
+                data: { phase_id: phaseId }
             });
 
-            // TODO: perform state update
+            // Update the activity descriptor
+            vm.activityDescriptor = await ActivityStateService.getActivityDescriptor(vm.sessionId, true);
+            vm.isActivityFinished = vm.activityDescriptor.status === "finished";
+            
+            // Get udpated phase instances
+            vm.phaseInstances = await ActivityStateService.getInstancedPhases(vm.sessionId);
 
             // Have we reached the last phase?
             vm.reachedLastPhase = vm.activityDescriptor.currentPhase.number == vm.designObj.phases.length;
-                
         } catch (error) {
             console.error("Error in startActivityDesign:", error);
         }        
@@ -158,11 +165,18 @@ export function DashboardController($scope, $routeParams, $http,
     };
 
     vm.responseHandler = function () {
-        
+        vm.responses = vm.activityState.responses;
     };
 
     vm.chatMessageHandler = function () {
-
+        if (!vm.loadingChatStats) {
+            vm.loadingChatStats = true;
+            $timeout(function() {
+                vm.loadingChatStats = false;
+                const phaseId = vm.activityDescriptor.currentPhase.id;
+                vm.chatStats = ActivityStateService.getChatMessageCount(phaseId);
+            }, 5000);
+        }
     };
 
     vm.init();
