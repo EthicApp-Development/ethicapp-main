@@ -1,4 +1,6 @@
 import * as PhaseCreationHelpers from "../../helpers/phase-creation-helpers.js";
+import * as DesignHelpers from "../../helpers/design-helpers.js";
+import * as DashboardDataJoiners from "../../helpers/dashboard-data-joiners.js";
 
 /*eslint func-style: ["error", "expression"]*/
 export function DashboardController($scope, $routeParams, $http, 
@@ -76,8 +78,58 @@ export function DashboardController($scope, $routeParams, $http,
         });
     };
 
-    vm.updateContent = function (data) {
-        console.log('Contenido actualizado:', data);
+    vm.loadPhaseStates = async function () {
+        try {
+            vm.phaseStates = [];
+            
+            // Get all instanced phases
+            const instancedPhases = await ActivityStateService.getInstancedPhases(vm.sessionId, true);
+    
+            // Get all activity responses:
+            const responses = await ActivityStateService.getResponses(vm.sessionId);
+
+            // Iterate by means of an async loop
+            for (const phase of instancedPhases) {
+                const state = {};
+    
+                // Get response statistics
+                state.responseStats = await ActivityStateService.getPhaseStats(phase.id);
+    
+                const phaseNumber = phase.number;
+                const groupPhase = DesignHelpers.isGroupPhase(vm.designObj, phaseNumber);
+    
+                let messageCount = [];
+                let groupChatStats = {};
+
+                // If this is a group phase, get chat message statistics
+                if (groupPhase) {
+                    messageCount = await ActivityStateService.getChatMessageCount(phase.id);
+                    groupChatStats = groupPhaseChatMessageSum(messageCount);
+                }
+
+                state.groupChatStats = groupChatStats;
+
+                // Get users
+                const users = await ActivityStateService.getSessionUsers(vm.sessionId, true);
+
+                const designType = this.designObj.type;
+                const joiner = DashboardDataJoiners.phaseDataJoiners(designType)
+
+                if (!joiner) {
+                    console.error(`Could not find a data joiner for design type '${designType}'`);
+                }
+                
+                const phaseDescriptors = ActivityStateService.getActivityDescriptor(vm.sessionId);
+                
+                // Build one large table with a record per student in the phase
+                const userStates = joiner(phase, users, responses, messageCount);
+                state.userStates = userStates;
+
+                vm.phaseStates.push(state);
+            }
+        } catch (error) {
+            console.error("Error cargando estadísticas de las fases:", error);
+        }
     };
 
     vm.startNextPhase = async function() {
