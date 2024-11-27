@@ -228,6 +228,18 @@ let ActivityStateService = ($http, SocketService) => {
             }
         },
 
+        getGroups: async function(phaseId) {
+            try {
+                // Make the HTTP GET request to the endpoint
+                const response = await $http.get(`/phases/${phaseId}/groups`);
+                return response.groups;
+            } catch (error) {
+                // Log the error for debugging purposes
+                console.error(`Error fetching group configuration for phase ${phaseId}: ${error}`);
+                return []; // Return an empty array in case of an error
+            }
+        },
+
         getChatMessageCount: async function(phaseId) {
             try {
                 // Make the HTTP GET request to the endpoint
