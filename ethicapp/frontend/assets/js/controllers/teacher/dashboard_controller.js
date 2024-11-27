@@ -15,6 +15,8 @@ export function DashboardController($scope, $routeParams, $http,
     vm.loadingResponseStats = false;
     vm.chatStats = {};
     vm.responseStats = {};
+    vm.phaseInstances = null;
+    vm.dashboardState = {};
 
     vm.init = async function () {
         let id = $routeParams.id;
@@ -140,6 +142,33 @@ export function DashboardController($scope, $routeParams, $http,
             console.error("Error in startActivityDesign:", error);
         }        
     };
+
+    const dashboardStateBuilders = {
+        semantic_differential: sdDashboardStateBuilder,
+        ranking: rankingDashboardStateBuilder,
+    };
+
+
+    vm.updateDashboardState() = function() {
+        vm.phaseInstances.forEach(phase => {
+            const designType = designobj.metainfo.type;
+            const builder = dashboardStateBuilders[designType];
+
+            if (!builder) {
+                console.error(`Could not find builder function for design type ${designType}`);
+                return;
+            }
+
+        });
+    };
+
+    const sdDashboardStateBuilder = function () {
+
+    }
+
+    const rankingDashboardStateBuilder = function () {
+        
+    }
 
     vm.endActivity = function() {    
         $http.post('/activities/' + vm.sessionId + '/finish')
