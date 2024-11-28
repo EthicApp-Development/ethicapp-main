@@ -168,8 +168,8 @@ export let rankingPhaseDataJoiner = (phaseDescriptor, responses, users,
     return existingData;
 };
 
-export let assignResponseClusters = (rankingData) => {
-    // Step 1: Generate concatenated sequences of idR values for each user
+export let assignRankingClusters = (rankingData) => {
+    // Step 1: Regenerate concatenated sequences of idR values for each user
     rankingData.forEach(user => {
         user.rankSequence = Object.keys(user)
             .filter(key => key.startsWith('idR')) // Only include keys for idR fields
@@ -190,7 +190,15 @@ export let assignResponseClusters = (rankingData) => {
         user.responseCluster = currentCluster; // Assign the cluster number
     });
 
-    // Step 4: Remove temporary rankSequence field
+    // Step 4: Sort by responseCluster and then by userName
+    rankingData.sort((a, b) => {
+        if (a.responseCluster !== b.responseCluster) {
+            return a.responseCluster - b.responseCluster; // Sort by cluster
+        }
+        return a.userName.localeCompare(b.userName); // Sort by name within the cluster
+    });
+
+    // Step 5: Remove temporary rankSequence field
     rankingData.forEach(user => delete user.rankSequence);
 
     return rankingData;
@@ -227,9 +235,12 @@ export function addParticipantGroupInfo(phaseData, groups) {
     });
 }
 
-export let addGroupStatistics = function(data, translate) {
+export let updateGroupStatistics = function(data, translate) {
+    // Step 0: Filter out existing group summary objects
+    const filteredData = data.filter(user => !user.groupStatistics);
+
     // Step 1: Group users by `groupId`
-    const groupedData = Enumerable.from(data)
+    const groupedData = Enumerable.from(filteredData)
         .groupBy(
             user => user.groupId, // Group by groupId
             user => user,         // Keep the user object
@@ -248,7 +259,7 @@ export let addGroupStatistics = function(data, translate) {
 
         // Extract group details (assumes all users in the group have the same groupNumber)
         const groupNumber = users[0].groupNumber;
-        const groupName = `{translate('group_label')} ${groupNumber}`;
+        const groupName = `${translate('group_label')} ${groupNumber}`;
 
         // Calculate chat statistics for the group
         const chatStats = users.reduce((stats, user) => {

@@ -16,7 +16,7 @@ export function DashboardController($scope, $routeParams, $http,
     vm.chatStats = {};
     vm.responseStats = {};
     vm.phaseInstances = null;
-    vm.dashboardState = {};
+    vm.dashboardPhaseStates = [];
 
     vm.init = async function () {
         let id = $routeParams.id;
@@ -143,13 +143,7 @@ export function DashboardController($scope, $routeParams, $http,
         }        
     };
 
-    const dashboardStateBuilders = {
-        semantic_differential: sdDashboardStateBuilder,
-        ranking: rankingDashboardStateBuilder,
-    };
-
-
-    vm.updateDashboardState() = function() {
+    vm.updateDashboardState() = async function() {
         vm.phaseInstances.forEach(phase => {
             const designType = designobj.metainfo.type;
             const builder = dashboardStateBuilders[designType];
@@ -158,16 +152,42 @@ export function DashboardController($scope, $routeParams, $http,
                 console.error(`Could not find builder function for design type ${designType}`);
                 return;
             }
+            
+            const phaseDescriptor = vm.activityDescriptor.phases.find(p => p.id == phase.id);
+            vm.activityState.responses
+            vm.userList
+            const groups = ActivityStateService.getGroups(phase.id);
+            const chatMessageCount = await ActivityStateService.getChatMessageCount(p.id);
 
         });
     };
 
-    const sdDashboardStateBuilder = function () {
+    const dashboardStateBuilders = {
+        semantic_differential: sdDashboardStateBuilder,
+        ranking: rankingDashboardStateBuilder,
+    };
 
+    const sdDashboardStateBuilder = function (phaseDescriptor, responses, users, groups, chatMessageCount) {
+        let phaseState = DashboardDataJoiners.sdPhaseDataJoiner(phaseDescriptor, responses,
+            users, chatMessageCount);
+        
+        if (phaseDescriptor.mode == "team") {
+            phaseState = DashboardDataJoiners.addParticipantGroupInfo(phaseState, groups);
+            phaseState = DashboardDataJoiners.updateGroupStatistics(phaseState, $translate);
+        }
+        return phaseState;
     }
 
-    const rankingDashboardStateBuilder = function () {
-        
+    const rankingDashboardStateBuilder = function (phaseDescriptor, responses, users, groups, chatMessageCount) {
+        let phaseState = DashboardDataJoiners.rankingPhaseDataJoiner(phaseDescriptor, responses,
+            users, chatMessageCount);
+
+        if (phaseDescriptor.mode == "team") {
+            phaseState = DashboardDataJoiners.addParticipantGroupInfo(phaseState, groups);
+            phaseState = DashboardDataJoiners.updateGroupStatistics(phaseState, $translate);
+            phaseState = DashboardDataJoiners.assignRankingClusters(phaseState);
+        }
+        return phaseState;
     }
 
     vm.endActivity = function() {    

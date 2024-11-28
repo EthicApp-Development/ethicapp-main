@@ -524,6 +524,7 @@ export async function getPhasesForSession(sessionId) {
             return {
                 id: row.id,         // The ID of the phase (stage)
                 number: row.number, // The number of the phase
+                mode: type,
                 questions: questions, // Add the questions for this phase
             };
         })
