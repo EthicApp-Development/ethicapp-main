@@ -1,5 +1,7 @@
 "use strict";
 
+import { CasesService } from "../../services/cases-service.js";
+
 var BASE_APP = window.location.href.replace("ethics", "");
 
 var app = angular.module(
@@ -11,10 +13,12 @@ app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
 
+app.service("CaseService", CasesService);
+
 app.controller(
     "EthicssController",
-    ["$scope", "$http", "$timeout", "$socket", "Notification", "$sce", "$uibModal","ngIntroService",
-        function ($scope, $http, $timeout, $socket, Notification, $sce, $uibModal, ngIntroService) {
+    ["$scope", "$http", "$timeout", "$socket", "Notification", "$sce", "$uibModal","ngIntroService", "CaseService",
+        function ($scope, $http, $timeout, $socket, Notification, $sce, $uibModal, ngIntroService, CaseService) {
             var self = $scope;
             self.designId = -1;
             self.iteration = 1;
@@ -52,9 +56,19 @@ app.controller(
             self.lang = "ES_CL/spanish";
             self.selectedDF = null;
             self.selectedDFPrev = null;
-
             
+            self.initEditor = (_case) => {
+                self.ckeditor = CaseService.initEditor(true, _case);
+            };
+            
+            self.ckeditorIsEmpty = () => {
+                return !CaseService.ckeditorIsNotEmpty(self.case.rich_text);
+            }
 
+            self.selectCaseDocument = (document) => {
+                self.selectedCaseDocument = document;
+                self.showDoc = true;
+            }
             self.init = function () {
                 self.getSesInfo()
                     .then(function () {
@@ -127,6 +141,15 @@ app.controller(
                     })
                         .then(function (response) {
                             self.designId = response.data[0].design;
+                            console.log(self.designId);
+                            CaseService.getCaseFromDesign(self.designId).then((response) => {
+                                if (!response || !response.data || !response.data.result) {
+                                  return;
+                                }
+                                self.case = response.data.result;
+                                
+                                self.selectedCaseDocument = self.case?.documents?.[0];
+                              })
                             resolve(); 
                         })
                         .catch(reject); 

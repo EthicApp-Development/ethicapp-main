@@ -1,6 +1,8 @@
 "use strict";
 
-var BASE_APP = window.location.href.replace("role-playing", "");
+import { CasesService } from "../../services/cases-service.js";
+
+// var BASE_APP = window.location.href.replace("role-playing", "");
 
 var app = angular.module("Role", ["ngSanitize", "ui.bootstrap", "ui.tree", "btford.socket-io", "angular-intro", "ui-notification", "luegg.directives"]);
 
@@ -8,7 +10,9 @@ app.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
 }]);
 
-app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Notification", "$sce", "$uibModal", "ngIntroService", function ($scope, $http, $timeout, $socket, Notification, $sce, $uibModal, ngIntroService) {
+app.service("CaseService", CasesService);
+
+app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Notification", "$sce", "$uibModal", "ngIntroService", "CaseService", function ($scope, $http, $timeout, $socket, Notification, $sce, $uibModal, ngIntroService, CaseService) {
     var self = $scope;
     self.designId = -1;
     self.iteration = 1;
@@ -60,6 +64,20 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
     self.justifyPosition = false;
 
     self.verified = false;
+
+    self.initEditor = (_case) => {
+        self.ckeditor = CaseService.initEditor(true, _case);
+    };
+    
+    self.ckeditorIsEmpty = () => {
+        return !CaseService.ckeditorIsNotEmpty(self.case.rich_text);
+    }
+
+    self.selectCaseDocument = (document) => {
+        self.selectedCaseDocument = document;
+        self.showDoc = true;
+    }
+
 
     self.init = function () {
         self.getSesInfo()
@@ -142,6 +160,14 @@ app.controller("RoleController", ["$scope", "$http", "$timeout", "$socket", "Not
                 .then(function (response) {
                     console.log("Response data:", response.data[0].design);
                     self.designId = response.data[0].design;
+                    CaseService.getCaseFromDesign(self.designId).then((response) => {
+                        if (!response || !response.data || !response.data.result) {
+                          return;
+                        }
+                        self.case = response.data.result;
+                        
+                        self.selectedCaseDocument = self.case?.documents?.[0];
+                      });
                     resolve(); 
                 })
                 .catch(reject); 

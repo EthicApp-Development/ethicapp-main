@@ -455,6 +455,54 @@ router.post("/get-design", (req, res) => {
 });
 
 
+router.post("/designs/:id/clone", async (req, res) => {
+    const uid = req.session.uid;
+    const designId = req.params.id;
+    const db = getDBInstance(pass.dbcon);
+
+    try {
+        const getDesignSql = `
+        SELECT design, public, locked, case_id
+        FROM DESIGNS
+        WHERE id = $1
+        `;
+        
+        const result = await db.query(getDesignSql, [designId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: "err", message: "Diseño no encontrado." });
+        }
+
+        const originalDesign = result.rows[0];
+        const design = originalDesign.design;
+        design.metainfo.creation_date = new Date().toISOString();
+
+        const insertDesignSql = `
+        INSERT INTO DESIGNS (creator, design, public, locked, case_id)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id;
+        `;
+        
+        const clonedDesignValues = [
+            uid,                  
+            design, 
+            originalDesign.public, 
+            false,               
+            originalDesign.case_id
+        ];
+
+        const insertResult = await db.query(insertDesignSql, clonedDesignValues);
+        const newDesignId = insertResult.rows[0].id;
+
+        res.json({ status: "ok", message: "Diseño clonado exitosamente", newDesignId });
+    } catch (err) {
+        console.error(`Error al clonar el diseño con id ${designId}:`, err);
+        res.status(500).json({ status: "err", message: "Error al clonar el diseño." });
+    }
+});
+
+
+
 router.get("/get-user-designs", (req, res) => {
     var uid = req.session.uid;
     var sql = `
@@ -535,27 +583,32 @@ router.post("/design-lock", rpg.multiSQL({
 }));
 
 
-router.post("/update-design", (req, res) => {
-    var uid = req.session.uid;
-    var id = req.body.id;
-    var sql = `
-    UPDATE DESIGNS
-    SET design = '${JSON.stringify(req.body.design)}'
-    WHERE creator = ${uid}
-        AND id = ${id}
-    `;
-    var db = getDBInstance(pass.dbcon);
-    var qry;
-    qry = db.query(sql);
-    qry.on("end", function () {
-        res.end('{"status":"ok"}');
-    });
-    qry.on("error", function(err){
-        console.error(`Fatal error on the SQL query "${sql}"`);
-        console.error(err);
-        res.end('{"status":"err"}');
-    });
+router.post("/update-design", async (req, res) => {
+    try {
+        const uid = req.session.uid;
+        const id = req.body.id;
+        const case_id = req.body.case_id;
+        const design = JSON.stringify(req.body.design);
+        
+        const sql = `
+        UPDATE DESIGNS
+        SET design = $1, case_id = $2
+        WHERE creator = $3
+          AND id = $4
+        `;
+
+        const db = getDBInstance(pass.dbcon);
+        
+        // Ejecutamos la consulta usando parámetros preparados
+        await db.query(sql, [design, case_id, uid, id]);
+
+        res.json({ status: "ok" });
+    } catch (err) {
+        console.error(`Error fatal en la consulta SQL: ${err.message}`);
+        res.json({ status: "err" });
+    }
 });
+
 
 
 router.post("/delete-design", (req, res) => {

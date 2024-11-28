@@ -1,0 +1,124 @@
+<div ng-controller="CasesController" ng-init="initCasesView()" ng-if="selectedView=='cases'">
+    <h2>{{'actCases'|translate}}</h2>
+    <button class="btn btn-primary createDesignBtn" ng-click="createCase()">{{'createCase' | translate}}</button>
+    <p class="designContext">{{'casesContext' | translate}}</p>
+    <div class="tab_cs">
+        <button class="tab_cs" ng-click="tabListCases='ownCases'" ng-class="{'btn_selected': tabListCases == 'ownCases'}">
+            {{'yours'|translate}}
+        </button>
+        <button class="tab_cs" ng-click="tabListCases='publicCases'" ng-class="{'btn_selected': tabListCases == 'publicCases'}">
+            {{'byOthers'|translate}}
+        </button>
+        <div style="float: left;display: flex;justify-content: left;align-items: center;">
+            <input class="form-control text-left search-input fontAwesome" type="text"
+                placeholder="{{'search'|translate}}  &#xF002;" ng-model="userSearch">
+        </div>
+    </div>
+
+    <div class="wrapper">
+        <div class="container" style="overflow: scroll; max-height: 40em; min-height: 10em; border: #bbb 1px solid;">
+            <div class="activities_container" style="margin-top: 2em;">
+                <div class="list-group pad-content">
+
+                    <div class="box-item" ng-repeat="case in ownCases | filter:customFilter" ng-if="tabListCases == 'ownCases'">
+  
+
+                        <div style="display: inline-flex; justify-content: space-between">
+                            <div>
+                                <h4 class="list-group-item-heading" ng-bind="case.title || ('untitled' | translate)"></h4>
+                                <h5 class="list-group-item-heading" ng-bind="case.description || ('noDescription' | translate)"></h6>
+                                <h6 class="list-group-item-heading" ng-bind="case.creator"></h6>
+
+                                <p class="list-group-item-text"></p>
+                                <p class="list-group-item-text">{{'creationDate' | translate}}: {{formatDate(case.created_at)}}</p>
+                                <p class="list-group-item-text">{{'lastModificationDate' | translate}}: {{formatDate(case.updated_at)  }}</p>
+                            </div>
+                            <div class="text-right vertical-align">
+                            
+                                <img class="locked-svg ml-1" ng-show="case.locked"
+                                    src="../../assets/images/iconsets/gray-lineart/design-lock-active.svg"
+                                    alt="SVGLocked"
+                                    data-toggle="tooltip" title="Locked">
+                                <img class="locked-svg ml-1" ng-show="true"
+                                    ng-mouseover="handleMouseOverClone($event)"
+                                    ng-mouseleave="handleMouseLeaveClone($event)"
+                                    ng-click="handleClickClone($event, case.case_id)"
+                                    src="../../assets/images/iconsets/gray-lineart/design-clone.svg" 
+                                    alt="SVGClone"
+                                    data-toggle="tooltip" title="Share">
+                                <button class="btn btn-primary btn-smaller ml-1" ng-click="editCase(case.case_id)"
+                                    ng-hide="case.locked">{{'edit' |
+                                    translate}}</button>
+                                <button class="btn btn-primary btn-smaller ml-1" ng-click="viewCase(case.case_id)">{{'view' |
+                                    translate}}</button>
+                                <button class="btn btn-danger btn-smaller ml-1" ng-click="deleteCase(case.case_id)"
+                                    ng-hide="case.locked">{{'delete' |
+                                    translate}}</button>
+                                <div class="ml-1">
+                                    <label class="switch">
+                                        <input type="checkbox" ng-checked="case.is_public"
+                                            ng-click="toggleIsPublic(case.case_id, case.is_public)">
+                                        <span class="slider round"></span>
+    
+                                    </label>
+                                    <p class="share-paragraph">{{'share'|translate}}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div ng-if="case.topic_tags.length > 0">
+                            <hr class="mt-1medio">
+                            <div>
+                                <p class="list-group-item-text">{{'tags' | translate}}:</p>
+    
+                                <div class="tags-container" >
+                                    <div class="tag-container" ng-repeat="tag in case.topic_tags track by $index">
+                                        <span class="tag-text">
+                                            <p>{{tag.name}}</p>
+                                        </span>
+                                    </div>
+                                </div> 
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="list-group-item" ng-repeat="case in publicCases | filter:userSearch" ng-if="tabListCases == 'publicCases'">
+                    <div>
+                        <h4 class="list-group-item-heading" ng-bind="case.title || ('untitled' | translate)"></h4>
+                                <h5 class="list-group-item-heading" ng-bind="case.description || ('noDescription' | translate)"></h6>
+                                <h6 class="list-group-item-heading" ng-bind="case.creator"></h6>
+
+                                <p class="list-group-item-text"></p>
+                                <p class="list-group-item-text">{{'creationDate' | translate}}: {{formatDate(case.created_at)}}</p>
+                                <p class="list-group-item-text">{{'lastModificationDate' | translate}}: {{formatDate(case.updated_at)  }}</p>
+                    </div>
+                    <div class="text-right vertical-align">
+                        <img class="locked-svg" ng-show="case.locked"
+                            src="../../assets/images/iconsets/gray-lineart/design-lock-active.svg" alt="SVGLocked">
+                            <img class="locked-svg ml-1" ng-show="true"
+                            ng-mouseover="handleMouseOverClone($event)"
+                            ng-mouseleave="handleMouseLeaveClone($event)"
+                            ng-click="handleClickClone($event, case.case_id)"
+                            src="../../assets/images/iconsets/gray-lineart/design-clone.svg" 
+                            alt="SVGClone"
+                            data-toggle="tooltip" title="Share">
+                        <button class="btn btn-primary btn-smaller ml-1" ng-click="viewCase(case.case_id)">{{'view' |
+                            translate}}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="help_panel">
+            <img src="../../assets/images/iconsets/exclamation-mark.png" alt="signoExclamacion"
+                class="exclamation-mark-image">
+            <div class="help-container">
+                <p class="help-paragraph">
+                    {{'casesPanel1' | translate}}
+                </p>
+                <p class="help-paragraph">
+                    {{'casesPanel2' | translate}}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

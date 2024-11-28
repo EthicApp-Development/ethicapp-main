@@ -134,7 +134,7 @@ a:hover{
     top: 0;
     left: 0;
     width: 100%;
-    z-index: 9999;
+    z-index: 1000;
 }
 
 .side-panel{
@@ -1839,7 +1839,6 @@ h2{
     align-items: center; 
 }
 
-
 .code-div{
     background-color: #ddd;
     margin-bottom: -2.8rem;
@@ -1967,6 +1966,106 @@ h2{
     margin-top: -2rem;
 }
 
+/* FOR TAGS IN CASES */
+
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    max-width: 600px;
+}
+
+.tag-container {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+}
+
+.tag-text {
+    display: flex;
+    align-items: center;
+    background-color: #0077c1;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 20px;
+    transition: background-color 0.3s ease;
+}
+
+.tag-text:hover {
+    filter: brightness(0.8); 
+}
+
+.tag-text p {
+    margin: 0;
+    margin-right: 5px;
+}
+
+.remove-tag {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+    padding: 0 5px;
+    transition: color 0.3s, transform 0.3s; /* Añadido para una transición suave */
+}
+
+.remove-tag:hover {
+    /* color: #e74c3c; */
+    transform: scale(1.4); /* Aumenta el tamaño en un 20% */
+}
+
+.slider-blocked::before {
+    position: absolute;
+    content: "";
+    height: 13px;
+    width: 13px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+  
+input:checked + .slider-blocked {
+    background-color: #888888;
+}
+  
+input:focus + .slider-blocked {
+    box-shadow: 0 0 1px #888888;
+}
+  
+input:checked + .slider-blocked::before {
+    -webkit-transform: translateX(26px);
+    -ms-transform: translateX(26px);
+    transform: translateX(26px);
+}
+
+
+
+.modal-case-background {
+    display: flex; 
+    position: fixed; 
+    z-index: 1; 
+    padding-top: 100px; 
+    left: 0;
+    top: 0;
+    width: 100%; 
+    height: 100%; 
+    overflow: auto; 
+    background-color: rgba(0,0,0,0.4); 
+}
+
+.modal-case-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    height: 80%;
+    overflow: auto;
+}
 .content-table.table {
     margin-bottom: 0;
     margin-right: 0px;
