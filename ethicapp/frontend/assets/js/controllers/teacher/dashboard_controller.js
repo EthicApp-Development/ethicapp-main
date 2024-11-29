@@ -143,7 +143,7 @@ export function DashboardController($scope, $routeParams, $http,
         }        
     };
 
-    vm.updateDashboardState() = async function() {
+    vm.loadCompleteDashboardState() = async function() {
         vm.phaseInstances.forEach(phase => {
             const designType = designobj.metainfo.type;
             const builder = dashboardStateBuilders[designType];
@@ -152,14 +152,39 @@ export function DashboardController($scope, $routeParams, $http,
                 console.error(`Could not find builder function for design type ${designType}`);
                 return;
             }
-            
-            const phaseDescriptor = vm.activityDescriptor.phases.find(p => p.id == phase.id);
-            vm.activityState.responses
-            vm.userList
-            const groups = ActivityStateService.getGroups(phase.id);
-            const chatMessageCount = await ActivityStateService.getChatMessageCount(p.id);
-
+            const phaseState = await loadDashboardPhaseState(phase.id);
+            vm.dashboardPhaseStates.push(phaseState);
         });
+    };
+
+    vm.loadDashboardPhaseState = async (phaseId) => {
+        try {
+            const designType = vm.designObj.metainfo.type;
+            const builder = dashboardStateBuilders[designType];
+    
+            if (!builder) {
+                console.error(`Could not find builder function for design type ${designType}`);
+                return;
+            }
+            
+            const phaseDescriptor = vm.activityDescriptor.phases.find(p => p.id == phaseId);
+    
+            const responses = vm.activityState.responses.phases.
+                find(pr => pr.responses.phase_number == phaseDescriptor.number).responses;
+    
+            vm.userList = await ActivityStateService.getSessionUsers(vm.sessionId);
+            const groups = await ActivityStateService.getGroups(phaseId);
+            const chatMessageCount = await ActivityStateService.getChatMessageCount(phaseId);
+
+            const phaseState = builder(phaseDescriptor, responses, 
+                vm.userList, groups, chatMessageCount);
+
+            return phaseState;
+        }
+        catch(error) {
+            console.error(`Failed to load the dashboard state of phase with id '${phaseId}'`);
+            return {};
+        }
     };
 
     const dashboardStateBuilders = {
