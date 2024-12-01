@@ -19,11 +19,13 @@ const router = express.Router();
 router.get("/activities/:session_id/descriptor", async (req, res) => {
     const { session_id } = req.params;
 
-    if (!session_id) {
-        return res.status(400).json({ error: "Missing required parameter: session_id." });
+    // Ensure session_id is valid
+    if (!session_id || isNaN(Number(session_id))) {
+        return res.status(400).json({ error: "Invalid or missing required parameter: session_id." });
     }
 
     try {
+        // Get the activity matching the session id
         const activityResult = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
@@ -37,25 +39,36 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
         });
 
         if (!activityResult) {
+            console.warn(`No activity found for session_id: ${session_id}`);
             return res.status(404).json({ error: "No activity found for the given session." });
         }
 
         const { design: designId, status, description } = activityResult;
 
+        // Get the phases that have been created in the session
         const phases = await getPhasesForSession(session_id);
+        if (!phases || phases.length === 0) {
+            console.warn(`No phases found for session_id: ${session_id}`);
+            return res.status(404).json({ error: "No phases found for the given session." });
+        }
 
-        res.status(200).json({
-            description: description,
-            designId: designId,
+        // Create the activity descriptor
+        const descriptor = {
+            description,
+            designId,
             status: StatusCodes.getNameByCode(status),
-            phases: phases,
-            currentPhase: phases[phases.length - 1],
-        });
+            phases,
+            currentPhase: phases[phases.length - 1], // Last phase
+        };
+
+        console.info(`Successfully retrieved activity descriptor for session_id: ${session_id}.`);
+        return res.status(200).json({ descriptor });
     } catch (err) {
-        console.error("Error fetching activity descriptor:", err);
-        res.status(500).json({ error: "Internal server error" });
+        console.error(`Error fetching activity descriptor for session_id: ${session_id}`, err);
+        return res.status(500).json({ error: "Internal server error" });
     }
 });
+
 
 /**
  * @route GET /activities/:session_id/responses
@@ -119,15 +132,13 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
 router.get("/activities/:session_id/responses", async (req, res) => {
     const { session_id } = req.params;
 
-    if (!session_id) {
-        return res.status(400).json({ error: "Missing required parameter: session_id" });
+    if (!session_id || isNaN(Number(session_id))) {
+        return res.status(400).json({ error: "Invalid or missing required parameter: session_id" });
     }
 
     try {
-        // Determine the design type
         const designType = await getDesignTypeBySessionId(session_id);
 
-        // Fetch responses using the appropriate handler
         const handler = activityResponsesFetchHandlers[designType];
         if (!handler) {
             return res.status(400).json({ error: `Unsupported design type: ${designType}` });
@@ -135,28 +146,21 @@ router.get("/activities/:session_id/responses", async (req, res) => {
 
         const results = await handler(session_id);
 
-        if (results.length === 0) {
+        if (!results || results.length === 0) {
+            console.warn(`No responses found for session_id: ${session_id}`);
             return res.status(404).json({ error: "No responses found for the given activity." });
         }
 
-        // Group responses by stage or other relevant criteria if necessary
         const groupedResponses = results.reduce((acc, row) => {
             const { phase_number, ...response } = row;
-            if (!acc[phase_number]) {
-                acc[phase_number] = {
-                    phase_number,
-                    responses: [],
-                };
-            }
+            acc[phase_number] = acc[phase_number] || { phase_number, responses: [] };
             acc[phase_number].responses.push(response);
             return acc;
         }, {});
 
-        const responseArray = Object.values(groupedResponses);
-
-        res.status(200).json({ phases: responseArray });
+        res.status(200).json({ phases: Object.values(groupedResponses) });
     } catch (err) {
-        console.error("Error fetching activity responses:", err);
+        console.error(`Error fetching responses for session_id: ${session_id}`, err);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -326,9 +330,9 @@ router.post("/activities/:session_id/finish", async (req, res) => {
 router.get("/activities/:session_id/phases", async (req, res) => {
     const { session_id } = req.params;
 
-    // Validate required parameter
-    if (!session_id) {
-        return res.status(400).json({ error: "Missing required parameter: session_id." });
+    // Validate session_id
+    if (!session_id || isNaN(Number(session_id))) {
+        return res.status(400).json({ error: "Invalid or missing required parameter: session_id." });
     }
 
     try {
@@ -351,17 +355,21 @@ router.get("/activities/:session_id/phases", async (req, res) => {
         });
 
         // Check if any phases were found
-        if (phases.length === 0) {
+        if (!phases || phases.length === 0) {
+            console.warn(`No phases found for session_id: ${session_id}`);
             return res.status(404).json({ error: "No phases found for the given session." });
         }
 
-        // Return the phases as JSON
-        res.status(200).json({ phases });
+        // Log success and return the phases
+        console.info(`Successfully retrieved ${phases.length} phases for session_id: ${session_id}.`);
+        return res.status(200).json({ phases });
     } catch (err) {
-        console.error("Error fetching phases for session:", err);
-        res.status(500).json({ error: "Internal server error" });
+        // Log error with session_id for context
+        console.error(`Error fetching phases for session_id: ${session_id}`, err);
+        return res.status(500).json({ error: "Internal server error" });
     }
 });
+
 
 /**
  * @route POST /activities/:session_id/phases

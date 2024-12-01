@@ -159,8 +159,7 @@ app.controller("NewUsersController",
     ["$scope", "$http", "Notification", "ActivityStateService", IncomingUsersController]);
 app.controller("DashboardController", 
     ["$scope", "$routeParams", "$http", "$timeout", "$uibModal", "ActivityStateService",
-        "ActivityCatalogService", "DesignCatalogService", 
-        "$translate", DashboardController]);
+        "DesignCatalogService", "$translate", DashboardController]);
 app.controller("MapSelectionModalController", 
     ["$scope", "$uibModalInstance", MapSelectionModalController]);
 app.controller("ConfirmModalController", 

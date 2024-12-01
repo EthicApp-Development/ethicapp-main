@@ -1,9 +1,9 @@
-let sdIndividualPhaseTableDirective = function() {
+let individualPhaseTableDirective = function() {
     return {
         restrict: 'E',
         scope: {
-            questions: '<',
-            responses: '<'
+            phaseData: '<',
+            designType: '<'
         },
         // TODO: refactoring, so that the template is imported depending on the
         // type of activity
@@ -28,4 +28,4 @@ let sdIndividualPhaseTableDirective = function() {
     };
 };
 
-export { sdIndividualPhaseTableDirective };
+export { individualPhaseTableDirective };

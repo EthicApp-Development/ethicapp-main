@@ -186,8 +186,8 @@ router.get("/phases/:id/stats", async (req, res) => {
 
         // Return the statistics as JSON
         res.status(200).json({
-            expected_responses_per_question: expectedResponsesPerQuestion,
-            response_stats: responseStats,
+            expectedResponsesPerQuestion,
+            responseStats,
         });
     } catch (error) {
         console.error("Error retrieving phase statistics:", error);

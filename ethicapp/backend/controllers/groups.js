@@ -53,11 +53,13 @@ const router = express.Router();
 router.get("/phases/:id/groups", async (req, res) => {
     const { id } = req.params;
 
-    if (!id) {
-        return res.status(400).json({ error: "Missing required parameter: id" });
+    // Validate required parameter
+    if (!id || isNaN(Number(id))) {
+        return res.status(400).json({ error: "Invalid or missing required parameter: id." });
     }
 
     try {
+        // Fetch group data from the database
         const results = await rpg2.execSQL({
             sql: `
                 SELECT t.id AS team_id,
@@ -73,13 +75,14 @@ router.get("/phases/:id/groups", async (req, res) => {
             sqlParams: [id],
         });
 
+        // Handle no results
         if (results.length === 0) {
+            console.warn(`No groups found for phase_id: ${id}`);
             return res.status(404).json({ error: "No groups found for the given phase." });
         }
 
-        const groupedTeams = results.reduce((acc, row) => {
-            const { team_id, user_id } = row;
-
+        // Group the results by team_id
+        const groupedTeams = results.reduce((acc, { team_id, user_id }) => {
             if (!acc[team_id]) {
                 acc[team_id] = {
                     id: team_id,
@@ -95,12 +98,17 @@ router.get("/phases/:id/groups", async (req, res) => {
             return acc;
         }, {});
 
+        // Convert the grouped object to an array
         const responseArray = Object.values(groupedTeams);
+
+        // Log successful response
+        console.info(`Successfully retrieved ${responseArray.length} groups for phase_id: ${id}.`);
 
         res.status(200).json({ groups: responseArray });
     } catch (err) {
-        console.error("Error fetching groups:", err);
-        res.status(500).json({ error: "Internal server error" });
+        // Log error with context
+        console.error(`Error fetching groups for phase_id: ${id}`, err);
+        res.status(500).json({ error: "Internal server error." });
     }
 });
 

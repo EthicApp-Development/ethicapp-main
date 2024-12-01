@@ -273,6 +273,7 @@
 	"activity_information_tab_title": "Información",
 	"activity_users_tab_title": "Usuarios",	
 	"connected_users_colon": "Usuarios conectados:",
+	"phase_title_text": "Fase",
 	"activity_phases_title": "Fases de la Actividad",
 	"start_next_phase_button" : "Iniciar fase siguiente",
 	"end_activity_button": "Finalizar actividad",

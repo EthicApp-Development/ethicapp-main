@@ -2,25 +2,18 @@ let phaseStateDirective = function() {
     return {
         restrict: 'E',
         scope: {
-            phaseConfig: '<', 
-            users: '<',       
-            responses: '<'    
+            designType: '<',
+            phaseData: '<'
         },
         template: `
             <div>
-                <h5>{{ phaseConfig.name | translate }}</h5>
-                <div ng-if="!phaseConfig.isGroup">
-                    <individual-phase-table
-                        phase-config="phaseConfig"
-                        users="users"
-                        responses="responses">
+                <h5>{{ "phase_title_text" | translate }} {{ phaseData.descriptor.number }}</h5>
+                <div ng-if="phaseData.descriptor.mode == 'team'">
+                    <individual-phase-table phase-data="phaseData" design-type="designType">
                     </individual-phase-table>
                 </div>
-                <div ng-if="phaseConfig.isGroup">
-                    <group-phase-table
-                        phase-config="phaseConfig"
-                        users="users"
-                        responses="responses">
+                <div ng-if="phaseObj.descriptor.mode == 'team'">
+                    <group-phase-table phase-data="phaseData" design-type="designType">
                     </group-phase-table>
                 </div>
             </div>

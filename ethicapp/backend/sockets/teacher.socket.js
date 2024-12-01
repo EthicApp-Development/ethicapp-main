@@ -36,26 +36,25 @@ const toTeacherNotifications = (socketNamespace) => {
             socketNamespace.to(`session-${sessionId}`).
                 emit("onStudentJoined", { 
                     id: userId,
-                    name: name,
-                    device: device
+                    name,
+                    device
                 });
         },
 
-        responseSubmitted: (sessionId, phaseId, repsonseObj) => {
+        responseSubmitted: (sessionId, phaseId, responseObj) => {
             socketNamespace.to(`session-${sessionId}`).
                 emit("onResponseSubmitted", { 
-                    phaseId: phaseId,
-                    responseObj: responseObj
+                    ...responseObj,
+                    phaseId             
                 });
         },
 
         chatMessage: (sessionId, phaseId, questionId, groupId, message) => {
-
             socketNamespace.to(`session-${sessionId}`).emit("onChatMessage", { 
-                    phaseId: phaseId,
-                    questionId: questionId,
-                    groupId: groupId, 
-                    message: message
+                    phaseId,
+                    questionId,
+                    groupId, 
+                    message
                 });
         }
     };

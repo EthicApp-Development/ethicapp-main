@@ -1,6 +1,7 @@
 let phaseDescriptionComponent = {
     bindings: {
-        phase: '<',
+        phaseData: '<',
+        designType: '<'
     },
     // TODO: Choose the template depending on the phase type
     template: `

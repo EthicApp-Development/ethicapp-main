@@ -24,22 +24,22 @@ const toStudentsNotifications = (socketNamespace) => {
     return {
         phaseTransition: (sessionId, phaseId) => {
             socketNamespace.to(`session-${sessionId}`).
-                emit("onPhaseTransition", { phaseId: phaseId });
+                emit("onPhaseTransition", { phaseId });
         },
 
         chatMessage: (sessionId, groupId, messages) => {
             socketNamespace.to(`group-${sessionId}-${groupId}`).
-                emit("onChatMessage", { messages: messages });            
+                emit("onChatMessage", { messages });            
         },
 
         shareResponse: (sessionId, content) => {
             socketNamespace.to(`session-${sessionId}`).emit("onShareResponse", 
-                { content: content });
+                { content });
         },
 
         endSession:  (sessionId, content) => {
             socketNamespace.to(`session-${sessionId}`).emit("onEndSession", 
-                { content: content });
+                { content });
         }
     };
 };

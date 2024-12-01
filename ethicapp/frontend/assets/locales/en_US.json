@@ -224,6 +224,7 @@
 	"activity_information_tab_title": "Information",
 	"activity_users_tab_title": "Users",
 	"connected_users_colon": "Connected users:",
+	"phase_title_text": "Phase",
 	"activity_phases_title": "Activity Phases",
 	"start_next_phase_button" : "Start next phase",
 	"end_activity_button": "End activity",

@@ -1,9 +1,9 @@
-let sdGroupPhaseTableDirective = function() {
+let groupPhaseTableDirective = function() {
     return {
         restrict: 'E',
         scope: {
-            questions: '<',
-            responses: '<'
+            phaseData: '<',
+            designType: '<'
         },
         // TODO: Refactoring, so that the appropriate template is chosen depending on the
         // type of activity
@@ -51,4 +51,4 @@ let sdGroupPhaseTableDirective = function() {
     };
 };
 
-export { sdGroupPhaseTableDirective };
+export { groupPhaseTableDirective };

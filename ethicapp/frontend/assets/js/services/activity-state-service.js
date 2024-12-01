@@ -6,6 +6,8 @@ let ActivityStateService = ($http, SocketService) => {
 
         loadActivityState: async function(sessionId) {
             try {
+                service.activityStates[sessionId] = { };
+
                 // list of connected users
                 await service.getSessionUsers(sessionId, true);
 
@@ -18,14 +20,7 @@ let ActivityStateService = ($http, SocketService) => {
 
                 // load activity responses
                 await service.getResponses(sessionId, true);
-                
-                service.activityStates[sessionId] = { 
-                    users: users.users, 
-                    descriptor: descriptor,
-                    phases: phaseInstances.phases,
-                    responses: responses
-                };
-
+        
                 return service.activityStates[sessionId];
             }
             catch (error) {
@@ -85,7 +80,7 @@ let ActivityStateService = ($http, SocketService) => {
                     next: async (data) => {
                         console.debug(`Response submitted for session ${sessionId}:`, 
                             JSON.stringify(data));
-                        
+                
                         const handler = responseMergeHandlers[data.type];
                         
                         if (!handler) {
@@ -93,15 +88,15 @@ let ActivityStateService = ($http, SocketService) => {
                             console.error(msg);
                             throw new Error(msg);                           
                         }
-
+                
                         handler(data, service.activityStates[sessionId].responses);
-
-                        // Notify listeners
+                
                         service.notifyListeners("onResponseSubmitted", { 
-                            response: data });
+                            response: data
+                        });
                     },
                     error: (err) => console.error(`Websocket error for responseSubmitted in session ${sessionId}:`, err),
-                })
+                })                
             );
         
             // Subscribe to `onChatMessage`
@@ -112,7 +107,7 @@ let ActivityStateService = ($http, SocketService) => {
 
                         // Notify listeners
                         service.notifyListeners("onChatMessage", { 
-                            response: data, stats: stats });                        
+                            messages: data.messages });                        
                     },
                     error: (err) => console.error(`Websocket error for phaseChanged in session ${sessionId}:`, err),
                 })
@@ -135,18 +130,23 @@ let ActivityStateService = ($http, SocketService) => {
             if (!(sessionId in service.activityStates)) {
                 throw new Error(`Activity state not found for session with id '${sessionId}'`);
             }
-
+        
             if (refresh) {
                 try {
-                    const users = await $http.get('/sessions/' + sessionId + '/users');
-                    service.activityStates[sessionId].users = users;
-                }
-                catch (error) {
-                    console.error(`Failed to get users in session ${sessionId}.`);
-                    throw new Error(error);
+                    const response = await $http.get(`/sessions/${sessionId}/users`);
+                    
+                    if (response?.data?.users && Array.isArray(response.data.users)) {
+                        service.activityStates[sessionId].users = response.data.users;
+                    } else {
+                        console.warn("Unexpected response format:", response);
+                        throw new Error("Invalid response format received from server.");
+                    }
+                } catch (error) {
+                    console.error(`Failed to refresh users in session ${sessionId}:`, error);
+                    throw new Error(`Error fetching users for session ${sessionId}: ${error.message}`);
                 }
             }
-
+        
             return service.activityStates[sessionId].users;
         },
 
@@ -154,18 +154,24 @@ let ActivityStateService = ($http, SocketService) => {
             if (!(sessionId in service.activityStates)) {
                 throw new Error(`Activity descriptor not found for session with id '${sessionId}'`);
             }
-
+        
             if (refresh) {
                 try {
-                    const descriptor = await $http.get('/activities/' + sessionId + '/descriptor');
-                    service.activityStates[sessionId].descriptor = descriptor;
-                }
-                catch (error) {
-                    console.error(`Failed to get the activity descriptor for session ${sessionId}.`);
-                    throw new Error(error);
+                    const response = await $http.get(`/activities/${sessionId}/descriptor`);
+                    
+                    // Validar el formato de la respuesta
+                    if (response?.data?.descriptor) {
+                        service.activityStates[sessionId].descriptor = response.data.descriptor;
+                    } else {
+                        console.warn("Unexpected response format:", response);
+                        throw new Error("Invalid response format received from server.");
+                    }
+                } catch (error) {
+                    console.error(`Failed to refresh the activity descriptor for session ${sessionId}:`, error);
+                    throw new Error(`Error fetching activity descriptor for session ${sessionId}: ${error.message}`);
                 }
             }
-
+        
             return service.activityStates[sessionId].descriptor;
         },
 
@@ -173,18 +179,23 @@ let ActivityStateService = ($http, SocketService) => {
             if (!(sessionId in service.activityStates)) {
                 throw new Error(`Responses not found for activity in session with id '${sessionId}'`);
             }
-
+        
             if (refresh) {
                 try {
-                    const responses = await $http.get('/activities/' + sessionId + '/responses');
-                    service.activityStates[sessionId].responses = responses;
-                }
-                catch (error) {
-                    console.error(`Failed to get responses for the activity in session ${sessionId}.`);
-                    throw new Error(error);
+                    const response = await $http.get(`/activities/${sessionId}/responses`);
+                    
+                    if (response?.data?.phases && Array.isArray(response.data.phases)) {
+                        service.activityStates[sessionId].responses = response.data.phases;
+                    } else {
+                        console.warn("Unexpected response format:", response);
+                        throw new Error("Invalid response format received from server.");
+                    }
+                } catch (error) {
+                    console.error(`Failed to refresh responses for session ${sessionId}:`, error);
+                    throw new Error(`Error fetching responses for session ${sessionId}: ${error.message}`);
                 }
             }
-
+        
             return service.activityStates[sessionId].responses;
         },
 
@@ -192,18 +203,24 @@ let ActivityStateService = ($http, SocketService) => {
             if (!(sessionId in service.activityStates)) {
                 throw new Error(`Phase instances not found for activity in session with id '${sessionId}'`);
             }
-
+        
             if (refresh) {
                 try {
-                    const phaseInstances = await $http.get('/activities/' + sessionId + '/phases');
-                    service.activityStates[sessionId].phases = phaseInstances;
-                }
-                catch (error) {
-                    console.error(`Failed to get phase instances for the activity in session ${sessionId}.`);
-                    throw new Error(error);
+                    const response = await $http.get(`/activities/${sessionId}/phases`);
+                    
+                    // Validate response format
+                    if (response?.data?.phases && Array.isArray(response.data.phases)) {
+                        service.activityStates[sessionId].phases = response.data.phases;
+                    } else {
+                        console.warn("Unexpected response format:", response);
+                        throw new Error("Invalid response format received from server.");
+                    }
+                } catch (error) {
+                    console.error(`Failed to refresh phase instances for session ${sessionId}:`, error);
+                    throw new Error(`Error fetching phases for session ${sessionId}: ${error.message}`);
                 }
             }
-
+        
             return service.activityStates[sessionId].phases;
         },
 
@@ -232,10 +249,17 @@ let ActivityStateService = ($http, SocketService) => {
             try {
                 // Make the HTTP GET request to the endpoint
                 const response = await $http.get(`/phases/${phaseId}/groups`);
-                return response.groups;
+        
+                // Validate the response format
+                if (response?.data?.groups && Array.isArray(response.data.groups)) {
+                    return response.data.groups; // Return the groups
+                } else {
+                    console.warn("Unexpected response format:", response);
+                    throw new Error("Invalid response format received from server.");
+                }
             } catch (error) {
                 // Log the error for debugging purposes
-                console.error(`Error fetching group configuration for phase ${phaseId}: ${error}`);
+                console.error(`Error fetching group configuration for phase ${phaseId}:`, error);
                 return []; // Return an empty array in case of an error
             }
         },
@@ -246,8 +270,8 @@ let ActivityStateService = ($http, SocketService) => {
                 const response = await $http.get(`/phases/${phaseId}/message_count`);
                 
                 // Check if the response data is valid and contains the expected "messages" field
-                if (response && response.data && Array.isArray(response.data.messages)) {
-                    return response.data.messages; // Return the list of message counts
+                if (response && response.data && Array.isArray(response.messageCount)) {
+                    return response.messageCount; // Return the list of message counts
                 } else {
                     console.warn("Unexpected response format:", response);
                     return []; // Return an empty array if the format is not as expected
@@ -260,9 +284,21 @@ let ActivityStateService = ($http, SocketService) => {
         },
 
         getPhaseStats: async function(phaseId) {
-            // Fetch statistics for the requested phase
-            const response = await $http.get(`/phases/${phaseId}/stats`);
-            return response;
+            try {
+                const response = await $http.get(`/phases/${phaseId}/stats`);
+                return response?.data;
+            } catch (error) {
+                if (error.status === 404) {
+                    console.error(`Phase stats not found for phaseId: ${phaseId}`);
+                    throw new Error("Phase stats not found.");
+                } else if (error.status === 400) {
+                    console.error(`Bad request for phaseId: ${phaseId}`);
+                    throw new Error("Invalid request for phase stats.");
+                } else {
+                    console.error("Unexpected error fetching phase stats:", error);
+                    throw new Error("An unexpected error occurred.");
+                }
+            }
         },
 
         getChatMessages: async function(groupId, questionId) {

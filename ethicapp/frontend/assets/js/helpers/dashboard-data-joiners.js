@@ -1,134 +1,149 @@
 import Enumerable from 'linq';
 
-export const phaseDataJoiners = {
-    semantic_differential: sdPhaseDataJoiner,
-    ranking: rankingPhaseDataJoiner
+export const DashboardDataJoiners = {
+    semantic_differential: {
+        joinPhaseData: (phaseDescriptor, responses, users, chatMessageCount, phaseState = null) => {
+            sdPhaseDataJoiner(phaseDescriptor, responses, users, chatMessageCount, phaseState)
+        },
+        addGroupInfo: (phaseState, groups) => {
+            addParticipantGroupInfo(phaseData, groups);
+        },
+        updateGroupStatistics: (phaseState) => {
+            updateGroupStatistics(phaseState);
+        },
+    },
+    ranking: {
+        joinPhaseData: (phaseDescriptor, responses, users, chatMessageCount, phaseState) => {
+            rankingPhaseDataJoiner(phaseDescriptor, responses, users, chatMessageCount, phaseState);
+        },
+        addGroupInfo: (phaseState, groups) => {
+            addParticipantGroupInfo(phaseData, groups);
+        },
+        updateGroupStatistics: (phaseState) => {
+            updateGroupStatistics(phaseState);
+        },
+        assignRankingClusters: (phaseState) => {
+            assignRankingClusters(phaseState);
+        },
+    },
 };
 
 let sdPhaseDataJoiner = (phaseDescriptor, responses, users, 
-    chatMessageStats, phaseId, existingData = null) => {
-    // Find the phase descriptor matching the given phaseId
-    const phase = Enumerable.from(phaseDescriptor)
-        .firstOrDefault(p => p.id === phaseId);
+    chatMessageStats, existingData = null) => {
 
-    if (!phase) return [];
+    // Extract phase details
+    const phaseNumber = phaseDescriptor.number;
+    const questions = phaseDescriptor.questions;
 
-    // Find the corresponding phase in the new responses format
-    const phaseNumber = phase.number;
-    const phaseResponses = Enumerable.from(responses.phases)
-        .firstOrDefault(p => p.phase_number === phaseNumber)?.responses || [];
+    // Extract the responses for the current phase
+    const phaseResponses = responses.find(p => p.phase_number === phaseNumber)?.responses || [];
 
-    // If no existingData is provided, build the structure from scratch
-    if (!existingData) {
-        const relevantUsers = Enumerable.from(users)
-            .where(u => u.role === 'A') // Filter users with role 'A'
-            .toArray();
+    // Filter relevant users (only those with role 'A')
+    const relevantUsers = users.filter(u => u.role === 'A');
 
-        const relevantChats = Enumerable.from(chatMessageStats)
-            .where(chat => phaseResponses.some(r => r.did === chat.did)) // Match relevant chats to responses
-            .toArray();
+    // Match relevant chat statistics
+    const relevantChats = chatMessageStats;
 
-        // Create a map of users indexed by their uid
-        const usersMap = relevantUsers.reduce((acc, user) => {
-            acc[user.id] = {
-                userId: user.id,
-                userName: user.name
-            };
-            return acc;
-        }, {});
+    // Initialize a map of users indexed by their user ID
+    const usersMap = relevantUsers.reduce((acc, user) => {
+        acc[user.id] = {
+            userId: user.id,
+            userName: user.name
+        };
+        return acc;
+    }, {});
 
-        // Consolidate responses and chat statistics for each user
-        phase.questions.forEach(question => {
-            const questionNumber = question.number;
+    // Ensure all questions have default values for all users
+    questions.forEach(question => {
+        const questionNumber = question.number;
 
-            // Ensure default chat count (chatRN) for all users
-            Object.values(usersMap).forEach(user => {
-                user[`chatR${questionNumber}`] = 0; // Default value for chat count
-            });
-
-            // Assign responses (e.g., r1, r2) to the corresponding user
-            phaseResponses
-                .filter(response => response.did === question.id)
-                .forEach(response => {
-                    const user = usersMap[response.uid];
-                    if (user) {
-                        user[`r${questionNumber}`] = response.sel; // Set response value
-                    }
-                });
-
-            // Assign chat statistics (e.g., chatR1, chatR2) to the corresponding user
-            relevantChats
-                .filter(chat => chat.did === question.id)
-                .forEach(chat => {
-                    const user = usersMap[chat.uid];
-                    if (user) {
-                        user[`chatR${questionNumber}`] = chat.messageCount; // Update chat count
-                    }
-                });
+        // Initialize default values for responses and chat counts
+        Object.values(usersMap).forEach(user => {
+            user[`r${questionNumber}`] = null; // Default value for responses
+            user[`chatR${questionNumber}`] = null; // Default value for chat counts
         });
 
+        // Assign response values (e.g., r1, r2) to corresponding users
+        phaseResponses
+            .filter(response => response.did === question.id)
+            .forEach(response => {
+                const user = usersMap[response.uid];
+                if (user) {
+                    user[`r${questionNumber}`] = response.sel; // Assign response value
+                }
+            });
+
+        // Assign chat statistics (e.g., chatR1, chatR2) to corresponding users
+        relevantChats
+            .filter(chat => chat.did === question.id)
+            .forEach(chat => {
+                const user = usersMap[chat.uid];
+                if (user) {
+                    user[`chatR${questionNumber}`] = chat.messageCount; // Assign chat count
+                }
+            });
+    });
+
+    // If no existingData is provided, return the newly created data structure
+    if (!existingData) {
         return Object.values(usersMap);
     }
 
-    // If existingData is provided, update it with the new responses
-    const existingDataMap = Enumerable.from(existingData)
-        .toDictionary(user => user.userId); // Create a dictionary for quick access by userId
+    // If existingData is provided, update it with the new responses and chats
+    const existingDataMap = existingData.reduce((acc, user) => {
+        acc[user.userId] = user;
+        return acc;
+    }, {});
 
-    // Update only the relevant properties based on new responses
-    phaseResponses.forEach(response => {
-        const user = existingDataMap.get(response.uid);
-        if (user) {
-            // Update the specific response property
-            const question = phase.questions.find(q => q.id === response.did);
-            if (question) {
-                const questionNumber = question.number;
-                user[`r${questionNumber}`] = response.sel; // Update response value
-            }
+    // Merge existing data with new data
+    Object.values(usersMap).forEach(user => {
+        if (!existingDataMap[user.userId]) {
+            existingDataMap[user.userId] = user; // Add new users
+        } else {
+            // Update existing users
+            Object.assign(existingDataMap[user.userId], user);
         }
     });
 
-    return existingData;
+    // Convert the updated map back to an array
+    return Object.values(existingDataMap);
 };
 
-export let rankingPhaseDataJoiner = (phaseDescriptor, responses, users, 
-    chatMessageStats, phaseId, existingData = null) => {
-    // Find the phase descriptor matching the given phaseId
-    const phase = Enumerable.from(phaseDescriptor)
-        .firstOrDefault(p => p.id === phaseId);
+let rankingPhaseDataJoiner = (phaseDescriptor, responses, users, 
+    chatMessageStats, existingData = null) => {
 
-    if (!phase) return [];
+    // Extract phase details from phaseDescriptor
+    const phaseNumber = phaseDescriptor.number;
+    const questions = phaseDescriptor.questions;
 
-    // Find the corresponding phase in the new responses format
-    const phaseNumber = phase.number;
-    const phaseResponses = Enumerable.from(responses.phases)
-        .firstOrDefault(p => p.phase_number === phaseNumber)?.responses || [];
+    // Extract the responses for the current phase
+    const phaseResponses = responses.find(p => p.phase_number === phaseNumber)?.responses || [];
+
+    // Filter relevant users (only those with role 'A')
+    const relevantUsers = users.filter(u => u.role === 'A');
+
+    // Extract relevant chat statistics
+    const relevantChats = chatMessageStats;
+
+    // Initialize a map of users indexed by their user ID
+    const usersMap = relevantUsers.reduce((acc, user) => {
+        acc[user.id] = {
+            uid: user.id,
+            userName: user.name,
+            chatCount: 0 // Default chat count
+        };
+        return acc;
+    }, {});
 
     // If no existingData is provided, build the structure from scratch
     if (!existingData) {
-        const relevantUsers = Enumerable.from(users)
-            .where(u => u.role === 'A') // Filter users with role 'A'
-            .toArray();
-
-        const relevantChats = Enumerable.from(chatMessageStats)
-            .toArray();
-
-        // Create a map of users indexed by their uid
-        const usersMap = relevantUsers.reduce((acc, user) => {
-            acc[user.id] = {
-                uid: user.id,
-                userName: user.name,
-                chatCount: 0 // Default chat count
-            };
-            return acc;
-        }, {});
-
-        // Consolidate rankings and chat statistics for each user
+        // Assign responses and chat statistics for each user
         phaseResponses.forEach(response => {
             const user = usersMap[response.uid];
             if (user) {
                 // Assign the ranked item description and actor ID to the respective order
-                user[`r${response.orden}`] = response.description;
-                user[`idR${response.orden}`] = response.actorid;
+                user[`r${response.orden}`] = response.description || null;
+                user[`idR${response.orden}`] = response.actorid || null;
             }
         });
 
@@ -140,35 +155,60 @@ export let rankingPhaseDataJoiner = (phaseDescriptor, responses, users,
             }
         });
 
+        // Ensure all users have default values for ranking slots
+        questions.forEach((_, index) => {
+            const rankNumber = index + 1;
+            Object.values(usersMap).forEach(user => {
+                user[`r${rankNumber}`] = user[`r${rankNumber}`] || null;
+                user[`idR${rankNumber}`] = user[`idR${rankNumber}`] || null;
+            });
+        });
+
         return Object.values(usersMap);
     }
 
     // If existingData is provided, update it with the new responses
-    const existingDataMap = Enumerable.from(existingData)
-        .toDictionary(user => user.uid); // Create a dictionary for quick access by uid
+    const existingDataMap = existingData.reduce((acc, user) => {
+        acc[user.uid] = user;
+        return acc;
+    }, {});
 
-    // Update only the relevant properties based on new responses
-    phaseResponses.forEach(response => {
-        const user = existingDataMap.get(response.uid);
-        if (user) {
-            // Update the ranked item description and actor ID for the respective order
-            user[`r${response.orden}`] = response.description;
-            user[`idR${response.orden}`] = response.actorid;
+    // Merge existing data with new responses
+    Object.values(usersMap).forEach(user => {
+        if (!existingDataMap[user.uid]) {
+            existingDataMap[user.uid] = user; // Add new users
+        } else {
+            const existingUser = existingDataMap[user.uid];
+            // Update ranked items and actor IDs
+            phaseResponses
+                .filter(response => response.uid === user.uid)
+                .forEach(response => {
+                    existingUser[`r${response.orden}`] = response.description || null;
+                    existingUser[`idR${response.orden}`] = response.actorid || null;
+                });
+
+            // Update chat counts
+            relevantChats
+                .filter(chat => chat.uid === user.uid)
+                .forEach(chat => {
+                    existingUser.chatCount += chat.messageCount || 0;
+                });
         }
     });
 
-    // Update chat counts
-    relevantChats.forEach(chat => {
-        const user = existingDataMap.get(chat.uid);
-        if (user) {
-            user.chatCount += chat.messageCount || 0;
-        }
+    // Ensure all users in existingData have default values for ranking slots
+    questions.forEach((_, index) => {
+        const rankNumber = index + 1;
+        Object.values(existingDataMap).forEach(user => {
+            user[`r${rankNumber}`] = user[`r${rankNumber}`] || null;
+            user[`idR${rankNumber}`] = user[`idR${rankNumber}`] || null;
+        });
     });
 
-    return existingData;
+    return Object.values(existingDataMap); // Convert the updated map back to an array
 };
 
-export let assignRankingClusters = (rankingData) => {
+let assignRankingClusters = (rankingData) => {
     // Step 1: Regenerate concatenated sequences of idR values for each user
     rankingData.forEach(user => {
         user.rankSequence = Object.keys(user)
@@ -204,7 +244,7 @@ export let assignRankingClusters = (rankingData) => {
     return rankingData;
 };
 
-export function addParticipantGroupInfo(phaseData, groups) {
+function addParticipantGroupInfo(phaseData, groups) {
     // Step 1: Create a map of participant ID to group details
     const participantGroupMap = groups.reduce((map, group) => {
         group.participants.forEach(participantId => {
@@ -235,7 +275,7 @@ export function addParticipantGroupInfo(phaseData, groups) {
     });
 }
 
-export let updateGroupStatistics = function(data, translate) {
+let updateGroupStatistics = function(data, translate) {
     // Step 0: Filter out existing group summary objects
     const filteredData = data.filter(user => !user.groupStatistics);
 

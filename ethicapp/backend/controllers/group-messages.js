@@ -56,8 +56,9 @@ const chatInsertHandlers = {
 router.get("/phases/:id/message_count", async (req, res) => {
     const { id } = req.params;
 
-    if (!id) {
-        return res.status(400).json({ error: "Missing required parameter: id." });
+    // Validar que `id` sea un número
+    if (!id || isNaN(Number(id))) {
+        return res.status(400).json({ error: "Invalid or missing required parameter: id." });
     }
 
     try {
@@ -73,14 +74,17 @@ router.get("/phases/:id/message_count", async (req, res) => {
         // Execute the handler to fetch message counts
         const results = await handler(id);
 
-        if (results.length === 0) {
+        if (!results || results.length === 0) {
             return res.status(404).json({ error: "No messages found for the given phase." });
         }
 
-        res.status(200).json({ messages: results });
+        // Log success and return the results
+        console.info(`Successfully retrieved ${results.length} message(s) for phase ${id}.`);
+        res.status(200).json({ messageCount: results });
     } catch (err) {
-        console.error("Error fetching message counts:", err);
-        res.status(500).json({ error: "Internal server error" });
+        // Log error with detailed context
+        console.error(`Error fetching message counts for phase ${id}:`, err);
+        res.status(500).json({ error: "An internal server error occurred." });
     }
 });
 
