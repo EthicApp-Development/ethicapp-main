@@ -1,4 +1,4 @@
-export default sdPhaseDescriptionTemplate = `
+const sdPhaseDescriptionTemplate = `
     <div>
     <h3>{{ 'phase_mode_label' | translate }}: {{ $ctrl.phaseMode | translate }}</h3>
     <div ng-if="$ctrl.phaseMode === 'team'">
@@ -46,3 +46,5 @@ export default sdPhaseDescriptionTemplate = `
         </tbody>
     </table>
 </div>`;
+
+export default sdPhaseDescriptionTemplate;

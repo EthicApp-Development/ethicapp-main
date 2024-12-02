@@ -1,9 +1,9 @@
 "use strict";
-import { DirectContentController } from "../../controllers/student/direct-content-controller.js";
-import { LinksFilter } from "../../filters/links-filter.js";
-import { LangFilter } from "../../filters/lang-filter.js";
-import { BindHTMLCompile } from "../../directives/bind-html-compile.js";
-import { RolePlayingController } from "../../controllers/student/role-playing-controller.js";
+import { DirectContentController } from "../../controllers/student/direct-content.controller.js";
+import { LinksFilter } from "../../filters/links.filter.js";
+import { LangFilter } from "../../filters/lang.filter.js";
+import { BindHTMLCompile } from "../../directives/bind-html-compile.directive.js";
+import { RolePlayingController } from "../../controllers/student/role-playing.controller.js";
 
 let BASE_APP = window.location.href.replace("role-playing", "");
 

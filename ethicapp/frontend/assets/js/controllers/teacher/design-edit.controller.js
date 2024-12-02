@@ -30,7 +30,7 @@ export function DesignEditController($scope, $routeParams,
     vm.error = false;
     vm.saved = false;
     vm.errorList = [];
-    vm.designObj = null;
+    vm.design = null;
     vm.designId = 0;
     vm.selectedOption = "";
     vm.roles = [];
@@ -53,15 +53,15 @@ export function DesignEditController($scope, $routeParams,
             await DesignStateService.setDesign(designId, designObj);
 
             // Necessary for the views...
-            vm.designObj = designObj;
+            vm.design = designObj;
 
-            // console.log(`[DesignEditorController::init] The design is as follows: ${JSON.stringify(vm.designObj)}`);
+            // console.log(`[DesignEditorController::init] The design is as follows: ${JSON.stringify(vm.design)}`);
         }
 
-        if(vm.designObj != null){
-            vm.stageType = vm.designObj.type;
-            if(vm.designObj.type == "semantic_differential") {
-                vm.num = vm.designObj.phases[0].questions[0].ans_format.values;
+        if(vm.design != null){
+            vm.stageType = vm.design.type;
+            if(vm.design.type == "semantic_differential") {
+                vm.num = vm.design.phases[0].questions[0].ans_format.values;
             }
             vm.resetValues();
             vm.cleanEmptyValues();
@@ -70,8 +70,8 @@ export function DesignEditController($scope, $routeParams,
     };
 
     vm.cleanEmptyValues = function() {
-        // console.log(`cleanEmptyValues vm.designObj: '${JSON.stringify(vm.designObj)}'`);
-        let phases = vm.designObj.phases;
+        // console.log(`cleanEmptyValues vm.design: '${JSON.stringify(vm.design)}'`);
+        let phases = vm.design.phases;
         for(let i =0; i< phases.length; i++){
             let phase = phases[i];
             if(vm.stageType == "semantic_differential"){
@@ -99,7 +99,7 @@ export function DesignEditController($scope, $routeParams,
 
     vm.createErrorList = function(){
         //[[{q:false, l:false, t:true}]]
-        let phases = vm.designObj.phases;
+        let phases = vm.design.phases;
         for(let i =0; i< phases.length; i++){
             let phase = phases[i];
             if(vm.stageType == "semantic_differential"){
@@ -147,7 +147,7 @@ export function DesignEditController($scope, $routeParams,
         else if(vm.stageType == "ranking"){
             const roles = vm.errorList[phase];
             let error = false;
-            if(vm.designObj.phases[phase].q_text == "") error = true;
+            if(vm.design.phases[phase].q_text == "") error = true;
             for(let role=0; role<roles.length; role++){
 
                 if(vm.errorList[phase][role]) error = true;
@@ -192,7 +192,7 @@ export function DesignEditController($scope, $routeParams,
     };
 
     vm.addRole = function(){
-        vm.designObj.phases[vm.currentStage].roles.push({
+        vm.design.phases[vm.currentStage].roles.push({
             name: "",
             type: "role", //order
             wc:   5
@@ -212,14 +212,14 @@ export function DesignEditController($scope, $routeParams,
     };
 
     vm.setAllRolesType = function (type) {
-        for (let i = 0; i < vm.designObj.phases[vm.currentStage].roles.length; i++) {
-            vm.designObj.phases[vm.currentStage].roles[i].type = type;
+        for (let i = 0; i < vm.design.phases[vm.currentStage].roles.length; i++) {
+            vm.design.phases[vm.currentStage].roles[i].type = type;
         }
     };
 
     vm.removeRole = function (index) {
         if (window.confirm("¿Esta seguro de eliminar este rol?")) {
-            vm.designObj.phases[vm.currentStage].roles.splice(index, 1);
+            vm.design.phases[vm.currentStage].roles.splice(index, 1);
         }
     };
 
@@ -231,10 +231,10 @@ export function DesignEditController($scope, $routeParams,
                 return vm.saved;
             }
 
-            // console.debug(`[DesignEditorController::updateDesign] designId: ${vm.designId} designObj: ${JSON.stringify(vm.designObj)}`);
+            // console.debug(`[DesignEditorController::updateDesign] designId: ${vm.designId} designObj: ${JSON.stringify(vm.design)}`);
     
             const designId = DesignStateService.getDesignId();
-            const result = await DesignCatalogService.updateDesign(designId, vm.designObj);
+            const result = await DesignCatalogService.updateDesign(designId, vm.design);
 
             if (result) {
                 vm.saved = true;
@@ -252,12 +252,12 @@ export function DesignEditController($scope, $routeParams,
         
     vm.checkDesign = function(){ 
         let error = false;
-        let phases = vm.designObj.phases;
+        let phases = vm.design.phases;
         
         for(let i = 0; i< phases.length; i++){
-            let phase = vm.designObj.phases[i];
+            let phase = vm.design.phases[i];
 
-            if(vm.designObj.metainfo.title === "") error = true;
+            if(vm.design.metainfo.title === "") error = true;
 
             if(phase.mode == "individual"){
                 phase.chat = false;
@@ -291,9 +291,9 @@ export function DesignEditController($scope, $routeParams,
         // RESET VALUES
         vm.currentStage = 0; 
         vm.currentQuestion = 0; 
-        vm.stageType = vm.designObj.type;
-        if(vm.designObj.type == "semantic_differential") {
-            vm.designObj.phases[0].questions[0].ans_format.values;
+        vm.stageType = vm.design.type;
+        if(vm.design.type == "semantic_differential") {
+            vm.design.phases[0].questions[0].ans_format.values;
         }
         vm.busy = false; 
         vm.extraOpts = false;
@@ -319,12 +319,12 @@ export function DesignEditController($scope, $routeParams,
     
     vm.selectQuestion = function(id){
         vm.currentQuestion = id; 
-        vm.num = vm.designObj.phases[vm.currentStage].questions[vm.currentQuestion].ans_format
+        vm.num = vm.design.phases[vm.currentStage].questions[vm.currentQuestion].ans_format
             .values;
     };
 
     vm.addQuestion = function(){
-        vm.designObj.phases[vm.currentStage].questions.push(
+        vm.design.phases[vm.currentStage].questions.push(
             {
                 "q_text":     "",
                 "ans_format": {
@@ -334,21 +334,21 @@ export function DesignEditController($scope, $routeParams,
                     "just_required":   true,
                     "min_just_length": 10
                 }});
-        vm.selectQuestion(vm.designObj.phases[vm.currentStage].questions.length-1); //send to new question
+        vm.selectQuestion(vm.design.phases[vm.currentStage].questions.length-1); //send to new question
         vm.errorList[vm.currentStage].push({q: true,l: true,r: true});
     };
 
     vm.deleteQuestion = function(index){
         if (
             (vm.currentQuestion != null) &&
-            (vm.designObj.phases[vm.currentStage].questions.length != 1)
+            (vm.design.phases[vm.currentStage].questions.length != 1)
         ){
             //change question index
             if(index == 0) vm.currentQuestion = 0;
             // else if (index < vm.design.phases[vm.currentStage].questions.length-1)
             //     vm.currentQuestion = vm.currentQuestion; //! vm-assign makes no sense
             else vm.currentQuestion = vm.currentQuestion -1;
-            vm.designObj.phases[vm.currentStage].questions.splice(index, 1);
+            vm.design.phases[vm.currentStage].questions.splice(index, 1);
             vm.errorList[vm.currentStage].splice(index, 1);
             vm.selectQuestion(vm.currentQuestion);
         }
@@ -357,10 +357,10 @@ export function DesignEditController($scope, $routeParams,
     vm.selectStage = function(id){
         if(vm.currentStage != id){
             vm.currentStage = id;
-            vm.stageType = vm.designObj.type;
+            vm.stageType = vm.design.type;
             vm.currentQuestion = 0; //reset question index
             if(vm.stageType == "semantic_differential"){  
-                vm.num = vm.designObj.phases[vm.currentStage].questions[vm.currentQuestion]
+                vm.num = vm.design.phases[vm.currentStage].questions[vm.currentQuestion]
                     .ans_format.values;
             }
         }
@@ -377,9 +377,9 @@ export function DesignEditController($scope, $routeParams,
     };
 
     vm.deleteStage = function(){
-        if(vm.currentStage != null && vm.designObj.phases.length != 1){
+        if(vm.currentStage != null && vm.design.phases.length != 1){
             let index = vm.currentStage;
-            vm.designObj.phases.splice(index, 1);
+            vm.design.phases.splice(index, 1);
             vm.currentQuestion = 0; //reset question index
             vm.num = null;
             vm.currentStage = null;
@@ -439,17 +439,17 @@ export function DesignEditController($scope, $routeParams,
     };
 
     vm.addStage = function(){
-        const index = vm.designObj.phases.length -1;
-        const prev_phase = vm.designObj.phases[index];
-        vm.designObj.phases.push(vm.copyPrevStage(vm.stageType, prev_phase));
+        const index = vm.design.phases.length -1;
+        const prev_phase = vm.design.phases[index];
+        vm.design.phases.push(vm.copyPrevStage(vm.stageType, prev_phase));
         vm.errorList.push(JSON.parse(JSON.stringify(vm.errorList[index])));
     };
 
     vm.getStages = function() {
-        if (vm.designObj == null) {
+        if (vm.design == null) {
             return [];
         }    
-        return vm.designObj.phases;
+        return vm.design.phases;
     };
 
     vm.amountOptions = function(type) {
@@ -464,7 +464,7 @@ export function DesignEditController($scope, $routeParams,
         else{
             vm.num = vm.num > 2 ? vm.num - 1 : 2;
         }
-        vm.designObj.phases[vm.currentStage].questions[vm.currentQuestion].ans_format
+        vm.design.phases[vm.currentStage].questions[vm.currentQuestion].ans_format
             .values = vm.num;
     };
 

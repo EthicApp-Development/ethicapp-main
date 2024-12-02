@@ -1,4 +1,4 @@
-import { groupResultsTables } from "./templates/dashboard-views/dashboard-views-registry.js";
+import { groupResultsTables } from "./templates/dashboard/dashboard-views.registry.js";
 
 let groupPhaseTableDirective = function() {
     return {

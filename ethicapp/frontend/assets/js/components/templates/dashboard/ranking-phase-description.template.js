@@ -1,4 +1,4 @@
-export default rankingPhaseDescriptionTemplate = `
+const rankingPhaseDescriptionTemplate = `
     <div>
         <h3>{{ 'phase_mode_label' | translate }}: {{ $ctrl.phaseMode | translate }}</h3>
         <div ng-if="$ctrl.phaseMode === 'team'">
@@ -40,3 +40,5 @@ export default rankingPhaseDescriptionTemplate = `
             </tbody>
         </table>
     </div>`;
+
+export default rankingPhaseDescriptionTemplate;

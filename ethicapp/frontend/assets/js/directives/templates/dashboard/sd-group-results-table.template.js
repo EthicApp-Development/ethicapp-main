@@ -1,4 +1,4 @@
-export default sdGroupResultsTable = `
+const sdGroupResultsTable = `
     <table class="table table-striped">
         <thead>
             <tr>
@@ -71,3 +71,5 @@ export default sdGroupResultsTable = `
             </tr>
         </tfoot>
     </table>`;
+
+export default sdGroupResultsTable;

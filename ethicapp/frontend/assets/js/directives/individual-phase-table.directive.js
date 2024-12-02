@@ -1,4 +1,4 @@
-import { individualResultsTables } from "./templates/dashboard-views/dashboard-views-registry.js";
+import { individualResultsTables } from "./templates/dashboard/dashboard-views.registry.js";
 
 let individualPhaseTableDirective = function() {
     return {

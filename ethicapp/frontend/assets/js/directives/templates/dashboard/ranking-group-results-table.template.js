@@ -1,4 +1,4 @@
-export default rankingGroupResultsTable = `
+const rankingGroupResultsTable = `
     <table class="table table-striped table-sortable">
         <thead>
             <tr>
@@ -34,3 +34,5 @@ export default rankingGroupResultsTable = `
         </tbody>
     </table>
 `;
+
+export default rankingGroupResultsTable;

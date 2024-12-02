@@ -1,4 +1,4 @@
-import phaseDescriptionTemplatesRegistry from "./templates/phase-description-templates-registry.js";
+import phaseDescriptionTemplatesRegistry from "./templates/dashboard/phase-description-templates.registry.js";
 
 let phaseDescriptionComponent = {
     bindings: {

@@ -1,4 +1,4 @@
-export default sdIndividualResultsTable = `
+const sdIndividualResultsTable = `
     <table class="table table-striped">
         <thead>
             <tr>
@@ -14,7 +14,7 @@ export default sdIndividualResultsTable = `
                 <td>{{ response.userName }}</td>
                 <td ng-repeat="question in phaseData.descriptor.questions">
                     {{ response['r' + question.number] || ('no_response' | translate) }}
-                    <!-- Checkmark con FontAwesome -->
+                    <!-- Checkmark with FontAwesome -->
                     <i ng-if="response['commentR' + question.number] && response['commentR' + question.number].length > 0"
                     class="fas fa-sticky-note"
                     aria-hidden="true"></i>
@@ -26,9 +26,15 @@ export default sdIndividualResultsTable = `
                 <td colspan="{{ phaseData.descriptor.questions.length + 1 }}">
                     <div class="summary-text">
                         <strong>{{ 'participants_label' | translate }}:</strong> {{ phaseData.state.responses.length }} <br>
-                        <strong>A:</strong> {{ 'average_label' | translate }}. <strong>CV:</strong> {{ 'coefficient_of_variation_label' | translate }}. <i class="fa fa-comments"></i> {{ 'chat_messages_label' | translate }}. <span class="class="text-danger">*</span> {'justification_required_caption' | translate }.
+                        <strong>A:</strong> {{ 'average_label' | translate }}. 
+                        <strong>CV:</strong> {{ 'coefficient_of_variation_label' | translate }}. 
+                        <i class="fa fa-comments"></i> {{ 'chat_messages_label' | translate }}. 
+                        <span class="text-danger">*</span> {{ 'justification_required_caption' | translate }}.
                     </div>
                 </td>
             </tr>
         </tfoot>
-    </table>`;
+    </table>
+`;
+
+export default sdIndividualResultsTable;

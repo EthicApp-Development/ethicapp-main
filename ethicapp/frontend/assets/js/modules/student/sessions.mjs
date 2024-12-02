@@ -1,8 +1,8 @@
 "use strict";
 
-import { LocalesController } from "../../controllers/common/locales_controller.js";
-import { SessionsListController } from "../../controllers/student/sessions-list-controller.js";
-import { LangFilter } from "../../filters/lang-filter.js";
+import { LocalesController } from "../../controllers/common/locales.controller.js";
+import { SessionsListController } from "../../controllers/student/sessions-list.controller.js";
+import { LangFilter } from "../../filters/lang.filter.js";
 
 let adpp = angular.module("SessionsList", 
     ["ui.bootstrap", "btford.socket-io", "angular-intro", "pascalprecht.translate"]);

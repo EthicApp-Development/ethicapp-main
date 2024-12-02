@@ -1,9 +1,9 @@
 "use strict";
-import { EthicsController } from "../../controllers/student/ethics-controller.js";
-import { DirectContentController } from "../../controllers/student/direct-content-controller.js";
-import { LinksFilter } from "../../filters/links-filter.js";
-import { LangFilter } from "../../filters/lang-filter.js";
-import { BindHTMLCompile } from "../../directives/bind-html-compile.js";
+import { EthicsController } from "../../controllers/student/ethics.controller.js";
+import { DirectContentController } from "../../controllers/student/direct-content.controller.js";
+import { LinksFilter } from "../../filters/links.filter.js";
+import { LangFilter } from "../../filters/lang.filter.js";
+import { BindHTMLCompile } from "../../directives/bind-html-compile.directive.js";
 
 let BASE_APP = window.location.href.replace("ethics", "");
 

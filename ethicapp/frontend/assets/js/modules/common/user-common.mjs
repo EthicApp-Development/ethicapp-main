@@ -2,13 +2,13 @@
 
 import { MatchFieldDirective } from "../../directives/match-field.directive.js";
 import { InstitutionRequired } from "../../directives/institution-required.directive.js";
-import { LoginController } from "../../controllers/common/login_controller.js";
-import { RegistrationsController } from "../../controllers/common/registrations_controller.js";
-import { ProfileController } from "../../controllers/common/profile_controller.js";
-import { CredentialsController } from "../../controllers/common/credentials_controller.js";
-import { LocalesController } from "../../controllers/common/locales_controller.js";
-import { ErrorsController } from "../../controllers/common/errors_controller.js";
-import { VoidController } from "../../controllers/common/void_controller.js";
+import { LoginController } from "../../controllers/common/login.controller.js";
+import { RegistrationsController } from "../../controllers/common/registrations.controller.js";
+import { ProfileController } from "../../controllers/common/profile.controller.js";
+import { CredentialsController } from "../../controllers/common/credentials.controller.js";
+import { LocalesController } from "../../controllers/common/locales.controller.js";
+import { ErrorsController } from "../../controllers/common/errors.controller.js";
+import { VoidController } from "../../controllers/common/void.controller.js";
 
 let ngapp_user_common = angular.module("UserCommon", 
     ["ui.bootstrap", "ngRoute", "pascalprecht.translate"]);

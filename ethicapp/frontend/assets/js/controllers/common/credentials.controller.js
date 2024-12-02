@@ -1,4 +1,4 @@
-import { getRecaptchaResponse } from "./recaptcha_api.js";
+import { getRecaptchaResponse } from "./recaptcha-api.js";
 
 export let CredentialsController = ($scope, $http, $window) => {
     let self = $scope;
