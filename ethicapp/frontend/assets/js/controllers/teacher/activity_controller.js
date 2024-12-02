@@ -58,7 +58,10 @@ export function ActivityController($scope, $filter, $http, Notification, $timeou
             await vm.generateAccessCode(sessionId);
 
             // Bootstrap the activity design in the activity session.
-            await vm.startActivityDesign(designObj, sessionId);            
+            // UPDATE: we won't bootstrap the activity. We will let the
+            // user decide whether they want to first wait for participants
+            // to join.
+            // await vm.startActivityDesign(designObj, sessionId);            
 
             // Switch to the page of the activity
             $scope.navigateTo(`/activities/${sessionId}`);

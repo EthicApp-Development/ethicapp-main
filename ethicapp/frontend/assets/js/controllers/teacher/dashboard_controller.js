@@ -63,63 +63,80 @@ export function DashboardController($scope, $routeParams, $http,
         });
     };
 
-    vm.startNextPhase = async function() {
+    vm.startNextPhase = async function () {
         try {
-            const currentPhase = vm.activityDescriptor.currentPhase.number;
-
-            if (currentPhase == vm.designObj.phases.length) {
-                console.error("Cannot advance any further, reached the last phase already");
+            // Check if there are existing phases
+            let currentPhaseNumber = vm.activityDescriptor.currentPhase
+                ? vm.activityDescriptor.currentPhase.number
+                : null;
+    
+            // Determine if we need to create the first phase
+            if (currentPhaseNumber === null) {
+                console.info("No phases found. Creating the first phase with number 1.");
+                currentPhaseNumber = 0; // Start with 0 so we can increment to 1 below
+            }
+    
+            // Check if we've already reached the last phase
+            if (currentPhaseNumber === vm.designObj.phases.length) {
+                console.error("Cannot advance any further, reached the last phase already.");
                 return;
             }
-
-            const nextPhaseIndex = currentPhase.number;
-            const nextPhaseNumber = currentPhase.number + 1;
-            const phase = design.phases[nextPhaseIndex];
+    
+            const nextPhaseIndex = currentPhaseNumber;
+            const nextPhaseNumber = currentPhaseNumber + 1;
+            const phase = vm.designObj.phases[nextPhaseIndex];
+    
+            // Create the next phase
             const requestObj = PhaseCreationHelpers.phaseCreationRequestObject(
-                phase, nextPhaseNumber, vm.sessionId);
-
+                phase,
+                nextPhaseNumber,
+                vm.sessionId
+            );
+    
             const stageResponse = await $http({
                 url: `/activities/${vm.sessionId}/phases`,
                 method: "post",
                 data: requestObj,
             });
-            
+    
             const phaseId = stageResponse.data.id;
-            
+    
             if (phaseId) {
                 // Build the phase items
-                const builder = PhaseCreationHelpers.itemBuilders[design.type];
-
+                const builder = PhaseCreationHelpers.itemBuilders[vm.designObj.type];
+    
                 if (builder) {
                     await builder(phase, phaseId, vm.sessionId);
                 } else {
-                    console.warn(`No handler found for design type: ${design.type}`);
+                    console.warn(`No handler found for design type: ${vm.designObj.type}`);
                 }
             } else {
-                console.error("Error creating activity phase");
+                console.error("Error creating activity phase.");
+                return;
             }
-
-            await $http({ 
-                url: `/activities/${vm.sessionId}/phase_transition`, 
-                method: "post", 
-                data: { phase_id: phaseId }
+    
+            // Transition to the newly created phase
+            await $http({
+                url: `/activities/${vm.sessionId}/phase_transition`,
+                method: "post",
+                data: { phase_id: phaseId },
             });
-
-            // Update the activity descriptor
+    
+            // Reload the activity descriptor
             vm.activityDescriptor = await ActivityStateService.getActivityDescriptor(vm.sessionId, true);
-            vm.isActivityFinished = vm.activityDescriptor.status === "finished";
-
-            if (vm.activityDescriptor.currentPhase.id != phaseId) {
+            vm.isActivityFinished = vm.isActivityFinished();
+    
+            if (vm.activityDescriptor.currentPhase.id !== phaseId) {
                 throw new Error("Abnormal state found.");
             }
-            
+    
             // Have we reached the last phase?
             vm.reachedLastPhase = vm.lastPhaseReached();
-
+    
             // Update data for the current phase
             vm.updateDashboardPhaseState(phaseId);
         } catch (error) {
-            console.error("Error in startActivityDesign:", error);
+            console.error("Error in startNextPhase:", error);
         }
     };
 

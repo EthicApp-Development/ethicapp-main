@@ -47,18 +47,14 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
 
         // Get the phases that have been created in the session
         const phases = await getPhasesForSession(session_id);
-        if (!phases || phases.length === 0) {
-            console.warn(`No phases found for session_id: ${session_id}`);
-            return res.status(404).json({ error: "No phases found for the given session." });
-        }
 
         // Create the activity descriptor
         const descriptor = {
             description,
             designId,
             status: StatusCodes.getNameByCode(status),
-            phases,
-            currentPhase: phases[phases.length - 1], // Last phase
+            phases: phases || [], // Default to an empty array if no phases
+            currentPhase: phases && phases.length > 0 ? phases[phases.length - 1] : null, // Last phase or null
         };
 
         console.info(`Successfully retrieved activity descriptor for session_id: ${session_id}.`);
@@ -68,7 +64,6 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
         return res.status(500).json({ error: "Internal server error" });
     }
 });
-
 
 /**
  * @route GET /activities/:session_id/responses

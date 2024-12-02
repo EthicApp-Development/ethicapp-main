@@ -50,12 +50,12 @@
     </div>
 
     <!-- Activity Phases Section -->
-    <div class="row">
+    <div class="row" ng-if="dc.dashboardPhaseStates && dc.dashboardPhaseStates.length > 0">
         <div class="col-md-12">
             <h3>{{ 'activity_phases_title' | translate }}</h3>
             <uib-accordion close-others="false">
                 <div uib-accordion-group class="panel-default" 
-                    ng-repeat="phase in dc.dashboardPhaseStates" is-open="true" 
+                    ng-repeat="phase in dc.dashboardPhaseStates track by phase.id" is-open="true" 
                     heading="{{ 'phase_title_text' | translate }} {{ phaseData.descriptor.number }}">
                     <phase-description phase-data="phase" design-type="dc.designObj.metainfo.type"></phase-description>
                     <phase-state phase-data="phase" design-type="dc.designObj.metainfo.type"></phase-state>
