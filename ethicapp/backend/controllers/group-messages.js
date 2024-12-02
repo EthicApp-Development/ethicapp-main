@@ -1,9 +1,9 @@
 "use strict";
 
 import express from "express";
-import config from "../config/config.js"; 
+import * as config from "../config/config.js"; 
 import * as rpg2 from "../db/rest-pg-2.js";
-import { getDesignById, getDesignTypeByStageId } from "../helpers/designs-helper.js";
+import { getDesignById, getDesignTypeByPhaseId } from "../helpers/designs-helper.js";
 import * as SessionsHelper from "../helpers/sessions-helper.js"
 
 const router = express.Router();
@@ -63,7 +63,7 @@ router.get("/phases/:id/message_count", async (req, res) => {
 
     try {
         // Fetch the design type for the phase
-        const designType = await getDesignTypeByStageId(id);
+        const designType = await getDesignTypeByPhaseId(id);
 
         // Find the appropriate message count handler
         const handler = messageCountHandlers[designType];
@@ -328,3 +328,5 @@ async function rankingChatTranscriptByGroup(groupId, questionId) {
         sqlParams: [groupId],
     });
 }
+
+export default router;
