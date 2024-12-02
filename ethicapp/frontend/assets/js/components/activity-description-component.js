@@ -1,6 +1,6 @@
 let activityDescriptionComponent = {
     bindings: {
-        activity: '<',
+        descriptor: '<',
         titleText: '<'
     },
     template: `
@@ -15,6 +15,5 @@ let activityDescriptionComponent = {
         </div>
     `
 };
-
 
 export { activityDescriptionComponent };

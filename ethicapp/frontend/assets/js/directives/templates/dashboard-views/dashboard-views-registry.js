@@ -3,14 +3,14 @@ import rankingIndividualResultsTable from "./ranking-individual-results-table.js
 import sdGroupResultsTable from "./sd-group-results-table.js";
 import rankingGroupResultsTable from "./ranking-group-results-table.js";
 
-let individualResultsTables = {
+const individualResultsTables = {
     semantic_differential: sdIndividualResultsTable,
     ranking: rankingIndividualResultsTable
 };
 
-let groupResultsTables = {
+const groupResultsTables = {
     semantic_differential: sdGroupResultsTable,
     ranking: rankingGroupResultsTable
 };
 
-export default { individualResultsTables, groupResultsTables };
+export { individualResultsTables, groupResultsTables };

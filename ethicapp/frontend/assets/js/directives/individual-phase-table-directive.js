@@ -1,3 +1,5 @@
+import { individualResultsTables } from "./templates/dashboard-views/dashboard-views-registry.js";
+
 let individualPhaseTableDirective = function() {
     return {
         restrict: 'E',
@@ -5,13 +7,8 @@ let individualPhaseTableDirective = function() {
             phaseData: '<',  // Processed data directly passed to the directive
             designType: '<'  // Design type (e.g., 'ranking', 'semantic_differential')
         },
-        template: function(element, atts) {
-            // Dynamically select the template based on the design type
-            const template = individualResultsTables[atts.designType];
-            if (!template) {
-                throw new Error(`Could not find template for design type '${atts.designType}'`);
-            }
-            return template;
+            template: function(element, atts) {
+            return individualResultsTables[atts.designType] || `<p>Template not found for '${atts.designType}'</p>`;
         },
         controller: function($scope) {
             // Preprocessing strategies for different design types
@@ -58,6 +55,11 @@ let individualPhaseTableDirective = function() {
 
             // Initialize table data
             $scope.initialize = function() {
+                if (!$scope.phaseData.state.responses || !$scope.phaseData.descriptor.questions) {
+                    console.error("Invalid phase data provided.");
+                    return;
+                }
+
                 // Preprocess data using the appropriate strategy for the design type
                 const processedData = $scope.preProcessData($scope.phaseData.state.responses, 
                     $scope.designType);

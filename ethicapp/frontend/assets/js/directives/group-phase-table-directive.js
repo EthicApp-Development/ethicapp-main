@@ -1,4 +1,4 @@
-import groupResultsTables from "./templates/dashboard-views/dashboard-views-registry.js";
+import { groupResultsTables } from "./templates/dashboard-views/dashboard-views-registry.js";
 
 let groupPhaseTableDirective = function() {
     return {
@@ -8,11 +8,7 @@ let groupPhaseTableDirective = function() {
             designType: '<'  // Design type ('ranking', 'semantic_differential', etc.)
         },
         template: function(element, atts) {
-            const template = groupResultsTables[atts.designType];
-            if (!template) {
-                throw new Error(`Could not find template for design type '${atts.designType}'`);
-            }
-            return template;
+            return groupResultsTables[atts.designType] || `<p>Template not found for '${atts.designType}'</p>`;
         },
         controller: function($scope) {
             // Define statistics calculators for each design type
@@ -71,6 +67,11 @@ let groupPhaseTableDirective = function() {
 
             // Initialize data
             $scope.initialize = function() {
+                if (!$scope.phaseData.state.responses || !$scope.phaseData.descriptor.questions) {
+                    console.error("Invalid phase data provided.");
+                    return;
+                }
+
                 const groupData = $scope.phaseData.state.responses;
                 const questions = $scope.phaseData.descriptor.questions;
 
