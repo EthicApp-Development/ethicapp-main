@@ -723,7 +723,7 @@ const questionFetchHandlers = {
         });
 
         return results.map((row, index) => ({
-            number: index + 1, // Assign a sequential number to each question
+            name: row.name,
             id: row.id,        // The ID of the question
         }));
     },

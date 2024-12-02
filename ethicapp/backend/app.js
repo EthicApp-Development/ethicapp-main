@@ -22,6 +22,7 @@ import sessions from "./controllers/sessions.js";
 import activities from "./controllers/activities.js";
 import phases from "./controllers/phases.js";
 import groups from "./controllers/groups.js";
+import group_messages from "./controllers/group-messages.js";
 import content_analysis from "./controllers/content-analysis-controller.js";
 import admin_panel from "./controllers/admin-panel-api.js";
 
@@ -142,7 +143,7 @@ app.use("/", validateSession, sessions);
 app.use("/", validateSession, activities);
 app.use("/", validateSession, phases);
 app.use("/", validateSession, groups);
-
+app.use("/", validateSession, group_messages);
 app.use("/", validateSession, content_analysis);
 app.use("/", validateSession, teams);
 app.use("/", validateSession, stages);

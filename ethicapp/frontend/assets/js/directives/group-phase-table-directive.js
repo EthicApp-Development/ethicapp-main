@@ -1,3 +1,5 @@
+import groupResultsTables from "./templates/dashboard-views/dashboard-views-registry.js";
+
 let groupPhaseTableDirective = function() {
     return {
         restrict: 'E',
@@ -5,37 +7,13 @@ let groupPhaseTableDirective = function() {
             phaseData: '<',
             designType: '<'
         },
-        // TODO: Refactoring, so that the appropriate template is chosen depending on the
-        // type of activity
-        template: `
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>{{ 'group' | translate }}</th>
-                        <th>{{ 'members' | translate }}</th>
-                        <th ng-repeat="question in questions">{{ question.text }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr ng-repeat="group in phaseDesign.groups">
-                        <td>{{ group.id }}</td>
-                        <td>
-                            <ul>
-                                <li ng-repeat="userId in group.members">
-                                    {{ getUserName(userId) }}
-                                </li>
-                            </ul>
-                        </td>
-                        <td ng-repeat="question in phaseConfig.questions">
-                            <!-- Mostrar respuestas agregadas o por grupo -->
-                            <span ng-repeat="response in getGroupResponses(group.members, question.id)">
-                                {{ response }}<br>
-                            </span>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        `,
+        template: function(element, atts) {
+            const template = groupResultsTables[atts.designType];
+            if (!template) {
+                throw new Error(`Could not find template for design type '${atts.designType}'`);
+            }
+            return template;            
+        },
         controller: function($scope) {
             $scope.getUserName = function(userId) {
                 const user = $scope.users.find(u => u.id === userId);
