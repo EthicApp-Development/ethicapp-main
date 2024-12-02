@@ -697,17 +697,23 @@ const questionFetchHandlers = {
         const results = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT id
+                SELECT id,
+                justify,
+                orden,
+                num
                 FROM differential
                 WHERE stageid = $1
-                ORDER BY id ASC
+                ORDER BY orden ASC
             `,
             sqlParams: [phaseId],
         });
 
         return results.map((row, index) => ({
-            number: index + 1, // Assign a sequential number to each question
             id: row.id,        // The ID of the question
+            number: index + 1, // Assign a sequential number to each question
+            justify: row.justify,
+            range: row.num,
+            order: row.orden,
         }));
     },
     ranking: async (phaseId) => {

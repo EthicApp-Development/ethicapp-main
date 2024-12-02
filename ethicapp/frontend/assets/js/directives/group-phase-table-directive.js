@@ -15,15 +15,33 @@ let groupPhaseTableDirective = function() {
             return template;            
         },
         controller: function($scope) {
-            $scope.getUserName = function(userId) {
-                const user = $scope.users.find(u => u.id === userId);
-                return user ? user.name : 'Unknown';
-            };
+            const statisticsCalculators = {
+                ranking: function(groupData, questions) {
 
-            $scope.getGroupResponses = function(memberIds, questionId) {
-                return memberIds
-                    .map(userId => $scope.responses[userId]?.[questionId])
-                    .filter(response => response);
+                },
+                semantic_differential: function(groupData, questions) {
+                    const stats = {};
+                    questions.forEach((question, index) => {
+                        const key = `r${index + 1}`;
+                        const chatKey = `chatR${index + 1}`;
+                        const values = groupData.map(user => user[key]).filter(v => v !== null);
+        
+                        const avg = values.reduce((a, b) => a + b, 0) / values.length || 0;
+        
+                        stats[`averageR${index + 1}`] = avg.toFixed(2);
+                        stats[chatKey] = groupData.reduce((sum, user) => sum + (user[chatKey] || 0), 0);
+                    });
+                    stats.totalChatCount = groupData.reduce((sum, user) => sum + (user.totalChatCount || 0), 0);
+                    return stats;
+                }
+            };
+        
+            $scope.calculateGroupStatistics = function(groupData, questions) {
+                const calculator = statisticsCalculators[$scope.designType];
+                if (!calculator) {
+                    throw new Error(`No statistics calculator defined for design type: '${$scope.designType}'`);
+                }
+                return calculator(groupData, questions);
             };
         }
     };
