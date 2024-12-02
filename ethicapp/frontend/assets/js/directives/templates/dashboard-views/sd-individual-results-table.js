@@ -26,9 +26,7 @@ export default sdIndividualResultsTable = `
                 <td colspan="{{ phaseData.descriptor.questions.length + 1 }}">
                     <div class="summary-text">
                         <strong>{{ 'participants_label' | translate }}:</strong> {{ phaseData.state.responses.length }} <br>
-                        <strong>A:</strong> {{ 'average_label' | translate }}. 
-                        <strong>CV:</strong> {{ 'coefficient_of_variation_label' | translate }}. 
-                        <i class="fa fa-comments"></i> {{ 'chat_messages_label' | translate }}.
+                        <strong>A:</strong> {{ 'average_label' | translate }}. <strong>CV:</strong> {{ 'coefficient_of_variation_label' | translate }}. <i class="fa fa-comments"></i> {{ 'chat_messages_label' | translate }}. <span class="class="text-danger">*</span> {'justification_required_caption' | translate }.
                     </div>
                 </td>
             </tr>

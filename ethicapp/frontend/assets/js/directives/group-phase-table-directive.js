@@ -4,20 +4,44 @@ let groupPhaseTableDirective = function() {
     return {
         restrict: 'E',
         scope: {
-            phaseData: '<',
-            designType: '<'
+            phaseData: '<',  // Processed group-phase data
+            designType: '<'  // Design type ('ranking', 'semantic_differential', etc.)
         },
         template: function(element, atts) {
             const template = groupResultsTables[atts.designType];
             if (!template) {
                 throw new Error(`Could not find template for design type '${atts.designType}'`);
             }
-            return template;            
+            return template;
         },
         controller: function($scope) {
+            // Define statistics calculators for each design type
             const statisticsCalculators = {
                 ranking: function(groupData, questions) {
+                    // Group data by groupNumber
+                    const groupedData = groupData.reduce((acc, user) => {
+                        const groupNumber = user.groupNumber || 'Ungrouped';
+                        if (!acc[groupNumber]) acc[groupNumber] = [];
+                        acc[groupNumber].push(user);
+                        return acc;
+                    }, {});
 
+                    // Add total chat messages per group
+                    Object.keys(groupedData).forEach(groupNumber => {
+                        const groupMembers = groupedData[groupNumber];
+                        const totalChatCount = groupMembers.reduce(
+                            (sum, member) => sum + (member.totalChatCount || 0),
+                            0
+                        );
+
+                        // Assign totalChatCount to each member for display
+                        groupMembers.forEach(member => {
+                            member.groupChatMessages = totalChatCount;
+                        });
+                    });
+
+                    // Flatten grouped data back into a single array
+                    return Object.values(groupedData).flat();
                 },
                 semantic_differential: function(groupData, questions) {
                     const stats = {};
@@ -35,7 +59,8 @@ let groupPhaseTableDirective = function() {
                     return stats;
                 }
             };
-        
+
+            // General function to calculate statistics based on design type
             $scope.calculateGroupStatistics = function(groupData, questions) {
                 const calculator = statisticsCalculators[$scope.designType];
                 if (!calculator) {
@@ -43,6 +68,21 @@ let groupPhaseTableDirective = function() {
                 }
                 return calculator(groupData, questions);
             };
+
+            // Initialize data
+            $scope.initialize = function() {
+                const groupData = $scope.phaseData.state.responses;
+                const questions = $scope.phaseData.descriptor.questions;
+
+                // Preprocess data based on the design type
+                const processedData = $scope.calculateGroupStatistics(groupData, questions);
+
+                // Update scope with processed data
+                $scope.sortedResponses = [...processedData]; // Default sorted responses
+            };
+
+            // Call initialize when directive is loaded
+            $scope.initialize();
         }
     };
 };

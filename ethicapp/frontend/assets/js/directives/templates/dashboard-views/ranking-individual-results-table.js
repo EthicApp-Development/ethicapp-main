@@ -1,20 +1,42 @@
 export default rankingIndividualResultsTable = `
-    <table class="table table-striped">
+    <table class="table table-striped table-sortable">
         <thead>
             <tr>
-                <th>{{ 'participant_column_header' | translate }}</th>
+                <th sortable-column="responseCluster" reverse="reverse" on-sort="sortBy(field)">
+                    {{ 'number_of_equal_column_header' | translate }}
+                </th>
+                <th>{{ 'author_column_header' | translate }}</th>
+                <th>{{ 'role_column_header' | translate }}</th>
                 <th ng-repeat="question in phaseData.descriptor.questions">
-                    {{ question.name }}
+                    {{ 'position_label' | translate }} {{ $index + 1 }}
                 </th>
             </tr>
         </thead>
         <tbody>
-            <tr ng-repeat="user in phaseData.state.responses track by user.uid">
-                <td>{{ user.userName }}</td>
-                <td ng-repeat="question in phaseData.descriptor.questions track by question.id">
-                    {{ user['r' + $index + 1] || ('no_ranking' | translate) }}
+            <tr ng-repeat="response in sortedResponses track by response.uid">
+                <td>{{ response.clusterCount }}</td>
+                <td>{{ response.userName }}</td>
+                <td>{{ response.role }}</td>
+                <td ng-repeat="question in phaseData.descriptor.questions">
+                    <span>
+                        {{ response['r' + ($index + 1)] || ('no_response' | translate) }}
+                    </span>
+                    <i ng-if="response['commentR' + ($index + 1)] && response['commentR' + ($index + 1)].length > 0"
+                    class="fa-solid fa-sticky-note text-warning"></i>
                 </td>
             </tr>
         </tbody>
-    </table>
-    `;
+        <tfoot>
+            <tr>
+                <td colspan="{{ phaseData.descriptor.questions.length + 3 }}">
+                    <div class="summary-text">
+                        <strong>{{ 'participants_label' | translate }}:</strong> {{ sortedResponses.length }} <br>
+                        <span class="badge badge-danger">
+                            <i class="fa fa-comments"></i> {{ totalChatMessages }} {{ 'chat_messages_label' | translate }}
+                        </span>
+                        <i class="fa-solid fa-sticky-note text-warning"></i> {{ 'comment_note_legend' | translate }}. <span class="text-danger">*</span> {{ 'justification_required_caption' | translate }}.
+                    </div>
+                </td>
+            </tr>
+        </tfoot>        
+    </table>`;
