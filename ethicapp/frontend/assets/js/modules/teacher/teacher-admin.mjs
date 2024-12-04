@@ -43,6 +43,8 @@ import { EthicsModalController } from "../../controllers/teacher/ethics_modal_co
 import { ErrorController } from "../../controllers/teacher/error.controller.js";
 import { VoidController } from "../../controllers/common/void.controller.js";
 import { ngQuillConfigProvider } from "../../helpers/util.js";
+import { DesignEditorController } from "../../controllers/teacher/design-editor.controller.js";
+
 //import { GroupController } from "../../controllers/teacher/group_controller.js";
 // import { DuplicateSesModalController } from "../../controllers/teacher/duplicate_ses_modal_controller.js";
 // import { IncomingUsersController } from "../../controllers/teacher/incoming_users_controller.js";
@@ -165,7 +167,10 @@ app.controller("EthicsModalController",
     ["$scope", "$http", "$uibModalInstance", "Notification", "data", EthicsModalController]);
 app.controller("ErrorController", 
     ["$scope", "$window", "$routeParams",
-        ErrorController]); 
+        ErrorController]);
+app.controller("DesignEditorController", 
+    ["$scope", "$routeParams", "DesignStateService", "DesignCatalogService",
+        DesignEditorController]);         
 app.controller("VoidController", [VoidController]);        
 /*app.controller("RoutingController", 
     ["$scope", RoutingController]);

@@ -1,0 +1,16 @@
+<div>
+    <div class="d-flex align-items-center">
+        <i ng-class="{'fa-chevron-up': $parent.isOpen, 'fa-chevron-down': !$parent.isOpen}" 
+           class="fa-solid me-2"
+           ng-click="$parent.isOpen = !$parent.isOpen">
+        </i>
+        <span>
+            {{ heading }}
+        </span>
+        <i class="fa-solid fa-trash text-danger ms-auto" 
+           style="cursor: pointer;" 
+           ng-click="$parent.confirmDeletePhase($parent.$index)">
+        </i>
+    </div>
+    <div ng-transclude></div>
+</div>

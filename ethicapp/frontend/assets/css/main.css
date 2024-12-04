@@ -2203,6 +2203,50 @@ h2{
     width: 12em;
 }
 
+.design-editor .accordion-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.design-editor .action-icons {
+    display: flex;
+    align-items: center;
+}
+
+.design-editor .action-icons i {
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+.design-editor .action-icons i:hover {
+    color: #0056b3;
+}
+
+.design-editor .d-flex {
+    display: flex;
+}
+
+.design-editor .align-items-center {
+    align-items: center;
+}
+
+.design-editor .me-2 {
+    margin-right: 0.5rem;
+}
+
+.design-editor .ms-auto {
+    margin-left: auto;
+}
+
+.design-editor .fa-solid {
+    cursor: pointer;
+}
+
+.design-editor .fa-solid:hover {
+    color: #007bff;
+}
+
 .ats-switch {
     border: 1px solid;
     cursor: pointer;

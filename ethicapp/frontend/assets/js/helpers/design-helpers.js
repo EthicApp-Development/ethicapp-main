@@ -5,3 +5,11 @@ export let isGroupPhaseByDesign = function(design, phaseNumber) {
 export let isGroupPhaseByPhaseDescriptor = function(phaseDescriptor) {
     return phaseDescriptor.mode == "team";
 }
+
+export let getDesignType = function(design) {
+    return design.type;
+}
+
+export let getPhaseByIndex = function(design, phaseIndex) {
+    return design.phases[phaseIndex];
+}

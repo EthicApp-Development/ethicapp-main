@@ -22,6 +22,8 @@ export function DesignEditController($scope, $routeParams,
         vm.keyGroups("previous")
     ];
 
+    vm.accordionState = {};
+
     vm.groupType = [vm.keyGroups("individual"), vm.keyGroups("team")];
     vm.busy = false; //upload file
     vm.extraOpts = false;
@@ -66,6 +68,32 @@ export function DesignEditController($scope, $routeParams,
             vm.resetValues();
             vm.cleanEmptyValues();
             vm.createErrorList();
+        }
+
+        vm.initializeAccordionState();
+    };
+
+    vm.initializeAccordionState = function () {
+        vm.accordionState = {};
+        vm.design.phases.forEach((_, index) => {
+            vm.accordionState[index] = false;
+        });
+    };
+
+    vm.toggleAccordion = function (index) {
+        console.log("toggleAccordion");
+        vm.accordionState[index] = !vm.accordionState[index];
+    };
+
+    vm.isAccordionOpen = function (index) {
+        console.log("isAccordionOpen");
+        return vm.accordionState[index] || false;
+    };  
+
+    vm.confirmDeletePhase = function (index) {
+        if (window.confirm("¿Estás seguro de que deseas eliminar esta fase?")) {
+            vm.design.phases.splice(index, 1);
+            delete vm.accordionState[index];
         }
     };
 

@@ -1,7 +1,9 @@
-<div class="container" ng-controller="DesignEditController as dec">
-    <h2 class="text-center text-primary">{{ 'designMsg' | translate }}</h2>
-
-    <!-- Input para el título del diseño -->
+<div class="container" ng-controller="DesignEditorController as dec">
+    <div class="row">
+        <div class="col-md-12 mb-2">
+            <h2><i class="fa fa-paint-brush"></i> Edit Design</h2>
+        </div>
+    </div>
     <div class="form-group">
         <label for="designTitle">{{ 'designTitlePlaceholder' | translate }}</label>
         <input id="designTitle" type="text" class="form-control input-lg" 
@@ -9,38 +11,46 @@
                ng-model="dec.design.metainfo.title">
     </div>
 
-    <!-- Lista de fases -->
-    <div class="phases-list row">
-        <!-- Usar la directiva phase-item -->
-        <div class="col-sm-4" ng-repeat="phase in dec.design.phases">
-            <phase-item phase="phase" 
-                        on-select="dec.selectPhase($index)">
-            </phase-item>
+    <div class="panel panel-default">
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <div class="action-buttons">
+                        <button class="btn btn-default btn-sm" ng-click="dec.addPhase()">
+                            <i class="fa-solid fa-plus text-success"></i> {{ 'add_phase_button_text' | translate }}
+                        </button>
+                        <button class="btn btn-default btn-sm" ng-click="dec.saveDesign()">
+                            <i class="fa-solid fa-save"></i> {{ 'save_design_button_text' | translate }}
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
+    </div>    
 
-    <!-- Mostrar preguntas según el tipo de fase -->
-    <div class="questions-container mt-4" ng-if="dec.currentPhase >= 0">
-        <div ng-switch="dec.design.phases[dec.currentPhase].type">
-            <!-- Usar semantic-differential para fases de tipo diferencial semántico -->
-            <semantic-differential ng-switch-when="semantic_differential" 
-                                   question="dec.currentQuestion">
-            </semantic-differential>
-            
-            <!-- Usar ranking para fases de tipo ranking -->
-            <ranking ng-switch-when="ranking" 
-                     phase="dec.design.phases[dec.currentPhase]">
-            </ranking>
-        </div>
-    </div>
-
-    <!-- Botones de Acción -->
-    <div class="text-center mt-4">
-        <button class="btn btn-success" ng-click="dec.saveDesign()">
-            <i class="glyphicon glyphicon-save"></i> {{ 'save' | translate }}
-        </button>
-        <button class="btn btn-primary" ng-click="dec.launchDesign()">
-            <i class="glyphicon glyphicon-send"></i> {{ 'launchActivity' | translate }}
-        </button>
+    <div class="design-editor">
+        <uib-accordion close-others="false">
+            <div uib-accordion-group class="panel-default" 
+                 ng-repeat="phase in dec.design.phases" 
+                 is-open="false"
+                 template-url="/assets/static/partials/teacher/micro-partials/design-editor-accordeon-heading.html">
+                 
+                QUESTION BODY
+    
+                <div ng-switch="dec.design.type">
+                    QUESTION BODY
+                    <sd-item-editor 
+                        ng-repeat="question in phase.questions" 
+                        ng-switch-when="semantic_differential" 
+                        question="question">
+                    </sd-item-editor>
+                    
+                    <ranking-item-editor 
+                        ng-switch-when="ranking" 
+                        roles="phase.roles">
+                    </ranking-item-editor>
+                </div>
+            </div>
+        </uib-accordion>
     </div>
 </div>
