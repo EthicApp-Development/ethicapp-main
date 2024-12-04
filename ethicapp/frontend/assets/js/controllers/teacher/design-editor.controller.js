@@ -24,7 +24,9 @@ export function DesignEditorController($scope, $routeParams,
                 $scope.navigateTo("/error/404/2");
             }
 
-            vm.design = designObj;
+            $scope.$applyAsync(() => {
+                vm.design = designObj;
+            });
 
             await DesignStateService.setDesign(designId, designObj);
         }
