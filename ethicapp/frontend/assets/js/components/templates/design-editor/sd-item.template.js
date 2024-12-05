@@ -1,7 +1,5 @@
-const semanticDifferentialItemTemplate = `<div class="panel panel-primary">
-    <div class="panel-heading">
-        <h4 class="panel-title">{{ 'semanticDiffEscale' | translate }}</h4>
-    </div>
+const semanticDifferentialItemTemplate = `
+<div class="panel">
     <div class="panel-body">
         <div class="form-group">
             <label for="questionText">{{ 'questionText' | translate }}</label>
@@ -16,10 +14,15 @@ const semanticDifferentialItemTemplate = `<div class="panel panel-primary">
                        ng-model="$ctrl.question.ans_format.l_pole">
             </div>
             <div class="col-xs-6 text-center">
-                <span ng-repeat="option in $ctrl.buildOptions($ctrl.question.ans_format.values)" 
-                      class="label label-default">
-                    {{ option }}
-                </span>
+                <button class="btn btn-default btn-sm" ng-click="$ctrl.removeScaleTick()">
+                    <i class="fa-solid fa-minus"></i>
+                </button>
+                <i style="margin-left:1em" class="fa-regular fa-circle" ng-repeat="option in $ctrl.buildOptions($ctrl.question.ans_format.values)"></i>
+                <button style="margin-left:1em" class="btn btn-default btn-sm" ng-click="$ctrl.addScaleTick()">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+                <br>
+                <small>{{ 'scale_values_text' | translate }}: 1-{{$ctrl.question.ans_format.values}}</small>
             </div>
             <div class="col-xs-3 text-left">
                 <input type="text" class="form-control" placeholder="{{ 'right' | translate }}" 
@@ -28,6 +31,7 @@ const semanticDifferentialItemTemplate = `<div class="panel panel-primary">
         </div>
     </div>
 </div>
+<hr>
 `;
 
 export default semanticDifferentialItemTemplate;

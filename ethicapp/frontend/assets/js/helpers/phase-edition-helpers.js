@@ -73,7 +73,6 @@ function rankingItemBuilder(params = {}) {
 // Acciones de edición dinámicas
 const designEditActions = {
     buildBlankPhase: (design) => {
-        console.log("[buildBlankPhase] " + design.type);
         const builder = phaseBuilders[getDesignType(design)];
         return builder();
     },
@@ -87,7 +86,6 @@ const designEditActions = {
         design.phases = design.phases.filter((_phase) => _phase !== phase);
     },
     buildBlankItem: (design) => {
-        console.log("[buildBlankItem] " + design.type);
         const builder = itemBuilders[getDesignType(design)];
         return builder();
     },

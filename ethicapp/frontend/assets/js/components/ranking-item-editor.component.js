@@ -1,8 +1,8 @@
 import rankingItemTemplate from "./templates/design-editor/ranking-item.template.js";
 
-const rankingItemComponent = {
+const rankingItemEditorComponent = {
     bindings: {
-        phase: '=',
+        roles: '=',
     },
     template: rankingItemTemplate,
     controller: RankingController,
@@ -20,4 +20,4 @@ function RankingController() {
     };
 }
 
-export default rankingItemComponent;
+export default rankingItemEditorComponent;

@@ -294,6 +294,7 @@
 	"group_column_header": "Grupo",
     "chat_column_header": "Mensajes de Chat",
     "justification_required_caption": "Se requiere justificación para esta pregunta",
+	"scale_values_text": "Valores de la escala",
 	"number_of_equal_column_header": "Número de Iguales",
 	"author_column_header": "Autor",
 	"position_label": "Pos",	

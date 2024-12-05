@@ -36,9 +36,13 @@ export function DesignEditorController($scope, $routeParams,
 
     vm.initializeEditorUI = function () {
         vm.accordionState = {};
-        vm.design.phases.forEach((_, index) => {
-            vm.accordionState[index] = false;
-        });
+        try {
+            vm.design.phases.forEach((_, index) => {
+                vm.accordionState[index] = false;
+            });
+        } catch (error) {
+            console.warn("The design does not appear to have any phases yet.");
+        }
     };    
 
     vm.addPhase = function() { 
@@ -49,10 +53,10 @@ export function DesignEditorController($scope, $routeParams,
         });
     }
 
-    vm.addItemToPhase = function() {
+    vm.addItemToPhase = function(phase) {
         const item = designEditActions.buildBlankItem(vm.design);
         $scope.$applyAsync(() => {
-            designEditActions.addItemToPhase(vm.design, phase, item);
+            designEditActions.addPhaseItem(vm.design, phase, item);
         });
     }
 

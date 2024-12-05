@@ -35,10 +35,13 @@
                  is-open="false"
                  template-url="/assets/static/partials/teacher/micro-partials/design-editor-accordeon-heading.html">
                  
-                QUESTION BODY
+                 <div class="action-buttons">
+                    <button class="btn btn-default btn-sm" ng-click="dec.addItemToPhase(phase)">
+                        <i class="fa-solid fa-plus text-success"></i> {{ 'add_question_button_text' | translate }}
+                    </button>
+                </div>
     
                 <div ng-switch="dec.design.type">
-                    QUESTION BODY
                     <sd-item-editor 
                         ng-repeat="question in phase.questions" 
                         ng-switch-when="semantic_differential" 

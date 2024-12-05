@@ -248,6 +248,7 @@
     "author_column_header": "Author",
     "position_label": "Pos",
     "justification_required_caption": "Justification required for this question",
+	"scale_values_text": "Scale values",
 	"login": "Login",
 	"back_to_login": "Back to login",
 	"login_w_account": "Login",

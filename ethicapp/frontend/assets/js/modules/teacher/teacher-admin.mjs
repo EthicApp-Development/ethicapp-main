@@ -244,7 +244,11 @@ app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateSer
 import { activityDescriptionComponent } from "../../components/activity-description.component.js"
 import { designDescriptionComponent } from "../../components/design-description.component.js"
 import { phaseDescriptionComponent } from "../../components/phase-description.component.js"
+import rankingItemEditorComponent from "../../components/ranking-item-editor.component.js"
+import sdItemEditorComponent from "../../components/sd-item-editor.component.js"
 
 app.component('activityDescription', activityDescriptionComponent);
 app.component('designDescription', designDescriptionComponent);
 app.component('phaseDescription', phaseDescriptionComponent);
+app.component('rankingItemEditor', rankingItemEditorComponent);
+app.component('sdItemEditor', sdItemEditorComponent);
