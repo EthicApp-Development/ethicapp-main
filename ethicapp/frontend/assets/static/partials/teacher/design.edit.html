@@ -28,14 +28,14 @@
         </div>
     </div>    
 
-    <div class="design-editor">
+    <div class="design-editor" ng-init="dec.initializeAccordionStates()">
         <uib-accordion close-others="false">
             <div uib-accordion-group class="panel-default" 
                  ng-repeat="phase in dec.design.phases" 
-                 is-open="false"
+                 is-open="dec.accordionState[$index]"
                  template-url="/assets/static/partials/teacher/micro-partials/design-editor-accordeon-heading.html">
-                 
                 <div class="row">
+                    {{ dec.accordionState }}
                     <div class="col-md-12">
                         <div class="panel action-buttons">
                             <div class="panel-body">

@@ -30,11 +30,9 @@ export function DesignEditorController($scope, $routeParams,
 
             await DesignStateService.setDesign(designId, designObj);
         }
-
-        vm.initializeEditorUI();
     };
 
-    vm.initializeEditorUI = function () {
+    vm.initializeAccordionStates = function () {
         vm.accordionState = {};
         try {
             vm.design.phases.forEach((_, index) => {
