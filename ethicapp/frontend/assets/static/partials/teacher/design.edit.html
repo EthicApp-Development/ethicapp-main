@@ -5,9 +5,9 @@
         </div>
     </div>
     <div class="form-group">
-        <label for="designTitle">{{ 'designTitlePlaceholder' | translate }}</label>
+        <label for="designTitle">{{ 'design_title_input_label' | translate }}:</label>
         <input id="designTitle" type="text" class="form-control input-lg" 
-               placeholder="{{ 'designTitlePlaceholder' | translate }}" 
+               placeholder="{{ 'title_input_hint_text' | translate }}" 
                ng-model="dec.design.metainfo.title">
     </div>
 
@@ -35,12 +35,22 @@
                  is-open="false"
                  template-url="/assets/static/partials/teacher/micro-partials/design-editor-accordeon-heading.html">
                  
-                 <div class="action-buttons">
-                    <button class="btn btn-default btn-sm" ng-click="dec.addItemToPhase(phase)">
-                        <i class="fa-solid fa-plus text-success"></i> {{ 'add_question_button_text' | translate }}
-                    </button>
-                </div>
-    
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="panel action-buttons">
+                            <div class="panel-body">
+                                <p>Modalidad:</p>
+                                <p>Anonimato:</p>
+                                <p>Chat:</p>
+                                <p>Mostrar preguntas de fases anteriores:</p>
+                                <hr>
+                                <button class="btn btn-default btn-sm" ng-click="dec.addItemToPhase(phase)">
+                                    <i class="fa-solid fa-plus text-success"></i> {{ 'add_question_button_text' | translate }}
+                                </button>
+                            </div>
+                        </div>        
+                    </div>                    
+                </div>                 
                 <div ng-switch="dec.design.type">
                     <sd-item-editor 
                         ng-repeat="question in phase.questions" 

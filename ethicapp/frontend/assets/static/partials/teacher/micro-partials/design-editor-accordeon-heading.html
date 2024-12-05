@@ -1,12 +1,10 @@
-<div>
-    <div class="d-flex align-items-center">
+<div style="background: #efefef;">
+    <div class="d-flex align-items-center" style="margin-left: 15px; margin-right: 15px;">
         <i ng-class="{'fa-chevron-up': $parent.isOpen, 'fa-chevron-down': !$parent.isOpen}" 
            class="fa-solid me-2"
            ng-click="$parent.isOpen = !$parent.isOpen">
         </i>
-        <span>
-            {{ heading }}
-        </span>
+        <h4>{{ 'phase_title_prefix' | translate }}</h4>
         <i class="fa-solid fa-trash text-danger ms-auto" 
            style="cursor: pointer;" 
            ng-click="$parent.confirmDeletePhase($parent.$index)">
