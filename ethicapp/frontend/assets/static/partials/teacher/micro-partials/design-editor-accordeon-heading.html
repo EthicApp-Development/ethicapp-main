@@ -1,13 +1,14 @@
 <div style="background: #f5f5f5;">
     <div class="d-flex align-items-center" style="margin-left: 15px; margin-right: 15px;">
-        <i ng-class="{'fa-solid fa-maximize': $parent.isOpen, 'fa-solid fa-minimize': !$parent.isOpen}" 
-           class="fa-solid me-2"
-           ng-click="$parent.isOpen = !$parent.isOpen">
+        {{ parentDec }}
+        <h4>{{ 'phase_title_prefix' | translate }} {{ $index + 1 }}</h4>
+        <i ng-class="{'fa-solid fa-window-maximize': isOpen, 'fa-solid fa-window-minimize': !isOpen}" 
+           class="fa-solid me-2 ms-auto"
+           ng-click="isOpen = !isOpen">
         </i>
-        <h4>{{ 'phase_title_prefix' | translate }} {{ $parent.$index + 1}}</h4>
-        <i class="fa-solid fa-trash text-danger ms-auto" 
+        <i class="fa-solid fa-trash text-danger" 
            style="cursor: pointer;" 
-           ng-click="$parent.confirmDeletePhase($parent.$index)">
+           ng-click="parentDec.confirmDeletePhase($index)">
         </i>
     </div>
     <div ng-transclude></div>

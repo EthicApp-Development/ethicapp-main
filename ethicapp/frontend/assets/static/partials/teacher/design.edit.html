@@ -28,21 +28,41 @@
         </div>
     </div>    
 
-    <div class="design-editor" ng-init="dec.initializeAccordionStates()">
-        <uib-accordion close-others="false">
+    <div class="design-editor">
+        <div uib-accordion close-others="false">
             <div uib-accordion-group class="panel-default" 
-                 ng-repeat="phase in dec.design.phases" 
-                 is-open="dec.accordionState[$index]"
-                 template-url="/assets/static/partials/teacher/micro-partials/design-editor-accordeon-heading.html">
+                 ng-repeat="phase in dec.design.phases track by $index"
+                 is-open="dec.accordionState[$index]">
+                 <div uib-accordion-heading>
+                    <div style="background: #f5f5f5;">
+                        <div class="d-flex align-items-center">
+                            <h4>{{ 'phase_title_prefix' | translate }} {{ $index + 1 }}</h4>
+                            <i class="fa-regular fa-copy  ms-auto"
+                                style="cursor: pointer;"
+                                ng-click="dec.duplicatePhase($index, $event)"></i>&nbsp;
+                            <i class="fa-solid fa-trash text-danger" 
+                               style="cursor: pointer;" 
+                               ng-click="dec.confirmDeletePhase($index, $event)">
+                            </i>&nbsp;
+                            <i ng-class="{'fa-solid fa-down-left-and-up-right-to-center': dec.accordionState[$index], 
+                                          'fa-solid fa-up-right-and-down-left-from-center': !dec.accordionState[$index]}" 
+                               class="fa-solid me-2"
+                               ng-click="dec.toggleAccordionState($index, $event)">
+                            </i>
+                        </div>
+                    </div>                    
+                </div>
                 <div class="row">
-                    {{ dec.accordionState }}
                     <div class="col-md-12">
                         <div class="panel action-buttons">
                             <div class="panel-body">
-                                <p>Modalidad:</p>
-                                <p>Anonimato:</p>
-                                <p>Chat:</p>
-                                <p>Mostrar preguntas de fases anteriores:</p>
+                                <h4>Características</h4>
+                                <div toggle-switch phase-mode-value-adapter ng-model="phase.mode" class="ats-switch switch-mini"></div> Fase Grupal
+                                <div ng-show="phase.mode !== 'individual'">
+                                    <div toggle-switch phase-mode-value-adapter ng-model="phase.mode" class="ats-switch switch-mini"></div> Usar Anonimato <br>
+                                    <div toggle-switch phase-mode-value-adapter ng-model="phase.mode" class="ats-switch switch-mini"></div> Usar Chat <br>
+                                    Mostrar respuestas de fases anteriores
+                                </div>
                                 <hr>
                                 <button class="btn btn-default btn-sm" ng-click="dec.addItemToPhase(phase)">
                                     <i class="fa-solid fa-plus text-success"></i> {{ 'add_question_button_text' | translate }}
@@ -61,9 +81,9 @@
                     <ranking-item-editor 
                         ng-switch-when="ranking" 
                         roles="phase.roles">
-                    </ranking-item-editor>
+                        </ranking-item-editor>
                 </div>
             </div>
-        </uib-accordion>
+        </div>      
     </div>
 </div>

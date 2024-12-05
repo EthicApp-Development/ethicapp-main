@@ -97,6 +97,10 @@ const designEditActions = {
         const remover = itemRemovers[getDesignType(design)];
         remover(phase, item);
     },
+    clonePhaseByIndex: (design, phaseIndex) => {
+        const phaseClone = structuredClone(design.phases[phaseIndex]);
+        design.phases.splice(phaseIndex+1, 0, phaseClone);
+    }
 };
 
 export default designEditActions;
