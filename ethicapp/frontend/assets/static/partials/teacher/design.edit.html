@@ -1,7 +1,7 @@
 <div class="container" ng-controller="DesignEditorController as dec">
     <div class="row">
         <div class="col-md-12 mb-2">
-            <h2><i class="fa fa-paint-brush"></i> Edit Design</h2>
+            <h2><i class="fa fa-paint-brush"></i> {{ 'edit_design_title' | translate }}</h2>
         </div>
     </div>
     <div class="form-group">
@@ -30,10 +30,11 @@
 
     <div class="design-editor">
         <div uib-accordion close-others="false">
-            <div uib-accordion-group class="panel-default" 
+            <div uib-accordion-group class="panel-default phase-editor-item-heading" 
                  ng-repeat="phase in dec.design.phases track by $index"
                  is-open="dec.accordionState[$index]">
-                 <div uib-accordion-heading>
+                
+                <div uib-accordion-heading>
                     <div style="background: #f5f5f5;">
                         <div class="d-flex align-items-center">
                             <h4>{{ 'phase_title_prefix' | translate }} {{ $index + 1 }}</h4>
@@ -41,20 +42,20 @@
                                 style="cursor: pointer;"
                                 ng-click="dec.duplicatePhase($index, $event)"></i>&nbsp;
                             <i class="fa-solid fa-trash text-danger" 
-                               style="cursor: pointer;" 
-                               ng-click="dec.confirmDeletePhase($index, $event)">
+                            style="cursor: pointer;" 
+                            ng-click="dec.confirmDeletePhase($index, $event)">
                             </i>&nbsp;
                             <i ng-class="{'fa-solid fa-down-left-and-up-right-to-center': dec.accordionState[$index], 
-                                          'fa-solid fa-up-right-and-down-left-from-center': !dec.accordionState[$index]}" 
-                               class="fa-solid me-2"
-                               ng-click="dec.toggleAccordionState($index, $event)">
+                                        'fa-solid fa-up-right-and-down-left-from-center': !dec.accordionState[$index]}" 
+                            class="fa-solid me-2"
+                            ng-click="dec.toggleAccordionState($index, $event)">
                             </i>
                         </div>
                     </div>                    
                 </div>
                 <div class="row">
                     <div class="col-md-4">
-                        <h4>{{ 'features_title_text' | translate}}</h4>
+                        <h4>{{ 'features_title_text' | translate }}</h4>
                         <div toggle-switch phase-mode-value-adapter ng-model="phase.mode" class="ats-switch switch-mini"></div> <label>{{ 'group_phase_label' | translate }}</label>
                         <div ng-show="phase.mode !== 'individual'">
                             <div toggle-switch phase-mode-value-adapter ng-model="phase.anonymous" class="ats-switch switch-mini"></div> <label>{{ 'use_anonimity_label' | translate }}</label> <br>
@@ -69,8 +70,8 @@
                             validate-callback="dec.handleValidationResult(result)">
                         </grouping-mode-selector>
                     
-                        <div>
-                            <label>Group size</label>
+                        <div style="margin-top:0.5em">
+                            <label>{{ 'group_size_label' | translate }}</label>
                             <numeric-input-with-spinbutton 
                                 value="phase.stdntAmount" 
                                 min="2" 
@@ -79,7 +80,7 @@
                                 id="phaseNumericInput">
                             </numeric-input-with-spinbutton>
                         </div>
-                    </div>                                     
+                    </div>
                     <div class="col-md-4" style="padding-top: 4px">
                         <previous-phases-selector phase="phase" phase-index="$index" design="dec.design"></previous-phases-selector>
                     </div>
@@ -87,22 +88,33 @@
                 <div class="row">
                     <div class="col-md-12">
                         <div style="margin-top: 1em" ng-switch="dec.design.type">
-                            <hr>                            
+                            <hr>
                             <h4>{{ 'questions_title_text' | translate }}</h4>
                             <button class="btn btn-default btn-sm" ng-click="dec.addItemToPhase(phase)">
                                 <i class="fa-solid fa-plus text-success"></i> {{ 'add_question_button_text' | translate }}
-                            </button>                  
-                            <sd-item-editor 
-                                ng-repeat="question in phase.questions" 
-                                ng-switch-when="semantic_differential" 
-                                question="question">
-                            </sd-item-editor>
-                            
-                            <ranking-item-editor 
-                                ng-switch-when="ranking" 
-                                roles="phase.roles">
-                            </ranking-item-editor>
+                            </button>
+                            <div ng-repeat="question in phase.questions track by $index">
+                                <div ng-switch="dec.design.type">
+                                    <div ng-switch-when="semantic_differential">
+                                        <sd-item-editor question="question">
+                                            <item-deleter items="phase.questions" index="$index"></item-deleter>
+                                            <item-duplicator items="phase.questions" index="$index"></item-duplicator>
+                                        </sd-item-editor>
+                                    </div>
+                                    <div ng-switch-when="ranking">
+                                        <ranking-item-editor roles="phase.roles">
+                                            <item-deleter items="phase.roles" index="$index"></item-deleter>
+                                            <item-duplicator items="phase.questions" index="$index"></item-duplicator>
+                                        </ranking-item-editor>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-12 text-right">
+                        <phase-mover phases="dec.design.phases" index="$index"></phase-mover>                    
                     </div>
                 </div>
             </div>

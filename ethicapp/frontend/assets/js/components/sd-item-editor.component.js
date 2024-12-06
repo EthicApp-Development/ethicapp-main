@@ -4,6 +4,7 @@ const sdItemEditorComponent = {
     bindings: {
         question: '=',
     },
+    transclude: true,
     template: semanticDifferentialItemTemplate,
     controller: SDItemEditController,
 };

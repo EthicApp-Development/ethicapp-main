@@ -4,6 +4,7 @@ const rankingItemEditorComponent = {
     bindings: {
         roles: '=',
     },
+    transclude: true,
     template: rankingItemTemplate,
     controller: RankingController,
 };

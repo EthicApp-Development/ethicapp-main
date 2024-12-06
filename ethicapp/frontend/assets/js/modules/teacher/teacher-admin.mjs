@@ -1,19 +1,13 @@
 "use strict";
-// TODO: refactor these global variables
-//var DASHBOARD_AUTORELOAD = window.location.hostname.indexOf("localhost") == -1;
-//var DASHBOARD_AUTORELOAD_TIME = 15;
-
-window.DIC = null;
-window.warnDIC = {};
 
 import "angular-toggle-switch";
+import { io } from 'socket.io-client';
+import * as Rx from 'rxjs';
+
 import { ActivityStateService } from "../../services/activity-state.service.js";
 import { ActivityCatalogService } from "../../services/activity-catalog.service.js";
 import { DesignStateService } from "../../services/design-state.service.js";
 import { DesignCatalogService } from "../../services/design-catalog.service.js";
-
-import { io } from 'socket.io-client';
-import * as Rx from 'rxjs';
 
 var app = angular.module("TeacherApp", ["ngSanitize",
     "ui.bootstrap", "ui.multiselect", "timer", "ngFileUpload",
@@ -111,7 +105,6 @@ app.run(function($rootScope) {
         console.error('Failed to load route:', current.originalPath);
     });
 });
-
 
 // Rich text editor configuration
 app.config(["ngQuillConfigProvider", ngQuillConfigProvider]);
@@ -251,6 +244,9 @@ import sdItemEditorComponent from "../../components/sd-item-editor.component.js"
 import groupingModeSelectorComponent from "../../components/grouping-mode-selector.component.js";
 import previousPhasesSelectorComponent from "../../components/previous-phases-selector.component.js";
 import numericInputWithSpinbuttonComponent from "../../components/numeric-input-with-spinbutton.component.js";
+import phaseMoverComponent from "../../components/phase-mover.component.js";
+import itemDeleterComponent from "../../components/item-deleter.component.js";
+import itemDuplicatorComponent from "../../components/item-duplicator.component.js";
 
 app.component('activityDescription', activityDescriptionComponent);
 app.component('designDescription', designDescriptionComponent);
@@ -260,3 +256,6 @@ app.component('sdItemEditor', sdItemEditorComponent);
 app.component('groupingModeSelector', groupingModeSelectorComponent);
 app.component('previousPhasesSelector', previousPhasesSelectorComponent);
 app.component('numericInputWithSpinbutton', numericInputWithSpinbuttonComponent);
+app.component('phaseMover', phaseMoverComponent);
+app.component('itemDeleter', itemDeleterComponent);
+app.component('itemDuplicator', itemDuplicatorComponent);

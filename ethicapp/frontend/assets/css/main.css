@@ -2309,6 +2309,25 @@ h2{
     margin-top: 0.5em;
 }
 
+.item-deleter,
+.item-duplicator {
+    display: inline-block;
+}
+
+.phase-editor-item-heading a {
+    text-decoration: none;
+    color: inherit;
+}
+
+.phase-editor-item-heading a:hover {
+    text-decoration: none;
+    color: #0056b3;
+}
+
+.phase-editor-item-heading a:focus {
+    outline: none;
+}
+
 .ats-switch {
     border: 1px solid;
     cursor: pointer;

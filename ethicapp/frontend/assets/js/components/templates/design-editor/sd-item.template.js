@@ -29,6 +29,14 @@ const semanticDifferentialItemTemplate = `
                        ng-model="$ctrl.question.ans_format.r_pole">
             </div>
         </div>
+        <hr>
+        <div class="row">
+            <div class="col-xs-12">
+                <div class="btn-group" role="group" aria-label="Item Actions">
+                    <ng-transclude></ng-transclude>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 <hr>

@@ -27,11 +27,11 @@ export function CreateDesignController($scope, $http,
                     "stdntAmount":        3,
                     "questions":          [
                         {
-                            "q_text":     "-->>N/A<<--",
+                            "q_text":     "",
                             "ans_format": {
                                 "values":          7,
-                                "l_pole":          "-->>N/A<<--",
-                                "r_pole":          "-->>N/A<<--",
+                                "l_pole":          "",
+                                "r_pole":          "",
                                 "just_required":   true,
                                 "min_just_length": 5
                             }
@@ -56,7 +56,7 @@ export function CreateDesignController($scope, $http,
                     "grouping_algorithm": "random",
                     "prevPhasesResponse": [ ],
                     "stdntAmount":        3,
-                    "q_text":             "-->>N/A<<--",
+                    "q_text":             "",
                     "roles":              [
                     ]
                 }

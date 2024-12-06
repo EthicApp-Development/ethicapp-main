@@ -420,21 +420,18 @@ router.post("/check-design", await rpg.singleSQL({
                 phase.questions?.forEach(question => {
                     if (
                         !question.q_text ||
-                        question.q_text === "-->>N/A<<--" ||
                         !question.ans_format.l_pole ||
-                        question.ans_format.l_pole === "-->>N/A<<--" ||
-                        !question.ans_format.r_pole ||
-                        question.ans_format.r_pole === "-->>N/A<<--"
+                        !question.ans_format.r_pole
                     ) {
                         isValid = false;
                     }
                 });
             } else if (design.type === "ranking") {
-                if (!phase.q_text || phase.q_text === "-->>N/A<<--") {
+                if (!phase.q_text) {
                     isValid = false;
                 }
                 phase.roles?.forEach(role => {
-                    if (!role.name || role.name === "-->>N/A<<--") {
+                    if (!role.name) {
                         isValid = false;
                     }
                 });

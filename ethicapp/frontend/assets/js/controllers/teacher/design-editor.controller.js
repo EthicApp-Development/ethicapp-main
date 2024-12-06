@@ -80,6 +80,8 @@ export function DesignEditorController($scope, $routeParams,
         const phase = designEditActions.buildBlankPhase(vm.design);
         $scope.$applyAsync(() => {
             designEditActions.addPhase(vm.design, phase);
+            const numPhases = vm.design.phases.length;
+            vm.accordionState[numPhases-1] = true;
         });
     };
 
