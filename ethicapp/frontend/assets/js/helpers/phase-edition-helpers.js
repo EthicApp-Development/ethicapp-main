@@ -102,6 +102,7 @@ const designEditActions = {
     },
     updatePhaseType: (phase) => {
         if (phase.mode == 'team') {
+            phase.stdntAmount = phase.stdntAmount || 3;
             phase.anonymous = phase.anonymous || true;
             phase.chat = phase.chat || true;
             phase.grouping_algorithm = phase.grouping_algorithm || 'random';
@@ -109,12 +110,14 @@ const designEditActions = {
             delete phase.anonymous;
             delete phase.chat;
             delete phase.grouping_algorithm;
+            delete phase.stdntAmount;
         }
     },
     initPhase: (phase) => {
         phase.anonymous = phase.anonymous || false;
         phase.chat = phase.chat || false;
         phase.grouping_algorithm = phase.grouping_algorithm || null;
+        phase.stdntAmount = phase.stdntAmount || 3;
     }
 };
 
