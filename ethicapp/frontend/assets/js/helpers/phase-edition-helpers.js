@@ -1,6 +1,5 @@
 import { getDesignType } from "./design-helpers.js";
 
-// Fases y acciones de construcción
 const phaseBuilders = {
     semantic_differential: genericPhaseBuilder,
     ranking: genericPhaseBuilder,
@@ -31,7 +30,6 @@ const itemAdders = {
     },
 };
 
-// Funciones auxiliares
 function removeSDItemFromPhase(phase, item) {
     phase.questions = phase.questions.filter((_item) => _item !== item);
 }
@@ -43,6 +41,7 @@ function removeRankingItemFromPhase(phase, item) {
 function genericPhaseBuilder(params = {}) {
     const phaseObj = {
         mode: params.mode ?? "individual",
+        prevPhasesResponse: params.prevPhasesResponse ?? [],
         ...params,
     };
     return phaseObj;
@@ -70,10 +69,10 @@ function rankingItemBuilder(params = {}) {
 }
 
 const designEditActions = {
-    buildBlankPhase: (design) => {
+    buildBlankPhase: function(design) {
         const builder = phaseBuilders[getDesignType(design)];
         const blankPhase = builder();
-        initPhase(blankPhase); // add basic fields
+        this.initPhase(blankPhase);
         return blankPhase;
     },
     addPhase: (design, phase) => {

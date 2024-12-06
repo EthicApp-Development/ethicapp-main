@@ -2275,6 +2275,19 @@ h2{
     width: 16em;
 }
 
+.prev-phases-selector {
+    margin-top: 10px;
+}
+
+.prev-phases-selector label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.prev-phases-selector input[type="checkbox"] {
+    margin-right: 8px;
+}
 
 .ats-switch {
     border: 1px solid;

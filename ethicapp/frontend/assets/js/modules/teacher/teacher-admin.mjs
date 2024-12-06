@@ -249,6 +249,7 @@ import { phaseDescriptionComponent } from "../../components/phase-description.co
 import rankingItemEditorComponent from "../../components/ranking-item-editor.component.js";
 import sdItemEditorComponent from "../../components/sd-item-editor.component.js";
 import groupingModeSelectorComponent from "../../components/grouping-mode-selector.component.js";
+import previousPhasesSelectorComponent from "../../components/previous-phases-selector.component.js";
 
 app.component('activityDescription', activityDescriptionComponent);
 app.component('designDescription', designDescriptionComponent);
@@ -256,3 +257,4 @@ app.component('phaseDescription', phaseDescriptionComponent);
 app.component('rankingItemEditor', rankingItemEditorComponent);
 app.component('sdItemEditor', sdItemEditorComponent);
 app.component('groupingModeSelector', groupingModeSelectorComponent);
+app.component('previousPhasesSelector', previousPhasesSelectorComponent);
