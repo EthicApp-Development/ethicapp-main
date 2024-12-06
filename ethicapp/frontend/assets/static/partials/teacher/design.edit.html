@@ -55,17 +55,25 @@
                 <div class="row">
                     <div class="col-md-4">
                         <h4>{{ 'features_title_text' | translate}}</h4>
-                        <div toggle-switch phase-mode-value-adapter ng-model="phase.mode" class="ats-switch switch-mini"></div> {{ 'group_phase_label' | translate }} 
+                        <div toggle-switch phase-mode-value-adapter ng-model="phase.mode" class="ats-switch switch-mini"></div> <label>{{ 'group_phase_label' | translate }}</label>
                         <div ng-show="phase.mode !== 'individual'">
-                            <div toggle-switch phase-mode-value-adapter ng-model="phase.anonymous" class="ats-switch switch-mini"></div> {{ 'use_anonimity_label' | translate }} <br>
-                            <div toggle-switch phase-mode-value-adapter ng-model="phase.chat" class="ats-switch switch-mini"></div> {{ 'use_chat_label' | translate }}  <br>
+                            <div toggle-switch phase-mode-value-adapter ng-model="phase.anonymous" class="ats-switch switch-mini"></div> <label>{{ 'use_anonimity_label' | translate }}</label> <br>
+                            <div toggle-switch phase-mode-value-adapter ng-model="phase.chat" class="ats-switch switch-mini"></div> <label>{{ 'use_chat_label' | translate }} </label> <br>
                         </div>
                     </div>
-                    <div class="col-md-4" style="padding-top: 8px">
+                    <div class="col-md-4" style="padding-top: 16px">
                         <grouping-mode-selector phase="phase"></grouping-mode-selector>
-                        <previous-phases-selector phase="phase" phase-index="$index" design="dec.design"></previous-phases-selector>
+                        <label>Group size</label>
+                        <numeric-input-with-spinbutton 
+                            value="phase.someNumericValue" 
+                            min="1" 
+                            max="10" 
+                            step="1" 
+                            id="phaseNumericInput">
+                        </numeric-input-with-spinbutton>
                     </div>                                     
-                    <div class="col-md-4">
+                    <div class="col-md-4" style="padding-top: 4px">
+                        <previous-phases-selector phase="phase" phase-index="$index" design="dec.design"></previous-phases-selector>
                     </div>
                 </div>
                 <div class="row">

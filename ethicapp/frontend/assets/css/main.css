@@ -2263,6 +2263,11 @@ h2{
     width: 100%;
 }
 
+.group-size-input {
+    width: 120px;
+    text-align: center;
+}
+
 .grouping-mode-selector label {
     margin-bottom: 5px;
 }
@@ -2280,13 +2285,28 @@ h2{
 }
 
 .prev-phases-selector label {
-    font-weight: bold;
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 2px;
 }
 
 .prev-phases-selector input[type="checkbox"] {
     margin-right: 8px;
+}
+
+.prev-phases-selector .phases-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.prev-phases-selector .phase-item {
+    display: flex;
+    align-items: center;
+    width: calc(30% - 7.5px);
+}
+
+.prev-phases-selector .phase-item label {
+    margin-top: 0.5em;
 }
 
 .ats-switch {

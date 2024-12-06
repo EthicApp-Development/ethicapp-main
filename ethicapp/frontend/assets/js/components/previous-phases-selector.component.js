@@ -5,18 +5,20 @@ const previousPhasesSelectorComponent = {
         design: '<'
     },
     template: `
-        <div class="prev-phases-selector" ng-if="$ctrl.availablePhases.length > 0">
-            <label>{{ 'show_previous_phase_responses_text' | translate }}</label>
-            <div ng-repeat="phase in $ctrl.availablePhases track by phase">
+    <div class="prev-phases-selector" ng-if="$ctrl.availablePhases.length > 0">
+        <label>{{ 'show_previous_phase_responses_text' | translate }}</label>
+        <div class="phases-container">
+            <div class="phase-item" ng-repeat="phase in $ctrl.availablePhases track by phase">
                 <input type="checkbox" 
-                       id="phase_{{phase}}" 
-                       ng-checked="$ctrl.isPhaseSelected(phase)" 
-                       ng-click="$ctrl.togglePhase(phase)">
+                    id="phase_{{phase}}" 
+                    ng-checked="$ctrl.isPhaseSelected(phase)" 
+                    ng-click="$ctrl.togglePhase(phase)">
                 <label for="phase_{{phase}}">
                     {{ 'phase_title_prefix' | translate }} {{ phase }}
                 </label>
             </div>
         </div>
+    </div>
     `,
     controller: PreviousPhasesSelectorController
 };

@@ -250,6 +250,7 @@ import rankingItemEditorComponent from "../../components/ranking-item-editor.com
 import sdItemEditorComponent from "../../components/sd-item-editor.component.js";
 import groupingModeSelectorComponent from "../../components/grouping-mode-selector.component.js";
 import previousPhasesSelectorComponent from "../../components/previous-phases-selector.component.js";
+import numericInputWithSpinbuttonComponent from "../../components/numeric-input-with-spinbutton.component.js";
 
 app.component('activityDescription', activityDescriptionComponent);
 app.component('designDescription', designDescriptionComponent);
@@ -258,3 +259,4 @@ app.component('rankingItemEditor', rankingItemEditorComponent);
 app.component('sdItemEditor', sdItemEditorComponent);
 app.component('groupingModeSelector', groupingModeSelectorComponent);
 app.component('previousPhasesSelector', previousPhasesSelectorComponent);
+app.component('numericInputWithSpinbutton', numericInputWithSpinbuttonComponent);
