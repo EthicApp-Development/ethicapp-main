@@ -32,6 +32,7 @@ export function DesignEditorController($scope, $routeParams,
 
             await DesignStateService.setDesign(designId, designObj);
 
+            //vm.initializePhases();
             vm.initializeAccordionStates();
         }
     };
@@ -55,8 +56,27 @@ export function DesignEditorController($scope, $routeParams,
         vm.accordionState[index] = !vm.accordionState[index];
     };
 
+    vm.initializePhases = function(design) {
+        try {
+            vm.design.phases.forEach(vm.initPhase);
+        } catch (error) {
+            console.warn("The current design is probably invalid.");
+        }
+    };
+
+    vm.initPhase = function(phase) {
+        $scope.$applyAsync(() => {
+            designEditActions.initPhase(phase);
+        });
+    };    
+
+    vm.updatePhaseType = function(phase) {
+        $scope.$applyAsync(() => {
+            designEditActions.updatePhaseType(phase);
+        });
+    }
+
     vm.addPhase = function() { 
-        console.log("[addPhase] " + JSON.stringify(vm.design));
         const phase = designEditActions.buildBlankPhase(vm.design);
         $scope.$applyAsync(() => {
             designEditActions.addPhase(vm.design, phase);
@@ -85,12 +105,10 @@ export function DesignEditorController($scope, $routeParams,
     };
 
     vm.toggleAccordion = function (index) {
-        console.log("toggleAccordion");
         vm.accordionState[index] = !vm.accordionState[index];
     };
 
     vm.isAccordionOpen = function (index) {
-        console.log("isAccordionOpen");
         return vm.accordionState[index] || false;
     };  
 

@@ -41,7 +41,6 @@ function removeRankingItemFromPhase(phase, item) {
 }
 
 function genericPhaseBuilder(params = {}) {
-    console.log("generic builder");
     const phaseObj = {
         mode: params.mode ?? "individual",
         ...params,
@@ -70,11 +69,12 @@ function rankingItemBuilder(params = {}) {
     };
 }
 
-// Acciones de edición dinámicas
 const designEditActions = {
     buildBlankPhase: (design) => {
         const builder = phaseBuilders[getDesignType(design)];
-        return builder();
+        const blankPhase = builder();
+        initPhase(blankPhase); // add basic fields
+        return blankPhase;
     },
     addPhase: (design, phase) => {
         if (!design.phases) {
@@ -100,6 +100,22 @@ const designEditActions = {
     clonePhaseByIndex: (design, phaseIndex) => {
         const phaseClone = structuredClone(design.phases[phaseIndex]);
         design.phases.splice(phaseIndex+1, 0, phaseClone);
+    },
+    updatePhaseType: (phase) => {
+        if (phase.mode == 'team') {
+            phase.anonymous = phase.anonymous || true;
+            phase.chat = phase.chat || true;
+            phase.grouping_algorithm = phase.grouping_algorithm || 'random';
+        } else {
+            delete phase.anonymous;
+            delete phase.chat;
+            delete phase.grouping_algorithm;
+        }
+    },
+    initPhase: (phase) => {
+        phase.anonymous = phase.anonymous || false;
+        phase.chat = phase.chat || false;
+        phase.grouping_algorithm = phase.grouping_algorithm || null;
     }
 };
 
