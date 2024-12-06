@@ -8,7 +8,7 @@ const semanticDifferentialItemTemplate = `
                    ng-model="$ctrl.question.q_text">
         </div>
 
-        <div class="row">
+        <div class="row dashed-bottom-border">
             <div class="col-xs-3 text-right">
                 <input type="text" class="form-control" placeholder="{{ 'left' | translate }}" 
                        ng-model="$ctrl.question.ans_format.l_pole">

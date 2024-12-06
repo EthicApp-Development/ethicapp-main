@@ -1,4 +1,4 @@
-const rankingItemTemplate = `<div class="panel panel-info">
+const rankingItemTemplate = `<div class="panel panel-info dashed-bottom-border">
     <div class="panel-heading">
         <h4 class="panel-title">{{ 'roles' | translate }}</h4>
     </div>

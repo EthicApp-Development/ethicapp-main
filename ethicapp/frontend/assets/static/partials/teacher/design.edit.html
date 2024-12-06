@@ -53,20 +53,28 @@
                     </div>                    
                 </div>
                 <div class="row">
-                    <div class="col-md-12">
+                    <div class="col-md-4">
                         <h4>Características</h4>
                         <div toggle-switch phase-mode-value-adapter ng-model="phase.mode" class="ats-switch switch-mini"></div> Fase Grupal
                         <div ng-show="phase.mode !== 'individual'">
                             <div toggle-switch phase-mode-value-adapter ng-model="phase.anonymous" class="ats-switch switch-mini"></div> Usar Anonimato <br>
                             <div toggle-switch phase-mode-value-adapter ng-model="phase.chat" class="ats-switch switch-mini"></div> Usar Chat <br>
-                            Mostrar respuestas de fases anteriores
                         </div>
+                    </div>
+                    <div class="col-md-4" style="padding-top: 36px;">
+                        <p style="line-height: 1.7em;">Método de agrupación<br>Mostrar respuestas de fases anteriores</p>
+                    </div>
+                    <div class="col-md-4">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
                         <div style="margin-top: 1em" ng-switch="dec.design.type">
+                            <hr>                            
                             <h4>Preguntas</h4>
                             <button class="btn btn-default btn-sm" ng-click="dec.addItemToPhase(phase)">
                                 <i class="fa-solid fa-plus text-success"></i> {{ 'add_question_button_text' | translate }}
-                            </button>
-                            <hr style="margin-top:1em">                    
+                            </button>                  
                             <sd-item-editor 
                                 ng-repeat="question in phase.questions" 
                                 ng-switch-when="semantic_differential" 

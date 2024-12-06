@@ -2247,6 +2247,16 @@ h2{
     color: #007bff;
 }
 
+.dashed-bottom-border {
+    border-bottom: 1px dashed #efefef;
+    height: 1px;
+}
+
+.solid-bottom-border {
+    border-bottom: 1px solid #efefef;
+    height: 1px;
+}
+
 .ats-switch {
     border: 1px solid;
     cursor: pointer;
