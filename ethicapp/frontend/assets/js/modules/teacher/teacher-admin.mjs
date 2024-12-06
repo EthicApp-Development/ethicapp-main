@@ -241,16 +241,18 @@ app.directive("individualPhaseTable", individualPhaseTableDirective);
 app.directive("phaseModeValueAdapter", phaseModeValueAdapter);
 
 app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateService", 
-    ConnectedUsersDirectiveController])
+    ConnectedUsersDirectiveController]);
 
-import { activityDescriptionComponent } from "../../components/activity-description.component.js"
-import { designDescriptionComponent } from "../../components/design-description.component.js"
-import { phaseDescriptionComponent } from "../../components/phase-description.component.js"
-import rankingItemEditorComponent from "../../components/ranking-item-editor.component.js"
-import sdItemEditorComponent from "../../components/sd-item-editor.component.js"
+import { activityDescriptionComponent } from "../../components/activity-description.component.js";
+import { designDescriptionComponent } from "../../components/design-description.component.js";
+import { phaseDescriptionComponent } from "../../components/phase-description.component.js";
+import rankingItemEditorComponent from "../../components/ranking-item-editor.component.js";
+import sdItemEditorComponent from "../../components/sd-item-editor.component.js";
+import groupingModeSelectorComponent from "../../components/grouping-mode-selector.component.js";
 
 app.component('activityDescription', activityDescriptionComponent);
 app.component('designDescription', designDescriptionComponent);
 app.component('phaseDescription', phaseDescriptionComponent);
 app.component('rankingItemEditor', rankingItemEditorComponent);
 app.component('sdItemEditor', sdItemEditorComponent);
+app.component('groupingModeSelector', groupingModeSelectorComponent);

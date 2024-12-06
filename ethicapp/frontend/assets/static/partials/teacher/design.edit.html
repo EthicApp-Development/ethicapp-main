@@ -54,16 +54,19 @@
                 </div>
                 <div class="row">
                     <div class="col-md-4">
-                        <h4>Características</h4>
-                        <div toggle-switch phase-mode-value-adapter ng-model="phase.mode" class="ats-switch switch-mini"></div> Fase Grupal
+                        <h4>{{ 'features_title_text' | translate}}</h4>
+                        <div toggle-switch phase-mode-value-adapter ng-model="phase.mode" class="ats-switch switch-mini"></div> {{ 'group_phase_label' | translate }} 
                         <div ng-show="phase.mode !== 'individual'">
-                            <div toggle-switch phase-mode-value-adapter ng-model="phase.anonymous" class="ats-switch switch-mini"></div> Usar Anonimato <br>
-                            <div toggle-switch phase-mode-value-adapter ng-model="phase.chat" class="ats-switch switch-mini"></div> Usar Chat <br>
+                            <div toggle-switch phase-mode-value-adapter ng-model="phase.anonymous" class="ats-switch switch-mini"></div> {{ 'use_anonimity_label' | translate }} <br>
+                            <div toggle-switch phase-mode-value-adapter ng-model="phase.chat" class="ats-switch switch-mini"></div> {{ 'use_chat_label' | translate }}  <br>
                         </div>
                     </div>
-                    <div class="col-md-4" style="padding-top: 36px;">
-                        <p style="line-height: 1.7em;">Método de agrupación<br>Mostrar respuestas de fases anteriores</p>
-                    </div>
+                    <div class="col-md-4" style="padding-top: 8px">
+                        <grouping-mode-selector phase="phase"></grouping-mode-selector>
+                        <div class="form-group">
+                            <span>{{ 'show_previous_phase_responses_text' | translate }}</span>
+                        </div>
+                    </div>                                     
                     <div class="col-md-4">
                     </div>
                 </div>
@@ -71,7 +74,7 @@
                     <div class="col-md-12">
                         <div style="margin-top: 1em" ng-switch="dec.design.type">
                             <hr>                            
-                            <h4>Preguntas</h4>
+                            <h4>{{ 'questions_title_text' | translate }}</h4>
                             <button class="btn btn-default btn-sm" ng-click="dec.addItemToPhase(phase)">
                                 <i class="fa-solid fa-plus text-success"></i> {{ 'add_question_button_text' | translate }}
                             </button>                  

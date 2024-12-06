@@ -2257,6 +2257,25 @@ h2{
     height: 1px;
 }
 
+.grouping-mode-selector {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.grouping-mode-selector label {
+    margin-bottom: 5px;
+}
+
+.grouping-mode-selector .form-group {
+    margin-bottom: 15px;
+}
+
+.grouping-mode-selector select {
+    width: 16em;
+}
+
+
 .ats-switch {
     border: 1px solid;
     cursor: pointer;
