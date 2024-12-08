@@ -1,7 +1,7 @@
 import designEditActions from "../../helpers/phase-edition-helpers.js";
 import { getPhaseByIndex } from "../../helpers/design-helpers.js";
 
-export function DesignEditorController($scope, $routeParams, 
+export function DesignEditorController($scope, $translate, $routeParams, 
     DesignStateService, DesignCatalogService) {
 
     const vm = this;
@@ -116,20 +116,7 @@ export function DesignEditorController($scope, $routeParams,
 
     vm.isAccordionOpen = function (index) {
         return vm.accordionState[index] || false;
-    };  
-
-    vm.confirmDeletePhase = function (index, event) {
-        if (event) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-
-        if (window.confirm("¿Estás seguro de que deseas eliminar esta fase?")) {
-            const phase = getPhaseByIndex(vm.design, index)
-            designEditActions.removePhase(vm.design, phase);
-            delete vm.accordionState[index];
-        }
-    };
+    };      
 
     vm.saveDesign = async function() {
         try {
@@ -230,78 +217,6 @@ export function DesignEditorController($scope, $routeParams,
             }
         }
 
-        vm.handleItemDeletion = function({ phaseNumber, deletedItem, index }) {
-            console.log("[handleItemDeletion]");
-        
-            // Validate that phaseNumber is provided and valid
-            if (phaseNumber === undefined || phaseNumber === null) {
-                console.warn("[handleItemDeletion] phaseNumber is missing or invalid:", phaseNumber);
-                return;
-            }
-        
-            // Validate that index is provided and valid
-            if (index === undefined || index === null || index < 0) {
-                console.warn("[handleItemDeletion] index is missing or invalid:", index);
-                return;
-            }
-        
-            const phaseKey = `phase_${phaseNumber}`;
-            const itemKey = `item_${index + 1}`;
-        
-            // Check that the validationErrors structure is initialized
-            if (!vm.validationErrors || !vm.validationErrors.phases) {
-                console.warn("[handleItemDeletion] Validation errors structure is not initialized.");
-                return;
-            }
-        
-            // Check if the phase exists in validationErrors
-            if (!vm.validationErrors.phases[phaseKey]) {
-                console.warn(`[handleItemDeletion] Phase key '${phaseKey}' does not exist in validationErrors.`);
-                return;
-            }
-        
-            // Ensure the items field is initialized within the phase
-            if (!vm.validationErrors.phases[phaseKey].items) {
-                console.warn(`[handleItemDeletion] Items for phase '${phaseKey}' are not initialized.`);
-                return;
-            }
-        
-            // Check if the specific item exists in the phase
-            if (!vm.validationErrors.phases[phaseKey].items[itemKey]) {
-                console.warn(`[handleItemDeletion] Item key '${itemKey}' does not exist in phase '${phaseKey}'.`);
-                return;
-            }
-        
-            $scope.$applyAsync(() => {
-                // Remove validation errors associated with the deleted item
-                delete vm.validationErrors.phases[phaseKey].items[itemKey];
-                console.debug(`[handleItemDeletion] Validation errors for item '${itemKey}' in phase '${phaseKey}' deleted.`);
-            
-                // Update keys for subsequent items
-                const itemKeys = Object.keys(vm.validationErrors.phases[phaseKey].items).sort();
-                itemKeys.forEach((currentKey) => {
-                    const currentIndex = parseInt(currentKey.split('_')[1], 10);
-                    if (currentIndex > index + 1) {
-                        const newKey = `item_${currentIndex - 1}`;
-                        vm.validationErrors.phases[phaseKey].items[newKey] = vm.validationErrors.phases[phaseKey].items[currentKey];
-                        delete vm.validationErrors.phases[phaseKey].items[currentKey];
-                        console.debug(`[handleItemDeletion] Item key updated from '${currentKey}' to '${newKey}'.`);
-                    }
-                });
-            
-                // Clean up the phase if it has no remaining errors
-                const phaseErrors = vm.validationErrors.phases[phaseKey];
-                if (
-                    Object.keys(phaseErrors.items).length === 0 &&
-                    phaseErrors.groupingConfig.length === 0 &&
-                    phaseErrors.other.length === 0
-                ) {
-                    delete vm.validationErrors.phases[phaseKey];
-                    console.debug(`[handleItemDeletion] Phase '${phaseKey}' has no errors left and was removed.`);
-                }
-            });
-        };
-        
         // Handle global errors
         if (type === "global") {
             if (messages.length > 0) {
@@ -311,9 +226,114 @@ export function DesignEditorController($scope, $routeParams,
             }
         }
 
-        console.log("Validation Errors:", JSON.stringify(vm.validationErrors));
+        console.log("Validation Errors:", JSON.stringify(vm.validationErrors));        
     };
+
+    vm.handleItemDeletion = function({ phaseNumber, deletedItem, index }) {
+        console.log("[handleItemDeletion]");
+    
+        // Validate that phaseNumber is provided and valid
+        if (phaseNumber === undefined || phaseNumber === null) {
+            console.warn("[handleItemDeletion] phaseNumber is missing or invalid:", phaseNumber);
+            return;
+        }
+    
+        // Validate that index is provided and valid
+        if (index === undefined || index === null || index < 0) {
+            console.warn("[handleItemDeletion] index is missing or invalid:", index);
+            return;
+        }
+    
+        const phaseKey = `phase_${phaseNumber}`;
+        const itemKey = `item_${index + 1}`;
+    
+        // Check that the validationErrors structure is initialized
+        if (!vm.validationErrors || !vm.validationErrors.phases) {
+            console.warn("[handleItemDeletion] Validation errors structure is not initialized.");
+            return;
+        }
+    
+        // Check if the phase exists in validationErrors
+        if (!vm.validationErrors.phases[phaseKey]) {
+            console.warn(`[handleItemDeletion] Phase key '${phaseKey}' does not exist in validationErrors.`);
+            return;
+        }
+    
+        // Ensure the items field is initialized within the phase
+        if (!vm.validationErrors.phases[phaseKey].items) {
+            console.warn(`[handleItemDeletion] Items for phase '${phaseKey}' are not initialized.`);
+            return;
+        }
+    
+        // Check if the specific item exists in the phase
+        if (!vm.validationErrors.phases[phaseKey].items[itemKey]) {
+            console.warn(`[handleItemDeletion] Item key '${itemKey}' does not exist in phase '${phaseKey}'.`);
+            return;
+        }
+    
+        $scope.$applyAsync(() => {
+            // Remove validation errors associated with the deleted item
+            delete vm.validationErrors.phases[phaseKey].items[itemKey];
+            console.debug(`[handleItemDeletion] Validation errors for item '${itemKey}' in phase '${phaseKey}' deleted.`);
         
+            // Update keys for subsequent items
+            const itemKeys = Object.keys(vm.validationErrors.phases[phaseKey].items).sort();
+            itemKeys.forEach((currentKey) => {
+                const currentIndex = parseInt(currentKey.split('_')[1], 10);
+                if (currentIndex > index + 1) {
+                    const newKey = `item_${currentIndex - 1}`;
+                    vm.validationErrors.phases[phaseKey].items[newKey] = vm.validationErrors.phases[phaseKey].items[currentKey];
+                    delete vm.validationErrors.phases[phaseKey].items[currentKey];
+                    console.debug(`[handleItemDeletion] Item key updated from '${currentKey}' to '${newKey}'.`);
+                }
+            });
+        
+            // Clean up the phase if it has no remaining errors
+            const phaseErrors = vm.validationErrors.phases[phaseKey];
+            if (
+                Object.keys(phaseErrors.items).length === 0 &&
+                phaseErrors.groupingConfig.length === 0 &&
+                phaseErrors.other.length === 0
+            ) {
+                delete vm.validationErrors.phases[phaseKey];
+                console.debug(`[handleItemDeletion] Phase '${phaseKey}' has no errors left and was removed.`);
+            }
+        });
+    };
+
+    vm.handlePhaseDeletion = function (deletedIndex) {
+        console.debug(`[handlePhaseDeletion] Deleted phase at index: ${deletedIndex}`);
+    
+        const phaseKeyPrefix = 'phase_';
+    
+        // Removes errors associated with the deleted phase
+        const phaseKey = `${phaseKeyPrefix}${deletedIndex + 1}`;
+        if (vm.validationErrors.phases && vm.validationErrors.phases[phaseKey]) {
+            $scope.$applyAsync(() => {
+                delete vm.validationErrors.phases[phaseKey];
+            });
+            console.debug(`[handlePhaseDeletion] Removed validation errors for ${phaseKey}`);
+        }
+    
+        // Updates the keys of the remaining phases
+        if (vm.validationErrors.phases) {
+            const updatedPhases = {};
+            Object.keys(vm.validationErrors.phases).forEach((key) => {
+                const phaseNumber = parseInt(key.split('_')[1], 10);
+                if (phaseNumber > deletedIndex + 1) {
+                    const newPhaseKey = `${phaseKeyPrefix}${phaseNumber - 1}`;
+                    updatedPhases[newPhaseKey] = vm.validationErrors.phases[key];
+                    console.debug(`[handlePhaseDeletion] Updated phase key: ${key} -> ${newPhaseKey}`);
+                } else {
+                    updatedPhases[key] = vm.validationErrors.phases[key];
+                }
+            });
+            $scope.$applyAsync(() => {
+                vm.validationErrors.phases = updatedPhases;
+            })
+        }
+    };
+    
     vm.getSortedPhaseErrorKeys = function () {
         return Object.keys(vm.validationErrors.phases).sort((a, b) => {
             const phaseNumberA = parseInt(a.split('_')[1], 10);

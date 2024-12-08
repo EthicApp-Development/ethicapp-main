@@ -87,7 +87,7 @@ function GroupingModeSelectorController() {
     
     vm.updateGroupingMode = function () {
         vm.phase.grouping_algorithm = vm.selectedMode;
-
+        
         if (vm.validateCallback) {
             const validation = vm.validate();
             vm.validateCallback({ result: validation });
@@ -104,6 +104,21 @@ function GroupingModeSelectorController() {
 
     vm.$onInit = function () {
         vm.loadGroupingModes();
+    
+        // Set the selected mode based on the phase's grouping_algorithm
+        if (vm.phase && vm.phase.grouping_algorithm) {
+            const validMode = vm.groupingModes.some(mode => mode.name === vm.phase.grouping_algorithm);
+            vm.selectedMode = validMode ? vm.phase.grouping_algorithm : null;
+    
+            if (!validMode) {
+                console.warn(`[GroupingModeSelectorController] Invalid grouping_algorithm '${vm.phase.grouping_algorithm}' in phase. Resetting to null.`);
+            }
+        } else {
+            // Default to null if no grouping_algorithm is set
+            vm.selectedMode = null;
+        }
+    
+        // Perform initial validation
         if (vm.validateCallback) {
             const validation = vm.validate();
             vm.validateCallback({ result: validation });

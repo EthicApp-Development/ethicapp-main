@@ -301,6 +301,7 @@
 	"edit_design_title": "Editar Diseño",
 	"add_phase_button_text": "Agregar fase",
 	"delete_phase_button_text": "Eliminar fase",
+	"delete_phase_confirmation_message": "Por favor confirma que deseas eliminar esta fase",
 	"delete_item_button_text" : "Eliminar",
 	"delete_item_confirmation_message" : "Por favor confirma la eliminación de este ítem de la fase",
 	"grouping_mode_label_text": "Modo de agrupación",

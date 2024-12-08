@@ -51,8 +51,11 @@
                                     style="cursor: pointer;"
                                     ng-click="dec.duplicatePhase(phaseIndex, $event)"></i>&nbsp;
                                 <i class="fa-solid fa-trash text-danger" 
-                                style="cursor: pointer;" 
-                                ng-click="dec.confirmDeletePhase(phaseIndex, $event)">
+                                    style="cursor: pointer;" 
+                                    phase-deleter 
+                                    phases="dec.design.phases" 
+                                    phase-index="$index"
+                                    on-delete="dec.handlePhaseDeletion(index)">
                                 </i>&nbsp;
                                 <i ng-class="{'fa-solid fa-down-left-and-up-right-to-center': dec.accordionState[phaseIndex], 
                                             'fa-solid fa-up-right-and-down-left-from-center': !dec.accordionState[phaseIndex]}" 
@@ -79,7 +82,7 @@
                                 validate-callback="dec.handleValidationResult(result)">
                             </grouping-mode-selector>
                         
-                            <div style="margin-top:0.5em">
+                            <div style="margin-top:0.5em" ng-if="dec.design.phases[phaseIndex].grouping_algorithm !== 'preserve'">
                                 <label>{{ 'group_size_label' | translate }}</label>
                                 <numeric-input-with-spinbutton 
                                     value="phase.stdntAmount" 

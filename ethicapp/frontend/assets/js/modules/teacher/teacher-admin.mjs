@@ -162,7 +162,7 @@ app.controller("ErrorController",
     ["$scope", "$window", "$routeParams",
         ErrorController]);
 app.controller("DesignEditorController", 
-    ["$scope", "$routeParams", "DesignStateService", "DesignCatalogService",
+    ["$scope", "$translate", "$routeParams", "DesignStateService", "DesignCatalogService",
         DesignEditorController]);         
 app.controller("VoidController", [VoidController]);        
 /*app.controller("RoutingController", 
@@ -225,6 +225,7 @@ import { phaseStateDirective } from "../../directives/phase-state.directive.js";
 import { groupPhaseTableDirective } from "../../directives/group-phase-table.directive.js";
 import { individualPhaseTableDirective } from "../../directives/individual-phase-table.directive.js";
 import phaseModeValueAdapter from "../../directives/phase-mode-value-adapter.directive.js";
+import phaseDeleterDirective from "../../directives/phase-deleter.directive.js";
 
 app.directive("connectedUsers", connectedUsersDirective);
 app.directive("activityControls", activityControlsDirective);
@@ -232,6 +233,7 @@ app.directive("phaseState", phaseStateDirective);
 app.directive("groupPhaseTable", groupPhaseTableDirective);
 app.directive("individualPhaseTable", individualPhaseTableDirective);
 app.directive("phaseModeValueAdapter", phaseModeValueAdapter);
+app.directive("phaseDeleter", ["$translate", phaseDeleterDirective]);
 
 app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateService", 
     ConnectedUsersDirectiveController]);

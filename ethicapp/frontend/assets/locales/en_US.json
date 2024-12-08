@@ -255,6 +255,7 @@
 	"phase_title_prefix": "Phase",
 	"add_phase_button_text": "Add a phase",
 	"delete_phase_button_text": "Delete phase",
+	"delete_phase_confirmation_message": "Please confirm deletion of this phase",
 	"delete_item_button_text" : "Delete",
 	"delete_item_confirmation_message" : "Please confirm deletion of this item from the phase",
 	"save_design_button_text": "Save design",
