@@ -2328,6 +2328,10 @@ h2{
     outline: none;
 }
 
+.validation-errors .list-group-item {
+    cursor: pointer;
+} 
+
 .ats-switch {
     border: 1px solid;
     cursor: pointer;

@@ -2,7 +2,10 @@ import semanticDifferentialItemTemplate from "./templates/design-editor/sd-item.
 
 const sdItemEditorComponent = {
     bindings: {
+        phaseNumber: '<?',
+        questionNumber: '<?',
         question: '=',
+        validateCallback: '&?',
     },
     transclude: true,
     template: semanticDifferentialItemTemplate,
@@ -17,11 +20,41 @@ function SDItemEditController() {
     };
 
     vm.addScaleTick = function() {
-        console.log("[addScaleTick]");
         if (vm.question && vm.question.ans_format) {
             const currVal = vm.question.ans_format.values;
             vm.question.ans_format.values = Math.min(10, currVal + 1);
         }
+    };
+    
+    vm.validateItem = function() {
+        let validation = { 
+            type: "phase",
+            valid: true, 
+            context: 
+                {
+                    phaseNumber: vm.phaseNumber, 
+                    itemNumber: vm.questionNumber
+                }, 
+            messages: [] };
+        
+        if (vm.isEmptyString(vm.question.q_text)) {
+            validation.valid = false;
+            validation.messages.push("edit_error_sd_missing_question_text");
+        }
+        if (vm.isEmptyString(vm.question.ans_format.l_pole)) {
+            validation.valid = false;
+            validation.messages.push("edit_error_sd_missing_value_left_pole");
+        }
+        if (vm.isEmptyString(vm.question.ans_format.r_pole)) {
+            validation.valid = false;
+            validation.messages.push("edit_error_sd_missing_value_right_pole");
+        }
+
+        if (vm.validateCallback) {
+            vm.validateCallback({ result: validation });
+        }
+
+        return validation;
     };
 
     vm.removeScaleTick = function() {
@@ -30,6 +63,25 @@ function SDItemEditController() {
             vm.question.ans_format.values = Math.max(2, currVal - 1);
         }
     };
+
+    vm.$onInit = function () {
+        if (vm.validateCallback) {
+            const validation = vm.validateItem();
+            vm.validateCallback({ result: validation });
+        }        
+    };
+
+    vm.$onDestroy = function() {
+        vm.selectedMode = null;
+        if (vm.validateCallback) {
+            const validation = vm.validateItem();
+            vm.validateCallback({ result: validation });
+        }
+    }
+
+    vm.isEmptyString = function(value) {
+        return typeof value === 'string' && value.trim() === '';
+    }
 }
 
 export default sdItemEditorComponent;

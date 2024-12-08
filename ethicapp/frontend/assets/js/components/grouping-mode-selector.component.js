@@ -46,12 +46,27 @@ function GroupingModeSelectorController() {
     };
 
     vm.isValidMode = function () {
+        let validation = { 
+            type: "phase",
+            valid: true, 
+            context: 
+                {
+                    phaseNumber: vm.phaseIndex + 1,
+                    groupingConfig: true,
+                },
+            messages: []
+        };
+    
+        // Rule 0: If the phase's mode is "team", then a grouping method must be selected
+        if (vm.phase.mode === 'team' && (vm.selectedMode == '' || vm.selectedMode == null)) {
+            validation.valid = false;
+            validation.messages.push("error_must_select_grouping_algorithm");            
+        }
+
         // Rule 1: 'preserve' is not valid in the first phase
         if (vm.selectedMode === 'preserve' && vm.phaseIndex === 0) {
-            return { 
-                valid: false,
-                message: "error_cannot_preserve_groups_phase1"
-            };
+            validation.valid = false;
+            validation.messages.push("error_cannot_preserve_groups_phase1");
         }
     
         // Rule 2: 'preserve' is valid only if there is a previous team phase with a grouping algorithm defined
@@ -60,16 +75,16 @@ function GroupingModeSelectorController() {
                 .slice(0, vm.phaseIndex) // Consider only phases before the current one
                 .some(phase => phase.mode === 'team' && phase.grouping_algorithm); // Check for team mode with a grouping algorithm
     
-            return { 
-                valid: hasValidPreviousGrouping,
-                message: !hasValidPreviousGrouping ? "error_no_previous_grouping" : ""
-            };
+            if (!hasValidPreviousGrouping) {
+                validation.valid = false;
+                validation.messages.push("error_no_previous_grouping");
+            }
         }
-    
-        // All other modes are considered valid
-        return { valid: true };
-    };    
 
+        // Return the validation result
+        return validation;
+    };
+    
     vm.updateGroupingMode = function () {
         vm.phase.grouping_algorithm = vm.selectedMode;
 
@@ -80,19 +95,50 @@ function GroupingModeSelectorController() {
     };
 
     vm.validate = function () {
-        const validation = vm.isValidMode();
-        if (!validation.valid) {
-            return {
-                valid: validation.valid,
-                message: validation.message,
-            };
+        return vm.isValidMode();
+        /*if (!validation.valid) {
+            return validation;
         }
-        return { valid: true };
+        return { valid: true };*/
     };
 
     vm.$onInit = function () {
         vm.loadGroupingModes();
+        if (vm.validateCallback) {
+            const validation = vm.validate();
+            vm.validateCallback({ result: validation });
+        }        
     };
+
+    vm.$onDestroy = function() {
+        console.log(`[GroupingModeSelectorController] on destroy`);
+        vm.selectedMode = null;
+        if (vm.validateCallback) {
+            const validation = vm.validate();
+            vm.validateCallback({ result: validation });
+        }
+    }
+
+    vm.$onChanges = function (changes) {
+        console.log(`[GroupingModeSelectorController] something changed`);
+        if (changes.phase && changes.phase.currentValue) {
+            const currentMode = changes.phase.currentValue.mode;
+            const previousMode = changes.phase.previousValue
+                ? changes.phase.previousValue.mode
+                : undefined;
+            console.log(`[GroupingModeSelectorController] mode changed`);
+
+            if (currentMode === 'individual') {
+                console.log(`[GroupingModeSelectorController] mode changed to individual`);
+                vm.selectedMode = null;
+                
+                if (vm.validateCallback) {
+                    const validation = vm.validate();
+                    vm.validateCallback({ result: validation });
+                }                    
+            }
+        }
+    };    
 }
 
 GroupingModeSelectorController.$inject = ['$http'];

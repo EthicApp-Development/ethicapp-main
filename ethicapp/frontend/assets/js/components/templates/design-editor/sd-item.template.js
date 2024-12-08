@@ -5,13 +5,14 @@ const semanticDifferentialItemTemplate = `
             <label for="questionText">{{ 'questionText' | translate }}</label>
             <input id="questionText" type="text" class="form-control" 
                    placeholder="{{ 'title' | translate }}" 
-                   ng-model="$ctrl.question.q_text">
+                   ng-model="$ctrl.question.q_text"
+                   ng-change="$ctrl.validateItem()">
         </div>
 
         <div class="row dashed-bottom-border">
             <div class="col-xs-3 text-right">
                 <input type="text" class="form-control" placeholder="{{ 'left' | translate }}" 
-                       ng-model="$ctrl.question.ans_format.l_pole">
+                       ng-model="$ctrl.question.ans_format.l_pole" ng-blur="$ctrl.validateItem()">
             </div>
             <div class="col-xs-6 text-center">
                 <button class="btn btn-default btn-sm" ng-click="$ctrl.removeScaleTick()">
@@ -26,7 +27,8 @@ const semanticDifferentialItemTemplate = `
             </div>
             <div class="col-xs-3 text-left">
                 <input type="text" class="form-control" placeholder="{{ 'right' | translate }}" 
-                       ng-model="$ctrl.question.ans_format.r_pole">
+                       ng-model="$ctrl.question.ans_format.r_pole"
+                       ng-change="$ctrl.validateItem()">
             </div>
         </div>
         <hr>

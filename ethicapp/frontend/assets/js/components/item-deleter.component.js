@@ -1,10 +1,11 @@
 const itemDeleterComponent = {
     bindings: {
+        phaseNumber: '<',
         items: '<',
         index: '<',
+        onDelete: '&?'
     },
     controller: ItemDeleterController,
-    //ng-click="$ctrl.deleteItem()
     template: `
     <div class="item-deleter">
         <button class="btn btn-default btn-sm" ng-click="$ctrl.deleteItem()">
@@ -18,11 +19,21 @@ const itemDeleterComponent = {
 function ItemDeleterController($translate) {
     const vm = this;
 
+    vm.$onInit = function () {
+        console.log(`[itemDeleterComponent] index: ${vm.index} phaseNumber: ${vm.phaseNumber}`);
+    };
+
     vm.deleteItem = function () {
         $translate('delete_item_confirmation_message').then(function (confirmationMessage) {
             if (window.confirm(confirmationMessage)) {
-                vm.items.splice(vm.index, 1); // Elimina el elemento en el índice actual
-            }
+                const deletedItem = vm.items.splice(vm.index, 1); 
+            
+                if (vm.onDelete) {
+                    vm.onDelete(
+                        { phaseNumber: vm.phaseNumber, deletedItem: deletedItem[0], index: vm.index }
+                    );
+                }                
+            }         
         });
     };
 }

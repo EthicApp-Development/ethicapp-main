@@ -247,6 +247,7 @@ import numericInputWithSpinbuttonComponent from "../../components/numeric-input-
 import phaseMoverComponent from "../../components/phase-mover.component.js";
 import itemDeleterComponent from "../../components/item-deleter.component.js";
 import itemDuplicatorComponent from "../../components/item-duplicator.component.js";
+import designErrorSummaryComponent from "../../components/design-error-summary.component.js";
 
 app.component('activityDescription', activityDescriptionComponent);
 app.component('designDescription', designDescriptionComponent);
@@ -259,3 +260,4 @@ app.component('numericInputWithSpinbutton', numericInputWithSpinbuttonComponent)
 app.component('phaseMover', phaseMoverComponent);
 app.component('itemDeleter', itemDeleterComponent);
 app.component('itemDuplicator', itemDuplicatorComponent);
+app.component('designErrorSummary', designErrorSummaryComponent);
