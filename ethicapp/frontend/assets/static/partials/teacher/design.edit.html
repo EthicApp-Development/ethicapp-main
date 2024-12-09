@@ -43,7 +43,9 @@
         </div>
     </div>    
 
-    <div class="design-editor">
+    <div class="design-editor" validate-design
+            phases="dec.design.phases"
+            on-validate="dec.handleValidationResult(result)">
         <div uib-accordion close-others="false">
             <div uib-accordion-group class="panel-default phase-editor-item-heading" 
                 ng-repeat="phase in dec.design.phases track by $index"
@@ -104,7 +106,11 @@
                             <previous-phases-selector phase="phase" phase-index="phaseIndex" design="dec.design"></previous-phases-selector>
                         </div>
                     </div>
-                    <div class="row">
+                    <div class="row" validate-phase
+                        design-type="dec.design.type"
+                        phase="phase"
+                        phase-number="phaseIndex+1"
+                        on-validate="dec.handleValidationResult(result)">
                         <div class="col-md-12">
                             <div style="margin-top: 1em" ng-switch="dec.design.type">
                                 <hr>

@@ -240,6 +240,8 @@ import { groupPhaseTableDirective } from "../../directives/group-phase-table.dir
 import { individualPhaseTableDirective } from "../../directives/individual-phase-table.directive.js";
 import phaseModeValueAdapter from "../../directives/phase-mode-value-adapter.directive.js";
 import phaseDeleterDirective from "../../directives/phase-deleter.directive.js";
+import validateDesignDirective from '../../directives/validate-design.directive.js';
+import validatePhaseDirective from '../../directives/validate-phase.directive.js';
 
 app.directive("connectedUsers", connectedUsersDirective);
 app.directive("activityControls", activityControlsDirective);
@@ -247,6 +249,8 @@ app.directive("phaseState", phaseStateDirective);
 app.directive("groupPhaseTable", groupPhaseTableDirective);
 app.directive("individualPhaseTable", individualPhaseTableDirective);
 app.directive("phaseModeValueAdapter", phaseModeValueAdapter);
+app.directive("validateDesign", validateDesignDirective);
+app.directive("validatePhase", validatePhaseDirective);
 app.directive("phaseDeleter", ["$translate", phaseDeleterDirective]);
 
 app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateService", 

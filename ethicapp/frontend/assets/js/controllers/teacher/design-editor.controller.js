@@ -168,6 +168,16 @@ export function DesignEditorController($scope, $translate, $timeout,
         console.log(`[handleValidationResult] ${JSON.stringify(result)}`);
     
         const { type, context, messages } = result;
+
+        // Handle global errors
+        if (type === "global") {
+            console.log(`[vm.handleValidationResult] global error handling`);
+            if (messages.length > 0) {
+                vm.validationErrors.global = messages;
+            } else {
+                vm.validationErrors.global = [];
+            }
+        }
     
         if (type === "phase") {
             const phaseKey = `phase_${context.phaseNumber}`;
@@ -216,15 +226,6 @@ export function DesignEditorController($scope, $translate, $timeout,
                 vm.validationErrors.phases[phaseKey].other.length === 0
             ) {
                 delete vm.validationErrors.phases[phaseKey];
-            }
-        }
-
-        // Handle global errors
-        if (type === "global") {
-            if (messages.length > 0) {
-                vm.validationErrors.global = messages;
-            } else {
-                vm.validationErrors.global = [];
             }
         }
 
