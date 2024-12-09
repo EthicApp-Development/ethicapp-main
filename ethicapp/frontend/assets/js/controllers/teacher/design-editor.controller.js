@@ -1,5 +1,5 @@
 import designEditActions from "../../helpers/phase-edition-helpers.js";
-import { getPhaseByIndex } from "../../helpers/design-helpers.js";
+import accordionStateHelpers from "../../helpers/accordeon-state-helpers.js"
 
 export function DesignEditorController($scope, $translate, $timeout,
     $routeParams, DesignStateService, DesignCatalogService, toast) {
@@ -108,12 +108,14 @@ export function DesignEditorController($scope, $translate, $timeout,
             event.stopPropagation();
         }
         $scope.$applyAsync(() => {
+            const state = vm.accordionState[phaseIndex];
+            accordionStateHelpers.insertAccordionState(vm.accordionState, phaseIndex+1, state);
             designEditActions.clonePhaseByIndex(vm.design, phaseIndex);
         });
     };
 
     vm.removeItemFromPhase = function(phase, item) {
-        designEditActions.removePhase(vm.design, phase, item);
+        designEditActions.removeItem(vm.design, phase, item);
     };
 
     vm.toggleAccordion = function (index) {
@@ -146,15 +148,17 @@ export function DesignEditorController($scope, $translate, $timeout,
         }
         catch (error) {
             $scope.$applyAsync(() => {
-                toast.create({
-                    timeout: 5 * 1000,
-                    message: 'Failed to save design',
-                    className: 'alert-danger',
-                    dismissible: false,
-                    containerClass: 'toast-container',
-                    defaultToastClass: 'toast',
-                    insertFromTop: true
-                  });
+                $translate("save_design_failure").then((result) => {
+                    toast.create({
+                        timeout: 5 * 1000,
+                        message: 'Failed to save design',
+                        className: 'alert-danger',
+                        dismissible: false,
+                        containerClass: 'toast-container',
+                        defaultToastClass: 'toast',
+                        insertFromTop: true
+                    });
+                });
             });
             console.error(error);
         }
@@ -303,6 +307,9 @@ export function DesignEditorController($scope, $translate, $timeout,
         console.debug(`[handlePhaseDeletion] Deleted phase at index: ${deletedIndex}`);
     
         const phaseKeyPrefix = 'phase_';
+
+        // Remove the accordion state entry
+        accordionStateHelpers.removeAccordionState(vm.accordionState, deletedIndex);
     
         $scope.$applyAsync(function() {
             // Removes errors associated with the deleted phase
@@ -337,7 +344,15 @@ export function DesignEditorController($scope, $translate, $timeout,
     
         const fromPhaseKey = `phase_${fromIndex + 1}`;
         const toPhaseKey = `phase_${toIndex + 1}`;
-    
+
+        // Move the accordion state entry accordingly
+        const up = fromIndex - toIndex > 0;
+        if (up) {
+            accordionStateHelpers.moveAccordionStateUp(vm.accordionState, deletedIndex);
+        } else {
+            accordionStateHelpers.moveAccordionStateDown(vm.accordionState, deletedIndex);
+        }
+
         // Ensure validationErrors and phases exist
         if (!vm.validationErrors || !vm.validationErrors.phases) {
             console.warn("[handlePhaseMove] validationErrors or phases structure is not initialized.");

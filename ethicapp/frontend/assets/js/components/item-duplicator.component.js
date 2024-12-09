@@ -20,6 +20,7 @@ function ItemDuplicatorController() {
     const vm = this;
 
     vm.duplicateItem = function () {
+        console.log("[ItemDuplicatorController::duplicateItem]");
         if (!Array.isArray(vm.items)) {
             console.error('items is not a valid array:', vm.items);
             return;

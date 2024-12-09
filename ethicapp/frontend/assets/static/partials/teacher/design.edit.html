@@ -47,7 +47,7 @@
         <div uib-accordion close-others="false">
             <div uib-accordion-group class="panel-default phase-editor-item-heading" 
                 ng-repeat="phase in dec.design.phases track by $index"
-                is-open="dec.accordionState[phaseIndex]">
+                is-open="dec.accordionState[$index]">
 
                 <div ng-init="phaseIndex = $index">
                     <div uib-accordion-heading ng-attr-id="phase_{{phaseIndex+1}}">
@@ -66,11 +66,11 @@
                                 </i>&nbsp;
                                 <i ng-class="{'fa-solid fa-down-left-and-up-right-to-center': dec.accordionState[phaseIndex], 
                                             'fa-solid fa-up-right-and-down-left-from-center': !dec.accordionState[phaseIndex]}" 
-                                class="fa-solid me-2"
-                                ng-click="dec.toggleAccordionState(phaseIndex, $event)">
+                                    class="fa-solid me-2"
+                                    ng-click="dec.toggleAccordionState(phaseIndex, $event)">
                                 </i>
                             </div>
-                        </div>                    
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-md-4">
@@ -105,16 +105,16 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-12" ng-init="itemList = dec.design.type === 'semantic_differential' ? phase.questions : phase.roles">
+                        <div class="col-md-12">
                             <div style="margin-top: 1em" ng-switch="dec.design.type">
                                 <hr>
                                 <h4>{{ 'questions_title_text' | translate }}</h4>
                                 <button class="btn btn-default btn-sm" ng-click="dec.addItemToPhase(phase)">
                                     <i class="fa-solid fa-plus text-success"></i> {{ 'add_question_button_text' | translate }}
                                 </button>
-                                <div ng-repeat="item in itemList track by $index">
+                                <div ng-repeat="item in (dec.design.type === 'semantic_differential' ? phase.questions : phase.roles) track by $index">
                                     <div ng-switch on="dec.design.type">
-                                        <div ng-switch-when="semantic_differential"><!-- $index < (itemList.length - 1) -->
+                                        <div ng-switch-when="semantic_differential">
                                             <sd-item-editor 
                                                 phase-number="phaseIndex+1"
                                                 question="item" 
