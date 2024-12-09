@@ -349,9 +349,9 @@ export function DesignEditorController($scope, $translate, $timeout,
         // Move the accordion state entry accordingly
         const up = fromIndex - toIndex > 0;
         if (up) {
-            accordionStateHelpers.moveAccordionStateUp(vm.accordionState, deletedIndex);
+            accordionStateHelpers.moveAccordionStateUp(vm.accordionState, fromIndex);
         } else {
-            accordionStateHelpers.moveAccordionStateDown(vm.accordionState, deletedIndex);
+            accordionStateHelpers.moveAccordionStateDown(vm.accordionState, fromIndex);
         }
 
         // Ensure validationErrors and phases exist
