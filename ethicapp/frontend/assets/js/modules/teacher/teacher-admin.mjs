@@ -1,9 +1,10 @@
 "use strict";
 
+import 'angular-animate';
+import 'angularjs-toast';
 import "angular-toggle-switch";
 import { io } from 'socket.io-client';
 import * as Rx from 'rxjs';
-
 import { ActivityStateService } from "../../services/activity-state.service.js";
 import { ActivityCatalogService } from "../../services/activity-catalog.service.js";
 import { DesignStateService } from "../../services/design-state.service.js";
@@ -12,7 +13,8 @@ import { DesignCatalogService } from "../../services/design-catalog.service.js";
 var app = angular.module("TeacherApp", ["ngSanitize",
     "ui.bootstrap", "ui.multiselect", "timer", "ngFileUpload",
     "ui-notification", "ngQuill", "tableSort", "pascalprecht.translate", 
-    "ngRoute", "checklist-model", "ngDialog", "toggle-switch"]
+    "ngRoute", "checklist-model", "ngDialog", "toggle-switch", 'angularjsToast',
+    'ngAnimate']
 ).factory("TabStateService", function() {
     var service = {};
     service.sharedTabState = { type: 0 };
@@ -127,6 +129,18 @@ app.config(function($translateProvider) {
     $translateProvider.fallbackLanguage("en");
 });
 
+const config = toastProvider => {
+    toastProvider.configure({
+      maxToast: 2,
+      timeout: 5 * 1000,
+      dismissible: true,
+      insertFromTop: true,
+    });
+  };
+  
+config.$inject = ['toastProvider'];
+app.config(config);
+
 // Inject controllers into application
 app.controller("LocalesController", 
     ["$translate", "$scope", "$rootScope", LocalesController]); 
@@ -162,8 +176,8 @@ app.controller("ErrorController",
     ["$scope", "$window", "$routeParams",
         ErrorController]);
 app.controller("DesignEditorController", 
-    ["$scope", "$translate", "$routeParams", "DesignStateService", "DesignCatalogService",
-        DesignEditorController]);         
+    ["$scope", "$translate", "$timeout", "$routeParams", "DesignStateService", 
+        "DesignCatalogService", "toast", DesignEditorController]);         
 app.controller("VoidController", [VoidController]);        
 /*app.controller("RoutingController", 
     ["$scope", RoutingController]);
@@ -250,6 +264,7 @@ import phaseMoverComponent from "../../components/phase-mover.component.js";
 import itemDeleterComponent from "../../components/item-deleter.component.js";
 import itemDuplicatorComponent from "../../components/item-duplicator.component.js";
 import designErrorSummaryComponent from "../../components/design-error-summary.component.js";
+//import toastComponent from "../../components/toast.component.js";
 
 app.component('activityDescription', activityDescriptionComponent);
 app.component('designDescription', designDescriptionComponent);
@@ -263,3 +278,4 @@ app.component('phaseMover', phaseMoverComponent);
 app.component('itemDeleter', itemDeleterComponent);
 app.component('itemDuplicator', itemDuplicatorComponent);
 app.component('designErrorSummary', designErrorSummaryComponent);
+//app.component('toast', toastComponent);

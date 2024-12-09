@@ -4,13 +4,15 @@ const designErrorSummaryComponent = {
         scrollTo: '&'
     },
     template: `
-<div class="panel panel-default" 
-     ng-if="$ctrl.hasErrors()">
+<div class="panel panel-default">
     <div class="panel-heading">
         {{ 'validation_summary_title_text' | translate }}
     </div>
     <div class="panel-body">
-        <div class="validation-errors">
+        <div class="validation-errors" ng-if="!$ctrl.hasErrors()">
+            <p>{{ 'valid_design_message' | translate }}</p>
+        </div>
+        <div class="validation-errors" ng-if="$ctrl.hasErrors()">
             <p>{{ 'design_error_message' | translate }}</p>
             
             <hr style="margin-bottom:1em">                     

@@ -1,14 +1,20 @@
 import designEditActions from "../../helpers/phase-edition-helpers.js";
 import { getPhaseByIndex } from "../../helpers/design-helpers.js";
 
-export function DesignEditorController($scope, $translate, $routeParams, 
-    DesignStateService, DesignCatalogService) {
+export function DesignEditorController($scope, $translate, $timeout,
+    $routeParams, DesignStateService, DesignCatalogService, toast) {
 
     const vm = this;
     vm.designId = 0;
     vm.design = null;
     vm.accordionState = {};
-
+    vm.toastMessage = {
+        id: Date.now(),
+        message: null,
+        type: 'info',
+        duration: 5000
+    };
+    
     vm.validationErrors = {
         global: [], // Global design-related errors
         phases: {}, // Specific per-phase errors
@@ -124,43 +130,35 @@ export function DesignEditorController($scope, $translate, $routeParams,
                 throw Error("Cannot save a null design");
             }
             await DesignCatalogService.updateDesign(vm.designId, vm.design);
+
+            $scope.$applyAsync(() => {
+                $translate("save_design_success").then((result) => {
+                    toast.create({
+                        timeout: 3 * 1000,
+                        message: result,
+                        containerClass: 'toast-container',
+                        dismissible: false,
+                        defaultToastClass: 'toast',
+                        insertFromTop: true,
+                      });
+                    });
+            });
         }
         catch (error) {
-            // TODO: display error on view.
+            $scope.$applyAsync(() => {
+                toast.create({
+                    timeout: 5 * 1000,
+                    message: 'Failed to save design',
+                    className: 'alert-danger',
+                    dismissible: false,
+                    containerClass: 'toast-container',
+                    defaultToastClass: 'toast',
+                    insertFromTop: true
+                  });
+            });
             console.error(error);
         }
     };
-
-    vm.validateItem = function() {
-        let validation = { 
-            type: "phase",
-            valid: true, 
-            context: 
-                {
-                    phaseNumber: vm.phaseNumber, 
-                    itemNumber: vm.questionNumber
-                }, 
-            messages: [] };
-        
-        if (vm.isEmptyString(vm.question.q_text)) {
-            validation.valid = false;
-            validation.messages.push("edit_error_sd_missing_question_text");
-        }
-        if (vm.isEmptyString(vm.question.ans_format.l_pole)) {
-            validation.valid = false;
-            validation.messages.push("edit_error_sd_missing_value_left_pole");
-        }
-        if (vm.isEmptyString(vm.question.ans_format.r_pole)) {
-            validation.valid = false;
-            validation.messages.push("edit_error_sd_missing_value_right_pole");
-        }
-
-        if (vm.validateCallback) {
-            vm.validateCallback({ result: validation });
-        }
-
-        return validation;
-    };    
 
     vm.handleValidationResult = function (result) {
         console.log(`[handleValidationResult] ${JSON.stringify(result)}`);
@@ -371,7 +369,7 @@ export function DesignEditorController($scope, $translate, $routeParams,
                 console.debug("[handlePhaseMove] Neither phase has validation errors. No updates needed.");
             }
         });
-    };
+    };    
         
     vm.getSortedPhaseErrorKeys = function () {
         return Object.keys(vm.validationErrors.phases).sort((a, b) => {
@@ -388,6 +386,28 @@ export function DesignEditorController($scope, $translate, $routeParams,
         );
     };
 
+    vm.showToast = function (message, type = 'success') {
+        /*$timeout(() => {
+            vm.toastMessage = {
+                id: Date.now(),
+                message: message,
+                type: type,
+                duration: 5000
+            };
+            console.log('[showToast] toastMessage:', vm.toastMessage);
+        });*/
+
+        $scope.$applyAsync(() => {
+            vm.toastMessage = {
+                id: Date.now(),
+                message: message,
+                type: type,
+                duration: 5000
+            };
+            console.log('[showToast] toastMessage:', vm.toastMessage);
+        });
+    };
+   
     vm.scrollToPhase = function (phaseKey) {
         const elementId = phaseKey;
         const element = document.getElementById(elementId);

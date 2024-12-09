@@ -2337,6 +2337,38 @@ h2{
     border: 1px solid #ffc107; /* Orange border */
 }
 
+.toast-container .alert {
+    height: 1.75em !important;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 6px;
+    margin-bottom: 32px !important;
+    padding-top: 2px;
+    padding-left: 0px;
+    padding-right: 0px;
+    opacity: 1;
+    background: #fff;
+    border: 0px;
+    font-size: small;
+    animation: fadeOut 5.0s ease-in-out forwards;
+}
+
+.toast-container ul, li {
+    list-style: none !important;
+    margin: 0;
+    padding: 0;
+}
+
+@keyframes fadeOut {
+    0% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
 .ats-switch {
     border: 1px solid;
     cursor: pointer;
