@@ -306,34 +306,73 @@ export function DesignEditorController($scope, $translate, $routeParams,
     
         const phaseKeyPrefix = 'phase_';
     
-        // Removes errors associated with the deleted phase
-        const phaseKey = `${phaseKeyPrefix}${deletedIndex + 1}`;
-        if (vm.validationErrors.phases && vm.validationErrors.phases[phaseKey]) {
-            $scope.$applyAsync(() => {
+        $scope.$applyAsync(function() {
+            // Removes errors associated with the deleted phase
+            const phaseKey = `${phaseKeyPrefix}${deletedIndex + 1}`;
+            if (vm.validationErrors.phases && vm.validationErrors.phases[phaseKey]) {
                 delete vm.validationErrors.phases[phaseKey];
-            });
-            console.debug(`[handlePhaseDeletion] Removed validation errors for ${phaseKey}`);
-        }
-    
-        // Updates the keys of the remaining phases
-        if (vm.validationErrors.phases) {
-            const updatedPhases = {};
-            Object.keys(vm.validationErrors.phases).forEach((key) => {
-                const phaseNumber = parseInt(key.split('_')[1], 10);
-                if (phaseNumber > deletedIndex + 1) {
-                    const newPhaseKey = `${phaseKeyPrefix}${phaseNumber - 1}`;
-                    updatedPhases[newPhaseKey] = vm.validationErrors.phases[key];
-                    console.debug(`[handlePhaseDeletion] Updated phase key: ${key} -> ${newPhaseKey}`);
-                } else {
-                    updatedPhases[key] = vm.validationErrors.phases[key];
-                }
-            });
-            $scope.$applyAsync(() => {
+                console.debug(`[handlePhaseDeletion] Removed validation errors for ${phaseKey}`);
+                console.debug(`[handlePhaseDeletion] validation errors ${JSON.stringify(vm.validationErrors.phases)}`);
+            }
+        
+            // Updates the keys of the remaining phases
+            if (vm.validationErrors.phases) {
+                const updatedPhases = {};
+                Object.keys(vm.validationErrors.phases).forEach((key) => {
+                    const phaseNumber = parseInt(key.split('_')[1], 10);
+                    if (phaseNumber > deletedIndex + 1) {
+                        const newPhaseKey = `${phaseKeyPrefix}${phaseNumber - 1}`;
+                        updatedPhases[newPhaseKey] = vm.validationErrors.phases[key];
+                        console.debug(`[handlePhaseDeletion] Updated phase key: ${key} -> ${newPhaseKey}`);
+                    } else {
+                        updatedPhases[key] = vm.validationErrors.phases[key];
+                    }
+                });
+                console.debug(`[handlePhaseDeletion] validation errors post update ${JSON.stringify(vm.validationErrors.phases)}`);
                 vm.validationErrors.phases = updatedPhases;
-            })
-        }
+            }
+        });
     };
+
+    vm.handlePhaseMove = function ({ fromIndex, toIndex }) {
+        console.log(`[handlePhaseMove] Moving phase from ${fromIndex + 1} to ${toIndex + 1}`);
     
+        const fromPhaseKey = `phase_${fromIndex + 1}`;
+        const toPhaseKey = `phase_${toIndex + 1}`;
+    
+        // Ensure validationErrors and phases exist
+        if (!vm.validationErrors || !vm.validationErrors.phases) {
+            console.warn("[handlePhaseMove] validationErrors or phases structure is not initialized.");
+            return;
+        }
+    
+        $scope.$applyAsync(function () {
+            // Case 1: Both phases exist in validationErrors
+            if (vm.validationErrors.phases[fromPhaseKey] && vm.validationErrors.phases[toPhaseKey]) {
+                const temp = vm.validationErrors.phases[fromPhaseKey];
+                vm.validationErrors.phases[fromPhaseKey] = vm.validationErrors.phases[toPhaseKey];
+                vm.validationErrors.phases[toPhaseKey] = temp;
+                console.debug(`[handlePhaseMove] Swapped validation errors for phases ${fromPhaseKey} and ${toPhaseKey}.`);
+            }
+            // Case 2: Only the "from" phase exists in validationErrors
+            else if (vm.validationErrors.phases[fromPhaseKey] && !vm.validationErrors.phases[toPhaseKey]) {
+                vm.validationErrors.phases[toPhaseKey] = vm.validationErrors.phases[fromPhaseKey];
+                delete vm.validationErrors.phases[fromPhaseKey];
+                console.debug(`[handlePhaseMove] Moved validation errors from ${fromPhaseKey} to ${toPhaseKey}.`);
+            }
+            // Case 3: Only the "to" phase exists in validationErrors
+            else if (!vm.validationErrors.phases[fromPhaseKey] && vm.validationErrors.phases[toPhaseKey]) {
+                vm.validationErrors.phases[fromPhaseKey] = vm.validationErrors.phases[toPhaseKey];
+                delete vm.validationErrors.phases[toPhaseKey];
+                console.debug(`[handlePhaseMove] Moved validation errors from ${toPhaseKey} to ${fromPhaseKey}.`);
+            }
+            // Case 4: Neither phase exists in validationErrors
+            else {
+                console.debug("[handlePhaseMove] Neither phase has validation errors. No updates needed.");
+            }
+        });
+    };
+        
     vm.getSortedPhaseErrorKeys = function () {
         return Object.keys(vm.validationErrors.phases).sort((a, b) => {
             const phaseNumberA = parseInt(a.split('_')[1], 10);

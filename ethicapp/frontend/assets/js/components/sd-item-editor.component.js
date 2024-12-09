@@ -6,6 +6,7 @@ const sdItemEditorComponent = {
         questionNumber: '<?',
         question: '=',
         validateCallback: '&?',
+        showSeparator: '<?',
     },
     transclude: true,
     template: semanticDifferentialItemTemplate,
@@ -65,6 +66,9 @@ function SDItemEditController() {
     };
 
     vm.$onInit = function () {
+        vm.showSeparator = vm.showSeparator !== false;
+        vm.showSeparator = false;
+
         if (vm.validateCallback) {
             const validation = vm.validateItem();
             vm.validateCallback({ result: validation });

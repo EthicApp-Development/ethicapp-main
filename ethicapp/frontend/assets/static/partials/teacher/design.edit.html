@@ -54,7 +54,7 @@
                                     style="cursor: pointer;" 
                                     phase-deleter 
                                     phases="dec.design.phases" 
-                                    phase-index="$index"
+                                    phase-index="phaseIndex"
                                     on-delete="dec.handlePhaseDeletion(index)">
                                 </i>&nbsp;
                                 <i ng-class="{'fa-solid fa-down-left-and-up-right-to-center': dec.accordionState[phaseIndex], 
@@ -98,20 +98,21 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-12">
+                        <div class="col-md-12" ng-init="itemList = dec.design.type === 'semantic_differential' ? phase.questions : phase.roles">
                             <div style="margin-top: 1em" ng-switch="dec.design.type">
                                 <hr>
                                 <h4>{{ 'questions_title_text' | translate }}</h4>
                                 <button class="btn btn-default btn-sm" ng-click="dec.addItemToPhase(phase)">
                                     <i class="fa-solid fa-plus text-success"></i> {{ 'add_question_button_text' | translate }}
                                 </button>
-                                <div ng-repeat="item in (dec.design.type === 'semantic_differential' ? phase.questions : phase.roles) track by $index">
+                                <div ng-repeat="item in itemList track by $index">
                                     <div ng-switch on="dec.design.type">
-                                        <div ng-switch-when="semantic_differential">
+                                        <div ng-switch-when="semantic_differential"><!-- $index < (itemList.length - 1) -->
                                             <sd-item-editor 
                                                 phase-number="phaseIndex+1"
                                                 question="item" 
                                                 question-number="$index+1"
+                                                show-separator="false" 
                                                 validate-callback="dec.handleValidationResult(result)">
                                                 <item-deleter 
                                                     items="phase.questions"
@@ -135,7 +136,11 @@
                     </div>
                     <div class="row">
                         <div class="col-sm-12 text-right">
-                            <phase-mover phases="dec.design.phases" index="phaseIndex"></phase-mover>                    
+                            <phase-mover 
+                                phases="dec.design.phases"
+                                index="phaseIndex"
+                                on-move="dec.handlePhaseMove({ fromIndex, toIndex })">
+                            </phase-mover>
                         </div>
                     </div>
                 </div>

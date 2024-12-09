@@ -3,16 +3,22 @@ const semanticDifferentialItemTemplate = `
     <div class="panel-body">
         <div class="form-group">
             <label for="questionText">{{ 'questionText' | translate }}</label>
-            <input id="questionText" type="text" class="form-control" 
+            <input id="questionText" type="text" 
+                   class="form-control" 
+                   ng-class="{'input-warning': !$ctrl.question.q_text}" 
                    placeholder="{{ 'title' | translate }}" 
                    ng-model="$ctrl.question.q_text"
                    ng-change="$ctrl.validateItem()">
         </div>
 
-        <div class="row dashed-bottom-border">
+        <div class="row">
             <div class="col-xs-3 text-right">
-                <input type="text" class="form-control" placeholder="{{ 'left' | translate }}" 
-                       ng-model="$ctrl.question.ans_format.l_pole" ng-blur="$ctrl.validateItem()">
+                <input type="text" 
+                       class="form-control" 
+                       ng-class="{'input-warning': !$ctrl.question.ans_format.l_pole}" 
+                       placeholder="{{ 'left' | translate }}" 
+                       ng-model="$ctrl.question.ans_format.l_pole" 
+                       ng-blur="$ctrl.validateItem()">
             </div>
             <div class="col-xs-6 text-center">
                 <button class="btn btn-default btn-sm" ng-click="$ctrl.removeScaleTick()">
@@ -26,7 +32,10 @@ const semanticDifferentialItemTemplate = `
                 <small>{{ 'scale_values_text' | translate }}: 1-{{$ctrl.question.ans_format.values}}</small>
             </div>
             <div class="col-xs-3 text-left">
-                <input type="text" class="form-control" placeholder="{{ 'right' | translate }}" 
+                <input type="text" 
+                       class="form-control" 
+                       ng-class="{'input-warning': !$ctrl.question.ans_format.r_pole}" 
+                       placeholder="{{ 'right' | translate }}" 
                        ng-model="$ctrl.question.ans_format.r_pole"
                        ng-change="$ctrl.validateItem()">
             </div>
@@ -41,7 +50,11 @@ const semanticDifferentialItemTemplate = `
         </div>
     </div>
 </div>
-<hr>
 `;
+
+`
+<hr ng-if="$ctrl.showSeparator">
+ng-class="{'dashed-bottom-border': $ctrl.showSeparator}"
+`
 
 export default semanticDifferentialItemTemplate;

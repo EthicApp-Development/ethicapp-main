@@ -1,7 +1,8 @@
-let phaseMoverComponent = {
+const phaseMoverComponent = {
     bindings: {
         phases: '<',
         index: '<',
+        onMove: '&?',
     },
     controller: PhaseMoverController,
     template: `
@@ -23,22 +24,6 @@ let phaseMoverComponent = {
 function PhaseMoverController() {
     const vm = this;
 
-    vm.moveUp = function () {
-        if (vm.index > 0) {
-            const temp = vm.phases[vm.index];
-            vm.phases[vm.index] = vm.phases[vm.index - 1];
-            vm.phases[vm.index - 1] = temp;
-        }
-    };
-
-    vm.moveDown = function () {
-        if (vm.index < vm.phases.length - 1) {
-            const temp = vm.phases[vm.index];
-            vm.phases[vm.index] = vm.phases[vm.index + 1];
-            vm.phases[vm.index + 1] = temp;
-        }
-    };
-
     vm.isFirstPhase = function () {
         return vm.index === 0;
     };
@@ -46,6 +31,32 @@ function PhaseMoverController() {
     vm.isLastPhase = function () {
         return vm.index === vm.phases.length - 1;
     };
+
+    vm.moveUp = function () {
+        if (vm.index > 0) {
+            swapPhases(vm.phases, vm.index, vm.index - 1);
+
+            if (vm.onMove) {
+                vm.onMove({ fromIndex: vm.index, toIndex: vm.index - 1 });
+            }
+        }
+    };
+
+    vm.moveDown = function () {
+        if (vm.index < vm.phases.length - 1) {
+            swapPhases(vm.phases, vm.index, vm.index + 1);
+
+            if (vm.onMove) {
+                vm.onMove({ fromIndex: vm.index, toIndex: vm.index + 1 });
+            }
+        }
+    };
+
+    function swapPhases(phases, fromIndex, toIndex) {
+        const temp = phases[fromIndex];
+        phases[fromIndex] = phases[toIndex];
+        phases[toIndex] = temp;
+    }
 }
 
 export default phaseMoverComponent;

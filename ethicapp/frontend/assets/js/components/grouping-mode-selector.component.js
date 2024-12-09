@@ -8,7 +8,9 @@ const groupingModeSelectorComponent = {
     template: `
     <div class="grouping-mode-selector">
         <label for="groupingMode">{{ 'grouping_mode_label_text' | translate }}</label>
-        <select id="groupingMode" class="form-control"
+        <select id="groupingMode" 
+                class="form-control" 
+                ng-class="{'input-warning': !$ctrl.isValidMode().valid}" 
                 ng-model="$ctrl.selectedMode"
                 ng-options="mode.name as (mode.description | translate) for mode in $ctrl.groupingModes"
                 ng-change="$ctrl.updateGroupingMode()">
@@ -87,7 +89,7 @@ function GroupingModeSelectorController() {
     
     vm.updateGroupingMode = function () {
         vm.phase.grouping_algorithm = vm.selectedMode;
-        
+
         if (vm.validateCallback) {
             const validation = vm.validate();
             vm.validateCallback({ result: validation });

@@ -2332,6 +2332,11 @@ h2{
     cursor: pointer;
 } 
 
+.input-warning {
+    background-color: #fff3cd; /* Yellow pale background */
+    border: 1px solid #ffc107; /* Orange border */
+}
+
 .ats-switch {
     border: 1px solid;
     cursor: pointer;
