@@ -114,9 +114,13 @@
                         <div class="col-md-12">
                             <div style="margin-top: 1em" ng-switch="dec.design.type">
                                 <hr>
-                                <h4>{{ 'questions_title_text' | translate }}</h4>
-                                <button class="btn btn-default btn-sm" ng-click="dec.addItemToPhase(phase)">
-                                    <i class="fa-solid fa-plus text-success"></i> {{ 'add_question_button_text' | translate }}
+                                <h4 ng-switch on ="dec.design.type">
+                                    <span ng-switch-when="semantic_differential">{{ 'questions_title_text' | translate }}</span>
+                                    <span ng-switch-when="ranking">{{ 'items_title_text' | translate }}</span>
+                                </h4>
+                                <button ng-switch on="dec.design.type" class="btn btn-default btn-sm" ng-click="dec.addItemToPhase(phase)">
+                                    <span ng-switch-when="semantic_differential"><i class="fa-solid fa-plus text-success"></i> {{ 'add_question_button_text' | translate }}</span>
+                                    <span ng-switch-when="ranking"><i class="fa-solid fa-plus text-success"></i> {{ 'add_item_button_text' | translate }}</span>
                                 </button>
                                     <div ng-switch on="dec.design.type">
                                         <div ng-switch-when="semantic_differential" ng-repeat="item in phase.questions track by $index">
@@ -138,8 +142,14 @@
                                             </div>
                                         </div>
                                         <div ng-switch-when="ranking">
-                                            {{phase.roles}}
-                                            <ranking-items-editor items="phase.roles" validate-callback="dec.handleValidationResult(result)"></ranking-items-editor>
+                                            <ranking-item-editor item="phase.roles" phase-number="phaseIndex+1" validate-callback="dec.handleValidationResult(result)">
+                                                <item-deleter 
+                                                    items="phase.roles"
+                                                    index="$index"
+                                                    phase-number="phaseIndex+1"
+                                                    on-delete="dec.handleItemDeletion({ phaseNumber: phaseNumber, deletedItem: deletedItem, index: index })">
+                                                </item-deleter>
+                                            </ranking-item-editor>
                                         </div>
                                     </div>
                                 </div>
