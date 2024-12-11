@@ -259,7 +259,7 @@ app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateSer
 import { activityDescriptionComponent } from "../../components/activity-description.component.js";
 import { designDescriptionComponent } from "../../components/design-description.component.js";
 import { phaseDescriptionComponent } from "../../components/phase-description.component.js";
-import rankingItemEditorComponent from "../../components/ranking-item-editor.component.js";
+import rankingItemsEditorComponent from "../../components/ranking-items-editor.component.js";
 import sdItemEditorComponent from "../../components/sd-item-editor.component.js";
 import groupingModeSelectorComponent from "../../components/grouping-mode-selector.component.js";
 import previousPhasesSelectorComponent from "../../components/previous-phases-selector.component.js";
@@ -273,8 +273,6 @@ import designErrorSummaryComponent from "../../components/design-error-summary.c
 app.component('activityDescription', activityDescriptionComponent);
 app.component('designDescription', designDescriptionComponent);
 app.component('phaseDescription', phaseDescriptionComponent);
-app.component('rankingItemEditor', rankingItemEditorComponent);
-app.component('sdItemEditor', sdItemEditorComponent);
 app.component('groupingModeSelector', groupingModeSelectorComponent);
 app.component('previousPhasesSelector', previousPhasesSelectorComponent);
 app.component('numericInputWithSpinbutton', numericInputWithSpinbuttonComponent);
@@ -282,4 +280,7 @@ app.component('phaseMover', phaseMoverComponent);
 app.component('itemDeleter', itemDeleterComponent);
 app.component('itemDuplicator', itemDuplicatorComponent);
 app.component('designErrorSummary', designErrorSummaryComponent);
+app.component('rankingItemsEditor', rankingItemsEditorComponent);
+app.component('sdItemEditor', sdItemEditorComponent);
+
 //app.component('toast', toastComponent);

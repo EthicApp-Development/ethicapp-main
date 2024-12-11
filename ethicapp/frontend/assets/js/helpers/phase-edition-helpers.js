@@ -2,7 +2,7 @@ import { getDesignType } from "./design-helpers.js";
 
 const phaseBuilders = {
     semantic_differential: genericPhaseBuilder,
-    ranking: genericPhaseBuilder,
+    ranking: () => { genericPhaseBuilder({ roles: [ ] }) },
 };
 
 const itemBuilders = {

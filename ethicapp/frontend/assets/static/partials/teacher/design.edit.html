@@ -118,29 +118,28 @@
                                 <button class="btn btn-default btn-sm" ng-click="dec.addItemToPhase(phase)">
                                     <i class="fa-solid fa-plus text-success"></i> {{ 'add_question_button_text' | translate }}
                                 </button>
-                                <div ng-repeat="item in (dec.design.type === 'semantic_differential' ? phase.questions : phase.roles) track by $index">
                                     <div ng-switch on="dec.design.type">
-                                        <div ng-switch-when="semantic_differential">
-                                            <sd-item-editor 
-                                                phase-number="phaseIndex+1"
-                                                question="item" 
-                                                question-number="$index+1"
-                                                show-separator="false" 
-                                                validate-callback="dec.handleValidationResult(result)">
-                                                <item-deleter 
-                                                    items="phase.questions"
-                                                    index="$index"
+                                        <div ng-switch-when="semantic_differential" ng-repeat="item in phase.questions track by $index">
+                                            <div>
+                                                <sd-item-editor 
                                                     phase-number="phaseIndex+1"
-                                                    on-delete="dec.handleItemDeletion({ phaseNumber: phaseNumber, deletedItem: deletedItem, index: index })">
-                                                </item-deleter>
-                                                <item-duplicator items="phase.questions" index="$index"></item-duplicator>
-                                            </sd-item-editor>
+                                                    question="item" 
+                                                    question-number="$index+1"
+                                                    show-separator="false" 
+                                                    validate-callback="dec.handleValidationResult(result)">
+                                                    <item-deleter 
+                                                        items="phase.questions"
+                                                        index="$index"
+                                                        phase-number="phaseIndex+1"
+                                                        on-delete="dec.handleItemDeletion({ phaseNumber: phaseNumber, deletedItem: deletedItem, index: index })">
+                                                    </item-deleter>
+                                                    <item-duplicator items="phase.questions" index="$index"></item-duplicator>
+                                                </sd-item-editor>
+                                            </div>
                                         </div>
-                    
                                         <div ng-switch-when="ranking">
-                                            <ranking-item-editor role="item"
-                                                validate-callback="dec.handleValidationResult(result)">
-                                            </ranking-item-editor>
+                                            {{phase.roles}}
+                                            <ranking-items-editor items="phase.roles" validate-callback="dec.handleValidationResult(result)"></ranking-items-editor>
                                         </div>
                                     </div>
                                 </div>
