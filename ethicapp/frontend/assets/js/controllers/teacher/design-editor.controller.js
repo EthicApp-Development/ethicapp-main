@@ -386,8 +386,12 @@ export function DesignEditorController($scope, $translate, $timeout,
                 console.debug("[handlePhaseMove] Neither phase has validation errors. No updates needed.");
             }
         });
-    };    
-        
+    };
+
+    vm.handleItemMove = function ({ phaseNumber, fromIndex, toIndex }) {
+        console.log(`[DesignEditorController::handleItemMove] ${phaseNumber} ${fromIndex} ${toIndex}`);
+    };
+
     vm.getSortedPhaseErrorKeys = function () {
         return Object.keys(vm.validationErrors.phases).sort((a, b) => {
             const phaseNumberA = parseInt(a.split('_')[1], 10);

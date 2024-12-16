@@ -166,7 +166,7 @@
                                                         </item-deleter>
                                                     </div>
                                                     <div class="col-sm-6 text-right">
-                                                        <item-mover items="phase.roles" item="item"></item-mover>
+                                                        <item-mover items="phase.roles" ng-init="phaseNumber=phaseIndex+1" item="item" on-move="dec.handleItemMove({ phaseNumber: phaseNumber, fromIndex: fromIndex, toIndex: toIndex})"></item-mover>
                                                     </div>
                                                 </div>
                                             </ranking-item-editor>
