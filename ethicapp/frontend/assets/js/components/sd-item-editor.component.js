@@ -1,15 +1,13 @@
-import semanticDifferentialItemTemplate from "./templates/design-editor/sd-item.template.js";
-
 const sdItemEditorComponent = {
     bindings: {
         phaseNumber: '<?',
-        questionNumber: '<?',
         question: '=',
+        questionNumber: '=',
         validateCallback: '&?',
         showSeparator: '<?',
     },
     transclude: true,
-    template: semanticDifferentialItemTemplate,
+    templateUrl: "/assets/static/partials/teacher/micro-partials/sd-item-editor.template.html",   
     controller: SDItemEditController,
 };
 

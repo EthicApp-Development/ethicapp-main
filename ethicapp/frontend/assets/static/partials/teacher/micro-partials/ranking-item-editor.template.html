@@ -1,0 +1,47 @@
+<div class="row">
+    <div class="col-sm-12" style="margin-top: 1em;">
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-sm-12">
+                        <h4>Item {{$ctrl.itemNumber}}</h4>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-4">
+                        <label>{{ 'item_text' | translate }}:</label>
+                        <textarea class="form-control" 
+                            style="resize: none;"
+                            placeholder="{{ 'item_input_placeholder_text' | translate }}" 
+                            ng-model="$ctrl.item.name"
+                            ng-class="{'input-warning': !$ctrl.item.name}" 
+                            rows="2">
+                        </textarea>
+                    </div>
+                    <div class="col-sm-4">
+                        <div style="padding-left: 2em; padding-top: 1em">
+                            <div style="display: flex; align-items: flex-start; gap: 0.5em;">
+                                <input type="checkbox"></input>
+                                <label>{{ 'justify_ranking_order_text' | translate }}</label><br>
+                            </div>
+                            <div style="display: flex; align-items: flex-start; gap: 0.5em;">
+                                <input type="checkbox"></input>
+                                <label>{{ 'justify_ranking_item_text' | translate }}</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-4" style="padding-top: 1em; display: flex; flex-direction: column; gap: 0.5em;">
+                        <div style="display: flex; align-items: flex-start; gap: 0.5em;">
+                            <input type="checkbox" style="margin-top: 0.25em;">
+                            <label style="margin: 0;">{{ 'ranking_justification_minlength_text' | translate }}</label>
+                        </div>
+                        <input class="form-control" size="3" style="margin-left: 1.25em; width: 9ch;" type="number">
+                    </div>
+                </div>
+            </div>
+            <div class="panel-footer">
+                <ng-transclude></ng-transclude>
+            </div>    
+        </div>
+    </div>
+</div>

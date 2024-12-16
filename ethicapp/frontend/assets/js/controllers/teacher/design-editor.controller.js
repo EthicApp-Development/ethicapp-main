@@ -97,6 +97,7 @@ export function DesignEditorController($scope, $translate, $timeout,
 
     vm.addItemToPhase = function(phase) {
         const item = designEditActions.buildBlankItem(vm.design);
+        console.log(`[vm.addItemToPhase] ${JSON.stringify(item)}`);
         $scope.$applyAsync(() => {
             designEditActions.addPhaseItem(vm.design, phase, item);
         });

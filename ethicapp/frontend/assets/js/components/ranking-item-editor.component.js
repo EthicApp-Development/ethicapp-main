@@ -1,17 +1,17 @@
-import rankingItemEditorTemplate from "./templates/design-editor/ranking-item-editor.template.js";
-
 const rankingItemEditorComponent = {
     bindings: {
-        item: '<',
+        phaseNumber: '<?',
+        item: '=',
+        itemNumber: '=',
         validateCallback: '&?'
     },
     transclude: true,
-    template: rankingItemEditorTemplate,
+    templateUrl: "/assets/static/partials/teacher/micro-partials/ranking-item-editor.template.html",
     controller: RankingItemEditorController,
 };
 
 function RankingItemEditorController() {
-    const vm = this; 
+    const vm = this;
 }
 
 export default rankingItemEditorComponent;

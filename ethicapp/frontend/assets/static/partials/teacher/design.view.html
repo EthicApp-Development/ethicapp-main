@@ -1,215 +1,125 @@
-<div ng-controller="DesignViewController as dvc">
-    <div class="container">
-        <h2>{{'designMsg' | translate}}</h2>
-        <h3>{{dvc.designObj.metainfo.title}}</h3>
-        <div class="container" ng-controller="DesignAttachmentsController as dac">
-            <h4 ng-show="dac.documents.length > 0">{{'documents' | translate}}</h4>
-            <div class="list-group mt-1medio" style="margin-bottom: 0">
-                <div class="list-group-item inline-docs" ng-repeat="doc in dac.documents">
-                    <i class="fa fa-file-text-o"></i> <strong class="ml-1" ng-bind="dac.getPathname(doc.path)"></strong>
-                    <button class="btn btn-xs btn-default" ng-disabled="false" ng-click="dac.openPDFInNewTab(doc.path)">
-                        {{ 'viewOriginalDoc' | translate}}
-                    </button>
-                </div>
-            </div>
-        </div>
-        <br>
-        <hr>
-    </div>
-
-    <!--Phases selections-->
-    <div class="container phase_container">
-        <div class="row">
-            <div class="col-xs-1 phase_element" ng-repeat="item in dvc.getStages()" ng-init="current"
-                ng-class="{phase_selected:dvc.currentStage==$index}" ng-click="dvc.selectStage($index)">
-                {{'stage' | translate}} {{$index+ 1}}
-                {{'mode' | translate}}: {{item.mode|translate}}
-            </div>
+<div class="container" ng-controller="DesignEditorController as dec">
+    <div class="row">
+        <div class="col-md-12 mb-2">
+            <h2><i class="fa fa-paint-brush"></i> {{ 'view_design_title' | translate }}: {{ dec.design.metainfo.title }}</h2>
         </div>
     </div>
-
-    <div class="container stage_container" ng-show="dvc.currentStage != null">
-        <div class="row">
-            <h4 class="col-lg-2"><strong>{{'stage' | translate}} #{{dvc.currentStage+1}}</strong></h4>
-            <h4 class="col-lg-4" ng-show="dvc.currentStage == 0"><strong>{{'modeType' | translate}}:</strong>
-                {{dvc.designObj.phases[dvc.currentStage].mode|translate}} </h4>
-        </div>
-
-        <!--STAGE 2 AND FOWARD-->
-        <div ng-if="dvc.currentStag > 0">
-            <div class="row margin-top-8">
-                <label class="col-lg-2">{{'modeType' | translate}}:</label>
-                <div class="col-lg-3">
-                    <select class="form-control form-inline-med"
-                        ng-options="x.key as (x.name | translate) for x in dvc.groupType"
-                        ng-model="dvc.designObj.phases[dvc.currentStage].mode" ng-disabled="true"></select>
+    <div class="panel panel-default">
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-12">
+                    <design-error-summary
+                        validation-errors="dec.validationErrors"
+                        scroll-to="dec.scrollToPhase(phaseKey)">
+                    </design-error-summary>
                 </div>
             </div>
-            <div ng-if="dvc.designObj.phases[dvc.currentStage].mode == 'team'">
-                <div class="row margin-top-8">
-                    <label class="col-lg-2">{{'groupingMethod' | translate}}:</label>
-                    <div class="col-lg-3">
-                        <select class="form-control form-inline-med"
-                            ng-init="dvc.designObj.phases[dvc.currentStage].grouping_algorithm"
-                            ng-options="x.key as (x.name | translate) for x in dvc.methods"
-                            ng-model="dvc.designObj.phases[dvc.currentStage].grouping_algorithm" ng-disabled="true"></select>
-                    </div>
-                </div>
-                <div class="row margin-top-8">
-                    <label class="col-lg-2">{{'studentsPerGroup' | translate}}:</label>
-                    <div class="col-lg-2">
-                        <input type="number" id="points" name="length" step="1" min="2" class="form-control"
-                            ng-model="dvc.designObj.phases[dvc.currentStage].stdntAmount" readonly
-                            style="width: 6em; text-align: center; height: 2em;">
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <div class="action-buttons">
+                        <button class="btn btn-default btn-sm" ng-click="navigateTo('/designs/edit/{{dec.designId}}')">
+                            <i class="fa fa-paint-brush"></i> {{ 'edit_design_button_text' | translate }}
+                        </button>
                     </div>
                 </div>
             </div>
-            <div ng-if="dvc.designObj.phases[dvc.currentStage].mode == 'team'">
-                <a ng-click="dvc.toggleOpts(1)">{{'advOpts'|translate}}</a>
-                <div ng-show="extraOpts" class="question_container">
-                    <div class="row margin-top-8">
-                        <label class="col-lg-2">{{'studentAnon'|translate}}:</label>
-                        <div class="col-lg-1">
-                            <input type="radio" name="anon2" ng-value="true" ng-disabled="true"
-                                ng-model="dvc.designObj.phases[dvc.currentStage].anonymous">
-                            <label>{{'yes'|translate}}</label>
-                        </div>
-                        <div class="col-lg-1">
-                            <input type="radio" name="anon2" ng-value="false" ng-disabled="true"
-                                ng-model="dvc.designObj.phases[dvc.currentStage].anonymous">
-                            <label>{{'no'|translate}}</label>
-                        </div>
-                        <div class="col-lg-3 ">
-                            <div ng-click="dvc.toggleOpts(2)" style="cursor: pointer;">
-                                {{'viewPastSes'|translate}}:
+        </div>
+    </div>    
+
+    <div class="design-editor" validate-design
+            phases="dec.design.phases"
+            on-validate="dec.handleValidationResult(result)">
+        <div uib-accordion close-others="false">
+            <div uib-accordion-group class="panel-default phase-editor-item-heading" 
+                ng-repeat="phase in dec.design.phases track by $index"
+                is-open="dec.accordionState[$index]">
+
+                <div ng-init="phaseIndex = $index">
+                    <div uib-accordion-heading ng-attr-id="phase_{{phaseIndex+1}}">
+                        <div style="background: #f5f5f5;">
+                            <div class="d-flex align-items-center">
+                                <h4>{{ 'phase_title_prefix' | translate }} {{ phaseIndex + 1 }}</h4>
+                                <i ng-class="{'fa-solid fa-down-left-and-up-right-to-center': dec.accordionState[phaseIndex], 
+                                            'fa-solid fa-up-right-and-down-left-from-center': !dec.accordionState[phaseIndex]}" 
+                                    class="fa-solid me-2"
+                                    ng-click="dec.toggleAccordionState(phaseIndex, $event)">
+                                </i>
                             </div>
-                            <div class="stack_top stage_container" ng-show="dvc.prevStages"
-                                style="z-index: 2; position:absolute; background:#fff; border: 2px #bbb solid; width:10em;">
-                                <div ng-repeat="n in dvc.buildArray(dvc.currentStage)">
-                                    <input type="checkbox" name="prevStage" ng-disabled="true" checklist-value="n-1"
-                                        checklist-model="dvc.designObj.phases[dvc.currentStage].prevPhasesResponse[n-1]">
-                                    <label for="S{{n}}">{{'stage'|translate}}: {{n}}</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h4>{{ 'features_title_text' | translate }}</h4>
+                            <div toggle-switch phase-mode-value-adapter ng-model="phase.mode" class="ats-switch switch-mini"></div> <label>{{ 'group_phase_label' | translate }}</label>
+                            <div ng-show="phase.mode !== 'individual'">
+                                <div toggle-switch phase-mode-value-adapter ng-model="phase.anonymous" class="ats-switch switch-mini"></div> <label>{{ 'use_anonimity_label' | translate }}</label> <br>
+                                <div toggle-switch phase-mode-value-adapter ng-model="phase.chat" class="ats-switch switch-mini"></div> <label>{{ 'use_chat_label' | translate }} </label> <br>
+                            </div>
+                        </div>
+                        <div class="col-md-4" style="padding-top: 16px" ng-if="phase.mode !== 'individual'">
+                            <grouping-mode-selector 
+                                phase="phase" 
+                                phase-index="phaseIndex" 
+                                design="dec.design" 
+                                validate-callback="dec.handleValidationResult(result)">
+                            </grouping-mode-selector>
+                        
+                            <div style="margin-top:0.5em" ng-if="dec.design.phases[phaseIndex].grouping_algorithm !== 'preserve'">
+                                <label>{{ 'group_size_label' | translate }}</label>
+                                <numeric-input-with-spinbutton 
+                                    value="phase.stdntAmount" 
+                                    min="2" 
+                                    max="10" 
+                                    step="1" 
+                                    id="phaseNumericInput">
+                                </numeric-input-with-spinbutton>
+                            </div>
+                        </div>
+                        <div class="col-md-4" style="padding-top: 4px">
+                            <previous-phases-selector phase="phase" phase-index="phaseIndex" design="dec.design"></previous-phases-selector>
+                        </div>
+                    </div>
+                    <div class="row" validate-phase
+                        design-type="dec.design.type"
+                        phase="phase"
+                        phase-number="phaseIndex+1"
+                        on-validate="dec.handleValidationResult(result)">
+                        <div class="col-md-12">
+                            <div style="margin-top: 1em" ng-switch="dec.design.type">
+                                <hr>
+                                <h4 ng-switch on="dec.design.type">
+                                    <span ng-switch-when="semantic_differential">{{ 'questions_title_text' | translate }}</span>
+                                    <span ng-switch-when="ranking">{{ 'items_title_text' | translate }}</span>
+                                </h4>
+                                <div ng-switch on="dec.design.type">
+                                    <div ng-switch-when="semantic_differential" ng-repeat="item in phase.questions track by $index">
+                                        <div>
+                                            <sd-item-editor 
+                                                phase-number="phaseIndex+1"
+                                                question="item" 
+                                                question-number="$index+1"
+                                                show-separator="false" 
+                                                validate-callback="dec.handleValidationResult(result)">
+                                            </sd-item-editor>
+                                        </div>
+                                    </div>
+                                    <div ng-switch-when="ranking">
+                                        <input style="margin-top: 1em;" type="checkbox"></input> <label>{{ 'item_random_order_label' | translate }}</label>
+                                        <div ng-repeat="item in phase.roles track by $index">
+                                            <ranking-item-editor 
+                                                phase-number="phaseIndex+1"
+                                                item="item"
+                                                item-number="$index+1"
+                                                validate-callback="dec.handleValidationResult(result)">
+                                            </ranking-item-editor>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="row margin-top-8">
-                        <label class="col-lg-2">{{'activeChat'|translate}}:</label>
-                        <div class="col-lg-1">
-                            <input type="radio" name="chat2" ng-value="true" ng-disabled="true"
-                                ng-model="dvc.designObj.phases[dvc.currentStage].chat">
-                            <label>{{'yes'|translate}}</label>
-                        </div>
-                        <div class="col-lg-1">
-                            <input type="radio" name="chat2" readonly ng-value="false" ng-disabled="true"
-                                ng-model="dvc.designObj.phases[dvc.currentStage].chat">
-                            <label>{{'no'|translate}}</label>
-                        </div>
-                    </div>
-
                 </div>
             </div>
-        </div>
-        <!--TABS QUESTIONS-->
-        <div class="tab_cs">
-            <button ng-repeat="i in dvc.buildArray(dvc.designObj.phases[dvc.currentStage].questions.length)" class="tab_cs"
-                ng-click="dvc.selectQuestion($index)" ng-class="{'btn_selected': dvc.currentQuestion == $index}">
-                {{'question'|translate}} {{i}}
-            </button>
-        </div>
-        <div class="question_container">
-            <div ng-show="dvc.stageType == 'semantic_differential'">
-                <div class="row">
-                    <label class="col-lg-2">{{'questionText'|translate}}</label>
-                    <div class="col-lg-6">
-                        <input type="text" class="form-control text-center" ng-disabled="readonly" readonly
-                            placeholder="{{'title'|translate}}"
-                            ng-model="dvc.designObj.phases[dvc.currentStage].questions[dvc.currentQuestion].q_text">
-                    </div>
-                </div>
-                <!--Semantic Differential-->
-                <label class="margin-top-8">{{'semanticDiffEscale'|translate}}</label>
-                <div class="row margin-top-8">
-                    <div class="col-xs-3 text-right">
-                        <div class="tlabel">
-                            <input type="text" class="form-control" ng-disabled="readonly" readonly
-                                placeholder="{{'left'|translate}}"
-                                ng-model="dvc.designObj.phases[dvc.currentStage].questions[dvc.currentQuestion].ans_format.l_pole">
-                        </div>
-                        <button class="btn btn-default" ng-disabled="true">-</button>
-                    </div>
-                    <div class="dopts col-xs-6">
-                        <div class="option eq-space" ng-repeat="i in dvc.buildArray(dvc.num)">{{i}}</div>
-                    </div>
-                    <div class="col-xs-3">
-                        <button class="btn btn-default" ng-disabled="true">+</button>
-                        <div class="tlabel">
-                            <input type="text" class="form-control" ng-disabled="readonly" readonly
-                                placeholder="{{'right'|translate}}"
-                                ng-model="dvc.designObj.phases[dvc.currentStage].questions[dvc.currentQuestion].ans_format.r_pole">
-                        </div>
-                    </div>
-                </div>
-                <div class="row margin-top-24">
-                    <label class="col-lg-2">{{'mandatoryComment'|translate}}</label>
-                    <div class="col-lg-1">
-                        <input type="radio" name="comment2" ng-value="true" ng-disabled="true"
-                            ng-model="dvc.designObj.phases[dvc.currentStage].questions[dvc.currentQuestion].ans_format.just_required">
-                        <label>{{'yes'|translate}}</label>
-                    </div>
-                    <div class="col-lg-1">
-                        <input type="radio" name="comment2" ng-value="false" ng-disabled="true"
-                            ng-model="dvc.designObj.phases[dvc.currentStage].questions[dvc.currentQuestion].ans_format.just_required">
-                        <label>{{'no'|translate}}</label>
-                    </div>
-                </div>
-                <div class="row margin-top-24">
-                    <label class="col-lg-2">{{'minComment'|translate}}</label>
-                    <div class="col-lg-1">
-                        <input type="number" id="points" name="length" step="1" min="5" class="form-control" readonly
-                            ng-model="dvc.designObj.phases[dvc.currentStage].questions[dvc.currentQuestion].ans_format.min_just_length"
-                            style="width: 6em; text-align: center; height: 2em;">
-                    </div>
-                    <label class="col-lg-2" for="length">{{'words'|translate}}</label>
-                </div>
-            </div>
-            <!--ANOTHER OPTION-->
-            <div ng-show="dvc.stageType == 'ranking'">
-                <div class="row">
-                    <div class="col-sm-12">
-                        <label>{{ 'question' | translate }}</label>
-                        <textarea rows="2" class="form-control" ng-model="dvc.designObj.phases[dvc.currentStage].q_text"
-                            ng-disabled="true"
-                            ng-class="{'error': dvc.IsTextEmpty($index, dvc.designObj.phases[dvc.currentStage].q_text)}"></textarea>
-                    </div>
-                    <div class="col-sm-5">
-                        <h4>{{ 'listOf' | translate }} {{ 'roles' | translate }}/{{ 'actors' |
-                            translate }}</h4>
-                    </div>
-                </div>
-                <div class="row row-border" ng-repeat="role in dvc.designObj.phases[dvc.currentStage].roles">
-                    <div class="col-sm-5">
-                        <input class="form-control" ng-model="role.name" ng-disabled="true"
-                            ng-class="{'error': dvc.IsTextEmpty($index, role.name)}">
-                    </div>
-                    <div class="col-sm-2 text-center">
-                        <button class="btn btn-default" ng-class="{'btn-primary': role.type == 'role'}"
-                            ng-click="dvc.setRoleType(role, 'role')" ng-disabled="true">
-                            {{ 'justify' | translate }} {{ 'role' | translate }}
-                        </button>
-                    </div>
-                    <div class="col-sm-2 text-center">
-                        <button class="btn btn-default" ng-class="{'btn-primary': role.type == 'order'}"
-                            ng-click="dvc.setRoleType(role, 'order')" ng-disabled="true">
-                            {{ 'justify' | translate }} {{ 'order' | translate }}
-                        </button>
-                    </div>
-                    <div class="col-sm-2 text-right">
-                        <input class="form-control form-inline-mini" placeholder="Word Count" type="number"
-                            ng-model="dvc.role.wc" ng-disabled="true">
-                    </div>
-                </div>
-            </div>
-        </div>
+        </div>      
     </div>
 </div>

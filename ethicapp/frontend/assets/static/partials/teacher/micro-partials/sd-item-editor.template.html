@@ -1,5 +1,4 @@
-const semanticDifferentialItemTemplate = `
-<div class="panel">
+<div class="panel panel-default" style="margin-top:1em">
     <div class="panel-body">
         <div class="form-group">
             <label for="questionText">{{ 'questionText' | translate }}</label>
@@ -40,21 +39,8 @@ const semanticDifferentialItemTemplate = `
                        ng-change="$ctrl.validateItem()">
             </div>
         </div>
-        <hr>
-        <div class="row">
-            <div class="col-xs-12">
-                <div class="btn-group" role="group" aria-label="Item Actions">
-                    <ng-transclude></ng-transclude>
-                </div>
-            </div>
-        </div>
     </div>
+    <div class="panel-footer">
+        <ng-transclude></ng-transclude>
+    </div>      
 </div>
-`;
-
-`
-<hr ng-if="$ctrl.showSeparator">
-ng-class="{'dashed-bottom-border': $ctrl.showSeparator}"
-`
-
-export default semanticDifferentialItemTemplate;
