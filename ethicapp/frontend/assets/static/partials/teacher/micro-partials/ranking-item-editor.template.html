@@ -14,28 +14,50 @@
                             style="resize: none;"
                             placeholder="{{ 'item_input_placeholder_text' | translate }}" 
                             ng-model="$ctrl.item.name"
-                            ng-class="{'input-warning': !$ctrl.item.name}" 
+                            ng-class="{'input-warning': !$ctrl.item.name}"
+                            ng-change="$ctrl.validateItem()"
                             rows="2">
                         </textarea>
                     </div>
                     <div class="col-sm-4">
                         <div style="padding-left: 2em; padding-top: 1em">
                             <div style="display: flex; align-items: flex-start; gap: 0.5em;">
-                                <input type="checkbox"></input>
-                                <label>{{ 'justify_ranking_order_text' | translate }}</label><br>
+                                <div toggle-switch ng-model="$ctrl.item.justification_required" class="ats-switch switch-mini"></div>
+                                <label>{{ 'justification_required_text' | translate }}</label>
                             </div>
-                            <div style="display: flex; align-items: flex-start; gap: 0.5em;">
-                                <input type="checkbox"></input>
-                                <label>{{ 'justify_ranking_item_text' | translate }}</label>
+                            <div ng-if="$ctrl.item.justification_required">
+                                <div style="margin-top: 1em; margin-bottom: 0.5em;">
+                                    <label>{{ 'justify_ranking_instruction_text' | translate }}:</label><br>
+                                </div>
+                                <div style="display: flex; align-items: flex-start; gap: 0.5em;">
+                                    <input 
+                                        name="justify_{{$ctrl.itemNumber}}" 
+                                        value="order" 
+                                        type="radio" 
+                                        ng-class="{'input-warning': !$ctrl.item.type}"
+                                        ng-model="$ctrl.item.type">
+                                    <label>{{ 'justify_ranking_order_text' | translate }}</label><br>
+                                </div>
+                                <div style="display: flex; align-items: flex-start; gap: 0.5em;">
+                                    <input 
+                                        name="justify_{{$ctrl.itemNumber}}" 
+                                        value="role" 
+                                        type="radio" 
+                                        ng-class="{'input-warning': !$ctrl.item.type}"
+                                        ng-model="$ctrl.item.type">
+                                    <label>{{ 'justify_ranking_item_text' | translate }}</label>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div class="col-sm-4" style="padding-top: 1em; display: flex; flex-direction: column; gap: 0.5em;">
-                        <div style="display: flex; align-items: flex-start; gap: 0.5em;">
-                            <input type="checkbox" style="margin-top: 0.25em;">
-                            <label style="margin: 0;">{{ 'ranking_justification_minlength_text' | translate }}</label>
+                        <div ng-if="$ctrl.item.justification_required">
+                            <div style="display: flex; align-items: flex-start; gap: 0.5em;">
+                                <input type="checkbox" ng-model="$ctrl.item.justification_minimum_length_required" style="margin-top: 0.25em;">
+                                <label style="margin: 0;">{{ 'ranking_justification_minlength_text' | translate }}:</label>
+                            </div>
+                            <input class="form-control" ng-if="$ctrl.item.justification_minimum_length_required" ng-model="$ctrl.item.wc" size="3" style="margin-left: 1.25em; width: 9ch;" type="number" min="5">
                         </div>
-                        <input class="form-control" size="3" style="margin-left: 1.25em; width: 9ch;" type="number">
                     </div>
                 </div>
             </div>

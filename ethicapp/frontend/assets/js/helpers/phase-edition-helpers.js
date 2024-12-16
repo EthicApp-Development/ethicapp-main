@@ -2,7 +2,9 @@ import { getDesignType } from "./design-helpers.js";
 
 const phaseBuilders = {
     semantic_differential: genericPhaseBuilder,
-    ranking: () => { genericPhaseBuilder({ roles: [ ] }) },
+    ranking: () => { 
+        genericPhaseBuilder({ roles: [ ], randomize_item_order: false }) 
+    },
 };
 
 const itemBuilders = {
@@ -62,6 +64,8 @@ function sdItemBuilder(params = {}) {
 
 function rankingItemBuilder(params = {}) {
     return {
+        justification_required: false,
+        justification_minimum_length_required: false,
         wc: params.wc ?? 5,
         name: params.name ?? "",
         type: params.type,

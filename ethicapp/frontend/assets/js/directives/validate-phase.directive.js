@@ -37,7 +37,7 @@ const itemValidators = {
                 context: {
                     phaseNumber: phaseNumber
                 },
-                messages: ['error_no_roles_defined']
+                messages: ['error_no_items_defined']
             };
             scope.onValidate({ result });
             console.warn('[validatePhaseDirective] No roles defined.');

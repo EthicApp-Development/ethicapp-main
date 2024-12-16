@@ -149,7 +149,7 @@
                                         </div>
                                     </div>
                                     <div ng-switch-when="ranking">
-                                        <input style="margin-top: 1em;" type="checkbox"></input> <label>{{ 'item_random_order_label' | translate }}</label>
+                                        <input style="margin-top: 1em;" ng-model="phase.randomize_item_order" type="checkbox"></input> <label>{{ 'item_random_order_label' | translate }}</label>
                                         <div ng-repeat="item in phase.roles track by $index">
                                             <ranking-item-editor 
                                                 phase-number="phaseIndex+1"
