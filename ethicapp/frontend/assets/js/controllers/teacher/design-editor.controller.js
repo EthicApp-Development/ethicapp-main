@@ -1,4 +1,5 @@
 import designEditActions from "../../helpers/phase-edition-helpers.js";
+import * as phaseValidationHelpers from "../../helpers/phase-validation-helpers.js"
 import accordionStateHelpers from "../../helpers/accordeon-state-helpers.js"
 
 export function DesignEditorController($scope, $translate, $timeout,
@@ -390,6 +391,91 @@ export function DesignEditorController($scope, $translate, $timeout,
 
     vm.handleItemMove = function ({ phaseNumber, fromIndex, toIndex }) {
         console.log(`[DesignEditorController::handleItemMove] ${phaseNumber} ${fromIndex} ${toIndex}`);
+        
+        const phaseKey = `phase_${phaseNumber}`;
+        const fromItemKey = `item_${fromIndex + 1}`;
+        const toItemKey = `item_${toIndex + 1}`;
+        
+        $scope.$applyAsync(function() {
+            // Case 1: Both items exist in validationErrors
+            const phaseErrors = vm.validationErrors.phases[phaseKey];
+            if (phaseErrors && phaseErrors.items[fromItemKey] && phaseErrors.items[toItemKey]) {
+                const temp = phaseErrors.items[fromItemKey];
+                phaseErrors.items[fromItemKey] = phaseErrors.items[toItemKey];
+                phaseErrors.items[toItemKey] = temp;
+                console.debug(
+                    `[handleItemMove] Swapped validation errors for items ${fromItemKey} and ${toItemKey} in phase ${phaseNumber}.`);
+            }
+            // Case 2: Only the "from" item exists in validationErrors
+            else if (phaseErrors && !phaseErrors.items[toItemKey]) {
+                phaseErrors.items[toItemKey] = phaseErrors.items[fromItemKey];
+                delete phaseErrors.items[fromItemKey];
+                console.debug(`[handleItemMove] Moved validation errors from ${fromItemKey} to ${toItemKey} in phase ${phaseNumber}.`);
+            }
+            // Case 3: Only the "to" item exists in validationErrors
+            else if (!phaseErrors.items[fromItemKey] && phaseErrors.items[toItemKey]) {
+                phaseErrors.items[fromItemKey] = phaseErrors.items[toItemKey];
+                delete phaseErrors.items[toItemKey];
+                console.debug(`[handleItemMove] Moved validation errors from ${toItemKey} to ${fromItemKey}.`);        }
+
+            // Case 4: Neither phase exists in validationErrors
+            else {
+                console.debug("[handleItemMove] Neither phase has validation errors. No updates needed.");
+            }
+        });
+    };
+
+    vm.handleItemDeletion = function ({ phaseNumber, deletedIndex }) {
+        console.debug(
+            `[handleItemDeletion] Deleted item at index: ${deletedIndex}, phase ${phaseNumber}`);
+    
+        const phaseKeyPrefix = "phase_";
+        const phaseKey = `${phaseKeyPrefix}${phaseNumber}`;
+        const itemKey = `item_${deletedIndex+1}`;
+
+        $scope.$applyAsync(function() {
+            // Removes errors associated with the deleted phase
+            const phaseErrors = vm.validationErrors.phases[phaseKey];
+            if (phaseErrors && phaseErrors.items[itemKey]) {
+                delete phaseErrors.items[itemKey];
+
+                if (Object.keys(phaseErrors.items).length == 0) {
+                    delete phaseErrors.items;
+                }
+
+                const phaseValid = phaseValidationHelpers.isPhaseValid(phaseErrors);
+                
+                if (phaseValid) {
+                    delete vm.validationErrors.phases[phaseKey];
+
+                    console.debug(`[handleItemDeletion] Removed validation errors for ${phaseKey}`);
+                    console.debug(
+                        `[handleItemDeletion] No further operations are required for ${phaseKey}, deleting it from validation errors.`);
+                    
+                    // No further updates are required
+                    return;
+                }
+    
+                console.debug(`[handleItemDeletion] validation errors ${JSON.stringify(vm.validationErrors.phases)}`);
+            }
+        
+            // Updates the keys of the remaining items
+            if (phaseErrors.items) {
+                const updatedItems = {};
+                Object.keys(phaseErrors.items).forEach((key) => {
+                    const itemNumber = parseInt(key.split('_')[1], 10);
+                    if (itemNumber > deletedIndex + 1) {
+                        const newItemKey = `${phaseKeyPrefix}${itemNumber - 1}`;
+                        updatedItems[newItemKey] = phaseErrors.items[key];
+                        console.debug(`[handleItemDeletion] Updated phase key: ${key} -> ${newItemKey}`);
+                    } else {
+                        updatedItems[key] = phaseErrors.items[key];
+                    }
+                });
+                console.debug(`[handleItemDeletion] validation errors post update ${JSON.stringify(phaseErrors.items)}`);
+                phaseErrors.items = updatedItems;
+            }
+        });
     };
 
     vm.getSortedPhaseErrorKeys = function () {
