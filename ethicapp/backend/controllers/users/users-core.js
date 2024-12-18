@@ -394,6 +394,43 @@ router.post("/update-lang", async (req, res) => {
     }
 });
 
+router.get("/users/myinfo", async (req, res) => {
+    try {
+        // Validate session
+        if (!req.session || !req.session.uid) {
+            return res.status(401).json({ success: false, error: "unauthorized" });
+        }
+
+        // Execute the SQL query to get user information based on session uid
+        const result = await execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT 
+                    u.id, 
+                    u.name, 
+                    u.mail as email,
+                    ui.name AS institution_name
+                FROM users u
+                LEFT JOIN user_institutions ui ON u.institution_id = ui.id
+                WHERE u.id = $1
+                LIMIT 1
+            `,
+            sqlParams: [req.session.uid], // Directly pass the plain session uid
+        });
+
+        // Return user data if found, else return empty object
+        if (result.length > 0) {
+            return res.status(200).json({ success: true, data: result[0] });
+        } else {
+            return res.status(404).json({ success: false, error: "user_not_found" });
+        }
+    } catch (error) {
+        console.error("Error in /users/myinfo:", { error, sessionId: req.session.uid });
+        return res.status(500).json({ success: false, error: "internal_server_error" });
+    }
+});
+
+
 router.post("/getuserinfo", async (req, res) => {
     try {
         // Execute the SQL query to get user information based on session uid

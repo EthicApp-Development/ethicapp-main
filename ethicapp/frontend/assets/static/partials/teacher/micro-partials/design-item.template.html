@@ -1,0 +1,56 @@
+<div class="panel panel-default design-item-panel" 
+     ng-click="$ctrl.onSelect({ id: $ctrl.design.id })" 
+     ng-class="{'dsgn_sel': $ctrl.design.id === $ctrl.pickedDesignId}">
+    <div class="panel-body" ng-init="left_width = $ctrl.isOwner ? 'col-sm-4' : 'col-sm-8'; right_width = $ctrl.isOwner ? 'col-sm-8' : 'col-sm-4'">
+        <div class="row">
+            <div class="{{left_width}}">
+                <p><i class="fa-solid fa-info-circle" aria-hidden="true"></i> {{ 'title_colon' | translate }} <a ng-href="#!/designs/{{$ctrl.design.id}}" class="text-decoration-none">{{$ctrl.design.metainfo.title}}</a></p>
+                <p ng-if="!$ctrl.isOwner"><i class="fa-solid fa-user" aria-hidden="true"></i> {{ 'author' | translate }}: <span ng-switch on="![undefined, null, ''].includes($ctrl.design.metainfo.authorName)"><span ng-switch-when="false">{{ 'unknown' | translate }}</span><span ng-switch-when="true"><a ng-if="!([undefined, null, ''].includes($ctrl.design.metainfo.email))" href="mailto:{{$ctrl.design.metainfo.email}}" target="_blank">{{$ctrl.design.metainfo.authorName}}</a><span ng-if="[undefined, null, ''].includes($ctrl.design.metainfo.email)">{{$ctrl.design.metainfo.authorName}}</span></span></span><span ng-if="!([undefined, null, ''].includes($ctrl.design.metainfo.institution))">, {{$ctrl.design.metainfo.institution}}</span></p>
+                <p ng-if="!$ctrl.design.valid"><i class="text-warning fa-solid fa-xmark" aria-hidden="true"></i> {{ 'invalid_design_warning_text' | translate }}</p>
+                <p ng-if="$ctrl.design.valid"><i class="text-success fa-solid fa-check" aria-hidden="true"></i></i> {{ 'valid_design_text' | translate }}</p>
+                <p><i class="fa-solid fa-calendar-alt" aria-hidden="true"></i> {{ 'creation_date_colon' | translate }} {{$ctrl.design.metainfo.creation_date | date}}</p>
+                <p><i class="fa-solid fa-paint-brush" aria-hidden="true"></i> {{ 'design_type_colon' | translate }} {{$ctrl.design.type === "semantic_differential" ? ("semantic_differential" | translate) : ("ranking_activity" | translate)}}</p>
+                <p><i class="fa-solid fa-layer-group" aria-hidden="true"></i> {{ 'number_of_phases_colon' | translate }} {{$ctrl.design.phases.length}}</p>
+            </div>
+            <div class="{{right_width}}">
+                <div style="width: 100%; display: flex; justify-content: flex-end; align-items: center;">
+                    <!-- Buttons Section -->
+                    <div ng-if="$ctrl.isOwner" class="d-inline-flex align-items-center">
+                        <button ng-if="$ctrl.design.valid" class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onLaunch({ design: $ctrl.design })">
+                            <i class="fa fa-rocket"></i> {{ 'launch_activity_button_text' | translate }}
+                        </button>
+                        <button class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onEdit({ design: $ctrl.design })" ng-hide="$ctrl.design.locked">
+                            <i class="fa fa-pencil"></i> {{ 'edit' | translate }}
+                        </button>
+                        <button class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onView({ design: $ctrl.design })">
+                            <i class="fa fa-eye"></i> {{ 'view' | translate }}
+                        </button>
+                        <button class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onDuplicate({ design: $ctrl.design })" ng-hide="$ctrl.design.locked">
+                            <i class="fa-regular fa-clone"></i> {{ 'duplicate_item_button_text' | translate }}
+                        </button>                        
+                        <button class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onDelete({ design: $ctrl.design })" ng-hide="$ctrl.design.locked">
+                            <i class="fa fa-trash"></i> {{ 'delete' | translate }}
+                        </button>
+                    </div>
+            
+                    <!-- Toggle Switch with Text -->
+                    <div ng-if="$ctrl.isOwner" style="margin-top: 1em" class="ml-3 text-center">
+                        <div toggle-switch ng-model="$ctrl.design.public" 
+                             ng-click="$ctrl.onTogglePublic({ design: $ctrl.design })"
+                             class="ats-switch switch-primary d-inline-block">
+                        </div>
+                        <div class="small text-muted">{{ 'share_design' | translate }}</div>
+                    </div>
+            
+                    <!-- Import Button for Non-Owners -->
+                    <div class="ml-3" ng-if="!$ctrl.isOwner">
+                        <button class="btn btn-default btn-sm" ng-click="$ctrl.onImport({ design: $ctrl.design })">
+                            <i class="fa fa-download"></i> {{ 'import_design_button_text' | translate }}
+                        </button>
+                        <toast></toast>
+                    </div>
+                </div>
+            </div>            
+        </div>
+    </div>
+</div>

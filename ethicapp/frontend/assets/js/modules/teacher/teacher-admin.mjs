@@ -9,20 +9,18 @@ import { ActivityStateService } from "../../services/activity-state.service.js";
 import { ActivityCatalogService } from "../../services/activity-catalog.service.js";
 import { DesignStateService } from "../../services/design-state.service.js";
 import { DesignCatalogService } from "../../services/design-catalog.service.js";
+import UserInformationService from "../../services/user-information.service.js";
 
 var app = angular.module("TeacherApp", ["ngSanitize",
     "ui.bootstrap", "ui.multiselect", "timer", "ngFileUpload",
     "ui-notification", "ngQuill", "tableSort", "pascalprecht.translate", 
     "ngRoute", "checklist-model", "ngDialog", "toggle-switch", 'angularjsToast',
     'ngAnimate']
-).factory("TabStateService", function() {
-    var service = {};
-    service.sharedTabState = { type: 0 };
-    return service;
-}).factory("ActivityStateService", ["$http", "SocketService", ActivityStateService])
+).factory("ActivityStateService", ["$http", "SocketService", ActivityStateService])
     .factory("ActivityCatalogService", ["$http", ActivityCatalogService])
     .factory("DesignCatalogService", ["$rootScope", "$http", DesignCatalogService])
-    .factory("DesignStateService", ["$rootScope", "$http", DesignStateService]);
+    .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
+    .factory("UserInformationService", ["$http", UserInformationService]);
 
 import { LocalesController } from "../../controllers/common/locales.controller.js";
 import { ActivityController } from "../../controllers/teacher/activity.controller.js";
@@ -131,7 +129,7 @@ app.config(function($translateProvider) {
 
 const config = toastProvider => {
     toastProvider.configure({
-      maxToast: 2,
+      maxToast: 1,
       timeout: 5 * 1000,
       dismissible: true,
       insertFromTop: true,
@@ -151,15 +149,14 @@ app.controller("DesignEditController",
     ["$scope", "$routeParams", "DesignStateService", "$filter", "$http", "Notification", 
         "$timeout", "ActivityStateService", "DesignCatalogService", DesignEditController]);
 app.controller("BrowseDesignsController", 
-    ["$scope", "$routeParams", "TabStateService", "DesignStateService", 
-        "ActivityStateService", "DesignCatalogService", 
-        "$filter", "$http", BrowseDesignsController]); 
+    ["$scope", "$routeParams", "DesignStateService", 
+        "ActivityStateService", "DesignCatalogService", BrowseDesignsController]); 
 app.controller("ConfirmModalController", 
     ["$uibModalInstance", ConfirmModalController]);
 app.controller("ContentModalController", 
     ["$scope", "$uibModalInstance", "data", ContentModalController]); 
 app.controller("CreateDesignController", 
-    ["$scope", "$http", "DesignCatalogService", CreateDesignController]);
+    ["$scope", "DesignCatalogService", "UserInformationService", CreateDesignController]);
 app.controller("DashboardController", 
     ["$scope", "$routeParams", "$http", "$timeout", "$uibModal", "ActivityStateService",
         "DesignCatalogService", "$translate", DashboardController]);  
@@ -269,6 +266,7 @@ import itemDeleterComponent from "../../components/item-deleter.component.js";
 import itemDuplicatorComponent from "../../components/item-duplicator.component.js";
 import designErrorSummaryComponent from "../../components/design-error-summary.component.js";
 import itemMoverComponent from '../../components/item-mover.component.js';
+import designItemComponent from '../../components/design-item.component.js';
 
 app.component('activityDescription', activityDescriptionComponent);
 app.component('designDescription', designDescriptionComponent);
@@ -283,3 +281,4 @@ app.component('itemDuplicator', itemDuplicatorComponent);
 app.component('designErrorSummary', designErrorSummaryComponent);
 app.component('rankingItemEditor', rankingItemEditorComponent);
 app.component('sdItemEditor', sdItemEditorComponent);
+app.component('designItem', designItemComponent);

@@ -1,100 +1,34 @@
-/*eslint func-style: ["error", "expression"]*/
-export function CreateDesignController($scope, $http, 
-    DesignCatalogService) {
+import { designFactories } from  "../../../../../common/modules/design-types.js";
 
+/*eslint func-style: ["error", "expression"]*/
+export function CreateDesignController($scope,
+    DesignCatalogService, UserInformationService) {
     const vm = this;
 
-    vm.init = async function() {
-        //console.log(`[CreateDesignController] DesignCatalogService: ${DesignCatalogService.loadDesigns}`);
-    };
-
-    vm.uploadDesign = async function (title, author, type) {
-        var semantic = { 
-            "metainfo": {
-                "title":         title,
-                "author":        author,
-                "creation_date": Date.now()
-            },
-            "roles":  [],
-            "type":   "semantic_differential",
-            "phases": [
-                {
-                    "mode":               "individual",
-                    "chat":               false,
-                    "anonymous":          true,
-                    "grouping_algorithm": "random",
-                    "prevPhasesResponse": [ ],
-                    "stdntAmount":        3,
-                    "questions":          [
-                        {
-                            "q_text":     "",
-                            "ans_format": {
-                                "values":          7,
-                                "l_pole":          "",
-                                "r_pole":          "",
-                                "just_required":   true,
-                                "min_just_length": 5
-                            }
-                        }
-                    ]
-                }
-            ]
-        };
-        var ranking = { 
-            "metainfo": {
-                "title":         title,
-                "author":        author,
-                "creation_date": Date.now()
-            },
-            "roles":  [],
-            "type":   "ranking",
-            "phases": [
-                {
-                    "mode":               "individual",
-                    "chat":               false,
-                    "anonymous":          true,
-                    "grouping_algorithm": "random",
-                    "prevPhasesResponse": [ ],
-                    "stdntAmount":        3,
-                    "q_text":             "",
-                    "roles":              [
-                    ]
-                }
-            ]
-        };
-        if(type) {
-            let requestParams = {};
-
-            if (type === "semantic_differential"){
-                requestParams = { design: semantic };
+    vm.uploadDesign = async function (title, type) {
+        try {
+            const factory = designFactories[type];
+            if (!factory) {
+                throw Error("Unsupported design type!");
             }
-            else if (type== "ranking"){
-                requestParams = { design: ranking };
+            
+            const userInformation = await UserInformationService.getUserInformation();
+            const design = factory(title, userInformation.name);
+            
+            design.metainfo.institution = userInformation.institution_name ?? "Unknown";
+            design.metainfo.email = userInformation.email;
+
+            const designId = await DesignCatalogService.createDesign(design);
+
+            if (!designId) {
+                throw Error("Could not create the new design.");
             }
 
-            try {
-                // Send POST request to upload design
-                const response = await $http.post("/upload-design", requestParams);
-                
-                // Check if the response status is "ok"
-                if (response.data.status === "ok") {
-                    await DesignCatalogService.loadDesigns();
-                    console.debug("Design uploaded successfully and catalog reloaded.");
-                } else {
-                    // Handle unexpected status in the response
-                    throw new Error("Unexpected response status: " + response.data.status);
-                }
-
-                const designId = response.data.id;
-
-                // Switch to the editor view
-                //console.log(`[CreateDesignController] Attempting to open /designs/${designId}/edit navigateTo: ${$scope.navigateTo}`);
-                $scope.navigateTo(`/designs/${designId}/edit`);
-            } catch (error) {
-                // Log and handle any errors encountered during the HTTP request or response processing
-                console.error("Error uploading design:", error.message || error);
-            }
+            // Switch to the editor view
+            $scope.navigateTo(`/designs/${designId}/edit`);
+        } catch (error) {
+            // Log and handle any errors encountered during the HTTP request or response processing
+            console.error("Error uploading design:", error.message || error);
         }
-    };    
-    vm.init();
+    };
 };

@@ -9,12 +9,6 @@ export function DesignEditorController($scope, $translate, $timeout,
     vm.designId = 0;
     vm.design = null;
     vm.accordionState = {};
-    vm.toastMessage = {
-        id: Date.now(),
-        message: null,
-        type: 'info',
-        duration: 5000
-    };
     
     vm.validationErrors = {
         global: [], // Global design-related errors
@@ -98,7 +92,7 @@ export function DesignEditorController($scope, $translate, $timeout,
 
     vm.addItemToPhase = function(phase) {
         const item = designEditActions.buildBlankItem(vm.design);
-        console.log(`[vm.addItemToPhase] ${JSON.stringify(item)}`);
+        console.debug(`[vm.addItemToPhase] ${JSON.stringify(item)}`);
         $scope.$applyAsync(() => {
             designEditActions.addPhaseItem(vm.design, phase, item);
         });
@@ -166,14 +160,12 @@ export function DesignEditorController($scope, $translate, $timeout,
         }
     };
 
-    vm.handleValidationResult = function (result) {
-        console.log(`[handleValidationResult] ${JSON.stringify(result)}`);
-    
+    vm.handleValidationResult = function (result) {    
         const { type, context, messages } = result;
-
+        
         // Handle global errors
         if (type === "global") {
-            console.log(`[vm.handleValidationResult] global error handling`);
+            console.debug(`[vm.handleValidationResult] global error handling`);
             if (messages.length > 0) {
                 vm.validationErrors.global = messages;
             } else {
@@ -231,7 +223,27 @@ export function DesignEditorController($scope, $translate, $timeout,
             }
         }
 
-        console.log("Validation Errors:", JSON.stringify(vm.validationErrors));        
+        // Update the design's validity flag
+        if (vm.design) {
+            vm.design.valid = vm.isDesignValid();
+        }
+
+        console.debug("Validation Errors:", JSON.stringify(vm.validationErrors));        
+    };
+
+    vm.isDesignValid = function() {
+        let valid = true;
+
+        if (vm.validationErrors.global && vm.validationErrors.global.length > 0) {
+            console.debug("[isDesignValid] The design has global errors.");
+            valid = false;
+        }
+        if (vm.validationErrors.phases && Object.keys(vm.validationErrors.phases).length > 0) {
+            console.debug("[isDesignValid] The design has phase errors.");
+            valid = false;
+        }
+
+        return valid;
     };
 
     vm.handleItemDeletion = function({ phaseNumber, deletedItem, index }) {
@@ -485,35 +497,6 @@ export function DesignEditorController($scope, $translate, $timeout,
             return phaseNumberA - phaseNumberB;
         });
     };    
-
-    vm.canSave = function() {
-        return (
-            vm.validationErrors.global.length === 0 &&
-            Object.keys(vm.validationErrors.phases).length === 0
-        );
-    };
-
-    vm.showToast = function (message, type = 'success') {
-        /*$timeout(() => {
-            vm.toastMessage = {
-                id: Date.now(),
-                message: message,
-                type: type,
-                duration: 5000
-            };
-            console.log('[showToast] toastMessage:', vm.toastMessage);
-        });*/
-
-        $scope.$applyAsync(() => {
-            vm.toastMessage = {
-                id: Date.now(),
-                message: message,
-                type: type,
-                duration: 5000
-            };
-            console.log('[showToast] toastMessage:', vm.toastMessage);
-        });
-    };
    
     vm.scrollToPhase = function (phaseKey) {
         const elementId = phaseKey;

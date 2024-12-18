@@ -2369,6 +2369,34 @@ h2{
     }
 }
 
+.design-item-panel .panel-body .row {
+    display: flex;
+    align-items: center; /* Center content vertically */
+    height: 100%; /* Ensure full height */
+    margin: 0; /* Remove default margins */
+}
+
+.design-item-panel .col-md-8,
+.design-item-panel .col-md-4 {
+    height: 100%; /* Force full height for columns */
+}
+
+.design-item-panel .inline-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px; /* Reduce spacing */
+}
+
+.design-item-panel .btn {
+    margin-left: 5px; /* Add spacing between buttons */
+}
+
+.design-item-panel .small.text-muted {
+    margin-left: 5px;
+    font-size: 11px;
+    color: #999;
+}
+
 .ats-switch {
     border: 1px solid;
     cursor: pointer;

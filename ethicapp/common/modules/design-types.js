@@ -1,4 +1,6 @@
 // designTypes.js
+import { sdTemplate } from "./design-templates/sd.template.js";
+import { rankingTemplate } from "./design-templates/ranking.template.js";
 
 /**
  * Object defining the supported design types.
@@ -13,6 +15,26 @@ const designTypes = {
         description: "Semantic differential design type, used for measuring attitudes.",
         identifier: "J",
     },
+};
+
+const designFactories = {
+    create_instance: (template) => { 
+        const instance = structuredClone(template);
+        instance.metainfo.creation_date = Date.now();
+        return instance;
+    },
+    ranking: (title, author) => { 
+        const instance = designFactories.create_instance(rankingTemplate);
+        instance.metainfo.author = author;
+        instance.metainfo.title = title;
+        return instance;
+    },
+    semantic_differential: (title, author) => {
+        const instance = designFactories.create_instance(sdTemplate);
+        instance.metainfo.author = author;
+        instance.metainfo.title = title;
+        return instance;
+    }
 };
 
 /**
@@ -45,4 +67,5 @@ function listSupportedDesignTypes() {
 }
 
 // Export the functions and the design types object
-export { designTypes, isValidDesignType, getDesignTypeDetails, listSupportedDesignTypes };
+export { designTypes, designFactories, isValidDesignType, 
+    getDesignTypeDetails, listSupportedDesignTypes };

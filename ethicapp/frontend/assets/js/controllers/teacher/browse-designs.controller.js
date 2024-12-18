@@ -1,7 +1,7 @@
 /*eslint func-style: ["error", "expression"]*/
 export function BrowseDesignsController($scope, $routeParams,
-    TabStateService, DesignStateService, ActivityStateService, 
-    DesignCatalogService, $filter, $http) {
+    DesignStateService, ActivityStateService, 
+    DesignCatalogService) {
 
     const vm = this;
     vm.pickedDesignId = 0;
@@ -26,7 +26,7 @@ export function BrowseDesignsController($scope, $routeParams,
         }
 
         $scope.$on('designCatalogUpdated', async function(event, data) {
-            await vm.forceFetchDesigns();
+            $scope.$apply();
         });
     }
 
@@ -41,19 +41,6 @@ export function BrowseDesignsController($scope, $routeParams,
 
         $scope.$apply();
     }
-
-    vm.launchDesign = async function(id, title, type) {
-        DesignStateService.setInstanceData(id, title, type);
-        vm.selectedDesign = await DesignCatalogService.getDesignById(id);
-        $scope.selectView("launchActivity");
-    };
-
-    vm.retrieveInstanceData = function() {
-        const instanceData = DesignStateService.getInstanceData();
-        vm.dsgnid = instanceData.id;
-        vm.dsgntitle = instanceData.title;
-        vm.dsgntype = instanceData.type;
-    };
 
     vm.setInstanceData = function(id, title, type) {
         DesignStateService.setInstanceData(id, title, type);
@@ -81,6 +68,14 @@ export function BrowseDesignsController($scope, $routeParams,
     vm.deleteDesign = async function(id) {
         await DesignCatalogService.deleteDesign(id);
     };
+
+    vm.duplicateDesign = async function(id) {
+        await DesignCatalogService.duplicateDesign(id);
+    };
+
+    vm.importDesign = async function(id) {
+        await DesignCatalogService.importDesign(id);
+    };
     
     vm.getDesign = async function(id) {
         const design = await DesignCatalogService.getDesignById(id);
@@ -90,30 +85,6 @@ export function BrowseDesignsController($scope, $routeParams,
     vm.filterById = function(design) {
         return vm.selectedDesign && design.id === vm.selectedDesign.id;
     };
-    
-    vm.goToDesign = function(id, operationType) {
-        const designObj = DesignCatalogService.getDesignById(id);
-
-        // Set the state of the design being edited or worked on
-        DesignStateService.setDesign(id, designObj);
-
-        // Set the id of the selected design
-        vm.selectedDesign = designObj;
-
-        // Should this be?
-        // ActivityStateService.setDesign(id, designObj);
-
-        switch(operationType){
-            case 'Edit':
-                $scope.selectView("newDesignExt");
-                break;
-            case 'View':
-                $scope.selectView("viewDesign");
-                break;
-            default:
-                throw new Error("[BrowseDesignsController::goToDesign] Undefined operation!");
-        }
-    }
 
     vm.init();
 };

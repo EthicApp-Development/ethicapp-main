@@ -143,6 +143,29 @@ export async function hasTheUserRole(email, role) {
   }
 }
 
+export async function hasTheUserRoleById(id, role) {
+    try {
+        const sql = `
+        SELECT role
+        FROM users
+        WHERE id = $1 
+        AND role = $2
+        LIMIT 1
+    `;
+        const values = [id, role];
+
+        // Get the database instance
+        const db = await pglib.getDBInstance(config.dbconnString);
+        const result = await db.query(sql, values);
+        
+        return result.rows.length > 0
+  } catch(err) {
+    const msg = "Could not get role for user.";
+    console.error(msg);
+    throw new Error(msg);
+  }
+}
+
 // Hash password with bcrypt
 export async function hashPassword(password) {
     const saltRounds = 10;

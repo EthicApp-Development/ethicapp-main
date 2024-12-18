@@ -10,7 +10,7 @@
         </div>
     </div>
     <div class="row" ng-init="vm.dsgnMode = 0; vm.forceFetchDesigns();" style="position: relative;">
-        <!-- Tabs de navegación -->
+        <!-- Nav Tabs -->
         <ul class="nav nav-tabs" style="margin-left: 16px; display: inline-block;">
             <li ng-class="{'active': vm.dsgnMode === 0}">
                 <a href="" ng-click="vm.dsgnMode = 0; vm.getUserDesigns()">{{'yours' | translate}}</a>
@@ -20,7 +20,7 @@
             </li>
         </ul>
 
-        <!-- Caja de búsqueda posicionada manualmente -->
+        <!-- Search box -->
         <div style="position: absolute; left: 200px; top: 6px; min-width: 80px; max-width: 200px;">
             <input class="form-control search-input fontAwesome" type="text" 
                    placeholder="{{'search' | translate}} &#xF002;" ng-model="vm.userSearch">
@@ -30,58 +30,25 @@
         <div class="col-md-12">
             <div class="panel panel-default">
                 <div class="panel-body">
-                    <!-- Diseños del Usuario -->
-                    <div class="list-group-item list-designs"
-                        ng-repeat="design in vm.userDesigns | filter: vm.userSearch"
-                        ng-if="vm.dsgnMode === 0">
-                        <div>
-                            <a ng-href="#!/designs/{{design.id}}"><h4 class="list-group-item-heading" ng-bind="design.metainfo.title"></h4></a>
-                            <p class="list-group-item-text" ng-if="design.type === 'ranking'">{{'ranking_activity' | translate}}</p>
-                            <p class="list-group-item-text" ng-if="design.type !== 'ranking'">{{'semantic_differential' | translate}}</p>
-                            <p class="list-group-item-text">{{'created' | translate}} {{design.metainfo.creation_date | date}}</p>
-                        </div>
-                        <div class="text-right vertical-align">
-                            <img class="locked-svg" ng-show="design.locked" src="../../assets/images/iconsets/gray-lineart/design-lock-active.svg" alt="SVGLocked">
-                            
-                            <button class="btn btn-default btn-sm ml-1" ng-click="navigateTo('/activities/new/'+design.id)">
-                                <i class="fa fa-rocket"></i> {{'launchActivity' | translate}}
-                            </button>
-                            
-                            <button class="btn btn-default btn-sm ml-1" ng-click="navigateTo('/designs/'+design.id+'/edit')" ng-hide="design.locked">
-                                <i class="fa fa-pencil"></i> {{'edit' | translate}}
-                            </button>
-                            
-                            <button class="btn btn-default btn-sm ml-1" ng-click="navigateTo('/designs/'+design.id)">
-                                <i class="fa fa-eye"></i> {{'view' | translate}}
-                            </button>
-                            
-                            <button class="btn btn-default btn-sm ml-1 text-danger" ng-click="vm.deleteDesign(design.id)" ng-hide="design.locked">
-                                <i class="fa fa-trash"></i> {{'delete' | translate}}
-                            </button>
+                    <design-item ng-repeat="design in vm.userDesigns | filter: { metainfo: { title: vm.userSearch } } track by design.id"
+                        ng-if="vm.dsgnMode === 0"
+                        design="design"
+                        is-owner="true"
+                        on-launch="navigateTo('/activities/new/' + design.id)"
+                        on-edit="navigateTo('/designs/' + design.id + '/edit')"
+                        on-view="navigateTo('/designs/' + design.id)"
+                        on-delete="vm.deleteDesign(design.id)"
+                        on-duplicate="vm.duplicateDesign(design.id)"
+                        on-toggle-public="vm.designPublic(design.id)">
+                    </design-item>
 
-                            <div class="ml-1">
-                                <div toggle-switch ng-model="design.public" ng-click="vm.designPublic(design.id)" class="ats-switch switch-primary"></div>
-                                <p class="share-paragraph small text-center">{{'share_design' | translate}}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Diseños Públicos -->
-                    <div class="list-group-item"
-                        ng-repeat="design in vm.publicDesigns | filter: vm.userSearch"
-                        ng-if="vm.dsgnMode === 1">
-                        <div>
-                            <a ng-href="#!/designs/{{design.id}}"><h4 class="list-group-item-heading" ng-bind="design.metainfo.title"></h4></a>
-                            <p class="list-group-item-text" ng-if="design.type === 'ranking'">{{'ranking_activity' | translate}}</p>
-                            <p class="list-group-item-text" ng-if="design.type !== 'ranking'">{{'semantic_differential' | translate}}</p>
-                            <p class="list-group-item-text">{{'created' | translate}} {{design.metainfo.creation_date | date}}</p>
-                        </div>
-                        <div class="text-right vertical-align">
-                            <button class="btn btn-primary btn-sm" ng-click="navigateTo('/activities/new/'+design.id)">
-                                {{'view' | translate}}
-                            </button>
-                        </div>
-                    </div>
+                    <!-- Public Designs -->
+                    <design-item ng-repeat="design in vm.publicDesigns | filter: { metainfo: { title: vm.userSearch } } track by design.id"
+                        ng-if="vm.dsgnMode === 1"
+                        design="design"
+                        is-owner="false"
+                        on-import="vm.importDesign(design)">
+                    </design-item>
                 </div>
             </div>
         </div>
