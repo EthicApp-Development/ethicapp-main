@@ -157,7 +157,7 @@ export function DashboardController($scope, $routeParams, $http,
             vm.designObj = await DesignCatalogService.getDesignById(vm.activityDescriptor.designId);
     
             // Have we reached the last phase?
-            vm.reachedLastPhase = vm.activityDescriptor.currentPhase.number == vm.designObj.phases.length;
+            vm.reachedLastPhase = vm.lastPhaseReached();
     
             // Get phase instances
             const phaseInstances = await ActivityStateService.getInstancedPhases(vm.sessionId);
@@ -321,7 +321,8 @@ export function DashboardController($scope, $routeParams, $http,
     };
 
     vm.lastPhaseReached = function() {
-        return vm.activityDescriptor.currentPhase.number == vm.designObj.phases.length;
+        return vm.activityDescriptor.currentPhase !== null && 
+            vm.activityDescriptor.currentPhase.number == vm.designObj.phases.length;
     }
 
     vm.isActivityFinished = function() {

@@ -25,18 +25,49 @@ let ActivityCatalogService = ($http) => {
             return activity || null;
         },
 
-        async createActivity(sessionId, designId) {
+        async createActivity(design, description) {
             try {
-                const postdata = { sesid: sessionId, dsgnid: designId };            
-                const response = await $http({ 
-                    url: "add-activity", 
-                    method: "post", 
-                    data: postdata 
+                console.debug(`[createActivity] ${JSON.stringify(design)})`);
+
+                // Create the session for the activity
+                const sessionResponse = await $http({
+                    url:    "/sessions",
+                    method: "POST",
+                    data: { 
+                        name: design.metainfo.title, 
+                        descr: description, 
+                        type: design.type == "semantic_differential" ? "T" : "R", 
+                        additionalConfig: {} 
+                    }
                 });
-            }
-            catch (error) {
-                const msg = "[ActivityCatalogService::createActivity] Error creating activity:";
-                throw new Error(msg);
+
+                const sessionId = sessionResponse.data.id;
+                const designId = design.id;
+                
+                // Create the activity bound to the session
+                const response = await $http({
+                    url: "/activities",
+                    method: "POST",
+                    data: { 
+                        sesid: sessionId, 
+                        dsgnid: designId 
+                    }
+                });
+        
+                // Check the response status
+                if (response.data.status === "ok" && response.data.activity) {
+                    // Add the new activity to the local list
+                    service.activities.push(response.data.activity);
+        
+                    // Notify subscribers of the updated activities list
+                    // service.notifySubscribers();
+                    return sessionId;
+                } else {
+                    throw new Error("Unexpected response format or missing activity in response.");
+                }
+            } catch (error) {
+                console.error("[ActivityCatalogService::createActivity] Error creating activity:", error);
+                throw new Error("[ActivityCatalogService::createActivity] Failed to create activity.");
             }
         },
         

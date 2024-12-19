@@ -107,10 +107,12 @@ let DesignCatalogService = ($rootScope, $http) => {
             }
         },
 
-        async toggleDesignLock(id) {
+        async lockDesign(id, local = false) {
             try {
                 // Make the API call to toggle the lock property
-                await $http({ url: `/designs/${id}/toggle_lock`, method: "PATCH" });
+                if (!local) {
+                    await $http({ url: `/designs/${id}/lock`, method: "PATCH" });
+                }
         
                 // Update the locked status of the design locally
                 const design = service.designs.find(d => d.id === id);
@@ -213,6 +215,25 @@ let DesignCatalogService = ($rootScope, $http) => {
             } catch (error) {
                 console.error(`Error updating design with id '${designId}':`, error);
                 return false;
+            }
+        },
+
+        isDesignValid: async function(designId) {
+            try {
+                // Call the API endpoint
+                const response = await $http.get(`/designs/${designId}/valid`);
+                console.debug(`[isDesignValid] ${JSON.stringify(response)}`);
+                
+                // Check the response
+                if (response.data.status === 'ok' && typeof response.data.valid === 'boolean') {
+                    return response.data.valid; // Return the validity status
+                } else {
+                    console.error('Unexpected response format:', response.data);
+                    throw new Error('Invalid response format');
+                }
+            } catch (error) {
+                console.error('Error checking design validity:', error);
+                throw error; // Propagate the error
             }
         },
 

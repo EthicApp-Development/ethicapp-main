@@ -143,8 +143,7 @@ app.config(config);
 app.controller("LocalesController", 
     ["$translate", "$scope", "$rootScope", LocalesController]); 
 app.controller("ActivityController", 
-    ["$scope", "$filter", "$http", "Notification", "$timeout", 
-        "ActivityStateService", "ActivityCatalogService", "DesignCatalogService", ActivityController]);
+    ["$scope", "$http", "ActivityCatalogService", "DesignCatalogService", ActivityController]);
 app.controller("DesignEditController", 
     ["$scope", "$routeParams", "DesignStateService", "$filter", "$http", "Notification", 
         "$timeout", "ActivityStateService", "DesignCatalogService", DesignEditController]);

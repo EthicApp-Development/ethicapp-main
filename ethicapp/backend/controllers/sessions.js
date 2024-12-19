@@ -113,12 +113,12 @@ router.post("/add-session", await rpg.execSQL({
     }
 }));
 
-router.post("/add-session-activity", async (req, res) => {
+router.post("/sessions", async (req, res) => {
     const uid = req.session.uid;
     const { name, descr, type, additionalConfig } = req.body;
     const config = additionalConfig || {};
 
-    console.log(`add-session-activity: ${name}, ${descr}, ${type}, ${additionalConfig}`);
+    console.debug(`POST /sessions: ${name}, ${descr}, ${type}, ${additionalConfig}`);
 
     try {
         // Step 1: Insert into `sessions` table and get the id returned.
@@ -136,11 +136,11 @@ router.post("/add-session-activity", async (req, res) => {
                         rpg2.param('plain', JSON.stringify(config))]
         });
         
-        console.debug(`[add-session-activity] Session result: ${JSON.stringify(sessionResult)}`);
+        console.debug(`[sessions] Session result: ${JSON.stringify(sessionResult)}`);
         const sessionId = sessionResult.id;
 
         if (!sessionId) {
-            console.error("[add-session-activity] sessionId not found");
+            console.error("[sessions] sessionId not found");
             throw new Error("Failed to retrieve session ID");
         }
 
@@ -1381,7 +1381,6 @@ router.post("/generate-session-code", await rpg.singleSQL({
         calc.code = generateCode(data.id);
     }
 }));
-
 
 router.post("/archive-session", await rpg.singleSQL({
     dbcon: pass.dbcon,

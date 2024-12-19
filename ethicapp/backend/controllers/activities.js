@@ -3,10 +3,138 @@
 import express from "express";
 import * as config from "../config/config.js"; 
 import * as rpg2 from "../db/rest-pg-2.js";
+import * as DesignTypes from "../../common/modules/design-types.js";
 import * as ActivitiesHelper from "../helpers/activities-helper.js"
 import * as StatusCodes from "../../common/modules/session-status.js"
 
 const router = express.Router();
+
+router.get("/activities", async (req, res) => {
+    try {
+        // Validate session
+        const userId = req.session?.uid;
+        if (!userId) {
+            return res.status(401).json({ status: "err", message: "Unauthorized" });
+        }
+
+        // Execute the query
+        const activities = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT 
+                    activity.id,
+                    activity.session,
+                    sessions.creator,
+                    sessions.name,
+                    sessions.descr,
+                    sessions.time,
+                    sessions.code,
+                    sessions.archived,
+                    designs.design,
+                    sessions.status,
+                    sessions.type,
+                    designs.id AS dsgnid
+                FROM activity
+                INNER JOIN sessions
+                    ON activity.session = sessions.id
+                INNER JOIN designs
+                    ON activity.design = designs.id
+                WHERE sessions.creator = $1;
+            `,
+            sqlParams: [rpg2.param('plain', userId)],
+        });
+
+        // Return the activities
+        return res.status(200).json({ status: 200, activities });
+    } catch (err) {
+        console.error("Error in GET /activities:", err);
+        return res.status(500).json({ status: 500, error: "Error retrieving activities." });
+    }
+});
+
+router.post("/activities", async (req, res) => {
+    const sesid = req.body.sesid;
+    const dsgnid = req.body.dsgnid;
+
+    try {
+        // Validate input
+        if (!sesid || !dsgnid) {
+            return res.status(400).json({ status: "err", message: "Missing session or design ID" });
+        }
+
+        const sessionCode = ActivitiesHelper.generateSessionCode(sesid);
+
+        // Generate an access code for the session if not already set
+        await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                UPDATE sessions
+                SET code = $1
+                WHERE id = $2
+                  AND code IS NULL
+            `,
+            sqlParams: [rpg2.param('plain', sessionCode), 
+                rpg2.param('plain', sesid)],
+        });
+
+        // Insert the new activity
+        await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                INSERT INTO activity (design, session)
+                VALUES ($1, $2)
+            `,
+            sqlParams: [rpg2.param('plain', dsgnid), 
+                rpg2.param('plain', sesid)],
+        });
+
+        // Lock the design
+        await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                UPDATE designs
+                SET locked = TRUE
+                WHERE id = $1
+            `,
+            sqlParams: [rpg2.param('plain', dsgnid)],
+        });
+
+        // Query the newly created activity
+        const activity = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT 
+                    activity.id,
+                    activity.session,
+                    sessions.creator,
+                    sessions.name,
+                    sessions.descr,
+                    sessions.time,
+                    sessions.code,
+                    sessions.archived,
+                    designs.design,
+                    sessions.status,
+                    sessions.type,
+                    designs.id AS dsgnid
+                FROM activity
+                INNER JOIN sessions
+                    ON activity.session = sessions.id
+                INNER JOIN designs
+                    ON activity.design = designs.id
+                WHERE activity.session = $1 AND activity.design = $2
+                ORDER BY activity.id DESC
+                LIMIT 1
+            `,
+            sqlParams: [rpg2.param('plain', sesid), rpg2.param('plain', dsgnid)],
+        });
+
+        // Return the created activity
+        return res.status(200).json({ status: "ok", activity });
+    } catch (error) {
+        console.error("Error in POST /activities endpoint:", error);
+        return res.status(500).json({ status: "err", message: "Error processing activity addition" });
+    }
+});
 
 /**
  * Retrieves the descriptor object for an activity in a session.
@@ -29,13 +157,13 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
         const activityResult = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT a.design, s.status, s.description
+                SELECT a.design, s.status, s.descr as description
                 FROM activity AS a
                 INNER JOIN sessions AS s
                     ON a.session = s.id
                 WHERE a.session = $1
             `,
-            sqlParams: [session_id],
+            sqlParams: [rpg2.param('plain', session_id)],
         });
 
         if (!activityResult) {
@@ -215,7 +343,7 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
                 WHERE id = $1
             `,
             dbcon: config.dbconnString,
-            sqlParams: [phaseId],
+            sqlParams: [rpg2.param('plain', phaseId)],
         });
 
         if (!(result.length > 0 && result[0].count === 1)) {
@@ -230,7 +358,9 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
                 WHERE id = $3
             `,
             dbcon: config.dbconnString,
-            sqlParams: [status, phaseId, sessionId],
+            sqlParams: [rpg2.param('plain', status), 
+                rpg2.param('plain', phaseId), 
+                rpg2.param('plain', sessionId)],
         });
 
         if (result.rowCount === 0) {
@@ -298,7 +428,8 @@ router.post("/activities/:session_id/finish", async (req, res) => {
                 WHERE id = $2
             `,
             dbcon: config.dbconnString,
-            sqlParams: [status, session_id],
+            sqlParams: [rpg2.param('plain', status), 
+                rpg2.param('plain', session_id)],
         });
 
         if (result.rowCount === 0) {
@@ -346,7 +477,7 @@ router.get("/activities/:session_id/phases", async (req, res) => {
                 FROM stages
                 WHERE sesid = $1
             `,
-            sqlParams: [session_id],
+            sqlParams: [rpg2.param('plain', session_id)],
         });
 
         // Check if any phases were found
@@ -443,14 +574,14 @@ router.post("/activities/:session_id/phases", async (req, res) => {
             `,
             dbcon: config.dbconnString, // Database connection string
             sqlParams: [
-                number,    // The phase number
-                type,      // The phase type (e.g., "semantic_differential")
-                anon || false, // Whether the phase is anonymous (default: false)
-                chat || false, // Whether chat is enabled (default: false)
-                session_id,    // The session ID
-                prev_ans || null, // Previous answers (optional)
-                question || null, // Question associated with the phase (optional)
-                grouping || null, // Grouping algorithm (optional)
+                rpg2.param('plain', number),    // The phase number
+                rpg2.param('plain', type),      // The phase type (e.g., "semantic_differential")
+                rpg2.param('plain', anon || false), // Whether the phase is anonymous (default: false)
+                rpg2.param('plain', chat || false), // Whether chat is enabled (default: false)
+                rpg2.param('plain', session_id),    // The session ID
+                rpg2.param('plain', prev_ans || null), // Previous answers (optional)
+                rpg2.param('plain', question || null), // Question associated with the phase (optional)
+                rpg2.param('plain', grouping || null), // Grouping algorithm (optional)
             ],
         });
 
@@ -489,7 +620,7 @@ async function getDesignTypeBySessionId(sessionId) {
             WHERE a.session = $1
         `,
         dbcon: config.dbconnString,
-        sqlParams: [sessionId],
+        sqlParams: [rpg2.param('plain', sessionId)],
     });
 
     if (result.length === 0) {
@@ -498,7 +629,7 @@ async function getDesignTypeBySessionId(sessionId) {
 
     const designType = result[0].design_type;
 
-    if (!isValidDesignType(designType)) {
+    if (!DesignTypes.isValidDesignType(designType)) {
         throw new Error(`Unsupported design type: ${designType}`);
     }
 
@@ -514,7 +645,7 @@ export async function getPhasesForSession(sessionId) {
             WHERE sesid = $1
             ORDER BY id ASC
         `,
-        sqlParams: [sessionId],
+        sqlParams: [rpg2.param('plain', sessionId)],
     });
 
     if (results.length === 0) {
@@ -610,7 +741,7 @@ async function fetchSemanticDifferentialResponses(sessionId) {
             ORDER BY d.stageid, s.uid, d.orden
         `,
         dbcon: config.dbconnString,
-        sqlParams: [sessionId],
+        sqlParams: [rpg2.param('plain', sessionId)],
     });
 
     return results;
@@ -675,7 +806,7 @@ async function fetchRankingResponses(sessionId) {
             ORDER BY a.uid, a.orden
         `,
         dbcon: config.dbconnString,
-        sqlParams: [sessionId],
+        sqlParams: [rpg2.param('plain', sessionId)],
     });
 
     return results;
@@ -700,7 +831,7 @@ const questionFetchHandlers = {
                 WHERE stageid = $1
                 ORDER BY orden ASC
             `,
-            sqlParams: [phaseId],
+            sqlParams: [rpg2.param('plain', phaseId)],
         });
 
         return results.map((row, index) => ({
@@ -720,7 +851,7 @@ const questionFetchHandlers = {
                 WHERE stageid = $1
                 ORDER BY id ASC
             `,
-            sqlParams: [phaseId],
+            sqlParams: [rpg2.param('plain', phaseId)],
         });
 
         return results.map((row, index) => ({

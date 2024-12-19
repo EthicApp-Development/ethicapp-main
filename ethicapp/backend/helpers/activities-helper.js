@@ -29,4 +29,10 @@ export async function getPhasesForSession(sessionId) {
        number: index + 1,  // Assign a sequential number to each phase
        id: row.id,         // The ID of the phase (stage)
    }));
-}
+};
+
+export function generateSessionCode(id) {
+    let n = id*5 + 255 + ~~(Math.random()*5);
+    let s = n.toString(16);
+    return "k00000".substring(0, 6 - s.length) + s;
+};

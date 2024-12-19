@@ -1,8 +1,8 @@
 import * as PhaseCreationHelpers from "../../helpers/phase-creation-helpers.js";
 
 /*eslint func-style: ["error", "expression"]*/
-export function ActivityController($scope, $filter, $http, Notification, $timeout,
-    ActivityStateService, ActivityCatalogService, DesignCatalogService) {
+export function ActivityController($scope, $http,
+    ActivityCatalogService, DesignCatalogService) {
     
     const vm = this;
 
@@ -11,57 +11,33 @@ export function ActivityController($scope, $filter, $http, Notification, $timeou
     vm.activityDescription = "";
 
     vm.init = async function() {
-        console.log("[ActivityController::init] initializing");
+        console.debug("[ActivityController::init] initializing");
         await ActivityCatalogService.loadActivities();
-        vm.checkContentAnalysisAvailability();
+        // vm.checkContentAnalysisAvailability();
     };
 
-    // Create Activity from launch activity
     vm.createSession = async function (designId) {
         vm.showSpinner = true;
     
         try {
-            const designObj = await DesignCatalogService.getDesignById(designId);
-
             // Ensure the design is valid
-            const result = await DesignCatalogService.validateDesign(designId);
+            const result = await DesignCatalogService.isDesignValid(designId);
             vm.error = !result;
-    
-            // TODO: properly resolve the activity type
-            const postdata = { 
-                name: designObj.metainfo.title, 
-                descr: vm.activityDescription, 
-                type: designObj.type == "semantic_differential" ? "T" : "R", 
-                additionalConfig: {} }; 
 
-            console.debug(`[ActivityController::createSession] postdata: '${JSON.stringify(postdata)}'`);
+            if (!result) {
+                console.error(
+                    `Cannot create session based on design ${designId} because it is invalid`);
+                return;
+            }    
             
-            // TODO: move to service & refactor
-            // Add session activity
-            const sessionResponse = await $http({
-                url:    "add-session-activity",
-                method: "post",
-                data:   postdata
-            });
+            const design = await DesignCatalogService.getDesignById(designId);
+            
+            // Create the activity with the design that is required.
+            const sessionId = await ActivityCatalogService.createActivity(design, 
+                vm.activityDescription);
 
-            const sessionId = sessionResponse.data.id;
-
-            if (isNaN(sessionId) || sessionId == null || sessionId === undefined) {
-                throw new Error("Failed to create a session for the activity.");
-            }
-
-            // Call additional functions for activity creation and code generation
-            console.debug("[ActivityController::createSession] pre createActivity");
-            await vm.createActivity(sessionId, designId);
-
-            console.debug("[ActivityController::createSession] pre generateAccessCode");
-            await vm.generateAccessCode(sessionId);
-
-            // Bootstrap the activity design in the activity session.
-            // UPDATE: we won't bootstrap the activity. We will let the
-            // user decide whether they want to first wait for participants
-            // to join.
-            // await vm.startActivityDesign(designObj, sessionId);            
+            // The design is locked remotely. We need to lock it locally too.
+            await DesignCatalogService.lockDesign(designId, true);
 
             // Switch to the page of the activity
             $scope.navigateTo(`/activities/${sessionId}`);
@@ -69,25 +45,6 @@ export function ActivityController($scope, $filter, $http, Notification, $timeou
             console.error("Error creating session:", error);
         } finally {
             vm.showSpinner = false;
-        }
-    };
-    
-    vm.createActivity = async function (sessionId, designId) {
-        try {            
-            console.debug(`[ActivityController::createActivity] pre add activity sesId: '${sessionId}' dsgnID: '${designId}'`);
-
-            // Create the activity with the design that is required.
-            await ActivityCatalogService.createActivity(sessionId, designId);
-            
-            // The design is now locked. It must be refreshed.
-            // TODO: reload just the design that has been modified
-            await DesignCatalogService.loadDesigns();
-
-            // Refresh activities
-            console.debug("[ActivityController::createSession] pre loadActivities");
-            await ActivityCatalogService.loadActivities();   
-        } catch (error) {
-            console.error("Error creating activity:", error);
         }
     };
 
@@ -129,18 +86,6 @@ export function ActivityController($scope, $filter, $http, Notification, $timeou
         }
     };
     
-    vm.generateAccessCode = async function (id) {
-        const postdata = { id: id };
-        try {
-            const response = await $http.post("generate-session-code", postdata);
-            if (response.data.code != null) {
-                ActivityStateService.sessionDescriptor.code = response.data.code;
-            }
-        } catch (error) {
-            console.error("Error generating session code:", error);
-        }
-    };
-    
     vm.currentActivities = function(type){
         try {
             let activities = ActivityCatalogService.getActivities();
@@ -159,12 +104,6 @@ export function ActivityController($scope, $filter, $http, Notification, $timeou
         } catch (error) {
             console.error("[ActivityController::currentActivities] An error ocurred.");
         }
-    };
-
-    vm.createCopy = function(ses){
-        vm.createSession(ses.name, ses.descr, ses.type, ses.dsgnid);
-        ActivityCatalogService.loadActivities();
-        vm.shared.updateSesData();
     };
 
     vm.checkContentAnalysisAvailability = function() {

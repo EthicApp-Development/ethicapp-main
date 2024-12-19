@@ -294,7 +294,7 @@ router.patch("/designs/:id/toggle_public", async (req, res) => {
     }
 });
 
-router.patch("/designs/:id/toggle_lock", async (req, res) => {
+router.patch("/designs/:id/lock", async (req, res) => {
     try {
         const designId = req.params.id;
 
@@ -308,15 +308,15 @@ router.patch("/designs/:id/toggle_lock", async (req, res) => {
             dbcon: config.dbconnString,
             sql: `
                 UPDATE designs
-                SET locked = NOT locked
+                SET locked = true
                 WHERE id = $1;
             `,
             sqlParams: [designId],
         });
 
-        return res.json({ status: "ok", message: "Design lock status toggled successfully" });
+        return res.json({ status: "ok", message: "Design locked successfully" });
     } catch (err) {
-        console.error("Error in /designs/:id/toggle_lock:", err);
+        console.error("Error in /designs/:id/lock:", err);
         return res.status(500).json({ status: "err", message: "Internal Server Error" });
     }
 });
@@ -439,6 +439,42 @@ router.delete("/designs/:id", async (req, res) => {
     } catch (err) {
         console.error("Error in /designs/:id DELETE:", err);
         return res.status(500).json({ status: "err", message: "Internal Server Error" });
+    }
+});
+
+// Endpoint to check the validity of a design
+router.get('/designs/:id/valid', async (req, res) => {
+    try {
+        const designId = parseInt(req.params.id, 10);
+
+        // Validate input
+        if (isNaN(designId)) {
+            return res.status(400).json({ status: 'err', message: 'Invalid design ID' });
+        }
+
+        // Query the database for the design's valid flag
+        const result = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT design ->> 'valid' AS valid
+                FROM designs
+                WHERE id = $1
+            `,
+            sqlParams: [rpg2.param("plain", designId)],
+        });
+
+        // Check if the design exists
+        if (!result) {
+            return res.status(404).json({ status: 'err', message: 'Design not found' });
+        }
+
+        // Convert 'valid' to a boolean
+        const isValid = result.valid === 'true';
+        return res.status(200).json({ status: 'ok', valid: isValid });        
+
+    } catch (err) {
+        console.error('Error in GET /designs/:id/valid:', err);
+        return res.status(500).json({ status: 'err', message: 'Internal Server Error' });
     }
 });
 

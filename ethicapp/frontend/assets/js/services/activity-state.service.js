@@ -1,6 +1,6 @@
 let ActivityStateService = ($http, SocketService) => {
     const service = {
-        subscriptionsMap: {}, // Subscription to socket events
+        subscriptionsMap: new Map(), // Subscription to socket events
         activityStates: {}, // Activity states
         listeners: {}, // Subscribed listeners
 
@@ -188,11 +188,16 @@ let ActivityStateService = ($http, SocketService) => {
                         service.activityStates[sessionId].responses = response.data.phases;
                     } else {
                         console.warn("Unexpected response format:", response);
-                        throw new Error("Invalid response format received from server.");
+                        service.activityStates[sessionId].responses = []; // Set to an empty array if no responses are found
                     }
                 } catch (error) {
-                    console.error(`Failed to refresh responses for session ${sessionId}:`, error);
-                    throw new Error(`Error fetching responses for session ${sessionId}: ${error.message}`);
+                    if (error.status === 404) {
+                        console.warn(`No responses found for session ${sessionId}:`, error);
+                        service.activityStates[sessionId].responses = []; // Return an empty array if 404 error
+                    } else {
+                        console.error(`Failed to refresh responses for session ${sessionId}:`, error);
+                        throw new Error(`Error fetching responses for session ${sessionId}: ${error.message}`);
+                    }
                 }
             }
         
@@ -212,12 +217,17 @@ let ActivityStateService = ($http, SocketService) => {
                     if (response?.data?.phases && Array.isArray(response.data.phases)) {
                         service.activityStates[sessionId].phases = response.data.phases;
                     } else {
-                        console.warn("Unexpected response format:", response);
-                        throw new Error("Invalid response format received from server.");
+                        console.warn("This activity has no phases yet:", response);
+                        service.activityStates[sessionId].phases = []; // Set to an empty array if no phases are found
                     }
                 } catch (error) {
-                    console.error(`Failed to refresh phase instances for session ${sessionId}:`, error);
-                    throw new Error(`Error fetching phases for session ${sessionId}: ${error.message}`);
+                    if (error.status === 404) {
+                        console.warn(`No phases found for session ${sessionId}:`, error);
+                        service.activityStates[sessionId].phases = []; // Return an empty array if 404 error
+                    } else {
+                        console.error(`Failed to refresh phase instances for session ${sessionId}:`, error);
+                        throw new Error(`Error fetching phases for session ${sessionId}: ${error.message}`);
+                    }
                 }
             }
         
@@ -225,23 +235,23 @@ let ActivityStateService = ($http, SocketService) => {
         },
 
         registerListener: (eventName, callback) => {
-            if (!listeners[eventName]) {
-                listeners[eventName] = [];
+            if (!service.listeners[eventName]) {
+                service.listeners[eventName] = [];
             }
-            listeners[eventName].push(callback);
+            service.listeners[eventName].push(callback);
         },
 
         unregisterListener: function (eventName, callback) {
-            if (this.listeners[eventName]) {
-                this.listeners[eventName] = this.listeners[eventName].filter(
+            if (service.listeners[eventName]) {
+                service.listeners[eventName] = service.listeners[eventName].filter(
                     (listener) => listener !== callback
                 );
             }
         },
 
         notifyListeners: (eventName, data) => {
-            if (listeners[eventName]) {
-                listeners[eventName].forEach((callback) => callback(data));
+            if (service.listeners[eventName]) {
+                service.listeners[eventName].forEach((callback) => callback(data));
             }
         },
 

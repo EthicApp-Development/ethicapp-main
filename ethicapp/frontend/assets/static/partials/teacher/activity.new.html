@@ -34,7 +34,8 @@
                 </div>
             </div>
         </div>
-        <div class="panel panel-default" ng-show="bdc.pickedDesignId != 0 && bdc.pickedDesignId != NaN" ng-controller="ActivityController as ac">
+        <div ng-controller="ActivityController as ac" class="panel panel-default" 
+            ng-show="bdc.pickedDesignId != 0 && bdc.pickedDesignId != NaN">
             <div class="panel-heading">
                 <label>{{'step_2_prepare_activity' | translate}}</label>
             </div>                
