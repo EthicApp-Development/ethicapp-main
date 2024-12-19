@@ -157,8 +157,8 @@ app.controller("ContentModalController",
 app.controller("CreateDesignController", 
     ["$scope", "DesignCatalogService", "UserInformationService", CreateDesignController]);
 app.controller("DashboardController", 
-    ["$scope", "$routeParams", "$http", "$timeout", "$uibModal", "ActivityStateService",
-        "DesignCatalogService", "$translate", DashboardController]);  
+    ["$scope", "$routeParams", "$http", "$translate", "$timeout", "$uibModal",
+        "ActivityStateService", "ActivityCatalogService", "DesignCatalogService", DashboardController]);  
 app.controller("DesignAttachmentsController", 
     ["$scope", "DesignStateService" ,"$http", "Notification", "$timeout", DesignAttachmentsController]);
 app.controller("DesignViewController", 

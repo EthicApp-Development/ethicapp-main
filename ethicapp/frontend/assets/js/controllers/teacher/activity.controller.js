@@ -14,6 +14,18 @@ export function ActivityController($scope, $http,
         console.debug("[ActivityController::init] initializing");
         await ActivityCatalogService.loadActivities();
         // vm.checkContentAnalysisAvailability();
+
+        const updateHandler = function() {
+            $scope.$applyAsync();
+        };
+
+        ActivityCatalogService.registerListener("onActivityCatalogUpdated", 
+            updateHandler);
+
+        $scope.$on('$destroy', function () {
+            ActivityCatalogService.unregisterListener("onActivityCatalogUpdated", 
+                updateHandler);    
+        }); 
     };
 
     vm.createSession = async function (designId) {

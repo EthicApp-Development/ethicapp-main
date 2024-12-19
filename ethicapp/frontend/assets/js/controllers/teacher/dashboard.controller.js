@@ -4,7 +4,8 @@ import { DashboardDataJoiners } from "../../helpers/dashboard-data-joiners.js";
 
 /*eslint func-style: ["error", "expression"]*/
 export function DashboardController($scope, $routeParams, $http, 
-    $timeout, $uibModal, ActivityStateService, DesignCatalogService, $translate) {
+    $translate, $timeout, $uibModal, 
+    ActivityStateService, ActivityCatalogService, DesignCatalogService) {
 
     const vm = this;
 
@@ -76,6 +77,8 @@ export function DashboardController($scope, $routeParams, $http,
                 currentPhaseNumber = 0; // Start with 0 so we can increment to 1 below
             }
     
+            // console.debug(`[startNextPhase] ${JSON.stringify(vm.designObj)}`);
+
             // Check if we've already reached the last phase
             if (currentPhaseNumber === vm.designObj.phases.length) {
                 console.error("Cannot advance any further, reached the last phase already.");
@@ -84,6 +87,7 @@ export function DashboardController($scope, $routeParams, $http,
     
             const nextPhaseIndex = currentPhaseNumber;
             const nextPhaseNumber = currentPhaseNumber + 1;
+
             const phase = vm.designObj.phases[nextPhaseIndex];
     
             // Create the next phase
@@ -148,14 +152,15 @@ export function DashboardController($scope, $routeParams, $http,
     
             // Get the activity descriptor
             vm.activityDescriptor = vm.activityState.descriptor;
-            console.debug(`[DashboardController::init] ${JSON.stringify(vm.activityDescriptor)}`);
+            console.debug(`[DashboardController::initializeDashboardState] ${JSON.stringify(vm.activityDescriptor)}`);
                 
             vm.isActivityFinished = vm.isActivityFinished();
             vm.setActivityTitle();
     
             // Get the design of the activity
             vm.designObj = await DesignCatalogService.getDesignById(vm.activityDescriptor.designId);
-    
+            console.debug(`[DashboardController::initializeDashboardState] designId: ${vm.activityDescriptor.designId} designObj: ${JSON.stringify(vm.designObj)}`);
+
             // Have we reached the last phase?
             vm.reachedLastPhase = vm.lastPhaseReached();
     

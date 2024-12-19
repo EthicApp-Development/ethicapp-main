@@ -161,6 +161,8 @@ let ActivityStateService = ($http, SocketService) => {
                     
                     // Validar el formato de la respuesta
                     if (response?.data?.descriptor) {
+                        console.log("[getActivityDescriptor] Activity descriptor:", 
+                            JSON.stringify(response.data.descriptor));
                         service.activityStates[sessionId].descriptor = response.data.descriptor;
                     } else {
                         console.warn("Unexpected response format:", response);

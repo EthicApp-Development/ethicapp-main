@@ -115,10 +115,10 @@ router.post("/add-session", await rpg.execSQL({
 
 router.post("/sessions", async (req, res) => {
     const uid = req.session.uid;
-    const { name, descr, type, additionalConfig } = req.body;
+    const { name, description, type, additionalConfig } = req.body;
     const config = additionalConfig || {};
 
-    console.debug(`POST /sessions: ${name}, ${descr}, ${type}, ${additionalConfig}`);
+    console.debug(`POST /sessions: ${name}, ${description}, ${type}, ${additionalConfig}`);
 
     try {
         // Step 1: Insert into `sessions` table and get the id returned.
@@ -130,7 +130,7 @@ router.post("/sessions", async (req, res) => {
                 RETURNING id;
             `,
             sqlParams: [rpg2.param('plain', name), 
-                        rpg2.param('plain', descr), 
+                        rpg2.param('plain', description), 
                         rpg2.param('plain', uid), 
                         rpg2.param('plain', type),
                         rpg2.param('plain', JSON.stringify(config))]

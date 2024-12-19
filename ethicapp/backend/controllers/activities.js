@@ -22,18 +22,18 @@ router.get("/activities", async (req, res) => {
             dbcon: config.dbconnString,
             sql: `
                 SELECT 
-                    activity.id,
-                    activity.session,
+                    activity.id as activityId,
+                    activity.session as sessionId,
                     sessions.creator,
                     sessions.name,
-                    sessions.descr,
+                    sessions.descr as description,
                     sessions.time,
                     sessions.code,
                     sessions.archived,
                     designs.design,
                     sessions.status,
                     sessions.type,
-                    designs.id AS dsgnid
+                    designs.id AS designId
                 FROM activity
                 INNER JOIN sessions
                     ON activity.session = sessions.id
@@ -53,16 +53,16 @@ router.get("/activities", async (req, res) => {
 });
 
 router.post("/activities", async (req, res) => {
-    const sesid = req.body.sesid;
-    const dsgnid = req.body.dsgnid;
+    const sessionId = req.body.sessionId;
+    const designId = req.body.designId;
 
     try {
         // Validate input
-        if (!sesid || !dsgnid) {
+        if (!sessionId || !designId) {
             return res.status(400).json({ status: "err", message: "Missing session or design ID" });
         }
 
-        const sessionCode = ActivitiesHelper.generateSessionCode(sesid);
+        const sessionCode = ActivitiesHelper.generateSessionCode(sessionId);
 
         // Generate an access code for the session if not already set
         await rpg2.singleSQL({
@@ -74,7 +74,7 @@ router.post("/activities", async (req, res) => {
                   AND code IS NULL
             `,
             sqlParams: [rpg2.param('plain', sessionCode), 
-                rpg2.param('plain', sesid)],
+                rpg2.param('plain', sessionId)],
         });
 
         // Insert the new activity
@@ -84,8 +84,8 @@ router.post("/activities", async (req, res) => {
                 INSERT INTO activity (design, session)
                 VALUES ($1, $2)
             `,
-            sqlParams: [rpg2.param('plain', dsgnid), 
-                rpg2.param('plain', sesid)],
+            sqlParams: [rpg2.param('plain', designId), 
+                rpg2.param('plain', sessionId)],
         });
 
         // Lock the design
@@ -96,7 +96,7 @@ router.post("/activities", async (req, res) => {
                 SET locked = TRUE
                 WHERE id = $1
             `,
-            sqlParams: [rpg2.param('plain', dsgnid)],
+            sqlParams: [rpg2.param('plain', designId)],
         });
 
         // Query the newly created activity
@@ -104,18 +104,18 @@ router.post("/activities", async (req, res) => {
             dbcon: config.dbconnString,
             sql: `
                 SELECT 
-                    activity.id,
-                    activity.session,
+                    activity.id as activityId,
+                    activity.session as sessionId,
                     sessions.creator,
                     sessions.name,
-                    sessions.descr,
+                    sessions.descr as description,
                     sessions.time,
                     sessions.code,
                     sessions.archived,
                     designs.design,
                     sessions.status,
                     sessions.type,
-                    designs.id AS dsgnid
+                    designs.id as designId
                 FROM activity
                 INNER JOIN sessions
                     ON activity.session = sessions.id
@@ -125,7 +125,7 @@ router.post("/activities", async (req, res) => {
                 ORDER BY activity.id DESC
                 LIMIT 1
             `,
-            sqlParams: [rpg2.param('plain', sesid), rpg2.param('plain', dsgnid)],
+            sqlParams: [rpg2.param('plain', sessionId), rpg2.param('plain', designId)],
         });
 
         // Return the created activity
@@ -153,34 +153,63 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
     }
 
     try {
-        // Get the activity matching the session id
-        const activityResult = await rpg2.singleSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                SELECT a.design, s.status, s.descr as description
-                FROM activity AS a
-                INNER JOIN sessions AS s
-                    ON a.session = s.id
-                WHERE a.session = $1
-            `,
-            sqlParams: [rpg2.param('plain', session_id)],
-        });
+        const pool = await rpg2.getDBInstance(config.dbconnString);
 
-        if (!activityResult) {
+        if (!pool || typeof pool.query !== "function") {
+            throw new Error("Database pool not properly initialized or invalid.");
+        }
+
+        // Get the activity matching the session id
+        const queryText = `
+            SELECT 
+                activity.id AS activityId,
+                activity.session AS sessionId,
+                sessions.creator,
+                sessions.name,
+                sessions.descr AS description,
+                sessions.time,
+                sessions.code,
+                sessions.archived,
+                sessions.status,
+                sessions.type,
+                designs.id AS designId,
+                designs.design
+            FROM activity
+            INNER JOIN sessions
+                ON activity.session = sessions.id
+            INNER JOIN designs
+                ON activity.design = designs.id
+            WHERE activity.session = $1
+            ORDER BY activity.id DESC
+            LIMIT 1;
+        `;
+
+        const result = await pool.query(queryText, [Number(session_id)]);
+
+        if (!result.rows || result.rows.length === 0) {
             console.warn(`No activity found for session_id: ${session_id}`);
             return res.status(404).json({ error: "No activity found for the given session." });
         }
 
-        const { design: designId, status, description } = activityResult;
+        const activityResult = result.rows[0];
 
         // Get the phases that have been created in the session
         const phases = await getPhasesForSession(session_id);
 
         // Create the activity descriptor
         const descriptor = {
-            description,
-            designId,
-            status: StatusCodes.getNameByCode(status),
+            activityId: activityResult.activityid,
+            sessionId: activityResult.sessionid,
+            creator: activityResult.creator,
+            name: activityResult.name,
+            description: activityResult.description,
+            time: activityResult.time,
+            code: activityResult.code,
+            archived: activityResult.archived,
+            status: StatusCodes.getNameByCode(activityResult.status),
+            type: activityResult.type,
+            designId: activityResult.designid,
+            design: activityResult.design,
             phases: phases || [], // Default to an empty array if no phases
             currentPhase: phases && phases.length > 0 ? phases[phases.length - 1] : null, // Last phase or null
         };

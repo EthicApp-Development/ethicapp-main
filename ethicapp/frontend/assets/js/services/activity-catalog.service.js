@@ -1,6 +1,7 @@
 let ActivityCatalogService = ($http) => {
     const service = {
         activities: [],
+        listeners: {}, // Subscribed listeners
         
         getActivities() {
             return service.activities;
@@ -35,7 +36,7 @@ let ActivityCatalogService = ($http) => {
                     method: "POST",
                     data: { 
                         name: design.metainfo.title, 
-                        descr: description, 
+                        description: description, 
                         type: design.type == "semantic_differential" ? "T" : "R", 
                         additionalConfig: {} 
                     }
@@ -49,8 +50,8 @@ let ActivityCatalogService = ($http) => {
                     url: "/activities",
                     method: "POST",
                     data: { 
-                        sesid: sessionId, 
-                        dsgnid: designId 
+                        sessionId, 
+                        designId
                     }
                 });
         
@@ -60,7 +61,9 @@ let ActivityCatalogService = ($http) => {
                     service.activities.push(response.data.activity);
         
                     // Notify subscribers of the updated activities list
-                    // service.notifySubscribers();
+                    service.notifyListeners("onActivityCatalogUpdated", { 
+                        response: null });
+                    
                     return sessionId;
                 } else {
                     throw new Error("Unexpected response format or missing activity in response.");
@@ -91,9 +94,10 @@ let ActivityCatalogService = ($http) => {
                         activity.title = activity.design.metainfo.title;
                     }
                 });
-
-                console.debug(`[loadActivities] ${JSON.stringify(service.activities)}`);
                 
+                service.notifyListeners("onActivityCatalogUpdated", { 
+                    response: null });
+
                 return service.activities;
                 
             } catch (error) {
@@ -101,7 +105,27 @@ let ActivityCatalogService = ($http) => {
                 service.activities = [];
                 return service.activities;
             }
-        }
+        },
+        registerListener: (eventName, callback) => {
+            if (!service.listeners[eventName]) {
+                service.listeners[eventName] = [];
+            }
+            service.listeners[eventName].push(callback);
+        },
+
+        unregisterListener: function (eventName, callback) {
+            if (service.listeners[eventName]) {
+                service.listeners[eventName] = service.listeners[eventName].filter(
+                    (listener) => listener !== callback
+                );
+            }
+        },
+
+        notifyListeners: (eventName, data) => {
+            if (service.listeners[eventName]) {
+                service.listeners[eventName].forEach((callback) => callback(data));
+            }
+        }, 
     };
 
     return service;
