@@ -341,6 +341,26 @@ let ActivityStateService = ($http, SocketService) => {
             }
             return service.activityStates[sessionId];
         },
+        addItemsToPhase: async function(phaseId, phaseItems) {
+            try {
+                // TODO: refactor the backend endpoint so that it can receive a list of
+                // items...
+                // Iterate over the phase items and make HTTP POST requests for each item
+                await Promise.all(
+                    phaseItems.map(item => {
+                        return $http({
+                            url: `/phases/${phaseId}/items`,
+                            method: "POST",
+                            data: item
+                        });
+                    })
+                );
+                console.info(`Items successfully added to phase ${phaseId}`);
+            } catch (error) {
+                console.error(`Failed to add items to phase ${phaseId}:`, error);
+                throw new Error("Error adding items to phase.");
+            }
+        },
     };
 
     return service; 

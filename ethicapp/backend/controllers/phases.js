@@ -4,6 +4,7 @@ import express from "express";
 import * as config from "../config/config.js"; 
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as SessionsHelper from "../helpers/sessions-helper.js"
+import * as DesignTypes from "../../common/modules/design-types.js";
 
 const router = express.Router();
 
@@ -147,10 +148,11 @@ router.get("/phases/:id/stats", async (req, res) => {
             sql: `
                 SELECT d.design
                 FROM designs d
-                INNER JOIN stages s ON d.id = s.stageid
+                INNER JOIN activity a ON d.id = a.design
+                INNER JOIN stages s ON a.session = s.sesid
                 WHERE s.id = $1
             `,
-            sqlParams: [phaseId],
+            sqlParams: [rpg2.param('plain', phaseId)],
         });
 
         if (designResult.length === 0) {
@@ -176,7 +178,7 @@ router.get("/phases/:id/stats", async (req, res) => {
                 WHERE su.sesid = (SELECT sesid FROM stages WHERE id = $1)
                 AND u.role = 'A'
             `,
-            sqlParams: [phaseId],
+            sqlParams: [rpg2.param('plain', phaseId)],
         });
 
         const expectedResponsesPerQuestion = Number(studentsResult[0].student_count);
@@ -288,6 +290,12 @@ router.post("/phases/:id/items", async (req, res) => {
     const { id } = req.params; // Phase (stage) ID
     const payload = req.body; // Item details from the request body
 
+    const userId = req.session?.uid;
+
+    if (!userId) {
+        return res.status(401).json({ status: "err", message: "Unauthorized" });
+    }
+
     if (!id) {
         return res.status(400).json({ error: "Missing required parameter: id." });
     }
@@ -303,7 +311,7 @@ router.post("/phases/:id/items", async (req, res) => {
         }
 
         // Execute the appropriate handler
-        await handler({ stageId: id, payload });
+        await handler({ userId, stageId: id, ...payload });
 
         res.status(201).json({ status: "ok", message: "Item added successfully." });
     } catch (err) {
@@ -383,7 +391,8 @@ async function fetchSemanticDifferentialResponsesByPhase(phaseId) {
             ORDER BY d.stageid, s.uid, d.orden
         `,
         dbcon: config.dbconnString,
-        sqlParams: [phaseId, phaseId],
+        sqlParams: [rpg2.param('plain', phaseId), 
+            rpg2.param('plain', phaseId)],
     });
 
     return results;
@@ -442,7 +451,7 @@ async function fetchRankingResponsesByPhase(phaseId) {
             ORDER BY uid, orden
         `,
         dbcon: config.dbconnString,
-        sqlParams: [phaseId],
+        sqlParams: [rpg2.param('plain', phaseId)],
     });
 
     return results;
@@ -473,7 +482,8 @@ async function fetchSemanticDifferentialStudentResponsesByPhase(phaseId, userId)
               AND s.uid = $2
             ORDER BY d.orden
         `,
-        sqlParams: [phaseId, userId],
+        sqlParams: [rpg2.param('plain', phaseId), 
+            rpg2.param('plain', userId)],
     });
 
     return results;
@@ -501,7 +511,8 @@ async function fetchRankingStudentResponsesByPhase(phaseId, userId) {
             ORDER BY orden
         `,
         dbcon: config.dbconnString,
-        sqlParams: [phaseId, userId],
+        sqlParams: [rpg2.param('plain', phaseId), 
+            rpg2.param('plain', userId)],
     });
 
     return results;
@@ -521,7 +532,7 @@ async function fetchRankingStudentResponsesByPhase(phaseId, userId) {
  * @param {number} params.orden - The order of the item in the phase.
  * @param {number} params.num - The number of possible values for the item.
  * @param {boolean} params.justify - Whether justification is required for the item.
- * @param {number} params.word_count - The word count limit for justification.
+ * @param {number} params.wordCount - The word count limit for justification.
  * @returns {Promise<void>} - Resolves when the item is successfully added.
  * 
  * @throws {Error} If the SQL query fails.
@@ -542,6 +553,8 @@ async function fetchRankingStudentResponsesByPhase(phaseId, userId) {
  * // Inserts an item with the provided parameters into the database.
  */
 async function addSemanticDifferentialItem({
+    sessionId,
+    userId,
     stageId,
     name,
     tleft,
@@ -549,7 +562,7 @@ async function addSemanticDifferentialItem({
     orden,
     num,
     justify,
-    word_count,
+    wordCount,
 }) {
     await rpg2.execSQL({
         sql: `
@@ -559,16 +572,16 @@ async function addSemanticDifferentialItem({
         `,
         dbcon: config.dbconnString,
         sqlParams: [
-            name,     // Item title
-            tleft,    // Left text
-            tright,   // Right text
-            orden,    // Order
-            null,     // Creator (adjust as needed)
-            stageId,  // Stage ID
-            num,      // Number of values
-            justify,  // Requires justification
-            null,     // Session ID (adjust as needed)
-            word_count, // Word count
+            rpg2.param('plain', name),
+            rpg2.param('plain', tleft),
+            rpg2.param('plain', tright),
+            rpg2.param('plain', orden),
+            rpg2.param('plain', userId),
+            rpg2.param('plain', stageId),
+            rpg2.param('plain', num),
+            rpg2.param('plain', justify),
+            rpg2.param('plain', sessionId),
+            rpg2.param('plain', wordCount),
         ],
     });
 }
@@ -584,7 +597,7 @@ async function addSemanticDifferentialItem({
  * @param {string} params.name - The name of the ranking item.
  * @param {number} params.jorder - The order of the item in the phase.
  * @param {boolean} params.justified - Whether justification is required for the item.
- * @param {number} params.word_count - The word count limit for justification.
+ * @param {number} params.wordCount - The word count limit for justification.
  * @returns {Promise<void>} - Resolves when the item is successfully added.
  * 
  * @throws {Error} If the SQL query fails.
@@ -601,7 +614,7 @@ async function addSemanticDifferentialItem({
  * 
  * // Inserts a ranking item with the provided parameters into the database.
  */
-async function addRankingItem({ stageId, name, jorder, justified, word_count }) {
+async function addRankingItem({ stageId, name, jorder, justified, wordCount }) {
     await rpg2.execSQL({
         sql: `
             INSERT INTO actors (name, jorder, stageid, justified, word_count)
@@ -609,11 +622,11 @@ async function addRankingItem({ stageId, name, jorder, justified, word_count }) 
         `,
         dbcon: config.dbconnString,
         sqlParams: [
-            name,      // Item name
-            jorder,    // Order
-            stageId,   // Stage ID
-            justified, // Requires justification
-            word_count, // Word count
+            rpg2.param('plain', name),      // Item name
+            rpg2.param('plain', jorder),    // Order
+            rpg2.param('plain', stageId),   // Stage ID
+            rpg2.param('plain', justified), // Requires justification
+            rpg2.param('plain', wordCount), // Word count
         ],
     });
 }
@@ -654,8 +667,16 @@ async function handleSemanticDifferentialResponse(
         `,
         dbcon: config.dbconnString,
         sqlParams: [
-            sel, comment, did, sessionId, iteration, // Update params
-            sessionId, did, sel, comment, iteration, // Insert params
+            rpg2.param('plain', sel),
+            rpg2.param('plain', comment),
+            rpg2.param('plain', did),
+            rpg2.param('plain', userId),
+            rpg2.param('plain', iteration), // Update params
+            rpg2.param('plain', userId),
+            rpg2.param('plain', did),
+            rpg2.param('plain', sel),
+            rpg2.param('plain', comment),
+            rpg2.param('plain', iteration) // Insert params
         ],
     });
 
@@ -702,8 +723,16 @@ async function handleRankingResponse(
             `,
             dbcon: config.dbconnString,
             sqlParams: [
-                orden, description, actorid, userId, phaseId, // Update params
-                userId, actorid, orden, description, phaseId, // Insert params
+                rpg2.param('plain', orden), 
+                rpg2.param('plain', description),
+                rpg2.param('plain', actorid), 
+                rpg2.param('plain', userId),
+                rpg2.param('plain', phaseId),
+                rpg2.param('plain', userId),
+                rpg2.param('plain', actorid),
+                rpg2.param('plain', orden),
+                rpg2.param('plain', description),
+                rpg2.param('plain', phaseId)
             ],
         });
     }
@@ -736,7 +765,7 @@ async function getDesignTypeByPhaseId(phaseId) {
             WHERE st.id = $1
         `,
         dbcon: config.dbconnString,
-        sqlParams: [phaseId],
+        sqlParams: [rpg2.param('plain', phaseId)],
     });
 
     if (result.length === 0) {
@@ -745,7 +774,7 @@ async function getDesignTypeByPhaseId(phaseId) {
 
     const designType = result[0].design_type;
 
-    if (!isValidDesignType(designType)) {
+    if (!DesignTypes.isValidDesignType(designType)) {
         throw new Error(`Unsupported design type: ${designType}`);
     }
 
@@ -767,7 +796,7 @@ async function computeRankingStats(stageId) {
             WHERE a.stageid = $1
             ORDER BY a.id
         `,
-        sqlParams: [stageId],
+        sqlParams: [rpg2.param('plain', stageId)],
     });
 
     if (actors.length === 0) {
@@ -791,7 +820,8 @@ async function computeRankingStats(stageId) {
             GROUP BY asel.uid
             HAVING COUNT(*) = $2
         `,
-        sqlParams: [stageId, totalActors],
+        sqlParams: [rpg2.param('plain', stageId),
+            rpg2.param('plain', totalActors)],
     });
 
     // Count distinct user IDs with valid responses
@@ -819,7 +849,7 @@ async function computeSemanticDifferentialStats(stageId) {
             WHERE d.stageid = $1
             ORDER BY d.id
         `,
-        sqlParams: [stageId],
+        sqlParams: [rpg2.param('plain', stageId)],
     });
 
     if (questions.length === 0) {

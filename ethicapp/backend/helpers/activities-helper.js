@@ -18,7 +18,7 @@ export async function getPhasesForSession(sessionId) {
            WHERE sesid = $1
            ORDER BY id ASC
        `,
-       sqlParams: [sessionId],
+       sqlParams: [rpg2.param('plain', sessionId)],
    });
 
    if (results.length === 0) {

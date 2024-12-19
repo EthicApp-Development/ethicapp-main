@@ -18,22 +18,22 @@ router.get("/activities", async (req, res) => {
         }
 
         // Execute the query
-        const activities = await rpg2.execSQL({
+        const rawActivities = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
                 SELECT 
-                    activity.id as activityId,
-                    activity.session as sessionId,
+                    activity.id AS "activityId",
+                    activity.session AS "sessionId",
                     sessions.creator,
                     sessions.name,
-                    sessions.descr as description,
+                    sessions.descr AS "description",
                     sessions.time,
                     sessions.code,
                     sessions.archived,
                     designs.design,
                     sessions.status,
                     sessions.type,
-                    designs.id AS designId
+                    designs.id AS "designId"
                 FROM activity
                 INNER JOIN sessions
                     ON activity.session = sessions.id
@@ -41,14 +41,30 @@ router.get("/activities", async (req, res) => {
                     ON activity.design = designs.id
                 WHERE sessions.creator = $1;
             `,
-            sqlParams: [rpg2.param('plain', userId)],
+            sqlParams: [rpg2.param("plain", userId)],
         });
 
+        // Ensure camelCase formatting for the keys
+        const activities = rawActivities.map((row) => ({
+            activityId: row.activityId,
+            sessionId: row.sessionId,
+            creator: row.creator,
+            name: row.name,
+            description: row.description,
+            time: row.time,
+            code: row.code,
+            archived: row.archived,
+            design: row.design,
+            status: row.status,
+            type: row.type,
+            designId: row.designId,
+        }));
+
         // Return the activities
-        return res.status(200).json({ status: 200, activities });
+        return res.status(200).json({ status: "ok", activities });
     } catch (err) {
         console.error("Error in GET /activities:", err);
-        return res.status(500).json({ status: 500, error: "Error retrieving activities." });
+        return res.status(500).json({ status: "err", error: "Error retrieving activities." });
     }
 });
 
@@ -194,7 +210,8 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
         const activityResult = result.rows[0];
 
         // Get the phases that have been created in the session
-        const phases = await getPhasesForSession(session_id);
+        const designType = activityResult.design.type;
+        const phases = await getPhasesForSessionByDesignType(session_id, designType);
 
         // Create the activity descriptor
         const descriptor = {
@@ -355,7 +372,7 @@ router.get("/activities/:session_id/responses", async (req, res) => {
  */
 router.post("/activities/:session_id/phase_transition", async (req, res) => {
     const { session_id: sessionId } = req.params;
-    const { phase_id: phaseId } = req.body;
+    const { phaseId } = req.body;
 
     if (!sessionId || !phaseId) {
         return res.status(400).json({ error: "Missing required parameters: session_id or phase_id." });
@@ -365,7 +382,7 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
     const status = StatusCodes.getStatusCode("in_progress");
 
     try {
-        let result = await rpg.execSQL({
+        let result = await rpg2.execSQL({
             sql: `
                 SELECT COUNT(*) 
                 FROM stages
@@ -379,7 +396,7 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
             return res.status(400).json({ error: "The phase does not exist." });
         }        
 
-        result = await rpg.execSQL({
+        result = await rpg2.execSQL({
             sql: `
                 UPDATE sessions
                 SET status = $1,
@@ -593,6 +610,19 @@ router.post("/activities/:session_id/phases", async (req, res) => {
         });
     }
 
+    const queryParams = [
+        rpg2.param('plain', number),    // The phase number
+        rpg2.param('plain', type),      // The phase type (e.g., "individual"/"team")
+        rpg2.param('plain', anon || false), // Whether the phase is anonymous (default: false)
+        rpg2.param('plain', chat || false), // Whether chat is enabled (default: false)
+        rpg2.param('plain', session_id),    // The session ID
+        rpg2.param('plain', prev_ans || null), // Previous answers (optional)
+        rpg2.param('plain', question || null), // Question associated with the phase (optional)
+        rpg2.param('plain', grouping || null), // Grouping algorithm (optional)
+    ];
+
+    console.log("[post phases] Inserting phase with body params:", JSON.stringify(req.body));
+
     try {
         // Insert the new phase into the database
         const result = await rpg2.execSQL({
@@ -602,16 +632,7 @@ router.post("/activities/:session_id/phases", async (req, res) => {
                 RETURNING id
             `,
             dbcon: config.dbconnString, // Database connection string
-            sqlParams: [
-                rpg2.param('plain', number),    // The phase number
-                rpg2.param('plain', type),      // The phase type (e.g., "semantic_differential")
-                rpg2.param('plain', anon || false), // Whether the phase is anonymous (default: false)
-                rpg2.param('plain', chat || false), // Whether chat is enabled (default: false)
-                rpg2.param('plain', session_id),    // The session ID
-                rpg2.param('plain', prev_ans || null), // Previous answers (optional)
-                rpg2.param('plain', question || null), // Question associated with the phase (optional)
-                rpg2.param('plain', grouping || null), // Grouping algorithm (optional)
-            ],
+            sqlParams: queryParams,
         });
 
         // Check if any row was inserted
@@ -621,10 +642,12 @@ router.post("/activities/:session_id/phases", async (req, res) => {
             });
         }
 
+        console.debug("[post phases] result:", result)
+
         // Respond with the ID of the newly created phase
         res.status(201).json({
             status: "ok",
-            phase_id: result.rows[0].id,
+            phaseId: result[0].id,
             message: "Phase added successfully.",
         });
     } catch (err) {
@@ -665,7 +688,7 @@ async function getDesignTypeBySessionId(sessionId) {
     return designType;
 }
 
-export async function getPhasesForSession(sessionId) {
+async function getPhasesForSessionByDesignType(sessionId, designType) {
     const results = await rpg2.execSQL({
         dbcon: config.dbconnString,
         sql: `
@@ -683,11 +706,11 @@ export async function getPhasesForSession(sessionId) {
 
     return Promise.all(
         results.map(async (row, index) => {
-            const questions = await getQuestionsByPhase(row.id, row.type);
+            const questions = await getQuestionsByPhase(row.id, designType);
             return {
                 id: row.id,         // The ID of the phase (stage)
                 number: row.number, // The number of the phase
-                mode: type,
+                mode: row.type,
                 questions: questions, // Add the questions for this phase
             };
         })

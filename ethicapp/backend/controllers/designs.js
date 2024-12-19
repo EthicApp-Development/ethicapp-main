@@ -360,6 +360,9 @@ router.post("/designs/:id/duplicate", async (req, res) => {
         // Duplicate designs are not made public by default
         designNoId.public = false;
 
+        // Duplicate designs are not locked by default
+        designNoId.locked = false;
+
         // Serialize the design object
         const clonedDesign = JSON.stringify(designNoId);
 

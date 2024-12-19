@@ -67,7 +67,7 @@ let DesignCatalogService = ($rootScope, $http) => {
                     design.id = newDesignId;
 
                     // Add the new design to the service's local list
-                    service.designs.push(design);
+                    service.designs.unshift(design);
 
                     // Notify listeners
                     service.notifyListeners("onDesignCatalogUpdated", { 
@@ -147,11 +147,12 @@ let DesignCatalogService = ($rootScope, $http) => {
                             ...originalDesign,
                             id: newDesignId,
                             public: false,
+                            locked: false,
                             userOwned: true,
                         };
         
                         // Add the imported design locally
-                        service.designs.push(importedDesign);
+                        service.designs.unshift(importedDesign);
 
                         // Notify listeners
                         service.notifyListeners("onDesignCatalogUpdated", { 

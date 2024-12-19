@@ -16,6 +16,8 @@
                 <div style="width: 100%; display: flex; justify-content: flex-end; align-items: center;">
                     <!-- Buttons Section -->
                     <div ng-if="$ctrl.isOwner" class="d-inline-flex align-items-center">
+                        <img class="locked-svg"
+                            src="/assets/images/iconsets/gray-lineart/design-lock-active.svg" alt="locked" ng-show="$ctrl.design.locked">
                         <button ng-if="$ctrl.design.valid" class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onLaunch({ design: $ctrl.design })">
                             <i class="fa fa-rocket"></i> {{ 'launch_activity_button_text' | translate }}
                         </button>
@@ -25,7 +27,7 @@
                         <button class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onView({ design: $ctrl.design })">
                             <i class="fa fa-eye"></i> {{ 'view' | translate }}
                         </button>
-                        <button class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onDuplicate({ design: $ctrl.design })" ng-hide="$ctrl.design.locked">
+                        <button class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onDuplicate({ design: $ctrl.design })">
                             <i class="fa-regular fa-clone"></i> {{ 'duplicate_item_button_text' | translate }}
                         </button>                        
                         <button class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onDelete({ design: $ctrl.design })" ng-hide="$ctrl.design.locked">
@@ -34,7 +36,7 @@
                     </div>
             
                     <!-- Toggle Switch with Text -->
-                    <div ng-if="$ctrl.isOwner" style="margin-top: 1em" class="ml-3 text-center">
+                    <div ng-if="$ctrl.isOwner && $ctrl.design.valid" style="margin-top: 1em" class="ml-3 text-center">
                         <div toggle-switch ng-model="$ctrl.design.public" 
                              ng-click="$ctrl.onTogglePublic({ design: $ctrl.design })"
                              class="ats-switch switch-primary d-inline-block">

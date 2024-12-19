@@ -6,11 +6,11 @@ export let getSessionIdByPhaseId = async (phaseId) => {
         const result = await rpg2.execSQL({
             sql: `
                 SELECT session_id
-                FROM phases
+                FROM stages
                 WHERE id = $1
             `,
             dbcon: config.dbconnString,
-            sqlParams: [phaseId],
+            sqlParams: [rpg2.param('plain', phaseId)],
         });
 
         if (result.length === 0) {

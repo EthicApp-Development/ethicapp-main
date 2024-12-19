@@ -152,7 +152,7 @@
 	"edit_error_ranking_missing_item_text" : "Falta ingresar el texto del ítem",
 	"edit_error_justification_type_undefined" : "Se debe seleccionar el tipo de justificación escrita",
 	"item_title_text": "Ítem",
-	"invalid_design_warning_text" : "Este diseño está inconcluso y/o tiene algunos errores",
+	"invalid_design_warning_text" : "Este diseño está inconcluso y/o tiene algunos errores, por lo que no puede usarse ni compartirse",
 	"valid_design_text" : "Este es un diseño válido que puede utilizarse para lanzar actividades",
 	"import_design_button_text": "Importar diseño",
 	"justifyAll": "Justificar todos los",

@@ -28,6 +28,7 @@
     <div class="row">
         <div class="col-md-12">
             <div ng-show="dc.activeTab === 'info'" class="margin-top-8">
+                {{dc.activityDescriptor}}
                 <activity-description activity="dc.activityDescriptor" enable-link="false"></activity-description>
                 <activity-controls is-finished="dc.isActivityFinished" parent-ctrl="dc"></activity-controls>              
             </div>

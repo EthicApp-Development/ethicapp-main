@@ -152,7 +152,7 @@
 	"edit_error_ranking_missing_item_text" : "The text of the item is missing",
 	"edit_error_justification_type_undefined" : "The type of written justification must be selected",
 	"item_title_text": "Item",
-	"invalid_design_warning_text" : "This design still requires work to be valid and usable",
+	"invalid_design_warning_text" : "This design still requires work to be valid, and thus usable and sharable",
 	"valid_design_text" : "This design is valid and can be used to launch activities",
 	"import_design_button_text": "Import design",
 	"justifyAll": "Justify all",

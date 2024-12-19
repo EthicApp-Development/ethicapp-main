@@ -103,14 +103,15 @@ export function DashboardController($scope, $routeParams, $http,
                 data: requestObj,
             });
     
-            const phaseId = stageResponse.data.id;
+            const phaseId = stageResponse.data.phaseId;
     
             if (phaseId) {
                 // Build the phase items
                 const builder = PhaseCreationHelpers.itemBuilders[vm.designObj.type];
     
                 if (builder) {
-                    await builder(phase, phaseId, vm.sessionId);
+                    const phaseItems = builder(phase, phaseId, vm.sessionId);
+                    await ActivityStateService.addItemsToPhase(phaseId, phaseItems);
                 } else {
                     console.warn(`No handler found for design type: ${vm.designObj.type}`);
                 }
@@ -123,7 +124,7 @@ export function DashboardController($scope, $routeParams, $http,
             await $http({
                 url: `/activities/${vm.sessionId}/phase_transition`,
                 method: "post",
-                data: { phase_id: phaseId },
+                data: { phaseId },
             });
     
             // Reload the activity descriptor
@@ -148,10 +149,10 @@ export function DashboardController($scope, $routeParams, $http,
         try {
             // Load the entire activity state
             vm.activityState = await ActivityStateService.loadActivityState(vm.sessionId);
-            vm.userList = vm.activityState.users;
+            vm.userList = vm.activityState?.users;
     
             // Get the activity descriptor
-            vm.activityDescriptor = vm.activityState.descriptor;
+            vm.activityDescriptor = vm.activityState?.descriptor;
             console.debug(`[DashboardController::initializeDashboardState] ${JSON.stringify(vm.activityDescriptor)}`);
                 
             vm.isActivityFinished = vm.isActivityFinished();
@@ -200,7 +201,7 @@ export function DashboardController($scope, $routeParams, $http,
     
     vm.loadDashboardPhaseState = async (phaseId, phaseState = null) => {
         try {
-            const designType = vm.designObj.metainfo.type;
+            const designType = vm.designObj.type;
             const builder = dashboardStateBuilders[designType];
     
             if (!builder) throw new Error(`No builder found for design type: ${designType}`);
