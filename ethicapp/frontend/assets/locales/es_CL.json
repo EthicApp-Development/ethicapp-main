@@ -344,6 +344,7 @@
 	"use_anonimity_label": "Usar anonimato",
 	"use_chat_label": "Usar Chat",
 	"save_design_success": "Diseño guardado",
+	"design_imported_text": "Diseño importado en tu colección",
 	"save_design_failure": "Hubo un error al guardar el diseño. Inténtalo nuevamente en unos minutos.",	
 	"error_no_phases_defined" : "El diseño actual no tiene fases. Agrega al menos una fase para crear un diseño que se pueda utilizar con EthicApp.",
 	"other_phase_errors_title" : "Errores generales",

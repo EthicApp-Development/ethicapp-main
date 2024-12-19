@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export function BrowseDesignsController($scope, $routeParams,
+export function BrowseDesignsController($scope, $routeParams, toast, $translate,
     DesignStateService, ActivityStateService, 
     DesignCatalogService) {
 
@@ -25,9 +25,17 @@ export function BrowseDesignsController($scope, $routeParams,
             console.error("[BrowseDesignsController::init] Failed to retrieve designId route parameter");
         }
 
-        $scope.$on('designCatalogUpdated', async function(event, data) {
-            $scope.$apply();
-        });
+        const updateHandler = function() {
+            vm.forceFetchDesigns();
+        };
+
+        DesignCatalogService.registerListener("onDesignCatalogUpdated", 
+            updateHandler);
+
+        $scope.$on('$destroy', function () {
+            DesignCatalogService.unregisterListener("onDesignCatalogUpdated", 
+                updateHandler);    
+        });            
     }
 
     vm.setPickedDesignId = function(id) {
@@ -39,7 +47,7 @@ export function BrowseDesignsController($scope, $routeParams,
         vm.publicDesigns = await DesignCatalogService.getPublicDesigns();
         vm.designs = await DesignCatalogService.getDesigns();
 
-        $scope.$apply();
+        $scope.$applyAsync();
     }
 
     vm.setInstanceData = function(id, title, type) {
@@ -75,6 +83,19 @@ export function BrowseDesignsController($scope, $routeParams,
 
     vm.importDesign = async function(id) {
         await DesignCatalogService.importDesign(id);
+        
+        $scope.$applyAsync(() => {
+            $translate("design_imported_text").then((result) => {
+                toast.create({
+                    timeout: 100 * 1000,
+                    message: result,
+                    containerClass: 'toast-container',
+                    dismissible: false,
+                    defaultToastClass: 'toast',
+                    insertFromTop: true,
+                  });
+            });
+        });        
     };
     
     vm.getDesign = async function(id) {

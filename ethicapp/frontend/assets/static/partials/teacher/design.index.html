@@ -29,6 +29,9 @@
     <div class="row" style="margin-left:-14px; margin-top: -6px;">
         <div class="col-md-12">
             <div class="panel panel-default">
+                <div class="panel-heading designs-list" style="padding-top: 0px; padding-left: 8px; min-height: 1.25em; max-height: 1.25em; background: white;">
+                    <toast></toast>
+                </div>
                 <div class="panel-body">
                     <design-item ng-repeat="design in vm.userDesigns | filter: { metainfo: { title: vm.userSearch } } track by design.id"
                         ng-if="vm.dsgnMode === 0"
@@ -47,7 +50,7 @@
                         ng-if="vm.dsgnMode === 1"
                         design="design"
                         is-owner="false"
-                        on-import="vm.importDesign(design)">
+                        on-import="vm.importDesign(design.id)">
                     </design-item>
                 </div>
             </div>

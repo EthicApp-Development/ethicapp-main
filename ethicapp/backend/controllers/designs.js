@@ -355,7 +355,10 @@ router.post("/designs/:id/duplicate", async (req, res) => {
             return res.status(403).json({ status: "err", message: "Forbidden: You cannot clone a private design you do not own." });
         }
 
-        const { id, ...designNoId } = design;
+        const { id, ...designNoId } = design.design;
+
+        // Duplicate designs are not made public by default
+        designNoId.public = false;
 
         // Serialize the design object
         const clonedDesign = JSON.stringify(designNoId);

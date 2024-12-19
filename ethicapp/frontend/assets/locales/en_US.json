@@ -304,6 +304,7 @@
 	"use_anonimity_label": "Enable anonimity",
 	"use_chat_label": "Enable chat",
 	"save_design_success": "Design saved",
+	"design_imported_text": "Design imported into your collection",
 	"save_design_failure": "Failed to save the design. Please try again in a few minutes.",
 	"error_no_phases_defined" : "The current design has no phases. Try adding a phase to create a working design for EthicApp.",
 	"other_phase_errors_title" : "General errors",

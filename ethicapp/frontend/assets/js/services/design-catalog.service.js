@@ -1,6 +1,7 @@
 let DesignCatalogService = ($rootScope, $http) => {
     const service = {
         designs: [],
+        listeners: {}, // Subscribed listeners
 
         async loadDesigns() {
             try {
@@ -9,7 +10,10 @@ let DesignCatalogService = ($rootScope, $http) => {
                 // Validate the response structure
                 if (response.data.status === "ok" && Array.isArray(response.data.result)) {
                     service.designs = response.data.result; // Assign the fetched designs
-                    service.notifySubscribers(); // Notify any subscribers
+                    
+                    // Notify listeners
+                    service.notifyListeners("onDesignCatalogUpdated", { 
+                        response: null });                      
                 } else {
                     console.error("Error: Unexpected response format", response.data);
                     // Optional: Handle unexpected response formats (e.g., show an error to the user)
@@ -39,7 +43,7 @@ let DesignCatalogService = ($rootScope, $http) => {
                 await service.loadDesigns();
             }
             const result = service.designs.filter(design => design.public === true && 
-                design.valid === true);
+                design.valid === true && design.userOwned === false);
             return result;
         },
 
@@ -65,9 +69,9 @@ let DesignCatalogService = ($rootScope, $http) => {
                     // Add the new design to the service's local list
                     service.designs.push(design);
 
-                    // Notify subscribers about the update
-                    service.notifySubscribers();
-
+                    // Notify listeners
+                    service.notifyListeners("onDesignCatalogUpdated", { 
+                        response: null });  
                     return newDesignId; // Return the new design ID
                 } else {
                     throw new Error("Failed to create design");
@@ -88,14 +92,18 @@ let DesignCatalogService = ($rootScope, $http) => {
                 // Make the API call to toggle the public property
                 await $http({ url: `/designs/${id}/toggle_public`, method: "PATCH" });
         
-                // Notify subscribers to confirm the change
-                service.notifySubscribers();
+                // Notify listeners
+                service.notifyListeners("onDesignCatalogUpdated", { 
+                    response: null });  
             } catch (error) {
                 console.error(`Failed to change public property of design with id: '${id}'`, error);
         
                 // Revert on API failure
                 design.public = previousValue;
-                service.notifySubscribers();
+
+                // Notify listeners
+                service.notifyListeners("onDesignCatalogUpdated", { 
+                    response: null });  
             }
         },
 
@@ -108,7 +116,10 @@ let DesignCatalogService = ($rootScope, $http) => {
                 const design = service.designs.find(d => d.id === id);
                 if (design) {
                     design.locked = !design.locked; // Toggle the lock status locally
-                    service.notifySubscribers(); // Notify subscribers about the update
+                    
+                    // Notify listeners
+                    service.notifyListeners("onDesignCatalogUpdated", { 
+                        response: null });                      
                 }
             } catch (error) {
                 console.error(`Failed to toggle lock property of design with id: '${id}'`, error);
@@ -133,12 +144,16 @@ let DesignCatalogService = ($rootScope, $http) => {
                         const importedDesign = {
                             ...originalDesign,
                             id: newDesignId,
+                            public: false,
                             userOwned: true,
                         };
         
                         // Add the imported design locally
                         service.designs.push(importedDesign);
-                        service.notifySubscribers(); // Notify subscribers of the update
+
+                        // Notify listeners
+                        service.notifyListeners("onDesignCatalogUpdated", { 
+                            response: null });  
                     } else {
                         console.warn(`Original design with id: '${id}' not found after duplication.`);
                     }
@@ -201,9 +216,26 @@ let DesignCatalogService = ($rootScope, $http) => {
             }
         },
 
-        notifySubscribers: function() {
-            $rootScope.$broadcast('designCatalogUpdated', service.designs);
-        }        
+        registerListener: (eventName, callback) => {
+            if (!service.listeners[eventName]) {
+                service.listeners[eventName] = [];
+            }
+            service.listeners[eventName].push(callback);
+        },
+
+        unregisterListener: function (eventName, callback) {
+            if (service.listeners[eventName]) {
+                service.listeners[eventName] = service.listeners[eventName].filter(
+                    (listener) => listener !== callback
+                );
+            }
+        },
+
+        notifyListeners: (eventName, data) => {
+            if (service.listeners[eventName]) {
+                service.listeners[eventName].forEach((callback) => callback(data));
+            }
+        },   
     };
 
     return service;

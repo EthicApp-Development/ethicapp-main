@@ -149,7 +149,7 @@ app.controller("DesignEditController",
     ["$scope", "$routeParams", "DesignStateService", "$filter", "$http", "Notification", 
         "$timeout", "ActivityStateService", "DesignCatalogService", DesignEditController]);
 app.controller("BrowseDesignsController", 
-    ["$scope", "$routeParams", "DesignStateService", 
+    ["$scope", "$routeParams", "toast", "$translate", "DesignStateService", 
         "ActivityStateService", "DesignCatalogService", BrowseDesignsController]); 
 app.controller("ConfirmModalController", 
     ["$uibModalInstance", ConfirmModalController]);

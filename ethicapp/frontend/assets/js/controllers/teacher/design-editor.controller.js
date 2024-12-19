@@ -138,11 +138,10 @@ export function DesignEditorController($scope, $translate, $timeout,
                         dismissible: false,
                         defaultToastClass: 'toast',
                         insertFromTop: true,
-                      });
                     });
+                });
             });
-        }
-        catch (error) {
+        } catch (error) {
             $scope.$applyAsync(() => {
                 $translate("save_design_failure").then((result) => {
                     toast.create({
@@ -226,6 +225,9 @@ export function DesignEditorController($scope, $translate, $timeout,
         // Update the design's validity flag
         if (vm.design) {
             vm.design.valid = vm.isDesignValid();
+            if (!vm.design.valid) {
+                vm.design.public = false;
+            }
         }
 
         console.debug("Validation Errors:", JSON.stringify(vm.validationErrors));        

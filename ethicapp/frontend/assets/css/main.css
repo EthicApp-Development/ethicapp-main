@@ -2353,6 +2353,19 @@ h2{
     animation: fadeOut 5.0s ease-in-out forwards;
 }
 
+.designs-list .toast-container ul, li {
+    list-style: none !important;
+    margin: 0;
+    padding: 0;
+}
+
+.designs-list .toast-container .alert {
+    height: 1 !important;
+    background: transparent;
+    margin-top: 0px;
+    margin-bottom: 0px;
+};
+
 .toast-container ul, li {
     list-style: none !important;
     margin: 0;
