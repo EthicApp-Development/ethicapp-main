@@ -76,8 +76,8 @@ let ActivityCatalogService = ($http) => {
             
             try {
                 const response = await $http({
-                    url: "get-activities",
-                    method: "POST",
+                    url: "/activities",
+                    method: "GET",
                     data: {}
                 });
                 
@@ -91,6 +91,8 @@ let ActivityCatalogService = ($http) => {
                         activity.title = activity.design.metainfo.title;
                     }
                 });
+
+                console.debug(`[loadActivities] ${JSON.stringify(service.activities)}`);
                 
                 return service.activities;
                 
