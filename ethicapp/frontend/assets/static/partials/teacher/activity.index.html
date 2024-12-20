@@ -22,16 +22,16 @@
         </ul>
         <div style="position: absolute; right: 400px; top: 6px; max-width: 200px;">
             <input class="form-control search-input fontAwesome" type="text" 
-                   placeholder="{{'search' | translate}} &#xF002;" ng-model="ac.userSearch">
+                placeholder="{{'search' | translate}} &#xF002;" ng-model="ac.userSearch">
         </div>
     </div>
     <div class="row" style="margin-left:-14px; margin-top: -6px;">
         <div class="col-md-12">
             <div class="panel panel-default">
                 <div class="panel-body">
-                    <activity-description ng-if="ac.dsgnMode === 0" ng-repeat="act in ac.currentActivities(0) | filter:{title: ac.userSearch} | orderBy: '-time'" activity="act"></activity-description>
-                    <activity-description ng-if="ac.dsgnMode === 1" ng-repeat="act in ac.currentActivities(1) | filter:{title: ac.userSearch} | orderBy: '-time'" activity="act"></activity-description>
-                    <activity-description ng-if="ac.dsgnMode === 2" ng-repeat="act in ac.currentActivities(2) | filter:{title: ac.userSearch} | orderBy: '-time'" activity="act"></activity-description>
+                    <activity-description ng-if="ac.dsgnMode === 0" ng-repeat="act in ac.activities.ongoing | filter:{title: ac.userSearch} | orderBy: '-time'" activity="act"></activity-description>
+                    <activity-description on-archive="ac.handleArchive" ng-if="ac.dsgnMode === 1" ng-repeat="act in ac.activities.finished | filter:{title: ac.userSearch} | orderBy: '-time'" activity="act"></activity-description>
+                    <activity-description on-unarchive="ac.handleArchive" ng-if="ac.dsgnMode === 2" ng-repeat="act in ac.activities.archived | filter:{title: ac.userSearch} | orderBy: '-time'" activity="act"></activity-description>
                 </div>
             </div>
         </div>

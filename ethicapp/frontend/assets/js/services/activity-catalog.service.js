@@ -106,6 +106,42 @@ let ActivityCatalogService = ($http) => {
                 return service.activities;
             }
         },
+
+        toggleArchived: async function(sessionId) {
+            try {
+                // Make a PATCH request to toggle the `archived` status of the session
+                const response = await $http({
+                    method: "PATCH",
+                    url: `/activities/${sessionId}/toggle_archived`,
+                });
+        
+                // Check if the response indicates success
+                if (response.data.status === "ok") {
+                    console.info(`Archived status toggled successfully for sessionId: ${sessionId}`);
+                    
+                    // Update the cached activity in the service's `activities` list
+                    const activity = this.activities.find(act => act.sessionId === sessionId);
+                    if (activity) {
+                        activity.archived = !activity.archived; // Toggle the `archived` attribute
+                        console.info(`Cached activity updated:`, activity);
+                    } else {
+                        console.warn(`Activity with sessionId ${sessionId} not found in cache.`);
+                    }
+                    
+                    service.notifyListeners("onActivityCatalogUpdated", { 
+                        response: null });
+
+                    return true; // Indicate success
+                } else {
+                    console.error(`Failed to toggle archived status for sessionId: ${sessionId}`);
+                    return false; // Indicate failure
+                }
+            } catch (error) {
+                console.error(`Error toggling archived status for sessionId: ${sessionId}`, error);
+                throw new Error("Failed to toggle archived status");
+            }
+        },
+        
         registerListener: (eventName, callback) => {
             if (!service.listeners[eventName]) {
                 service.listeners[eventName] = [];

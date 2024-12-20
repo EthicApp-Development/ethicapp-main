@@ -30,7 +30,7 @@
             <div ng-show="dc.activeTab === 'info'" class="margin-top-8">
                 {{dc.activityDescriptor}}
                 <activity-description activity="dc.activityDescriptor" enable-link="false"></activity-description>
-                <activity-controls is-finished="dc.isActivityFinished" parent-ctrl="dc"></activity-controls>              
+                <activity-controls is-last-phase="dc.reachedLastPhase" is-finished="dc.isActivityFinished" parent-ctrl="dc"></activity-controls>              
             </div>
             <div ng-show="dc.activeTab === 'users'" class="margin-top-8">
                 <div class="panel panel-default">

@@ -155,15 +155,16 @@ export function DashboardController($scope, $routeParams, $http,
             vm.activityDescriptor = vm.activityState?.descriptor;
             console.debug(`[DashboardController::initializeDashboardState] ${JSON.stringify(vm.activityDescriptor)}`);
                 
+            // Check if the activity is finished
             vm.isActivityFinished = vm.checkActivityFinished();
             vm.setActivityTitle();
-    
-            // Get the design of the activity
-            vm.designObj = await DesignCatalogService.getDesignById(vm.activityDescriptor.designId);
-            console.debug(`[DashboardController::initializeDashboardState] designId: ${vm.activityDescriptor.designId} designObj: ${JSON.stringify(vm.designObj)}`);
 
             // Have we reached the last phase?
             vm.reachedLastPhase = vm.lastPhaseReached();
+
+            // Get the design of the activity
+            vm.designObj = await DesignCatalogService.getDesignById(vm.activityDescriptor.designId);
+            console.debug(`[DashboardController::initializeDashboardState] designId: ${vm.activityDescriptor.designId} designObj: ${JSON.stringify(vm.designObj)}`);
     
             // Get phase instances
             const phaseInstances = await ActivityStateService.getInstancedPhases(vm.sessionId);
@@ -211,7 +212,7 @@ export function DashboardController($scope, $routeParams, $http,
     
             const phaseResponses = vm.activityState.responses.find(
                 pr => pr.responses.phase_number == phaseDescriptor.number
-            )?.responses;
+            )?.responses ?? [];
     
             let [groups, chatMessageCount] = [null, null];
             if (DesignHelpers.isGroupPhaseByPhaseDescriptor(phaseDescriptor)) {

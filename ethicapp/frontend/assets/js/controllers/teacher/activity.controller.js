@@ -1,4 +1,5 @@
 import * as PhaseCreationHelpers from "../../helpers/phase-creation-helpers.js";
+import { statusCodes } from  "../../../../../common/modules/session-status.js";
 
 /*eslint func-style: ["error", "expression"]*/
 export function ActivityController($scope, $http,
@@ -10,14 +11,20 @@ export function ActivityController($scope, $http,
     vm.showSpinner = false;
     vm.activityDescription = "";
 
+    vm.activities = {
+        ongoing: [],
+        finished: [],
+        archived: []
+    };
+
     vm.init = async function() {
         console.debug("[ActivityController::init] initializing");
-        await ActivityCatalogService.loadActivities();
-        // vm.checkContentAnalysisAvailability();
 
         const updateHandler = function() {
-            $scope.$applyAsync();
-        };
+            $scope.$applyAsync(() => {
+                vm.updateActivities();
+            });
+        };  
 
         ActivityCatalogService.registerListener("onActivityCatalogUpdated", 
             updateHandler);
@@ -26,6 +33,9 @@ export function ActivityController($scope, $http,
             ActivityCatalogService.unregisterListener("onActivityCatalogUpdated", 
                 updateHandler);    
         }); 
+
+        await ActivityCatalogService.loadActivities();
+        // vm.checkContentAnalysisAvailability();
     };
 
     vm.createSession = async function (designId) {
@@ -98,23 +108,25 @@ export function ActivityController($scope, $http,
         }
     };
     
-    vm.currentActivities = function(type){
+    vm.updateActivities = function() {
+        const activities = ActivityCatalogService.getActivities();
+
+        if (!activities) {
+            console.warn("[ActivityController::updateActivities] No activities found.");
+            return;
+        }
+
         try {
-            let activities = ActivityCatalogService.getActivities();
-            if (!Array.isArray(activities) || activities.length === 0) {
-                return;
-            }
-            if (type == 0) return activities.filter(function(activity) {
-                return activity.status != 3 && activity.archived == false;
-            });
-            if (type == 1) return activities.filter(function(activity) {
-                return activity.status == 3 && activity.archived == false;
-            });
-            if (type == 2) return activities.filter(function(activity) {
-                return activity.archived;
-            });    
+            vm.activities.archived = ActivityCatalogService.
+                getActivities().filter(activity => { return activity.archived; });
+            vm.activities.ongoing = ActivityCatalogService.
+                getActivities().filter(activity => { return !activity.archived &&
+                    activity.status == statusCodes.in_progress; });
+            vm.activities.finished = ActivityCatalogService.
+                getActivities().filter(activity => { return !activity.archived &&
+                    activity.status == statusCodes.finished; });
         } catch (error) {
-            console.error("[ActivityController::currentActivities] An error ocurred.");
+            console.error("[ActivityController::updateActivities] An error ocurred.");
         }
     };
 
@@ -130,6 +142,16 @@ export function ActivityController($scope, $http,
             .catch(function(error) {
                 vm.isContentAnalysisEnabled = false;
             });
+    };
+
+    vm.handleSelect = function(activity) {
+        // Switch to the page of the activity
+        console.debug("[ActivityController::handleSelect] Navigating to activity", activity);
+        $scope.navigateTo(`/activities/${activity.sessionId}`);
+    };
+
+    vm.handleArchive = async function(activity) {
+        await ActivityCatalogService.toggleArchived(activity.sessionId);
     };
 
     vm.init();

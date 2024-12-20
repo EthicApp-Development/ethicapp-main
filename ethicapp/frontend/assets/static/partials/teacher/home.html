@@ -47,10 +47,20 @@
         <div class="col-md-12" ng-controller= "ActivityController as ac">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    {{'recentActivity'|translate}}
+                    {{ 'recent_activities_title_text'| translate }}
                 </div>
-                <div class="panel-body">
-                    <activity-description ng-repeat="act in ac.currentActivities(0) | limitTo: 3 | orderBy : '-time'" activity="act"></activity-description>
+                <div class="panel-body" ng-show="ac.activities.ongoing.length === 0 && ac.activities.finished.length === 0">
+                    <p>{{ 'no_recent_activities_text' | translate }}</p>
+                    <button class="btn btn-default btn-sm" ng-click="navigateTo('/activities/new')">
+                        <i class="fa-brands fa-space-awesome" aria-hidden="true"></i> {{'launch_activity' | translate}}
+                    </button>
+                    <button class="btn btn-default btn-sm" ng-click="navigateTo('/designs/new')">
+                        <i class="fa fa-paint-brush" aria-hidden="true"></i> {{'create_design' | translate}}
+                    </button>
+                </div>
+                <div class="panel-body" ng-show="ac.activities.ongoing.length > 0 || ac.activities.finished.length > 0">                     
+                    <activity-description on-select="ac.handleSelect" ng-repeat="act in ac.activities.ongoing | limitTo: 3 | orderBy : '-time'" activity="act"></activity-description>
+                    <activity-description on-select="ac.handleSelect" ng-repeat="act in ac.activities.finished | limitTo: 3 | orderBy : '-time'" activity="act"></activity-description>
                 </div>
             </div>
         </div>

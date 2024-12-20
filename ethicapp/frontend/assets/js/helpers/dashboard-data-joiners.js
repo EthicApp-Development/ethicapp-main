@@ -42,7 +42,7 @@ let sdPhaseDataJoiner = (phaseDescriptor, responses, users,
     const relevantUsers = users.filter(u => u.role === 'A');
 
     // Match relevant chat statistics
-    const relevantChats = chatMessageStats;
+    const relevantChats = chatMessageStats ?? [];
 
     // Initialize a map of users indexed by their user ID
     const usersMap = relevantUsers.reduce((acc, user) => {

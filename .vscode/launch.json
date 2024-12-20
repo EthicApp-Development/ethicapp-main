@@ -10,6 +10,14 @@
             "localRoot": "${workspaceFolder}/ethicapp",
             "remoteRoot": "/home/app",
             "skipFiles": ["<node_internals>/**"]
-        }
+        },
+        {
+            "type": "pwa-chrome",
+            "request": "launch",
+            "name": "Launch AngularJS App",
+            "url": "http://localhost:3001", // Cambia al puerto donde corre tu servidor local
+            "webRoot": "${workspaceFolder}",
+            "sourceMaps": true
+        }        
     ]
 }

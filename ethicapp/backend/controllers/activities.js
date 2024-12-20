@@ -23,7 +23,7 @@ router.get("/activities", async (req, res) => {
             dbcon: config.dbconnString,
             sql: `
                 SELECT 
-                    activity.id AS "activityId",
+                    activity.id AS id,
                     activity.session AS "sessionId",
                     sessions.creator,
                     sessions.name,
@@ -47,7 +47,7 @@ router.get("/activities", async (req, res) => {
 
         // Ensure camelCase formatting for the keys
         const activities = rawActivities.map((row) => ({
-            activityId: row.activityId,
+            id: row.id,
             sessionId: row.sessionId,
             creator: row.creator,
             name: row.name,
@@ -121,7 +121,7 @@ router.post("/activities", async (req, res) => {
             dbcon: config.dbconnString,
             sql: `
                 SELECT 
-                    activity.id as activityId,
+                    activity.id as id,
                     activity.session as sessionId,
                     sessions.creator,
                     sessions.name,
@@ -179,7 +179,7 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
         // Get the activity matching the session id
         const queryText = `
             SELECT 
-                activity.id AS activityId,
+                activity.id AS id,
                 activity.session AS sessionId,
                 sessions.creator,
                 sessions.name,
@@ -216,7 +216,7 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
 
         // Create the activity descriptor
         const descriptor = {
-            activityId: activityResult.activityid,
+            id: activityResult.id,
             sessionId: activityResult.sessionid,
             creator: activityResult.creator,
             name: activityResult.name,
@@ -459,9 +459,9 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
  * }
  */
 router.post("/activities/:session_id/finish", async (req, res) => {
-    const { session_id } = req.params;
+    const { session_id: sessionId } = req.params;
 
-    if (!session_id) {
+    if (!sessionId) {
         return res.status(400).json({ error: "Missing required parameter: session_id" });
     }
 
@@ -478,16 +478,15 @@ router.post("/activities/:session_id/finish", async (req, res) => {
             `,
             dbcon: config.dbconnString,
             sqlParams: [rpg2.param('plain', status), 
-                rpg2.param('plain', session_id)],
+                rpg2.param('plain', sessionId)],
         });
 
         if (result.rowCount === 0) {
             return res.status(404).json({ error: "Session not found or no update performed." });
         }
 
-        const io = req.app.locals.io;
-        const socket = configSocket(io);
-        socket.stateChange(session_id);
+        // Notify students the activity has finished!
+        studentNotifications.endSession(sessionId);
 
         res.status(200).json({ status: "ok", message: "Activity session finished successfully." });
     } catch (err) {
@@ -656,6 +655,55 @@ router.post("/activities/:session_id/phases", async (req, res) => {
     } catch (err) {
         console.error("Error adding phase:", err); // Log the error for debugging
         res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+/**
+ * @route PATCH /activities/:session_id/toggle_archived
+ * @description Toggles the `archived` status of a session. This endpoint inverts the current boolean value 
+ *              of the `archived` field for the specified session in the `sessions` table.
+ * @param {string} :session_id - The ID of the session to toggle the `archived` status for.
+ * @returns {object} - A JSON response with a success message if the operation is successful, or an error message otherwise.
+ * @example
+ * // Request
+ * PATCH /activities/123/toggle_archived
+ * 
+ * // Successful Response
+ * {
+ *   "status": "ok",
+ *   "message": "Session archived status toggled successfully"
+ * }
+ * 
+ * // Error Response
+ * {
+ *   "status": "err",
+ *   "message": "Internal Server Error"
+ * }
+ */
+router.patch("/activities/:session_id/toggle_archived", async (req, res) => {
+    try {
+        const sessionId = req.params.session_id;
+
+        // Validate input
+        if (!sessionId) {
+            return res.status(400).json({ status: "err", message: "Session ID is required" });
+        }
+
+        // Execute SQL to toggle the archived field
+        await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                UPDATE sessions
+                SET archived = NOT archived
+                WHERE id = $1;
+            `,
+            sqlParams: [rpg2.param('plain', sessionId)],
+        });
+
+        return res.json({ status: "ok", message: "Session archived status toggled successfully" });
+    } catch (err) {
+        console.error("Error in /activities/:session_id/toggle_archived:", err);
+        return res.status(500).json({ status: "err", message: "Internal Server Error" });
     }
 });
 

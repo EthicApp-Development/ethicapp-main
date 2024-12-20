@@ -1,0 +1,29 @@
+<div class="panel panel-default activity-item-panel">
+  <div class="panel-heading" ng-if="$ctrl.activity.name">{{$ctrl.activity.name}}</div>
+  <div class="panel-body">
+    <div class="row">
+      <div class="col-sm-8">
+        <p><b><i class="fa-solid fa-asterisk"></i> {{ 'activity_description_colon' | translate }}</b> <a ng-href="#!/activities/{{$ctrl.activity.id}}" ng-if="$ctrl.enableLink">{{ $ctrl.activity.description === '' ? ('no_description' | translate) : $ctrl.activity.description }}</a><span ng-if="!$ctrl.enableLink">{{ $ctrl.activity.description === '' ? ('no_description' | translate) : $ctrl.activity.description }}</span></p>
+        <p><b><i class="fa-solid fa-chart-gantt"></i> {{ 'current_status_colon' | translate }}</b> <span ng-class="['finished', 'initiated'].includes($ctrl.getReadableStatus($ctrl.activity.status)) ? 'text' : 'text-success'">{{ $ctrl.getReadableStatus($ctrl.activity.status) | translate }}</span></p>
+        <p><b><i class="fa-solid fa-paint-brush" aria-hidden="true"></i> {{ 'design_used_colon' | translate }}</b> <a ng-href="#!/designs/{{$ctrl.activity.designId}}" ng-if="$ctrl.enableLink">{{ $ctrl.activity.design.metainfo.title }}</a><span ng-if="!$ctrl.enableLink">{{ $ctrl.activity.design.metainfo.title }}</span><span class="small"> ({{$ctrl.activity.type === "R" ? ('ranking_activity' | translate) : ('semantic_differential' | translate)}})</span></p>
+        <p><b><i class="fa-solid fa-key" aria-hidden="true"></i> {{ 'access_code_colon' | translate }}</b> {{ $ctrl.activity.code }}</p>
+        <p><b><i class="fa-solid fa-calendar-alt" aria-hidden="true"></i> {{ 'launch_date_colon' | translate }}</b> {{ $ctrl.activity.time | date:'dd-MM-yyyy HH:mm' }} (UTC)</p>
+      </div>
+      <div class="col-sm-4">
+        <div style="width: 100%; display: flex; justify-content: flex-end; align-items: center;">
+          <div class="d-inline-flex align-items-center">
+            <button ng-show="$ctrl.isFunction($ctrl.onArchive)" class="btn btn-default btn-sm" ng-click="$ctrl.onArchive($ctrl.activity)">
+              <i class="fa-solid fa-inbox"></i> {{ 'archive_button_text' | translate }}
+            </button>
+            <button ng-show="$ctrl.isFunction($ctrl.onSelect)" class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onSelect($ctrl.activity)">
+              <i class="fa-regular fa-hand-pointer"></i> {{ 'select_button_text' | translate }}
+            </button>
+            <button ng-show="$ctrl.isFunction($ctrl.onUnarchive)" class="btn btn-default btn-sm" ng-click="$ctrl.onUnarchive($ctrl.activity)">
+              <i class="fa-regular fa-star"></i> {{ 'unarchive_button_text' | translate }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

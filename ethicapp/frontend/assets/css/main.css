@@ -2382,6 +2382,7 @@ h2{
     }
 }
 
+.activity-item-panel .panel-body .row, 
 .design-item-panel .panel-body .row {
     display: flex;
     align-items: center; /* Center content vertically */
@@ -2389,21 +2390,26 @@ h2{
     margin: 0; /* Remove default margins */
 }
 
+.activity-item-panel .col-md-8, 
 .design-item-panel .col-md-8,
+.activity-item-panel .col-md-4, 
 .design-item-panel .col-md-4 {
     height: 100%; /* Force full height for columns */
 }
 
+.activity-item-panel .inline-item, 
 .design-item-panel .inline-item {
     display: flex;
     align-items: center;
     margin-bottom: 5px; /* Reduce spacing */
 }
 
+.activity-item-panel .btn, 
 .design-item-panel .btn {
     margin-left: 5px; /* Add spacing between buttons */
 }
 
+.activity-item-panel .small.text-muted, 
 .design-item-panel .small.text-muted {
     margin-left: 5px;
     font-size: 11px;

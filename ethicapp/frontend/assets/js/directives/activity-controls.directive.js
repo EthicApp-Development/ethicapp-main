@@ -3,6 +3,7 @@ let activityControlsDirective = function() {
         restrict: 'E',
         scope: {
             isFinished: '<', // Boolean: Determines if the activity is finished
+            isLastPhase: '<',
             parentCtrl: '<'  // Reference to the parent controller
         },
         template: `
@@ -12,7 +13,7 @@ let activityControlsDirective = function() {
                         <div class="col-md-12 text-center">
                             <!-- Section 1: Main Actions -->
                             <div ng-if="!isFinished" class="action-buttons">
-                                <button class="btn btn-default btn-sm" ng-click="parentCtrl.startNextPhase()">
+                                <button ng-if="!isLastPhase" class="btn btn-default btn-sm" ng-click="parentCtrl.startNextPhase()">
                                     <i class="fa-solid fa-forward text-success"></i> {{ 'start_next_phase_button' | translate }}
                                 </button>
                                 <button class="btn btn-default btn-sm" ng-click="parentCtrl.endActivity()">
