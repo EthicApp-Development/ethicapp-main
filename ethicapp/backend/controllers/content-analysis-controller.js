@@ -2,7 +2,7 @@
 
 import express from "express";
 import pass from "../helpers/compat-helper.js"
-import configSocket from "../config/socket.config.js";
+import configSocket from "../config/deprecated/socket.config.js";
 import * as rpg from "../db/rest-pg.js";
 import { isContentAnalysisAvailable } from "../services/content-analysis/content-analysis.js";
 

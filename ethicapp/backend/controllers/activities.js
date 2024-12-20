@@ -6,6 +6,7 @@ import * as rpg2 from "../db/rest-pg-2.js";
 import * as DesignTypes from "../../common/modules/design-types.js";
 import * as ActivitiesHelper from "../helpers/activities-helper.js"
 import * as StatusCodes from "../../common/modules/session-status.js"
+import { studentNotifications } from "../config/socket.config.js";
 
 const router = express.Router();
 
@@ -384,13 +385,15 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
     try {
         let result = await rpg2.execSQL({
             sql: `
-                SELECT COUNT(*) 
+                SELECT COUNT(*)::integer
                 FROM stages
                 WHERE id = $1
             `,
             dbcon: config.dbconnString,
             sqlParams: [rpg2.param('plain', phaseId)],
         });
+
+        console.log(`[phase_transition] query 1 result: ${JSON.stringify(result)}`);
 
         if (!(result.length > 0 && result[0].count === 1)) {
             return res.status(400).json({ error: "The phase does not exist." });
@@ -414,7 +417,7 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
         }
 
         // Notify students the phase has changed!
-        req.app.locals.toStudentsNotifications.phaseTransition(sessionId, phaseId);
+        studentNotifications.phaseTransition(sessionId, phaseId);
 
         res.status(200).json({ status: "ok", message: "Session transitioned to the new phase." });
     } catch (err) {

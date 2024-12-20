@@ -129,7 +129,7 @@ export function DashboardController($scope, $routeParams, $http,
     
             // Reload the activity descriptor
             vm.activityDescriptor = await ActivityStateService.getActivityDescriptor(vm.sessionId, true);
-            vm.isActivityFinished = vm.isActivityFinished();
+            vm.isActivityFinished = vm.checkActivityFinished();
     
             if (vm.activityDescriptor.currentPhase.id !== phaseId) {
                 throw new Error("Abnormal state found.");
@@ -155,7 +155,7 @@ export function DashboardController($scope, $routeParams, $http,
             vm.activityDescriptor = vm.activityState?.descriptor;
             console.debug(`[DashboardController::initializeDashboardState] ${JSON.stringify(vm.activityDescriptor)}`);
                 
-            vm.isActivityFinished = vm.isActivityFinished();
+            vm.isActivityFinished = vm.checkActivityFinished();
             vm.setActivityTitle();
     
             // Get the design of the activity
@@ -310,7 +310,7 @@ export function DashboardController($scope, $routeParams, $http,
     };
 
     vm.studentJoinHandler = function (data) {
-        if (vm.isActivityFinished()) {
+        if (vm.checkActivityFinished()) {
             return;
         }
         vm.userList = vm.activityState.users;
@@ -331,7 +331,7 @@ export function DashboardController($scope, $routeParams, $http,
             vm.activityDescriptor.currentPhase.number == vm.designObj.phases.length;
     }
 
-    vm.isActivityFinished = function() {
+    vm.checkActivityFinished = function() {
         return vm.activityDescriptor.status === "finished";        
     }
 

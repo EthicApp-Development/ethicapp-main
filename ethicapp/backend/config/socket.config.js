@@ -1,51 +1,38 @@
-const socket = function(io) {
-    const stateChange = function(sesid) {
-        io.of("/").emit("stateChange", { ses: sesid });
-    };
+// socket.config.js
+import { Server as SocketIO } from "socket.io";
+import { studentSocketInit, toStudentsNotifications } from "../sockets/student.socket.js";
+import { teacherSocketInit, toTeacherNotifications } from "../sockets/teacher.socket.js";
 
-    const updateTeam = function(tmid) {
-        io.of("/").emit("updateTeam", { tmid: tmid });
-    };
+let ioInstance = null;
+let studentNotifications = null;
+let teacherNotifications = null;
 
-    const reportChange = function(sesid) {
-        io.of("/").emit("reportChange", { ses: sesid });
-    };
+const initializeSockets = (server) => {
+    if (!server) {
+        throw new Error("Server instance is required to initialize sockets.");
+    }
 
-    const reportBroadcast = function(sesid, rid) {
-        io.of("/").emit("reportReceived", { ses: sesid, rid: rid });
-    };
+    const io = new SocketIO(server);
 
-    const diffBroadcast = function(sesid, content) {
-        io.of("/").emit("diffReceived", { ses: sesid, content: content });
-    };
+    // Teacher namespace
+    const teacherSocket = io.of('/teacher');
+    teacherSocket.on('connection', teacherSocketInit);
+    teacherNotifications = toTeacherNotifications(teacherSocket);
 
-    const teamProgress = function(sesid, tmid) {
-        io.of("/").emit("teamProgress", { ses: sesid, tmid: tmid });
-    };
+    // Student namespace
+    const studentSocket = io.of('/student');
+    studentSocket.on('connection', studentSocketInit);
+    studentNotifications = toStudentsNotifications(studentSocket);
 
-    const chatMsg = function(sesid, tmid) {
-        io.of("/").emit("chatMsg", { ses: sesid, tmid: tmid });
-    };
+    ioInstance = io;
 
-    const chatMsgStage = function(stageid, tmid) {
-        io.of("/").emit("chatMsgStage", { stageid: stageid, tmid: tmid });
-    };
-
-    const contentUpdate = function(data) {
-        io.of("/").emit("contentUpdate", { data: data });
-    };
-
-    return {
-        stateChange,
-        updateTeam,
-        reportChange,
-        reportBroadcast,
-        diffBroadcast,
-        teamProgress,
-        chatMsg,
-        chatMsgStage,
-        contentUpdate
-    };
+    return io;
 };
 
-export default socket;
+// Export the initialized namespaces and notifications
+export {
+    initializeSockets,
+    ioInstance,
+    studentNotifications,
+    teacherNotifications
+};

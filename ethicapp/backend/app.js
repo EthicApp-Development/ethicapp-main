@@ -27,12 +27,6 @@ import group_messages from "./controllers/group-messages.js";
 import content_analysis from "./controllers/content-analysis-controller.js";
 import admin_panel from "./controllers/admin-panel-api.js";
 
-// Deprecated:
-import teams from "./controllers/teams.js";
-import stages from "./controllers/stages.js";
-import visor from "./controllers/visor.js";
-import analysis from "./controllers/analysis.js";
-
 import fs from "fs";
 
 import * as config from "./config/config.js";
@@ -147,10 +141,7 @@ app.use("/", validateSession, groups);
 app.use("/", validateSession, designs);
 app.use("/", validateSession, group_messages);
 app.use("/", validateSession, content_analysis);
-app.use("/", validateSession, teams);
-app.use("/", validateSession, stages);
-app.use("/", validateSession, visor);
-app.use("/", validateSession, analysis);
+
 //app.use("/", validateSession, cases);
 app.use("/", admin_panel);
 
