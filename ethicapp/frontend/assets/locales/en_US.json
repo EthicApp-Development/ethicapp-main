@@ -232,7 +232,7 @@
 	"content_analysis_title" : "Automated Content Analysis",
 	"content_analysis_description" : "Enable automated content analysis on the teacher's dashboard.",
 	"activity_details_dashboard_title" : "Activity Details",
-	"available_designs_colon": "Available designs:",
+	"available_designs_colon": "Select a design from your collection:",
 	"activity_information_tab_title": "Information",
 	"activity_users_tab_title": "Users",
 	"connected_users_colon": "Connected users:",

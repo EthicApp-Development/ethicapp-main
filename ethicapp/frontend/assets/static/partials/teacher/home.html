@@ -59,8 +59,8 @@
                     </button>
                 </div>
                 <div class="panel-body" ng-show="ac.activities.ongoing.length > 0 || ac.activities.finished.length > 0">                     
-                    <activity-description on-select="ac.handleSelect" ng-repeat="act in ac.activities.ongoing | limitTo: 3 | orderBy : '-time'" activity="act"></activity-description>
-                    <activity-description on-select="ac.handleSelect" ng-repeat="act in ac.activities.finished | limitTo: 3 | orderBy : '-time'" activity="act"></activity-description>
+                    <activity-description on-view="ac.handleView" ng-repeat="act in ac.activities.ongoing | limitTo: 3 | orderBy : '-time'" activity="act"></activity-description>
+                    <activity-description on-view="ac.handleView" ng-repeat="act in ac.activities.finished | limitTo: 3 | orderBy : '-time'" activity="act"></activity-description>
                 </div>
             </div>
         </div>

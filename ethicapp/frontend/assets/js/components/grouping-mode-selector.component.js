@@ -1,29 +1,3 @@
-const groupingModeSelectorComponent = {
-    bindings: {
-        phase: '<',         
-        phaseIndex: '<',    
-        design: '<',        
-        validateCallback: '&?',
-    },
-    template: `
-    <div class="grouping-mode-selector">
-        <label for="groupingMode">{{ 'grouping_mode_label_text' | translate }}</label>
-        <select id="groupingMode" 
-                class="form-control" 
-                ng-class="{'input-warning': !$ctrl.isValidMode().valid}" 
-                ng-model="$ctrl.selectedMode"
-                ng-options="mode.name as (mode.description | translate) for mode in $ctrl.groupingModes"
-                ng-change="$ctrl.updateGroupingMode()">
-            <option value="">{{ 'no_grouping_mode_selected_text' | translate }}</option>
-        </select>
-        <div class="error-message" ng-if="!$ctrl.isValidMode().valid && $ctrl.selectedMode === 'preserve'">
-            <span class="text-danger">{{ $ctrl.isValidMode().message | translate }}</span>
-        </div>
-    </div>
-    `,
-    controller: GroupingModeSelectorController,
-};
-
 function GroupingModeSelectorController() {
     const vm = this;
 
@@ -156,7 +130,33 @@ function GroupingModeSelectorController() {
             }
         }
     };    
-}
+};
+
+const groupingModeSelectorComponent = {
+    bindings: {
+        phase: '<',         
+        phaseIndex: '<',    
+        design: '<',        
+        validateCallback: '&?',
+    },
+    template: `
+    <div class="grouping-mode-selector">
+        <label for="groupingMode">{{ 'grouping_mode_label_text' | translate }}</label>
+        <select id="groupingMode" 
+                class="form-control" 
+                ng-class="{'input-warning': !$ctrl.isValidMode().valid}" 
+                ng-model="$ctrl.selectedMode"
+                ng-options="mode.name as (mode.description | translate) for mode in $ctrl.groupingModes"
+                ng-change="$ctrl.updateGroupingMode()">
+            <option value="">{{ 'no_grouping_mode_selected_text' | translate }}</option>
+        </select>
+        <div class="error-message" ng-if="!$ctrl.isValidMode().valid && $ctrl.selectedMode === 'preserve'">
+            <span class="text-danger">{{ $ctrl.isValidMode().message | translate }}</span>
+        </div>
+    </div>
+    `,
+    controller: GroupingModeSelectorController,
+};
 
 GroupingModeSelectorController.$inject = ['$http'];
 

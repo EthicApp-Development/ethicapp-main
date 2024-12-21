@@ -107,7 +107,7 @@ export function ActivityController($scope, $http,
             console.error("Error in startActivityDesign:", error);
         }
     };
-    
+
     vm.updateActivities = function() {
         const activities = ActivityCatalogService.getActivities();
 
@@ -147,6 +147,12 @@ export function ActivityController($scope, $http,
     vm.handleSelect = function(activity) {
         // Switch to the page of the activity
         console.debug("[ActivityController::handleSelect] Navigating to activity", activity);
+        $scope.navigateTo(`/activities/${activity.sessionId}`);
+    };
+
+    vm.handleView = function(activity) {
+        // Switch to the page of the activity
+        console.debug("[ActivityController::handleView] Navigating to activity", activity);
         $scope.navigateTo(`/activities/${activity.sessionId}`);
     };
 

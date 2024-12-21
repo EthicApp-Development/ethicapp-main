@@ -29,9 +29,9 @@
         <div class="col-md-12">
             <div class="panel panel-default">
                 <div class="panel-body">
-                    <activity-description ng-if="ac.dsgnMode === 0" ng-repeat="act in ac.activities.ongoing | filter:{title: ac.userSearch} | orderBy: '-time'" activity="act"></activity-description>
-                    <activity-description on-archive="ac.handleArchive" ng-if="ac.dsgnMode === 1" ng-repeat="act in ac.activities.finished | filter:{title: ac.userSearch} | orderBy: '-time'" activity="act"></activity-description>
-                    <activity-description on-unarchive="ac.handleArchive" ng-if="ac.dsgnMode === 2" ng-repeat="act in ac.activities.archived | filter:{title: ac.userSearch} | orderBy: '-time'" activity="act"></activity-description>
+                    <activity-description on-view="ac.handleView" ng-if="ac.dsgnMode === 0" ng-repeat="act in ac.activities.ongoing | filter:{title: ac.userSearch} | orderBy: '-time'" activity="act"></activity-description>
+                    <activity-description on-view="ac.handleView" on-archive="ac.handleArchive" ng-if="ac.dsgnMode === 1" ng-repeat="act in ac.activities.finished | filter:{title: ac.userSearch} | orderBy: '-time'" activity="act"></activity-description>
+                    <activity-description on-view="ac.handleView" on-unarchive="ac.handleArchive" ng-if="ac.dsgnMode === 2" ng-repeat="act in ac.activities.archived | filter:{title: ac.userSearch} | orderBy: '-time'" activity="act"></activity-description>
                 </div>
             </div>
         </div>

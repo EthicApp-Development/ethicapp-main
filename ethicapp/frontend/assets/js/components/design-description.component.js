@@ -1,4 +1,4 @@
-let designDescriptionComponent = {
+const designDescriptionComponent = {
     bindings: {
         design: '<',
         onSelect: '&',     

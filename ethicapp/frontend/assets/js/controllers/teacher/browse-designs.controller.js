@@ -1,30 +1,14 @@
 /*eslint func-style: ["error", "expression"]*/
 export function BrowseDesignsController($scope, $routeParams, toast, $translate,
-    DesignStateService, ActivityStateService, 
-    DesignCatalogService) {
+    ActivityStateService, DesignCatalogService) {
 
     const vm = this;
-    vm.pickedDesignId = 0;
-    vm.dsgntitle = "";
-    vm.dsgntype = "";
+    vm.selectedDesignId = 0;
     vm.userDesigns = [];
     vm.publicDesigns = [];
     vm.designs = [];
 
     vm.init = async function() {
-        await vm.forceFetchDesigns();
-
-        try {
-            const designIdParam = Number($routeParams.designId);
-            if (!isNaN(designIdParam)) {
-                vm.pickedDesignId = designIdParam;
-                const designObj = await DesignCatalogService.getDesignById(vm.pickedDesignId);
-                vm.userSearch = designObj.metainfo.title;
-            }
-        } catch(error) {
-            console.error("[BrowseDesignsController::init] Failed to retrieve designId route parameter");
-        }
-
         const updateHandler = function() {
             vm.forceFetchDesigns();
         };
@@ -35,11 +19,26 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
         $scope.$on('$destroy', function () {
             DesignCatalogService.unregisterListener("onDesignCatalogUpdated", 
                 updateHandler);    
-        });            
+        });
+        
+        try {
+            await vm.forceFetchDesigns();
+
+            const designIdParam = Number($routeParams.designId);
+            if (!isNaN(designIdParam)) {
+                vm.selectedDesignId = designIdParam;
+                const designObj = await DesignCatalogService.getDesignById(vm.selectedDesignId);
+                vm.userSearch = designObj.metainfo.title;
+            }
+        } catch(error) {
+            console.error("[BrowseDesignsController::init] Failed to retrieve designId route parameter");
+        }        
     }
 
-    vm.setPickedDesignId = function(id) {
-        vm.pickedDesignId = id;
+    vm.handleSelectDesign = function(id) {
+        $scope.$applyAsync(() => {
+            vm.selectedDesignId = id;
+        });
     }
 
     vm.forceFetchDesigns = async function() {
@@ -49,13 +48,6 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
 
         $scope.$applyAsync();
     }
-
-    vm.setInstanceData = function(id, title, type) {
-        DesignStateService.setInstanceData(id, title, type);
-        vm.dsgnid = id;
-        vm.dsgntitle = title;
-        vm.dsgntype = type;
-    };
 
     vm.designPublic = async function(id) {
         await DesignCatalogService.togglePublicVisibility(id);
@@ -68,7 +60,19 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
     vm.getDesigns = async function() {
         vm.userDesigns = await DesignCatalogService.getUserDesigns();
     };
-    
+
+    vm.handleLaunch = function(designId) {
+        $scope.navigateTo('/activities/new/' + designId);
+    };
+
+    vm.handleEdit = function(designId) {
+        $scope.navigateTo('/designs/' + designId + '/edit');
+    };
+
+    vm.handleView = function(designId) {
+        $scope.navigateTo('/designs/' + designId);
+    };
+
     vm.getPublicDesigns = async function() {
         vm.publicDesigns = await DesignCatalogService.getPublicDesigns();
     };

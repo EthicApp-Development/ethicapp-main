@@ -1,16 +1,3 @@
-const sdItemEditorComponent = {
-    bindings: {
-        phaseNumber: '<?',
-        question: '=',
-        questionNumber: '=',
-        validateCallback: '&?',
-        showSeparator: '<?',
-    },
-    transclude: true,
-    templateUrl: "/assets/static/partials/teacher/micro-partials/sd-item-editor.template.html",   
-    controller: SDItemEditController,
-};
-
 function SDItemEditController() {
     const vm = this;
 
@@ -84,6 +71,19 @@ function SDItemEditController() {
     vm.isEmptyString = function(value) {
         return typeof value === 'string' && value.trim() === '';
     }
-}
+};
+
+const sdItemEditorComponent = {
+    bindings: {
+        phaseNumber: '<?',
+        question: '=',
+        questionNumber: '=',
+        validateCallback: '&?',
+        showSeparator: '<?',
+    },
+    transclude: true,
+    templateUrl: "/assets/static/partials/teacher/micro-partials/sd-item-editor.template.html",   
+    controller: SDItemEditController,
+};
 
 export default sdItemEditorComponent;

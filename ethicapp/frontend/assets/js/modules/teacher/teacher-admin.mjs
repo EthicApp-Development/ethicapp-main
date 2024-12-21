@@ -24,7 +24,6 @@ var app = angular.module("TeacherApp", ["ngSanitize",
 
 import { LocalesController } from "../../controllers/common/locales.controller.js";
 import { ActivityController } from "../../controllers/teacher/activity.controller.js";
-import { DesignEditController } from "../../controllers/teacher/design-edit.controller.js";
 import { BrowseDesignsController } from "../../controllers/teacher/browse-designs.controller.js";
 import { ConfirmModalController } from "../../controllers/teacher/confirm_modal_controller.js";
 import { ContentModalController } from "../../controllers/teacher/content_modal_controller.js";
@@ -38,19 +37,6 @@ import { ErrorController } from "../../controllers/teacher/error.controller.js";
 import { VoidController } from "../../controllers/common/void.controller.js";
 import { ngQuillConfigProvider } from "../../helpers/util.js";
 import { DesignEditorController } from "../../controllers/teacher/design-editor.controller.js";
-
-//import { GroupController } from "../../controllers/teacher/group_controller.js";
-// import { DuplicateSesModalController } from "../../controllers/teacher/duplicate_ses_modal_controller.js";
-// import { IncomingUsersController } from "../../controllers/teacher/incoming_users_controller.js";
-// import { ManagementController } from "../../controllers/teacher/deprecated/management_controller.js";
-// import { TabsController } from "../../controllers/teacher/deprecated/tabs_controller.js";
-// import { MapSelectionModalController } from "../../controllers/teacher/map_selection_modal_controller.js";
-// import { MonitorActivityController } from "../../controllers/teacher/deprecated/monitor_activity_controller.js";
-// import { OptionsController } from "../../controllers/teacher/options_controller.js";
-// import { RoutingController } from "../../controllers/teacher/deprecated/routing_controller.js";
-// import { SesEditorController } from "../../controllers/teacher/ses_editor_controller.js";
-// import { StagesController } from "../../controllers/teacher/stages_controller.js";
-// import { DashboardRubricaController } from "../../controllers/teacher/dashboard_rubrica_controller.js";
 
 import { SessionSocketService } from "../../services/session-socket.service.js";
 app.factory('SessionSocketService', SessionSocketService);
@@ -144,12 +130,9 @@ app.controller("LocalesController",
     ["$translate", "$scope", "$rootScope", LocalesController]); 
 app.controller("ActivityController", 
     ["$scope", "$http", "ActivityCatalogService", "DesignCatalogService", ActivityController]);
-app.controller("DesignEditController", 
-    ["$scope", "$routeParams", "DesignStateService", "$filter", "$http", "Notification", 
-        "$timeout", "ActivityStateService", "DesignCatalogService", DesignEditController]);
 app.controller("BrowseDesignsController", 
-    ["$scope", "$routeParams", "toast", "$translate", "DesignStateService", 
-        "ActivityStateService", "DesignCatalogService", BrowseDesignsController]); 
+    ["$scope", "$routeParams", "toast", "$translate", "ActivityStateService", "DesignCatalogService", 
+        BrowseDesignsController]); 
 app.controller("ConfirmModalController", 
     ["$uibModalInstance", ConfirmModalController]);
 app.controller("ContentModalController", 
@@ -174,7 +157,8 @@ app.controller("ErrorController",
 app.controller("DesignEditorController", 
     ["$scope", "$translate", "$timeout", "$routeParams", "DesignStateService", 
         "DesignCatalogService", "toast", DesignEditorController]);         
-app.controller("VoidController", [VoidController]);        
+app.controller("VoidController", [VoidController]);
+
 /*app.controller("RoutingController", 
     ["$scope", RoutingController]);
 app.controller("ManagementController",

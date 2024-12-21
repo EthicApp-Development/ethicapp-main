@@ -1,26 +1,3 @@
-const phaseMoverComponent = {
-    bindings: {
-        phases: '<',
-        index: '<',
-        onMove: '&?',
-    },
-    controller: PhaseMoverController,
-    template: `
-        <hr style="margin-top:1em">
-        <div class="phase-mover" style="margin-top: 1em; margin-left: 1em">
-            <i ng-if="!$ctrl.isFirstPhase()" 
-               class="fa-solid fa-caret-up" 
-               style="cursor: pointer; font-size:1.25em;" 
-               ng-click="$ctrl.moveUp();">
-            </i>
-            <i ng-if="!$ctrl.isLastPhase()" 
-               class="fa-solid fa-caret-down" 
-               style="cursor: pointer; font-size:1.25em;" 
-               ng-click="$ctrl.moveDown()">
-            </i>
-        </div>`,
-};
-
 function PhaseMoverController() {
     const vm = this;
 
@@ -57,6 +34,29 @@ function PhaseMoverController() {
         phases[fromIndex] = phases[toIndex];
         phases[toIndex] = temp;
     }
-}
+};
+
+const phaseMoverComponent = {
+    bindings: {
+        phases: '<',
+        index: '<',
+        onMove: '&?',
+    },
+    controller: PhaseMoverController,
+    template: `
+        <hr style="margin-top:1em">
+        <div class="phase-mover" style="margin-top: 1em; margin-left: 1em">
+            <i ng-if="!$ctrl.isFirstPhase()" 
+               class="fa-solid fa-caret-up" 
+               style="cursor: pointer; font-size:1.25em;" 
+               ng-click="$ctrl.moveUp();">
+            </i>
+            <i ng-if="!$ctrl.isLastPhase()" 
+               class="fa-solid fa-caret-down" 
+               style="cursor: pointer; font-size:1.25em;" 
+               ng-click="$ctrl.moveDown()">
+            </i>
+        </div>`,
+};
 
 export default phaseMoverComponent;

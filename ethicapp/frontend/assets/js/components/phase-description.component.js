@@ -1,5 +1,29 @@
 import phaseDescriptionTemplatesRegistry from "./templates/dashboard/phase-description-templates.registry.js";
 
+let designTransformers = {
+    semantic_differential: transformSemanticDifferentialPhase,
+    ranking: transformRankingPhase
+};
+
+function transformSemanticDifferentialPhase(ctrl) {
+    ctrl.phaseQuestions = ctrl.phaseDetails.questions.map(q => ({
+        text: q.q_text,
+        leftPole: q.ans_format.l_pole,
+        rightPole: q.ans_format.r_pole,
+        range: q.ans_format.values,
+        justificationRequired: q.ans_format.just_required,
+        minJustificationLength: q.ans_format.min_just_length
+    }));
+}
+
+function transformRankingPhase(ctrl) {
+    ctrl.phaseActors = ctrl.phaseDetails.roles.map(actor => ({
+        name: actor.name,
+        justificationRequired: actor.type === 'order',
+        minJustificationLength: actor.wc || 0
+    }));
+}
+
 let phaseDescriptionComponent = {
     bindings: {
         phaseData: '<',
@@ -45,29 +69,5 @@ let phaseDescriptionComponent = {
         return ctrl.getTemplate();
     } 
 };
-
-let designTransformers = {
-    semantic_differential: transformSemanticDifferentialPhase,
-    ranking: transformRankingPhase
-};
-
-function transformSemanticDifferentialPhase(ctrl) {
-    ctrl.phaseQuestions = ctrl.phaseDetails.questions.map(q => ({
-        text: q.q_text,
-        leftPole: q.ans_format.l_pole,
-        rightPole: q.ans_format.r_pole,
-        range: q.ans_format.values,
-        justificationRequired: q.ans_format.just_required,
-        minJustificationLength: q.ans_format.min_just_length
-    }));
-}
-
-function transformRankingPhase(ctrl) {
-    ctrl.phaseActors = ctrl.phaseDetails.roles.map(actor => ({
-        name: actor.name,
-        justificationRequired: actor.type === 'order',
-        minJustificationLength: actor.wc || 0
-    }));
-}
 
 export { phaseDescriptionComponent };

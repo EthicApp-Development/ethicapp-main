@@ -1,15 +1,3 @@
-const rankingItemEditorComponent = {
-    bindings: {
-        phaseNumber: '<?',
-        item: '=',
-        itemNumber: '=',
-        validateCallback: '&?'
-    },
-    transclude: true,
-    templateUrl: "/assets/static/partials/teacher/micro-partials/ranking-item-editor.template.html",
-    controller: RankingItemEditorController,
-};
-
 function RankingItemEditorController() {
     const vm = this;
 
@@ -54,6 +42,18 @@ function RankingItemEditorController() {
     vm.isEmptyString = function(value) {
         return typeof value === 'string' && value.trim() === '';
     };
-}
+};
+
+const rankingItemEditorComponent = {
+    bindings: {
+        phaseNumber: '<?',
+        item: '=',
+        itemNumber: '=',
+        validateCallback: '&?'
+    },
+    transclude: true,
+    templateUrl: "/assets/static/partials/teacher/micro-partials/ranking-item-editor.template.html",
+    controller: RankingItemEditorController,
+};
 
 export default rankingItemEditorComponent;

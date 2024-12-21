@@ -1,25 +1,3 @@
-const itemMoverComponent = {
-    bindings: {
-        items: '=',
-        item: '<',
-        onMove: '&?',
-    },
-    controller: ItemMoverController,
-    template: `
-        <div class="phase-mover" style="margin-top:.25em; margin-left: 1em">
-            <i ng-if="!$ctrl.isFirstItem()" 
-               class="fa-solid fa-caret-up" 
-               style="cursor: pointer; font-size:1.25em;" 
-               ng-click="$ctrl.moveUp();">
-            </i>
-            <i ng-if="!$ctrl.isLastItem()" 
-               class="fa-solid fa-caret-down" 
-               style="cursor: pointer; font-size:1.25em;" 
-               ng-click="$ctrl.moveDown()">
-            </i>
-        </div>`,
-};
-
 function ItemMoverController() {
     const vm = this;
 
@@ -63,6 +41,28 @@ function ItemMoverController() {
         items[fromIndex] = items[toIndex];
         items[toIndex] = temp;
     }
+};
+
+const itemMoverComponent = {
+    bindings: {
+        items: '=',
+        item: '<',
+        onMove: '&?',
+    },
+    controller: ItemMoverController,
+    template: `
+        <div class="phase-mover" style="margin-top:.25em; margin-left: 1em">
+            <i ng-if="!$ctrl.isFirstItem()" 
+               class="fa-solid fa-caret-up" 
+               style="cursor: pointer; font-size:1.25em;" 
+               ng-click="$ctrl.moveUp();">
+            </i>
+            <i ng-if="!$ctrl.isLastItem()" 
+               class="fa-solid fa-caret-down" 
+               style="cursor: pointer; font-size:1.25em;" 
+               ng-click="$ctrl.moveDown()">
+            </i>
+        </div>`,
 };
 
 export default itemMoverComponent;

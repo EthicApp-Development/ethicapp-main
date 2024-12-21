@@ -1,21 +1,3 @@
-const itemDeleterComponent = {
-    bindings: {
-        phaseNumber: '<',
-        items: '<',
-        index: '<',
-        onDelete: '&?'
-    },
-    controller: ItemDeleterController,
-    template: `
-    <div class="item-deleter">
-        <button class="btn btn-default btn-sm" ng-click="$ctrl.deleteItem()">
-            <i class="fa-solid fa-trash text-danger"></i>
-            {{ 'delete_item_button_text' | translate }}
-        </button>
-    </div>
-    `,
-};
-
 function ItemDeleterController($translate) {
     const vm = this;
 
@@ -36,7 +18,26 @@ function ItemDeleterController($translate) {
             }         
         });
     };
-}
+};
+
 ItemDeleterController.$inject = ['$translate'];
+
+const itemDeleterComponent = {
+    bindings: {
+        phaseNumber: '<',
+        items: '<',
+        index: '<',
+        onDelete: '&?'
+    },
+    controller: ItemDeleterController,
+    template: `
+    <div class="item-deleter">
+        <button class="btn btn-default btn-sm" ng-click="$ctrl.deleteItem()">
+            <i class="fa-solid fa-trash text-danger"></i>
+            {{ 'delete_item_button_text' | translate }}
+        </button>
+    </div>
+    `,
+};
 
 export default itemDeleterComponent;

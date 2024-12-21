@@ -149,10 +149,10 @@ export function DashboardController($scope, $routeParams, $http,
         try {
             // Load the entire activity state
             vm.activityState = await ActivityStateService.loadActivityState(vm.sessionId);
-            vm.userList = vm.activityState?.users;
+            vm.userList = vm.activityState?.users ?? [];
     
             // Get the activity descriptor
-            vm.activityDescriptor = vm.activityState?.descriptor;
+            vm.activityDescriptor = vm.activityState?.descriptor ?? {};
             console.debug(`[DashboardController::initializeDashboardState] ${JSON.stringify(vm.activityDescriptor)}`);
                 
             // Check if the activity is finished
