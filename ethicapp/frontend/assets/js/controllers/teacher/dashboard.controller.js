@@ -155,16 +155,16 @@ export function DashboardController($scope, $routeParams, $http,
             vm.activityDescriptor = vm.activityState?.descriptor ?? {};
             console.debug(`[DashboardController::initializeDashboardState] ${JSON.stringify(vm.activityDescriptor)}`);
                 
+            // Get the design of the activity
+            vm.designObj = await DesignCatalogService.getDesignById(vm.activityDescriptor.designId);
+            console.debug(`[DashboardController::initializeDashboardState] designId: ${vm.activityDescriptor.designId} designObj: ${JSON.stringify(vm.designObj)}`);
+
             // Check if the activity is finished
             vm.isActivityFinished = vm.checkActivityFinished();
             vm.setActivityTitle();
 
             // Have we reached the last phase?
             vm.reachedLastPhase = vm.lastPhaseReached();
-
-            // Get the design of the activity
-            vm.designObj = await DesignCatalogService.getDesignById(vm.activityDescriptor.designId);
-            console.debug(`[DashboardController::initializeDashboardState] designId: ${vm.activityDescriptor.designId} designObj: ${JSON.stringify(vm.designObj)}`);
     
             // Get phase instances
             const phaseInstances = await ActivityStateService.getInstancedPhases(vm.sessionId);
@@ -182,7 +182,11 @@ export function DashboardController($scope, $routeParams, $http,
     
             // Wait for all phase states to be loaded
             const resolvedPhaseStates = await Promise.all(phaseStatePromises);
-            vm.dashboardPhaseStates = resolvedPhaseStates.filter(state => state !== null);
+
+            $scope.$applyAsync(() => {
+                vm.dashboardPhaseStates = resolvedPhaseStates.filter(state => state !== null);
+            });
+
         } catch (error) {
             console.error("Error during initializeDashboardState:", error);
         }
@@ -193,7 +197,11 @@ export function DashboardController($scope, $routeParams, $http,
     
         if (!phaseState) {
             phaseState = await vm.loadDashboardPhaseState(phaseId);
-            if (phaseState) vm.dashboardPhaseStates.push(phaseState);
+            if (phaseState) {
+                $scope.$applyAsync(() => {
+                    vm.dashboardPhaseStates.push(phaseState);
+                });
+            }
         }
         else {
             await vm.loadDashboardPhaseState(phaseId, phaseState);

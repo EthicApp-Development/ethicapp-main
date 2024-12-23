@@ -5,7 +5,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "nodemon ./ethicapp --inspect=0.0.0.0:9229 --nolazy ./ethicapp",
+    "dev": "node --inspect=0.0.0.0:9229 --nolazy ./ethicapp",
+    "dev_bak": "nodemon ./ethicapp --inspect=0.0.0.0:9229 --nolazy ./ethicapp",
     "start": "node ./ethicapp",
     "debug": "node --inspect=0.0.0.0:9229 --nolazy ./ethicapp",
     "test": "jest --no-cache"

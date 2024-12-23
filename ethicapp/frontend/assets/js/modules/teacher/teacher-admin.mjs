@@ -215,6 +215,7 @@ app.controller("DialogCtrl", function($scope, DialogService) {
 
 import { connectedUsersDirective, ConnectedUsersDirectiveController } from "../../directives/connected-users.directive.js";
 import { activityControlsDirective } from "../../directives/activity-controls.directive.js";
+import { phaseDescriptionDirective } from "../../directives/phase-description.directive.js";
 import { phaseStateDirective } from "../../directives/phase-state.directive.js";
 import { groupPhaseTableDirective } from "../../directives/group-phase-table.directive.js";
 import { individualPhaseTableDirective } from "../../directives/individual-phase-table.directive.js";
@@ -225,6 +226,7 @@ import validatePhaseDirective from '../../directives/validate-phase.directive.js
 
 app.directive("connectedUsers", connectedUsersDirective);
 app.directive("activityControls", activityControlsDirective);
+app.directive('phaseDescription', phaseDescriptionDirective);
 app.directive("phaseState", phaseStateDirective);
 app.directive("groupPhaseTable", groupPhaseTableDirective);
 app.directive("individualPhaseTable", individualPhaseTableDirective);
@@ -238,7 +240,6 @@ app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateSer
 
 import { activityDescriptionComponent } from "../../components/activity-description.component.js";
 import { designDescriptionComponent } from "../../components/design-description.component.js";
-import { phaseDescriptionComponent } from "../../components/phase-description.component.js";
 import rankingItemEditorComponent from "../../components/ranking-item-editor.component.js";
 import sdItemEditorComponent from "../../components/sd-item-editor.component.js";
 import groupingModeSelectorComponent from "../../components/grouping-mode-selector.component.js";
@@ -253,7 +254,6 @@ import designItemComponent from '../../components/design-item.component.js';
 
 app.component('activityDescription', activityDescriptionComponent);
 app.component('designDescription', designDescriptionComponent);
-app.component('phaseDescription', phaseDescriptionComponent);
 app.component('groupingModeSelector', groupingModeSelectorComponent);
 app.component('previousPhasesSelector', previousPhasesSelectorComponent);
 app.component('numericInputWithSpinbutton', numericInputWithSpinbuttonComponent);

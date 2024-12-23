@@ -5,19 +5,24 @@
             "type": "node",
             "request": "attach",
             "name": "Attach to Docker",
-            "address": "localhost",
+            "address": "127.0.0.1",
             "port": 9229,
+            "restart": true,
             "localRoot": "${workspaceFolder}/ethicapp",
             "remoteRoot": "/home/app",
             "skipFiles": ["<node_internals>/**"]
         },
         {
-            "type": "pwa-chrome",
+            "type": "chrome",
             "request": "launch",
-            "name": "Launch AngularJS App",
-            "url": "http://localhost:3001", // Cambia al puerto donde corre tu servidor local
-            "webRoot": "${workspaceFolder}",
-            "sourceMaps": true
-        }        
+            "name": "Launch EthicApp Frontend",
+            "url": "http://localhost:3001",
+            "webRoot": "${workspaceFolder}/ethicapp/frontend/assets/js",
+            "sourceMaps": true,
+            "outFiles": [
+                "${workspaceFolder}/ethicapp/frontend/assets/js/dist/*.js"
+            ],
+            "skipFiles": ["<node_internals>/**"]
+        }
     ]
 }

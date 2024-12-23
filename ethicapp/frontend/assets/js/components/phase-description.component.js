@@ -1,4 +1,4 @@
-import phaseDescriptionTemplatesRegistry from "./templates/dashboard/phase-description-templates.registry.js";
+import phaseDescriptionTemplatesRegistry from "../directives/templates/dashboard/phase-description-templates.registry.js";
 
 let designTransformers = {
     semantic_differential: transformSemanticDifferentialPhase,
@@ -35,12 +35,16 @@ let phaseDescriptionComponent = {
         ctrl.getTemplate = function() {
             const designType = ctrl.designObject.type;
             const template = phaseDescriptionTemplatesRegistry[designType];
+            console.debug(`[phaseDescriptionComponent] template: ${JSON.stringify(template)}`);
+            
             return template || `
                 <p>{{ 'unsupported_design_type_label' | translate }}: {{ $ctrl.designObject.type }}</p>
             `;
         };
 
         ctrl.$onInit = function() {
+
+            console.debug(`[phaseDescriptionComponent] onInit`);
 
             // Access phase details from designObject using phase number
             const phaseNumber = ctrl.phaseData.descriptor.number;
@@ -63,11 +67,11 @@ let phaseDescriptionComponent = {
             }
 
             transformer(ctrl);
-        };        
+        };
     },
-    template: function(elem, atts, ctrl) {
-        return ctrl.getTemplate();
-    } 
+    template: function() {
+        return "<div>{{ $ctrl.getTemplate() }}</div>";
+    }
 };
 
 export { phaseDescriptionComponent };
