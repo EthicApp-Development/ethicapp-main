@@ -1,5 +1,5 @@
 <div>
-    <label>{{ 'phase_mode_label' | translate }}: {{ ctrl.phaseMode | translate }}</label>
+    <h4>{{ 'phase_mode_label' | translate }}: {{ ctrl.phaseMode | translate }}</h4>
     <div ng-if="ctrl.phaseMode === 'team'">
         <p>
             <strong>{{ 'interaction_type_label' | translate }}:</strong>
@@ -20,6 +20,7 @@
             {{ ctrl.phaseDetails.prevPhasesResponse.join(', ') }}
         </p>
     </div>
+    <h4>{{ 'questions_title_text' | translate }}</h4>
     <table class="table table-striped">
         <thead>
             <tr>
@@ -36,7 +37,7 @@
                 <td>{{ question.text }}</td>
                 <td>{{ question.leftPole }}</td>
                 <td>{{ question.rightPole }}</td>
-                <td>{{ question.range }}</td>
+                <td>1-{{ question.range }}</td>
                 <td>{{ question.justificationRequired ? ('yes_label' | translate) : ('no_label' | translate) }}</td>
                 <td>{{ question.minJustificationLength }}</td>
             </tr>

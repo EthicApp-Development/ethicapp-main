@@ -136,7 +136,9 @@ export function DashboardController($scope, $routeParams, $http,
             }
     
             // Have we reached the last phase?
-            vm.reachedLastPhase = vm.lastPhaseReached();
+            $scope.$applyAsync(() => {
+                vm.reachedLastPhase = vm.lastPhaseReached();
+            });
     
             // Update data for the current phase
             vm.updateDashboardPhaseState(phaseId);

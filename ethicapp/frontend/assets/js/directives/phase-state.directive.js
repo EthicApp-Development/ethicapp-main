@@ -12,11 +12,11 @@ let phaseStateDirective = function() {
             // Detecta cambios en las bindings
             ctrl.$onChanges = function(changes) {
                 if (changes.designType) {
-                    console.debug('DesignType changed:', changes.designType.currentValue);
+                    console.debug('[phaseStateDirective] DesignType changed:', changes.designType.currentValue);
                     ctrl.designType = changes.designType.currentValue;
                 }
                 if (changes.phaseData) {
-                    console.debug('PhaseData changed:', changes.phaseData.currentValue);
+                    console.debug('[phaseStateDirective] PhaseData changed:', changes.phaseData.currentValue);
                     ctrl.phaseData = changes.phaseData.currentValue;
                 }
             };

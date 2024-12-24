@@ -3,27 +3,27 @@ import Enumerable from 'linq';
 export const DashboardDataJoiners = {
     semantic_differential: {
         joinPhaseData: (phaseDescriptor, responses, users, chatMessageCount, phaseState = null) => {
-            sdPhaseDataJoiner(phaseDescriptor, responses, users, chatMessageCount, phaseState)
+            return sdPhaseDataJoiner(phaseDescriptor, responses, users, chatMessageCount, phaseState)
         },
         addGroupInfo: (phaseState, groups) => {
-            addParticipantGroupInfo(phaseData, groups);
+            return addParticipantGroupInfo(phaseData, groups);
         },
         updateGroupStatistics: (phaseState) => {
-            updateGroupStatistics(phaseState);
+            return updateGroupStatistics(phaseState);
         },
     },
     ranking: {
         joinPhaseData: (phaseDescriptor, responses, users, chatMessageCount, phaseState) => {
-            rankingPhaseDataJoiner(phaseDescriptor, responses, users, chatMessageCount, phaseState);
+            return rankingPhaseDataJoiner(phaseDescriptor, responses, users, chatMessageCount, phaseState);
         },
         addGroupInfo: (phaseState, groups) => {
-            addParticipantGroupInfo(phaseData, groups);
+            return addParticipantGroupInfo(phaseData, groups);
         },
         updateGroupStatistics: (phaseState) => {
-            updateGroupStatistics(phaseState);
+            return updateGroupStatistics(phaseState);
         },
         assignRankingClusters: (phaseState) => {
-            assignRankingClusters(phaseState);
+            return assignRankingClusters(phaseState);
         },
     },
 };

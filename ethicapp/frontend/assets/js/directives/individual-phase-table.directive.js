@@ -4,17 +4,17 @@ let individualPhaseTableDirective = function() {
     return {
         restrict: 'E',
         scope: {
-            phaseData: '<',  // Processed data directly passed to the directive
-            designType: '<'  // Design type (e.g., 'ranking', 'semantic_differential')
+            phaseData: '<',
+            designType: '<'
         },
-            template: function(element, atts) {
-            return individualResultsTables[atts.designType] || `<p>Template not found for '${atts.designType}'</p>`;
-        },
+        bindToController: true, // Bind the scope properties to the controller
+        controllerAs: 'iptCtrl', // Alias for the controller
         controller: function($scope) {
+            const iptCtrl = this;
+
             // Preprocessing strategies for different design types
             const preProcessStrategies = {
                 ranking: function(data) {
-                    // Calculate cluster frequencies for ranking design
                     const clusterCounts = {};
                     data.forEach(response => {
                         const cluster = response.responseCluster;
@@ -27,60 +27,79 @@ let individualPhaseTableDirective = function() {
                     }));
                 },
                 semantic_differential: function(data) {
-                    // No preprocessing required for semantic differential
-                    return data;
+                    return data; // No preprocessing needed for semantic differential
                 }
-                // Additional design types can be added here
             };
 
-            // Abstract method to preprocess data based on the design type
-            $scope.preProcessData = function(data, designType) {
+            // Preprocess data based on the design type
+            iptCtrl.preProcessData = function(data, designType) {
                 const strategy = preProcessStrategies[designType];
                 if (!strategy) {
-                    throw new Error(`No pre-processing strategy defined for design type '${designType}'`);
+                    throw new Error(`No preprocessing strategy for design type '${designType}'`);
                 }
                 return strategy(data);
             };
 
-            // Sort responses dynamically based on a selected field
-            $scope.sortBy = function(field) {
-                $scope.reverse = $scope.sortField === field ? !$scope.reverse : false;
-                $scope.sortField = field;
-                $scope.sortedResponses = [...$scope.phaseData.state.responses].sort((a, b) => {
-                    if (a[field] < b[field]) return $scope.reverse ? 1 : -1;
-                    if (a[field] > b[field]) return $scope.reverse ? -1 : 1;
-                    return 0;
-                });
-            };
-
-            $scope.initialize = function() {
-                if (!$scope.phaseData || !$scope.phaseData.state || !$scope.phaseData.descriptor) {
+            // Initialize the directive's state
+            iptCtrl.initialize = function() {
+                if (!iptCtrl.phaseData || !iptCtrl.phaseData.state || !iptCtrl.phaseData.descriptor) {
                     console.error("Invalid phase data structure provided.");
                     return;
                 }
-            
-                $scope.phaseData.state.responses = $scope.phaseData.state.responses || [];
-                $scope.phaseData.descriptor.questions = $scope.phaseData.descriptor.questions || [];
-            
-                if ($scope.phaseData.state.responses.length === 0 || $scope.phaseData.descriptor.questions.length === 0) {
+
+                iptCtrl.phaseData.state.responses = iptCtrl.phaseData.state.responses || [];
+                iptCtrl.phaseData.descriptor.questions = iptCtrl.phaseData.descriptor.questions || [];
+
+                if (iptCtrl.phaseData.state.responses.length === 0 || iptCtrl.phaseData.descriptor.questions.length === 0) {
                     console.warn("No responses or questions available. Initialization skipped.");
                     return;
                 }
-            
-                // Preprocess data using the appropriate strategy for the design type
-                const processedData = $scope.preProcessData(
-                    $scope.phaseData.state.responses, 
-                    $scope.designType
-                );
-            
-                // Update scope with processed data and default sorted responses
-                $scope.phaseData.state.responses = processedData;
-                $scope.sortedResponses = [...processedData];
+
+                const processedData = iptCtrl.preProcessData(iptCtrl.phaseData.state.responses, iptCtrl.designType);
+                iptCtrl.phaseData.state.responses = processedData;
+                iptCtrl.sortedResponses = [...processedData];
             };
-            
-            // Call initialization when the directive is loaded
-            $scope.initialize();
-        }
+
+            // Lifecycle hook: Called when the directive is initialized
+            iptCtrl.$onInit = function() {
+                iptCtrl.initialize();
+            };
+
+            // Lifecycle hook: Reacts to changes in bindings
+            iptCtrl.$onChanges = function(changes) {
+                if (changes.designType && changes.designType.currentValue) {
+                    iptCtrl.designType = changes.designType.currentValue;
+                    console.debug(`[individualPhaseTableDirective] Updated designType: ${iptCtrl.designType}`);
+                }
+
+                if (changes.phaseData && changes.phaseData.currentValue) {
+                    iptCtrl.phaseData = changes.phaseData.currentValue;
+                    console.debug(`[individualPhaseTableDirective] Updated phaseData:`, iptCtrl.phaseData);
+                    iptCtrl.initialize();
+                }
+            };
+
+            // Resolve the template URL dynamically
+            iptCtrl.getTemplateUrl = function() {
+                if (!iptCtrl.designType) {
+                    console.warn(`[individualPhaseTableDirective] Waiting for designType to be ready...`);
+                    return '/assets/static/partials/teacher/micro-partials/default-phase-description.html';
+                }
+
+                const template = individualResultsTables[iptCtrl.designType];
+                if (!template) {
+                    console.warn(`[individualPhaseTableDirective] Template not found for design type: ${iptCtrl.designType}`);
+                    return `/assets/static/partials/teacher/micro-partials/default-template.html`;
+                }
+                console.debug(`[individualPhaseTableDirective] Using template: ${template}`);
+                return template;
+            };
+        },
+        template: `
+            <div>
+                <ng-include src="iptCtrl.getTemplateUrl()"></ng-include>
+            </div>
+        `,
     };
 };
 
