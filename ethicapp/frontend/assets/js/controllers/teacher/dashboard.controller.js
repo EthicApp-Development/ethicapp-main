@@ -195,12 +195,12 @@ export function DashboardController($scope, $routeParams, $http,
     };
 
     vm.updateDashboardPhaseState = async (phaseId) => {
-        let phaseState = vm.dashboardPhaseStates.find(ps => ps.phaseDescriptor.phaseId == phaseId);
+        let phaseState = vm.dashboardPhaseStates.find(ps => ps.descriptor.id == phaseId);
     
         if (!phaseState) {
             phaseState = await vm.loadDashboardPhaseState(phaseId);
             if (phaseState) {
-                $scope.$applyAsync(() => {
+                $scope.$applyAsync(() => {  
                     vm.dashboardPhaseStates.push(phaseState);
                 });
             }

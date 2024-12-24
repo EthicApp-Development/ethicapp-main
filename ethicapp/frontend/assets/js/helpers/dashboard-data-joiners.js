@@ -6,7 +6,7 @@ export const DashboardDataJoiners = {
             return sdPhaseDataJoiner(phaseDescriptor, responses, users, chatMessageCount, phaseState)
         },
         addGroupInfo: (phaseState, groups) => {
-            return addParticipantGroupInfo(phaseData, groups);
+            return addParticipantGroupInfo(phaseState, groups);
         },
         updateGroupStatistics: (phaseState) => {
             return updateGroupStatistics(phaseState);
@@ -17,7 +17,7 @@ export const DashboardDataJoiners = {
             return rankingPhaseDataJoiner(phaseDescriptor, responses, users, chatMessageCount, phaseState);
         },
         addGroupInfo: (phaseState, groups) => {
-            return addParticipantGroupInfo(phaseData, groups);
+            return addParticipantGroupInfo(phaseState, groups);
         },
         updateGroupStatistics: (phaseState) => {
             return updateGroupStatistics(phaseState);
