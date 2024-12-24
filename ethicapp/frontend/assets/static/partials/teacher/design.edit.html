@@ -79,8 +79,8 @@
                             <h4>{{ 'features_title_text' | translate }}</h4>
                             <div toggle-switch phase-mode-value-adapter ng-model="phase.mode" class="ats-switch switch-mini"></div> <label>{{ 'group_phase_label' | translate }}</label>
                             <div ng-show="phase.mode !== 'individual'">
-                                <div toggle-switch phase-mode-value-adapter ng-model="phase.anonymous" class="ats-switch switch-mini"></div> <label>{{ 'use_anonimity_label' | translate }}</label> <br>
-                                <div toggle-switch phase-mode-value-adapter ng-model="phase.chat" class="ats-switch switch-mini"></div> <label>{{ 'use_chat_label' | translate }} </label> <br>
+                                <div toggle-switch ng-model="phase.anonymous" class="ats-switch switch-mini"></div> <label>{{ 'use_anonimity_label' | translate }}</label> <br>
+                                <div toggle-switch ng-model="phase.chat" class="ats-switch switch-mini"></div> <label>{{ 'use_chat_label' | translate }} </label> <br>
                             </div>
                         </div>
                         <div class="col-md-4" style="padding-top: 16px" ng-if="phase.mode !== 'individual'">

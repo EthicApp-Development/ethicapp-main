@@ -72,7 +72,7 @@ router.get("/phases/:id/groups", async (req, res) => {
                 ORDER BY t.id, tu.uid
             `,
             dbcon: config.dbconnString,
-            sqlParams: [id],
+            sqlParams: [rpg2.param('plain', id)],
         });
 
         // Handle no results
@@ -134,7 +134,7 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
                 ORDER BY tu.uid
             `,
             dbcon: config.dbconnString,
-            sqlParams: [phaseId, userId],
+            sqlParams: [rpg2.param('plain', phaseId), rpg2.param('plain', userId)],
         });
 
         // If no group is found for the user, return a 404 error
@@ -155,7 +155,7 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
                 ORDER BY tu.uid
             `,
             dbcon: config.dbconnString,
-            sqlParams: [teamId],
+            sqlParams: [rpg2.param('plain', teamId)],
         });
 
         // Respond with the team details and its participants
@@ -191,7 +191,7 @@ router.post("/phase/:id/groups", async (req, res) => {
                 FROM stages
                 WHERE id = $1
             `,
-            sqlParams: [phaseId],
+            sqlParams: [rpg2.param('plain', phaseId)],
         });
 
         if (sessionResult.length === 0) {
@@ -209,7 +209,7 @@ router.post("/phase/:id/groups", async (req, res) => {
                 INNER JOIN activity a ON d.id = a.design
                 WHERE a.session = $1
             `,
-            sqlParams: [sessionId],
+            sqlParams: [rpg2.param('plain', sessionId)],
         });
 
         if (designResult.length === 0) {
@@ -257,7 +257,7 @@ router.post("/phase/:id/groups", async (req, res) => {
                     VALUES ($1, $2)
                     RETURNING id
                 `,
-                sqlParams: [sessionId, phaseId],
+                sqlParams: [rpg2.param('plain', sessionId), rpg2.param('plain', phaseId)],
             });
 
             let maskCode = 'A'.charCodeAt(0);
@@ -274,7 +274,8 @@ router.post("/phase/:id/groups", async (req, res) => {
                         INSERT INTO teamusers (tmid, uid, anon_mask)
                         VALUES ($1, $2, $3)
                     `,
-                    sqlParams: [team.id, userId, mask],
+                    sqlParams: [rpg2.param('plain', team.id), rpg2.param('plain', userId), 
+                        rpg2.param('plain', mask)],
                 });
                 maskCode++;
             }

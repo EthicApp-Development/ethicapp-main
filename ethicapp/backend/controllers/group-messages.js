@@ -30,7 +30,8 @@ const chatInsertHandlers = {
                 VALUES ($1, $2, $3, $4)
             `,
             dbcon,
-            sqlParams: [userId, phaseId, content, parentId || null],
+            sqlParams: [rpg2.param('plain', userId), rpg2.param('plain', phaseId), 
+                rpg2.param('plain', content), rpg2.param('plain', parentId) || null],
         });
     },
 
@@ -41,7 +42,9 @@ const chatInsertHandlers = {
                 VALUES ($1, $2, $3, $4)
             `,
             dbcon,
-            sqlParams: [userId, questionId, content, parentId || null],
+            sqlParams: [rpg2.param('plain', userId), 
+                rpg2.param('plain', questionId), rpg2.param('plain', content),
+                rpg2.param('plain', parentId) || null],
         });
     },
 };
@@ -116,7 +119,7 @@ router.get("/groups/:group_id/question/:question_id/chat_messages", async (req, 
                 WHERE id = $1
             `,
             dbcon: config.dbconnString,
-            sqlParams: [groupId],
+            sqlParams: [rpg2.param('plain', groupId)],
         });
 
         if (phaseIdResult.length === 0) {
@@ -242,7 +245,7 @@ async function countSemanticDifferentialMessages(phaseId) {
             GROUP BY c.did, u.uid, u.tmid
         `,
         dbcon: config.dbconnString,
-        sqlParams: [phaseId],
+        sqlParams: [rpg2.param('plain', phaseId)],
     });
 
     return results.map(row => ({
@@ -270,7 +273,7 @@ async function countRankingMessages(phaseId) {
             GROUP BY c.stageid, u.uid, u.tmid
         `,
         dbcon: config.dbconnString,
-        sqlParams: [phaseId],
+        sqlParams: [rpg2.param('plain', phaseId)],
     });
 
     return results.map(row => ({
@@ -299,7 +302,7 @@ async function semanticDifferentialChatTranscriptByGroup(groupId, questionId) {
             ORDER BY c.stime ASC
         `,
         dbcon: config.dbconnString,
-        sqlParams: [questionId, groupId],
+        sqlParams: [rpg2.param('plain', questionId), rpg2.param('plain', groupId)],
     });
 }
 
@@ -325,7 +328,7 @@ async function rankingChatTranscriptByGroup(groupId, questionId) {
             ORDER BY s.stime ASC
         `,
         dbcon: config.dbconnString,
-        sqlParams: [groupId],
+        sqlParams: [rpg2.param('plain', groupId)],
     });
 }
 

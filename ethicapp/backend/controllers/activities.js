@@ -618,7 +618,7 @@ router.post("/activities/:session_id/phases", async (req, res) => {
         rpg2.param('plain', anon || false), // Whether the phase is anonymous (default: false)
         rpg2.param('plain', chat || false), // Whether chat is enabled (default: false)
         rpg2.param('plain', session_id),    // The session ID
-        rpg2.param('plain', prev_ans || null), // Previous answers (optional)
+        rpg2.param('plain', JSON.stringify(prev_ans) || null), // Previous answers (optional)
         rpg2.param('plain', question || null), // Question associated with the phase (optional)
         rpg2.param('plain', grouping || null), // Grouping algorithm (optional)
     ];

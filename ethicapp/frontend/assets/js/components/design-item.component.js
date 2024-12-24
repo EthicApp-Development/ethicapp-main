@@ -1,6 +1,6 @@
 const DesignItemController = function() {
     this.isFunction = function(variable) {
-        console.log("[DesignItemController::isFunction]", variable, typeof variable === 'function');
+        // console.log("[DesignItemController::isFunction]", variable, typeof variable === 'function');
         return typeof variable === 'function';
     };
 }

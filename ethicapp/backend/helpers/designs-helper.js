@@ -17,7 +17,7 @@ export async function getDesignById(id) {
                 FROM designs
                 WHERE id = $1
             `,
-            sqlParams: [id],
+            sqlParams: [rpg2.param('plain', id)],
         });
 
         // If no design is found, return null
@@ -51,7 +51,7 @@ export async function getDesignTypeByPhaseId(phaseId) {
                 FROM stages
                 WHERE id = $1
             `,
-            sqlParams: [phaseId],
+            sqlParams: [rpg2.param('plain', phaseId)],
         });
 
         if (!sessionResult) {
@@ -68,7 +68,7 @@ export async function getDesignTypeByPhaseId(phaseId) {
                 FROM activity
                 WHERE session = $1
             `,
-            sqlParams: [sessionId],
+            sqlParams: [rpg2.param('plain', sessionId)],
         });
 
         if (!activityResult) {
