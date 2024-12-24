@@ -56,7 +56,7 @@
             <uib-accordion close-others="false">
                 <div uib-accordion-group class="panel-default" 
                     ng-repeat="phase in dc.dashboardPhaseStates track by phase.id" is-open="true" 
-                    heading="{{ 'phase_title_text' | translate }} {{ phaseData.descriptor.number }}">
+                    heading="{{ 'phase_title_text' | translate }} {{ phase.descriptor.number }}">
                     <phase-description phase-data="phase" design-object="dc.designObj"></phase-description>
                     <phase-state phase-data="phase" design-type="dc.designObj.metainfo.type"></phase-state>
                 </div>

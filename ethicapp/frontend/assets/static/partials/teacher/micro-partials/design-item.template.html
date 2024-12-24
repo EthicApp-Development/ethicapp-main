@@ -18,7 +18,7 @@
                     <div ng-if="$ctrl.isOwner" class="d-inline-flex align-items-center">
                         <img class="locked-svg"
                             src="/assets/images/iconsets/gray-lineart/design-lock-active.svg" alt="locked" ng-show="$ctrl.design.locked">
-                        <button ng-show="$ctrl.isFunction($ctrl.onLaunch) && $ctrl.design.valid" class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onLaunch">
+                        <button ng-show="$ctrl.isFunction($ctrl.onLaunch) && $ctrl.design.valid" class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onLaunch($ctrl.design.id)">
                             <i class="fa fa-rocket"></i> {{ 'launch_activity_button_text' | translate }}
                         </button>
                         <button ng-show="$ctrl.isFunction($ctrl.onEdit) && !$ctrl.design.locked" class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onEdit($ctrl.design.id)">

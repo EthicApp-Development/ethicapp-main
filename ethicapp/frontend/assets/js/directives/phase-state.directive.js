@@ -5,19 +5,27 @@ let phaseStateDirective = function() {
             designType: '<',
             phaseData: '<'
         },
-        template: `
-            <div>
-                <h5>{{ "phase_title_text" | translate }} {{ phaseData.descriptor.number }}</h5>
-                <div ng-if="phaseData.descriptor.mode == 'team'">
-                    <individual-phase-table phase-data="phaseData" design-type="designType">
-                    </individual-phase-table>
-                </div>
-                <div ng-if="phaseObj.descriptor.mode == 'team'">
-                    <group-phase-table phase-data="phaseData" design-type="designType">
-                    </group-phase-table>
-                </div>
-            </div>
-        `
+        bindToController: true,
+        controllerAs: 'ctrl',
+        controller: function() {
+            const ctrl = this;
+            // Detecta cambios en las bindings
+            ctrl.$onChanges = function(changes) {
+                if (changes.designType) {
+                    console.debug('DesignType changed:', changes.designType.currentValue);
+                    ctrl.designType = changes.designType.currentValue;
+                }
+                if (changes.phaseData) {
+                    console.debug('PhaseData changed:', changes.phaseData.currentValue);
+                    ctrl.phaseData = changes.phaseData.currentValue;
+                }
+            };
+
+            ctrl.$onInit = function() {
+                console.debug('[phaseStateDirective] Initialized');
+            };
+        },
+        templateUrl: "/assets/static/partials/teacher/micro-partials/phase-state.template.html"
     };
 };
 

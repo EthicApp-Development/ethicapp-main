@@ -53,22 +53,31 @@ let individualPhaseTableDirective = function() {
                 });
             };
 
-            // Initialize table data
             $scope.initialize = function() {
-                if (!$scope.phaseData.state.responses || !$scope.phaseData.descriptor.questions) {
-                    console.error("Invalid phase data provided.");
+                if (!$scope.phaseData || !$scope.phaseData.state || !$scope.phaseData.descriptor) {
+                    console.error("Invalid phase data structure provided.");
                     return;
                 }
-
+            
+                $scope.phaseData.state.responses = $scope.phaseData.state.responses || [];
+                $scope.phaseData.descriptor.questions = $scope.phaseData.descriptor.questions || [];
+            
+                if ($scope.phaseData.state.responses.length === 0 || $scope.phaseData.descriptor.questions.length === 0) {
+                    console.warn("No responses or questions available. Initialization skipped.");
+                    return;
+                }
+            
                 // Preprocess data using the appropriate strategy for the design type
-                const processedData = $scope.preProcessData($scope.phaseData.state.responses, 
-                    $scope.designType);
-
+                const processedData = $scope.preProcessData(
+                    $scope.phaseData.state.responses, 
+                    $scope.designType
+                );
+            
                 // Update scope with processed data and default sorted responses
                 $scope.phaseData.state.responses = processedData;
                 $scope.sortedResponses = [...processedData];
             };
-
+            
             // Call initialization when the directive is loaded
             $scope.initialize();
         }
