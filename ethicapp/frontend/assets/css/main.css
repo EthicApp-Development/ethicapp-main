@@ -2353,7 +2353,7 @@ h2{
     animation: fadeOut 5.0s ease-in-out forwards;
 }
 
-.designs-list .toast-container ul, li {
+.designs-list .toast-container ul, .designs-list .toast-containerli {
     list-style: none !important;
     margin: 0;
     padding: 0;
@@ -2614,4 +2614,26 @@ h2{
     color: #000;
     background: #eeeeee;
   }
-  
+
+.list-with-dots {
+    list-style-type: disc !important; /* Set bullet style to filled dots */
+    list-style-position: outside; /* Place bullets outside the list item */
+    padding-left: 20px; /* Indent the list */
+}
+
+/* Default tab header style */
+.nav-tabs > li {
+    border: 1px solid transparent; /* Default transparent border */
+}
+
+/* Highlighted tab header style */
+.nav-tabs > li.custom-tab-header {
+    border-bottom: 3px solid #007bff; /* Blue bottom border for active tab */
+    border-top: 3px solid #007bff;    /* Optional: Top border for more emphasis */
+}
+
+/* Style for active and hover states */
+.nav-tabs > li.custom-tab-header > a {
+    color: #007bff; /* Blue text color for active or custom tab */
+    font-weight: bold; /* Optional: Make the font bold */
+}

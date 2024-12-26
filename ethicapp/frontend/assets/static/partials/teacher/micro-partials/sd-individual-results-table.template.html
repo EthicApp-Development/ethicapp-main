@@ -1,5 +1,6 @@
 
-<table class="table table-striped">
+<p ng-if="iptCtrl.phaseData.state.responses.length == 0">No responses currently available, waiting for participants to submit them.</p>
+<table class="table table-striped" ng-if="iptCtrl.phaseData.state.responses.length > 0">
     <thead>
         <tr>
             <th>{{ 'participant_column_header' | translate }}</th>

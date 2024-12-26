@@ -1,4 +1,5 @@
-<table class="table table-striped table-sortable">
+<p ng-if="iptCtrl.sortedResponses.length == 0">No responses currently available, waiting for participants to submit them.</p>
+<table class="table table-striped table-sortable" ng-if="iptCtrl.sortedResponses.length > 0">
     <thead>
         <tr>
             <th sortable-column="responseCluster" reverse="reverse" on-sort="sortBy(field)">
@@ -12,7 +13,7 @@
         </tr>
     </thead>
     <tbody>
-        <tr ng-repeat="response in sortedResponses track by response.uid">
+        <tr ng-repeat="response in iptCtrl.sortedResponses track by response.uid">
             <td>{{ response.clusterCount }}</td>
             <td>{{ response.userName }}</td>
             <td>{{ response.role }}</td>

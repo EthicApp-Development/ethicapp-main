@@ -13,6 +13,12 @@ export function DashboardController($scope, $routeParams, $http,
     vm.userList = [];
     vm.reachedLastPhase = false;
     vm.dashboardPhaseStates = [];
+    
+    vm.selectedTab = 0; // Default to the first tab
+
+    vm.selectTab = function(index) {
+        vm.selectedTab = index; // Update the selected tab index
+    };
 
     vm.init = async function () {
         let id = $routeParams.id;

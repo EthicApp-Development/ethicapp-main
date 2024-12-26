@@ -30,37 +30,53 @@
             <div ng-show="dc.activeTab === 'info'" class="margin-top-8">
                 <activity-description activity="dc.activityDescriptor" enable-link="false"></activity-description>
                 <activity-controls is-last-phase="dc.reachedLastPhase" is-finished="dc.isActivityFinished" parent-ctrl="dc"></activity-controls>              
+                <!-- Horizontal Rule -->
+                <hr>
+                <!-- Activity Phases Section -->
+                <div class="row" ng-if="dc.dashboardPhaseStates && dc.dashboardPhaseStates.length === 0">
+                    <div class="col-md-12">
+                        <h3 style="margin-bottom: 1em;">{{ 'activity_progress_title' | translate }}</h3>
+                        <div class="alert alert-warning" role="alert">
+                            <p>Para comenzar la actividad debes dar el código de acceso a los participantes y luego iniciar la primera fase.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" ng-if="dc.dashboardPhaseStates && dc.dashboardPhaseStates.length > 0">
+                    <div class="col-md-12">
+                        <h3 style="margin-bottom: 1em;">{{ 'activity_phases_title' | translate }}</h3>
+                        <div>
+                            <ul class="nav nav-tabs" role="tablist">
+                                <!-- Tab headers -->
+                                <li role="presentation" ng-repeat="phase in dc.dashboardPhaseStates track by $index" 
+                                    ng-class="{active: dc.selectedTab === $index}">
+                                    <a href="" ng-click="dc.selectTab($index)" role="tab">
+                                        {{ 'phase_title_text' | translate }} {{ phase.descriptor.number }}
+                                    </a>
+                                </li>
+                            </ul>
+                        
+                            <div class="tab-content">
+                                <div role="tabpanel" class="tab-pane" style="margin-bottom: 2em; padding:1em; border-bottom: 1px solid #ddd; border-left: 1px solid #ddd; border-right: 1px solid #ddd;"
+                                     ng-class="{active: dc.selectedTab === $index}" 
+                                     id="phase-{{ $index }}" 
+                                     ng-if="dc.dashboardPhaseStates.length > 0"
+                                     ng-repeat="phase in dc.dashboardPhaseStates track by $index">
+                                    <phase-description phase-data="phase" design-object="dc.designObj"></phase-description>
+                                    <phase-state phase-data="phase" design-type="dc.designObj.type"></phase-state>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div ng-show="dc.activeTab === 'users'" class="margin-top-8">
                 <div class="panel panel-default">
                     <div class="panel-body">
-                        <p>{{'connected_users_colon' | translate}} {{activityStateDescriptor.users.length}}</p>
+                        <p>{{ 'connected_users_colon' | translate }} {{ !activityStateDescriptor.users ? 0 : activityStateDescriptor.users.length }}</p>
                     </div>
                 </div>
                 <connected-users session-id="{{dc.sessionId}}">
             </div>
-        </div>
-    </div>
-
-    <!-- Horizontal Rule -->
-    <div class="row">
-        <div class="col-md-12">
-            <hr style="border: 1px solid #ccc; margin: 1rem 0;">
-        </div>
-    </div>
-
-    <!-- Activity Phases Section -->
-    <div class="row" ng-if="dc.dashboardPhaseStates && dc.dashboardPhaseStates.length > 0">
-        <div class="col-md-12">
-            <h3>{{ 'activity_phases_title' | translate }}</h3>
-            <uib-accordion close-others="false">
-                <div uib-accordion-group class="panel-default" 
-                    ng-repeat="phase in dc.dashboardPhaseStates track by $index" is-open="true" 
-                    heading="{{ 'phase_title_text' | translate }} {{ phase.descriptor.number }}">
-                    <phase-description phase-data="phase" design-object="dc.designObj"></phase-description>
-                    <phase-state phase-data="phase" design-type="dc.designObj.type"></phase-state>
-                </div>
-            </uib-accordion>
         </div>
     </div>
 </div>

@@ -9,7 +9,6 @@ let phaseStateDirective = function() {
         controllerAs: 'ctrl',
         controller: function() {
             const ctrl = this;
-            // Detecta cambios en las bindings
             ctrl.$onChanges = function(changes) {
                 if (changes.designType) {
                     console.debug('[phaseStateDirective] DesignType changed:', changes.designType.currentValue);

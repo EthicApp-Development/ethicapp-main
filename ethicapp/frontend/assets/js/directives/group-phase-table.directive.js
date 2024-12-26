@@ -7,10 +7,11 @@ let groupPhaseTableDirective = function() {
             phaseData: '<',  // Processed group-phase data
             designType: '<'  // Design type ('ranking', 'semantic_differential', etc.)
         },
-        template: function(element, atts) {
-            return groupResultsTables[atts.designType] || `<p>Template not found for '${atts.designType}'</p>`;
-        },
+        bindToController: true, // Bind the scope properties to the controller
+        controllerAs: 'gptCtrl', // Alias for the controller        
         controller: function($scope) {
+            const gptCtrl = this;
+
             // Define statistics calculators for each design type
             const statisticsCalculators = {
                 ranking: function(groupData, questions) {
@@ -57,34 +58,67 @@ let groupPhaseTableDirective = function() {
             };
 
             // General function to calculate statistics based on design type
-            $scope.calculateGroupStatistics = function(groupData, questions) {
-                const calculator = statisticsCalculators[$scope.designType];
+            gptCtrl.calculateGroupStatistics = function(groupData, questions) {
+                const calculator = statisticsCalculators[gptCtrl.designType];
                 if (!calculator) {
-                    throw new Error(`No statistics calculator defined for design type: '${$scope.designType}'`);
+                    throw new Error(`No statistics calculator defined for design type: '${gptCtrl.designType}'`);
                 }
                 return calculator(groupData, questions);
             };
 
             // Initialize data
-            $scope.initialize = function() {
-                if (!$scope.phaseData.state.responses || !$scope.phaseData.descriptor.questions) {
+            gptCtrl.initialize = function() {
+                if (!gptCtrl.phaseData.state.responses || !gptCtrl.phaseData.descriptor.questions) {
                     console.error("Invalid phase data provided.");
                     return;
                 }
 
-                const groupData = $scope.phaseData.state.responses;
-                const questions = $scope.phaseData.descriptor.questions;
+                const groupData = gptCtrl.phaseData.state.responses;
+                const questions = gptCtrl.phaseData.descriptor.questions;
 
                 // Preprocess data based on the design type
-                const processedData = $scope.calculateGroupStatistics(groupData, questions);
+                const processedData = gptCtrl.calculateGroupStatistics(groupData, questions);
 
                 // Update scope with processed data
-                $scope.sortedResponses = [...processedData]; // Default sorted responses
+                gptCtrl.sortedResponses = [...processedData]; // Default sorted responses
             };
 
-            // Call initialize when directive is loaded
-            $scope.initialize();
-        }
+            // Lifecycle hook: Reacts to changes in bindings
+            gptCtrl.$onChanges = function(changes) {
+                if (changes.designType && changes.designType.currentValue) {
+                    gptCtrl.designType = changes.designType.currentValue;
+                    console.debug(`[individualPhaseTableDirective] Updated designType: ${gptCtrl.designType}`);
+                }
+
+                if (changes.phaseData && changes.phaseData.currentValue) {
+                    gptCtrl.phaseData = changes.phaseData.currentValue;
+                    console.debug(`[groupPhaseTableDirective] Updated phaseData:`, gptCtrl.phaseData);
+
+                    // Only initialize when bindings are ready
+                    gptCtrl.initialize();
+                }
+            };
+
+            // Resolve the template URL dynamically
+            gptCtrl.getTemplateUrl = function() {
+                if (!gptCtrl.designType) {
+                    console.warn(`[groupPhaseTableDirective] Waiting for designType to be ready...`);
+                    return '/assets/static/partials/teacher/micro-partials/default-phase-description.html';
+                }
+
+                const template = groupResultsTables[gptCtrl.designType];
+                if (!template) {
+                    console.warn(`[groupPhaseTableDirective] Template not found for design type: ${gptCtrl.designType}`);
+                    return `/assets/static/partials/teacher/micro-partials/default-template.html`;
+                }
+                console.debug(`[groupPhaseTableDirective] Using template: ${template}`);
+                return template;
+            };            
+        },
+        template: `
+        <div>
+            <ng-include src="gptCtrl.getTemplateUrl()"></ng-include>
+        </div>`,
     };
 };
 

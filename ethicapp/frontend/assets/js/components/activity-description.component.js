@@ -1,4 +1,4 @@
-import { getNameByCode } from "../../../../common/modules/session-status.js";
+import * as StatusCode from "../../../../common/modules/session-status.js";
 
 const activityDescriptionComponent = {
     bindings: {
@@ -18,9 +18,11 @@ const activityDescriptionComponent = {
         };
 
         this.getReadableStatus = function(value) {
-            return getNameByCode(value);
+            // Convert name to code if needed
+            const code = isNaN(value) ? StatusCode.getStatusCode(value) : value;
+            return StatusCode.getNameByCode(code);
         };
-
+        
         this.isFunction = function(variable) {
             return typeof variable === 'function';
         };
