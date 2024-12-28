@@ -1,0 +1,13 @@
+
+<div class="design-viewer">
+    <div uib-accordion close-others="false">
+        <div uib-accordion-group class="panel-default phase-editor-item-heading" 
+            ng-repeat="phase in ctrl.design.phases track by $index"
+            is-open="true" style="margin-bottom: 1em">
+            <div uib-accordion-heading>
+                <h4>{{ 'phase_title_prefix' | translate }} {{ $index + 1 }}</h4>
+            </div>
+            <phase-description phase-number="$index + 1" design-object="ctrl.design"></phase-description>
+        </div>
+    </div>      
+</div>

@@ -30,13 +30,13 @@ import { ContentModalController } from "../../controllers/teacher/content_modal_
 import { CreateDesignController } from "../../controllers/teacher/create_design.controller.js";
 import { DashboardController } from "../../controllers/teacher/dashboard.controller.js";
 import { DesignAttachmentsController } from "../../controllers/teacher/design-attachments-controller.js";
-import { DesignViewController } from "../../controllers/teacher/design-view.controller.js";
 import { DocumentsController } from "../../controllers/teacher/documents.controller.js";
 import { EthicsModalController } from "../../controllers/teacher/ethics_modal_controller.js";
 import { ErrorController } from "../../controllers/teacher/error.controller.js";
 import { VoidController } from "../../controllers/common/void.controller.js";
 import { ngQuillConfigProvider } from "../../helpers/util.js";
 import { DesignEditorController } from "../../controllers/teacher/design-editor.controller.js";
+import { DesignViewerController } from "../../controllers/teacher/design-viewer.controller.js";
 
 import { SessionSocketService } from "../../services/session-socket.service.js";
 app.factory('SessionSocketService', SessionSocketService);
@@ -144,8 +144,8 @@ app.controller("DashboardController",
         "ActivityStateService", "ActivityCatalogService", "DesignCatalogService", DashboardController]);  
 app.controller("DesignAttachmentsController", 
     ["$scope", "DesignStateService" ,"$http", "Notification", "$timeout", DesignAttachmentsController]);
-app.controller("DesignViewController", 
-    ["$scope", "$routeParams", "DesignCatalogService", DesignViewController]);
+app.controller("DesignViewerController", 
+    ["$scope", "$routeParams", "DesignCatalogService", DesignViewerController]);
 app.controller("DocumentsController", 
     ["$scope", "$http", "Notification", "$timeout", "ActivityStateService",
         DocumentsController]);
@@ -223,6 +223,7 @@ import phaseModeValueAdapter from "../../directives/phase-mode-value-adapter.dir
 import phaseDeleterDirective from "../../directives/phase-deleter.directive.js";
 import validateDesignDirective from '../../directives/validate-design.directive.js';
 import validatePhaseDirective from '../../directives/validate-phase.directive.js';
+import { designViewerDirective } from '../../directives/design-viewer.directive.js';
 
 app.directive("connectedUsers", connectedUsersDirective);
 app.directive("activityControls", activityControlsDirective);
@@ -233,6 +234,7 @@ app.directive("individualPhaseTable", individualPhaseTableDirective);
 app.directive("phaseModeValueAdapter", phaseModeValueAdapter);
 app.directive("validateDesign", validateDesignDirective);
 app.directive("validatePhase", validatePhaseDirective);
+app.directive("designViewer", designViewerDirective);
 app.directive("phaseDeleter", ["$translate", phaseDeleterDirective]);
 
 app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateService", 

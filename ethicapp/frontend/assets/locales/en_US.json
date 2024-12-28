@@ -236,6 +236,8 @@
 	"available_designs_colon": "Select a design from your collection:",
 	"activity_information_tab_title": "Information",
 	"activity_users_tab_title": "Users",
+	"activity_design_tab_title": "Design",
+	"design_explanation_text": "This activity design is composed of the following phases:",
 	"connected_users_colon": "Connected users:",
 	"phase_title_text": "Phase",
 	"edit_design_title": "Edit Design",

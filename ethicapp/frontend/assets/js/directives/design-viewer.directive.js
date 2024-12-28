@@ -1,0 +1,35 @@
+let designViewerDirective = function() {
+    return {
+        restrict: 'E',
+        scope: {
+            design: '<'
+        },
+        bindToController: true,
+        controllerAs: 'ctrl',
+        controller: function($scope) {
+            const ctrl = this;
+
+            ctrl.$onInit = function() {
+
+            };
+
+            ctrl.$onChanges = function(changes) {
+                if (changes.design) {
+                    console.debug('[designViewerDirective] design changed:', changes.design.currentValue);
+                    ctrl.design = changes.design.currentValue;
+                }
+            };            
+
+            ctrl.getTemplateUrl = function() {
+                if (!ctrl.design) {
+                    console.warn(`[designViewerDirective] Waiting for designObject to be ready...`);
+                }                
+                return "/assets/static/partials/teacher/micro-partials/design-viewer.template.html";
+            };
+            
+        },
+        template: '<div ng-include="ctrl.getTemplateUrl()"></div>'
+    };
+};
+
+export { designViewerDirective };

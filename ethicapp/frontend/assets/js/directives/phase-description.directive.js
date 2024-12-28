@@ -28,7 +28,7 @@ const phaseDescriptionDirective = function() {
     return {
         restrict: 'E',
         scope: {
-            phaseData: '<',
+            phaseNumber: '<',
             designObject: '<'
         },
         bindToController: true,
@@ -39,7 +39,7 @@ const phaseDescriptionDirective = function() {
             ctrl.$onInit = function() {
                 console.debug(`[phaseDescription] onInit`);
             
-                const phaseNumber = ctrl.phaseData.descriptor.number;
+                const phaseNumber = ctrl.phaseNumber;
                 if (!phaseNumber) {
                     console.error(`[phaseDescription] Invalid phase number: ${phaseNumber}`);
                     return;

@@ -1,125 +1,26 @@
-<div class="container" ng-controller="DesignEditorController as dec">
+<div class="container" ng-controller="DesignViewerController as dvc">
     <div class="row">
-        <div class="col-md-12 mb-2">
-            <h2><i class="fa fa-paint-brush"></i> {{ 'view_design_title' | translate }}: {{ dec.design.metainfo.title }}</h2>
+        <div class="col-md-12">
+            <div>
+                <h2><i class="fa fa-paint-brush"></i> {{ 'view_design_title' | translate }}: {{ dvc.design.metainfo.title }}</h2>
+            </div>
+            <div style="margin-top: 2em">
+                <design-item
+                    design="dvc.design"
+                    is-owner="dvc.design.userOwned"
+                    on-launch="dvc.handleLaunch"
+                    on-edit="dvc.handleEdit"
+                    on-toggle-public="dvc.designPublic">
+                </design-item>                
+            </div>
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-body">
-            <div class="row">
-                <div class="col-md-12">
-                    <design-error-summary
-                        validation-errors="dec.validationErrors"
-                        scroll-to="dec.scrollToPhase(phaseKey)">
-                    </design-error-summary>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-12 text-center">
-                    <div class="action-buttons">
-                        <button class="btn btn-default btn-sm" ng-click="navigateTo('/designs/edit/{{dec.designId}}')">
-                            <i class="fa fa-paint-brush"></i> {{ 'edit_design_button_text' | translate }}
-                        </button>
-                    </div>
-                </div>
-            </div>
+    <div class="row">
+        <div class="col-md-12 mb-2">
+            <h4 style="margin-top:1em; margin-bottom:2em">
+                {{ 'design_explanation_text ' | translate }}
+            </h4>
+            <design-viewer design="dvc.design"></design-viewer>            
         </div>
-    </div>    
-
-    <div class="design-editor" validate-design
-            phases="dec.design.phases"
-            on-validate="dec.handleValidationResult(result)">
-        <div uib-accordion close-others="false">
-            <div uib-accordion-group class="panel-default phase-editor-item-heading" 
-                ng-repeat="phase in dec.design.phases track by $index"
-                is-open="dec.accordionState[$index]">
-
-                <div ng-init="phaseIndex = $index">
-                    <div uib-accordion-heading ng-attr-id="phase_{{phaseIndex+1}}">
-                        <div style="background: #f5f5f5;">
-                            <div class="d-flex align-items-center">
-                                <h4>{{ 'phase_title_prefix' | translate }} {{ phaseIndex + 1 }}</h4>
-                                <i ng-class="{'fa-solid fa-down-left-and-up-right-to-center': dec.accordionState[phaseIndex], 
-                                            'fa-solid fa-up-right-and-down-left-from-center': !dec.accordionState[phaseIndex]}" 
-                                    class="fa-solid me-2"
-                                    ng-click="dec.toggleAccordionState(phaseIndex, $event)">
-                                </i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <h4>{{ 'features_title_text' | translate }}</h4>
-                            <div toggle-switch phase-mode-value-adapter ng-model="phase.mode" class="ats-switch switch-mini"></div> <label>{{ 'group_phase_label' | translate }}</label>
-                            <div ng-show="phase.mode !== 'individual'">
-                                <div toggle-switch phase-mode-value-adapter ng-model="phase.anonymous" class="ats-switch switch-mini"></div> <label>{{ 'use_anonimity_label' | translate }}</label> <br>
-                                <div toggle-switch phase-mode-value-adapter ng-model="phase.chat" class="ats-switch switch-mini"></div> <label>{{ 'use_chat_label' | translate }} </label> <br>
-                            </div>
-                        </div>
-                        <div class="col-md-4" style="padding-top: 16px" ng-if="phase.mode !== 'individual'">
-                            <grouping-mode-selector 
-                                phase="phase" 
-                                phase-index="phaseIndex" 
-                                design="dec.design" 
-                                validate-callback="dec.handleValidationResult(result)">
-                            </grouping-mode-selector>
-                        
-                            <div style="margin-top:0.5em" ng-if="dec.design.phases[phaseIndex].grouping_algorithm !== 'preserve'">
-                                <label>{{ 'group_size_label' | translate }}</label>
-                                <numeric-input-with-spinbutton 
-                                    value="phase.stdntAmount" 
-                                    min="2" 
-                                    max="10" 
-                                    step="1" 
-                                    id="phaseNumericInput">
-                                </numeric-input-with-spinbutton>
-                            </div>
-                        </div>
-                        <div class="col-md-4" style="padding-top: 4px">
-                            <previous-phases-selector phase="phase" phase-index="phaseIndex" design="dec.design"></previous-phases-selector>
-                        </div>
-                    </div>
-                    <div class="row" validate-phase
-                        design-type="dec.design.type"
-                        phase="phase"
-                        phase-number="phaseIndex+1"
-                        on-validate="dec.handleValidationResult(result)">
-                        <div class="col-md-12">
-                            <div style="margin-top: 1em" ng-switch="dec.design.type">
-                                <hr>
-                                <h4 ng-switch on="dec.design.type">
-                                    <span ng-switch-when="semantic_differential">{{ 'questions_title_text' | translate }}</span>
-                                    <span ng-switch-when="ranking">{{ 'items_title_text' | translate }}</span>
-                                </h4>
-                                <div ng-switch on="dec.design.type">
-                                    <div ng-switch-when="semantic_differential" ng-repeat="item in phase.questions track by $index">
-                                        <div>
-                                            <sd-item-editor 
-                                                phase-number="phaseIndex+1"
-                                                question="item" 
-                                                question-number="$index+1"
-                                                show-separator="false" 
-                                                validate-callback="dec.handleValidationResult(result)">
-                                            </sd-item-editor>
-                                        </div>
-                                    </div>
-                                    <div ng-switch-when="ranking">
-                                        <input style="margin-top: 1em;" type="checkbox"></input> <label>{{ 'item_random_order_label' | translate }}</label>
-                                        <div ng-repeat="item in phase.roles track by $index">
-                                            <ranking-item-editor 
-                                                phase-number="phaseIndex+1"
-                                                item="item"
-                                                item-number="$index+1"
-                                                validate-callback="dec.handleValidationResult(result)">
-                                            </ranking-item-editor>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>      
     </div>
 </div>
