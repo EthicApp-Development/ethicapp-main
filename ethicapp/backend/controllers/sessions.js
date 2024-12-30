@@ -20,7 +20,7 @@ router.get("/seslist", (req, res) => {
                 ngApp:        "SessionsList",
                 controller:   "SessionsListController",
                 scripts:    [
-                    ["js/dist/user-common.js", "js/dist/user-common.min.js"],
+                    ["js/dist/sessions.js", "js/dist/sessions.min.js"]
                 ],
                 renderScripts: (scripts) => ViewsHelper.renderScripts(scripts, res)
             });

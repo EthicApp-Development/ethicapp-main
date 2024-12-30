@@ -224,6 +224,8 @@ import phaseDeleterDirective from "../../directives/phase-deleter.directive.js";
 import validateDesignDirective from '../../directives/validate-design.directive.js';
 import validatePhaseDirective from '../../directives/validate-phase.directive.js';
 import { designViewerDirective } from '../../directives/design-viewer.directive.js';
+import copyToClipboardDirective from '../../directives/copy-to-clipboard.directive.js';
+import tooltipDirective from   '../../directives/tooltip.directive.js';
 
 app.directive("connectedUsers", connectedUsersDirective);
 app.directive("activityControls", activityControlsDirective);
@@ -235,6 +237,8 @@ app.directive("phaseModeValueAdapter", phaseModeValueAdapter);
 app.directive("validateDesign", validateDesignDirective);
 app.directive("validatePhase", validatePhaseDirective);
 app.directive("designViewer", designViewerDirective);
+app.directive("tooltip", ["$translate", "$timeout", tooltipDirective]);
+app.directive("copyToClipboard", copyToClipboardDirective);
 app.directive("phaseDeleter", ["$translate", phaseDeleterDirective]);
 
 app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateService", 

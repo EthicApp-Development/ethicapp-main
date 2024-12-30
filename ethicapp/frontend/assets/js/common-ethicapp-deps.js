@@ -7,7 +7,6 @@ import 'angular-translate-loader-static-files';
 import 'socket.io-client';
 window.io = require('socket.io-client');
 import 'angular-socket-io';
-import 'angular-intro.js';
 import 'ua-parser-js';
 import 'angular-ui-tree';
 import 'angular-timer';

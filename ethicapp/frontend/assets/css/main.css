@@ -8,6 +8,7 @@ html{
 }
 
 body{
+    --global-font-family: "Avenir", "Helvetica Neue", "Helvetica", "Verdana", sans-serif;
     font-family: "Avenir", "Helvetica Neue", "Helvetica", "Verdana", sans-serif;
     padding: 0;
     margin: 0;
@@ -2636,4 +2637,41 @@ h2{
 .nav-tabs > li.custom-tab-header > a {
     color: #007bff; /* Blue text color for active or custom tab */
     font-weight: bold; /* Optional: Make the font bold */
+}
+
+.fixed-width-font {
+    font-family: "Courier New", "Courier", monospace; /* Use monospace font for fixed-width text */
+}
+
+.white-against-black-bg {
+    color: white; /* White text color */
+    background-color: black; /* Black background color */
+}
+
+.bold-text {
+    font-weight: bold; /* Bold text */
+}
+
+.black-bg-rounded-corners {
+    border: 1px solid black;
+    background-color: black; /* Black background color */
+    border-radius: 2px; /* Rounded corners */
+}
+
+.copy-to-clipboard-parent {
+    position: relative; /* Position relative for absolute child */
+    display: inline-block;
+}
+
+.custom-tooltip {
+    background-color: #333;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    position: absolute;
+    z-index: 1000;
+    white-space: nowrap;
+    display: none;
+    font-family: var(--global-font-family); /* Usa la fuente del body */
 }

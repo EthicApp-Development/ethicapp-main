@@ -1,4 +1,6 @@
-export function SessionsListController($scope, $http, $socket, $uibModal, ngIntroService) {
+import * as UAParser from 'ua-parser-js';
+
+export function SessionsListController($scope, $http, $socket, $uibModal) {
     var self = $scope;
     self.sessions = [];
     self.sesOpen = false;
@@ -177,16 +179,18 @@ export function SessionsListController($scope, $http, $socket, $uibModal, ngIntr
         doneLabel:          "Listo"
     };
 
-    ngIntroService.setOptions(introOptions);
-
-    self.startTour = function () {
-        ngIntroService.start();
-    };
-
     self.getDeviceInfo = function () {
-        var p = new UAParser();
-        return (p.getDevice().type || "Desktop") + " / " +
-         p.getOS().name + " / " + p.getBrowser().name;
+        try {
+            const parser = new UAParser.UAParser();
+            const deviceType = parser.getDevice().type || "Desktop";
+            const osName = parser.getOS().name || "Unknown OS";
+            const browserName = parser.getBrowser().name || "Unknown Browser";
+    
+            return `${deviceType} / ${osName} / ${browserName}`;
+        } catch (error) {
+            console.error("Failed to parse device info:", error);
+            return "Unknown Device / Unknown OS / Unknown Browser";
+        }
     };
 
     self.init();

@@ -5,7 +5,7 @@ import { SessionsListController } from "../../controllers/student/sessions-list.
 import { LangFilter } from "../../filters/lang.filter.js";
 
 let adpp = angular.module("SessionsList", 
-    ["ui.bootstrap", "btford.socket-io", "angular-intro", "pascalprecht.translate"]);
+    ["ui.bootstrap", "btford.socket-io", "pascalprecht.translate"]);
 
 adpp.factory("$socket", ["socketFactory", function (socketFactory) {
     return socketFactory();
@@ -32,7 +32,7 @@ adpp.controller("LocalesController",
     ["$translate", "$scope", "$rootScope", LocalesController]);
 
 adpp.controller("SessionsListController",
-    ["$scope", "$http", "$socket", "$uibModal", "ngIntroService", SessionsListController]
+    ["$scope", "$http", "$socket", "$uibModal", SessionsListController]
 );
 
 export default adpp;
