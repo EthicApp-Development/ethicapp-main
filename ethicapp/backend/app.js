@@ -26,7 +26,7 @@ import groups from "./controllers/groups.js";
 import group_messages from "./controllers/group-messages.js";
 import content_analysis from "./controllers/content-analysis-controller.js";
 import admin_panel from "./controllers/admin-panel-api.js";
-//import visor from "./controllers/visor.js";
+import legacy_ethics from "./controllers/legacy-ethics.js";
 
 import fs from "fs";
 
@@ -142,7 +142,7 @@ app.use("/", validateSession, groups);
 app.use("/", validateSession, designs);
 app.use("/", validateSession, group_messages);
 app.use("/", validateSession, content_analysis);
-//app.use("/", validateSession, visor);
+app.use("/", validateSession, legacy_ethics); // Legacy endpoints
 
 //app.use("/", validateSession, cases);
 app.use("/", admin_panel);

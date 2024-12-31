@@ -1,5 +1,5 @@
 export function EthicsController($scope, $http, $timeout, 
-    $socket, Notification, $sce, $uibModal, ngIntroService) {
+    StudentSocketService, Notification, $sce, $uibModal) {
     var self = $scope;
     self.designId = -1;
     self.iteration = 1;
@@ -38,70 +38,82 @@ export function EthicsController($scope, $http, $timeout,
     self.selectedDF = null;
     self.selectedDFPrev = null;
 
-    
-
-    self.init = function () {
-        self.getSesInfo()
-            .then(function () {
-                $socket.on("stateChange", function (data) {
-                    console.log("SOCKET.IO", data);
-                    if (data.ses == self.sesId) {
-                        window.location.reload();
-                    }
-                });
-
-                $socket.on("chatMsg", function (data) {
-                    console.log("SOCKET.IO", data);
-                    if (data.tmid == self.tmId && self.currentStage.chat) {
-                        updateChat();
-                    }
-                });
-
-                $socket.on("diffReceived", function (data) {
-                    console.log("SOCKET.IO", data);
-                    if (data.ses == self.sesId) {
-                        console.log("Open");
-                        self.openDetails(data);
-                    }
-                });
-
-                self.loadDocuments();
-            })
-            .catch(function (error) {
-                console.error("Error:", error);
-            });
-
+    self.init = async function () {
+        await self.getSesInfo();
         self.getMe();
+        self.loadDocuments();
+        self.initializeSocket();
     };
 
-    self.getSesInfo = function () {
-        return new Promise(function (resolve, reject) {
-            $http({ url: "get-ses-info", method: "post" })
-                .then(function (response) {
-                    var data = response.data;
-                    self.iteration = data.iteration + 1;
-                    self.myUid = data.uid;
-                    self.sesName = data.name;
-                    self.sesId = data.id;
-                    self.sesSTime = data.stime;
-                    self.sesDescr = data.descr;
-                    self.currentStageId = data.current_stage;
-    
-                    self.getDesignId(self.sesId)
-                        .then(resolve)
-                        .catch(reject);
-    
-                    if (self.iteration > 1) {
-                        self.finished = true;
-                    }
-                    if (self.currentStageId != null || self.iteration >= 1) {
-                        self.loadStageData();
-                    }
-                })
-                .catch(reject);
+    self.initializeSocket = function () {
+        if (!self.sesId || self.sesId < 0) {
+            const msg = "Session Id is not defined";
+            console.error(`[EthicsController::initializeSocket] ${msg}`);
+            throw new Error(msg);
+        }
+        StudentSocketService.joinSession(self.sesId);
+
+        $scope.$on("destroy", () => {
+            StudentSocketService.disconnect();
+        });
+
+        $scope.$watch('tmId', function (newVal, oldVal) {
+            if (oldVal > 0) {
+                StudentSocketService.emitEvent("leaveGroup", `${oldVal}`);
+                console.debug(`Left group: group-${oldVal}`);
+            }
+
+            if (newVal > 0) {
+                StudentSocketService.emitEvent("joinGroup", `${newVal}`);
+                console.debug(`Joined group: group-${newVal}`);
+            }
+        });
+
+        StudentSocketService.onEvent("onPhaseTransition", (data) => {
+            window.location.reload();
+        });
+
+        StudentSocketService.onEvent("onChatMessage", (data) => {
+            updateChat();
+        })
+
+        StudentSocketService.onEvent("onShareResponse", (data) => {
+            self.openDetails(data);
+        });
+
+        StudentSocketService.onEvent("onEndSession", (data) => {
+
         });
     };
-    
+
+
+    self.getSesInfo = async function () {
+        try {
+            const response = await $http({ url: "get-ses-info", method: "post" });
+            const data = response.data;
+
+            self.iteration = data.iteration + 1;
+            self.myUid = data.uid;
+            self.sesName = data.name;
+            self.sesId = data.id;
+            self.sesSTime = data.stime;
+            self.sesDescr = data.descr;
+            self.currentStageId = data.current_stage;
+
+            if (self.iteration > 1) {
+                self.finished = true;
+            }
+
+            if (self.currentStageId != null || self.iteration >= 1) {
+                self.loadStageData();
+            }
+
+            await self.getDesignId(self.sesId);
+        } catch (error) {
+            console.error("Error in getSesInfo:", error);
+            throw error; // Re-throw the error to propagate it if needed
+        }
+    };
 
     self.getDesignId = function (sesId) {
         return new Promise(function (resolve, reject) {
@@ -554,30 +566,40 @@ export function EthicsController($scope, $http, $timeout,
             return;
         }
         var postdata = {
-            sel: df.select,
-            comment: df.comment,
-            did: df.id,
-            iteration: 0
+            response: [{
+                sel: df.select,
+                comment: df.comment,
+                did: df.id,
+                iteration: 0
+            }]
         };
-        $http.post("send-diff-selection", postdata)
+
+        const phaseId = self.currentStageId;
+
+        // Submit the response
+        $http.post(`/phases/${phaseId}/responses`, postdata)
             .then(function () {
                 df.dirty = false;
                 df.sent = true;
             })
             .catch(function (error) {
-                console.error("Error sending differential selection:", error);
+                console.error("Error sending response:", error);
             });
+
         self.selectedDF = null;
     };
     
     self.sendChatMsg = function () {
         var postdata = {
-            did: self.selectedDF,
             content: self.chatmsg,
-            tmid: self.tmId,
+            group_id: self.tmId,
             parent_id: self.chatmsgreply
         };
-        $http.post("add-chat-msg", postdata)
+
+        const phaseId = self.currentStageId;
+        const questionId = self.selectedDF;
+
+        $http.post(`/phases/${phaseId}/question/${questionId}/chat_messages`, postdata)
             .then(function () {
                 self.chatmsg = "";
                 self.chatmsgreply = null;

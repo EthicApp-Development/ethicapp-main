@@ -3,8 +3,6 @@
 import 'angular-animate';
 import 'angularjs-toast';
 import "angular-toggle-switch";
-import { io } from 'socket.io-client';
-import * as Rx from 'rxjs';
 import { ActivityStateService } from "../../services/activity-state.service.js";
 import { ActivityCatalogService } from "../../services/activity-catalog.service.js";
 import { DesignStateService } from "../../services/design-state.service.js";
@@ -16,7 +14,7 @@ var app = angular.module("TeacherApp", ["ngSanitize",
     "ui-notification", "ngQuill", "tableSort", "pascalprecht.translate", 
     "ngRoute", "checklist-model", "ngDialog", "toggle-switch", 'angularjsToast',
     'ngAnimate']
-).factory("ActivityStateService", ["$http", "SocketService", ActivityStateService])
+).factory("ActivityStateService", ["$http", "TeacherSocketService", ActivityStateService])
     .factory("ActivityCatalogService", ["$http", ActivityCatalogService])
     .factory("DesignCatalogService", ["$rootScope", "$http", DesignCatalogService])
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
@@ -38,41 +36,11 @@ import { ngQuillConfigProvider } from "../../helpers/util.js";
 import { DesignEditorController } from "../../controllers/teacher/design-editor.controller.js";
 import { DesignViewerController } from "../../controllers/teacher/design-viewer.controller.js";
 
-import { SessionSocketService } from "../../services/session-socket.service.js";
-app.factory('SessionSocketService', SessionSocketService);
-
-app.factory("SocketService", function () {
-    const websocketUrl = `${window.location.protocol}//${window.location.host}/teacher`;
-    const socket = io(websocketUrl); // Connect to the /teacher namespace
-
-    return {
-        // Listen to generic events
-        fromEvent: (eventName) => new Rx.Observable(observer => {
-            // Subscribe to the event
-            socket.on(eventName, (data) => observer.next(data));
-        
-            // Clean subscription on disconnection
-            return () => socket.off(eventName);
-        }),
-
-        // Emit generic events
-        emit: (eventName, data) => socket.emit(eventName, data),
-
-        // Join a specific room
-        joinRoom: (room) => {
-            socket.emit("joinRoom", room);
-        },
-
-        // Leave a specific room
-        leaveRoom: (room) => {
-            socket.emit("leaveRoom", room);
-        },
-    };
-});
-
-/*app.factory("$socket", ["socketFactory", function (socketFactory) {
-    return socketFactory();
-}]);*/
+import SocketService from '../../services/socket.service.js';
+app.factory("SocketService", function () { return SocketService } );
+app.factory("TeacherSocketService", ["SocketService", function (SocketService) {
+    return SocketService('teacher');
+}]);
 
 import { TeacherRouter } from "./teacher-routes.js";
 app.config(TeacherRouter);

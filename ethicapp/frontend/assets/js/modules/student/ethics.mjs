@@ -10,16 +10,18 @@ let BASE_APP = window.location.href.replace("ethics", "");
 let app = angular.module(
     "StudentEthics",
     ["ngSanitize", "ui.bootstrap", "ui.tree", "btford.socket-io",
-        "angular-intro", "ui-notification", "luegg.directives"]);
+        "ui-notification", "luegg.directives"]);
 
-app.factory("$socket", ["socketFactory", function (socketFactory) {
-    return socketFactory();
+import SocketService from '../../services/socket.service.js';
+app.factory("SocketService", function () { return SocketService } );
+app.factory("StudentSocketService", ["SocketService", function (SocketService) {
+    return SocketService('student');
 }]);
 
 app.controller(
     "EthicsController",
-    ["$scope", "$http", "$timeout", "$socket", 
-        "Notification", "$sce", "$uibModal","ngIntroService",
+    ["$scope", "$http", "$timeout", "StudentSocketService", 
+        "Notification", "$sce", "$uibModal",
     EthicsController]);
 
 app.controller("DirectContentController",

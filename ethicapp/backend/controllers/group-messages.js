@@ -5,6 +5,7 @@ import * as config from "../config/config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { getDesignById, getDesignTypeByPhaseId } from "../helpers/designs-helper.js";
 import * as SessionsHelper from "../helpers/sessions-helper.js"
+import { teacherNotifications } from "../config/socket.config.js";
 
 const router = express.Router();
 
@@ -212,8 +213,7 @@ router.post("/phases/:id/question/:question_id/chat_messages", async (req, res) 
         const sessionId = await SessionsHelper.getSessionIdByPhaseId(phaseId);
 
         // Step 4: Notify clients about the new message
-        const notificationEmitter = req.app.locals.toTeacherNotifications;
-        notificationEmitter.chatMessage(sessionId, phaseId, questionId, groupId, content);
+        teacherNotifications.chatMessage(sessionId, phaseId, questionId, groupId, content);
 
         // Respond with success
         res.status(201).json({

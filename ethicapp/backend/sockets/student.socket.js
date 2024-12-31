@@ -1,16 +1,35 @@
 let studentSocketInit = (socket) => {
     console.debug('Student connected');
 
-    // Join a session, then a group
-    socket.on('joinGroup', ({ sessionId, groupId }) => {
+    // Join a session
+    socket.on('joinSession', (sessionId) => {
         socket.join(`session-${sessionId}`);
-        socket.join(`group-${sessionId}-${groupId}`);
-        console.debug(`Student joined session ${sessionId}, and group ${groupId}`);
+        console.debug(`A student has joined session-${sessionId}`);
     });
 
+    // Leave a session
+    socket.on('leaveSession', (sessionId) => {
+        // Leave the socket from the room named `session-{sessionId}`
+        socket.leave(`session-${sessionId}`);
+        console.debug(`A student has left session-${sessionId}`);
+    });
+
+    // Join a group
+    socket.on('joinGroup', (groupId) => {
+        socket.join(`group-${groupId}`);
+        console.debug(`Student joined group ${groupId}`);
+    });
+
+    // Leave a group
+    socket.on('leaveGroup', (groupId) => {
+        // Leave the socket from the room named `group-{groupId}`
+        socket.leave(`group-${groupId}`);
+        console.debug(`A teacher has left group-${groupId}`);
+    });    
+
     // Send a message to the group
-    socket.on('messageToGroup', ({ sessionId, groupId, message }) => {
-        studentNamespace.to(`group-${sessionId}-${groupId}`).emit('groupMessage', message);
+    socket.on('messageToGroup', ({ groupId, message }) => {
+        studentNamespace.to(`group-${groupId}`).emit('groupMessage', message);
     });
 
     // Broadcast message to everyone in the session
@@ -27,8 +46,8 @@ const toStudentsNotifications = (socketNamespace) => {
                 emit("onPhaseTransition", { phaseId });
         },
 
-        chatMessage: (sessionId, groupId, messages) => {
-            socketNamespace.to(`group-${sessionId}-${groupId}`).
+        chatMessage: (groupId, messages) => {
+            socketNamespace.to(`group-${groupId}`).
                 emit("onChatMessage", { messages });            
         },
 

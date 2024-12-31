@@ -5,6 +5,7 @@ import * as config from "../config/config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as SessionsHelper from "../helpers/sessions-helper.js"
 import * as DesignTypes from "../../common/modules/design-types.js";
+import { teacherNotifications } from "../config/socket.config.js";
 
 const router = express.Router();
 
@@ -24,7 +25,7 @@ const phaseCreationHandlers = {
 };
 
 const phaseResponseSubmissionHandlers = {
-    handleRankingResponse: handleSemanticDifferentialResponse,
+    semantic_differential: handleSemanticDifferentialResponse,
     ranking: handleRankingResponse,
 };
 
@@ -220,10 +221,8 @@ router.post("/phases/:id/responses", async (req, res) => {
             return res.status(400).json({ error: `Unsupported design type: ${designType}` });
         }
 
-        const notificationEmitter = req.app.locals.toTeacherNotifications;
-
         // Execute the handler
-        await handler(sessionId, phaseId, req.session.uid, response, notificationEmitter);
+        await handler(sessionId, phaseId, req.session.uid, response, teacherNotifications);
 
         res.status(201).json({
             status: "ok",
@@ -639,6 +638,7 @@ async function handleSemanticDifferentialResponse(
         throw new Error(
             "Invalid response format. Either it is not an array, or its length is greater than 1");
     }
+    
     // Only one response is expected for a semantic differential question
     const { did, sel, comment, iteration } = response[0];
 

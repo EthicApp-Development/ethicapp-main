@@ -1,4 +1,4 @@
-let ActivityStateService = ($http, SocketService) => {
+let ActivityStateService = ($http, TeacherSocketService) => {
     const service = {
         subscriptionsMap: new Map(), // Subscription to socket events
         activityStates: {}, // Activity states
@@ -41,14 +41,14 @@ let ActivityStateService = ($http, SocketService) => {
                 return service.subscriptionsMap.get(sessionId).unsubscribeAll; // Return the existing unsubscribe function
             }
         
-            // Join the room for the given sessionId
-            SocketService.joinRoom(sessionId);
+            // Join the session for the given sessionId
+            TeacherSocketService.joinSession(sessionId);
         
             const subscriptions = [];
             
             // Subscribe to `onStudentJoined`
             subscriptions.push(
-                SocketService.fromEvent('onStudentJoined').subscribe({
+                TeacherSocketService.fromEvent('onStudentJoined').subscribe({
                     next: async (data) => {
                         console.debug(`Peer joined session ${sessionId}:`, 
                             JSON.stringify(data));
@@ -76,7 +76,7 @@ let ActivityStateService = ($http, SocketService) => {
 
             // Subscribe to `onResponseSubmitted`
             subscriptions.push(
-                SocketService.fromEvent('onResponseSubmitted').subscribe({
+                TeacherSocketService.fromEvent('onResponseSubmitted').subscribe({
                     next: async (data) => {
                         console.debug(`Response submitted for session ${sessionId}:`, 
                             JSON.stringify(data));
@@ -101,7 +101,7 @@ let ActivityStateService = ($http, SocketService) => {
         
             // Subscribe to `onChatMessage`
             subscriptions.push(
-                SocketService.fromEvent('onChatMessage').subscribe({
+                TeacherSocketService.fromEvent('onChatMessage').subscribe({
                     next: (data) => {
                         console.debug(`New chat message ${sessionId}:`, data);
 
@@ -116,7 +116,7 @@ let ActivityStateService = ($http, SocketService) => {
             // Function to unsubscribe all subscriptions
             const unsubscribeAll = () => {
                 subscriptions.forEach((subscription) => subscription.unsubscribe());
-                SocketService.leaveRoom(sessionId);
+                TeacherSocketService.leaveSession(sessionId);
                 service.subscriptionsMap.delete(sessionId); // Remove from the map
             };
         

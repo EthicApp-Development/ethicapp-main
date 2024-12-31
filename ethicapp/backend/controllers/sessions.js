@@ -6,6 +6,7 @@ import * as config from "../config/config.js";
 import * as rpg from "../db/rest-pg.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as ViewsHelper from "../helpers/views-helper.js";
+import { teacherNotifications } from "../config/socket.config.js";
 
 const router = express.Router();
 
@@ -363,8 +364,7 @@ router.post("/sessions/join/:code", async (req, res) => {
 
         const { name } = userResult[0];
 
-        const notificationEmitter = req.app.locals.toTeacherNotifications;
-        notificationEmitter.studentJoined(sesid, uid, name, device);
+        teacherNotifications.studentJoined(sesid, uid, name, device);
 
         const sessionResult = await execSQL({
             dbcon,
@@ -1161,21 +1161,6 @@ router.post("/get-differentials", await rpg.multiSQL({
     sesReqData: ["uid", "ses"],
     sqlParams:  [rpg.param("ses", "ses")]
 }));
-
-
-router.post("/get-differentials-stage", await rpg.multiSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    SELECT *
-    FROM differential
-    WHERE stageid = $1
-    ORDER BY orden
-    `,
-    postReqData: ["stageid"],
-    sesReqData:  ["uid"],
-    sqlParams:   [rpg.param("post", "stageid")]
-}));
-
 
 router.post("/add-differential", await rpg.execSQL({
     dbcon: pass.dbcon,

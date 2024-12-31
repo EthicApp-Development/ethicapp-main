@@ -50,8 +50,6 @@ const callbackURL = domain_name === "localhost"
     ? `http://localhost:${process.env.ETHICAPP_NODE_PORT}/google/callback`
     : `https://${domain_name}/google/callback`;
 
-console.log(callbackURL);
-
 passport.use(
     new GoogleStrategy({
         clientID:          process.env.GOOGLE_CLIENT_ID,

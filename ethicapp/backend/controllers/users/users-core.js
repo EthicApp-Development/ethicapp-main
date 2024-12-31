@@ -35,9 +35,6 @@ router.get("/login", (req, res) => {
 router.post("/login", (req, res, next) => {
     passport.authenticate("local", async (err, user) => {
         try {
-            console.log("begin login");
-            console.log(`user: ${user}`);
-
             if (!user) {
                 return res.status(401).json({ message: "login_failed" });
             }
@@ -52,9 +49,6 @@ router.post("/login", (req, res, next) => {
 
             // Record the login event
             EthicAppEventLogger.userLogin();
-
-            console.log("post logger");
-            console.log(`logged in user: ${JSON.stringify(user)}`);
 
             // Create a session for the user
             req.logIn(user, (err) => {
@@ -148,7 +142,7 @@ router.post("/forgot", async (req, res) => {
         const recaptchaResult = await RecaptchaHelper.validateRecaptcha(responseKey);
         
         if (!recaptchaResult) {
-            console.log("Captcha verification failed.");
+            console.error("Captcha verification failed.");
             return res.status(400).json({
                 success: false, message: "captcha_error"
             });
@@ -265,7 +259,7 @@ router.post("/reset-password", async (req, res) => {
         const recaptchaResult = await RecaptchaHelper.validateRecaptcha(responseKey);
 
         if (!recaptchaResult) {
-            console.log("Captcha verification failed.");
+            console.error("Captcha verification failed.");
             return res.status(400).json(
                 { success: false, message: "captcha_error" });
         }
@@ -298,7 +292,7 @@ router.get("/logout", (req, res) => {
 
         // Optionally destroy the session instead of nulling specific properties
         req.session.destroy((sessionErr) => {
-            console.log("attempting to destroy session");
+            console.debug("attempting to destroy session");
             
             if (sessionErr) {
                 console.error("Error destroying session:", sessionErr);
@@ -327,7 +321,6 @@ router.get("/google/callback",
         failureRedirect: "/register"
     }),
     (req, res) => {
-        console.log("Authentication successful:", req.user);
         res.redirect("/login_record");
     }
 );

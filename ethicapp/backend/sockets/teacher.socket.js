@@ -10,7 +10,7 @@ let teacherSocketInit = (socket) => {
     });
 
     // Handle a teacher leaving a specific session
-    socket.on('leaveRoom', (sessionId) => {
+    socket.on('leaveSession', (sessionId) => {
         // Leave the socket from the room named `session-{sessionId}`
         socket.leave(`session-${sessionId}`);
         console.debug(`A teacher has left session-${sessionId}`);
