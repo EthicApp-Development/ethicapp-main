@@ -11,8 +11,6 @@ FLAG_FILE="/home/app/backend/.npm_installed"
 # Check if npm install has already been executed
 if [ ! -f "$FLAG_FILE" ]; then
     echo "npm install has not been executed previously. Running npm install..."
-    npm install --save-dev nodemon
-    npm install -g npm@10.9.0
     npm install
     touch "$FLAG_FILE"
     echo "npm install completed. Flag created at $FLAG_FILE."

@@ -393,8 +393,6 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
             sqlParams: [rpg2.param('plain', phaseId)],
         });
 
-        console.log(`[phase_transition] query 1 result: ${JSON.stringify(result)}`);
-
         if (!(result.length > 0 && result[0].count === 1)) {
             return res.status(400).json({ error: "The phase does not exist." });
         }        
@@ -623,8 +621,6 @@ router.post("/activities/:session_id/phases", async (req, res) => {
         rpg2.param('plain', grouping || null), // Grouping algorithm (optional)
     ];
 
-    console.log("[post phases] Inserting phase with body params:", JSON.stringify(req.body));
-
     try {
         // Insert the new phase into the database
         const result = await rpg2.execSQL({
@@ -643,8 +639,6 @@ router.post("/activities/:session_id/phases", async (req, res) => {
                 error: "Failed to add the phase. No rows were inserted.",
             });
         }
-
-        console.debug("[post phases] result:", result)
 
         // Respond with the ID of the newly created phase
         res.status(201).json({

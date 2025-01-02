@@ -137,7 +137,6 @@ router.post("/sessions", async (req, res) => {
                         rpg2.param('plain', JSON.stringify(config))]
         });
         
-        console.debug(`[sessions] Session result: ${JSON.stringify(sessionResult)}`);
         const sessionId = sessionResult.id;
 
         if (!sessionId) {

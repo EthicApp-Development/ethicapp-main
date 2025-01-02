@@ -6,14 +6,8 @@ export const groupingAlgorithms = {
     preserve: preserveGroups
 };
 
-// Create random groups for the active phase
+// Create random groups
 async function createRandomGroups(sessionId, phases, groupSize) {
-    // Find the active phase
-    const activePhase = phases.find(phase => phase.active);
-    if (!activePhase) {
-        throw new Error("No active phase found for this session.");
-    }
-
     // Fetch all users in the session
     const students = await rpg2.execSQL({
         dbcon: config.dbconnString,
@@ -23,38 +17,47 @@ async function createRandomGroups(sessionId, phases, groupSize) {
             INNER JOIN users u ON su.uid = u.id
             WHERE su.sesid = $1 AND u.role = 'A'
         `,
-        sqlParams: [sessionId],
+        sqlParams: [rpg2.param('plain', sessionId)],
     });
 
     if (students.length === 0) {
-        throw new Error("No students available in the session to form groups.");
+        console.warn("No students available in the session to form groups.");
+        return [];
     }
 
     // Shuffle students randomly
     const shuffledStudents = students.sort(() => Math.random() - 0.5);
 
-    // Calculate the number of full groups and remaining students
-    const fullGroups = Math.floor(shuffledStudents.length / groupSize);
-    const remainder = shuffledStudents.length % groupSize;
-
     const groups = [];
 
-    // Create full groups
-    for (let i = 0; i < fullGroups; i++) {
-        groups.push(shuffledStudents.splice(0, groupSize));
-    }
+    if (shuffledStudents.length < groupSize) {
+        // Not enough students to form a full group, create a single group
+        groups.push(shuffledStudents);
+    } else {
+        // Calculate the number of full groups and remaining students
+        const fullGroups = Math.floor(shuffledStudents.length / groupSize);
+        const remainder = shuffledStudents.length % groupSize;
 
-    // Distribute remaining students across existing groups
-    if (remainder > 0) {
-        for (let i = 0; i < remainder; i++) {
-            groups[i % groups.length].push(shuffledStudents.pop());
+        // Create full groups
+        for (let i = 0; i < fullGroups; i++) {
+            groups.push(shuffledStudents.splice(0, groupSize));
+        }
+
+        // Distribute remaining students across existing groups
+        if (remainder > 0 && groups.length > 0) {
+            for (let i = 0; i < remainder; i++) {
+                groups[i % groups.length].push(shuffledStudents.pop());
+            }
         }
     }
 
     return groups;
 }
 
-// Preserve groups from a previous group phase
+
+// Preserve groups backwards from the currently active phase, i.e.,
+// just before transitioning to the next phase that will require
+// the same groups.
 async function preserveGroups(sessionId, phases, groupSize) {
     // Find the active phase
     const activePhase = phases.find(phase => phase.active);
@@ -62,9 +65,9 @@ async function preserveGroups(sessionId, phases, groupSize) {
         throw new Error("No active phase found for this session.");
     }
 
-    // Identify the previous group phase
+    // Identify the previous group phase 
     const previousPhase = phases
-        .slice(0, phases.findIndex(p => p.id === activePhase.id))
+        .slice(0, phases.findIndex(p => p.id === activePhase.id) + 1) // Include the active phase
         .reverse()
         .find(p => p.mode === "team");
 
@@ -81,11 +84,13 @@ async function preserveGroups(sessionId, phases, groupSize) {
             INNER JOIN teamusers tu ON t.id = tu.tmid
             WHERE t.sesid = $1 AND t.stageid = $2
         `,
-        sqlParams: [sessionId, previousPhase.id],
+        sqlParams: [rpg2.param('plain', sessionId), 
+            rpg2.param('plain', previousPhase.id)],
     });
 
     if (previousGroups.length === 0) {
-        throw new Error("No groups found in the previous phase.");
+        console.warn("No groups found in the previous phase.");
+        return [];
     }
 
     // Organize users into their respective teams
@@ -106,7 +111,7 @@ async function preserveGroups(sessionId, phases, groupSize) {
  * @param {string} phaseId - The ID of the phase for which to delete groups.
  * @throws {Error} Throws an error if the operation fails.
  */
-async function deleteGroupsForPhase(phaseId) {
+export async function deleteGroupsForPhase(phaseId) {
     if (!phaseId) {
         throw new Error("Missing required parameter: phaseId.");
     }
@@ -121,7 +126,7 @@ async function deleteGroupsForPhase(phaseId) {
             USING teams AS t
             WHERE tu.tmid = t.id AND t.stageid = $1
         `,
-        sqlParams: [phaseId],
+        sqlParams: [rpg2.param('plain', phaseId)],
     });
 
     // Delete teams linked to the phase
@@ -131,6 +136,6 @@ async function deleteGroupsForPhase(phaseId) {
             DELETE FROM teams
             WHERE stageid = $1
         `,
-        sqlParams: [phaseId],
+        sqlParams: [rpg2.param('plain', phaseId)],
     });
 }

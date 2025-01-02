@@ -83,8 +83,6 @@ export function DashboardController($scope, $routeParams, $http,
                 currentPhaseNumber = 0; // Start with 0 so we can increment to 1 below
             }
     
-            // console.debug(`[startNextPhase] ${JSON.stringify(vm.designObj)}`);
-
             // Check if we've already reached the last phase
             if (currentPhaseNumber === vm.designObj.phases.length) {
                 console.error("Cannot advance any further, reached the last phase already.");
@@ -94,44 +92,32 @@ export function DashboardController($scope, $routeParams, $http,
             const nextPhaseIndex = currentPhaseNumber;
             const nextPhaseNumber = currentPhaseNumber + 1;
 
+            // Get the current design object of the current phase
             const phase = vm.designObj.phases[nextPhaseIndex];
-    
-            // Create the next phase
-            const requestObj = PhaseCreationHelpers.phaseCreationRequestObject(
+            const designType = DesignHelpers.getDesignType(vm.designObj);
+
+            // Add the phase to the activity
+            const phaseId = await ActivityStateService.addPhaseToActivity(
                 phase,
                 nextPhaseNumber,
                 vm.sessionId
             );
     
-            const stageResponse = await $http({
-                url: `/activities/${vm.sessionId}/phases`,
-                method: "post",
-                data: requestObj,
-            });
-    
-            const phaseId = stageResponse.data.phaseId;
-    
+            // Add items to the newly created phase
             if (phaseId) {
-                // Build the phase items
-                const builder = PhaseCreationHelpers.itemBuilders[vm.designObj.type];
-    
-                if (builder) {
-                    const phaseItems = builder(phase, phaseId, vm.sessionId);
-                    await ActivityStateService.addItemsToPhase(phaseId, phaseItems);
-                } else {
-                    console.warn(`No handler found for design type: ${vm.designObj.type}`);
-                }
+                await ActivityStateService.addItemsToPhase(
+                    phase,
+                    phaseId,
+                    vm.sessionId,
+                    designType
+                );
             } else {
                 console.error("Error creating activity phase.");
                 return;
             }
     
             // Transition to the newly created phase
-            await $http({
-                url: `/activities/${vm.sessionId}/phase_transition`,
-                method: "post",
-                data: { phaseId },
-            });
+            await ActivityStateService.transitionToPhase(vm.sessionId, phaseId, phase);
     
             // Reload the activity descriptor
             vm.activityDescriptor = await ActivityStateService.getActivityDescriptor(vm.sessionId, true);

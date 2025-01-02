@@ -27,7 +27,7 @@
             <div class="tab tab-text" ng-repeat="st in stages"
                 ng-class="{active: (selectedStage == $index && (!showDoc||documents.length==0))||(st.id == currentStageId && selectedStage==null), 'green': st.id != currentStageId, 'yellow': st.id == currentStageId}"
                 ng-click="selectStage($index)" ng-attr-id="{{ 'tabq' + $index }}">
-                <i class="fa fa-question-circle"></i> {{ 'stage' | lang }} {{st.number}} <span class="badge bg-red"
+                <i class="fa fa-question-circle"></i> {{ 'stage' | translate }} {{st.number}} <span class="badge bg-red"
                     ng-show="st.c != null && st.c > st.cr">{{st.c - st.cr}}</span>
             </div>
         </div>
@@ -40,7 +40,7 @@
                     <h3>{{documents[selectedDocument].title}}</h3>
                     <div class="flex-justify-center mt-n2 mb-medio">
                         <button class="btn btn-sm text-white bg-ethicapp"
-                            ng-click="openPDFInNewTab(documents[selectedDocument].path)">{{'openInNewTab'|lang}}</button>
+                            ng-click="openPDFInNewTab(documents[selectedDocument].path)">{{'openInNewTab' | translate}}</button>
                     </div>
                     <div>
                         <iframe ng-src="{{getDocURL()}}" class="pdf-embed">
@@ -49,7 +49,7 @@
                 </div>
             </div>
             <h4 ng-show="finished" style="text-align: center;margin: auto;color:red">
-                <strong>{{'sessionFinish'|lang}}</strong></h4>
+                <strong>{{'sessionFinish' | translate}}</strong></h4>
             <div ng-show="iteration > 0 && (!showDoc || documents.length==0)">
                 <div class="differential margin-top-n12">
                     <h5>
@@ -98,7 +98,7 @@
                                 </div>
                                 <div class="col-xs-12">
                                     <textarea type="text" class="form-control text-comment-input"
-                                        placeholder="{{'comment' | lang}}" ng-model="df.comment"
+                                        placeholder="{{'comment' | translate }}" ng-model="df.comment"
                                         ng-change="df.dirty = true" ng-disabled="finished || !df.justify">
                                                     </textarea>
                                 </div>
@@ -107,11 +107,11 @@
                                         ng-disabled="finished || !df.dirty" ng-click="sendDFSel(df)">
                                         <div ng-if="df.sent">
                                             <i class="fa fa-check"></i>
-                                            <span ng-show="!df.dirty && df.sent">Enviado</span>
+                                            <span ng-show="!df.dirty && df.sent">{{'response_submitted' | translate}}</span>
                                         </div>
                                         <div ng-if="!df.sent">
                                             <i class="fa fa-send"></i>
-                                            <span>Por Enviar</span>
+                                            <span>{{'response_to_be_submitted' | translate}}</span>
                                         </div>
                                     </span>
                                 </div>
@@ -151,7 +151,7 @@
                                 </div>
                                 <div class="row margin-top-28">
                                     <div class="col-xs-12">
-                                        <div class="as-textfield"><strong>{{ 'comment' | lang }}:</strong> {{
+                                        <div class="as-textfield"><strong>{{ 'comment' | translate }}:</strong> {{
                                             df.comment }}</div>
                                     </div>
                                 </div>
@@ -163,10 +163,10 @@
                 <br>
                 <div ng-if="prevRes != null && stages[selectedStage].id == currentStageId">
                     <div ng-repeat="res in prevRes">
-                        <h4 class="text-center">{{'answerOf' | lang }} {{ 'stage' | lang }} {{
+                        <h4 class="text-center">{{'answerOf' | translate }} {{ 'stage' | translate }} {{
                             stagesMap[prevStages[$index]].number }}</h4>
                         <div ng-repeat="(uid, arr) in res">
-                            <h5><strong>{{'author' | lang}}: {{ teamMapPrev[uid] }}</strong></h5>
+                            <h5><strong>{{ 'author' | translate }}: {{ teamMapPrev[uid] }}</strong></h5>
                             <div class="row">
                                 <div class="col-sm-10 col-sm-offset-1 col-xs-12">
                                     <div class="differential" ng-repeat="df in arr">
@@ -191,7 +191,7 @@
                                         <div class="row margin-top-28">
                                             <div class="col-xs-12">
                                                 <div class="as-textfield">
-                                                    <strong>{{ 'comment' | lang }}:</strong> {{ df.comment }}
+                                                    <strong>{{ 'comment' | translate }}:</strong> {{ df.comment }}
                                                 </div>
                                             </div>
                                         </div>
@@ -205,10 +205,10 @@
                 </div>
                 <div ng-if="prevResPrev != null && stages[selectedStage].id != currentStageId">
                     <div ng-repeat="res in prevResPrev">
-                        <h3 class="text-center">{{'answerOf' | lang }} {{ 'stage' | lang }} {{
+                        <h3 class="text-center">{{ 'answerOf' | translate }} {{ 'stage' | translate }} {{
                             stagesMap[prevStagesPrev[$index]].number }}</h3>
                         <div ng-repeat="(uid, arr) in res">
-                            <h5><strong>{{'author' | lang}}: {{ teamMapPrev[uid] }}</strong></h5>
+                            <h5><strong>{{ 'author' | translate }}: {{ teamMapPrev[uid] }}</strong></h5>
                             <div class="row">
                                 <div class="col-sm-10 col-sm-offset-1 col-xs-12">
                                     <div class="differential" ng-repeat="df in arr">
@@ -232,7 +232,7 @@
                                         </div>
                                         <div class="row margin-top-28">
                                             <div class="col-xs-12">
-                                                <div class="as-textfield"><strong>{{ 'comment' | lang }}:</strong>
+                                                <div class="as-textfield"><strong>{{ 'comment' | translate }}:</strong>
                                                     {{ df.comment }}</div>
                                             </div>
                                         </div>
@@ -266,9 +266,9 @@
                                     </div>
                                     <i class="fa fa-reply" ng-show="msg.parent != null"></i>
                                     <span class="pull-right font-mini text-right">
-                                        <span class="text-muted">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
+                                        <span class="text-muted">{{ msg.stime | date:'HH:mm dd-MM-yy'}}</span>
                                         <br>
-                                        <a ng-click="setReply(msg)">{{'reply' | lang}}</a>
+                                        <a ng-click="setReply(msg)">{{ 'reply' | translate }}</a>
                                     </span>
                                     <div><strong
                                             ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">{{
@@ -290,7 +290,7 @@
                                     <span class="pull-right font-mini text-right">
                                         <span class="text-muted">{{msg.stime | date:'HH:mm dd-MM-yy'}}</span>
                                         <br>
-                                        <a ng-click="setReply(msg)">{{'reply' | lang}}</a>
+                                        <a ng-click="setReply(msg)">{{ 'reply' | translate }}</a>
                                     </span>
                                     <div><strong
                                             ng-class="{'margin-left-n8': msg.parent == null, 'simple-margin-left': msg.parent != null}">{{
@@ -329,9 +329,8 @@
     </div>
     <div class="splash" ng-if="iteration <= 0">
         <div class="splash-box">
-            <h3><i class="fa fa-clock-o"></i> Sesión en espera</h3>
-            <h5>Espere a que el profesor indique el inicio de la actividad.</h5>
-            <h5>Esta página se recargará automáticamente cuando comience.</h5>
+            <h3><i class="fa fa-clock-o"></i> {{ 'waiting_for_session_title_text' | translate }}</h3>
+            <h5>{{ 'waiting_for_session_indications_text' | translate }}</h5>
         </div>
     </div>
 </div>

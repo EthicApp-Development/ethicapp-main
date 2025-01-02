@@ -1,3 +1,5 @@
+import * as PhaseCreationHelpers from "../helpers/phase-creation-helpers.js";
+
 let ActivityStateService = ($http, TeacherSocketService) => {
     const service = {
         subscriptionsMap: new Map(), // Subscription to socket events
@@ -341,26 +343,69 @@ let ActivityStateService = ($http, TeacherSocketService) => {
             }
             return service.activityStates[sessionId];
         },
-        addItemsToPhase: async function(phaseId, phaseItems) {
+        addPhaseToActivity: async function(phaseObj, phaseNumber, sessionId) {
+            // Create the next phase
+            const requestObj = PhaseCreationHelpers.phaseCreationRequestObject(
+                phaseObj,
+                phaseNumber,
+                sessionId
+            );
+    
+            const stageResponse = await $http({
+                url: `/activities/${sessionId}/phases`,
+                method: "post",
+                data: requestObj,
+            });
+    
+            const phaseId = stageResponse.data.phaseId;
+            return phaseId;
+        },
+        addItemsToPhase: async function(phase, phaseId, sessionId, designType) {
             try {
-                // TODO: refactor the backend endpoint so that it can receive a list of
-                // items...
-                // Iterate over the phase items and make HTTP POST requests for each item
-                await Promise.all(
-                    phaseItems.map(item => {
-                        return $http({
-                            url: `/phases/${phaseId}/items`,
-                            method: "POST",
-                            data: item
-                        });
-                    })
-                );
-                console.info(`Items successfully added to phase ${phaseId}`);
+                const builder = PhaseCreationHelpers.itemBuilders[designType];
+                
+                if (builder) {
+                    const phaseItems = builder(phase, phaseId, sessionId);
+
+                    // TODO: refactor the backend endpoint so that it can receive a list of
+                    // items...
+                    // Iterate over the phase items and make HTTP POST requests for each item
+                    await Promise.all(
+                        phaseItems.map(item => {
+                            return $http({
+                                url: `/phases/${phaseId}/items`,
+                                method: "POST",
+                                data: item
+                            });
+                        })
+                    );
+                    console.info(`Items successfully added to phase ${phaseId}`);
+                } else {
+                    console.warn(`No handler found for design type: ${designType}`);
+                }
             } catch (error) {
                 console.error(`Failed to add items to phase ${phaseId}:`, error);
                 throw new Error("Error adding items to phase.");
             }
         },
+        transitionToPhase: async function(sessionId, phaseId, phaseObj) {
+            const phaseMode = phaseObj.mode;
+
+            // Form groups if the phase mode is "team"
+            if (phaseMode == "team") {
+                await $http({
+                    url: `/phases/${phaseId}/groups`,
+                    method: "post"
+                });
+            }
+
+            // Transition to the newly created phase
+            await $http({
+                url: `/activities/${sessionId}/phase_transition`,
+                method: "post",
+                data: { phaseId },
+            });            
+        }
     };
 
     return service; 

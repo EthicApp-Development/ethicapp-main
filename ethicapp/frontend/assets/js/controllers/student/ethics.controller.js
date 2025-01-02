@@ -1,5 +1,5 @@
 export function EthicsController($scope, $http, $timeout, 
-    StudentSocketService, Notification, $sce, $uibModal) {
+    StudentSocketService, Notification, $sce, $uibModal, $translate) {
     var self = $scope;
     self.designId = -1;
     self.iteration = 1;
@@ -34,13 +34,11 @@ export function EthicsController($scope, $http, $timeout,
     self.tmId = -1;
     self.teamMap = {};
 
-    self.lang = "ES_CL/spanish";
     self.selectedDF = null;
     self.selectedDFPrev = null;
 
     self.init = async function () {
-        await self.getSesInfo();
-        self.getMe();
+        await self.loadSessionInfo();
         self.loadDocuments();
         self.initializeSocket();
     };
@@ -87,9 +85,9 @@ export function EthicsController($scope, $http, $timeout,
     };
 
 
-    self.getSesInfo = async function () {
+    self.loadSessionInfo = async function () {
         try {
-            const response = await $http({ url: "get-ses-info", method: "post" });
+            const response = await $http({ url: "/get-ses-info", method: "post" });
             const data = response.data;
 
             self.iteration = data.iteration + 1;
@@ -105,12 +103,12 @@ export function EthicsController($scope, $http, $timeout,
             }
 
             if (self.currentStageId != null || self.iteration >= 1) {
-                self.loadStageData();
+                await self.loadStageData();
             }
 
             await self.getDesignId(self.sesId);
         } catch (error) {
-            console.error("Error in getSesInfo:", error);
+            console.error("Error in loadSessionInfo:", error);
             throw error; // Re-throw the error to propagate it if needed
         }
     };
@@ -167,7 +165,6 @@ export function EthicsController($scope, $http, $timeout,
                 console.error("Error updating chat:", error);
             });
     }
-    
 
     self.openChat = function (df) {
         self.selDF = df;
@@ -175,19 +172,6 @@ export function EthicsController($scope, $http, $timeout,
         self.chatExp = true;
         df.cr = df.c;
     };
-
-    self.getMe = function () {
-        $http.post("get-my-name")
-            .then(function (response) {
-                var data = response.data;
-                self.lang = data.lang == "spanish" ? "ES_CL/spanish" : "EN_US/english";
-                self.updateLang(self.lang);
-            })
-            .catch(function (error) {
-                console.error("Error fetching user language:", error);
-            });
-    };
-    
 
     // self.selectDF = (i) => {
     //     self.selectedDF = i;
@@ -212,198 +196,209 @@ export function EthicsController($scope, $http, $timeout,
         });
     };
     
-    self.loadStageData = function () {
-        $http.post("get-stages", {})
-            .then(function (response) {
-                var data = response.data;
-                self.stages = data;
-                console.log(self.stages);
-                self.selectStage2(self.stages.find(e => e.id == self.currentStageId).number - 1);
+    self.loadStageData = async function () {
+        try {
+            // Load stages
+            const stagesResponse = await $http.post("get-stages", {});
+            const stagesData = stagesResponse.data;
+            self.stages = stagesData;
     
-                self.currentStage = self.stages.find(function (e) {
-                    return e.id == self.currentStageId;
-                });
-                self.stagesMap = {};
-                data.forEach(function (s) {
-                    self.stagesMap[s.id] = s;
-                });
+            const currentStage = self.stages.find(e => e.id == self.currentStageId);
+            if (currentStage) {
+                self.loadStageDetails(currentStage.number - 1);
+                self.currentStage = currentStage;
+            }
     
-                if (self.currentStage && self.currentStage.type == "team") {
-                    $http.post("get-team-stage", { stageid: self.currentStageId })
-                        .then(function (response) {
-                            var data = response.data;
-                            self.team = data;
-                            self.teamMap = {};
-                            var alph = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-                            data.forEach(function (u, i) {
-                                self.teamMap[u.id] = self.currentStage.anon ? alph[i] : u.name;
-                                self.tmId = u.tmid;
-                            });
-                        })
-                        .catch(function (error) {
-                            console.error("Error loading team stage:", error);
-                        });
+            self.stagesMap = self.stages.reduce((map, stage) => {
+                map[stage.id] = stage;
+                return map;
+            }, {});
     
-                    if (self.currentStage.prev_ans !== "" && self.currentStage.prev_ans != null) {
-                        var p = {
+            if (self.currentStage?.type === "team") {
+                try {
+                    // Load team stage
+                    const teamResponse = await $http.post("get-team-stage", { stageid: self.currentStageId });
+                    const teamData = teamResponse.data;
+                    self.team = teamData;
+    
+                    const alph = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                    self.teamMap = teamData.reduce((map, user, index) => {
+                        map[user.id] = self.currentStage.anon ? alph[index] : user.name;
+                        self.tmId = user.tmid;
+                        return map;
+                    }, {});
+                } catch (error) {
+                    console.error("Error loading team stage:", error);
+                }
+    
+                if (self.currentStage.prev_ans) {
+                    try {
+                        // Load team differential selection
+                        const prevResponse = await $http.post("/get-team-differential-selection", {
                             stageid: self.currentStageId,
                             prevstages: self.currentStage.prev_ans
-                        };
-                        $http.post("get-team-differential-selection", p)
-                            .then(function (response) {
-                                self.teamSel = response.data;
-                                self.structureSelData();
-                            })
-                            .catch(function (error) {
-                                console.error("Error loading team differential selection:", error);
-                            });
-                    }
-                    if (self.currentStage.chat) {
-                        updateChat();
+                        });
+                        self.teamSel = prevResponse.data;
+                        self.structureSelData();
+                    } catch (error) {
+                        console.error("Error loading team differential selection:", error);
                     }
                 }
-            })
-            .catch(function (error) {
-                console.error("Error loading stages:", error);
-            });
+    
+                if (self.currentStage.chat) {
+                    updateChat();
+                }
+            }
+        } catch (error) {
+            console.error("Error loading stages:", error);
+        }
     
         if (self.currentStageId != null) {
-            $http.post("get-differentials-stage", { stageid: self.currentStageId })
-                .then(function (response) {
-                    self.dfs = response.data;
-                    if (self.dfs.length > 0 && self.sel.length > 0) {
-                        self.populateDFs();
-                    }
-                })
-                .catch(function (error) {
-                    console.error("Error loading differentials stage:", error);
-                });
+            try {
+                // Load differentials stage
+                const dfsResponse = await $http.post("get-differentials-stage", { stageid: self.currentStageId });
+                self.dfs = dfsResponse.data;
+                if (self.dfs.length > 0 && self.sel.length > 0) {
+                    self.populateDFs();
+                }
+            } catch (error) {
+                console.error("Error loading differentials stage:", error);
+            }
     
-            $http.post("get-diff-selection-stage", { stageid: self.currentStageId })
-                .then(function (response) {
-                    self.sel = response.data;
-                    if (self.dfs.length > 0 && self.sel.length > 0) {
-                        self.populateDFs();
-                    }
-                })
-                .catch(function (error) {
-                    console.error("Error loading differential selection stage:", error);
-                });
+            try {
+                // Load differential selection stage
+                const selResponse = await $http.post("get-diff-selection-stage", { stageid: self.currentStageId });
+                self.sel = selResponse.data;
+                if (self.dfs.length > 0 && self.sel.length > 0) {
+                    self.populateDFs();
+                }
+            } catch (error) {
+                console.error("Error loading differential selection stage:", error);
+            }
         }
     };
-    
-    self.populateDFs = function () {
-        self.sel.forEach(function (s) {
-            var a = self.dfs.find(function (e) {
-                return e.id == s.did;
-            });
-            a.comment = s.comment;
-            a.select = s.sel;
-            a.sent = s.comment != "" && s.comment != null;
-        });
         
+    self.populateDFs = function () {
+        self.sel.forEach(s => {
+            const df = self.dfs.find(e => e.id === s.did);
+            if (df) {
+                df.comment = s.comment || "";
+                df.select = s.sel;
+                df.sent = Boolean(s.comment);
+            }
+        });
     };
-
+    
     self.populateDFsPrev = function () {
-        self.selPrev.forEach(function (s) {
-            var a = self.dfsPrev.find(function (e) {
-                return e.id == s.did;
-            });
-            if (a) {
-                a.comment = s.comment;
-                a.select = s.sel;
-                a.sent = s.comment != "" && s.comment != null;
+        self.selPrev.forEach(s => {
+            const df = self.dfsPrev.find(e => e.id === s.did);
+            if (df) {
+                df.comment = s.comment || "";
+                df.select = s.sel;
+                df.sent = Boolean(s.comment);
             }
         });
     };
-
+    
     self.structureSelData = function () {
-        var byStage = {};
-        self.teamSel.forEach(function (e) {
-            if (!byStage[e.stageid]) {
-                byStage[e.stageid] = [];
-            }
-            byStage[e.stageid].push(e);
-        });
+        if (!Array.isArray(self.teamSel) || self.teamSel.length === 0) {
+            // Nothing to update
+            return;
+        }
+    
+        // Group teamSel by stageid
+        const byStage = self.teamSel.reduce((acc, item) => {
+            acc[item.stageid] = acc[item.stageid] || [];
+            acc[item.stageid].push(item);
+            return acc;
+        }, {});
+    
+        // Extract stage IDs
         self.prevStages = Object.keys(byStage);
-        byStage = Object.values(byStage);
-        byStage = byStage.map(function (arr) {
-            var byUser = {};
-            arr.forEach(function (e) {
-                if (!byUser[e.uid]) {
-                    byUser[e.uid] = [];
-                }
-                byUser[e.uid].push(e);
-            });
-            return byUser;
-        });
-        self.prevRes = byStage;
+    
+        // Transform grouped stages into a user-based grouping
+        self.prevRes = Object.values(byStage).map(stageArray =>
+            stageArray.reduce((acc, item) => {
+                acc[item.uid] = acc[item.uid] || [];
+                acc[item.uid].push(item);
+                return acc;
+            }, {})
+        );
     };
-
+    
     self.structureSelDataPrev = function () {
-        var byStage = {};
-        self.teamSelPrev.forEach(function (e) {
-            if (!byStage[e.stageid]) {
-                byStage[e.stageid] = [];
-            }
-            byStage[e.stageid].push(e);
-        });
+        if (!Array.isArray(self.teamSelPrev) || self.teamSelPrev.length === 0) {
+            // Nothing to update
+            return;
+        }
+    
+        // Group teamSelPrev by stageid
+        const byStage = self.teamSelPrev.reduce((acc, item) => {
+            acc[item.stageid] = acc[item.stageid] || [];
+            acc[item.stageid].push(item);
+            return acc;
+        }, {});
+    
+        // Extract stage IDs
         self.prevStagesPrev = Object.keys(byStage);
-        byStage = Object.values(byStage);
-        byStage = byStage.map(function (arr) {
-            var byUser = {};
-            arr.forEach(function (e) {
-                if (!byUser[e.uid]) {
-                    byUser[e.uid] = [];
-                }
-                byUser[e.uid].push(e);
-            });
-            return byUser;
-        });
-        self.prevResPrev = byStage;
+    
+        // Transform grouped stages into a user-based grouping
+        self.prevResPrev = Object.values(byStage).map(stageArray =>
+            stageArray.reduce((acc, item) => {
+                acc[item.uid] = acc[item.uid] || [];
+                acc[item.uid].push(item);
+                return acc;
+            }, {})
+        );
     };
-
+    
     self.selectDocument = function (i) {
         self.selectedDocument = i;
         self.showDoc = true;
     };
 
-    self.selectStage = function (i) {
+    self.switchStage = async function (stageIndex, showDocCondition = null) {
         if (self.stages[self.selectedStage] && self.stages[self.selectedStage].dirty) {
-            notify("Error", "Debe completar el diferencial antes de cambiar");
+            const title = await $translate('error_response_dialog_title');
+            const message = await $translate('incomplete_response_error_text');
+            notify(title, message);
             return;
         }
-        self.selectedStage = i;
+    
+        self.selectedStage = stageIndex;
         self.stages[self.selectedStage].cr = self.stages[self.selectedStage].c;
-        self.showDoc = false;
+    
+        // Apply specific showDoc logic if provided
+        self.showDoc = showDocCondition !== null ? showDocCondition(stageIndex) : false;
+    
         self.chatmsg = "";
         self.selPrev = [];
         self.dfsPrev = [];
         self.chatMsgsPrev = {};
     
-        $http.post("get-differentials-stage", { stageid: self.stages[self.selectedStage].id })
-            .then(function (response) {
-                self.dfsPrev = response.data;
-                if (self.selPrev.length === self.dfsPrev.length && self.selPrev.length > 0) {
-                    self.populateDFsPrev();
-                }
-            })
-            .catch(function (error) {
-                console.error("Error loading differentials stage:", error);
-            });
+        try {
+            // Load differentials stage
+            const dfsResponse = await $http.post("get-differentials-stage", { stageid: self.stages[self.selectedStage].id });
+            self.dfsPrev = dfsResponse.data;
+            if (self.selPrev.length === self.dfsPrev.length && self.selPrev.length > 0) {
+                self.populateDFsPrev();
+            }
+        } catch (error) {
+            console.error("Error loading differentials stage:", error);
+        }
     
-        $http.post("get-diff-selection-stage", { stageid: self.stages[self.selectedStage].id })
-            .then(function (response) {
-                self.selPrev = response.data;
-                if (self.selPrev.length === self.dfsPrev.length && self.dfsPrev.length > 0) {
-                    self.populateDFsPrev();
-                }
-            })
-            .catch(function (error) {
-                console.error("Error loading differential selection stage:", error);
-            });
+        try {
+            // Load differential selection stage
+            const selResponse = await $http.post("get-diff-selection-stage", { stageid: self.stages[self.selectedStage].id });
+            self.selPrev = selResponse.data;
+            if (self.selPrev.length === self.dfsPrev.length && self.dfsPrev.length > 0) {
+                self.populateDFsPrev();
+            }
+        } catch (error) {
+            console.error("Error loading differential selection stage:", error);
+        }
     
-        var st = self.stages[self.selectedStage];
+        const st = self.stages[self.selectedStage];
         self.teamPrev = [];
         self.teamMapPrev = {};
         self.teamSelPrev = [];
@@ -411,160 +406,80 @@ export function EthicsController($scope, $http, $timeout,
         self.prevStagesPrev = {};
     
         if (st.type === "team") {
-            $http.post("get-team-stage", { stageid: st.id })
-                .then(function (response) {
-                    var data = response.data;
-                    self.teamPrev = data;
-                    self.teamMapPrev = {};
-                    var alph = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-                    data.forEach(function (u, i) {
-                        self.teamMapPrev[u.id] = st.anon ? alph[i] : u.name;
-                        self.tmId = u.tmid;
-                    });
-                })
-                .catch(function (error) {
-                    console.error("Error loading team stage:", error);
-                });
+            try {
+                // Load team stage
+                const teamResponse = await $http.post("get-team-stage", { stageid: st.id });
+                const data = teamResponse.data;
+                self.teamPrev = data;
+                const alph = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                self.teamMapPrev = data.reduce((map, user, index) => {
+                    map[user.id] = st.anon ? alph[index] : user.name;
+                    self.tmId = user.tmid;
+                    return map;
+                }, {});
+            } catch (error) {
+                console.error("Error loading team stage:", error);
+            }
     
             if (st.prev_ans !== "" && st.prev_ans != null) {
-                var p = {
-                    stageid: st.id,
-                    prevstages: st.prev_ans
-                };
-                $http.post("get-team-differential-selection", p)
-                    .then(function (response) {
-                        self.teamSelPrev = response.data;
-                        self.structureSelDataPrev();
-                    })
-                    .catch(function (error) {
-                        console.error("Error loading team differential selection:", error);
+                try {
+                    // Load team differential selection
+                    const teamSelResponse = await $http.post("get-team-differential-selection", {
+                        stageid: st.id,
+                        prevstages: st.prev_ans,
                     });
+                    self.teamSelPrev = teamSelResponse.data;
+                    self.structureSelDataPrev();
+                } catch (error) {
+                    console.error("Error loading team differential selection:", error);
+                }
             }
         }
+    
         if (st.chat) {
-            $http.post("get-diff-chat-stage", { stageid: st.id })
-                .then(function (response) {
-                    var data = response.data;
-                    self.chatMsgsPrev = {};
-                    data.forEach(function (msg) {
-                        if (msg.parent_id) {
-                            msg.parent = data.find(function (e) {
-                                return e.id == msg.parent_id;
-                            });
-                        }
-                        self.chatMsgsPrev[msg.did] = self.chatMsgsPrev[msg.did] || [];
-                        self.chatMsgsPrev[msg.did].push(msg);
-                    });
-                })
-                .catch(function (error) {
-                    console.error("Error loading chat messages:", error);
-                });
-        }
-    };
-    
-    self.selectStage2 = function (i) {
-        if (self.stages[self.selectedStage] && self.stages[self.selectedStage].dirty) {
-            notify("Error", "Debe completar el diferencial antes de cambiar");
-            return;
-        }
-        self.selectedStage = i;
-        self.stages[self.selectedStage].cr = self.stages[self.selectedStage].c;
-        self.showDoc = i === 0;
-        self.chatmsg = "";
-        self.selPrev = [];
-        self.dfsPrev = [];
-        self.chatMsgsPrev = {};
-    
-        $http.post("get-differentials-stage", { stageid: self.stages[self.selectedStage].id })
-            .then(function (response) {
-                self.dfsPrev = response.data;
-                if (self.selPrev.length === self.dfsPrev.length && self.selPrev.length > 0) {
-                    self.populateDFsPrev();
-                }
-            })
-            .catch(function (error) {
-                console.error("Error loading differentials stage:", error);
-            });
-    
-        $http.post("get-diff-selection-stage", { stageid: self.stages[self.selectedStage].id })
-            .then(function (response) {
-                self.selPrev = response.data;
-                if (self.selPrev.length === self.dfsPrev.length && self.dfsPrev.length > 0) {
-                    self.populateDFsPrev();
-                }
-            })
-            .catch(function (error) {
-                console.error("Error loading differential selection stage:", error);
-            });
-    
-        var st = self.stages[self.selectedStage];
-        self.teamPrev = [];
-        self.teamMapPrev = {};
-        self.teamSelPrev = [];
-        self.prevResPrev = {};
-        self.prevStagesPrev = {};
-    
-        if (st.type === "team") {
-            $http.post("get-team-stage", { stageid: st.id })
-                .then(function (response) {
-                    var data = response.data;
-                    self.teamPrev = data;
-                    self.teamMapPrev = {};
-                    var alph = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-                    data.forEach(function (u, i) {
-                        self.teamMapPrev[u.id] = st.anon ? alph[i] : u.name;
-                        self.tmId = u.tmid;
-                    });
-                })
-                .catch(function (error) {
-                    console.error("Error loading team stage:", error);
-                });
-    
-            if (st.prev_ans !== "" && st.prev_ans != null) {
-                var p = {
-                    stageid: st.id,
-                    prevstages: st.prev_ans
-                };
-                $http.post("get-team-differential-selection", p)
-                    .then(function (response) {
-                        self.teamSelPrev = response.data;
-                        self.structureSelDataPrev();
-                    })
-                    .catch(function (error) {
-                        console.error("Error loading team differential selection:", error);
-                    });
+            try {
+                // Load chat messages
+                const chatResponse = await $http.post("get-diff-chat-stage", { stageid: st.id });
+                const chatData = chatResponse.data;
+                self.chatMsgsPrev = chatData.reduce((map, msg) => {
+                    if (msg.parent_id) {
+                        msg.parent = chatData.find(e => e.id == msg.parent_id);
+                    }
+                    map[msg.did] = map[msg.did] || [];
+                    map[msg.did].push(msg);
+                    return map;
+                }, {});
+            } catch (error) {
+                console.error("Error loading chat messages:", error);
             }
         }
-        if (st.chat) {
-            $http.post("get-diff-chat-stage", { stageid: st.id })
-                .then(function (response) {
-                    var data = response.data;
-                    self.chatMsgsPrev = {};
-                    data.forEach(function (msg) {
-                        if (msg.parent_id) {
-                            msg.parent = data.find(function (e) {
-                                return e.id == msg.parent_id;
-                            });
-                        }
-                        self.chatMsgsPrev[msg.did] = self.chatMsgsPrev[msg.did] || [];
-                        self.chatMsgsPrev[msg.did].push(msg);
-                    });
-                })
-                .catch(function (error) {
-                    console.error("Error loading chat messages:", error);
-                });
-        }
+    };
+
+    self.selectStage = function (stageIndex) {
+        self.switchStage(stageIndex)
+            .catch(error => console.error("Error in selectStage:", error));
     };
     
-    self.sendDFSel = function (df) {
+    self.loadStageDetails = function (stageIndex) {
+        self.switchStage(stageIndex, index => index === 0)
+            .catch(error => console.error("Error in selectStage2:", error));
+    };
+        
+    self.sendDFSel = async function (df) {
+        const errorTitle = await $translate('error_response_dialog_title');
+
         if (df.select == null || df.select == -1) {
-            notify("Error", "El diferencial no está completo");
+            const errorMessage = await $translate('semantic_differential_value_incomplete_text');
+            notify(errorTitle, errorMessage);
             return;
         }
+        
         if (df.justify === true && self.wordCount(df.comment) < df.word_count) {
-            notify("Error", "El comentario está incompleto");
+            const errorMessage = await $translate('no_justification_error_text');
+            notify(errorTitle, errorMessage);
             return;
         }
+
         var postdata = {
             response: [{
                 sel: df.select,
@@ -628,26 +543,6 @@ export function EthicsController($scope, $http, $timeout,
         notify("Comentario", com);
     };
 
-    self.showInfo = function () {
-        notify("Factor Detonante", self.sesDescr, false);
-    };
-
-    self.updateLang = function (lang) {
-        $http.get("assets/i18n/" + lang + ".json")
-            .then(function (response) {
-                window.DIC = response.data;
-            })
-            .catch(function (error) {
-                console.error("Error loading language file:", error);
-            });
-    };
-    
-
-    self.changeLang = function () {
-        self.lang = self.lang == "EN_US/english" ? "ES_CL/spanish" : "EN_US/english";
-        self.updateLang(self.lang);
-    };
-
     self.openDetails = function (_data) {
         $uibModal.open({
             templateUrl:  "../../frontend/static/direct-content.html",
@@ -665,35 +560,6 @@ export function EthicsController($scope, $http, $timeout,
     self.setReply = function (msg) {
         self.chatmsgreply = msg == null ? null : msg.id;
         document.getElementById("chat-input").focus();
-    };
-
-    var introOptions = {
-        steps: [{
-            element: "#tabd0",
-            intro:   "En esta pestaña encontrarás el caso a leer"
-        }, {
-            element: "#tabq0",
-            intro:   "En esta pestaña se encuentra la lista de items" + 
-            " que debes categorizar y justificar"
-        }, {
-            element: "#seslistbtn",
-            intro:   "Usando este botón puedes volver a la lista de sesiones"
-        }],
-        showStepNumbers:    false,
-        showBullets:        false,
-        exitOnOverlayClick: true,
-        exitOnEsc:          true,
-        tooltipPosition:    "auto",
-        nextLabel:          "Siguiente",
-        prevLabel:          "Anterior",
-        skipLabel:          "Salir",
-        doneLabel:          "Listo"
-    };
-
-    ngIntroService.setOptions(introOptions);
-
-    self.startTour = function () {
-        ngIntroService.start();
     };
 
     self.wordCount = function (s) {

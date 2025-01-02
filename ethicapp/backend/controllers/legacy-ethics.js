@@ -3,7 +3,10 @@
 import express from "express";
 import pass from "../helpers/compat-helper.js"; 
 import * as rpg from "../db/rest-pg.js";
+import * as config from "../config/config.js"; 
+import * as rpg2 from "../db/rest-pg-2.js";
 import { studentNotifications } from "../config/socket.config.js";
+import * as ViewsHelper from "../helpers/views-helper.js";
 
 const router = express.Router();
 
@@ -11,13 +14,15 @@ const router = express.Router();
 router.get("/ethics", (req, res) => {
     if (req.session.uid && req.session.ses)
         res.render("ethics", {
+            layout: "./layouts/student-app",
             title: "EthicApp",
             ngApp: "StudentEthics",
             controller:  "EthicsController",
-            extraScripts : `            
-            <script src="assets/libs/angular-glue.min.js" defer></script>
-            <script src="assets/js/dist/ethics.min.js" defer></script>          
-            `
+            scripts:    [
+                ["libs/angular-glue.min.js"],
+                ["js/dist/ethics.js", "js/dist/ethics.min.js"]
+            ],
+            renderScripts: (scripts) => ViewsHelper.renderScripts(scripts, res)            
         });
     else
         res.redirect(".");
@@ -107,6 +112,23 @@ router.post("/get-diff-chat-stage", await rpg.multiSQL({
     ]
 }));
 
+router.post("/get-diff-selection-stage", await rpg.multiSQL({
+    dbcon: pass.dbcon,
+    sql:   `
+    SELECT s.did,
+        s.sel,
+        s.comment
+    FROM differential_selection AS s
+    INNER JOIN differential AS d
+    ON d.id = s.did
+    WHERE d.stageid = $1
+        AND s.uid = $2
+    `,
+    sesReqData:  ["uid", "ses"],
+    postReqData: ["stageid"],
+    sqlParams:   [rpg.param("post", "stageid"), rpg.param("ses", "uid")]
+}));
+
 router.post("/get-stages", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
@@ -148,7 +170,7 @@ router.post("/get-team-stage", await rpg.multiSQL({
     sqlParams:  [rpg.param("post", "stageid"), rpg.param("ses", "uid")]
 }));
 
-router.post("/get-team-differential-selection", await rpg.multiSQL({
+router.post("/get-team-differential-selection-deprecated", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     SELECT DISTINCT s.sel,
@@ -188,6 +210,77 @@ router.post("/get-team-differential-selection", await rpg.multiSQL({
     },
     sqlParams: [rpg.param("calc","prevarr"), rpg.param("post","stageid"), rpg.param("ses","uid")]
 }));
+
+router.post("/get-team-differential-selection", async (req, res) => {
+    let { prevstages, stageid } = req.body;
+    const userId = req.session?.uid;
+
+    // Validate 'prevstages' and attempt to parse it if it's a string
+    if (typeof prevstages === "string") {
+        try {
+            prevstages = JSON.parse(prevstages);
+        } catch (err) {
+            return res.status(400).json({ error: "Invalid 'prevstages' parameter. Must be a JSON array or an array of integers." });
+        }
+    }
+
+    // Validate input parameters
+    if (!Array.isArray(prevstages) || !prevstages.every(Number.isInteger)) {
+        return res.status(400).json({ error: "Invalid 'prevstages' parameter. Must be an array of integers." });
+    }
+    if (!stageid || !userId) {
+        return res.status(400).json({ error: "Missing required parameters: 'stageid' or user session." });
+    }
+
+    try {
+        // Convert the incoming array to PostgreSQL's preferred format
+        const formattedPrevStages = `{${prevstages.join(",")}}`;
+
+        // Execute the query
+        const result = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT DISTINCT 
+                    s.sel,
+                    s.uid,
+                    s.did,
+                    s.comment,
+                    d.stageid,
+                    d.orden,
+                    d.title,
+                    d.tleft,
+                    d.tright,
+                    d.num
+                FROM differential_selection AS s
+                INNER JOIN differential AS d ON s.did = d.id
+                WHERE d.stageid = ANY($1::int[])
+                    AND s.uid IN (
+                        SELECT tu.uid
+                        FROM teamusers AS tu
+                        WHERE tu.tmid = (
+                            SELECT t.id
+                            FROM teamusers AS tu
+                            INNER JOIN teams AS t ON tu.tmid = t.id
+                            WHERE t.stageid = $2
+                                AND tu.uid = $3
+                        )
+                    )
+                ORDER BY d.stageid, s.uid, d.orden
+            `,
+            sqlParams: [
+                rpg2.param("plain", formattedPrevStages), // Array with desired previous stages
+                rpg2.param("plain", stageid),             // ID of the current pahse
+                rpg2.param("plain", userId)               // ID of the current user
+            ],
+        });
+
+        // Devolver los resultados
+        res.status(200).json({ data: result });
+    } catch (err) {
+        console.error("[Error in /get-team-differential-selection]", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 
 router.post("/get-differentials-stage", await rpg.multiSQL({
     dbcon: pass.dbcon,

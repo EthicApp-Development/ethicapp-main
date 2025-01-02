@@ -10,7 +10,7 @@ import * as rpg2 from "../db/rest-pg-2.js";
 * @throws {Error} - Throws an error if the query or processing fails.
 */
 export async function getPhasesForSession(sessionId) {
-   const results = await rpg2.execSQL({
+   const phaseIds = await rpg2.execSQL({
        dbcon: config.dbconnString,
        sql: `
            SELECT id
@@ -21,14 +21,32 @@ export async function getPhasesForSession(sessionId) {
        sqlParams: [rpg2.param('plain', sessionId)],
    });
 
-   if (results.length === 0) {
+   if (phaseIds.length === 0) {
        return [];
    }
 
-   return results.map((row, index, arr) => ({
-       number: index + 1,  // Assign a sequential number to each phase
-       id: row.id,         // The ID of the phase (stage)
-   }));
+   const session = await rpg2.execSQL({
+        dbcon: config.dbconnString,
+        sql: `
+            SELECT current_stage
+            FROM sessions
+            WHERE id = $1
+            ORDER BY id ASC
+        `,
+        sqlParams: [rpg2.param('plain', sessionId)],
+    });
+
+    if (session.length === 0) {
+        return [];
+    }
+
+    const currentPhaseId = session[0].current_stage;
+
+    return phaseIds.map((row, index, arr) => ({
+        number: index + 1,  // Assign a sequential number to each phase
+        id: row.id,         // The ID of the phase (stage)
+        active: row.id === currentPhaseId,  // Indicates if the phase is active
+    }));
 };
 
 export function generateSessionCode(id) {

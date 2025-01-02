@@ -1,4 +1,4 @@
-export function RolePlayingController($scope, $http, $timeout, $socket, Notification, $sce, $uibModal, ngIntroService) {
+export function RolePlayingController($scope, $http, $timeout, $socket, Notification, $sce, $uibModal) {
     var self = $scope;
     self.designId = -1;
     self.iteration = 1;
@@ -762,35 +762,7 @@ export function RolePlayingController($scope, $http, $timeout, $socket, Notifica
         self.chatmsgreply = msg == null ? null : msg.id;
         document.getElementById("chat-input").focus();
     };
-
-    var introOptions = {
-        steps: [{
-            element: "#tabd0",
-            intro:   "En esta pestaña encontrarás el caso a leer"
-        }, {
-            element: "#tabq0",
-            intro:   "En esta pestaña se encuentra la lista de roles que debes ordenar y justificar"
-        }, {
-            element: "#seslistbtn",
-            intro:   "Usando este botón puedes volver a la lista de sesiones"
-        }],
-        showStepNumbers:    false,
-        showBullets:        false,
-        exitOnOverlayClick: true,
-        exitOnEsc:          true,
-        tooltipPosition:    "auto",
-        nextLabel:          "Siguiente",
-        prevLabel:          "Anterior",
-        skipLabel:          "Salir",
-        doneLabel:          "Listo"
-    };
-
-    ngIntroService.setOptions(introOptions);
-
-    self.startTour = function () {
-        ngIntroService.start();
-    };
-
+    
     self.wordCount = function (s) {
         return s ? s.split(" ").filter(function (e) {
             return e != "";

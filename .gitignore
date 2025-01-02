@@ -17,3 +17,5 @@ secrets/
 package-lock.json
 node_modules/
 *.backup
+
+.codegpt

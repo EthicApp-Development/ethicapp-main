@@ -5,7 +5,7 @@ export let getSessionIdByPhaseId = async (phaseId) => {
     try {
         const result = await rpg2.execSQL({
             sql: `
-                SELECT session_id
+                SELECT sesid
                 FROM stages
                 WHERE id = $1
             `,
@@ -17,7 +17,7 @@ export let getSessionIdByPhaseId = async (phaseId) => {
             throw new Error(`No session found for phaseId: ${phaseId}`);
         }
 
-        return result[0].session_id;
+        return result[0].sesid;
     } catch (err) {
         console.error("Error fetching sessionId by phaseId:", err);
         throw err;

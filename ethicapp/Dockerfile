@@ -17,5 +17,9 @@ RUN chmod +x /usr/local/bin/entrypoint.development.sh
 # Set the working directory
 WORKDIR /home/app/backend
 
+# Install process managers, launchers and tools
+RUN npm install -g nodemon
+RUN npm install -g pm2
+
 # Define the entrypoint
 ENTRYPOINT ["/usr/local/bin/entrypoint.development.sh"]

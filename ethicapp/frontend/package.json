@@ -12,7 +12,6 @@
   "dependencies": {
     "angular": "^1.8.3",
     "angular-animate": "^1.8.3",
-    "angular-intro.js": "^3.4.0",
     "angular-route": "^1.8.3",
     "angular-sanitize": "^1.8.3",
     "angular-socket-io": "^0.7.0",

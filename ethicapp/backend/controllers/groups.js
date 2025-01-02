@@ -177,9 +177,9 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
 
 /**
  * Endpoint to create groups for a specific phase (stage).
- * Route: POST /phase/:id/groups
+ * Route: POST /phases/:id/groups
  */
-router.post("/phase/:id/groups", async (req, res) => {
+router.post("/phases/:id/groups", async (req, res) => {
     const { id: phaseId } = req.params; // Get the stage ID from the route parameter
 
     try {
@@ -222,7 +222,7 @@ router.post("/phase/:id/groups", async (req, res) => {
         const phases = await ActivitiesHelper.getPhasesForSession(sessionId);
 
         // Match the phase ID to its corresponding phase in the design
-        const phase = phases.find(p => p.id === phaseId);
+        const phase = phases.find(p => p.id === Number(phaseId));
         if (!phase) {
             return res.status(404).json({ error: "Phase not found in the session." });
         }
@@ -262,7 +262,7 @@ router.post("/phase/:id/groups", async (req, res) => {
 
             let maskCode = 'A'.charCodeAt(0);
 
-            for (const userId of group) {
+            for (const { uid } of group) {
                 if (maskCode > 'Z'.charCodeAt(0)) {
                     throw new Error("Exceeded allowed characters for anon_mask.");
                 }
@@ -274,7 +274,7 @@ router.post("/phase/:id/groups", async (req, res) => {
                         INSERT INTO teamusers (tmid, uid, anon_mask)
                         VALUES ($1, $2, $3)
                     `,
-                    sqlParams: [rpg2.param('plain', team.id), rpg2.param('plain', userId), 
+                    sqlParams: [rpg2.param('plain', team.id), rpg2.param('plain', uid), 
                         rpg2.param('plain', mask)],
                 });
                 maskCode++;
