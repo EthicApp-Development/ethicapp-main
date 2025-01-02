@@ -681,10 +681,10 @@ async function handleSemanticDifferentialResponse(
     });
 
     notificationEmitter.responseSubmitted(
+        sessionId,
+        phaseId,
         { 
           type: "semantic_differential",
-          sessionId: sessionId,
-          phaseId: phaseId,
           uid: userId,
           did: did, 
           sel: sel,

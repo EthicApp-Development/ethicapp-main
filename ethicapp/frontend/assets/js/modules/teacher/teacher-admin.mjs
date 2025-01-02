@@ -1,5 +1,3 @@
-"use strict";
-
 import 'angular-animate';
 import 'angularjs-toast';
 import "angular-toggle-switch";
@@ -8,13 +6,21 @@ import { ActivityCatalogService } from "../../services/activity-catalog.service.
 import { DesignStateService } from "../../services/design-state.service.js";
 import { DesignCatalogService } from "../../services/design-catalog.service.js";
 import UserInformationService from "../../services/user-information.service.js";
+import SocketService from '../../services/socket.service.js';
 
 var app = angular.module("TeacherApp", ["ngSanitize",
     "ui.bootstrap", "ui.multiselect", "timer", "ngFileUpload",
     "ui-notification", "ngQuill", "tableSort", "pascalprecht.translate", 
     "ngRoute", "checklist-model", "ngDialog", "toggle-switch", 'angularjsToast',
     'ngAnimate']
-).factory("ActivityStateService", ["$http", "TeacherSocketService", ActivityStateService])
+);
+
+app.factory("SocketService", function () { return SocketService } );
+app.factory("TeacherSocketService", ["SocketService", function (SocketService) {
+    return SocketService('teacher');
+}]);
+
+app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivityStateService])
     .factory("ActivityCatalogService", ["$http", ActivityCatalogService])
     .factory("DesignCatalogService", ["$rootScope", "$http", DesignCatalogService])
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
@@ -35,12 +41,6 @@ import { VoidController } from "../../controllers/common/void.controller.js";
 import { ngQuillConfigProvider } from "../../helpers/util.js";
 import { DesignEditorController } from "../../controllers/teacher/design-editor.controller.js";
 import { DesignViewerController } from "../../controllers/teacher/design-viewer.controller.js";
-
-import SocketService from '../../services/socket.service.js';
-app.factory("SocketService", function () { return SocketService } );
-app.factory("TeacherSocketService", ["SocketService", function (SocketService) {
-    return SocketService('teacher');
-}]);
 
 import { TeacherRouter } from "./teacher-routes.js";
 app.config(TeacherRouter);
@@ -127,40 +127,6 @@ app.controller("DesignEditorController",
         "DesignCatalogService", "toast", DesignEditorController]);         
 app.controller("VoidController", [VoidController]);
 
-/*app.controller("RoutingController", 
-    ["$scope", RoutingController]);
-app.controller("ManagementController",
-    ["$scope", "TabStateService", "DesignStateService",
-        "$http", "$uibModal", "$location", "$locale", 
-        "$filter", "$socket", "$route", "$translate", "ActivityStateService",
-        "ActivityCatalogService", "DesignCatalogService",
-        ManagementController]);*/
-   
-/*app.controller("TabsController", 
-    ["$scope", "$http", "Notification", TabsController]);*/       
-/* app.controller("SesEditorController", 
-    ["$scope", "$http", "Notification", "ActivityStateService", SesEditorController]); */
-/* app.controller("NewUsersController", 
-    ["$scope", "$http", "Notification", "ActivityStateService", IncomingUsersController]); */
-/*app.controller("MapSelectionModalController", 
-    ["$scope", "$uibModalInstance", MapSelectionModalController]);*/
-
-/*app.controller("DuplicateSesModalController", 
-    ["$scope", "$http", "$uibModalInstance", "data", DuplicateSesModalController]);
-app.controller("GroupController", 
-    ["$scope", "$http", "Notification", "ActivityStateService", GroupController]);*/
-/*app.controller("MonitorActivityController", 
-    ["$scope", "$filter", "$http", "$window", "Notification","$uibModal", "ActivityStateService",
-        MonitorActivityController]);*/
-
-/*app.controller("OptionsController", 
-    ["$scope", "$http", "Notification", "ActivityStateService", OptionsController]); */
-/*app.controller("DashboardRubricaController", 
-    ["$scope", DashboardRubricaController]);
-app.controller("StagesController", 
-    ["$scope", "$http", "Notification", "$uibModal", "ActivityStateService", StagesController]);*/
-
-    
 app.service("DialogService", function(ngDialog) {
     this.openDialog = function() {
         ngDialog.open({

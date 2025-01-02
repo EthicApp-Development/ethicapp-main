@@ -338,5 +338,9 @@ export function DashboardController($scope, $routeParams, $http,
         return vm.activityDescriptor.status === "finished";        
     }
 
+    vm.getUserCount = function(data) {
+        return data.filter(user => !user.groupStatistics).length;
+    };
+
     vm.init();
 };

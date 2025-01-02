@@ -45,7 +45,7 @@ const toTeacherNotifications = (socketNamespace) => {
             socketNamespace.to(`session-${sessionId}`).
                 emit("onResponseSubmitted", { 
                     ...responseObj,
-                    phaseId             
+                    phaseId
                 });
         },
 
@@ -53,7 +53,7 @@ const toTeacherNotifications = (socketNamespace) => {
             socketNamespace.to(`session-${sessionId}`).emit("onChatMessage", { 
                     phaseId,
                     questionId,
-                    groupId, 
+                    groupId,
                     message
                 });
         }

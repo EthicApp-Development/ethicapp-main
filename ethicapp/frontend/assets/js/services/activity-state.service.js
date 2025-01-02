@@ -1,11 +1,61 @@
 import * as PhaseCreationHelpers from "../helpers/phase-creation-helpers.js";
 
-let ActivityStateService = ($http, TeacherSocketService) => {
+let ActivityStateService = function($http, TeacherSocketService) {
     const service = {
         subscriptionsMap: new Map(), // Subscription to socket events
         activityStates: {}, // Activity states
         listeners: {}, // Subscribed listeners
+        rankingResponseMerger: async function(sessionId, response, responses) {
+            const phases = await service.getInstancedPhases(sessionId, false);
+            const phaseNumber = phases.find((phase) => phase.id === response.phaseId)?.number;
 
+            const phaseResponses = responses.find(
+                (prs) => Number(prs.phase_number) === Number(phaseNumber)
+            );
+
+            const existingResponse = phaseResponses?.items.find(resp => resp.uid === response.uid);
+        
+            if (existingResponse) {
+                existingResponse.items = response.items;
+            } else {
+                const { type, ...responseWithoutType } = response;
+                if (!phaseResponses) {
+                    responses.push({
+                        phase_number: phaseNumber,
+                        responses: [responseWithoutType]
+                    });
+                }
+                else {
+                    phaseResponses.push(responseWithoutType);
+                }
+            }
+        },
+        semanticDifferentialResponseMerger: async function(sessionId, response, responses) {
+            const phases = await service.getInstancedPhases(sessionId, true);
+            const phaseNumber = phases.find((phase) => phase.id === Number(response.phaseId))?.number;
+
+            const phaseResponses = responses.find(
+                (prs) => Number(prs.phase_number) === Number(phaseNumber)
+            );
+
+            const existingResponse = phaseResponses?.items.find(resp => resp.uid === response.uid);
+
+            if (existingResponse) {
+                existingResponse.comment = response.comment;
+                existingResponse.sel = response.sel;
+            } else {
+                const { type, ...responseWithoutType } = response;
+                if (!phaseResponses) {
+                    responses.push({
+                        phase_number: phaseNumber,
+                        responses: [responseWithoutType]
+                    });
+                }
+                else {
+                    phaseResponses.push(responseWithoutType);
+                }
+            }
+        },
         loadActivityState: async function(sessionId) {
             try {
                 service.activityStates[sessionId] = { };
@@ -83,7 +133,7 @@ let ActivityStateService = ($http, TeacherSocketService) => {
                         console.debug(`Response submitted for session ${sessionId}:`, 
                             JSON.stringify(data));
                 
-                        const handler = responseMergeHandlers[data.type];
+                        const handler = await service.responseMergeHandlers[data.type];
                         
                         if (!handler) {
                             const msg = "No handler available for the incoming response data";
@@ -91,7 +141,7 @@ let ActivityStateService = ($http, TeacherSocketService) => {
                             throw new Error(msg);                           
                         }
                 
-                        handler(data, service.activityStates[sessionId].responses);
+                        handler(sessionId, data, service.activityStates[sessionId].responses);
                 
                         service.notifyListeners("onResponseSubmitted", { 
                             response: data
@@ -408,40 +458,12 @@ let ActivityStateService = ($http, TeacherSocketService) => {
         }
     };
 
+    service.responseMergeHandlers = {
+        ranking: service.rankingResponseMerger,
+        semantic_differential : service.semanticDifferentialResponseMerger
+    };
+
     return service; 
-};
-
-const responseMergeHandlers = {
-    ranking: rankingResponseMerger,
-    semantic_differential : semanticDifferentialResponseMerger
-};
-
-let rankingResponseMerger = (response, responses) => {
-    const existingResponse = responses.find(
-        (resp) => resp.phaseId === response.phaseId && resp.uid === response.uid
-    );
-
-    if (existingResponse) {
-        existingResponse.items = response.items;
-    } else {
-        const { type, ...responseWithoutType } = response;
-        responses.push(responseWithoutType);
-    }
-};
-
-let semanticDifferentialResponseMerger = (response, responses) => {
-    const existingResponse = responses.find(
-        (resp) => resp.phaseId === response.phaseId &&  resp.did == response.did && 
-            resp.uid === response.uid
-    );
-
-    if (existingResponse) {
-        existingResponse.comment = response.comment;
-        existingResponse.sel = response.sel;
-    } else {
-        const { type, ...responseWithoutType } = response;
-        responses.push(responseWithoutType);
-    }
 };
 
 export { ActivityStateService };
