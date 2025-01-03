@@ -375,6 +375,7 @@
 	"waiting_for_session_indications_text": "Espera pacientemente aquí hasta que se inicie la primera tarea de esta actividad. La tarea se iniciará aquí automáticamente.",
 	"response_submitted": "Respuesta enviada",
 	"response_to_be_submitted": "Pincha aquí para enviar tu respuesta",
+	"waiting_for_responses_text": "No hay aún respuestas, estamos esperando a que los participantes las envíen.",
 	"yes_label": "Sí",
 	"no_label": "No",
 	"save_design_button_text": "Guardar diseño",

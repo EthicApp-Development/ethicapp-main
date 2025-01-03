@@ -1,4 +1,4 @@
-<p ng-if="gptCtrl.phaseData.state.length === 0 || gptCtrl.phaseData.state.data === 0">No responses currently available, waiting for participants to submit them.</p>
+<p ng-if="gptCtrl.phaseData.state.length === 0">{{ 'waiting_for_responses_text' | translate }}</p>
 <table class="table table-striped" ng-if="gptCtrl.phaseData.state.length > 0">
     <thead>
         <tr>

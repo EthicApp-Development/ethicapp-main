@@ -348,6 +348,7 @@
 	"waiting_for_session_indications_text": "Please wait until the session starts. Your screen will update automatically.",
 	"response_submitted": "Response submitted",
 	"response_to_be_submitted": "Click to submit your response",
+	"waiting_for_responses_text": "No responses currently available, waiting for participants to submit them.",
 	"yes_label": "Yes",
 	"no_label": "No",
 	"login": "Login",
