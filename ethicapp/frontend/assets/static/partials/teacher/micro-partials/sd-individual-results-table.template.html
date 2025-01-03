@@ -1,6 +1,6 @@
 
-<p ng-if="iptCtrl.phaseData.state.responses.length == 0">No responses currently available, waiting for participants to submit them.</p>
-<table class="table table-striped" ng-if="iptCtrl.phaseData.state.responses.length > 0">
+<p ng-if="iptCtrl.phaseData.state.length == 0">No responses currently available, waiting for participants to submit them.</p>
+<table class="table table-striped" ng-if="iptCtrl.phaseData.state.length > 0">
     <thead>
         <tr>
             <th>{{ 'participant_column_header' | translate }}</th>
@@ -11,13 +11,13 @@
         </tr>
     </thead>
     <tbody>
-        <tr ng-repeat="response in iptCtrl.phaseData.state.responses track by response.userId">
+        <tr ng-repeat="response in iptCtrl.phaseData.state track by response.userId">
             <td>{{ response.userName }}</td>
-            <td ng-repeat="question in phaseData.descriptor.questions">
+            <td ng-repeat="question in iptCtrl.phaseData.descriptor.questions">
                 {{ response['r' + question.number] || ('no_response' | translate) }}
                 <!-- Checkmark with FontAwesome -->
                 <i ng-if="response['commentR' + question.number] && response['commentR' + question.number].length > 0"
-                class="fas fa-sticky-note"
+                class="fa-regular fa-note-sticky"
                 aria-hidden="true"></i>
             </td>
         </tr>
@@ -26,7 +26,7 @@
         <tr>
             <td colspan="{{ iptCtrl.phaseData.descriptor.questions.length + 1 }}">
                 <div class="summary-text small">
-                    <strong>{{ 'participants_label' | translate }}:</strong> {{ phaseData.state.responses.length > 0 ? phaseData.state.responses.length : 0 }} <br>
+                    <strong>{{ 'participants_label' | translate }}:</strong> {{ iptCtrl.phaseData.state.length > 0 ? iptCtrl.phaseData.state.length : 0 }} <br>
                     <strong>A:</strong> {{ 'average_label' | translate }}. 
                     <strong>CV:</strong> {{ 'coefficient_of_variation_label' | translate }}.<br>
                     <i class="fa fa-comments"></i> {{ 'chat_messages_label' | translate }}. 

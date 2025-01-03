@@ -35,9 +35,6 @@ let sdPhaseDataJoiner = (phaseDescriptor, responses, users,
     const phaseNumber = phaseDescriptor.number;
     const questions = phaseDescriptor.questions;
 
-    // Extract the responses for the current phase
-    const phaseResponses = responses.find(p => p.phase_number === phaseNumber)?.responses || [];
-
     // Filter relevant users (only those with role 'A')
     const relevantUsers = users.filter(u => u.role === 'A');
 
@@ -64,12 +61,13 @@ let sdPhaseDataJoiner = (phaseDescriptor, responses, users,
         });
 
         // Assign response values (e.g., r1, r2) to corresponding users
-        phaseResponses
+        responses
             .filter(response => response.did === question.id)
             .forEach(response => {
                 const user = usersMap[response.uid];
                 if (user) {
                     user[`r${questionNumber}`] = response.sel; // Assign response value
+                    user[`commentR${questionNumber}`] = response.comment; // Assign comment value
                 }
             });
 
@@ -116,9 +114,6 @@ let rankingPhaseDataJoiner = (phaseDescriptor, responses, users,
     const phaseNumber = phaseDescriptor.number;
     const questions = phaseDescriptor.questions;
 
-    // Extract the responses for the current phase
-    const phaseResponses = responses.find(p => p.phase_number === phaseNumber)?.responses || [];
-
     // Filter relevant users (only those with role 'A')
     const relevantUsers = users.filter(u => u.role === 'A');
 
@@ -138,7 +133,7 @@ let rankingPhaseDataJoiner = (phaseDescriptor, responses, users,
     // If no existingData is provided, build the structure from scratch
     if (!existingData) {
         // Assign responses and chat statistics for each user
-        phaseResponses.forEach(response => {
+        responses.forEach(response => {
             const user = usersMap[response.uid];
             if (user) {
                 // Assign the ranked item description and actor ID to the respective order

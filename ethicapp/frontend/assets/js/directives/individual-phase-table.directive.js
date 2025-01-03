@@ -42,21 +42,24 @@ let individualPhaseTableDirective = function() {
 
             // Initialize the directive's state
             iptCtrl.initialize = function() {
-                if (!iptCtrl.phaseData || !iptCtrl.phaseData.state || !iptCtrl.phaseData.descriptor) {
+                if (!iptCtrl.phaseData ||
+                    !iptCtrl.phaseData.state ||
+                    !iptCtrl.phaseData.descriptor) {
                     console.error("Invalid phase data structure provided.");
                     return;
                 }
 
-                iptCtrl.phaseData.state.responses = iptCtrl.phaseData.state.responses || [];
-                iptCtrl.phaseData.descriptor.questions = iptCtrl.phaseData.descriptor.questions || [];
-
-                if (iptCtrl.phaseData.state.responses.length === 0 || iptCtrl.phaseData.descriptor.questions.length === 0) {
+                if (iptCtrl.phaseData.state.length === 0 ||
+                    iptCtrl.phaseData.descriptor.questions.length === 0) {
                     console.warn("No responses or questions available. Initialization skipped.");
                     return;
                 }
 
-                const processedData = iptCtrl.preProcessData(iptCtrl.phaseData.state.responses, iptCtrl.designType);
-                iptCtrl.phaseData.state.responses = processedData;
+                const processedData = iptCtrl.preProcessData(
+                    iptCtrl.phaseData.state,
+                    iptCtrl.designType);
+
+                iptCtrl.phaseData.state = processedData;
                 iptCtrl.sortedResponses = [...processedData];
             };
 

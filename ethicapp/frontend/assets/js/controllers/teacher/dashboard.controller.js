@@ -218,7 +218,7 @@ export function DashboardController($scope, $routeParams, $http,
             if (!phaseDescriptor) throw new Error(`Phase descriptor not found for phaseId: ${phaseId}`);
     
             const phaseResponses = vm.activityState.responses.find(
-                pr => pr.responses.phase_number == phaseDescriptor.number
+                pr => pr.phase_number == phaseDescriptor.number
             )?.responses ?? [];
     
             let [groups, chatMessageCount] = [null, null];
