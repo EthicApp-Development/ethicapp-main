@@ -77,7 +77,7 @@
             <div ng-show="dc.activeTab === 'users'" class="margin-top-8">
                 <div class="panel panel-default">
                     <div class="panel-body">
-                        <p>{{ 'connected_users_colon' | translate }} {{ !activityStateDescriptor.users ? 0 : activityStateDescriptor.users.length }}</p>
+                        <p>{{ 'connected_users_colon' | translate }} {{ dc.userList.length }}</p>
                     </div>
                 </div>
                 <connected-users session-id="{{dc.sessionId}}">

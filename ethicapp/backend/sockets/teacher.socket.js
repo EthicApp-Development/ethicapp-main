@@ -32,13 +32,9 @@ let teacherSocketInit = (socket) => {
 // Teacher-Student socket notifications (from backend)
 const toTeacherNotifications = (socketNamespace) => {
     return {
-        studentJoined: (sessionId, userId, name, device) => {
+        studentJoined: (sessionId, obj) => {
             socketNamespace.to(`session-${sessionId}`).
-                emit("onStudentJoined", { 
-                    id: userId,
-                    name,
-                    device
-                });
+                emit("onStudentJoined", obj);
         },
 
         responseSubmitted: (sessionId, phaseId, responseObj) => {

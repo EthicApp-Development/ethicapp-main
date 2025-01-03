@@ -204,6 +204,11 @@ export function DashboardController($scope, $routeParams, $http,
     
     vm.loadDashboardPhaseState = async (phaseId, phaseState = null) => {
         try {
+            if (phaseId === null || phaseId === undefined) {
+                console.warn("[DashboardController::loadDashboardPhaseState] PhaseId is null or undefined. Skipping phase state load.");
+                return;
+            }
+
             const designType = vm.designObj.type;
             const builder = dashboardStateBuilders[designType];
     
@@ -316,7 +321,13 @@ export function DashboardController($scope, $routeParams, $http,
         if (vm.checkActivityFinished()) {
             return;
         }
-        vm.userList = vm.activityState.users;
+
+        const currentPhaseId = vm?.activityDescriptor?.currentPhase?.id;
+
+        $scope.$applyAsync(() => { 
+            vm.userList = vm.activityState.users;
+        });
+
         vm.updateDashboardPhaseState(currentPhaseId);
     };
 

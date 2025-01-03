@@ -77,32 +77,36 @@ export function SessionsListController($scope, $http, $socket, $uibModal) {
         self.sesOpen = true;
     };
 
-    self.enterCode = function () {
-        if (self.checkCode(self.invCode.toLowerCase())) {
-            var postdata = {
-                code:   self.invCode.toLowerCase(),
-                device: self.getDeviceInfo()
-            };
+    self.enterCode = async function () {
+        try {
+            if (self.checkCode(self.invCode.toLowerCase())) {
+                const sessionCode = self.invCode.toLowerCase();
+                const postdata = {
+                    device: self.getDeviceInfo()
+                };
     
-            $http.post("enter-session-code", postdata)
-                .then(function (response) {
-                    if (response.data.status === "ok") {
-                        window.location.replace(response.data.redirect);
-                    } else {
-                        $uibModal.open({
-                            template: 
-                                '<div><div class="modal-header"><h4>Error</h4></div>' + 
-                                '<div class="modal-body"><p>El código ingresado no es válido' +
-                                " o la sesión no admite nuevos usuarios</p></div></div>"
-                        });
-                    }
-                })
-                .catch(function (error) {
-                    console.error("Error en la solicitud:", error);
-                    // Manejo opcional de errores adicionales
-                });
+                const response = await $http.post(`/sessions/join/${sessionCode}`, postdata);
+    
+                if (response.data.status === "ok") {
+                    window.location.replace(response.data.redirect);
+                } else {
+                    $uibModal.open({
+                        template: `
+                            <div>
+                                <div class="modal-header">
+                                    <h4>Error</h4>
+                                </div>
+                                <div class="modal-body">
+                                    <p>El código ingresado no es válido o la sesión no admite nuevos usuarios</p>
+                                </div>
+                            </div>`
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Error en la solicitud:", error);
         }
-    };   
+    };  
 
     self.checkCode = function (code) {
         var s = self.sessions.find(function (e) {

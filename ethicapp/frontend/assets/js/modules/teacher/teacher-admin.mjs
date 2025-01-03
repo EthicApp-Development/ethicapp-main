@@ -205,3 +205,6 @@ app.component('designErrorSummary', designErrorSummaryComponent);
 app.component('rankingItemEditor', rankingItemEditorComponent);
 app.component('sdItemEditor', sdItemEditorComponent);
 app.component('designItem', designItemComponent);
+
+import { userRolesFilter } from '../../filters/user-roles.filter.js';
+app.filter("roleTranslate", ["$translate", userRolesFilter]);

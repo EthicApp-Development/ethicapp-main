@@ -310,8 +310,8 @@ router.post("/sessions/join/:code", async (req, res) => {
 
     try {
         // Insertar al usuario en la sesión si las condiciones se cumplen
-        const insertResult = await execSQL({
-            dbcon,
+        const insertResult = await rpg2.execSQL({
+            dbcon: config.dbconnString,
             sql: `
                 INSERT INTO sesusers(UID, sesid, device)
                 SELECT $1::int AS UID,
@@ -337,7 +337,8 @@ router.post("/sessions/join/:code", async (req, res) => {
                   )
                 RETURNING sesid
             `,
-            sqlParams: [uid, device, code],
+            sqlParams: [rpg2.param('plain', uid), rpg2.param('plain', device), 
+                rpg2.param('plain', code)],
         });
 
         if (insertResult.length === 0 || !insertResult[0].sesid) {
@@ -347,32 +348,38 @@ router.post("/sessions/join/:code", async (req, res) => {
         const sesid = insertResult[0].sesid;
 
         // Obtener información del usuario
-        const userResult = await execSQL({
+        const userResult = await rpg2.execSQL({
             dbcon,
             sql: `
-                SELECT name, $1 AS device
+                SELECT name, $1 AS device, role, mail
                 FROM users
                 WHERE id = $2
             `,
-            sqlParams: [device, uid],
+            sqlParams: [rpg2.param('plain', device), rpg2.param('plain', uid)]
         });
 
         if (userResult.length === 0) {
             return res.status(404).json({ status: "error", message: "User not found." });
         }
 
-        const { name } = userResult[0];
+        const { name, role, mail } = userResult[0];
 
-        teacherNotifications.studentJoined(sesid, uid, name, device);
+        teacherNotifications.studentJoined(sesid, { 
+            id: uid,
+            name,
+            device,
+            role,
+            mail
+        });
 
-        const sessionResult = await execSQL({
+        const sessionResult = await rpg2.execSQL({
             dbcon,
             sql: `
                 SELECT type
                 FROM sessions
                 WHERE id = $1
             `,
-            sqlParams: [sesid],
+            sqlParams: [rpg2.param('plain', sesid)],
         });
 
         if (sessionResult.length === 0 || !sessionResult[0].type) {

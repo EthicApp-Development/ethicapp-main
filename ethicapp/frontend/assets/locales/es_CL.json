@@ -421,6 +421,8 @@
 	"activity_designs": "Diseños de Actividades",
 	"launch_activity_button_text": "Lanzar Actividad",
 	"home": "Inicio",
+	"role_student": "Estudiante",
+	"role_teacher": "Docente",
 	"nav_pill_title_home": "Inicio",
 	"nav_pill_title_launch_activity": "Lanzar Actividad",
 	"nav_pill_title_activities": "Actividades",

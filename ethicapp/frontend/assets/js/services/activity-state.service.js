@@ -112,6 +112,8 @@ let ActivityStateService = function($http, TeacherSocketService) {
                             userList.push({
                                 id: data.id,
                                 name: data.name,
+                                role: 'A',
+                                mail: data.mail,
                                 device: data.device,
                             });
                         }
