@@ -8,8 +8,8 @@ export const DashboardDataJoiners = {
         addGroupInfo: (phaseState, groups) => {
             return addParticipantGroupInfo(phaseState, groups);
         },
-        updateGroupStatistics: (phaseState) => {
-            return updateGroupStatistics(phaseState);
+        updateGroupStatistics: (phaseState, translator) => {
+            return updateGroupStatistics(phaseState, translator);
         },
     },
     ranking: {
@@ -19,8 +19,8 @@ export const DashboardDataJoiners = {
         addGroupInfo: (phaseState, groups) => {
             return addParticipantGroupInfo(phaseState, groups);
         },
-        updateGroupStatistics: (phaseState) => {
-            return updateGroupStatistics(phaseState);
+        updateGroupStatistics: (phaseState, translator) => {
+            return updateGroupStatistics(phaseState, translator);
         },
         assignRankingClusters: (phaseState) => {
             return assignRankingClusters(phaseState);
@@ -250,7 +250,7 @@ function addParticipantGroupInfo(phaseData, groups) {
 
     // Step 2: Add group info to each user object
     const updatedUsers = phaseData.map(user => {
-        const groupInfo = participantGroupMap[user.uid] || { groupId: null, groupNumber: null };
+        const groupInfo = participantGroupMap[user.userId] || { groupId: null, groupNumber: null };
         return {
             ...user,
             groupId: groupInfo.groupId,
@@ -270,7 +270,7 @@ function addParticipantGroupInfo(phaseData, groups) {
     });
 }
 
-let updateGroupStatistics = function(data, translate) {
+let updateGroupStatistics = function(data, translator) {
     // Step 0: Filter out existing group summary objects
     const filteredData = data.filter(user => !user.groupStatistics);
 
@@ -294,7 +294,8 @@ let updateGroupStatistics = function(data, translate) {
 
         // Extract group details (assumes all users in the group have the same groupNumber)
         const groupNumber = users[0].groupNumber;
-        const groupName = `${translate('group_label')} ${groupNumber}`;
+        const groupLabel = translator('group_label');
+        const groupName = `${groupLabel} ${groupNumber}`;
 
         // Calculate chat statistics for the group
         const chatStats = users.reduce((stats, user) => {
@@ -306,11 +307,16 @@ let updateGroupStatistics = function(data, translate) {
             return stats;
         }, {});
 
+        // Calculate totalChatCount as the sum of all chatR values
+        const totalChatCount = Object.values(chatStats).reduce((sum, value) => sum + value, 0);
+
         // Create the group summary object
         const groupSummary = {
             groupStatistics: true,
             groupName,
-            ...chatStats
+            groupNumber,
+            ...chatStats,
+            totalChatCount
         };
 
         // Return the group users followed by the summary

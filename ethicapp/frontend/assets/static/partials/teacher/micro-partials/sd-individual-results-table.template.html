@@ -17,7 +17,7 @@
                 {{ response['r' + question.number] || ('no_response' | translate) }}
                 <!-- Checkmark with FontAwesome -->
                 <i ng-if="response['commentR' + question.number] && response['commentR' + question.number].length > 0"
-                class="fa-regular fa-note-sticky"
+                class="fa-regular fa-note-sticky text-warning"
                 aria-hidden="true"></i>
             </td>
         </tr>

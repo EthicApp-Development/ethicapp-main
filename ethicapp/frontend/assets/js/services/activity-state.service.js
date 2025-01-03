@@ -213,10 +213,7 @@ let ActivityStateService = function($http, TeacherSocketService) {
                 try {
                     const response = await $http.get(`/activities/${sessionId}/descriptor`);
                     
-                    // Validar el formato de la respuesta
                     if (response?.data?.descriptor) {
-                        console.log("[getActivityDescriptor] Activity descriptor:", 
-                            JSON.stringify(response.data.descriptor));
                         service.activityStates[sessionId].descriptor = response.data.descriptor;
                     } else {
                         console.warn("Unexpected response format:", response);

@@ -15,14 +15,13 @@ let designViewerDirective = function() {
 
             ctrl.$onChanges = function(changes) {
                 if (changes.design) {
-                    console.debug('[designViewerDirective] design changed:', changes.design.currentValue);
                     ctrl.design = changes.design.currentValue;
                 }
             };            
 
             ctrl.getTemplateUrl = function() {
                 if (!ctrl.design) {
-                    console.warn(`[designViewerDirective] Waiting for designObject to be ready...`);
+                    // console.warn(`[designViewerDirective] Waiting for designObject to be ready...`);
                 }                
                 return "/assets/static/partials/teacher/micro-partials/design-viewer.template.html";
             };

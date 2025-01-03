@@ -11,17 +11,17 @@ let phaseStateDirective = function() {
             const ctrl = this;
             ctrl.$onChanges = function(changes) {
                 if (changes.designType) {
-                    console.debug('[phaseStateDirective] DesignType changed:', changes.designType.currentValue);
+                    // console.debug('[phaseStateDirective] DesignType changed:', changes.designType.currentValue);
                     ctrl.designType = changes.designType.currentValue;
                 }
                 if (changes.phaseData) {
-                    console.debug('[phaseStateDirective] PhaseData changed:', changes.phaseData.currentValue);
+                    // console.debug('[phaseStateDirective] PhaseData changed:', changes.phaseData.currentValue);
                     ctrl.phaseData = changes.phaseData.currentValue;
                 }
             };
 
             ctrl.$onInit = function() {
-                console.debug('[phaseStateDirective] Initialized');
+                // console.debug('[phaseStateDirective] Initialized');
             };
         },
         templateUrl: "/assets/static/partials/teacher/micro-partials/phase-state.template.html"

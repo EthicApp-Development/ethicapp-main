@@ -147,11 +147,11 @@ export function DashboardController($scope, $routeParams, $http,
     
             // Get the activity descriptor
             vm.activityDescriptor = vm.activityState?.descriptor ?? {};
-            console.debug(`[DashboardController::initializeDashboardState] ${JSON.stringify(vm.activityDescriptor)}`);
+            // console.debug(`[DashboardController::initializeDashboardState] ${JSON.stringify(vm.activityDescriptor)}`);
                 
             // Get the design of the activity
             vm.designObj = await DesignCatalogService.getDesignById(vm.activityDescriptor.designId);
-            console.debug(`[DashboardController::initializeDashboardState] designId: ${vm.activityDescriptor.designId} designObj: ${JSON.stringify(vm.designObj)}`);
+            // console.debug(`[DashboardController::initializeDashboardState] designId: ${vm.activityDescriptor.designId} designObj: ${JSON.stringify(vm.designObj)}`);
 
             // Check if the activity is finished
             vm.isActivityFinished = vm.checkActivityFinished();
@@ -259,7 +259,7 @@ export function DashboardController($scope, $routeParams, $http,
     
             if (DesignHelpers.isGroupPhaseByPhaseDescriptor(phaseDescriptor)) {
                 phaseState = builderSteps.addGroupInfo(phaseState, groups);
-                phaseState = builderSteps.updateGroupStatistics(phaseState);
+                phaseState = builderSteps.updateGroupStatistics(phaseState, $translate.instant);
             }
     
             return phaseState;

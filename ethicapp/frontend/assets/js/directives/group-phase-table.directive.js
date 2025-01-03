@@ -40,20 +40,57 @@ let groupPhaseTableDirective = function() {
                     // Flatten grouped data back into a single array
                     return Object.values(groupedData).flat();
                 },
-                semantic_differential: function(groupData, questions) {
-                    const stats = {};
-                    questions.forEach((question, index) => {
-                        const key = `r${index + 1}`;
-                        const chatKey = `chatR${index + 1}`;
-                        const values = groupData.map(user => user[key]).filter(v => v !== null);
-        
-                        const avg = values.reduce((a, b) => a + b, 0) / values.length || 0;
-        
-                        stats[`averageR${index + 1}`] = avg.toFixed(2);
-                        stats[chatKey] = groupData.reduce((sum, user) => sum + (user[chatKey] || 0), 0);
+                semantic_differential: function (participantData, questions) {
+                    // Filter out individual participant data and group it by `groupNumber`
+                    const individualData = participantData.filter(participant => !participant.groupStatistics);
+                    const groupMap = individualData.reduce((acc, participant) => {
+                        const groupNumber = participant.groupNumber || 'Ungrouped';
+                        if (!acc[groupNumber]) acc[groupNumber] = [];
+                        acc[groupNumber].push(participant);
+                        return acc;
+                    }, {});
+            
+                    // Calculate statistics for each group
+                    Object.keys(groupMap).forEach(groupNumber => {
+                        const members = groupMap[groupNumber];
+                        const stats = {};
+            
+                        // Calculate average and coefficient of variation (CV) for each question
+                        questions.forEach((question, index) => {
+                            const key = `r${index + 1}`;
+                            const values = members.map(member => member[key]).filter(v => v !== null);
+            
+                            if (values.length > 0) {
+                                const avg = values.reduce((a, b) => a + b, 0) / values.length;
+                                const variance = values.reduce((sum, value) => sum + Math.pow(value - avg, 2), 0) / values.length;
+                                const stdDev = Math.sqrt(variance);
+                                const cv = avg !== 0 ? (stdDev / avg) : 0;
+            
+                                // Add calculated average and CV to stats object
+                                stats[`averageR${index + 1}`] = avg.toFixed(2);
+                                stats[`cvR${index + 1}`] = cv.toFixed(2);
+                            } else {
+                                // Default values if no data is available
+                                stats[`averageR${index + 1}`] = '-';
+                                stats[`cvR${index + 1}`] = '-';
+                            }
+                        });
+            
+                        // Locate or create the `groupStatistics` object for this group
+                        let groupStatsObject = participantData.find(obj => obj.groupStatistics && 
+                            obj.groupNumber === Number(groupNumber));
+                        if (!groupStatsObject) {
+                            // If the object does not exist, create and add it
+                            groupStatsObject = { groupStatistics: true, groupNumber, stats: {} };
+                            participantData.push(groupStatsObject);
+                        }
+            
+                        // Update the `groupStatistics` object with the calculated stats
+                        Object.assign(groupStatsObject, stats);
                     });
-                    stats.totalChatCount = groupData.reduce((sum, user) => sum + (user.totalChatCount || 0), 0);
-                    return stats;
+            
+                    // Return the updated participantData with `groupStatistics` objects in their original positions
+                    return participantData;
                 }
             };
 
@@ -68,31 +105,32 @@ let groupPhaseTableDirective = function() {
 
             // Initialize data
             gptCtrl.initialize = function() {
-                if (!gptCtrl.phaseData.state.responses || !gptCtrl.phaseData.descriptor.questions) {
+                if (!gptCtrl.phaseData.state || !gptCtrl.phaseData.descriptor.questions) {
                     console.error("Invalid phase data provided.");
                     return;
                 }
 
-                const groupData = gptCtrl.phaseData.state.responses;
+                const participantData = gptCtrl.phaseData.state;
                 const questions = gptCtrl.phaseData.descriptor.questions;
 
                 // Preprocess data based on the design type
-                const processedData = gptCtrl.calculateGroupStatistics(groupData, questions);
+                gptCtrl.calculateGroupStatistics(participantData, questions);
+            };
 
-                // Update scope with processed data
-                gptCtrl.sortedResponses = [...processedData]; // Default sorted responses
+            gptCtrl.getParticipantCount = function() {
+                return gptCtrl.phaseData?.state.filter(pd => !pd.groupStatistics).length ?? 0;
             };
 
             // Lifecycle hook: Reacts to changes in bindings
             gptCtrl.$onChanges = function(changes) {
                 if (changes.designType && changes.designType.currentValue) {
                     gptCtrl.designType = changes.designType.currentValue;
-                    console.debug(`[individualPhaseTableDirective] Updated designType: ${gptCtrl.designType}`);
+                    // console.debug(`[individualPhaseTableDirective] Updated designType: ${gptCtrl.designType}`);
                 }
 
                 if (changes.phaseData && changes.phaseData.currentValue) {
                     gptCtrl.phaseData = changes.phaseData.currentValue;
-                    console.debug(`[groupPhaseTableDirective] Updated phaseData:`, gptCtrl.phaseData);
+                    // console.debug(`[groupPhaseTableDirective] Updated phaseData:`, gptCtrl.phaseData);
 
                     // Only initialize when bindings are ready
                     gptCtrl.initialize();
@@ -111,7 +149,6 @@ let groupPhaseTableDirective = function() {
                     console.warn(`[groupPhaseTableDirective] Template not found for design type: ${gptCtrl.designType}`);
                     return `/assets/static/partials/teacher/micro-partials/default-template.html`;
                 }
-                console.debug(`[groupPhaseTableDirective] Using template: ${template}`);
                 return template;
             };            
         },

@@ -72,12 +72,12 @@ let individualPhaseTableDirective = function() {
             iptCtrl.$onChanges = function(changes) {
                 if (changes.designType && changes.designType.currentValue) {
                     iptCtrl.designType = changes.designType.currentValue;
-                    console.debug(`[individualPhaseTableDirective] Updated designType: ${iptCtrl.designType}`);
+                    // console.debug(`[individualPhaseTableDirective] Updated designType: ${iptCtrl.designType}`);
                 }
 
                 if (changes.phaseData && changes.phaseData.currentValue) {
                     iptCtrl.phaseData = changes.phaseData.currentValue;
-                    console.debug(`[individualPhaseTableDirective] Updated phaseData:`, iptCtrl.phaseData);
+                    // console.debug(`[individualPhaseTableDirective] Updated phaseData:`, iptCtrl.phaseData);
                     iptCtrl.initialize();
                 }
             };
@@ -94,7 +94,6 @@ let individualPhaseTableDirective = function() {
                     console.warn(`[individualPhaseTableDirective] Template not found for design type: ${iptCtrl.designType}`);
                     return `/assets/static/partials/teacher/micro-partials/default-template.html`;
                 }
-                console.debug(`[individualPhaseTableDirective] Using template: ${template}`);
                 return template;
             };
         },

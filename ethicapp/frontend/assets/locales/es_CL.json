@@ -308,6 +308,7 @@
     "coefficient_of_variation_label": "Coeficiente de Variación",
     "chat_messages_label": "Mensajes de Chat",
 	"group_column_header": "Grupo",
+	"group_label": "Grupo",
     "chat_column_header": "Mensajes de Chat",
     "justification_required_caption": "Se requiere justificación para esta pregunta",
 	"scale_values_text": "Valores de la escala",

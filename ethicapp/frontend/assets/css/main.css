@@ -2673,5 +2673,9 @@ h2{
     z-index: 1000;
     white-space: nowrap;
     display: none;
-    font-family: var(--global-font-family); /* Usa la fuente del body */
+    font-family: var(--global-font-family); /* Use the font defined for the body */
+}
+
+tr.group-summary {
+    background-color: #ddd !important;
 }

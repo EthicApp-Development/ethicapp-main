@@ -264,6 +264,7 @@
 	"coefficient_of_variation_label": "Coefficient of Variation",
 	"chat_messages_label": "Chat Messages",
 	"group_column_header": "Group",
+	"group_label": "Group",
 	"chat_column_header": "Chat Messages",	
 	"number_of_equal_column_header": "Number of Equal",
 	"author_column_header": "Author",

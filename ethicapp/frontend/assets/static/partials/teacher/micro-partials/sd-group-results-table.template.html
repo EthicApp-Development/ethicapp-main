@@ -2,7 +2,7 @@
 <table class="table table-striped" ng-if="gptCtrl.phaseData.state.length > 0">
     <thead>
         <tr>
-            <th>{{ 'author_column_header' | translate }}</th>
+            <th>{{ 'participant_column_header' | translate }}</th>
             <th>{{ 'group_column_header' | translate }}</th>
             <th ng-repeat="question in gptCtrl.phaseData.descriptor.questions">
                 {{ 'item_label' | translate }} {{ $index + 1 }} (1-{{ question.range }})
@@ -12,7 +12,7 @@
         </tr>
     </thead>
     <tbody>
-        <tr ng-repeat="user in gptCtrl.phaseData.state.data track by $index" ng-class="{'group-summary': user.groupStatistics}">
+        <tr ng-repeat="user in gptCtrl.phaseData.state track by $index" ng-class="{'group-summary': user.groupStatistics}">
             <td>
                 <span ng-if="!user.groupStatistics">{{ user.userName }}</span>
                 <strong ng-if="user.groupStatistics">{{ user.groupName }}</strong>
@@ -23,13 +23,13 @@
             <td ng-repeat="question in gptCtrl.phaseData.descriptor.questions">
                 <div ng-if="!user.groupStatistics">
                     {{ user['r' + ($index + 1)] || ('no_response' | translate) }}
-                    <span class="badge badge-info">
-                        <i class="fa fa-comments"></i> {{ user['chatR' + ($index + 1)] || 0 }}
-                    </span>
                     <i ng-if="user['commentR' + ($index + 1)] && user['commentR' + ($index + 1)].length > 0"
-                    class="fa-solid fa-note-sticky text-warning"
+                    class="fa-regular fa-note-sticky text-warning"
                     aria-hidden="true"
                     title="{{ 'comment_exists_tooltip' | translate }}"></i>
+                    <span class="badge badge-danger">
+                        <i class="fa fa-comments"></i> {{ user['chatR' + ($index + 1)] || 0 }}
+                    </span>
                 </div>
                 <div ng-if="user.groupStatistics">
                     <span>
@@ -61,9 +61,9 @@
     </tbody>
     <tfoot>
         <tr>
-            <td colspan="{{ gptCtrl.phaseData.descriptor.questions.length + 2 }}">
+            <td colspan="{{ gptCtrl.phaseData.descriptor.questions.length + 3 }}">
                 <div class="summary-text">
-                    <strong>{{ 'participants_label' | translate }}:</strong> {{ gptCtrl.getUserCount(gptCtrl.phaseData.state.data) }}<br>
+                    <strong>{{ 'participants_label' | translate }}:</strong> {{ gptCtrl.getParticipantCount() }}<br>
                     <strong>A:</strong> {{ 'average_label' | translate }}. <strong>CV:</strong> {{ 'coefficient_of_variation_label' | translate }}. <i class="fa fa-comments"></i> {{ 'chat_messages_label' | translate }}. <span class="text-danger">*</span>{{'justification_required_caption' | translate }}.
                 </div>
             </td>
