@@ -38,7 +38,7 @@ let ActivityStateService = function($http, TeacherSocketService) {
                 (prs) => Number(prs.phase_number) === Number(phaseNumber)
             );
 
-            const existingResponse = phaseResponses?.items.find(resp => resp.uid === response.uid);
+            const existingResponse = phaseResponses?.responses.find(resp => resp.uid === response.uid);
 
             if (existingResponse) {
                 existingResponse.comment = response.comment;
@@ -142,9 +142,18 @@ let ActivityStateService = function($http, TeacherSocketService) {
                             console.error(msg);
                             throw new Error(msg);                           
                         }
-                
-                        handler(sessionId, data, service.activityStates[sessionId].responses);
-                
+
+                        // If this is the first response, fetch the responses, including the
+                        // one that just arrived. That is, have the API conform the appropriate data
+                        // structure to accommodate the next responses that arrive.
+                        if (!service.activityStates[sessionId].responses) {
+                            // load activity responses
+                            await service.getResponses(sessionId, true);
+                        }
+                        else {
+                            handler(sessionId, data, service.activityStates[sessionId].responses);
+                        }
+
                         service.notifyListeners("onResponseSubmitted", { 
                             response: data
                         });

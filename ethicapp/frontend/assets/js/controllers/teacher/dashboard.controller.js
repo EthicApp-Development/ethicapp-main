@@ -12,7 +12,7 @@ export function DashboardController($scope, $routeParams, $http,
     vm.designObj = null;
     vm.userList = [];
     vm.reachedLastPhase = false;
-    vm.dashboardPhaseStates = [];
+    vm.dashboardPhaseData = [];
     
     vm.selectedTab = 0; // Default to the first tab
 
@@ -166,7 +166,7 @@ export function DashboardController($scope, $routeParams, $http,
             // Initialize dashboard phase states using Promise.all for efficiency
             const phaseStatePromises = phaseInstances.map(async (phase) => {
                 try {    
-                    const phaseState = await vm.loadDashboardPhaseState(phase.id);
+                    const phaseState = await vm.loadDashboardPhaseData(phase.id);
                     return phaseState;
                 } catch (error) {
                     console.error(`Error loading state for phase ${phase.id}:`, error);
@@ -178,7 +178,7 @@ export function DashboardController($scope, $routeParams, $http,
             const resolvedPhaseStates = await Promise.all(phaseStatePromises);
 
             $scope.$applyAsync(() => {
-                vm.dashboardPhaseStates = resolvedPhaseStates.filter(state => state !== null);
+                vm.dashboardPhaseData = resolvedPhaseStates.filter(state => state !== null);
             });
 
         } catch (error) {
@@ -187,25 +187,36 @@ export function DashboardController($scope, $routeParams, $http,
     };
 
     vm.updateDashboardPhaseState = async (phaseId) => {
-        let phaseState = vm.dashboardPhaseStates.find(ps => ps.descriptor.id == phaseId);
+        let phaseData = vm.dashboardPhaseData.find(pd => pd.descriptor.id == phaseId);
     
-        if (!phaseState) {
-            phaseState = await vm.loadDashboardPhaseState(phaseId);
-            if (phaseState) {
-                $scope.$applyAsync(() => {  
-                    vm.dashboardPhaseStates.push(phaseState);
-                });
+        try {
+            if (!phaseData) {
+                phaseData = await vm.loadDashboardPhaseData(phaseId);
+                if (phaseData) {
+                    $scope.$applyAsync(() => {  
+                        vm.dashboardPhaseData.push(phaseData);
+                    });
+                }
             }
-        }
-        else {
-            await vm.loadDashboardPhaseState(phaseId, phaseState);
+            else {
+                // Load the phase data partially, i.e., update the state, not fully recreate it.
+                const updatedData = await vm.loadDashboardPhaseData(phaseId, phaseData.state);
+                if (updatedData) {
+                    $scope.$applyAsync(() => {
+                        const index = vm.dashboardPhaseData.findIndex(pd => pd.descriptor.id == phaseId);
+                        vm.dashboardPhaseData[index] = updatedData;
+                    });
+                }
+            }
+        } catch(error) {
+            console.error("Error updating dashboard phase state:", error);
         }
     };
     
-    vm.loadDashboardPhaseState = async (phaseId, phaseState = null) => {
+    vm.loadDashboardPhaseData = async (phaseId, phaseState = null) => {
         try {
             if (phaseId === null || phaseId === undefined) {
-                console.warn("[DashboardController::loadDashboardPhaseState] PhaseId is null or undefined. Skipping phase state load.");
+                console.warn("[DashboardController::loadDashboardPhaseData] PhaseId is null or undefined. Skipping phase state load.");
                 return;
             }
 

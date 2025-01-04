@@ -38,7 +38,7 @@
                 <!-- Horizontal Rule -->
                 <hr>
                 <!-- Activity Phases Section -->
-                <div class="row" ng-if="dc.dashboardPhaseStates && dc.dashboardPhaseStates.length === 0">
+                <div class="row" ng-if="dc.dashboardPhaseData && dc.dashboardPhaseData.length === 0">
                     <div class="col-md-12">
                         <h3 style="margin-bottom: 1em;">{{ 'activity_progress_title' | translate }}</h3>
                         <div class="alert alert-warning" role="alert">
@@ -46,13 +46,13 @@
                         </div>
                     </div>
                 </div>
-                <div class="row" ng-if="dc.dashboardPhaseStates && dc.dashboardPhaseStates.length > 0">
+                <div class="row" ng-if="dc.dashboardPhaseData && dc.dashboardPhaseData.length > 0">
                     <div class="col-md-12">
                         <h3 style="margin-bottom: 1em;">{{ 'activity_progress_title' | translate }}</h3>
                         <div>
                             <ul class="nav nav-tabs" role="tablist">
                                 <!-- Tab headers -->
-                                <li role="presentation" ng-repeat="phase in dc.dashboardPhaseStates track by $index" 
+                                <li role="presentation" ng-repeat="phase in dc.dashboardPhaseData track by $index" 
                                     ng-class="{active: dc.selectedTab === $index}">
                                     <a href="" ng-click="dc.selectTab($index)" role="tab">
                                         {{ 'phase_title_text' | translate }} {{ phase.descriptor.number }}
@@ -64,8 +64,8 @@
                                 <div role="tabpanel" class="tab-pane" style="margin-bottom: 2em; padding:1em; border-bottom: 1px solid #ddd; border-left: 1px solid #ddd; border-right: 1px solid #ddd;"
                                      ng-class="{active: dc.selectedTab === $index}" 
                                      id="phase-{{ $index }}" 
-                                     ng-if="dc.dashboardPhaseStates.length > 0"
-                                     ng-repeat="phase in dc.dashboardPhaseStates track by $index">
+                                     ng-if="dc.dashboardPhaseData.length > 0"
+                                     ng-repeat="phase in dc.dashboardPhaseData track by $index">
                                     <phase-description phase-number="phase.descriptor.number" design-object="dc.designObj"></phase-description>
                                     <phase-state phase-data="phase" design-type="dc.designObj.type"></phase-state>
                                 </div>
