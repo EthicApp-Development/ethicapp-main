@@ -72,9 +72,11 @@ export function DashboardController($scope, $routeParams, $http,
 
     vm.startNextPhase = async function () {
         try {
+            // TODO: refactor, as the following operations should be performed by the service
+
             // Check if there are existing phases
-            let currentPhaseNumber = vm.activityDescriptor.currentPhase
-                ? vm.activityDescriptor.currentPhase.number
+            let currentPhaseNumber = vm.activityState.descriptor.currentPhase
+                ? vm.activityState.descriptor.currentPhase.number
                 : null;
     
             // Determine if we need to create the first phase
@@ -119,11 +121,9 @@ export function DashboardController($scope, $routeParams, $http,
             // Transition to the newly created phase
             await ActivityStateService.transitionToPhase(vm.sessionId, phaseId, phase);
     
-            // Reload the activity descriptor
-            vm.activityDescriptor = await ActivityStateService.getActivityDescriptor(vm.sessionId, true);
             vm.isActivityFinished = vm.checkActivityFinished();
     
-            if (vm.activityDescriptor.currentPhase.id !== phaseId) {
+            if (vm.activityState.descriptor.currentPhase.id !== phaseId) {
                 throw new Error("Abnormal state found.");
             }
     
@@ -144,15 +144,10 @@ export function DashboardController($scope, $routeParams, $http,
             // Load the entire activity state
             vm.activityState = await ActivityStateService.loadActivityState(vm.sessionId);
             vm.userList = vm.activityState?.users ?? [];
-    
-            // Get the activity descriptor
-            vm.activityDescriptor = vm.activityState?.descriptor ?? {};
-            // console.debug(`[DashboardController::initializeDashboardState] ${JSON.stringify(vm.activityDescriptor)}`);
-                
+                    
             // Get the design of the activity
-            vm.designObj = await DesignCatalogService.getDesignById(vm.activityDescriptor.designId);
-            // console.debug(`[DashboardController::initializeDashboardState] designId: ${vm.activityDescriptor.designId} designObj: ${JSON.stringify(vm.designObj)}`);
-
+            vm.designObj = await DesignCatalogService.getDesignById(vm.activityState.descriptor.designId);
+    
             // Check if the activity is finished
             vm.isActivityFinished = vm.checkActivityFinished();
             vm.setActivityTitle();
@@ -219,13 +214,13 @@ export function DashboardController($scope, $routeParams, $http,
                 console.warn("[DashboardController::loadDashboardPhaseData] PhaseId is null or undefined. Skipping phase state load.");
                 return;
             }
-            
+
             const designType = vm.designObj.type;
             const builder = dashboardStateBuilders[designType];
     
             if (!builder) throw new Error(`No builder found for design type: ${designType}`);
     
-            const phaseDescriptor = vm.activityDescriptor.phases.find(p => p.id == phaseId);
+            const phaseDescriptor = vm.activityState.descriptor.phases.find(p => p.id == phaseId);
             if (!phaseDescriptor) throw new Error(`Phase descriptor not found for phaseId: ${phaseId}`);
     
             const phaseResponses = vm.activityState.responses.find(
@@ -333,7 +328,7 @@ export function DashboardController($scope, $routeParams, $http,
             return;
         }
 
-        const currentPhaseId = vm?.activityDescriptor?.currentPhase?.id;
+        const currentPhaseId = vm?.activityState?.descriptor?.currentPhase?.id;
 
         $scope.$applyAsync(() => { 
             vm.userList = vm.activityState.users;
@@ -343,7 +338,7 @@ export function DashboardController($scope, $routeParams, $http,
     };
 
     vm.defaultEventHandler = function (data) {
-        const currentPhaseId = vm?.activityDescriptor?.currentPhase?.id;
+        const currentPhaseId = vm?.activityState?.descriptor?.currentPhase?.id;
         if (!currentPhaseId) {
             console.warn("Unable to resolve the current phase");
             return;
@@ -352,12 +347,12 @@ export function DashboardController($scope, $routeParams, $http,
     };
 
     vm.lastPhaseReached = function() {
-        return vm.activityDescriptor.currentPhase !== null && 
-            vm.activityDescriptor.currentPhase.number == vm.designObj.phases.length;
+        return vm.activityState?.descriptor.currentPhase !== null && 
+            vm.activityState.descriptor.currentPhase.number == vm.designObj.phases.length;
     }
 
     vm.checkActivityFinished = function() {
-        return vm.activityDescriptor.status === "finished";        
+        return vm.activityState.descriptor.status === "finished";        
     }
 
     vm.getUserCount = function(data) {

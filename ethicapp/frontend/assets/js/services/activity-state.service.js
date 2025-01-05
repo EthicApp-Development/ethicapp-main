@@ -31,14 +31,15 @@ let ActivityStateService = function($http, TeacherSocketService) {
             }
         },
         semanticDifferentialResponseMerger: async function(sessionId, response, responses) {
-            const phases = await service.getInstancedPhases(sessionId, true);
+            const phases = await service.getInstancedPhases(sessionId, false);
             const phaseNumber = phases.find((phase) => phase.id === Number(response.phaseId))?.number;
 
             const phaseResponses = responses.find(
                 (prs) => Number(prs.phase_number) === Number(phaseNumber)
             );
 
-            const existingResponse = phaseResponses?.responses.find(resp => resp.uid === response.uid);
+            const existingResponse = phaseResponses?.responses.find(resp => resp.uid === response.uid
+                && resp.did == response.did);
 
             if (existingResponse) {
                 existingResponse.comment = response.comment;
@@ -148,7 +149,7 @@ let ActivityStateService = function($http, TeacherSocketService) {
                             await service.getResponses(sessionId, true);
                         }
 
-                        handler(sessionId, data, service.activityStates[sessionId].responses);
+                        await handler(sessionId, data, service.activityStates[sessionId].responses);
 
                         console.debug(`Response submitted for session ${sessionId}:`, 
                             JSON.stringify(data));
@@ -462,7 +463,16 @@ let ActivityStateService = function($http, TeacherSocketService) {
                 url: `/activities/${sessionId}/phase_transition`,
                 method: "post",
                 data: { phaseId },
-            });            
+            });
+
+            // Update the phases
+            await service.getInstancedPhases(sessionId, true);
+
+            // Update the activity descriptor
+            await service.getActivityDescriptor(sessionId, true);
+
+            // Update the responses
+            await service.getResponses(sessionId, true);
         }
     };
 

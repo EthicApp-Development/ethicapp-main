@@ -212,72 +212,66 @@ router.post("/get-team-differential-selection-deprecated", await rpg.multiSQL({
 }));
 
 router.post("/get-team-differential-selection", async (req, res) => {
-    let { prevstages, stageid } = req.body;
-    const userId = req.session?.uid;
+    const { stageid, prevstages } = req.body;
+    let prevStagesArray = JSON.parse(prevstages);
 
-    // Validate 'prevstages' and attempt to parse it if it's a string
-    if (typeof prevstages === "string") {
-        try {
-            prevstages = JSON.parse(prevstages);
-        } catch (err) {
-            return res.status(400).json({ error: "Invalid 'prevstages' parameter. Must be a JSON array or an array of integers." });
-        }
-    }
-
-    // Validate input parameters
-    if (!Array.isArray(prevstages) || !prevstages.every(Number.isInteger)) {
+    // Validate input
+    if (!Array.isArray(prevStagesArray) || !prevStagesArray.every(Number.isInteger)) {
         return res.status(400).json({ error: "Invalid 'prevstages' parameter. Must be an array of integers." });
     }
-    if (!stageid || !userId) {
-        return res.status(400).json({ error: "Missing required parameters: 'stageid' or user session." });
+
+    if (!Number.isInteger(stageid)) {
+        return res.status(400).json({ error: "Invalid 'stageid' parameter. Must be an integer." });
     }
 
     try {
-        // Convert the incoming array to PostgreSQL's preferred format
-        const formattedPrevStages = `{${prevstages.join(",")}}`;
+        const db = await rpg2.getDBInstance(config.dbconnString);
 
-        // Execute the query
-        const result = await rpg2.execSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                SELECT DISTINCT 
-                    s.sel,
-                    s.uid,
-                    s.did,
-                    s.comment,
-                    d.stageid,
-                    d.orden,
-                    d.title,
-                    d.tleft,
-                    d.tright,
-                    d.num
-                FROM differential_selection AS s
-                INNER JOIN differential AS d ON s.did = d.id
-                WHERE d.stageid = ANY($1::int[])
-                    AND s.uid IN (
-                        SELECT tu.uid
-                        FROM teamusers AS tu
-                        WHERE tu.tmid = (
-                            SELECT t.id
-                            FROM teamusers AS tu
-                            INNER JOIN teams AS t ON tu.tmid = t.id
-                            WHERE t.stageid = $2
-                                AND tu.uid = $3
-                        )
-                    )
-                ORDER BY d.stageid, s.uid, d.orden
-            `,
-            sqlParams: [
-                rpg2.param("plain", formattedPrevStages), // Array with desired previous stages
-                rpg2.param("plain", stageid),             // ID of the current pahse
-                rpg2.param("plain", userId)               // ID of the current user
-            ],
-        });
+        // Query with subquery to map phase numbers to stage IDs
+        const sql = `
+            SELECT DISTINCT s.sel,
+                s.uid,
+                s.did,
+                s.comment,
+                d.stageid,
+                d.orden,
+                d.title,
+                d.tleft,
+                d.tright,
+                d.num
+            FROM differential_selection AS s
+            INNER JOIN differential AS d
+                ON s.did = d.id
+            WHERE d.stageid = ANY (
+                SELECT id
+                FROM stages
+                WHERE sesid = (
+                    SELECT sesid
+                    FROM stages
+                    WHERE id = $1
+                )
+                AND number = ANY($2::int[])
+            )
+            AND s.uid IN (
+                SELECT tu.uid
+                FROM teamusers AS tu
+                WHERE tu.tmid = (
+                    SELECT t.id
+                    FROM teamusers AS tu
+                    INNER JOIN teams AS t
+                        ON tu.tmid = t.id
+                    WHERE t.stageid = $1
+                        AND tu.uid = $3
+                )
+            )
+            ORDER BY d.stageid, s.uid, d.orden
+        `;
 
-        // Devolver los resultados
-        res.status(200).json({ data: result });
-    } catch (err) {
-        console.error("[Error in /get-team-differential-selection]", err);
+        const result = await db.query(sql, [stageid, prevStagesArray, req.session.uid]);
+
+        res.status(200).json({ data: result.rows });
+    } catch (error) {
+        console.error("Error in /get-team-differential-selection:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
