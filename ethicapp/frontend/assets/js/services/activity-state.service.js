@@ -7,7 +7,7 @@ let ActivityStateService = function($http, TeacherSocketService) {
         listeners: {}, // Subscribed listeners
         rankingResponseMerger: async function(sessionId, response, responses) {
             const phases = await service.getInstancedPhases(sessionId, false);
-            const phaseNumber = phases.find((phase) => phase.id === response.phaseId)?.number;
+            const phaseNumber = phases.find((phase) => phase.id === Number(response.phaseId))?.number;
 
             const phaseResponses = responses.find(
                 (prs) => Number(prs.phase_number) === Number(phaseNumber)
@@ -26,7 +26,7 @@ let ActivityStateService = function($http, TeacherSocketService) {
                     });
                 }
                 else {
-                    phaseResponses.push(responseWithoutType);
+                    phaseResponses.items.push(responseWithoutType);
                 }
             }
         },
@@ -52,7 +52,7 @@ let ActivityStateService = function($http, TeacherSocketService) {
                     });
                 }
                 else {
-                    phaseResponses.push(responseWithoutType);
+                    phaseResponses.responses.push(responseWithoutType);
                 }
             }
         },
@@ -132,9 +132,6 @@ let ActivityStateService = function($http, TeacherSocketService) {
             subscriptions.push(
                 TeacherSocketService.fromEvent('onResponseSubmitted').subscribe({
                     next: async (data) => {
-                        console.debug(`Response submitted for session ${sessionId}:`, 
-                            JSON.stringify(data));
-                
                         const handler = await service.responseMergeHandlers[data.type];
                         
                         if (!handler) {
@@ -150,10 +147,13 @@ let ActivityStateService = function($http, TeacherSocketService) {
                             // load activity responses
                             await service.getResponses(sessionId, true);
                         }
-                        else {
-                            handler(sessionId, data, service.activityStates[sessionId].responses);
-                        }
 
+                        handler(sessionId, data, service.activityStates[sessionId].responses);
+
+                        console.debug(`Response submitted for session ${sessionId}:`, 
+                            JSON.stringify(data));
+                        console.debug(`About to notify listeners ${JSON.stringify(data)}:`);
+    
                         service.notifyListeners("onResponseSubmitted", { 
                             response: data
                         });

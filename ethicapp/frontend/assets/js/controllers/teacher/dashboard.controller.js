@@ -133,7 +133,7 @@ export function DashboardController($scope, $routeParams, $http,
             });
     
             // Update data for the current phase
-            vm.updateDashboardPhaseState(phaseId);
+            vm.updateDashboardPhaseData(phaseId);
         } catch (error) {
             console.error("Error in startNextPhase:", error);
         }
@@ -186,10 +186,10 @@ export function DashboardController($scope, $routeParams, $http,
         }
     };
 
-    vm.updateDashboardPhaseState = async (phaseId) => {
-        let phaseData = vm.dashboardPhaseData.find(pd => pd.descriptor.id == phaseId);
-    
+    vm.updateDashboardPhaseData = async (phaseId) => {    
         try {
+            let phaseData = vm.dashboardPhaseData.find(pd => pd.descriptor.id == phaseId);
+
             if (!phaseData) {
                 phaseData = await vm.loadDashboardPhaseData(phaseId);
                 if (phaseData) {
@@ -219,7 +219,7 @@ export function DashboardController($scope, $routeParams, $http,
                 console.warn("[DashboardController::loadDashboardPhaseData] PhaseId is null or undefined. Skipping phase state load.");
                 return;
             }
-
+            
             const designType = vm.designObj.type;
             const builder = dashboardStateBuilders[designType];
     
@@ -339,7 +339,7 @@ export function DashboardController($scope, $routeParams, $http,
             vm.userList = vm.activityState.users;
         });
 
-        vm.updateDashboardPhaseState(currentPhaseId);
+        vm.updateDashboardPhaseData(currentPhaseId);
     };
 
     vm.defaultEventHandler = function (data) {
@@ -348,7 +348,7 @@ export function DashboardController($scope, $routeParams, $http,
             console.warn("Unable to resolve the current phase");
             return;
         }
-        vm.updateDashboardPhaseState(currentPhaseId);
+        vm.updateDashboardPhaseData(currentPhaseId);
     };
 
     vm.lastPhaseReached = function() {
