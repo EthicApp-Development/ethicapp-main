@@ -60,7 +60,6 @@
                             <div class="differential" ng-repeat="df in dfs">
                                 <div class="row mb-2">
                                     <div class="col-xs-12">
-
                                         <button class="btn btn-default"
                                             ng-class="{'btn-primary': selDF.id == df.id}" ng-click="openChat(df)"
                                             style="padding: 2px 8px;" ng-show="stages[selectedStage].chat"
@@ -100,7 +99,7 @@
                                     <textarea type="text" class="form-control text-comment-input"
                                         placeholder="{{'comment' | translate }}" ng-model="df.comment"
                                         ng-change="df.dirty = true" ng-disabled="finished || !df.justify">
-                                                    </textarea>
+                                    </textarea>
                                 </div>
                                 <div class="col-xs-12 mb-4">
                                     <span class="input-group-addon hoverable text-white bg-ethicapp"
@@ -250,7 +249,7 @@
                     <div class="chat-container">
                         <!-- <h4>Chat</h4> -->
                         <div class="chat bordered">
-                            <div ng-show="chatExp && selectedDF != null && stages[selectedStage].chat "
+                            <div ng-show="chatExp && selectedDF != null && stages[selectedStage].chat"
                                 class="text-center font-large">
                                 <strong>Chat Item {{ selDF.orden }}</strong>
                             </div>

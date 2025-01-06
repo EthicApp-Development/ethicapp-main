@@ -265,7 +265,7 @@ export function EthicsController($scope, $http, $timeout,
                 }
     
                 if (self.currentStage.chat) {
-                    updateChat();
+                    await updateChat();
                 }
             }
         } catch (error) {
@@ -528,10 +528,10 @@ export function EthicsController($scope, $http, $timeout,
         StudentSocketService.emitEvent("messageToGroup", {
             groupId: self.tmId,
             content: {
-                phaseId: self.currentStageId,
-                parentId: self.chatmsgreply,
-                questionId: self.selectedDF,
-                text: self.chatmsg,
+                stage_id: self.currentStageId,
+                parent_id: self.chatmsgreply,
+                did: self.selectedDF,
+                comment: self.chatmsg,
                 uid: self.myUid
             }
         });
