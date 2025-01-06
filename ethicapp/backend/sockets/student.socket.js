@@ -1,4 +1,6 @@
-let studentSocketInit = (socket) => {
+import * as ChatHelper from "../helpers/chat-helper.js";
+
+let studentSocketInit = (socket, socketNamespace) => {
     console.debug('Student connected');
 
     // Join a session
@@ -28,13 +30,25 @@ let studentSocketInit = (socket) => {
     });    
 
     // Send a message to the group
-    socket.on('messageToGroup', ({ groupId, message }) => {
-        studentNamespace.to(`group-${groupId}`).emit('groupMessage', message);
+    socket.on('messageToGroup', (data) => {
+        // Keep the message
+        try {
+            ChatHelper.saveChatMessage({ 
+                userId: data.content.uid,
+                phaseId: data.content.phaseId,
+                questionId: data.content.questionId,
+                parentId: data.content.parentId,
+                content: data.content.text
+             });
+             socketNamespace.to(`group-${data.groupId}`).emit('onGroupMessage', data.content);    
+        } catch (error) {
+            console.error(`Failed to process message for group ${groupId}`);
+        }
     });
 
     // Broadcast message to everyone in the session
     socket.on('broadcastToSession', (sessionId, message) => {
-        studentNamespace.to(`session-${sessionId}`).emit('notification', message);
+        socketNamespace.to(`session-${sessionId}`).emit('notification', message);
     });
 }
 

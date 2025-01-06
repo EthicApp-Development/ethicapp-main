@@ -1,3 +1,5 @@
+import { sdAddChatMessage } from "../../helpers/student-chat-helper.js"
+
 export function EthicsController($scope, $http, $timeout, 
     StudentSocketService, Notification, $sce, $uibModal, $translate) {
     var self = $scope;
@@ -71,8 +73,13 @@ export function EthicsController($scope, $http, $timeout,
             window.location.reload();
         });
 
-        StudentSocketService.onEvent("onChatMessage", (data) => {
-            updateChat();
+        StudentSocketService.onEvent("onGroupMessage", (data) => {
+            console.log(`[EthicsController::initializeSocket] onGroupMessage ${JSON.stringify(data)}`);
+            $scope.$applyAsync(() => {
+                if (!sdAddChatMessage(self, data)) {
+                    console.error("[EthicsController::initializeSocket] Failed to add chat message to the scope");
+                }
+            });
         })
 
         StudentSocketService.onEvent("onShareResponse", (data) => {
@@ -83,7 +90,6 @@ export function EthicsController($scope, $http, $timeout,
 
         });
     };
-
 
     self.loadSessionInfo = async function () {
         try {
@@ -132,40 +138,53 @@ export function EthicsController($scope, $http, $timeout,
         });
     };
 
-    function updateChat(count) {
-        $http.post("get-diff-chat-stage", { stageid: self.currentStageId })
-            .then(function (response) {
-                var data = response.data;
-                self.chatMsgs = {};
-                self.dfs.forEach(function (e) {
-                    e.c = 0;
-                });
-                data.forEach(function (msg) {
-                    var df = self.dfs.find(function (e) {
-                        return e.id == msg.did;
-                    });
-                    df.c = df.c ? df.c + 1 : 1;
-                    if (count || df.id == self.selectedDF) df.cr = df.c;
-                    if (msg.parent_id) {
-                        msg.parent = data.find(function (e) {
-                            return e.id == msg.parent_id;
-                        });
-                    }
-                    self.chatMsgs[msg.did] = self.chatMsgs[msg.did] || [];
-                    self.chatMsgs[msg.did].push(msg);
-                });
-                self.dfs.forEach(function (e) {
-                    e.cr = e.cr == null ? e.c : e.cr;
-                });
-                if (self.dfs.length == 1) {
-                    self.openChat(self.dfs[0]);
-                }
-            })
-            .catch(function (error) {
-                console.error("Error updating chat:", error);
+    async function updateChat(count) {
+        try {
+            // Make the POST request
+            const response = await $http.post("get-diff-chat-stage", { stageid: self.currentStageId });
+            const data = response.data;
+    
+            // Reset chat messages and update counts
+            self.chatMsgs = {};
+            self.dfs.forEach((e) => {
+                e.c = 0;
             });
+    
+            // Process each message
+            data.forEach((msg) => {
+                // Find the differential
+                const df = self.dfs.find((e) => e.id === msg.did);
+                df.c = df.c ? df.c + 1 : 1;
+    
+                if (count || df.id === self.selectedDF) {
+                    df.cr = df.c;
+                }
+    
+                if (msg.parent_id) {
+                    // Assign the parent message
+                    msg.parent = data.find((e) => e.id === msg.parent_id);
+                }
+    
+                // Group messages by differential ID
+                self.chatMsgs[msg.did] = self.chatMsgs[msg.did] || [];
+                self.chatMsgs[msg.did].push(msg);
+            });
+    
+            // Update remaining counts
+            self.dfs.forEach((e) => {
+                e.cr = e.cr == null ? e.c : e.cr;
+            });
+    
+            // Open chat for the first differential if only one exists
+            if (self.dfs.length === 1) {
+                self.openChat(self.dfs[0]);
+            }
+        } catch (error) {
+            // Log the error for debugging
+            console.error("Error updating chat:", error);
+        }
     }
-
+    
     self.openChat = function (df) {
         self.selDF = df;
         self.selectedDF = df.id;
@@ -238,7 +257,7 @@ export function EthicsController($scope, $http, $timeout,
                             stageid: self.currentStageId,
                             prevstages: self.currentStage.prev_ans
                         });
-                        self.teamSel = prevResponse.data;
+                        self.teamSel = prevResponse.data.responses;
                         self.structureSelData();
                     } catch (error) {
                         console.error("Error loading team differential selection:", error);
@@ -505,23 +524,17 @@ export function EthicsController($scope, $http, $timeout,
     };
     
     self.sendChatMsg = function () {
-        var postdata = {
-            content: self.chatmsg,
-            group_id: self.tmId,
-            parent_id: self.chatmsgreply
-        };
-
-        const phaseId = self.currentStageId;
-        const questionId = self.selectedDF;
-
-        $http.post(`/phases/${phaseId}/question/${questionId}/chat_messages`, postdata)
-            .then(function () {
-                self.chatmsg = "";
-                self.chatmsgreply = null;
-            })
-            .catch(function (error) {
-                console.error("Error sending chat message:", error);
-            });
+        // Send the message via WS to the group (the backend will keep the message).
+        StudentSocketService.emitEvent("messageToGroup", {
+            groupId: self.tmId,
+            content: {
+                phaseId: self.currentStageId,
+                parentId: self.chatmsgreply,
+                questionId: self.selectedDF,
+                text: self.chatmsg,
+                uid: self.myUid
+            }
+        });
     };
     
     self.getDocURL = function () {

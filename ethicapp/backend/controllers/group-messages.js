@@ -5,50 +5,13 @@ import * as config from "../config/config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { getDesignById, getDesignTypeByPhaseId } from "../helpers/designs-helper.js";
 import * as SessionsHelper from "../helpers/sessions-helper.js"
+import { messageCountHandlers, 
+    chatTranscriptHandlers, 
+    chatInsertHandlers, 
+    saveChatMessage } from "../helpers/chat-helper.js";
 import { teacherNotifications } from "../config/socket.config.js";
 
 const router = express.Router();
-
-/**
- * Handlers for message count queries based on design type.
- */
-const messageCountHandlers = {
-    semantic_differential: countSemanticDifferentialMessages,
-    ranking: countRankingMessages,
-};
-
-// Handlers for fetching chat transcript based on design type
-const chatTranscriptHandlers = {
-    ranking: rankingChatTranscriptByGroup,
-    semantic_differential: semanticDifferentialChatTranscriptByGroup,
-};
-
-const chatInsertHandlers = {
-    ranking: async ({ userId, phaseId, content, parentId, dbcon }) => {
-        await rpg2.execSQL({
-            sql: `
-                INSERT INTO chat (uid, stageid, content, parent_id)
-                VALUES ($1, $2, $3, $4)
-            `,
-            dbcon,
-            sqlParams: [rpg2.param('plain', userId), rpg2.param('plain', phaseId), 
-                rpg2.param('plain', content), rpg2.param('plain', parentId) || null],
-        });
-    },
-
-    semantic_differential: async ({ userId, questionId, content, parentId, dbcon }) => {
-        await rpg2.execSQL({
-            sql: `
-                INSERT INTO differential_chat (uid, did, content, parent_id)
-                VALUES ($1, $2, $3, $4)
-            `,
-            dbcon,
-            sqlParams: [rpg2.param('plain', userId), 
-                rpg2.param('plain', questionId), rpg2.param('plain', content),
-                rpg2.param('plain', parentId) || null],
-        });
-    },
-};
 
 /**
  * @route GET /phases/:id/message_count
@@ -132,7 +95,7 @@ router.get("/groups/:group_id/question/:question_id/chat_messages", async (req, 
         const phaseId = phaseIdResult[0].stageid;
 
         // Step 2: Determine the design type for the phase
-        const designType = await getDesignTypeByStageId(phaseId);
+        const designType = await getDesignTypeByPhaseId(phaseId);
 
         // Step 3: Fetch the appropriate handler for the design type
         const handler = chatTranscriptHandlers[designType];
@@ -188,26 +151,11 @@ router.post("/phases/:id/question/:question_id/chat_messages", async (req, res) 
     }
 
     try {
-        // Step 1: Determine the design type for the phase
-        const designType = await getDesignTypeByStageId(phaseId);
-
-        // Step 2: Fetch the appropriate handler for the design type
-        const handler = chatInsertHandlers[designType];
-        if (!handler) {
+        if (!saveChatMessage({userId, phaseId, questionId, parentId, content})) {
             return res.status(400).json({
-                error: `Unsupported design type: ${designType}`,
+                error: `Error saving the chat message`,
             });
         }
-
-        // Step 3: Execute the handler to insert the chat message
-        await handler({
-            userId,
-            phaseId,
-            questionId,
-            content,
-            parentId,
-            dbcon: config.dbconnString,
-        });
 
         // Get the session Id
         const sessionId = await SessionsHelper.getSessionIdByPhaseId(phaseId);
@@ -226,110 +174,6 @@ router.post("/phases/:id/question/:question_id/chat_messages", async (req, res) 
     }
 });
 
-async function countSemanticDifferentialMessages(phaseId) {
-    const results = await rpg2.execSQL({
-        sql: `
-            SELECT c.did,
-                   u.uid,
-                   u.tmid,
-                   COUNT(*) AS message_count
-            FROM differential_chat AS c
-            INNER JOIN teamusers AS u
-                ON u.uid = c.uid
-            INNER JOIN differential AS d
-                ON d.id = c.did
-            INNER JOIN teams AS tm
-                ON tm.id = u.tmid
-            WHERE d.stageid = $1
-              AND tm.stageid = $1
-            GROUP BY c.did, u.uid, u.tmid
-        `,
-        dbcon: config.dbconnString,
-        sqlParams: [rpg2.param('plain', phaseId)],
-    });
 
-    return results.map(row => ({
-        questionId: row.did,
-        userId: row.uid,
-        teamId: row.tmid,
-        messageCount: parseInt(row.message_count, 10),
-    }));
-}
-
-async function countRankingMessages(phaseId) {
-    const results = await rpg2.execSQL({
-        sql: `
-            SELECT c.stageid,
-                   u.uid,
-                   u.tmid,
-                   COUNT(*) AS message_count
-            FROM chat AS c
-            INNER JOIN teamusers AS u
-                ON u.uid = c.uid
-            INNER JOIN teams AS tm
-                ON tm.id = u.tmid
-            WHERE c.stageid = $1
-              AND tm.stageid = $1
-            GROUP BY c.stageid, u.uid, u.tmid
-        `,
-        dbcon: config.dbconnString,
-        sqlParams: [rpg2.param('plain', phaseId)],
-    });
-
-    return results.map(row => ({
-        phaseId: row.stageid,
-        userId: row.uid,
-        teamId: row.tmid,
-        messageCount: parseInt(row.message_count, 10),
-    }));
-}
-
-async function semanticDifferentialChatTranscriptByGroup(groupId, questionId) {
-    return await rpg2.execSQL({
-        sql: `
-            SELECT c.id,
-                   c.uid,
-                   c.content,
-                   c.stime,
-                   c.parent_id
-            FROM differential_chat AS c
-            WHERE c.did = $1
-              AND c.uid IN (
-                  SELECT tu.uid
-                  FROM teamusers AS tu
-                  WHERE tu.tmid = $2
-              )
-            ORDER BY c.stime ASC
-        `,
-        dbcon: config.dbconnString,
-        sqlParams: [rpg2.param('plain', questionId), rpg2.param('plain', groupId)],
-    });
-}
-
-async function rankingChatTranscriptByGroup(groupId, questionId) {
-    return await rpg2.execSQL({
-        sql: `
-            SELECT s.id,
-                   s.uid,
-                   s.content,
-                   s.stime,
-                   s.parent_id
-            FROM chat AS s
-            WHERE s.stageid = (
-                SELECT stageid
-                FROM teams
-                WHERE id = $1
-            )
-              AND s.uid IN (
-                  SELECT tu.uid
-                  FROM teamusers AS tu
-                  WHERE tu.tmid = $1
-              )
-            ORDER BY s.stime ASC
-        `,
-        dbcon: config.dbconnString,
-        sqlParams: [rpg2.param('plain', groupId)],
-    });
-}
 
 export default router;

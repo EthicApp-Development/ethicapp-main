@@ -269,7 +269,7 @@ router.post("/get-team-differential-selection", async (req, res) => {
 
         const result = await db.query(sql, [stageid, prevStagesArray, req.session.uid]);
 
-        res.status(200).json({ data: result.rows });
+        res.status(200).json({ responses: result.rows });
     } catch (error) {
         console.error("Error in /get-team-differential-selection:", error);
         res.status(500).json({ error: "Internal server error" });

@@ -1,5 +1,5 @@
 // Initialize teacherSocket behavior
-let teacherSocketInit = (socket) => {
+let teacherSocketInit = (socket, socketNamespace) => {
     console.debug('Teacher connected');
 
     // Handle a teacher joining a specific session
@@ -19,7 +19,7 @@ let teacherSocketInit = (socket) => {
     // Broadcast a message to all sockets in a specific session
     socket.on('broadcastToSession', (sessionId, message) => {
         // Emit a notification to all clients in the room `session-{sessionId}`
-        teacherNamespace.to(`session-${sessionId}`).emit('notification', message);
+        socketNamespace.to(`session-${sessionId}`).emit('notification', message);
         console.debug(`Notification sent to session-${sessionId}:`, message);
     });
 

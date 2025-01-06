@@ -16,12 +16,12 @@ const initializeSockets = (server) => {
 
     // Teacher namespace
     const teacherSocket = io.of('/teacher');
-    teacherSocket.on('connection', teacherSocketInit);
+    teacherSocket.on('connection', (socket) => teacherSocketInit(socket, teacherSocket));
     teacherNotifications = toTeacherNotifications(teacherSocket);
 
     // Student namespace
     const studentSocket = io.of('/student');
-    studentSocket.on('connection', studentSocketInit);
+    studentSocket.on('connection', (socket) => studentSocketInit(socket, studentSocket));
     studentNotifications = toStudentsNotifications(studentSocket);
 
     ioInstance = io;
