@@ -52,7 +52,7 @@ const rankingItemEditorComponent = {
         validateCallback: '&?'
     },
     transclude: true,
-    templateUrl: "/assets/static/partials/teacher/micro-partials/ranking-item-editor.template.html",
+    templateUrl: "/assets/static/views/teacher/fragments/ranking-item-editor.template.html",
     controller: RankingItemEditorController,
 };
 

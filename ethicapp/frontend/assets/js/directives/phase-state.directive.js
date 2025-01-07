@@ -24,7 +24,7 @@ let phaseStateDirective = function() {
                 // console.debug('[phaseStateDirective] Initialized');
             };
         },
-        templateUrl: "/assets/static/partials/teacher/micro-partials/phase-state.template.html"
+        templateUrl: "/assets/static/views/teacher/fragments/phase-state.template.html"
     };
 };
 

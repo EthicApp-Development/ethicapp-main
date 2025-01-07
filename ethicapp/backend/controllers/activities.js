@@ -701,6 +701,89 @@ router.patch("/activities/:session_id/toggle_archived", async (req, res) => {
     }
 });
 
+router.get("/activities/:session_id/users/:user_id/full_state", async (req, res) => {
+    const { session_id: sessionId, user_id: userId } = req.params;
+
+    // Validate session_id
+    if (!sessionId || isNaN(Number(sessionId))) {
+        return res.status(400).json({ error: "Invalid or missing required parameter: session_id." });
+    }
+
+    // Validate the user_id
+    if (!userId || isNaN(Number(userId))) {
+        return res.status(400).json({ error: "Invalid or missing required parameter: session_id." });
+    }    
+
+    // The user_id must match that of the logged in user
+    if (userId !== req.session.uid) {
+        return res.status(403).json({ error: "Forbidden state access attempt." });
+    }    
+    
+    const descriptor = `SELECT s.descr description, a.design, st.number  
+    FROM activity a
+    WHERE a.session = $1
+    JOIN session s
+    ON a.session = s.id
+    JOIN stage st
+    ON st.id = s.current_stage
+    `;
+
+    const stages = `SELECT st.number, st.type as mode, st.anon, st.chat
+    FROM stages st
+    WHERE st.sesid = $1`;
+
+    const groups = `SELECT st.number, u.name, u.id, tu.anon_mask
+    FROM user u
+    WHERE u.id = $1
+    JOIN teamusers tu
+    ON tu.uid = u.id
+    JOIN teams t
+    ON t.tid = t.id
+    JOIN stages st
+    ON t.stageid = st.id and st.sesid = $2`;
+
+    const tasks_sd = ``;
+    const tasks_ranking = ``;
+
+    const responses = ``;
+
+    const messages = ``;
+
+    try {
+        // Execute the SQL query to fetch phases
+        const phases = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT id,
+                       number,
+                       type,
+                       anon,
+                       chat,
+                       prev_ans,
+                       question,
+                       grouping
+                FROM stages
+                WHERE sesid = $1
+            `,
+            sqlParams: [rpg2.param('plain', session_id)],
+        });
+
+        // Check if any phases were found
+        if (!phases || phases.length === 0) {
+            console.warn(`No phases found for session_id: ${session_id}`);
+            return res.status(404).json({ error: "No phases found for the given session." });
+        }
+
+        // Log success and return the phases
+        console.info(`Successfully retrieved ${phases.length} phases for session_id: ${session_id}.`);
+        return res.status(200).json({ descriptor, phases });
+    } catch (err) {
+        // Log error with session_id for context
+        console.error(`Error fetching phases for session_id: ${session_id}`, err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
 /**
  * Retrieves the design type for a given session ID.
  * @param {number} sessionId - The session ID.

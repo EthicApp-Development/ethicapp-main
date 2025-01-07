@@ -23,7 +23,7 @@ let designViewerDirective = function() {
                 if (!ctrl.design) {
                     // console.warn(`[designViewerDirective] Waiting for designObject to be ready...`);
                 }                
-                return "/assets/static/partials/teacher/micro-partials/design-viewer.template.html";
+                return "/assets/static/views/teacher/fragments/design-viewer.template.html";
             };
             
         },

@@ -86,13 +86,13 @@ let individualPhaseTableDirective = function() {
             iptCtrl.getTemplateUrl = function() {
                 if (!iptCtrl.designType) {
                     console.warn(`[individualPhaseTableDirective] Waiting for designType to be ready...`);
-                    return '/assets/static/partials/teacher/micro-partials/default-phase-description.html';
+                    return '/assets/static/views/teacher/fragments/default-phase-description.html';
                 }
 
                 const template = individualResultsTables[iptCtrl.designType];
                 if (!template) {
                     console.warn(`[individualPhaseTableDirective] Template not found for design type: ${iptCtrl.designType}`);
-                    return `/assets/static/partials/teacher/micro-partials/default-template.html`;
+                    return `/assets/static/views/teacher/fragments/default-template.html`;
                 }
                 return template;
             };

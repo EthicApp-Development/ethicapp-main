@@ -82,7 +82,7 @@ const sdItemEditorComponent = {
         showSeparator: '<?',
     },
     transclude: true,
-    templateUrl: "/assets/static/partials/teacher/micro-partials/sd-item-editor.template.html",   
+    templateUrl: "/assets/static/views/teacher/fragments/sd-item-editor.template.html",   
     controller: SDItemEditController,
 };
 

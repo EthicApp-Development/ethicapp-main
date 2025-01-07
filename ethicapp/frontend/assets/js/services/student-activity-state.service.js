@@ -5,6 +5,26 @@ let StudentActivityStateService = function($http, StudentSocketService) {
         sessionId: null,
         listeners: {}, // Subscribed listeners
         joinSession: async function(sessionId) {
+            service.sessionId = sessionId;
+            return service.subscribeToActivityEvents();
+        },
+        leaveSession: async function(sessionId) {
+            if (sessionId !== service.sessionId) {
+                console.warn(
+                    `[StudentActivityStateService::leaveSession] I was asked to leave a session '${sessionId}' that does not match the current one '${service.sessionId}'. Aborting...`
+                );
+                return;
+            }
+            // End all previous subscriptions
+            if (typeof service.subscriptions.unsubscribeAll === "function") {
+                service.subscriptions.unsubscribeAll();
+            }
+            
+            const sessionId = service.sessionId;
+            service.sessionId = null;
+            service.activityState = null;
+
+            service.notifyListeners("onLeftSession", { sessionId });
         },
         loadActivityState: async function() {
             if (!sessionId) {
@@ -14,16 +34,11 @@ let StudentActivityStateService = function($http, StudentSocketService) {
             await service.getActivityDescriptor(true);
             await service.getInstancedPhases(true);
             await service.getGroups(true);
-            await service.loadChatTranscripts();            
+            await service.loadChatTranscripts();
         },
         subscribeToActivityEvents: () => {
             // Join the session for the given sessionId
             StudentSocketService.joinSession(sessionId);
-
-            // End all previous subscriptions
-            if (typeof service.subscriptions.unsubscribeAll === "function") {
-                service.subscriptions.unsubscribeAll();
-            }
         
             const eventSubscriptions = [];
             
@@ -40,7 +55,7 @@ let StudentActivityStateService = function($http, StudentSocketService) {
 
                         // Notify listeners
                         service.notifyListeners("onPhaseTransition", { 
-                            response: data });
+                            params: data });
                     },
                     error: (err) => {
                         console.error(`Websocket error for onPhaseTransition event in session ${service.sessionId}:`, err)
@@ -59,7 +74,7 @@ let StudentActivityStateService = function($http, StudentSocketService) {
 
                         // Notify listeners
                         service.notifyListeners("onGroupMessage", { 
-                            response: data });
+                            params: data });
                     },
                     error: (err) => {
                         console.error(`Websocket error for onGroupMessage event in session ${service.sessionId}:`, err)
@@ -78,7 +93,7 @@ let StudentActivityStateService = function($http, StudentSocketService) {
 
                         // Notify listeners
                         service.notifyListeners("onShareResponse", { 
-                            response: data });
+                            params: data });
                     },
                     error: (err) => {
                         console.error(`Websocket error for onShareResponse event in session ${service.sessionId}:`, err)
@@ -97,7 +112,7 @@ let StudentActivityStateService = function($http, StudentSocketService) {
 
                         // Notify listeners
                         service.notifyListeners("onEndSession", { 
-                            response: data });
+                            params: data });
                     },
                     error: (err) => {
                         console.error(`Websocket error for onEndSession event in session ${service.sessionId}:`, err)

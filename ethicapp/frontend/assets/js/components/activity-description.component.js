@@ -9,7 +9,7 @@ const activityDescriptionComponent = {
         onUnarchive: '<?',
         onView: '<?',
     },
-    templateUrl: "/assets/static/partials/teacher/micro-partials/activity-description.template.html",
+    templateUrl: "/assets/static/views/teacher/fragments/activity-description.template.html",
     controller: function() {
         this.$onInit = function() {
             if (angular.isUndefined(this.enableLink)) {

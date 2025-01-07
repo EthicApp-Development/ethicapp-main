@@ -1,0 +1,18 @@
+<div class="chat-room">
+  <h3>Chat Room</h3>
+
+  <div class="chat-messages">
+    <div ng-repeat="message in $ctrl.messages track by $index" class="chat-message">
+      <strong>{{ message.user }}:</strong> {{ message.text }}
+    </div>
+  </div>
+
+  <div class="chat-input">
+    <input
+      type="text"
+      ng-model="$ctrl.newMessage"
+      placeholder="Type your message here..."
+    />
+    <button ng-click="$ctrl.sendMessage()">Send</button>
+  </div>
+</div>

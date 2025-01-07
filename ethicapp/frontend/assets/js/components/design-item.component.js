@@ -20,7 +20,7 @@ const designItemComponent = {
         selectedDesignId: '<'
     },
     controller: DesignItemController,
-    templateUrl: "/assets/static/partials/teacher/micro-partials/design-item.template.html"
+    templateUrl: "/assets/static/views/teacher/fragments/design-item.template.html"
 };
 
 export default designItemComponent;

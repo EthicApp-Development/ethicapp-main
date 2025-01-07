@@ -65,13 +65,13 @@ const phaseDescriptionDirective = function() {
             ctrl.getTemplateUrl = function() {
                 if (!ctrl.designObject || !ctrl.designObject.type) {
                     // console.warn(`[phaseDescription] Waiting for designObject to be ready...`);
-                    return '/assets/static/partials/teacher/micro-partials/default-phase-description.html';
+                    return '/assets/static/views/teacher/fragments/default-phase-description.html';
                 }
 
                 const templateUrl = phaseDescriptionTemplatesRegistry[ctrl.designObject.type];
                 if (!templateUrl) {
                     console.error(`[phaseDescription] No template found for design type: ${ctrl.designObject.type}`);
-                    return '/assets/static/partials/teacher/micro-partials/default-phase-description.html';
+                    return '/assets/static/views/teacher/fragments/default-phase-description.html';
                 }
                 return templateUrl;
             };            
