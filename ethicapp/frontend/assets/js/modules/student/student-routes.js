@@ -1,17 +1,17 @@
 function StudentRouter($routeProvider) {
     $routeProvider
         .when('/', {
-            templateUrl: 'static/partials/student/session.index.html',
+            templateUrl: 'static/templates/student/session.index.html',
         })
         .when('/activities/:id', {
-            templateUrl: 'static/partials/student/activity.view.html',
+            templateUrl: 'static/templates/student/activity.view.html',
         })                  
         .when('/profile', {
-            templateUrl: 'static/partials/student/profile.html',
+            templateUrl: 'static/templates/student/profile.html',
         })  
         .when('/error/:errorCode/:backSteps', {
             templateUrl: function(params) {
-              return 'static/partials/student/error.' + params.errorCode + '.html';
+              return 'static/templates/student/error.' + params.errorCode + '.html';
             },
             controller: 'ErrorController'
           })
@@ -20,7 +20,7 @@ function StudentRouter($routeProvider) {
           })        
         .when('/error/:errorCode', {
             templateUrl: function(params) {
-              return 'static/partials/student/error.' + params.errorCode + '.html';
+              return 'static/templates/student/error.' + params.errorCode + '.html';
             },
             controller: 'ErrorController'
           })

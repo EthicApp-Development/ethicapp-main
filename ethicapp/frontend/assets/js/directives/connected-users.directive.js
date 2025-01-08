@@ -4,7 +4,7 @@ let connectedUsersDirective = function() {
         scope: {
             sessionId: '@'
         },
-        templateUrl: 'static/partials/teacher/connected-users.html',
+        templateUrl: 'static/views/teacher/connected-users.html',
         controller: 'ConnectedUsersDirectiveController',
         controllerAs: 'ctrl' // Use controller aliasing
     };

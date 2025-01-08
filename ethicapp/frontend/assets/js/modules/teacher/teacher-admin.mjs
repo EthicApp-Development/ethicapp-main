@@ -130,7 +130,7 @@ app.controller("VoidController", [VoidController]);
 app.service("DialogService", function(ngDialog) {
     this.openDialog = function() {
         ngDialog.open({
-            template:        "views/partials/teacher/warning-dialog.html",
+            template:        "views/templates/teacher/warning-dialog.html",
             controller:      "DialogCtrl",
             className:       "ngdialog-theme-default",
             closeByDocument: true

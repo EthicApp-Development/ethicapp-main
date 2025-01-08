@@ -1,41 +1,41 @@
 function TeacherRouter($routeProvider) {
     $routeProvider
         .when('/', {
-            templateUrl: 'static/partials/teacher/home.html',
+            templateUrl: 'static/views/teacher/home.html',
         })
         .when('/designs', {
-            templateUrl: 'static/partials/teacher/design.index.html',
+            templateUrl: 'static/views/teacher/design.index.html',
         })
         .when('/designs/new', {
-            templateUrl: 'static/partials/teacher/design.new.html',
+            templateUrl: 'static/views/teacher/design.new.html',
         })
         .when('/designs/:id', {
-            templateUrl: 'static/partials/teacher/design.view.html',
+            templateUrl: 'static/views/teacher/design.view.html',
         })        
         .when('/designs/:id/edit', {
-            templateUrl: 'static/partials/teacher/design.edit.html',
+            templateUrl: 'static/views/teacher/design.edit.html',
         })              
         .when('/activities', {
-            templateUrl: 'static/partials/teacher/activity.index.html',
+            templateUrl: 'static/views/teacher/activity.index.html',
         })
         .when('/activities/new', {
-            templateUrl: 'static/partials/teacher/activity.new.html',
+            templateUrl: 'static/views/teacher/activity.new.html',
         })        
         .when('/activities/new/:designId', {
-            templateUrl: 'static/partials/teacher/activity.new.html',
+            templateUrl: 'static/views/teacher/activity.new.html',
         })
         .when('/activities/:id', {
-            templateUrl: 'static/partials/teacher/activity.view.html',
+            templateUrl: 'static/views/teacher/activity.view.html',
         })                  
         .when('/profile', {
-            templateUrl: 'static/partials/teacher/profile.html',
+            templateUrl: 'static/views/teacher/profile.html',
         })  
         .when('/users', {
-            templateUrl: 'static/partials/teacher/users.html',
+            templateUrl: 'static/views/teacher/users.html',
         })
         .when('/error/:errorCode/:backSteps', {
             templateUrl: function(params) {
-              return 'static/partials/teacher/error.' + params.errorCode + '.html';
+              return 'static/views/teacher/error.' + params.errorCode + '.html';
             },
             controller: 'ErrorController'
           })
@@ -44,7 +44,7 @@ function TeacherRouter($routeProvider) {
           })        
         .when('/error/:errorCode', {
             templateUrl: function(params) {
-              return 'static/partials/teacher/error.' + params.errorCode + '.html';
+              return 'static/views/teacher/error.' + params.errorCode + '.html';
             },
             controller: 'ErrorController'
           })

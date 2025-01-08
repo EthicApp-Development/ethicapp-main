@@ -37,6 +37,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import expressLayouts from "express-ejs-layouts";
 import { renderScripts } from "./helpers/views-helper.js";
+import redisClient from "./db/redis.js"; // Importar el módulo centralizado
 import { ErrorReply } from "redis";
 
 let app = express();
@@ -117,6 +118,14 @@ app.use(session({
     saveUninitialized: false,
     cookie:            { maxAge: 24 * 60 * 60 * 1000 } // Cookie para 1 día
 }));
+
+// Middleware for handling redis errors
+app.use((req, res, next) => {
+    if (!redisClient.status || redisClient.status !== "ready") {
+        return res.status(500).json({ error: "Redis is not connected" });
+    }
+    next();
+});
 
 // Load build_hash.json
 const buildHashPath = path.join(__dirname, "build_hash.json");
