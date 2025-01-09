@@ -1172,7 +1172,8 @@ async function getStudentActivityDescriptor(sessionId) {
             SELECT 
                 s.descr AS description,
                 a.design AS design,
-                st.number AS currentPhaseNumber
+                st.number AS currentphasenumber,
+                st.id AS currentphaseid
             FROM 
                 sessions s
             JOIN 
@@ -1194,13 +1195,19 @@ async function getStudentActivityDescriptor(sessionId) {
             return { descriptor: {} };
         }
 
-        const { description, design, currentphasenumber: currentPhaseNumber } = descriptorResult[0];
+        const {
+            description, 
+            design, 
+            currentphasenumber: currentPhaseNumber,
+            currentphaseid: currentPhaseId
+         } = descriptorResult[0];
 
         return {
             descriptor: {
                 description,
                 design,
                 currentPhaseNumber,
+                currentPhaseId
             },
         };
     } catch (error) {

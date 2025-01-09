@@ -43,8 +43,10 @@ export const chatInsertHandlers = {
     },
 };
 
-export const saveChatMessage = async function({ userId, phaseId, questionId, parentId, content }) {
+export const saveChatMessage = async function(data) {
     try {
+        // TODO: validate the incoming data with Yup
+
         // Step 1: Determine the design type for the phase
         const designType = await getDesignTypeByPhaseId(phaseId);
 
@@ -54,11 +56,14 @@ export const saveChatMessage = async function({ userId, phaseId, questionId, par
             throw new Error(`Unsupported design type: ${designType}`);
         }
 
+        const { userId, phaseId, itemId } = data.header;
+        const { parentId, content } = data.payload;
+
         // Step 3: Execute the handler to insert the chat message
         await handler({
             userId,
             phaseId,
-            questionId,
+            itemId,
             content,
             parentId,
             dbcon: config.dbconnString,
