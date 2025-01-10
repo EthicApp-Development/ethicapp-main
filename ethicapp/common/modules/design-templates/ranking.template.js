@@ -20,3 +20,14 @@ export const rankingTemplate = {
         }
     ]
 };
+
+export const rankingResponseTemplate = {
+    items: []
+};
+
+export const rankingItemTemplate = {
+    order: 0,
+    description: '',
+    actor_id: 0,
+    phase_id: 0,
+};

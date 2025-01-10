@@ -1,6 +1,6 @@
 // designTypes.js
-import { sdTemplate } from "./design-templates/sd.template.js";
-import { rankingTemplate } from "./design-templates/ranking.template.js";
+import { sdTemplate, sdResponseTemplate } from "./design-templates/sd.template.js";
+import { rankingTemplate, rankingResponseTemplate } from "./design-templates/ranking.template.js";
 
 /**
  * Object defining the supported design types.
@@ -18,24 +18,44 @@ const designTypes = {
 };
 
 const designFactories = {
-    create_instance: (template) => { 
+    createInstance: (template) => { 
         const instance = structuredClone(template);
         instance.metainfo.creation_date = Date.now();
         return instance;
     },
     ranking: (title, author) => { 
-        const instance = designFactories.create_instance(rankingTemplate);
+        const instance = designFactories.createInstance(rankingTemplate);
         instance.metainfo.author = author;
         instance.metainfo.title = title;
         return instance;
     },
     semantic_differential: (title, author) => {
-        const instance = designFactories.create_instance(sdTemplate);
+        const instance = designFactories.createInstance(sdTemplate);
         instance.metainfo.author = author;
         instance.metainfo.title = title;
         return instance;
     }
 };
+
+const responseFactories = {
+    createInstance: (template) => {
+        const instance = structuredClone(template);
+        instance.stime = Date.now();
+        return instance;
+    },
+    ranking: (params) => {
+        const { actorId, phaseId } = params;
+        const instance = responseFactories.createInstance(rankingResponseTemplate);
+        instance.actor_id = actorId;
+        instance.phase_id = phaseId;
+    },
+    semantic_differential: (params) => {
+        const { taskId, iteration = 1 } = params;
+        const instance = responseFactories.createInstance(sdResponseTemplate);
+        instance.did = taskId;
+        instance.iteration = iteration;
+    }
+}
 
 /**
  * Checks if a given design type is valid.
@@ -67,5 +87,5 @@ function listSupportedDesignTypes() {
 }
 
 // Export the functions and the design types object
-export { designTypes, designFactories, isValidDesignType, 
-    getDesignTypeDetails, listSupportedDesignTypes };
+export { designTypes, designFactories, responseFactories, 
+    isValidDesignType, getDesignTypeDetails, listSupportedDesignTypes };

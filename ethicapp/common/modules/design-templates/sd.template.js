@@ -30,3 +30,10 @@ export const sdTemplate = {
         }
     ]
 };
+
+export const sdResponseTemplate = {
+    iteration: 0,
+    comment: '',
+    sel: 0,
+    did: 0
+};

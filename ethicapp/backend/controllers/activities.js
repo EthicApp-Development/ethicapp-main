@@ -789,7 +789,7 @@ router.get('/activities/:id/users/:user_id/full_state', async (req, res) => {
                 userId,
                 phasesWithTasks
             );
-
+            
         // Step 6: Get peer responses for each phase
         const phasesWithPeerResponses = await StudentActivityStatusHelper.
             getCachedStudentActivityPeerResponses(
@@ -806,14 +806,13 @@ router.get('/activities/:id/users/:user_id/full_state', async (req, res) => {
             phasesWithPeerResponses
         );
 
-        // Step 8: Get group messages
+            // Step 8: Get group messages
         const phasesWithGroupMessages = await StudentActivityStatusHelper.
             getCachedStudentActivityGroupMessages(
                 designType,
                 sessionId,
-                userId,
-                phasesWithPeerResponses
-            );
+                phasesWithPeerResponses,
+                groupId);
 
         // Step 9: Assemble the state object
         const state = {

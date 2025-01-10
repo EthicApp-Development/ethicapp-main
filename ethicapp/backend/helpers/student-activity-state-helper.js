@@ -1,19 +1,25 @@
 import * as config from "../config/config.js"
 import * as rpg2 from "../db/rest-pg-2.js"
 import redisClient from "../db/redis.js";
+import { responseFactories } from  "../../common/modules/design-types.js";
+import { response } from "express";
 
-export const buildPhaseState = function(sessionId, phaseDesign) {
+export const buildInitialPhaseState = function(sessionId, phaseId, phaseNumber, phaseDesign) {
+    const tasksObj = getCachedPhaseTasks(design.type, phaseNumber);
+    const responses = [];
+
+    // taskObj.tasks.forEach(task => responses.push(responseFactories[design.type].))
 
     return { 
         phase: {
-            id: null,
-            number: null,
+            id: phaseId,
+            number: phaseNumber,
             features: {
-
+                chat: phaseDesign.chat,
+                anonymity: phaseDesign.anonymous,
+                previousResponses: phaseDesign.prevPhasesResponse
             },
-            tasks: {
-            
-            },
+            tasks: tasksObj.tasks,
             responses: [],
             peerResonses: [],
             group: [],
@@ -22,7 +28,7 @@ export const buildPhaseState = function(sessionId, phaseDesign) {
     }
 }
 
-export async function getCachedStudentActivityDescriptor(sessionId, invalidate = false) {
+export async function getCachedStudentActivityPhases(sessionId, invalidate = false) {
     if (!sessionId || isNaN(Number(sessionId))) {
         throw new Error("Invalid sessionId");
     }
@@ -336,34 +342,62 @@ const studentActivityTaskGetters = {
     ranking: getStudentActivityTasks_ranking
 }
 
-export async function getCachedStudentActivityTasks(sessionId, phaseNumber, designType, invalidate = false) {
-    const cacheKey = `tasks:${sessionId}:${phaseNumber}`;
+export async function getCachedStudentActivityTasks(designType, sessionId, phases, invalidate = false) {
+    if (!Array.isArray(phases) || phases.length === 0) {
+        console.error(`Invalid or empty phases array:`, phases);
+        return phases;
+    }
+
+    // Create a unique cache key using concatenated phase numbers
+    const phaseNumbers = phases.map(phase => phase.number).sort().join(',');
+    const cacheKey = `tasks:${sessionId}:phases:${phaseNumbers}`;
 
     try {
         // Handle cache invalidation
         if (invalidate) {
-            console.debug(`Invalidating cache for tasks: sessionId=${sessionId}, phaseNumber=${phaseNumber}`);
+            console.debug(`Invalidating cache for tasks: sessionId=${sessionId}, phases=[${phaseNumbers}]`);
             await redisClient.del(cacheKey);
         } else {
             // Check Redis cache
-            const cachedTasks = await redisClient.get(cacheKey);
-            if (cachedTasks) {
-                console.debug(`Cache hit for tasks: sessionId=${sessionId}, phaseNumber=${phaseNumber}`);
-                return JSON.parse(cachedTasks);
+            const cachedData = await redisClient.get(cacheKey);
+            if (cachedData) {
+                console.debug(`Cache hit for tasks: sessionId=${sessionId}, phases=[${phaseNumbers}]`);
+                const tasksByPhase = JSON.parse(cachedData);
+
+                // Attach cached tasks to the corresponding phases
+                phases.forEach(phase => {
+                    phase.tasks = tasksByPhase[phase.number] || [];
+                });
+
+                return phases;
             }
         }
 
         // Cache miss or invalidation: Fetch tasks from the database
-        console.debug(`Cache miss for tasks: sessionId=${sessionId}, phaseNumber=${phaseNumber}`);
-        const tasks = await studentActivityTaskGetters[designType](sessionId, [phaseNumber]);
+        console.debug(`Cache miss for tasks: sessionId=${sessionId}, phases=[${phaseNumbers}]`);
+        const updatedPhases = await getStudentActivityTasks(designType, sessionId, phases);
+
+        // Extract tasks for caching
+        const tasksByPhase = updatedPhases.reduce((acc, phase) => {
+            acc[phase.number] = phase.tasks || [];
+            return acc;
+        }, {});
 
         // Cache the result in Redis
-        await redisClient.set(cacheKey, JSON.stringify(tasks), 'EX', 300); // Expiration: 5 minutes
+        await redisClient.set(cacheKey, JSON.stringify(tasksByPhase), {
+            EX: 300, // Expiration: 5 minutes
+        });
 
-        return tasks;
+        return updatedPhases;
     } catch (error) {
-        console.error(`Error in getCachedStudentActivityTasks: sessionId=${sessionId}, phaseNumber=${phaseNumber}`, error);
-        return []; // Fallback to an empty array if there's an error
+        console.error(`Error in getCachedStudentActivityTasks: sessionId=${sessionId}, phases=[${phaseNumbers}]`, error);
+
+        // Fallback to empty tasks in the phases in case of error
+        phases.forEach(phase => {
+            phase.tasks = [];
+        });
+
+        return phases;
     }
 }
 
@@ -465,10 +499,10 @@ export async function getStudentActivityTasks_ranking(sessionId, phases) {
                     SELECT
                         st.number AS phase_number,
                         a.stageid AS phase_id,
-                        a.id AS actor_id,
-                        a.name AS actor_name,
-                        a.jorder AS is_ordered,
-                        a.justified AS requires_justification,
+                        a.id AS item_id,
+                        a.name AS item_name,
+                        a.jorder AS justify_order,
+                        a.justified AS justify_item,
                         a.word_count AS min_word_count
                     FROM 
                         actors a
@@ -518,34 +552,59 @@ const studentActivityResponseGetters = {
     ranking: getStudentActivityResponses_ranking,
 };
 
-export async function getCachedStudentActivityResponses(sessionId, phaseNumber, userId, designType, invalidate = false) {
-    const cacheKey = `responses:${sessionId}:${phaseNumber}:${userId}`;
+export async function getCachedStudentActivityResponses(designType, sessionId, userId, phases, invalidate = false) {
+    if (!sessionId || isNaN(Number(sessionId)) || !userId || isNaN(Number(userId))) {
+        console.error("Invalid sessionId or userId:", { sessionId, userId });
+        return phases;
+    }
+
+    const cacheKey = `responses:${sessionId}:${userId}:${phases.map(phase => phase.number).join(",")}`;
 
     try {
         // Handle cache invalidation
         if (invalidate) {
-            console.debug(`Invalidating cache for responses: sessionId=${sessionId}, phaseNumber=${phaseNumber}, userId=${userId}`);
+            console.debug(`Invalidating cache for responses: sessionId=${sessionId}, userId=${userId}`);
             await redisClient.del(cacheKey);
         } else {
             // Check Redis cache
-            const cachedResponses = await redisClient.get(cacheKey);
-            if (cachedResponses) {
-                console.debug(`Cache hit for responses: sessionId=${sessionId}, phaseNumber=${phaseNumber}, userId=${userId}`);
-                return JSON.parse(cachedResponses);
+            const cachedData = await redisClient.get(cacheKey);
+            if (cachedData) {
+                console.debug(`Cache hit for responses: sessionId=${sessionId}, userId=${userId}`);
+                const responsesByPhase = JSON.parse(cachedData);
+
+                // Attach cached responses to the corresponding phases
+                phases.forEach(phase => {
+                    phase.responses = responsesByPhase[phase.number] || [];
+                });
+
+                return phases;
             }
         }
 
         // Cache miss or invalidation: Fetch responses from the database
-        console.debug(`Cache miss for responses: sessionId=${sessionId}, phaseNumber=${phaseNumber}, userId=${userId}`);
-        const responses = await studentActivityResponseGetters[designType](sessionId, userId, [phaseNumber]);
+        console.debug(`Cache miss for responses: sessionId=${sessionId}, userId=${userId}`);
+        const responsesByPhase = await studentActivityResponseGetters[designType](sessionId, userId, phases);
 
-        // Cache the result in Redis
-        await redisClient.set(cacheKey, JSON.stringify(responses), 'EX', 300); // Expiration: 5 minutes
+        // Cache the result
+        await redisClient.set(cacheKey, JSON.stringify(responsesByPhase), {
+            EX: 300, // Expiration: 5 minutes
+        });
 
-        return responses;
+        // Attach responses to the corresponding phases
+        phases.forEach(phase => {
+            phase.responses = responsesByPhase[phase.number] || [];
+        });
+
+        return phases;
     } catch (error) {
-        console.error(`Error in getCachedStudentActivityResponses: sessionId=${sessionId}, phaseNumber=${phaseNumber}, userId=${userId}`, error);
-        return []; // Fallback to an empty array if there's an error
+        console.error(`Error in getCachedStudentActivityResponses: sessionId=${sessionId}, userId=${userId}, designType=${designType}`, error);
+
+        // Fallback to empty responses if an error occurs
+        phases.forEach(phase => {
+            phase.responses = [];
+        });
+
+        return phases;
     }
 }
 
@@ -948,45 +1007,69 @@ const studentActivityGroupMessageGetters = {
     ranking: getStudentActivityGroupMessages_ranking
 };
 
-export async function getCachedStudentActivityGroupMessages(sessionId, phaseNumber, groupId, designType, invalidate = false) {
-    if (!sessionId || isNaN(Number(sessionId)) || !phaseNumber || isNaN(Number(phaseNumber)) || !groupId || isNaN(Number(groupId))) {
-        console.error("Invalid sessionId, phaseNumber, or groupId:", { sessionId, phaseNumber, groupId });
-        return [];
+/**
+ * Retrieve cached group messages for the specified phases and group.
+ * @param {string} designType - The type of instructional design.
+ * @param {number} sessionId - The session ID.
+ * @param {Array} phases - The list of phases (each with a number).
+ * @param {number} groupId - The group ID.
+ * @param {boolean} invalidate - Whether to invalidate the cache.
+ * @returns {Promise<Array>} The updated phases with group messages.
+ */
+export async function getCachedStudentActivityGroupMessages(designType, sessionId, userId, phases, invalidate = false) {
+    if (!sessionId || isNaN(Number(sessionId)) || !userId || isNaN(Number(userId))) {
+        console.error("Invalid sessionId or userId:", { sessionId, userId });
+        return phases;
     }
 
-    const cacheKey = `chatMessages:${sessionId}:${phaseNumber}:${groupId}`;
-
+    const cacheKey = `chatMessages:${sessionId}:${userId}`;
+    
     try {
-        // Handle cache invalidation
+        // Invalidate cache if necessary
         if (invalidate) {
-            console.debug(`Invalidating cache for chat messages: sessionId=${sessionId}, phaseNumber=${phaseNumber}, groupId=${groupId}`);
+            console.debug(`Invalidating cache for chat messages: sessionId=${sessionId}, userId=${userId}`);
             await redisClient.del(cacheKey);
         } else {
             // Check Redis cache
-            const cachedMessages = await redisClient.get(cacheKey);
-            if (cachedMessages) {
-                console.debug(`Cache hit for chat messages: sessionId=${sessionId}, phaseNumber=${phaseNumber}, groupId=${groupId}`);
-                return JSON.parse(cachedMessages);
+            const cachedData = await redisClient.get(cacheKey);
+            if (cachedData) {
+                console.debug(`Cache hit for chat messages: sessionId=${sessionId}, userId=${userId}`);
+                const messagesByPhase = JSON.parse(cachedData);
+                phases.forEach(phase => {
+                    phase.groupMessages = messagesByPhase[phase.number] || [];
+                });
+                return phases;
             }
         }
 
         // Fetch messages from the database
-        console.debug(`Cache miss for chat messages: sessionId=${sessionId}, phaseNumber=${phaseNumber}, groupId=${groupId}`);
-        const messages = await studentActivityGroupMessageGetters[designType](sessionId, groupId, [phaseNumber]);
+        console.debug(`Cache miss for chat messages: sessionId=${sessionId}, userId=${userId}`);
+        const messagesByPhase = await studentActivityGroupMessageGetters[designType](sessionId, userId, phases);
 
         // Cache the result
-        await redisClient.set(cacheKey, JSON.stringify(messages), {
-            EX: 300,
+        await redisClient.set(cacheKey, JSON.stringify(messagesByPhase), { EX: 300 });
+
+        // Attach messages to phases
+        phases.forEach(phase => {
+            phase.groupMessages = messagesByPhase[phase.number] || [];
         });
 
-        return messages;
+        return phases;
     } catch (error) {
-        console.error(`Error in getCachedStudentActivityGroupMessages: sessionId=${sessionId}, phaseNumber=${phaseNumber}, groupId=${groupId}, designType=${designType}`, error);
-        return [];
+        console.error(`Error in getCachedStudentActivityGroupMessages: sessionId=${sessionId}, userId=${userId}, designType=${designType}`, error);
+        return phases;
     }
 }
 
-async function getStudentActivityGroupMessages(designType, sessionId, userId, phases) {
+/**
+ * Retrieve group messages for the specified phases and design type.
+ * @param {string} designType - The type of instructional design.
+ * @param {number} sessionId - The session ID.
+ * @param {number} groupId - The group ID.
+ * @param {Array} phases - The list of phases (each with a number).
+ * @returns {Promise<Array>} The updated phases with group messages.
+ */
+export async function getStudentActivityGroupMessages(designType, sessionId, groupId, phases) {
     const groupMessageGetter = studentActivityGroupMessageGetters[designType];
     if (!groupMessageGetter) {
         console.error(`No group message getter defined for design type: ${designType}`);
@@ -994,7 +1077,8 @@ async function getStudentActivityGroupMessages(designType, sessionId, userId, ph
     }
 
     try {
-        return await groupMessageGetter(sessionId, userId, phases);
+        // Attach messages to each phase
+        return await groupMessageGetter(sessionId, groupId, phases);
     } catch (error) {
         console.error(`Failed to get group messages for design type ${designType}:`, error);
         return phases;
@@ -1158,3 +1242,170 @@ export async function getStudentActivityGroupMessages_ranking(sessionId, userId,
         return phases;
     }
 };
+
+export const getPhaseTaskGetters = {
+    semantic_differential: getTasksForPhase_semanticDifferential,
+    ranking: getTasksForPhase_ranking
+}
+
+/**
+ * Retrieve tasks for a specific phase based on the design type with caching.
+ * @param {string} designType - The type of instructional design.
+ * @param {number} phaseId - The ID of the phase.
+ * @param {boolean} [invalidate=false] - Whether to invalidate the cache.
+ * @returns {Promise<Object>} An object containing the list of tasks.
+ */
+export async function getCachedPhaseTasks(designType, phaseId, invalidate = false) {
+    if (!phaseId || isNaN(Number(phaseId))) {
+        console.error(`Invalid phaseId: ${phaseId}`);
+        return { tasks: [] };
+    }
+
+    const cacheKey = `phase:${phaseId}:tasks:${designType}`;
+
+    try {
+        // Handle cache invalidation
+        if (invalidate) {
+            console.debug(`Invalidating cache for tasks: phaseId=${phaseId}, designType=${designType}`);
+            await redisClient.del(cacheKey);
+        } else {
+            // Check Redis cache
+            const cachedData = await redisClient.get(cacheKey);
+            if (cachedData) {
+                console.debug(`Cache hit for tasks: phaseId=${phaseId}, designType=${designType}`);
+                return JSON.parse(cachedData);
+            }
+        }
+
+        // Cache miss or invalidation: Fetch tasks using the appropriate getter
+        console.debug(`Cache miss for tasks: phaseId=${phaseId}, designType=${designType}`);
+        const taskGetter = getPhaseTaskGetters[designType];
+        if (!taskGetter) {
+            console.error(`No task getter defined for design type: ${designType}`);
+            return { tasks: [] };
+        }
+
+        const tasks = await taskGetter(phaseId);
+
+        // Cache the result in Redis
+        await redisClient.set(cacheKey, JSON.stringify(tasks), {
+            EX: 300, // Expiration: 5 minutes
+        });
+
+        return { tasks };
+    } catch (error) {
+        console.error(`Error in getCachedPhaseTasks: phaseId=${phaseId}, designType=${designType}`, error);
+        return { tasks: [] }; // Fallback to an empty tasks list in case of error
+    }
+}
+
+/**
+ * Retrieve tasks for a specific phase based on the design type.
+ * @param {string} designType - The type of instructional design.
+ * @param {number} phaseId - The ID of the phase.
+ * @returns {Promise<Object>} An object containing the list of tasks.
+ */
+export async function getPhaseTasks(designType, phaseId) {
+    const taskGetter = getPhaseTaskGetters[designType];
+    if (!taskGetter) {
+        console.error(`No task getter defined for design type: ${designType}`);
+        return { tasks: [] };
+    }
+
+    try {
+        return await taskGetter(phaseId);
+    } catch (error) {
+        console.error(`Failed to get tasks for phase ID ${phaseId} and design type ${designType}:`, error);
+        return { tasks: [] };
+    }
+}
+
+/**
+ * Retrieve tasks for a specific phase in "semantic_differential" design type.
+ * @param {number} phaseId - The ID of the phase.
+ * @returns {Promise<Object>} An object containing the list of tasks.
+ */
+export async function getTasksForPhase_semanticDifferential(phaseId) {
+    const query = `
+        SELECT
+            d.id AS task_id,
+            d.title AS task_title,
+            d.tleft AS left_pole,
+            d.tright AS right_pole,
+            d.orden AS task_order,
+            d.justify AS requires_justification,
+            d.num AS num_values,
+            d.word_count AS min_word_count
+        FROM 
+            differential d
+        WHERE 
+            d.stageid = $1;
+    `;
+
+    try {
+        const results = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: query,
+            sqlParams: [rpg2.param("plain", Number(phaseId))],
+        });
+
+        // Transform the results into a list of tasks
+        const tasks = results.map(task => ({
+            id: task.task_id,
+            title: task.task_title,
+            leftPole: task.left_pole,
+            rightPole: task.right_pole,
+            order: task.task_order,
+            requiresJustification: task.requires_justification,
+            numValues: task.num_values,
+            minWordCount: task.min_word_count,
+        }));
+
+        return { tasks };
+    } catch (error) {
+        console.error(`Failed to retrieve tasks for phase ID ${phaseId}:`, error);
+        return { tasks: [] };
+    }
+}
+
+/**
+ * Retrieve tasks for a specific phase in "ranking" design type.
+ * @param {number} phaseId - The ID of the phase.
+ * @returns {Promise<Object>} An object containing the list of tasks.
+ */
+export async function getTasksForPhase_ranking(phaseId) {
+    const query = `
+        SELECT
+            a.id AS actor_id,
+            a.name AS actor_name,
+            a.jorder AS is_ordered,
+            a.justified AS requires_justification,
+            a.word_count AS min_word_count
+        FROM 
+            actors a
+        WHERE 
+            a.stageid = $1;
+    `;
+
+    try {
+        const results = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: query,
+            sqlParams: [rpg2.param("plain", Number(phaseId))],
+        });
+
+        // Transform the results into a list of tasks
+        const tasks = results.map(actor => ({
+            id: actor.actor_id,
+            name: actor.actor_name,
+            isOrdered: actor.is_ordered,
+            requiresJustification: actor.requires_justification,
+            minWordCount: actor.min_word_count,
+        }));
+
+        return { tasks };
+    } catch (error) {
+        console.error(`Failed to retrieve tasks for phase ID ${phaseId}:`, error);
+        return { tasks: [] };
+    }
+}
