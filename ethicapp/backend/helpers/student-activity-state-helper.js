@@ -2,33 +2,50 @@ import * as config from "../config/config.js"
 import * as rpg2 from "../db/rest-pg-2.js"
 import redisClient from "../db/redis.js";
 import { responseFactories } from  "../../common/modules/design-types.js";
-import { response } from "express";
+import * as DesignsHelper from "../helpers/designs-helper.js"
+import * as ActivitiesHelper from "../helpers/activities-helper.js"
 
-export const buildInitialPhaseState = function(sessionId, phaseId, phaseNumber, phaseDesign) {
-    const tasksObj = getCachedPhaseTasks(design.type, phaseNumber);
-    const responses = [];
+export const buildInitialPhaseState = async function (phaseId) {
+    try {
+        // Fetch tasks and design data for the phase
+        const tasksObj = await getCachedPhaseTasks(phaseId);
+        const phaseDesign = await DesignsHelper.getPhaseDesignByPhaseId(phaseId);
+        const designType = await DesignsHelper.getDesignTypeByPhaseId(phaseId);
+        const phaseNumber = await ActivitiesHelper.getPhaseNumberByPhaseId(phaseId);
 
-    // taskObj.tasks.forEach(task => responses.push(responseFactories[design.type].))
-
-    return { 
-        phase: {
-            id: phaseId,
-            number: phaseNumber,
-            features: {
-                chat: phaseDesign.chat,
-                anonymity: phaseDesign.anonymous,
-                previousResponses: phaseDesign.prevPhasesResponse
-            },
-            tasks: tasksObj.tasks,
-            responses: [],
-            peerResonses: [],
-            group: [],
-            groupMessages: []
+        // Retrieve the response factory for the design type
+        const responseFactory = responseFactories[designType];
+        if (!responseFactory) {
+            console.error("[buildInitialPhaseState] Error: Unsupported design type!");
+            return null;
         }
-    }
-}
 
-export async function getCachedStudentActivityPhases(sessionId, invalidate = false) {
+        // Generate responses for each task
+        const responses = tasksObj.tasks.map(task => responseFactory(task));
+
+        return {
+            phase: {
+                id: phaseId,
+                number: phaseNumber,
+                features: {
+                    chat: phaseDesign.chat,
+                    anonymity: phaseDesign.anonymous,
+                    previousResponses: phaseDesign.prevPhasesResponse || []
+                },
+                tasks: tasksObj.tasks,
+                responses: responses,
+                peerResponses: [],
+                group: [],
+                groupMessages: {}
+            }
+        };
+    } catch (error) {
+        console.error("[buildInitialPhaseState] Error building initial phase state:", error);
+        throw error; // Re-throw the error for higher-level handling if necessary
+    }
+};
+
+export async function getCachedStudentActivityDescriptor(sessionId, invalidate = false) {
     if (!sessionId || isNaN(Number(sessionId))) {
         throw new Error("Invalid sessionId");
     }
@@ -420,6 +437,70 @@ export async function getStudentActivityTasks(designType, sessionId, phases) {
     } catch (error) {
         console.error(`Failed to get tasks for design type ${designType}:`, error);
         return phases;
+    }
+}
+
+/**
+ * Retrieve tasks for a specific phase (stage) by its ID.
+ * Determines the design type and fetches tasks accordingly.
+ *
+ * @param {number} phaseId - The ID of the phase (stage).
+ * @returns {Promise<Object>} - The phase object with its associated tasks.
+ * @throws {Error} If there is an issue with retrieving tasks or the phase.
+ */
+export async function getStudentActivityTasksForPhase(phaseId) {
+    try {
+        // Step 1: Fetch the session ID, stage number, and design type
+        const phaseResult = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT
+                    st.sesid AS session_id,
+                    st.number AS phase_number,
+                    d.design AS design_json
+                FROM stages st
+                JOIN activity a ON a.session = st.sesid
+                JOIN designs d ON d.id = a.design
+                WHERE st.id = $1
+            `,
+            sqlParams: [phaseId],
+        });
+
+        if (!phaseResult) {
+            throw new Error(`No phase found for ID: ${phaseId}`);
+        }
+
+        const { session_id: sessionId, phase_number: phaseNumber, design_json: designJson } = phaseResult;
+
+        // Parse the design JSON
+        const design = typeof designJson === "string" ? JSON.parse(designJson) : designJson;
+        const { type: designType, phases } = design;
+
+        if (!designType || !phases || !Array.isArray(phases)) {
+            throw new Error(`Invalid design structure for phase ID: ${phaseId}`);
+        }
+
+        // Step 2: Retrieve tasks for the specific phase based on its design type
+        const mockPhaseObject = {};
+        mockPhaseObject.number = phaseNumber;
+
+        const taskGetter = studentActivityTaskGetters[designType];
+        if (!taskGetter) {
+            throw new Error(`No task getter defined for design type: ${designType}`);
+        }
+
+        const phasesWithTasks = await taskGetter(sessionId, [mockPhaseObject]);
+        const phaseWithTasks = phasesWithTasks.find(phase => phase.number === phaseNumber);
+
+        if (!phaseWithTasks) {
+            throw new Error(`Tasks not found for phase number: ${phaseNumber}`);
+        }
+
+        // Step 3: Return the list of tasks
+        return phaseWithTasks.tasks;
+    } catch (error) {
+        console.error("Error in getStudentActivityTasksForPhase:", error);
+        throw new Error(`Unable to fetch tasks for phase ID: ${phaseId}`);
     }
 }
 
@@ -1249,27 +1330,54 @@ export const getPhaseTaskGetters = {
 }
 
 /**
- * Retrieve tasks for a specific phase based on the design type with caching.
- * @param {string} designType - The type of instructional design.
+ * Retrieve tasks for a specific phase with caching, deducing the design type from the phaseId.
  * @param {number} phaseId - The ID of the phase.
  * @param {boolean} [invalidate=false] - Whether to invalidate the cache.
  * @returns {Promise<Object>} An object containing the list of tasks.
  */
-export async function getCachedPhaseTasks(designType, phaseId, invalidate = false) {
+export async function getCachedPhaseTasks(phaseId, invalidate = false) {
     if (!phaseId || isNaN(Number(phaseId))) {
         console.error(`Invalid phaseId: ${phaseId}`);
         return { tasks: [] };
     }
 
-    const cacheKey = `phase:${phaseId}:tasks:${designType}`;
-
     try {
-        // Handle cache invalidation
+        // Step 1: Retrieve the design type and sessionId associated with the phaseId
+        const phaseResult = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT
+                    st.sesid AS session_id,
+                    d.design AS design_json
+                FROM stages st
+                JOIN activity a ON a.session = st.sesid
+                JOIN designs d ON d.id = a.design
+                WHERE st.id = $1
+            `,
+            sqlParams: [phaseId],
+        });
+
+        if (!phaseResult) {
+            throw new Error(`No design or session found for phase ID: ${phaseId}`);
+        }
+
+        const { session_id: sessionId, design_json: designJson } = phaseResult;
+
+        // Parse the design JSON to extract the design type
+        const design = typeof designJson === "string" ? JSON.parse(designJson) : designJson;
+        const designType = design.type;
+
+        if (!designType) {
+            throw new Error(`Design type not found for phase ID: ${phaseId}`);
+        }
+
+        const cacheKey = `phase:${phaseId}:tasks:${designType}`;
+
+        // Step 2: Handle caching
         if (invalidate) {
             console.debug(`Invalidating cache for tasks: phaseId=${phaseId}, designType=${designType}`);
             await redisClient.del(cacheKey);
         } else {
-            // Check Redis cache
             const cachedData = await redisClient.get(cacheKey);
             if (cachedData) {
                 console.debug(`Cache hit for tasks: phaseId=${phaseId}, designType=${designType}`);
@@ -1277,14 +1385,14 @@ export async function getCachedPhaseTasks(designType, phaseId, invalidate = fals
             }
         }
 
-        // Cache miss or invalidation: Fetch tasks using the appropriate getter
-        console.debug(`Cache miss for tasks: phaseId=${phaseId}, designType=${designType}`);
+        // Step 3: Fetch tasks using the appropriate task getter
         const taskGetter = getPhaseTaskGetters[designType];
         if (!taskGetter) {
             console.error(`No task getter defined for design type: ${designType}`);
             return { tasks: [] };
         }
 
+        console.debug(`Cache miss for tasks: phaseId=${phaseId}, designType=${designType}`);
         const tasks = await taskGetter(phaseId);
 
         // Cache the result in Redis
@@ -1294,7 +1402,7 @@ export async function getCachedPhaseTasks(designType, phaseId, invalidate = fals
 
         return { tasks };
     } catch (error) {
-        console.error(`Error in getCachedPhaseTasks: phaseId=${phaseId}, designType=${designType}`, error);
+        console.error(`Error in getCachedPhaseTasks: phaseId=${phaseId}`, error);
         return { tasks: [] }; // Fallback to an empty tasks list in case of error
     }
 }
