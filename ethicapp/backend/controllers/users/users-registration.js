@@ -21,22 +21,28 @@ const router = express.Router();
 
 router.get("/register", async (req, res) => {
     try {
-        // Load recaptcha partial view from file
-        const scriptPath = path.join(__dirname, 
-            VIEWS_PREFIX, "partials", "recaptcha.ejs");
-        let captchaScript = await fs.promises.readFile(scriptPath, "utf-8");
+        // Load recaptcha partial bottom view from file
+        const headPartialPath = path.join(__dirname, 
+            VIEWS_PREFIX, "partials", "recaptcha-head.ejs");
+        let recaptchaHeadScript = await fs.promises.readFile(headPartialPath, "utf-8");
+
+        // Load recaptcha partial bottom view from file
+        const bottomPartialPath = path.join(__dirname, 
+            VIEWS_PREFIX, "partials", "recaptcha-bottom.ejs");
+        let recaptchaBottomScript = await fs.promises.readFile(bottomPartialPath, "utf-8");
 
         // Replace placeholder with actual site key
-        captchaScript = captchaScript.replace("{{RECAPTCHA_SITE_KEY}}", 
+        recaptchaBottomScript = recaptchaBottomScript.replace("{{RECAPTCHA_SITE_KEY}}", 
             process.env.RECAPTCHA_SITE_KEY);
 
         // Render the view
         res.render("register", {
             title:        "EthicApp",
             controller:   "RegistrationsController",
-            extraScripts: `${captchaScript}`,
+            extraScripts: `${recaptchaHeadScript}`,
+            bottomScripts: `${recaptchaBottomScript}`,
             scripts:    [
-                ["js/dist/user-common.js", "js/dist/user-common.min.js"],
+                ["js/dist/user-common.js", "js/dist/user-common.min.js"]
             ],
             renderScripts: (scripts) => ViewsHelper.renderScripts(scripts, res),
             rc:           req.query.rc

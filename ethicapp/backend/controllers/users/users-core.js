@@ -95,13 +95,18 @@ router.post("/login/admin", async (req, res, next) => {
 
 router.get("/forgot", async (req, res) => {
     try {
-        // Load recaptcha partial view from file
-        const scriptPath = path.join(__dirname, 
-            VIEWS_PREFIX, "partials", "recaptcha.ejs");
-        let captchaScript = await fs.promises.readFile(scriptPath, "utf-8");
+        // Load recaptcha partial head view from file
+        const headScriptPath = path.join(__dirname, 
+            VIEWS_PREFIX, "partials", "recaptcha-head.ejs");
+        let headRecaptchaScript = await fs.promises.readFile(headScriptPath, "utf-8");
+
+        // Load recaptcha partial bottom view from file
+        const bottomScriptPath = path.join(__dirname, 
+            VIEWS_PREFIX, "partials", "recaptcha-bottom.ejs");
+        let bottomRecaptchaScript = await fs.promises.readFile(bottomScriptPath, "utf-8");
 
         // Replace placeholder with actual site key
-        captchaScript = captchaScript.replace("{{RECAPTCHA_SITE_KEY}}", 
+        bottomRecaptchaScript = bottomRecaptchaScript.replace("{{RECAPTCHA_SITE_KEY}}", 
             process.env.RECAPTCHA_SITE_KEY);
 
         const welc = req.query.welc;
@@ -113,7 +118,8 @@ router.get("/forgot", async (req, res) => {
             scripts:    [
                 ["js/dist/user-common.js", "js/dist/user-common.min.js"],
             ],
-            extraScripts: `${captchaScript}`,
+            bottomScripts: `${bottomRecaptchaScript}`,
+            extraScripts: `${headRecaptchaScript}`,
             renderScripts: (scripts) => ViewsHelper.renderScripts(scripts, res),
             welc:         welc,
         });
@@ -209,20 +215,26 @@ router.get("/reset-password", async (req, res) => {
             return res.redirect("/forgot?welc=pass_recovery_token_expired");
         }
 
-        // Load recaptcha partial view from file
-        const scriptPath = path.join(__dirname, 
+        // Load recaptcha partial head view from file
+        const headScriptPath = path.join(__dirname, 
+            VIEWS_PREFIX, "partials", "recaptcha-head.ejs");
+        let headRecaptchaScript = await fs.promises.readFile(headScriptPath, "utf-8");
+
+        // Load recaptcha partial bottom view from file
+        const bottomScriptPath = path.join(__dirname, 
             VIEWS_PREFIX, "partials", "recaptcha.ejs");
-        let captchaScript = await fs.promises.readFile(scriptPath, "utf-8");
+        let bottomRecaptchaScript = await fs.promises.readFile(bottomScriptPath, "utf-8");
 
         // Replace placeholder with actual site key
-        captchaScript = captchaScript.replace(
+        bottomRecaptchaScript = bottomRecaptchaScript.replace(
             "{{RECAPTCHA_SITE_KEY}}", process.env.RECAPTCHA_SITE_KEY);
 
         // Render the view with the retrieved email
         res.render("reset-password", {
             title:        "EthicApp",
             controller:   "CredentialsController",
-            extraScripts: `${captchaScript}`,
+            extraScripts: `${headRecaptchaScript}`,
+            bottomScript: `${bottomRecaptchaScript}`,
             email:        email,
             token:        token,
             rc:           req.query.rc

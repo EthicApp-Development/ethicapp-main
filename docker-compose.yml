@@ -14,7 +14,7 @@ secrets:
 services:
   # ---------------------- Node web app ---------------------- #
   ethicapp:
-    container_name: "ethicapp-node"
+    #container_name: "ethicapp-node"
     build:
       context: ethicapp/
       args:
@@ -49,9 +49,9 @@ services:
   # ---------------------- Redis Cache Server ---------------------- #
   redis:
     image: redis
-    container_name: "ethicapp-redis"
-    ports:
-      - "6379:6379"
+    #container_name: "ethicapp-redis"
+    #ports:
+    #  - "6379:6379"
 
   # ---------------------- Database ---------------------- #
   postgres:
@@ -65,8 +65,8 @@ services:
     volumes:
       - "${HOST_DB_VOLUME_PATH}:/var/lib/postgresql/data:rw"
       - ./postgres-db/schema:/docker-entrypoint-initdb.d
-    ports:
-      - "5432:5432"
+    #ports:
+      #- "5432:5432"
   postgres_init:
     image: postgres:${POSTGRES_VERSION}
     env_file:

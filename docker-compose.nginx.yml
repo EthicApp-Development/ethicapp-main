@@ -12,11 +12,12 @@ services:
     environment:
       NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
       ETHICAPP_NODE_PORT: ${ETHICAPP_NODE_PORT}
-      ETHICAPP_HOSTNAME: ethicapp
+      ETHICAPP_HOSTNAME: beta_ethicapp_1
     networks:
       default:
     volumes:
-      - shared-volume:/usr/share/nginx/:rw
+      #- shared-volume:/usr/share/nginx/:rw
+      - ./ethicapp/frontend/assets:/usr/share/nginx/assets:ro
       - shared-volume-admin:/usr/share/nginx/admin:rw
 
 volumes:
