@@ -12,7 +12,7 @@ import requests
 import math
 import os
 
-redis_host_name = os.environ.get("REDIS_HOST_NAME", 'localhost')
+redis_host_name = os.environ.get("REDIS_HOST", 'localhost')
 
 app = Celery('tasks',
                     broker=f'redis://{redis_host_name}:6379/0',

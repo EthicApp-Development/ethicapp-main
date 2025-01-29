@@ -7,7 +7,7 @@ from celery import Celery, chain, signature
 app = Flask(__name__)
 app.config.from_object(os.getenv('APP_SETTINGS', "config.DevelopmentConfig"))
 
-redis_host_name = os.environ.get("REDIS_HOST_NAME")
+redis_host_name = os.environ.get("REDIS_HOST")
 # Configuración de Celery
 def make_celery(app):
     celery = Celery(

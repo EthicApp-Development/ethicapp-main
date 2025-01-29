@@ -27,7 +27,7 @@ services:
       - .:/app
       - model_data:/app/models
     environment:
-      REDIS_HOST_NAME: ${REDIS_HOST_NAME}
+      REDIS_HOST: ${REDIS_HOST}
       CONTENT_ANALYSIS_API_KEY: ${CONTENT_ANALYSIS_API_KEY}
     depends_on:
       - redis
@@ -42,7 +42,7 @@ services:
       - .:/app
       - model_data:/app/models
     environment:
-      REDIS_HOST_NAME: ${REDIS_HOST_NAME}
+      REDIS_HOST: ${REDIS_HOST}
       CONTENT_ANALYSIS_API_KEY: ${CONTENT_ANALYSIS_API_KEY}
     depends_on:
       - content-analysis
