@@ -90,3 +90,84 @@ export async function getDesignTypeByPhaseId(phaseId) {
         throw new Error("Unable to fetch design type.");
     }
 }
+
+/**
+ * Fetches the specific phase design from a given phase (stage) ID.
+ *
+ * @param {number} phaseId - The ID of the phase (stage).
+ * @returns {Promise<Object>} - The design object corresponding to the queried phase.
+ * @throws {Error} If the phase, session, design, or phase index is invalid or cannot be found.
+ */
+export async function getPhaseDesignByPhaseId(phaseId) {
+    try {
+        // Step 1: Fetch the session ID (`sesid`) and stage number from the `stages` table
+        const stageResult = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT sesid, number
+                FROM stages
+                WHERE id = $1
+            `,
+            sqlParams: [phaseId],
+        });
+
+        if (!stageResult) {
+            throw new Error(`No session ID or stage number found for phase (stage) ID: ${phaseId}`);
+        }
+
+        const sessionId = stageResult.sesid;
+        const stageNumber = stageResult.number;
+
+        // Step 2: Fetch the design ID associated with the session from the `activity` table
+        const activityResult = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT design
+                FROM activity
+                WHERE session = $1
+            `,
+            sqlParams: [sessionId],
+        });
+
+        if (!activityResult) {
+            throw new Error(`No design found for session ID: ${sessionId}`);
+        }
+
+        const designId = activityResult.design;
+
+        // Step 3: Fetch the design details from the `designs` table
+        const designResult = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT design
+                FROM designs
+                WHERE id = $1
+            `,
+            sqlParams: [designId],
+        });
+
+        if (!designResult || !designResult.design) {
+            throw new Error(`No design found for design ID: ${designId}`);
+        }
+
+        const design = designResult.design; // Assuming `design` is stored as JSON in the database
+
+        // Step 4: Extract the phase from the design's `phases` array using the stage number
+        const phases = design.phases;
+
+        if (!Array.isArray(phases) || stageNumber < 1 || stageNumber > phases.length) {
+            throw new Error(
+                `Invalid phase index for stage number ${stageNumber} in design ID: ${designId}`
+            );
+        }
+
+        const phaseDesign = phases[stageNumber - 1];
+
+        return phaseDesign;
+    } catch (error) {
+        console.error("Error in getPhaseDesignByPhaseId:", error);
+        throw new Error("Unable to fetch phase design.");
+    }
+}
+
+

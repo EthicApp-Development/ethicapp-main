@@ -43,19 +43,34 @@ const responseFactories = {
         instance.stime = Date.now();
         return instance;
     },
-    ranking: (params) => {
-        const { actorId, phaseId } = params;
+    ranking: (taskParams) => {
+        const { actorId, phaseId } = taskParams;
         const instance = responseFactories.createInstance(rankingResponseTemplate);
-        instance.actor_id = actorId;
-        instance.phase_id = phaseId;
+        instance.actorId = actorId;
+        instance.phaseId = phaseId;
+        instance.comment = "";
+        instance.order = 0;
+        return instance;
     },
-    semantic_differential: (params) => {
-        const { taskId, iteration = 1 } = params;
+    semantic_differential: (taskParams) => {
+        const { taskId, iteration = 1 } = taskParams;
         const instance = responseFactories.createInstance(sdResponseTemplate);
-        instance.did = taskId;
+        instance.taskId = taskId;
         instance.iteration = iteration;
+        instance.comment = "";
+        instance.sel = 0;
+        return instance;
     }
 }
+
+const phaseVisitors = {
+    ranking: (phaseObj) => {
+        return phaseObj.roles;
+    },
+    semantic_differential: (phaseObj) => {
+        return phaseObj.questions;
+    }
+};
 
 /**
  * Checks if a given design type is valid.
@@ -87,5 +102,5 @@ function listSupportedDesignTypes() {
 }
 
 // Export the functions and the design types object
-export { designTypes, designFactories, responseFactories, 
+export { designTypes, designFactories, responseFactories, phaseVisitors,
     isValidDesignType, getDesignTypeDetails, listSupportedDesignTypes };

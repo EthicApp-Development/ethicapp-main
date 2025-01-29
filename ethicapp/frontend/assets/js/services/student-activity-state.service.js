@@ -74,6 +74,10 @@ let StudentActivityStateService = function($http, StudentSocketService) {
                         console.debug(`Incoming group message: `, 
                             JSON.stringify(data));
                             
+                        if (service.activityState) {
+                            const lastPhaseIndex = service.activityState.phases.length - 1;
+                            service.activityState.phases[lastPhaseIndex].groupMessages.push();
+                        }
                         // TODO: Do something with the incoming group message
 
                         // Resolve the current phase in the session
