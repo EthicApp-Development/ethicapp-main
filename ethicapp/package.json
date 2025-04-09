@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node ./backend/ethicapp",
     "testing": "mocha tests",
-    "test": "./backend/api/v2/test/repeat-test.sh"
+    "test": "NODE_ENV=test ./backend/api/v2/test/repeat-test.sh",
+    "test:clean": "cd ./backend/api/v2 && NODE_ENV=test sequelize-cli db:migrate:undo:all && NODE_ENV=test sequelize-cli db:migrate && NODE_ENV=test sequelize-cli db:seed:all",
+    "test:truncate": "cd ./backend/api/v2 && NODE_ENV=test sequelize-cli db:migrate:undo:all",
+    "test:seed": "cd ./backend/api/v2 && NODE_ENV=test sequelize-cli db:seed:all",
+    "test:migrate": "cd ./backend/api/v2 && NODE_ENV=test sequelize-cli db:migrate"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.185.0",
@@ -17,7 +21,7 @@
     "checklist-model": "1.0.0",
     "cookie-parser": "~1.4.6",
     "debug": "~4.3.4",
-    "dotenv": "^16.3.1",
+    "dotenv": "^16.4.5",
     "ejs": "~3.1.8",
     "express": "^4.18.1",
     "express-asset-versions": "^0.1.2",
