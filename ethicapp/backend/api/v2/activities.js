@@ -185,7 +185,6 @@ router.post('/activities/start', auth, checkAbility('create', 'Activity'), async
     }
 });
 
-
 router.post('/activities/end', auth, checkAbility('update', 'Activity'), async (req, res) => {
     const { activityId } = req.body;
     const { id: userId } = req.user;
@@ -225,4 +224,5 @@ router.post('/activities/end', auth, checkAbility('update', 'Activity'), async (
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 });
+
 module.exports = router;
