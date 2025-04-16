@@ -1,4 +1,4 @@
-const { Activity, Design } = require('../../models');
+const { Activity, Design, Phase } = require('../../models');
 const designs = require('../fixtures/designs.json')
 
 describe('Activity Model', () => {
@@ -19,4 +19,7 @@ describe('Activity Model', () => {
             .rejects
             .toThrow();
     });
+
+    
+    
 });

@@ -185,4 +185,44 @@ router.post('/activities/start', auth, checkAbility('create', 'Activity'), async
     }
 });
 
+router.post('/activities/end', auth, checkAbility('update', 'Activity'), async (req, res) => {
+    const { activityId } = req.body;
+    const { id: userId } = req.user;
+
+    try {
+        // Validate input
+        if (!activityId) {
+            return res.status(400).json({ status: 'error', message: 'Activity ID is required' });
+        }
+
+        // Find the activity
+        const activity = await Activity.findByPk(activityId);
+        if (!activity) {
+            return res.status(404).json({ status: 'error', message: 'Activity not found' });
+        }
+
+        // Verify that the session exists and the user is the creator
+        const sessionInstance = await Session.findByPk(activity.session);
+        if (!sessionInstance) {
+            return res.status(404).json({ status: 'error', message: 'Session not found' });
+        }
+        if (sessionInstance.creator !== userId) {
+            return res.status(403).json({ status: 'error', message: 'You do not own this session' });
+        }
+
+        // Check if the activity is already ended
+        if (activity.status === 'finished') {
+            return res.status(400).json({ status: 'error', message: 'Activity is already finished' });
+        }
+
+        // Update activity status to finished
+        await activity.update({ status: 'finished' });
+
+        res.status(200).json({ status: 'success', message: 'Activity ended successfully' });
+    } catch (err) {
+        console.error('[POST /activities/end] Error:', err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+});
+
 module.exports = router;

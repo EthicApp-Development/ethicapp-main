@@ -1,4 +1,5 @@
 #!/bin/bash
+echo "Running tests with NODE_ENV=$NODE_ENV"
 
 for i in {1..1}
 do

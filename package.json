@@ -25,17 +25,21 @@
     "admin-panel": "./dev-ops/admin-panel.sh"
   },
   "devDependencies": {
+    "dotenv-cli": "^4.1.1",
     "esbuild": "^0.18.20",
     "eslint": "^8.24.0",
     "eslint-plugin-angular": "^4.1.0",
     "htmlhint": "^1.1.4",
     "sass": "^1.63.6",
+    "sequelize-cli": "^6.6.2",
     "stylelint": "^14.13.0",
     "stylelint-config-prettier": "^9.0.3",
     "stylelint-config-standard": "^28.0.0",
     "terser": "^5.21.0"
   },
   "dependencies": {
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "sequelize": "^6.37.3",
+    "sequelize-cli": "^6.6.2"
   }
 }

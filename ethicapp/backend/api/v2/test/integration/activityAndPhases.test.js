@@ -130,4 +130,24 @@ describe('Activities and Phases API', () => {
         expect(res.body.status).toBe('success');
         expect(res.body.data.anon).toBe(true);
     });
+
+    it('should return the phases with their state', async () => {
+        const res = await request(app)
+          .get(`${API_VERSION_PATH_PREFIX}/activities/${activityId}`)
+          .set('Authorization', `Bearer ${token}`)
+          .expect(200);
+      
+        expect(res.body.status).toBe('success');
+        expect(Array.isArray(res.body.data.phases)).toBe(true);
+        expect(res.body.data.phases.length).toBeGreaterThan(0);
+        res.body.data.phases.forEach(phase => {
+            expect(phase).toHaveProperty('id');
+            expect(phase).toHaveProperty('number');
+            expect(phase).toHaveProperty('status');
+            expect(typeof phase.number).toBe('number'); 
+            expect(['inprogress', 'done']).toContain(phase.status);
+        });
+        
+      });
+      
 });
