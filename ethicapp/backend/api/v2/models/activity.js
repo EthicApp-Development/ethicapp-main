@@ -17,7 +17,11 @@ module.exports = (sequelize, DataTypes) => {
   }
   Activity.init({
     design: DataTypes.INTEGER,
-    session: DataTypes.INTEGER
+    session: DataTypes.INTEGER,
+    status: {
+      type: DataTypes.STRING,
+      defaultValue: 'active'
+    }
   }, {
     sequelize,
     modelName: 'Activity',//class
