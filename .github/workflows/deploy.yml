@@ -52,12 +52,12 @@ jobs:
 
       - name: Run Sequelize migrations
         run: |
-          cd backend/api/v2
+          cd ethicapp/backend/api/v2
           NODE_ENV=test npx sequelize-cli db:migrate
 
       - name: Run Sequelize seeds
         run: |
-          cd backend/api/v2
+          cd ethicapp/backend/api/v2
           NODE_ENV=test npx sequelize-cli db:seed:all
 
       - name: Run tests
