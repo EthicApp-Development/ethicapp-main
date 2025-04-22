@@ -8,6 +8,8 @@ DB_CONNECTION_URI="postgresql://$DB_USER_NAME:$DB_USER_PASSWORD@localhost:5432/$
 
 /etc/init.d/postgresql start
 
+su postgres -c "psql -c \"ALTER USER postgres WITH PASSWORD 'postgres';\""
+
 # Replacing ENV variables at the SQL script
 mv ./create-db.sql /tmp/create-db.sql
 envsubst '${DB_USER_NAME} ${DB_USER_PASSWORD} ${DB_NAME}' < /tmp/create-db.sql > ./create-db.sql

@@ -1,0 +1,116 @@
+name: Deploy EthicApp APIv2
+
+on:
+  push:
+    branches:
+      - apiv2
+      - 'issue-*'
+  pull_request:
+    branches: [ apiv2 ]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ethicapp_test
+          POSTGRES_USER: ethicapp
+          POSTGRES_PASSWORD: ethicapp
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ethicapp"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Wait for Postgres and Redis to be ready
+        run: |
+          echo "Esperando que Postgres esté listo..."
+          until pg_isready -h localhost -p 5432 -U ethicapp; do sleep 2; done
+
+      - name: Run Sequelize migrations
+        run: |
+          cd backend/api/v2
+          NODE_ENV=test npx sequelize-cli db:migrate
+
+      - name: Run Sequelize seeds
+        run: |
+          cd backend/api/v2
+          NODE_ENV=test npx sequelize-cli db:seed:all
+
+      - name: Run tests
+        run: npm run test
+
+  deploy:
+    needs: build_and_test
+    runs-on: [self-hosted, apiV2]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Definir COMPOSE_PROJECT_NAME
+        run: echo "COMPOSE_PROJECT_NAME=ethicapp-apiv2" >> $GITHUB_ENV
+
+      - name: Ir a la carpeta de despliegue
+        run: |
+          mkdir -p /opt/ethicapp-apiv2
+          rsync -a --delete . /opt/ethicapp-apiv2/
+          cd /opt/ethicapp-apiv2
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+  
+      - name: Instalar dependencias
+        run: |
+          cd /opt/ethicapp-apiv2
+          npm install
+        env:
+          COMPOSE_PROJECT_NAME: ethicapp-apiv2
+  
+      - name: Detener contenedores anteriores
+        run: |
+          cd /opt/ethicapp-apiv2
+          docker-compose down --remove-orphans
+        env:
+          COMPOSE_PROJECT_NAME: ethicapp-apiv2
+
+      - name: Inicializar la Base de Datos
+        run: |
+          cd /opt/ethicapp-apiv2
+          npm run init-db
+        env:
+          COMPOSE_PROJECT_NAME: ethicapp-apiv2
+
+      - name: Construir y levantar contenedores
+        run: |
+          cd /opt/ethicapp-apiv2
+          docker-compose up --build -d
+        env:
+          COMPOSE_PROJECT_NAME: ethicapp-apiv2
+
+      - name: Verificar contenedores en ejecución
+        run: docker ps
