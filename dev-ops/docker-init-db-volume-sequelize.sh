@@ -42,18 +42,25 @@ docker-compose ${ComposeRewriteFlags} build postgres
 docker-compose ${ComposeRewriteFlags} up --detach postgres pgadmin
 
 # Checking target Postgres role and database exist
-docker exec ethicapp-postgres /bin/bash -c \
+docker exec ethicapp-apiV2-postgres /bin/bash -c \
     "psql postgresql://$DB_USER_NAME:$DB_USER_PASSWORD@localhost:5432/$DB_NAME -c '\conninfo'"
 
+# Crear base de datos de test
+docker exec ethicapp-apiV2-postgres /bin/bash -c \
+    "psql postgresql://postgres:postgres@localhost:5432/postgres -c 'CREATE DATABASE $DB_TEST_NAME OWNER $DB_TEST_USER_NAME;'"
+
+
+
+
 # Create test database
-docker exec ethicapp-postgres /bin/bash -c \
+docker exec ethicapp-apiV2-postgres /bin/bash -c \
     "psql postgresql://$DB_TEST_USER_NAME:$DB_TEST_USER_PASSWORD@localhost:5432/$DB_TEST_NAME -c '\conninfo'"
 
 #* ---
 #* Step (2): export database files directly into host.
 #* ---
 mkdir -p ${TargetVolumePath}
-docker cp ethicapp-postgres:/var/lib/postgresql/${POSTGRES_VERSION}/main/ ${TargetVolumePath}
+docker cp ethicapp-apiV2-postgres:/var/lib/postgresql/${POSTGRES_VERSION}/main/ ${TargetVolumePath}
 mv ${TargetVolumePath}/main/* ${TargetVolumePath}
 rm -R -v ${TargetVolumePath}/main/
 
@@ -68,28 +75,11 @@ docker-compose down --remove-orphans
 docker-compose build postgres
 docker-compose up --detach postgres
 
-# Initialise Sequelize
-echo "Inicializando Sequelize..."
-
-cd ./ethicapp   # Cambia a la carpeta ethicapp
-echo "cambiando a la carpeta ethicapp"
-
-echo "instalando paquetes en la carpeta ethicapp"
-npm install
-#npx sequelize-cli --help # verifica que la instalacion sea correcta
-
-echo "Ejecutando migraciones de Sequelize..."
-cd ./backend/api/v2
-
-npx sequelize-cli db:migrate:undo
-npx sequelize-cli db:migrate
-
-echo "Insertando datos iniciales..."
-npx sequelize-cli db:seed:all
-
-# Volver a la carpeta original (opcional)
-cd ./../../../..
-# ./ethicapp/backend/api/v2/
+echo "Esperando a que Postgres esté listo para aceptar conexiones..."
+until docker exec ethicapp-apiV2-postgres pg_isready -U ethicapp > /dev/null 2>&1; do
+    echo "Esperando..."
+    sleep 2
+done
 
 
 rm ${TempComposeFilePath}

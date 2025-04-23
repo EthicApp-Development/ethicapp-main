@@ -1,23 +1,23 @@
 {
   "development": {
-    "username": "postgres",
-    "password": "postgres",
-    "database": "postgres",
-    "host": "127.0.0.1",
+    "username": "ethicapp",
+    "password": "ethicapp",
+    "database": "ethicapp_dev",
+    "host": "postgres",
     "dialect": "postgres"
   },
   "test": {
-    "username": "ethicapp_test_user",
-    "password": "ethicapp_test_password",
+    "username": "ethicapp",
+    "password": "ethicapp",
     "database": "ethicapp_test",
-    "host": "127.0.0.1",
+    "host": "postgres",
     "dialect": "postgres"
   },
   "production": {
     "username": "postgres",
     "password": "postgres",
     "database": "ethicapp_database",
-    "host": "127.0.0.1",
+    "host": "postgres",
     "dialect": "postgres"
   }
 }

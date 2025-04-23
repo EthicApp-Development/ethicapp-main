@@ -1,20 +1,20 @@
-# --------------------------------------------------------------------------------------------------
-# DEVELOPMENT docker-compose.
-# --------------------------------------------------------------------------------------------------
-
 version: "3.9"
 
+
 networks:
-  default:
+  ethicapp-net:
+    driver: bridge
 
 secrets:
   jwt_token:
     file: ./secrets/jwt_token
 
 services:
-  # ---------------------- Node web app ---------------------- #
+  # ---------------------------------------------------------
+  # Node web app
+  # ---------------------------------------------------------
   node:
-    container_name: "ethicapp-node"
+    container_name: "ethicapp-apiV2-node"
     build:
       context: ethicapp/
       args:
@@ -27,9 +27,12 @@ services:
       ETHICAPP_DOMAIN_NAME: ${ETHICAPP_DOMAIN_NAME}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
       REDIS_HOST: RedisContainer
+      DB_NAME: ${DB_NAME}
+      DB_USER_NAME: ${DB_USER_NAME}
+      DB_USER_PASSWORD: ${DB_USER_PASSWORD}
     restart: "no"
     networks:
-      default:
+      - ethicapp-net
     ports:
       - "${NODE_PORT}:${NODE_PORT}"
     volumes:
@@ -38,9 +41,11 @@ services:
       - RedisContainer
       - postgres
 
- # ---------------------- Admin Panel ---------------------- #
+  # ---------------------------------------------------------
+  # Admin Panel
+  # ---------------------------------------------------------
   admin-panel:
-    container_name: "ethicapp-admin-panel"
+    container_name: "ethicapp-apiV2-admin-panel"
     build:
       context: admin-panel/
       args:
@@ -49,21 +54,27 @@ services:
     ports:
       - "3000:3000"
     networks:
-      default:
+      - ethicapp-net
     depends_on:
       - node
       - RedisContainer
 
-  # ---------------------- Redis Cache Server ---------------------- #
+  # ---------------------------------------------------------
+  # Redis Cache
+  # ---------------------------------------------------------
   RedisContainer:
     image: redis
-    container_name: ethicapp-redis
-    ports:
-      - "6379:6379"
+    container_name: ethicapp-apiV2-redis
+    #ports:
+    # - "6379:6379"
+    networks:
+      - ethicapp-net
 
-  # ---------------------- Database ---------------------- #
+  # ---------------------------------------------------------
+  # Postgres Database
+  # ---------------------------------------------------------
   postgres:
-    container_name: "ethicapp-postgres"
+    container_name: "ethicapp-apiV2-postgres"
     build:
       context: postgres-db/
       args:
@@ -74,25 +85,28 @@ services:
         DB_USER_PASSWORD: ${DB_USER_PASSWORD}
     environment:
       POSTGRES_LOG_LEVEL: 1
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER_NAME}
+      POSTGRES_PASSWORD: ${DB_USER_PASSWORD}
       PGPORT: 5432
       PGDATA: /var/lib/postgresql/${POSTGRES_VERSION}/main
     restart: unless-stopped
     networks:
-      default:
+      - ethicapp-net
     healthcheck:
       test: ["CMD-SHELL", "su healthcheckuser -c pg_isready"]
       interval: 20s
       timeout: 5s
       retries: 1
       start_period: 10s
-    #* Do not modify this volume declaration, as the automated initialization of the volume mount
-    #* will break if not updated as well
     volumes:
       - "${HOST_DB_VOLUME_PATH}:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"
 
-  # ---------------------- PGAdmin ---------------------- #
+  # ---------------------------------------------------------
+  # PGAdmin
+  # ---------------------------------------------------------
   pgadmin:
-    container_name: "ethicapp-pgadmin"
+    container_name: "ethicapp-apiV2-pgadmin"
     build:
       context: pgadmin/
       args:
@@ -104,7 +118,7 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin
     restart: unless-stopped
     networks:
-      default:
+      - ethicapp-net
     ports:
       - "${PGADMIN_PORT}:80"
     depends_on:

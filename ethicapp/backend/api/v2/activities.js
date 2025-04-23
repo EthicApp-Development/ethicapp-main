@@ -19,6 +19,38 @@ router.get('/activity', async (req, res) => {
     }
 });
 
+// GET /activities/:activity_id
+router.get('/activities/:activity_id', async (req, res) => {
+    const { activity_id } = req.params;
+ 
+ 
+    try {
+        const activity = await Activity.findByPk(activity_id, {
+            include: {
+                model: Phase,
+                as: 'Phases',
+                attributes: ['id', 'number', 'status'] 
+            }
+        });
+        if (!activity) {
+            return res.status(404).json({ status: 'error', message: 'Activity not found' });
+        }
+ 
+ 
+        res.status(200).json({
+            status: 'success',
+            data: {
+                activity_id: activity.id,
+                name: activity.name,
+                phases: activity.Phases
+            }
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+ });
+
 // Create
 router.post('/activity', auth, checkAbility('create', 'Activity'), async (req, res) => {
     const { design, session } = req.body;
