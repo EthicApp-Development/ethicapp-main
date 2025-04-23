@@ -9,7 +9,7 @@
   "test": {
     "username": "ethicapp",
     "password": "ethicapp",
-    "database": "ethicapp_dev",
+    "database": "ethicapp_test",
     "host": "postgres",
     "dialect": "postgres"
   },
