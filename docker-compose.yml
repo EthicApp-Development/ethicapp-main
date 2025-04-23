@@ -65,8 +65,8 @@ services:
   RedisContainer:
     image: redis
     container_name: ethicapp-apiV2-redis
-    ports:
-      - "6379:6379"
+    #ports:
+    # - "6379:6379"
     networks:
       - ethicapp-net
 
