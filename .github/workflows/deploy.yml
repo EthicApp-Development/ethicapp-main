@@ -49,16 +49,21 @@ jobs:
         run: |
           echo "Esperando que Postgres esté listo..."
           until pg_isready -h localhost -p 5432 -U ethicapp; do sleep 2; done
+      
+      - name: Show current directory
+        run: pwd && ls -l
 
       - name: Run Sequelize migrations
         run: |
-          cd ethicapp/backend/api/v2
-          NODE_ENV=test npx sequelize-cli db:migrate
+          cd ethicapp
+          NODE_ENV=test npx sequelize-cli db:migrate --config ./backend/api/v2/config/config.json --migrations-path ./backend/api/v2/migrations
+        
 
       - name: Run Sequelize seeds
         run: |
-          cd ethicapp/backend/api/v2
-          NODE_ENV=test npx sequelize-cli db:seed:all
+          cd ethicapp
+          NODE_ENV=test npx sequelize-cli db:seed:all --config ./backend/api/v2/config/config.json --seeders-path ./backend/api/v2/seeders
+        
 
       - name: Run tests
         run: npm run test
