@@ -22,17 +22,17 @@ jobs:
 
       - name: Copiar el código al runner
         run: |
-          mkdir -p /opt/ethicapp-apiv2
-          rsync -a --delete . /opt/ethicapp-apiv2/
+          mkdir -p ~/ethicapp-apiv2
+          rsync -a --delete . ~/ethicapp-apiv2/
 
       - name: Detener contenedores anteriores
         run: |
-          cd /opt/ethicapp-apiv2
+          cd ~/ethicapp-apiv2
           docker-compose down --remove-orphans
 
       - name: Levantar entorno para test
         run: |
-          cd /opt/ethicapp-apiv2
+          cd ~/ethicapp-apiv2
           docker-compose up -d --build
 
       - name: Esperar que el entorno esté listo
@@ -50,7 +50,7 @@ jobs:
       - name: Apagar entorno temporal de test
         if: always()
         run: |
-          cd /opt/ethicapp-apiv2
+          cd ~/ethicapp-apiv2
           docker-compose down --remove-orphans
 
   deploy:
@@ -66,17 +66,17 @@ jobs:
 
       - name: Sincronizar código
         run: |
-          mkdir -p /opt/ethicapp-apiv2
-          rsync -a --delete . /opt/ethicapp-apiv2/
+          mkdir -p ~/ethicapp-apiv2
+          rsync -a --delete . ~/ethicapp-apiv2/
 
       - name: Inicializar base de datos
         run: |
-          cd /opt/ethicapp-apiv2
+          cd ~/ethicapp-apiv2
           npm run init-db
 
       - name: Desplegar contenedores
         run: |
-          cd /opt/ethicapp-apiv2
+          cd ~/ethicapp-apiv2
           docker-compose down --remove-orphans
           docker-compose up -d --build
 
