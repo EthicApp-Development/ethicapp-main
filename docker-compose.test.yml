@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  postgres:
+    container_name: "ethicapp-postgres-test"
+    build:
+      context: postgres-db/
+      args:
+        UBUNTU_VERSION: "22.04"
+        POSTGRES_VERSION: ${POSTGRES_VERSION}
+        DB_NAME: ${DB_NAME}
+        DB_USER_NAME: ${DB_USER_NAME}
+        DB_USER_PASSWORD: ${DB_USER_PASSWORD}
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER_NAME}
+      POSTGRES_PASSWORD: ${DB_USER_PASSWORD}
+      POSTGRES_LOG_LEVEL: 1
+      PGPORT: 5432
+      PGDATA: /var/lib/postgresql/${POSTGRES_VERSION}/main
+    restart: unless-stopped
+    networks:
+      default:
+    healthcheck:
+      test: ["CMD-SHELL", "su healthcheckuser -c pg_isready"]
+      interval: 20s
+      timeout: 5s
+      retries: 1
+      start_period: 10s
+    volumes:
+      - "${HOST_DB_VOLUME_PATH}:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"
+    ports:
+      - "5433:5432"

@@ -119,6 +119,22 @@ describe('Phase Model', () => {
     //console.log("resPhaseDesign", resPhaseDesign.body)
     expect(resPhaseDesign.status).toBe(201)
     expect(resPhaseDesign.body).toHaveProperty('status', 'success')
-  })
+  });
+  it('should get the activity with its phases via API', async () => {
+    const res = await request(app)
+      .get(`${API_VERSION_PATH_PREFIX}/activities/${activityId.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
 
+    expect(res.body.status).toBe('success');
+    expect(Array.isArray(res.body.data.phases)).toBe(true);
+    expect(res.body.data.phases.length).toBeGreaterThan(0);
+
+    res.body.data.phases.forEach(phase => {
+      expect(phase).toHaveProperty('id');
+      expect(phase).toHaveProperty('number');
+      expect(phase).toHaveProperty('status');
+      expect(['inprogress', 'done']).toContain(phase.status);//aqui dejar solo inprogress y done
+    });
+  });
 });
