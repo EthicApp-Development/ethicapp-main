@@ -44,7 +44,12 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-
+      
+      - name: Install backend dependencies
+        run: |
+          cd ethicapp
+          npm install
+      
       - name: Wait for Postgres and Redis to be ready
         run: |
           echo "Esperando que Postgres esté listo..."
