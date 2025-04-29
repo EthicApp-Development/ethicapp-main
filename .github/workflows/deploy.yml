@@ -72,24 +72,32 @@ jobs:
       - name: Install Babel and Jest dependencies
         run: |
           cd ~/ethicapp-apiv2
-          echo "Installing Babel and Jest dependencies..."
-          # Instalar dependencias globales
-          docker exec ethicapp-apiV2-node npm install -g jest sequelize-cli
+          echo "Installing critical dependencies one by one to avoid memory issues..."
           
-          # Instalar dependencias de Babel necesarias para los tests
-          docker exec ethicapp-apiV2-node npm install --save-dev @babel/core @babel/preset-env babel-jest
+          # Instalar Jest y Sequelize CLI globalmente
+          docker exec ethicapp-apiV2-node npm install -g sequelize-cli --no-fund --no-audit
+          docker exec ethicapp-apiV2-node npm install -g jest --no-fund --no-audit
           
-          # Verificar que las dependencias críticas están instaladas
+          # Instalar Babel core
+          docker exec ethicapp-apiV2-node npm install --save-dev @babel/core --no-fund --no-audit
+          
+          # Instalar preset-env
+          docker exec ethicapp-apiV2-node npm install --save-dev @babel/preset-env --no-fund --no-audit
+          
+          # Instalar babel-jest
+          docker exec ethicapp-apiV2-node npm install --save-dev babel-jest --no-fund --no-audit
+          
+          # Verificar instalación de las dependencias críticas
           docker exec ethicapp-apiV2-node npm list @babel/preset-env || true
           
-          # Crear o actualizar .babelrc
+          # Crear o actualizar .babelrc (configuración mínima)
           docker exec ethicapp-apiV2-node bash -c "echo '{\"presets\": [\"@babel/preset-env\"]}' > .babelrc"
           
-          # Crear Jest config
-          docker exec ethicapp-apiV2-node bash -c "echo '{\"transform\": {\"^.+\\\\.jsx?$\": \"babel-jest\"}, \"transformIgnorePatterns\": [\"node_modules/(?!@babel)\"], \"testEnvironment\": \"node\"}' > jest.config.json"
+          # Crear Jest config (configuración mínima)
+          docker exec ethicapp-apiV2-node bash -c "echo '{\"transform\": {\"^.+\\\\.jsx?$\": \"babel-jest\"}, \"testEnvironment\": \"node\"}' > jest.config.json"
           
-          # Asegurarse que sequelize y otras dependencias estén instaladas en el backend
-          docker exec ethicapp-apiV2-node bash -c "cd ./backend/api/v2 && npm install sequelize sequelize-cli pg pg-hstore"
+          # Instalar solo las dependencias esenciales en el backend
+          docker exec ethicapp-apiV2-node bash -c "cd ./backend/api/v2 && npm install sequelize pg pg-hstore --no-fund --no-audit"
 
       - name: Verify database connection
         run: |
@@ -112,45 +120,37 @@ jobs:
           docker exec -e NODE_ENV=test ethicapp-apiV2-node bash -c "cd ./backend/api/v2 && npx sequelize-cli db:migrate" || true
           docker exec -e NODE_ENV=test ethicapp-apiV2-node bash -c "cd ./backend/api/v2 && npx sequelize-cli db:seed:all" || true
 
-      - name: Run tests
+      - name: Run tests with reduced memory usage
         id: run_tests
         run: |
           cd ~/ethicapp-apiv2
-          echo "Ejecutando los tests..."
+          echo "Ejecutando los tests con opciones para reducir uso de memoria..."
           
-          # Intento 1: Usando npm run test (el enfoque estándar)
-          if docker exec -e NODE_ENV=test -e NODE_PATH=/usr/local/lib/node_modules ethicapp-apiV2-node npm run test; then
-            echo "tests_passed=true" >> $GITHUB_OUTPUT
-            echo "Tests passed successfully!"
-          else
-            echo "Standard test failed, attempting alternative test approach..."
-            
-            # Intento 2: Ejecutar los tests directamente desde el directorio de test
-            if docker exec -e NODE_ENV=test -e NODE_PATH=/usr/local/lib/node_modules ethicapp-apiV2-node bash -c "cd ./backend/api/v2/test && npx jest"; then
-              echo "tests_passed=true" >> $GITHUB_OUTPUT
-              echo "Tests passed successfully with alternative approach!"
+          # Establecer variables para reducir consumo de memoria de Node.js
+          export NODE_OPTIONS="--max-old-space-size=2048"
+          
+          # Intento 1: Ejecutar tests de forma individualizada para reducir consumo de memoria
+          echo "Ejecutando tests individualmente..."
+          TEST_SUCCEEDED=true
+          
+          for TEST_FILE in $(docker exec ethicapp-apiV2-node find ./backend/api/v2/test -name "*.test.js"); do
+            echo "Ejecutando test: $TEST_FILE"
+            if ! docker exec -e NODE_ENV=test -e NODE_OPTIONS="--max-old-space-size=2048" ethicapp-apiV2-node npx jest $TEST_FILE --no-cache; then
+              # Marcar como fallido, pero continuar con los otros tests
+              TEST_SUCCEEDED=false
+              echo "❌ Test falló: $TEST_FILE"
             else
-              echo "Second approach failed, trying with explicit babel-node..."
-              
-              # Intento 3: Usar babel-node para ejecutar los tests
-              docker exec ethicapp-apiV2-node npm install -g @babel/node
-              if docker exec -e NODE_ENV=test ethicapp-apiV2-node bash -c "cd ./backend/api/v2/test && npx babel-node ./repeat-test.sh"; then
-                echo "tests_passed=true" >> $GITHUB_OUTPUT
-                echo "Tests passed successfully with babel-node approach!"
-              else
-                # Si todos los intentos fallan, salir con error
-                echo "tests_passed=false" >> $GITHUB_OUTPUT
-                echo "All test attempts failed!"
-                
-                # Mostrar información de diagnóstico
-                echo "Diagnostic information:"
-                docker exec ethicapp-apiV2-node bash -c "cd ./backend/api/v2 && ls -la"
-                docker exec ethicapp-apiV2-node bash -c "cat .babelrc"
-                docker exec ethicapp-apiV2-node bash -c "cat jest.config.json"
-                
-                exit 1
-              fi
+              echo "✅ Test pasó: $TEST_FILE"
             fi
+          done
+          
+          if [ "$TEST_SUCCEEDED" = true ]; then
+            echo "tests_passed=true" >> $GITHUB_OUTPUT
+            echo "Todos los tests pasaron correctamente!"
+          else
+            echo "tests_passed=false" >> $GITHUB_OUTPUT
+            echo "Algunos tests fallaron. Revisar los logs para más detalles."
+            exit 1
           fi
 
       - name: Deploy on successful tests
