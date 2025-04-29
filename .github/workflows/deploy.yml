@@ -23,13 +23,15 @@ jobs:
       - name: Sync code to runner
         run: |
           mkdir -p ~/ethicapp-apiv2
-          rsync -a --delete . ~/ethicapp-apiv2/
+          # Use --chmod to set appropriate permissions during sync
+          rsync -a --delete --exclude="db-data-volume/" --chmod=Du+rwx,Fu+rw . ~/ethicapp-apiv2/
 
       - name: Cleanup existing containers and volumes
         run: |
           cd ~/ethicapp-apiv2
           docker-compose down --remove-orphans --volumes
-          rm -rf ./db-data-volume
+          # Use sudo to remove the db-data-volume directory
+          sudo rm -rf ./db-data-volume
 
       - name: Initialize database
         run: |
@@ -58,13 +60,13 @@ jobs:
       - name: Prepare test environment
         run: |
           cd ~/ethicapp-apiv2
-          docker exec ethicapp-apiv2-node npm run test:clean
+          docker exec ethicapp-apiV2-node npm run test:clean
 
       - name: Run tests
         id: run_tests
         run: |
           cd ~/ethicapp-apiv2
-          if docker exec ethicapp-apiv2-node npm run test; then
+          if docker exec ethicapp-apiV2-node npm run test; then
             echo "::set-output name=tests_passed::true"
             echo "Tests passed successfully!"
           else
