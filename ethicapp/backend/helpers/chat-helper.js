@@ -1,6 +1,6 @@
-import * as config from "../config/config.js"; 
+import * as config from "../api/v2/config/config.json"; 
 import * as rpg2 from "../db/rest-pg-2.js";
-import { getDesignTypeByPhaseId } from "./designs-helper.js";
+import { getDesignTypeByPhaseId } from "./desings-helper.js";
 
 /**
  * Handlers for message count queries based on design type.

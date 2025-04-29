@@ -1,6 +1,6 @@
 const { Server: SocketIO } = require("socket.io");
-const { studentSocketInit, toStudentsNotifications } = require("../sockets/student.socket.js");
-const { teacherSocketInit, toTeacherNotifications } = require("../sockets/teacher.socket.js");
+const { studentSocketInit, toStudentsNotifications } = require("../socket/student.socket.js");
+const { teacherSocketInit, toTeacherNotifications } = require("../socket/teacher.socket.js");
 
 let ioInstance = null;
 let studentNotifications = null;

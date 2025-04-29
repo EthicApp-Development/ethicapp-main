@@ -142,12 +142,13 @@ router.post('/activities/:id/init_next_phase', auth, checkAbility('update', 'Pha
         }
         const phase = await Phase.create({
             number: nextPhaseNumber,
-            type: nextPhaseDesign.type || 'regular',
+            type: nextPhaseDesign.mode || nextPhaseDesign.type || 'regular',
             anon: nextPhaseDesign.anon || false,
             chat: nextPhaseDesign.chat || false,
             prev_ans: nextPhaseDesign.prev_ans || '',
             activity_id: activity.id
         });
+        
         studentNotifications.phaseTransition(session.id, phase.id);
         res.status(201).json({ status: 'success', data: phase });
     } catch (err) {
