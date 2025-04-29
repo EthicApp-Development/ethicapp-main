@@ -1,4 +1,4 @@
-name: Deploy EthicApp APIv2
+name: EthicApp APIv2 Test and Deploy
 
 on:
   push:
@@ -10,75 +10,77 @@ on:
       - apiv2
 
 jobs:
-  integration_test_in_docker:
+  test_and_deploy:
     runs-on: [self-hosted, apiV2]
-    name: Run tests inside docker-compose
+    name: Test and Deploy EthicApp APIv2
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Definir COMPOSE_PROJECT_NAME
+      - name: Define COMPOSE_PROJECT_NAME
         run: echo "COMPOSE_PROJECT_NAME=ethicapp-apiv2" >> $GITHUB_ENV
 
-      - name: Copiar el código al runner
+      - name: Sync code to runner
         run: |
           mkdir -p ~/ethicapp-apiv2
           rsync -a --delete . ~/ethicapp-apiv2/
 
-      - name: Detener contenedores anteriores
+      - name: Cleanup existing containers and volumes
         run: |
           cd ~/ethicapp-apiv2
-          docker-compose down --remove-orphans
+          docker-compose down --remove-orphans --volumes
+          rm -rf ./db-data-volume
 
-      - name: Levantar entorno para test
-        run: |
-          cd ~/ethicapp-apiv2
-          docker-compose up -d --build
-
-      - name: Esperar que el entorno esté listo
-        run: sleep 15
-
-      - name: Truncar base de datos
-        run: docker exec ethicapp-apiv2-node npm run test:truncate
-
-      - name: Limpiar registros
-        run: docker exec ethicapp-apiv2-node npm run test:clean
-
-      - name: Ejecutar tests
-        run: docker exec ethicapp-apiv2-node npm run test
-
-      - name: Apagar entorno temporal de test
-        if: always()
-        run: |
-          cd ~/ethicapp-apiv2
-          docker-compose down --remove-orphans
-
-  deploy:
-    needs: integration_test_in_docker
-    runs-on: [self-hosted, apiV2]
-    name: Deploy containers to server
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Definir COMPOSE_PROJECT_NAME
-        run: echo "COMPOSE_PROJECT_NAME=ethicapp-apiv2" >> $GITHUB_ENV
-
-      - name: Sincronizar código
-        run: |
-          mkdir -p ~/ethicapp-apiv2
-          rsync -a --delete . ~/ethicapp-apiv2/
-
-      - name: Inicializar base de datos
+      - name: Initialize database
         run: |
           cd ~/ethicapp-apiv2
           npm run init-db
 
-      - name: Desplegar contenedores
+      - name: Build and start containers
+        run: |
+          cd ~/ethicapp-apiv2
+          docker-compose up -d --build
+
+      - name: Wait for services to be ready
+        run: |
+          cd ~/ethicapp-apiv2
+          echo "Waiting for services to be ready..."
+          sleep 20
+          docker ps
+
+      - name: Prepare test environment
+        run: |
+          cd ~/ethicapp-apiv2
+          docker exec ethicapp-apiv2-node npm run test:clean
+
+      - name: Run tests
+        id: run_tests
+        run: |
+          cd ~/ethicapp-apiv2
+          if docker exec ethicapp-apiv2-node npm run test; then
+            echo "::set-output name=tests_passed::true"
+            echo "Tests passed successfully!"
+          else
+            echo "::set-output name=tests_passed::false"
+            echo "Tests failed!"
+            exit 1
+          fi
+
+      - name: Deploy on successful tests
+        if: steps.run_tests.outputs.tests_passed == 'true'
+        run: |
+          cd ~/ethicapp-apiv2
+          echo "Deploying the application..."
+          # Add any additional deployment steps here if needed
+          docker-compose restart node
+
+      - name: Verify active containers
+        if: steps.run_tests.outputs.tests_passed == 'true'
+        run: docker ps
+
+      - name: Cleanup on failure
+        if: failure()
         run: |
           cd ~/ethicapp-apiv2
           docker-compose down --remove-orphans
-          docker-compose up -d --build
-
-      - name: Verificar contenedores activos
-        run: docker ps
+          echo "Cleaning up after failure"
