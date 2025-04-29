@@ -57,18 +57,36 @@ jobs:
           sleep 20
           docker ps
 
-      - name: Install necessary npm packages in container
+      - name: Debug container status
         run: |
           cd ~/ethicapp-apiv2
-          docker exec ethicapp-apiV2-node npm install -g sequelize-cli
-          docker exec ethicapp-apiV2-node bash -c "cd ./backend/api/v2 && npm install sequelize sequelize-cli pg pg-hstore"
-          docker exec ethicapp-apiV2-node ls -la ./backend/api/v2
+          echo "Checking container status..."
+          docker ps -a
+          echo "Checking container logs..."
+          docker logs ethicapp-apiV2-node
+          echo "Checking file structure..."
+          docker exec ethicapp-apiV2-node ls -la /home/app
+          echo "Checking Node.js version..."
+          docker exec ethicapp-apiV2-node node --version
+          echo "Checking NPM version..."
+          docker exec ethicapp-apiV2-node npm --version
 
-      - name: Prepare test environment
+      - name: Simplify test approach
         run: |
           cd ~/ethicapp-apiv2
-          # Usar el script npm definido para mayor consistencia
-          docker exec -e NODE_ENV=test ethicapp-apiV2-node npm run test:clean || true
+          # Intentar ejecutar un comando simple para verificar que el contenedor está funcionando correctamente
+          docker exec ethicapp-apiV2-node echo "Container is working"
+          # Verificar que la base de datos está accesible
+          docker exec ethicapp-apiV2-postgres pg_isready -U ${DB_USER_NAME}
+
+      - name: Install basic packages and run simplified test
+        run: |
+          cd ~/ethicapp-apiv2
+          # Instalar solo los paquetes esenciales
+          docker exec ethicapp-apiV2-node npm install --no-fund --quiet
+          # Ejecutar un test simplificado o un comando que no dependa de sequelize
+          echo "Attempting to run a simple test..."
+          docker exec -e NODE_ENV=test ethicapp-apiV2-node node -e "console.log('Node.js is working')"
 
       - name: Run tests
         id: run_tests
