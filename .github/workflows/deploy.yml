@@ -36,6 +36,13 @@ jobs:
           cd ~/ethicapp-apiv2
           npm run init-db
 
+      - name: Create JWT secret directory and token file
+        run: |
+          cd ~/ethicapp-apiv2
+          mkdir -p ./secrets
+          echo "${{ secrets.JWT_SECRET_TOKEN }}" > ./secrets/jwt_token
+          chmod 600 ./secrets/jwt_token
+
       - name: Build and start containers
         run: |
           cd ~/ethicapp-apiv2
