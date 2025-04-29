@@ -1,11 +1,4 @@
-- name: Prepare test database
-        run: |
-          cd ~/ethicapp-apiv2
-          echo "Preparando la base de datos de prueba..."
-          # Ejecutamos los comandos secuencialmente para asegurar que los cambios en la base de datos se apliquen correctamente
-          docker exec -e NODE_ENV=test ethicapp-apiV2-node npm run test:truncate || true
-          docker exec -e NODE_ENV=test ethicapp-apiV2-node npm run test:migrate || true
-          docker exec -e NODE_ENV=test ethicapp-apiV2-node npm run test:seed || truename: EthicApp APIv2 Test and Deploy
+name: EthicApp APIv2 Test and Deploy
 
 on:
   push:
@@ -97,6 +90,15 @@ jobs:
           # Verificar la instalación
           docker exec ethicapp-apiV2-node bash -c "which sequelize-cli || echo 'No se encuentra globalmente'"
           docker exec ethicapp-apiV2-node bash -c "cd ./backend/api/v2 && ls -la node_modules/.bin/sequelize || echo 'No se encuentra localmente'"
+
+      - name: Prepare test database
+        run: |
+          cd ~/ethicapp-apiv2
+          echo "Preparando la base de datos de prueba..."
+          # Ejecutamos los comandos secuencialmente para asegurar que los cambios en la base de datos se apliquen correctamente
+          docker exec -e NODE_ENV=test ethicapp-apiV2-node npm run test:truncate || true
+          docker exec -e NODE_ENV=test ethicapp-apiV2-node npm run test:migrate || true
+          docker exec -e NODE_ENV=test ethicapp-apiV2-node npm run test:seed || true
 
       - name: Run tests with shell script
         id: run_tests
