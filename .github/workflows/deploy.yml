@@ -61,7 +61,6 @@ jobs:
         run: |
           cd ~/ethicapp-apiv2
           docker exec ethicapp-apiV2-node npm install -g sequelize-cli
-          docker exec ethicapp-apiV2-node npm install
 
       - name: Prepare test environment
         run: |
