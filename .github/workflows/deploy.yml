@@ -57,10 +57,16 @@ jobs:
           sleep 20
           docker ps
 
+      - name: Install necessary npm packages in container
+        run: |
+          cd ~/ethicapp-apiv2
+          docker exec ethicapp-apiV2-node npm install -g sequelize-cli
+          docker exec ethicapp-apiV2-node npm install
+
       - name: Prepare test environment
         run: |
           cd ~/ethicapp-apiv2
-          docker exec ethicapp-apiV2-node npm run test:clean
+          docker exec ethicapp-apiV2-node bash -c "cd ./backend/api/v2 && NODE_ENV=test npx sequelize-cli db:migrate:undo:all && NODE_ENV=test npx sequelize-cli db:migrate && NODE_ENV=test npx sequelize-cli db:seed:all"
 
       - name: Run tests
         id: run_tests
