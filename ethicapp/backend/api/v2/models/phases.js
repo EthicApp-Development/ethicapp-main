@@ -17,7 +17,11 @@ module.exports = (sequelize, DataTypes) => {
   }
   Phase.init({
     number: DataTypes.INTEGER,
-    type: DataTypes.CHAR(15),
+    type: {
+      type: DataTypes.STRING(15),
+      allowNull: false,
+      defaultValue: 'regular'
+    },
     anon: DataTypes.BOOLEAN,
     chat: DataTypes.BOOLEAN,
     prev_ans: DataTypes.CHAR(255),
