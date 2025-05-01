@@ -17,7 +17,7 @@ module.exports = (sequelize, DataTypes) => {
   }
   Phase.init({
     number: DataTypes.INTEGER,
-    type: {
+    mode: {
       type: DataTypes.STRING(15),
       allowNull: false,
       defaultValue: 'regular'

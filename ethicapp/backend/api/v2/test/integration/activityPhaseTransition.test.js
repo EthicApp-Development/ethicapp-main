@@ -84,7 +84,7 @@ describe('POST /activities/:id/init_next_phase', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.data).toHaveProperty('number', 2);
-    expect(res.body.data).toHaveProperty('type'); // por diseño será individual
+    expect(res.body.data).toHaveProperty('mode'); // por diseño será individual
     // Verificamos que el mock se haya llamado con los IDs correctos
     expect(studentNotifications.phaseTransition).toHaveBeenCalledWith(
       sessionId,

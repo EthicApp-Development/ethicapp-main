@@ -67,14 +67,14 @@ describe('POST /activities/:id/init_next_phase (fase grupal)', () => {
           phases: [
             {
               number: 1,
-              type: 'individual',
+              mode: 'individual',
               anonymous: false,
               chat: false,
               prevPhasesResponse: []
             },
             {
               number: 2,
-              type: 'group',
+              mode: 'group',
               anonymous: false,
               chat: false,
               prevPhasesResponse: [],
@@ -110,7 +110,8 @@ describe('POST /activities/:id/init_next_phase (fase grupal)', () => {
       .toHaveBeenCalledWith(sessionId, phaseId);
 
     const phase = await Phase.findByPk(phaseId);
-    expect(phase.type).toBe('group');
+    console.log('phase', phase);
+    expect(phase.mode).toBe('group');
 
     const groupRes = await request(app)
       .get(`${API}/group`)
@@ -120,6 +121,7 @@ describe('POST /activities/:id/init_next_phase (fase grupal)', () => {
     console.log('groupRes', groupRes.body);  
     expect(groupRes.status).toBe(200);
     const groups = groupRes.body.data.filter(g => g.session_id === sessionId);
+    console.log('groups', groups);
     expect(groups.length).toBeGreaterThan(0);
   });
 });
