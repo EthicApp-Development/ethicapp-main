@@ -52,15 +52,26 @@ jobs:
         run: |
           docker-compose -f docker-compose.test.yml build
 
+      - name: Install missing dependencies
+        run: |
+          # Add any missing dependencies to package.json
+          cd ethicapp
+          if ! grep -q '"log-timestamp"' package.json; then
+            echo "Adding log-timestamp to package.json..."
+            npm install log-timestamp --save
+          fi
+          cd ..
+          # Rebuild the container with updated dependencies
+          docker-compose -f docker-compose.test.yml build test-node
+
       - name: Start test containers
         run: |
           docker-compose -f docker-compose.test.yml up -d
           echo "Waiting for services to be ready..."
           sleep 15
-          docker ps -a | grep ethicapp-test
-        
+          docker ps | grep ethicapp-test
+
       - name: Check Node container logs
-        if: always()
         run: |
           docker logs ethicapp-test-node || true
 
@@ -73,6 +84,12 @@ jobs:
 
       - name: Prepare test database
         run: |
+          # Check if Node container is running
+          if ! docker ps | grep -q ethicapp-test-node; then
+            echo "Node container is not running. Cannot prepare database."
+            exit 1
+          fi
+          
           # Prepare test database using npx to ensure sequelize-cli is available
           echo "Preparing test database..."
           docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app/backend/api/v2 && npx sequelize-cli db:migrate:undo:all" || true
@@ -82,6 +99,13 @@ jobs:
       - name: Run tests
         id: run_tests
         run: |
+          # Check if Node container is running
+          if ! docker ps | grep -q ethicapp-test-node; then
+            echo "Node container is not running. Cannot run tests."
+            echo "tests_passed=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
           # Make sure the test script is executable
           docker exec ethicapp-test-node bash -c "chmod +x /home/app/backend/api/v2/test/repeat-test.sh"
           
