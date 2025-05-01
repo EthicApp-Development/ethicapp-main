@@ -23,10 +23,8 @@ services:
   test-node:
     container_name: "ethicapp-test-node"
     build:
-      context: ethicapp/
+      context: ./ethicapp
       dockerfile: ../Dockerfile.test
-      args:
-        NODE_VERSION: ${NODE_VERSION:-18}
     environment:
       NODE_ENV: test
       NODE_PORT: 3100
