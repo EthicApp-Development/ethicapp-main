@@ -9,7 +9,7 @@ COPY package*.json ./
 RUN npm install
 
 # Instalar dependencias adicionales que podrían ser necesarias
-RUN npm install pg sequelize sequelize-cli --save
+RUN npm install pg sequelize sequelize-cli log-timestamp --save
 
 # Copiar el resto de la aplicación
 COPY . ./
