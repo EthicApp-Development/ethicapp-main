@@ -57,7 +57,12 @@ jobs:
           docker-compose -f docker-compose.test.yml up -d
           echo "Waiting for services to be ready..."
           sleep 15
-          docker ps | grep ethicapp-test
+          docker ps -a | grep ethicapp-test
+        
+      - name: Check Node container logs
+        if: always()
+        run: |
+          docker logs ethicapp-test-node || true
 
       - name: Verify database connection
         run: |
