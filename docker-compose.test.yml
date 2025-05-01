@@ -27,7 +27,7 @@ services:
       dockerfile: ../Dockerfile.test
     environment:
       NODE_ENV: test
-      NODE_PORT: 3100
+      NODE_PORT: 3200  # Cambiado el puerto interno
       ALLOWED_ORIGINS: "*"
       # Variables para base de datos
       DB_HOST: ethicapp-test-postgres
@@ -42,7 +42,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "3100:3100"
+      - "3200:3200"  # Cambiado el mapeo de puertos externo:interno
     volumes:
       - "./ethicapp:/home/app:rw"
     # Esperamos a que la base de datos esté lista usando la condición de healthcheck
