@@ -1,0 +1,99 @@
+name: EthicApp APIv2 Deploy
+
+on:
+  workflow_run:
+    workflows: ["EthicApp Test"]
+    types:
+      - completed
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, apiV2]
+    name: Deploy EthicApp APIv2
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Define environment variables
+        run: |
+          echo "COMPOSE_PROJECT_NAME=ethicapp-apiv2" >> $GITHUB_ENV
+          # Explicitly set DB_USER_NAME from .env file for use in pipeline
+          if [ -f ./.env ]; then
+            export $(grep -v '^#' ./.env | xargs)
+            echo "DB_USER_NAME=$DB_USER_NAME" >> $GITHUB_ENV
+          else
+            echo "No .env file found, using defaults"
+            echo "DB_USER_NAME=ethicapp" >> $GITHUB_ENV
+          fi
+
+      - name: Sync code to runner
+        run: |
+          mkdir -p ~/ethicapp-apiv2
+          # Use --chmod to set appropriate permissions during sync
+          rsync -a --delete --exclude="db-data-volume/" --chmod=Du+rwx,Fu+rw . ~/ethicapp-apiv2/
+
+      - name: Create JWT secret
+        run: |
+          cd ~/ethicapp-apiv2
+          mkdir -p ./secrets
+          echo "${{ secrets.JWT_SECRET_TOKEN }}" > ./secrets/jwt_token
+          chmod 600 ./secrets/jwt_token
+
+      - name: Check if database volume exists
+        id: check_db
+        run: |
+          cd ~/ethicapp-apiv2
+          if [ -d "./db-data-volume" ] && [ "$(ls -A ./db-data-volume)" ]; then
+            echo "db_exists=true" >> $GITHUB_OUTPUT
+            echo "Database volume exists"
+          else
+            echo "db_exists=false" >> $GITHUB_OUTPUT
+            echo "Database volume does not exist"
+          fi
+
+      - name: Initialize database if needed
+        if: steps.check_db.outputs.db_exists == 'false'
+        run: |
+          cd ~/ethicapp-apiv2
+          echo "Initializing database..."
+          npm run init-db
+
+      - name: Build and start containers
+        run: |
+          cd ~/ethicapp-apiv2
+          docker-compose up -d --build
+
+      - name: Wait for services to be ready
+        run: |
+          cd ~/ethicapp-apiv2
+          echo "Waiting for services to be ready..."
+          sleep 30
+          docker ps | grep ethicapp-apiV2
+
+      - name: Verify database connection
+        run: |
+          cd ~/ethicapp-apiv2
+          # Verify postgres connection with explicit username
+          docker exec ethicapp-apiV2-postgres pg_isready -U $DB_USER_NAME || true
+          # Check if database is accessible
+          docker exec ethicapp-apiV2-postgres psql -U $DB_USER_NAME -c "SELECT 1" || true
+
+      - name: Restart application service
+        run: |
+          cd ~/ethicapp-apiv2
+          echo "Restarting application service..."
+          docker-compose restart ethicapp-apiV2-node || docker-compose restart node
+
+      - name: Verify active containers
+        run: docker ps | grep ethicapp-apiV2
+
+      - name: Cleanup on failure
+        if: failure()
+        run: |
+          cd ~/ethicapp-apiv2
+          echo "Cleaning up after failure"
+          docker-compose logs ethicapp-apiV2-node
+          docker-compose logs ethicapp-apiV2-postgres

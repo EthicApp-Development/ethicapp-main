@@ -1,33 +1,56 @@
 version: "3.9"
 
 services:
-  postgres:
-    container_name: "ethicapp-postgres-test"
-    build:
-      context: postgres-db/
-      args:
-        UBUNTU_VERSION: "22.04"
-        POSTGRES_VERSION: ${POSTGRES_VERSION}
-        DB_NAME: ${DB_NAME}
-        DB_USER_NAME: ${DB_USER_NAME}
-        DB_USER_PASSWORD: ${DB_USER_PASSWORD}
+  # Base de datos PostgreSQL para pruebas
+  test-postgres:
+    container_name: "ethicapp-test-postgres"
+    image: postgres:14
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER_NAME}
-      POSTGRES_PASSWORD: ${DB_USER_PASSWORD}
-      POSTGRES_LOG_LEVEL: 1
-      PGPORT: 5432
-      PGDATA: /var/lib/postgresql/${POSTGRES_VERSION}/main
-    restart: unless-stopped
-    networks:
-      default:
-    healthcheck:
-      test: ["CMD-SHELL", "su healthcheckuser -c pg_isready"]
-      interval: 20s
-      timeout: 5s
-      retries: 1
-      start_period: 10s
-    volumes:
-      - "${HOST_DB_VOLUME_PATH}:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"
+      POSTGRES_DB: ethicapp_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
-      - "5433:5432"
+      - "5440:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Servicio Node.js para pruebas
+  test-node:
+    container_name: "ethicapp-test-node"
+    build:
+      context: ethicapp/
+      dockerfile: ../Dockerfile.test
+      args:
+        NODE_VERSION: ${NODE_VERSION:-18}
+    environment:
+      NODE_ENV: test
+      NODE_PORT: 3100
+      ALLOWED_ORIGINS: "*"
+      # Variables para base de datos
+      DB_HOST: ethicapp-test-postgres
+      DB_PORT: 5432
+      DB_NAME: ethicapp_test
+      DB_USER_NAME: postgres
+      DB_USER_PASSWORD: postgres
+      # Variables adicionales para diferentes configuraciones
+      DATABASE_URL: postgres://postgres:postgres@ethicapp-test-postgres:5432/ethicapp_test
+      POSTGRES_HOST: ethicapp-test-postgres
+      POSTGRES_DB: ethicapp_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "3100:3100"
+    volumes:
+      - "./ethicapp:/home/app:rw"
+    # Esperamos a que la base de datos esté lista usando la condición de healthcheck
+    depends_on:
+      test-postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_test_data:
