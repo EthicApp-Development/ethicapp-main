@@ -7,10 +7,10 @@
     "dialect": "postgres"
   },
   "test": {
-    "username": "ethicapp",
-    "password": "ethicapp",
+    "username": "postgres",
+    "password": "postgres",
     "database": "ethicapp_test",
-    "host": "postgres",
+    "host": "ethicapp-test-postgres",
     "dialect": "postgres"
   },
   "production": {
