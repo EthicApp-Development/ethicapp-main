@@ -41,6 +41,26 @@ jobs:
           mkdir -p ./secrets
           echo "${{ secrets.JWT_SECRET_TOKEN }}" > ./secrets/jwt_token
           chmod 600 ./secrets/jwt_token
+          
+      - name: Create keys-n-secrets.js file
+        run: |
+          mkdir -p ./backend/config
+          cat > ./backend/config/keys-n-secrets.js << 'EOF'
+          module.exports.dbcon = "tcp://ethicapp:ethicapp@postgres:5432/ethicapp_dev";
+          module.exports.uploadPath = "frontend/assets/uploads";
+          module.exports.GOOGLE_CLIENT_ID = "${{ secrets.GOOGLE_CLIENT_ID || 'foo.apps.googleusercontent.com' }}";
+          module.exports.GOOGLE_CLIENT_SECRET = "${{ secrets.GOOGLE_CLIENT_SECRET || 'qwerty' }}";
+          module.exports.Captcha_Web = "${{ secrets.CAPTCHA_WEB || 'qwerty' }}";
+          module.exports.Captcha_Secret = "${{ secrets.CAPTCHA_SECRET || 'qwerty' }}";
+          module.exports.accessKeyId = "${{ secrets.ACCESS_KEY_ID || 'qwerty' }}";
+          module.exports.secretAccessKey = "${{ secrets.SECRET_ACCESS_KEY || 'qwerty' }}";
+          EOF
+          echo "Created keys-n-secrets.js file"
+          
+          # Ensure the file is copied to the ethicapp directory structure as well
+          mkdir -p ./ethicapp/backend/config
+          cp ./backend/config/keys-n-secrets.js ./ethicapp/backend/config/
+          echo "Copied keys-n-secrets.js to ethicapp directory"
 
       - name: Cleanup existing test containers
         run: |

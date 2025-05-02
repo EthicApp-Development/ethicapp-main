@@ -1,5 +1,4 @@
 version: "3.9"
-
 services:
   # Base de datos PostgreSQL para pruebas
   test-postgres:
@@ -18,7 +17,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
   # Servicio Node.js para pruebas
   test-node:
     container_name: "ethicapp-test-node"
@@ -27,7 +25,7 @@ services:
       dockerfile: ../Dockerfile.test
     environment:
       NODE_ENV: test
-      NODE_PORT: 3200  # Cambiado el puerto interno
+      NODE_PORT: 3200
       ALLOWED_ORIGINS: "*"
       # Variables para base de datos
       DB_HOST: ethicapp-test-postgres
@@ -42,13 +40,14 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "3200:3200"  # Cambiado el mapeo de puertos externo:interno
+      - "3200:3200"
     volumes:
       - "./ethicapp:/home/app:rw"
+      - "./backend/config:/home/app/backend/config:rw"  # Añadido para montar el directorio de config
+      - "./secrets:/home/app/secrets:rw"  # Añadido para montar los secretos JWT
     # Esperamos a que la base de datos esté lista usando la condición de healthcheck
     depends_on:
       test-postgres:
         condition: service_healthy
-
 volumes:
   postgres_test_data:
