@@ -31,27 +31,61 @@ jobs:
 
       - name: Create configuration files
         run: |
-          # Create keys-n-secrets.js
+          # Create necessary directories
           mkdir -p ./backend/config ./ethicapp/backend/config ./secrets
           
           # JWT Token
           echo "${{ secrets.JWT_SECRET_TOKEN || 'test_token' }}" > ./secrets/jwt_token
           chmod 600 ./secrets/jwt_token
           
-          # Config file with secrets
+          # Create keys-n-secrets.js
           cat > ./backend/config/keys-n-secrets.js << 'EOF'
           module.exports.dbcon = "tcp://ethicapp:ethicapp@postgres:5432/ethicapp_dev";
           module.exports.uploadPath = "frontend/assets/uploads";
           module.exports.GOOGLE_CLIENT_ID = "${{ secrets.GOOGLE_CLIENT_ID }}";
-          module.exports.GOOGLE_CLIENT_SECRET = "${{ secrets.GOOGLE_CLIENT_SECRET}}";
-          module.exports.Captcha_Web = "${{ secrets.CAPTCHA_WEB}}";
-          module.exports.Captcha_Secret = "${{ secrets.CAPTCHA_SECRET}}";
-          module.exports.accessKeyId = "${{ secrets.ACCESS_KEY_ID}}";
-          module.exports.secretAccessKey = "${{ secrets.SECRET_ACCESS_KEY}}";
+          module.exports.GOOGLE_CLIENT_SECRET = "${{ secrets.GOOGLE_CLIENT_SECRET }}";
+          module.exports.Captcha_Web = "${{ secrets.CAPTCHA_WEB }}";
+          module.exports.Captcha_Secret = "${{ secrets.CAPTCHA_SECRET }}";
+          module.exports.accessKeyId = "${{ secrets.ACCESS_KEY_ID }}";
+          module.exports.secretAccessKey = "${{ secrets.SECRET_ACCESS_KEY }}";
+          EOF
+          
+          # Create socket.config.js with the correct content
+          cat > ./backend/config/socket.config.js << 'EOF'
+          module.exports.configSocket = function(io){
+            module.exports.stateChange = function(sesid){
+              io.of("/").emit("stateChange", {ses: sesid});
+            };
+            module.exports.updateTeam = function(tmid){
+              io.of("/").emit("updateTeam", {tmid: tmid});
+            };
+            module.exports.reportChange = function(sesid){
+              io.of("/").emit("reportChange", {ses: sesid});
+            };
+            module.exports.reportBroadcast = function(sesid, rid){
+              io.of("/").emit("reportReceived", {ses: sesid, rid: rid});
+            };
+            module.exports.diffBroadcast = function(sesid, content){
+              io.of("/").emit("diffReceived", {ses: sesid, content: content});
+            };
+            module.exports.teamProgress = function(sesid, tmid){
+              io.of("/").emit("teamProgress", {ses: sesid, tmid: tmid});
+            };
+            module.exports.chatMsg = function(sesid, tmid){
+              io.of("/").emit("chatMsg", {ses: sesid, tmid: tmid});
+            };
+            module.exports.chatMsgStage = function(stageid, tmid){
+              io.of("/").emit("chatMsgStage", {stageid: stageid, tmid: tmid});
+            };
+          };
           EOF
           
           # Copy to ethicapp directory
           cp ./backend/config/keys-n-secrets.js ./ethicapp/backend/config/
+          cp ./backend/config/socket.config.js ./ethicapp/backend/config/
+          
+          echo "Configuration files created successfully"
+      
 
       - name: Clean up existing containers
         run: |
