@@ -10,13 +10,14 @@ services:
       POSTGRES_PASSWORD: postgres
     ports:
       - "5440:5432"
-    volumes:
-      - postgres_test_data:/var/lib/postgresql/data
+    tmpfs:
+      - /var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
+
   # Servicio Node.js para pruebas
   test-node:
     container_name: "ethicapp-test-node"
@@ -43,11 +44,8 @@ services:
       - "3200:3200"
     volumes:
       - "./ethicapp:/home/app:rw"
-      - "./backend/config:/home/app/backend/config:rw"  # Añadido para montar el directorio de config
-      - "./secrets:/home/app/secrets:rw"  # Añadido para montar los secretos JWT
-    # Esperamos a que la base de datos esté lista usando la condición de healthcheck
+      - "./backend/config:/home/app/backend/config:rw"
+      - "./secrets:/home/app/secrets:rw"
     depends_on:
       test-postgres:
         condition: service_healthy
-volumes:
-  postgres_test_data:
