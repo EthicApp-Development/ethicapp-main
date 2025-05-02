@@ -174,19 +174,85 @@ jobs:
             echo "No .env file found, using defaults"
             echo "DB_USER_NAME=ethicapp" >> $GITHUB_ENV
           fi
+      
+      - name: Prepare deployment directory with correct permissions
+        run: |
+          # Crear el directorio si no existe
+          sudo mkdir -p ~/ethicapp-apiv2
           
+          # Cambiar el propietario al usuario actual
+          sudo chown -R $(whoami):$(whoami) ~/ethicapp-apiv2
+          
+          # Establecer permisos adecuados
+          sudo chmod -R 755 ~/ethicapp-apiv2
+          
+          echo "Deployment directory prepared with correct permissions"
+      
       - name: Sync code to runner
         run: |
-          mkdir -p ~/ethicapp-apiv2
-          # Use --chmod to set appropriate permissions during sync
-          rsync -a --delete --exclude="db-data-volume/" --chmod=Du+rwx,Fu+rw . ~/ethicapp-apiv2/
+          # Usar rsync con permisos adecuados
+          rsync -a --delete --exclude="db-data-volume/" . ~/ethicapp-apiv2/
           
-      - name: Create JWT secret
+          # Verificar que la sincronización se haya completado correctamente
+          if [ $? -eq 0 ]; then
+            echo "Code synced successfully to deployment directory"
+          else
+            echo "Error during code sync"
+            exit 1
+          fi
+          
+      - name: Create configuration files and secrets
         run: |
           cd ~/ethicapp-apiv2
-          mkdir -p ./secrets
+          
+          # Crear directorios necesarios
+          mkdir -p ./backend/config ./secrets
+          
+          # Crear JWT secret
           echo "${{ secrets.JWT_SECRET_TOKEN }}" > ./secrets/jwt_token
           chmod 600 ./secrets/jwt_token
+          
+          # Crear keys-n-secrets.js
+          cat > ./backend/config/keys-n-secrets.js << 'EOF'
+          module.exports.dbcon = "tcp://ethicapp:ethicapp@postgres:5432/ethicapp_dev";
+          module.exports.uploadPath = "frontend/assets/uploads";
+          module.exports.GOOGLE_CLIENT_ID = "${{ secrets.GOOGLE_CLIENT_ID }}";
+          module.exports.GOOGLE_CLIENT_SECRET = "${{ secrets.GOOGLE_CLIENT_SECRET }}";
+          module.exports.Captcha_Web = "${{ secrets.CAPTCHA_WEB }}";
+          module.exports.Captcha_Secret = "${{ secrets.CAPTCHA_SECRET }}";
+          module.exports.accessKeyId = "${{ secrets.ACCESS_KEY_ID }}";
+          module.exports.secretAccessKey = "${{ secrets.SECRET_ACCESS_KEY }}";
+          EOF
+          
+          # Crear socket.config.js
+          cat > ./backend/config/socket.config.js << 'EOF'
+          module.exports.configSocket = function(io){
+            module.exports.stateChange = function(sesid){
+              io.of("/").emit("stateChange", {ses: sesid});
+            };
+            module.exports.updateTeam = function(tmid){
+              io.of("/").emit("updateTeam", {tmid: tmid});
+            };
+            module.exports.reportChange = function(sesid){
+              io.of("/").emit("reportChange", {ses: sesid});
+            };
+            module.exports.reportBroadcast = function(sesid, rid){
+              io.of("/").emit("reportReceived", {ses: sesid, rid: rid});
+            };
+            module.exports.diffBroadcast = function(sesid, content){
+              io.of("/").emit("diffReceived", {ses: sesid, content: content});
+            };
+            module.exports.teamProgress = function(sesid, tmid){
+              io.of("/").emit("teamProgress", {ses: sesid, tmid: tmid});
+            };
+            module.exports.chatMsg = function(sesid, tmid){
+              io.of("/").emit("chatMsg", {ses: sesid, tmid: tmid});
+            };
+            module.exports.chatMsgStage = function(stageid, tmid){
+              io.of("/").emit("chatMsgStage", {stageid: stageid, tmid: tmid});
+            };
+          };
+          EOF
           
       - name: Check if database volume exists
         id: check_db
@@ -241,5 +307,5 @@ jobs:
         run: |
           cd ~/ethicapp-apiv2
           echo "Cleaning up after failure"
-          docker-compose logs ethicapp-apiV2-node
-          docker-compose logs ethicapp-apiV2-postgres
+          docker-compose logs ethicapp-apiV2-node || true
+          docker-compose logs ethicapp-apiV2-postgres || true
