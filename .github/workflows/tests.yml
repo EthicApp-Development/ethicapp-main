@@ -134,15 +134,15 @@ jobs:
             docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app/backend/api/v2 && npx sequelize-cli db:migrate:undo:all"
             
             # Configurar base de datos limpia (test:clean - migración y semillas)
-            docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app/backend/api/v2 && npx sequelize-cli db:migrate"
-            docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app/backend/api/v2 && npx sequelize-cli db:seed:all"
+            docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app && npm run test:truncate"
+    
+            # Configurar base de datos limpia (test:clean - migración y semillas)
+            docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app && npm run test:clean"
             
-            # Make test script executable
-            docker exec ethicapp-test-node bash -c "chmod +x /home/app/backend/api/v2/test/repeat-test.sh"
             
-            # Ejecutar tests
+            
             echo "Running tests..."
-            if docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app && NODE_ENV=test ./backend/api/v2/test/repeat-test.sh"; then
+            if docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app && npm run test"; then
               echo "tests_passed=true" >> $GITHUB_OUTPUT
               echo "Tests passed successfully!"
             else
