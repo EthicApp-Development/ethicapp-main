@@ -18,188 +18,71 @@ jobs:
       tests_passed: ${{ steps.run_tests.outputs.tests_passed }}
     
     steps:
+      # Fix permissions first to avoid checkout issues
+      - name: Fix directory permissions
+        run: |
+          if [ -d "/home/ethicapp/apiV2-runner/_work/ethicapp-main/ethicapp-main" ]; then
+            sudo chmod -R 777 /home/ethicapp/apiV2-runner/_work/ethicapp-main/ethicapp-main || true
+            sudo rm -rf /home/ethicapp/apiV2-runner/_work/ethicapp-main/ethicapp-main/db-test-data-volume || true
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Define environment variables
+      - name: Create configuration files
         run: |
-          echo "COMPOSE_PROJECT_NAME=ethicapp-test" >> $GITHUB_ENV
-          if [ -f ./.env ]; then
-            export $(grep -v '^#' ./.env | xargs)
-            echo "DB_USER_NAME=$DB_USER_NAME" >> $GITHUB_ENV
-            echo "DB_TEST_USER_NAME=$DB_TEST_USER_NAME" >> $GITHUB_ENV
-            echo "DB_TEST_NAME=$DB_TEST_NAME" >> $GITHUB_ENV
-          else
-            echo "No .env file found, using defaults"
-            echo "DB_USER_NAME=postgres" >> $GITHUB_ENV
-            echo "DB_TEST_USER_NAME=postgres" >> $GITHUB_ENV
-            echo "DB_TEST_NAME=ethicapp_test" >> $GITHUB_ENV
-          fi
-
-      - name: Create JWT secret for tests
-        run: |
-          mkdir -p ./secrets
-          echo "${{ secrets.JWT_SECRET_TOKEN }}" > ./secrets/jwt_token
+          # Create keys-n-secrets.js
+          mkdir -p ./backend/config ./ethicapp/backend/config ./secrets
+          
+          # JWT Token
+          echo "${{ secrets.JWT_SECRET_TOKEN || 'test_token' }}" > ./secrets/jwt_token
           chmod 600 ./secrets/jwt_token
           
-      - name: Create keys-n-secrets.js file
-        run: |
-          mkdir -p ./backend/config
+          # Config file with secrets
           cat > ./backend/config/keys-n-secrets.js << 'EOF'
           module.exports.dbcon = "tcp://ethicapp:ethicapp@postgres:5432/ethicapp_dev";
           module.exports.uploadPath = "frontend/assets/uploads";
-          module.exports.GOOGLE_CLIENT_ID = "${{ secrets.GOOGLE_CLIENT_ID || 'foo.apps.googleusercontent.com' }}";
-          module.exports.GOOGLE_CLIENT_SECRET = "${{ secrets.GOOGLE_CLIENT_SECRET || 'qwerty' }}";
-          module.exports.Captcha_Web = "${{ secrets.CAPTCHA_WEB || 'qwerty' }}";
-          module.exports.Captcha_Secret = "${{ secrets.CAPTCHA_SECRET || 'qwerty' }}";
-          module.exports.accessKeyId = "${{ secrets.ACCESS_KEY_ID || 'qwerty' }}";
-          module.exports.secretAccessKey = "${{ secrets.SECRET_ACCESS_KEY || 'qwerty' }}";
+          module.exports.GOOGLE_CLIENT_ID = "${{ secrets.GOOGLE_CLIENT_ID }}";
+          module.exports.GOOGLE_CLIENT_SECRET = "${{ secrets.GOOGLE_CLIENT_SECRET}}";
+          module.exports.Captcha_Web = "${{ secrets.CAPTCHA_WEB}}";
+          module.exports.Captcha_Secret = "${{ secrets.CAPTCHA_SECRET}}";
+          module.exports.accessKeyId = "${{ secrets.ACCESS_KEY_ID}}";
+          module.exports.secretAccessKey = "${{ secrets.SECRET_ACCESS_KEY}}";
           EOF
-          echo "Created keys-n-secrets.js file"
           
-          # Ensure the file is copied to the ethicapp directory structure as well
-          mkdir -p ./ethicapp/backend/config
+          # Copy to ethicapp directory
           cp ./backend/config/keys-n-secrets.js ./ethicapp/backend/config/
-          echo "Copied keys-n-secrets.js to ethicapp directory"
 
-      - name: Cleanup existing test containers
+      - name: Clean up existing containers
         run: |
-          docker-compose -f docker-compose.test.yml down --remove-orphans --volumes || true
+          docker-compose -f docker-compose.test.yml down --volumes --remove-orphans || true
           docker rm -f ethicapp-test-node ethicapp-test-postgres || true
           docker volume rm -f postgres_test_data || true
-          # Eliminar el directorio de volumen de prueba si existe
           rm -rf ./db-test-data-volume || true
 
-      - name: Install missing dependencies
+      - name: Install node dependencies
         run: |
-          # Instalar log-timestamp en el proyecto
           cd ethicapp
-          npm list log-timestamp || npm install log-timestamp --save
-          npm list pg || npm install pg --save
-          npm list sequelize || npm install sequelize sequelize-cli --save
+          npm install log-timestamp pg sequelize sequelize-cli --save
           cd ..
 
-      - name: Initialize test database
+      - name: Start test containers directly
         run: |
-          # Crear script de inicialización de base de datos
-          cat > init-test-db.sh << 'EOF'
-          #!/bin/bash -e
-          # Inicializa el volumen compartido para la base de datos de prueba
-          
-          # Definir variables específicas para pruebas
-          TEST_DB_VOLUME_PATH="./db-test-data-volume"
-          TEST_COMPOSE_FILE="docker-compose.test.yml"
-          POSTGRES_SERVICE="test-postgres"
-          POSTGRES_CONTAINER="ethicapp-test-postgres"
-          
-          # Verificar si el directorio ya existe
-          if test -d ${TEST_DB_VOLUME_PATH}; then
-            echo "[WARNING] El directorio \"${TEST_DB_VOLUME_PATH}\" ya existe. Se eliminará y recreará."
-            rm -rf ${TEST_DB_VOLUME_PATH}
-          fi
-          
-          # Crear un archivo docker-compose temporal sin el volumen montado
-          TempComposeFilePath="./.docker-compose.test-no-volume.temp"
-          echo "# ----
-          # ARCHIVO GENERADO TEMPORALMENTE
-          # ----
-          version: \"3.9\"
-          
-          services:
-            # Base de datos PostgreSQL para pruebas
-            ${POSTGRES_SERVICE}:
-              container_name: \"${POSTGRES_CONTAINER}\"
-              image: postgres:14
-              environment:
-                POSTGRES_DB: ethicapp_test
-                POSTGRES_USER: postgres
-                POSTGRES_PASSWORD: postgres
-              ports:
-                - \"5440:5432\"
-              healthcheck:
-                test: [\"CMD-SHELL\", \"pg_isready -U postgres\"]
-                interval: 5s
-                timeout: 5s
-                retries: 5" > ${TempComposeFilePath}
-          
-          # Iniciar PostgreSQL sin el volumen montado
-          echo "[INFO] Iniciando PostgreSQL sin volumen montado..."
-          docker-compose -f ${TempComposeFilePath} down --remove-orphans
-          docker-compose -f ${TempComposeFilePath} up -d ${POSTGRES_SERVICE}
-          
-          # Esperar a que PostgreSQL esté listo
-          echo "[INFO] Esperando a que PostgreSQL esté listo..."
-          until docker exec ${POSTGRES_CONTAINER} pg_isready -U postgres > /dev/null 2>&1; do
-            echo "Esperando..."
-            sleep 2
-          done
-          
-          # Verificar que la base de datos existe
-          echo "[INFO] Verificando conexión a la base de datos..."
-          docker exec ${POSTGRES_CONTAINER} psql -U postgres -c "\conninfo"
-          
-          # Crear directorio para el volumen
-          echo "[INFO] Exportando archivos de base de datos al host..."
-          mkdir -p ${TEST_DB_VOLUME_PATH}
-          
-          # Copiar los archivos de la base de datos al host
-          docker cp ${POSTGRES_CONTAINER}:/var/lib/postgresql/data/ ${TEST_DB_VOLUME_PATH}
-          mv ${TEST_DB_VOLUME_PATH}/data/* ${TEST_DB_VOLUME_PATH}
-          rm -R -v ${TEST_DB_VOLUME_PATH}/data/ 2>/dev/null || true
-          
-          # Detener el contenedor temporal
-          docker-compose -f ${TempComposeFilePath} down
-          
-          # Modificar docker-compose.test.yml para usar el volumen
-          echo "[INFO] Actualizando docker-compose.test.yml para usar el volumen..."
-          sed -i.bak "s|postgres_test_data:/var/lib/postgresql/data|${TEST_DB_VOLUME_PATH}:/var/lib/postgresql/data:rw|g" ${TEST_COMPOSE_FILE}
-          # Restaurar el archivo de backup si la sustitución falla
-          if [ $? -ne 0 ]; then
-            echo "[ERROR] No se pudo actualizar el archivo docker-compose.test.yml"
-            if [ -f "${TEST_COMPOSE_FILE}.bak" ]; then
-              mv "${TEST_COMPOSE_FILE}.bak" "${TEST_COMPOSE_FILE}"
-            fi
-            exit 1
-          fi
-          # Eliminar el archivo de backup si la sustitución fue exitosa
-          rm -f "${TEST_COMPOSE_FILE}.bak"
-          
-          # Eliminar el archivo temporal
-          rm ${TempComposeFilePath}
-          
-          echo "[OK] Preparado el volumen para PostgreSQL en ${TEST_DB_VOLUME_PATH}"
-          EOF
-          
-          # Hacer el script ejecutable
-          chmod +x init-test-db.sh
-          
-          # Ejecutar el script
-          ./init-test-db.sh
-
-      - name: Start test containers
-        run: |
+          # Start containers without volume initialization
           docker-compose -f docker-compose.test.yml up -d
+          
+          # Wait for services to be ready
           echo "Waiting for services to be ready..."
           sleep 15
           docker ps | grep ethicapp-test
 
-      - name: Check Node container logs
+      - name: Check container logs
         run: |
+          echo "Node container logs:"
           docker logs ethicapp-test-node || true
-
-      - name: Prepare test database
-        run: |
-          # Check if Node container is running
-          if ! docker ps | grep -q ethicapp-test-node; then
-            echo "Node container is not running. Cannot prepare database."
-            exit 1
-          fi
           
-          # Prepare test database using npx to ensure sequelize-cli is available
-          echo "Preparing test database..."
-          docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app/backend/api/v2 && npx sequelize-cli db:migrate:undo:all" || true
-          docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app/backend/api/v2 && npx sequelize-cli db:migrate" || true
-          docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app/backend/api/v2 && npx sequelize-cli db:seed:all" || true
+          echo "Postgres container logs:"
+          docker logs ethicapp-test-postgres || true
 
       - name: Run tests
         id: run_tests
@@ -211,11 +94,9 @@ jobs:
             exit 1
           fi
           
-          # Make sure the test script is executable
+          # Make test script executable and run tests
           docker exec ethicapp-test-node bash -c "chmod +x /home/app/backend/api/v2/test/repeat-test.sh"
           
-          # Run the tests
-          echo "Running tests..."
           if docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app && ./backend/api/v2/test/repeat-test.sh"; then
             echo "tests_passed=true" >> $GITHUB_OUTPUT
             echo "Tests passed successfully!"
@@ -225,16 +106,8 @@ jobs:
             exit 1
           fi
 
-      - name: Restore docker-compose.test.yml
-        if: always()
-        run: |
-          # Restaurar el archivo docker-compose.test.yml a su estado original
-          if grep -q "db-test-data-volume" docker-compose.test.yml; then
-            sed -i.bak "s|./db-test-data-volume:/var/lib/postgresql/data:rw|postgres_test_data:/var/lib/postgresql/data|g" docker-compose.test.yml
-            rm -f docker-compose.test.yml.bak
-          fi
-
       - name: Cleanup test containers
         if: always()
         run: |
-          docker-compose -f docker-compose.test.yml down --volumes
+          docker-compose -f docker-compose.test.yml down --volumes --remove-orphans
+          sudo rm -rf ./db-test-data-volume || true
