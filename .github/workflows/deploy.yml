@@ -162,7 +162,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        
+
       - name: Define environment variables
         run: |
           echo "COMPOSE_PROJECT_NAME=ethicapp-apiv2" >> $GITHUB_ENV
@@ -174,25 +174,25 @@ jobs:
             echo "No .env file found, using defaults"
             echo "DB_USER_NAME=ethicapp" >> $GITHUB_ENV
           fi
-      
+
       - name: Prepare deployment directory with correct permissions
         run: |
           # Crear el directorio si no existe
           sudo mkdir -p ~/ethicapp-apiv2
-          
+
           # Cambiar el propietario al usuario actual
           sudo chown -R $(whoami):$(whoami) ~/ethicapp-apiv2
-          
+
           # Establecer permisos adecuados
           sudo chmod -R 755 ~/ethicapp-apiv2
-          
+
           echo "Deployment directory prepared with correct permissions"
-      
+
       - name: Sync code to runner
         run: |
           # Usar rsync con permisos adecuados
           rsync -a --delete --exclude="db-data-volume/" . ~/ethicapp-apiv2/
-          
+
           # Verificar que la sincronización se haya completado correctamente
           if [ $? -eq 0 ]; then
             echo "Code synced successfully to deployment directory"
@@ -200,18 +200,18 @@ jobs:
             echo "Error during code sync"
             exit 1
           fi
-          
+
       - name: Create configuration files and secrets
         run: |
           cd ~/ethicapp-apiv2
-          
+
           # Crear directorios necesarios
           mkdir -p ./backend/config ./secrets
-          
+
           # Crear JWT secret
           echo "${{ secrets.JWT_SECRET_TOKEN }}" > ./secrets/jwt_token
           chmod 600 ./secrets/jwt_token
-          
+
           # Crear keys-n-secrets.js
           cat > ./backend/config/keys-n-secrets.js << 'EOF'
           module.exports.dbcon = "tcp://ethicapp:ethicapp@postgres:5432/ethicapp_dev";
@@ -223,7 +223,7 @@ jobs:
           module.exports.accessKeyId = "${{ secrets.ACCESS_KEY_ID }}";
           module.exports.secretAccessKey = "${{ secrets.SECRET_ACCESS_KEY }}";
           EOF
-          
+
           # Crear socket.config.js
           cat > ./backend/config/socket.config.js << 'EOF'
           module.exports.configSocket = function(io){
@@ -253,38 +253,53 @@ jobs:
             };
           };
           EOF
-          
+
       - name: Check if database volume exists
         id: check_db
         run: |
           cd ~/ethicapp-apiv2
-          if [ -d "./db-data-volume" ] && [ "$(ls -A ./db-data-volume)" ]; then
-            echo "db_exists=true" >> $GITHUB_OUTPUT
-            echo "Database volume exists"
+          if [ -d "./db-data-volume" ]; then
+            # El directorio existe, ahora verificamos mejor
+            echo "Directory exists, checking contents..."
+            if [ "$(find ./db-data-volume -mindepth 1 -type f | wc -l)" -gt 0 ]; then
+              echo "db_exists=true" >> $GITHUB_OUTPUT
+              echo "Database volume exists and contains files"
+            else
+              echo "db_exists=empty" >> $GITHUB_OUTPUT
+              echo "Database volume directory exists but is empty"
+              # Eliminar el directorio vacío para permitir una inicialización limpia
+              rm -rf ./db-data-volume
+            fi
           else
             echo "db_exists=false" >> $GITHUB_OUTPUT
             echo "Database volume does not exist"
           fi
-          
+
       - name: Initialize database if needed
-        if: steps.check_db.outputs.db_exists == 'false'
+        if: steps.check_db.outputs.db_exists == 'false' || steps.check_db.outputs.db_exists == 'empty'
         run: |
           cd ~/ethicapp-apiv2
           echo "Initializing database..."
-          npm run init-db
           
+          if [ -d "./db-data-volume" ]; then
+            echo "Removing empty directory before initialization..."
+            rm -rf ./db-data-volume
+          fi
+          
+          npm run init-db
+
       - name: Build and start containers
         run: |
           cd ~/ethicapp-apiv2
           docker-compose up -d --build
-          
+
       - name: Wait for services to be ready
         run: |
           cd ~/ethicapp-apiv2
           echo "Waiting for services to be ready..."
           sleep 30
           docker ps | grep ethicapp-apiV2
-          
+
       - name: Verify database connection
         run: |
           cd ~/ethicapp-apiv2
@@ -292,16 +307,16 @@ jobs:
           docker exec ethicapp-apiV2-postgres pg_isready -U $DB_USER_NAME || true
           # Check if database is accessible
           docker exec ethicapp-apiV2-postgres psql -U $DB_USER_NAME -c "SELECT 1" || true
-          
+
       - name: Restart application service
         run: |
           cd ~/ethicapp-apiv2
           echo "Restarting application service..."
           docker-compose restart ethicapp-apiV2-node || docker-compose restart node
-          
+
       - name: Verify active containers
         run: docker ps | grep ethicapp-apiV2
-        
+
       - name: Cleanup on failure
         if: failure()
         run: |
