@@ -21,7 +21,6 @@ router.post('/sessions/:sessionId/users', async (req, res) => {
         if (!session) {
             return res.status(404).json({ status: 'error', message: 'Session not found' });
         }
-        console.log("req.body.user_id -> ", req.body.user_id)
         const sessionUser = await SessionsUsers.create({ session_id: sessionId, user_id: req.body.user_id });
         res.status(201).json({ status: 'success', data: sessionUser });
     } catch (err) {

@@ -52,7 +52,6 @@ async function createRandomGroups(sessionId, phases, groupSize) {
     if (groups[idx].length >= groupSize) idx++;
   }
 
-  console.log('[grouping] Grupos generados:', groups);
   return groups;
 }
 

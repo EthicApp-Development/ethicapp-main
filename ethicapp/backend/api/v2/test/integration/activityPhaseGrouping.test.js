@@ -111,7 +111,6 @@ describe('POST /activities/:id/init_next_phase (fase grupal)', () => {
       .toHaveBeenCalledWith(sessionId, phaseId);
 
     const phase = await Phase.findByPk(phaseId);
-    console.log('phase', phase);
     expect(phase.mode).toBe('group');
 
     const groupRes = await request(app)
@@ -119,10 +118,9 @@ describe('POST /activities/:id/init_next_phase (fase grupal)', () => {
       .set('Authorization', `Bearer ${token}`);
 
     
-    console.log('groupRes', groupRes.body);  
+   
     expect(groupRes.status).toBe(200);
     const groups = groupRes.body.data.filter(g => g.session_id === sessionId);
-    console.log('groups', groups);
     expect(groups.length).toBeGreaterThan(0);
   });
 });
