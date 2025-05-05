@@ -5,6 +5,14 @@ const app = require('../../testApi'); // Ajusta la ruta según sea necesario
 const API = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 const userData = require('../fixtures/users.json');
 
+jest.mock('../../config/socket.config.js', () => ({
+  studentNotifications: {
+    phaseTransition: jest.fn(),
+  },
+}));
+const { studentNotifications } = require('../../config/socket.config.js');
+
+
 describe('Activities and Phases API', () => {
   let token, designId, sessionId, activityId, phaseId;
 

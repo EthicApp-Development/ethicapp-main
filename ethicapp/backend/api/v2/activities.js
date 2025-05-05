@@ -117,17 +117,14 @@ router.post(
     async (req, res) => {
       const { id } = req.params;
       try {
-        console.log('[init] Buscar actividad:', id);
         const activity = await Activity.findByPk(id);
         if (!activity) return res.status(400).json({ status: 'error', message: 'Activity not found' });
   
-        console.log('[init] Buscar sesión:', activity.session);
         const session = await Session.findByPk(activity.session);
         if (!session) return res.status(400).json({ status: 'error', message: 'Session not found' });
         if (session.creator !== req.user.id)
           return res.status(403).json({ status: 'error', message: 'You do not own this session' });
   
-        console.log('[init] Buscar diseño:', activity.design);
         const designInstance = await Design.findByPk(activity.design);
         if (!designInstance) return res.status(400).json({ status: 'error', message: 'Design not found' });
         const design = typeof designInstance.design === 'string'
@@ -142,32 +139,25 @@ router.post(
         if (await Phase.findOne({ where: { activity_id: activity.id, number: nextPhaseNumber } }))
           return res.status(400).json({ status: 'error', message: 'Phase already initiated' });
   
-        //console.log('[init] Crear fase:', nextPhaseDesign);
         const phase = await Phase.create({
           number: nextPhaseNumber,
-          // usa `mode` para grupal/individual
           mode: nextPhaseDesign.mode || 'individual',
           anon: nextPhaseDesign.anonymous || nextPhaseDesign.anon || false,
           chat: nextPhaseDesign.chat || false,
           prev_ans: (nextPhaseDesign.prevPhasesResponse || []).join(','),
           activity_id: activity.id
         });
-        console.log ('[init] tipo siguiente fase', nextPhaseDesign.mode);
-        // === FORMACIÓN DE GRUPOS si es modo 'group' ===
+        
+        // Group creation
         if (nextPhaseDesign.mode === 'group') {
-          console.log('[group] Inicia agrupación');
           const { stdntAmount, grouping_algorithm, heteroQuestionIndex } = nextPhaseDesign;
-          console.log('[group] Params:', { stdntAmount, grouping_algorithm, heteroQuestionIndex });
-  
           const allPhases = await Phase.findAll({ where: { activity_id: activity.id } });
-          console.log('[group] Fases:', allPhases);
           const groups = await groupingAlgorithms[grouping_algorithm || 'random'](
             session.id,
             allPhases,
             stdntAmount,
             heteroQuestionIndex
           );
-          console.log('[group] Grupos generados:', groups);
   
           for (const g of groups) {
             const newGroup = await Group.create({ session_id: session.id });
@@ -175,13 +165,10 @@ router.post(
               await groupUser.create({ group_id: newGroup.id, user_id: userId });
             }
           }
-          console.log('[group] Equipos creados');
         }
   
         try {
-            console.log('[notify] Enviando notificación');
             studentNotifications.phaseTransition(session.id, phase.id);
-            console.log('[notify] Notificación enviada');
           } catch (err) {
             console.error('[notify] Error al enviar notificación:', err);
           }

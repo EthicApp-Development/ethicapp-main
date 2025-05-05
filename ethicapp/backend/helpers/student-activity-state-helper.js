@@ -1,6 +1,6 @@
 import * as config from "../api/v2/config/config.json";
 import * as rpg2 from "../db/rest-pg-2.js"
-import redisClient from "../db/redis.js";
+//import redisClient from "../db/redis.js";
 //import { responseFactories } from  "../../common/modules/design-types.js";
 import * as DesignsHelper from "./desings-helper.js"
 import * as ActivitiesHelper from "./activities-helper.js"

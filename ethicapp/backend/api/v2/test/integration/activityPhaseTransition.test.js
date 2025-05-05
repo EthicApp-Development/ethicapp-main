@@ -21,7 +21,6 @@ describe('POST /activities/:id/init_next_phase', () => {
   let token, userId, sessionId, designId, activityId;
 
   beforeAll(async () => {
-    // Crear y loguear un usuario válido
     const prof = userData[0];
     await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/users`)
@@ -34,7 +33,6 @@ describe('POST /activities/:id/init_next_phase', () => {
     token = login.body.token;
     userId = login.body.userId;
 
-    // Crear un design con 2 fases
     const dRes = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/designs`)
       .set('Authorization', `Bearer ${token}`)
@@ -51,7 +49,7 @@ describe('POST /activities/:id/init_next_phase', () => {
       });
     designId = dRes.body.data.id;
 
-    // Crear una session
+    
     const sRes = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/sessions`)
       .set('Authorization', `Bearer ${token}`)
@@ -65,7 +63,7 @@ describe('POST /activities/:id/init_next_phase', () => {
       });
     sessionId = sRes.body.data.id;
 
-    // Iniciar la actividad (crea la fase 1 automáticamente)
+    
     const aRes = await request(app)
       .post(`${API_VERSION_PATH_PREFIX}/activities/start`)
       .set('Authorization', `Bearer ${token}`)
@@ -84,8 +82,8 @@ describe('POST /activities/:id/init_next_phase', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.data).toHaveProperty('number', 2);
-    expect(res.body.data).toHaveProperty('mode'); // por diseño será individual
-    // Verificamos que el mock se haya llamado con los IDs correctos
+    expect(res.body.data).toHaveProperty('mode'); 
+    
     expect(studentNotifications.phaseTransition).toHaveBeenCalledWith(
       sessionId,
       res.body.data.id

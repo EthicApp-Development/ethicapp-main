@@ -41,16 +41,17 @@ describe('POST /activities/:id/init_next_phase (fase grupal)', () => {
     sessionId = sRes.body.data.id;
 
     // Crear alumnos y agregarlos a la sesión con el endpoint real
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 3; i <= 7; i++) {
       const stu = userData[i];
       await request(app)
         .post(`${API}/users`)
         .send({ ...stu, pass_confirmation: stu.pass });
 
+      
       const stuLogin = await request(app)
         .post(`${API}/authenticate_client`)
         .send({ mail: stu.mail, pass: stu.pass });
-
+      
       const stuId = stuLogin.body.userId;
 
       await request(app)
