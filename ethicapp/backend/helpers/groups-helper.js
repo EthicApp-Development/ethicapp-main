@@ -1,12 +1,13 @@
 //import { Group, groupUser, User, sessions_users } from '../api/v2/models';
-const { Group, groupUser, User, SessionsUsers } = require('../api/v2/models');
+const { Group, groupUser, User, SessionsUsers, ActivityUserRole } = require('../api/v2/models');
 
 /**
  * Algoritmos de agrupación disponibles
  */
 export const groupingAlgorithms = {
   random: createRandomGroups,
-  preserve: preserveGroups
+  preserve: preserveGroups,
+  sameRole: createSameRoleGroups
 };
 
 /**
@@ -79,3 +80,26 @@ async function preserveGroups(sessionId, phases, groupSize) {
 
   return Object.values(grouped);
 }
+
+async function createSameRoleGroups(sessionId, phases) {
+  if (!phases.length) return [];
+  const activityId = phases[0].activity_id;
+  
+  // Obtener asignaciones usuario->rol
+  const assignments = await ActivityUserRole.findAll({
+    where: { activityId },
+    attributes: ['RoleId', 'userId'],
+    raw: true
+  });
+
+  // Agrupar por RoleId
+  const groupsMap = {};
+  for (const { RoleId, userId } of assignments) {
+    if (!groupsMap[RoleId]) groupsMap[RoleId] = [];
+    groupsMap[RoleId].push(userId);
+  }
+
+  // Devolver solo los arrays de userIds
+  return Object.values(groupsMap);
+}
+
