@@ -198,51 +198,48 @@ router.get('/activities/:id/phases', async (req, res) => {
 });
 
 
-router.post('/activities/start', auth, checkAbility('create', 'Activity'), async (req, res) => {
-    const { design, session } = req.body;
-    const { id: userId } = req.user;
-
-    try {
+router.post(
+    '/activities/start',
+    auth,
+    checkAbility('create', 'Activity'),
+    async (req, res) => {
+      const { design, session } = req.body;
+      const { id: userId } = req.user;
+  
+      try {
         const designInstance = await Design.findByPk(design);
         if (!designInstance) {
-            return res.status(404).json({ status: 'error', message: 'Design not found' });
+          return res
+            .status(404)
+            .json({ status: 'error', message: 'Design not found' });
         }
-
+  
         const sessionInstance = await Session.findByPk(session);
         if (!sessionInstance) {
-            return res.status(404).json({ status: 'error', message: 'Session not found' });
+          return res
+            .status(404)
+            .json({ status: 'error', message: 'Session not found' });
         }
-
+  
         if (sessionInstance.creator !== userId) {
-            return res.status(403).json({ status: 'error', message: 'You do not own this session' });
+          return res
+            .status(403)
+            .json({ status: 'error', message: 'You do not own this session' });
         }
-
+  
+        // Solo se crea la actividad
         const activity = await Activity.create({ design, session });
-
-        const designJson = typeof designInstance.design === 'string'
-            ? JSON.parse(designInstance.design)
-            : designInstance.design;
-
-        const firstPhaseJson = designJson.phases?.[0];
-        if (!firstPhaseJson) {
-            return res.status(400).json({ status: 'error', message: 'No phases defined in design' });
-        }
-
-        const firstPhase = await Phase.create({
-            number: 1,
-            mode: firstPhaseJson.mode || 'individual',
-            anon: firstPhaseJson.anonymous || false,
-            chat: firstPhaseJson.chat || false,
-            prev_ans: (firstPhaseJson.prevPhasesResponse || []).join(','),
-            activity_id: activity.id
-        });
-
-        res.status(201).json({ status: 'success', data: { activity, firstPhase } });
-    } catch (err) {
+        return res
+          .status(201)
+          .json({ status: 'success', data: activity });
+      } catch (err) {
         console.error('[POST /activities/start] Error:', err);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        return res
+          .status(500)
+          .json({ status: 'error', message: 'Internal server error' });
+      }
     }
-});
+  );
 
 router.post('/activities/end', auth, checkAbility('update', 'Activity'), async (req, res) => {
     const { activityId } = req.body;

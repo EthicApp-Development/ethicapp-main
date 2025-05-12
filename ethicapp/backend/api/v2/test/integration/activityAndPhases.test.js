@@ -101,10 +101,15 @@ describe('Activities and Phases API', () => {
         session: sessionId,
         design: designId
       });
-    activityId = startRes.body.data.activity.id;
-    // opcional: capturar la primera fase si la necesitas
-    phaseId = startRes.body.data.firstPhase.id;
+    activityId = startRes.body.data.id;
+
+    await request(app)
+      .post(`${API}/activities/${activityId}/init_next_phase`)
+      .set('Authorization', `Bearer ${token}`)
+      .send()
+      .expect(201);
   });
+  
 
   it('should list all phases in an activity', async () => {
     const res = await request(app)

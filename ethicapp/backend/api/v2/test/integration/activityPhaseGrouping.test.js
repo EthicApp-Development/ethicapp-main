@@ -94,33 +94,41 @@ describe('POST /activities/:id/init_next_phase (fase grupal)', () => {
       .post(`${API}/activities/start`)
       .set('Authorization', `Bearer ${token}`)
       .send({ session: sessionId, design: designId });
-    activityId = aRes.body.data.activity.id;
+    activityId = aRes.body.data.id;
   });
 
-  it('crea la fase grupal y persiste equipos según stdntAmount', async () => {
-    const res = await request(app)
+  it('primero crea fase individual y luego fase grupal con equipos', async () => {
+    // --- fase 1: individual ---
+    const res1 = await request(app)
       .post(`${API}/activities/${activityId}/init_next_phase`)
       .set('Authorization', `Bearer ${token}`)
       .send();
-
-    expect(res.status).toBe(201);
-    expect(res.body.data).toHaveProperty('number', 2);
-    const phaseId = res.body.data.id;
-
+    expect(res1.status).toBe(201);
+    expect(res1.body.data).toHaveProperty('number', 1);
+    expect(res1.body.data).toHaveProperty('mode', 'individual');
+    const phase1Id = res1.body.data.id;
     expect(studentNotifications.phaseTransition)
-      .toHaveBeenCalledWith(sessionId, phaseId);
+      .toHaveBeenCalledWith(sessionId, phase1Id);
 
-    const phase = await Phase.findByPk(phaseId);
-    expect(phase.mode).toBe('group');
+    // --- fase 2: grupal ---
+    const res2 = await request(app)
+      .post(`${API}/activities/${activityId}/init_next_phase`)
+      .set('Authorization', `Bearer ${token}`)
+      .send();
+    expect(res2.status).toBe(201);
+    expect(res2.body.data).toHaveProperty('number', 2);
+    expect(res2.body.data).toHaveProperty('mode', 'group');
+    const phase2Id = res2.body.data.id;
+    expect(studentNotifications.phaseTransition)
+      .toHaveBeenCalledWith(sessionId, phase2Id);
 
+    // Verificar persistencia de los grupos
     const groupRes = await request(app)
       .get(`${API}/group`)
       .set('Authorization', `Bearer ${token}`);
-
-    
-   
     expect(groupRes.status).toBe(200);
     const groups = groupRes.body.data.filter(g => g.session_id === sessionId);
+    // Dado stdntAmount = 2 y 5 alumnos, debe haber al menos un grupo
     expect(groups.length).toBeGreaterThan(0);
   });
 });

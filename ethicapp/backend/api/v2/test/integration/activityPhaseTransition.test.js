@@ -69,7 +69,7 @@ describe('POST /activities/:id/init_next_phase', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ session: sessionId, design: designId });
 
-    activityId = aRes.body.data.activity.id;
+    activityId = aRes.body.data.id;
   });
 
   it('crea la fase 2 y notifica por WebSocket', async () => {
@@ -81,7 +81,7 @@ describe('POST /activities/:id/init_next_phase', () => {
       .send();
 
     expect(res.status).toBe(201);
-    expect(res.body.data).toHaveProperty('number', 2);
+    expect(res.body.data).toHaveProperty('number', 1);
     expect(res.body.data).toHaveProperty('mode'); 
     
     expect(studentNotifications.phaseTransition).toHaveBeenCalledWith(
