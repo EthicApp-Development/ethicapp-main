@@ -3,9 +3,10 @@ const bodyParser = require('body-parser');
 const router = express.Router();
 const auth = require('../v2/middleware/authenticateToken');
 const checkAbility = require('../v2/middleware/checkAbility');
-const { Activity, Design, Session, Phase, Group, groupUser } = require('./models');
+const { Activity, Design, Session, Phase, Group, groupUser,ActivityRole, ActivityUserRole, SessionsUsers } = require('./models');
 const { studentNotifications } = require('./config/socket.config.js');
 const { groupingAlgorithms } = require('../../helpers/groups-helper.js');
+const { assignRoles } = require('../../helpers/role-helper.js');
 
 // Configure body-parser to process the body of requests in JSON format.
 router.use(bodyParser.json());
@@ -130,7 +131,7 @@ router.post(
         const design = typeof designInstance.design === 'string'
           ? JSON.parse(designInstance.design)
           : designInstance.design;
-  
+
         const existingPhases = await Phase.findAll({ where: { activity_id: activity.id } });
         const nextPhaseNumber = existingPhases.length + 1;
         const nextPhaseDesign = design.phases.find(p => p.number === nextPhaseNumber);
@@ -139,6 +140,36 @@ router.post(
         if (await Phase.findOne({ where: { activity_id: activity.id, number: nextPhaseNumber } }))
           return res.status(400).json({ status: 'error', message: 'Phase already initiated' });
   
+        // --- Role assignment before first phase ---
+        const roleDefs = Array.isArray(design.roles) ? design.roles : [];
+        if (nextPhaseNumber === 1 && roleDefs.length > 0) {
+            // 1) Create ActivityRole entries
+            const roleInstances = {};
+            for (const r of roleDefs) {
+            const role = await ActivityRole.create({
+                nombre: r.name,
+                descripcion: r.description,
+                ActivityId: activity.id
+            });
+            roleInstances[r.name] = role;
+            }
+            // 2) Fetch session users
+            const sessionUsers = await SessionsUsers.findAll({ where: { session_id: session.id } });
+            const userIds = sessionUsers.map(su => su.dataValues.user_id);
+            // 3) Assign users to roles
+            const assignments = assignRoles(roleDefs, userIds);
+            for (const { roleName, userId } of assignments) {
+            await ActivityUserRole.create({
+                userId,
+                RoleId: roleInstances[roleName].id,
+                activityId: activity.id
+            });
+            }
+        } else if (nextPhaseNumber === 1) {
+            // No roles defined: skip assignment
+            
+        }
+
         const phase = await Phase.create({
           number: nextPhaseNumber,
           mode: nextPhaseDesign.mode || 'individual',
@@ -147,7 +178,6 @@ router.post(
           prev_ans: (nextPhaseDesign.prevPhasesResponse || []).join(','),
           activity_id: activity.id
         });
-        
         // Group creation
         if (nextPhaseDesign.mode === 'group') {
           const { stdntAmount, grouping_algorithm, heteroQuestionIndex } = nextPhaseDesign;
@@ -166,7 +196,6 @@ router.post(
             }
           }
         }
-  
         try {
             studentNotifications.phaseTransition(session.id, phase.id);
           } catch (err) {

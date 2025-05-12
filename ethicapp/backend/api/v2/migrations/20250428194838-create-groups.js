@@ -31,6 +31,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('groups');
+    await queryInterface.dropTable('groups', {cascade:true});
   }
 };

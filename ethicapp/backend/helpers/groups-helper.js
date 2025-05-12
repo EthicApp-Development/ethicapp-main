@@ -13,15 +13,14 @@ export const groupingAlgorithms = {
  * Crea grupos aleatorios usando Sequelize en vez de SQL plano
  */
 async function createRandomGroups(sessionId, phases, groupSize) {
-  //console.log('[grouping] Buscando estudiantes en la sesión:', sessionId);
 
   const sessionUsers = await SessionsUsers.findAll({
     where: { session_id: sessionId },
     attributes: ['user_id']
   });
-  //console.log('[grouping] Usuarios en la sesión:', sessionUsers);
+
   const userIds = sessionUsers.map(su => su.user_id);
-  //console.log('[grouping] Usuarios en la sesión:', userIds);
+
   // 2. Buscar esos usuarios con rol 'A'
   const users = await User.findAll({
     where: {
@@ -30,9 +29,6 @@ async function createRandomGroups(sessionId, phases, groupSize) {
     attributes: ['id']
   });
   const studentIds = users.map(u => u.id);
-
-  
-  //console.log('[grouping] Estudiantes encontrados:', studentIds);
 
   if (studentIds.length === 0) {
     console.warn('No hay estudiantes para agrupar.');

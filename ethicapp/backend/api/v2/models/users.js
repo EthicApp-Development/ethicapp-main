@@ -5,7 +5,12 @@ const bcrypt = require('bcryptjs');
 module.exports = (sequelize) => {
   class User extends Model {
     static associate(models) {
-      
+      User.belongsToMany(models.ActivityRole, {
+        through: models.ActivityUserRole,
+        foreignKey: 'userId',
+        otherKey: 'RoleId',
+        as: 'activityRoles'
+      });
     }
   }
   User.init({
