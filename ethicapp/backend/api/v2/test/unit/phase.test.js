@@ -65,7 +65,7 @@ describe('Phase Model', () => {
     .post(`${API_VERSION_PATH_PREFIX}/phases`)
     .send({
       number: 999,
-      type: `Test activity ${activityId.id}`,
+      mode: `individual`,
       anon: true,
       chat: false,
       prev_ans: 'None',
@@ -79,7 +79,7 @@ describe('Phase Model', () => {
   });
 
   it('should not create a phase without an activity', async () => {
-    await expect(Phase.create({ number: 999 + 1, type: `Test with not activity`, anon: true, chat: false, prev_ans: 'None' }))
+    await expect(Phase.create({ number: 999 + 1, mode: `individual`, anon: true, chat: false, prev_ans: 'None' }))
       .rejects
       .toThrow();
   });
@@ -90,7 +90,7 @@ describe('Phase Model', () => {
       .post(`${API_VERSION_PATH_PREFIX}/designs/${1}/phases`)
       .send({
         number: 2,
-        type: `Test activity duplicated${activityId.id - 1}`,
+        mode: `individual`,
         anon: true,
         chat: false,
         prev_ans: 'None',
@@ -109,7 +109,7 @@ describe('Phase Model', () => {
       .post(`${API_VERSION_PATH_PREFIX}/designs/${1}/phases`)
       .send({
         number: 3,
-        type: `Test activity duplicated${activityId.id - 1}`,
+       mode: `individual`,
         anon: true,
         chat: false,
         prev_ans: 'None',

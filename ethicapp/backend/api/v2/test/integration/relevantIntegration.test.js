@@ -4,6 +4,13 @@ const { User, Session } = require('../../models');
 const jwt = require('jsonwebtoken');
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
+jest.mock('../../config/socket.config.js', () => ({
+  studentNotifications: {
+    phaseTransition: jest.fn(),
+  },
+}));
+const { studentNotifications } = require('../../config/socket.config.js');
+
 const userData = require('../fixtures/users.json');
 
 describe('Integration Test', () => {

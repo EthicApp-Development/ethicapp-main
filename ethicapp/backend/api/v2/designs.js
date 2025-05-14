@@ -66,7 +66,7 @@ router.delete('/designs/:id',authenticateToken, checkAbility('delete', 'Design')
 });
 
 router.post('/designs/:id/phases', async (req, res) => {
-  const { number, type, anon, chat, prev_ans, activity_id } = req.body;
+  const { number, mode, anon, chat, prev_ans, activity_id } = req.body;
   let designId, numberPhases
   const { id } = req.params;
   try {
@@ -83,7 +83,7 @@ router.post('/designs/:id/phases', async (req, res) => {
     if (phaseNumber) {
       return res.status(400).json({ status: 'error', message: 'phase number is exist in the design' });
     }
-    const phase = await Phase.create({ number, type, anon, chat, prev_ans, activity_id });
+    const phase = await Phase.create({ number, mode, anon, chat, prev_ans, activity_id });
     return res.status(201).json({ status: 'success', data: phase });
   } catch (err) {
     console.error(err);

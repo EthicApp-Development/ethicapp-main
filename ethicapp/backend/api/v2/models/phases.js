@@ -17,11 +17,28 @@ module.exports = (sequelize, DataTypes) => {
   }
   Phase.init({
     number: DataTypes.INTEGER,
-    type: DataTypes.CHAR(15),
+    mode: {
+      type: DataTypes.STRING(15),
+      allowNull: false,
+      defaultValue: 'regular'
+    },
     anon: DataTypes.BOOLEAN,
     chat: DataTypes.BOOLEAN,
     prev_ans: DataTypes.CHAR(255),
-    activity_id: DataTypes.INTEGER
+    activity_id: DataTypes.INTEGER,
+  
+    grouping_algorithm: {
+      type: DataTypes.STRING(20),
+      allowNull: true
+    },
+    stdnt_amount: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
+    hetero_question_index: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    }
   }, {
     sequelize,
     modelName: 'Phase',
