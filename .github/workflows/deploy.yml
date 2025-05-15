@@ -18,7 +18,6 @@ jobs:
       tests_passed: ${{ steps.run_tests.outputs.tests_passed }}
     
     steps:
-      # Fix permissions first to avoid checkout issues
       - name: Fix directory permissions
         run: |
           if [ -d "/home/ethicapp/apiV2-runner/_work/ethicapp-main/ethicapp-main" ]; then
@@ -31,26 +30,14 @@ jobs:
 
       - name: Create configuration files
         run: |
-          # Create necessary directories
           mkdir -p ./backend/config ./ethicapp/backend/config ./secrets
           
-          # JWT Token
-          echo "${{ secrets.JWT_SECRET_TOKEN || 'test_token' }}" > ./secrets/jwt_token
+          npm run init-passwords-js
+          
+          mkdir -p ./secrets
+          echo 'qwerty-dev-token' > ./secrets/jwt_token
           chmod 600 ./secrets/jwt_token
           
-          # Create keys-n-secrets.js
-          cat > ./backend/config/keys-n-secrets.js << 'EOF'
-          module.exports.dbcon = "tcp://ethicapp:ethicapp@postgres:5432/ethicapp_dev";
-          module.exports.uploadPath = "frontend/assets/uploads";
-          module.exports.GOOGLE_CLIENT_ID = "${{ secrets.GOOGLE_CLIENT_ID }}";
-          module.exports.GOOGLE_CLIENT_SECRET = "${{ secrets.GOOGLE_CLIENT_SECRET }}";
-          module.exports.Captcha_Web = "${{ secrets.CAPTCHA_WEB }}";
-          module.exports.Captcha_Secret = "${{ secrets.CAPTCHA_SECRET }}";
-          module.exports.accessKeyId = "${{ secrets.ACCESS_KEY_ID }}";
-          module.exports.secretAccessKey = "${{ secrets.SECRET_ACCESS_KEY }}";
-          EOF
-          
-          # Create socket.config.js with the correct content
           cat > ./backend/config/socket.config.js << 'EOF'
           module.exports.configSocket = function(io){
             module.exports.stateChange = function(sesid){
@@ -80,8 +67,7 @@ jobs:
           };
           EOF
           
-          # Copy to ethicapp directory
-          cp ./backend/config/keys-n-secrets.js ./ethicapp/backend/config/
+          cp ./backend/config/keys-n-secrets.js ./ethicapp/backend/config/ || true
           cp ./backend/config/socket.config.js ./ethicapp/backend/config/
           
           echo "Configuration files created successfully"
@@ -101,10 +87,8 @@ jobs:
 
       - name: Start test containers directly
         run: |
-          # Start containers without volume initialization
           docker-compose -f docker-compose.test.yml up -d
           
-          # Wait for services to be ready
           echo "Waiting for services to be ready..."
           sleep 15
           docker ps | grep ethicapp-test
@@ -120,23 +104,18 @@ jobs:
       - name: Run tests
         id: run_tests
         run: |
-          # Check if Node container is running
           if ! docker ps | grep -q ethicapp-test-node; then
             echo "Node container is not running. Cannot run tests."
             echo "tests_passed=false" >> $GITHUB_OUTPUT
             exit 1
           fi
           
-          # Preparar la base de datos primero
           echo "Preparing database for tests..."
           
-          # Paso 1: Limpiar la base de datos (eliminar todas las tablas)
           docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app && npm run test:truncate"
           
-          # Paso 2: Configurar base de datos limpia (migración y semillas)
           docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app && npm run test:clean"
           
-          # Paso 3: Ejecutar tests
           echo "Running tests..."
           if docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app && npm run test"; then
             echo "tests_passed=true" >> $GITHUB_OUTPUT
@@ -166,7 +145,7 @@ jobs:
       - name: Define environment variables
         run: |
           echo "COMPOSE_PROJECT_NAME=ethicapp-apiv2" >> $GITHUB_ENV
-          # Explicitly set DB_USER_NAME from .env file for use in pipeline
+          
           if [ -f ./.env ]; then
             export $(grep -v '^#' ./.env | xargs)
             echo "DB_USER_NAME=$DB_USER_NAME" >> $GITHUB_ENV
@@ -190,10 +169,8 @@ jobs:
 
       - name: Sync code to runner
         run: |
-          # Usar rsync con permisos adecuados
           rsync -a --delete --exclude="db-data-volume/" . ~/ethicapp-apiv2/
 
-          # Verificar que la sincronización se haya completado correctamente
           if [ $? -eq 0 ]; then
             echo "Code synced successfully to deployment directory"
           else
@@ -204,27 +181,14 @@ jobs:
       - name: Create configuration files and secrets
         run: |
           cd ~/ethicapp-apiv2
-
-          # Crear directorios necesarios
+          
           mkdir -p ./backend/config ./secrets
-
-          # Crear JWT secret
-          echo "${{ secrets.JWT_SECRET_TOKEN }}" > ./secrets/jwt_token
+          
+          npm run init-passwords-js
+          
+          echo 'qwerty-dev-token' > ./secrets/jwt_token
           chmod 600 ./secrets/jwt_token
-
-          # Crear keys-n-secrets.js
-          cat > ./backend/config/keys-n-secrets.js << 'EOF'
-          module.exports.dbcon = "tcp://ethicapp:ethicapp@postgres:5432/ethicapp_dev";
-          module.exports.uploadPath = "frontend/assets/uploads";
-          module.exports.GOOGLE_CLIENT_ID = "${{ secrets.GOOGLE_CLIENT_ID }}";
-          module.exports.GOOGLE_CLIENT_SECRET = "${{ secrets.GOOGLE_CLIENT_SECRET }}";
-          module.exports.Captcha_Web = "${{ secrets.CAPTCHA_WEB }}";
-          module.exports.Captcha_Secret = "${{ secrets.CAPTCHA_SECRET }}";
-          module.exports.accessKeyId = "${{ secrets.ACCESS_KEY_ID }}";
-          module.exports.secretAccessKey = "${{ secrets.SECRET_ACCESS_KEY }}";
-          EOF
-
-          # Crear socket.config.js
+          
           cat > ./backend/config/socket.config.js << 'EOF'
           module.exports.configSocket = function(io){
             module.exports.stateChange = function(sesid){
@@ -259,7 +223,6 @@ jobs:
         run: |
           cd ~/ethicapp-apiv2
           if [ -d "./db-data-volume" ]; then
-            # El directorio existe, ahora verificamos mejor
             echo "Directory exists, checking contents..."
             if [ "$(find ./db-data-volume -mindepth 1 -type f | wc -l)" -gt 0 ]; then
               echo "db_exists=true" >> $GITHUB_OUTPUT
@@ -267,7 +230,6 @@ jobs:
             else
               echo "db_exists=empty" >> $GITHUB_OUTPUT
               echo "Database volume directory exists but is empty"
-              # Eliminar el directorio vacío para permitir una inicialización limpia
               rm -rf ./db-data-volume
             fi
           else
@@ -303,9 +265,7 @@ jobs:
       - name: Verify database connection
         run: |
           cd ~/ethicapp-apiv2
-          # Verify postgres connection with explicit username
           docker exec ethicapp-apiV2-postgres pg_isready -U $DB_USER_NAME || true
-          # Check if database is accessible
           docker exec ethicapp-apiV2-postgres psql -U $DB_USER_NAME -c "SELECT 1" || true
 
       - name: Restart application service
