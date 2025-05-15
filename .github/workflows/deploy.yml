@@ -28,12 +28,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Create configuration files
+      - name: Crear archivos de configuración
         run: |
+          # Crear directorios necesarios
           mkdir -p ./backend/config ./ethicapp/backend/config ./secrets
           
-          npm run init-passwords-js
+          # Ejecutar el script que genera el archivo de contraseñas
+          chmod +x ./dev-ops/create-passwords-js.sh
+          ./dev-ops/create-passwords-js.sh
           
+          # Asegurar que el archivo existe en ambas ubicaciones
+          if [ ! -f ./backend/config/keys-n-secrets.js ] && [ -f ./ethicapp/backend/config/keys-n-secrets.js ]; then
+            cp ./ethicapp/backend/config/keys-n-secrets.js ./backend/config/
+          elif [ ! -f ./ethicapp/backend/config/keys-n-secrets.js ] && [ -f ./backend/config/keys-n-secrets.js ]; then
+            cp ./backend/config/keys-n-secrets.js ./ethicapp/backend/config/
+          fi
+          
+          # Crear token JWT como dice el README
           mkdir -p ./secrets
           echo 'qwerty-dev-token' > ./secrets/jwt_token
           chmod 600 ./secrets/jwt_token
@@ -104,18 +115,23 @@ jobs:
       - name: Run tests
         id: run_tests
         run: |
+          # Verificar contenedor node
           if ! docker ps | grep -q ethicapp-test-node; then
             echo "Node container is not running. Cannot run tests."
             echo "tests_passed=false" >> $GITHUB_OUTPUT
             exit 1
           fi
           
+          # Preparar la base de datos primero
           echo "Preparing database for tests..."
           
+          # Paso 1: Limpiar la base de datos (eliminar todas las tablas)
           docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app && npm run test:truncate"
           
+          # Paso 2: Configurar base de datos limpia (migración y semillas)
           docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app && npm run test:clean"
           
+          # Paso 3: Ejecutar tests
           echo "Running tests..."
           if docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app && npm run test"; then
             echo "tests_passed=true" >> $GITHUB_OUTPUT
@@ -145,7 +161,6 @@ jobs:
       - name: Define environment variables
         run: |
           echo "COMPOSE_PROJECT_NAME=ethicapp-apiv2" >> $GITHUB_ENV
-          
           if [ -f ./.env ]; then
             export $(grep -v '^#' ./.env | xargs)
             echo "DB_USER_NAME=$DB_USER_NAME" >> $GITHUB_ENV
@@ -169,8 +184,10 @@ jobs:
 
       - name: Sync code to runner
         run: |
+          # Usar rsync con permisos adecuados
           rsync -a --delete --exclude="db-data-volume/" . ~/ethicapp-apiv2/
 
+          # Verificar que la sincronización se haya completado correctamente
           if [ $? -eq 0 ]; then
             echo "Code synced successfully to deployment directory"
           else
@@ -182,13 +199,22 @@ jobs:
         run: |
           cd ~/ethicapp-apiv2
           
-          mkdir -p ./backend/config ./secrets
+          mkdir -p ./backend/config ./ethicapp/backend/config ./secrets
           
-          npm run init-passwords-js
+          chmod +x ./dev-ops/create-passwords-js.sh
+          ./dev-ops/create-passwords-js.sh
+          
+          if [ ! -f ./backend/config/keys-n-secrets.js ] && [ -f ./ethicapp/backend/config/keys-n-secrets.js ]; then
+            cp ./ethicapp/backend/config/keys-n-secrets.js ./backend/config/
+          elif [ ! -f ./ethicapp/backend/config/keys-n-secrets.js ] && [ -f ./backend/config/keys-n-secrets.js ]; then
+            cp ./backend/config/keys-n-secrets.js ./ethicapp/backend/config/
+          fi
           
           echo 'qwerty-dev-token' > ./secrets/jwt_token
           chmod 600 ./secrets/jwt_token
           
+          
+          # Create socket.config.js
           cat > ./backend/config/socket.config.js << 'EOF'
           module.exports.configSocket = function(io){
             module.exports.stateChange = function(sesid){
@@ -230,6 +256,7 @@ jobs:
             else
               echo "db_exists=empty" >> $GITHUB_OUTPUT
               echo "Database volume directory exists but is empty"
+              # Eliminar el directorio vacío para permitir una inicialización limpia
               rm -rf ./db-data-volume
             fi
           else
