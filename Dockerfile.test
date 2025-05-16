@@ -1,0 +1,25 @@
+FROM node:18
+WORKDIR /home/app
+# Copiar package.json y package-lock.json
+COPY package*.json ./
+# Instalar dependencias
+RUN npm install
+# Instalar dependencias adicionales que podrían ser necesarias
+RUN npm install pg sequelize sequelize-cli log-timestamp --save
+# Copiar el resto de la aplicación
+COPY . ./
+# Asegurarnos que el directorio de configuración existe
+RUN mkdir -p /home/app/backend/config
+# Configurar variables de entorno
+ENV NODE_ENV=test \
+    NODE_PORT=3200 \
+    ALLOWED_ORIGINS="*" \
+    DB_HOST=ethicapp-test-postgres \
+    DB_PORT=5432 \
+    DB_NAME=ethicapp_test \
+    DB_USER_NAME=postgres \
+    DB_USER_PASSWORD=postgres
+# Exponer el puerto
+EXPOSE 3200
+# Comando para iniciar la aplicación en modo prueba
+CMD ["npm", "run", "start"]

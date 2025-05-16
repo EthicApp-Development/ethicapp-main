@@ -1,4 +1,4 @@
-name: Deploy EthicApp APIv2
+name: EthicApp CI/CD Pipeline
 
 on:
   push:
@@ -8,77 +8,306 @@ on:
   pull_request:
     branches:
       - apiv2
+  workflow_dispatch:
 
 jobs:
-  integration_test_in_docker:
+  test:
     runs-on: [self-hosted, apiV2]
-    name: Run tests inside docker-compose
+    name: Run EthicApp Tests
+    outputs:
+      tests_passed: ${{ steps.run_tests.outputs.tests_passed }}
+    
     steps:
+      - name: Fix directory permissions
+        run: |
+          if [ -d "/home/ethicapp/apiV2-runner/_work/ethicapp-main/ethicapp-main" ]; then
+            sudo chmod -R 777 /home/ethicapp/apiV2-runner/_work/ethicapp-main/ethicapp-main || true
+            sudo rm -rf /home/ethicapp/apiV2-runner/_work/ethicapp-main/ethicapp-main/db-test-data-volume || true
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Definir COMPOSE_PROJECT_NAME
-        run: echo "COMPOSE_PROJECT_NAME=ethicapp-apiv2" >> $GITHUB_ENV
-
-      - name: Copiar el código al runner
+      - name: Crear archivos de configuración
         run: |
-          mkdir -p ~/ethicapp-apiv2
-          rsync -a --delete . ~/ethicapp-apiv2/
-
-      - name: Detener contenedores anteriores
+          # Crear directorios necesarios
+          mkdir -p ./backend/config ./ethicapp/backend/config ./secrets
+          
+          # Ejecutar el script que genera el archivo de contraseñas
+          chmod +x ./dev-ops/create-passwords-js.sh
+          ./dev-ops/create-passwords-js.sh
+          
+          # Asegurar que el archivo existe en ambas ubicaciones
+          if [ ! -f ./backend/config/keys-n-secrets.js ] && [ -f ./ethicapp/backend/config/keys-n-secrets.js ]; then
+            cp ./ethicapp/backend/config/keys-n-secrets.js ./backend/config/
+          elif [ ! -f ./ethicapp/backend/config/keys-n-secrets.js ] && [ -f ./backend/config/keys-n-secrets.js ]; then
+            cp ./backend/config/keys-n-secrets.js ./ethicapp/backend/config/
+          fi
+          
+          # Crear token JWT como dice el README
+          mkdir -p ./secrets
+          echo 'qwerty-dev-token' > ./secrets/jwt_token
+          chmod 600 ./secrets/jwt_token
+          
+          cat > ./backend/config/socket.config.js << 'EOF'
+          module.exports.configSocket = function(io){
+            module.exports.stateChange = function(sesid){
+              io.of("/").emit("stateChange", {ses: sesid});
+            };
+            module.exports.updateTeam = function(tmid){
+              io.of("/").emit("updateTeam", {tmid: tmid});
+            };
+            module.exports.reportChange = function(sesid){
+              io.of("/").emit("reportChange", {ses: sesid});
+            };
+            module.exports.reportBroadcast = function(sesid, rid){
+              io.of("/").emit("reportReceived", {ses: sesid, rid: rid});
+            };
+            module.exports.diffBroadcast = function(sesid, content){
+              io.of("/").emit("diffReceived", {ses: sesid, content: content});
+            };
+            module.exports.teamProgress = function(sesid, tmid){
+              io.of("/").emit("teamProgress", {ses: sesid, tmid: tmid});
+            };
+            module.exports.chatMsg = function(sesid, tmid){
+              io.of("/").emit("chatMsg", {ses: sesid, tmid: tmid});
+            };
+            module.exports.chatMsgStage = function(stageid, tmid){
+              io.of("/").emit("chatMsgStage", {stageid: stageid, tmid: tmid});
+            };
+          };
+          EOF
+          
+          cp ./backend/config/keys-n-secrets.js ./ethicapp/backend/config/ || true
+          cp ./backend/config/socket.config.js ./ethicapp/backend/config/
+          
+          echo "Configuration files created successfully"
+      
+      - name: Clean up existing containers
         run: |
-          cd ~/ethicapp-apiv2
-          docker-compose down --remove-orphans
+          docker-compose -f docker-compose.test.yml down --volumes --remove-orphans || true
+          docker rm -f ethicapp-test-node ethicapp-test-postgres || true
+          docker volume rm -f postgres_test_data || true
+          rm -rf ./db-test-data-volume || true
 
-      - name: Levantar entorno para test
+      - name: Install node dependencies
         run: |
-          cd ~/ethicapp-apiv2
-          docker-compose up -d --build
+          cd ethicapp
+          npm install log-timestamp pg sequelize sequelize-cli --save
+          cd ..
 
-      - name: Esperar que el entorno esté listo
-        run: sleep 15
+      - name: Start test containers directly
+        run: |
+          docker-compose -f docker-compose.test.yml up -d
+          
+          echo "Waiting for services to be ready..."
+          sleep 15
+          docker ps | grep ethicapp-test
 
-      - name: Truncar base de datos
-        run: docker exec ethicapp-apiv2-node npm run test:truncate
+      - name: Check container logs
+        run: |
+          echo "Node container logs:"
+          docker logs ethicapp-test-node || true
+          
+          echo "Postgres container logs:"
+          docker logs ethicapp-test-postgres || true
 
-      - name: Limpiar registros
-        run: docker exec ethicapp-apiv2-node npm run test:clean
+      - name: Run tests
+        id: run_tests
+        run: |
+          # Verificar contenedor node
+          if ! docker ps | grep -q ethicapp-test-node; then
+            echo "Node container is not running. Cannot run tests."
+            echo "tests_passed=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          # Preparar la base de datos primero
+          echo "Preparing database for tests..."
+          
+          # Paso 1: Limpiar la base de datos (eliminar todas las tablas)
+          docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app && npm run test:truncate"
+          
+          # Paso 2: Configurar base de datos limpia (migración y semillas)
+          docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app && npm run test:clean"
+          
+          # Paso 3: Ejecutar tests
+          echo "Running tests..."
+          if docker exec -e NODE_ENV=test ethicapp-test-node bash -c "cd /home/app && npm run test"; then
+            echo "tests_passed=true" >> $GITHUB_OUTPUT
+            echo "Tests passed successfully!"
+          else
+            echo "Tests failed"
+            echo "tests_passed=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
 
-      - name: Ejecutar tests
-        run: docker exec ethicapp-apiv2-node npm run test
-
-      - name: Apagar entorno temporal de test
+      - name: Cleanup test containers
         if: always()
         run: |
-          cd ~/ethicapp-apiv2
-          docker-compose down --remove-orphans
+          docker-compose -f docker-compose.test.yml down --volumes --remove-orphans
+          sudo rm -rf ./db-test-data-volume || true
 
   deploy:
-    needs: integration_test_in_docker
+    needs: test
+    if: ${{ needs.test.outputs.tests_passed == 'true' }}
     runs-on: [self-hosted, apiV2]
-    name: Deploy containers to server
+    name: Deploy EthicApp APIv2
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Definir COMPOSE_PROJECT_NAME
-        run: echo "COMPOSE_PROJECT_NAME=ethicapp-apiv2" >> $GITHUB_ENV
-
-      - name: Sincronizar código
+      - name: Define environment variables
         run: |
-          mkdir -p ~/ethicapp-apiv2
-          rsync -a --delete . ~/ethicapp-apiv2/
+          echo "COMPOSE_PROJECT_NAME=ethicapp-apiv2" >> $GITHUB_ENV
+          if [ -f ./.env ]; then
+            export $(grep -v '^#' ./.env | xargs)
+            echo "DB_USER_NAME=$DB_USER_NAME" >> $GITHUB_ENV
+          else
+            echo "No .env file found, using defaults"
+            echo "DB_USER_NAME=ethicapp" >> $GITHUB_ENV
+          fi
 
-      - name: Inicializar base de datos
+      - name: Prepare deployment directory with correct permissions
+        run: |
+          # Crear el directorio si no existe
+          sudo mkdir -p ~/ethicapp-apiv2
+
+          # Cambiar el propietario al usuario actual
+          sudo chown -R $(whoami):$(whoami) ~/ethicapp-apiv2
+
+          # Establecer permisos adecuados
+          sudo chmod -R 755 ~/ethicapp-apiv2
+
+          echo "Deployment directory prepared with correct permissions"
+
+      - name: Sync code to runner
+        run: |
+          # Usar rsync con permisos adecuados
+          rsync -a --delete --exclude="db-data-volume/" . ~/ethicapp-apiv2/
+
+          # Verificar que la sincronización se haya completado correctamente
+          if [ $? -eq 0 ]; then
+            echo "Code synced successfully to deployment directory"
+          else
+            echo "Error during code sync"
+            exit 1
+          fi
+
+      - name: Create configuration files and secrets
         run: |
           cd ~/ethicapp-apiv2
+          
+          mkdir -p ./backend/config ./ethicapp/backend/config ./secrets
+          
+          chmod +x ./dev-ops/create-passwords-js.sh
+          ./dev-ops/create-passwords-js.sh
+          
+          if [ ! -f ./backend/config/keys-n-secrets.js ] && [ -f ./ethicapp/backend/config/keys-n-secrets.js ]; then
+            cp ./ethicapp/backend/config/keys-n-secrets.js ./backend/config/
+          elif [ ! -f ./ethicapp/backend/config/keys-n-secrets.js ] && [ -f ./backend/config/keys-n-secrets.js ]; then
+            cp ./backend/config/keys-n-secrets.js ./ethicapp/backend/config/
+          fi
+          
+          echo 'qwerty-dev-token' > ./secrets/jwt_token
+          chmod 600 ./secrets/jwt_token
+          
+          
+          # Create socket.config.js
+          cat > ./backend/config/socket.config.js << 'EOF'
+          module.exports.configSocket = function(io){
+            module.exports.stateChange = function(sesid){
+              io.of("/").emit("stateChange", {ses: sesid});
+            };
+            module.exports.updateTeam = function(tmid){
+              io.of("/").emit("updateTeam", {tmid: tmid});
+            };
+            module.exports.reportChange = function(sesid){
+              io.of("/").emit("reportChange", {ses: sesid});
+            };
+            module.exports.reportBroadcast = function(sesid, rid){
+              io.of("/").emit("reportReceived", {ses: sesid, rid: rid});
+            };
+            module.exports.diffBroadcast = function(sesid, content){
+              io.of("/").emit("diffReceived", {ses: sesid, content: content});
+            };
+            module.exports.teamProgress = function(sesid, tmid){
+              io.of("/").emit("teamProgress", {ses: sesid, tmid: tmid});
+            };
+            module.exports.chatMsg = function(sesid, tmid){
+              io.of("/").emit("chatMsg", {ses: sesid, tmid: tmid});
+            };
+            module.exports.chatMsgStage = function(stageid, tmid){
+              io.of("/").emit("chatMsgStage", {stageid: stageid, tmid: tmid});
+            };
+          };
+          EOF
+
+      - name: Check if database volume exists
+        id: check_db
+        run: |
+          cd ~/ethicapp-apiv2
+          if [ -d "./db-data-volume" ]; then
+            echo "Directory exists, checking contents..."
+            if [ "$(find ./db-data-volume -mindepth 1 -type f | wc -l)" -gt 0 ]; then
+              echo "db_exists=true" >> $GITHUB_OUTPUT
+              echo "Database volume exists and contains files"
+            else
+              echo "db_exists=empty" >> $GITHUB_OUTPUT
+              echo "Database volume directory exists but is empty"
+              # Eliminar el directorio vacío para permitir una inicialización limpia
+              rm -rf ./db-data-volume
+            fi
+          else
+            echo "db_exists=false" >> $GITHUB_OUTPUT
+            echo "Database volume does not exist"
+          fi
+
+      - name: Initialize database if needed
+        if: steps.check_db.outputs.db_exists == 'false' || steps.check_db.outputs.db_exists == 'empty'
+        run: |
+          cd ~/ethicapp-apiv2
+          echo "Initializing database..."
+          
+          if [ -d "./db-data-volume" ]; then
+            echo "Removing empty directory before initialization..."
+            rm -rf ./db-data-volume
+          fi
+          
           npm run init-db
 
-      - name: Desplegar contenedores
+      - name: Build and start containers
         run: |
           cd ~/ethicapp-apiv2
-          docker-compose down --remove-orphans
           docker-compose up -d --build
 
-      - name: Verificar contenedores activos
-        run: docker ps
+      - name: Wait for services to be ready
+        run: |
+          cd ~/ethicapp-apiv2
+          echo "Waiting for services to be ready..."
+          sleep 30
+          docker ps | grep ethicapp-apiV2
+
+      - name: Verify database connection
+        run: |
+          cd ~/ethicapp-apiv2
+          docker exec ethicapp-apiV2-postgres pg_isready -U $DB_USER_NAME || true
+          docker exec ethicapp-apiV2-postgres psql -U $DB_USER_NAME -c "SELECT 1" || true
+
+      - name: Restart application service
+        run: |
+          cd ~/ethicapp-apiv2
+          echo "Restarting application service..."
+          docker-compose restart ethicapp-apiV2-node || docker-compose restart node
+
+      - name: Verify active containers
+        run: docker ps | grep ethicapp-apiV2
+
+      - name: Cleanup on failure
+        if: failure()
+        run: |
+          cd ~/ethicapp-apiv2
+          echo "Cleaning up after failure"
+          docker-compose logs ethicapp-apiV2-node || true
+          docker-compose logs ethicapp-apiV2-postgres || true
