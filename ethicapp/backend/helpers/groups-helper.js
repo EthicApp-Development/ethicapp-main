@@ -1,33 +1,44 @@
-//import { Group, groupUser, User, sessions_users } from '../api/v2/models';
-const { Group, groupUser, User, SessionsUsers, ActivityUserRole } = require('../api/v2/models');
+// helpers/groupingAlgorithms.js
 
+const { Group, groupUser, User, SessionsUsers, ActivityUserRole } = require('../api/v2/models');
+import { accumulateScoresByPhase, kendallTau, euclideanDistance } from './score-helper';
 /**
  * Algoritmos de agrupación disponibles
  */
 export const groupingAlgorithms = {
   random: createRandomGroups,
   preserve: preserveGroups,
-  sameRole: createSameRoleGroups
+  sameRole: createSameRoleGroups,
+  distinctRole: createDistinctRoleGroups,
+  similarResponses: createSimilarResponseGroups,
+  diverseResponses: createDiverseResponseGroups
 };
 
+
 /**
- * Crea grupos aleatorios usando Sequelize en vez de SQL plano
+ * Crea grupos “random” que tratan de respetar el tamaño ideal
+ * pero permiten que algunos grupos excedan ese tamaño si así
+ * minimiza la diferencia global entre grupos.
+ *
+ * @param {number} sessionId
+ * @param {Phase[]} phases
+ * @param {number} groupSize
+ * @returns {Promise<number[][]>}
  */
 async function createRandomGroups(sessionId, phases, groupSize) {
-
+  // 1) Lee todos los usuarios de la sesión
   const sessionUsers = await SessionsUsers.findAll({
     where: { session_id: sessionId },
-    attributes: ['user_id']
+    attributes: ['user_id'],
+    raw: true
   });
-
   const userIds = sessionUsers.map(su => su.user_id);
 
-  // 2. Buscar esos usuarios con rol 'A'
+  // 2) Filtra por rol 'A' si lo necesitas (aquí se omite)
   const users = await User.findAll({
-    where: {
-      id: userIds
-    },
-    attributes: ['id']
+    where: { id: userIds },
+    attributes: ['id'],
+    raw: true
   });
   const studentIds = users.map(u => u.id);
 
@@ -36,70 +47,292 @@ async function createRandomGroups(sessionId, phases, groupSize) {
     return [];
   }
 
-  // Barajar aleatoriamente
+  // 3) Mezcla al azar
   const shuffled = studentIds.sort(() => Math.random() - 0.5);
 
-  // Dividir en grupos
-  const groups = [];
-  let idx = 0;
+  // 4) Decide cuántos grupos crear
+  const total = shuffled.length;
+  let groupCount = Math.round(total / groupSize);
+  if (groupCount < 1) groupCount = 1;
 
-  for (const uid of shuffled) {
-    if (!groups[idx]) groups[idx] = [];
-    groups[idx].push(uid);
-    if (groups[idx].length >= groupSize) idx++;
-  }
+  // 5) Reparte round-robin
+  const groups = Array.from({ length: groupCount }, () => []);
+  shuffled.forEach((uid, i) => {
+    groups[i % groupCount].push(uid);
+  });
 
   return groups;
 }
 
+
 /**
- * Agrupa reutilizando los mismos grupos anteriores (versión básica)
+ * Reutiliza los grupos de la fase anterior.
+ * groupSize no se usa aquí, pues asumimos que ya vienen "correctos".
+ *
+ * @param {number} sessionId
+ * @param {Phase[]} phases
+ * @param {number} groupSize
+ * @returns {Promise<number[][]>}
  */
 async function preserveGroups(sessionId, phases, groupSize) {
   const activePhase = phases.reduce((a, b) => (a.number > b.number ? a : b));
-  const previousGroupPhase = phases
-    .filter(p => p.type === 'group' && p.number < activePhase.number)
+  const prev = phases
+    .filter(p => p.mode === 'group' && p.number < activePhase.number)
     .sort((a, b) => b.number - a.number)[0];
 
-  if (!previousGroupPhase) {
-    throw new Error("No previous group phase found.");
-  }
+  if (!prev) throw new Error("No previous group phase found.");
 
   const rows = await Group.findAll({
     where: { session_id: sessionId },
-    include: [{
-      model: groupUser,
-      attributes: ['user_id']
-    }]
+    include: [{ model: groupUser, attributes: ['user_id'], raw: true }],
+    raw: false
   });
 
-  const grouped = {};
-  for (const g of rows) {
-    grouped[g.id] = g.groupUsers.map(gu => gu.user_id);
-  }
-
-  return Object.values(grouped);
+  const byGroup = rows.map(g =>
+    g.groupUsers.map(gu => gu.user_id)
+  );
+  return byGroup;
 }
 
-async function createSameRoleGroups(sessionId, phases) {
+
+/**
+ * Agrupa por roles similares, creando chunks de tamaño ideal
+ * y luego redistribuyendo cualquier chunk muy pequeño (menos de la mitad)
+ * al grupo de menor tamaño del mismo rol.
+ *
+ * @param {number} sessionId
+ * @param {Phase[]} phases
+ * @param {number} groupSize
+ * @returns {Promise<number[][]>}
+ */
+async function createSameRoleGroups(sessionId, phases, groupSize) {
   if (!phases.length) return [];
   const activityId = phases[0].activity_id;
-  
-  // Obtener asignaciones usuario->rol
+
+  // 1) Lee todas las asignaciones usuario→rol
   const assignments = await ActivityUserRole.findAll({
     where: { activityId },
     attributes: ['RoleId', 'userId'],
     raw: true
   });
 
-  // Agrupar por RoleId
-  const groupsMap = {};
-  for (const { RoleId, userId } of assignments) {
-    if (!groupsMap[RoleId]) groupsMap[RoleId] = [];
-    groupsMap[RoleId].push(userId);
+  // 2) Agrupa userIds por RoleId
+  const byRole = assignments.reduce((acc, { RoleId, userId }) => {
+    acc[RoleId] = acc[RoleId] || [];
+    acc[RoleId].push(userId);
+    return acc;
+  }, {});
+
+  const finalGroups = [];
+
+  // 3) Para cada rol, parte en chunks y balancea sobrantes
+  for (const members of Object.values(byRole)) {
+    // a) Chunking básico
+    const chunks = [];
+    for (let i = 0; i < members.length; i += groupSize) {
+      chunks.push(members.slice(i, i + groupSize));
+    }
+
+    // b) Redistribuir si el último chunk es muy pequeño
+    if (chunks.length > 1) {
+      const last = chunks[chunks.length - 1];
+      const threshold = Math.floor(groupSize / 2);
+      if (last.length > 0 && last.length < threshold) {
+        chunks.pop();
+        for (const u of last) {
+          // Meter en el chunk con menos integrantes
+          const target = chunks.reduce((a, b) =>
+            a.length <= b.length ? a : b
+          );
+          target.push(u);
+        }
+      }
+    }
+
+    // c) Acumular resultados
+    chunks.forEach(grp => finalGroups.push(grp));
   }
 
-  // Devolver solo los arrays de userIds
-  return Object.values(groupsMap);
+  return finalGroups;
 }
 
+
+/**
+ * Crea grupos intentando meter en cada uno la máxima variedad de roles.
+ * Si sobran usuarios, los reparte en los grupos más pequeños.
+ *
+ * @param {number} sessionId
+ * @param {Phase[]} phases
+ * @param {number} groupSize
+ * @returns {Promise<number[][]>}
+ */
+async function createDistinctRoleGroups(sessionId, phases, groupSize) {
+  if (!phases.length) return [];
+  const activityId = phases[0].activity_id;
+
+  // 1) Leer todas las asignaciones usuario→rol
+  const assignments = await ActivityUserRole.findAll({
+    where: { activityId },
+    attributes: ['RoleId', 'userId'],
+    raw: true
+  });
+
+  // 2) Agrupar userIds por RoleId
+  const byRole = assignments.reduce((acc, { RoleId, userId }) => {
+    if (!acc[RoleId]) acc[RoleId] = [];
+    acc[RoleId].push(userId);
+    return acc;
+  }, {});
+
+  const roles = Object.keys(byRole);
+  const totalUsers = assignments.length;
+
+  // 3) Calcular cuántos grupos necesitamos
+  const floorCount = Math.floor(totalUsers / groupSize) || 1;
+  const ceilCount  = Math.ceil (totalUsers / groupSize);
+
+  // Ejemplo de política:  
+  // - Si al usar ceil queda algún grupo de tamaño 1, 
+  //   prefiero floorCount para evitar mini‐grupos.
+  // - En caso contrario uso ceilCount.
+  let groupCount = ceilCount;
+  if (totalUsers % groupSize === 1) {
+    groupCount = floorCount;
+}
+
+
+
+  if (groupCount < 1) groupCount = 1;
+
+  // 4) Inicializar grupos vacíos
+  const groups = Array.from({ length: groupCount }, () => []);
+
+  // 5) Fase de “roles distintos”: a cada grupo, de uno en uno, un usuario de cada rol
+  for (const role of roles) {
+    const queue = byRole[role];
+    for (let i = 0; i < groupCount && queue.length; i++) {
+      if (groups[i].length < groupSize) {
+        groups[i].push(queue.shift());
+      }
+    }
+  }
+
+  // 6) Recolectar los usuarios sobrantes (los que no cupieron en la fase 5)
+  const leftovers = [];
+  for (const role of roles) {
+    leftovers.push(...byRole[role]);
+  }
+
+  // 7) Repartir los sobrantes en los grupos más pequeños
+  leftovers.sort(() => Math.random() - 0.5); // opcional: barajar para menos sesgo
+  for (const u of leftovers) {
+    const idx = groups.reduce(
+      (minIdx, grp, i, arr) => (grp.length < arr[minIdx].length ? i : minIdx),
+      0
+    );
+    groups[idx].push(u);
+  }
+
+  return groups;
+}
+
+
+/**
+ * Agrupa alumnos con respuestas más similares entre sí.
+ */
+async function createSimilarResponseGroups(sessionId, phases, groupSize, heteroQuestionIndex) {
+  const activePhase = phases.reduce((a,b)=>a.number>b.number?a:b);
+  const { scoresByUser, isRanking } = await accumulateScoresByPhase(sessionId, activePhase.id);
+
+  // Convertir a array de { userId, vector }
+  const students = Object.entries(scoresByUser)
+    .map(([userId, vector]) => ({ userId: +userId, vector }));
+
+  // Para ranking: orden descendente de coeficiente medio de tau vs todos
+  // Para no-ranking: orden ascendente de “magnitud” del vector (o distancia a cero)
+  if (isRanking) {
+    // Calcular “similaridad total” de cada par y promedio
+    const tauSums = {};
+    for (const s of students) {
+      tauSums[s.userId] = 0;
+      for (const t of students) {
+        if (s.userId !== t.userId) {
+          tauSums[s.userId] += kendallTau(s.vector, t.vector);
+        }
+      }
+      tauSums[s.userId] /= (students.length - 1);
+    }
+    students.sort((a, b) => tauSums[b.userId] - tauSums[a.userId]);
+  } else {
+    // Ordenar por norma euclidiana creciente
+    students.sort((a, b) =>
+      euclideanDistance(a.vector, []) - euclideanDistance(b.vector, [])
+    );
+  }
+
+  // Chunking secuencial
+  const groups = [];
+  for (let i = 0; i < students.length; i += groupSize) {
+    groups.push(students.slice(i, i + groupSize).map(s => s.userId));
+  }
+  return groups;
+}
+
+/**
+ * Agrupa buscando máxima **diversidad** de respuestas.
+ */
+async function createDiverseResponseGroups(sessionId, phases, groupSize) {
+  const activePhase = phases.reduce((a,b)=>a.number>b.number?a:b);
+  const { scoresByUser, isRanking } = await accumulateScoresByPhase(sessionId, activePhase.id);
+
+  const students = Object.entries(scoresByUser)
+    .map(([userId, vector]) => ({ userId: +userId, vector }));
+
+  // Para ranking: ordenar por coeficiente medio de tau, luego “zig-zag”:
+  // primera posición más alta, luego más baja, segunda más alta, segunda más baja, etc.
+  let seq;
+  if (isRanking) {
+    // Reusar cálculo de tauSums del algoritmo similar
+    const tauSums = {};
+    for (const s of students) {
+      tauSums[s.userId] = 0;
+      for (const t of students) {
+        if (s.userId !== t.userId) tauSums[s.userId] += kendallTau(s.vector, t.vector);
+      }
+      tauSums[s.userId] /= (students.length - 1);
+    }
+    const sorted = students.sort((a,b) => tauSums[b.userId] - tauSums[a.userId]);
+    seq = [];
+    let i = 0, j = sorted.length - 1;
+    while (i <= j) {
+      if (i === j) seq.push(sorted[i]);
+      else {
+        seq.push(sorted[i], sorted[j]);
+      }
+      i++; j--;
+    }
+  } else {
+    // Para no-ranking: usar la norma euclidiana y zig-zag de la misma forma
+    const sorted = students.sort((a,b) =>
+      euclideanDistance(a.vector, []) - euclideanDistance(b.vector, [])
+    );
+    seq = [];
+    let i = 0, j = sorted.length - 1;
+    while (i <= j) {
+      if (i === j) seq.push(sorted[i]);
+      else {
+        seq.push(sorted[i], sorted[j]);
+      }
+      i++; j--;
+    }
+  }
+
+  // Reparto round-robin en N grupos
+  const total = seq.length;
+  const groupCount = Math.max(1, Math.round(total / groupSize));
+  const groups = Array.from({ length: groupCount }, () => []);
+  seq.forEach((s, idx) => {
+    groups[idx % groupCount].push(s.userId);
+  });
+  return groups;
+}
