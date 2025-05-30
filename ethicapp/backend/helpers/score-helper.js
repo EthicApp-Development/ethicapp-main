@@ -1,12 +1,18 @@
 import { Question, Response, SessionsUsers } from '../api/v2/models';
+console.log('HELP → models.resolve:', require.resolve('../api/v2/models'));
 
 export async function accumulateScoresByPhase(sessionId, phaseId) {
   // 1) Lista de alumnos activos en la sesión
+  console.log(
+    'API-level responses:',
+    await Response.findAll({ where: { question_id: phaseId }, raw: true })
+  );
   const sessionUsers = await SessionsUsers.findAll({
     where: { session_id: sessionId },
     attributes: ['user_id'],
     raw: true
   });
+  console.log('Session users:', sessionUsers);
   const studentIds = sessionUsers.map(su => su.user_id);
 
   // 2) Preguntas de la fase
@@ -19,7 +25,7 @@ export async function accumulateScoresByPhase(sessionId, phaseId) {
   // 3) Inicializar map: userId → []
   const scoresByUser = {};
   studentIds.forEach(id => { scoresByUser[id] = []; });
-
+  console.log('questions:', questions);
   // 4) Recorrer cada pregunta y sus respuestas
   for (const { id: qId } of questions) {
     const responses = await Response.findAll({
@@ -27,6 +33,7 @@ export async function accumulateScoresByPhase(sessionId, phaseId) {
       attributes: ['user_id', 'score'],
       raw: true
     });
+    console.log(`Responses for question ${qId}:`, responses);
     for (const { user_id, score } of responses) {
       // score ya es Array<Float>
       scoresByUser[user_id] = scoresByUser[user_id].concat(score);
@@ -36,6 +43,8 @@ export async function accumulateScoresByPhase(sessionId, phaseId) {
   // ¿Todas las preguntas de ranking? (si sólo hay una ranking, se detecta por type)
   const isRanking = questions.length === 1 && questions[0].type === 'ranking';
 
+  console.log('Scores by user:', scoresByUser);
+  console.log('Is ranking:', isRanking);
   return { scoresByUser, isRanking };
 }
 

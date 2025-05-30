@@ -240,99 +240,110 @@ async function createDistinctRoleGroups(sessionId, phases, groupSize) {
 /**
  * Agrupa alumnos con respuestas más similares entre sí.
  */
-async function createSimilarResponseGroups(sessionId, phases, groupSize, heteroQuestionIndex) {
-  const activePhase = phases.reduce((a,b)=>a.number>b.number?a:b);
-  const { scoresByUser, isRanking } = await accumulateScoresByPhase(sessionId, activePhase.id);
+export async function createSimilarResponseGroups(sessionId, phases, groupSize, heteroQuestionIndex) {
+  // 1) Ordenar fases por número
+  const sortedPhases = [...phases].sort((a, b) => a.number - b.number);
+  if (sortedPhases.length < 2) {
+    throw new Error('No hay fase anterior de la cual acumular respuestas');
+  }
 
-  // Convertir a array de { userId, vector }
+  // 2) Tomar la fase previa a la activa
+  const prevPhase = sortedPhases[sortedPhases.length - 2];
+
+  // 3) Acumular scores de la fase previa
+  const { scoresByUser, isRanking } = await accumulateScoresByPhase(sessionId, prevPhase.id);
+
+  // 4) Convertir a array de { userId, vector }
   const students = Object.entries(scoresByUser)
     .map(([userId, vector]) => ({ userId: +userId, vector }));
 
-  // Para ranking: orden descendente de coeficiente medio de tau vs todos
-  // Para no-ranking: orden ascendente de “magnitud” del vector (o distancia a cero)
+  // 5) Ordenar según el tipo
   if (isRanking) {
-    // Calcular “similaridad total” de cada par y promedio
+    // ranking → coeficiente medio de Kendall Tau descendente
     const tauSums = {};
     for (const s of students) {
-      tauSums[s.userId] = 0;
-      for (const t of students) {
-        if (s.userId !== t.userId) {
-          tauSums[s.userId] += kendallTau(s.vector, t.vector);
-        }
-      }
-      tauSums[s.userId] /= (students.length - 1);
+      tauSums[s.userId] = students
+        .filter(t => t.userId !== s.userId)
+        .reduce((sum, t) => sum + kendallTau(s.vector, t.vector), 0)
+        / (students.length - 1);
     }
     students.sort((a, b) => tauSums[b.userId] - tauSums[a.userId]);
   } else {
-    // Ordenar por norma euclidiana creciente
+    // no-ranking → norma euclidiana creciente
     students.sort((a, b) =>
       euclideanDistance(a.vector, []) - euclideanDistance(b.vector, [])
     );
   }
 
-  // Chunking secuencial
+  // 6) Chunking secuencial en grupos de tamaño groupSize
   const groups = [];
   for (let i = 0; i < students.length; i += groupSize) {
     groups.push(students.slice(i, i + groupSize).map(s => s.userId));
   }
+
   return groups;
 }
 
 /**
- * Agrupa buscando máxima **diversidad** de respuestas.
+ * Agrupa buscando máxima diversidad de respuestas.
  */
-async function createDiverseResponseGroups(sessionId, phases, groupSize) {
-  const activePhase = phases.reduce((a,b)=>a.number>b.number?a:b);
-  const { scoresByUser, isRanking } = await accumulateScoresByPhase(sessionId, activePhase.id);
+export async function createDiverseResponseGroups(sessionId, phases, groupSize) {
+  // 1) Ordenar fases y tomar la fase previa
+  const sortedPhases = [...phases].sort((a, b) => a.number - b.number);
+  if (sortedPhases.length < 2) {
+    throw new Error('No hay fase anterior de la cual acumular respuestas');
+  }
+  const prevPhase = sortedPhases[sortedPhases.length - 2];
 
+  // 2) Acumular scores de la fase previa
+  const { scoresByUser, isRanking } = await accumulateScoresByPhase(sessionId, prevPhase.id);
+
+  // 3) Convertir a array de { userId, vector }
   const students = Object.entries(scoresByUser)
     .map(([userId, vector]) => ({ userId: +userId, vector }));
 
-  // Para ranking: ordenar por coeficiente medio de tau, luego “zig-zag”:
-  // primera posición más alta, luego más baja, segunda más alta, segunda más baja, etc.
-  let seq;
+  // 4) Crear secuencia zig-zag según métrica
+  let seq = [];
   if (isRanking) {
-    // Reusar cálculo de tauSums del algoritmo similar
+    // ranking → coeficiente medio de Kendall Tau
     const tauSums = {};
     for (const s of students) {
-      tauSums[s.userId] = 0;
-      for (const t of students) {
-        if (s.userId !== t.userId) tauSums[s.userId] += kendallTau(s.vector, t.vector);
-      }
-      tauSums[s.userId] /= (students.length - 1);
+      tauSums[s.userId] = students
+        .filter(t => t.userId !== s.userId)
+        .reduce((sum, t) => sum + kendallTau(s.vector, t.vector), 0)
+        / (students.length - 1);
     }
-    const sorted = students.sort((a,b) => tauSums[b.userId] - tauSums[a.userId]);
-    seq = [];
-    let i = 0, j = sorted.length - 1;
+    const byTau = students.slice().sort((a, b) => tauSums[b.userId] - tauSums[a.userId]);
+    let i = 0, j = byTau.length - 1;
     while (i <= j) {
-      if (i === j) seq.push(sorted[i]);
+      if (i === j) seq.push(byTau[i]);
       else {
-        seq.push(sorted[i], sorted[j]);
+        seq.push(byTau[i], byTau[j]);
       }
       i++; j--;
     }
   } else {
-    // Para no-ranking: usar la norma euclidiana y zig-zag de la misma forma
-    const sorted = students.sort((a,b) =>
+    // no-ranking → norma euclidiana
+    const byNorm = students.slice().sort((a, b) =>
       euclideanDistance(a.vector, []) - euclideanDistance(b.vector, [])
     );
-    seq = [];
-    let i = 0, j = sorted.length - 1;
+    let i = 0, j = byNorm.length - 1;
     while (i <= j) {
-      if (i === j) seq.push(sorted[i]);
+      if (i === j) seq.push(byNorm[i]);
       else {
-        seq.push(sorted[i], sorted[j]);
+        seq.push(byNorm[i], byNorm[j]);
       }
       i++; j--;
     }
   }
 
-  // Reparto round-robin en N grupos
+  // 5) Reparto round-robin en N grupos
   const total = seq.length;
   const groupCount = Math.max(1, Math.round(total / groupSize));
   const groups = Array.from({ length: groupCount }, () => []);
   seq.forEach((s, idx) => {
     groups[idx % groupCount].push(s.userId);
   });
+
   return groups;
 }

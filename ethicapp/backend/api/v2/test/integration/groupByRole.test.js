@@ -58,7 +58,7 @@ describe('POST /activities/:id/init_next_phase (group by role)', () => {
               anonymous: false,
               chat: false,
               prevPhasesResponse: [],
-              stdntAmount: null,
+              stdntAmount: 4,
               grouping_algorithm: 'sameRole',
               heteroQuestionIndex: null
             }

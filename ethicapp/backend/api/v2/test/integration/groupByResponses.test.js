@@ -9,6 +9,7 @@ const {
   Question,
   Response
 } = require('../../models');
+console.log('TEST  → models.resolve:', require.resolve('../../models'));
 
 jest.mock('../../config/socket.config.js', () => ({
   studentNotifications: { phaseTransition: jest.fn() }
@@ -35,6 +36,8 @@ describe.each([
       .send({ mail: prof.mail, pass: prof.pass });
     token = loginRes.body.token;
     userId = loginRes.body.userId;
+
+    console.log("Punto 1: Profesor creado y autenticado");
 
     // 2) Create session
     const sRes = await request(app)
@@ -63,6 +66,8 @@ describe.each([
         .post(`${API}/sessions/${sessionId}/users`)
         .send({ user_id: stuId });
     }
+
+    console.log("Punto 3: Alumnos creados y añadidos a la sesión");
 
     // 4) Create design with two phases:
     //    Phase 1: individual (to collect responses)
@@ -99,12 +104,16 @@ describe.each([
       });
     designId = dRes.body.data.id;
 
+    console.log("Punto 4: Diseño creado con dos fases");
+
     // 5) Start the activity
     const aRes = await request(app)
       .post(`${API}/activities/start`)
       .set('Authorization', `Bearer ${token}`)
       .send({ session: sessionId, design: designId });
     activityId = aRes.body.data.id;
+
+    console.log("Punto 5: Actividad iniciada");
 
     // 6) INIT PHASE 1
     const phase1Res = await request(app)
@@ -115,13 +124,20 @@ describe.each([
     expect(phase1Res.body.data.number).toBe(1);
     phase1Id = phase1Res.body.data.id;
 
+
+    console.log("Punto 6: Fase 1 iniciada");
     // 7) Seed one Question for Phase 1
     //    (minimal fields; adjust as needed) :contentReference[oaicite:1]{index=1}
     const question = await Question.create({
-      phase_id: phase1Id,
-      type: 'numeric',
-      content: {}  // assuming JSONB column
+        session_id: sessionId,        // link back to the session
+        phase_id:   phase1Id,
+        number:     1,                // question order within the phase
+        type:       'numeric',
+        text:       'Auto‐generated test question', // you need some text
+        content:    {}                // your JSON payload
     });
+
+    console.log("Punto 7: Pregunta creada para la fase 1");
 
     // 8) Seed one Response per student — half low (1), half high (10)
     const responses = studentIds.map((sid, idx) => ({
@@ -132,7 +148,16 @@ describe.each([
       score: [ idx % 2 === 0 ? 1 : 10 ]
     }));
     await Response.bulkCreate(responses);
+    const inserted = await Response.findAll({
+        where: { question_id: question.id },
+        raw: true
+    });
+    console.log('>>> inserted responses:', inserted);
+
+    console.log("Punto 8: Respuestas creadas para cada alumno");
   });
+
+  
 
   it(`creates two groups clustering by response ${algorithm}`, async () => {
     // Trigger Phase 2 grouping
