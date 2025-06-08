@@ -1,4 +1,4 @@
-// tests/groupByResponses.test.js
+// tests/groupByResponsesRanking.test.js
 const request = require('supertest');
 const app = require('../../testApi');
 const API = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
@@ -21,7 +21,7 @@ const userData = require('../fixtures/users.json');
 describe.each([
   ['similarResponses', 'similarity'],
   ['diverseResponses', 'diversity']
-])('POST /activities/:id/init_next_phase (group by response %s)', (algorithm, desc) => {
+])('POST /activities/:id/init_next_phase (group by ranking %s)', (algorithm, desc) => {
   let token, userId, sessionId, designId, activityId, phase1Id;
   const studentIds = [];
 
@@ -44,7 +44,7 @@ describe.each([
       .post(`${API}/sessions`)
       .set('Authorization', `Bearer ${token}`)
       .send({
-        name: `Session response groups (${desc})`,
+        name: `Session ranking groups (${desc})`,
         descr: `Test by ${desc}`,
         status: 1,
         type: 'A',
@@ -52,6 +52,8 @@ describe.each([
         creator: userId
       });
     sessionId = sRes.body.data.id;
+
+    console.log("Punto 2: Sesión creada");
 
     // 3) Create 4 students and add to session
     for (let i = 3; i <= 6; i++) {
@@ -70,7 +72,7 @@ describe.each([
     console.log("Punto 3: Alumnos creados y añadidos a la sesión");
 
     // 4) Create design with two phases:
-    //    Phase 1: individual (to collect responses)
+    //    Phase 1: individual (to collect ranking response)
     //    Phase 2: group with our algorithm
     const dRes = await request(app)
       .post(`${API}/designs`)
@@ -78,21 +80,19 @@ describe.each([
       .send({
         creator: userId,
         design: {
-          roles: [], 
+          roles: [],
           phases: [
             {
               number: 1,
               mode: 'individual',
               anonymous: false,
-              chat: false,
-              prevPhasesResponse: []
+              chat: false
             },
             {
               number: 2,
               mode: 'group',
               anonymous: false,
               chat: false,
-              prevPhasesResponse: [1],
               stdntAmount: 2,
               grouping_algorithm: algorithm,
               heteroQuestionIndex: null
@@ -124,66 +124,42 @@ describe.each([
     expect(phase1Res.body.data.number).toBe(1);
     phase1Id = phase1Res.body.data.id;
 
-
     console.log("Punto 6: Fase 1 iniciada");
-    // 7) Seed dos preguntas para Fase 1
-    const question1 = await Question.create({
+
+    // 7) Seed one ranking question for Phase 1
+    const question = await Question.create({
       session_id: sessionId,
       phase_id:   phase1Id,
       number:     1,
-      type:       'numeric',
-      text:       'Auto‐generated test question 1',
+      type:       'ranking',
+      text:       'Auto‐generated ranking question',
       content:    {}
     });
 
-    const question2 = await Question.create({
-      session_id: sessionId,
-      phase_id:   phase1Id,
-      number:     2,
-      type:       'numeric',
-      text:       'Auto‐generated test question 2',
-      content:    {}
-    });
+    console.log("Punto 7: Pregunta de ranking creada para la fase 1");
 
-    console.log("Punto 7: Dos preguntas creadas para la fase 1");
-
-    // 8) Seed respuestas para cada alumno y cada pregunta:
-    //    - Para question1: scores [1] o [10]
-    //    - Para question2: scores [2] o [20]
-    const responses = [];
-    studentIds.forEach((sid, idx) => {
-      // Si idx es par → respuestas bajas; si idx es impar → respuestas altas
-      const score1 = idx % 2 === 0 ? 1 : 10;
-      const score2 = idx % 2 === 0 ? 2 : 20;
-      responses.push({
-        user_id:     sid,
-        question_id: question1.id,
-        content:     {},
-        type:        'numeric',
-        score:       [ score1 ]
-      });
-      responses.push({
-        user_id:     sid,
-        question_id: question2.id,
-        content:     {},
-        type:        'numeric',
-        score:       [ score2 ]
-      });
-    });
+    // 8) Seed one ranking Response per student:
+    //    - Even indices → [1,2,3]
+    //    - Odd indices  → [3,1,2]
+    const responses = studentIds.map((sid, idx) => ({
+      user_id:     sid,
+      question_id: question.id,
+      content:     {},
+      type:        'ranking',
+      score:       idx % 2 === 0 ? [1,2,3] : [3,1,2]
+    }));
     await Response.bulkCreate(responses);
 
     const inserted = await Response.findAll({
-      where: { question_id: [question1.id, question2.id] },
+      where: { question_id: question.id },
       raw: true
     });
-    //console.log('>>> inserted responses:', inserted);
+    //console.log('>>> inserted ranking responses:', inserted);
 
-    console.log("Punto 8: Respuestas creadas para cada pregunta y cada alumno");
+    console.log("Punto 8: Respuestas de ranking creadas para cada alumno");
   });
 
-  
-
-  it(`creates two groups clustering by response ${algorithm}`, async () => {
+  it(`creates two groups clustering by ranking ${algorithm}`, async () => {
     // Trigger Phase 2 grouping
     const phase2Res = await request(app)
       .post(`${API}/activities/${activityId}/init_next_phase`)
@@ -211,11 +187,15 @@ describe.each([
       )
     );
 
-    // Build expected clusters: students at even indices vs odd
-    const lowCluster  = [ studentIds[0], studentIds[2] ].sort();
-    const highCluster = [ studentIds[1], studentIds[3] ].sort();
-    const expectedSets = [ lowCluster, highCluster ];
-
+    // Build expected clusters:
+    // - Students with [1,2,3] (indices 0 and 2)
+    // - Students with [3,1,2] (indices 1 and 3)
+    const clusterA = [ studentIds[0], studentIds[2] ].sort();
+    const clusterB = [ studentIds[1], studentIds[3] ].sort();
+    
+    const expectedSets = [ clusterA, clusterB ];
+    console.log('Final groups:', actualSets);
+    console.log('Expected groups:', expectedSets);
     expect(actualSets).toEqual(
       expect.arrayContaining(expectedSets)
     );

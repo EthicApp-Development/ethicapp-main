@@ -1,5 +1,5 @@
 import { Question, Response, SessionsUsers } from '../api/v2/models';
-console.log('HELP → models.resolve:', require.resolve('../api/v2/models'));
+//console.log('HELP → models.resolve:', require.resolve('../api/v2/models'));
 
 export async function accumulateScoresByPhase(sessionId, phaseId) {
   // 1) Lista de alumnos activos en la sesión
@@ -51,6 +51,7 @@ export async function accumulateScoresByPhase(sessionId, phaseId) {
 
 // 1) Kendall Tau (versión simplificada: coeficiente de correlación)
 export function kendallTau(a, b) {
+  //console.log('Kendall Tau:', a, b);
   let concord = 0, discord = 0;
   for (let i = 0; i < a.length; i++) {
     for (let j = i + 1; j < a.length; j++) {

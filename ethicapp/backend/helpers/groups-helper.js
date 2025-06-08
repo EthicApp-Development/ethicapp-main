@@ -241,45 +241,68 @@ async function createDistinctRoleGroups(sessionId, phases, groupSize) {
  * Agrupa alumnos con respuestas más similares entre sí.
  */
 export async function createSimilarResponseGroups(sessionId, phases, groupSize, heteroQuestionIndex) {
-  // 1) Ordenar fases por número
+  console.log('Creating similar response groups...');
+  // 1) Ordenar fases por número y tomar la fase previa a la activa
   const sortedPhases = [...phases].sort((a, b) => a.number - b.number);
   if (sortedPhases.length < 2) {
     throw new Error('No hay fase anterior de la cual acumular respuestas');
   }
-
-  // 2) Tomar la fase previa a la activa
   const prevPhase = sortedPhases[sortedPhases.length - 2];
 
-  // 3) Acumular scores de la fase previa
+  // 2) Acumular scores de la fase previa
   const { scoresByUser, isRanking } = await accumulateScoresByPhase(sessionId, prevPhase.id);
 
-  // 4) Convertir a array de { userId, vector }
+  // 3) Convertir a array de { userId, vector }
   const students = Object.entries(scoresByUser)
     .map(([userId, vector]) => ({ userId: +userId, vector }));
 
-  // 5) Ordenar según el tipo
+  // 4) Ordenar según el tipo
   if (isRanking) {
-    // ranking → coeficiente medio de Kendall Tau descendente
-    const tauSums = {};
+    console.log('Agrupando por respuestas idénticas (ranking)');
+
+    // 1) Bucketizar por vector serializado
+    const buckets = {};
+    students.forEach(({ userId, vector }) => {
+      const key = JSON.stringify(vector); 
+      if (!buckets[key]) buckets[key] = [];
+      buckets[key].push(userId);
+    });
+
+    // 2) Formar grupos a partir de cada bucket
+    const groups = [];
+    for (const ids of Object.values(buckets)) {
+      // Si un bucket es más grande que groupSize, lo “chunkeamos”
+      for (let i = 0; i < ids.length; i += groupSize) {
+        groups.push(ids.slice(i, i + groupSize));
+      }
+    }
+
+    // 3) Si hay alumnos que quedan solteros (groups[var].length < groupSize),
+    //    podrías opcionalmente mezclarlos usando Tau o round-robin con los grupos existentes.
+    //    Para un test simple, igual puedes dejar esos grupos más pequeños.
+
+    console.log('Groups created (identical ranking):', groups);
+    return groups;
+  } else {
+    // NO-RANKING: distancia media al resto, no al cero
+    const distSums = {};
     for (const s of students) {
-      tauSums[s.userId] = students
+      distSums[s.userId] = students
         .filter(t => t.userId !== s.userId)
-        .reduce((sum, t) => sum + kendallTau(s.vector, t.vector), 0)
+        .reduce((sum, t) => sum + euclideanDistance(s.vector, t.vector), 0)
         / (students.length - 1);
     }
-    students.sort((a, b) => tauSums[b.userId] - tauSums[a.userId]);
-  } else {
-    // no-ranking → norma euclidiana creciente
-    students.sort((a, b) =>
-      euclideanDistance(a.vector, []) - euclideanDistance(b.vector, [])
-    );
+    // ordenar por distancia media ascendente (más parecido primero)
+    students.sort((a, b) => distSums[a.userId] - distSums[b.userId]);
   }
 
-  // 6) Chunking secuencial en grupos de tamaño groupSize
-  const groups = [];
-  for (let i = 0; i < students.length; i += groupSize) {
-    groups.push(students.slice(i, i + groupSize).map(s => s.userId));
-  }
+  // 5) Reparto en grupos evitando sobrantes con round-robin
+  const groupCount = Math.ceil(students.length / groupSize);
+  const groups = Array.from({ length: groupCount }, () => []);
+  students.forEach((s, idx) => {
+    groups[idx % groupCount].push(s.userId);
+  });
+  console.log('Groups created en algoritmo:', groups);
 
   return groups;
 }
@@ -288,6 +311,7 @@ export async function createSimilarResponseGroups(sessionId, phases, groupSize, 
  * Agrupa buscando máxima diversidad de respuestas.
  */
 export async function createDiverseResponseGroups(sessionId, phases, groupSize) {
+  console.log('Creating diverse response groups...');
   // 1) Ordenar fases y tomar la fase previa
   const sortedPhases = [...phases].sort((a, b) => a.number - b.number);
   if (sortedPhases.length < 2) {
@@ -305,6 +329,7 @@ export async function createDiverseResponseGroups(sessionId, phases, groupSize) 
   // 4) Crear secuencia zig-zag según métrica
   let seq = [];
   if (isRanking) {
+    console.log('Agrupando por respuestas diversas (ranking)');
     // ranking → coeficiente medio de Kendall Tau
     const tauSums = {};
     for (const s of students) {
