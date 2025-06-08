@@ -127,27 +127,26 @@ describe('POST /activities/:id/init_next_phase (group by responses normal divers
     }
     console.log('Punto 7: Cuatro preguntas numéricas creadas para la fase 1');
 
-    // 8) Seed responses: each question one score [1..4] rotated
+        // 8) Seed respuestas para cada alumno y cada pregunta:
+    //    - Cada respuesta es un número aleatorio entre 1 y 4
     const responses = [];
-    questions.forEach((q, qi) => {
-      studentIds.forEach((sid, si) => {
-        const val = ((si + qi) % 4) + 1;  // produce 1..4
+    const OPTIONS = [1, 2, 3, 4];
+    questions.forEach((q) => {
+      studentIds.forEach((sid) => {
+        // escogemos aleatoriamente una opción
+        const val = OPTIONS[Math.floor(Math.random() * OPTIONS.length)];
         responses.push({
-          user_id: sid,
+          user_id:     sid,
           question_id: q.id,
-          content: {},
-          type: 'numeric',
-          score: [ val ]
+          content:     {},
+          type:        'numeric',
+          score:       [ val ]
         });
       });
     });
     await Response.bulkCreate(responses);
-    const inserted = await Response.findAll({
-      where: { question_id: questions.map(q => q.id) },
-      raw: true
-    });
-    //console.log('>>> inserted responses:', inserted);
-    console.log('Punto 8: Respuestas numéricas creadas para cada pregunta y cada alumno');
+    console.log('Punto 8: Respuestas numéricas aleatorias creadas para cada pregunta y cada alumno');
+
   });
 
   it('creates three groups clustering by normal responses diverseResponses', async () => {
