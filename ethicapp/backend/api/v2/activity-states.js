@@ -207,20 +207,49 @@ router.get('/student/activities/:activityId/state', auth, async (req, res) => {
             });
         }
 
-        // 4. Obtener respuestas del estudiante para todas las preguntas
+        // 4. Obtener respuestas del estudiante y de sus compañeros si la fase es grupal
         const questions = activity.Phases.flatMap(phase => phase.questions);
         const questionIds = questions.map(q => q.id);
         
-        const responses = await Response.findAll({
+        // Obtener todas las respuestas para las preguntas de la actividad
+        const allResponses = await Response.findAll({
             where: {
-                question_id: questionIds,
-                user_id: userId
-            }
+                question_id: questionIds
+            },
+            include: [{
+                model: User,
+                attributes: ['id', 'name', 'mail']
+            }]
         });
 
         // 5. Formatear la respuesta
         const currentPhase = activity.Phases.find(phase => phase.status === 'active') || null;
         
+        // Filtrar respuestas del estudiante actual
+        const myResponses = allResponses
+            .filter(response => response.user_id === userId)
+            .map(response => ({
+                question_id: response.question_id,
+                content: response.content,
+                created_at: response.createdAt
+            }));
+
+        // Obtener respuestas de compañeros para fases grupales
+        const groupResponses = currentPhase && currentPhase.type === 'group' 
+            ? allResponses
+                .filter(response => response.user_id !== userId)
+                .map(response => ({
+                    question_id: response.question_id,
+                    content: response.content,
+                    created_at: response.createdAt,
+                    user: {
+                        id: response.User.id,
+                        name: response.User.name,
+                        mail: response.User.mail
+                    }
+                }))
+            : [];
+
         const formattedResponse = {
             status: 'success',
             data: {
@@ -234,13 +263,14 @@ router.get('/student/activities/:activityId/state', auth, async (req, res) => {
                     type: currentPhase.type,
                     status: currentPhase.status
                 } : null,
-                my_responses: responses.map(response => ({
-                    question_id: response.question_id,
-                    content: response.content,
-                    created_at: response.createdAt
-                }))
+                my_responses: myResponses,
+                group_responses: groupResponses
             }
         };
+
+        // Agregar console.log para ver la respuesta
+        console.log('=== Respuesta del endpoint estudiante ===');
+        console.log(JSON.stringify(formattedResponse, null, 2));
 
         // Guardar en caché solo si la respuesta fue exitosa
         await redis.setex(cacheKey, CACHE_TTL, JSON.stringify(formattedResponse));
