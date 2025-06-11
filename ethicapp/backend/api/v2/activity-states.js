@@ -17,15 +17,22 @@ router.use(bodyParser.json());
  * Incluye caché con Redis
  */
 router.get('/teacher/activities/:activityId/state', auth, checkAbility('read', 'Activity'), async (req, res) => {
-    const redis = req.app.locals.redisClient; // Acceder a la instancia de Redis
+    const redis = req.app.locals.redisClient;
     try {
         const { activityId } = req.params;
         const { id: userId } = req.user;
 
+        // Intentar obtener del caché
+        const cacheKey = `${TEACHER_CACHE_PREFIX}${activityId}_${userId}`;
+        const cachedData = await redis.get(cacheKey);
+        
+        if (cachedData) {
+            return res.status(200).json(JSON.parse(cachedData));
+        }
+
         // 1. Obtener actividad
         const activity = await Activity.findByPk(activityId);
         if (!activity) {
-            console.error("Error: Actividad no encontrada");
             return res.status(404).json({ 
                 status: 'error', 
                 message: 'Actividad no encontrada' 
@@ -35,7 +42,6 @@ router.get('/teacher/activities/:activityId/state', auth, checkAbility('read', '
         // 2. Obtener sesión
         const session = await Session.findByPk(activity.session);
         if (!session) {
-            console.error("Error: Sesión no encontrada");
             return res.status(404).json({ 
                 status: 'error', 
                 message: 'Sesión no encontrada' 
@@ -44,7 +50,6 @@ router.get('/teacher/activities/:activityId/state', auth, checkAbility('read', '
 
         // 3. Verificar permisos
         if (session.creator !== userId) {
-            console.error("Error: Usuario no autorizado");
             return res.status(403).json({ 
                 status: 'error', 
                 message: 'No tienes permiso para ver esta actividad' 
@@ -124,10 +129,12 @@ router.get('/teacher/activities/:activityId/state', auth, checkAbility('read', '
             }
         };
 
+        // Guardar en caché solo si la respuesta fue exitosa
+        await redis.setex(cacheKey, CACHE_TTL, JSON.stringify(formattedResponse));
+
         return res.status(200).json(formattedResponse);
 
     } catch (error) {
-        console.error("Error en el endpoint:", error);
         return res.status(500).json({ 
             status: 'error', 
             message: 'Error interno del servidor',
@@ -170,7 +177,6 @@ router.get('/student/activities/:activityId/state', auth, async (req, res) => {
             ]
         });
         if (!activity) {
-            console.error("Error: Actividad no encontrada");
             return res.status(404).json({ 
                 status: 'error', 
                 message: 'Actividad no encontrada' 
@@ -180,7 +186,6 @@ router.get('/student/activities/:activityId/state', auth, async (req, res) => {
         // 2. Obtener sesión
         const session = await Session.findByPk(activity.session);
         if (!session) {
-            console.error("Error: Sesión no encontrada");
             return res.status(404).json({ 
                 status: 'error', 
                 message: 'Sesión no encontrada' 
@@ -196,7 +201,6 @@ router.get('/student/activities/:activityId/state', auth, async (req, res) => {
         });
 
         if (!studentInSession) {
-            console.error("Error: Estudiante no está en la sesión");
             return res.status(404).json({ 
                 status: 'error', 
                 message: 'No tienes acceso a esta actividad' 
@@ -244,7 +248,6 @@ router.get('/student/activities/:activityId/state', auth, async (req, res) => {
         return res.status(200).json(formattedResponse);
 
     } catch (error) {
-        console.log('[GET /student/activities/:activityId/state] Error:', error);
         return res.status(500).json({ 
             status: 'error', 
             message: 'Error interno del servidor' 

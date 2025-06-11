@@ -6,6 +6,11 @@ const userData = require('../fixtures/users.json');
 const onlyDesign = require('../fixtures/onlyDesign.json');
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
+// Constantes de caché
+const CACHE_TTL = 30;
+const TEACHER_CACHE_PREFIX = 'teacher_activity_state:';
+const STUDENT_CACHE_PREFIX = 'student_activity_state:';
+
 // Mock Redis para pruebas
 const mockRedis = {
     get: jest.fn(),
@@ -24,7 +29,6 @@ describe('Activity States API', () => {
         mockRedis.get.mockClear();
         mockRedis.setex.mockClear();
         
-        console.log("=== Iniciando configuración del test ===");
         
         // Crear profesor
         const professorExample = userData[9];
@@ -68,7 +72,6 @@ describe('Activity States API', () => {
         designId = designRes.body.data.id;
         
         // Crear sesión
-        console.log("\n=== Creando sesión ===");
         const sessionRes = await request(app)
             .post(`${API_VERSION_PATH_PREFIX}/sessions`)
             .set('Authorization', `Bearer ${teacherToken}`)
@@ -87,7 +90,6 @@ describe('Activity States API', () => {
         
 
         // Verificar que la actividad existe
-        console.log("\n=== Verificando actividad creada ===");
         const verifyActivity = await Activity.findByPk(activityId);
         
 
@@ -148,22 +150,25 @@ describe('Activity States API', () => {
             });
 
         expect(responseRes.status).toBe(201);
-        console.log("=== Configuración del test completada ===");
     });
 
 
     describe('GET /teacher/activities/:activityId/state', () => {
         it('should return complete activity state for teacher', async () => {
-            console.log("\n=== Test: Estado completo para profesor ===");
 
             try {
+                const cacheKey = `${TEACHER_CACHE_PREFIX}${activityId}_${teacherId}`;
+                const cachedData = await mockRedis.get(cacheKey);
+                
+                if (cachedData) {
+                    return res.status(200).json(JSON.parse(cachedData));
+                }
+
                 const response = await request(app)
                     .get(`${API_VERSION_PATH_PREFIX}/teacher/activities/${activityId}/state`)
                     .set('Authorization', `Bearer ${teacherToken}`);
 
-                console.log("Status code:", response.status);
-                console.log("Headers:", response.headers);
-                console.log("Respuesta completa:", JSON.stringify(response.body, null, 2));
+               
 
                 if (response.status !== 200) {
                     console.error("Error en la respuesta:", response.body);
@@ -175,6 +180,8 @@ describe('Activity States API', () => {
                 expect(response.body.data).toHaveProperty('session');
                 expect(response.body.data).toHaveProperty('phases');
                 expect(response.body.data.phases[0]).toHaveProperty('questions');
+
+                await mockRedis.setex(cacheKey, CACHE_TTL, JSON.stringify(response.body));
             } catch (error) {
                 console.error("Error en el test:", error);
                 throw error;
@@ -182,7 +189,6 @@ describe('Activity States API', () => {
         });
         
         it('should return 403 for unauthorized teacher', async () => {
-            console.log("\n=== Test: Profesor no autorizado ===");
             // Usar el profesor falso del índice 5
             const falseProfessor = userData[5];
            
@@ -205,7 +211,6 @@ describe('Activity States API', () => {
  
  
         it('should return 401 without token', async () => {
-            console.log("\n=== Test: Acceso sin token ===");
            
             const response = await request(app)
                 .get(`${API_VERSION_PATH_PREFIX}/teacher/activities/${activityId}/state`)
@@ -217,7 +222,6 @@ describe('Activity States API', () => {
  
     describe('GET /student/activities/:activityId/state', () => {
         it('should return activity state for student', async () => {
-            console.log("\n=== Test: Estado para estudiante ===");
             
  
  
@@ -237,7 +241,6 @@ describe('Activity States API', () => {
  
  
         it('should return 404 for student not in session', async () => {
-            console.log("\n=== Test: Estudiante no en sesión ===");
             // Usar el estudiante del índice 4 (un estudiante diferente)
             const otherStudent = userData[4];
            
@@ -258,7 +261,6 @@ describe('Activity States API', () => {
  
  
         it('should return 401 without token', async () => {
-            console.log("\n=== Test: Acceso sin token (estudiante) ===");
            
             const response = await request(app)
                 .get(`${API_VERSION_PATH_PREFIX}/student/activities/${activityId}/state`)
@@ -269,49 +271,115 @@ describe('Activity States API', () => {
  
  
     describe('Cache behavior', () => {
-        it('should return cached data for subsequent requests', async () => {
+        it('should store and return correct cached data for teacher', async () => {
             // Limpiar los mocks antes del test
             mockRedis.get.mockClear();
             mockRedis.setex.mockClear();
 
-            // Configurar el mock para simular caché
-            mockRedis.get.mockImplementationOnce(() => null) // Primera llamada: no hay caché
-                .mockImplementationOnce(() => JSON.stringify({ status: 'success', data: { cached: true } })); // Segunda llamada: hay caché
+            // Primera petición - no hay caché
+            mockRedis.get.mockImplementationOnce(() => null);
 
-            // Primera petición
+            const firstResponse = await request(app)
+                .get(`${API_VERSION_PATH_PREFIX}/teacher/activities/${activityId}/state`)
+                .set('Authorization', `Bearer ${teacherToken}`)
+                .expect(200);
+
+            // Verificar que se guardó en caché
+            expect(mockRedis.setex).toHaveBeenCalledWith(
+                `${TEACHER_CACHE_PREFIX}${activityId}_${teacherId}`,
+                CACHE_TTL,
+                expect.any(String)
+            );
+
+            // Guardar la respuesta para simular el caché
+            const cachedData = firstResponse.body;
+            mockRedis.get.mockImplementationOnce(() => JSON.stringify(cachedData));
+
+            // Segunda petición - debería usar el caché
+            const secondResponse = await request(app)
+                .get(`${API_VERSION_PATH_PREFIX}/teacher/activities/${activityId}/state`)
+                .set('Authorization', `Bearer ${teacherToken}`)
+                .expect(200);
+
+            // Verificar que se usó el caché
+            expect(mockRedis.get).toHaveBeenCalledWith(
+                `${TEACHER_CACHE_PREFIX}${activityId}_${teacherId}`
+            );
+
+            // Verificar que la respuesta es exactamente la misma que la primera
+            expect(secondResponse.body).toEqual(cachedData);
+
+            // Verificar que no se volvió a guardar en caché
+            expect(mockRedis.setex).toHaveBeenCalledTimes(1);
+        });
+
+        it('should store and return correct cached data for student', async () => {
+            // Limpiar los mocks antes del test
+            mockRedis.get.mockClear();
+            mockRedis.setex.mockClear();
+
+            // Primera petición - no hay caché
+            mockRedis.get.mockImplementationOnce(() => null);
+
             const firstResponse = await request(app)
                 .get(`${API_VERSION_PATH_PREFIX}/student/activities/${activityId}/state`)
                 .set('Authorization', `Bearer ${studentToken}`)
                 .expect(200);
 
-            // Verificar que se intentó guardar en caché
-            expect(mockRedis.setex).toHaveBeenCalledTimes(1);
+            // Verificar que se guardó en caché
+            expect(mockRedis.setex).toHaveBeenCalledWith(
+                `${STUDENT_CACHE_PREFIX}${activityId}_${studentId}`,
+                CACHE_TTL,
+                expect.any(String)
+            );
 
-            // Segunda petición inmediata
+            // Guardar la respuesta para simular el caché
+            const cachedData = firstResponse.body;
+            mockRedis.get.mockImplementationOnce(() => JSON.stringify(cachedData));
+
+            // Segunda petición - debería usar el caché
             const secondResponse = await request(app)
                 .get(`${API_VERSION_PATH_PREFIX}/student/activities/${activityId}/state`)
                 .set('Authorization', `Bearer ${studentToken}`)
                 .expect(200);
 
-            // Verificar que se intentó obtener del caché
-            expect(mockRedis.get).toHaveBeenCalledTimes(2);
+            // Verificar que se usó el caché
+            expect(mockRedis.get).toHaveBeenCalledWith(
+                `${STUDENT_CACHE_PREFIX}${activityId}_${studentId}`
+            );
+
+            // Verificar que la respuesta es exactamente la misma que la primera
+            expect(secondResponse.body).toEqual(cachedData);
+
+            // Verificar que no se volvió a guardar en caché
+            expect(mockRedis.setex).toHaveBeenCalledTimes(1);
         });
 
-        it('should have different cache for teacher and student', async () => {
-            // Configurar el mock para simular diferentes respuestas
-            mockRedis.get.mockImplementation(() => null); // No hay caché para ninguna petición
 
-            const teacherResponse = await request(app)
+        it('should have different cache keys for teacher and student', async () => {
+            // Limpiar los mocks antes del test
+            mockRedis.get.mockClear();
+            mockRedis.setex.mockClear();
+
+            // Configurar el mock para simular diferentes respuestas
+            mockRedis.get.mockImplementation(() => null);
+
+            // Hacer peticiones para profesor y estudiante
+            await request(app)
                 .get(`${API_VERSION_PATH_PREFIX}/teacher/activities/${activityId}/state`)
                 .set('Authorization', `Bearer ${teacherToken}`)
                 .expect(200);
 
-            const studentResponse = await request(app)
+            await request(app)
                 .get(`${API_VERSION_PATH_PREFIX}/student/activities/${activityId}/state`)
                 .set('Authorization', `Bearer ${studentToken}`)
                 .expect(200);
 
-            expect(teacherResponse.body).not.toEqual(studentResponse.body);
+            // Verificar que se usaron diferentes claves de caché
+            const cacheKeys = mockRedis.setex.mock.calls.map(call => call[0]);
+            expect(cacheKeys).toContain(`${TEACHER_CACHE_PREFIX}${activityId}_${teacherId}`);
+            expect(cacheKeys).toContain(`${STUDENT_CACHE_PREFIX}${activityId}_${studentId}`);
+            expect(cacheKeys[0]).not.toBe(cacheKeys[1]);
         });
     });
 }); 
