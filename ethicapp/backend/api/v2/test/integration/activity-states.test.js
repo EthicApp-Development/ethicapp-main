@@ -1,23 +1,20 @@
 const request = require('supertest');
-const app = require('../../testApi');
+const {app} = require('../../testApi');
 const { User, Session, Activity, Design, Phase, Question, Response } = require('../../models');
 const jwt = require('jsonwebtoken');
 const userData = require('../fixtures/users.json');
 const onlyDesign = require('../fixtures/onlyDesign.json');
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 
-// Constantes de caché
 const CACHE_TTL = 30;
 const TEACHER_CACHE_PREFIX = 'teacher_activity_state:';
 const STUDENT_CACHE_PREFIX = 'student_activity_state:';
 
-// Mock Redis para pruebas
 const mockRedis = {
     get: jest.fn(),
     setex: jest.fn()
 };
 
-// Configurar el mock de Redis en la app
 app.locals.redisClient = mockRedis;
 
 describe('Activity States API', () => {
@@ -269,6 +266,7 @@ describe('Activity States API', () => {
         });
     });
  
+
  
     describe('Cache behavior', () => {
         it('should store and return correct cached data for teacher', async () => {

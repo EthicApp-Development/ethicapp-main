@@ -1,11 +1,10 @@
 const request = require('supertest');
-const express = require('express');
+const { app } = require('../../testApi');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const sessionRouter = require('../../sessions'); // Adjust the path according to your directory structure.
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
-const app = require('../../testApi'); // Asegúrate de que apunta a tu aplicación Express
 const { User, Session  } = require('../../models');
 
 const userData = require('../fixtures/users.json')
