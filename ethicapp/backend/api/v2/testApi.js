@@ -10,7 +10,11 @@ const chatroomRouter = require('./chatrooms')
 const activityRouter = require('./activities')
 const sessionUserRouter = require('./sessions-users')
 const phaseRouter = require('./phases')
-const activityStatesRouter = require('./activity-states')
+const activityStatesRouter = require('./activity-states');
+const http = require('http');
+
+
+const { initializeWebSocket } = require('./websocket/reportSocket')
 const app = express();
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 const PORT = process.env.PORT || 3000;
@@ -26,7 +30,20 @@ app.use(`${API_VERSION_PATH_PREFIX}`,chatroomRouter);
 app.use(`${API_VERSION_PATH_PREFIX}`,activityRouter);
 app.use(`${API_VERSION_PATH_PREFIX}`,loginUserRouter);
 app.use(`${API_VERSION_PATH_PREFIX}`,sessionUserRouter);
-app.use(`${API_VERSION_PATH_PREFIX}`,activityStatesRouter)
+app.use(`${API_VERSION_PATH_PREFIX}`,activityStatesRouter);
+
+if(process.env.NODE_ENV === "test"){
+    const server = http.createServer(app);
+
+    initializeWebSocket(server);
+
+    app.createServer = () => {
+        return server;
+    }
+
+    module.exports = server;
+    module.exports.app = app;
+} else{
 
 module.exports = app;
-
+}

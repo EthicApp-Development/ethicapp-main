@@ -4,6 +4,7 @@ const router = express.Router();
 const auth = require('../v2/middleware/authenticateToken');
 const checkAbility = require('../v2/middleware/checkAbility');
 const { Activity, Design, Session, Phase } = require('../../api/v2/models');
+const ActivityWorkerManager = require('./workers/ActivityWorkerManager');
 
 // Configure body-parser to process the body of requests in JSON format.
 router.use(bodyParser.json());
@@ -210,7 +211,11 @@ router.post('/activities/start', auth, checkAbility('create', 'Activity'), async
             activity_id: activity.id
         });
 
-        res.status(201).json({ status: 'success', data: { activity, firstPhase } });
+        ActivityWorkerManager.startActivityWorker(activity.id, userId, {
+            interval: 5000
+        });
+
+        res.status(201).json({ status: 'success', data: { activity, firstPhase, liveReportWorker: 'started' } });
     } catch (err) {
         console.error('[POST /activities/start] Error:', err);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
@@ -250,7 +255,11 @@ router.post('/activities/end', auth, checkAbility('update', 'Activity'), async (
         // Update activity status to finished
         await activity.update({ status: 'finished' });
 
-        res.status(200).json({ status: 'success', message: 'Activity ended successfully' });
+        const stopped = ActivityWorkerManager.stopActivityWorker(activityId);
+
+
+
+        res.status(200).json({ status: 'success', message: 'Activity ended successfully',data: { activityId, liveReportWorker: stopped ? 'stopped':'was_not_running'} });
     } catch (err) {
         console.error('[POST /activities/end] Error:', err);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
