@@ -9,7 +9,7 @@ const {
   Question,
   Response
 } = require('../../models');
-console.log('TEST  → models.resolve:', require.resolve('../../models'));
+//console.log('TEST  → models.resolve:', require.resolve('../../models'));
 
 jest.mock('../../config/socket.config.js', () => ({
   studentNotifications: { phaseTransition: jest.fn() }
@@ -34,7 +34,7 @@ describe('POST /activities/:id/init_next_phase (group by responses normal divers
       .send({ mail: prof.mail, pass: prof.pass });
     token = loginRes.body.token;
     userId = loginRes.body.userId;
-    console.log('Punto 1: Profesor creado y autenticado');
+    //console.log('Punto 1: Profesor creado y autenticado');
 
     // 2) Create session
     const sRes = await request(app)
@@ -49,7 +49,7 @@ describe('POST /activities/:id/init_next_phase (group by responses normal divers
         creator: userId
       });
     sessionId = sRes.body.data.id;
-    console.log('Punto 2: Sesión creada');
+    //console.log('Punto 2: Sesión creada');
 
     // 3) Create 10 students and add to session using dummy data
     for (let idx = 0; idx < 10; idx++) {
@@ -72,7 +72,7 @@ describe('POST /activities/:id/init_next_phase (group by responses normal divers
         .post(`${API}/sessions/${sessionId}/users`)
         .send({ user_id: stuId });
     }
-    console.log('Punto 3: 10 alumnos creados y añadidos a la sesión');
+    //console.log('Punto 3: 10 alumnos creados y añadidos a la sesión');
 
     // 4) Create design with two phases
     const dRes = await request(app)
@@ -92,7 +92,7 @@ describe('POST /activities/:id/init_next_phase (group by responses normal divers
         locked: false
       });
     designId = dRes.body.data.id;
-    console.log('Punto 4: Diseño creado con stdntAmount 3 y algoritmo diverseResponses');
+    //console.log('Punto 4: Diseño creado con stdntAmount 3 y algoritmo diverseResponses');
 
     // 5) Start the activity
     const aRes = await request(app)
@@ -100,7 +100,7 @@ describe('POST /activities/:id/init_next_phase (group by responses normal divers
       .set('Authorization', `Bearer ${token}`)
       .send({ session: sessionId, design: designId });
     activityId = aRes.body.data.id;
-    console.log('Punto 5: Actividad iniciada');
+    //console.log('Punto 5: Actividad iniciada');
 
     // 6) INIT PHASE 1
     const phase1Res = await request(app)
@@ -110,7 +110,7 @@ describe('POST /activities/:id/init_next_phase (group by responses normal divers
     expect(phase1Res.status).toBe(201);
     expect(phase1Res.body.data.number).toBe(1);
     phase1Id = phase1Res.body.data.id;
-    console.log('Punto 6: Fase 1 iniciada');
+    //console.log('Punto 6: Fase 1 iniciada');
 
     // 7) Seed four numeric questions for Phase 1
     const questions = [];
@@ -125,7 +125,7 @@ describe('POST /activities/:id/init_next_phase (group by responses normal divers
       });
       questions.push(q);
     }
-    console.log('Punto 7: Cuatro preguntas numéricas creadas para la fase 1');
+    //console.log('Punto 7: Cuatro preguntas numéricas creadas para la fase 1');
 
         // 8) Seed respuestas para cada alumno y cada pregunta:
     //    - Cada respuesta es un número aleatorio entre 1 y 4
@@ -145,7 +145,7 @@ describe('POST /activities/:id/init_next_phase (group by responses normal divers
       });
     });
     await Response.bulkCreate(responses);
-    console.log('Punto 8: Respuestas numéricas aleatorias creadas para cada pregunta y cada alumno');
+    //console.log('Punto 8: Respuestas numéricas aleatorias creadas para cada pregunta y cada alumno');
 
   });
 
@@ -169,7 +169,7 @@ describe('POST /activities/:id/init_next_phase (group by responses normal divers
           .then(rows => rows.map(r => r.user_id).sort())
       )
     );
-    console.log('Final groups:', actualSets);
+    //console.log('Final groups:', actualSets);
 
     // Ensure every student is in exactly one group
     const allMembers = actualSets.flat().sort();

@@ -9,7 +9,7 @@ const {
   Question,
   Response
 } = require('../../models');
-console.log('TEST  → models.resolve:', require.resolve('../../models'));
+//console.log('TEST  → models.resolve:', require.resolve('../../models'));
 
 jest.mock('../../config/socket.config.js', () => ({
   studentNotifications: { phaseTransition: jest.fn() }
@@ -37,7 +37,7 @@ describe.each([
     token = loginRes.body.token;
     userId = loginRes.body.userId;
 
-    console.log("Punto 1: Profesor creado y autenticado");
+    //console.log("Punto 1: Profesor creado y autenticado");
 
     // 2) Create session
     const sRes = await request(app)
@@ -53,7 +53,7 @@ describe.each([
       });
     sessionId = sRes.body.data.id;
 
-    console.log("Punto 2: Sesión creada");
+    //console.log("Punto 2: Sesión creada");
 
     // 3) Create 4 students and add to session
     for (let i = 3; i <= 6; i++) {
@@ -69,7 +69,7 @@ describe.each([
         .send({ user_id: stuId });
     }
 
-    console.log("Punto 3: Alumnos creados y añadidos a la sesión");
+    //console.log("Punto 3: Alumnos creados y añadidos a la sesión");
 
     // 4) Create design with two phases:
     //    Phase 1: individual (to collect ranking response)
@@ -104,7 +104,7 @@ describe.each([
       });
     designId = dRes.body.data.id;
 
-    console.log("Punto 4: Diseño creado con dos fases");
+    //console.log("Punto 4: Diseño creado con dos fases");
 
     // 5) Start the activity
     const aRes = await request(app)
@@ -113,7 +113,7 @@ describe.each([
       .send({ session: sessionId, design: designId });
     activityId = aRes.body.data.id;
 
-    console.log("Punto 5: Actividad iniciada");
+    //console.log("Punto 5: Actividad iniciada");
 
     // 6) INIT PHASE 1
     const phase1Res = await request(app)
@@ -124,7 +124,7 @@ describe.each([
     expect(phase1Res.body.data.number).toBe(1);
     phase1Id = phase1Res.body.data.id;
 
-    console.log("Punto 6: Fase 1 iniciada");
+    //console.log("Punto 6: Fase 1 iniciada");
 
     // 7) Seed one ranking question for Phase 1
     const question = await Question.create({
@@ -136,7 +136,7 @@ describe.each([
       content:    {}
     });
 
-    console.log("Punto 7: Pregunta de ranking creada para la fase 1");
+    //console.log("Punto 7: Pregunta de ranking creada para la fase 1");
 
     // 8) Seed one ranking Response per student:
     //    - Even indices → [1,2,3]
@@ -156,7 +156,7 @@ describe.each([
     });
     //console.log('>>> inserted ranking responses:', inserted);
 
-    console.log("Punto 8: Respuestas de ranking creadas para cada alumno");
+    //console.log("Punto 8: Respuestas de ranking creadas para cada alumno");
   });
 
   it(`creates two groups clustering by ranking ${algorithm}`, async () => {
@@ -194,8 +194,8 @@ describe.each([
     const clusterB = [ studentIds[1], studentIds[3] ].sort();
     
     const expectedSets = [ clusterA, clusterB ];
-    console.log('Final groups:', actualSets);
-    console.log('Expected groups:', expectedSets);
+    //console.log('Final groups:', actualSets);
+    //console.log('Expected groups:', expectedSets);
     expect(actualSets).toEqual(
       expect.arrayContaining(expectedSets)
     );

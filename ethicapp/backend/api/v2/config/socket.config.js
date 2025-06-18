@@ -25,6 +25,11 @@ function configSocket(server) {
     studentSocket.on('connection', (socket) => studentSocketInit(socket, studentSocket));
     studentNotifications = toStudentsNotifications(studentSocket);
 
+    // ↳ Nueva exportación de notificación de mensaje en sala de chat
+    module.exports.chatRoomMessage = function(chatRoomId, message) {
+        studentNotifications.chatRoomMessage(chatRoomId, message);
+    };
+
     // Legacy (compatibilidad con la API vieja que usaba io.of("/").emit)
     module.exports.stateChange = function(sesid) {
         io.of("/").emit("stateChange", { ses: sesid });

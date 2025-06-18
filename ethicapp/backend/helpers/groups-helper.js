@@ -26,7 +26,6 @@ export const groupingAlgorithms = {
  * @returns {Promise<number[][]>}
  */
 async function createRandomGroups(sessionId, phases, groupSize) {
-  // 1) Lee todos los usuarios de la sesión
   const sessionUsers = await SessionsUsers.findAll({
     where: { session_id: sessionId },
     attributes: ['user_id'],
@@ -34,7 +33,6 @@ async function createRandomGroups(sessionId, phases, groupSize) {
   });
   const userIds = sessionUsers.map(su => su.user_id);
 
-  // 2) Filtra por rol 'A' si lo necesitas (aquí se omite)
   const users = await User.findAll({
     where: { id: userIds },
     attributes: ['id'],
@@ -47,7 +45,6 @@ async function createRandomGroups(sessionId, phases, groupSize) {
     return [];
   }
 
-  // 3) Mezcla al azar
   const shuffled = studentIds.sort(() => Math.random() - 0.5);
 
   // 4) Decide cuántos grupos crear
@@ -200,8 +197,6 @@ async function createDistinctRoleGroups(sessionId, phases, groupSize) {
     groupCount = floorCount;
 }
 
-
-
   if (groupCount < 1) groupCount = 1;
 
   // 4) Inicializar grupos vacíos
@@ -271,15 +266,10 @@ export async function createSimilarResponseGroups(sessionId, phases, groupSize, 
     // 2) Formar grupos a partir de cada bucket
     const groups = [];
     for (const ids of Object.values(buckets)) {
-      // Si un bucket es más grande que groupSize, lo “chunkeamos”
       for (let i = 0; i < ids.length; i += groupSize) {
         groups.push(ids.slice(i, i + groupSize));
       }
     }
-
-    // 3) Si hay alumnos que quedan solteros (groups[var].length < groupSize),
-    //    podrías opcionalmente mezclarlos usando Tau o round-robin con los grupos existentes.
-    //    Para un test simple, igual puedes dejar esos grupos más pequeños.
 
     console.log('Groups created (identical ranking):', groups);
     return groups;

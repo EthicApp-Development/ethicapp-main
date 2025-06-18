@@ -9,7 +9,7 @@ const {
   Question,
   Response
 } = require('../../models');
-console.log('TEST  → models.resolve:', require.resolve('../../models'));
+//console.log('TEST  → models.resolve:', require.resolve('../../models'));
 
 jest.mock('../../config/socket.config.js', () => ({
   studentNotifications: { phaseTransition: jest.fn() }
@@ -34,7 +34,7 @@ describe('POST /activities/:id/init_next_phase (group by ranking diverseResponse
     token = loginRes.body.token;
     userId = loginRes.body.userId;
 
-    console.log('Punto 1: Profesor creado y autenticado');
+    //console.log('Punto 1: Profesor creado y autenticado');
 
     // 2) Create session
     const sRes = await request(app)
@@ -49,7 +49,7 @@ describe('POST /activities/:id/init_next_phase (group by ranking diverseResponse
         creator: userId
       });
     sessionId = sRes.body.data.id;
-    console.log('Punto 2: Sesión creada');
+    //console.log('Punto 2: Sesión creada');
 
     // 3) Crear 10 alumnos y añadir a la sesión (sin usar userData más allá de los primeros)
     const dummyPass = 'Test1234!';
@@ -78,7 +78,7 @@ describe('POST /activities/:id/init_next_phase (group by ranking diverseResponse
         .send({ user_id: stuId });
     }
 
-    console.log('Punto 3: 10 alumnos creados y añadidos a la sesión');
+    //console.log('Punto 3: 10 alumnos creados y añadidos a la sesión');
 
     // 4) Create design with two phases
     const dRes = await request(app)
@@ -98,7 +98,7 @@ describe('POST /activities/:id/init_next_phase (group by ranking diverseResponse
         locked: false
       });
     designId = dRes.body.data.id;
-    console.log('Punto 4: Diseño creado con stdntAmount 3 y algoritmo diverseResponses');
+    //console.log('Punto 4: Diseño creado con stdntAmount 3 y algoritmo diverseResponses');
 
     // 5) Start the activity
     const aRes = await request(app)
@@ -106,7 +106,7 @@ describe('POST /activities/:id/init_next_phase (group by ranking diverseResponse
       .set('Authorization', `Bearer ${token}`)
       .send({ session: sessionId, design: designId });
     activityId = aRes.body.data.id;
-    console.log('Punto 5: Actividad iniciada');
+    //console.log('Punto 5: Actividad iniciada');
 
     // 6) INIT PHASE 1
     const phase1Res = await request(app)
@@ -116,7 +116,7 @@ describe('POST /activities/:id/init_next_phase (group by ranking diverseResponse
     expect(phase1Res.status).toBe(201);
     expect(phase1Res.body.data.number).toBe(1);
     phase1Id = phase1Res.body.data.id;
-    console.log('Punto 6: Fase 1 iniciada');
+    //console.log('Punto 6: Fase 1 iniciada');
 
     // 7) Seed one ranking question (5 options)
     const question = await Question.create({
@@ -127,7 +127,7 @@ describe('POST /activities/:id/init_next_phase (group by ranking diverseResponse
       text: 'Ranking 5-options question',
       content: {}
     });
-    console.log('Punto 7: Pregunta de ranking (5 valores) creada');
+    //console.log('Punto 7: Pregunta de ranking (5 valores) creada');
 
     // 8) Seed ranking responses: each student a rotated [1,2,3,4,5]
     const base = [1,2,3,4,5];
@@ -144,7 +144,7 @@ describe('POST /activities/:id/init_next_phase (group by ranking diverseResponse
     await Response.bulkCreate(responses);
     const inserted = await Response.findAll({ where: { question_id: question.id }, raw: true });
     //console.log('>>> inserted ranking responses:', inserted);
-    console.log('Punto 8: Respuestas de ranking creadas para cada alumno');
+    //console.log('Punto 8: Respuestas de ranking creadas para cada alumno');
   });
 
   it('creates three groups clustering by ranking diverseResponses', async () => {
@@ -167,7 +167,7 @@ describe('POST /activities/:id/init_next_phase (group by ranking diverseResponse
           .then(rows => rows.map(r => r.user_id).sort())
       )
     );
-    console.log('Final groups:', actualSets);
+    //console.log('Final groups:', actualSets);
 
     // Ensure every student is in exactly one group
     const allMembers = actualSets.flat().sort();
