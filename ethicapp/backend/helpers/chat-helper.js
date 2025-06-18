@@ -1,6 +1,7 @@
 import * as config from "../api/v2/config/config.json"; 
 import * as rpg2 from "../db/rest-pg-2.js";
 import { getDesignTypeByPhaseId } from "./desings-helper.js";
+import { ChatMessage, ChatRoom } from "../api/v2/models";
 
 /**
  * Handlers for message count queries based on design type.
@@ -44,36 +45,26 @@ export const chatInsertHandlers = {
 };
 
 export const saveChatMessage = async function(data) {
-    try {
-        // TODO: validate the incoming data with Yup
+  try {
+    console.log("[ChatHelper::saveChatMessage] Received data:", data);
+    const { userId, chatRoomId } = data.header;
+    const { content, parentId } = data.payload;
 
-        // Step 1: Determine the design type for the phase
-        const designType = await getDesignTypeByPhaseId(phaseId);
-
-        // Step 2: Fetch the appropriate handler for the design type
-        const handler = chatInsertHandlers[designType];
-        if (!handler) {
-            throw new Error(`Unsupported design type: ${designType}`);
-        }
-
-        const { userId, phaseId, itemId } = data.header;
-        const { parentId, content } = data.payload;
-
-        // Step 3: Execute the handler to insert the chat message
-        await handler({
-            userId,
-            phaseId,
-            itemId,
-            content,
-            parentId,
-            dbcon: config.dbconnString,
-        });
-        return true;
-    } catch(error) {
-        console.error("[ChatHelper::saveChatMessage] Could not save the message. ", error);
-        return false;
-    }
-}
+    //imprimir el tipo de los valores
+    console.log("[ChatHelper::saveChatMessage] userId:", typeof userId, "chatRoomId:", typeof chatRoomId, "content:", typeof content, "parentId:", typeof parentId);
+    await ChatMessage.create({
+      chatroom_id: chatRoomId,
+      user_id: userId,
+      content,
+      parent_id: parentId || null
+    });
+    console.log("[ChatHelper::saveChatMessage] Message saved successfully");
+    return true;
+  } catch (error) {
+    console.error("[ChatHelper::saveChatMessage] Error:", error);
+    return false;
+  }
+};
 
 async function countSemanticDifferentialMessages(phaseId) {
     const results = await rpg2.execSQL({

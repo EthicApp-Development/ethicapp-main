@@ -62,4 +62,5 @@ function configSocket(server) {
     module.exports.teacherNotifications = teacherNotifications;
 }
 
+//console.log('Exportando configSocket:', typeof configSocket);
 module.exports.configSocket = configSocket;
