@@ -1,65 +1,80 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const router = express.Router();
+const auth = require('../v2/middleware/authenticateToken');
+const checkAbility = require('../v2/middleware/checkAbility');
+const { Phase, ChatRoom, ChatMessage, groupUser, Session, Activity } = require('./models');
 
-const { Chatroom } = require('./models');
+// 1.1 – Listar salas de chat de un grupo/ pregunta/ fase
+router.get(
+  '/activities/:activityId/phases/:phaseId/questions/:questionId/groups/:groupId/chatrooms',
+  auth,
+  checkAbility('read', 'ChatMessage'),
+  async (req, res) => {
+    const { phaseId, questionId, groupId } = req.params;
+    const rooms = await ChatRoom.findAll({
+      where: { phase_id: phaseId, question_id: questionId, group_id: groupId },
+      include: [{ model: ChatMessage, as: 'messages', order: [['created_at','ASC']] }]
+    });
+    return res.json({ status: 'success', data: rooms });
+  }
+);
 
-// Configure body-parser to process the body of requests in JSON format.
-router.use(bodyParser.json());
-
-// Read
-router.get('/chatroom', async (req, res) => {
-    try {
-        const chatrooms = await Chatroom.findAll();
-        res.status(200).json({ status: 'success', data: chatrooms });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+// 1.2 – Crear (o idempotente) la sala de chat para un grupo en una pregunta
+router.post(
+  '/activities/:activityId/phases/:phaseId/questions/:questionId/groups/:groupId/chatrooms',
+  auth,
+  checkAbility('create', 'ChatMessage'),
+  async (req, res) => {
+    const { phaseId, questionId, groupId } = req.params;
+    console.log(`Creating chat room for phase ${phaseId}, question ${questionId}, group ${groupId}`);
+    // validar fase activa y chat habilitado
+    const phase = await Phase.findByPk(phaseId);
+    //console.log('Phase details:', phase.chat, phase.status);
+    if (!phase || !phase.chat) {
+        console.log(`Fase no válida o sin chat habilitado: ${phaseId}`);
+        return res.status(400).json({ status:'error', message:'Fase no válida o sin chat' });
     }
-});
+    const sessionId = (await Session.findOne({ where: { id: phase.activity_id ? (await Activity.findByPk(phase.activity_id)).session : null } }))?.id;
 
-// Create
-router.post('/chatroom', async (req, res) => {
+    // crear o devolver existente
     try {
-        const chatroom = await Chatroom.create(req.body);
-        res.status(201).json({ status: 'success', data: chatroom });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
-    }
-});
-
-// Update
-router.put('/chatroom/:id', async (req, res) => {
-    const { id } = req.params;
-    try {
-        const chatroom = await Chatroom.findByPk(id);
-        if (!chatroom) {
-            return res.status(404).json({ status: 'error', message: 'Chatroom not found' });
+      console.log(`Checking for existing chat room for phase ${phaseId}, question ${questionId}, group ${groupId}`);
+      const [room] = await ChatRoom.findOrCreate({
+        where: {
+          session_id: sessionId,
+          phase_id: phaseId,
+          question_id: questionId,
+          group_id: groupId
+        },
+        defaults: {
+          phase_id: phaseId,
+          question_id: questionId,
+          group_id: groupId
         }
-        await chatroom.update(req.body);
-        res.json({ status: 'success', data: chatroom });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+      });
+      console.log(`Chat room ${room.id} created or already exists`);
+      return res.status(201).json({ status: 'success', data: room });
+    } catch (error) {
+      console.error('[ChatRoom] Error in findOrCreate:', error);
+      return res.status(500).json({ status: 'error', message: 'Failed to create or find chat room' });
     }
-});
 
-// Delete
-router.delete('/chatroom/:id', async (req, res) => {
-    const { id } = req.params;
-    try {
-        const chatroom = await Chatroom.findByPk(id);
-        if (!chatroom) {
-            return res.status(404).json({ status: 'error', message: 'Chatroom not found' });
-        }
-        await chatroom.destroy();
-        res.status(204).end();
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
-    }
-});
+  }
+);
 
+// 1.3 – Obtener mensajes históricos de una sala
+router.get(
+  '/chatrooms/:chatRoomId/messages',
+  auth,
+  checkAbility('read', 'ChatMessage'),
+  async (req, res) => {
+    const { chatRoomId } = req.params;
+    const msgs = await ChatMessage.findAll({
+      where: { chatroom_id: chatRoomId },
+      order: [['created_at','ASC']]
+    });
+    return res.json({ status:'success', data:msgs });
+  }
+);
 
 module.exports = router;

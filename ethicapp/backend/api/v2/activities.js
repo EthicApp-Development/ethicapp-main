@@ -3,7 +3,10 @@ const bodyParser = require('body-parser');
 const router = express.Router();
 const auth = require('../v2/middleware/authenticateToken');
 const checkAbility = require('../v2/middleware/checkAbility');
-const { Activity, Design, Session, Phase } = require('../../api/v2/models');
+const { Activity, Design, Session, Phase, Group, groupUser,ActivityRole, ActivityUserRole, SessionsUsers } = require('./models');
+const { studentNotifications } = require('./config/socket.config.js');
+const { groupingAlgorithms } = require('../../helpers/groups-helper.js');
+const { assignRoles } = require('../../helpers/role-helper.js');
 const ActivityWorkerManager = require('./workers/ActivityWorkerManager');
 
 // Configure body-parser to process the body of requests in JSON format.
@@ -109,51 +112,104 @@ router.delete('/activity/:id', auth, checkAbility('delete', 'Activity'), async (
     }
 });
 
-router.post('/activities/:id/init_next_phase', auth, checkAbility('update', 'Phase'), async (req, res) => {
-    const { id } = req.params;
-
-    try {
+router.post(
+    '/activities/:id/init_next_phase',
+    auth,
+    checkAbility('update', 'Phase'),
+    async (req, res) => {
+      const { id } = req.params;
+      try {
         const activity = await Activity.findByPk(id);
-        if (!activity) {
-            return res.status(400).json({ status: 'error', message: 'Activity not found' });
-        }
+        if (!activity) return res.status(400).json({ status: 'error', message: 'Activity not found' });
+  
         const session = await Session.findByPk(activity.session);
-        if (!session) {
-            return res.status(400).json({ status: 'error', message: 'Session not found' });
-        }
-        if (session.creator !== req.user.id) {
-            return res.status(403).json({ status: 'error', message: 'You do not own this session' });
+        if (!session) return res.status(400).json({ status: 'error', message: 'Session not found' });
+        if (session.creator !== req.user.id)
+          return res.status(403).json({ status: 'error', message: 'You do not own this session' });
+  
+        const designInstance = await Design.findByPk(activity.design);
+        if (!designInstance) return res.status(400).json({ status: 'error', message: 'Design not found' });
+        const design = typeof designInstance.design === 'string'
+          ? JSON.parse(designInstance.design)
+          : designInstance.design;
+
+        const existingPhases = await Phase.findAll({ where: { activity_id: activity.id } });
+        const nextPhaseNumber = existingPhases.length + 1;
+        const nextPhaseDesign = design.phases.find(p => p.number === nextPhaseNumber);
+        if (!nextPhaseDesign)
+          return res.status(400).json({ status: 'error', message: 'No more phases available in the design' });
+        if (await Phase.findOne({ where: { activity_id: activity.id, number: nextPhaseNumber } }))
+          return res.status(400).json({ status: 'error', message: 'Phase already initiated' });
+  
+        // --- Role assignment before first phase ---
+        const roleDefs = Array.isArray(design.roles) ? design.roles : [];
+        if (nextPhaseNumber === 1 && roleDefs.length > 0) {
+            // 1) Create ActivityRole entries
+            const roleInstances = {};
+            for (const r of roleDefs) {
+            const role = await ActivityRole.create({
+                nombre: r.name,
+                descripcion: r.description,
+                ActivityId: activity.id
+            });
+            roleInstances[r.name] = role;
+            }
+            // 2) Fetch session users
+            const sessionUsers = await SessionsUsers.findAll({ where: { session_id: session.id } });
+            const userIds = sessionUsers.map(su => su.dataValues.user_id);
+            // 3) Assign users to roles
+            const assignments = assignRoles(roleDefs, userIds);
+            for (const { roleName, userId } of assignments) {
+            await ActivityUserRole.create({
+                userId,
+                RoleId: roleInstances[roleName].id,
+                activityId: activity.id
+            });
+            }
+        } else if (nextPhaseNumber === 1) {
+            // No roles defined: skip assignment
+            
         }
 
-        const design = await Design.findByPk(activity.design);
-        if (!design) {
-            return res.status(400).json({ status: 'error', message: 'Design not found' });
-        }
-
-        const phases = await Phase.findAll({ where: { activity_id: activity.id } });
-        const nextPhaseNumber = phases.length + 1;
-        const nextPhaseDesign = design.design.phases.find(p => p.number === nextPhaseNumber);
-        if (!nextPhaseDesign) {
-            return res.status(400).json({ status: 'error', message: 'No more phases available in the design' });
-        }
-        const existingPhase = await Phase.findOne({ where: { activity_id: activity.id, number: nextPhaseNumber } });
-        if (existingPhase) {
-            return res.status(400).json({ status: 'error', message: 'Phase already initiated' });
-        }
         const phase = await Phase.create({
-            number: nextPhaseNumber,
-            type: nextPhaseDesign.type || 'regular',
-            anon: nextPhaseDesign.anon || false,
-            chat: nextPhaseDesign.chat || false,
-            prev_ans: nextPhaseDesign.prev_ans || '',
-            activity_id: activity.id
+          number: nextPhaseNumber,
+          mode: nextPhaseDesign.mode || 'individual',
+          anon: nextPhaseDesign.anonymous || nextPhaseDesign.anon || false,
+          chat: nextPhaseDesign.chat || false,
+          prev_ans: (nextPhaseDesign.prevPhasesResponse || []).join(','),
+          activity_id: activity.id
         });
+        // Group creation
+        if (nextPhaseDesign.mode === 'group') {
+          const { stdntAmount, grouping_algorithm, heteroQuestionIndex } = nextPhaseDesign;
+          const allPhases = await Phase.findAll({ where: { activity_id: activity.id } });
+          const groups = await groupingAlgorithms[grouping_algorithm || 'random'](
+            session.id,
+            allPhases,
+            stdntAmount,
+            heteroQuestionIndex
+          );
+  
+          for (const g of groups) {
+            const newGroup = await Group.create({ session_id: session.id });
+            for (const userId of g) {
+              await groupUser.create({ group_id: newGroup.id, user_id: userId });
+            }
+          }
+        }
+        try {
+            studentNotifications.phaseTransition(session.id, phase.id);
+          } catch (err) {
+            console.error('[notify] Error al enviar notificación:', err);
+          }
         res.status(201).json({ status: 'success', data: phase });
-    } catch (err) {
-        console.error(err);
+      } catch (err) {
+        console.error('[init_next_phase] Error:', err);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
+      }
     }
-});
+  );
+  
 
 router.get('/activities/:id/phases', async (req, res) => {
     const { id } = req.params;
@@ -172,55 +228,50 @@ router.get('/activities/:id/phases', async (req, res) => {
 });
 
 
-router.post('/activities/start', auth, checkAbility('create', 'Activity'), async (req, res) => {
-    const { design, session } = req.body;
-    const { id: userId } = req.user;
-
-    try {
+router.post(
+    '/activities/start',
+    auth,
+    checkAbility('create', 'Activity'),
+    async (req, res) => {
+      const { design, session } = req.body;
+      const { id: userId } = req.user;
+  
+      try {
         const designInstance = await Design.findByPk(design);
         if (!designInstance) {
-            return res.status(404).json({ status: 'error', message: 'Design not found' });
+          return res
+            .status(404)
+            .json({ status: 'error', message: 'Design not found' });
         }
-
+  
         const sessionInstance = await Session.findByPk(session);
         if (!sessionInstance) {
-            return res.status(404).json({ status: 'error', message: 'Session not found' });
+          return res
+            .status(404)
+            .json({ status: 'error', message: 'Session not found' });
         }
-
+  
         if (sessionInstance.creator !== userId) {
-            return res.status(403).json({ status: 'error', message: 'You do not own this session' });
+          return res
+            .status(403)
+            .json({ status: 'error', message: 'You do not own this session' });
         }
-
+  
+        // Solo se crea la actividad
         const activity = await Activity.create({ design, session });
-
-        const designJson = typeof designInstance.design === 'string'
-            ? JSON.parse(designInstance.design)
-            : designInstance.design;
-
-        const firstPhaseJson = designJson.phases?.[0];
-        if (!firstPhaseJson) {
-            return res.status(400).json({ status: 'error', message: 'No phases defined in design' });
-        }
-
-        const firstPhase = await Phase.create({
-            number: 1,
-            type: firstPhaseJson.mode || 'individual',
-            anon: firstPhaseJson.anonymous || false,
-            chat: firstPhaseJson.chat || false,
-            prev_ans: (firstPhaseJson.prevPhasesResponse || []).join(','),
-            activity_id: activity.id
-        });
-
         ActivityWorkerManager.startActivityWorker(activity.id, userId, {
             interval: 5000
         });
 
         res.status(201).json({ status: 'success', data: { activity, firstPhase, liveReportWorker: 'started' } });
-    } catch (err) {
+      } catch (err) {
         console.error('[POST /activities/start] Error:', err);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        return res
+          .status(500)
+          .json({ status: 'error', message: 'Internal server error' });
+      }
     }
-});
+  );
 
 router.post('/activities/end', auth, checkAbility('update', 'Activity'), async (req, res) => {
     const { activityId } = req.body;

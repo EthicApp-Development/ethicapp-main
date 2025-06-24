@@ -1,12 +1,11 @@
 'use strict';
 
-/** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up (queryInterface, Sequelize) {
     await queryInterface.bulkInsert('phases', [
       {
         number: 1,
-        type: 'Type A',
+        mode: 'Type A', 
         anon: true,
         chat: false,
         prev_ans: 'Previous answer A',
@@ -16,7 +15,7 @@ module.exports = {
       },
       {
         number: 2,
-        type: 'Type B',
+        mode: 'Type B',
         anon: false,
         chat: true,
         prev_ans: 'Previous answer B',
@@ -26,7 +25,7 @@ module.exports = {
       },
       {
         number: 3,
-        type: 'Type c',
+        mode: 'Type C',
         anon: true,
         chat: true,
         prev_ans: 'Previous answer C',
@@ -36,7 +35,7 @@ module.exports = {
       },
       {
         number: 4,
-        type: 'Type D',
+        mode: 'Type D',
         anon: true,
         chat: true,
         prev_ans: 'Previous D answer',
@@ -48,11 +47,7 @@ module.exports = {
   },
 
   async down (queryInterface, Sequelize) {
-    /**
-     * Add commands to revert seed here.
-     *
-     * Example:
-     * await queryInterface.bulkDelete('People', null, {});
-     */
+    
+    await queryInterface.bulkDelete('phases', null, {});
   }
 };

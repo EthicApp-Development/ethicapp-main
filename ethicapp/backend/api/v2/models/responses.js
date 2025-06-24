@@ -17,7 +17,8 @@ module.exports = (sequelize, DataTypes) => {
     user_id: DataTypes.INTEGER,
     content: DataTypes.JSONB,
     type: DataTypes.STRING,
-    question_id: DataTypes.INTEGER
+    question_id: DataTypes.INTEGER,
+    score: DataTypes.ARRAY(DataTypes.FLOAT),
   }, {
     sequelize,
     modelName: 'Response',

@@ -13,8 +13,8 @@ module.exports = {
         type: Sequelize.INTEGER,
         allowNull: false
       },
-      type: {
-        type: Sequelize.CHAR,
+      mode: {
+        type: Sequelize.STRING,
         allowNull: false
       },
       anon: {

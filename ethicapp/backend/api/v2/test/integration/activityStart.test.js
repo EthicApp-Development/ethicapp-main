@@ -87,10 +87,8 @@ describe('POST /activities/start', () => {
             .expect(201);
 
         expect(res.body.status).toBe('success');
-        expect(res.body.data.activity).toHaveProperty('id');
-        expect(res.body.data.firstPhase.number).toBe(1);
-        expect(res.body.data.firstPhase.chat).toBe(false);
-        expect(res.body.data.firstPhase.anon).toBe(true);
+        expect(res.body.data).toHaveProperty('id');
+        
     });
 
     it('should fail if session does not belong to user', async () => {

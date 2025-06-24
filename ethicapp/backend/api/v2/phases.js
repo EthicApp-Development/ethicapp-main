@@ -24,7 +24,7 @@ router.get('/phases', async (req, res) => {
 
 // Create
 router.post('/phases', authenticateToken, checkAbility('create', 'Phase'), async (req, res) => {
-  const { number, type, anon, chat, prev_ans, activity_id } = req.body;
+  const { number, mode, anon, chat, prev_ans, activity_id } = req.body;
   try {
 
     const activity = await Activity.findByPk(activity_id);
@@ -47,7 +47,7 @@ router.post('/phases', authenticateToken, checkAbility('create', 'Phase'), async
     //   return res.status(400).json({ status: 'error', message: 'Phase number already exists in Phase table' });
     // }
 
-    const phase = await Phase.create({ number, type, anon, chat, prev_ans, activity_id });
+    const phase = await Phase.create({ number, mode, anon, chat, prev_ans, activity_id });
     return res.status(201).json({ status: 'success', data: phase });
 
   } catch (err) {
