@@ -259,11 +259,9 @@ router.post(
   
         // Solo se crea la actividad
         const activity = await Activity.create({ design, session });
-        ActivityWorkerManager.startActivityWorker(activity.id, userId, {
-            interval: 5000
-        });
-
-        res.status(201).json({ status: 'success', data: { activity, firstPhase, liveReportWorker: 'started' } });
+        return res
+          .status(201)
+          .json({ status: 'success', data: activity });
       } catch (err) {
         console.error('[POST /activities/start] Error:', err);
         return res
