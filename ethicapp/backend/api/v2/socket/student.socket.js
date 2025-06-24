@@ -35,7 +35,7 @@ let studentSocketInit = (socket, socketNamespace) => {
         // Keep the message
         try {
             ChatHelper.saveChatMessage(data);
-            console.debug(`Message saved for group ${data.header.groupId}`);
+            //console.debug(`Message saved for group ${data.header.groupId}`);
             socketNamespace.to(`group-${data.header.groupId}`).emit('onGroupMessage', data);    
         } catch (error) {
             console.error(`Failed to process message for group ${groupId}`);

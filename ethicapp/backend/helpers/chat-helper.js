@@ -46,19 +46,19 @@ export const chatInsertHandlers = {
 
 export const saveChatMessage = async function(data) {
   try {
-    console.log("[ChatHelper::saveChatMessage] Received data:", data);
+    //console.log("[ChatHelper::saveChatMessage] Received data:", data);
     const { userId, chatRoomId } = data.header;
     const { content, parentId } = data.payload;
 
     //imprimir el tipo de los valores
-    console.log("[ChatHelper::saveChatMessage] userId:", typeof userId, "chatRoomId:", typeof chatRoomId, "content:", typeof content, "parentId:", typeof parentId);
+    //console.log("[ChatHelper::saveChatMessage] userId:", typeof userId, "chatRoomId:", typeof chatRoomId, "content:", typeof content, "parentId:", typeof parentId);
     await ChatMessage.create({
       chatroom_id: chatRoomId,
       user_id: userId,
       content,
       parent_id: parentId || null
     });
-    console.log("[ChatHelper::saveChatMessage] Message saved successfully");
+    //console.log("[ChatHelper::saveChatMessage] Message saved successfully");
     return true;
   } catch (error) {
     console.error("[ChatHelper::saveChatMessage] Error:", error);

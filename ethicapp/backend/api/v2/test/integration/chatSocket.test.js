@@ -26,7 +26,6 @@ jest.mock('../../config/socket.config.js', () => {
 });
 
 beforeAll(async () => {
-  console.log('Starting chat socket integration tests...');
   server = http.createServer(app);
   configSocket(server);
   await new Promise((res) => server.listen(0, res));
@@ -43,32 +42,10 @@ describe('Chat socket integration', () => {
   it('should allow two students in the same group to exchange messages via socket', async () => {
     // 1. Crear profesor
     const prof = userData[0];
-    await request(app).post(`${API}/users`).send({ ...prof, pass_confirmation: prof.pass, role: 'teacher' });
+    await request(app).post(`${API}/users`).send({ ...prof, pass_confirmation: prof.pass, role: prof.role });
     const login = await request(app).post(`${API}/authenticate_client`).send({ mail: prof.mail, pass: prof.pass });
     const profToken = login.body.token;
     professorId = login.body.userId;
-
-    // 2. Crear sesión
-    const sessionRes = await request(app).post(`${API}/sessions`)
-      .set('Authorization', `Bearer ${profToken}`)
-      .send({ name: 'Session socket chat', descr: 'Test chat', status: 1, type: 'A', time: new Date(), creator: professorId });
-    const sessionId = sessionRes.body.data.id;
-
-    // 3. Crear estudiantes y agregarlos
-    const students = [userData[3], userData[4]];
-    const tokens = [];
-    const ids = [];
-
-    for (const stu of students) {
-      await request(app).post(`${API}/users`).send({ ...stu, pass_confirmation: stu.pass });
-      const res = await request(app).post(`${API}/authenticate_client`).send({ mail: stu.mail, pass: stu.pass });
-      const stuId = res.body.userId;
-      await request(app).post(`${API}/sessions/${sessionId}/users`).send({ user_id: stuId });
-      tokens.push(res.body.token);
-      ids.push(stuId);
-    }
-    [token1, token2] = tokens;
-    [studentId1, studentId2] = ids;
 
     // 4. Crear diseño con fase grupal y pregunta embebida
     const dRes = await request(app).post(`${API}/designs`)
@@ -102,6 +79,31 @@ describe('Chat socket integration', () => {
         locked: false
       });
     const designId = dRes.body.data.id;
+
+    //await new Promise(resolve => setTimeout(resolve, 5000)); // 100 ms
+    // 2. Crear sesión
+    const sessionRes = await request(app).post(`${API}/sessions`)
+      .set('Authorization', `Bearer ${profToken}`)
+      .send({ name: 'Session socket chat', descr: 'Test chat', status: 1, type: 'A', time: new Date(), creator: professorId });
+    const sessionId = sessionRes.body.data.id;
+
+    // 3. Crear estudiantes y agregarlos
+    const students = [userData[3], userData[4]];
+    const tokens = [];
+    const ids = [];
+
+    for (const stu of students) {
+      await request(app).post(`${API}/users`).send({ ...stu, pass_confirmation: stu.pass });
+      const res = await request(app).post(`${API}/authenticate_client`).send({ mail: stu.mail, pass: stu.pass });
+      const stuId = res.body.userId;
+      await request(app).post(`${API}/sessions/${sessionId}/users`).send({ user_id: stuId });
+      tokens.push(res.body.token);
+      ids.push(stuId);
+    }
+    [token1, token2] = tokens;
+    [studentId1, studentId2] = ids;
+
+    
 
     // 5. Iniciar la actividad y avanzar a fase 1
     const aRes = await request(app).post(`${API}/activities/start`)
@@ -137,29 +139,29 @@ describe('Chat socket integration', () => {
     const roomRes = await request(app)
       .post(`${API}/activities/${activityId}/phases/${phaseId}/questions/${questionId}/groups/${groupId}/chatrooms`)
       .set('Authorization', `Bearer ${profToken}`);
-    console.log('chatroom response:', roomRes.body);
+    //console.log('chatroom response:', roomRes.body);
     chatRoomId = roomRes.body.data.id;
-    console.log('Chat room created with ID:', chatRoomId);
+    //console.log('Chat room created with ID:', chatRoomId);
     // 9. Conectar sockets
     studentSocket1 = socketClient(`http://localhost:${port}/student`, {
       transports: ['websocket'],
       extraHeaders: { Authorization: `Bearer ${token1}` }
     });
-    console.log('Connecting studentSocket1 with token:', token1);
+    //console.log('Connecting studentSocket1 with token:', token1);
     studentSocket2 = socketClient(`http://localhost:${port}/student`, {
       transports: ['websocket'],
       extraHeaders: { Authorization: `Bearer ${token2}` }
     });
-    console.log('Connecting studentSocket2 with token:', token2);
+    //console.log('Connecting studentSocket2 with token:', token2);
 
     await Promise.all([
       new Promise(res => studentSocket1.on('connect', res)),
       new Promise(res => studentSocket2.on('connect', res))
     ]);
-    console.log('Both student sockets connected successfully');
+    //console.log('Both student sockets connected successfully');
     studentSocket1.emit('joinGroup', groupId);
     studentSocket2.emit('joinGroup', groupId);
-    console.log('Both students joined the group:', groupId);
+    //console.log('Both students joined the group:', groupId);
     const testMessage = {
       header: {
         userId: studentId1,
@@ -172,13 +174,13 @@ describe('Chat socket integration', () => {
       }
     };
 
-    console.log('[socket] sending messageToGroup:', testMessage);
+    //console.log('[socket] sending messageToGroup:', testMessage);
     //agregar tiempo de espera para asegurar que los sockets estén listos
     await new Promise(resolve => setTimeout(resolve, 1000));
     //Hasta aca llegue
     const received = new Promise((resolve) => {
       studentSocket2.on('onGroupMessage', (data) => {
-        console.log('[socket] received onGroupMessage:', data);
+        //console.log('[socket] received onGroupMessage:', data);
         resolve(data);
       });
     });

@@ -236,7 +236,7 @@ async function createDistinctRoleGroups(sessionId, phases, groupSize) {
  * Agrupa alumnos con respuestas más similares entre sí.
  */
 export async function createSimilarResponseGroups(sessionId, phases, groupSize, heteroQuestionIndex) {
-  console.log('Creating similar response groups...');
+  //console.log('Creating similar response groups...');
   // 1) Ordenar fases por número y tomar la fase previa a la activa
   const sortedPhases = [...phases].sort((a, b) => a.number - b.number);
   if (sortedPhases.length < 2) {
@@ -271,7 +271,7 @@ export async function createSimilarResponseGroups(sessionId, phases, groupSize, 
       }
     }
 
-    console.log('Groups created (identical ranking):', groups);
+    //console.log('Groups created (identical ranking):', groups);
     return groups;
   } else {
     // NO-RANKING: distancia media al resto, no al cero
@@ -292,7 +292,7 @@ export async function createSimilarResponseGroups(sessionId, phases, groupSize, 
   students.forEach((s, idx) => {
     groups[idx % groupCount].push(s.userId);
   });
-  console.log('Groups created en algoritmo:', groups);
+  //console.log('Groups created en algoritmo:', groups);
 
   return groups;
 }
@@ -301,7 +301,7 @@ export async function createSimilarResponseGroups(sessionId, phases, groupSize, 
  * Agrupa buscando máxima diversidad de respuestas.
  */
 export async function createDiverseResponseGroups(sessionId, phases, groupSize) {
-  console.log('Creating diverse response groups...');
+  //console.log('Creating diverse response groups...');
   // 1) Ordenar fases y tomar la fase previa
   const sortedPhases = [...phases].sort((a, b) => a.number - b.number);
   if (sortedPhases.length < 2) {

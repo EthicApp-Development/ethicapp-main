@@ -37,38 +37,6 @@ describe.each([
     token = loginRes.body.token;
     userId = loginRes.body.userId;
 
-    //console.log("Punto 1: Profesor creado y autenticado");
-
-    // 2) Create session
-    const sRes = await request(app)
-      .post(`${API}/sessions`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({
-        name: `Session response groups (${desc})`,
-        descr: `Test by ${desc}`,
-        status: 1,
-        type: 'A',
-        time: new Date(),
-        creator: userId
-      });
-    sessionId = sRes.body.data.id;
-
-    // 3) Create 4 students and add to session
-    for (let i = 3; i <= 6; i++) {
-      const stu = userData[i];
-      await request(app).post(`${API}/users`).send({ ...stu, pass_confirmation: stu.pass });
-      const stuLogin = await request(app)
-        .post(`${API}/authenticate_client`)
-        .send({ mail: stu.mail, pass: stu.pass });
-      const stuId = stuLogin.body.userId;
-      studentIds.push(stuId);
-      await request(app)
-        .post(`${API}/sessions/${sessionId}/users`)
-        .send({ user_id: stuId });
-    }
-
-    //console.log("Punto 3: Alumnos creados y añadidos a la sesión");
-
     // 4) Create design with two phases:
     //    Phase 1: individual (to collect responses)
     //    Phase 2: group with our algorithm
@@ -103,6 +71,40 @@ describe.each([
         locked: false
       });
     designId = dRes.body.data.id;
+
+    //console.log("Punto 1: Profesor creado y autenticado");
+    //await new Promise(resolve => setTimeout(resolve, 1000)); // 100 ms
+    // 2) Create session
+    const sRes = await request(app)
+      .post(`${API}/sessions`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: `Session response groups (${desc})`,
+        descr: `Test by ${desc}`,
+        status: 1,
+        type: 'A',
+        time: new Date(),
+        creator: userId
+      });
+    sessionId = sRes.body.data.id;
+
+    // 3) Create 4 students and add to session
+    for (let i = 3; i <= 6; i++) {
+      const stu = userData[i];
+      await request(app).post(`${API}/users`).send({ ...stu, pass_confirmation: stu.pass });
+      const stuLogin = await request(app)
+        .post(`${API}/authenticate_client`)
+        .send({ mail: stu.mail, pass: stu.pass });
+      const stuId = stuLogin.body.userId;
+      studentIds.push(stuId);
+      await request(app)
+        .post(`${API}/sessions/${sessionId}/users`)
+        .send({ user_id: stuId });
+    }
+
+    //console.log("Punto 3: Alumnos creados y añadidos a la sesión");
+
+    
 
     //console.log("Punto 4: Diseño creado con dos fases");
 
