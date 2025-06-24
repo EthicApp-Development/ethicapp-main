@@ -90,7 +90,7 @@ describe('POST /activities/:id/init_next_phase (roles assignment)', () => {
       .post(`${API}/activities/start`)
       .set('Authorization', `Bearer ${token}`)
       .send({ session: sessionId, design: designId });
-    activityId = aRes.body.data.id;
+    activityId = aRes.body.data.activity.id;
   });
 
   it('creates ActivityRole and ActivityUserRole on first phase', async () => {

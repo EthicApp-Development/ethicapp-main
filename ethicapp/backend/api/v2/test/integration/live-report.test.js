@@ -243,7 +243,6 @@ describe('Live Reports Worker Integration Tests', () => {
       expect(startResponse.status).toBe(201);
       expect(startResponse.body.status).toBe('success');
       expect(startResponse.body.data).toHaveProperty('activity');
-      expect(startResponse.body.data).toHaveProperty('firstPhase');
       expect(startResponse.body.data).toHaveProperty('liveReportWorker', 'started');
 
       activityId = startResponse.body.data.activity.id;

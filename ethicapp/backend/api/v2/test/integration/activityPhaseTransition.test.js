@@ -69,7 +69,7 @@ describe('POST /activities/:id/init_next_phase', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ session: sessionId, design: designId });
 
-    activityId = aRes.body.data.id;
+    activityId = aRes.body.data.activity.id;
   });
 
   it('crea la fase 2 y notifica por WebSocket', async () => {

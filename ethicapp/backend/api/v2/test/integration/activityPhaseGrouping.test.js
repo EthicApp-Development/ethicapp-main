@@ -94,7 +94,7 @@ describe('POST /activities/:id/init_next_phase (fase grupal)', () => {
       .post(`${API}/activities/start`)
       .set('Authorization', `Bearer ${token}`)
       .send({ session: sessionId, design: designId });
-    activityId = aRes.body.data.id;
+    activityId = aRes.body.data.activity.id;
   });
 
   it('primero crea fase individual y luego fase grupal con equipos', async () => {

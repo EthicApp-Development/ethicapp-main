@@ -76,7 +76,7 @@ describe('POST /activities/start', () => {
       });
       
 
-    it('should create an activity and its first phase', async () => {
+    it('should create an activity', async () => {
         const res = await request(app)
             .post(`${API_VERSION_PATH_PREFIX}/activities/start`)
             .set('Authorization', `Bearer ${token}`)
@@ -87,7 +87,7 @@ describe('POST /activities/start', () => {
             .expect(201);
 
         expect(res.body.status).toBe('success');
-        expect(res.body.data).toHaveProperty('id');
+        expect(res.body.data.activity).toHaveProperty('id');
         
     });
 

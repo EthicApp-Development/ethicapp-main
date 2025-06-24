@@ -109,7 +109,7 @@ describe('Chat socket integration', () => {
     const aRes = await request(app).post(`${API}/activities/start`)
       .set('Authorization', `Bearer ${profToken}`)
       .send({ session: sessionId, design: designId });
-    const activityId = aRes.body.data.id;
+    const activityId = aRes.body.data.activity.id;
 
     const phaseRes = await request(app).post(`${API}/activities/${activityId}/init_next_phase`)
       .set('Authorization', `Bearer ${profToken}`);

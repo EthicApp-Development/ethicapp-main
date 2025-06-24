@@ -101,7 +101,7 @@ describe('Activities and Phases API', () => {
         session: sessionId,
         design: designId
       });
-    activityId = startRes.body.data.id;
+    activityId = startRes.body.data.activity.id;
 
     await request(app)
       .post(`${API}/activities/${activityId}/init_next_phase`)
