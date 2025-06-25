@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken');
 const userData = require('../fixtures/users.json');
 const onlyDesign = require('../fixtures/onlyDesign.json');
 const axios = require('axios');
-const { initializeWebSocket } = require('../../websocket/reportSocket');
+const { initializeWebSocket } = require('../../socket/reportSocket');
 
 const ActivityWorkerManager = require('../../workers/ActivityWorkerManager');
 

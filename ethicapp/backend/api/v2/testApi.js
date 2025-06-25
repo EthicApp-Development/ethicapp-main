@@ -14,7 +14,7 @@ const activityStatesRouter = require('./activity-states');
 const http = require('http');
 
 
-const { initializeWebSocket } = require('./websocket/reportSocket')
+const { initializeWebSocket } = require('./socket/reportSocket')
 const app = express();
 const API_VERSION_PATH_PREFIX = process.env.API_VERSION_PATH_PREFIX || '/api/v2';
 const PORT = process.env.PORT || 3000;

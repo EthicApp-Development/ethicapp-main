@@ -4,7 +4,7 @@ require("log-timestamp");
 var app = module.exports = require("../app");
 var http = require("http");
 var debug = require("debug")("ethicapp:server");
-const { initializeWebSocket } = require('./api/v2/websocket/reportSocket')
+const { initializeWebSocket } = require('./api/v2/socket/reportSocket')
 const activityWorkerManager = require('./api/v2/workers/ActivityWorkerManager')
 
 const DEFAULT_PORT = "8080";
