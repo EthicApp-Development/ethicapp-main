@@ -3,11 +3,11 @@ name: EthicApp CI/CD Pipeline
 on:
   push:
     branches:
-      - apiv2
+      - api-v2
       - 'issue-*'
   pull_request:
     branches:
-      - apiv2
+      - api-v2
   workflow_dispatch:
 
 jobs:
