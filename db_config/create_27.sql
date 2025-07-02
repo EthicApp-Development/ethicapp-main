@@ -1,5 +1,7 @@
-alter table teams add column stageid integer references stages(id);
-alter table actor_selection add column stime timestamp default now();
-alter table actors add column justified boolean default true;
-alter table stages add column question text;
-alter table stages add column grouping varchar(63);
+alter table sesusers add column device varchar(255);
+
+create table if not exists drafts(
+    id serial,
+    sesid integer references sessions(id),
+    data text
+);

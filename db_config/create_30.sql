@@ -1,1 +1,1 @@
-alter table differential add column word_count integer default 0;
+alter table documents add column active boolean default true;

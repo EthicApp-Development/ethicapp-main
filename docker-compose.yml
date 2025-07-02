@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  ethicapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ethicapp
+    environment:
+      - PORT=8501
+      - PGUSER=postgres
+      - PGPASSWORD=postgres
+      - POSTGRES_DB=ethicapp
+      - PGHOST=postgresql
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - uploads:/app/uploads
+    depends_on:
+      - postgresql
+
+  postgresql:
+    build:
+      context: ./db_config
+      dockerfile: Dockerfile
+    container_name: ethicapp-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=ethicapp
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+  uploads:

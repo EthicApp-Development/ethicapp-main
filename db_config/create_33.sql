@@ -1,7 +1,1 @@
-alter table sesusers add column device varchar(255);
-
-create table if not exists drafts(
-    id serial,
-    sesid integer references sessions(id),
-    data text
-);
+alter table teams add column progress integer default 0;

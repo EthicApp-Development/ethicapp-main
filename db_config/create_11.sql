@@ -1,1 +1,1 @@
-alter table selection add column confidence integer;
+ALTER TABLE users ADD COLUMN lang varchar(10) default 'spanish';

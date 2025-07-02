@@ -1,1 +1,1 @@
-alter table semantic_unit add column iteration integer;
+alter table sesusers add constraint no_dup_users unique(uid,sesid);

@@ -1,5 +1,28 @@
-alter table semantic_unit add column docs integer[];
-alter table semantic_unit drop column docid;
-alter table semantic_unit add column sesid integer references sessions(id);
+create table if not exists differential(
+    id      serial,
+    title   text default '',
+    tleft   text not null,
+    tright  text not null,
+    orden   integer not null,
+    creator integer references users(id),
+    sesid   integer references sessions(id),
+    primary key(id)
+);
 
-alter table semantic_document add column orden integer;
+create table if not exists differential_selection(
+    id      serial,
+    uid     integer references users(id),
+    did     integer references differential(id),
+    sel     integer not null,
+    iteration   integer,
+    comment text,
+    stime   timestamp default now()
+);
+
+create table if not exists differential_chat(
+    id      serial,
+    uid     integer references users(id),
+    did     integer references differential(id),
+    content text,
+    stime   timestamp default now()
+);

@@ -1,1 +1,1 @@
-alter table sessions add column archived boolean default false;
+alter table differential add column word_count integer default 0;

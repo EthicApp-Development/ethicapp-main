@@ -1,1 +1,4 @@
-alter table actors add column word_count integer default 0;
+create table report_ideas(
+    rid integer references reports(id),
+    idea_id integer references ideas(id)
+);

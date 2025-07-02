@@ -1,1 +1,1 @@
-ALTER TABLE users ADD COLUMN lang varchar(10) default 'spanish';
+alter table sessions add column current_stage integer references stages(id);
