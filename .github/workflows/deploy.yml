@@ -91,12 +91,14 @@ jobs:
           docker volume rm -f postgres_test_data || true
           rm -rf ./db-test-data-volume || true
 
-      - name: Install node dependencies
+      - name: Install node dependencies in Node container
         run: |
-          cd ethicapp
-          npm install log-timestamp pg sequelize sequelize-cli --save
-          cd ..
-
+          docker run --rm \
+            -v "$PWD/ethicapp":/app \
+            -w /app \
+            node:22 \
+            sh -c "npm install log-timestamp pg sequelize sequelize-cli --save"
+            
       - name: Start test containers directly
         run: |
           docker compose -f docker-compose.test.yml up -d
