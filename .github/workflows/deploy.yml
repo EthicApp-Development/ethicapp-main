@@ -1,0 +1,11 @@
+name: Dummy Deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  no-op:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dummy step
+        run: echo "Este workflow no hace nada útil"
