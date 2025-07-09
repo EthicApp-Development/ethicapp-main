@@ -2,6 +2,7 @@
 
 const { Group, groupUser, User, SessionsUsers, ActivityUserRole } = require('../api/v2/models');
 import { accumulateScoresByPhase, kendallTau, euclideanDistance } from './score-helper';
+
 /**
  * Algoritmos de agrupación disponibles
  */
@@ -60,7 +61,6 @@ async function createRandomGroups(sessionId, phases, groupSize) {
 
   return groups;
 }
-
 
 /**
  * Reutiliza los grupos de la fase anterior.
@@ -362,3 +362,4 @@ export async function createDiverseResponseGroups(sessionId, phases, groupSize) 
 
   return groups;
 }
+

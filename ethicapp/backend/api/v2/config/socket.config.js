@@ -64,3 +64,4 @@ function configSocket(server) {
 
 //console.log('Exportando configSocket:', typeof configSocket);
 module.exports.configSocket = configSocket;
+

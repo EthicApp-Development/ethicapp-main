@@ -66,6 +66,7 @@ export const saveChatMessage = async function(data) {
   }
 };
 
+
 async function countSemanticDifferentialMessages(phaseId) {
     const results = await rpg2.execSQL({
         sql: `

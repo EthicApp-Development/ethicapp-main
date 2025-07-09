@@ -9,10 +9,11 @@ on:
     branches:
       - api-v2
   workflow_dispatch:
-
+env:
+  WORKDIR: ~/ethicapp-apiv2
 jobs:
   test:
-    runs-on: [self-hosted, apiV2]
+    runs-on: [self-hosted, apps-runner]
     name: Run EthicApp Tests
     outputs:
       tests_passed: ${{ steps.run_tests.outputs.tests_passed }}
@@ -85,20 +86,23 @@ jobs:
       
       - name: Clean up existing containers
         run: |
-          docker-compose -f docker-compose.test.yml down --volumes --remove-orphans || true
+          docker compose -f docker-compose.test.yml down --volumes --remove-orphans || true
           docker rm -f ethicapp-test-node ethicapp-test-postgres || true
           docker volume rm -f postgres_test_data || true
           rm -rf ./db-test-data-volume || true
 
-      - name: Install node dependencies
+      - name: Install node dependencies in Node container
         run: |
-          cd ethicapp
-          npm install log-timestamp pg sequelize sequelize-cli --save
-          cd ..
-
+          docker run --rm \
+            -v "$PWD/ethicapp":/app \
+            -w /app \
+            --user $(id -u):$(id -g) \
+            node:22 \
+            sh -c "npm install log-timestamp pg sequelize sequelize-cli --save"
+        
       - name: Start test containers directly
         run: |
-          docker-compose -f docker-compose.test.yml up -d
+          docker compose -f docker-compose.test.yml up -d
           
           echo "Waiting for services to be ready..."
           sleep 15
@@ -145,13 +149,13 @@ jobs:
       - name: Cleanup test containers
         if: always()
         run: |
-          docker-compose -f docker-compose.test.yml down --volumes --remove-orphans
+          docker compose -f docker-compose.test.yml down --volumes --remove-orphans
           sudo rm -rf ./db-test-data-volume || true
 
   deploy:
     needs: test
     if: ${{ needs.test.outputs.tests_passed == 'true' }}
-    runs-on: [self-hosted, apiV2]
+    runs-on: [self-hosted, apps-runner]
     name: Deploy EthicApp APIv2
     
     steps:
@@ -160,7 +164,7 @@ jobs:
 
       - name: Define environment variables
         run: |
-          echo "COMPOSE_PROJECT_NAME=ethicapp-apiv2" >> $GITHUB_ENV
+          echo "COMPOSE_PROJECT_NAME=$WORKDIR" >> $GITHUB_ENV
           if [ -f ./.env ]; then
             export $(grep -v '^#' ./.env | xargs)
             echo "DB_USER_NAME=$DB_USER_NAME" >> $GITHUB_ENV
@@ -172,20 +176,20 @@ jobs:
       - name: Prepare deployment directory with correct permissions
         run: |
           # Crear el directorio si no existe
-          sudo mkdir -p ~/ethicapp-apiv2
+          sudo mkdir -p $WORKDIR
 
           # Cambiar el propietario al usuario actual
-          sudo chown -R $(whoami):$(whoami) ~/ethicapp-apiv2
+          sudo chown -R $(whoami):$(whoami) $WORKDIR
 
           # Establecer permisos adecuados
-          sudo chmod -R 755 ~/ethicapp-apiv2
+          sudo chmod -R 755 $WORKDIR
 
           echo "Deployment directory prepared with correct permissions"
 
       - name: Sync code to runner
         run: |
           # Usar rsync con permisos adecuados
-          rsync -a --delete --exclude="db-data-volume/" . ~/ethicapp-apiv2/
+          rsync -a --delete --exclude="db-data-volume/" . $WORKDIR/
 
           # Verificar que la sincronización se haya completado correctamente
           if [ $? -eq 0 ]; then
@@ -197,7 +201,7 @@ jobs:
 
       - name: Create configuration files and secrets
         run: |
-          cd ~/ethicapp-apiv2
+          cd $WORKDIR
           
           mkdir -p ./backend/config ./ethicapp/backend/config ./secrets
           
@@ -247,7 +251,7 @@ jobs:
       - name: Check if database volume exists
         id: check_db
         run: |
-          cd ~/ethicapp-apiv2
+          cd $WORKDIR
           if [ -d "./db-data-volume" ]; then
             echo "Directory exists, checking contents..."
             if [ "$(find ./db-data-volume -mindepth 1 -type f | wc -l)" -gt 0 ]; then
@@ -267,7 +271,7 @@ jobs:
       - name: Initialize database if needed
         if: steps.check_db.outputs.db_exists == 'false' || steps.check_db.outputs.db_exists == 'empty'
         run: |
-          cd ~/ethicapp-apiv2
+          cd $WORKDIR
           echo "Initializing database..."
           
           if [ -d "./db-data-volume" ]; then
@@ -279,27 +283,27 @@ jobs:
 
       - name: Build and start containers
         run: |
-          cd ~/ethicapp-apiv2
-          docker-compose up -d --build
+          cd $WORKDIR
+          docker compose up -d --build
 
       - name: Wait for services to be ready
         run: |
-          cd ~/ethicapp-apiv2
+          cd $WORKDIR
           echo "Waiting for services to be ready..."
           sleep 30
           docker ps | grep ethicapp-apiV2
 
       - name: Verify database connection
         run: |
-          cd ~/ethicapp-apiv2
+          cd $WORKDIR
           docker exec ethicapp-apiV2-postgres pg_isready -U $DB_USER_NAME || true
           docker exec ethicapp-apiV2-postgres psql -U $DB_USER_NAME -c "SELECT 1" || true
 
       - name: Restart application service
         run: |
-          cd ~/ethicapp-apiv2
+          cd $WORKDIR
           echo "Restarting application service..."
-          docker-compose restart ethicapp-apiV2-node || docker-compose restart node
+          docker compose restart ethicapp-apiV2-node || docker compose restart node
 
       - name: Verify active containers
         run: docker ps | grep ethicapp-apiV2
@@ -307,7 +311,8 @@ jobs:
       - name: Cleanup on failure
         if: failure()
         run: |
-          cd ~/ethicapp-apiv2
+          cd $WORKDIR
           echo "Cleaning up after failure"
           docker-compose logs ethicapp-apiV2-node || true
           docker-compose logs ethicapp-apiV2-postgres || true
+

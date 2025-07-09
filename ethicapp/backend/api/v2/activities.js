@@ -9,6 +9,7 @@ const { groupingAlgorithms } = require('../../helpers/groups-helper.js');
 const { assignRoles } = require('../../helpers/role-helper.js');
 const ActivityWorkerManager = require('./workers/ActivityWorkerManager');
 
+
 // Configure body-parser to process the body of requests in JSON format.
 router.use(bodyParser.json());
 
@@ -133,14 +134,6 @@ router.post(
           ? JSON.parse(designInstance.design)
           : designInstance.design;
 
-        const existingPhases = await Phase.findAll({ where: { activity_id: activity.id } });
-        const nextPhaseNumber = existingPhases.length + 1;
-        const nextPhaseDesign = design.phases.find(p => p.number === nextPhaseNumber);
-        if (!nextPhaseDesign)
-          return res.status(400).json({ status: 'error', message: 'No more phases available in the design' });
-        if (await Phase.findOne({ where: { activity_id: activity.id, number: nextPhaseNumber } }))
-          return res.status(400).json({ status: 'error', message: 'Phase already initiated' });
-  
         // --- Role assignment before first phase ---
         const roleDefs = Array.isArray(design.roles) ? design.roles : [];
         if (nextPhaseNumber === 1 && roleDefs.length > 0) {
@@ -171,14 +164,6 @@ router.post(
             
         }
 
-        const phase = await Phase.create({
-          number: nextPhaseNumber,
-          mode: nextPhaseDesign.mode || 'individual',
-          anon: nextPhaseDesign.anonymous || nextPhaseDesign.anon || false,
-          chat: nextPhaseDesign.chat || false,
-          prev_ans: (nextPhaseDesign.prevPhasesResponse || []).join(','),
-          activity_id: activity.id
-        });
         // Group creation
         if (nextPhaseDesign.mode === 'group') {
           const { stdntAmount, grouping_algorithm, heteroQuestionIndex } = nextPhaseDesign;
@@ -197,6 +182,7 @@ router.post(
             }
           }
         }
+
         try {
             studentNotifications.phaseTransition(session.id, phase.id);
           } catch (err) {
@@ -267,6 +253,7 @@ router.post(
         return res
           .status(201)
           .json({ status: 'success', data: { activity, liveReportWorker: 'started' } });
+
       } catch (err) {
         console.error('[POST /activities/start] Error:', err);
         return res
