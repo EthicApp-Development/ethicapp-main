@@ -3,14 +3,14 @@
     "username": "ethicapp",
     "password": "ethicapp",
     "database": "ethicapp_dev",
-    "host": "postgres",
+    "host": "ethicapp-apiV2-postgres",
     "dialect": "postgres"
   },
   "test": {
     "username": "ethicapp",
     "password": "ethicapp",
     "database": "ethicapp_dev",
-    "host": "ethicapp-apiV2-postgres",
+    "host": "ethicapp-test-postgres",
     "dialect": "postgres"
   },
   "production": {
