@@ -89,7 +89,10 @@ jobs:
           docker compose -f docker-compose.test.yml down --volumes --remove-orphans || true
           docker rm -f ethicapp-test-node ethicapp-test-postgres || true
           docker volume rm -f postgres_test_data || true
-          rm -rf ./db-test-data-volume || true
+          if [ -d "./db-test-data-volume" ]; then
+            sudo chmod -R 777 ./db-test-data-volume || true
+            sudo rm -rf ./db-test-data-volume || true
+          fi
 
       - name: Install node dependencies in Node container
         run: |
