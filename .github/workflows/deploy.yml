@@ -145,7 +145,7 @@ jobs:
             echo "Tests passed successfully!"
           else
             echo "Tests failed"
-            echo "tests_passed=false" >> $GITHUB_OUTPUT
+            echo "tests_passed=false" >> $GITHUB_OUTPUsT
             exit 1
           fi
 
@@ -153,7 +153,10 @@ jobs:
         if: always()
         run: |
           docker compose -f docker-compose.test.yml down --volumes --remove-orphans
-          sudo rm -rf ./db-test-data-volume || true
+          if [ -d "./db-test-data-volume" ]; then
+            sudo chmod -R 777 ./db-test-data-volume || true
+            sudo rm -rf ./db-test-data-volume || true
+          fi
 
   deploy:
     needs: test
