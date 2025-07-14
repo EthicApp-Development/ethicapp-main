@@ -164,6 +164,15 @@ router.post(
             
         }
 
+        const phase = await Phase.create({
+          number: nextPhaseNumber,
+          mode: nextPhaseDesign.mode || 'individual',
+          anon: nextPhaseDesign.anonymous || nextPhaseDesign.anon || false,
+          chat: nextPhaseDesign.chat || false,
+          prev_ans: (nextPhaseDesign.prevPhasesResponse || []).join(','),
+          activity_id: activity.id
+        });
+
         // Group creation
         if (nextPhaseDesign.mode === 'group') {
           const { stdntAmount, grouping_algorithm, heteroQuestionIndex } = nextPhaseDesign;
