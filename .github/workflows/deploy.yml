@@ -170,7 +170,8 @@ jobs:
 
       - name: Define environment variables
         run: |
-          echo "COMPOSE_PROJECT_NAME=$WORKDIR" >> $GITHUB_ENV
+          echo "WORKDIR=$HOME/ethicapp-apiv2" >> $GITHUB_ENV
+          echo "COMPOSE_PROJECT_NAME=ethicapp-apiv2" >> $GITHUB_ENV
           if [ -f ./.env ]; then
             export $(grep -v '^#' ./.env | xargs)
             echo "DB_USER_NAME=$DB_USER_NAME" >> $GITHUB_ENV
@@ -181,13 +182,11 @@ jobs:
 
       - name: Prepare deployment directory with correct permissions
         run: |
-          # Crear el directorio si no existe
-          mkdir -p $WORKDIR
-
-          # Establecer permisos adecuados
-          chmod -R 755 $WORKDIR
-
+          WORKDIR="$HOME/ethicapp-apiv2"
+          mkdir -p "$WORKDIR"
+          chmod -R 755 "$WORKDIR"
           echo "Deployment directory prepared with correct permissions"
+      
 
       - name: Sync code to runner
         run: |
