@@ -190,6 +190,7 @@ router.post(
             }
           }
         }
+        
 
         try {
             studentNotifications.phaseTransition(session.id, phase.id);
