@@ -80,7 +80,7 @@ describe('POST /activities/end', () => {
         if (startRes.body.status !== 'success') {
             throw new Error('Activity start failed: ' + startRes.body.message);
         }
-        activityId = startRes.body.data.id;
+        activityId = startRes.body.data.activity.id;
     });
 
     it('should end an activity successfully', async () => {
