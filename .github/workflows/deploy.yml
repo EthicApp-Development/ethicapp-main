@@ -10,7 +10,7 @@ on:
       - api-v2
   workflow_dispatch:
 env:
-  WORKDIR: ~/ethicapp-apiv2
+  WORKDIR: $HOME/ethicapp-apiv2
 jobs:
   test:
     runs-on: [self-hosted, apps-runner]
