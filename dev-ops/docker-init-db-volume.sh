@@ -33,13 +33,13 @@ echo "# ----
 sed 's^- "${HOST_DB_VOLUME_PATH}:/var/lib/postgresql/${POSTGRES_VERSION}/main:rw"^[]^g' \
     ./docker-compose.yml >> ${TempComposeFilePath}
 
-docker-compose ${ComposeRewriteFlags} config 1> /dev/null
+docker compose ${ComposeRewriteFlags} config 1> /dev/null
 
 # Here, we also start PgAdmin service, as a trick for ensuring the `up` command does not return
 # until the Postgres service isn't healthy (as it depends on healthiness of Postgres)
-docker-compose ${ComposeRewriteFlags} down --remove-orphans
-docker-compose ${ComposeRewriteFlags} build postgres
-docker-compose ${ComposeRewriteFlags} up --detach postgres pgadmin
+docker compose ${ComposeRewriteFlags} down --remove-orphans
+docker compose ${ComposeRewriteFlags} build postgres
+docker compose ${ComposeRewriteFlags} up --detach postgres pgadmin
 
 # Checking target Postgres role and database exist
 docker exec ethicapp-postgres /bin/bash -c \
@@ -58,11 +58,11 @@ rm -R -v ${TargetVolumePath}/main/
 #* ---
 export HOST_DB_VOLUME_PATH=${TargetVolumePath}
 
-docker-compose down --remove-orphans
+docker compose down --remove-orphans
 
 # Setting mounted volume path defined in this bash script
-docker-compose build postgres
-docker-compose up --detach postgres
+docker compose build postgres
+docker compose up --detach postgres
 
 rm ${TempComposeFilePath}
 echo "[OK] Postgres service up and running with development data volume at ${HOST_DB_VOLUME_PATH}"

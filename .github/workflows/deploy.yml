@@ -322,6 +322,6 @@ jobs:
         run: |
           cd $WORKDIR
           echo "Cleaning up after failure"
-          docker-compose logs ethicapp-apiV2-node || true
-          docker-compose logs ethicapp-apiV2-postgres || true
+          docker compose logs ethicapp-apiV2-node || true
+          docker compose logs ethicapp-apiV2-postgres || true
 
