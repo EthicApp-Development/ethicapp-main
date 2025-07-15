@@ -271,18 +271,23 @@ jobs:
             echo "Database volume does not exist"
           fi
 
-      - name: Initialize database if needed
+      - name: Initialize database if needed (via Docker)
         if: steps.check_db.outputs.db_exists == 'false' || steps.check_db.outputs.db_exists == 'empty'
         run: |
-          cd $WORKDIR
           echo "Initializing database..."
-          
-          if [ -d "./db-data-volume" ]; then
+      
+          if [ -d "$WORKDIR/db-data-volume" ]; then
             echo "Removing empty directory before initialization..."
-            rm -rf ./db-data-volume
+            rm -rf "$WORKDIR/db-data-volume"
           fi
-          
-          npm run init-db
+      
+          docker run --rm \
+            -v "$WORKDIR":/app \
+            -w /app \
+            --user $(id -u):$(id -g) \
+            node:22 \
+            npm run init-db
+      
 
       - name: Build and start containers
         run: |
