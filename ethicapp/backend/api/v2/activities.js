@@ -161,7 +161,6 @@ router.post(
             }
         } else if (nextPhaseNumber === 1) {
             // No roles defined: skip assignment
-            
         }
 
         const phase = await Phase.create({
