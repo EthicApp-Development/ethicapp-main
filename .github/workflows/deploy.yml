@@ -182,13 +182,10 @@ jobs:
       - name: Prepare deployment directory with correct permissions
         run: |
           # Crear el directorio si no existe
-          sudo mkdir -p $WORKDIR
-
-          # Cambiar el propietario al usuario actual
-          sudo chown -R $(whoami):$(whoami) $WORKDIR
+          mkdir -p $WORKDIR
 
           # Establecer permisos adecuados
-          sudo chmod -R 755 $WORKDIR
+          chmod -R 755 $WORKDIR
 
           echo "Deployment directory prepared with correct permissions"
 
