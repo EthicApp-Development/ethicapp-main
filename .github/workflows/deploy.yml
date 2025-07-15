@@ -282,11 +282,12 @@ jobs:
           fi
       
           docker run --rm \
-            -v "$WORKDIR":/app \
+            -v "$(realpath $WORKDIR)":/app \
             -w /app \
             --user $(id -u):$(id -g) \
             node:22 \
             npm run init-db
+        
       
 
       - name: Build and start containers
