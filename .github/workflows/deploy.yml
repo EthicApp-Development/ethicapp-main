@@ -281,12 +281,10 @@ jobs:
             rm -rf "$WORKDIR/db-data-volume"
           fi
       
-          docker run --rm \
-            -v "$(realpath $WORKDIR)":/app \
-            -w /app \
-            --user $(id -u):$(id -g) \
-            node:22 \
-            npm run init-db
+          cd $WORKDIR
+          chmod +x ./dev-ops/docker-init-db-volume-sequelize.sh
+          ./dev-ops/docker-init-db-volume-sequelize.sh
+        
         
       
 
