@@ -1,10 +1,10 @@
 # EthicApp v1
 
-> ⚠️ **Warning:** This is a legacy and deprecated version of EthicApp. It is no longer actively maintained and is used solely for research purposes.
+> This is a legacy version of EthicApp. It is no longer actively maintained and is used solely for research purposes.
 >
 > For current development, see branch `ethicapp-v2`.
 
-This is a containerized version of the EthicApp v1 application for experimental and development purposes.
+This is a containerized version of the EthicApp v1 application for evaluation purposes.
 
 ## 🟢 How to Start the Application
 
