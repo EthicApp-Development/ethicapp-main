@@ -71,7 +71,7 @@ export async function getPhaseNumberByPhaseId(phaseId) {
                 FROM stages
                 WHERE id = $1
             `,
-            sqlParams: [phaseId],
+            sqlParams: [rpg2.param('plain', phaseId)],
         });
 
         if (!result) {

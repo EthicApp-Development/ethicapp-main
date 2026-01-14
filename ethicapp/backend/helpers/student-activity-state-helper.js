@@ -451,7 +451,7 @@ export async function getStudentActivityTasks(designType, sessionId, phases) {
 export async function getStudentActivityTasksForPhase(phaseId) {
     try {
         // Step 1: Fetch the session ID, stage number, and design type
-        const phaseResult = await rpg2.singleSQL({
+        const phaseResult = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
                 SELECT
@@ -463,7 +463,7 @@ export async function getStudentActivityTasksForPhase(phaseId) {
                 JOIN designs d ON d.id = a.design
                 WHERE st.id = $1
             `,
-            sqlParams: [phaseId],
+            sqlParams: [rpg2.param('plain', phaseId)],
         });
 
         if (!phaseResult) {
@@ -1343,7 +1343,7 @@ export async function getCachedPhaseTasks(phaseId, invalidate = false) {
 
     try {
         // Step 1: Retrieve the design type and sessionId associated with the phaseId
-        const phaseResult = await rpg2.singleSQL({
+        const phaseResult = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
                 SELECT
@@ -1354,14 +1354,14 @@ export async function getCachedPhaseTasks(phaseId, invalidate = false) {
                 JOIN designs d ON d.id = a.design
                 WHERE st.id = $1
             `,
-            sqlParams: [phaseId],
+            sqlParams: [rpg2.param('plain', phaseId)],
         });
 
         if (!phaseResult) {
             throw new Error(`No design or session found for phase ID: ${phaseId}`);
         }
 
-        const { session_id: sessionId, design_json: designJson } = phaseResult;
+        const { session_id: sessionId, design_json: designJson } = phaseResult[0];
 
         // Parse the design JSON to extract the design type
         const design = typeof designJson === "string" ? JSON.parse(designJson) : designJson;

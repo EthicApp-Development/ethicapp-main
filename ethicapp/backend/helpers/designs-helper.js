@@ -108,7 +108,7 @@ export async function getPhaseDesignByPhaseId(phaseId) {
                 FROM stages
                 WHERE id = $1
             `,
-            sqlParams: [phaseId],
+            sqlParams: [rpg2.param('plain', phaseId)],
         });
 
         if (!stageResult) {
@@ -126,7 +126,7 @@ export async function getPhaseDesignByPhaseId(phaseId) {
                 FROM activity
                 WHERE session = $1
             `,
-            sqlParams: [sessionId],
+            sqlParams: [rpg2.param('plain', sessionId)],
         });
 
         if (!activityResult) {
@@ -143,7 +143,7 @@ export async function getPhaseDesignByPhaseId(phaseId) {
                 FROM designs
                 WHERE id = $1
             `,
-            sqlParams: [designId],
+            sqlParams: [rpg2.param('plain', designId)],
         });
 
         if (!designResult || !designResult.design) {

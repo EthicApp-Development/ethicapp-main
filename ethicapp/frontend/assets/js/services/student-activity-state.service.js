@@ -22,16 +22,16 @@ let StudentActivityStateService = function($http, StudentSocketService) {
                 service.subscriptions.unsubscribeAll();
             }
             
-            const sessionId = service.sessionId;
+            const sesId = service.sessionId;
             service.sessionId = null;
             service.activityState = null;
 
-            service.notifyListeners("onLeftSession", { sessionId });
+            service.notifyListeners("onLeftSession", { sesId });
         },
         subscribeToActivityEvents: () => {
             // Join the session for the given sessionId
-            StudentSocketService.joinSession(sessionId);
-        
+            StudentSocketService.joinSession(service.sessionId);
+
             const eventSubscriptions = [];
             
             // Subscribe to `onPhaseTransition`

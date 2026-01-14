@@ -78,6 +78,7 @@ const sdItemComponent = {
         phaseNumber: '<?',
         question: '=',
         questionNumber: '=',
+        text: '=',
         validateCallback: '&?',
         showSeparator: '<?',
     },
