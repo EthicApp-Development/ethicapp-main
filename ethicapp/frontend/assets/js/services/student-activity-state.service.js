@@ -248,3 +248,5 @@ let StudentActivityStateService = function($http, StudentSocketService) {
 
     return service;
 };
+
+export default StudentActivityStateService;

@@ -1,7 +1,8 @@
 import { sdAddChatMessage } from "../../helpers/student-chat-helper.js"
 
 export function EthicsController($scope, $http, $timeout, 
-    StudentSocketService, Notification, $sce, $uibModal, $translate) {
+    StudentActivityStateService, StudentSocketService, 
+    Notification, $sce, $uibModal, $translate) {
     var self = $scope;
     self.designId = -1;
     self.iteration = 1;
@@ -524,17 +525,14 @@ export function EthicsController($scope, $http, $timeout,
     };
     
     self.sendChatMsg = function () {
-        // Send the message via WS to the group (the backend will keep the message).
-        StudentSocketService.emitEvent("messageToGroup", {
-            groupId: self.tmId,
-            content: {
-                stage_id: self.currentStageId,
-                parent_id: self.chatmsgreply,
-                did: self.selectedDF,
-                comment: self.chatmsg,
-                uid: self.myUid
-            }
-        });
+        try {
+            // groupId, itemId, message
+            StudentActivityStateService.sendMessageToGroup(
+                self.tmid, self.selectedDF, self.chatmsg);
+        }
+        catch (error) { 
+            console.error("Error sending chat message:", error);
+        }
     };
     
     self.getDocURL = function () {

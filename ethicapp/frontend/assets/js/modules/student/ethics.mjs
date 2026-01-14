@@ -44,15 +44,15 @@ app.controller("LocalesController",
     ["$translate", "$scope", "$rootScope", LocalesController]); 
 app.controller(
     "EthicsController",
-    ["$scope", "$http", "$timeout", "StudentSocketService", 
-        "Notification", "$sce", "$uibModal", "$translate",
+    ["$scope", "$http", "$timeout", "StudentActivityStateService", 
+        "StudentSocketService", "Notification", "$sce", "$uibModal", "$translate",
     EthicsController]);
 
-app.controller(
+/*app.controller(
     "PhaseController",
     ["$scope", "$http", "$timeout", "StudentActivityStateService", 
         "$uibModal", "$translate",
-    PhaseController]);
+    PhaseController]);*/
 
 app.controller("DirectContentController",
     ["$scope", "$uibModalInstance", "data", DirectContentController]);
