@@ -1,13 +1,38 @@
-# Usa una imagen oficial de Node.js 16 como base
-FROM node:12-slim
+# -----------------------------
+# Stage 1: build frontend assets
+# -----------------------------
+FROM node:22-slim AS frontend-builder
 
-# Establece el directorio de trabajo
+WORKDIR /build
+
+# Copiar manifests primero para aprovechar cache
+COPY package*.json ./
+
+# Instalar dependencias completas, incluyendo devDependencies
+RUN npm ci
+
+# Copiar el código necesario para el build
+COPY public ./public
+COPY scripts ./scripts
+COPY modules ./modules
+
+# Ejecutar build del frontend
+RUN npm run build:auth
+
+# -----------------------------
+# Stage 2: legacy runtime
+# -----------------------------
+FROM node:12
+
 WORKDIR /app
 
-# Copia archivos necesarios
+# Copiar manifests
 COPY package*.json ./
-RUN npm install
 
+# Instalar dependencias de producción solamente
+RUN npm install --production
+
+# Copiar código de la aplicación
 COPY app.js ./
 COPY bin ./bin
 COPY public ./public
@@ -16,14 +41,20 @@ COPY views ./views
 COPY modules ./modules
 COPY entrypoint.sh ./entrypoint.sh
 
-# Crea directorio para cargas
-RUN mkdir /app/uploads && chmod 777 /app/uploads
+# Copiar el bundle generado en la etapa moderna
+COPY --from=frontend-builder /build/public/js/auth.bundle.js /app/public/js/auth.bundle.js
 
-# Da permisos al script
+# Si generas sourcemap en desarrollo o en producción, copia también esto:
+# COPY --from=frontend-builder /build/public/js/auth.bundle.js.map /app/public/js/auth.bundle.js.map
+
+# Crear directorios persistentes
+RUN mkdir -p /app/uploads /app/sessions \
+    && chmod 777 /app/uploads \
+    && chmod 755 /app/sessions
+
+# Permisos del entrypoint
 RUN chmod +x ./entrypoint.sh
 
-# Expone el puerto
 EXPOSE 8501
 
-# Entrypoint
 ENTRYPOINT ["./entrypoint.sh"]

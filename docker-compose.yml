@@ -16,8 +16,9 @@ services:
       - "8501:8501"
     volumes:
       - .:/app
-      - /app/node_modules
+      - ethicapp_node_modules:/app/node_modules
       - uploads:/app/uploads
+      - sessions:/app/sessions
     depends_on:
       - postgresql
 
@@ -36,5 +37,7 @@ services:
       - pgdata:/var/lib/postgresql/data
 
 volumes:
+  ethicapp_node_modules:
+  sessions:
   pgdata:
   uploads:
