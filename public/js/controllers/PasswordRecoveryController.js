@@ -1,73 +1,61 @@
 module.exports = [
-  '$scope',
-  '$http',
-  '$window',
-  function PasswordRecoveryController($scope, $http, $window) {
-    $scope.formData = {
-      token: '',
-      password: '',
-      password_confirmation: ''
-    };
+    "$scope",
+    "$http",
+    "$window",
+    function PasswordRecoveryController($scope, $http, $window) {
+        $scope.formData = {
+            token:                 "",
+            password:              "",
+            password_confirmation: ""
+        };
 
-    $scope.errors = {};
-    $scope.isSubmitting = false;
-    $scope.serverError = null;
-    $scope.passwordResetSuccess = false;
+        $scope.isSubmitting = false;
+        $scope.serverError = null;
+        $scope.passwordResetSuccess = false;
+        $scope.showPassword = false;
+        $scope.showPasswordConfirmation = false;
 
-    function getTokenFromUrl() {
-      const params = new URLSearchParams($window.location.search);
-      return params.get('token') || '';
-    }
+        function getTokenFromUrl() {
+            var params = new URLSearchParams($window.location.search);
+            return params.get("token") || "";
+        }
 
-    $scope.formData.token = getTokenFromUrl();
+        $scope.formData.token = getTokenFromUrl();
 
-    $scope.submitNewPassword = function submitNewPassword() {
-      $scope.errors = {};
-      $scope.serverError = null;
-      $scope.passwordResetSuccess = false;
+        $scope.submitNewPassword = function submitNewPassword(form) {
+            $scope.serverError = null;
 
-      if (!$scope.formData.token) {
-        $scope.errors.token = 'Recovery token is required.';
-      }
+            if (!$scope.formData.token) {
+                $scope.serverError = "El enlace de recuperación no es válido.";
+                return;
+            }
 
-      if (!$scope.formData.password) {
-        $scope.errors.password = 'New password is required.';
-      }
+            if (form.$invalid) {
+                return;
+            }
 
-      if (!$scope.formData.password_confirmation) {
-        $scope.errors.password_confirmation = 'Password confirmation is required.';
-      }
+            if ($scope.formData.password !== $scope.formData.password_confirmation) {
+                return;
+            }
 
-      if (
-        $scope.formData.password &&
-        $scope.formData.password_confirmation &&
-        $scope.formData.password !== $scope.formData.password_confirmation
-      ) {
-        $scope.errors.password_confirmation = 'Passwords do not match.';
-      }
+            $scope.isSubmitting = true;
 
-      if (Object.keys($scope.errors).length > 0) {
-        return;
-      }
-
-      $scope.isSubmitting = true;
-
-      $http.post('/newpassword', {
-        token: $scope.formData.token,
-        password: $scope.formData.password,
-        password_confirmation: $scope.formData.password_confirmation
-      })
-        .then(function onSuccess() {
-          $scope.passwordResetSuccess = true;
-        })
-        .catch(function onError(error) {
-          $scope.serverError =
+            $http.post("/newpassword", {
+                token:                 $scope.formData.token,
+                password:              $scope.formData.password,
+                password_confirmation: $scope.formData.password_confirmation
+            })
+                .then(function onSuccess() {
+                    $scope.passwordResetSuccess = true;
+                })
+                .catch(function onError(error) {
+                    $scope.serverError =
             (error.data && error.data.error) ||
-            'Password reset failed. Please request a new recovery link.';
-        })
-        .finally(function onFinally() {
-          $scope.isSubmitting = false;
-        });
-    };
-  }
+            "No se pudo actualizar la contraseña. Solicita un nuevo enlace de recuperación.";
+                })
+                .finally(function onFinally() {
+                    $scope.isSubmitting = false;
+                });
+        };
+    }
 ];

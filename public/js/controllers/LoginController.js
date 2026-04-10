@@ -35,7 +35,7 @@ module.exports = [
                 .catch(function onError(error) {
                     $scope.serverError =
             (error.data && error.data.error) ||
-            "Login failed. Please verify your credentials.";
+            "Falló el acceso. Verifica tus credenciales.";
                 })
                 .finally(function onFinally() {
                     $scope.isSubmitting = false;
