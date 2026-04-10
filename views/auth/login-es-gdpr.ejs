@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es" ng-app="EthicAppAuth">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Iniciar sesión - EthicApp</title>
+
+    <link rel="stylesheet" href="/css/bootstrap5.min.css" />
+    <link rel="stylesheet" href="/css/auth.css" />
+    <link rel="icon" href="img/favicon/favicon.ico" />
+    <link rel="apple-touch-icon" href="img/favicon/logo192.png" />
+</head>
+
+<body>
+    <div class="container auth-page d-flex align-items-center justify-content-center" ng-controller="LoginController">
+        <div class="card auth-card">
+            <div class="card-body p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <img src="img/logos/ethicapp-logo.svg" alt="Logo">
+                    <h1 class="h3 auth-title mb-1">Iniciar sesión</h1>
+                    <p class="text-muted mb-0">Accede con tus credenciales</p>
+                </div>
+
+                <div class="alert alert-danger" role="alert" ng-if="serverError">
+                    {{ serverError }}
+                </div>
+
+                <form name="loginForm" novalidate ng-submit="submitLogin(loginForm)">
+                    <!-- Usuario -->
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Usuario</label>
+                        <input type="text" id="username" name="username" class="form-control"
+                            ng-model="formData.username" ng-trim="true" required autofocus />
+                        <div class="text-danger small mt-1"
+                            ng-if="(loginForm.$submitted || loginForm.username.$touched) && loginForm.username.$error.required">
+                            El usuario es obligatorio.
+                        </div>
+                    </div>
+
+                    <!-- Contraseña -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label for="password" class="form-label mb-0">Contraseña</label>
+                            <a href="/forgot" class="small text-decoration-none">
+                                ¿Has olvidado tu contraseña?
+                            </a>
+                        </div>
+                        <input type="password" id="password" name="password" class="form-control"
+                            ng-model="formData.password" required />
+                        <div class="text-danger small mt-1"
+                            ng-if="(loginForm.$submitted || loginForm.password.$touched) && loginForm.password.$error.required">
+                            La contraseña es obligatoria.
+                        </div>
+                    </div>
+
+                    <!-- Botón -->
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg" ng-disabled="isSubmitting">
+                            <span ng-if="!isSubmitting">Entrar</span>
+                            <span ng-if="isSubmitting">Accediendo...</span>
+                        </button>
+                    </div>
+                </form>
+
+                <hr class="my-4" />
+
+                <p class="text-center mb-0">
+                    <span class="text-muted">¿No tienes cuenta?</span>
+                    <a href="/register" class="text-decoration-none">
+                        Crear cuenta
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/angular.min.js"></script>
+    <script src="/js/auth.bundle.js"></script>
+</body>
+
+</html>

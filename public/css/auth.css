@@ -1,0 +1,28 @@
+body {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #f8f9fa 0%, #eef1f5 100%);
+}
+
+.auth-page {
+    min-height: 100vh;
+    padding-top: 6vh;
+    padding-bottom: 6vh;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 420px;
+    border: 0;
+    border-radius: 1rem;
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.08);
+}
+
+.auth-title {
+    font-weight: 600;
+}
+
+.auth-logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
