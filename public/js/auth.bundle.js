@@ -15253,19 +15253,11 @@
             username: "",
             password: ""
           };
-          $scope.errors = {};
           $scope.isSubmitting = false;
           $scope.serverError = null;
-          $scope.submitLogin = function submitLogin() {
-            $scope.errors = {};
+          $scope.submitLogin = function submitLogin(form) {
             $scope.serverError = null;
-            if (!$scope.formData.username || !$scope.formData.username.trim()) {
-              $scope.errors.username = "Username is required.";
-            }
-            if (!$scope.formData.password || !$scope.formData.password.trim()) {
-              $scope.errors.password = "Password is required.";
-            }
-            if (Object.keys($scope.errors).length > 0) {
+            if (form.$invalid) {
               return;
             }
             $scope.isSubmitting = true;
@@ -15277,7 +15269,7 @@
                 $window.location.href = response.data.redirectTo;
                 return;
               }
-              $window.location.reload();
+              $window.location.href = "/";
             }).catch(function onError(error) {
               $scope.serverError = error.data && error.data.error || "Login failed. Please verify your credentials.";
             }).finally(function onFinally() {
@@ -15308,10 +15300,16 @@
           $scope.isSubmitting = false;
           $scope.serverError = null;
           $scope.registrationSuccess = false;
-          $scope.submitRegistration = function submitRegistration() {
+          $scope.showPassword = false;
+          $scope.showPasswordConfirmation = false;
+          $scope.submitRegistration = function submitRegistration(form) {
             $scope.errors = {};
             $scope.serverError = null;
             $scope.registrationSuccess = false;
+            if (form.$invalid) return;
+            if ($scope.formData.password !== $scope.formData.password_confirmation) {
+              return;
+            }
             if (!$scope.formData.name || !$scope.formData.name.trim()) {
               $scope.errors.name = "Name is required.";
             }
@@ -15416,14 +15414,35 @@
     }
   });
 
+  // public/js/directives/passwordStrength.js
+  var require_passwordStrength = __commonJS({
+    "public/js/directives/passwordStrength.js"(exports, module) {
+      module.exports = function passwordStrengthDirective() {
+        return {
+          require: "ngModel",
+          link: function(scope, element, attrs, ngModel) {
+            ngModel.$validators.passwordStrength = function(value) {
+              if (!value) return false;
+              if (value.length < 10) return false;
+              const symbolCount = (value.match(/[^a-zA-Z0-9]/g) || []).length;
+              if (symbolCount < 2) return false;
+              return true;
+            };
+          }
+        };
+      };
+    }
+  });
+
   // public/js/modules/auth.module.js
   var require_auth_module = __commonJS({
     "public/js/modules/auth.module.js"(exports, module) {
-      var angular3 = require_angular2();
+      var angular3 = window.angular;
       var LoginController = require_LoginController();
       var RegistrationController = require_RegistrationController();
       var PasswordRecoveryController = require_PasswordRecoveryController();
-      module.exports = angular3.module("AuthModule", []).controller("LoginController", LoginController).controller("RegistrationController", RegistrationController).controller("PasswordRecoveryController", PasswordRecoveryController).name;
+      var passwordStrength = require_passwordStrength();
+      module.exports = angular3.module("AuthModule", []).controller("LoginController", LoginController).controller("RegistrationController", RegistrationController).controller("PasswordRecoveryController", PasswordRecoveryController).directive("passwordStrength", passwordStrength).name;
     }
   });
 

@@ -16,8 +16,8 @@ router.get("/login", (req, res) => {
     res.render("auth/login-es-gdpr", {rc: req.query.rc});
 });
 
-router.get("/forgot-pass", function(req,res){
-    res.render("forgot-pass");
+router.get("/forgot", function(req,res){
+    res.render("auth/forgot-es-gdpr", {rc: req.query.rc});
 });
 
 router.get("/logout", (req, res) => {
@@ -52,7 +52,7 @@ router.post("/login", rpg.singleSQL({
 }));
 
 router.get("/register", (req, res) => {
-    res.render("register");
+    res.render("auth/register-es-gdpr");
 });
 
 router.post("/register", rpg.execSQL({
