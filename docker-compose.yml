@@ -44,7 +44,9 @@ services:
     environment:
       - PORT=8502
       - PGUSER=postgres
+      - PGPORT=5432
       - PGPASSWORD=postgres
+      - PGSSLMODE=disable
       - POSTGRES_DB=ethicapp
       - PGHOST=postgresql
       - TRUST_PROXY=1

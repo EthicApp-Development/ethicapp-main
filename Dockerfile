@@ -1,27 +1,3 @@
-# -----------------------------
-# Stage 1: build frontend assets
-# -----------------------------
-FROM node:22-slim AS frontend-builder
-
-WORKDIR /build
-
-# Copiar manifests primero para aprovechar cache
-COPY package*.json ./
-
-# Instalar dependencias completas, incluyendo devDependencies
-RUN npm ci
-
-# Copiar el código necesario para el build
-COPY public ./public
-COPY scripts ./scripts
-COPY modules ./modules
-
-# Ejecutar build del frontend
-RUN npm run build:auth
-
-# -----------------------------
-# Stage 2: legacy runtime
-# -----------------------------
 FROM node:12
 
 WORKDIR /app
@@ -29,7 +5,7 @@ WORKDIR /app
 # Copiar manifests
 COPY package*.json ./
 
-# Instalar dependencias de producción solamente
+# Instalar dependencias de producción
 RUN npm install --production
 
 # Copiar código de la aplicación
@@ -39,13 +15,8 @@ COPY public ./public
 COPY routes ./routes
 COPY views ./views
 COPY modules ./modules
+COPY middlewares ./middlewares
 COPY entrypoint.sh ./entrypoint.sh
-
-# Copiar el bundle generado en la etapa moderna
-COPY --from=frontend-builder /build/public/js/auth.bundle.js /app/public/js/auth.bundle.js
-
-# Si generas sourcemap en desarrollo o en producción, copia también esto:
-# COPY --from=frontend-builder /build/public/js/auth.bundle.js.map /app/public/js/auth.bundle.js.map
 
 # Crear directorios persistentes
 RUN mkdir -p /app/uploads /app/sessions \
@@ -58,3 +29,4 @@ RUN chmod +x ./entrypoint.sh
 EXPOSE 8501
 
 ENTRYPOINT ["./entrypoint.sh"]
+CMD ["node", "bin/www"]

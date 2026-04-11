@@ -1,6 +1,6 @@
 const { Pool } = require('pg');
 
-const isProduction = process.env.NODE_ENV === 'production';
+const useSsl = process.env.PGSSLMODE === 'require';
 
 const pool = new Pool({
   host: process.env.PGHOST || 'localhost',
@@ -13,19 +13,17 @@ const pool = new Pool({
   idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT || 30000),
   connectionTimeoutMillis: Number(process.env.PG_CONN_TIMEOUT || 2000),
 
-  ssl: isProduction
+  ssl: useSsl
     ? {
         rejectUnauthorized: false
       }
     : false
 });
 
-// Logging de errores del pool (MUY importante en producción)
 pool.on('error', (err) => {
   console.error('Unexpected error on idle PostgreSQL client', err);
 });
 
-// Función helper opcional
 async function query(text, params) {
   const start = Date.now();
 
