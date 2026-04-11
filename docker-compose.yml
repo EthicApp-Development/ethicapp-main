@@ -1,6 +1,19 @@
 version: '3.8'
 
 services:
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: ethicapp-nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - ethicapp
+      - auth-backend
+    volumes:
+      - uploads:/var/www/uploads:ro
+
   ethicapp:
     build:
       context: .
@@ -12,13 +25,34 @@ services:
       - PGPASSWORD=postgres
       - POSTGRES_DB=ethicapp
       - PGHOST=postgresql
-    ports:
-      - "8501:8501"
+      - TRUST_PROXY=1
+    expose:
+      - "8501"
     volumes:
       - .:/app
       - ethicapp_node_modules:/app/node_modules
       - uploads:/app/uploads
       - sessions:/app/sessions
+    depends_on:
+      - postgresql
+
+  auth-backend:
+    build:
+      context: ./auth-backend
+      dockerfile: Dockerfile
+    container_name: ethicapp-auth
+    environment:
+      - PORT=8502
+      - PGUSER=postgres
+      - PGPASSWORD=postgres
+      - POSTGRES_DB=ethicapp
+      - PGHOST=postgresql
+      - TRUST_PROXY=1
+      - NODE_ENV=production
+      - SESSION_COOKIE_NAME=auth.sid
+      - SESSION_SECRET=${SESSION_SECRET}
+    expose:
+      - "8502"
     depends_on:
       - postgresql
 
