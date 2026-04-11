@@ -5,12 +5,13 @@
   "scripts": {
     "start": "node ./bin/www",
     "test": "mocha tests",
-    "copy:assets": "cp node_modules/angular/angular.min.js public/js/angular.min.js && cp node_modules/bootstrap/dist/css/bootstrap.min.css public/css/bootstrap5.min.css",    
+    "copy:assets": "cp node_modules/angular/angular.min.js public/js/angular.min.js && cp node_modules/bootstrap/dist/css/bootstrap.min.css public/css/bootstrap5.min.css",
     "build:auth": "node scripts/build-auth.js --production",
     "dev:auth": "node scripts/build-auth.js",
     "watch:auth": "node scripts/watch-auth.js"
   },
   "dependencies": {
+    "@popperjs/core": "^2.11.8",
     "angular": "^1.5.11",
     "body-parser": "^1.19.0",
     "bootstrap": "^5.3.8",
