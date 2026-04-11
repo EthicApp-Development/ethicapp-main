@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
+    "create:user": "node scripts/create-user.js",
+    "create:admin": "node scripts/create-admin.js",
     "frontend:dev": "cd frontend && npm run dev",
     "frontend:build": "cd frontend && npm run build"
   },

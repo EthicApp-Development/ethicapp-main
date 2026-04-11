@@ -51,6 +51,9 @@ services:
       - NODE_ENV=production
       - SESSION_COOKIE_NAME=auth.sid
       - SESSION_SECRET=${SESSION_SECRET}
+      - CREATE_ADMIN=true
+      - SEED_USERS=true
+      - WAIT_FOR_DB=true      
     expose:
       - "8502"
     depends_on:

@@ -163,4 +163,7 @@ app.use(function errorHandler(err, req, res, next) {
   });
 });
 
+app.use('/', viewRoutes);
+app.use('/', authRoutes);
+
 module.exports = app;
