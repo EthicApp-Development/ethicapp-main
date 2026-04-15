@@ -4,6 +4,8 @@ import PasswordField from './PasswordField';
 import TextField from '../common/TextField';
 import SelectField from '../common/SelectField';
 import { register } from '../../api/authApi';
+import RecaptchaField from '../common/RecaptchaField';
+import { recaptchaSiteKey } from '../../config/env';
 
 function RegisterForm() {
   const navigate = useNavigate();
@@ -16,13 +18,15 @@ function RegisterForm() {
     gender: '',
     password: '',
     password_confirmation: '',
-    acceptPrivacy: false
+    acceptPrivacy: false,
+    recaptchaToken: ''
   });
 
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [recaptchaResetCounter, setRecaptchaResetCounter] = useState(0);
 
   const genderOptions = [
     { value: 'F', label: 'Femenino' },
@@ -104,6 +108,10 @@ function RegisterForm() {
         'Debes aceptar la Política de Privacidad para crear una cuenta.';
     }
 
+    if (recaptchaSiteKey && !formData.recaptchaToken) {
+      nextErrors.recaptcha = 'Debes completar el reCAPTCHA.';
+    }
+
     return nextErrors;
   }
 
@@ -129,7 +137,8 @@ function RegisterForm() {
         email: formData.email.trim(),
         gender: formData.gender,
         password: formData.password,
-        password_confirmation: formData.password_confirmation
+        password_confirmation: formData.password_confirmation,
+        recaptcha_token: formData.recaptchaToken
       });
 
       setSuccessMessage('Cuenta creada correctamente. Ya puedes iniciar sesión.');
@@ -146,6 +155,8 @@ function RegisterForm() {
       setServerError(message);
     } finally {
       setIsSubmitting(false);
+      setRecaptchaResetCounter((current) => current + 1);
+      setFormData((current) => ({ ...current, recaptchaToken: '' }));
     }
   }
 
@@ -251,6 +262,22 @@ function RegisterForm() {
         error={errors.password_confirmation}
         autoComplete="new-password"
         required
+      />
+
+      <RecaptchaField
+        siteKey={recaptchaSiteKey}
+        onChange={(token) => {
+          setFormData((current) => ({
+            ...current,
+            recaptchaToken: token
+          }));
+          setErrors((current) => ({
+            ...current,
+            recaptcha: ''
+          }));
+        }}
+        resetCounter={recaptchaResetCounter}
+        error={errors.recaptcha}
       />
 
       <div className="auth-form-actions">

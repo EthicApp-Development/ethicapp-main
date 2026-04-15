@@ -1,33 +1,27 @@
 import axios from 'axios';
+import { authApiBaseUrl } from '../config/env';
+
+const authApiClient = axios.create({
+  baseURL: authApiBaseUrl,
+  withCredentials: true
+});
 
 export async function login(credentials) {
-  const response = await axios.post('/api/auth/login', credentials, {
-    withCredentials: true
-  });
-
+  const response = await authApiClient.post('/login', credentials);
   return response.data;
 }
 
 export async function register(payload) {
-  const response = await axios.post('/api/auth/register', payload, {
-    withCredentials: true
-  });
-
+  const response = await authApiClient.post('/register', payload);
   return response.data;
 }
 
 export async function forgotPassword(payload) {
-  const response = await axios.post('/api/auth/forgot', payload, {
-    withCredentials: true
-  });
-
+  const response = await authApiClient.post('/forgot', payload);
   return response.data;
 }
 
 export async function resetPassword(payload) {
-  const response = await axios.post('/api/auth/newpassword', payload, {
-    withCredentials: true
-  });
-
+  const response = await authApiClient.post('/newpassword', payload);
   return response.data;
 }

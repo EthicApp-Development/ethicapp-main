@@ -3,6 +3,8 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
 const db = require('../config/database');
+const mailService = require('../services/mail.service');
+const recaptchaService = require('../services/recaptcha.service');
 
 const router = express.Router();
 
@@ -139,6 +141,7 @@ router.post('/register', async (req, res) => {
     const email = (req.body.email || '').trim().toLowerCase();
     const password = req.body.password || '';
     const passwordConfirmation = req.body.password_confirmation || '';
+    const recaptchaToken = (req.body.recaptcha_token || '').trim();
 
     if (!name || !lastname || !dni || !gender || !password || !passwordConfirmation) {
       return res.status(400).json({
@@ -146,7 +149,19 @@ router.post('/register', async (req, res) => {
       });
     }
 
+    const isHuman = await recaptchaService.verifyRecaptchaToken({
+      token: recaptchaToken,
+      remoteIp: req.ip
+    });
+
+    if (!isHuman) {
+      return res.status(400).json({
+        error: 'Validación reCAPTCHA inválida'
+      });
+    }
+
     if (password !== passwordConfirmation) {
+
       return res.status(400).json({
         error: 'Las contraseñas no coinciden'
       });
@@ -267,16 +282,28 @@ router.post('/logout', (req, res) => {
  *   email
  * }
  *
- * This implementation stores a reset token digest and expiry in the users table.
- * Sending the email is intentionally left out here to keep the data layer simple.
+ * This implementation stores a reset token digest and expiry in the users table
+ * and then sends an email with the reset link.
  */
 router.post('/forgot', async (req, res) => {
   try {
     const email = (req.body.email || '').trim().toLowerCase();
+    const recaptchaToken = (req.body.recaptcha_token || '').trim();
 
     if (!email) {
       return res.status(400).json({
         error: 'El correo es obligatorio'
+      });
+    }
+
+    const isHuman = await recaptchaService.verifyRecaptchaToken({
+      token: recaptchaToken,
+      remoteIp: req.ip
+    });
+
+    if (!isHuman) {
+      return res.status(400).json({
+        error: 'Validación reCAPTCHA inválida'
       });
     }
 
@@ -313,16 +340,14 @@ router.post('/forgot', async (req, res) => {
       [tokenDigest, expiresAt, user.id]
     );
 
-    const response = {
+    await mailService.sendPasswordResetEmail({
+      to: user.mail,
+      rawToken
+    });
+
+    return res.json({
       message: 'Si el correo existe, recibirás instrucciones para restablecer la contraseña'
-    };
-
-    if (process.env.NODE_ENV !== 'production') {
-      response.reset_token = rawToken;
-      response.reset_url = `/newpassword?token=${rawToken}`;
-    }
-
-    return res.json(response);
+    });
   } catch (err) {
     console.error('FORGOT PASSWORD ERROR:', err);
     return res.status(500).json({
