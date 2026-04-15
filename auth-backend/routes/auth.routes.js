@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
 const db = require('../config/database');
+const mailService = require('../services/mail.service');
 
 const router = express.Router();
 
@@ -267,8 +268,8 @@ router.post('/logout', (req, res) => {
  *   email
  * }
  *
- * This implementation stores a reset token digest and expiry in the users table.
- * Sending the email is intentionally left out here to keep the data layer simple.
+ * This implementation stores a reset token digest and expiry in the users table
+ * and then sends an email with the reset link.
  */
 router.post('/forgot', async (req, res) => {
   try {
@@ -313,16 +314,14 @@ router.post('/forgot', async (req, res) => {
       [tokenDigest, expiresAt, user.id]
     );
 
-    const response = {
+    await mailService.sendPasswordResetEmail({
+      to: user.mail,
+      rawToken
+    });
+
+    return res.json({
       message: 'Si el correo existe, recibirás instrucciones para restablecer la contraseña'
-    };
-
-    if (process.env.NODE_ENV !== 'production') {
-      response.reset_token = rawToken;
-      response.reset_url = `/newpassword?token=${rawToken}`;
-    }
-
-    return res.json(response);
+    });
   } catch (err) {
     console.error('FORGOT PASSWORD ERROR:', err);
     return res.status(500).json({
