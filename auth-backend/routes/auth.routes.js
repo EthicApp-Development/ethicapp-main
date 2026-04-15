@@ -4,6 +4,7 @@ const crypto = require('crypto');
 
 const db = require('../config/database');
 const mailService = require('../services/mail.service');
+const recaptchaService = require('../services/recaptcha.service');
 
 const router = express.Router();
 
@@ -140,6 +141,7 @@ router.post('/register', async (req, res) => {
     const email = (req.body.email || '').trim().toLowerCase();
     const password = req.body.password || '';
     const passwordConfirmation = req.body.password_confirmation || '';
+    const recaptchaToken = (req.body.recaptcha_token || '').trim();
 
     if (!name || !lastname || !dni || !gender || !password || !passwordConfirmation) {
       return res.status(400).json({
@@ -147,7 +149,19 @@ router.post('/register', async (req, res) => {
       });
     }
 
+    const isHuman = await recaptchaService.verifyRecaptchaToken({
+      token: recaptchaToken,
+      remoteIp: req.ip
+    });
+
+    if (!isHuman) {
+      return res.status(400).json({
+        error: 'Validación reCAPTCHA inválida'
+      });
+    }
+
     if (password !== passwordConfirmation) {
+
       return res.status(400).json({
         error: 'Las contraseñas no coinciden'
       });
@@ -274,10 +288,22 @@ router.post('/logout', (req, res) => {
 router.post('/forgot', async (req, res) => {
   try {
     const email = (req.body.email || '').trim().toLowerCase();
+    const recaptchaToken = (req.body.recaptcha_token || '').trim();
 
     if (!email) {
       return res.status(400).json({
         error: 'El correo es obligatorio'
+      });
+    }
+
+    const isHuman = await recaptchaService.verifyRecaptchaToken({
+      token: recaptchaToken,
+      remoteIp: req.ip
+    });
+
+    if (!isHuman) {
+      return res.status(400).json({
+        error: 'Validación reCAPTCHA inválida'
       });
     }
 

@@ -2,16 +2,20 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import TextField from '../common/TextField';
 import { forgotPassword } from '../../api/authApi';
+import RecaptchaField from '../common/RecaptchaField';
+import { recaptchaSiteKey } from '../../config/env';
 
 function ForgotPasswordForm() {
   const [formData, setFormData] = useState({
-    email: ''
+    email: '',
+    recaptchaToken: ''
   });
 
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [recaptchaResetCounter, setRecaptchaResetCounter] = useState(0);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -43,6 +47,10 @@ function ForgotPasswordForm() {
       nextErrors.email = 'Introduce un correo electrónico válido.';
     }
 
+    if (recaptchaSiteKey && !formData.recaptchaToken) {
+      nextErrors.recaptcha = 'Debes completar el reCAPTCHA.';
+    }
+
     return nextErrors;
   }
 
@@ -62,7 +70,8 @@ function ForgotPasswordForm() {
       setIsSubmitting(true);
 
       await forgotPassword({
-        email: formData.email.trim()
+        email: formData.email.trim(),
+        recaptcha_token: formData.recaptchaToken
       });
 
       setSuccessMessage(
@@ -77,6 +86,8 @@ function ForgotPasswordForm() {
       setServerError(message);
     } finally {
       setIsSubmitting(false);
+      setRecaptchaResetCounter((current) => current + 1);
+      setFormData((current) => ({ ...current, recaptchaToken: '' }));
     }
   }
 
@@ -111,6 +122,22 @@ function ForgotPasswordForm() {
         Introduce el correo asociado a tu cuenta y te enviaremos un enlace para
         restablecer tu contraseña.
       </div>
+
+      <RecaptchaField
+        siteKey={recaptchaSiteKey}
+        onChange={(token) => {
+          setFormData((current) => ({
+            ...current,
+            recaptchaToken: token
+          }));
+          setErrors((current) => ({
+            ...current,
+            recaptcha: ''
+          }));
+        }}
+        resetCounter={recaptchaResetCounter}
+        error={errors.recaptcha}
+      />
 
       <div className="auth-form-actions">
         <button
