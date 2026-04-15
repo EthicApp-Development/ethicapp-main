@@ -27,7 +27,7 @@ app.use(express.json());
 // --------------------------------------------------
 // Static assets
 // --------------------------------------------------
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public', 'app')));
 
 // --------------------------------------------------
 // Session
@@ -143,9 +143,11 @@ app.get('/auth/session/check', function sessionCheckHandler(req, res) {
 // 404
 // --------------------------------------------------
 app.use(function notFoundHandler(req, res) {
-  res.status(404).render('404', {
-    title: 'Página no encontrada'
-  });
+  if (req.path.startsWith('/auth/') || req.path === '/login' || req.path === '/register' || req.path === '/forgot' || req.path === '/reset-password') {
+    return res.status(404).send('Not found');
+  }
+
+  return res.status(404).send('Not found');
 });
 
 // --------------------------------------------------
@@ -158,12 +160,10 @@ app.use(function errorHandler(err, req, res, next) {
     return next(err);
   }
 
-  res.status(500).render('500', {
-    title: 'Error interno del servidor'
+  return res.status(500).json({
+    error: 'Internal server error'
   });
 });
 
-app.use('/', viewRoutes);
-app.use('/', authRoutes);
 
 module.exports = app;
