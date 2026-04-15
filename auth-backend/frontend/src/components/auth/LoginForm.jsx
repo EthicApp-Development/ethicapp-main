@@ -138,6 +138,14 @@ function LoginForm() {
             'Entrar'
           )}
         </button>
+        <div className="text-center mt-3">
+            <p className="small text-muted mb-0">
+                Al continuar, aceptas nuestra{' '}
+                <Link to="/privacy" className="text-decoration-none">
+                Política de Privacidad
+                </Link>.
+            </p>
+        </div>
       </div>
     </form>
   );

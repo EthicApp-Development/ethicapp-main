@@ -15,7 +15,8 @@ function RegisterForm() {
     email: '',
     gender: '',
     password: '',
-    password_confirmation: ''
+    password_confirmation: '',
+    acceptPrivacy: false
   });
 
   const [errors, setErrors] = useState({});
@@ -40,11 +41,11 @@ function RegisterForm() {
   }, [formData.password]);
 
   function handleChange(event) {
-    const { name, value } = event.target;
+    const { name, type, value, checked } = event.target;
 
     setFormData((current) => ({
       ...current,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
 
     setErrors((current) => ({
@@ -96,6 +97,11 @@ function RegisterForm() {
       nextErrors.password_confirmation = 'Debes confirmar la contraseña.';
     } else if (formData.password !== formData.password_confirmation) {
       nextErrors.password_confirmation = 'Las contraseñas no coinciden.';
+    }
+
+    if (!formData.acceptPrivacy) {
+      nextErrors.acceptPrivacy =
+        'Debes aceptar la Política de Privacidad para crear una cuenta.';
     }
 
     return nextErrors;
@@ -265,6 +271,33 @@ function RegisterForm() {
             'Crear cuenta'
           )}
         </button>
+
+        <div className="form-check mt-3">
+          <input
+            className={`form-check-input ${errors.acceptPrivacy ? 'is-invalid' : ''}`}
+            type="checkbox"
+            id="acceptPrivacy"
+            name="acceptPrivacy"
+            checked={formData.acceptPrivacy}
+            onChange={handleChange}
+          />
+          <label className="form-check-label" htmlFor="acceptPrivacy">
+            He leído y acepto la{' '}
+            <Link to="/privacy">Política de Privacidad</Link>.
+          </label>
+          {errors.acceptPrivacy ? (
+            <div className="invalid-feedback d-block">
+              {errors.acceptPrivacy}
+            </div>
+          ) : null}
+            <p className="small text-muted">
+            Tus datos se utilizarán para gestionar tu cuenta y el uso de la plataforma.
+            El uso de datos con fines de investigación se realizará únicamente con tu
+            consentimiento explícito en el contexto de estudios específicos.
+            Consulta más información en nuestra{' '}
+            <Link to="/privacy">Política de Privacidad</Link>.
+            </p>          
+        </div>
       </div>
 
       <hr className="auth-divider" />
