@@ -1,27 +1,33 @@
 import axios from 'axios';
 
-const api = axios.create({
-  withCredentials: true
-});
+export async function login(credentials) {
+  const response = await axios.post('/api/auth/login', credentials, {
+    withCredentials: true
+  });
 
-export async function login(payload) {
-  const { data } = await api.post('/login', payload);
-  return data;
+  return response.data;
 }
 
 export async function register(payload) {
-  const { data } = await api.post('/register', payload);
-  return data;
+  const response = await axios.post('/api/auth/register', payload, {
+    withCredentials: true
+  });
+
+  return response.data;
 }
 
 export async function forgotPassword(payload) {
-  const { data } = await api.post('/forgot', payload);
-  return data;
+  const response = await axios.post('/api/auth/forgot', payload, {
+    withCredentials: true
+  });
+
+  return response.data;
 }
 
 export async function resetPassword(payload) {
-  const { data } = await api.post('/reset-password', payload);
-  return data;
-}
+  const response = await axios.post('/api/auth/newpassword', payload, {
+    withCredentials: true
+  });
 
-export default api;
+  return response.data;
+}

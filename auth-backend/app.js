@@ -27,6 +27,11 @@ app.use(express.json());
 // --------------------------------------------------
 // Static assets
 // --------------------------------------------------
+app.use(
+  '/auth-assets',
+  express.static(path.join(__dirname, 'public', 'app', 'assets'))
+);
+
 app.use(express.static(path.join(__dirname, 'public', 'app')));
 
 // --------------------------------------------------
@@ -115,7 +120,7 @@ app.use(function exposeAuthState(req, res, next) {
 // Routes
 // --------------------------------------------------
 app.use('/', viewRoutes);
-app.use('/', authRoutes);
+app.use('/api/auth', authRoutes);
 
 // --------------------------------------------------
 // Health check

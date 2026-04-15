@@ -66,7 +66,7 @@ function LoginForm() {
       });
 
       const redirectTo = response?.redirectTo || '/';
-      navigate(redirectTo, { replace: true });
+      window.location.assign(redirectTo);
     } catch (error) {
       const message =
         error?.response?.data?.error ||
@@ -141,7 +141,7 @@ function LoginForm() {
         <div className="text-center mt-3">
             <p className="small text-muted mb-0">
                 Al continuar, aceptas nuestra{' '}
-                <Link to="/privacy" className="text-decoration-none">
+                <Link to="/privacy">
                 Política de Privacidad
                 </Link>.
             </p>

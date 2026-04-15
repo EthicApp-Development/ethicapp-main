@@ -36,20 +36,14 @@ function getResetTokenExpiryDate() {
   return expiresAt;
 }
 
-/**
- * POST /login
- *
- * Expects:
- * {
- *   username,
- *   password
- * }
- *
- * Notes:
- * - "username" is treated as a generic login identifier.
- * - This version tries to match either dni or email.
- */
-router.post('/login', async (req, res) => {
+function getPostLoginRedirect(role) {
+  if (role === 'A') return '/seslist';
+  if (role === 'P') return '/admin';
+  if (role === 'S') return '/super';
+  return '/login';
+}
+
+router.post('/login', async (req, res, next) => {
   try {
     const username = (req.body.username || '').trim();
     const password = req.body.password || '';
@@ -64,7 +58,7 @@ router.post('/login', async (req, res) => {
       `
         SELECT
           id,
-          dni,
+          rut,
           mail,
           role,
           auth_provider,
@@ -72,7 +66,7 @@ router.post('/login', async (req, res) => {
           password_bcrypt
         FROM users
         WHERE active = true
-          AND (dni = $1 OR mail = $1)
+          AND (rut = $1 OR mail = $1)
         LIMIT 1
       `,
       [username]
@@ -85,9 +79,7 @@ router.post('/login', async (req, res) => {
     }
 
     const user = userResult.rows[0];
-    let validPassword = false;
-
-    validPassword = await bcrypt.compare(password, user.password_bcrypt);
+    const validPassword = await bcrypt.compare(password, user.password_bcrypt);
 
     if (!validPassword) {
       return res.status(401).json({
@@ -95,16 +87,27 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    req.session.user = {
-      id: user.id,
-      role: user.role,
-      provider: user.auth_provider || 'local'
-    };
+    req.login(
+      {
+        id: user.id,
+        role: user.role,
+        email: user.mail,
+        auth_provider: user.auth_provider || 'local',
+        is_active: user.active
+      },
+      function (err) {
+        if (err) {
+          return next(err);
+        }
 
-    return res.json({
-      message: 'Login exitoso',
-      redirectTo: '/'
-    });
+        const redirectTo = getPostLoginRedirect(user.role);
+
+        return res.json({
+          message: 'Login exitoso',
+          redirectTo
+        });
+      }
+    );
   } catch (err) {
     console.error('LOGIN ERROR:', err);
     return res.status(500).json({
@@ -165,7 +168,7 @@ router.post('/register', async (req, res) => {
       `
         SELECT id
         FROM users
-        WHERE dni = $1
+        WHERE rut = $1
            OR ($2 <> '' AND mail = $2)
         LIMIT 1
       `,
@@ -183,7 +186,7 @@ router.post('/register', async (req, res) => {
     const insertResult = await db.query(
       `
         INSERT INTO users
-          (name, lastname, dni, gender, mail, role, password_bcrypt, auth_provider, active)
+          (name, lastname, rut, gender, mail, role, password_bcrypt, auth_provider, active)
         VALUES
           ($1, $2, $3, $4, NULLIF($5, ''), $6, $7, $8, true)
         RETURNING id
@@ -316,7 +319,7 @@ router.post('/forgot', async (req, res) => {
 
     if (process.env.NODE_ENV !== 'production') {
       response.reset_token = rawToken;
-      response.reset_url = `/reset-password?token=${rawToken}`;
+      response.reset_url = `/newpassword?token=${rawToken}`;
     }
 
     return res.json(response);
