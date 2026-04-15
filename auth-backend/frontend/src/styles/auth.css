@@ -155,3 +155,29 @@
   object-fit: contain;
   margin-bottom: 0.75rem;
 }
+
+.cookie-notice-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1080;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.cookie-notice-overlay__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+}
+
+.cookie-notice-overlay__dialog {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 36rem;
+  border: 0;
+  border-radius: 1rem;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.18);
+}
