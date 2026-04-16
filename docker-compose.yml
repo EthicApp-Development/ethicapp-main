@@ -19,13 +19,9 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: ethicapp
-    environment:
-      - PORT=8501
-      - PGUSER=postgres
-      - PGPASSWORD=postgres
-      - POSTGRES_DB=ethicapp
-      - PGHOST=postgresql
-      - TRUST_PROXY=1
+    env_file:
+      - ./.env.shared
+      - ./.env
     expose:
       - "8501"
     volumes:
@@ -41,21 +37,11 @@ services:
       context: ./auth-backend
       dockerfile: Dockerfile
     container_name: ethicapp-auth
+    env_file:
+      - ./.env.shared
+      - ./auth-backend/.env
     environment:
-      - PORT=8502
-      - PGUSER=postgres
-      - PGPORT=5432
-      - PGPASSWORD=postgres
-      - PGSSLMODE=disable
-      - POSTGRES_DB=ethicapp
-      - PGHOST=postgresql
-      - TRUST_PROXY=1
       - NODE_ENV=production
-      - SESSION_COOKIE_NAME=auth.sid
-      - SESSION_SECRET=${SESSION_SECRET}
-      - CREATE_ADMIN=true
-      - SEED_USERS=true
-      - WAIT_FOR_DB=true      
     expose:
       - "8502"
     depends_on:

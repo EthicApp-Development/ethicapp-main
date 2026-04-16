@@ -2,21 +2,11 @@ version: '3.8'
 
 services:
   auth-backend:
+    env_file:
+      - ./.env.shared
+      - ./auth-backend/.env
     environment:
       - NODE_ENV=development
-      - PORT=8502
-      - PGUSER=postgres
-      - PGPORT=5432
-      - PGPASSWORD=postgres
-      - PGSSLMODE=disable
-      - POSTGRES_DB=ethicapp
-      - PGHOST=postgresql
-      - TRUST_PROXY=1
-      - SESSION_COOKIE_NAME=auth.sid
-      - SESSION_SECRET=${SESSION_SECRET}
-      - CREATE_ADMIN=true
-      - SEED_USERS=true
-      - WAIT_FOR_DB=true
     volumes:
       - ./auth-backend:/app
       - auth_backend_node_modules:/app/node_modules
