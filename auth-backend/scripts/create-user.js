@@ -1,11 +1,12 @@
 require('dotenv').config();
 
-const pool = require('../config/database');
+const pool = require('../config/database.js');
 const bcrypt = require('bcrypt');
 
 async function main() {
   const [
-    name,
+    firstname,
+    lastname,
     rut,
     email,
     password,
@@ -13,24 +14,25 @@ async function main() {
     sex = 'M'
   ] = process.argv.slice(2);
 
-  if (!name || !rut || !email || !password) {
+  if (!firstname || !lastname || !rut || !email || !password) {
     console.error(`
 Uso:
-node scripts/create-user.js <name> <rut> <email> <password> [role] [sex]
+node scripts/create-user.js <firstname> <lastname> <rut> <email> <password> [role] [sex]
 `);
     process.exit(1);
   }
 
   const hash = await bcrypt.hash(password, 12);
+  const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
 
   await pool.query(
     `
-    INSERT INTO users
-      (name, rut, pass, mail, sex, role, password_bcrypt, auth_provider, active)
-    VALUES
-      ($1, $2, '', $3, $4, $5, $6, 'local', true)
+      INSERT INTO users
+        (firstname, lastname, name, rut, mail, sex, role, password_bcrypt, auth_provider, active)
+      VALUES
+        ($1, $2, $3, $4, $5, $6, $7, $8, 'local', true)
     `,
-    [name, rut, email, sex, role, hash]
+    [firstname, lastname, fullName, rut, email, sex, role, hash]
   );
 
   console.log(`✔ Usuario creado: ${email}`);

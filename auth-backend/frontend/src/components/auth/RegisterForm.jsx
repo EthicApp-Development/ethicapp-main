@@ -11,7 +11,7 @@ function RegisterForm() {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    name: '',
+    firstname: '',
     lastname: '',
     dni: '',
     email: '',
@@ -68,8 +68,8 @@ function RegisterForm() {
   function validate() {
     const nextErrors = {};
 
-    if (!formData.name.trim()) {
-      nextErrors.name = 'El nombre es obligatorio.';
+    if (!formData.firstname.trim()) {
+      nextErrors.firstname = 'El nombre es obligatorio.';
     }
 
     if (!formData.lastname.trim()) {
@@ -131,7 +131,7 @@ function RegisterForm() {
       setIsSubmitting(true);
 
       await register({
-        name: formData.name.trim(),
+        firstname: formData.firstname.trim(),
         lastname: formData.lastname.trim(),
         dni: formData.dni.trim(),
         email: formData.email.trim(),
@@ -175,12 +175,12 @@ function RegisterForm() {
       ) : null}
 
       <TextField
-        id="name"
-        name="name"
+        id="firstname"
+        name="firstname"
         label="Nombre"
-        value={formData.name}
+        value={formData.firstname}
         onChange={handleChange}
-        error={errors.name}
+        error={errors.firstname}
         autoComplete="given-name"
         autoFocus
         required

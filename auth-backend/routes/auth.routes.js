@@ -134,6 +134,7 @@ router.post('/login', async (req, res, next) => {
  */
 router.post('/register', async (req, res) => {
   try {
+    const firstname = (req.body.firstname || '').trim();
     const name = (req.body.name || '').trim();
     const lastname = (req.body.lastname || '').trim();
     const dni = (req.body.dni || '').trim();
@@ -143,7 +144,7 @@ router.post('/register', async (req, res) => {
     const passwordConfirmation = req.body.password_confirmation || '';
     const recaptchaToken = (req.body.recaptcha_token || '').trim();
 
-    if (!name || !lastname || !dni || !gender || !password || !passwordConfirmation) {
+    if (!firstname || !lastname || !dni || !gender || !password || !passwordConfirmation) {
       return res.status(400).json({
         error: 'Faltan campos obligatorios'
       });
@@ -198,16 +199,18 @@ router.post('/register', async (req, res) => {
 
     const passwordBcrypt = await bcrypt.hash(password, SALT_ROUNDS);
 
+    const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
+
     const insertResult = await db.query(
-      `
-        INSERT INTO users
-          (name, lastname, rut, gender, mail, role, password_bcrypt, auth_provider, active)
-        VALUES
-          ($1, $2, $3, $4, NULLIF($5, ''), $6, $7, $8, true)
-        RETURNING id
-      `,
-      [name, lastname, dni, gender, email, 'A', passwordBcrypt, 'local']
-    );
+        `
+            INSERT INTO users
+            (firstname, lastname, name, rut, gender, mail, role, password_bcrypt, auth_provider, active)
+            VALUES
+            ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8, $9, true)
+            RETURNING id
+        `,
+        [firstname, lastname, fullName, dni, gender, email, 'A', passwordBcrypt, 'local']
+        );
 
     return res.status(201).json({
       message: 'Usuario creado correctamente',

@@ -20,7 +20,8 @@ function main() {
 
   // Profesor
   createUser([
-    'Profesor Demo',
+    'Profesor',
+    'Demo',
     '11111111-1',
     'profesor@test',
     'profesor123!!',
@@ -30,6 +31,7 @@ function main() {
   // Alumnos
   createUser([
     'Alumno Uno',
+    'Demo',
     '22222222-2',
     'alumno1@test',
     'alumno123!!',
@@ -38,6 +40,7 @@ function main() {
 
   createUser([
     'Alumno Dos',
+    'Demo',
     '33333333-3',
     'alumno2@test',
     'alumno123!!',
@@ -46,6 +49,7 @@ function main() {
 
   createUser([
     'Alumno Tres',
+    'Demo',
     '44444444-4',
     'alumno3@test',
     'alumno123!!',

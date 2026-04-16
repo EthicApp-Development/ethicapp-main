@@ -84,8 +84,11 @@ function RecaptchaField({ siteKey, onChange, resetCounter = 0, error = '' }) {
   }
 
   return (
-    <div className="mb-3">
-      <div ref={containerRef} />
+    <div className="mb-3 text-center">
+      <div
+        ref={containerRef}
+        style={{ display: 'inline-block', margin: '1rem 0' }}
+      />
       {error ? <div className="invalid-feedback d-block">{error}</div> : null}
     </div>
   );
