@@ -69,7 +69,7 @@ app.controller("SuperAdminController", function ($scope, $http) {
             uid: uid
         };
         $http.post("/super-login-as", postdata).success((data) => {
-            window.location.replace("/");
+            window.location.replace("/seslist");
         });
     };
 

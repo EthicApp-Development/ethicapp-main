@@ -395,32 +395,48 @@ router.get('/auth/session', (req, res) => {
   });
 });
 
-/**
- * POST /logout
- */
-router.post('/logout', (req, res) => {
+function clearAuthCookie(res) {
+  res.clearCookie(process.env.SESSION_COOKIE_NAME || 'auth.sid', {
+    path: '/'
+  });
+}
+
+function handleLogout(req, res) {
+  const finish = () => {
+    clearAuthCookie(res);
+
+    if (req.method === 'GET') {
+      return res.redirect(302, '/login');
+    }
+
+    return res.json({ message: 'Sesión cerrada' });
+  };
+
   if (!req.session) {
-    res.clearCookie(AUTH_COOKIE_NAME, { path: '/' });
-    return res.json({
-      message: 'Sesión cerrada'
-    });
+    return finish();
   }
 
   req.session.destroy((err) => {
     if (err) {
       console.error('LOGOUT ERROR:', err);
-      return res.status(500).json({
-        error: 'Error al cerrar sesión'
-      });
+
+      if (req.method === 'GET') {
+        clearAuthCookie(res);
+        return res.redirect(302, '/login');
+      }
+
+      return res.status(500).json({ error: 'Error al cerrar sesión' });
     }
 
-    res.clearCookie(AUTH_COOKIE_NAME, { path: '/' });
-
-    return res.json({
-      message: 'Sesión cerrada'
-    });
+    return finish();
   });
-});
+}
+
+/**
+ * GET, POST /logout
+ */
+router.get('/logout', handleLogout);
+router.post('/logout', handleLogout);
 
 /**
  * POST /forgot
