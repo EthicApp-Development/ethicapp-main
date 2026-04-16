@@ -314,43 +314,49 @@ router.post('/forgot', async (req, res) => {
       `
         SELECT id, mail, active
         FROM users
-        WHERE mail = $1
+        WHERE lower(mail) = $1
           AND active = true
         LIMIT 1
       `,
       [email]
     );
 
+    // Always return the same message to avoid account enumeration.
+    const genericResponse = {
+      message: 'Si el correo existe, recibirás instrucciones para restablecer la contraseña'
+    };
+
     if (userResult.rowCount === 0) {
-      return res.json({
-        message: 'Si el correo existe, recibirás instrucciones para restablecer la contraseña'
-      });
+      return res.json(genericResponse);
     }
 
     const user = userResult.rows[0];
     const rawToken = generateResetToken();
     const tokenDigest = sha256Hex(rawToken);
-    const expiresAt = getResetTokenExpiryDate();
 
-    await db.query(
-      `
-        UPDATE users
-        SET
-          reset_token_digest = $1,
-          reset_token_expires_at = $2
-        WHERE id = $3
-      `,
-      [tokenDigest, expiresAt, user.id]
-    );
+    await db.query('BEGIN');
+
+    try {
+      await db.query(`DELETE FROM pass_reset WHERE mail = $1`, [user.mail]);
+      await db.query(
+        `
+          INSERT INTO pass_reset (mail, token, ctime)
+          VALUES ($1, $2, NOW())
+        `,
+        [user.mail, tokenDigest]
+      );
+      await db.query('COMMIT');
+    } catch (txErr) {
+      await db.query('ROLLBACK');
+      throw txErr;
+    }
 
     await mailService.sendPasswordResetEmail({
       to: user.mail,
       rawToken
     });
 
-    return res.json({
-      message: 'Si el correo existe, recibirás instrucciones para restablecer la contraseña'
-    });
+    return res.json(genericResponse);
   } catch (err) {
     console.error('FORGOT PASSWORD ERROR:', err);
     return res.status(500).json({
@@ -360,7 +366,7 @@ router.post('/forgot', async (req, res) => {
 });
 
 /**
- * POST /newpassword
+ * POST /reset-password
  *
  * Expects:
  * {
@@ -369,7 +375,7 @@ router.post('/forgot', async (req, res) => {
  *   password_confirmation
  * }
  */
-router.post('/newpassword', async (req, res) => {
+router.post('/reset-password', async (req, res) => {
   try {
     const token = (req.body.token || '').trim();
     const password = req.body.password || '';
@@ -395,16 +401,34 @@ router.post('/newpassword', async (req, res) => {
 
     const tokenDigest = sha256Hex(token);
 
+    const resetResult = await db.query(
+      `
+        SELECT mail
+        FROM pass_reset
+        WHERE token = $1
+          AND ctime > NOW() - INTERVAL '24 hours'
+        LIMIT 1
+      `,
+      [tokenDigest]
+    );
+
+    if (resetResult.rowCount === 0) {
+      return res.status(400).json({
+        error: 'El token es inválido o ha expirado'
+      });
+    }
+
+    const resetRequest = resetResult.rows[0];
+
     const userResult = await db.query(
       `
         SELECT id
         FROM users
-        WHERE reset_token_digest = $1
-          AND reset_token_expires_at IS NOT NULL
-          AND reset_token_expires_at > NOW()
+        WHERE lower(mail) = lower($1)
+          AND active = true
         LIMIT 1
       `,
-      [tokenDigest]
+      [resetRequest.mail]
     );
 
     if (userResult.rowCount === 0) {
@@ -416,17 +440,31 @@ router.post('/newpassword', async (req, res) => {
     const user = userResult.rows[0];
     const passwordBcrypt = await bcrypt.hash(password, SALT_ROUNDS);
 
-    await db.query(
-      `
-        UPDATE users
-        SET
-          password_bcrypt = $1,
-          reset_token_digest = NULL,
-          reset_token_expires_at = NULL
-        WHERE id = $2
-      `,
-      [passwordBcrypt, user.id]
-    );
+    await db.query('BEGIN');
+
+    try {
+      await db.query(
+        `
+          UPDATE users
+          SET password_bcrypt = $1
+          WHERE id = $2
+        `,
+        [passwordBcrypt, user.id]
+      );
+
+      await db.query(
+        `
+          DELETE FROM pass_reset
+          WHERE mail = $1
+        `,
+        [resetRequest.mail]
+      );
+
+      await db.query('COMMIT');
+    } catch (txErr) {
+      await db.query('ROLLBACK');
+      throw txErr;
+    }
 
     return res.json({
       message: 'Contraseña actualizada correctamente'

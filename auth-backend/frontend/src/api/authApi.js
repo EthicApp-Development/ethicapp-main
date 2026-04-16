@@ -22,6 +22,6 @@ export async function forgotPassword(payload) {
 }
 
 export async function resetPassword(payload) {
-  const response = await authApiClient.post('/newpassword', payload);
+  const response = await authApiClient.post('/reset-password', payload);
   return response.data;
 }

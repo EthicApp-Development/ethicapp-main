@@ -24,7 +24,7 @@ function buildResetUrl(rawToken) {
     ? AUTH_PUBLIC_URL.slice(0, -1)
     : AUTH_PUBLIC_URL;
 
-  return `${normalizedBaseUrl}/newpassword?token=${encodeURIComponent(rawToken)}`;
+  return `${normalizedBaseUrl}/reset-password?token=${encodeURIComponent(rawToken)}`;
 }
 
 function createTransporter() {
