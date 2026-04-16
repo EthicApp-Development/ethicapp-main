@@ -6,4 +6,11 @@ node_modules/
 uploads
 public/fonts/*
 sessions
+
+# Ignorar secretos
 .env
+.env.*
+
+# Permitir templates
+!.env.example
+!.env.*.example
