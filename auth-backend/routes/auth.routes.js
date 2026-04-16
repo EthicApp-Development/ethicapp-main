@@ -204,7 +204,7 @@ router.post('/register', async (req, res) => {
     const insertResult = await db.query(
         `
             INSERT INTO users
-            (firstname, lastname, name, rut, gender, mail, role, password_bcrypt, auth_provider, active)
+            (firstname, lastname, name, rut, sex, mail, role, password_bcrypt, auth_provider, active)
             VALUES
             ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8, $9, true)
             RETURNING id
