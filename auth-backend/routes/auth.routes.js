@@ -232,6 +232,151 @@ router.post('/register', async (req, res) => {
 });
 
 /**
+ * POST /register-prof
+ *
+ * Admin-only endpoint to create a professor account.
+ *
+ * Expects:
+ * {
+ *   firstname,
+ *   lastname,
+ *   dni,
+ *   gender,
+ *   email,
+ *   password,
+ *   password_confirmation
+ * }
+ *
+ * Legacy rule preserved:
+ * - only role "S" can create professors
+ * - created user gets role "P"
+ */
+router.post('/register-prof', async (req, res) => {
+  try {
+    if (!req.isAuthenticated || !req.isAuthenticated()) {
+      return res.status(401).json({
+        error: 'No autenticado'
+      });
+    }
+
+    if (!req.user || req.user.role !== 'S') {
+      return res.status(403).json({
+        error: 'No autorizado'
+      });
+    }
+
+    // Compatibilidad legacy:
+    // - name = firstname
+    // - lastname se mantiene
+    const firstname = (req.body.firstname || req.body.name || '').trim();
+    const lastname = (req.body.lastname || '').trim();
+
+    const dni = (req.body.dni || '').trim();
+    const gender = (req.body.gender || '').trim();
+    const email = (req.body.email || '').trim().toLowerCase();
+    const password = req.body.password || '';
+    const passwordConfirmation = req.body.password_confirmation || '';
+
+    if (!firstname || !lastname || !dni || !gender || !password || !passwordConfirmation) {
+      return respondRegisterProfError(req, res, 400, 'Faltan campos obligatorios');
+    }
+
+    if (password !== passwordConfirmation) {
+      return respondRegisterProfError(req, res, 400, 'Las contraseñas no coinciden');
+    }
+
+    if (!isStrongPassword(password)) {
+      return respondRegisterProfError(
+        req,
+        res,
+        400,
+        'La contraseña debe tener al menos 10 caracteres y al menos 2 símbolos'
+      );
+    }
+
+    if (!['F', 'M', 'O'].includes(gender)) {
+      return respondRegisterProfError(req, res, 400, 'Género inválido');
+    }
+
+    const existingUserResult = await db.query(
+      `
+        SELECT id
+        FROM users
+        WHERE rut = $1
+           OR ($2 <> '' AND mail = $2)
+        LIMIT 1
+      `,
+      [dni, email]
+    );
+
+    if (existingUserResult.rowCount > 0) {
+      return respondRegisterProfError(
+        req,
+        res,
+        409,
+        'Ya existe un usuario con ese identificador'
+      );
+    }
+
+    const passwordBcrypt = await bcrypt.hash(password, SALT_ROUNDS);
+    const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
+
+    const insertResult = await db.query(
+      `
+        INSERT INTO users
+          (firstname, lastname, name, rut, sex, mail, role, password_bcrypt, auth_provider, active)
+        VALUES
+          ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8, true)
+        RETURNING id
+      `,
+      [firstname, lastname, fullName, dni, gender, email, 'P', passwordBcrypt, 'local']
+    );
+
+    if (wantsHtmlRedirect(req)) {
+      return res.redirect('/login?rc=1');
+    }
+
+    return res.status(201).json({
+      message: 'Profesor creado correctamente',
+      user_id: insertResult.rows[0].id
+    });
+  } catch (err) {
+    console.error('REGISTER PROF ERROR:', err);
+
+    if (err.code === '23505') {
+      return respondRegisterProfError(
+        req,
+        res,
+        409,
+        'Ya existe un usuario con ese identificador'
+      );
+    }
+
+    return respondRegisterProfError(
+      req,
+      res,
+      500,
+      'Error interno del servidor'
+    );
+  }
+});
+
+function wantsHtmlRedirect(req) {
+  const accept = req.headers.accept || '';
+  return accept.includes('text/html');
+}
+
+function respondRegisterProfError(req, res, statusCode, message) {
+  if (wantsHtmlRedirect(req)) {
+    return res.status(statusCode).send(message);
+  }
+
+  return res.status(statusCode).json({
+    error: message
+  });
+}
+
+/**
  * GET /auth/session
  *
  * Used by EthicApp legacy to bootstrap or refresh its own local session.
