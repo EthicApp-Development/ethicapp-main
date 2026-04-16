@@ -143,7 +143,7 @@ function LoginForm() {
                 Al continuar, aceptas nuestra{' '}
                 <Link to="/privacy">
                 Política de Privacidad
-                </Link>.
+                </Link> y <Link to="/terms">Términos de Uso</Link>.
             </p>
         </div>
       </div>

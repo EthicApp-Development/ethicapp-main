@@ -41,13 +41,19 @@ export default function PrivacyPolicyPage() {
             <h2 className="h4">1. Responsable del tratamiento</h2>
             <p>
               El responsable del tratamiento de los datos personales es la
-              <strong> Universidad de Valladolid</strong>.
+              <strong>{' '}
+              {import.meta.env.VITE_INSTITUTION_NAME}{' '}</strong>.
             </p>
             <p>
               La plataforma ha sido desarrollada por instituciones colaboradoras y
-              se proporciona en estado operativo, siendo la Universidad de Valladolid
-              la entidad responsable del tratamiento de los datos personales.
+              se proporciona en estado operativo, siendo{' '}
+              {import.meta.env.VITE_INSTITUTION_NAME}
+              {' '}la entidad responsable del tratamiento de los datos personales.
             </p>
+            <p>
+              Para consultas relacionadas con privacidad de datos, puedes contactar a{' '}
+              {import.meta.env.VITE_DATAPRIVACY_CONTACT}.
+            </p>            
           </section>
 
           <section className="mb-4">

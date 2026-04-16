@@ -7,6 +7,7 @@ import ResetPasswordPage from '../pages/ResetPasswordPage';
 
 import NotFoundPage from '../pages/NotFoundPage';
 import PrivacyPolicyPage from '../pages/PrivacyPolicyPage';
+import TermsOfUsePage from '../pages/TermsOfUsePage';
 
 const router = createBrowserRouter([
   {
@@ -37,6 +38,10 @@ const router = createBrowserRouter([
     path: '/privacy',
     element: <PrivacyPolicyPage />
   },
+  {
+    path: '/terms',
+    element: <TermsOfUsePage />
+  },  
   {
     path: '*',
     element: <NotFoundPage />
