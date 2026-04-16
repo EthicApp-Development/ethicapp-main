@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import logo from '../../assets/logos/ethicapp-logo.svg';
-
+import { Link } from 'react-router-dom';
 function AuthLayout({ title, subtitle, children, footer }) {
   return (
     <main className="auth-page">
@@ -8,12 +8,13 @@ function AuthLayout({ title, subtitle, children, footer }) {
         <section className="auth-card">
           <div className="auth-card-body">
             <header className="auth-header">
-
-              <img
-                src={logo}
-                alt="EthicApp"
-                className="auth-logo-img"
-              />
+              <Link to="https://www.ethicapp.info" target="_blank" className="auth-logo-link">
+                <img
+                  src={logo}
+                  alt="EthicApp"
+                  className="auth-logo-img"
+                />
+              </Link>
 
               <h1 className="auth-title">{title}</h1>
 

@@ -115,7 +115,7 @@ adpp.controller("AdminController", function ($scope, $http, $uibModal, $location
 
     self.shared.updateSesData = function () {
         $http({ url: "get-session-list", method: "post" }).success(function (data) {
-            console.log("Session data updated");
+            // console.log("Session data updated");
             self.sessions = data;
             if (self.selectedId != -1) {
                 var ses = self.sessions.find(function (e) {
@@ -968,7 +968,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     };
 
     self.updateStateIni = function () {
-        console.log(self.iterationIndicator);
+        //console.log(self.iterationIndicator);
         self.alumTime = {};
         var postdata = { sesid: self.selectedSes.id, iteration: self.iterationIndicator };
         if (self.selectedSes.type == "S") {
@@ -1795,7 +1795,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
     };
 
     self.openDF2Details = function (group, did, uid) {
-        console.log(group, did, uid);
+        // console.log(group, did, uid);
         var postdata = {
             stageid: self.iterationIndicator,
             tmid: group,
@@ -1853,7 +1853,7 @@ adpp.controller("DashboardController", function ($scope, $http, $timeout, $uibMo
 
                         data.dfarr = self.shared.buildArray(data.df.num);
 
-                        console.log(data);
+                        // console.log(data);
                         return data;
                     }
                 }
@@ -2469,7 +2469,7 @@ adpp.controller("OptionsController", function ($scope, $http, Notification) {
             for (var i = 0; i < op.length; i++) {
                 self.selectedSes.conf[op[i]] = true;
             }
-            console.log(self.selectedSes);
+            //console.log(self.selectedSes);
         }
         return true;
     };

@@ -2,7 +2,7 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
     var self = $scope;
 
     self.stages = [];
-    console.log(self.flang);
+    // console.log(self.flang);
 
     var klg = function klg(k1, k2) {
         return {
@@ -177,9 +177,9 @@ window.StagesController = function ($scope, $http, Notification, $uibModal) {
                         self.shared.groupByUid[u.uid] = {index: i + 1, tmid: u.tmid};
                     });
                 });
-                console.log(self.shared.groupByUid);
+                // console.log(self.shared.groupByUid);
             });
-            console.log(self.selectedSes, data);
+            // console.log(self.selectedSes, data);
             if (self.selectedSes.status >= 3) {
                 self.shared.setIterationIndicator(data[data.length - 1].id);
                 self.setCurrentStage(data.length - 1);
