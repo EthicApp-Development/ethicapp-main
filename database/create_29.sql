@@ -1,0 +1,1 @@
+alter table teams add column original_leader integer references users(id);

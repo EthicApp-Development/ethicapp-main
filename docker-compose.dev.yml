@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  auth-backend:
+    env_file:
+      - ./.env.shared
+      - ./auth-backend/.env
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./auth-backend:/app
+      - auth_backend_node_modules:/app/node_modules
+      - auth_frontend_node_modules:/app/frontend/node_modules
+    command: >
+      sh -c "
+        npm install &&
+        cd frontend && npm install &&
+        cd /app &&
+        npx nodemon server.js &
+        cd frontend && npx vite --host 0.0.0.0 --port 5173
+      "
+    expose:
+      - "8502"
+      - "5173"
+
+  nginx:
+    volumes:
+      - ./nginx/conf.d/dev.conf:/etc/nginx/nginx.conf:ro
+
+volumes:
+  auth_backend_node_modules:
+  auth_frontend_node_modules:

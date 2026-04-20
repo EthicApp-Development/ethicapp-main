@@ -1,11 +1,13 @@
 .idea/
 .DS_store
 
+# Ignorar secretos
 .env
+.env.*
 
-# Postgres dev volume(s)
-db-data-volume/
-db-data-volume*/
+# Permitir templates
+!.env.example
+!.env.*.example
 
 # Secret files, but keep directory
 secrets/
