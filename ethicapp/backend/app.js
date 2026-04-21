@@ -39,9 +39,16 @@ import expressLayouts from "express-ejs-layouts";
 import { renderScripts } from "./helpers/views-helper.js";
 import redisClient from "./db/redis.js"; // Importar el módulo centralizado
 import { ErrorReply } from "redis";
+import {
+  hydrateLegacySession,
+  exposeLegacySession,
+  requireLegacyAuth
+} from './middleware/index.js';
 
 let app = express();
 app.set("trust proxy", true); // i.e., trust headers from a reverse proxy
+
+app.set("trust proxy", 1);
 
 // Configure assets 
 const __filename = fileURLToPath(import.meta.url);
@@ -113,11 +120,14 @@ app.use(session({
         logFn:    function(msg) { console.log("FileStore Log:", msg); },
         fileMode: 0o600,
     }),
-    secret:            process.env.SESSION_SECRET || "ssshhh",
+    secret:            process.env.SESSION_SECRET || "legacy-dev-secret",
     resave:            false,
     saveUninitialized: false,
     cookie:            { maxAge: 24 * 60 * 60 * 1000 } // Cookie para 1 día
 }));
+
+app.use(hydrateLegacySession);
+app.use(exposeLegacySession);
 
 // Middleware for handling redis errors
 app.use((req, res, next) => {
@@ -144,14 +154,14 @@ app.locals.ETHICAPP_BUILD_HASH = ETHICAPP_BUILD_HASH;
 app.use("/", index);
 app.use("/", users_core);
 app.use("/", users_registration);
-app.use("/", validateSession, sessions);
-app.use("/", validateSession, activities);
-app.use("/", validateSession, phases);
-app.use("/", validateSession, groups);
-app.use("/", validateSession, designs);
-app.use("/", validateSession, group_messages);
-app.use("/", validateSession, content_analysis);
-app.use("/", validateSession, legacy_ethics); // Legacy endpoints
+app.use("/", requireLegacyAuth, sessions);
+app.use("/", requireLegacyAuth, activities);
+app.use("/", requireLegacyAuth, phases);
+app.use("/", requireLegacyAuth, groups);
+app.use("/", requireLegacyAuth, designs);
+app.use("/", requireLegacyAuth, group_messages);
+app.use("/", requireLegacyAuth, content_analysis);
+app.use("/", requireLegacyAuth, legacy_ethics); // Legacy endpoints
 
 //app.use("/", validateSession, cases);
 app.use("/", admin_panel);
