@@ -57,7 +57,7 @@ i18n.configure({
 
 app.use(i18n.init);
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
+//const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
 const corsOptions = {
     origin: function (origin, callback) {
         callback(null, true); // Permite todos los orígenes

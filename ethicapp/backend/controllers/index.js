@@ -1,13 +1,13 @@
 "use strict";
 
 import express from "express";
-import passport from "./users/passport-setup.js";
+// import passport from "./users/passport-setup.js";
 
 const router = express.Router();
 
 // Initialize passport for authentication
-router.use(passport.initialize());
-router.use(passport.session());
+// router.use(passport.initialize());
+// router.use(passport.session());
 
 router.get("/", (req, res) => {
     console.log(req.session);

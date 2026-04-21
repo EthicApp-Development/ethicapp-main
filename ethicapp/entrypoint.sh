@@ -1,19 +1,26 @@
 #!/bin/sh
-
-# Exit on errors
 set -e
-
-# Print output as commands execute (for debugging)
-# set -x
 
 cd /app/backend
 
-# Install dependencies
-if [ ! -d "node_modules" ]; then
+# Install dependencies if missing
+if [ ! -d "node_modules/dotenv" ]; then
   echo "Installing dependencies..."
-  npm install
+  if [ -f package-lock.json ]; then
+    npm ci
+  else
+    npm install
+  fi
 fi
 
-# Run EthicApp
 echo "Starting EthicApp on port ${PORT:-8501}..."
-exec npm start
+echo "NODE_ENV=${NODE_ENV}"
+
+# Decide how to run the app
+if [ "$NODE_ENV" = "development" ]; then
+  echo "Running in development mode with nodemon..."
+  exec npx nodemon --inspect=0.0.0.0:9229 --nolazy ./ethicapp
+else
+  echo "Running in production mode..."
+  exec npm start
+fi

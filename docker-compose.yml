@@ -26,10 +26,10 @@ services:
     expose:
       - "8501"
     volumes:
-      - .:/app
-      - ethicapp_node_modules:/app/node_modules
-      - uploads:/app/uploads
-      - sessions:/app/sessions
+      - ./ethicapp:/app
+      - ethicapp_node_modules:/app/backend/node_modules
+      - uploads:/app/backend/uploads
+      - sessions:/app/backend/sessions
     depends_on:
       - postgresql
       - redis
