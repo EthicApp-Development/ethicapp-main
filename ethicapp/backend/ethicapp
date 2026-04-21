@@ -11,7 +11,7 @@ import { initializeSockets } from "./config/socket.config.js";
 
 const debug = debugLib("ethicapp:server");
 
-const DEFAULT_PORT = "3000";
+const DEFAULT_PORT = "8501";
 
 // Set web server port
 const port = normalizePort(process.env.ETHICAPP_NODE_PORT || DEFAULT_PORT);

@@ -46,6 +46,9 @@ const router = createBrowserRouter([
     path: '*',
     element: <NotFoundPage />
   }
-]);
+],
+{
+  basename: '/auth'
+});
 
 export default router;
