@@ -39,7 +39,7 @@ function getResetTokenExpiryDate() {
 }
 
 function getPostLoginRedirect(role) {
-  if (role === 'A') return '/seslist';
+  if (role === 'A') return '/student';
   if (role === 'P') return '/home';
   if (role === 'S') return '/super';
   return '/login';

@@ -49,12 +49,12 @@ export default function App() {
 
       <main className="container py-4 py-md-5 flex-grow-1">
         <div className="row g-4">
-          <section className="col-12 col-xl-7">
-            <SessionList isAuthenticated={session.isAuthenticated} refreshKey={sessionRefreshKey} />
-          </section>
-
           <section className="col-12 col-xl-5">
             <JoinSessionCard disabled={loadingSession} onJoined={handleSessionJoined} />
+          </section>
+
+          <section className="col-12 col-xl-7">
+            <SessionList isAuthenticated={session.isAuthenticated} refreshKey={sessionRefreshKey} />
           </section>
         </div>
       </main>

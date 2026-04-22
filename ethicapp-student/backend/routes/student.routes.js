@@ -51,7 +51,6 @@ router.get('/sessions', async (req, res, next) => {
                 s.options,
                 s.archived,
                 s.current_stage,
-                s.additional_config,
                 (
                     s.id in (SELECT sesid FROM teams)
                 ) AS grouped,
