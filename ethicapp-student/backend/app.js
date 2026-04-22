@@ -33,6 +33,7 @@ app.use(
 app.use(hydrateLegacySession);
 app.use(exposeLegacySession);
 
+app.use('/student', requireLegacyAuth, studentRoutes);
 app.use('/student/api', requireLegacyAuth, studentRoutes);
 
 app.get('/student/health', (req, res) => {
