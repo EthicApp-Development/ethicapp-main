@@ -1,34 +1,7 @@
 import { useEffect, useState } from 'react';
+import { formatSessionDate, sessionStatusLabel } from '../utils/sessionFormat.js';
 
-function formatSessionDate(value) {
-  if (!value) {
-    return 'Sin fecha';
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return 'Sin fecha';
-  }
-
-  return new Intl.DateTimeFormat('es-CL', {
-    dateStyle: 'medium',
-    timeStyle: 'short'
-  }).format(date);
-}
-
-function sessionStatusLabel(status) {
-  const labels = {
-    setup: 'Configuración',
-    active: 'Activa',
-    closed: 'Cerrada',
-    archived: 'Archivada'
-  };
-
-  return labels[status] ?? status ?? 'Sin estado';
-}
-
-export default function SessionList({ isAuthenticated, refreshKey }) {
+export default function SessionList({ isAuthenticated, refreshKey, onSessionSelect }) {
   const [joinedSessions, setJoinedSessions] = useState([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [sessionsError, setSessionsError] = useState('');
@@ -84,17 +57,23 @@ export default function SessionList({ isAuthenticated, refreshKey }) {
             <div className="list-group list-group-flush">
               {joinedSessions.map((joinedSession) => (
                 <article key={joinedSession.id} className="list-group-item px-0">
-                  <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">
-                    <div>
-                      <h3 className="h6 mb-1">{joinedSession.name ?? `Sesión #${joinedSession.id}`}</h3>
-                      <p className="mb-1 small text-secondary">{joinedSession.descr || 'Sin descripción'}</p>
-                      <div className="small text-muted d-flex flex-wrap gap-2">
-                        <span>Estado: {sessionStatusLabel(joinedSession.status)}</span>
-                        <span>Fecha: {formatSessionDate(joinedSession.time)}</span>
-                        <span>Código: {joinedSession.code}</span>
+                  <button
+                    type="button"
+                    className="btn btn-link p-0 text-start text-decoration-none w-100"
+                    onClick={() => onSessionSelect?.(joinedSession.id)}
+                  >
+                    <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">
+                      <div>
+                        <h3 className="h6 mb-1">{joinedSession.name ?? `Sesión #${joinedSession.id}`}</h3>
+                        <p className="mb-1 small text-secondary">{joinedSession.descr || 'Sin descripción'}</p>
+                        <div className="small text-muted d-flex flex-wrap gap-2">
+                          <span>Estado: {sessionStatusLabel(joinedSession.status)}</span>
+                          <span>Fecha: {formatSessionDate(joinedSession.time)}</span>
+                          <span>Código: {joinedSession.code}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 </article>
               ))}
             </div>
