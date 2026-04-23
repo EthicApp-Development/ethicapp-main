@@ -18,7 +18,7 @@ export default function JoinSessionCard({ disabled, onJoined }) {
     setJoinFeedback(null);
 
     try {
-      const response = await fetch('/student/api/sessions/join', {
+      const response = await fetch('/student/sessions/join', {
         method: 'POST',
         credentials: 'include',
         headers: {
