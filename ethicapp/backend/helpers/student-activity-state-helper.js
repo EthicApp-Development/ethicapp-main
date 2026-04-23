@@ -403,9 +403,7 @@ export async function getCachedStudentActivityTasks(designType, sessionId, phase
         }, {});
 
         // Cache the result in Redis
-        await redisClient.set(cacheKey, JSON.stringify(tasksByPhase), {
-            EX: 300, // Expiration: 5 minutes
-        });
+        await redisClient.set(cacheKey, JSON.stringify(tasksByPhase), 'EX', 300); // Expiration: 5 minutes
 
         return updatedPhases;
     } catch (error) {
@@ -669,9 +667,7 @@ export async function getCachedStudentActivityResponses(designType, sessionId, u
         const responsesByPhase = await studentActivityResponseGetters[designType](sessionId, userId, phases);
 
         // Cache the result
-        await redisClient.set(cacheKey, JSON.stringify(responsesByPhase), {
-            EX: 300, // Expiration: 5 minutes
-        });
+        await redisClient.set(cacheKey, JSON.stringify(responsesByPhase), 'EX', 300); // Expiration: 5 minutes
 
         // Attach responses to the corresponding phases
         phases.forEach(phase => {
@@ -887,9 +883,7 @@ export async function getCachedStudentActivityPeerResponses(designType, sessionI
         const peerResponsesByPhase = await studentActivityPeerResponseGetters[designType](sessionId, userId);
 
         // Cache the result
-        await redisClient.set(cacheKey, JSON.stringify(peerResponsesByPhase), {
-            EX: 300,
-        });
+        await redisClient.set(cacheKey, JSON.stringify(peerResponsesByPhase), 'EX', 300);
 
         // Attach responses to the corresponding phases
         phases.forEach(phase => {
@@ -1130,7 +1124,7 @@ export async function getCachedStudentActivityGroupMessages(designType, sessionI
         const messagesByPhase = await studentActivityGroupMessageGetters[designType](sessionId, userId, phases);
 
         // Cache the result
-        await redisClient.set(cacheKey, JSON.stringify(messagesByPhase), { EX: 300 });
+        await redisClient.set(cacheKey, JSON.stringify(messagesByPhase), 'EX', 300);
 
         // Attach messages to phases
         phases.forEach(phase => {
@@ -1204,7 +1198,7 @@ export async function getDesignTypeBySessionId(sessionId) {
         const designType = design?.type ?? null;
 
         if (designType) {
-            await redisClient.set(cacheKey, designType, { EX: 3600 });
+            await redisClient.set(cacheKey, designType, 'EX', 3600);
         }
 
         return designType;
