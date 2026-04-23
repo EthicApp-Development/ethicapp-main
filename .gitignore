@@ -16,7 +16,6 @@ secrets/
 # Log files and root node modules (for linters)
 *.log
 *.lock
-package-lock.json
 node_modules/
 *.backup
 

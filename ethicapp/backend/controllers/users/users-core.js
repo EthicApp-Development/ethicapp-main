@@ -413,10 +413,8 @@ router.get("/users/myinfo", async (req, res) => {
                 SELECT 
                     u.id, 
                     u.name, 
-                    u.mail as email,
-                    ui.name AS institution_name
+                    u.mail as email
                 FROM users u
-                LEFT JOIN user_institutions ui ON u.institution_id = ui.id
                 WHERE u.id = $1
                 LIMIT 1
             `,

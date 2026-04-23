@@ -126,15 +126,14 @@ router.post("/sessions", async (req, res) => {
         const sessionResult = await rpg2.singleSQL({
             dbcon: pass.dbcon,
             sql:   `
-                INSERT INTO sessions(name, descr, creator, time, status, type, additional_config)
-                VALUES ($1, $2, $3, now(), 1, $4, $5)
+                INSERT INTO sessions(name, descr, creator, time, status, type)
+                VALUES ($1, $2, $3, now(), 1, $4)
                 RETURNING id;
             `,
             sqlParams: [rpg2.param('plain', name), 
                         rpg2.param('plain', description), 
                         rpg2.param('plain', uid), 
-                        rpg2.param('plain', type),
-                        rpg2.param('plain', JSON.stringify(config))]
+                        rpg2.param('plain', type)]
         });
         
         const sessionId = sessionResult.id;
@@ -165,15 +164,6 @@ router.post("/sessions", async (req, res) => {
         });
 
         const maxId = maxIdResult.max;
-
-        // Step 4: Execute stored procedure to update or insert activity record.
-        await rpg2.singleSQL({
-            dbcon: pass.dbcon,
-            sql:   `
-                SELECT UpdateOrInsertActivityRecord($1);
-            `,
-            sqlParams: [rpg2.param('plain', uid)]
-        });
 
         // Generate a successful response.
         res.json({ status: 200, id: maxId });

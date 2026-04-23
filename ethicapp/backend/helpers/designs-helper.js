@@ -13,7 +13,7 @@ export async function getDesignById(id) {
         const result = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT id, design, creator, public, locked, case_id
+                SELECT id, design, creator, public, locked
                 FROM designs
                 WHERE id = $1
             `,
