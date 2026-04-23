@@ -6,4 +6,8 @@ const studentApi = axios.create({
   withCredentials: true
 });
 
-export { studentApi };
+const legacyUserApi = axios.create({
+  withCredentials: true
+});
+
+export { studentApi, legacyUserApi };
