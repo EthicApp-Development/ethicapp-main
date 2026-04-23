@@ -1,0 +1,233 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EthicApp Design Schema",
+  "oneOf": [
+    { "$ref": "#/$defs/semanticDifferentialDesign" },
+    { "$ref": "#/$defs/rankingDesign" }
+  ],
+  "$defs": {
+    "baseDesign": {
+      "type": "object",
+      "required": ["type", "valid", "phases", "public", "metainfo"],
+      "properties": {
+        "roles": { "type": "array" },
+        "valid": { "type": "boolean" },
+        "locked": { "type": "boolean" },
+        "public": { "type": "boolean" },
+        "userOwned": { "type": "boolean" },
+        "metainfo": { "$ref": "#/$defs/metainfo" }
+      }
+    },
+
+    "semanticDifferentialDesign": {
+      "allOf": [
+        { "$ref": "#/$defs/baseDesign" },
+        {
+          "type": "object",
+          "required": ["type", "phases"],
+          "properties": {
+            "type": { "const": "semantic_differential" },
+            "phases": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/semanticDifferentialPhase" }
+            }
+          }
+        }
+      ]
+    },
+
+    "rankingDesign": {
+      "allOf": [
+        { "$ref": "#/$defs/baseDesign" },
+        {
+          "type": "object",
+          "required": ["type", "phases"],
+          "properties": {
+            "type": { "const": "ranking" },
+            "phases": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/rankingPhase" }
+            }
+          }
+        }
+      ]
+    },
+
+    "basePhase": {
+      "type": "object",
+      "required": [
+        "chat",
+        "mode",
+        "anonymous",
+        "stdntAmount",
+        "grouping_algorithm",
+        "prevPhasesResponse"
+      ],
+      "properties": {
+        "chat": { "type": "boolean" },
+        "mode": {
+          "type": "string",
+          "enum": ["individual", "team"]
+        },
+        "anonymous": { "type": "boolean" },
+        "stdntAmount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "grouping_algorithm": {
+          "type": "string",
+          "enum": ["random"]
+        },
+        "prevPhasesResponse": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+
+    "semanticDifferentialPhase": {
+      "allOf": [
+        { "$ref": "#/$defs/basePhase" },
+        {
+          "type": "object",
+          "required": ["questions"],
+          "properties": {
+            "questions": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/semanticDifferentialQuestion" }
+            }
+          }
+        }
+      ]
+    },
+
+    "semanticDifferentialQuestion": {
+      "type": "object",
+      "required": ["q_text", "ans_format"],
+      "properties": {
+        "q_text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ans_format": {
+          "type": "object",
+          "required": [
+            "l_pole",
+            "r_pole",
+            "values",
+            "just_required",
+            "min_just_length"
+          ],
+          "properties": {
+            "l_pole": {
+              "type": "string",
+              "minLength": 1
+            },
+            "r_pole": {
+              "type": "string",
+              "minLength": 1
+            },
+            "values": {
+              "type": "integer",
+              "minimum": 2
+            },
+            "just_required": {
+              "type": "boolean"
+            },
+            "min_just_length": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "rankingPhase": {
+      "allOf": [
+        { "$ref": "#/$defs/basePhase" },
+        {
+          "type": "object",
+          "required": ["roles"],
+          "properties": {
+            "q_text": {
+              "type": "string"
+            },
+            "roles": {
+              "type": "array",
+              "minItems": 2,
+              "items": { "$ref": "#/$defs/rankingItem" }
+            }
+          }
+        }
+      ]
+    },
+
+    "rankingItem": {
+      "type": "object",
+      "required": [
+        "wc",
+        "name",
+        "justification_required",
+        "justification_minimum_length_required"
+      ],
+      "properties": {
+        "wc": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": ["role", "order"]
+        },
+        "justification_required": {
+          "type": "boolean"
+        },
+        "justification_minimum_length_required": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "metainfo": {
+      "type": "object",
+      "required": ["title", "author", "institution", "creation_date"],
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "author": {
+          "type": "string",
+          "minLength": 1
+        },
+        "institution": {
+          "type": "string",
+          "minLength": 1
+        },
+        "creation_date": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}
