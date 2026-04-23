@@ -6,6 +6,7 @@ import * as rpg2 from "../db/rest-pg-2.js";
 import * as DesignTypes from "../../common/modules/design-types.js";
 import * as ActivitiesHelper from "../helpers/activities-helper.js"
 import * as StatusCodes from "../../common/modules/session-status.js"
+import { requireRole, requireOwnershipOrRole } from "../helpers/auth-helper.js"
 import * as StudentActivityStatusHelper from "../helpers/student-activity-state-helper.js"
 import { studentNotifications } from "../config/socket.config.js";
 
@@ -13,11 +14,11 @@ const router = express.Router();
 
 router.get("/activities", async (req, res) => {
     try {
-        // Validate session
-        const userId = req.session?.uid;
-        if (!userId) {
-            return res.status(401).json({ status: "err", message: "Unauthorized" });
+        if (!requireRole(req, res, "P")) {
+            return;
         }
+
+        const userId = req.session.uid;
 
         // Execute the query
         const rawActivities = await rpg2.execSQL({
@@ -71,6 +72,9 @@ router.get("/activities", async (req, res) => {
 });
 
 router.post("/activities", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
     const sessionId = req.body.sessionId;
     const designId = req.body.designId;
 
@@ -163,6 +167,9 @@ router.post("/activities", async (req, res) => {
  * @returns {Object} - A JSON object with the design ID, activity status, and phase information.
  */
 router.get("/activities/:session_id/descriptor", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
     const { session_id } = req.params;
 
     // Ensure session_id is valid
@@ -301,6 +308,9 @@ router.get("/activities/:session_id/descriptor", async (req, res) => {
  * }
  */
 router.get("/activities/:session_id/responses", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
     const { session_id } = req.params;
 
     if (!session_id || isNaN(Number(session_id))) {
@@ -373,6 +383,9 @@ router.get("/activities/:session_id/responses", async (req, res) => {
  * }
  */
 router.post("/activities/:session_id/phase_transition", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
     const { session_id: sessionId } = req.params;
     const { phaseId } = req.body;
 
@@ -458,6 +471,9 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
  * }
  */
 router.post("/activities/:session_id/finish", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
     const { session_id: sessionId } = req.params;
 
     if (!sessionId) {
@@ -501,6 +517,9 @@ router.post("/activities/:session_id/finish", async (req, res) => {
  * @returns {Object} - A JSON object containing a list of phases, each with detailed information.
  */
 router.get("/activities/:session_id/phases", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
     const { session_id } = req.params;
 
     // Validate session_id
@@ -593,6 +612,9 @@ router.get("/activities/:session_id/phases", async (req, res) => {
  * }
  */
 router.post("/activities/:session_id/phases", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
     const { session_id } = req.params; // Extract session_id from URL parameters
     const {
         number,
@@ -676,6 +698,9 @@ router.post("/activities/:session_id/phases", async (req, res) => {
  * }
  */
 router.patch("/activities/:session_id/toggle_archived", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
     try {
         const sessionId = req.params.session_id;
 
@@ -744,8 +769,12 @@ router.get('/activities/:id/users/:user_id/full_state', async (req, res) => {
         return res.status(400).json({ error: 'Invalid session ID or user ID.' });
     }
 
-    if (userId !== req.session.uid) {
-        return res.status(403).json({ error: 'Access forbidden to state of the user.' });
+    if (!requireRole(req, res, 'A')) {
+        return;
+    }
+
+    if (!requireOwnershipOrRole(req, res, userId, [])) {
+        return;
     }
 
     try {
@@ -871,6 +900,10 @@ router.get('/activities/:session_id/users/:user_id/peer_responses', async (req, 
         // Validate parameters
         if (isNaN(sessionId) || isNaN(userId)) {
             return res.status(400).json({ error: 'Invalid session_id or user_id' });
+        }
+
+        if (!requireOwnershipOrRole(req, res, userId, 'P')) {
+            return;
         }
 
         // Extract the phases from the request body (phases should be provided in the body as JSON)
