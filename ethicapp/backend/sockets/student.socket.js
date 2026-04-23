@@ -50,8 +50,8 @@ let studentSocketInit = (socket, socketNamespace) => {
 // Teacher-Student socket notifications (from backend)
 const toStudentsNotifications = (socketNamespace) => {
     return {
-        phaseTransition: (sessionId, phaseId) => {
-            const initialPhaseState = buildInitialPhaseState(phaseId);
+        phaseTransition: async (sessionId, phaseId) => {
+            const initialPhaseState = await buildInitialPhaseState(phaseId);
             socketNamespace.to(`session-${sessionId}`).
                 emit("onPhaseTransition", initialPhaseState );
         },

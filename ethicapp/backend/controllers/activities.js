@@ -9,6 +9,7 @@ import * as StatusCodes from "../../common/modules/session-status.js"
 import { requireRole, requireOwnershipOrRole } from "../helpers/auth-helper.js"
 import * as StudentActivityStatusHelper from "../helpers/student-activity-state-helper.js"
 import { studentNotifications } from "../config/socket.config.js";
+import redisClient from "../db/redis.js";
 
 const router = express.Router();
 
@@ -427,6 +428,9 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
         if (result.rowCount === 0) {
             return res.status(404).json({ error: "Session not found or no update performed." });
         }
+
+        // Invalidate cached descriptor so students read the updated current phase.
+        await redisClient.del(`descriptor:${sessionId}`);
 
         // Notify students the phase has changed!
         studentNotifications.phaseTransition(sessionId, phaseId);
