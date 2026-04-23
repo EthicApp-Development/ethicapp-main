@@ -1,5 +1,7 @@
+import axios from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
+import { studentApi } from '../api/studentApi.js';
 import { formatSessionDate, sessionStatusLabel } from '../utils/sessionFormat.js';
 
 export default function SessionDetailPage() {
@@ -20,21 +22,18 @@ export default function SessionDetailPage() {
     setLoadingSessions(true);
     setSessionsError('');
 
-    fetch('/student/api/sessions', { credentials: 'include' })
-      .then(async (response) => {
-        if (!response.ok) {
-          const payload = await response.json().catch(() => ({}));
-          throw new Error(payload?.error ?? 'No se pudieron cargar los datos de la sesión');
-        }
-
-        return response.json();
-      })
-      .then((rows) => {
-        setJoinedSessions(Array.isArray(rows) ? rows : []);
+    studentApi
+      .get('sessions')
+      .then(({ data }) => {
+        setJoinedSessions(Array.isArray(data) ? data : []);
         setLoadingSessions(false);
       })
       .catch((error) => {
-        setSessionsError(error.message);
+        const message = axios.isAxiosError(error)
+          ? (error.response?.data?.error ?? 'No se pudieron cargar los datos de la sesión')
+          : 'No se pudieron cargar los datos de la sesión';
+
+        setSessionsError(message);
         setJoinedSessions([]);
         setLoadingSessions(false);
       });

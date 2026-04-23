@@ -1,4 +1,6 @@
+import axios from 'axios';
 import { useState } from 'react';
+import { studentApi } from '../api/studentApi.js';
 
 export default function JoinSessionCard({ disabled, onJoined }) {
   const [joinCode, setJoinCode] = useState('');
@@ -18,29 +20,20 @@ export default function JoinSessionCard({ disabled, onJoined }) {
     setJoinFeedback(null);
 
     try {
-      const response = await fetch('/student/api/sessions/join', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          code: normalizedCode,
-          device: 'web'
-        })
+      await studentApi.post('sessions/join', {
+        code: normalizedCode,
+        device: 'web'
       });
-
-      const payload = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(payload?.error ?? 'No fue posible unirse a la sesión');
-      }
 
       setJoinFeedback({ type: 'success', message: 'Te uniste a la sesión correctamente.' });
       setJoinCode('');
       onJoined();
     } catch (error) {
-      setJoinFeedback({ type: 'danger', message: error.message });
+      const message = axios.isAxiosError(error)
+        ? (error.response?.data?.error ?? 'No fue posible unirse a la sesión')
+        : 'No fue posible unirse a la sesión';
+
+      setJoinFeedback({ type: 'danger', message });
     } finally {
       setJoinBusy(false);
     }
