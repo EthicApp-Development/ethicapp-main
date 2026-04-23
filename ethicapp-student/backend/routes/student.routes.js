@@ -89,12 +89,18 @@ router.post('/sessions/join', async (req, res, next) => {
     return;
   }
 
-  const code = req.params?.code ?? req.body?.code;
+  const code = (req.body?.code ?? '').toLowerCase();
   const { device } = req.body;
 
   if (!code) {
     return res.status(400).json({ error: 'Código de sesión requerido' });
   }
+
+  console.log('[join] payload', {
+    uid,
+    code,
+    device: device ?? null
+    });
 
   try {
     const result = await query(
@@ -127,6 +133,7 @@ router.post('/sessions/join', async (req, res, next) => {
     );
 
     if (result.rowCount === 0) {
+      console.log('[join] no row inserted', { uid, code, device: device ?? null });
       return res.status(404).json({
         error: 'No fue posible unirse a la sesión con el código entregado'
       });

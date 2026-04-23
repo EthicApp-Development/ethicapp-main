@@ -18,7 +18,7 @@ export default function JoinSessionCard({ disabled, onJoined }) {
     setJoinFeedback(null);
 
     try {
-      const response = await fetch('/student/sessions/join', {
+      const response = await fetch('/student/api/sessions/join', {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -59,10 +59,10 @@ export default function JoinSessionCard({ disabled, onJoined }) {
             <input
               type="text"
               className="form-control"
-              placeholder="Ej: ABC123"
+              placeholder="Ej: k0010d"
               aria-label="Código de sesión"
               value={joinCode}
-              onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
+              onChange={(event) => setJoinCode(event.target.value.toLowerCase())}
             />
             <button className="btn btn-primary" type="submit" disabled={joinBusy || disabled}>
               {joinBusy ? 'Uniendo...' : 'Unirse'}

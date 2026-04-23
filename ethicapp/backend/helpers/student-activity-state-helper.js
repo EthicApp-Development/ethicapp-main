@@ -1393,14 +1393,12 @@ export async function getCachedPhaseTasks(phaseId, invalidate = false) {
         }
 
         console.debug(`Cache miss for tasks: phaseId=${phaseId}, designType=${designType}`);
-        const tasks = await taskGetter(phaseId);
+        const result = await taskGetter(phaseId);
 
         // Cache the result in Redis
-        await redisClient.set(cacheKey, JSON.stringify(tasks), {
-            EX: 300, // Expiration: 5 minutes
-        });
+        await redisClient.set(cacheKey, JSON.stringify(result), 'EX', 300);
 
-        return { tasks };
+        return result;
     } catch (error) {
         console.error(`Error in getCachedPhaseTasks: phaseId=${phaseId}`, error);
         return { tasks: [] }; // Fallback to an empty tasks list in case of error

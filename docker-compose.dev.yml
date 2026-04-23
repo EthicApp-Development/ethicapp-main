@@ -35,13 +35,16 @@ services:
       - ethicapp_student_backend_node_modules:/app/backend/node_modules
       - ethicapp_student_frontend_node_modules:/app/frontend/node_modules
     command: >
-      sh -c "
-        cd backend && npm install &&
-        cd ../frontend && npm install &&
-        cd /app &&
-        npx nodemon backend/server.js &
-        cd frontend && npx vite --host 0.0.0.0 --port 5174
-      "
+      sh -lc '
+        cd /app/backend &&
+        npm install --include=dev &&
+        (
+          npm run dev
+        ) &
+        cd /app/frontend &&
+        npm install --include=dev &&
+        exec npm run dev
+      '
     expose:
       - "8503"
       - "5174"

@@ -54,23 +54,27 @@ export default function SessionList({ isAuthenticated, refreshKey, onSessionSele
 
         {!loadingSessions && isAuthenticated && !sessionsError ? (
           joinedSessions.length > 0 ? (
-            <div className="list-group list-group-flush">
+            <div className="d-flex flex-column gap-3">
               {joinedSessions.map((joinedSession) => (
-                <article key={joinedSession.id} className="list-group-item px-0">
+                <article key={joinedSession.id} className="card nested-card shadow-sm border-1">
                   <button
                     type="button"
-                    className="btn btn-link p-0 text-start text-decoration-none w-100"
+                    className="btn text-start w-100 p-0"
                     onClick={() => onSessionSelect?.(joinedSession.id)}
                   >
-                    <div className="d-flex flex-column flex-sm-row justify-content-between gap-2">
-                      <div>
-                        <h3 className="h6 mb-1">{joinedSession.name ?? `Sesión #${joinedSession.id}`}</h3>
-                        <p className="mb-1 small text-secondary">{joinedSession.descr || 'Sin descripción'}</p>
-                        <div className="small text-muted d-flex flex-wrap gap-2">
-                          <span>Estado: {sessionStatusLabel(joinedSession.status)}</span>
-                          <span>Fecha: {formatSessionDate(joinedSession.time)}</span>
-                          <span>Código: {joinedSession.code}</span>
-                        </div>
+                    <div className="card-body">
+                      <h3 className="h6 mb-1">
+                        {joinedSession.name ?? `Sesión #${joinedSession.id}`}
+                      </h3>
+
+                      <p className="mb-2 small text-secondary">
+                        {joinedSession.descr || 'Sin descripción'}
+                      </p>
+
+                      <div className="small text-muted d-flex flex-wrap gap-2">
+                        <span>Estado: {sessionStatusLabel(joinedSession.status)}</span>
+                        <span>Fecha: {formatSessionDate(joinedSession.time)}</span>
+                        <span>Código: {joinedSession.code}</span>
                       </div>
                     </div>
                   </button>

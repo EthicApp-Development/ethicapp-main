@@ -33,8 +33,19 @@ app.use(
 app.use(hydrateLegacySession);
 app.use(exposeLegacySession);
 
-app.use('/student', requireLegacyAuth, studentRoutes);
-app.use('/student/api', requireLegacyAuth, studentRoutes);
+app.use((req, res, next) => {
+  console.log('[student-backend] incoming', {
+    method: req.method,
+    url: req.originalUrl,
+    xUserId: req.headers['x-user-id'],
+    xUserRole: req.headers['x-user-role'],
+    sessionUid: req.session?.uid,
+    sessionRole: req.session?.role
+  });
+  next();
+});
+
+app.use('/student/api', studentRoutes);
 
 app.get('/student/health', (req, res) => {
   res.status(200).json({ ok: true });
