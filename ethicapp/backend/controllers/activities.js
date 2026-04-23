@@ -751,7 +751,7 @@ router.get('/activities/:id/users/:user_id/full_state', async (req, res) => {
     try {
         // Step 1: Get the descriptor
         const { descriptor } = await StudentActivityStatusHelper.
-            getCachedStudentActivityDescriptor(sessionId);
+            getCachedStudentActivityDescriptor(sessionId, invalidate);
 
         if (!descriptor || !descriptor.design) {
             return res.status(404).json({ error: 'Descriptor not found for the given session.' });
@@ -759,14 +759,14 @@ router.get('/activities/:id/users/:user_id/full_state', async (req, res) => {
 
         // Step 2: Get the phases
         const { phases } = await StudentActivityStatusHelper.
-            getCachedStudentActivityPhases(sessionId);
+            getCachedStudentActivityPhases(sessionId, invalidate);
 
         if (!phases || phases.length === 0) {
             return res.status(404).json({ error: 'No phases found for the given session.' });
         }
 
         // Step 3: Determine design type
-        const designType = StudentActivityStatusHelper.
+        const designType = descriptor?.design?.type || await StudentActivityStatusHelper.
             getDesignTypeBySessionId(sessionId);
 
         if (!designType) {
@@ -778,7 +778,8 @@ router.get('/activities/:id/users/:user_id/full_state', async (req, res) => {
             getCachedStudentActivityTasks(
                 designType,
                 sessionId,
-                phases
+                phases,
+                invalidate
             );
 
         // Step 5: Get responses for each phase
@@ -787,7 +788,8 @@ router.get('/activities/:id/users/:user_id/full_state', async (req, res) => {
                 designType, 
                 sessionId,
                 userId,
-                phasesWithTasks
+                phasesWithTasks,
+                invalidate
             );
             
         // Step 6: Get peer responses for each phase
@@ -796,23 +798,27 @@ router.get('/activities/:id/users/:user_id/full_state', async (req, res) => {
                 designType,
                 sessionId,
                 userId,
-                phasesWithResponses
+                phasesWithResponses,
+                invalidate
             );
 
         // Step 7: Get groups and integrate into phases
-        await StudentActivityStatusHelper.getCachedStudentActivityGroups(
+        const phasesWithGroups = await StudentActivityStatusHelper.getCachedStudentActivityGroups(
             sessionId,
             userId,
-            phasesWithPeerResponses
+            phasesWithPeerResponses,
+            invalidate
         );
 
-            // Step 8: Get group messages
+        // Step 8: Get group messages
         const phasesWithGroupMessages = await StudentActivityStatusHelper.
             getCachedStudentActivityGroupMessages(
                 designType,
                 sessionId,
-                phasesWithPeerResponses,
-                groupId);
+                userId,
+                phasesWithGroups,
+                invalidate
+            );
 
         // Step 9: Assemble the state object
         const state = {

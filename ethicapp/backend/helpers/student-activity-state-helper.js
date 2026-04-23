@@ -84,13 +84,15 @@ export async function getStudentActivityDescriptor(sessionId) {
         const descriptorQuery = `
             SELECT 
                 s.descr AS description,
-                a.design AS design,
+                d.design AS design,
                 st.number AS currentphasenumber,
                 st.id AS currentphaseid
             FROM 
                 sessions s
             JOIN 
                 activity a ON s.id = a.session
+            JOIN
+                designs d ON d.id = a.design
             JOIN 
                 stages st ON st.id = s.current_stage
             WHERE 
@@ -186,7 +188,7 @@ export async function getStudentActivityPhases(sessionId) {
         // Query to get the phases
         const phasesQuery = `
             SELECT
-                st.id
+                st.id,
                 st.number, 
                 st.type AS mode, 
                 st.anon, 
@@ -609,10 +611,10 @@ export async function getStudentActivityTasks_ranking(sessionId, phases) {
             }
 
             tasksByPhase[actor.phase_number].push({
-                id: actor.actor_id,
-                name: actor.actor_name,
-                isOrdered: actor.is_ordered,
-                requiresJustification: actor.requires_justification,
+                id: actor.item_id,
+                name: actor.item_name,
+                justifyOrder: actor.justify_order,
+                requiresJustification: actor.justify_item,
                 minWordCount: actor.min_word_count,
             });
         });
@@ -1163,6 +1165,52 @@ export async function getStudentActivityGroupMessages(designType, sessionId, gro
     } catch (error) {
         console.error(`Failed to get group messages for design type ${designType}:`, error);
         return phases;
+    }
+}
+
+export async function getDesignTypeBySessionId(sessionId) {
+    if (!sessionId || isNaN(Number(sessionId))) {
+        console.error("Invalid sessionId:", sessionId);
+        return null;
+    }
+
+    const cacheKey = `session:${sessionId}:design_type`;
+
+    try {
+        const cachedDesignType = await redisClient.get(cacheKey);
+        if (cachedDesignType) {
+            return cachedDesignType;
+        }
+
+        const result = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT d.design AS design
+                FROM activity a
+                JOIN designs d ON d.id = a.design
+                WHERE a.session = $1
+                ORDER BY a.id DESC
+                LIMIT 1;
+            `,
+            sqlParams: [rpg2.param('plain', Number(sessionId))],
+        });
+
+        if (!Array.isArray(result) || result.length === 0) {
+            return null;
+        }
+
+        const designValue = result[0].design;
+        const design = typeof designValue === "string" ? JSON.parse(designValue) : designValue;
+        const designType = design?.type ?? null;
+
+        if (designType) {
+            await redisClient.set(cacheKey, designType, { EX: 3600 });
+        }
+
+        return designType;
+    } catch (error) {
+        console.error(`Unable to determine design type for sessionId ${sessionId}:`, error);
+        return null;
     }
 }
 

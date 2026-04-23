@@ -2,6 +2,7 @@ import axios from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import { studentApi } from '../api/studentApi.js';
+import { useStudentActivityState } from '../context/StudentActivityStateContext.jsx';
 import { formatSessionDate, sessionStatusLabel } from '../utils/sessionFormat.js';
 
 export default function SessionDetailPage() {
@@ -10,6 +11,7 @@ export default function SessionDetailPage() {
   const [joinedSessions, setJoinedSessions] = useState([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [sessionsError, setSessionsError] = useState('');
+  const { stateBySession, loadingBySession, errorBySession, loadFullState } = useStudentActivityState();
 
   useEffect(() => {
     if (!session.isAuthenticated) {
@@ -43,6 +45,30 @@ export default function SessionDetailPage() {
     const parsedSessionId = Number(sessionId);
     return joinedSessions.find((joinedSession) => joinedSession.id === parsedSessionId) ?? null;
   }, [joinedSessions, sessionId]);
+
+  const selectedSessionId = Number(sessionId);
+  const activityState = stateBySession[selectedSessionId] ?? null;
+  const loadingActivityState = loadingBySession[selectedSessionId] ?? false;
+  const activityStateError = errorBySession[selectedSessionId] ?? '';
+
+  useEffect(() => {
+    if (!session.isAuthenticated || !selectedSession || !session.uid) {
+      return;
+    }
+
+    loadFullState({
+      sessionId: selectedSession.id,
+      userId: session.uid
+    }).catch(() => {
+      // El error ya queda reflejado en el contexto.
+    });
+  }, [loadFullState, selectedSession, session.isAuthenticated, session.uid]);
+
+  const phaseTabs = useMemo(() => {
+    return Array.isArray(activityState?.phases) ? activityState.phases : [];
+  }, [activityState]);
+
+  const currentPhaseNumber = activityState?.descriptor?.currentPhaseNumber ?? null;
 
   return (
     <section className="mx-auto" style={{ maxWidth: '860px' }}>
@@ -83,6 +109,33 @@ export default function SessionDetailPage() {
                 <dt className="col-sm-3">Tipo</dt>
                 <dd className="col-sm-9">{selectedSession.type ?? 'Sin tipo'}</dd>
               </dl>
+
+              {loadingActivityState ? <p className="text-muted mt-3 mb-0">Cargando estado completo de la actividad...</p> : null}
+
+              {activityStateError ? (
+                <div className="alert alert-warning mt-3 mb-0" role="alert">
+                  {activityStateError}
+                </div>
+              ) : null}
+
+              {!loadingActivityState && !activityStateError && phaseTabs.length > 0 ? (
+                <section className="mt-4" aria-label="Fases de la actividad">
+                  <h3 className="h6 mb-2">Fases</h3>
+                  <div className="d-flex gap-2 flex-wrap">
+                    {phaseTabs.map((phase) => {
+                      const isCurrent = Number(phase.number) === Number(currentPhaseNumber);
+                      return (
+                        <span
+                          key={phase.id ?? phase.number}
+                          className={`phase-pill ${isCurrent ? 'phase-pill--current' : 'phase-pill--inactive'}`}
+                        >
+                          Fase {phase.number}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </section>
+              ) : null}
             </div>
           </article>
         ) : (
