@@ -413,6 +413,8 @@ router.get("/users/myinfo", async (req, res) => {
                 SELECT 
                     u.id, 
                     u.name, 
+                    u.firstname,
+                    u.lastname,
                     u.mail as email
                 FROM users u
                 WHERE u.id = $1
