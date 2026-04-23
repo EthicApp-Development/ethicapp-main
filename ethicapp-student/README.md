@@ -16,6 +16,12 @@ npm install
 npm run dev
 ```
 
+## Configuración frontend
+
+- `VITE_STUDENT_API_BASE_PATH`: prefijo base para los requests del frontend al backend.
+  - Valor por defecto: `/student/api/`
+  - Se normaliza automáticamente para usar `/` inicial y final.
+
 ## Producción
 
 ```bash

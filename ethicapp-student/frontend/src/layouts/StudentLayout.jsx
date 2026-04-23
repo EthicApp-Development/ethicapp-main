@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import { studentApi } from '../api/studentApi.js';
 import StudentTopbar from '../components/StudentTopbar.jsx';
 
 const SESSION_PLACEHOLDER = {
@@ -22,9 +23,9 @@ export default function StudentLayout() {
   }, [session]);
 
   useEffect(() => {
-    fetch('/student/api/session', { credentials: 'include' })
-      .then((response) => response.json())
-      .then((data) => {
+    studentApi
+      .get('session')
+      .then(({ data }) => {
         setSession(data);
         setLoadingSession(false);
       })
