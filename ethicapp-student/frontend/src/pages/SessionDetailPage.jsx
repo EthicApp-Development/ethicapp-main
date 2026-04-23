@@ -69,6 +69,7 @@ export default function SessionDetailPage() {
   }, [activityState]);
 
   const currentPhaseNumber = activityState?.descriptor?.currentPhaseNumber ?? null;
+  const currentPhaseId = activityState?.descriptor?.currentPhaseId ?? null;
 
   return (
     <section className="mx-auto" style={{ maxWidth: '860px' }}>
@@ -108,6 +109,12 @@ export default function SessionDetailPage() {
 
                 <dt className="col-sm-3">Tipo</dt>
                 <dd className="col-sm-9">{selectedSession.type ?? 'Sin tipo'}</dd>
+
+                <dt className="col-sm-3">Fase activa #</dt>
+                <dd className="col-sm-9">{currentPhaseNumber ?? 'No disponible'}</dd>
+
+                <dt className="col-sm-3">Fase activa ID</dt>
+                <dd className="col-sm-9">{currentPhaseId ?? 'No disponible'}</dd>
               </dl>
 
               {loadingActivityState ? <p className="text-muted mt-3 mb-0">Cargando estado completo de la actividad...</p> : null}
