@@ -10,3 +10,26 @@
   box-shadow: 0 .5rem 1rem rgba(0,0,0,.1);
   cursor: pointer;
 }
+
+.phase-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-width: 2px;
+  border-style: solid;
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.875rem;
+  background: #fff;
+}
+
+.phase-pill--current {
+  border-color: #198754;
+  color: #198754;
+  font-weight: 600;
+}
+
+.phase-pill--inactive {
+  border-color: #fd7e14;
+  color: #b35a00;
+}
