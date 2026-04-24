@@ -97,3 +97,24 @@ Minimum verification checklist:
 - Lint succeeds for modified languages/components.
 - Core endpoint flows and helper logic paths are validated with basic cases.
 - Any known limitations are explicitly documented in the PR.
+
+## 7) Legacy EthicApp routing conventions (important)
+
+For the legacy app inside `ethicapp/`, keep backend and frontend routing concerns separated and colocated:
+
+- Backend Express bootstrapping and route registration live in `ethicapp/app.js`.
+- Backend route handlers/controllers live in `ethicapp/backend/controllers/`.
+- Legacy teacher AngularJS module wiring is under:
+  - `ethicapp/frontend/assets/js/ngmodules/teacher/`
+  - `ethicapp/frontend/assets/js/controllers/teacher/`
+  - `ethicapp/frontend/assets/js/services/`
+- Legacy teacher HTML templates are primarily under:
+  - `ethicapp/frontend/views/partials/teacher/`
+  - `ethicapp/frontend/assets/static/views/teacher/` (for static Angular partials used by new teacher CRUD flows)
+
+When adding teacher-facing features in legacy EthicApp:
+
+1. Register API routes via controller modules mounted from `ethicapp/app.js`.
+2. Expose AngularJS services for API communication in `assets/js/services`.
+3. Wire controllers/services in `teacher_admin.mjs`.
+4. Add/update teacher navigation entry points in `ethicapp/frontend/views/home.ejs`.
