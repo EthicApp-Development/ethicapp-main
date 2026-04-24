@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import { studentApi } from '../api/studentApi.js';
 import { useStudentActivityState } from '../context/StudentActivityStateContext.jsx';
+import { getStudentSocket } from '../services/studentSocket.js';
 import { formatSessionDate, sessionStatusLabel } from '../utils/sessionFormat.js';
 
 export default function SessionDetailPage() {
@@ -63,6 +64,78 @@ export default function SessionDetailPage() {
       // El error ya queda reflejado en el contexto.
     });
   }, [loadFullState, selectedSession, session.isAuthenticated, session.uid]);
+
+  useEffect(() => {
+    if (!session.isAuthenticated || !selectedSession) {
+      return;
+    }
+
+    let isUnmounted = false;
+    let socket = null;
+    const activeSessionId = Number(selectedSession.id);
+
+    const handlePhaseTransition = (...payload) => {
+      console.debug('[student socket] onPhaseTransition', {
+        sessionId: activeSessionId,
+        payload
+      });
+    };
+
+    const handleShareResponse = (payload) => {
+      console.debug('[student socket] onShareResponse', {
+        sessionId: activeSessionId,
+        payload
+      });
+    };
+
+    const handleEndSession = (payload) => {
+      console.debug('[student socket] onEndSession', {
+        sessionId: activeSessionId,
+        payload
+      });
+    };
+
+    const handleChatMessage = (payload) => {
+      console.debug('[student socket] onChatMessage', {
+        sessionId: activeSessionId,
+        payload
+      });
+    };
+
+    getStudentSocket()
+      .then((instance) => {
+        if (isUnmounted) {
+          return;
+        }
+
+        socket = instance;
+        socket.emit('joinSession', activeSessionId);
+        socket.on('onPhaseTransition', handlePhaseTransition);
+        socket.on('onShareResponse', handleShareResponse);
+        socket.on('onEndSession', handleEndSession);
+        socket.on('onChatMessage', handleChatMessage);
+      })
+      .catch((error) => {
+        console.debug('[student socket] could not initialize websocket client', {
+          sessionId: activeSessionId,
+          error
+        });
+      });
+
+    return () => {
+      isUnmounted = true;
+
+      if (!socket) {
+        return;
+      }
+
+      socket.emit('leaveSession', activeSessionId);
+      socket.off('onPhaseTransition', handlePhaseTransition);
+      socket.off('onShareResponse', handleShareResponse);
+      socket.off('onEndSession', handleEndSession);
+      socket.off('onChatMessage', handleChatMessage);
+    };
+  }, [selectedSession, session.isAuthenticated]);
 
   const phaseTabs = useMemo(() => {
     return Array.isArray(activityState?.phases) ? activityState.phases : [];
