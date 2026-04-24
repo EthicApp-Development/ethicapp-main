@@ -237,11 +237,11 @@ export function DesignEditorController($scope, $translate, $timeout,
         let valid = true;
 
         if (vm.validationErrors.global && vm.validationErrors.global.length > 0) {
-            console.debug("[isDesignValid] The design has global errors.");
+            // console.debug("[isDesignValid] The design has global errors.");
             valid = false;
         }
         if (vm.validationErrors.phases && Object.keys(vm.validationErrors.phases).length > 0) {
-            console.debug("[isDesignValid] The design has phase errors.");
+            // console.debug("[isDesignValid] The design has phase errors.");
             valid = false;
         }
 

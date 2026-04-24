@@ -223,7 +223,7 @@ let DesignCatalogService = ($rootScope, $http) => {
             try {
                 // Call the API endpoint
                 const response = await $http.get(`/designs/${designId}/valid`);
-                console.debug(`[isDesignValid] ${JSON.stringify(response)}`);
+                // console.debug(`[isDesignValid] ${JSON.stringify(response)}`);
                 
                 // Check the response
                 if (response.data.status === 'ok' && typeof response.data.valid === 'boolean') {

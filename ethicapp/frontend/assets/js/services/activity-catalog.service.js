@@ -28,7 +28,7 @@ let ActivityCatalogService = ($http) => {
 
         async createActivity(design, description) {
             try {
-                console.debug(`[createActivity] ${JSON.stringify(design)})`);
+                // console.debug(`[createActivity] ${JSON.stringify(design)})`);
 
                 // Create the session for the activity
                 const sessionResponse = await $http({

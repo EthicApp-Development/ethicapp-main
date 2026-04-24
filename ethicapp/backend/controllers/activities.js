@@ -330,7 +330,7 @@ router.get("/activities/:session_id/responses", async (req, res) => {
 
         if (!results || results.length === 0) {
             console.warn(`No responses found for session_id: ${session_id}`);
-            return res.status(404).json({ error: "No responses found for the given activity." });
+            return res.status(200).json({ phases: [] });
         }
 
         const groupedResponses = results.reduce((acc, row) => {
@@ -553,7 +553,7 @@ router.get("/activities/:session_id/phases", async (req, res) => {
         // Check if any phases were found
         if (!phases || phases.length === 0) {
             console.warn(`No phases found for session_id: ${session_id}`);
-            return res.status(404).json({ error: "No phases found for the given session." });
+            return res.status(200).json({ phases: [] });
         }
 
         // Log success and return the phases
