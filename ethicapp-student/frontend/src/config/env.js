@@ -7,9 +7,12 @@ function ensureTrailingSlash(value) {
 }
 
 const viteStudentApiBasePath = (import.meta.env.VITE_STUDENT_API_BASE_PATH || '').trim();
+const viteStudentSocketUrl = (import.meta.env.VITE_STUDENT_SOCKET_URL || '').trim();
 
 const studentApiBasePath = viteStudentApiBasePath
   ? ensureTrailingSlash(ensureLeadingSlash(viteStudentApiBasePath))
   : '/student/api/';
 
-export { studentApiBasePath };
+const studentSocketUrl = viteStudentSocketUrl || (typeof window !== 'undefined' ? window.location.origin : '');
+
+export { studentApiBasePath, studentSocketUrl };

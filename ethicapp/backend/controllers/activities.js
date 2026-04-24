@@ -433,7 +433,7 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
         await redisClient.del(`descriptor:${sessionId}`);
 
         // Notify students the phase has changed!
-        studentNotifications.phaseTransition(sessionId, phaseId);
+        studentNotifications.phaseTransition(sessionId);
 
         res.status(200).json({ status: "ok", message: "Session transitioned to the new phase." });
     } catch (err) {
@@ -728,6 +728,40 @@ router.patch("/activities/:session_id/toggle_archived", async (req, res) => {
     } catch (err) {
         console.error("Error in /activities/:session_id/toggle_archived:", err);
         return res.status(500).json({ status: "err", message: "Internal Server Error" });
+    }
+});
+
+/**
+ * Returns the initial state for the current active phase of a session.
+ *
+ * GET /activities/:session_id/current_phase_state
+ */
+router.get("/activities/:session_id/current_phase_state", async (req, res) => {
+    const sessionId = Number(req.params.session_id);
+    const invalidate = req.query.invalidate === "true";
+
+    if (!sessionId || isNaN(sessionId)) {
+        return res.status(400).json({ error: "Invalid session ID." });
+    }
+
+    if (!requireRole(req, res, "A")) {
+        return;
+    }
+
+    try {
+        const { descriptor } = await StudentActivityStatusHelper.
+            getCachedStudentActivityDescriptor(sessionId, invalidate);
+        const currentPhaseId = Number(descriptor?.currentPhaseId);
+
+        if (!currentPhaseId || isNaN(currentPhaseId)) {
+            return res.status(404).json({ error: "No active phase found for this session." });
+        }
+
+        const initialPhaseState = await StudentActivityStatusHelper.buildInitialPhaseState(currentPhaseId);
+        return res.status(200).json(initialPhaseState);
+    } catch (error) {
+        console.error(`Error retrieving current phase state for session ${sessionId}:`, error);
+        return res.status(500).json({ error: "Internal server error." });
     }
 });
 

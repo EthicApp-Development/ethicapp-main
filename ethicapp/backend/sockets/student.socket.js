@@ -1,5 +1,4 @@
 import * as ChatHelper from "../helpers/chat-helper.js";
-import { buildInitialPhaseState } from "../helpers/student-activity-state-helper.js";
 
 let studentSocketInit = (socket, socketNamespace) => {
     console.debug('Student connected');
@@ -50,10 +49,9 @@ let studentSocketInit = (socket, socketNamespace) => {
 // Teacher-Student socket notifications (from backend)
 const toStudentsNotifications = (socketNamespace) => {
     return {
-        phaseTransition: async (sessionId, phaseId) => {
-            const initialPhaseState = await buildInitialPhaseState(phaseId);
+        phaseTransition: (sessionId) => {
             socketNamespace.to(`session-${sessionId}`).
-                emit("onPhaseTransition", initialPhaseState );
+                emit("onPhaseTransition");
         },
 
         chatMessage: (groupId, messages) => {
