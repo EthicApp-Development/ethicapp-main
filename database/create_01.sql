@@ -89,9 +89,13 @@ create table if not exists teams (
     foreign key(sesid) references sessions(id)
 );
 
-create table if not exists teamusers (
+CREATE TABLE IF NOT EXISTS teamusers (
     tmid integer,
     uid integer,
-    foreign key(tmid) references teams(id),
-    foreign key(uid) references users(id)
+    anon_mask CHAR(1),
+    FOREIGN KEY (tmid) REFERENCES teams (id),
+    FOREIGN KEY (uid) REFERENCES users (id)
 );
+
+CREATE INDEX idx_teamusers_tmid ON teamusers(tmid);
+CREATE INDEX idx_teamusers_uid ON teamusers(uid);
