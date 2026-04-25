@@ -130,8 +130,8 @@ app.controller("SelectController", [
 
         self.getMe = async () => {
             try {
-                const response = await $http.post("get-my-name");
-                self.lang = response.data.lang === "spanish" ? "ES_CL/spanish" : "EN_US/english";
+                const response = await $http.get("/users/myinfo");
+                self.lang = response.data.data.lang === "spanish" ? "ES_CL/spanish" : "EN_US/english";
                 await self.updateLang(self.lang);
             } catch (error) {
                 console.error("Error fetching user language:", error);
@@ -142,7 +142,7 @@ app.controller("SelectController", [
         self.updateTeam = async () => {
             try {
                 const response = await $http({ url: "get-team", method: "post" });
-                const data = response.data;
+                const data = response.data.data;
         
                 self.team = {};
                 self.teamstr = data.map(e => e.name).join(", ");
@@ -223,7 +223,7 @@ app.controller("SelectController", [
                     console.log("Checking team answers");
                     const postdata = { qid: self.questions[self.selectedQs].id };
                     const response = await $http.post("check-team-answer", postdata);
-                    const data = response.data;
+                    const data = response.data.data;
         
                     if (data.status === "ok") {
                         await self.sendTeamProgress(idx);
@@ -256,7 +256,7 @@ app.controller("SelectController", [
                     console.log("Checking team answers");
                     const postdata = { qid: self.questions[self.selectedQs].id };
                     const response = await $http.post("check-team-answer", postdata);
-                    const data = response.data;
+                    const data = response.data.data;
         
                     if (data.status === "ok") {
                         await self.sendTeamProgress(self.selectedQs + 1);

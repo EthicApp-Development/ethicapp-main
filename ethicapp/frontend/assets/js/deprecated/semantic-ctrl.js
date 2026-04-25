@@ -109,7 +109,7 @@ app.controller("SemanticController", [
         };
 
         self.getUserInfo = () => {
-            $http.post("get-my-name").success(data => {
+            $http.get("/users/myinfo").success((response) => { const data = response.data ? response.data.data : response.data;
                 self.myName = data.name;
                 self.myRole = data.role;
             });

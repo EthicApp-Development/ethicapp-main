@@ -107,7 +107,7 @@ router.get("/forgot", async (req, res) => {
 
         // Replace placeholder with actual site key
         bottomRecaptchaScript = bottomRecaptchaScript.replace("{{RECAPTCHA_SITE_KEY}}", 
-            process.env.RECAPTCHA_SITE_KEY);
+            process.env.VITE_RECAPTCHA_SITE_KEY);
 
         const welc = req.query.welc;
 
@@ -142,6 +142,10 @@ router.post("/forgot", async (req, res) => {
     }
 
     try {
+        if (!RecaptchaHelper.isRecaptchaEnabled() && !req.body["g_recaptcha_response"]) {
+            req.body["g_recaptcha_response"] = "recaptcha-disabled";
+        }
+
         await UserSchemas.passwordRecoverySchema.validate(req.body);
 
         const responseKey = req.body["g_recaptcha_response"];
@@ -227,7 +231,7 @@ router.get("/reset-password", async (req, res) => {
 
         // Replace placeholder with actual site key
         bottomRecaptchaScript = bottomRecaptchaScript.replace(
-            "{{RECAPTCHA_SITE_KEY}}", process.env.RECAPTCHA_SITE_KEY);
+            "{{RECAPTCHA_SITE_KEY}}", process.env.VITE_RECAPTCHA_SITE_KEY);
 
         // Render the view with the retrieved email
         res.render("reset-password", {
@@ -348,33 +352,6 @@ router.get("/login_record", async (req, res) => {
 });
   
 // Route to get the user's name and other details
-router.post("/get-my-name", async (req, res) => {
-    try {
-        // Execute SQL query to fetch user's name, role, lang, and mail based on session uid
-        const result = await execSQL({
-            dbcon: config.dbconnString,
-            sql:   `
-                SELECT name,
-                    role,
-                    lang,
-                    mail
-                FROM users
-                WHERE id = $1
-            `,
-            sqlParams: [param("plain", req.session.uid)]  // Use session uid as the parameter
-        });
-
-        if (result.length > 0) {
-            return res.status(200).json(result[0]);  // Return the first row
-        } else {
-            return res.status(404).json({ error: "user_not_found" });
-        }
-    } catch (error) {
-        console.error("Error in /get-my-name:", error);
-        return res.status(500).json({ error: "complete_request_error" });
-    }
-});
-
 router.post("/update-lang", async (req, res) => {
     try {
         // Execute SQL update to modify the user's language based on session uid
@@ -401,64 +378,39 @@ router.post("/update-lang", async (req, res) => {
 
 router.get("/users/myinfo", async (req, res) => {
     try {
-        // Validate session
         if (!req.session || !req.session.uid) {
             return res.status(401).json({ success: false, error: "unauthorized" });
         }
 
-        // Execute the SQL query to get user information based on session uid
         const result = await execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT 
-                    u.id, 
-                    u.name, 
+                SELECT
+                    u.id,
+                    u.name,
                     u.firstname,
                     u.lastname,
-                    u.mail as email
+                    u.sex,
+                    u.role,
+                    u.lang,
+                    u.mail AS email,
+                    u.profile_image_path,
+                    u.profile_image_topbar_path
                 FROM users u
                 WHERE u.id = $1
                 LIMIT 1
             `,
-            sqlParams: [req.session.uid], // Directly pass the plain session uid
+            sqlParams: [param("plain", req.session.uid)]
         });
 
-        // Return user data if found, else return empty object
         if (result.length > 0) {
             return res.status(200).json({ success: true, data: result[0] });
-        } else {
-            return res.status(404).json({ success: false, error: "user_not_found" });
         }
+
+        return res.status(404).json({ success: false, error: "user_not_found" });
     } catch (error) {
         console.error("Error in /users/myinfo:", { error, sessionId: req.session.uid });
         return res.status(500).json({ success: false, error: "internal_server_error" });
-    }
-});
-
-
-router.post("/getuserinfo", async (req, res) => {
-    try {
-        // Execute the SQL query to get user information based on session uid
-        const result = await execSQL({
-            dbcon: config.dbconnString,
-            sql:   `
-                SELECT *
-                FROM users
-                WHERE id = $1
-                LIMIT 1
-            `,
-            sqlParams: [param("plain", req.session.uid)]  // Use session uid as a parameter
-        });
-
-        // Return user data if found, else return empty object
-        if (result.length > 0) {
-            return res.status(200).json({ data: result[0] });
-        } else {
-            return res.status(404).json({ error: "user_information_lookup_failure" });
-        }
-    } catch (error) {
-        console.error("Error in /getuserinfo:", error);
-        return res.status(500).json({ error: "user_information_failure" });
     }
 });
 

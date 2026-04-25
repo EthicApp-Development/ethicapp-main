@@ -4,7 +4,6 @@ import { MatchFieldDirective } from "../../directives/match-field.directive.js";
 import { InstitutionRequired } from "../../directives/institution-required.directive.js";
 import { LoginController } from "../../controllers/common/login.controller.js";
 import { RegistrationsController } from "../../controllers/common/registrations.controller.js";
-import { ProfileController } from "../../controllers/common/profile.controller.js";
 import { CredentialsController } from "../../controllers/common/credentials.controller.js";
 import { LocalesController } from "../../controllers/common/locales.controller.js";
 import { ErrorsController } from "../../controllers/common/errors.controller.js";
@@ -43,8 +42,6 @@ ngapp_user_common.controller("LoginController",
     ["$scope", "$http", "$window", LoginController]);
 ngapp_user_common.controller("RegistrationsController", 
     ["$scope", "$http", RegistrationsController]);
-ngapp_user_common.controller("ProfileController",
-    ["$scope", "$http", ProfileController]);
 ngapp_user_common.controller("ErrorsController",
     ["$scope", "$http", ErrorsController]);    
 ngapp_user_common.controller("CredentialsController",

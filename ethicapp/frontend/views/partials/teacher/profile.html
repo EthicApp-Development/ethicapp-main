@@ -1,36 +1,43 @@
-<div ng-controller="ProfileController" ng-if="selectedView == 'profile'">
+<div ng-controller="ProfileController as vm" class="teacher-profile-page">
     <div class="profile">
-        <img src="assets/images/assorted/blanco.jpg" alt="No Carga" class="profile-pic">
+        <img ng-src="{{ vm.getProfileAvatar() }}" alt="Profile avatar" class="profile-pic">
         <div class="profile-info">
-            <strong class="profile-username">{{ username }}</strong>
-            <h3 ng-if="role == 'A'" class="profile-role">{{ 'student' | translate }}</h3>
-            <h3 ng-if="role == 'P'" class="profile-role">{{ 'teacher' | translate }}</h3>
-            <h3 ng-if="role == 'I'" class="profile-role">{{ 'institution' | translate }}</h3>
+            <strong class="profile-username">{{ vm.getDisplayName() }}</strong>
+            <h3 ng-if="vm.profile.role == 'P'" class="profile-role">{{ 'teacher' | translate }}</h3>
+            <p>{{ vm.profile.email }}</p>
         </div>
     </div>
-    <div>
-        <form action="changepassword" method="post">
-            <input name="mail" type="hidden" value="{{mail}}" class="form-control profile-input">
-            <label class="left">{{'change_passwors' | translate}}:</label>
-            <input type="text" class="form-control profile-input" name="pass" required autofocus><br>
-            <label>{{'confirm_password' | translate}}:</label>
-            <input type="text" class="form-control profile-input" name="pass-conf"><br>
-            <button type="submit" class="btn btn-primary" style="width: 200px;">
-                {{'change_passwors' | translate}}
-            </button>
-        </form>
+
+    <div class="mb-3">
+        <label>{{ 'profile_photo' | translate }}</label>
+        <input type="file" ngf-select ng-model="vm.selectedAvatarFile" ngf-change="vm.onAvatarSelected($file)" accept="image/jpeg" ngf-max-size="300KB">
+        <button type="button" class="btn btn-primary mt-medio" ng-click="vm.uploadAvatar()">{{ 'upload_photo' | translate }}</button>
+        <small class="d-block">JPG, máximo 300 KB</small>
     </div>
-    <br>
-    <br>
+
     <div>
-        <form action="deleteacc" method="post">
-            {{'terminate_account' | translate}}
-            <br>
-            <br>
-            <input name="mail" type="hidden" value="{{mail}}" class="form-control profile-input">
-            <button type="submit" class="btn btn-primary" style="width: 200px;">
-                {{'unsubscribe_account' | translate}}
-            </button>
-        </form>
+        <label>{{ 'firstname' | translate }}</label>
+        <input type="text" class="form-control profile-input" ng-model="vm.profile.firstname">
+
+        <label>{{ 'lastname' | translate }}</label>
+        <input type="text" class="form-control profile-input" ng-model="vm.profile.lastname">
+
+        <label>{{ 'gender' | translate }}</label>
+        <select class="form-control profile-input" ng-model="vm.profile.sex" ng-options="option.value as option.label for option in vm.genderOptions"></select>
+
+        <button type="button" class="btn btn-primary mt-medio" ng-click="vm.saveProfile()">{{ 'save_profile' | translate }}</button>
+    </div>
+
+    <hr>
+
+    <div>
+        <label>{{ 'password_reset_email' | translate }}</label>
+        <input type="email" class="form-control profile-input" ng-model="vm.passwordResetEmail" placeholder="mail@ejemplo.com">
+
+        <div id="recaptcha-container" ng-if="vm.isRecaptchaEnabled" class="mt-medio g-recaptcha"></div>
+
+        <button type="button" class="btn btn-warning mt-medio" ng-click="vm.triggerPasswordReset()">
+            {{ 'change_password' | translate }}
+        </button>
     </div>
 </div>

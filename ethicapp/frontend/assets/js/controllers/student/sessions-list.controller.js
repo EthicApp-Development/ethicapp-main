@@ -46,13 +46,13 @@ export function SessionsListController($scope, $http, $socket, $uibModal) {
     };
 
     self.showName = function () {
-        $http.post("get-my-name")
+        $http.get("/users/myinfo")
             .then(function (response) {
                 // Set user information based on the response data
-                self.mail = response.data.mail;
-                self.rol = response.data.role;
-                self.username = response.data.name;
-                self.mylang = response.data.lang === "spanish" ? "es_CL" : "en_US";
+                self.mail = response.data.data.email;
+                self.rol = response.data.data.role;
+                self.username = response.data.data.name;
+                self.mylang = response.data.data.lang === "spanish" ? "es_CL" : "en_US";
                 self.updateLang(self.mylang); // Update language based on user's preference
             })
             .catch(function (error) {

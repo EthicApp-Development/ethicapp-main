@@ -86,7 +86,7 @@ export function RolePlayingController($scope, $http, $timeout, $socket, Notifica
         return new Promise(function (resolve, reject) {
             $http({ url: "get-ses-info", method: "post" })
                 .then(function (response) {
-                    var data = response.data;
+                    var data = response.data.data;
                     self.iteration = data.iteration + 1;
                     self.myUid = data.uid;
                     self.sesName = data.name;
@@ -143,7 +143,7 @@ export function RolePlayingController($scope, $http, $timeout, $socket, Notifica
     function updateChat(count) {
         $http.post("get-chat-stage", { stageid: self.currentStageId })
             .then(function (response) {
-                var data = response.data;
+                var data = response.data.data;
                 self.chatMsgs = {};
                 data.forEach(function (msg) {
                     if (msg.parent_id) {
@@ -162,9 +162,9 @@ export function RolePlayingController($scope, $http, $timeout, $socket, Notifica
     }    
 
     self.getMe = function () {
-        $http.post("get-my-name")
+        $http.get("/users/myinfo")
             .then(function (response) {
-                var data = response.data;
+                var data = response.data.data;
                 self.lang = data.lang === "spanish" ? "ES_CL/spanish" : "EN_US/english";
                 self.updateLang(self.lang);
             })
@@ -229,7 +229,7 @@ export function RolePlayingController($scope, $http, $timeout, $socket, Notifica
     self.getAssignedJigsawRole = function () {
         $http.post("get-assigned-jigsaw-role")
             .then(function (response) {
-                var data = response.data;
+                var data = response.data.data;
                 if (data.length > 0) {
                     self.myJigsaw = data[0].roleid;
                 } else if (self.jroles.length > 0) {
@@ -254,7 +254,7 @@ export function RolePlayingController($scope, $http, $timeout, $socket, Notifica
     self.loadStageData = function () {
         $http.post("get-stages", {})
             .then(function (response) {
-                var data = response.data;
+                var data = response.data.data;
                 self.stages = data;
                 self.selectStage2(self.stages.length - 1);
                 self.currentStage = self.stages.find(function (e) {
@@ -268,7 +268,7 @@ export function RolePlayingController($scope, $http, $timeout, $socket, Notifica
                 if (self.currentStage && self.currentStage.type === "team") {
                     $http.post("get-team-stage", { stageid: self.currentStageId })
                         .then(function (response) {
-                            var data = response.data;
+                            var data = response.data.data;
                             self.team = data;
                             self.teamMap = {};
                             var alph = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -494,7 +494,7 @@ export function RolePlayingController($scope, $http, $timeout, $socket, Notifica
     
             $http.post("get-team-stage", { stageid: st.id })
                 .then(function (response) {
-                    var data = response.data;
+                    var data = response.data.data;
                     self.teamPrev = data;
                     self.teamMapPrev = {};
                     var alph = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -529,7 +529,7 @@ export function RolePlayingController($scope, $http, $timeout, $socket, Notifica
         if (st.chat) {
             $http.post("get-chat-stage", { stageid: st.id })
                 .then(function (response) {
-                    var data = response.data;
+                    var data = response.data.data;
                     self.chatMsgsPrev = {};
                     data.forEach(function (msg) {
                         if (msg.parent_id) {
@@ -593,7 +593,7 @@ export function RolePlayingController($scope, $http, $timeout, $socket, Notifica
     
             $http.post("get-team-stage", { stageid: st.id })
                 .then(function (response) {
-                    var data = response.data;
+                    var data = response.data.data;
                     self.teamPrev = data;
                     self.teamMapPrev = {};
                     var alph = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -628,7 +628,7 @@ export function RolePlayingController($scope, $http, $timeout, $socket, Notifica
         if (st.chat) {
             $http.post("get-chat-stage", { stageid: st.id })
                 .then(function (response) {
-                    var data = response.data;
+                    var data = response.data.data;
                     self.chatMsgsPrev = {};
                     data.forEach(function (msg) {
                         if (msg.parent_id) {
@@ -671,7 +671,7 @@ export function RolePlayingController($scope, $http, $timeout, $socket, Notifica
             console.log(postdata);
             $http.post("send-actor-selection", postdata)
                 .then(function (response) {
-                    var data = response.data;
+                    var data = response.data.data;
                     a.dirty = false;
                     a.sent = a.comment != null && a.comment != "";
                     if (self.wordCount(a.comment) < a.word_count) {
@@ -772,7 +772,7 @@ export function RolePlayingController($scope, $http, $timeout, $socket, Notifica
     self.inputAssignedRoles = function () {
         $http.post("get-assigned-jigsaw-roles", { sesid: self.sesId })
             .then(function (response) {
-                var data = response.data;
+                var data = response.data.data;
                 data.forEach(function (d) {
                     if (self.teamMap[d.userid]) {
                         var j = self.jroles.find(function (e) {

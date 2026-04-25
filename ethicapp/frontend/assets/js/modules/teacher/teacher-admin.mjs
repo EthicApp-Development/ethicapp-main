@@ -6,7 +6,7 @@ import { ActivityCatalogService } from "../../services/activity-catalog.service.
 import { DesignStateService } from "../../services/design-state.service.js";
 import { DesignCatalogService } from "../../services/design-catalog.service.js";
 import { CasesCatalogService } from "../../services/cases-catalog.service.js";
-import UserInformationService from "../../services/user-information.service.js";
+import UserProfileService from "../../services/user-profile.service.js";
 import SocketService from '../../services/socket.service.js';
 
 var app = angular.module("TeacherApp", ["ngSanitize",
@@ -25,7 +25,7 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("ActivityCatalogService", ["$http", ActivityCatalogService])
     .factory("DesignCatalogService", ["$rootScope", "$http", DesignCatalogService])
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
-    .factory("UserInformationService", ["$http", UserInformationService])
+    .factory("UserProfileService", ["$http", "Upload", UserProfileService])
     .factory("CasesCatalogService", ["$http", CasesCatalogService]);
 
 import { LocalesController } from "../../controllers/common/locales.controller.js";
@@ -44,6 +44,7 @@ import { ngQuillConfigProvider } from "../../helpers/util.js";
 import { DesignEditorController } from "../../controllers/teacher/design-editor.controller.js";
 import { DesignViewerController } from "../../controllers/teacher/design-viewer.controller.js";
 import { CasesController } from "../../controllers/teacher/cases.controller.js";
+import { ProfileController } from "../../controllers/teacher/profile.controller.js";
 
 import { TeacherRouter } from "./teacher-routes.js";
 app.config(TeacherRouter);
@@ -109,7 +110,7 @@ app.controller("ConfirmModalController",
 app.controller("ContentModalController", 
     ["$scope", "$uibModalInstance", "data", ContentModalController]); 
 app.controller("CreateDesignController", 
-    ["$scope", "DesignCatalogService", "UserInformationService", CreateDesignController]);
+    ["$scope", "DesignCatalogService", "UserProfileService", CreateDesignController]);
 app.controller("DashboardController", 
     ["$scope", "$routeParams", "$http", "$translate", "$timeout", "$uibModal",
         "ActivityStateService", "ActivityCatalogService", "DesignCatalogService", DashboardController]);  
@@ -131,6 +132,7 @@ app.controller("DesignEditorController",
     ["$scope", "$translate", "$timeout", "$routeParams", "DesignStateService", 
         "DesignCatalogService", "CasesCatalogService", "toast", DesignEditorController]);         
 app.controller("VoidController", [VoidController]);
+app.controller("ProfileController", ["$scope", "toast", "UserProfileService", ProfileController]);
 
 app.service("DialogService", function(ngDialog) {
     this.openDialog = function() {

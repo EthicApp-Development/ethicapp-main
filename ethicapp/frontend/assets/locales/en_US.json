@@ -579,5 +579,10 @@
 	"design_associated_case_label": "Associated case",
 	"design_associated_case_placeholder": "Search case by title or author",
 	"design_no_case_associated": "No case is associated.",
-	"design_associated_case_current": "Current case"
+	"design_associated_case_current": "Current case",
+	"profile_photo": "Profile photo",
+	"upload_photo": "Upload photo",
+	"save_profile": "Save profile",
+	"password_reset_email": "Email for password reset",
+	"change_password": "Change password"
 }
