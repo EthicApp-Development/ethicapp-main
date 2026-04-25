@@ -33,7 +33,7 @@ router.get("/register", async (req, res) => {
 
         // Replace placeholder with actual site key
         recaptchaBottomScript = recaptchaBottomScript.replace("{{RECAPTCHA_SITE_KEY}}", 
-            process.env.RECAPTCHA_SITE_KEY);
+            process.env.VITE_RECAPTCHA_SITE_KEY);
 
         // Render the view
         res.render("register", {

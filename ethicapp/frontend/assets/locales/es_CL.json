@@ -589,5 +589,13 @@
 	"design_associated_case_label": "Caso asociado",
 	"design_associated_case_placeholder": "Buscar caso por título o autor",
 	"design_no_case_associated": "No hay caso asociado.",
-	"design_associated_case_current": "Caso actual"
+	"design_associated_case_current": "Caso actual",
+	"profile_photo": "Foto de perfil",
+	"upload_photo": "Subir foto",
+	"save_profile": "Guardar perfil",
+	"password_reset_email": "Correo para recuperar contraseña",
+	"change_password": "Cambiar contraseña",
+	"password_reset_notice": "Al cambiar la contraseña se enviará un correo de recuperación a",
+	"password_reset_modal_message": "¿Confirmas que deseas enviar el correo para cambio de contraseña a",
+	"accept": "Aceptar"
 }

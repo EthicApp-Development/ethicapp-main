@@ -18,6 +18,7 @@ const FileStore = fileStoreFactory(session);
 import index from "./controllers/index.js";
 import users_core from "./controllers/users/users-core.js";
 import users_registration from "./controllers/users/users-registration.js";
+import user_profile from "./controllers/users/user-profile.js";
 import sessions from "./controllers/sessions.js";
 import activities from "./controllers/activities.js";
 import phases from "./controllers/phases.js";
@@ -104,7 +105,7 @@ app.use(logger("[:utc-date | EthicApp] :method :url :status - :response-time ms"
 // Setup busboy for uploads
 busboy.extend(app, {
     upload:        true,
-    mimeTypeLimit: ["application/pdf", "image/png"],
+    mimeTypeLimit: ["application/pdf", "image/png", "image/jpeg", "image/jpg"],
     path:          config.uploadsPath,
     limits:        { fileSize: 5*1024*1024 }
 });
@@ -155,6 +156,7 @@ app.locals.ETHICAPP_BUILD_HASH = ETHICAPP_BUILD_HASH;
 app.use("/", index);
 app.use("/", users_core);
 app.use("/", users_registration);
+app.use("/", requireLegacyAuth, user_profile);
 app.use("/", requireLegacyAuth, sessions);
 app.use("/", requireLegacyAuth, activities);
 app.use("/", requireLegacyAuth, phases);

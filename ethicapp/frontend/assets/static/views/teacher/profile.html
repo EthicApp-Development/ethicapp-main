@@ -1,36 +1,63 @@
-<div ng-controller="ProfileController" ng-if="selectedView == 'profile'">
+<div ng-controller="ProfileController as vm" class="teacher-profile-page">
     <div class="profile">
-        <img src="assets/images/assorted/blanco.jpg" alt="No Carga" class="profile-pic">
+        <img ng-src="{{ vm.getProfileAvatar() }}" alt="Profile avatar" class="profile-pic">
         <div class="profile-info">
-            <strong class="profile-username">{{ username }}</strong>
-            <h3 ng-if="role == 'A'" class="profile-role">{{ 'student' | translate }}</h3>
-            <h3 ng-if="role == 'P'" class="profile-role">{{ 'teacher' | translate }}</h3>
-            <h3 ng-if="role == 'I'" class="profile-role">{{ 'institution' | translate }}</h3>
+            <strong class="profile-username">{{ vm.getDisplayName() }}</strong>
+            <h3 ng-if="vm.profile.role == 'P'" class="profile-role">{{ 'teacher' | translate }}</h3>
+            <p><strong>{{ 'email' | translate }}:</strong> {{ vm.profile.email }}</p>
+            <p><strong>{{ 'gender' | translate }}:</strong> {{ vm.profile.sex }}</p>
         </div>
     </div>
-    <div>
-        <form action="changepassword" method="post">
-            <input name="mail" type="hidden" value="{{mail}}" class="form-control profile-input">
-            <label class="left">{{'change_passwors' | translate}}:</label>
-            <input type="text" class="form-control profile-input" name="pass" required autofocus><br>
-            <label>{{'confirm_password' | translate}}:</label>
-            <input type="text" class="form-control profile-input" name="pass-conf"><br>
-            <button type="submit" class="btn btn-primary" style="width: 200px;">
-                {{'change_passwors' | translate}}
-            </button>
-        </form>
+
+    <div class="mb-3">
+        <label>{{ 'profile_photo' | translate }}</label>
+        <input type="file" ngf-select ng-model="vm.selectedAvatarFile" ngf-change="vm.onAvatarSelected($file)" accept="image/jpeg" ngf-max-size="300KB">
+        <button type="button" class="btn btn-primary mt-medio" ng-click="vm.uploadAvatar()">{{ 'upload_photo' | translate }}</button>
+        <small class="d-block">JPG, máximo 300 KB</small>
     </div>
-    <br>
-    <br>
+
     <div>
-        <form action="deleteacc" method="post">
-            {{'terminate_account' | translate}}
-            <br>
-            <br>
-            <input name="mail" type="hidden" value="{{mail}}" class="form-control profile-input">
-            <button type="submit" class="btn btn-primary" style="width: 200px;">
-                {{'unsubscribe_account' | translate}}
-            </button>
-        </form>
+        <label>{{ 'firstname' | translate }}</label>
+        <input type="text" class="form-control profile-input" ng-model="vm.profile.firstname">
+
+        <label>{{ 'lastname' | translate }}</label>
+        <input type="text" class="form-control profile-input" ng-model="vm.profile.lastname">
+
+        <label>{{ 'gender' | translate }}</label>
+        <select class="form-control profile-input" ng-model="vm.profile.sex" ng-options="option.value as option.label for option in vm.genderOptions"></select>
+
+        <div id="profile-recaptcha-container" ng-if="vm.isRecaptchaEnabled" class="mt-medio g-recaptcha"></div>
+
+        <button type="button" class="btn btn-primary mt-medio" ng-click="vm.saveProfile()">{{ 'save_profile' | translate }}</button>
     </div>
+
+    <hr>
+
+    <div>
+        <p>{{ 'password_reset_notice' | translate }} <strong>{{ vm.profile.email }}</strong>.</p>
+
+        <button type="button" class="btn btn-warning mt-medio" ng-click="vm.openPasswordResetModal()">
+            {{ 'change_password' | translate }}
+        </button>
+    </div>
+
+    <div class="modal fade" ng-class="{'in': vm.isPasswordResetModalOpen}" ng-style="{display: vm.isPasswordResetModalOpen ? 'block' : 'none'}" tabindex="-1" role="dialog" aria-hidden="{{ !vm.isPasswordResetModalOpen }}">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" ng-click="vm.closePasswordResetModal()" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">{{ 'change_password' | translate }}</h4>
+                </div>
+                <div class="modal-body">
+                    <p>{{ 'password_reset_modal_message' | translate }} <strong>{{ vm.profile.email }}</strong>.</p>
+                    <div id="password-reset-recaptcha-container" ng-if="vm.isRecaptchaEnabled" class="mt-medio g-recaptcha"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" ng-click="vm.closePasswordResetModal()">{{ 'cancel' | translate }}</button>
+                    <button type="button" class="btn btn-primary" ng-click="vm.confirmPasswordReset()">{{ 'accept' | translate }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade in" ng-if="vm.isPasswordResetModalOpen"></div>
 </div>

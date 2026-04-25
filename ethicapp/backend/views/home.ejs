@@ -1,4 +1,11 @@
-  <div class="top-bar-mini cflex" ng-hide="false">
+<script>
+  window.__ETHICAPP_RECAPTCHA_ENABLED__ = <%= recaptchaEnabled ? "true" : "false" %>;
+  window.__ETHICAPP_RECAPTCHA_SITE_KEY__ = "<%= recaptchaSiteKey || '' %>";
+</script>
+<% if (recaptchaEnabled) { %>
+<script src="https://www.google.com/recaptcha/api.js?render=explicit" async defer></script>
+<% } %>
+  <div ng-controller="ProfileController" class="top-bar-mini cflex" ng-hide="false">
     <div class="cf1">
       <a href="/home" class="simple-margin-left">
         <img src="assets/images/logos/ethicapp-logo-emboss.png" class="logoEthicapp" alt="Logo">
@@ -18,10 +25,9 @@
           </li>
         </ul>
       </div>
-      <img src="assets/images/assorted/blanco.jpg" alt="No Carga"
-        class="circle_profile cf1 text-right margin-right-3 simple-padding-top" ng-click="selectView('profile')">
-      <strong class="margin-right-8"><a ng-click="selectView('profile')" style="color: white;"> {{'profile' | translate
-          }}
+      <img ng-src="{{ getTopbarAvatar() }}" alt="Avatar"
+        class="circle_profile cf1 text-right margin-right-3 simple-padding-top">
+      <strong class="margin-right-8"><a href="#!/profile" style="color: white;"> {{ getDisplayName() || ('profile' | translate) }}
         </a></strong>
       <a href="logout" class="text-white ml-2" title="{{'exitEthicapp' | translate}}">
         <i class="fa fa-sign-out fa-2x"></i>

@@ -132,7 +132,7 @@ app.controller("DifferentialController", [
         async function updateChat(count) {
             try {
                 const response = await $http.post("get-chat-msgs");
-                const data = response.data;
+                const data = response.data.data;
         
                 self.chatMsgs = {};
                 self.dfs.forEach(e => {
@@ -162,8 +162,8 @@ app.controller("DifferentialController", [
         
         self.getMe = async () => {
             try {
-                const response = await $http.post("get-my-name");
-                const data = response.data;
+                const response = await $http.get("/users/myinfo");
+                const data = response.data.data;
                 self.lang = data.lang === "spanish" ? "ES_CL/spanish" : "EN_US/english";
                 await self.updateLang(self.lang);
             } catch (error) {
