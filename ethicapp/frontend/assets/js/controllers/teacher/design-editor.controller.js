@@ -3,7 +3,7 @@ import * as phaseValidationHelpers from "../../helpers/phase-validation-helpers.
 import accordionStateHelpers from "../../helpers/accordeon-state-helpers.js"
 
 export function DesignEditorController($scope, $translate, $timeout,
-    $routeParams, DesignStateService, DesignCatalogService, toast) {
+    $routeParams, DesignStateService, DesignCatalogService, CasesCatalogService, toast) {
 
     const vm = this;
     vm.designId = 0;
@@ -14,6 +14,7 @@ export function DesignEditorController($scope, $translate, $timeout,
         global: [], // Global design-related errors
         phases: {}, // Specific per-phase errors
     };
+    vm.associatedCase = null;
     
     vm.init = async function() {
         // Retrieve the design from the route path
@@ -36,10 +37,68 @@ export function DesignEditorController($scope, $translate, $timeout,
             });
 
             await DesignStateService.setDesign(designId, designObj);
+            await vm.loadAssociatedCase();
 
             //vm.initializePhases();
             vm.initializeAccordionStates();
         }
+    };
+
+    vm.loadAssociatedCase = async function() {
+        vm.associatedCase = null;
+        if (!vm.designId) {
+            return;
+        }
+        try {
+            const response = await CasesCatalogService.getCaseByDesignId(vm.designId);
+            vm.associatedCase = response;
+            if (response && response.id) {
+                vm.design.caseId = response.id;
+                vm.selectedCase = vm.formatCaseLabel(response);
+            } else {
+                vm.design.caseId = null;
+                vm.selectedCase = "";
+            }
+        } catch (error) {
+            console.error("[DesignEditorController::loadAssociatedCase] Error loading associated case.", error);
+            vm.design.caseId = null;
+            vm.selectedCase = "";
+        } finally {
+            $scope.$applyAsync();
+        }
+    };
+
+    vm.searchCases = async function(query) {
+        return CasesCatalogService.searchCases(query);
+    };
+
+    vm.selectCase = function(caseItem) {
+        if (!caseItem) {
+            vm.design.caseId = null;
+            vm.associatedCase = null;
+            vm.selectedCase = "";
+            return;
+        }
+        vm.design.caseId = caseItem.id;
+        vm.associatedCase = caseItem;
+        vm.selectedCase = vm.formatCaseLabel(caseItem);
+    };
+
+    vm.clearAssociatedCase = function() {
+        vm.design.caseId = null;
+        vm.associatedCase = null;
+        vm.selectedCase = "";
+    };
+
+    vm.formatCaseLabel = function(caseItem) {
+        if (!caseItem) {
+            return "";
+        }
+        const hasAuthor = caseItem.authorFirstname || caseItem.authorLastname;
+        if (hasAuthor) {
+            return `${caseItem.title} (${caseItem.authorFirstname || ""} ${caseItem.authorLastname || ""})`.trim();
+        }
+        return caseItem.title;
     };
 
     vm.initializeAccordionStates = function () {

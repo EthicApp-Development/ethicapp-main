@@ -4,6 +4,7 @@ import express from "express";
 import * as config from "../config/config.js"; 
 import * as rpg2 from "../db/rest-pg-2.js";
 import { hasTheUserRoleById } from '../helpers/users-helper.js';
+import { requireRole } from "../helpers/auth-helper.js";
 
 const router = express.Router();
 
@@ -43,7 +44,7 @@ router.get("/designs/:id", async (req, res) => {
 router.post("/designs", async (req, res) => {
     try {
         const sessionUid = req.session?.uid;
-        const { design } = req.body; // Extract the design object from the request body
+        const { design, caseId = null } = req.body; // Extract the design object from the request body
 
         // Validate session
         if (!sessionUid) {
@@ -61,13 +62,14 @@ router.post("/designs", async (req, res) => {
         const result = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
-                INSERT INTO designs (creator, design)
-                VALUES ($1, $2)
+                INSERT INTO designs (creator, design, case_id)
+                VALUES ($1, $2, $3)
                 RETURNING id
             `,
             sqlParams: [
                 rpg2.param("plain", sessionUid), // Pass the session user ID as creator
                 rpg2.param("plain", JSON.stringify(designNoId)), // Serialize the design object
+                rpg2.param("plain", caseId),
             ],
         });
 
@@ -87,7 +89,7 @@ router.patch("/designs/:id", async (req, res) => {
     try {
         const sessionUid = req.session?.uid;
         const designId = parseInt(req.params.id, 10); // Convert designId to an integer
-        const { design } = req.body; // Extract the updated design from the request body
+        const { design, caseId = null } = req.body; // Extract the updated design from the request body
 
         // Validate session
         if (!sessionUid) {
@@ -127,11 +129,13 @@ router.patch("/designs/:id", async (req, res) => {
             dbcon: config.dbconnString,
             sql: `
                 UPDATE designs
-                SET design = $1
-                WHERE id = $2
+                SET design = $1,
+                    case_id = $2
+                WHERE id = $3
             `,
             sqlParams: [
                 rpg2.param("plain", designNoId),
+                rpg2.param("plain", caseId),
                 rpg2.param("plain", designId),
             ],
         });
@@ -206,6 +210,7 @@ router.get("/users/:id/designs", async (req, res) => {
             dbcon: config.dbconnString,
             sql: `
                 SELECT id, design, public, locked
+                       , case_id
                 FROM designs
                 WHERE creator = $1
                 ORDER BY id DESC;
@@ -219,6 +224,7 @@ router.get("/users/:id/designs", async (req, res) => {
             id: row.id,
             public: row.public,
             locked: row.locked,
+            caseId: row.case_id,
         }));
 
         // Return the formatted designs
@@ -242,6 +248,7 @@ router.get("/designs", async (req, res) => {
             dbcon: config.dbconnString,
             sql: `
                 SELECT DISTINCT ON (id) id, design, public, locked, 
+                       case_id,
                        CASE WHEN creator = $1 THEN TRUE ELSE FALSE END AS user_owned
                 FROM designs
                 WHERE creator = $1 OR public = TRUE
@@ -256,6 +263,7 @@ router.get("/designs", async (req, res) => {
             id: row.id,
             public: row.public,
             locked: row.locked,
+            caseId: row.case_id,
             userOwned: row.user_owned,
         }));
 
@@ -478,6 +486,57 @@ router.get('/designs/:id/valid', async (req, res) => {
     } catch (err) {
         console.error('Error in GET /designs/:id/valid:', err);
         return res.status(500).json({ status: 'err', message: 'Internal Server Error' });
+    }
+});
+
+router.get("/designs/:id/case", async (req, res) => {
+    if (!requireRole(req, res, ["P", "A"])) {
+        return;
+    }
+
+    try {
+        const designId = parseInt(req.params.id, 10);
+        if (isNaN(designId)) {
+            return res.status(400).json({ status: "err", message: "Invalid design ID" });
+        }
+
+        const result = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT d.id AS design_id,
+                       c.id,
+                       c.title,
+                       c.author_firstname,
+                       c.author_lastname,
+                       c.author_email
+                FROM designs d
+                LEFT JOIN ethical_cases c ON c.id = d.case_id
+                WHERE d.id = $1;
+            `,
+            sqlParams: [rpg2.param("plain", designId)],
+        });
+
+        if (!result || !result.design_id) {
+            return res.status(404).json({ status: "err", message: "Design not found" });
+        }
+
+        if (!result.id) {
+            return res.status(200).json({ status: "ok", result: null });
+        }
+
+        return res.status(200).json({
+            status: "ok",
+            result: {
+                id: result.id,
+                title: result.title,
+                authorFirstname: result.author_firstname,
+                authorLastname: result.author_lastname,
+                authorEmail: result.author_email,
+            },
+        });
+    } catch (err) {
+        console.error("Error in GET /designs/:id/case:", err);
+        return res.status(500).json({ status: "err", message: "Internal Server Error" });
     }
 });
 

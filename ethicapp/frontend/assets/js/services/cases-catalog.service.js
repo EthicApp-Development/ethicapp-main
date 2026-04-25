@@ -20,6 +20,27 @@ let CasesCatalogService = ($http) => {
             return response.data.result;
         },
 
+        async getCaseByDesignId(designId) {
+            const response = await $http.get(`/designs/${designId}/case`);
+            return response.data.result;
+        },
+
+        async searchCases(query) {
+            const trimmedQuery = String(query || "").trim();
+            if (trimmedQuery.length < 2) {
+                return [];
+            }
+            const response = await $http.get("/cases/search", {
+                params: { q: trimmedQuery },
+            });
+            return Array.isArray(response.data.result) ? response.data.result : [];
+        },
+
+        async getCaseDownloadLink(caseId) {
+            const response = await $http.get(`/cases/${caseId}/download-link`);
+            return response.data.result;
+        },
+
         async createCase(caseData) {
             const formData = new FormData();
             formData.append("title", caseData.title);
