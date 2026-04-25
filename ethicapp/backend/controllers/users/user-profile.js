@@ -64,6 +64,10 @@ router.get("/users/profile", async (req, res) => {
     if (!requireRole(req, res, "P")) return;
 
     try {
+        res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+        res.set("Pragma", "no-cache");
+        res.set("Expires", "0");
+
         const result = await execSQL({
             dbcon: config.dbconnString,
             sql: `
