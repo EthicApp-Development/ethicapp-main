@@ -2342,6 +2342,16 @@ h2{
     max-width: 42rem;
 }
 
+.case-form-field .help-block {
+    margin-top: 5px;
+    margin-bottom: 0;
+    white-space: normal;
+}
+
+.case-form-field .help-block.text-danger {
+    color: #a94442;
+}
+
 .toast-container .alert {
     height: 1.75em !important;
     margin-left: auto;
