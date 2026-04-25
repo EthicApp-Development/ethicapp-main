@@ -10,14 +10,30 @@
                 <label>{{'step_1_prepare_activity' | translate}}</label>
             </div>
             <div class="panel-body">
+                <div class="row" ng-init="bdc.getDesigns()" style="display: none;"></div>
                 <div class="row">
-                    <div class="col-md-12">
+                    <div class="col-md-12" ng-if="bdc.hasFetchedUserDesigns && bdc.userDesigns.length === 0">
+                        <div class="alert alert-info">
+                            <span>{{'empty_launch_designs_message' | translate}}</span>
+                            <a href="" ng-click="navigateTo('/designs/new')">{{'empty_launch_designs_link' | translate}}</a>.
+                            <span>{{'empty_launch_designs_then_return' | translate}}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-12" ng-if="bdc.userDesigns.length > 0">
                         <p>{{'choose_design_for_new_activity' | translate}}</p>
-                        <input class="form-control launch-activity-search fontAwesome" type="text" 
-                            placeholder="{{'search'|translate}} &#xF002;" ng-model="bdc.userSearch">
+                        <input
+                            class="form-control launch-activity-search fontAwesome"
+                            type="text"
+                            placeholder="{{'search'|translate}} &#xF002;"
+                            ng-model="bdc.designSearchQuery"
+                            ng-change="bdc.handleDesignSearchChange()"
+                            uib-typeahead="design as bdc.formatDesignLabel(design) for design in bdc.searchUserDesigns($viewValue)"
+                            typeahead-on-select="bdc.selectDesignFromSearch($item)"
+                            typeahead-input-formatter="bdc.formatDesignLabel($model)"
+                            typeahead-min-length="1">
                     </div>
                 </div>
-                <div class="row" ng-init="bdc.getDesigns()">
+                <div class="row" ng-if="bdc.userDesigns.length > 0">
                     <div class="col-md-12">
                         <p>{{'available_designs_colon' | translate}}</p>
                         <div class="panel panel-default">
