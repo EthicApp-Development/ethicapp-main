@@ -2338,6 +2338,10 @@ h2{
     border: 1px solid #ffc107; /* Orange border */
 }
 
+.case-form-field {
+    max-width: 42rem;
+}
+
 .toast-container .alert {
     height: 1.75em !important;
     margin-left: auto;

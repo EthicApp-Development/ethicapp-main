@@ -336,6 +336,10 @@
 	"ethical_cases_file": "PDF del caso",
 	"ethical_cases_open_file": "Abrir archivo",
 	"ethical_cases_current_file": "Archivo actual",
+
+	"ethical_cases_validation_required": "Este campo es obligatorio.",
+	"ethical_cases_validation_email": "Ingresa un correo electrónico válido.",
+	"ethical_cases_validation_pdf_required": "Debes seleccionar un archivo PDF.",
 	"empty_cases_message": "Aún no hay casos, pero puedes",
 	"empty_cases_link": "crear uno ahora",
 	"author_firstname": "Nombre del autor",
