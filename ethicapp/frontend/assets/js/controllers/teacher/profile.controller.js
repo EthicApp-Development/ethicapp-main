@@ -1,5 +1,5 @@
 export const ProfileController = function ($scope, $translate, toast, UserProfileService) {
-    const vm = $scope;
+    const vm = this;
 
     vm.genderOptions = [
         { value: "F", label: "Femenino" },
@@ -198,4 +198,6 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
 
     vm.loadProfile();
     setTimeout(vm.ensureProfileRecaptcha, 300);
+
+    $scope.vm = vm;
 };

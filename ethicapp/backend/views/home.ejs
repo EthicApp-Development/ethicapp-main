@@ -5,7 +5,7 @@
 <% if (recaptchaEnabled) { %>
 <script src="https://www.google.com/recaptcha/api.js?render=explicit" async defer></script>
 <% } %>
-  <div ng-controller="ProfileController" class="top-bar-mini cflex" ng-hide="false">
+  <div ng-controller="ProfileController as vm" class="top-bar-mini cflex" ng-hide="false">
     <div class="cf1">
       <a href="/home" class="simple-margin-left">
         <img src="assets/images/logos/ethicapp-logo-emboss.png" class="logoEthicapp" alt="Logo">
@@ -25,9 +25,9 @@
           </li>
         </ul>
       </div>
-      <img ng-src="{{ getTopbarAvatar() }}" alt="Avatar"
+      <img ng-src="{{ vm.getTopbarAvatar() }}" alt="Avatar"
         class="circle_profile cf1 text-right margin-right-3 simple-padding-top">
-      <strong class="margin-right-8"><a href="#!/profile" style="color: white;"> {{ getDisplayName() || ('profile' | translate) }}
+      <strong class="margin-right-8"><a href="#!/profile" style="color: white;"> {{ vm.getDisplayName() || ('profile' | translate) }}
         </a></strong>
       <a href="logout" class="text-white ml-2" title="{{'exitEthicapp' | translate}}">
         <i class="fa fa-sign-out fa-2x"></i>
