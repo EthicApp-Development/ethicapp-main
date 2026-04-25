@@ -1642,6 +1642,14 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     margin-top: 5px;
 }
 
+.teacher-profile-page .form-horizontal {
+    max-width: 720px;
+}
+
+.profile-save-btn {
+    margin-bottom: 2rem;
+}
+
 .btn-activity{
     width: 13rem;
     margin-bottom: 3rem;

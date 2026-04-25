@@ -132,7 +132,7 @@ app.controller("DesignEditorController",
     ["$scope", "$translate", "$timeout", "$routeParams", "DesignStateService", 
         "DesignCatalogService", "CasesCatalogService", "toast", DesignEditorController]);         
 app.controller("VoidController", [VoidController]);
-app.controller("ProfileController", ["$scope", "toast", "UserProfileService", ProfileController]);
+app.controller("ProfileController", ["$scope", "$translate", "toast", "UserProfileService", ProfileController]);
 
 app.service("DialogService", function(ngDialog) {
     this.openDialog = function() {
