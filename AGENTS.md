@@ -121,3 +121,4 @@ When adding teacher-facing features in legacy EthicApp:
 4. Add/update teacher navigation entry points in `ethicapp/frontend/views/home.ejs`.
 5. When adding or modifying UI text in legacy EthicApp AngularJS views, add/update the corresponding translation keys in `ethicapp/frontend/assets/locales/` and use `{{'key'|translate}}` in templates instead of hardcoded strings.
 6. For role-based authorization in legacy backend endpoints, prefer `requireRole` from `ethicapp/backend/helpers/auth-helper.js`; it accepts either a single role (`"P"`) or an array (for example `["P", "A"]`) for professor/student shared access.
+7. For teacher view actions, prefer Bootstrap 3 small default buttons (`btn btn-default btn-sm`) unless the action semantics require another contextual style.

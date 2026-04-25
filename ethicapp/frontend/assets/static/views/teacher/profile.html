@@ -4,39 +4,57 @@
         <div class="profile-info">
             <strong class="profile-username">{{ vm.getDisplayName() }}</strong>
             <h3 ng-if="vm.profile.role == 'P'" class="profile-role">{{ 'teacher' | translate }}</h3>
-            <p><strong>{{ 'email' | translate }}:</strong> {{ vm.profile.email }}</p>
-            <p><strong>{{ 'gender' | translate }}:</strong> {{ vm.profile.sex }}</p>
         </div>
     </div>
 
-    <div class="mb-3">
-        <label>{{ 'profile_photo' | translate }}</label>
-        <input type="file" ngf-select ng-model="vm.selectedAvatarFile" ngf-change="vm.onAvatarSelected($file)" accept="image/jpeg" ngf-max-size="300KB">
-        <button type="button" class="btn btn-primary mt-medio" ng-click="vm.uploadAvatar()">{{ 'upload_photo' | translate }}</button>
-        <small class="d-block">JPG, máximo 300 KB</small>
-    </div>
+    <form class="form-horizontal" novalidate>
+        <div class="form-group">
+            <label class="col-sm-3 control-label">{{ 'profile_photo' | translate }}</label>
+            <div class="col-sm-9">
+                <input
+                    type="file"
+                    ngf-select
+                    ng-model="vm.selectedAvatarFile"
+                    ngf-change="vm.onAvatarSelected($file)"
+                    accept="image/jpeg,image/png"
+                    ngf-max-size="300KB">
+                <button type="button" class="btn btn-default btn-sm mt-medio" ng-click="vm.uploadAvatar()">{{ 'upload_photo' | translate }}</button>
+                <small class="help-block">{{ 'avatar_format_and_size' | translate }}</small>
+            </div>
+        </div>
 
-    <div>
-        <label>{{ 'firstname' | translate }}</label>
-        <input type="text" class="form-control profile-input" ng-model="vm.profile.firstname">
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="teacher-firstname">{{ 'firstname' | translate }}</label>
+            <div class="col-sm-9">
+                <input id="teacher-firstname" type="text" class="form-control" ng-model="vm.profile.firstname">
+            </div>
+        </div>
 
-        <label>{{ 'lastname' | translate }}</label>
-        <input type="text" class="form-control profile-input" ng-model="vm.profile.lastname">
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="teacher-lastname">{{ 'lastname' | translate }}</label>
+            <div class="col-sm-9">
+                <input id="teacher-lastname" type="text" class="form-control" ng-model="vm.profile.lastname">
+            </div>
+        </div>
 
-        <label>{{ 'gender' | translate }}</label>
-        <select class="form-control profile-input" ng-model="vm.profile.sex" ng-options="option.value as option.label for option in vm.genderOptions"></select>
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="teacher-gender">{{ 'gender' | translate }}</label>
+            <div class="col-sm-9">
+                <select id="teacher-gender" class="form-control" ng-model="vm.profile.sex" ng-options="option.value as option.label for option in vm.genderOptions"></select>
+            </div>
+        </div>
 
         <div id="profile-recaptcha-container" ng-if="vm.isRecaptchaEnabled" class="mt-medio g-recaptcha"></div>
 
-        <button type="button" class="btn btn-primary mt-medio" ng-click="vm.saveProfile()">{{ 'save_profile' | translate }}</button>
-    </div>
+        <button type="button" class="btn btn-default btn-sm mt-medio profile-save-btn" ng-click="vm.saveProfile()">{{ 'save_profile' | translate }}</button>
+    </form>
 
     <hr>
 
     <div>
         <p>{{ 'password_reset_notice' | translate }} <strong>{{ vm.profile.email }}</strong>.</p>
 
-        <button type="button" class="btn btn-warning mt-medio" ng-click="vm.openPasswordResetModal()">
+        <button type="button" class="btn btn-default btn-sm mt-medio" ng-click="vm.openPasswordResetModal()">
             {{ 'change_password' | translate }}
         </button>
     </div>

@@ -21,7 +21,7 @@ const profileUploadsRelativeDir = path.join("user-profile");
 const profileUploadsDir = path.join(uploadsRoot, profileUploadsRelativeDir);
 const AVATAR_MAX_SIZE_BYTES = 300 * 1024;
 
-const allowedMimeTypes = new Set(["image/jpeg", "image/jpg"]);
+const allowedMimeTypes = new Set(["image/jpeg", "image/jpg", "image/png"]);
 
 
 const validateProfileRecaptcha = async (req, res) => {
@@ -166,7 +166,11 @@ router.post("/users/profile/avatar", async (req, res) => {
         const avatarPaths = buildAvatarPaths(req.session.uid);
         await fs.promises.mkdir(profileUploadsDir, { recursive: true });
 
-        await fs.promises.copyFile(sourcePath, avatarPaths.originalAbsolute);
+        await execFileAsync("convert", [
+            sourcePath,
+            "-auto-orient",
+            avatarPaths.originalAbsolute
+        ]);
 
         await execFileAsync("convert", [
             avatarPaths.originalAbsolute,
