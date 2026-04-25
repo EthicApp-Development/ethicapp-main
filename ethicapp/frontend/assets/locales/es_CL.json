@@ -557,5 +557,15 @@
 	"internal_server_error": "Error Interno del Servidor (500)",
 	"internal_server_error_explanation": "Algo salió mal, por favor intenta nuevamente más tarde.",
 	"go_back": "Volver a la página anterior"
+,
+	"nav_pill_title_cases": "Casos",
+	"ethical_cases_title": "Casos éticos",
+	"ethical_cases_create": "Nuevo caso",
+	"ethical_cases_new_title": "Crear caso ético",
+	"ethical_cases_edit_title": "Editar caso ético",
+	"ethical_cases_file": "PDF del caso",
+	"ethical_cases_open_file": "Abrir archivo",
+	"ethical_cases_current_file": "Archivo actual",
+	"author_firstname": "Nombre del autor",
+	"author_lastname": "Apellido del autor"
 }
-
