@@ -23,10 +23,15 @@ let UserProfileService = function ($http, Upload) {
             return response.data;
         },
 
-        async uploadAvatar(file) {
+        async uploadAvatar(file, recaptchaResponse = null) {
+            const data = { avatar: file };
+            if (recaptchaResponse) {
+                data.g_recaptcha_response = recaptchaResponse;
+            }
+
             const response = await Upload.upload({
                 url: "/users/profile/avatar",
-                data: { avatar: file }
+                data
             });
 
             service.profileCache = null;

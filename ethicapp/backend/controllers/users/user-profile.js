@@ -9,6 +9,7 @@ import { fileURLToPath } from "url";
 import * as config from "../../config/config.js";
 import { execSQL, param } from "../../db/rest-pg-2.js";
 import { requireRole } from "../../helpers/auth-helper.js";
+import * as RecaptchaHelper from "../../helpers/recaptcha-helper.js";
 
 const execFileAsync = promisify(execFile);
 const router = express.Router();
@@ -21,6 +22,19 @@ const profileUploadsDir = path.join(uploadsRoot, profileUploadsRelativeDir);
 const AVATAR_MAX_SIZE_BYTES = 300 * 1024;
 
 const allowedMimeTypes = new Set(["image/jpeg", "image/jpg"]);
+
+
+const validateProfileRecaptcha = async (req, res) => {
+    const responseKey = req.body?.g_recaptcha_response;
+    const recaptchaResult = await RecaptchaHelper.validateRecaptcha(responseKey);
+
+    if (!recaptchaResult) {
+        res.status(400).json({ success: false, error: "captcha_error" });
+        return false;
+    }
+
+    return true;
+};
 
 const getAbsoluteUploadPath = (reqFilePath) => {
     if (!reqFilePath) return null;
@@ -86,6 +100,8 @@ router.post("/users/profile", async (req, res) => {
     if (!requireRole(req, res, "P")) return;
 
     try {
+        if (!(await validateProfileRecaptcha(req, res))) return;
+
         const firstname = (req.body.firstname || "").trim();
         const lastname = (req.body.lastname || "").trim();
         const sex = (req.body.sex || "").trim().toUpperCase();
@@ -127,6 +143,8 @@ router.post("/users/profile/avatar", async (req, res) => {
     if (!requireRole(req, res, "P")) return;
 
     try {
+        if (!(await validateProfileRecaptcha(req, res))) return;
+
         const avatarFile = req.files?.avatar;
         if (!avatarFile) {
             return res.status(400).json({ success: false, error: "avatar_required" });

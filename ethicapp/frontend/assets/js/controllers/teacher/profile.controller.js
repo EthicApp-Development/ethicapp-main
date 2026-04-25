@@ -1,5 +1,3 @@
-import { getRecaptchaResponse } from "../common/recaptcha-api.js";
-
 export const ProfileController = function ($scope, toast, UserProfileService) {
     const vm = $scope;
 
@@ -20,19 +18,40 @@ export const ProfileController = function ($scope, toast, UserProfileService) {
         profile_image_topbar_path: null
     };
 
-    vm.passwordResetEmail = "";
     vm.selectedAvatarFile = null;
     vm.defaultProfileAvatar = "assets/images/user-placeholder/profile-placeholder.svg";
     vm.defaultTopbarAvatar = "assets/images/user-placeholder/avatar-placeholder-64.svg";
-
     vm.isRecaptchaEnabled = window.__ETHICAPP_RECAPTCHA_ENABLED__ === true;
 
+    vm.isPasswordResetModalOpen = false;
+    vm.profileRecaptchaWidgetId = null;
+    vm.passwordResetRecaptchaWidgetId = null;
+
     vm.getTopbarAvatar = () => vm.profile.profile_image_topbar_path || vm.defaultTopbarAvatar;
+    vm.getProfileAvatar = () => vm.profile.profile_image_path || vm.defaultProfileAvatar;
 
-    vm.recaptchaWidgetId = null;
+    vm.getDisplayName = () => {
+        const first = vm.profile.firstname || "";
+        const last = vm.profile.lastname || "";
+        const fullName = `${first} ${last}`.trim();
+        return fullName || vm.profile.name || "";
+    };
 
-    vm.ensureRecaptcha = () => {
-        if (!vm.isRecaptchaEnabled || !window.grecaptcha || vm.recaptchaWidgetId !== null) {
+    vm.getRecaptchaToken = (widgetId) => {
+        if (!vm.isRecaptchaEnabled) {
+            return null;
+        }
+
+        if (!window.grecaptcha || widgetId === null || widgetId === undefined) {
+            return null;
+        }
+
+        const token = window.grecaptcha.getResponse(widgetId);
+        return token || null;
+    };
+
+    vm.ensureRecaptchaWidget = (containerId, currentWidgetIdSetter) => {
+        if (!vm.isRecaptchaEnabled || !window.grecaptcha) {
             return;
         }
 
@@ -41,22 +60,35 @@ export const ProfileController = function ($scope, toast, UserProfileService) {
             return;
         }
 
-        const container = document.getElementById("recaptcha-container");
+        const container = document.getElementById(containerId);
         if (!container) {
             return;
         }
 
-        vm.recaptchaWidgetId = window.grecaptcha.render("recaptcha-container", {
-            sitekey: siteKey
+        if (currentWidgetIdSetter.get() !== null) {
+            return;
+        }
+
+        const widgetId = window.grecaptcha.render(containerId, { sitekey: siteKey });
+        currentWidgetIdSetter.set(widgetId);
+    };
+
+    vm.ensureProfileRecaptcha = () => {
+        vm.ensureRecaptchaWidget("profile-recaptcha-container", {
+            get: () => vm.profileRecaptchaWidgetId,
+            set: (value) => {
+                vm.profileRecaptchaWidgetId = value;
+            }
         });
     };
-    vm.getProfileAvatar = () => vm.profile.profile_image_path || vm.defaultProfileAvatar;
 
-    vm.getDisplayName = () => {
-        const first = vm.profile.firstname || "";
-        const last = vm.profile.lastname || "";
-        const fullName = `${first} ${last}`.trim();
-        return fullName || vm.profile.name || "";
+    vm.ensurePasswordResetRecaptcha = () => {
+        vm.ensureRecaptchaWidget("password-reset-recaptcha-container", {
+            get: () => vm.passwordResetRecaptchaWidgetId,
+            set: (value) => {
+                vm.passwordResetRecaptchaWidgetId = value;
+            }
+        });
     };
 
     vm.loadProfile = async () => {
@@ -67,7 +99,6 @@ export const ProfileController = function ($scope, toast, UserProfileService) {
                 ...data,
                 sex: data.sex || "O"
             };
-            vm.passwordResetEmail = vm.profile.email || "";
         } catch (error) {
             console.error("Could not load profile:", error);
             toast.error("No se pudo cargar el perfil");
@@ -76,13 +107,23 @@ export const ProfileController = function ($scope, toast, UserProfileService) {
 
     vm.saveProfile = async () => {
         try {
+            const recaptchaResponse = vm.getRecaptchaToken(vm.profileRecaptchaWidgetId);
+            if (vm.isRecaptchaEnabled && !recaptchaResponse) {
+                toast.warning("Completa el reCAPTCHA para guardar cambios");
+                return;
+            }
+
             await UserProfileService.updateProfile({
                 firstname: vm.profile.firstname,
                 lastname: vm.profile.lastname,
-                sex: vm.profile.sex
+                sex: vm.profile.sex,
+                g_recaptcha_response: recaptchaResponse
             });
 
             await vm.loadProfile();
+            if (vm.isRecaptchaEnabled && window.grecaptcha && vm.profileRecaptchaWidgetId !== null) {
+                window.grecaptcha.reset(vm.profileRecaptchaWidgetId);
+            }
             toast.success("Perfil actualizado");
         } catch (error) {
             console.error("Could not update profile:", error);
@@ -100,10 +141,19 @@ export const ProfileController = function ($scope, toast, UserProfileService) {
             return;
         }
 
+        const recaptchaResponse = vm.getRecaptchaToken(vm.profileRecaptchaWidgetId);
+        if (vm.isRecaptchaEnabled && !recaptchaResponse) {
+            toast.warning("Completa el reCAPTCHA para actualizar la foto");
+            return;
+        }
+
         try {
-            await UserProfileService.uploadAvatar(vm.selectedAvatarFile);
+            await UserProfileService.uploadAvatar(vm.selectedAvatarFile, recaptchaResponse);
             vm.selectedAvatarFile = null;
             await vm.loadProfile();
+            if (vm.isRecaptchaEnabled && window.grecaptcha && vm.profileRecaptchaWidgetId !== null) {
+                window.grecaptcha.reset(vm.profileRecaptchaWidgetId);
+            }
             toast.success("Foto de perfil actualizada");
         } catch (error) {
             console.error("Could not upload avatar:", error);
@@ -114,16 +164,29 @@ export const ProfileController = function ($scope, toast, UserProfileService) {
         }
     };
 
-    vm.triggerPasswordReset = async () => {
+    vm.openPasswordResetModal = () => {
+        vm.isPasswordResetModalOpen = true;
+        setTimeout(vm.ensurePasswordResetRecaptcha, 200);
+    };
+
+    vm.closePasswordResetModal = () => {
+        vm.isPasswordResetModalOpen = false;
+        if (vm.isRecaptchaEnabled && window.grecaptcha && vm.passwordResetRecaptchaWidgetId !== null) {
+            window.grecaptcha.reset(vm.passwordResetRecaptchaWidgetId);
+        }
+    };
+
+    vm.confirmPasswordReset = async () => {
         try {
-            const recaptchaResponse = vm.isRecaptchaEnabled ? getRecaptchaResponse() : null;
+            const recaptchaResponse = vm.getRecaptchaToken(vm.passwordResetRecaptchaWidgetId);
             if (vm.isRecaptchaEnabled && !recaptchaResponse) {
-                toast.warning("Completa el reCAPTCHA");
+                toast.warning("Completa el reCAPTCHA para continuar");
                 return;
             }
 
-            await UserProfileService.requestPasswordReset(vm.passwordResetEmail, recaptchaResponse);
+            await UserProfileService.requestPasswordReset(vm.profile.email, recaptchaResponse);
             toast.success("Se envió el correo de recuperación");
+            vm.closePasswordResetModal();
         } catch (error) {
             console.error("Could not trigger password reset:", error);
             toast.error("No fue posible iniciar la recuperación de contraseña");
@@ -131,5 +194,5 @@ export const ProfileController = function ($scope, toast, UserProfileService) {
     };
 
     vm.loadProfile();
-    setTimeout(vm.ensureRecaptcha, 300);
+    setTimeout(vm.ensureProfileRecaptcha, 300);
 };

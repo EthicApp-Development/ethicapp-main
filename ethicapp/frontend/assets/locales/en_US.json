@@ -584,5 +584,8 @@
 	"upload_photo": "Upload photo",
 	"save_profile": "Save profile",
 	"password_reset_email": "Email for password reset",
-	"change_password": "Change password"
+	"change_password": "Change password",
+	"password_reset_notice": "If you change your password, a recovery email will be sent to",
+	"password_reset_modal_message": "Do you confirm sending the password reset email to",
+	"accept": "Accept"
 }
