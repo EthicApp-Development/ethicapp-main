@@ -3,6 +3,29 @@
         <div class="col-md-12 mb-2">
             
             <h2><i class="fa fa-paint-brush"></i> {{ 'edit_design_title' | translate }}</h2>
+            <div class="well well-sm">
+                <label for="designCaseSearch">{{ 'design_associated_case_label' | translate }}</label>
+                <input
+                    id="designCaseSearch"
+                    type="text"
+                    class="form-control"
+                    placeholder="{{ 'design_associated_case_placeholder' | translate }}"
+                    ng-model="dec.selectedCase"
+                    uib-typeahead="caseItem as dec.formatCaseLabel(caseItem) for caseItem in dec.searchCases($viewValue)"
+                    typeahead-on-select="dec.selectCase($item)"
+                    typeahead-editable="false"
+                    typeahead-min-length="2">
+                <p class="help-block" ng-if="!dec.associatedCase">
+                    {{ 'design_no_case_associated' | translate }}
+                </p>
+                <p class="help-block" ng-if="dec.associatedCase">
+                    <strong>{{ 'design_associated_case_current' | translate }}:</strong>
+                    {{ dec.formatCaseLabel(dec.associatedCase) }}
+                    <button type="button" class="btn btn-link btn-xs" ng-click="dec.clearAssociatedCase()">
+                        {{ 'remove' | translate }}
+                    </button>
+                </p>
+            </div>
         </div>
     </div>
     <div class="form-group">

@@ -49,7 +49,7 @@ router.get("/cases", async (req, res) => {
     }
 });
 
-router.get("/cases/:id", async (req, res) => {
+router.get("/cases/:id(\\d+)", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
     }
@@ -82,6 +82,80 @@ router.get("/cases/:id", async (req, res) => {
     } catch (error) {
         console.error("Error retrieving case by id:", error);
         return res.status(500).json({ status: "err", message: "Failed to load case." });
+    }
+});
+
+router.get("/cases/search", async (req, res) => {
+    if (!requireRole(req, res, ["P", "A"])) {
+        return;
+    }
+
+    const query = String(req.query.q || "").trim();
+    if (query.length < 2) {
+        return res.status(200).json({ status: "ok", result: [] });
+    }
+
+    try {
+        const cases = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT id, title, author_firstname, author_lastname, author_email,
+                       pdf_path, creator, created_at, updated_at
+                FROM ethical_cases
+                WHERE LOWER(title) LIKE LOWER($1)
+                   OR LOWER(author_firstname) LIKE LOWER($1)
+                   OR LOWER(author_lastname) LIKE LOWER($1)
+                ORDER BY updated_at DESC, id DESC
+                LIMIT 20;
+            `,
+            sqlParams: [rpg2.param("plain", `%${query}%`)],
+        });
+
+        return res.status(200).json({
+            status: "ok",
+            result: cases.map(normalizeCase),
+        });
+    } catch (error) {
+        console.error("Error searching cases:", error);
+        return res.status(500).json({ status: "err", message: "Failed to search cases." });
+    }
+});
+
+router.get("/cases/:id(\\d+)/download-link", async (req, res) => {
+    if (!requireRole(req, res, ["P", "A"])) {
+        return;
+    }
+
+    const caseId = Number(req.params.id);
+    if (!Number.isInteger(caseId)) {
+        return res.status(400).json({ status: "err", message: "Invalid case id." });
+    }
+
+    try {
+        const caseObj = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT id, pdf_path
+                FROM ethical_cases
+                WHERE id = $1;
+            `,
+            sqlParams: [rpg2.param("plain", caseId)],
+        });
+
+        if (!caseObj || !caseObj.id) {
+            return res.status(404).json({ status: "err", message: "Case not found." });
+        }
+
+        return res.status(200).json({
+            status: "ok",
+            result: {
+                id: caseObj.id,
+                downloadUrl: caseObj.pdf_path,
+            },
+        });
+    } catch (error) {
+        console.error("Error retrieving case download link:", error);
+        return res.status(500).json({ status: "err", message: "Failed to load case file link." });
     }
 });
 
@@ -135,7 +209,7 @@ router.post("/cases", async (req, res) => {
     }
 });
 
-router.patch("/cases/:id", async (req, res) => {
+router.patch("/cases/:id(\\d+)", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
     }
@@ -204,7 +278,7 @@ router.patch("/cases/:id", async (req, res) => {
     }
 });
 
-router.delete("/cases/:id", async (req, res) => {
+router.delete("/cases/:id(\\d+)", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
     }

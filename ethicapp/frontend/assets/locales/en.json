@@ -323,5 +323,9 @@
 	"ethical_cases_open_file": "Open file",
 	"ethical_cases_current_file": "Current file",
 	"author_firstname": "Author First Name",
-	"author_lastname": "Author Last Name"
+	"author_lastname": "Author Last Name",
+	"design_associated_case_label": "Associated case",
+	"design_associated_case_placeholder": "Search case by title or author",
+	"design_no_case_associated": "No case is associated.",
+	"design_associated_case_current": "Current case"
 }

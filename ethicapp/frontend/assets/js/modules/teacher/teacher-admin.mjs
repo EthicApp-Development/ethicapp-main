@@ -129,7 +129,7 @@ app.controller("ErrorController",
         ErrorController]);
 app.controller("DesignEditorController", 
     ["$scope", "$translate", "$timeout", "$routeParams", "DesignStateService", 
-        "DesignCatalogService", "toast", DesignEditorController]);         
+        "DesignCatalogService", "CasesCatalogService", "toast", DesignEditorController]);         
 app.controller("VoidController", [VoidController]);
 
 app.service("DialogService", function(ngDialog) {

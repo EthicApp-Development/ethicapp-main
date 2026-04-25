@@ -567,5 +567,9 @@
 	"ethical_cases_open_file": "Abrir archivo",
 	"ethical_cases_current_file": "Archivo actual",
 	"author_firstname": "Nombre del autor",
-	"author_lastname": "Apellido del autor"
+	"author_lastname": "Apellido del autor",
+	"design_associated_case_label": "Caso asociado",
+	"design_associated_case_placeholder": "Buscar caso por título o autor",
+	"design_no_case_associated": "No hay caso asociado.",
+	"design_associated_case_current": "Caso actual"
 }
