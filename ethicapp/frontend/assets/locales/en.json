@@ -155,6 +155,7 @@
 	"male":"Male",
 	"make_s": "Make Student",
 	"make_t": "Make Teacher",
+	"teacher": "Teacher",
 	"mandatoryComment": "Mandatory comment",
 	"minComment": "Minimum length of comment",
 	"mode": "Mode",
