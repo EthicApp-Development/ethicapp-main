@@ -32,11 +32,25 @@
                     <activity-description on-view="ac.handleView" ng-if="ac.dsgnMode === 0" ng-repeat="act in ac.activities.ongoing | filter:{title: ac.userSearch} | orderBy: '-time'" activity="act"></activity-description>
                     <activity-description on-view="ac.handleView" on-archive="ac.handleArchive" ng-if="ac.dsgnMode === 1" ng-repeat="act in ac.activities.finished | filter:{title: ac.userSearch} | orderBy: '-time'" activity="act"></activity-description>
                     <activity-description on-view="ac.handleView" on-unarchive="ac.handleArchive" ng-if="ac.dsgnMode === 2" ng-repeat="act in ac.activities.archived | filter:{title: ac.userSearch} | orderBy: '-time'" activity="act"></activity-description>
+
+                    <div class="alert alert-info" ng-if="ac.dsgnMode === 0 && (ac.activities.ongoing | filter:{title: ac.userSearch}).length === 0">
+                        <span>{{'empty_ongoing_activities_message' | translate}}</span>
+                        <a href="" ng-click="navigateTo('/designs/new')">{{'empty_activities_create_design_link' | translate}}</a>.
+                        <span>{{'empty_activities_then_launch_message' | translate}}</span>
+                        <a href="" ng-click="navigateTo('/activities/new')">{{'empty_activities_launch_link' | translate}}</a>.
+                    </div>
+
+                    <div class="alert alert-info" ng-if="ac.dsgnMode === 1 && (ac.activities.finished | filter:{title: ac.userSearch}).length === 0">
+                        <span>{{'empty_finished_activities_message' | translate}}</span>
+                    </div>
+
+                    <div class="alert alert-info" ng-if="ac.dsgnMode === 2 && (ac.activities.archived | filter:{title: ac.userSearch}).length === 0">
+                        <span>{{'empty_archived_activities_message' | translate}}</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
 
 
