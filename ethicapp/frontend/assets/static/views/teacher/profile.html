@@ -44,19 +44,34 @@
             </div>
         </div>
 
-        <div id="profile-recaptcha-container" ng-if="vm.isRecaptchaEnabled" class="mt-medio g-recaptcha"></div>
+        <div class="form-group" ng-if="vm.isRecaptchaEnabled">
+            <div class="col-sm-offset-3 col-sm-9">
+                <div id="profile-recaptcha-container" class="mt-medio"></div>
+            </div>
+        </div>
 
-        <button type="button" class="btn btn-default btn-sm mt-medio profile-save-btn" ng-click="vm.saveProfile()">{{ 'save_profile' | translate }}</button>
+        <div class="form-group">
+            <div class="col-sm-offset-3 col-sm-9">
+                <button type="button" class="btn btn-default btn-sm mt-medio profile-save-btn" ng-click="vm.saveProfile()">{{ 'save_profile' | translate }}</button>
+            </div>
+        </div>
     </form>
 
     <hr>
 
-    <div>
-        <p>{{ 'password_reset_notice' | translate }} <strong>{{ vm.profile.email }}</strong>.</p>
-
-        <button type="button" class="btn btn-default btn-sm mt-medio" ng-click="vm.openPasswordResetModal()">
-            {{ 'change_password' | translate }}
-        </button>
+    <div class="form-horizontal">
+        <div class="form-group">
+            <div class="col-sm-offset-3 col-sm-9">
+                <p>{{ 'password_reset_notice' | translate }} <strong>{{ vm.profile.email }}</strong>.</p>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-offset-3 col-sm-9">
+                <button type="button" class="btn btn-default btn-sm mt-medio" ng-click="vm.openPasswordResetModal()">
+                    {{ 'change_password' | translate }}
+                </button>
+            </div>
+        </div>
     </div>
 
     <div class="modal fade" ng-class="{'in': vm.isPasswordResetModalOpen}" ng-style="{display: vm.isPasswordResetModalOpen ? 'block' : 'none'}" tabindex="-1" role="dialog" aria-hidden="{{ !vm.isPasswordResetModalOpen }}">
@@ -68,7 +83,7 @@
                 </div>
                 <div class="modal-body">
                     <p>{{ 'password_reset_modal_message' | translate }} <strong>{{ vm.profile.email }}</strong>.</p>
-                    <div id="password-reset-recaptcha-container" ng-if="vm.isRecaptchaEnabled" class="mt-medio g-recaptcha"></div>
+                    <div id="password-reset-recaptcha-container" ng-if="vm.isRecaptchaEnabled" class="mt-medio"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" ng-click="vm.closePasswordResetModal()">{{ 'cancel' | translate }}</button>
