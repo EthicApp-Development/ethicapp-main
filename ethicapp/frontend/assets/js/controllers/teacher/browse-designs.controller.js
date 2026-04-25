@@ -4,6 +4,9 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
 
     const vm = this;
     vm.selectedDesignId = 0;
+    vm.hasFetchedUserDesigns = false;
+    vm.userSearch = "";
+    vm.designSearchQuery = "";
     vm.userDesigns = [];
     vm.publicDesigns = [];
     vm.designs = [];
@@ -28,7 +31,8 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
             if (!isNaN(designIdParam)) {
                 vm.selectedDesignId = designIdParam;
                 const designObj = await DesignCatalogService.getDesignById(vm.selectedDesignId);
-                vm.userSearch = designObj.metainfo.title;
+                vm.userSearch = vm.formatDesignLabel(designObj);
+                vm.designSearchQuery = vm.userSearch;
             }
         } catch(error) {
             console.error("[BrowseDesignsController::init] Failed to retrieve designId route parameter");
@@ -59,6 +63,36 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
     
     vm.getDesigns = async function() {
         vm.userDesigns = await DesignCatalogService.getUserDesigns();
+        vm.hasFetchedUserDesigns = true;
+    };
+
+    vm.searchUserDesigns = function(searchText) {
+        const query = (searchText || "").toLowerCase().trim();
+        if (query.length < 1) {
+            return vm.userDesigns.slice(0, 8);
+        }
+
+        return vm.userDesigns
+            .filter((design) => vm.formatDesignLabel(design).toLowerCase().includes(query))
+            .slice(0, 8);
+    };
+
+    vm.formatDesignLabel = function(design) {
+        return design?.metainfo?.title || "";
+    };
+
+    vm.handleDesignSearchChange = function() {
+        vm.userSearch = vm.designSearchQuery || "";
+    };
+
+    vm.selectDesignFromSearch = function(design) {
+        if (!design) {
+            return;
+        }
+
+        vm.selectedDesignId = design.id;
+        vm.designSearchQuery = vm.formatDesignLabel(design);
+        vm.userSearch = vm.designSearchQuery;
     };
 
     vm.handleLaunch = function(designId) {
