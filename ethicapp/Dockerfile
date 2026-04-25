@@ -18,8 +18,8 @@ COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 # Crear directorios persistentes
-RUN mkdir -p /app/uploads /app/sessions \
-    && chmod 777 /app/uploads \
-    && chmod 755 /app/sessions
+RUN mkdir -p /app/backend/uploads /app/backend/sessions \
+    && chmod 777 /app/backend/uploads \
+    && chmod 755 /app/backend/sessions
 
 ENTRYPOINT ["/app/entrypoint.sh"]

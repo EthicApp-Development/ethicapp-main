@@ -78,11 +78,13 @@ app.use(cors(corsOptions));
 
 // Asset handling
 const assetPath = path.join(__dirname, "../frontend/assets");
+const uploadsAbsolutePath = path.resolve(process.cwd(), config.uploadsPath);
 app.use(express.static(assetPath));
 app.use(assetVersions("/assets", assetPath));
 
 // Uploads
-app.use("/uploads", express.static(path.join(__dirname, "../frontend/assets/uploads")));
+app.use("/uploads", express.static(uploadsAbsolutePath));
+app.use("/assets/uploads", express.static(uploadsAbsolutePath));
 
 // view engine setup
 app.set("views", path.join(__dirname, "views"));
