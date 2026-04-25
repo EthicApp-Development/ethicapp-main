@@ -3,11 +3,7 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
     const TOAST_INFO_TIMEOUT_MS = 4 * 1000;
     const TOAST_ERROR_TIMEOUT_MS = 6 * 1000;
 
-    vm.genderOptions = [
-        { value: "F", label: "Femenino" },
-        { value: "M", label: "Masculino" },
-        { value: "O", label: "Otro" }
-    ];
+    vm.genderOptions = [];
 
     vm.profile = {
         firstname: "",
@@ -29,6 +25,18 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
     vm.profileRecaptchaWidgetId = null;
     vm.passwordResetRecaptchaWidgetId = null;
     vm.translate = (key) => $translate.instant(key);
+    vm.applyChanges = () => {
+        if (!$scope.$$destroyed) {
+            $scope.$applyAsync();
+        }
+    };
+    vm.refreshGenderOptions = () => {
+        vm.genderOptions = [
+            { value: "F", label: vm.translate("female") },
+            { value: "M", label: vm.translate("male") },
+            { value: "O", label: vm.translate("other") }
+        ];
+    };
 
     vm.getTopbarAvatar = () => vm.profile.profile_image_topbar_path || vm.defaultTopbarAvatar;
     vm.getProfileAvatar = () => vm.profile.profile_image_path || vm.defaultProfileAvatar;
@@ -129,9 +137,11 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
                 ...data,
                 sex: data.sex || "O"
             };
+            vm.applyChanges();
         } catch (error) {
             console.error("Could not load profile:", error);
             vm.showErrorToast(vm.translate("profile_load_error"));
+            vm.applyChanges();
         }
     };
 
@@ -155,9 +165,11 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
                 window.grecaptcha.reset(vm.profileRecaptchaWidgetId);
             }
             vm.showInfoToast(vm.translate("profile_update_success"));
+            vm.applyChanges();
         } catch (error) {
             console.error("Could not update profile:", error);
             vm.showErrorToast(vm.translate("profile_update_error"));
+            vm.applyChanges();
         }
     };
 
@@ -185,6 +197,7 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
                 window.grecaptcha.reset(vm.profileRecaptchaWidgetId);
             }
             vm.showInfoToast(vm.translate("profile_avatar_update_success"));
+            vm.applyChanges();
         } catch (error) {
             console.error("Could not upload avatar:", error);
             const message = error?.data?.error === "avatar_size_limit_exceeded"
@@ -193,12 +206,14 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
                     ? vm.translate("profile_avatar_invalid_type_error")
                     : vm.translate("profile_avatar_upload_error");
             vm.showErrorToast(message);
+            vm.applyChanges();
         }
     };
 
     vm.openPasswordResetModal = () => {
         vm.isPasswordResetModalOpen = true;
         setTimeout(vm.ensurePasswordResetRecaptcha, 200);
+        vm.applyChanges();
     };
 
     vm.closePasswordResetModal = () => {
@@ -206,6 +221,7 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
         if (vm.isRecaptchaEnabled && window.grecaptcha && vm.passwordResetRecaptchaWidgetId !== null) {
             window.grecaptcha.reset(vm.passwordResetRecaptchaWidgetId);
         }
+        vm.applyChanges();
     };
 
     vm.confirmPasswordReset = async () => {
@@ -219,14 +235,22 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
             await UserProfileService.requestPasswordReset(vm.profile.email, recaptchaResponse);
             vm.showInfoToast(vm.translate("profile_password_reset_success"));
             vm.closePasswordResetModal();
+            vm.applyChanges();
         } catch (error) {
             console.error("Could not trigger password reset:", error);
             vm.showErrorToast(vm.translate("profile_password_reset_error"));
+            vm.applyChanges();
         }
     };
 
+    vm.refreshGenderOptions();
     vm.loadProfile();
     setTimeout(vm.ensureProfileRecaptcha, 300);
+    const languageChangeListener = $scope.$on("$translateChangeSuccess", () => {
+        vm.refreshGenderOptions();
+        vm.applyChanges();
+    });
 
     $scope.vm = vm;
+    $scope.$on("$destroy", languageChangeListener);
 };
