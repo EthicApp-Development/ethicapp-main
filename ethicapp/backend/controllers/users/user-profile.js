@@ -5,7 +5,6 @@ import fs from "fs";
 import path from "path";
 import { promisify } from "util";
 import { execFile } from "child_process";
-import { fileURLToPath } from "url";
 import * as config from "../../config/config.js";
 import { execSQL, param } from "../../db/rest-pg-2.js";
 import { requireRole } from "../../helpers/auth-helper.js";
@@ -14,9 +13,7 @@ import * as RecaptchaHelper from "../../helpers/recaptcha-helper.js";
 const execFileAsync = promisify(execFile);
 const router = express.Router();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const uploadsRoot = path.resolve(__dirname, config.uploadsPath);
+const uploadsRoot = path.resolve(process.cwd(), config.uploadsPath);
 const profileUploadsRelativeDir = path.join("user-profile");
 const profileUploadsDir = path.join(uploadsRoot, profileUploadsRelativeDir);
 const AVATAR_MAX_SIZE_BYTES = 300 * 1024;

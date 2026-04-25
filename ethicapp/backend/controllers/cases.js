@@ -1,11 +1,32 @@
 "use strict";
 
 import express from "express";
+import path from "path";
 import * as config from "../config/config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { requireRole } from "../helpers/auth-helper.js";
 
 const router = express.Router();
+
+function buildPublicUploadPath(uploadedFilePath) {
+    if (!uploadedFilePath || typeof uploadedFilePath !== "string") {
+        return null;
+    }
+
+    const normalizedPath = path.normalize(uploadedFilePath);
+    const uploadDirToken = `${path.sep}uploads${path.sep}`;
+    const uploadDirIndex = normalizedPath.lastIndexOf(uploadDirToken);
+
+    if (uploadDirIndex === -1) {
+        return null;
+    }
+
+    const relativeToUploads = normalizedPath
+        .slice(uploadDirIndex + uploadDirToken.length)
+        .replaceAll(path.sep, "/");
+
+    return `/uploads/${relativeToUploads}`;
+}
 
 function normalizeCase(row) {
     return {
@@ -180,7 +201,11 @@ router.post("/cases", async (req, res) => {
     }
 
     try {
-        const pdfPath = "assets/uploads" + req.files.pdf.file.split("uploads")[1];
+        const pdfPath = buildPublicUploadPath(req.files.pdf.file);
+
+        if (!pdfPath) {
+            return res.status(500).json({ status: "err", message: "Failed to persist PDF path." });
+        }
 
         const createdCase = await rpg2.singleSQL({
             dbcon: config.dbconnString,
@@ -242,9 +267,12 @@ router.patch("/cases/:id(\\d+)", async (req, res) => {
         }
 
         const hasPdf = req.files?.pdf && req.files.pdf.mimetype === "application/pdf";
-        const pdfPath = hasPdf
-            ? "assets/uploads" + req.files.pdf.file.split("uploads")[1]
-            : existingCase.pdf_path;
+        const uploadedPdfPath = hasPdf ? buildPublicUploadPath(req.files.pdf.file) : null;
+        const pdfPath = hasPdf ? uploadedPdfPath : existingCase.pdf_path;
+
+        if (hasPdf && !pdfPath) {
+            return res.status(500).json({ status: "err", message: "Failed to persist PDF path." });
+        }
 
         const updatedCase = await rpg2.singleSQL({
             dbcon: config.dbconnString,
