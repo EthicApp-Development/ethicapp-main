@@ -5,6 +5,7 @@ import { ActivityStateService } from "../../services/activity-state.service.js";
 import { ActivityCatalogService } from "../../services/activity-catalog.service.js";
 import { DesignStateService } from "../../services/design-state.service.js";
 import { DesignCatalogService } from "../../services/design-catalog.service.js";
+import { CasesCatalogService } from "../../services/cases-catalog.service.js";
 import UserInformationService from "../../services/user-information.service.js";
 import SocketService from '../../services/socket.service.js';
 
@@ -24,7 +25,8 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("ActivityCatalogService", ["$http", ActivityCatalogService])
     .factory("DesignCatalogService", ["$rootScope", "$http", DesignCatalogService])
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
-    .factory("UserInformationService", ["$http", UserInformationService]);
+    .factory("UserInformationService", ["$http", UserInformationService])
+    .factory("CasesCatalogService", ["$http", CasesCatalogService]);
 
 import { LocalesController } from "../../controllers/common/locales.controller.js";
 import { ActivityController } from "../../controllers/teacher/activity.controller.js";
@@ -41,6 +43,7 @@ import { VoidController } from "../../controllers/common/void.controller.js";
 import { ngQuillConfigProvider } from "../../helpers/util.js";
 import { DesignEditorController } from "../../controllers/teacher/design-editor.controller.js";
 import { DesignViewerController } from "../../controllers/teacher/design-viewer.controller.js";
+import { CasesController } from "../../controllers/teacher/cases.controller.js";
 
 import { TeacherRouter } from "./teacher-routes.js";
 app.config(TeacherRouter);
@@ -114,6 +117,8 @@ app.controller("DesignAttachmentsController",
     ["$scope", "DesignStateService" ,"$http", "Notification", "$timeout", DesignAttachmentsController]);
 app.controller("DesignViewerController", 
     ["$scope", "$routeParams", "DesignCatalogService", DesignViewerController]);
+app.controller("CasesController",
+    ["$scope", "$routeParams", "CasesCatalogService", CasesController]);
 app.controller("DocumentsController", 
     ["$scope", "$http", "Notification", "$timeout", "ActivityStateService",
         DocumentsController]);

@@ -313,4 +313,15 @@
 	"selectActivityType": "Select an activity type",
 	"SemanticDescription": "Semantic Differential: It allows for questions about the case in which students make their ethical judgment using numeric scales that relate opposite terms, for example, Fair-Unfair, Responsible-Irresponsible, etc. The scales can range from dichotomous (two values) up to ten values.",
 	"RankingDescription": "Ranking: It allows for questions about the case in which students must rank the actors based on a question regarding an ethical criterion. For example, \"Rank the actors by placing first the one you believe acted in the most prudent manner\"."
+,
+	"nav_pill_title_cases": "Cases",
+	"ethical_cases_title": "Ethical Cases",
+	"ethical_cases_create": "New Case",
+	"ethical_cases_new_title": "Create Ethical Case",
+	"ethical_cases_edit_title": "Edit Ethical Case",
+	"ethical_cases_file": "Case PDF",
+	"ethical_cases_open_file": "Open file",
+	"ethical_cases_current_file": "Current file",
+	"author_firstname": "Author First Name",
+	"author_lastname": "Author Last Name"
 }

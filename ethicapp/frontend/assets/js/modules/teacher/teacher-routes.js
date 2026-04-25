@@ -33,6 +33,15 @@ function TeacherRouter($routeProvider) {
         .when('/users', {
             templateUrl: 'static/views/teacher/users.html',
         })
+        .when('/cases', {
+            templateUrl: 'static/views/teacher/cases.index.html',
+        })
+        .when('/cases/new', {
+            templateUrl: 'static/views/teacher/cases.new.html',
+        })
+        .when('/cases/:id/edit', {
+            templateUrl: 'static/views/teacher/cases.edit.html',
+        })
         .when('/error/:errorCode/:backSteps', {
             templateUrl: function(params) {
               return 'static/views/teacher/error.' + params.errorCode + '.html';

@@ -27,6 +27,7 @@ import group_messages from "./controllers/group-messages.js";
 import content_analysis from "./controllers/content-analysis-controller.js";
 import admin_panel from "./controllers/admin-panel-api.js";
 import legacy_ethics from "./controllers/legacy-ethics.js";
+import cases from "./controllers/cases.js";
 
 import fs from "fs";
 
@@ -162,8 +163,8 @@ app.use("/", requireLegacyAuth, designs);
 app.use("/", requireLegacyAuth, group_messages);
 app.use("/", requireLegacyAuth, content_analysis);
 app.use("/", requireLegacyAuth, legacy_ethics); // Legacy endpoints
+app.use("/", requireLegacyAuth, cases);
 
-//app.use("/", validateSession, cases);
 app.use("/", admin_panel);
 
 // app.use("/", validateSession, rubrica);

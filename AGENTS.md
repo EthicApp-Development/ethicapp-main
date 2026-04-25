@@ -76,6 +76,7 @@ Given the mix of legacy code, prototype-quality code, and AI-assisted developmen
 - All new JavaScript dependencies must support **ES Modules**.
 - Avoid adding new CommonJS code in new development.
 - Avoid legacy JavaScript patterns in new modules.
+- All newly implemented code (identifiers, comments, and user-facing technical labels) must be written in English.
 - Minimize architectural and code anti-patterns, especially:
   - oversized monolithic components,
   - low-cohesion modules,
@@ -118,3 +119,4 @@ When adding teacher-facing features in legacy EthicApp:
 2. Expose AngularJS services for API communication in `assets/js/services`.
 3. Wire controllers/services in `teacher_admin.mjs`.
 4. Add/update teacher navigation entry points in `ethicapp/frontend/views/home.ejs`.
+5. When adding or modifying UI text in legacy EthicApp AngularJS views, add/update the corresponding translation keys in `ethicapp/frontend/assets/locales/` and use `{{'key'|translate}}` in templates instead of hardcoded strings.
