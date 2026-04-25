@@ -1,6 +1,7 @@
 let DesignCatalogService = ($rootScope, $http) => {
     const service = {
         designs: [],
+        hasLoadedDesigns: false,
         listeners: {}, // Subscribed listeners
 
         async loadDesigns() {
@@ -10,6 +11,7 @@ let DesignCatalogService = ($rootScope, $http) => {
                 // Validate the response structure
                 if (response.data.status === "ok" && Array.isArray(response.data.result)) {
                     service.designs = response.data.result; // Assign the fetched designs
+                    service.hasLoadedDesigns = true;
                     
                     // Notify listeners
                     service.notifyListeners("onDesignCatalogUpdated", { 
@@ -24,14 +26,14 @@ let DesignCatalogService = ($rootScope, $http) => {
         },
 
         async getDesigns(reload = false) {
-            if (reload || service.designs.length === 0) {
+            if (reload || !service.hasLoadedDesigns) {
                 await service.loadDesigns();
             }
             return service.designs;
         },
 
         async getUserDesigns(reload = false) {
-            if (reload || service.designs.length === 0) {
+            if (reload || !service.hasLoadedDesigns) {
                 await service.loadDesigns();
             }
             const result = service.designs.filter(design => design.userOwned === true);
@@ -39,7 +41,7 @@ let DesignCatalogService = ($rootScope, $http) => {
         },
 
         async getPublicDesigns(reload = false) {
-            if (reload || service.designs.length === 0) {
+            if (reload || !service.hasLoadedDesigns) {
                 await service.loadDesigns();
             }
             const result = service.designs.filter(design => design.public === true && 
@@ -48,7 +50,7 @@ let DesignCatalogService = ($rootScope, $http) => {
         },
 
         async getDesignById(id, reload = false) {
-            if (reload || service.designs.length === 0) {
+            if (reload || !service.hasLoadedDesigns) {
                 await service.loadDesigns();
             }
             return service.designs.find(design => design.id === id) || null;
