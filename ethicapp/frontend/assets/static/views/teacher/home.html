@@ -51,11 +51,20 @@
                 </div>
                 <div class="panel-body" ng-show="ac.activities.ongoing.length === 0 && ac.activities.finished.length === 0">
                     <p>{{ 'no_recent_activities_text' | translate }}</p>
-                    <button class="btn btn-default btn-sm" ng-click="navigateTo('/activities/new')">
-                        <i class="fa-brands fa-space-awesome" aria-hidden="true"></i> {{'launch_activity' | translate}}
+                    <button class="btn btn-default btn-sm" ng-click="navigateTo('/cases/new')">
+                        <i class="fa fa-book" aria-hidden="true"></i> {{'ethical_cases_create' | translate}}
                     </button>
+                    &nbsp;
+                    &nbsp;
+                    &nbsp;
                     <button class="btn btn-default btn-sm" ng-click="navigateTo('/designs/new')">
                         <i class="fa fa-paint-brush" aria-hidden="true"></i> {{'create_design' | translate}}
+                    </button>
+                    &nbsp;
+                    &nbsp;
+                    &nbsp;
+                    <button class="btn btn-default btn-sm" ng-click="navigateTo('/activities/new')">
+                        <i class="fa-brands fa-space-awesome" aria-hidden="true"></i> {{'launch_activity' | translate}}
                     </button>
                 </div>
                 <div class="panel-body" ng-show="ac.activities.ongoing.length > 0 || ac.activities.finished.length > 0">                     

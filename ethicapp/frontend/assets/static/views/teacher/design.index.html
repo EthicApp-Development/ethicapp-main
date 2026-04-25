@@ -52,6 +52,17 @@
                         is-owner="false"
                         on-import="vm.importDesign">
                     </design-item>
+
+                    <div class="alert alert-info"
+                        ng-if="vm.dsgnMode === 0 && (vm.userDesigns | filter: { metainfo: { title: vm.userSearch } }).length === 0">
+                        <span>{{'empty_designs_message' | translate}}</span>
+                        <a href="" ng-click="navigateTo('/designs/new')">{{'empty_designs_link' | translate}}</a>.
+                    </div>
+
+                    <div class="alert alert-info"
+                        ng-if="vm.dsgnMode === 1 && (vm.publicDesigns | filter: { metainfo: { title: vm.userSearch } }).length === 0">
+                        <span>{{'empty_shared_designs_message' | translate}}</span>
+                    </div>
                 </div>
             </div>
         </div>
