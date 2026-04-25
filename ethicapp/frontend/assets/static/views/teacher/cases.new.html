@@ -1,33 +1,13 @@
 <div ng-controller="CasesController as vm">
     <h2>{{ 'ethical_cases_new_title' | translate }}</h2>
 
-    <form name="newCaseForm" ng-submit="newCaseForm.$valid && vm.createCase()" novalidate>
-        <div class="form-group">
-            <label>{{ 'title' | translate }}</label>
-            <input type="text" class="form-control" ng-model="vm.form.title" required>
-        </div>
-
-        <div class="form-group">
-            <label>{{ 'author_firstname' | translate }}</label>
-            <input type="text" class="form-control" ng-model="vm.form.authorFirstname" required>
-        </div>
-
-        <div class="form-group">
-            <label>{{ 'author_lastname' | translate }}</label>
-            <input type="text" class="form-control" ng-model="vm.form.authorLastname" required>
-        </div>
-
-        <div class="form-group">
-            <label>{{ 'email' | translate }}</label>
-            <input type="email" class="form-control" ng-model="vm.form.authorEmail" required>
-        </div>
-
-        <div class="form-group">
-            <label>{{ 'ethical_cases_file' | translate }}</label>
-            <input type="file" class="form-control" accept="application/pdf" onchange="angular.element(this).scope().vm.handlePdfSelected(this.files)" required>
-        </div>
-
-        <button type="submit" class="btn btn-primary">{{ 'save' | translate }}</button>
-        <button type="button" class="btn btn-default" ng-click="navigateTo('/cases')">{{ 'back' | translate }}</button>
-    </form>
+    <case-form-editor
+        form-model="vm.form"
+        submit-label-key="save"
+        is-pdf-required="true"
+        show-current-pdf="false"
+        on-save="vm.createCase()"
+        on-cancel="navigateTo('/cases')"
+        on-pdf-selected="vm.handlePdfSelected(files)">
+    </case-form-editor>
 </div>

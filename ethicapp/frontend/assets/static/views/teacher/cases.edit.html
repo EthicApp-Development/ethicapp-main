@@ -1,36 +1,13 @@
 <div ng-controller="CasesController as vm" ng-init="vm.loadCase()">
     <h2>{{ 'ethical_cases_edit_title' | translate }}</h2>
 
-    <form name="editCaseForm" ng-submit="editCaseForm.$valid && vm.updateCase()" novalidate>
-        <div class="form-group">
-            <label>{{ 'title' | translate }}</label>
-            <input type="text" class="form-control" ng-model="vm.form.title" required>
-        </div>
-
-        <div class="form-group">
-            <label>{{ 'author_firstname' | translate }}</label>
-            <input type="text" class="form-control" ng-model="vm.form.authorFirstname" required>
-        </div>
-
-        <div class="form-group">
-            <label>{{ 'author_lastname' | translate }}</label>
-            <input type="text" class="form-control" ng-model="vm.form.authorLastname" required>
-        </div>
-
-        <div class="form-group">
-            <label>{{ 'email' | translate }}</label>
-            <input type="email" class="form-control" ng-model="vm.form.authorEmail" required>
-        </div>
-
-        <div class="form-group">
-            <label>{{ 'ethical_cases_file' | translate }}</label>
-            <p ng-if="vm.form.currentPdfPath">
-                <a ng-href="{{ vm.form.currentPdfPath }}" target="_blank" rel="noopener noreferrer">{{ 'ethical_cases_current_file' | translate }}</a>
-            </p>
-            <input type="file" class="form-control" accept="application/pdf" onchange="angular.element(this).scope().vm.handlePdfSelected(this.files)">
-        </div>
-
-        <button type="submit" class="btn btn-primary">{{ 'saveChanges' | translate }}</button>
-        <button type="button" class="btn btn-default" ng-click="navigateTo('/cases')">{{ 'back' | translate }}</button>
-    </form>
+    <case-form-editor
+        form-model="vm.form"
+        submit-label-key="saveChanges"
+        is-pdf-required="false"
+        show-current-pdf="true"
+        on-save="vm.updateCase()"
+        on-cancel="navigateTo('/cases')"
+        on-pdf-selected="vm.handlePdfSelected(files)">
+    </case-form-editor>
 </div>
