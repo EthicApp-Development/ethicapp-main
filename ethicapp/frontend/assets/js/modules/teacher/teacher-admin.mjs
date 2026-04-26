@@ -199,6 +199,7 @@ import designErrorSummaryComponent from "../../components/design-error-summary.c
 import itemMoverComponent from '../../components/item-mover.component.js';
 import designItemComponent from '../../components/design-item.component.js';
 import caseFormEditorComponent from "../../components/case-form-editor.component.js";
+import phaseInstructionsEditComponent from "../../components/phase-instructions-edit.component.js";
 
 app.component('activityDescription', activityDescriptionComponent);
 app.component('designDescription', designDescriptionComponent);
@@ -214,6 +215,7 @@ app.component('rankingItemEditor', rankingItemEditorComponent);
 app.component('sdItemEditor', sdItemEditorComponent);
 app.component('designItem', designItemComponent);
 app.component("caseFormEditor", caseFormEditorComponent);
+app.component("phaseInstructionsEdit", phaseInstructionsEditComponent);
 
 import { userRolesFilter } from '../../filters/user-roles.filter.js';
 app.filter("roleTranslate", ["$translate", userRolesFilter]);

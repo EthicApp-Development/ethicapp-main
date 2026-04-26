@@ -87,6 +87,10 @@
             "minimum": 0
           },
           "uniqueItems": true
+        },
+        "instructions": {
+          "type": "string",
+          "minLength": 1
         }
       }
     },
