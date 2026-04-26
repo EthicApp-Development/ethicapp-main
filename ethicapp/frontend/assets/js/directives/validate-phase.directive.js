@@ -1,6 +1,6 @@
 const watchObjects = {
-    semantic_differential: 'phase.questions',
-    ranking: 'phase.roles'
+    semantic_differential: ['phase.questions', 'phase.instructions'],
+    ranking: ['phase.roles', 'phase.instructions']
 };
 
 const itemValidators = {
@@ -28,6 +28,8 @@ const itemValidators = {
             scope.onValidate({ result });
             console.log('[validatePhaseDirective] Validation passed.');
         }
+
+        validatePhaseInstructions(scope, phaseNumber);
     },
     ranking : function(scope, phaseNumber) {
         const phase = scope.phase;
@@ -52,7 +54,29 @@ const itemValidators = {
             scope.onValidate({ result });
             console.log('[validatePhaseDirective] Validation passed.');
         }
+
+        validatePhaseInstructions(scope, phaseNumber);
     }
+}
+
+function validatePhaseInstructions(scope, phaseNumber) {
+    const phase = scope.phase;
+    const hasInstructionsField = Object.prototype.hasOwnProperty.call(phase, 'instructions');
+    const hasValidInstructions = typeof phase.instructions === 'string' && phase.instructions.trim().length > 0;
+    const messages = hasInstructionsField && !hasValidInstructions
+        ? ['error_phase_instructions_required']
+        : [];
+
+    const result = {
+        type: 'phase',
+        context: {
+            phaseNumber: phaseNumber,
+            phaseInstructions: true
+        },
+        messages
+    };
+
+    scope.onValidate({ result });
 }
 
 const validatePhaseDirective = function () {
@@ -77,9 +101,17 @@ const validatePhaseDirective = function () {
                 return;
             }
 
-            scope.$watch(watchObject, function (newVal, oldVal) {
-                validator(scope, scope.phaseNumber);
-            }, true);
+            if (Array.isArray(watchObject)) {
+                watchObject.forEach((path) => {
+                    scope.$watch(path, function () {
+                        validator(scope, scope.phaseNumber);
+                    }, true);
+                });
+            } else {
+                scope.$watch(watchObject, function () {
+                    validator(scope, scope.phaseNumber);
+                }, true);
+            }
 
             validator(scope, scope.phaseNumber);
         }
