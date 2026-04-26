@@ -59,6 +59,9 @@
             <div class="col-sm-offset-3 col-sm-9">
                 <button type="button" class="btn btn-default btn-sm mt-medio profile-save-btn" ng-click="vm.saveProfile()">{{ 'save_profile' | translate }}</button>
                 <small class="help-block">{{ 'profile_save_scope_hint' | translate }}</small>
+                <div class="toast-container profile-toast-anchor">
+                    <toast></toast>
+                </div>
             </div>
         </div>
     </form>

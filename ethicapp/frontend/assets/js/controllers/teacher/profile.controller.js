@@ -19,6 +19,7 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
     vm.selectedAvatarFile = null;
     vm.defaultProfileAvatar = "/assets/images/user-placeholder/profile-placeholder.svg";
     vm.defaultTopbarAvatar = "/assets/images/user-placeholder/avatar-placeholder-64.svg";
+    vm.avatarCacheToken = Date.now();
     vm.isRecaptchaEnabled = window.__ETHICAPP_RECAPTCHA_ENABLED__ === true;
 
     vm.isPasswordResetModalOpen = false;
@@ -38,8 +39,16 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
         ];
     };
 
-    vm.getTopbarAvatar = () => vm.profile.profile_image_topbar_path || vm.defaultTopbarAvatar;
-    vm.getProfileAvatar = () => vm.profile.profile_image_path || vm.defaultProfileAvatar;
+    vm.withCacheToken = (url) => {
+        if (!url) {
+            return "";
+        }
+
+        const separator = url.includes("?") ? "&" : "?";
+        return `${url}${separator}v=${vm.avatarCacheToken}`;
+    };
+    vm.getTopbarAvatar = () => vm.withCacheToken(vm.profile.profile_image_topbar_path || vm.defaultTopbarAvatar);
+    vm.getProfileAvatar = () => vm.withCacheToken(vm.profile.profile_image_path || vm.defaultProfileAvatar);
     vm.showInfoToast = (message) => {
         toast.create({
             timeout: TOAST_INFO_TIMEOUT_MS,
@@ -137,6 +146,7 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
                 ...data,
                 sex: data.sex || "O"
             };
+            vm.avatarCacheToken = Date.now();
             vm.applyChanges();
         } catch (error) {
             console.error("Could not load profile:", error);

@@ -99,7 +99,10 @@ body {
     border-radius: 50%;
     height: 30px;
     width: 30px;
-    background: #fff;
+    background: transparent;
+    object-fit: cover;
+    object-position: center;
+    display: block;
 }
 
 .line_labels {
