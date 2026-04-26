@@ -30,7 +30,9 @@
         <div class="col-md-12">
             <div class="panel panel-default">
                 <div class="panel-heading designs-list" style="padding-top: 0px; padding-left: 8px; min-height: 1.25em; max-height: 1.25em; background: white;">
-                    <toast></toast>
+                    <div class="designs-toast-container">
+                        <toast></toast>
+                    </div>
                 </div>
                 <div class="panel-body">
                     <design-item ng-repeat="design in vm.userDesigns | filter: { metainfo: { title: vm.userSearch } } track by design.id"

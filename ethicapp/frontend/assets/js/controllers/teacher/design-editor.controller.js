@@ -193,7 +193,7 @@ export function DesignEditorController($scope, $translate, $timeout,
                     toast.create({
                         timeout: 3 * 1000,
                         message: result,
-                        containerClass: 'toast-container',
+                        containerClass: 'design-editor-toast-container',
                         dismissible: false,
                         defaultToastClass: 'toast',
                         insertFromTop: true,
@@ -208,7 +208,7 @@ export function DesignEditorController($scope, $translate, $timeout,
                         message: 'Failed to save design',
                         className: 'alert-danger',
                         dismissible: false,
-                        containerClass: 'toast-container',
+                        containerClass: 'design-editor-toast-container',
                         defaultToastClass: 'toast',
                         insertFromTop: true
                     });
