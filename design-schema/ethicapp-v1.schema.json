@@ -123,6 +123,7 @@
             "r_pole",
             "values",
             "just_required",
+            "justification_minimum_length_required",
             "min_just_length"
           ],
           "properties": {
@@ -141,11 +142,42 @@
             "just_required": {
               "type": "boolean"
             },
+            "justification_minimum_length_required": {
+              "type": "boolean"
+            },
             "min_just_length": {
               "type": "integer",
               "minimum": 0
             }
           },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "just_required": { "const": false }
+                }
+              },
+              "then": {
+                "properties": {
+                  "justification_minimum_length_required": { "const": false },
+                  "min_just_length": { "const": 0 }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "just_required": { "const": true },
+                  "justification_minimum_length_required": { "const": true }
+                }
+              },
+              "then": {
+                "properties": {
+                  "min_just_length": { "minimum": 5 }
+                }
+              }
+            }
+          ],
           "additionalProperties": true
         }
       },

@@ -1,5 +1,6 @@
 function SDItemEditController() {
     const vm = this;
+    const MIN_JUSTIFICATION_WORDS = 5;
 
     vm.buildOptions = function(values) {
         return Array.from({ length: values }, (_, i) => i + 1);
@@ -35,6 +36,13 @@ function SDItemEditController() {
             validation.valid = false;
             validation.messages.push("edit_error_sd_missing_value_right_pole");
         }
+        if (vm.question.ans_format.just_required
+            && vm.question.ans_format.justification_minimum_length_required
+            && (!Number.isInteger(vm.question.ans_format.min_just_length)
+                || vm.question.ans_format.min_just_length < MIN_JUSTIFICATION_WORDS)) {
+            validation.valid = false;
+            validation.messages.push("edit_error_sd_min_justification_length");
+        }
 
         if (vm.validateCallback) {
             vm.validateCallback({ result: validation });
@@ -50,9 +58,36 @@ function SDItemEditController() {
         }
     };
 
+    vm.onJustificationRequiredChange = function() {
+        if (!vm.question?.ans_format) {
+            return;
+        }
+
+        if (!vm.question.ans_format.just_required) {
+            vm.question.ans_format.justification_minimum_length_required = false;
+            vm.question.ans_format.min_just_length = 0;
+        }
+
+        vm.validateItem();
+    };
+
+    vm.onMinimumLengthRequiredChange = function() {
+        if (!vm.question?.ans_format) {
+            return;
+        }
+
+        if (vm.question.ans_format.justification_minimum_length_required
+            && !Number.isInteger(vm.question.ans_format.min_just_length)) {
+            vm.question.ans_format.min_just_length = MIN_JUSTIFICATION_WORDS;
+        }
+
+        vm.validateItem();
+    };
+
     vm.$onInit = function () {
         vm.showSeparator = vm.showSeparator !== false;
         vm.showSeparator = false;
+        vm.normalizeJustificationSettings();
 
         if (vm.validateCallback) {
             const validation = vm.validateItem();
@@ -70,7 +105,31 @@ function SDItemEditController() {
 
     vm.isEmptyString = function(value) {
         return typeof value === 'string' && value.trim() === '';
-    }
+    };
+
+    vm.normalizeJustificationSettings = function() {
+        if (!vm.question || !vm.question.ans_format) {
+            return;
+        }
+
+        if (typeof vm.question.ans_format.just_required !== "boolean") {
+            vm.question.ans_format.just_required = false;
+        }
+
+        if (typeof vm.question.ans_format.justification_minimum_length_required !== "boolean") {
+            vm.question.ans_format.justification_minimum_length_required = false;
+        }
+
+        if (!vm.question.ans_format.just_required) {
+            vm.question.ans_format.justification_minimum_length_required = false;
+            vm.question.ans_format.min_just_length = 0;
+            return;
+        }
+
+        if (!Number.isInteger(vm.question.ans_format.min_just_length)) {
+            vm.question.ans_format.min_just_length = MIN_JUSTIFICATION_WORDS;
+        }
+    };
 };
 
 const sdItemEditorComponent = {

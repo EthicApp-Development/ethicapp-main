@@ -309,6 +309,7 @@
 	"edit_error_sd_missing_question_text" : "Item/question text is missing",
 	"edit_error_sd_missing_value_left_pole": "Left pole text is missing",
 	"edit_error_sd_missing_value_right_pole": "Right pole text is missing",
+	"edit_error_sd_min_justification_length": "Minimum justification length must be at least 5 words",
 	"design_error_message": "The following errors prevent the current design from being used to create activities. Please address them to ensure the design is functional.",
 	"global_errors_title": "General design errors",
 	"grouping_config_errors_title": "Grouping issues",
