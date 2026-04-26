@@ -1,6 +1,6 @@
 <script>
-  window.__ETHICAPP_RECAPTCHA_ENABLED__ = <%= JSON.stringify(!!recaptchaEnabled) %>;
-  window.__ETHICAPP_RECAPTCHA_SITE_KEY__ = <%= JSON.stringify(recaptchaSiteKey || '') %>;
+  window.__ETHICAPP_RECAPTCHA_ENABLED__ = <%= recaptchaEnabled ? "true" : "false" %>;
+  window.__ETHICAPP_RECAPTCHA_SITE_KEY__ = "<%= recaptchaSiteKey || '' %>";
 </script>
 <% if (recaptchaEnabled) { %>
 <script src="https://www.google.com/recaptcha/api.js?render=explicit" async defer></script>
@@ -14,7 +14,7 @@
     <div class="cf1 text-right margin-right-8 simple-padding-top" id="topbtnlist">
       <div class="language-dropdown" ng-mouseenter="showLanguageDropdown = true"
         ng-mouseleave="showLanguageDropdown = false">
-        <i class="fa fa-globe"></i>
+        <span class="topbar-lang-icon"><i class="fa fa-globe"></i></span>
         <i class="fa fa-angle-down"></i>
         <ul class="language-options" ng-show="showLanguageDropdown">
           <li ng-repeat="languageKey in ['es_CL', 'en_US']" ng-click="changeLanguage(languageKey)">
@@ -25,8 +25,8 @@
           </li>
         </ul>
       </div>
-      <div class="topbar-avatar-wrap margin-right-3 simple-padding-top">
-        <img ng-src="{{ vm.getTopbarAvatar() }}" alt="Avatar" class="circle_profile topbar-avatar-img">
+      <div class="margin-right-3 simple-padding-top">
+        <img ng-src="{{ vm.getTopbarAvatar() }}" alt="Avatar" class="circle_profile">
       </div>
       <strong class="margin-right-8"><a href="#!/profile" style="color: white;"> {{ vm.getDisplayName() || ('profile' | translate) }}
         </a></strong>

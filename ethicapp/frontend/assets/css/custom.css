@@ -93,30 +93,21 @@ body {
     background: #5cb85c;
 }
 
-.topbar-avatar-wrap .topbar-avatar-img {
-    width: 30px !important;
-    height: 30px !important;
-    min-width: 30px;
-    min-height: 30px;
-    max-width: 30px;
-    max-height: 30px;
-    border-radius: 50%;
-    object-fit: cover;
-    object-position: center;
-    display: block;
-    flex-shrink: 0;
-}
-
 .circle_profile {
     -moz-border-radius: 50%;
     -webkit-border-radius: 50%;
     border-radius: 50%;
-    height: 30px;
-    width: 30px;
+    height: 30px !important;
+    width: 30px !important;
     background: transparent;
     object-fit: cover;
     object-position: center;
     display: block;
+}
+
+.topbar-lang-icon {
+    position: relative;
+    top: 2px;
 }
 
 .line_labels {
