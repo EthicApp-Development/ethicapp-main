@@ -40,7 +40,8 @@ function SDItemEditController() {
         }
         if (vm.question.ans_format.just_required
             && vm.question.ans_format.justification_minimum_length_required
-            && vm.question.ans_format.min_just_length < MIN_JUSTIFICATION_WORDS) {
+            && (!Number.isInteger(vm.question.ans_format.min_just_length)
+                || vm.question.ans_format.min_just_length < MIN_JUSTIFICATION_WORDS)) {
             validation.valid = false;
             validation.messages.push("edit_error_sd_min_justification_length");
         }
@@ -67,9 +68,6 @@ function SDItemEditController() {
         if (!vm.question.ans_format.just_required) {
             vm.question.ans_format.justification_minimum_length_required = false;
             vm.question.ans_format.min_just_length = 0;
-        } else if (!Number.isInteger(vm.question.ans_format.min_just_length)
-            || vm.question.ans_format.min_just_length < MIN_JUSTIFICATION_WORDS) {
-            vm.question.ans_format.min_just_length = MIN_JUSTIFICATION_WORDS;
         }
 
         vm.validateItem();
@@ -81,8 +79,7 @@ function SDItemEditController() {
         }
 
         if (vm.question.ans_format.justification_minimum_length_required
-            && (!Number.isInteger(vm.question.ans_format.min_just_length)
-                || vm.question.ans_format.min_just_length < MIN_JUSTIFICATION_WORDS)) {
+            && !Number.isInteger(vm.question.ans_format.min_just_length)) {
             vm.question.ans_format.min_just_length = MIN_JUSTIFICATION_WORDS;
         }
 

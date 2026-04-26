@@ -72,8 +72,9 @@
                         class="form-control"
                         min="5"
                         ng-model="$ctrl.question.ans_format.min_just_length"
+                        ng-model-options="{ updateOn: 'blur' }"
                         ng-class="{'input-warning': $ctrl.question.ans_format.min_just_length < 5}"
-                        ng-change="$ctrl.validateItem()">
+                        ng-blur="$ctrl.validateItem()">
                 </div>
             </div>
         </div>
