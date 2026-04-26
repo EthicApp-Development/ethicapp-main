@@ -53,7 +53,7 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
         toast.create({
             timeout: TOAST_INFO_TIMEOUT_MS,
             message,
-            containerClass: "toast-container",
+            containerClass: "profile-toast-container",
             dismissible: false,
             defaultToastClass: "toast",
             insertFromTop: true
@@ -64,7 +64,7 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
             timeout: TOAST_ERROR_TIMEOUT_MS,
             message,
             className: "alert-danger",
-            containerClass: "toast-container",
+            containerClass: "profile-toast-container",
             dismissible: false,
             defaultToastClass: "toast",
             insertFromTop: true

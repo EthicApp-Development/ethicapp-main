@@ -127,7 +127,7 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
                 toast.create({
                     timeout: 100 * 1000,
                     message: result,
-                    containerClass: 'toast-container',
+                    containerClass: 'designs-toast-container',
                     dismissible: false,
                     defaultToastClass: 'toast',
                     insertFromTop: true,
