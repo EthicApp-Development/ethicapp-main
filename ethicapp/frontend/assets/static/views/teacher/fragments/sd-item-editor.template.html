@@ -47,7 +47,7 @@
                         <input
                             type="checkbox"
                             ng-model="$ctrl.question.ans_format.just_required"
-                            ng-change="$ctrl.validateItem()">
+                            ng-change="$ctrl.onJustificationRequiredChange()">
                         {{ 'justification_required_label' | translate }}
                     </label>
                 </div>
@@ -61,7 +61,7 @@
                         <input
                             type="checkbox"
                             ng-model="$ctrl.question.ans_format.justification_minimum_length_required"
-                            ng-change="$ctrl.validateItem()">
+                            ng-change="$ctrl.onMinimumLengthRequiredChange()">
                         {{ 'ranking_justification_minlength_text' | translate }}
                     </label>
                 </div>
