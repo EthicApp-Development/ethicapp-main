@@ -1418,6 +1418,12 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     border-radius: 50%;
     height: 30px;
     width: 30px;
+    min-width: 30px;
+    min-height: 30px;
+    max-width: 30px;
+    max-height: 30px;
+    aspect-ratio: 1 / 1;
+    flex-shrink: 0;
     background: transparent;
     object-fit: cover;
     object-position: center;
@@ -1654,8 +1660,12 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     min-height: 2.5rem;
 }
 
-.teacher-profile-page .profile-toast-anchor {
-    margin-top: 0.75rem;
+
+.teacher-profile-page .toast-container ul,
+.teacher-profile-page .toast-container li {
+    list-style: none !important;
+    margin: 0;
+    padding: 0;
 }
 
 .profile-save-btn {

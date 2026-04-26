@@ -79,15 +79,14 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
     };
 
     vm.getRecaptchaToken = (widgetId) => {
-        if (!vm.isRecaptchaEnabled) {
+        if (!vm.isRecaptchaEnabled || !window.grecaptcha) {
             return null;
         }
 
-        if (!window.grecaptcha || widgetId === null || widgetId === undefined) {
-            return null;
-        }
+        const token = (widgetId === null || widgetId === undefined)
+            ? window.grecaptcha.getResponse()
+            : window.grecaptcha.getResponse(widgetId);
 
-        const token = window.grecaptcha.getResponse(widgetId);
         return token || null;
     };
 
