@@ -11,7 +11,7 @@ function mapUser(row) {
     email: row.mail,
     sex: row.sex,
     role: row.role,
-    lang: row.lang,
+    preferredLocale: row.preferred_locale,
     isActive: row.active !== false,
     authProvider: row.auth_provider || 'local',
     passwordHash: row.password_bcrypt
@@ -21,7 +21,7 @@ function mapUser(row) {
 async function findById(id) {
   const result = await query(
     `
-      SELECT id, name, rut, mail, sex, role, lang, active, auth_provider, password_bcrypt
+      SELECT id, name, rut, mail, sex, role, preferred_locale, active, auth_provider, password_bcrypt
       FROM users
       WHERE id = $1
       LIMIT 1
@@ -37,7 +37,7 @@ async function findByLogin(login) {
 
   const result = await query(
     `
-      SELECT id, name, rut, mail, sex, role, lang, active, auth_provider, password_bcrypt
+      SELECT id, name, rut, mail, sex, role, preferred_locale, active, auth_provider, password_bcrypt
       FROM users
       WHERE lower(mail) = $1 OR lower(rut) = $1
       LIMIT 1
@@ -53,7 +53,7 @@ async function findByEmail(email) {
 
   const result = await query(
     `
-      SELECT id, name, rut, mail, sex, role, lang, active, auth_provider, password_bcrypt
+      SELECT id, name, rut, mail, sex, role, preferred_locale, active, auth_provider, password_bcrypt
       FROM users
       WHERE lower(mail) = $1
       LIMIT 1
@@ -97,19 +97,19 @@ async function touchLastLogin(userId) {
   );
 }
 
-async function createUser({ name, lastname, dni, email, gender, password, lang = 'spanish', role = 'A' }) {
+async function createUser({ name, lastname, dni, email, gender, password, preferredLocale = 'en_US', role = 'A' }) {
   const fullName = `${name} ${lastname}`.trim();
   const passwordHash = await hashPassword(password);
 
   const result = await query(
     `
       INSERT INTO users
-        (name, rut, pass, mail, sex, role, lang, password_bcrypt, auth_provider, active)
+        (name, rut, pass, mail, sex, role, preferred_locale, password_bcrypt, auth_provider, active)
       VALUES
         ($1, $2, '', $3, $4, $5, $6, $7, 'local', true)
-      RETURNING id, name, rut, mail, sex, role, lang, active, auth_provider, password_bcrypt
+      RETURNING id, name, rut, mail, sex, role, preferred_locale, active, auth_provider, password_bcrypt
     `,
-    [fullName, dni, email, gender, role, lang, passwordHash]
+    [fullName, dni, email, gender, role, preferredLocale, passwordHash]
   );
 
   return mapUser(result.rows[0]);
