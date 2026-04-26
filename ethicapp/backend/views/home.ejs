@@ -25,8 +25,9 @@
           </li>
         </ul>
       </div>
-      <img ng-src="{{ vm.getTopbarAvatar() }}" alt="Avatar"
-        class="circle_profile cf1 text-right margin-right-3 simple-padding-top">
+      <div class="topbar-avatar-wrap margin-right-3 simple-padding-top">
+        <img ng-src="{{ vm.getTopbarAvatar() }}" alt="Avatar" class="circle_profile">
+      </div>
       <strong class="margin-right-8"><a href="#!/profile" style="color: white;"> {{ vm.getDisplayName() || ('profile' | translate) }}
         </a></strong>
       <a href="logout" class="text-white ml-2" title="{{'exitEthicapp' | translate}}">
