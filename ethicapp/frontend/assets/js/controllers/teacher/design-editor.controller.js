@@ -239,6 +239,7 @@ export function DesignEditorController($scope, $translate, $timeout,
                 vm.validationErrors.phases[phaseKey] = {
                     items: {},          // For item/question errors
                     groupingConfig: [], // For grouping configuration errors
+                    phaseInstructions: [], // For phase instructions errors
                     other: [],          // Other phase-related errors
                 };
             }
@@ -261,9 +262,17 @@ export function DesignEditorController($scope, $translate, $timeout,
                     vm.validationErrors.phases[phaseKey].groupingConfig = [];
                 }
             }
+
+            if (context.phaseInstructions) {
+                if (messages.length > 0) {
+                    vm.validationErrors.phases[phaseKey].phaseInstructions = messages;
+                } else {
+                    vm.validationErrors.phases[phaseKey].phaseInstructions = [];
+                }
+            }
     
             // Handle general phase errors
-            if (!context.itemNumber && !context.groupingConfig) {
+            if (!context.itemNumber && !context.groupingConfig && !context.phaseInstructions) {
                 if (messages.length > 0) {
                     vm.validationErrors.phases[phaseKey].other = messages;
                 } else {
@@ -275,6 +284,7 @@ export function DesignEditorController($scope, $translate, $timeout,
             if (
                 Object.keys(vm.validationErrors.phases[phaseKey].items).length === 0 &&
                 vm.validationErrors.phases[phaseKey].groupingConfig.length === 0 &&
+                vm.validationErrors.phases[phaseKey].phaseInstructions.length === 0 &&
                 vm.validationErrors.phases[phaseKey].other.length === 0
             ) {
                 delete vm.validationErrors.phases[phaseKey];
