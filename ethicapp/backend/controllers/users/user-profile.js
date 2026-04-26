@@ -81,7 +81,7 @@ router.get("/users/profile", async (req, res) => {
                     sex,
                     mail AS email,
                     role,
-                    lang,
+                    preferred_locale,
                     profile_image_path,
                     profile_image_topbar_path
                 FROM users

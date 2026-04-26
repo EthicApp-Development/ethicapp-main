@@ -20,6 +20,18 @@ const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
+const DEFAULT_LOCALE = 'en_US';
+
+function normalizePreferredLocale(locale) {
+    const normalizedLocale = String(locale || "").trim().toLowerCase().replace("-", "_");
+
+    if (normalizedLocale.startsWith("es_") || normalizedLocale === "es") {
+        return "es_CL";
+    }
+
+    return "en_US";
+}
+
 router.get("/login", (req, res) => {
     res.render("login", {
         title: "Login - EthicApp",
@@ -158,8 +170,8 @@ router.post("/forgot", async (req, res) => {
             });
         }
 
-        const { email, lang } = req.body;
-        const locale = lang || "en_US";
+        const { email, preferred_locale } = req.body;
+        const locale = normalizePreferredLocale(preferred_locale || DEFAULT_LOCALE);
 
         const userExists = await UsersHelper.checkIfUserExists(email);
         if (!userExists) {
@@ -354,16 +366,18 @@ router.get("/login_record", async (req, res) => {
 // Route to get the user's name and other details
 router.post("/update-lang", async (req, res) => {
     try {
+        const preferredLocale = normalizePreferredLocale(req.body.preferred_locale || DEFAULT_LOCALE);
+
         // Execute SQL update to modify the user's language based on session uid
         await execSQL({
             dbcon: config.dbconnString,
             sql:   `
                 UPDATE users
-                SET lang = $1
+                SET preferred_locale = $1
                 WHERE id = $2
             `,
             sqlParams: [
-                param("plain", req.body.lang),  // Language from the request body
+                param("plain", preferredLocale),
                 param("plain", req.session.uid)  // Session uid
             ]
         });
@@ -392,7 +406,7 @@ router.get("/users/myinfo", async (req, res) => {
                     u.lastname,
                     u.sex,
                     u.role,
-                    u.lang,
+                    u.preferred_locale,
                     u.mail AS email,
                     u.profile_image_path,
                     u.profile_image_topbar_path

@@ -1,0 +1,48 @@
+const authMessages = {
+  en_US: {
+    invalidCredentials: 'Invalid credentials',
+    wrongCredentials: 'Incorrect credentials',
+    loginSuccess: 'Login successful',
+    internalServerError: 'Internal server error',
+    requiredFieldsMissing: 'Required fields are missing',
+    invalidRecaptcha: 'Invalid reCAPTCHA validation',
+    passwordsDoNotMatch: 'Passwords do not match',
+    weakPassword: 'Password must be at least 10 characters long and contain at least 2 symbols',
+    invalidGender: 'Invalid gender',
+    duplicateUserIdentifier: 'A user with that identifier already exists',
+    userCreated: 'User created successfully',
+    unauthenticated: 'Not authenticated',
+    unauthorized: 'Not authorized',
+    professorCreated: 'Professor created successfully',
+    sessionClosed: 'Session closed',
+    logoutError: 'Error while logging out',
+    emailRequired: 'Email is required',
+    forgotSuccess: 'If the email exists, you will receive instructions to reset your password',
+    invalidOrExpiredToken: 'Token is invalid or has expired',
+    passwordUpdated: 'Password updated successfully'
+  },
+  es_CL: {
+    invalidCredentials: 'Credenciales inválidas',
+    wrongCredentials: 'Credenciales incorrectas',
+    loginSuccess: 'Login exitoso',
+    internalServerError: 'Error interno del servidor',
+    requiredFieldsMissing: 'Faltan campos obligatorios',
+    invalidRecaptcha: 'Validación reCAPTCHA inválida',
+    passwordsDoNotMatch: 'Las contraseñas no coinciden',
+    weakPassword: 'La contraseña debe tener al menos 10 caracteres y al menos 2 símbolos',
+    invalidGender: 'Género inválido',
+    duplicateUserIdentifier: 'Ya existe un usuario con ese identificador',
+    userCreated: 'Usuario creado correctamente',
+    unauthenticated: 'No autenticado',
+    unauthorized: 'No autorizado',
+    professorCreated: 'Profesor creado correctamente',
+    sessionClosed: 'Sesión cerrada',
+    logoutError: 'Error al cerrar sesión',
+    emailRequired: 'El correo es obligatorio',
+    forgotSuccess: 'Si el correo existe, recibirás instrucciones para restablecer la contraseña',
+    invalidOrExpiredToken: 'El token es inválido o ha expirado',
+    passwordUpdated: 'Contraseña actualizada correctamente'
+  }
+};
+
+module.exports = authMessages;

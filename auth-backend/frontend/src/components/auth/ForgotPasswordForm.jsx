@@ -4,8 +4,11 @@ import TextField from '../common/TextField';
 import { forgotPassword } from '../../api/authApi';
 import RecaptchaField from '../common/RecaptchaField';
 import { recaptchaSiteKey } from '../../config/env';
+import { useI18n } from '../../app/providers';
 
 function ForgotPasswordForm() {
+  const { t } = useI18n();
+
   const [formData, setFormData] = useState({
     email: '',
     recaptchaToken: ''
@@ -42,13 +45,13 @@ function ForgotPasswordForm() {
     const nextErrors = {};
 
     if (!formData.email.trim()) {
-      nextErrors.email = 'El correo electrónico es obligatorio.';
+      nextErrors.email = t('forgotPassword.errors.emailRequired');
     } else if (!isValidEmail(formData.email.trim())) {
-      nextErrors.email = 'Introduce un correo electrónico válido.';
+      nextErrors.email = t('forgotPassword.errors.emailInvalid');
     }
 
     if (recaptchaSiteKey && !formData.recaptchaToken) {
-      nextErrors.recaptcha = 'Debes completar el reCAPTCHA.';
+      nextErrors.recaptcha = t('forgotPassword.errors.recaptchaRequired');
     }
 
     return nextErrors;
@@ -74,14 +77,10 @@ function ForgotPasswordForm() {
         recaptcha_token: formData.recaptchaToken
       });
 
-      setSuccessMessage(
-        'Si existe una cuenta asociada a ese correo, recibirás instrucciones para restablecer la contraseña.'
-      );
+      setSuccessMessage(t('forgotPassword.successMessage'));
     } catch (error) {
       const message =
-        error?.response?.data?.error ||
-        error?.message ||
-        'No se ha podido procesar la solicitud. Inténtalo de nuevo.';
+        error?.response?.data?.error || error?.message || t('forgotPassword.errors.genericForgotError');
 
       setServerError(message);
     } finally {
@@ -108,7 +107,7 @@ function ForgotPasswordForm() {
       <TextField
         id="email"
         name="email"
-        label="Correo electrónico"
+        label={t('forgotPassword.emailLabel')}
         type="email"
         value={formData.email}
         onChange={handleChange}
@@ -118,10 +117,7 @@ function ForgotPasswordForm() {
         required
       />
 
-      <div className="auth-form-text">
-        Introduce el correo asociado a tu cuenta y te enviaremos un enlace para
-        restablecer tu contraseña.
-      </div>
+      <div className="auth-form-text">{t('forgotPassword.instructions')}</div>
 
       <RecaptchaField
         siteKey={recaptchaSiteKey}
@@ -151,10 +147,10 @@ function ForgotPasswordForm() {
                 className="spinner-border spinner-border-sm"
                 aria-hidden="true"
               />
-              <span>Enviando...</span>
+              <span>{t('forgotPassword.submitting')}</span>
             </span>
           ) : (
-            'Enviar instrucciones'
+            t('forgotPassword.submit')
           )}
         </button>
       </div>
@@ -162,7 +158,7 @@ function ForgotPasswordForm() {
       <hr className="auth-divider" />
 
       <p className="auth-footer">
-        <Link to="/login">Volver a iniciar sesión</Link>
+        <Link to="/login">{t('forgotPassword.backToLogin')}</Link>
       </p>
     </form>
   );
