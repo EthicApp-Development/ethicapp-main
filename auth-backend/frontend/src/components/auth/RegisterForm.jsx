@@ -6,8 +6,10 @@ import SelectField from '../common/SelectField';
 import { register } from '../../api/authApi';
 import RecaptchaField from '../common/RecaptchaField';
 import { recaptchaSiteKey } from '../../config/env';
+import { useI18n } from '../../app/providers';
 
 function RegisterForm() {
+  const { locale, t } = useI18n();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -29,9 +31,9 @@ function RegisterForm() {
   const [recaptchaResetCounter, setRecaptchaResetCounter] = useState(0);
 
   const genderOptions = [
-    { value: 'F', label: 'Femenino' },
-    { value: 'M', label: 'Masculino' },
-    { value: 'O', label: 'Otro' }
+    { value: 'F', label: t('register.genderOptions.female') },
+    { value: 'M', label: t('register.genderOptions.male') },
+    { value: 'O', label: t('register.genderOptions.other') }
   ];
 
   const passwordChecks = useMemo(() => {
@@ -69,47 +71,45 @@ function RegisterForm() {
     const nextErrors = {};
 
     if (!formData.firstname.trim()) {
-      nextErrors.firstname = 'El nombre es obligatorio.';
+      nextErrors.firstname = t('register.errors.firstnameRequired');
     }
 
     if (!formData.lastname.trim()) {
-      nextErrors.lastname = 'El apellido es obligatorio.';
+      nextErrors.lastname = t('register.errors.lastnameRequired');
     }
 
     if (!formData.dni.trim()) {
-      nextErrors.dni = 'El identificador es obligatorio.';
+      nextErrors.dni = t('register.errors.dniRequired');
     }
 
     if (!formData.email.trim()) {
-      nextErrors.email = 'El correo electrónico es obligatorio.';
+      nextErrors.email = t('register.errors.emailRequired');
     } else if (!isValidEmail(formData.email.trim())) {
-      nextErrors.email = 'Introduce un correo electrónico válido.';
+      nextErrors.email = t('register.errors.emailInvalid');
     }
 
     if (!formData.gender) {
-      nextErrors.gender = 'Debes seleccionar una opción.';
+      nextErrors.gender = t('register.errors.genderRequired');
     }
 
     if (!formData.password) {
-      nextErrors.password = 'La contraseña es obligatoria.';
+      nextErrors.password = t('register.errors.passwordRequired');
     } else if (!passwordChecks.minLength || !passwordChecks.twoSymbols) {
-      nextErrors.password =
-        'La contraseña debe tener al menos 10 caracteres y 2 símbolos.';
+      nextErrors.password = t('register.errors.passwordInvalid');
     }
 
     if (!formData.password_confirmation) {
-      nextErrors.password_confirmation = 'Debes confirmar la contraseña.';
+      nextErrors.password_confirmation = t('register.errors.passwordConfirmationRequired');
     } else if (formData.password !== formData.password_confirmation) {
-      nextErrors.password_confirmation = 'Las contraseñas no coinciden.';
+      nextErrors.password_confirmation = t('register.errors.passwordMismatch');
     }
 
     if (!formData.acceptPrivacy) {
-      nextErrors.acceptPrivacy =
-        'Debes aceptar la Política de Privacidad para crear una cuenta.';
+      nextErrors.acceptPrivacy = t('register.errors.privacyAcceptanceRequired');
     }
 
     if (recaptchaSiteKey && !formData.recaptchaToken) {
-      nextErrors.recaptcha = 'Debes completar el reCAPTCHA.';
+      nextErrors.recaptcha = t('register.errors.recaptchaRequired');
     }
 
     return nextErrors;
@@ -138,19 +138,18 @@ function RegisterForm() {
         gender: formData.gender,
         password: formData.password,
         password_confirmation: formData.password_confirmation,
-        recaptcha_token: formData.recaptchaToken
+        recaptcha_token: formData.recaptchaToken,
+        preferred_locale: locale
       });
 
-      setSuccessMessage('Cuenta creada correctamente. Ya puedes iniciar sesión.');
+      setSuccessMessage(t('register.successMessage'));
 
       setTimeout(() => {
         navigate('/login', { replace: true });
       }, 1200);
     } catch (error) {
       const message =
-        error?.response?.data?.error ||
-        error?.message ||
-        'No se ha podido completar el registro. Inténtalo de nuevo.';
+        error?.response?.data?.error || error?.message || t('register.errors.genericRegisterError');
 
       setServerError(message);
     } finally {
@@ -177,7 +176,7 @@ function RegisterForm() {
       <TextField
         id="firstname"
         name="firstname"
-        label="Nombre"
+        label={t('register.fields.firstname')}
         value={formData.firstname}
         onChange={handleChange}
         error={errors.firstname}
@@ -189,7 +188,7 @@ function RegisterForm() {
       <TextField
         id="lastname"
         name="lastname"
-        label="Apellido"
+        label={t('register.fields.lastname')}
         value={formData.lastname}
         onChange={handleChange}
         error={errors.lastname}
@@ -200,18 +199,18 @@ function RegisterForm() {
       <TextField
         id="dni"
         name="dni"
-        label="DNI / RUT"
+        label={t('register.fields.dni')}
         value={formData.dni}
         onChange={handleChange}
         error={errors.dni}
-        placeholder="Sin puntos, con guión"
+        placeholder={t('register.placeholders.dni')}
         required
       />
 
       <TextField
         id="email"
         name="email"
-        label="Correo electrónico"
+        label={t('register.fields.email')}
         type="email"
         value={formData.email}
         onChange={handleChange}
@@ -223,32 +222,32 @@ function RegisterForm() {
       <SelectField
         id="gender"
         name="gender"
-        label="Género"
+        label={t('register.fields.gender')}
         value={formData.gender}
         onChange={handleChange}
         error={errors.gender}
         options={genderOptions}
-        placeholder="Selecciona una opción"
+        placeholder={t('register.placeholders.gender')}
         required
       />
 
       <PasswordField
         id="password"
         name="password"
-        label="Contraseña"
+        label={t('register.fields.password')}
         value={formData.password}
         onChange={handleChange}
         error={errors.password}
         autoComplete="new-password"
-        helpText="Mínimo 10 caracteres y al menos 2 símbolos."
+        helpText={t('register.passwordRules.helpText')}
         required
       >
         <ul className="auth-password-rules">
           <li className={passwordChecks.minLength ? 'is-valid' : 'is-invalid'}>
-            Mínimo 10 caracteres
+            {t('register.passwordRules.minLength')}
           </li>
           <li className={passwordChecks.twoSymbols ? 'is-valid' : 'is-invalid'}>
-            Al menos 2 símbolos
+            {t('register.passwordRules.twoSymbols')}
           </li>
         </ul>
       </PasswordField>
@@ -256,7 +255,7 @@ function RegisterForm() {
       <PasswordField
         id="password_confirmation"
         name="password_confirmation"
-        label="Confirmar contraseña"
+        label={t('register.fields.passwordConfirmation')}
         value={formData.password_confirmation}
         onChange={handleChange}
         error={errors.password_confirmation}
@@ -292,10 +291,10 @@ function RegisterForm() {
                 className="spinner-border spinner-border-sm"
                 aria-hidden="true"
               />
-              <span>Registrando...</span>
+              <span>{t('register.submitting')}</span>
             </span>
           ) : (
-            'Crear cuenta'
+            t('register.submit')
           )}
         </button>
 
@@ -309,29 +308,32 @@ function RegisterForm() {
             onChange={handleChange}
           />
           <label className="form-check-label" htmlFor="acceptPrivacy">
-            He leído y acepto la{' '}
-            <Link to="/privacy">Política de Privacidad</Link>.
+            {t('register.privacyAcceptancePrefix')}{' '}
+            <Link to="/privacy">{t('register.privacyPolicy')}</Link>
+            {t('register.privacyAcceptanceSuffix')}
           </label>
           {errors.acceptPrivacy ? (
             <div className="invalid-feedback d-block">
               {errors.acceptPrivacy}
             </div>
           ) : null}
-            <p className="small text-muted">
-            Tus datos se utilizarán para gestionar tu cuenta y el uso de la plataforma.
-            El uso de datos con fines de investigación se realizará únicamente con tu
-            consentimiento explícito en el contexto de estudios específicos.
-            Consulta más información en nuestra{' '}
-            <Link to="/privacy">Política de Privacidad</Link>.
-            </p>          
+          <p className="small text-muted">
+            {t('register.privacyNoticePartOne')}
+            {' '}
+            {t('register.privacyNoticePartTwo')}
+            {' '}
+            {t('register.privacyNoticePartThreePrefix')}{' '}
+            <Link to="/privacy">{t('register.privacyPolicy')}</Link>
+            {t('register.privacyNoticePartThreeSuffix')}
+          </p>
         </div>
       </div>
 
       <hr className="auth-divider" />
 
       <p className="auth-footer">
-        <span>¿Ya tienes cuenta? </span>
-        <Link to="/login">Iniciar sesión</Link>
+        <span>{t('register.alreadyHaveAccount')} </span>
+        <Link to="/login">{t('register.signInLink')}</Link>
       </p>
     </form>
   );

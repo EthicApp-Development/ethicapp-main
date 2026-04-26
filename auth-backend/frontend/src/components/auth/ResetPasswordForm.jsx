@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import PasswordField from './PasswordField';
 import { resetPassword } from '../../api/authApi';
+import { useI18n } from '../../app/providers';
 
 function ResetPasswordForm() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -50,22 +52,19 @@ function ResetPasswordForm() {
     const nextErrors = {};
 
     if (!token) {
-      nextErrors.token = 'El enlace de recuperación no es válido.';
+      nextErrors.token = t('resetPassword.errors.invalidToken');
     }
 
     if (!formData.password) {
-      nextErrors.password = 'La nueva contraseña es obligatoria.';
-    } else {
-      if (!passwordChecks.minLength || !passwordChecks.twoSymbols) {
-        nextErrors.password =
-          'La contraseña debe tener al menos 10 caracteres y 2 símbolos.';
-      }
+      nextErrors.password = t('resetPassword.errors.passwordRequired');
+    } else if (!passwordChecks.minLength || !passwordChecks.twoSymbols) {
+      nextErrors.password = t('resetPassword.errors.passwordInvalid');
     }
 
     if (!formData.password_confirmation) {
-      nextErrors.password_confirmation = 'Debes confirmar la contraseña.';
+      nextErrors.password_confirmation = t('resetPassword.errors.passwordConfirmationRequired');
     } else if (formData.password !== formData.password_confirmation) {
-      nextErrors.password_confirmation = 'Las contraseñas no coinciden.';
+      nextErrors.password_confirmation = t('resetPassword.errors.passwordMismatch');
     }
 
     return nextErrors;
@@ -92,18 +91,14 @@ function ResetPasswordForm() {
         password_confirmation: formData.password_confirmation
       });
 
-      setSuccessMessage(
-        'La contraseña se ha actualizado correctamente. Serás redirigido para iniciar sesión.'
-      );
+      setSuccessMessage(t('resetPassword.successMessage'));
 
       setTimeout(() => {
         navigate('/login', { replace: true });
       }, 1500);
     } catch (error) {
       const message =
-        error?.response?.data?.error ||
-        error?.message ||
-        'No se ha podido restablecer la contraseña. Solicita un nuevo enlace.';
+        error?.response?.data?.error || error?.message || t('resetPassword.errors.genericResetError');
 
       setServerError(message);
     } finally {
@@ -134,20 +129,20 @@ function ResetPasswordForm() {
       <PasswordField
         id="password"
         name="password"
-        label="Nueva contraseña"
+        label={t('resetPassword.passwordLabel')}
         value={formData.password}
         onChange={handleChange}
         error={errors.password}
         autoComplete="new-password"
-        helpText="Mínimo 10 caracteres y al menos 2 símbolos."
+        helpText={t('resetPassword.passwordRules.helpText')}
         required
       >
         <ul className="auth-password-rules">
           <li className={passwordChecks.minLength ? 'is-valid' : 'is-invalid'}>
-            Mínimo 10 caracteres
+            {t('resetPassword.passwordRules.minLength')}
           </li>
           <li className={passwordChecks.twoSymbols ? 'is-valid' : 'is-invalid'}>
-            Al menos 2 símbolos
+            {t('resetPassword.passwordRules.twoSymbols')}
           </li>
         </ul>
       </PasswordField>
@@ -155,7 +150,7 @@ function ResetPasswordForm() {
       <PasswordField
         id="password_confirmation"
         name="password_confirmation"
-        label="Confirmar nueva contraseña"
+        label={t('resetPassword.passwordConfirmationLabel')}
         value={formData.password_confirmation}
         onChange={handleChange}
         error={errors.password_confirmation}
@@ -175,10 +170,10 @@ function ResetPasswordForm() {
                 className="spinner-border spinner-border-sm"
                 aria-hidden="true"
               />
-              <span>Actualizando...</span>
+              <span>{t('resetPassword.submitting')}</span>
             </span>
           ) : (
-            'Actualizar contraseña'
+            t('resetPassword.submit')
           )}
         </button>
       </div>
@@ -186,7 +181,7 @@ function ResetPasswordForm() {
       <hr className="auth-divider" />
 
       <p className="auth-footer">
-        <Link to="/login">Volver a iniciar sesión</Link>
+        <Link to="/login">{t('resetPassword.backToLogin')}</Link>
       </p>
     </form>
   );

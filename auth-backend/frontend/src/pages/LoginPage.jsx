@@ -1,33 +1,34 @@
-import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import AuthLayout from '../components/auth/AuthLayout';
 import LoginForm from '../components/auth/LoginForm';
 import CookieNoticeOverlay from '../components/common/CookieNoticeOverlay';
+import { useI18n } from '../app/providers';
 import useCookieNotice from '../hooks/useCookieNotice';
 
 function LoginPage() {
-  const { isOpen, isReady, acceptNotice } = useCookieNotice();   
+  const { isOpen, acceptNotice } = useCookieNotice();
+  const { t } = useI18n();
 
   return (
     <>
-        <AuthLayout
-        title="Iniciar sesión"
-        subtitle="Accede con tus credenciales"
+      <AuthLayout
+        title={t('login.title')}
+        subtitle={t('login.subtitle')}
         footer={
-            <>
-            <span>¿No tienes cuenta? </span>
-            <Link to="/register">Crear cuenta</Link>
-            </>
+          <>
+            <span>{t('login.noAccount')} </span>
+            <Link to="/register">{t('login.createAccount')}</Link>
+          </>
         }
-        >
+      >
         <LoginForm />
-        </AuthLayout>
-        <CookieNoticeOverlay
-            open={isOpen}
-            onAccept={acceptNotice}
-            privacyUrl="/privacy"
-            termsUrl="/terms"
-        />
+      </AuthLayout>
+      <CookieNoticeOverlay
+        open={isOpen}
+        onAccept={acceptNotice}
+        privacyUrl="/privacy"
+        termsUrl="/terms"
+      />
     </>
   );
 }
