@@ -5,6 +5,8 @@ const crypto = require('crypto');
 const db = require('../config/database');
 const mailService = require('../services/mail.service');
 const recaptchaService = require('../services/recaptcha.service');
+const authMessages = require('../i18n/messages/auth-messages');
+const { inferPreferredLocaleFromRequest, normalizePreferredLocale, translateMessage } = require('../i18n/locale');
 
 const router = express.Router();
 
@@ -48,83 +50,8 @@ function getPostLoginRedirect(role) {
 
 
 
-function normalizePreferredLocale(locale) {
-  const normalizedLocale = String(locale || '').trim().toLowerCase().replace('-', '_');
-
-  if (normalizedLocale.startsWith('es_') || normalizedLocale === 'es') {
-    return 'es_CL';
-  }
-
-  return 'en_US';
-}
-
-function inferPreferredLocaleFromRequest(req) {
-  const bodyLocale = (req.body?.preferred_locale || '').trim();
-
-  if (bodyLocale) {
-    return normalizePreferredLocale(bodyLocale);
-  }
-
-  const acceptLanguageHeader = String(req.headers['accept-language'] || '');
-  const languageCandidates = acceptLanguageHeader
-    .split(',')
-    .map((entry) => entry.split(';')[0].trim())
-    .filter(Boolean);
-
-  return normalizePreferredLocale(languageCandidates[0] || DEFAULT_LOCALE);
-}
-
-
-const MESSAGES = {
-  en_US: {
-    invalidCredentials: 'Invalid credentials',
-    wrongCredentials: 'Incorrect credentials',
-    loginSuccess: 'Login successful',
-    internalServerError: 'Internal server error',
-    requiredFieldsMissing: 'Required fields are missing',
-    invalidRecaptcha: 'Invalid reCAPTCHA validation',
-    passwordsDoNotMatch: 'Passwords do not match',
-    weakPassword: 'Password must be at least 10 characters long and contain at least 2 symbols',
-    invalidGender: 'Invalid gender',
-    duplicateUserIdentifier: 'A user with that identifier already exists',
-    userCreated: 'User created successfully',
-    unauthenticated: 'Not authenticated',
-    unauthorized: 'Not authorized',
-    professorCreated: 'Professor created successfully',
-    sessionClosed: 'Session closed',
-    logoutError: 'Error while logging out',
-    emailRequired: 'Email is required',
-    forgotSuccess: 'If the email exists, you will receive instructions to reset your password',
-    invalidOrExpiredToken: 'Token is invalid or has expired',
-    passwordUpdated: 'Password updated successfully'
-  },
-  es_CL: {
-    invalidCredentials: 'Credenciales inválidas',
-    wrongCredentials: 'Credenciales incorrectas',
-    loginSuccess: 'Login exitoso',
-    internalServerError: 'Error interno del servidor',
-    requiredFieldsMissing: 'Faltan campos obligatorios',
-    invalidRecaptcha: 'Validación reCAPTCHA inválida',
-    passwordsDoNotMatch: 'Las contraseñas no coinciden',
-    weakPassword: 'La contraseña debe tener al menos 10 caracteres y al menos 2 símbolos',
-    invalidGender: 'Género inválido',
-    duplicateUserIdentifier: 'Ya existe un usuario con ese identificador',
-    userCreated: 'Usuario creado correctamente',
-    unauthenticated: 'No autenticado',
-    unauthorized: 'No autorizado',
-    professorCreated: 'Profesor creado correctamente',
-    sessionClosed: 'Sesión cerrada',
-    logoutError: 'Error al cerrar sesión',
-    emailRequired: 'El correo es obligatorio',
-    forgotSuccess: 'Si el correo existe, recibirás instrucciones para restablecer la contraseña',
-    invalidOrExpiredToken: 'El token es inválido o ha expirado',
-    passwordUpdated: 'Contraseña actualizada correctamente'
-  }
-};
-
 function t(req, key) {
-  const locale = inferPreferredLocaleFromRequest(req);
-  return MESSAGES[locale]?.[key] || MESSAGES.en_US[key] || key;
+  return translateMessage(req, key, authMessages);
 }
 
 router.post('/login', async (req, res, next) => {
