@@ -64,6 +64,7 @@
 	"delete": "Delete",
 	"description": "Description",
 	"designActivity": "Design an Activity",
+	"createACase": "Create a Case",
 	"designMsg": "Create Activity Design",
 	"designMsgInfo": "Choose the activity type and enter a title to identify the design.",
 	"designs": "Designs",
