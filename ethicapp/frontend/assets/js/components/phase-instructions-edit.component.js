@@ -16,6 +16,14 @@ function PhaseInstructionsEditController() {
         delete vm.phase.instructions;
     };
 
+    vm.isInstructionsInvalid = function () {
+        if (!vm.isInstructionsEnabled) {
+            return false;
+        }
+
+        return typeof vm.phase.instructions !== 'string' || vm.phase.instructions.trim().length === 0;
+    };
+
     vm.$onInit = function () {
         vm.syncStateFromPhase();
     };
@@ -34,7 +42,7 @@ const phaseInstructionsEditComponent = {
     },
     template: `
     <div>
-        <hr>
+        <hr style="margin-top: 1.5em; margin-bottom: 1.25em">
         <h4>{{ 'phase_instructions_title' | translate }}</h4>
         <input
             type="checkbox"
@@ -49,6 +57,7 @@ const phaseInstructionsEditComponent = {
             <textarea
                 id="phase_instructions_text_{{$ctrl.phaseIndex}}"
                 class="form-control"
+                ng-class="{'input-warning': $ctrl.isInstructionsInvalid()}"
                 rows="3"
                 ng-model="$ctrl.phase.instructions"
                 placeholder="{{ 'phase_instructions_placeholder' | translate }}">
