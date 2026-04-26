@@ -130,6 +130,15 @@ const enUS = {
       title: 'Terms of Use',
       updatedAt: 'Last updated: April 16, 2026'
     }
+  },
+  cookieNotice: {
+    title: 'Cookie and session information',
+    closeLabel: 'Close notice',
+    acceptLabel: 'Understood',
+    linksPrefix: 'You can review',
+    privacyPolicy: 'the privacy policy',
+    linksConnector: 'and',
+    termsOfService: 'the terms of service'
   }
 };
 

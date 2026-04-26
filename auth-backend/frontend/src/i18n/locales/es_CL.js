@@ -132,6 +132,15 @@ const esCL = {
       title: 'Términos de Uso',
       updatedAt: 'Última actualización: 16 de abril de 2026'
     }
+  },
+  cookieNotice: {
+    title: 'Información sobre cookies y sesión',
+    closeLabel: 'Cerrar aviso',
+    acceptLabel: 'Entendido',
+    linksPrefix: 'Puedes consultar',
+    privacyPolicy: 'la política de privacidad',
+    linksConnector: 'y',
+    termsOfService: 'los términos del servicio'
   }
 };
 
