@@ -1,6 +1,6 @@
 <script>
-  window.__ETHICAPP_RECAPTCHA_ENABLED__ = <%= recaptchaEnabled ? "true" : "false" %>;
-  window.__ETHICAPP_RECAPTCHA_SITE_KEY__ = "<%= recaptchaSiteKey || '' %>";
+  window.__ETHICAPP_RECAPTCHA_ENABLED__ = <%= JSON.stringify(!!recaptchaEnabled) %>;
+  window.__ETHICAPP_RECAPTCHA_SITE_KEY__ = <%= JSON.stringify(recaptchaSiteKey || '') %>;
 </script>
 <% if (recaptchaEnabled) { %>
 <script src="https://www.google.com/recaptcha/api.js?render=explicit" async defer></script>
