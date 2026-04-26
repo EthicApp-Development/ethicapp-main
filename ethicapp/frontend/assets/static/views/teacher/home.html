@@ -12,7 +12,16 @@
                 <div class="panel-body">
                     <div class="row">
                         <!-- Tarjeta 1 -->
-                        <div class="col-md-4 col-sm-4 col-xs-12 text-center">
+                        <div class="col-md-3 col-sm-6 col-xs-12 text-center">
+                            <div ng-click="navigateTo('/cases/new')" class="home-card">
+                                <img src="/assets/images/cards/create-case.jpeg" class="img-responsive center-block" alt="Create a case">
+                                <div class="home-card-caption">
+                                    {{'createACase' | translate}}
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Tarjeta 2 -->
+                        <div class="col-md-3 col-sm-6 col-xs-12 text-center">
                             <div ng-click="navigateTo('/designs/new')" class="home-card">
                                 <img src="/assets/images/cards/design-activity.jpeg" class="img-responsive center-block" alt="Design an activity">
                                 <div class="home-card-caption">
@@ -20,8 +29,8 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Tarjeta 2 -->
-                        <div class="col-md-4 col-sm-4 col-xs-12 text-center">
+                        <!-- Tarjeta 3 -->
+                        <div class="col-md-3 col-sm-6 col-xs-12 text-center">
                             <div ng-click="navigateTo('/activities/new')" class="home-card">
                                 <img src="/assets/images/cards/launch-activity.jpeg" class="img-responsive center-block" alt="Launch an activity">
                                 <div class="home-card-caption">
@@ -29,8 +38,8 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Tarjeta 3 -->
-                        <div class="col-md-4 col-sm-4 col-xs-12 text-center">
+                        <!-- Tarjeta 4 -->
+                        <div class="col-md-3 col-sm-6 col-xs-12 text-center">
                             <div ng-click="navigateTo('/designs')" class="home-card">
                                 <img src="/assets/images/cards/search-designs.jpeg" class="img-responsive center-block" alt="Search designs">
                                 <div class="home-card-caption">
