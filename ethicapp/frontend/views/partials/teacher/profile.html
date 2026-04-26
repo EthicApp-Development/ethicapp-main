@@ -18,8 +18,9 @@
                     ngf-change="vm.onAvatarSelected($file)"
                     accept="image/jpeg,image/png"
                     ngf-max-size="300KB">
-                <button type="button" class="btn btn-default btn-sm mt-medio" ng-click="vm.uploadAvatar()">{{ 'upload_photo' | translate }}</button>
+                <button type="button" class="btn btn-default btn-sm mt-medio" ng-click="vm.uploadAvatar()" ng-disabled="!vm.selectedAvatarFile">{{ 'upload_photo' | translate }}</button>
                 <small class="help-block">{{ 'avatar_format_and_size' | translate }}</small>
+                <small class="help-block">{{ 'profile_avatar_flow_hint' | translate }}</small>
             </div>
         </div>
 
@@ -53,6 +54,10 @@
         <div class="form-group">
             <div class="col-sm-offset-3 col-sm-9">
                 <button type="button" class="btn btn-default btn-sm mt-medio profile-save-btn" ng-click="vm.saveProfile()">{{ 'save_profile' | translate }}</button>
+                <small class="help-block">{{ 'profile_save_scope_hint' | translate }}</small>
+                <div class="toast-container profile-toast-anchor">
+                    <toast></toast>
+                </div>
             </div>
         </div>
     </form>

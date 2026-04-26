@@ -1418,8 +1418,10 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     border-radius: 50%;
     height: 30px;
     width: 30px;
-    background: #fff;
-    margin-top: -0.5rem;
+    background: transparent;
+    object-fit: cover;
+    object-position: center;
+    display: block;
 }
 
 
@@ -1646,6 +1648,16 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     max-width: 720px;
 }
 
+.teacher-profile-page .toast-container {
+    position: relative;
+    z-index: 20;
+    min-height: 2.5rem;
+}
+
+.teacher-profile-page .profile-toast-anchor {
+    margin-top: 0.75rem;
+}
+
 .profile-save-btn {
     margin-bottom: 2rem;
 }
@@ -1741,7 +1753,6 @@ h2{
 }
 
 .top-bar-mini strong {
-    margin-top: -0.5rem;
     margin-left: 0.8rem;
 }
 
@@ -2361,14 +2372,15 @@ h2{
 }
 
 .toast-container .alert {
-    height: 1.75em !important;
+    min-height: 1.75em !important;
+    height: auto !important;
     margin-left: auto;
     margin-right: auto;
     margin-top: 6px;
     margin-bottom: 32px !important;
     padding-top: 2px;
-    padding-left: 0px;
-    padding-right: 0px;
+    padding-left: 8px;
+    padding-right: 8px;
     opacity: 1;
     background: #fff;
     border: 0px;
@@ -2376,7 +2388,7 @@ h2{
     animation: fadeOut 5.0s ease-in-out forwards;
 }
 
-.designs-list .toast-container ul, .designs-list .toast-containerli {
+.designs-list .toast-container ul, .designs-list .toast-container li {
     list-style: none !important;
     margin: 0;
     padding: 0;
@@ -2389,7 +2401,7 @@ h2{
     margin-bottom: 0px;
 };
 
-.toast-container ul, li {
+.toast-container ul, .toast-container li {
     list-style: none !important;
     margin: 0;
     padding: 0;
