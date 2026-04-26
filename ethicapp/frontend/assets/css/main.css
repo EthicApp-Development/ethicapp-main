@@ -1708,7 +1708,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 }
 
 .teacher-profile-page .profile-toast-anchor {
-    margin-top: 0.75rem;
+    margin-top: 0rem;
 }
 
 .profile-save-btn {
