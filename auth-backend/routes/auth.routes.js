@@ -11,6 +11,7 @@ const router = express.Router();
 const SALT_ROUNDS = Number(process.env.BCRYPT_SALT_ROUNDS || 10);
 const AUTH_COOKIE_NAME = process.env.AUTH_COOKIE_NAME || 'connect.sid';
 const RESET_TOKEN_TTL_MINUTES = Number(process.env.RESET_TOKEN_TTL_MINUTES || 60);
+const DEFAULT_LOCALE = 'en_US';
 
 function isStrongPassword(password) {
   if (!password || password.length < 10) {
@@ -43,6 +44,34 @@ function getPostLoginRedirect(role) {
   if (role === 'P') return '/home';
   if (role === 'S') return '/super';
   return '/login';
+}
+
+
+
+function normalizePreferredLocale(locale) {
+  const normalizedLocale = String(locale || '').trim().toLowerCase().replace('-', '_');
+
+  if (normalizedLocale.startsWith('es_') || normalizedLocale === 'es') {
+    return 'es_CL';
+  }
+
+  return 'en_US';
+}
+
+function inferPreferredLocaleFromRequest(req) {
+  const bodyLocale = (req.body?.preferred_locale || '').trim();
+
+  if (bodyLocale) {
+    return normalizePreferredLocale(bodyLocale);
+  }
+
+  const acceptLanguageHeader = String(req.headers['accept-language'] || '');
+  const languageCandidates = acceptLanguageHeader
+    .split(',')
+    .map((entry) => entry.split(';')[0].trim())
+    .filter(Boolean);
+
+  return normalizePreferredLocale(languageCandidates[0] || DEFAULT_LOCALE);
 }
 
 router.post('/login', async (req, res, next) => {
@@ -143,6 +172,7 @@ router.post('/register', async (req, res) => {
     const password = req.body.password || '';
     const passwordConfirmation = req.body.password_confirmation || '';
     const recaptchaToken = (req.body.recaptcha_token || '').trim();
+    const preferredLocale = normalizePreferredLocale((req.body.preferred_locale || '').trim() || inferPreferredLocaleFromRequest(req));
 
     if (!firstname || !lastname || !dni || !gender || !password || !passwordConfirmation) {
       return res.status(400).json({
@@ -180,6 +210,7 @@ router.post('/register', async (req, res) => {
       });
     }
 
+
     const existingUserResult = await db.query(
       `
         SELECT id
@@ -204,12 +235,12 @@ router.post('/register', async (req, res) => {
     const insertResult = await db.query(
         `
             INSERT INTO users
-            (firstname, lastname, name, rut, sex, mail, role, password_bcrypt, auth_provider, active)
+            (firstname, lastname, name, rut, sex, mail, role, preferred_locale, password_bcrypt, auth_provider, active)
             VALUES
-            ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8, $9, true)
+            ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8, $9, $10, true)
             RETURNING id
         `,
-        [firstname, lastname, fullName, dni, gender, email, 'A', passwordBcrypt, 'local']
+        [firstname, lastname, fullName, dni, gender, email, 'A', preferredLocale, passwordBcrypt, 'local']
         );
 
     return res.status(201).json({
@@ -453,6 +484,7 @@ router.post('/forgot', async (req, res) => {
   try {
     const email = (req.body.email || '').trim().toLowerCase();
     const recaptchaToken = (req.body.recaptcha_token || '').trim();
+    const preferredLocale = inferPreferredLocaleFromRequest(req);
 
     if (!email) {
       return res.status(400).json({
@@ -514,7 +546,8 @@ router.post('/forgot', async (req, res) => {
 
     await mailService.sendPasswordResetEmail({
       to: user.mail,
-      rawToken
+      rawToken,
+      preferredLocale
     });
 
     return res.json(genericResponse);

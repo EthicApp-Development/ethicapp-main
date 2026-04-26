@@ -164,7 +164,7 @@ app.controller("DifferentialController", [
             try {
                 const response = await $http.get("/users/myinfo");
                 const data = response.data.data;
-                self.lang = data.lang === "spanish" ? "ES_CL/spanish" : "EN_US/english";
+                self.lang = data.preferred_locale === "es_CL" ? "ES_CL/spanish" : "EN_US/english";
                 await self.updateLang(self.lang);
             } catch (error) {
                 console.error("Error fetching user information:", error);

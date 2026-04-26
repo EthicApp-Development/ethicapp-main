@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { login } from '../../api/authApi';
+import { useI18n } from '../../app/providers';
 import TextField from '../common/TextField';
 import PasswordField from './PasswordField';
 
 function LoginForm() {
-  const navigate = useNavigate();
+  const { t } = useI18n();
 
   const [formData, setFormData] = useState({
     username: '',
@@ -36,11 +37,11 @@ function LoginForm() {
     const nextErrors = {};
 
     if (!formData.username.trim()) {
-      nextErrors.username = 'El usuario es obligatorio.';
+      nextErrors.username = t('login.errors.usernameRequired');
     }
 
     if (!formData.password) {
-      nextErrors.password = 'La contraseña es obligatoria.';
+      nextErrors.password = t('login.errors.passwordRequired');
     }
 
     return nextErrors;
@@ -69,9 +70,7 @@ function LoginForm() {
       window.location.assign(redirectTo);
     } catch (error) {
       const message =
-        error?.response?.data?.error ||
-        error?.message ||
-        'No se ha podido iniciar sesión. Verifica tus credenciales.';
+        error?.response?.data?.error || error?.message || t('login.errors.genericLoginError');
 
       setServerError(message);
     } finally {
@@ -90,7 +89,7 @@ function LoginForm() {
       <TextField
         id="username"
         name="username"
-        label="Usuario"
+        label={t('login.usernameLabel')}
         value={formData.username}
         onChange={handleChange}
         error={errors.username}
@@ -102,15 +101,15 @@ function LoginForm() {
       <div className="mb-3">
         <div className="auth-link-row mb-2">
           <label htmlFor="password" className="form-label mb-0">
-            Contraseña
+            {t('login.passwordLabel')}
           </label>
-          <Link to="/forgot">¿Has olvidado tu contraseña?</Link>
+          <Link to="/forgot">{t('login.forgotPassword')}</Link>
         </div>
 
         <PasswordField
           id="password"
           name="password"
-          label="Contraseña"
+          label={t('login.passwordLabel')}
           showLabel={false}
           value={formData.password}
           onChange={handleChange}
@@ -132,19 +131,19 @@ function LoginForm() {
                 className="spinner-border spinner-border-sm"
                 aria-hidden="true"
               />
-              <span>Accediendo...</span>
+              <span>{t('login.submitting')}</span>
             </span>
           ) : (
-            'Entrar'
+            t('login.submit')
           )}
         </button>
         <div className="text-center mt-3">
-            <p className="small text-muted mb-0">
-                Al continuar, aceptas nuestra{' '}
-                <Link to="/privacy">
-                Política de Privacidad
-                </Link> y <Link to="/terms">Términos de Uso</Link>.
-            </p>
+          <p className="small text-muted mb-0">
+            {t('login.continuePolicyPrefix')}{' '}
+            <Link to="/privacy">{t('login.privacyPolicy')}</Link> {t('login.continuePolicyConnector')}{' '}
+            <Link to="/terms">{t('login.termsOfUse')}</Link>
+            {t('login.continuePolicySuffix')}
+          </p>
         </div>
       </div>
     </form>
