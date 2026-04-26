@@ -1,16 +1,53 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
+import { useI18n } from '../../app/providers';
+import { DEFAULT_LOCALE } from '../../i18n/languages';
+import MarkdownArticle from './MarkdownArticle';
+
+const cookieNoticeLoaders = import.meta.glob('../../content/notices/cookie/*.md', {
+  query: '?raw',
+  import: 'default'
+});
 
 function CookieNoticeOverlay({
   open,
-  title = 'Información sobre cookies y sesión',
   onAccept,
-  acceptLabel = 'Entendido',
   privacyUrl = null,
   termsUrl = null,
   showCloseButton = false,
   onClose = null
 }) {
+  const { locale, t } = useI18n();
+  const [markdownContent, setMarkdownContent] = useState('');
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadContent() {
+      const localizedPath = `../../content/notices/cookie/${locale}.md`;
+      const fallbackPath = `../../content/notices/cookie/${DEFAULT_LOCALE}.md`;
+      const loader = cookieNoticeLoaders[localizedPath] || cookieNoticeLoaders[fallbackPath];
+
+      if (!loader) {
+        if (!ignore) {
+          setMarkdownContent('');
+        }
+        return;
+      }
+
+      const content = await loader();
+      if (!ignore) {
+        setMarkdownContent(content);
+      }
+    }
+
+    loadContent();
+
+    return () => {
+      ignore = true;
+    };
+  }, [locale]);
+
   if (!open) {
     return null;
   }
@@ -39,42 +76,35 @@ function CookieNoticeOverlay({
         <div className="card-body p-4 p-md-5">
           <div className="d-flex justify-content-between align-items-start mb-3">
             <h2 id="cookie-notice-title" className="h5 mb-0">
-              {title}
+              {t('cookieNotice.title')}
             </h2>
 
             {showCloseButton && onClose ? (
               <button
                 type="button"
                 className="btn-close"
-                aria-label="Cerrar aviso"
+                aria-label={t('cookieNotice.closeLabel')}
                 onClick={onClose}
               />
             ) : null}
           </div>
 
-          <p className="text-muted mb-3">
-            Utilizamos cookies y tecnologías de almacenamiento estrictamente
-            necesarias para mantener tu sesión de trabajo y permitir el
-            funcionamiento seguro de la aplicación.
-          </p>
-
-          <p className="text-muted mb-4">
-            No usamos estas tecnologías para publicidad ni seguimiento no
-            esencial del usuario.
-          </p>
+          <div className="text-muted mb-4">
+            <MarkdownArticle markdown={markdownContent} />
+          </div>
 
           {(privacyUrl || termsUrl) && (
             <p className="small text-muted mb-4">
-              Puedes consultar{' '}
+              {t('cookieNotice.linksPrefix')}{' '}
               {privacyUrl ? (
                 <a href={privacyUrl} target="_blank" rel="noreferrer">
-                  la política de privacidad
+                  {t('cookieNotice.privacyPolicy')}
                 </a>
               ) : null}
-              {privacyUrl && termsUrl ? ' y ' : null}
+              {privacyUrl && termsUrl ? ` ${t('cookieNotice.linksConnector')} ` : null}
               {termsUrl ? (
                 <a href={termsUrl} target="_blank" rel="noreferrer">
-                  los términos del servicio
+                  {t('cookieNotice.termsOfService')}
                 </a>
               ) : null}
               .
@@ -87,7 +117,7 @@ function CookieNoticeOverlay({
               className="btn btn-primary"
               onClick={onAccept}
             >
-              {acceptLabel}
+              {t('cookieNotice.acceptLabel')}
             </button>
           </div>
         </div>
@@ -98,9 +128,7 @@ function CookieNoticeOverlay({
 
 CookieNoticeOverlay.propTypes = {
   open: PropTypes.bool.isRequired,
-  title: PropTypes.string,
   onAccept: PropTypes.func.isRequired,
-  acceptLabel: PropTypes.string,
   privacyUrl: PropTypes.string,
   termsUrl: PropTypes.string,
   showCloseButton: PropTypes.bool,

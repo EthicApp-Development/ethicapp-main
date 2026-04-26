@@ -11,6 +11,7 @@ const router = express.Router();
 const SALT_ROUNDS = Number(process.env.BCRYPT_SALT_ROUNDS || 10);
 const AUTH_COOKIE_NAME = process.env.AUTH_COOKIE_NAME || 'connect.sid';
 const RESET_TOKEN_TTL_MINUTES = Number(process.env.RESET_TOKEN_TTL_MINUTES || 60);
+const DEFAULT_LOCALE = 'en_US';
 
 function isStrongPassword(password) {
   if (!password || password.length < 10) {
@@ -45,6 +46,87 @@ function getPostLoginRedirect(role) {
   return '/login';
 }
 
+
+
+function normalizePreferredLocale(locale) {
+  const normalizedLocale = String(locale || '').trim().toLowerCase().replace('-', '_');
+
+  if (normalizedLocale.startsWith('es_') || normalizedLocale === 'es') {
+    return 'es_CL';
+  }
+
+  return 'en_US';
+}
+
+function inferPreferredLocaleFromRequest(req) {
+  const bodyLocale = (req.body?.preferred_locale || '').trim();
+
+  if (bodyLocale) {
+    return normalizePreferredLocale(bodyLocale);
+  }
+
+  const acceptLanguageHeader = String(req.headers['accept-language'] || '');
+  const languageCandidates = acceptLanguageHeader
+    .split(',')
+    .map((entry) => entry.split(';')[0].trim())
+    .filter(Boolean);
+
+  return normalizePreferredLocale(languageCandidates[0] || DEFAULT_LOCALE);
+}
+
+
+const MESSAGES = {
+  en_US: {
+    invalidCredentials: 'Invalid credentials',
+    wrongCredentials: 'Incorrect credentials',
+    loginSuccess: 'Login successful',
+    internalServerError: 'Internal server error',
+    requiredFieldsMissing: 'Required fields are missing',
+    invalidRecaptcha: 'Invalid reCAPTCHA validation',
+    passwordsDoNotMatch: 'Passwords do not match',
+    weakPassword: 'Password must be at least 10 characters long and contain at least 2 symbols',
+    invalidGender: 'Invalid gender',
+    duplicateUserIdentifier: 'A user with that identifier already exists',
+    userCreated: 'User created successfully',
+    unauthenticated: 'Not authenticated',
+    unauthorized: 'Not authorized',
+    professorCreated: 'Professor created successfully',
+    sessionClosed: 'Session closed',
+    logoutError: 'Error while logging out',
+    emailRequired: 'Email is required',
+    forgotSuccess: 'If the email exists, you will receive instructions to reset your password',
+    invalidOrExpiredToken: 'Token is invalid or has expired',
+    passwordUpdated: 'Password updated successfully'
+  },
+  es_CL: {
+    invalidCredentials: 'Credenciales inválidas',
+    wrongCredentials: 'Credenciales incorrectas',
+    loginSuccess: 'Login exitoso',
+    internalServerError: 'Error interno del servidor',
+    requiredFieldsMissing: 'Faltan campos obligatorios',
+    invalidRecaptcha: 'Validación reCAPTCHA inválida',
+    passwordsDoNotMatch: 'Las contraseñas no coinciden',
+    weakPassword: 'La contraseña debe tener al menos 10 caracteres y al menos 2 símbolos',
+    invalidGender: 'Género inválido',
+    duplicateUserIdentifier: 'Ya existe un usuario con ese identificador',
+    userCreated: 'Usuario creado correctamente',
+    unauthenticated: 'No autenticado',
+    unauthorized: 'No autorizado',
+    professorCreated: 'Profesor creado correctamente',
+    sessionClosed: 'Sesión cerrada',
+    logoutError: 'Error al cerrar sesión',
+    emailRequired: 'El correo es obligatorio',
+    forgotSuccess: 'Si el correo existe, recibirás instrucciones para restablecer la contraseña',
+    invalidOrExpiredToken: 'El token es inválido o ha expirado',
+    passwordUpdated: 'Contraseña actualizada correctamente'
+  }
+};
+
+function t(req, key) {
+  const locale = inferPreferredLocaleFromRequest(req);
+  return MESSAGES[locale]?.[key] || MESSAGES.en_US[key] || key;
+}
+
 router.post('/login', async (req, res, next) => {
   try {
     const username = (req.body.username || '').trim();
@@ -52,7 +134,7 @@ router.post('/login', async (req, res, next) => {
 
     if (!username || !password) {
       return res.status(400).json({
-        error: 'Credenciales inválidas'
+        error: t(req, 'invalidCredentials')
       });
     }
 
@@ -76,7 +158,7 @@ router.post('/login', async (req, res, next) => {
 
     if (userResult.rowCount === 0) {
       return res.status(401).json({
-        error: 'Credenciales incorrectas'
+        error: t(req, 'wrongCredentials')
       });
     }
 
@@ -85,7 +167,7 @@ router.post('/login', async (req, res, next) => {
 
     if (!validPassword) {
       return res.status(401).json({
-        error: 'Credenciales incorrectas'
+        error: t(req, 'wrongCredentials')
       });
     }
 
@@ -105,7 +187,7 @@ router.post('/login', async (req, res, next) => {
         const redirectTo = getPostLoginRedirect(user.role);
 
         return res.json({
-          message: 'Login exitoso',
+          message: t(req, 'loginSuccess'),
           redirectTo
         });
       }
@@ -113,7 +195,7 @@ router.post('/login', async (req, res, next) => {
   } catch (err) {
     console.error('LOGIN ERROR:', err);
     return res.status(500).json({
-      error: 'Error interno del servidor'
+      error: t(req, 'internalServerError')
     });
   }
 });
@@ -143,10 +225,11 @@ router.post('/register', async (req, res) => {
     const password = req.body.password || '';
     const passwordConfirmation = req.body.password_confirmation || '';
     const recaptchaToken = (req.body.recaptcha_token || '').trim();
+    const preferredLocale = normalizePreferredLocale((req.body.preferred_locale || '').trim() || inferPreferredLocaleFromRequest(req));
 
     if (!firstname || !lastname || !dni || !gender || !password || !passwordConfirmation) {
       return res.status(400).json({
-        error: 'Faltan campos obligatorios'
+        error: t(req, 'requiredFieldsMissing')
       });
     }
 
@@ -157,28 +240,29 @@ router.post('/register', async (req, res) => {
 
     if (!isHuman) {
       return res.status(400).json({
-        error: 'Validación reCAPTCHA inválida'
+        error: t(req, 'invalidRecaptcha')
       });
     }
 
     if (password !== passwordConfirmation) {
 
       return res.status(400).json({
-        error: 'Las contraseñas no coinciden'
+        error: t(req, 'passwordsDoNotMatch')
       });
     }
 
     if (!isStrongPassword(password)) {
       return res.status(400).json({
-        error: 'La contraseña debe tener al menos 10 caracteres y al menos 2 símbolos'
+        error: t(req, 'weakPassword')
       });
     }
 
     if (!['F', 'M', 'O'].includes(gender)) {
       return res.status(400).json({
-        error: 'Género inválido'
+        error: t(req, 'invalidGender')
       });
     }
+
 
     const existingUserResult = await db.query(
       `
@@ -193,7 +277,7 @@ router.post('/register', async (req, res) => {
 
     if (existingUserResult.rowCount > 0) {
       return res.status(409).json({
-        error: 'Ya existe un usuario con ese identificador'
+        error: t(req, 'duplicateUserIdentifier')
       });
     }
 
@@ -204,16 +288,16 @@ router.post('/register', async (req, res) => {
     const insertResult = await db.query(
         `
             INSERT INTO users
-            (firstname, lastname, name, rut, sex, mail, role, password_bcrypt, auth_provider, active)
+            (firstname, lastname, name, rut, sex, mail, role, preferred_locale, password_bcrypt, auth_provider, active)
             VALUES
-            ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8, $9, true)
+            ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8, $9, $10, true)
             RETURNING id
         `,
-        [firstname, lastname, fullName, dni, gender, email, 'A', passwordBcrypt, 'local']
+        [firstname, lastname, fullName, dni, gender, email, 'A', preferredLocale, passwordBcrypt, 'local']
         );
 
     return res.status(201).json({
-      message: 'Usuario creado correctamente',
+      message: t(req, 'userCreated'),
       user_id: insertResult.rows[0].id
     });
   } catch (err) {
@@ -221,12 +305,12 @@ router.post('/register', async (req, res) => {
 
     if (err.code === '23505') {
       return res.status(409).json({
-        error: 'Ya existe un usuario con ese identificador'
+        error: t(req, 'duplicateUserIdentifier')
       });
     }
 
     return res.status(500).json({
-      error: 'Error interno del servidor'
+      error: t(req, 'internalServerError')
     });
   }
 });
@@ -255,13 +339,13 @@ router.post('/register-prof', async (req, res) => {
   try {
     if (!req.isAuthenticated || !req.isAuthenticated()) {
       return res.status(401).json({
-        error: 'No autenticado'
+        error: t(req, 'unauthenticated')
       });
     }
 
     if (!req.user || req.user.role !== 'S') {
       return res.status(403).json({
-        error: 'No autorizado'
+        error: t(req, 'unauthorized')
       });
     }
 
@@ -278,11 +362,11 @@ router.post('/register-prof', async (req, res) => {
     const passwordConfirmation = req.body.password_confirmation || '';
 
     if (!firstname || !lastname || !dni || !gender || !password || !passwordConfirmation) {
-      return respondRegisterProfError(req, res, 400, 'Faltan campos obligatorios');
+      return respondRegisterProfError(req, res, 400, t(req, 'requiredFieldsMissing'));
     }
 
     if (password !== passwordConfirmation) {
-      return respondRegisterProfError(req, res, 400, 'Las contraseñas no coinciden');
+      return respondRegisterProfError(req, res, 400, t(req, 'passwordsDoNotMatch'));
     }
 
     if (!isStrongPassword(password)) {
@@ -290,12 +374,12 @@ router.post('/register-prof', async (req, res) => {
         req,
         res,
         400,
-        'La contraseña debe tener al menos 10 caracteres y al menos 2 símbolos'
+        t(req, 'weakPassword')
       );
     }
 
     if (!['F', 'M', 'O'].includes(gender)) {
-      return respondRegisterProfError(req, res, 400, 'Género inválido');
+      return respondRegisterProfError(req, res, 400, t(req, 'invalidGender'));
     }
 
     const existingUserResult = await db.query(
@@ -314,7 +398,7 @@ router.post('/register-prof', async (req, res) => {
         req,
         res,
         409,
-        'Ya existe un usuario con ese identificador'
+        t(req, 'duplicateUserIdentifier')
       );
     }
 
@@ -326,7 +410,7 @@ router.post('/register-prof', async (req, res) => {
         INSERT INTO users
           (firstname, lastname, name, rut, sex, mail, role, password_bcrypt, auth_provider, active)
         VALUES
-          ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8, true)
+          ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8, $9, true)
         RETURNING id
       `,
       [firstname, lastname, fullName, dni, gender, email, 'P', passwordBcrypt, 'local']
@@ -337,7 +421,7 @@ router.post('/register-prof', async (req, res) => {
     }
 
     return res.status(201).json({
-      message: 'Profesor creado correctamente',
+      message: t(req, 'professorCreated'),
       user_id: insertResult.rows[0].id
     });
   } catch (err) {
@@ -348,7 +432,7 @@ router.post('/register-prof', async (req, res) => {
         req,
         res,
         409,
-        'Ya existe un usuario con ese identificador'
+        t(req, 'duplicateUserIdentifier')
       );
     }
 
@@ -356,7 +440,7 @@ router.post('/register-prof', async (req, res) => {
       req,
       res,
       500,
-      'Error interno del servidor'
+      t(req, 'internalServerError')
     );
   }
 });
@@ -384,7 +468,7 @@ function respondRegisterProfError(req, res, statusCode, message) {
 router.get('/auth/session', (req, res) => {
   if (!req.session || !req.session.user) {
     return res.status(401).json({
-      error: 'No autenticado'
+      error: t(req, 'unauthenticated')
     });
   }
 
@@ -409,7 +493,7 @@ function handleLogout(req, res) {
       return res.redirect(302, '/login');
     }
 
-    return res.json({ message: 'Sesión cerrada' });
+    return res.json({ message: t(req, 'sessionClosed') });
   };
 
   if (!req.session) {
@@ -425,7 +509,7 @@ function handleLogout(req, res) {
         return res.redirect(302, '/login');
       }
 
-      return res.status(500).json({ error: 'Error al cerrar sesión' });
+      return res.status(500).json({ error: t(req, 'logoutError') });
     }
 
     return finish();
@@ -453,10 +537,11 @@ router.post('/forgot', async (req, res) => {
   try {
     const email = (req.body.email || '').trim().toLowerCase();
     const recaptchaToken = (req.body.recaptcha_token || '').trim();
+    const preferredLocale = inferPreferredLocaleFromRequest(req);
 
     if (!email) {
       return res.status(400).json({
-        error: 'El correo es obligatorio'
+        error: t(req, 'emailRequired')
       });
     }
 
@@ -467,7 +552,7 @@ router.post('/forgot', async (req, res) => {
 
     if (!isHuman) {
       return res.status(400).json({
-        error: 'Validación reCAPTCHA inválida'
+        error: t(req, 'invalidRecaptcha')
       });
     }
 
@@ -484,7 +569,7 @@ router.post('/forgot', async (req, res) => {
 
     // Always return the same message to avoid account enumeration.
     const genericResponse = {
-      message: 'Si el correo existe, recibirás instrucciones para restablecer la contraseña'
+      message: t(req, 'forgotSuccess')
     };
 
     if (userResult.rowCount === 0) {
@@ -514,14 +599,15 @@ router.post('/forgot', async (req, res) => {
 
     await mailService.sendPasswordResetEmail({
       to: user.mail,
-      rawToken
+      rawToken,
+      preferredLocale
     });
 
     return res.json(genericResponse);
   } catch (err) {
     console.error('FORGOT PASSWORD ERROR:', err);
     return res.status(500).json({
-      error: 'Error interno del servidor'
+      error: t(req, 'internalServerError')
     });
   }
 });
@@ -544,19 +630,19 @@ router.post('/reset-password', async (req, res) => {
 
     if (!token || !password || !passwordConfirmation) {
       return res.status(400).json({
-        error: 'Faltan campos obligatorios'
+        error: t(req, 'requiredFieldsMissing')
       });
     }
 
     if (password !== passwordConfirmation) {
       return res.status(400).json({
-        error: 'Las contraseñas no coinciden'
+        error: t(req, 'passwordsDoNotMatch')
       });
     }
 
     if (!isStrongPassword(password)) {
       return res.status(400).json({
-        error: 'La contraseña debe tener al menos 10 caracteres y al menos 2 símbolos'
+        error: t(req, 'weakPassword')
       });
     }
 
@@ -575,7 +661,7 @@ router.post('/reset-password', async (req, res) => {
 
     if (resetResult.rowCount === 0) {
       return res.status(400).json({
-        error: 'El token es inválido o ha expirado'
+        error: t(req, 'invalidOrExpiredToken')
       });
     }
 
@@ -594,7 +680,7 @@ router.post('/reset-password', async (req, res) => {
 
     if (userResult.rowCount === 0) {
       return res.status(400).json({
-        error: 'El token es inválido o ha expirado'
+        error: t(req, 'invalidOrExpiredToken')
       });
     }
 
@@ -628,12 +714,12 @@ router.post('/reset-password', async (req, res) => {
     }
 
     return res.json({
-      message: 'Contraseña actualizada correctamente'
+      message: t(req, 'passwordUpdated')
     });
   } catch (err) {
     console.error('RESET PASSWORD ERROR:', err);
     return res.status(500).json({
-      error: 'Error interno del servidor'
+      error: t(req, 'internalServerError')
     });
   }
 });

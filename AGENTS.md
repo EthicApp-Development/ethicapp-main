@@ -122,3 +122,50 @@ When adding teacher-facing features in legacy EthicApp:
 5. When adding or modifying UI text in legacy EthicApp AngularJS views, add/update the corresponding translation keys in `ethicapp/frontend/assets/locales/` and use `{{'key'|translate}}` in templates instead of hardcoded strings.
 6. For role-based authorization in legacy backend endpoints, prefer `requireRole` from `ethicapp/backend/helpers/auth-helper.js`; it accepts either a single role (`"P"`) or an array (for example `["P", "A"]`) for professor/student shared access.
 7. For teacher view actions, prefer Bootstrap 3 small default buttons (`btn btn-default btn-sm`) unless the action semantics require another contextual style.
+
+## 8) Translation and i18n policy (auth-backend + ethicapp)
+
+Use this policy for all new i18n-related changes in this repository.
+
+### Locale policy (canonical rule)
+
+- Supported locales are:
+  - `es_CL`
+  - `en_US`
+- Locale normalization rule:
+  - If browser/request locale is `es_*` (or `es`), normalize to `es_CL`.
+  - Otherwise, normalize to `en_US`.
+- In other words: Spanish is used **only** when the client explicitly prefers Spanish; every other locale falls back to English.
+
+### `auth-backend` i18n implementation
+
+- Frontend (`auth-backend/frontend/`):
+  - Uses a lightweight i18n provider (`src/app/providers.jsx`) exposed through `useI18n()`.
+  - Locale detection/normalization lives in `src/i18n/languages.js`.
+  - Translation catalogs live in `src/i18n/locales/` and are registered in `src/i18n/translations.js`.
+  - New UI text must use translation keys via `t(...)`, not hardcoded strings.
+- Legal/static content:
+  - Privacy and terms are maintained as locale-specific markdown under `src/content/legal/`.
+  - Rendering is done through reusable legal/markdown components in `src/components/common/`.
+- Backend (`auth-backend/routes/auth.routes.js`):
+  - API messages must be localized (no hardcoded single-language responses).
+  - Request locale must be inferred/normalized from `preferred_locale` and/or browser headers (`Accept-Language`) using the canonical policy.
+- Email templates:
+  - Keep locale-specific templates under `auth-backend/views/emails/` (for example `*.es_CL.ejs`, `*.en_US.ejs`).
+  - `auth-backend/services/mail.service.js` is responsible for locale resolution and selecting subject/template by locale.
+
+### `ethicapp` i18n implementation
+
+- Legacy teacher AngularJS app currently determines language from browser preferences (`$translateProvider.determinePreferredLanguage()`), with configured fallback.
+- User locale persistence uses `preferred_locale` at database level (not legacy `lang`).
+- When reading/updating user locale in backend controllers/helpers, use `preferred_locale` and apply the same normalization rule (`es_*` => `es_CL`, else `en_US`).
+
+### Translation change checklist
+
+When adding/changing translatable features:
+
+1. Add/update keys in both `es_CL` and `en_US`.
+2. Replace hardcoded user-facing strings with translation keys.
+3. Ensure API/email/user-flow messages are localized as applicable.
+4. Ensure locale inference/normalization follows the canonical rule above.
+5. If DB locale defaults or schema are touched, keep naming as `preferred_locale` and defaults aligned with the policy.
