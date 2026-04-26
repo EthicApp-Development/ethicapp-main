@@ -50,6 +50,10 @@ function genericPhaseBuilder(params = {}) {
 }
 
 function sdItemBuilder(params = {}) {
+    const minJustLength = params.ans_format?.min_just_length ?? 0;
+    const justificationMinimumLengthRequired = params.ans_format?.justification_minimum_length_required
+        ?? minJustLength > 0;
+
     return {
         q_text: params.q_text ?? "",
         ans_format: {
@@ -57,7 +61,8 @@ function sdItemBuilder(params = {}) {
             r_pole: params.ans_format?.r_pole ?? "",
             values: params.ans_format?.values ?? 7,
             just_required: params.ans_format?.just_required ?? false,
-            min_just_length: params.ans_format?.min_just_length ?? 0,
+            justification_minimum_length_required: justificationMinimumLengthRequired,
+            min_just_length: minJustLength,
         },
     };
 }

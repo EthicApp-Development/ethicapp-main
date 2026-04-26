@@ -39,6 +39,45 @@
                        ng-change="$ctrl.validateItem()">
             </div>
         </div>
+
+        <div class="row" style="margin-top: 1em;">
+            <div class="col-xs-12">
+                <div class="checkbox">
+                    <label>
+                        <input
+                            type="checkbox"
+                            ng-model="$ctrl.question.ans_format.just_required"
+                            ng-change="$ctrl.onJustificationRequiredChange()">
+                        {{ 'justification_required_label' | translate }}
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="row" ng-if="$ctrl.question.ans_format.just_required">
+            <div class="col-xs-12">
+                <div class="checkbox">
+                    <label>
+                        <input
+                            type="checkbox"
+                            ng-model="$ctrl.question.ans_format.justification_minimum_length_required"
+                            ng-change="$ctrl.onMinimumLengthRequiredChange()">
+                        {{ 'ranking_justification_minlength_text' | translate }}
+                    </label>
+                </div>
+                <div ng-if="$ctrl.question.ans_format.justification_minimum_length_required" style="margin-left: 1.5em; max-width: 220px;">
+                    <label>{{ 'min_words_label' | translate }}</label>
+                    <input
+                        type="number"
+                        class="form-control"
+                        min="5"
+                        ng-model="$ctrl.question.ans_format.min_just_length"
+                        ng-model-options="{ updateOn: 'blur' }"
+                        ng-class="{'input-warning': $ctrl.question.ans_format.min_just_length < 5}"
+                        ng-blur="$ctrl.validateItem()">
+                </div>
+            </div>
+        </div>
     </div>
     <div class="panel-footer">
         <ng-transclude></ng-transclude>
