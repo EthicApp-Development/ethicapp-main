@@ -1,6 +1,10 @@
-let UserProfileService = function ($http, Upload) {
+let UserProfileService = function ($http, $rootScope, Upload) {
     const service = {
         profileCache: null,
+        notifyProfileChanged() {
+            service.profileCache = null;
+            $rootScope.$broadcast("user-profile:updated");
+        },
 
         async getProfile(reload = false) {
             if (service.profileCache && !reload) {
@@ -19,7 +23,7 @@ let UserProfileService = function ($http, Upload) {
 
         async updateProfile(payload) {
             const response = await $http.post("/users/profile", payload);
-            service.profileCache = null;
+            service.notifyProfileChanged();
             return response.data;
         },
 
@@ -34,7 +38,7 @@ let UserProfileService = function ($http, Upload) {
                 data
             });
 
-            service.profileCache = null;
+            service.notifyProfileChanged();
             return response.data;
         },
 

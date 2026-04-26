@@ -25,7 +25,7 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("ActivityCatalogService", ["$http", ActivityCatalogService])
     .factory("DesignCatalogService", ["$rootScope", "$http", DesignCatalogService])
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
-    .factory("UserProfileService", ["$http", "Upload", UserProfileService])
+    .factory("UserProfileService", ["$http", "$rootScope", "Upload", UserProfileService])
     .factory("CasesCatalogService", ["$http", CasesCatalogService]);
 
 import { LocalesController } from "../../controllers/common/locales.controller.js";
