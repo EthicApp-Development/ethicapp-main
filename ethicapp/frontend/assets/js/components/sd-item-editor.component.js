@@ -14,6 +14,8 @@ function SDItemEditController() {
     };
     
     vm.validateItem = function() {
+        vm.normalizeJustificationSettings();
+
         let validation = { 
             type: "phase",
             valid: true, 
