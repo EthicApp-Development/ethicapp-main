@@ -13,6 +13,7 @@ const router = express.Router();
 const SALT_ROUNDS = Number(process.env.BCRYPT_SALT_ROUNDS || 10);
 const AUTH_COOKIE_NAME = process.env.AUTH_COOKIE_NAME || 'connect.sid';
 const RESET_TOKEN_TTL_MINUTES = Number(process.env.RESET_TOKEN_TTL_MINUTES || 60);
+const DEFAULT_LOCALE = 'en_US';
 
 function isStrongPassword(password) {
   if (!password || password.length < 10) {
