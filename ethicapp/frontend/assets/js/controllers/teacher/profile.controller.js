@@ -160,7 +160,6 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
                 g_recaptcha_response: recaptchaResponse
             });
 
-            await vm.loadProfile();
             if (vm.isRecaptchaEnabled && window.grecaptcha && vm.profileRecaptchaWidgetId !== null) {
                 window.grecaptcha.reset(vm.profileRecaptchaWidgetId);
             }
@@ -192,7 +191,6 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
         try {
             await UserProfileService.uploadAvatar(vm.selectedAvatarFile, recaptchaResponse);
             vm.selectedAvatarFile = null;
-            await vm.loadProfile();
             if (vm.isRecaptchaEnabled && window.grecaptcha && vm.profileRecaptchaWidgetId !== null) {
                 window.grecaptcha.reset(vm.profileRecaptchaWidgetId);
             }
@@ -250,7 +248,13 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
         vm.refreshGenderOptions();
         vm.applyChanges();
     });
+    const profileUpdateListener = $scope.$on("user-profile:updated", () => {
+        vm.loadProfile();
+    });
 
     $scope.vm = vm;
-    $scope.$on("$destroy", languageChangeListener);
+    $scope.$on("$destroy", () => {
+        languageChangeListener();
+        profileUpdateListener();
+    });
 };
