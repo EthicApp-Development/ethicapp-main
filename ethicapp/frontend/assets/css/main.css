@@ -1646,6 +1646,12 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
     max-width: 720px;
 }
 
+.teacher-profile-page .toast-container {
+    position: relative;
+    z-index: 20;
+    min-height: 2.5rem;
+}
+
 .profile-save-btn {
     margin-bottom: 2rem;
 }
@@ -2361,14 +2367,15 @@ h2{
 }
 
 .toast-container .alert {
-    height: 1.75em !important;
+    min-height: 1.75em !important;
+    height: auto !important;
     margin-left: auto;
     margin-right: auto;
     margin-top: 6px;
     margin-bottom: 32px !important;
     padding-top: 2px;
-    padding-left: 0px;
-    padding-right: 0px;
+    padding-left: 8px;
+    padding-right: 8px;
     opacity: 1;
     background: #fff;
     border: 0px;
