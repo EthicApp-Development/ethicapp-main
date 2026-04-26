@@ -13,17 +13,14 @@ function buildPublicUploadPath(uploadedFilePath) {
         return null;
     }
 
-    const normalizedPath = path.normalize(uploadedFilePath);
-    const uploadDirToken = `${path.sep}uploads${path.sep}`;
-    const uploadDirIndex = normalizedPath.lastIndexOf(uploadDirToken);
+    const normalizedPath = path.normalize(uploadedFilePath).replaceAll("\\", "/");
+    const uploadPathMatch = normalizedPath.match(/(?:^|\/)uploads\/(.+)$/);
 
-    if (uploadDirIndex === -1) {
+    if (!uploadPathMatch) {
         return null;
     }
 
-    const relativeToUploads = normalizedPath
-        .slice(uploadDirIndex + uploadDirToken.length)
-        .replaceAll(path.sep, "/");
+    const relativeToUploads = uploadPathMatch[1];
 
     return `/uploads/${relativeToUploads}`;
 }

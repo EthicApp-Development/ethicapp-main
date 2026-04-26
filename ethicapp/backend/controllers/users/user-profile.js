@@ -36,12 +36,17 @@ const validateProfileRecaptcha = async (req, res) => {
 const getAbsoluteUploadPath = (reqFilePath) => {
     if (!reqFilePath) return null;
 
-    const normalized = path.normalize(reqFilePath);
+    const normalized = path.normalize(reqFilePath).replaceAll("\\", "/");
     if (path.isAbsolute(normalized)) {
         return normalized;
     }
 
-    return path.resolve(process.cwd(), normalized);
+    const uploadsPathPrefix = `${config.uploadsPath.replaceAll("\\", "/").replace(/\/+$/, "")}/`;
+    const relativePath = normalized.startsWith(uploadsPathPrefix)
+        ? normalized.slice(uploadsPathPrefix.length)
+        : normalized;
+
+    return path.resolve(uploadsRoot, relativePath);
 };
 
 const buildAvatarPaths = (uid) => {
