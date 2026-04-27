@@ -28,7 +28,10 @@ export default function HomePage() {
             aria-selected={activeTab === TABS.JOIN}
             onClick={() => setActiveTab(TABS.JOIN)}
           >
-            Ingresar a Sesión
+            <span className="d-inline-flex align-items-center gap-2">
+              <i className="fa-solid fa-right-to-bracket" aria-hidden="true" />
+              <span>Ingresar a Sesión</span>
+            </span>
           </button>
           <button
             type="button"
@@ -37,7 +40,10 @@ export default function HomePage() {
             aria-selected={activeTab === TABS.PREVIOUS}
             onClick={() => setActiveTab(TABS.PREVIOUS)}
           >
-            Sesiones Anteriores
+            <span className="d-inline-flex align-items-center gap-2">
+              <i className="fa-solid fa-clock-rotate-left" aria-hidden="true" />
+              <span>Sesiones Anteriores</span>
+            </span>
           </button>
         </div>
       </nav>

@@ -104,7 +104,10 @@ export default function SessionList({
                     onClick={() => onSessionSelect?.(joinedSession.id)}
                   >
                     <div className="card-body">
-                      <h3 className="h6 mb-1">{joinedSession.name ?? `Sesión #${joinedSession.id}`}</h3>
+                      <h3 className="h6 mb-1 d-flex align-items-center gap-2">
+                        <i className="fa-solid fa-eye text-primary" aria-hidden="true" />
+                        <span>{joinedSession.name ?? `Sesión #${joinedSession.id}`}</span>
+                      </h3>
 
                       <p className="mb-2 small text-secondary">{joinedSession.descr || 'Sin descripción'}</p>
 
@@ -133,7 +136,10 @@ export default function SessionList({
                   onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                   aria-label="Página anterior"
                 >
-                  Anterior
+                  <span className="d-inline-flex align-items-center gap-2">
+                    <i className="fa-solid fa-chevron-left" aria-hidden="true" />
+                    <span>Anterior</span>
+                  </span>
                 </button>
               </li>
 
@@ -156,7 +162,10 @@ export default function SessionList({
                   onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
                   aria-label="Página siguiente"
                 >
-                  Siguiente
+                  <span className="d-inline-flex align-items-center gap-2">
+                    <span>Siguiente</span>
+                    <i className="fa-solid fa-chevron-right" aria-hidden="true" />
+                  </span>
                 </button>
               </li>
             </ul>

@@ -58,7 +58,10 @@ export default function JoinSessionCard({ disabled, onJoined }) {
               onChange={(event) => setJoinCode(event.target.value.toLowerCase())}
             />
             <button className="btn btn-primary" type="submit" disabled={joinBusy || disabled}>
-              {joinBusy ? 'Uniendo...' : 'Unirse'}
+              <span className="d-inline-flex align-items-center gap-2">
+                <i className={`fa-solid ${joinBusy ? 'fa-spinner fa-spin' : 'fa-right-to-bracket'}`} aria-hidden="true" />
+                <span>{joinBusy ? 'Uniendo...' : 'Unirse'}</span>
+              </span>
             </button>
           </div>
         </form>

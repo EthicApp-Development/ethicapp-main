@@ -18,7 +18,10 @@ export default function StudentTopbar({ loadingSession, userDisplayName, onLogou
             {loadingSession ? 'Cargando usuario...' : userDisplayName}
           </span>
           <button type="button" className="btn btn-outline-danger btn-sm" onClick={onLogout}>
-            Logout
+            <span className="d-inline-flex align-items-center gap-2">
+              <i className="fa-solid fa-right-from-bracket" aria-hidden="true" />
+              <span>Logout</span>
+            </span>
           </button>
         </div>
       </div>
