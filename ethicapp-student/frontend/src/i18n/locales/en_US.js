@@ -66,10 +66,18 @@ const enUS = {
     activePhaseId: 'Active phase ID',
     unavailable: 'Unavailable',
     noType: 'No type',
+    loadingDescriptor: 'Loading activity descriptor...',
+    descriptorLoadErrorFallback: 'Unable to load activity descriptor',
+    waitingTitle: 'Please wait while the activity starts',
+    waitingDescription: 'Stay tuned to your teacher instructions',
     loadingActivityState: 'Loading full activity state...',
+    loadingCaseDocument: 'Loading case document...',
+    caseLoadErrorFallback: 'Unable to load case document',
     activityPhasesLabel: 'Activity phases',
     phasesTitle: 'Phases',
+    caseTab: 'Case',
     phaseN: 'Phase',
+    phaseTabPlaceholder: 'Phase content is under implementation.',
     notFoundInAvailable: 'We could not find the requested session in your available sessions.'
   },
   notFound: {
