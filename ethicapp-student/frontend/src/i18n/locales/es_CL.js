@@ -76,6 +76,8 @@ const esCL = {
     activityPhasesLabel: 'Fases de la actividad',
     phasesTitle: 'Fases',
     caseTab: 'Caso',
+    caseViewerHint: 'Si el visor no carga correctamente, abre el PDF en una pestaña nueva.',
+    openCaseInNewTab: 'Abrir en nueva pestaña',
     phaseN: 'Fase',
     phaseTabPlaceholder: 'Contenido de la fase en implementación.',
     notFoundInAvailable: 'No encontramos la sesión solicitada dentro de tus sesiones disponibles.'
