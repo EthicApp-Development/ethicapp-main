@@ -318,7 +318,7 @@
 	"show_previous_phase_responses_text": "Show responses from previous phases",
 	"features_title_text": "Features",
 	"phase_instructions_title": "Instructions",
-	"phase_instructions_enabled_label": "The phase displays instructions to the user",
+	"phase_instructions_enabled_label": "The phase displays instructions to the student",
 	"phase_instructions_placeholder": "Write the instructions for this phase",
 	"questions_title_text": "Questions",
 	"items_title_text": "Items",

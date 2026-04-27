@@ -343,7 +343,7 @@
 	"show_previous_phase_responses_text": "Mostrar respuestas de fases anteriores",	
 	"features_title_text": "Caraterísticas",
 	"phase_instructions_title": "Instrucciones",
-	"phase_instructions_enabled_label": "La fase presenta instrucciones al usuario",
+	"phase_instructions_enabled_label": "La fase presenta instrucciones al estudiante",
 	"phase_instructions_placeholder": "Escribe las instrucciones para esta fase",
 	"questions_title_text": "Preguntas",
 	"items_title_text": "Items",
