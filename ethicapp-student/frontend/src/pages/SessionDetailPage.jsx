@@ -149,7 +149,10 @@ export default function SessionDetailPage() {
       <div className="d-flex align-items-center justify-content-between mb-3">
         <h1 className="h4 mb-0">Detalle de sesión</h1>
         <Link to="/" className="btn btn-outline-secondary btn-sm">
-          Volver al home
+          <span className="d-inline-flex align-items-center gap-2">
+            <i className="fa-solid fa-arrow-left" aria-hidden="true" />
+            <span>Volver al home</span>
+          </span>
         </Link>
       </div>
 
