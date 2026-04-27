@@ -76,6 +76,8 @@ const enUS = {
     activityPhasesLabel: 'Activity phases',
     phasesTitle: 'Phases',
     caseTab: 'Case',
+    caseViewerHint: 'If the embedded viewer does not load, open the PDF in a new tab.',
+    openCaseInNewTab: 'Open in new tab',
     phaseN: 'Phase',
     phaseTabPlaceholder: 'Phase content is under implementation.',
     notFoundInAvailable: 'We could not find the requested session in your available sessions.'
