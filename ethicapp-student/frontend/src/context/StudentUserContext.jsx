@@ -19,7 +19,7 @@ function StudentUserProvider({ children }) {
     setLoadingUser(true);
 
     try {
-      const { data } = await legacyUserApi.get('/users/myinfo');
+      const { data } = await legacyUserApi.get('/users/profile');
       const userData = data?.data ?? USER_PLACEHOLDER;
       setUser({
         id: userData.id ?? null,

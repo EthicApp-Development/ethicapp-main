@@ -63,7 +63,7 @@ const buildAvatarPaths = (uid) => {
 };
 
 router.get("/users/profile", async (req, res) => {
-    if (!requireRole(req, res, "P")) return;
+    if (!requireRole(req, res, ["P", "A"])) return;
 
     try {
         res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
