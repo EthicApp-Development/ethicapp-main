@@ -116,15 +116,28 @@ export function ActivityController($scope, $http,
             return;
         }
 
+        const normalizeStatus = (status) => {
+            const parsedStatus = Number(status);
+            return Number.isNaN(parsedStatus) ? status : parsedStatus;
+        };
+
         try {
-            vm.activities.archived = ActivityCatalogService.
-                getActivities().filter(activity => { return activity.archived; });
-            vm.activities.ongoing = ActivityCatalogService.
-                getActivities().filter(activity => { return !activity.archived &&
-                    activity.status == statusCodes.in_progress; });
-            vm.activities.finished = ActivityCatalogService.
-                getActivities().filter(activity => { return !activity.archived &&
-                    activity.status == statusCodes.finished; });
+            vm.activities.archived = activities.filter((activity) => {
+                return activity.archived;
+            });
+
+            vm.activities.ongoing = activities.filter((activity) => {
+                const activityStatus = normalizeStatus(activity.status);
+                return !activity.archived &&
+                    (activityStatus === statusCodes.initiated ||
+                     activityStatus === statusCodes.in_progress);
+            });
+
+            vm.activities.finished = activities.filter((activity) => {
+                const activityStatus = normalizeStatus(activity.status);
+                return !activity.archived &&
+                    activityStatus === statusCodes.finished;
+            });
         } catch (error) {
             console.error("[ActivityController::updateActivities] An error ocurred.");
         }
