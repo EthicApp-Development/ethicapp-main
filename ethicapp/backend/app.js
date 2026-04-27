@@ -15,9 +15,6 @@ import session from "express-session";
 import { default as fileStoreFactory } from "session-file-store"; 
 const FileStore = fileStoreFactory(session);
 
-import index from "./controllers/index.js";
-import users_core from "./controllers/users/users-core.js";
-import users_registration from "./controllers/users/users-registration.js";
 import user_profile from "./controllers/users/user-profile.js";
 import impersonation from "./controllers/users/impersonation.js";
 import sessions from "./controllers/sessions.js";
@@ -26,15 +23,11 @@ import phases from "./controllers/phases.js";
 import designs from "./controllers/designs.js";
 import groups from "./controllers/groups.js";
 import group_messages from "./controllers/group-messages.js";
-import content_analysis from "./controllers/content-analysis-controller.js";
-import admin_panel from "./controllers/admin-panel-api.js";
-import legacy_ethics from "./controllers/legacy-ethics.js";
 import cases from "./controllers/cases.js";
 
 import fs from "fs";
 
 import * as config from "./config/config.js";
-import { validateSession } from "./middleware/validate-session.js";
 import i18n from "i18n";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -156,9 +149,6 @@ try {
 // Make ETHICAPP_BUILD_HASH available in the entire application
 app.locals.ETHICAPP_BUILD_HASH = ETHICAPP_BUILD_HASH;
 
-app.use("/", index);
-app.use("/", users_core);
-app.use("/", users_registration);
 app.use("/", requireLegacyAuth, user_profile);
 app.use("/", requireLegacyAuth, impersonation);
 app.use("/", requireLegacyAuth, sessions);
@@ -167,13 +157,7 @@ app.use("/", requireLegacyAuth, phases);
 app.use("/", requireLegacyAuth, groups);
 app.use("/", requireLegacyAuth, designs);
 app.use("/", requireLegacyAuth, group_messages);
-app.use("/", requireLegacyAuth, content_analysis);
-app.use("/", requireLegacyAuth, legacy_ethics); // Legacy endpoints
 app.use("/", requireLegacyAuth, cases);
-
-app.use("/", admin_panel);
-
-// app.use("/", validateSession, rubrica);
 
 // Catch 404 and forward to error handler
 app.use((req, res, next) => {

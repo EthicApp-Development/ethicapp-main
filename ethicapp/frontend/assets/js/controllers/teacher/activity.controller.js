@@ -35,7 +35,8 @@ export function ActivityController($scope, $http,
         }); 
 
         await ActivityCatalogService.loadActivities();
-        // vm.checkContentAnalysisAvailability();
+
+        console.log(`[ActivityController::init] ${vm.activities.ongoing.length} ongoing, ${vm.activities.finished.length} finished and ${vm.activities.archived.length} archived activities loaded.`);
     };
 
     vm.createSession = async function (designId) {
@@ -117,13 +118,10 @@ export function ActivityController($scope, $http,
         }
 
         try {
-            vm.activities.archived = ActivityCatalogService.
-                getActivities().filter(activity => { return activity.archived; });
-            vm.activities.ongoing = ActivityCatalogService.
-                getActivities().filter(activity => { return !activity.archived &&
-                    activity.status == statusCodes.in_progress; });
-            vm.activities.finished = ActivityCatalogService.
-                getActivities().filter(activity => { return !activity.archived &&
+            vm.activities.archived = activities.filter(activity => { return activity.archived; });
+            vm.activities.ongoing = activities.filter(activity => { return !activity.archived &&
+                    activity.status == statusCodes.in_progress || activity.status == statusCodes.initiated; });
+            vm.activities.finished = activities.filter(activity => { return !activity.archived &&
                     activity.status == statusCodes.finished; });
         } catch (error) {
             console.error("[ActivityController::updateActivities] An error ocurred.");
