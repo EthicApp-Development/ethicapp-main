@@ -8,15 +8,20 @@ let ActivityCatalogService = ($http) => {
         },
         
         async getActivityBySessionId(sessionId, retry = true) {
+            const normalizedSessionId = Number(sessionId);
             // Search locally
-            const activity = service.activities.find(activity => activity.session === sessionId);
+            const activity = service.activities.find((activityItem) => {
+                return Number(activityItem.sessionId) === normalizedSessionId;
+            });
 
             // If the activity was not found, and retrying is requested, reload and
             // then find again.
             if (!activity && retry) {
                 try {
                     await service.loadActivities();
-                    return service.activities.find(activity => activity.session === sessionId) || null;
+                    return service.activities.find((activityItem) => {
+                        return Number(activityItem.sessionId) === normalizedSessionId;
+                    }) || null;
                 } catch (error) {
                     console.error(`Error fetching activity by sessionId: ${sessionId}`, error);
                     throw new Error("Error fetching activity by session ID");
