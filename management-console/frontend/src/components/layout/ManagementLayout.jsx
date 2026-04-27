@@ -22,6 +22,7 @@ function ManagementLayout({ children }) {
               <img src={logo} alt="EthicApp" className="ethicapp-logo-topbar-img" />
             </a>
           </Navbar.Brand>
+          <Navbar.Text className="text-muted">{t('app.title')}&nbsp;|&nbsp;</Navbar.Text>
           <Navbar.Toggle aria-controls="mng-nav" />
           <Navbar.Collapse id="mng-nav">
             <Nav className="me-auto" activeKey={location.pathname}>
