@@ -127,6 +127,64 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
+router.post('/admin/verify-password', async (req, res) => {
+  try {
+    if (!req.isAuthenticated || !req.isAuthenticated()) {
+      return res.status(401).json({
+        error: t(req, 'unauthenticated')
+      });
+    }
+
+    if (!req.user || req.user.role !== 'S') {
+      return res.status(403).json({
+        error: t(req, 'unauthorized')
+      });
+    }
+
+    const password = req.body.password || '';
+
+    if (!password) {
+      return res.status(400).json({
+        error: t(req, 'requiredFieldsMissing')
+      });
+    }
+
+    const userResult = await db.query(
+      `
+        SELECT password_bcrypt
+        FROM users
+        WHERE id = $1
+          AND active = true
+        LIMIT 1
+      `,
+      [req.user.id]
+    );
+
+    if (userResult.rowCount === 0) {
+      return res.status(401).json({
+        error: t(req, 'wrongCredentials')
+      });
+    }
+
+    const validPassword = await bcrypt.compare(password, userResult.rows[0].password_bcrypt || '');
+
+    if (!validPassword) {
+      return res.status(401).json({
+        error: t(req, 'wrongCredentials')
+      });
+    }
+
+    return res.status(200).json({
+      ok: true
+    });
+  } catch (err) {
+    console.error('ADMIN VERIFY PASSWORD ERROR:', err);
+    return res.status(500).json({
+      error: t(req, 'internalServerError')
+    });
+  }
+});
+
 /**
  * POST /register
  *

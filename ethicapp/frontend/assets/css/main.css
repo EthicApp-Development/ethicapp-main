@@ -202,6 +202,18 @@ a:hover{
     z-index: 9999;
 }
 
+.top-bar-mini-admin-inspection{
+    border-top: #d62828 solid 2px;
+}
+
+.admin-inspection-legend{
+    margin-right: 0.75rem;
+    margin-left: 0.75rem;
+    font-size: 0.9rem;
+    color: #ffb3b3;
+    font-weight: 600;
+}
+
 .side-panel{
     padding: 8px 24px;
     background: #e2e2e2;

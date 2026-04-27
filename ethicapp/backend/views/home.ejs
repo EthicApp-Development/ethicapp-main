@@ -5,7 +5,11 @@
 <% if (recaptchaEnabled) { %>
 <script src="https://www.google.com/recaptcha/api.js?render=explicit" async defer></script>
 <% } %>
-  <div ng-controller="ProfileController as vm" class="top-bar-mini cflex" ng-hide="false">
+  <div
+    ng-controller="ProfileController as vm"
+    class="top-bar-mini cflex <%= impersonating && authRole === 'S' ? 'top-bar-mini-admin-inspection' : '' %>"
+    ng-hide="false"
+  >
     <div class="cf1">
       <a href="/home" class="simple-margin-left">
         <img src="assets/images/logos/ethicapp-logo-emboss.png" class="logoEthicapp" alt="Logo">
@@ -30,6 +34,12 @@
       </div>
       <strong class="margin-right-8"><a href="#!/profile" style="color: white;"> {{ vm.getDisplayName() || ('profile' | translate) }}
         </a></strong>
+      <% if (impersonating && authRole === 'S') { %>
+      <span class="admin-inspection-legend">{{'admin_inspection_mode' | translate}}</span>
+      <a href="/mng/users" class="btn btn-default btn-sm margin-right-8">
+        {{'back_to_management_console' | translate}}
+      </a>
+      <% } %>
       <a href="logout" class="text-white ml-2" title="{{'exitEthicapp' | translate}}">
         <i class="fa fa-sign-out fa-2x"></i>
       </a>

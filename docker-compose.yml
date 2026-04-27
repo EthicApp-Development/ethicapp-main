@@ -11,6 +11,7 @@ services:
     depends_on:
       - ethicapp
       - auth-backend
+      - management-console
     volumes:
       - uploads:/var/www/uploads:ro
 
@@ -60,6 +61,21 @@ services:
       - NODE_ENV=production
     expose:
       - "8502"
+    depends_on:
+      - postgresql
+
+  management-console:
+    build:
+      context: ./management-console
+      dockerfile: Dockerfile
+    container_name: ethicapp-management-console
+    env_file:
+      - ./.env.shared
+      - ./management-console/.env
+    environment:
+      - NODE_ENV=production
+    expose:
+      - "8504"
     depends_on:
       - postgresql
 
