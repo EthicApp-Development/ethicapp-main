@@ -2,11 +2,13 @@ import axios from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import { studentApi } from '../api/studentApi.js';
+import { useI18n } from '../app/providers.jsx';
 import { useStudentActivityState } from '../context/StudentActivityStateContext.jsx';
 import { getStudentSocket } from '../services/studentSocket.js';
 import { formatSessionDate, sessionStatusLabel } from '../utils/sessionFormat.js';
 
 export default function SessionDetailPage() {
+  const { locale, t } = useI18n();
   const { session, sessionRefreshKey } = useOutletContext();
   const { sessionId } = useParams();
   const [joinedSessions, setJoinedSessions] = useState([]);
@@ -33,14 +35,14 @@ export default function SessionDetailPage() {
       })
       .catch((error) => {
         const message = axios.isAxiosError(error)
-          ? (error.response?.data?.error ?? 'No se pudieron cargar los datos de la sesión')
-          : 'No se pudieron cargar los datos de la sesión';
+          ? (error.response?.data?.error ?? t('sessionDetail.loadErrorFallback'))
+          : t('sessionDetail.loadErrorFallback');
 
         setSessionsError(message);
         setJoinedSessions([]);
         setLoadingSessions(false);
       });
-  }, [session.isAuthenticated, sessionRefreshKey]);
+  }, [session.isAuthenticated, sessionRefreshKey, t]);
 
   const selectedSession = useMemo(() => {
     const parsedSessionId = Number(sessionId);
@@ -61,7 +63,7 @@ export default function SessionDetailPage() {
       sessionId: selectedSession.id,
       userId: session.uid
     }).catch(() => {
-      // El error ya queda reflejado en el contexto.
+      // The error is already reflected in the context state.
     });
   }, [loadFullState, selectedSession, session.isAuthenticated, session.uid]);
 
@@ -147,18 +149,18 @@ export default function SessionDetailPage() {
   return (
     <section className="mx-auto" style={{ maxWidth: '860px' }}>
       <div className="d-flex align-items-center justify-content-between mb-3">
-        <h1 className="h4 mb-0">Detalle de sesión</h1>
+        <h1 className="h4 mb-0">{t('sessionDetail.title')}</h1>
         <Link to="/" className="btn btn-outline-secondary btn-sm">
           <span className="d-inline-flex align-items-center gap-2">
             <i className="fa-solid fa-arrow-left" aria-hidden="true" />
-            <span>Volver al home</span>
+            <span>{t('sessionDetail.backHome')}</span>
           </span>
         </Link>
       </div>
 
-      {!session.isAuthenticated ? <p className="text-muted">Inicia sesión para revisar la sesión seleccionada.</p> : null}
+      {!session.isAuthenticated ? <p className="text-muted">{t('sessionDetail.loginToView')}</p> : null}
 
-      {loadingSessions ? <p className="text-muted">Cargando detalle...</p> : null}
+      {loadingSessions ? <p className="text-muted">{t('sessionDetail.loadingDetail')}</p> : null}
 
       {sessionsError ? (
         <div className="alert alert-danger" role="alert">
@@ -170,30 +172,30 @@ export default function SessionDetailPage() {
         selectedSession ? (
           <article className="card shadow-sm">
             <div className="card-body">
-              <h2 className="h5 mb-2">{selectedSession.name ?? `Sesión #${selectedSession.id}`}</h2>
-              <p className="text-secondary mb-3">{selectedSession.descr || 'Sin descripción'}</p>
+              <h2 className="h5 mb-2">{selectedSession.name ?? `${t('sessions.sessionFallbackName')} #${selectedSession.id}`}</h2>
+              <p className="text-secondary mb-3">{selectedSession.descr || t('sessionDetail.noDescription')}</p>
 
               <dl className="row mb-0">
-                <dt className="col-sm-3">Estado</dt>
-                <dd className="col-sm-9">{sessionStatusLabel(selectedSession.status)}</dd>
+                <dt className="col-sm-3">{t('sessionDetail.status')}</dt>
+                <dd className="col-sm-9">{sessionStatusLabel(selectedSession.status, t)}</dd>
 
-                <dt className="col-sm-3">Fecha</dt>
-                <dd className="col-sm-9">{formatSessionDate(selectedSession.time)}</dd>
+                <dt className="col-sm-3">{t('sessionDetail.date')}</dt>
+                <dd className="col-sm-9">{formatSessionDate(selectedSession.time, locale, t)}</dd>
 
-                <dt className="col-sm-3">Código</dt>
-                <dd className="col-sm-9">{selectedSession.code ?? 'No disponible'}</dd>
+                <dt className="col-sm-3">{t('sessionDetail.code')}</dt>
+                <dd className="col-sm-9">{selectedSession.code ?? t('sessionDetail.unavailable')}</dd>
 
-                <dt className="col-sm-3">Tipo</dt>
-                <dd className="col-sm-9">{selectedSession.type ?? 'Sin tipo'}</dd>
+                <dt className="col-sm-3">{t('sessionDetail.type')}</dt>
+                <dd className="col-sm-9">{selectedSession.type ?? t('sessionDetail.noType')}</dd>
 
-                <dt className="col-sm-3">Fase activa #</dt>
-                <dd className="col-sm-9">{currentPhaseNumber ?? 'No disponible'}</dd>
+                <dt className="col-sm-3">{t('sessionDetail.activePhaseNumber')}</dt>
+                <dd className="col-sm-9">{currentPhaseNumber ?? t('sessionDetail.unavailable')}</dd>
 
-                <dt className="col-sm-3">Fase activa ID</dt>
-                <dd className="col-sm-9">{currentPhaseId ?? 'No disponible'}</dd>
+                <dt className="col-sm-3">{t('sessionDetail.activePhaseId')}</dt>
+                <dd className="col-sm-9">{currentPhaseId ?? t('sessionDetail.unavailable')}</dd>
               </dl>
 
-              {loadingActivityState ? <p className="text-muted mt-3 mb-0">Cargando estado completo de la actividad...</p> : null}
+              {loadingActivityState ? <p className="text-muted mt-3 mb-0">{t('sessionDetail.loadingActivityState')}</p> : null}
 
               {activityStateError ? (
                 <div className="alert alert-warning mt-3 mb-0" role="alert">
@@ -202,8 +204,8 @@ export default function SessionDetailPage() {
               ) : null}
 
               {!loadingActivityState && !activityStateError && phaseTabs.length > 0 ? (
-                <section className="mt-4" aria-label="Fases de la actividad">
-                  <h3 className="h6 mb-2">Fases</h3>
+                <section className="mt-4" aria-label={t('sessionDetail.activityPhasesLabel')}>
+                  <h3 className="h6 mb-2">{t('sessionDetail.phasesTitle')}</h3>
                   <div className="d-flex gap-2 flex-wrap">
                     {phaseTabs.map((phase) => {
                       const isCurrent = Number(phase.number) === Number(currentPhaseNumber);
@@ -212,7 +214,7 @@ export default function SessionDetailPage() {
                           key={phase.id ?? phase.number}
                           className={`phase-pill ${isCurrent ? 'phase-pill--current' : 'phase-pill--inactive'}`}
                         >
-                          Fase {phase.number}
+                          {t('sessionDetail.phaseN')} {phase.number}
                         </span>
                       );
                     })}
@@ -223,7 +225,7 @@ export default function SessionDetailPage() {
           </article>
         ) : (
           <div className="alert alert-warning mb-0" role="alert">
-            No encontramos la sesión solicitada dentro de tus sesiones disponibles.
+            {t('sessionDetail.notFoundInAvailable')}
           </div>
         )
       ) : null}

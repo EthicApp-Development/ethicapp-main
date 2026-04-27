@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import { useI18n } from '../app/providers.jsx';
 import { studentApi } from '../api/studentApi.js';
 import StudentTopbar from '../components/StudentTopbar.jsx';
 import { useStudentUser } from '../context/StudentUserContext.jsx';
@@ -11,6 +12,7 @@ const SESSION_PLACEHOLDER = {
 };
 
 export default function StudentLayout() {
+  const { t } = useI18n();
   const [session, setSession] = useState(SESSION_PLACEHOLDER);
   const [loadingSession, setLoadingSession] = useState(true);
   const [sessionRefreshKey, setSessionRefreshKey] = useState(0);
@@ -18,7 +20,7 @@ export default function StudentLayout() {
 
   const userDisplayName = useMemo(() => {
     if (!session.isAuthenticated) {
-      return 'Estudiante';
+      return t('common.studentLabel');
     }
 
     const fullName = [user.firstname, user.lastname].filter(Boolean).join(' ').trim();
@@ -31,8 +33,8 @@ export default function StudentLayout() {
       return user.name;
     }
 
-    return `Usuario #${session.uid}`;
-  }, [session, user]);
+    return `${t('common.studentLabel')} #${session.uid}`;
+  }, [session, t, user]);
 
   useEffect(() => {
     studentApi

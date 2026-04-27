@@ -1,21 +1,25 @@
 import axios from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 import { studentApi } from '../api/studentApi.js';
+import { useI18n } from '../app/providers.jsx';
 import { formatSessionDate, sessionStatusLabel } from '../utils/sessionFormat.js';
 
 export default function SessionList({
   isAuthenticated,
   refreshKey,
   onSessionSelect,
-  title = 'Mis sesiones',
+  title,
   limit,
   enablePagination = false,
   pageSize = 10
 }) {
+  const { locale, t } = useI18n();
   const [joinedSessions, setJoinedSessions] = useState([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [sessionsError, setSessionsError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+
+  const resolvedTitle = title || t('sessions.mySessions');
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -36,14 +40,14 @@ export default function SessionList({
       })
       .catch((error) => {
         const message = axios.isAxiosError(error)
-          ? (error.response?.data?.error ?? 'No se pudieron cargar las sesiones')
-          : 'No se pudieron cargar las sesiones';
+          ? (error.response?.data?.error ?? t('sessions.loadErrorFallback'))
+          : t('sessions.loadErrorFallback');
 
         setSessionsError(message);
         setJoinedSessions([]);
         setLoadingSessions(false);
       });
-  }, [isAuthenticated, refreshKey]);
+  }, [isAuthenticated, refreshKey, t]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -81,11 +85,11 @@ export default function SessionList({
   return (
     <div className="card h-100 shadow-sm">
       <div className="card-body">
-        <h2 className="h5 mb-3">{title}</h2>
+        <h2 className="h5 mb-3">{resolvedTitle}</h2>
 
-        {!isAuthenticated && <p className="text-muted mb-0">Inicia sesión para ver tus sesiones previas.</p>}
+        {!isAuthenticated && <p className="text-muted mb-0">{t('sessions.loginToView')}</p>}
 
-        {isAuthenticated && loadingSessions ? <p className="text-muted mb-0">Cargando sesiones...</p> : null}
+        {isAuthenticated && loadingSessions ? <p className="text-muted mb-0">{t('sessions.loadingSessions')}</p> : null}
 
         {sessionsError ? (
           <div className="alert alert-danger py-2 mb-0" role="alert">
@@ -106,15 +110,15 @@ export default function SessionList({
                     <div className="card-body">
                       <h3 className="h6 mb-1 d-flex align-items-center gap-2">
                         <i className="fa-solid fa-eye text-primary" aria-hidden="true" />
-                        <span>{joinedSession.name ?? `Sesión #${joinedSession.id}`}</span>
+                        <span>{joinedSession.name ?? `${t('sessions.sessionFallbackName')} #${joinedSession.id}`}</span>
                       </h3>
 
-                      <p className="mb-2 small text-secondary">{joinedSession.descr || 'Sin descripción'}</p>
+                      <p className="mb-2 small text-secondary">{joinedSession.descr || t('sessions.noDescription')}</p>
 
                       <div className="small text-muted d-flex flex-wrap gap-2">
-                        <span>Estado: {sessionStatusLabel(joinedSession.status)}</span>
-                        <span>Fecha: {formatSessionDate(joinedSession.time)}</span>
-                        <span>Código: {joinedSession.code}</span>
+                        <span>{t('sessions.statusLabel')}: {sessionStatusLabel(joinedSession.status, t)}</span>
+                        <span>{t('sessions.dateLabel')}: {formatSessionDate(joinedSession.time, locale, t)}</span>
+                        <span>{t('sessions.codeLabel')}: {joinedSession.code}</span>
                       </div>
                     </div>
                   </button>
@@ -122,23 +126,23 @@ export default function SessionList({
               ))}
             </div>
           ) : (
-            <p className="text-muted mb-0">Aún no te has unido a ninguna sesión.</p>
+            <p className="text-muted mb-0">{t('sessions.empty')}</p>
           )
         ) : null}
 
         {!loadingSessions && isAuthenticated && !sessionsError && enablePagination && totalPages > 1 ? (
-          <nav aria-label="Paginación de sesiones" className="mt-4 d-flex justify-content-end">
+          <nav aria-label={t('sessions.paginationLabel')} className="mt-4 d-flex justify-content-end">
             <ul className="pagination pagination-sm mb-0">
               <li className={`page-item ${safePage === 1 ? 'disabled' : ''}`}>
                 <button
                   type="button"
                   className="page-link"
                   onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                  aria-label="Página anterior"
+                  aria-label={t('sessions.previousPage')}
                 >
                   <span className="d-inline-flex align-items-center gap-2">
                     <i className="fa-solid fa-chevron-left" aria-hidden="true" />
-                    <span>Anterior</span>
+                    <span>{t('sessions.previous')}</span>
                   </span>
                 </button>
               </li>
@@ -160,10 +164,10 @@ export default function SessionList({
                   type="button"
                   className="page-link"
                   onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                  aria-label="Página siguiente"
+                  aria-label={t('sessions.nextPage')}
                 >
                   <span className="d-inline-flex align-items-center gap-2">
-                    <span>Siguiente</span>
+                    <span>{t('sessions.next')}</span>
                     <i className="fa-solid fa-chevron-right" aria-hidden="true" />
                   </span>
                 </button>

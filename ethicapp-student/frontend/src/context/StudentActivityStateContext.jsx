@@ -1,10 +1,12 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import axios from 'axios';
+import { useI18n } from '../app/providers.jsx';
 import { legacyUserApi } from '../api/studentApi.js';
 
 const StudentActivityStateContext = createContext(null);
 
 export function StudentActivityStateProvider({ children }) {
+  const { t } = useI18n();
   const [stateBySession, setStateBySession] = useState({});
   const [loadingBySession, setLoadingBySession] = useState({});
   const [errorBySession, setErrorBySession] = useState({});
@@ -14,11 +16,11 @@ export function StudentActivityStateProvider({ children }) {
     const parsedUserId = Number(userId);
 
     if (!Number.isInteger(parsedSessionId) || parsedSessionId <= 0) {
-      throw new Error('sessionId inválido');
+      throw new Error(t('errors.invalidSessionId'));
     }
 
     if (!Number.isInteger(parsedUserId) || parsedUserId <= 0) {
-      throw new Error('userId inválido');
+      throw new Error(t('errors.invalidUserId'));
     }
 
     setLoadingBySession((prev) => ({ ...prev, [parsedSessionId]: true }));
@@ -42,15 +44,15 @@ export function StudentActivityStateProvider({ children }) {
       return fullState;
     } catch (error) {
       const message = axios.isAxiosError(error)
-        ? (error.response?.data?.error ?? 'No se pudo cargar el estado completo de la actividad')
-        : 'No se pudo cargar el estado completo de la actividad';
+        ? (error.response?.data?.error ?? t('errors.fullStateFallback'))
+        : t('errors.fullStateFallback');
 
       setStateBySession((prev) => ({ ...prev, [parsedSessionId]: null }));
       setErrorBySession((prev) => ({ ...prev, [parsedSessionId]: message }));
       setLoadingBySession((prev) => ({ ...prev, [parsedSessionId]: false }));
       throw error;
     }
-  }, []);
+  }, [t]);
 
   const value = useMemo(
     () => ({
@@ -69,7 +71,7 @@ export function useStudentActivityState() {
   const context = useContext(StudentActivityStateContext);
 
   if (!context) {
-    throw new Error('useStudentActivityState debe usarse dentro de StudentActivityStateProvider');
+    throw new Error('useStudentActivityState must be used within StudentActivityStateProvider');
   }
 
   return context;

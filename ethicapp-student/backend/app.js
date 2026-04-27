@@ -4,6 +4,8 @@ import express from 'express';
 import session from 'express-session';
 
 import studentRoutes from './routes/student.routes.js';
+import studentMessages from './i18n/messages/student-messages.js';
+import { translateMessage } from './i18n/locale.js';
 import { exposeLegacySession, hydrateLegacySession, requireLegacyAuth } from './middleware/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -65,7 +67,7 @@ app.use((err, req, res, next) => {
     return next(err);
   }
 
-  return res.status(500).json({ error: 'Internal server error' });
+  return res.status(500).json({ error: translateMessage(req, 'internalServerError', studentMessages) });
 });
 
 export default app;

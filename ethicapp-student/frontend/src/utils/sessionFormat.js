@@ -1,27 +1,28 @@
-export function formatSessionDate(value) {
+export function formatSessionDate(value, locale, t) {
   if (!value) {
-    return 'Sin fecha';
+    return t('sessions.noDate');
   }
 
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return 'Sin fecha';
+    return t('sessions.noDate');
   }
 
-  return new Intl.DateTimeFormat('es-CL', {
+  const dateLocale = locale === 'es_CL' ? 'es-CL' : 'en-US';
+
+  return new Intl.DateTimeFormat(dateLocale, {
     dateStyle: 'medium',
     timeStyle: 'short'
   }).format(date);
 }
 
-export function sessionStatusLabel(status) {
-  const labels = {
-    setup: 'Configuración',
-    active: 'Activa',
-    closed: 'Cerrada',
-    archived: 'Archivada'
-  };
+export function sessionStatusLabel(status, t) {
+  if (!status) {
+    return t('sessions.noStatus');
+  }
 
-  return labels[status] ?? status ?? 'Sin estado';
+  const key = `sessions.status.${status}`;
+  const translatedStatus = t(key);
+  return translatedStatus === key ? status : translatedStatus;
 }

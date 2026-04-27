@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useI18n } from '../app/providers.jsx';
 import JoinSessionCard from '../components/JoinSessionCard.jsx';
 import SessionList from '../components/SessionList.jsx';
 
@@ -9,6 +10,7 @@ const TABS = {
 };
 
 export default function HomePage() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const { loadingSession, session, sessionRefreshKey, onSessionJoined } = useOutletContext();
   const [activeTab, setActiveTab] = useState(TABS.JOIN);
@@ -28,7 +30,7 @@ export default function HomePage() {
   return (
     <div className="d-flex flex-column gap-4">
       <nav>
-        <div className="nav nav-tabs" role="tablist" aria-label="Navegación de sesiones">
+        <div className="nav nav-tabs" role="tablist" aria-label={t('navigation.sessionsNavigation')}>
           <button
             type="button"
             className={`nav-link ${activeTab === TABS.JOIN ? 'active' : ''}`}
@@ -38,7 +40,7 @@ export default function HomePage() {
           >
             <span className="d-inline-flex align-items-center gap-2">
               <i className="fa-solid fa-right-to-bracket" aria-hidden="true" />
-              <span>Ingresar a Sesión</span>
+              <span>{t('navigation.joinSession')}</span>
             </span>
           </button>
           <button
@@ -50,7 +52,7 @@ export default function HomePage() {
           >
             <span className="d-inline-flex align-items-center gap-2">
               <i className="fa-solid fa-clock-rotate-left" aria-hidden="true" />
-              <span>Sesiones Anteriores</span>
+              <span>{t('navigation.previousSessions')}</span>
             </span>
           </button>
         </div>
@@ -64,7 +66,7 @@ export default function HomePage() {
 
           <section className="col-12">
             <SessionList
-              title="Sesiones recientes"
+              title={t('home.recentSessions')}
               isAuthenticated={session.isAuthenticated}
               refreshKey={sessionRefreshKey}
               onSessionSelect={handleSessionSelect}
@@ -75,7 +77,7 @@ export default function HomePage() {
       ) : (
         <section>
           <SessionList
-            title="Sesiones anteriores"
+            title={t('home.previousSessions')}
             isAuthenticated={session.isAuthenticated}
             refreshKey={sessionRefreshKey}
             onSessionSelect={handleSessionSelect}
