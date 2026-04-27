@@ -7,6 +7,7 @@ import ActivityTabsPanel from '../components/session-detail/ActivityTabsPanel.js
 import SessionMetadata from '../components/session-detail/SessionMetadata.jsx';
 import WaitingStatePanel from '../components/session-detail/WaitingStatePanel.jsx';
 import { useStudentActivityState } from '../context/StudentActivityStateContext.jsx';
+import { getStudentSocket } from '../services/studentSocket.js';
 import {
   initialSessionDetailState,
   normalizeStatusCode,
