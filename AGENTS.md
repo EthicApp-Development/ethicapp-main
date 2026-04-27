@@ -12,7 +12,10 @@ This repository is a multi-project workspace. Important areas:
   - Includes admin-user functionality.
 - `auth-backend/`: authentication app/service (login, logout, sign-up, password recovery, password change).
 - `ethicapp-student/`: new student-focused application under active development (Vite + React 19 (JS) + Express).
-- `admin-panel/`: React 18 admin tooling application, primarily for user administration; currently not integrated/in active use.
+- `management-console/`: super-admin management application for single-tenant operations (React + Vite + Bootstrap 5 frontend, Express backend, PostgreSQL access, and i18n aligned with `auth-backend`).
+  - Base path is `/mng` (by design, avoid predictable `/admin` paths).
+  - Uses auth proxy headers (`X-User-Id`, `X-User-Role`) and requires role `S`.
+  - Includes user administration workflows (list/filter/pagination, account detail/edit, password reset trigger, and professor impersonation trigger).
 - `nginx/`: NGINX configuration for development and production environments.
 - `database/`: EthicApp database DDL and related SQL assets shared by all applications.
 - `devops/`: deployment and environment automation scripts. Many are exposed from root `package.json` scripts.
@@ -123,7 +126,7 @@ When adding teacher-facing features in legacy EthicApp:
 6. For role-based authorization in legacy backend endpoints, prefer `requireRole` from `ethicapp/backend/helpers/auth-helper.js`; it accepts either a single role (`"P"`) or an array (for example `["P", "A"]`) for professor/student shared access.
 7. For teacher view actions, prefer Bootstrap 3 small default buttons (`btn btn-default btn-sm`) unless the action semantics require another contextual style.
 
-## 8) Translation and i18n policy (auth-backend + ethicapp)
+## 8) Translation and i18n policy (auth-backend + management-console + ethicapp)
 
 Use this policy for all new i18n-related changes in this repository.
 
@@ -153,6 +156,17 @@ Use this policy for all new i18n-related changes in this repository.
 - Email templates:
   - Keep locale-specific templates under `auth-backend/views/emails/` (for example `*.es_CL.ejs`, `*.en_US.ejs`).
   - `auth-backend/services/mail.service.js` is responsible for locale resolution and selecting subject/template by locale.
+
+### `management-console` i18n implementation
+
+- Frontend (`management-console/frontend/`):
+  - Uses a lightweight i18n provider pattern compatible with `auth-backend`.
+  - Locale detection/normalization follows canonical rule (`es_*` => `es_CL`, else `en_US`).
+  - Translation catalogs live under `src/i18n/locales/`.
+  - New UI text must use translation keys (no hardcoded strings in components/pages).
+- Backend (`management-console/backend/`):
+  - Error and response messages exposed to users should be localizable as the project evolves.
+  - Security-sensitive workflows (for example admin confirmation and impersonation flows) must keep user-facing messages consistent with selected locale.
 
 ### `ethicapp` i18n implementation
 

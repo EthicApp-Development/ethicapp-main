@@ -373,5 +373,7 @@
 	"change_password": "Change password",
 	"password_reset_notice": "If you change your password, a recovery email will be sent to",
 	"password_reset_modal_message": "Do you confirm sending the password reset email to",
-	"accept": "Accept"
+	"accept": "Accept",
+	"admin_inspection_mode": "Administrator inspection",
+	"back_to_management_console": "Back to management console"
 }
