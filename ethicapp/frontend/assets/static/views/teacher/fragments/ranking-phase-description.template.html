@@ -20,7 +20,11 @@
             {{ ctrl.phaseDetails.prevPhasesResponse.join(', ') }}
         </p>
     </div>
-    <hr>    
+    <div ng-if="ctrl.phaseDetails.instructions && ctrl.phaseDetails.instructions.trim().length > 0">
+        <h4>{{ 'phase_instructions_title' | translate }}</h4>
+        <p style="white-space: pre-line;">{{ ctrl.phaseDetails.instructions }}</p>
+    </div>
+    <hr>
     <h4>{{ 'actors_label' | translate }}</h4>
     <table class="table table-striped">
         <thead>

@@ -8,6 +8,10 @@
         <li ng-if="ctrl.phaseMode === 'team'"><strong>{{ 'group_size_label' | translate }}:</strong> {{ ctrl.phaseDetails.stdntAmount }}</li>
         <li ng-if="$ctrl.phaseDetails.prevPhasesResponse.length > 0"><strong>{{ 'previous_phases_label' | translate }}:</strong> {{ ctrl.phaseDetails.prevPhasesResponse.join(', ') }}</li>
     </ul>
+    <div ng-if="ctrl.phaseDetails.instructions && ctrl.phaseDetails.instructions.trim().length > 0">
+        <h4>{{ 'phase_instructions_title' | translate }}</h4>
+        <p style="white-space: pre-line;">{{ ctrl.phaseDetails.instructions }}</p>
+    </div>
     <hr>
     <h4>{{ 'questions_title_text' | translate }}</h4>
     <table class="table table-striped">
