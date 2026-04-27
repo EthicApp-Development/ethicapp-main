@@ -4,7 +4,8 @@ export default {
     subtitle: 'Single-tenant user operations'
   },
   nav: {
-    users: 'Users'
+    users: 'Users',
+    logout: 'Log out'
   },
   filters: {
     keywords: 'Search by first name, last name, email, or identifier',
