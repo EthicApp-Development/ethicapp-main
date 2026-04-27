@@ -1,19 +1,25 @@
 import { Router } from 'express';
 import { query } from '../config/database.js';
+import studentMessages from '../i18n/messages/student-messages.js';
+import { translateMessage } from '../i18n/locale.js';
 
 const router = Router();
+
+function t(req, key) {
+  return translateMessage(req, key, studentMessages);
+}
 
 function ensureStudentSession(req, res) {
   const uid = Number(req.session?.uid);
   const role = req.session?.role;
 
   if (!Number.isInteger(uid) || uid <= 0) {
-    res.status(401).json({ error: 'Usuario no autenticado' });
+    res.status(401).json({ error: t(req, 'unauthenticated') });
     return null;
   }
 
   if (role !== 'A') {
-    res.status(403).json({ error: 'Usuario sin permisos de estudiante' });
+    res.status(403).json({ error: t(req, 'unauthorizedStudent') });
     return null;
   }
 
@@ -93,14 +99,14 @@ router.post('/sessions/join', async (req, res, next) => {
   const { device } = req.body;
 
   if (!code) {
-    return res.status(400).json({ error: 'Código de sesión requerido' });
+    return res.status(400).json({ error: t(req, 'sessionCodeRequired') });
   }
 
   console.log('[join] payload', {
     uid,
     code,
     device: device ?? null
-    });
+  });
 
   try {
     const existingMembership = await query(
@@ -155,7 +161,7 @@ router.post('/sessions/join', async (req, res, next) => {
     if (result.rowCount === 0) {
       console.log('[join] no row inserted', { uid, code, device: device ?? null });
       return res.status(404).json({
-        error: 'No fue posible unirse a la sesión con el código entregado'
+        error: t(req, 'joinSessionUnavailable')
       });
     }
 
