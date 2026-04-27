@@ -147,8 +147,12 @@ function UserShowPage() {
     <Card>
       <Card.Body>
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <Card.Title>{t('pages.userShow.heading')}</Card.Title>
+          <Card.Title className="d-flex align-items-center gap-2 mb-0">
+            <i className="fa-solid fa-id-card text-primary" aria-hidden="true" />
+            <span>{t('pages.userShow.heading')}</span>
+          </Card.Title>
           <Button variant="outline-secondary" as={Link} to="/users">
+            <i className="fa-solid fa-arrow-left me-2" aria-hidden="true" />
             {t('pages.userShow.back')}
           </Button>
         </div>
@@ -236,15 +240,21 @@ function UserShowPage() {
           </Row>
 
           <div className="d-flex gap-2 mt-4">
-            <Button type="submit">{t('pages.userShow.actions.save')}</Button>
+            <Button type="submit">
+              <i className="fa-solid fa-floppy-disk me-2" aria-hidden="true" />
+              {t('pages.userShow.actions.save')}
+            </Button>
             <Button type="button" variant="outline-primary" onClick={() => navigate('/users')}>
+              <i className="fa-solid fa-xmark me-2" aria-hidden="true" />
               {t('pages.userShow.actions.cancel')}
             </Button>
             <Button type="button" variant="warning" onClick={onTriggerPasswordReset}>
+              <i className="fa-solid fa-key me-2" aria-hidden="true" />
               {t('pages.userShow.actions.triggerPasswordReset')}
             </Button>
             {form.role === 'P' ? (
               <Button type="button" variant="dark" onClick={onImpersonateProfessor}>
+                <i className="fa-solid fa-user-secret me-2" aria-hidden="true" />
                 {t('pages.userShow.actions.impersonateProfessor')}
               </Button>
             ) : null}

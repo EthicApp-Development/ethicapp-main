@@ -104,7 +104,10 @@ function UsersPage() {
   return (
     <Card>
       <Card.Body>
-        <Card.Title>{t('pages.users.heading')}</Card.Title>
+        <Card.Title className="d-flex align-items-center gap-2">
+          <i className="fa-solid fa-user-gear text-primary" aria-hidden="true" />
+          <span>{t('pages.users.heading')}</span>
+        </Card.Title>
         <Card.Text>{t('pages.users.description')}</Card.Text>
 
         <Form onSubmit={handleSubmit} className="mb-3">
@@ -137,7 +140,8 @@ function UsersPage() {
             </Col>
 
             <Col md={2}>
-              <Button type="submit" className="w-100">
+              <Button type="submit" className="w-100 d-inline-flex align-items-center justify-content-center">
+                <i className="fa-solid fa-magnifying-glass me-2" aria-hidden="true" />
                 {t('filters.search')}
               </Button>
             </Col>
@@ -179,6 +183,7 @@ function UsersPage() {
                       <td>{roleLabel(user.role)}</td>
                       <td>
                         <Button as={Link} to={`/users/${user.id}`} size="sm" variant="outline-secondary">
+                          <i className="fa-solid fa-eye me-2" aria-hidden="true" />
                           {t('pages.users.actions.view')}
                         </Button>
                       </td>

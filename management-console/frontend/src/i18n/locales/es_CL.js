@@ -4,7 +4,8 @@ export default {
     subtitle: 'Operaciones de usuarios para entorno single-tenant'
   },
   nav: {
-    users: 'Usuarios'
+    users: 'Usuarios',
+    logout: 'Cerrar sesión'
   },
   filters: {
     keywords: 'Buscar por nombre, apellido, email o identificador',
