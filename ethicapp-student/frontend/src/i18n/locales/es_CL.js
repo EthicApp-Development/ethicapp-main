@@ -66,10 +66,18 @@ const esCL = {
     activePhaseId: 'Fase activa ID',
     unavailable: 'No disponible',
     noType: 'Sin tipo',
+    loadingDescriptor: 'Cargando descriptor de actividad...',
+    descriptorLoadErrorFallback: 'No se pudo cargar el descriptor de la actividad',
+    waitingTitle: 'Por favor espera mientras la actividad se inicia',
+    waitingDescription: 'Mantente atento a las indicaciones del profesor',
     loadingActivityState: 'Cargando estado completo de la actividad...',
+    loadingCaseDocument: 'Cargando documento del caso...',
+    caseLoadErrorFallback: 'No se pudo cargar el documento del caso',
     activityPhasesLabel: 'Fases de la actividad',
     phasesTitle: 'Fases',
+    caseTab: 'Caso',
     phaseN: 'Fase',
+    phaseTabPlaceholder: 'Contenido de la fase en implementación.',
     notFoundInAvailable: 'No encontramos la sesión solicitada dentro de tus sesiones disponibles.'
   },
   notFound: {

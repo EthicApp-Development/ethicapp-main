@@ -1,53 +1,55 @@
 import axios from 'axios';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useReducer } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
-import { studentApi } from '../api/studentApi.js';
+import { studentApi, legacyUserApi } from '../api/studentApi.js';
 import { useI18n } from '../app/providers.jsx';
+import ActivityTabsPanel from '../components/session-detail/ActivityTabsPanel.jsx';
+import SessionMetadata from '../components/session-detail/SessionMetadata.jsx';
+import WaitingStatePanel from '../components/session-detail/WaitingStatePanel.jsx';
 import { useStudentActivityState } from '../context/StudentActivityStateContext.jsx';
-import { getStudentSocket } from '../services/studentSocket.js';
-import { formatSessionDate, sessionStatusLabel } from '../utils/sessionFormat.js';
+import {
+  initialSessionDetailState,
+  normalizeStatusCode,
+  SESSION_STATUS,
+  sessionDetailReducer
+} from './session-detail/sessionDetailState.js';
 
 export default function SessionDetailPage() {
   const { locale, t } = useI18n();
   const { session, sessionRefreshKey } = useOutletContext();
   const { sessionId } = useParams();
-  const [joinedSessions, setJoinedSessions] = useState([]);
-  const [loadingSessions, setLoadingSessions] = useState(true);
-  const [sessionsError, setSessionsError] = useState('');
+  const [localState, dispatch] = useReducer(sessionDetailReducer, initialSessionDetailState);
   const { stateBySession, loadingBySession, errorBySession, loadFullState } = useStudentActivityState();
 
   useEffect(() => {
     if (!session.isAuthenticated) {
-      setJoinedSessions([]);
-      setLoadingSessions(false);
-      setSessionsError('');
+      dispatch({ type: 'SESSIONS_CLEAR' });
       return;
     }
 
-    setLoadingSessions(true);
-    setSessionsError('');
+    dispatch({ type: 'SESSIONS_LOAD_START' });
 
     studentApi
       .get('sessions')
       .then(({ data }) => {
-        setJoinedSessions(Array.isArray(data) ? data : []);
-        setLoadingSessions(false);
+        dispatch({
+          type: 'SESSIONS_LOAD_SUCCESS',
+          payload: Array.isArray(data) ? data : []
+        });
       })
       .catch((error) => {
         const message = axios.isAxiosError(error)
           ? (error.response?.data?.error ?? t('sessionDetail.loadErrorFallback'))
           : t('sessionDetail.loadErrorFallback');
 
-        setSessionsError(message);
-        setJoinedSessions([]);
-        setLoadingSessions(false);
+        dispatch({ type: 'SESSIONS_LOAD_ERROR', payload: message });
       });
   }, [session.isAuthenticated, sessionRefreshKey, t]);
 
   const selectedSession = useMemo(() => {
     const parsedSessionId = Number(sessionId);
-    return joinedSessions.find((joinedSession) => joinedSession.id === parsedSessionId) ?? null;
-  }, [joinedSessions, sessionId]);
+    return localState.joinedSessions.find((joinedSession) => joinedSession.id === parsedSessionId) ?? null;
+  }, [localState.joinedSessions, sessionId]);
 
   const selectedSessionId = Number(sessionId);
   const activityState = stateBySession[selectedSessionId] ?? null;
@@ -55,7 +57,50 @@ export default function SessionDetailPage() {
   const activityStateError = errorBySession[selectedSessionId] ?? '';
 
   useEffect(() => {
-    if (!session.isAuthenticated || !selectedSession || !session.uid) {
+    if (!session.isAuthenticated || !selectedSession) {
+      dispatch({ type: 'DESCRIPTOR_CLEAR' });
+      return;
+    }
+
+    let isUnmounted = false;
+
+    dispatch({ type: 'DESCRIPTOR_LOAD_START' });
+
+    legacyUserApi
+      .get(`/activities/${selectedSession.id}/descriptor`)
+      .then(({ data }) => {
+        if (isUnmounted) {
+          return;
+        }
+
+        dispatch({ type: 'DESCRIPTOR_LOAD_SUCCESS', payload: data?.descriptor ?? null });
+      })
+      .catch((error) => {
+        if (isUnmounted) {
+          return;
+        }
+
+        const message = axios.isAxiosError(error)
+          ? (error.response?.data?.error ?? t('sessionDetail.descriptorLoadErrorFallback'))
+          : t('sessionDetail.descriptorLoadErrorFallback');
+
+        dispatch({ type: 'DESCRIPTOR_LOAD_ERROR', payload: message });
+      });
+
+    return () => {
+      isUnmounted = true;
+    };
+  }, [selectedSession, session.isAuthenticated, t]);
+
+  const activityStatusCode = useMemo(() => {
+    return normalizeStatusCode(localState.activityDescriptor?.status);
+  }, [localState.activityDescriptor]);
+
+  const shouldShowWaitingScreen = activityStatusCode === SESSION_STATUS.initiated;
+  const shouldLoadActivityData = activityStatusCode >= SESSION_STATUS.inProgress;
+
+  useEffect(() => {
+    if (!session.isAuthenticated || !selectedSession || !session.uid || !shouldLoadActivityData) {
       return;
     }
 
@@ -65,7 +110,63 @@ export default function SessionDetailPage() {
     }).catch(() => {
       // The error is already reflected in the context state.
     });
-  }, [loadFullState, selectedSession, session.isAuthenticated, session.uid]);
+  }, [loadFullState, selectedSession, session.isAuthenticated, session.uid, shouldLoadActivityData]);
+
+  useEffect(() => {
+    if (!session.isAuthenticated || !selectedSession || !shouldLoadActivityData) {
+      dispatch({ type: 'CASE_CLEAR' });
+      return;
+    }
+
+    const designId = Number(localState.activityDescriptor?.designId ?? activityState?.descriptor?.design?.id);
+
+    if (!Number.isInteger(designId) || designId <= 0) {
+      dispatch({ type: 'CASE_CLEAR' });
+      return;
+    }
+
+    let isUnmounted = false;
+
+    dispatch({ type: 'CASE_LOAD_START' });
+
+    legacyUserApi
+      .get(`/designs/${designId}/case`)
+      .then(({ data }) => {
+        const caseId = Number(data?.result?.id);
+
+        if (!Number.isInteger(caseId) || caseId <= 0) {
+          return { data: { result: null } };
+        }
+
+        return legacyUserApi.get(`/cases/${caseId}/download-link`);
+      })
+      .then(({ data }) => {
+        if (isUnmounted) {
+          return;
+        }
+
+        const url = data?.result?.downloadUrl;
+        dispatch({
+          type: 'CASE_LOAD_SUCCESS',
+          payload: typeof url === 'string' ? url : ''
+        });
+      })
+      .catch((error) => {
+        if (isUnmounted) {
+          return;
+        }
+
+        const message = axios.isAxiosError(error)
+          ? (error.response?.data?.message ?? t('sessionDetail.caseLoadErrorFallback'))
+          : t('sessionDetail.caseLoadErrorFallback');
+
+        dispatch({ type: 'CASE_LOAD_ERROR', payload: message });
+      });
+
+    return () => {
+      isUnmounted = true;
+    };
+  }, [activityState, localState.activityDescriptor?.designId, selectedSession, session.isAuthenticated, shouldLoadActivityData, t]);
 
   useEffect(() => {
     if (!session.isAuthenticated || !selectedSession) {
@@ -81,6 +182,8 @@ export default function SessionDetailPage() {
         sessionId: activeSessionId,
         payload
       });
+
+      dispatch({ type: 'ACTIVITY_FORCE_IN_PROGRESS' });
     };
 
     const handleShareResponse = (payload) => {
@@ -145,6 +248,39 @@ export default function SessionDetailPage() {
 
   const currentPhaseNumber = activityState?.descriptor?.currentPhaseNumber ?? null;
   const currentPhaseId = activityState?.descriptor?.currentPhaseId ?? null;
+  const hasCaseTab = localState.caseDocumentUrl.trim().length > 0;
+
+  const tabEntries = useMemo(() => {
+    const entries = [];
+
+    if (hasCaseTab) {
+      entries.push({ id: 'case', label: t('sessionDetail.caseTab') });
+    }
+
+    phaseTabs.forEach((phase) => {
+      entries.push({
+        id: `phase-${phase.id ?? phase.number}`,
+        label: `${t('sessionDetail.phaseN')} ${phase.number}`
+      });
+    });
+
+    return entries;
+  }, [hasCaseTab, phaseTabs, t]);
+
+  useEffect(() => {
+    if (tabEntries.length === 0) {
+      dispatch({ type: 'ACTIVE_TAB_SET', payload: '' });
+      return;
+    }
+
+    const activeTabExists = tabEntries.some((tabEntry) => tabEntry.id === localState.activeTab);
+    if (activeTabExists) {
+      return;
+    }
+
+    const nextDefaultTab = hasCaseTab ? 'case' : tabEntries[0].id;
+    dispatch({ type: 'ACTIVE_TAB_SET', payload: nextDefaultTab });
+  }, [hasCaseTab, localState.activeTab, tabEntries]);
 
   return (
     <section className="mx-auto" style={{ maxWidth: '860px' }}>
@@ -159,41 +295,35 @@ export default function SessionDetailPage() {
       </div>
 
       {!session.isAuthenticated ? <p className="text-muted">{t('sessionDetail.loginToView')}</p> : null}
+      {localState.loadingSessions ? <p className="text-muted">{t('sessionDetail.loadingDetail')}</p> : null}
 
-      {loadingSessions ? <p className="text-muted">{t('sessionDetail.loadingDetail')}</p> : null}
-
-      {sessionsError ? (
+      {localState.sessionsError ? (
         <div className="alert alert-danger" role="alert">
-          {sessionsError}
+          {localState.sessionsError}
         </div>
       ) : null}
 
-      {!loadingSessions && !sessionsError && session.isAuthenticated ? (
+      {!localState.loadingSessions && !localState.sessionsError && session.isAuthenticated ? (
         selectedSession ? (
           <article className="card shadow-sm">
             <div className="card-body">
-              <h2 className="h5 mb-2">{selectedSession.name ?? `${t('sessions.sessionFallbackName')} #${selectedSession.id}`}</h2>
-              <p className="text-secondary mb-3">{selectedSession.descr || t('sessionDetail.noDescription')}</p>
+              <SessionMetadata
+                selectedSession={selectedSession}
+                locale={locale}
+                t={t}
+                currentPhaseNumber={currentPhaseNumber}
+                currentPhaseId={currentPhaseId}
+              />
 
-              <dl className="row mb-0">
-                <dt className="col-sm-3">{t('sessionDetail.status')}</dt>
-                <dd className="col-sm-9">{sessionStatusLabel(selectedSession.status, t)}</dd>
+              {localState.loadingDescriptor ? <p className="text-muted mt-3 mb-0">{t('sessionDetail.loadingDescriptor')}</p> : null}
 
-                <dt className="col-sm-3">{t('sessionDetail.date')}</dt>
-                <dd className="col-sm-9">{formatSessionDate(selectedSession.time, locale, t)}</dd>
+              {localState.descriptorError ? (
+                <div className="alert alert-warning mt-3 mb-0" role="alert">
+                  {localState.descriptorError}
+                </div>
+              ) : null}
 
-                <dt className="col-sm-3">{t('sessionDetail.code')}</dt>
-                <dd className="col-sm-9">{selectedSession.code ?? t('sessionDetail.unavailable')}</dd>
-
-                <dt className="col-sm-3">{t('sessionDetail.type')}</dt>
-                <dd className="col-sm-9">{selectedSession.type ?? t('sessionDetail.noType')}</dd>
-
-                <dt className="col-sm-3">{t('sessionDetail.activePhaseNumber')}</dt>
-                <dd className="col-sm-9">{currentPhaseNumber ?? t('sessionDetail.unavailable')}</dd>
-
-                <dt className="col-sm-3">{t('sessionDetail.activePhaseId')}</dt>
-                <dd className="col-sm-9">{currentPhaseId ?? t('sessionDetail.unavailable')}</dd>
-              </dl>
+              {shouldShowWaitingScreen ? <WaitingStatePanel t={t} /> : null}
 
               {loadingActivityState ? <p className="text-muted mt-3 mb-0">{t('sessionDetail.loadingActivityState')}</p> : null}
 
@@ -203,23 +333,23 @@ export default function SessionDetailPage() {
                 </div>
               ) : null}
 
-              {!loadingActivityState && !activityStateError && phaseTabs.length > 0 ? (
-                <section className="mt-4" aria-label={t('sessionDetail.activityPhasesLabel')}>
-                  <h3 className="h6 mb-2">{t('sessionDetail.phasesTitle')}</h3>
-                  <div className="d-flex gap-2 flex-wrap">
-                    {phaseTabs.map((phase) => {
-                      const isCurrent = Number(phase.number) === Number(currentPhaseNumber);
-                      return (
-                        <span
-                          key={phase.id ?? phase.number}
-                          className={`phase-pill ${isCurrent ? 'phase-pill--current' : 'phase-pill--inactive'}`}
-                        >
-                          {t('sessionDetail.phaseN')} {phase.number}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </section>
+              {localState.loadingCaseDocument ? <p className="text-muted mt-3 mb-0">{t('sessionDetail.loadingCaseDocument')}</p> : null}
+
+              {localState.caseDocumentError ? (
+                <div className="alert alert-warning mt-3 mb-0" role="alert">
+                  {localState.caseDocumentError}
+                </div>
+              ) : null}
+
+              {!shouldShowWaitingScreen && !loadingActivityState && !activityStateError && tabEntries.length > 0 ? (
+                <ActivityTabsPanel
+                  tabEntries={tabEntries}
+                  activeTab={localState.activeTab}
+                  setActiveTab={(nextTab) => dispatch({ type: 'ACTIVE_TAB_SET', payload: nextTab })}
+                  hasCaseTab={hasCaseTab}
+                  caseDocumentUrl={localState.caseDocumentUrl}
+                  t={t}
+                />
               ) : null}
             </div>
           </article>
