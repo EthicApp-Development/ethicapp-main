@@ -49,6 +49,32 @@ services:
       - "8503"
       - "5174"
 
+  management-console:
+    env_file:
+      - ./.env.shared
+      - ./management-console/.env
+    environment:
+      - NODE_ENV=development
+      - MNG_PORT=8504
+    volumes:
+      - ./management-console:/app
+      - management_console_backend_node_modules:/app/backend/node_modules
+      - management_console_frontend_node_modules:/app/frontend/node_modules
+    command: >
+      sh -lc '
+        cd /app/backend &&
+        npm install --include=dev &&
+        (
+          npm run dev
+        ) &
+        cd /app/frontend &&
+        npm install --include=dev &&
+        exec npm run dev
+      '
+    expose:
+      - "8504"
+      - "5175"
+
   nginx:
     volumes:
       - ./nginx/conf.d/dev.conf:/etc/nginx/nginx.conf:ro
@@ -58,3 +84,5 @@ volumes:
   auth_frontend_node_modules:
   ethicapp_student_backend_node_modules:
   ethicapp_student_frontend_node_modules:
+  management_console_backend_node_modules:
+  management_console_frontend_node_modules:
