@@ -20,14 +20,22 @@ export default function JoinSessionCard({ disabled, onJoined }) {
     setJoinFeedback(null);
 
     try {
-      await studentApi.post('sessions/join', {
+      const { data } = await studentApi.post('sessions/join', {
         code: normalizedCode,
         device: 'web'
       });
 
-      setJoinFeedback({ type: 'success', message: 'Te uniste a la sesión correctamente.' });
+      const alreadyJoined = Boolean(data?.alreadyJoined);
+      const sessionId = Number(data?.sesid);
+
+      setJoinFeedback({
+        type: 'success',
+        message: alreadyJoined
+          ? 'Ya habías ingresado a esta sesión. Redirigiendo...'
+          : 'Te uniste a la sesión correctamente. Redirigiendo...'
+      });
       setJoinCode('');
-      onJoined();
+      onJoined(sessionId, { alreadyJoined });
     } catch (error) {
       const message = axios.isAxiosError(error)
         ? (error.response?.data?.error ?? 'No fue posible unirse a la sesión')

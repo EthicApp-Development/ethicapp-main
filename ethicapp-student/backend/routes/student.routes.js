@@ -103,6 +103,26 @@ router.post('/sessions/join', async (req, res, next) => {
     });
 
   try {
+    const existingMembership = await query(
+      `
+        SELECT s.id AS sesid
+        FROM sesusers AS su
+        JOIN sessions AS s
+          ON s.id = su.sesid
+        WHERE su.uid = $1
+          AND s.code = $2
+        LIMIT 1
+      `,
+      [uid, code]
+    );
+
+    if (existingMembership.rowCount > 0) {
+      return res.status(200).json({
+        sesid: existingMembership.rows[0].sesid,
+        alreadyJoined: true
+      });
+    }
+
     const result = await query(
       `
         INSERT INTO sesusers(uid, sesid, device)
@@ -140,7 +160,8 @@ router.post('/sessions/join', async (req, res, next) => {
     }
 
     return res.status(201).json({
-      sesid: result.rows[0].sesid
+      sesid: result.rows[0].sesid,
+      alreadyJoined: false
     });
   } catch (error) {
     return next(error);

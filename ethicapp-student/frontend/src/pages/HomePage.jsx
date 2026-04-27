@@ -17,6 +17,14 @@ export default function HomePage() {
     navigate(`/sessions/${sessionId}`);
   };
 
+  const handleSessionJoined = (sessionId) => {
+    onSessionJoined();
+
+    if (Number.isInteger(sessionId) && sessionId > 0) {
+      navigate(`/sessions/${sessionId}`);
+    }
+  };
+
   return (
     <div className="d-flex flex-column gap-4">
       <nav>
@@ -51,7 +59,7 @@ export default function HomePage() {
       {activeTab === TABS.JOIN ? (
         <div className="row g-4">
           <section className="col-12">
-            <JoinSessionCard disabled={loadingSession} onJoined={onSessionJoined} />
+            <JoinSessionCard disabled={loadingSession} onJoined={handleSessionJoined} />
           </section>
 
           <section className="col-12">
