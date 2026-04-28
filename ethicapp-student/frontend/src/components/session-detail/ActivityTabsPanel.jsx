@@ -86,7 +86,12 @@ export default function ActivityTabsPanel({
               aria-selected={activeTab === tabEntry.id}
               onClick={() => setActiveTab(tabEntry.id)}
             >
-              {tabEntry.label}
+              <span className="d-inline-flex align-items-center gap-2">
+                {typeof tabEntry.iconClass === 'string' && tabEntry.iconClass.length > 0 ? (
+                  <i className={`fa-solid ${tabEntry.iconClass}`} aria-hidden="true" />
+                ) : null}
+                <span>{tabEntry.label}</span>
+              </span>
             </button>
           </li>
         ))}
