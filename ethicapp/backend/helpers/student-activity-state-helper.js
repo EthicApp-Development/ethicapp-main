@@ -188,6 +188,22 @@ export async function getStudentActivityPhases(sessionId) {
     }
 
     try {
+        const designQuery = `
+            SELECT d.design
+            FROM activity a
+            INNER JOIN designs d ON d.id = a.design
+            WHERE a.session = $1
+            LIMIT 1;
+        `;
+
+        const designResult = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: designQuery,
+            sqlParams: [rpg2.param('plain', Number(sessionId))],
+        });
+
+        const designPhases = Array.isArray(designResult?.design?.phases) ? designResult.design.phases : [];
+
         // Query to get the phases
         const phasesQuery = `
             SELECT
@@ -213,7 +229,9 @@ export async function getStudentActivityPhases(sessionId) {
         const phases = phasesResult.map(phase => ({
             id: phase.id,
             number: phase.number,
-            instructions: typeof phase.instructions === "string" ? phase.instructions : "",
+            instructions: typeof (designPhases[Number(phase.number) - 1]?.instructions) === "string"
+                ? designPhases[Number(phase.number) - 1].instructions
+                : (typeof phase.instructions === "string" ? phase.instructions : ""),
             features: {
                 mode: phase.mode,
                 chat: phase.chat,
