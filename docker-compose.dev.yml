@@ -26,6 +26,7 @@ services:
   ethicapp-student:
     env_file:
       - ./.env.shared
+      - ./ethicapp-student/.env
       - ./ethicapp-student/backend/.env
     environment:
       - NODE_ENV=development

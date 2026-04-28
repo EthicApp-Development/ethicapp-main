@@ -37,10 +37,11 @@ export default function SemanticDifferentialTaskView({
     const isMinimumRequired = minimumRequiredCandidates.some((value) => value === true);
 
     const minimumWordCandidates = [
+      currentTask?.min_just_length,
+      currentTask?.minWordCount,
       currentTask?.minJustificationWords,
       currentTask?.minimumJustificationWords,
       currentTask?.minJustLength,
-      currentTask?.min_just_length,
       currentTask?.answerFormat?.minJustLength,
       currentTask?.answerFormat?.min_just_length,
       currentTask?.ansFormat?.minJustLength,

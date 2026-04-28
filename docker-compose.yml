@@ -43,7 +43,7 @@ services:
       - ./.env.shared
       - ./ethicapp-student/.env
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
     expose:
       - "8503"
     depends_on:
