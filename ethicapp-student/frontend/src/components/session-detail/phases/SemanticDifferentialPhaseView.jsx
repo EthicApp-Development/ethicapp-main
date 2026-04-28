@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import SemanticDifferentialTaskView from './SemanticDifferentialTaskView.jsx';
 
 function mapResponsesByTaskId(phase) {
   const responseList = Array.isArray(phase?.responses) ? phase.responses : [];
@@ -146,88 +147,25 @@ export default function SemanticDifferentialPhaseView({
 
       {tasks.map((task) => {
         const taskId = Number(task?.id);
-        const numValues = Number(task?.numValues);
         const disabled = isReadOnly || !isActivePhase;
         const selectedValue = getTaskValue(taskId);
         const justification = getTaskJustification(taskId);
         const taskFeedback = feedbackByTaskId[taskId] ?? null;
 
         return (
-          <article key={taskId}>
-            <p className="fw-semibold mb-2">{task.title}</p>
-            <div className="row align-items-center g-2 mb-3">
-              <div className="col-3 text-start">
-                <small className="text-muted">{task.leftPole}</small>
-              </div>
-              <div className="col-6 d-flex justify-content-center flex-nowrap gap-2">
-                {Array.from({ length: numValues }, (_, idx) => idx + 1).map((scaleValue) => {
-                  const radioId = `task-${taskId}-value-${scaleValue}`;
-
-                  return (
-                    <div key={radioId} className="form-check form-check-inline m-0 d-inline-flex align-items-center">
-                      <input
-                        id={radioId}
-                        type="radio"
-                        name={`task-${taskId}-scale`}
-                        className="form-check-input"
-                        checked={selectedValue === scaleValue}
-                        disabled={disabled}
-                        onChange={() => setTaskDraft(taskId, { value: scaleValue })}
-                      />
-                      <label htmlFor={radioId} className="form-check-label ms-1">
-                        {scaleValue}
-                      </label>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="col-3 text-end">
-                <small className="text-muted">{task.rightPole}</small>
-              </div>
-            </div>
-
-            {task.requiresJustification ? (
-              <div className="mb-3">
-                <label htmlFor={`task-${taskId}-justification`} className="form-label small text-muted mb-1">
-                  {t('sessionDetail.justificationLabel')}
-                </label>
-                <textarea
-                  id={`task-${taskId}-justification`}
-                  className="form-control"
-                  rows={3}
-                  value={justification}
-                  readOnly={disabled}
-                  onChange={(event) => setTaskDraft(taskId, { justification: event.target.value })}
-                  placeholder={t('sessionDetail.justificationPlaceholder')}
-                />
-              </div>
-            ) : null}
-
-            <div className="d-flex justify-content-end align-items-center gap-2">
-              {taskFeedback ? (
-                <div
-                  className={`alert alert-${taskFeedback.type} py-1 px-2 mb-0`}
-                  role="status"
-                  aria-live="polite"
-                >
-                  {taskFeedback.message}
-                </div>
-              ) : null}
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                disabled={disabled || submittingTaskId === taskId}
-                onClick={() => submitTask(task)}
-              >
-                <span className="d-inline-flex align-items-center gap-2">
-                  <i className="fa-solid fa-paper-plane" aria-hidden="true" />
-                  <span>{submittingTaskId === taskId ? t('sessionDetail.submittingResponse') : t('sessionDetail.submitResponse')}</span>
-                </span>
-              </button>
-            </div>
-
-            <hr className="my-3" />
-          </article>
+          <SemanticDifferentialTaskView
+            key={taskId}
+            task={task}
+            disabled={disabled}
+            selectedValue={selectedValue}
+            justification={justification}
+            taskFeedback={taskFeedback}
+            submitting={submittingTaskId === taskId}
+            onTaskValueChange={(value) => setTaskDraft(taskId, { value })}
+            onTaskJustificationChange={(nextJustification) => setTaskDraft(taskId, { justification: nextJustification })}
+            onTaskSubmit={() => submitTask(task)}
+            t={t}
+          />
         );
       })}
     </div>
