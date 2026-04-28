@@ -133,6 +133,14 @@ export function sessionDetailReducer(state, action) {
         }
       };
     }
+    case 'ACTIVITY_FORCE_FINISHED':
+      return {
+        ...state,
+        activityDescriptor: {
+          ...(state.activityDescriptor ?? {}),
+          status: SESSION_STATUS.finished
+        }
+      };
     case 'ACTIVE_TAB_SET':
       return {
         ...state,

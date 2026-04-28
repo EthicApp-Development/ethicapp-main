@@ -21,7 +21,7 @@ function buildCaseViewerUrl(caseDocumentUrl) {
   return normalizedCaseDocumentUrl.includes('#') ? normalizedCaseDocumentUrl : `${normalizedCaseDocumentUrl}${hash}`;
 }
 
-export default function ActivityTabsPanel({ tabEntries, activeTab, setActiveTab, hasCaseTab, caseDocumentUrl, t }) {
+export default function ActivityTabsPanel({ tabEntries, activeTab, setActiveTab, hasCaseTab, caseDocumentUrl, readOnly = false, t }) {
   const caseViewerUrl = buildCaseViewerUrl(caseDocumentUrl);
 
   return (
@@ -35,6 +35,7 @@ export default function ActivityTabsPanel({ tabEntries, activeTab, setActiveTab,
               role="tab"
               aria-selected={activeTab === tabEntry.id}
               onClick={() => setActiveTab(tabEntry.id)}
+              disabled={readOnly}
             >
               {tabEntry.label}
             </button>
@@ -42,7 +43,11 @@ export default function ActivityTabsPanel({ tabEntries, activeTab, setActiveTab,
         ))}
       </ul>
 
-      <div className="border border-top-0 rounded-bottom p-3">
+      <div
+        className={`border border-top-0 rounded-bottom p-3 ${readOnly ? 'opacity-75' : ''}`}
+        style={readOnly ? { pointerEvents: 'none' } : undefined}
+        aria-disabled={readOnly}
+      >
         {activeTab === 'case' && hasCaseTab ? (
           <div className="d-flex flex-column gap-2">
             <iframe
