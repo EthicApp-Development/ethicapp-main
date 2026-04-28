@@ -7,7 +7,17 @@ let ActivityStateService = function($http, TeacherSocketService) {
         listeners: {}, // Subscribed listeners
         rankingResponseMerger: async function(sessionId, response, responses) {
             const phases = await service.getInstancedPhases(sessionId, false);
-            const phaseNumber = phases.find((phase) => phase.id === Number(response.phaseId))?.number;
+            const phaseNumber = phases.find((phase) =>
+                Number(phase.id) === Number(response.phaseId)
+            )?.number;
+
+            if (phaseNumber === undefined || phaseNumber === null) {
+                console.warn(`[ActivityStateService] Could not resolve phaseNumber for ranking response in session ${sessionId}.`, {
+                    phaseId: response.phaseId,
+                    phases,
+                });
+                return;
+            }
 
             let phaseResponses = responses.find(
                 (prs) => Number(prs.phase_number) === Number(phaseNumber)
@@ -43,7 +53,17 @@ let ActivityStateService = function($http, TeacherSocketService) {
         },
         semanticDifferentialResponseMerger: async function(sessionId, response, responses) {
             const phases = await service.getInstancedPhases(sessionId, false);
-            const phaseNumber = phases.find((phase) => phase.id === Number(response.phaseId))?.number;
+            const phaseNumber = phases.find((phase) =>
+                Number(phase.id) === Number(response.phaseId)
+            )?.number;
+
+            if (phaseNumber === undefined || phaseNumber === null) {
+                console.warn(`[ActivityStateService] Could not resolve phaseNumber for semantic_differential response in session ${sessionId}.`, {
+                    phaseId: response.phaseId,
+                    phases,
+                });
+                return;
+            }
 
             const phaseResponses = responses.find(
                 (prs) => Number(prs.phase_number) === Number(phaseNumber)
