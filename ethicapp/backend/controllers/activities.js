@@ -168,7 +168,7 @@ router.post("/activities", async (req, res) => {
  * @returns {Object} - A JSON object with the design ID, activity status, and phase information.
  */
 router.get("/activities/:session_id/descriptor", async (req, res) => {
-    if (!requireRole(req, res, "P")) {
+    if (!requireRole(req, res, ["P", "A"])) {
         return;
     }
     const { session_id } = req.params;
