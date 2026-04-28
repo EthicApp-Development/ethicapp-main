@@ -284,18 +284,31 @@ export default function ActivityPage() {
     const entries = [];
 
     if (hasCaseTab) {
-      entries.push({ id: 'case', label: t('sessionDetail.caseTab') });
+      entries.push({
+        id: 'case',
+        label: t('sessionDetail.caseTab'),
+        iconClass: 'fa-book',
+        iconStyle: 'solid'
+      });
     }
+
+    const phaseIconClassByDesign = {
+      semantic_differential: { iconClass: 'fa-file', iconStyle: 'regular' },
+      ranking: { iconClass: 'fa-puzzle-piece', iconStyle: 'solid' }
+    };
+    const phaseIconConfig = phaseIconClassByDesign[designType] ?? { iconClass: 'fa-puzzle-piece', iconStyle: 'solid' };
 
     phaseTabs.forEach((phase) => {
       entries.push({
         id: `phase-${phase.id ?? phase.number}`,
-        label: `${t('sessionDetail.phaseN')} ${phase.number}`
+        label: `${t('sessionDetail.phaseN')} ${phase.number}`,
+        iconClass: phaseIconConfig.iconClass,
+        iconStyle: phaseIconConfig.iconStyle
       });
     });
 
     return entries;
-  }, [hasCaseTab, phaseTabs, t]);
+  }, [designType, hasCaseTab, phaseTabs, t]);
 
   useEffect(() => {
     if (tabEntries.length === 0) {
@@ -409,13 +422,8 @@ export default function ActivityPage() {
         selectedSession ? (
           <article className="card shadow-sm">
             <div className="card-body">
-              <SessionMetadata
-                selectedSession={selectedSession}
-                locale={locale}
-                t={t}
-                currentPhaseNumber={currentPhaseNumber}
-                currentPhaseId={currentPhaseId}
-              />
+              <h2 className="h5 mb-2">{selectedSession.name ?? `${t('sessions.sessionFallbackName')} #${selectedSession.id}`}</h2>
+              <p className="text-secondary mb-3">{selectedSession.descr || t('sessionDetail.noDescription')}</p>
 
               {localState.loadingDescriptor ? <p className="text-muted mt-3 mb-0">{t('sessionDetail.loadingDescriptor')}</p> : null}
 
@@ -472,6 +480,16 @@ export default function ActivityPage() {
             {t('sessionDetail.notFoundInAvailable')}
           </div>
         )
+      ) : null}
+
+      {selectedSession ? (
+        <SessionMetadata
+          selectedSession={selectedSession}
+          locale={locale}
+          t={t}
+          currentPhaseNumber={currentPhaseNumber}
+          currentPhaseId={currentPhaseId}
+        />
       ) : null}
     </section>
   );
