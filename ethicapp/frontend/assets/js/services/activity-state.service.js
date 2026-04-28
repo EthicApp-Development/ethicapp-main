@@ -136,23 +136,29 @@ let ActivityStateService = function($http, TeacherSocketService) {
                     next: async (data) => {
                         console.debug(`Peer joined session ${sessionId}:`, 
                             JSON.stringify(data));
-                            
-                        const userList = service.activityStates[sessionId].users;
-                        const existingUser = userList.find(user => user.id === data.id);
+
+                        const activityState = service.activityStates[sessionId] || {};
+                        const userList = Array.isArray(activityState.users) ? activityState.users : [];
+                        service.activityStates[sessionId].users = userList;
+
+                        const existingUser = userList.find((user) =>
+                            Number(user.id) === Number(data.id)
+                        );
 
                         if (!existingUser) {
                             userList.push({
                                 id: data.id,
                                 name: data.name,
-                                role: 'A',
+                                role: data.role || "A",
                                 mail: data.mail,
                                 device: data.device,
                             });
                         }
 
                         // Notify listeners
-                        service.notifyListeners("onStudentJoined", { 
-                            response: data });                            
+                        service.notifyListeners("onStudentJoined", {
+                            response: data
+                        });
                     },
                     error: (err) => {
                         console.error(`Websocket error for onStudentJoined event in session ${sessionId}:`, err)
