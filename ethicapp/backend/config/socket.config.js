@@ -12,17 +12,20 @@ const initializeSockets = (server) => {
         throw new Error("Server instance is required to initialize sockets.");
     }
 
+    console.info("[socket.config] Initializing Socket.IO namespaces.");
     const io = new SocketIO(server);
 
     // Teacher namespace
-    const teacherSocket = io.of('/teacher');
-    teacherSocket.on('connection', (socket) => teacherSocketInit(socket, teacherSocket));
+    const teacherSocket = io.of("/teacher");
+    teacherSocket.on("connection", (socket) => teacherSocketInit(socket, teacherSocket));
     teacherNotifications = toTeacherNotifications(teacherSocket);
+    console.info("[socket.config] Teacher namespace '/teacher' initialized.");
 
     // Student namespace
-    const studentSocket = io.of('/student');
-    studentSocket.on('connection', (socket) => studentSocketInit(socket, studentSocket));
+    const studentSocket = io.of("/student");
+    studentSocket.on("connection", (socket) => studentSocketInit(socket, studentSocket));
     studentNotifications = toStudentsNotifications(studentSocket);
+    console.info("[socket.config] Student namespace '/student' initialized.");
 
     ioInstance = io;
 
