@@ -27,6 +27,9 @@ export const buildInitialPhaseState = async function (phaseId) {
             phase: {
                 id: phaseId,
                 number: phaseNumber,
+                instructions: typeof phaseDesign?.instructions === "string"
+                    ? phaseDesign.instructions
+                    : (typeof phaseDesign?.question === "string" ? phaseDesign.question : ""),
                 features: {
                     chat: phaseDesign.chat,
                     anonymity: phaseDesign.anonymous,
@@ -185,6 +188,22 @@ export async function getStudentActivityPhases(sessionId) {
     }
 
     try {
+        const designQuery = `
+            SELECT d.design
+            FROM activity a
+            INNER JOIN designs d ON d.id = a.design
+            WHERE a.session = $1
+            LIMIT 1;
+        `;
+
+        const designResult = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: designQuery,
+            sqlParams: [rpg2.param('plain', Number(sessionId))],
+        });
+
+        const designPhases = Array.isArray(designResult?.design?.phases) ? designResult.design.phases : [];
+
         // Query to get the phases
         const phasesQuery = `
             SELECT
@@ -192,7 +211,8 @@ export async function getStudentActivityPhases(sessionId) {
                 st.number, 
                 st.type AS mode, 
                 st.anon, 
-                st.chat
+                st.chat,
+                st.question AS instructions
             FROM 
                 stages st
             WHERE 
@@ -209,6 +229,9 @@ export async function getStudentActivityPhases(sessionId) {
         const phases = phasesResult.map(phase => ({
             id: phase.id,
             number: phase.number,
+            instructions: typeof (designPhases[Number(phase.number) - 1]?.instructions) === "string"
+                ? designPhases[Number(phase.number) - 1].instructions
+                : (typeof phase.instructions === "string" ? phase.instructions : ""),
             features: {
                 mode: phase.mode,
                 chat: phase.chat,

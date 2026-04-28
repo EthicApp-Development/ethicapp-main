@@ -49,6 +49,13 @@ export default function SemanticDifferentialPhaseView({
   t
 }) {
   const responsesByTask = useMemo(() => mapResponsesByTaskId(phase), [phase]);
+  const phaseInstructions = useMemo(() => {
+    if (typeof phase?.instructions === 'string' && phase.instructions.trim().length > 0) {
+      return phase.instructions;
+    }
+
+    return typeof phase?.question === 'string' ? phase.question : '';
+  }, [phase]);
   const safeDraftByTaskId = draftByTaskId ?? {};
   const [submittingTaskId, setSubmittingTaskId] = useState(null);
   const [feedbackByTaskId, setFeedbackByTaskId] = useState({});
@@ -139,9 +146,9 @@ export default function SemanticDifferentialPhaseView({
         </div>
       ) : null}
 
-      {typeof phase?.instructions === 'string' && phase.instructions.trim().length > 0 ? (
+      {phaseInstructions.trim().length > 0 ? (
         <div className="alert alert-secondary mb-0" role="note">
-          <strong>{t('sessionDetail.instructionsLabel')}:</strong> {phase.instructions}
+          <strong>{t('sessionDetail.instructionsLabel')}:</strong> {phaseInstructions}
         </div>
       ) : null}
 
