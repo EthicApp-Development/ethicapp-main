@@ -1,5 +1,5 @@
-<p ng-if="iptCtrl.phaseData.state.length == 0">{{ 'waiting_for_responses_text' | translate }}</p>
-<table class="table table-striped" ng-if="iptCtrl.phaseData.state.length > 0">
+<p ng-if="!iptCtrl.sortedResponses || iptCtrl.sortedResponses.length == 0">{{ 'waiting_for_responses_text' | translate }}</p>
+<table class="table table-striped" ng-if="iptCtrl.sortedResponses && iptCtrl.sortedResponses.length > 0">
     <thead>
         <tr>
             <th>{{ 'participant_column_header' | translate }}</th>
@@ -10,7 +10,7 @@
         </tr>
     </thead>
     <tbody>
-        <tr ng-repeat="response in iptCtrl.phaseData.state track by response.userId">
+        <tr ng-repeat="response in iptCtrl.sortedResponses track by response.userId">
             <td>{{ response.userName }}</td>
             <td ng-repeat="question in iptCtrl.phaseData.descriptor.questions">
                 {{ response['r' + question.number] || ('no_response' | translate) }}
@@ -25,7 +25,7 @@
         <tr>
             <td colspan="{{ iptCtrl.phaseData.descriptor.questions.length + 1 }}">
                 <div class="summary-text small">
-                    <strong>{{ 'participants_label' | translate }}:</strong> {{ iptCtrl.phaseData.state.length > 0 ? iptCtrl.phaseData.state.length : 0 }} <br>
+                    <strong>{{ 'participants_label' | translate }}:</strong> {{ iptCtrl.sortedResponses.length > 0 ? iptCtrl.sortedResponses.length : 0 }} <br>
                     <strong>A:</strong> {{ 'average_label' | translate }}. 
                     <strong>CV:</strong> {{ 'coefficient_of_variation_label' | translate }}.<br>
                     <i class="fa fa-comments"></i> {{ 'chat_messages_label' | translate }}. 
