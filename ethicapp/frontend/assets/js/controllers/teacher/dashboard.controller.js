@@ -388,18 +388,21 @@ export function DashboardController($scope, $routeParams, $http,
         console.log('Downloading chat log...');
     };
 
-    vm.studentJoinHandler = function (data) {
-        if (vm.checkActivityFinished()) {
+    vm.studentJoinHandler = function () {
+        if (!vm.activityState || vm.checkActivityFinished()) {
             return;
         }
 
+        const users = Array.isArray(vm.activityState.users) ? vm.activityState.users : [];
         const currentPhaseId = vm?.activityState?.descriptor?.currentPhase?.id;
 
-        $scope.$applyAsync(() => { 
-            vm.userList = vm.activityState.users;
+        $scope.$applyAsync(() => {
+            vm.userList = users;
         });
 
-        vm.updateDashboardPhaseData(currentPhaseId);
+        if (currentPhaseId) {
+            vm.updateDashboardPhaseData(currentPhaseId);
+        }
     };
 
     vm.defaultEventHandler = function (data) {
