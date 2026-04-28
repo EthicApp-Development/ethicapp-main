@@ -4,6 +4,23 @@ import { Observable } from 'rxjs';
 const SocketService = function(namespace) {
     const url = `${window.location.protocol}//${window.location.hostname}${window.location.port ? `:${window.location.port}` : ''}/${namespace}`;
     const socket = io(url);
+    const socketTag = `[SocketService:${namespace}]`;
+
+    socket.on("connect", () => {
+        console.debug(`${socketTag} connected`, { socketId: socket.id, url });
+    });
+
+    socket.on("disconnect", (reason) => {
+        console.debug(`${socketTag} disconnected`, { reason });
+    });
+
+    socket.on("connect_error", (error) => {
+        console.error(`${socketTag} connection error`, error);
+    });
+
+    socket.onAny((eventName, payload) => {
+        console.debug(`${socketTag} incoming event`, { eventName, payload });
+    });
 
     return {
         // Listen to generic events
@@ -16,7 +33,10 @@ const SocketService = function(namespace) {
         // Listen to generic events using RxJS Observable
         fromEvent: (eventName) => {
             return new Observable((observer) => {
-                const handler = (data) => observer.next(data);
+                const handler = (data) => {
+                    console.debug(`${socketTag} fromEvent`, { eventName, data });
+                    observer.next(data);
+                };
 
                 socket.on(eventName, handler);
 

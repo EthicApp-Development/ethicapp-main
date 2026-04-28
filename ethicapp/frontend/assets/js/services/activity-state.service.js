@@ -9,26 +9,37 @@ let ActivityStateService = function($http, TeacherSocketService) {
             const phases = await service.getInstancedPhases(sessionId, false);
             const phaseNumber = phases.find((phase) => phase.id === Number(response.phaseId))?.number;
 
-            const phaseResponses = responses.find(
+            let phaseResponses = responses.find(
                 (prs) => Number(prs.phase_number) === Number(phaseNumber)
             );
 
-            const existingResponse = phaseResponses?.items.find(resp => resp.uid === response.uid);
-        
-            if (existingResponse) {
-                existingResponse.items = response.items;
-            } else {
-                const { type, ...responseWithoutType } = response;
-                if (!phaseResponses) {
-                    responses.push({
-                        phase_number: phaseNumber,
-                        responses: [responseWithoutType]
+            if (!phaseResponses) {
+                phaseResponses = {
+                    phase_number: phaseNumber,
+                    responses: [],
+                };
+                responses.push(phaseResponses);
+            }
+
+            const responseItems = Array.isArray(response.items) ? response.items : [];
+            responseItems.forEach((item) => {
+                const existingResponse = phaseResponses.responses.find(resp =>
+                    Number(resp.uid) === Number(response.uid) &&
+                    Number(resp.actorid) === Number(item.actorid)
+                );
+
+                if (existingResponse) {
+                    existingResponse.orden = item.orden;
+                    existingResponse.description = item.description;
+                } else {
+                    phaseResponses.responses.push({
+                        uid: response.uid,
+                        actorid: item.actorid,
+                        orden: item.orden,
+                        description: item.description,
                     });
                 }
-                else {
-                    phaseResponses.items.push(responseWithoutType);
-                }
-            }
+            });
         },
         semanticDifferentialResponseMerger: async function(sessionId, response, responses) {
             const phases = await service.getInstancedPhases(sessionId, false);
@@ -133,31 +144,36 @@ let ActivityStateService = function($http, TeacherSocketService) {
             subscriptions.push(
                 TeacherSocketService.fromEvent('onResponseSubmitted').subscribe({
                     next: async (data) => {
-                        const handler = await service.responseMergeHandlers[data.type];
-                        
-                        if (!handler) {
-                            const msg = "No handler available for the incoming response data";
-                            console.error(msg);
-                            throw new Error(msg);                           
+                        try {
+                            console.debug(`[ActivityStateService] onResponseSubmitted received for session ${sessionId}:`, data);
+                            const handler = service.responseMergeHandlers[data.type];
+                            
+                            if (!handler) {
+                                const msg = `[ActivityStateService] No handler available for incoming response type '${data.type}'`;
+                                console.error(msg, data);
+                                return;
+                            }
+
+                            // If this is the first response, fetch the responses, including the
+                            // one that just arrived. That is, have the API conform the appropriate data
+                            // structure to accommodate the next responses that arrive.
+                            if (!service.activityStates[sessionId].responses) {
+                                // load activity responses
+                                await service.getResponses(sessionId, true);
+                            }
+
+                            await handler(sessionId, data, service.activityStates[sessionId].responses);
+
+                            console.debug(`Response submitted for session ${sessionId}:`, 
+                                JSON.stringify(data));
+                            console.debug(`About to notify listeners ${JSON.stringify(data)}:`);
+        
+                            service.notifyListeners("onResponseSubmitted", { 
+                                response: data
+                            });
+                        } catch (error) {
+                            console.error(`[ActivityStateService] Failed to process onResponseSubmitted for session ${sessionId}:`, error);
                         }
-
-                        // If this is the first response, fetch the responses, including the
-                        // one that just arrived. That is, have the API conform the appropriate data
-                        // structure to accommodate the next responses that arrive.
-                        if (!service.activityStates[sessionId].responses) {
-                            // load activity responses
-                            await service.getResponses(sessionId, true);
-                        }
-
-                        await handler(sessionId, data, service.activityStates[sessionId].responses);
-
-                        console.debug(`Response submitted for session ${sessionId}:`, 
-                            JSON.stringify(data));
-                        console.debug(`About to notify listeners ${JSON.stringify(data)}:`);
-    
-                        service.notifyListeners("onResponseSubmitted", { 
-                            response: data
-                        });
                     },
                     error: (err) => console.error(`Websocket error for responseSubmitted in session ${sessionId}:`, err),
                 })                
