@@ -3,7 +3,15 @@ import axios from 'axios';
 import { useI18n } from '../app/providers.jsx';
 import { legacyUserApi } from '../api/studentApi.js';
 
-const StudentActivityStateContext = createContext(null);
+const defaultStudentActivityStateContext = {
+  stateBySession: {},
+  loadingBySession: {},
+  errorBySession: {},
+  loadFullState: async () => null,
+  loadCurrentPhaseState: async () => null
+};
+
+const StudentActivityStateContext = createContext(defaultStudentActivityStateContext);
 
 export function StudentActivityStateProvider({ children }) {
   const { t } = useI18n();
@@ -121,8 +129,8 @@ export function StudentActivityStateProvider({ children }) {
 export function useStudentActivityState() {
   const context = useContext(StudentActivityStateContext);
 
-  if (!context) {
-    throw new Error('useStudentActivityState must be used within StudentActivityStateProvider');
+  if (context === defaultStudentActivityStateContext && import.meta.env?.DEV) {
+    console.warn('useStudentActivityState is running without StudentActivityStateProvider. Using fallback context.');
   }
 
   return context;
