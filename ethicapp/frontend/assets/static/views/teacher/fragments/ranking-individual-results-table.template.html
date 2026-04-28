@@ -1,5 +1,5 @@
-<p ng-if="iptCtrl.sortedResponses.length == 0">No responses currently available, waiting for participants to submit them.</p>
-<table class="table table-striped table-sortable" ng-if="iptCtrl.sortedResponses.length > 0">
+<p ng-if="!iptCtrl.sortedResponses || iptCtrl.sortedResponses.length == 0">No responses currently available, waiting for participants to submit them.</p>
+<table class="table table-striped table-sortable" ng-if="iptCtrl.sortedResponses && iptCtrl.sortedResponses.length > 0">
     <thead>
         <tr>
             <th sortable-column="responseCluster" reverse="reverse" on-sort="sortBy(field)">
@@ -30,9 +30,9 @@
         <tr>
             <td colspan="{{ iptCtrl.phaseData.descriptor.questions.length + 3 }}">
                 <div class="summary-text">
-                    <strong>{{ 'participants_label' | translate }}:</strong> {{ sortedResponses.length }} <br>
+                    <strong>{{ 'participants_label' | translate }}:</strong> {{ iptCtrl.sortedResponses.length }} <br>
                     <span class="badge badge-danger">
-                        <i class="fa fa-comments"></i> {{ totalChatMessages }} {{ 'chat_messages_label' | translate }}
+                        <i class="fa fa-comments"></i> {{ iptCtrl.totalChatMessages }} {{ 'chat_messages_label' | translate }}
                     </span>
                     <i class="fa-solid fa-sticky-note text-warning"></i> {{ 'comment_note_legend' | translate }}. <span class="text-danger">*</span> {{ 'justification_required_caption' | translate }}.
                 </div>
