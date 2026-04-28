@@ -84,6 +84,8 @@ const enUS = {
     instructionsLabel: 'Instructions',
     justificationLabel: 'Written justification',
     justificationPlaceholder: 'Write your justification here',
+    justificationWordCountLabel: 'Current words',
+    justificationWordMinimumLabel: 'Minimum words',
     submitResponse: 'Submit response',
     submittingResponse: 'Submitting...',
     responseSubmitted: 'Response submitted successfully.',
@@ -92,7 +94,10 @@ const enUS = {
     responseCooldown: 'Please wait before submitting this question again.',
     rankingTabPlaceholder: 'Ranking phase view is under implementation.',
     phaseTabPlaceholder: 'Phase content is under implementation.',
-    notFoundInAvailable: 'We could not find the requested session in your available sessions.'
+    notFoundInAvailable: 'We could not find the requested session in your available sessions.',
+    developerInfoTitle: 'Developer information',
+    showDeveloperInfo: 'Show information',
+    hideDeveloperInfo: 'Hide information'
   },
   notFound: {
     title: 'Page not found',

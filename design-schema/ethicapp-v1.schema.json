@@ -180,6 +180,19 @@
                   "min_just_length": { "minimum": 5 }
                 }
               }
+            },
+            {
+              "if": {
+                "properties": {
+                  "justification_minimum_length_required": { "const": true }
+                }
+              },
+              "then": {
+                "properties": {
+                  "just_required": { "const": true },
+                  "min_just_length": { "minimum": 5 }
+                }
+              }
             }
           ],
           "additionalProperties": true
