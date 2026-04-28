@@ -26,7 +26,61 @@ export function DashboardController($scope, $routeParams, $http,
             return;
         }
 
-        openSemanticDifferentialIndividualResponseModal($uibModal, response, phaseData);
+        const hydratedPhaseData = vm.hydratePhaseDataForIndividualModal(phaseData);
+        openSemanticDifferentialIndividualResponseModal($uibModal, response, hydratedPhaseData);
+    };
+
+    vm.hydratePhaseDataForIndividualModal = function(phaseData) {
+        const descriptor = phaseData?.descriptor;
+        const descriptorQuestions = descriptor?.questions || [];
+
+        if (!descriptor || descriptorQuestions.length === 0) {
+            return phaseData;
+        }
+
+        const phaseIndex = Number(descriptor.number) - 1;
+        const designPhase = vm.designObj?.phases?.[phaseIndex];
+        const designQuestions = designPhase?.questions || [];
+
+        if (designQuestions.length === 0) {
+            return phaseData;
+        }
+
+        const mergedQuestions = descriptorQuestions.map((question, index) => {
+            const descriptorNumber = Number(question?.number || question?.order || index + 1);
+            const matchedDesignQuestion =
+                designQuestions.find((dq) => Number(dq?.number || dq?.order || 0) === descriptorNumber)
+                || designQuestions.find((dq) => Number(dq?.id || 0) === Number(question?.id || 0))
+                || designQuestions[index]
+                || {};
+
+            const mergedAnsFormat = {
+                ...(matchedDesignQuestion?.ans_format || {}),
+                ...(question?.ans_format || {}),
+            };
+
+            return {
+                ...matchedDesignQuestion,
+                ...question,
+                ans_format: mergedAnsFormat,
+                q_text: question?.q_text || matchedDesignQuestion?.q_text || null,
+                text: question?.text || matchedDesignQuestion?.q_text || matchedDesignQuestion?.text || null,
+                leftPole: question?.leftPole || mergedAnsFormat?.l_pole || matchedDesignQuestion?.leftPole || null,
+                rightPole: question?.rightPole || mergedAnsFormat?.r_pole || matchedDesignQuestion?.rightPole || null,
+                range: Number(question?.range || mergedAnsFormat?.values || matchedDesignQuestion?.range || 0),
+                justify: typeof question?.justify === "boolean"
+                    ? question.justify
+                    : Boolean(mergedAnsFormat?.just_required),
+            };
+        });
+
+        return {
+            ...phaseData,
+            descriptor: {
+                ...descriptor,
+                questions: mergedQuestions,
+            },
+        };
     };
 
     vm.init = async function () {
