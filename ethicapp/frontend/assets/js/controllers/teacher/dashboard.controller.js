@@ -36,7 +36,19 @@ export function DashboardController($scope, $routeParams, $http,
 
                 $ctrl.response = data.response;
                 $ctrl.phaseData = data.phaseData;
-                $ctrl.questions = data.phaseData?.descriptor?.questions || [];
+                $ctrl.questions = (data.phaseData?.descriptor?.questions || []).map((question) => {
+                    const ansFormat = question?.ans_format || {};
+                    return {
+                        ...question,
+                        text: question?.text || question?.q_text || question?.question || question?.name || null,
+                        leftPole: question?.leftPole || ansFormat?.l_pole || null,
+                        rightPole: question?.rightPole || ansFormat?.r_pole || null,
+                        range: Number(question?.range || ansFormat?.values || 0),
+                        justify: typeof question?.justify === "boolean"
+                            ? question.justify
+                            : Boolean(ansFormat?.just_required),
+                    };
+                });
 
                 $ctrl.buildScaleOptions = function(question) {
                     const range = Number(question?.range) || 0;
