@@ -443,7 +443,7 @@ export default function ActivityPage() {
                 </div>
               ) : null}
 
-              {!shouldShowWaitingScreen && !loadingActivityState && !activityStateError && tabEntries.length > 0 ? (
+              {!shouldShowWaitingScreen && !activityStateError && tabEntries.length > 0 ? (
                 <>
                   {isSessionFinished ? (
                     <div className="alert alert-warning mt-3 mb-0" role="alert">
