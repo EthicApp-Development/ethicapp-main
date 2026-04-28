@@ -24,7 +24,19 @@ export default function SemanticDifferentialTaskView({
   };
 
   const resolveMinimumWords = (currentTask) => {
-    const candidateValues = [
+    const minimumRequiredCandidates = [
+      currentTask?.justificationMinimumLengthRequired,
+      currentTask?.justification_minimum_length_required,
+      currentTask?.answerFormat?.justificationMinimumLengthRequired,
+      currentTask?.answerFormat?.justification_minimum_length_required,
+      currentTask?.ansFormat?.justificationMinimumLengthRequired,
+      currentTask?.ansFormat?.justification_minimum_length_required,
+      currentTask?.ans_format?.justification_minimum_length_required
+    ];
+
+    const isMinimumRequired = minimumRequiredCandidates.some((value) => value === true);
+
+    const minimumWordCandidates = [
       currentTask?.minJustificationWords,
       currentTask?.minimumJustificationWords,
       currentTask?.minJustLength,
@@ -36,9 +48,19 @@ export default function SemanticDifferentialTaskView({
       currentTask?.ans_format?.min_just_length
     ];
 
-    const minimumValue = candidateValues.find((value) => Number.isInteger(Number(value)));
-    const parsedValue = Number(minimumValue);
-    return Number.isInteger(parsedValue) && parsedValue > 0 ? parsedValue : null;
+    const parsedMinimumValues = minimumWordCandidates
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0);
+
+    if (parsedMinimumValues.length === 0) {
+      return null;
+    }
+
+    if (isMinimumRequired) {
+      return Math.max(...parsedMinimumValues);
+    }
+
+    return parsedMinimumValues[0];
   };
 
   const taskId = Number(task?.id);
