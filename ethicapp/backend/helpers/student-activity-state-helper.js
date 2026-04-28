@@ -27,6 +27,9 @@ export const buildInitialPhaseState = async function (phaseId) {
             phase: {
                 id: phaseId,
                 number: phaseNumber,
+                instructions: typeof phaseDesign?.instructions === "string"
+                    ? phaseDesign.instructions
+                    : (typeof phaseDesign?.question === "string" ? phaseDesign.question : ""),
                 features: {
                     chat: phaseDesign.chat,
                     anonymity: phaseDesign.anonymous,
@@ -192,7 +195,8 @@ export async function getStudentActivityPhases(sessionId) {
                 st.number, 
                 st.type AS mode, 
                 st.anon, 
-                st.chat
+                st.chat,
+                st.question AS instructions
             FROM 
                 stages st
             WHERE 
@@ -209,6 +213,7 @@ export async function getStudentActivityPhases(sessionId) {
         const phases = phasesResult.map(phase => ({
             id: phase.id,
             number: phase.number,
+            instructions: typeof phase.instructions === "string" ? phase.instructions : "",
             features: {
                 mode: phase.mode,
                 chat: phase.chat,
