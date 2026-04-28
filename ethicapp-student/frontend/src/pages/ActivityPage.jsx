@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useEffect, useMemo, useReducer } from 'react';
+import { useEffect, useMemo, useReducer, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import { studentApi, legacyUserApi } from '../api/studentApi.js';
 import { useI18n } from '../app/providers.jsx';
@@ -15,12 +15,22 @@ import {
   sessionDetailReducer
 } from './session-detail/sessionDetailState.js';
 
-export default function SessionDetailPage() {
+const RESPONSE_COOLDOWN_MS = 3000;
+
+export default function ActivityPage() {
   const { locale, t } = useI18n();
   const { session, sessionRefreshKey } = useOutletContext();
   const { sessionId } = useParams();
   const [localState, dispatch] = useReducer(sessionDetailReducer, initialSessionDetailState);
-  const { stateBySession, loadingBySession, errorBySession, loadFullState, loadCurrentPhaseState } = useStudentActivityState();
+  const [lastSubmittedAtByResponse, setLastSubmittedAtByResponse] = useState({});
+  const {
+    stateBySession,
+    loadingBySession,
+    errorBySession,
+    loadFullState,
+    loadCurrentPhaseState,
+    submitActivityResponse
+  } = useStudentActivityState();
 
   useEffect(() => {
     if (!session.isAuthenticated) {
@@ -189,6 +199,13 @@ export default function SessionDetailPage() {
       loadCurrentPhaseState({ sessionId: activeSessionId }).catch(() => {
         // Errors are already reflected in the context state.
       });
+      loadFullState({
+        sessionId: activeSessionId,
+        userId: session.uid,
+        invalidate: true
+      }).catch(() => {
+        // Errors are already reflected in the context state.
+      });
     };
 
     const handleShareResponse = (payload) => {
@@ -247,7 +264,7 @@ export default function SessionDetailPage() {
       socket.off('onEndSession', handleEndSession);
       socket.off('onChatMessage', handleChatMessage);
     };
-  }, [loadCurrentPhaseState, selectedSession, session.isAuthenticated]);
+  }, [loadCurrentPhaseState, loadFullState, selectedSession, session.isAuthenticated, session.uid]);
 
   const phaseTabs = useMemo(() => {
     return Array.isArray(activityState?.phases) ? activityState.phases : [];
@@ -255,6 +272,7 @@ export default function SessionDetailPage() {
 
   const currentPhaseNumber = activityState?.descriptor?.currentPhaseNumber ?? null;
   const currentPhaseId = activityState?.descriptor?.currentPhaseId ?? null;
+  const designType = activityState?.descriptor?.design?.type ?? localState.activityDescriptor?.design?.type ?? '';
   const hasCaseTab = localState.caseDocumentUrl.trim().length > 0;
 
   const tabEntries = useMemo(() => {
@@ -288,6 +306,73 @@ export default function SessionDetailPage() {
     const nextDefaultTab = hasCaseTab ? 'case' : tabEntries[0].id;
     dispatch({ type: 'ACTIVE_TAB_SET', payload: nextDefaultTab });
   }, [hasCaseTab, localState.activeTab, tabEntries]);
+
+  useEffect(() => {
+    if (!currentPhaseId || isSessionFinished) {
+      return;
+    }
+
+    const currentPhaseTabId = `phase-${currentPhaseId}`;
+    if (localState.activeTab !== currentPhaseTabId) {
+      dispatch({ type: 'ACTIVE_TAB_SET', payload: currentPhaseTabId });
+    }
+  }, [currentPhaseId, isSessionFinished, localState.activeTab]);
+
+  const onSubmitPhaseResponse = async ({ responseKey, responsePayload }) => {
+    if (!responsePayload || typeof responsePayload !== 'object') {
+      return {
+        ok: false,
+        message: t('sessionDetail.responseSubmitError')
+      };
+    }
+
+    const now = Date.now();
+    const key = String(responseKey ?? responsePayload?.questionId ?? 'response');
+    const lastSubmittedAt = lastSubmittedAtByResponse[key] ?? 0;
+
+    if (now - lastSubmittedAt < RESPONSE_COOLDOWN_MS) {
+      const cooldownSeconds = Math.ceil((RESPONSE_COOLDOWN_MS - (now - lastSubmittedAt)) / 1000);
+      return {
+        ok: false,
+        message: `${t('sessionDetail.responseCooldown')} ${cooldownSeconds}s.`
+      };
+    }
+
+    if (!selectedSessionId || Number.isNaN(selectedSessionId)) {
+      return {
+        ok: false,
+        message: t('sessionDetail.responseSubmitError')
+      };
+    }
+
+    try {
+      await submitActivityResponse({
+        sessionId: selectedSessionId,
+        responsePayload
+      });
+
+      setLastSubmittedAtByResponse((prev) => ({
+        ...prev,
+        [key]: now
+      }));
+
+      await loadFullState({
+        sessionId: selectedSessionId,
+        userId: session.uid,
+        invalidate: true
+      });
+
+      return {
+        ok: true,
+        message: t('sessionDetail.responseSubmitted')
+      };
+    } catch {
+      return {
+        ok: false,
+        message: t('sessionDetail.responseSubmitError')
+      };
+    }
+  };
 
   return (
     <section className="mx-auto" style={{ maxWidth: '860px' }}>
@@ -361,8 +446,12 @@ export default function SessionDetailPage() {
                     setActiveTab={(nextTab) => dispatch({ type: 'ACTIVE_TAB_SET', payload: nextTab })}
                     hasCaseTab={hasCaseTab}
                     caseDocumentUrl={localState.caseDocumentUrl}
-                    readOnly={isSessionFinished}
                     t={t}
+                    phases={phaseTabs}
+                    currentPhaseId={currentPhaseId}
+                    designType={designType}
+                    isSessionFinished={isSessionFinished}
+                    onSubmitPhaseResponse={onSubmitPhaseResponse}
                   />
                 </>
               ) : null}

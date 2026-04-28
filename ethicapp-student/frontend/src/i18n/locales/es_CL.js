@@ -80,6 +80,17 @@ const esCL = {
     caseViewerHint: 'Si el visor no carga correctamente, abre el PDF en una pestaña nueva.',
     openCaseInNewTab: 'Abrir en nueva pestaña',
     phaseN: 'Fase',
+    phaseReadOnlyWhileInactive: 'Esta fase no está activa. Puedes revisar tus respuestas en modo solo lectura.',
+    instructionsLabel: 'Instrucciones',
+    justificationLabel: 'Justificación escrita',
+    justificationPlaceholder: 'Escribe tu justificación aquí',
+    submitResponse: 'Enviar respuesta',
+    submittingResponse: 'Enviando...',
+    responseSubmitted: 'Respuesta enviada correctamente.',
+    responseSubmitError: 'No fue posible enviar tu respuesta.',
+    responseSelectScaleFirst: 'Selecciona un valor de la escala antes de enviar.',
+    responseCooldown: 'Espera antes de volver a enviar esta pregunta.',
+    rankingTabPlaceholder: 'Vista de fase de ranking en implementación.',
     phaseTabPlaceholder: 'Contenido de la fase en implementación.',
     notFoundInAvailable: 'No encontramos la sesión solicitada dentro de tus sesiones disponibles.'
   },
@@ -91,6 +102,8 @@ const esCL = {
   errors: {
     invalidSessionId: 'sessionId inválido',
     invalidUserId: 'userId inválido',
+    invalidQuestionId: 'questionId inválido',
+    invalidResponsePayload: 'payload de respuesta inválido',
     fullStateFallback: 'No se pudo cargar el estado completo de la actividad',
     currentPhaseStateFallback: 'No se pudo cargar el estado inicial de la fase actual'
   }

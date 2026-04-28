@@ -1,3 +1,7 @@
+import { useMemo } from 'react';
+import RankingPhaseView from './phases/RankingPhaseView.jsx';
+import SemanticDifferentialPhaseView from './phases/SemanticDifferentialPhaseView.jsx';
+
 function buildCaseViewerUrl(caseDocumentUrl) {
   if (typeof caseDocumentUrl !== 'string' || caseDocumentUrl.trim().length === 0) {
     return '';
@@ -21,8 +25,35 @@ function buildCaseViewerUrl(caseDocumentUrl) {
   return normalizedCaseDocumentUrl.includes('#') ? normalizedCaseDocumentUrl : `${normalizedCaseDocumentUrl}${hash}`;
 }
 
-export default function ActivityTabsPanel({ tabEntries, activeTab, setActiveTab, hasCaseTab, caseDocumentUrl, readOnly = false, t }) {
+export default function ActivityTabsPanel({
+  tabEntries,
+  activeTab,
+  setActiveTab,
+  hasCaseTab,
+  caseDocumentUrl,
+  phases,
+  currentPhaseId,
+  designType,
+  isSessionFinished,
+  onSubmitPhaseResponse,
+  t
+}) {
   const caseViewerUrl = buildCaseViewerUrl(caseDocumentUrl);
+
+  const activePhase = useMemo(() => {
+    if (typeof activeTab !== 'string' || !activeTab.startsWith('phase-')) {
+      return null;
+    }
+
+    const phaseId = Number(activeTab.replace('phase-', ''));
+    if (!Number.isInteger(phaseId) || phaseId <= 0) {
+      return null;
+    }
+
+    return Array.isArray(phases) ? phases.find((phase) => Number(phase?.id) === phaseId) ?? null : null;
+  }, [activeTab, phases]);
+
+  const isActivePhase = Number(activePhase?.id) === Number(currentPhaseId);
 
   return (
     <section className="mt-4" aria-label={t('sessionDetail.activityPhasesLabel')}>
@@ -35,7 +66,6 @@ export default function ActivityTabsPanel({ tabEntries, activeTab, setActiveTab,
               role="tab"
               aria-selected={activeTab === tabEntry.id}
               onClick={() => setActiveTab(tabEntry.id)}
-              disabled={readOnly}
             >
               {tabEntry.label}
             </button>
@@ -43,11 +73,7 @@ export default function ActivityTabsPanel({ tabEntries, activeTab, setActiveTab,
         ))}
       </ul>
 
-      <div
-        className={`border border-top-0 rounded-bottom p-3 ${readOnly ? 'opacity-75' : ''}`}
-        style={readOnly ? { pointerEvents: 'none' } : undefined}
-        aria-disabled={readOnly}
-      >
+      <div className="border border-top-0 rounded-bottom p-3">
         {activeTab === 'case' && hasCaseTab ? (
           <div className="d-flex flex-column gap-2">
             <iframe
@@ -71,7 +97,28 @@ export default function ActivityTabsPanel({ tabEntries, activeTab, setActiveTab,
           </div>
         ) : null}
 
-        {activeTab !== 'case' ? <p className="mb-0 text-secondary">{t('sessionDetail.phaseTabPlaceholder')}</p> : null}
+        {activeTab !== 'case' && activePhase && designType === 'semantic_differential' ? (
+          <SemanticDifferentialPhaseView
+            phase={activePhase}
+            isReadOnly={isSessionFinished}
+            isActivePhase={isActivePhase}
+            onSubmitPhaseResponse={onSubmitPhaseResponse}
+            t={t}
+          />
+        ) : null}
+
+        {activeTab !== 'case' && activePhase && designType === 'ranking' ? (
+          <RankingPhaseView
+            phase={activePhase}
+            isReadOnly={isSessionFinished}
+            isActivePhase={isActivePhase}
+            t={t}
+          />
+        ) : null}
+
+        {activeTab !== 'case' && (!activePhase || !['semantic_differential', 'ranking'].includes(designType)) ? (
+          <p className="mb-0 text-secondary">{t('sessionDetail.phaseTabPlaceholder')}</p>
+        ) : null}
       </div>
     </section>
   );

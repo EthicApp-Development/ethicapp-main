@@ -80,6 +80,17 @@ const enUS = {
     caseViewerHint: 'If the embedded viewer does not load, open the PDF in a new tab.',
     openCaseInNewTab: 'Open in new tab',
     phaseN: 'Phase',
+    phaseReadOnlyWhileInactive: 'This phase is not active. You can review your answers in read-only mode.',
+    instructionsLabel: 'Instructions',
+    justificationLabel: 'Written justification',
+    justificationPlaceholder: 'Write your justification here',
+    submitResponse: 'Submit response',
+    submittingResponse: 'Submitting...',
+    responseSubmitted: 'Response submitted successfully.',
+    responseSubmitError: 'Unable to submit your response.',
+    responseSelectScaleFirst: 'Select a scale value before submitting.',
+    responseCooldown: 'Please wait before submitting this question again.',
+    rankingTabPlaceholder: 'Ranking phase view is under implementation.',
     phaseTabPlaceholder: 'Phase content is under implementation.',
     notFoundInAvailable: 'We could not find the requested session in your available sessions.'
   },
@@ -91,6 +102,8 @@ const enUS = {
   errors: {
     invalidSessionId: 'Invalid sessionId',
     invalidUserId: 'Invalid userId',
+    invalidQuestionId: 'Invalid questionId',
+    invalidResponsePayload: 'Invalid response payload',
     fullStateFallback: 'Unable to load full activity state',
     currentPhaseStateFallback: 'Unable to load the initial state of the current phase'
   }
