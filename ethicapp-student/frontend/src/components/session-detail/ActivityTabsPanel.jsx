@@ -88,7 +88,7 @@ export default function ActivityTabsPanel({
             >
               <span className="d-inline-flex align-items-center gap-2">
                 {typeof tabEntry.iconClass === 'string' && tabEntry.iconClass.length > 0 ? (
-                  <i className={`fa-solid ${tabEntry.iconClass}`} aria-hidden="true" />
+                  <i className={`fa-${tabEntry.iconStyle ?? 'solid'} ${tabEntry.iconClass}`} aria-hidden="true" />
                 ) : null}
                 <span>{tabEntry.label}</span>
               </span>

@@ -84,6 +84,8 @@ const esCL = {
     instructionsLabel: 'Instrucciones',
     justificationLabel: 'Justificación escrita',
     justificationPlaceholder: 'Escribe tu justificación aquí',
+    justificationWordCountLabel: 'Palabras actuales',
+    justificationWordMinimumLabel: 'Mínimo de palabras',
     submitResponse: 'Enviar respuesta',
     submittingResponse: 'Enviando...',
     responseSubmitted: 'Respuesta enviada correctamente.',

@@ -84,6 +84,8 @@ const enUS = {
     instructionsLabel: 'Instructions',
     justificationLabel: 'Written justification',
     justificationPlaceholder: 'Write your justification here',
+    justificationWordCountLabel: 'Current words',
+    justificationWordMinimumLabel: 'Minimum words',
     submitResponse: 'Submit response',
     submittingResponse: 'Submitting...',
     responseSubmitted: 'Response submitted successfully.',

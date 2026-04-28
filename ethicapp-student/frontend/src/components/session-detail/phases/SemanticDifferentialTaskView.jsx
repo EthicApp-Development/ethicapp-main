@@ -10,8 +10,42 @@ export default function SemanticDifferentialTaskView({
   onTaskSubmit,
   t
 }) {
+  const countWords = (text) => {
+    if (typeof text !== 'string') {
+      return 0;
+    }
+
+    const normalizedText = text.trim();
+    if (normalizedText.length === 0) {
+      return 0;
+    }
+
+    return normalizedText.split(/\s+/).length;
+  };
+
+  const resolveMinimumWords = (currentTask) => {
+    const candidateValues = [
+      currentTask?.minJustificationWords,
+      currentTask?.minimumJustificationWords,
+      currentTask?.minJustLength,
+      currentTask?.min_just_length,
+      currentTask?.answerFormat?.minJustLength,
+      currentTask?.answerFormat?.min_just_length,
+      currentTask?.ansFormat?.minJustLength,
+      currentTask?.ansFormat?.min_just_length,
+      currentTask?.ans_format?.min_just_length
+    ];
+
+    const minimumValue = candidateValues.find((value) => Number.isInteger(Number(value)));
+    const parsedValue = Number(minimumValue);
+    return Number.isInteger(parsedValue) && parsedValue > 0 ? parsedValue : null;
+  };
+
   const taskId = Number(task?.id);
   const numValues = Number(task?.numValues);
+  const wordCount = countWords(justification);
+  const minimumWords = resolveMinimumWords(task);
+  const isBelowMinimumWords = Number.isInteger(minimumWords) && wordCount < minimumWords;
 
   return (
     <article>
@@ -61,6 +95,16 @@ export default function SemanticDifferentialTaskView({
             onChange={(event) => onTaskJustificationChange(event.target.value)}
             placeholder={t('sessionDetail.justificationPlaceholder')}
           />
+          <div className="d-flex justify-content-between align-items-center mt-2 gap-2 flex-wrap">
+            <small className={`mb-0 ${isBelowMinimumWords ? 'text-danger' : 'text-muted'}`}>
+              {t('sessionDetail.justificationWordCountLabel')}: {wordCount}
+            </small>
+            {Number.isInteger(minimumWords) ? (
+              <small className={`mb-0 ${isBelowMinimumWords ? 'text-danger' : 'text-muted'}`}>
+                {t('sessionDetail.justificationWordMinimumLabel')}: {minimumWords}
+              </small>
+            ) : null}
+          </div>
         </div>
       ) : null}
 

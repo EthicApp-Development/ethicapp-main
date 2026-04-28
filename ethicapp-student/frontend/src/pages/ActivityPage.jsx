@@ -287,21 +287,23 @@ export default function ActivityPage() {
       entries.push({
         id: 'case',
         label: t('sessionDetail.caseTab'),
-        iconClass: 'fa-book-open'
+        iconClass: 'fa-book',
+        iconStyle: 'solid'
       });
     }
 
     const phaseIconClassByDesign = {
-      semantic_differential: 'fa-brain',
-      ranking: 'fa-puzzle-piece'
+      semantic_differential: { iconClass: 'fa-file', iconStyle: 'regular' },
+      ranking: { iconClass: 'fa-puzzle-piece', iconStyle: 'solid' }
     };
-    const phaseIconClass = phaseIconClassByDesign[designType] ?? 'fa-puzzle-piece';
+    const phaseIconConfig = phaseIconClassByDesign[designType] ?? { iconClass: 'fa-puzzle-piece', iconStyle: 'solid' };
 
     phaseTabs.forEach((phase) => {
       entries.push({
         id: `phase-${phase.id ?? phase.number}`,
         label: `${t('sessionDetail.phaseN')} ${phase.number}`,
-        iconClass: phaseIconClass
+        iconClass: phaseIconConfig.iconClass,
+        iconStyle: phaseIconConfig.iconStyle
       });
     });
 
