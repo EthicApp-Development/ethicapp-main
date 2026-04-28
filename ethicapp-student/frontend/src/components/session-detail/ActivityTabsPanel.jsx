@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import RankingPhaseView from './phases/RankingPhaseView.jsx';
 import SemanticDifferentialPhaseView from './phases/SemanticDifferentialPhaseView.jsx';
 
@@ -38,6 +38,7 @@ export default function ActivityTabsPanel({
   onSubmitPhaseResponse,
   t
 }) {
+  const [semanticDraftByPhaseId, setSemanticDraftByPhaseId] = useState({});
   const caseViewerUrl = buildCaseViewerUrl(caseDocumentUrl);
 
   const activePhase = useMemo(() => {
@@ -54,6 +55,24 @@ export default function ActivityTabsPanel({
   }, [activeTab, phases]);
 
   const isActivePhase = Number(activePhase?.id) === Number(currentPhaseId);
+  const activePhaseId = Number(activePhase?.id);
+
+  const setSemanticTaskDraft = (phaseId, taskId, partialUpdate) => {
+    if (!Number.isInteger(phaseId) || phaseId <= 0) {
+      return;
+    }
+
+    setSemanticDraftByPhaseId((prev) => ({
+      ...prev,
+      [phaseId]: {
+        ...(prev[phaseId] ?? {}),
+        [taskId]: {
+          ...((prev[phaseId] ?? {})[taskId] ?? {}),
+          ...partialUpdate
+        }
+      }
+    }));
+  };
 
   return (
     <section className="mt-4" aria-label={t('sessionDetail.activityPhasesLabel')}>
@@ -100,6 +119,8 @@ export default function ActivityTabsPanel({
         {activeTab !== 'case' && activePhase && designType === 'semantic_differential' ? (
           <SemanticDifferentialPhaseView
             phase={activePhase}
+            draftByTaskId={semanticDraftByPhaseId[activePhaseId] ?? {}}
+            onTaskDraftChange={(taskId, partialUpdate) => setSemanticTaskDraft(activePhaseId, taskId, partialUpdate)}
             isReadOnly={isSessionFinished}
             isActivePhase={isActivePhase}
             onSubmitPhaseResponse={onSubmitPhaseResponse}
