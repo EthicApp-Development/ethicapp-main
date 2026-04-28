@@ -4,7 +4,13 @@ function mapResponsesByTaskId(phase) {
   const responseList = Array.isArray(phase?.responses) ? phase.responses : [];
 
   return responseList.reduce((acc, response) => {
-    const taskId = Number(response?.taskId ?? response?.questionId);
+    const taskId = Number(
+      response?.taskId
+      ?? response?.task_id
+      ?? response?.questionId
+      ?? response?.question_id
+      ?? response?.did
+    );
 
     if (!Number.isInteger(taskId) || taskId <= 0) {
       return acc;
@@ -12,14 +18,21 @@ function mapResponsesByTaskId(phase) {
 
     const normalizedValue = Number(
       response?.selection
+      ?? response?.sel
       ?? response?.value
       ?? response?.responseValue
       ?? response?.response_value
     );
 
+    const normalizedJustification = response?.justification
+      ?? response?.comment
+      ?? response?.description
+      ?? '';
+
     acc[taskId] = {
       ...response,
-      normalizedValue: Number.isInteger(normalizedValue) ? normalizedValue : null
+      normalizedValue: Number.isInteger(normalizedValue) ? normalizedValue : null,
+      normalizedJustification: typeof normalizedJustification === 'string' ? normalizedJustification : ''
     };
     return acc;
   }, {});
@@ -27,13 +40,15 @@ function mapResponsesByTaskId(phase) {
 
 export default function SemanticDifferentialPhaseView({
   phase,
+  draftByTaskId,
+  onTaskDraftChange,
   isReadOnly,
   isActivePhase,
   onSubmitPhaseResponse,
   t
 }) {
   const responsesByTask = useMemo(() => mapResponsesByTaskId(phase), [phase]);
-  const [draftByTaskId, setDraftByTaskId] = useState({});
+  const safeDraftByTaskId = draftByTaskId ?? {};
   const [submittingTaskId, setSubmittingTaskId] = useState(null);
   const [feedbackByTaskId, setFeedbackByTaskId] = useState({});
 
@@ -43,17 +58,15 @@ export default function SemanticDifferentialPhaseView({
   }, [phase]);
 
   const setTaskDraft = (taskId, partialUpdate) => {
-    setDraftByTaskId((prev) => ({
-      ...prev,
-      [taskId]: {
-        ...(prev[taskId] ?? {}),
-        ...partialUpdate
-      }
-    }));
+    if (typeof onTaskDraftChange !== 'function') {
+      return;
+    }
+
+    onTaskDraftChange(taskId, partialUpdate);
   };
 
   const getTaskValue = (taskId) => {
-    const draftValue = draftByTaskId[taskId]?.value;
+    const draftValue = safeDraftByTaskId[taskId]?.value;
     if (Number.isInteger(draftValue)) {
       return draftValue;
     }
@@ -62,11 +75,11 @@ export default function SemanticDifferentialPhaseView({
   };
 
   const getTaskJustification = (taskId) => {
-    if (typeof draftByTaskId[taskId]?.justification === 'string') {
-      return draftByTaskId[taskId].justification;
+    if (typeof safeDraftByTaskId[taskId]?.justification === 'string') {
+      return safeDraftByTaskId[taskId].justification;
     }
 
-    const persistedJustification = responsesByTask[taskId]?.justification;
+    const persistedJustification = responsesByTask[taskId]?.normalizedJustification;
     return typeof persistedJustification === 'string' ? persistedJustification : '';
   };
 
