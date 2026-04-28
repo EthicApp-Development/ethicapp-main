@@ -20,6 +20,59 @@ export function DashboardController($scope, $routeParams, $http,
         vm.selectedTab = index; // Update the selected tab index
     };
 
+    vm.openIndividualResponseModal = function(response, phaseData) {
+        if (!response || !phaseData || vm.designObj?.type !== "semantic_differential") {
+            return;
+        }
+
+        $uibModal.open({
+            animation: true,
+            size: "lg",
+            backdrop: "static",
+            templateUrl: "/assets/static/views/teacher/fragments/sd-individual-response-modal.template.html",
+            controllerAs: "$ctrl",
+            controller: ["$uibModalInstance", "data", function($uibModalInstance, data) {
+                const $ctrl = this;
+
+                $ctrl.response = data.response;
+                $ctrl.phaseData = data.phaseData;
+                $ctrl.questions = (data.phaseData?.descriptor?.questions || []).map((question) => {
+                    const ansFormat = question?.ans_format || {};
+                    return {
+                        ...question,
+                        text: question?.text || question?.q_text || question?.question || question?.name || null,
+                        leftPole: question?.leftPole || ansFormat?.l_pole || null,
+                        rightPole: question?.rightPole || ansFormat?.r_pole || null,
+                        range: Number(question?.range || ansFormat?.values || 0),
+                        justify: typeof question?.justify === "boolean"
+                            ? question.justify
+                            : Boolean(ansFormat?.just_required),
+                    };
+                });
+
+                $ctrl.buildScaleOptions = function(question) {
+                    const range = Number(question?.range) || 0;
+                    return Array.from({ length: range }, (_, i) => i + 1);
+                };
+
+                $ctrl.getResponseValue = function(question) {
+                    return $ctrl.response?.[`r${question.number}`] || null;
+                };
+
+                $ctrl.getResponseComment = function(question) {
+                    return $ctrl.response?.[`commentR${question.number}`] || "";
+                };
+
+                $ctrl.close = function() {
+                    $uibModalInstance.dismiss("close");
+                };
+            }],
+            resolve: {
+                data: () => ({ response, phaseData }),
+            },
+        });
+    };
+
     vm.init = async function () {
         let id = $routeParams.id;
 
