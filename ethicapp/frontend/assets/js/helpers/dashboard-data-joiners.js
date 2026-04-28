@@ -50,6 +50,18 @@ let sdPhaseDataJoiner = (phaseDescriptor, responses, users,
         return acc;
     }, {});
 
+    // Ensure responders that are not currently present in the connected users
+    // list are still visible in the dashboard.
+    responses.forEach((response) => {
+        const uid = Number(response.uid);
+        if (!usersMap[uid]) {
+            usersMap[uid] = {
+                userId: uid,
+                userName: `User ${uid}`
+            };
+        }
+    });
+
     // Ensure all questions have default values for all users
     questions.forEach(question => {
         const questionNumber = question.number;
@@ -129,6 +141,19 @@ let rankingPhaseDataJoiner = (phaseDescriptor, responses, users,
         };
         return acc;
     }, {});
+
+    // Ensure responders that are not currently present in the connected users
+    // list are still visible in the dashboard.
+    responses.forEach((response) => {
+        const uid = Number(response.uid);
+        if (!usersMap[uid]) {
+            usersMap[uid] = {
+                uid,
+                userName: `User ${uid}`,
+                chatCount: 0
+            };
+        }
+    });
 
     // If no existingData is provided, build the structure from scratch
     if (!existingData) {
