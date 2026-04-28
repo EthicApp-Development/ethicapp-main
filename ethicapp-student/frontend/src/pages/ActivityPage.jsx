@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useEffect, useMemo, useReducer, useState } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import { studentApi, legacyUserApi } from '../api/studentApi.js';
 import { useI18n } from '../app/providers.jsx';
@@ -23,6 +23,7 @@ export default function ActivityPage() {
   const { sessionId } = useParams();
   const [localState, dispatch] = useReducer(sessionDetailReducer, initialSessionDetailState);
   const [lastSubmittedAtByResponse, setLastSubmittedAtByResponse] = useState({});
+  const lastAutoSelectedPhaseIdRef = useRef(null);
   const {
     stateBySession,
     loadingBySession,
@@ -66,6 +67,10 @@ export default function ActivityPage() {
   const activityState = stateBySession[selectedSessionId] ?? null;
   const loadingActivityState = loadingBySession[selectedSessionId] ?? false;
   const activityStateError = errorBySession[selectedSessionId] ?? '';
+
+  useEffect(() => {
+    lastAutoSelectedPhaseIdRef.current = null;
+  }, [selectedSessionId]);
 
   useEffect(() => {
     if (!session.isAuthenticated || !selectedSession) {
@@ -312,6 +317,11 @@ export default function ActivityPage() {
       return;
     }
 
+    if (lastAutoSelectedPhaseIdRef.current === currentPhaseId) {
+      return;
+    }
+
+    lastAutoSelectedPhaseIdRef.current = currentPhaseId;
     const currentPhaseTabId = `phase-${currentPhaseId}`;
     if (localState.activeTab !== currentPhaseTabId) {
       dispatch({ type: 'ACTIVE_TAB_SET', payload: currentPhaseTabId });

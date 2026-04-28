@@ -4,7 +4,7 @@ function mapResponsesByTaskId(phase) {
   const responseList = Array.isArray(phase?.responses) ? phase.responses : [];
 
   return responseList.reduce((acc, response) => {
-    const taskId = Number(response?.taskId);
+    const taskId = Number(response?.taskId ?? response?.questionId);
 
     if (!Number.isInteger(taskId) || taskId <= 0) {
       return acc;
@@ -87,6 +87,7 @@ export default function SemanticDifferentialPhaseView({
     }
 
     setSubmittingTaskId(taskId);
+    setTaskDraft(taskId, { value, justification });
 
     const result = await onSubmitPhaseResponse({
       responseKey: taskId,
