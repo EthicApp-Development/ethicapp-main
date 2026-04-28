@@ -84,6 +84,8 @@ const esCL = {
     instructionsLabel: 'Instrucciones',
     justificationLabel: 'Justificación escrita',
     justificationPlaceholder: 'Escribe tu justificación aquí',
+    justificationWordCountLabel: 'Palabras actuales',
+    justificationWordMinimumLabel: 'Mínimo de palabras',
     submitResponse: 'Enviar respuesta',
     submittingResponse: 'Enviando...',
     responseSubmitted: 'Respuesta enviada correctamente.',
@@ -92,7 +94,10 @@ const esCL = {
     responseCooldown: 'Espera antes de volver a enviar esta pregunta.',
     rankingTabPlaceholder: 'Vista de fase de ranking en implementación.',
     phaseTabPlaceholder: 'Contenido de la fase en implementación.',
-    notFoundInAvailable: 'No encontramos la sesión solicitada dentro de tus sesiones disponibles.'
+    notFoundInAvailable: 'No encontramos la sesión solicitada dentro de tus sesiones disponibles.',
+    developerInfoTitle: 'Información para desarrolladores',
+    showDeveloperInfo: 'Mostrar información',
+    hideDeveloperInfo: 'Ocultar información'
   },
   notFound: {
     title: 'Página no encontrada',

@@ -284,18 +284,31 @@ export default function ActivityPage() {
     const entries = [];
 
     if (hasCaseTab) {
-      entries.push({ id: 'case', label: t('sessionDetail.caseTab') });
+      entries.push({
+        id: 'case',
+        label: t('sessionDetail.caseTab'),
+        iconClass: 'fa-book',
+        iconStyle: 'solid'
+      });
     }
+
+    const phaseIconClassByDesign = {
+      semantic_differential: { iconClass: 'fa-file', iconStyle: 'regular' },
+      ranking: { iconClass: 'fa-puzzle-piece', iconStyle: 'solid' }
+    };
+    const phaseIconConfig = phaseIconClassByDesign[designType] ?? { iconClass: 'fa-puzzle-piece', iconStyle: 'solid' };
 
     phaseTabs.forEach((phase) => {
       entries.push({
         id: `phase-${phase.id ?? phase.number}`,
-        label: `${t('sessionDetail.phaseN')} ${phase.number}`
+        label: `${t('sessionDetail.phaseN')} ${phase.number}`,
+        iconClass: phaseIconConfig.iconClass,
+        iconStyle: phaseIconConfig.iconStyle
       });
     });
 
     return entries;
-  }, [hasCaseTab, phaseTabs, t]);
+  }, [designType, hasCaseTab, phaseTabs, t]);
 
   useEffect(() => {
     if (tabEntries.length === 0) {
@@ -386,16 +399,6 @@ export default function ActivityPage() {
 
   return (
     <section className="mx-auto" style={{ maxWidth: '860px' }}>
-      <div className="d-flex align-items-center justify-content-between mb-3">
-        <h1 className="h4 mb-0">{t('sessionDetail.title')}</h1>
-        <Link to="/" className="btn btn-outline-secondary btn-sm">
-          <span className="d-inline-flex align-items-center gap-2">
-            <i className="fa-solid fa-arrow-left" aria-hidden="true" />
-            <span>{t('sessionDetail.backHome')}</span>
-          </span>
-        </Link>
-      </div>
-
       {!session.isAuthenticated ? <p className="text-muted">{t('sessionDetail.loginToView')}</p> : null}
       {localState.loadingSessions ? <p className="text-muted">{t('sessionDetail.loadingDetail')}</p> : null}
 
@@ -408,15 +411,19 @@ export default function ActivityPage() {
       {!localState.loadingSessions && !localState.sessionsError && session.isAuthenticated ? (
         selectedSession ? (
           <article className="card shadow-sm">
+            <div className="card-header bg-white d-flex justify-content-between align-items-start gap-3 flex-wrap">
+              <div>
+                <h1 className="h4 mb-2">{selectedSession.name ?? `${t('sessions.sessionFallbackName')} #${selectedSession.id}`}</h1>
+                <p className="text-secondary mb-0">{selectedSession.descr || t('sessionDetail.noDescription')}</p>
+              </div>
+              <Link to="/" className="btn btn-outline-secondary btn-sm">
+                <span className="d-inline-flex align-items-center gap-2">
+                  <i className="fa-solid fa-arrow-left" aria-hidden="true" />
+                  <span>{t('sessionDetail.backHome')}</span>
+                </span>
+              </Link>
+            </div>
             <div className="card-body">
-              <SessionMetadata
-                selectedSession={selectedSession}
-                locale={locale}
-                t={t}
-                currentPhaseNumber={currentPhaseNumber}
-                currentPhaseId={currentPhaseId}
-              />
-
               {localState.loadingDescriptor ? <p className="text-muted mt-3 mb-0">{t('sessionDetail.loadingDescriptor')}</p> : null}
 
               {localState.descriptorError ? (
@@ -472,6 +479,16 @@ export default function ActivityPage() {
             {t('sessionDetail.notFoundInAvailable')}
           </div>
         )
+      ) : null}
+
+      {selectedSession ? (
+        <SessionMetadata
+          selectedSession={selectedSession}
+          locale={locale}
+          t={t}
+          currentPhaseNumber={currentPhaseNumber}
+          currentPhaseId={currentPhaseId}
+        />
       ) : null}
     </section>
   );
