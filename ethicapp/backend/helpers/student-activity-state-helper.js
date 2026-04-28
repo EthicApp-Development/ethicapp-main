@@ -651,7 +651,16 @@ export async function getCachedStudentActivityResponses(designType, sessionId, u
             const cachedData = await redisClient.get(cacheKey);
             if (cachedData) {
                 console.debug(`Cache hit for responses: sessionId=${sessionId}, userId=${userId}`);
-                const responsesByPhase = JSON.parse(cachedData);
+                const cachedResponses = JSON.parse(cachedData);
+                const responsesByPhase = Array.isArray(cachedResponses)
+                    ? cachedResponses.reduce((acc, phase) => {
+                        const phaseNumber = Number(phase?.number);
+                        if (Number.isInteger(phaseNumber) && phaseNumber > 0) {
+                            acc[phaseNumber] = Array.isArray(phase?.responses) ? phase.responses : [];
+                        }
+                        return acc;
+                    }, {})
+                    : cachedResponses;
 
                 // Attach cached responses to the corresponding phases
                 phases.forEach(phase => {
@@ -664,9 +673,13 @@ export async function getCachedStudentActivityResponses(designType, sessionId, u
 
         // Cache miss or invalidation: Fetch responses from the database
         console.debug(`Cache miss for responses: sessionId=${sessionId}, userId=${userId}`);
-        const responsesByPhase = await studentActivityResponseGetters[designType](sessionId, userId, phases);
+        const phasesWithResponses = await getStudentActivityResponses(designType, sessionId, userId, phases);
+        const responsesByPhase = phasesWithResponses.reduce((acc, phase) => {
+            acc[phase.number] = Array.isArray(phase.responses) ? phase.responses : [];
+            return acc;
+        }, {});
 
-        // Cache the result
+        // Cache the normalized map of phaseNumber -> responses
         await redisClient.set(cacheKey, JSON.stringify(responsesByPhase), 'EX', 300); // Expiration: 5 minutes
 
         // Attach responses to the corresponding phases
