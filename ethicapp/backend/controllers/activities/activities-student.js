@@ -5,6 +5,7 @@ import { requireOwnershipOrRole, requireRole } from "../../helpers/auth-helper.j
 import * as StudentActivityStatusHelper from "../../helpers/student-activity-state-helper.js";
 import * as config from "../../config/config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
+import { teacherNotifications } from "../../config/socket.config.js";
 import { getDesignTypeBySessionId } from "./activities-common.js";
 
 const router = express.Router();
@@ -166,13 +167,15 @@ router.post("/activities/:id/response", async (req, res) => {
             return res.status(400).json({ error: `Unsupported design type: ${designType}` });
         }
 
-        await handler({
+        const notificationData = await handler({
             sessionId,
             phaseId,
             userId,
             questionId: Number(questionId),
             payload:    req.body,
         });
+
+        emitResponseSubmittedNotification(sessionId, phaseId, notificationData);
 
         return res.status(201).json({
             status:  "ok",
@@ -244,6 +247,14 @@ async function submitSemanticDifferentialResponse({ phaseId, userId, questionId,
             rpg2.param("plain", justification),
         ],
     });
+
+    return {
+        type: "semantic_differential",
+        uid:  userId,
+        did:  questionId,
+        sel:  value,
+        comment: justification,
+    };
 }
 
 async function submitRankingResponse({ phaseId, userId, questionId, payload }) {
@@ -302,6 +313,31 @@ async function submitRankingResponse({ phaseId, userId, questionId, payload }) {
             rpg2.param("plain", phaseId),
         ],
     });
+
+    return {
+        type: "ranking",
+        uid:  userId,
+        items: [
+            {
+                actorid: itemId,
+                orden: order,
+                description: justification,
+            },
+        ],
+    };
+}
+
+function emitResponseSubmittedNotification(sessionId, phaseId, responsePayload) {
+    if (!teacherNotifications?.responseSubmitted) {
+        console.warn("Teacher socket notification service is not initialized.");
+        return;
+    }
+
+    teacherNotifications.responseSubmitted(
+        sessionId,
+        phaseId,
+        responsePayload
+    );
 }
 
 async function getCurrentPhaseIdForSession(sessionId) {
