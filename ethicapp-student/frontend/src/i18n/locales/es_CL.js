@@ -71,11 +71,14 @@ const esCL = {
     waitingTitle: 'Por favor espera mientras la actividad se inicia',
     waitingDescription: 'Mantente atento a las indicaciones del profesor',
     loadingActivityState: 'Cargando estado completo de la actividad...',
+    activityFinished: 'Esta actividad ha finalizado',
     loadingCaseDocument: 'Cargando documento del caso...',
     caseLoadErrorFallback: 'No se pudo cargar el documento del caso',
     activityPhasesLabel: 'Fases de la actividad',
     phasesTitle: 'Fases',
     caseTab: 'Caso',
+    caseViewerHint: 'Si el visor no carga correctamente, abre el PDF en una pestaña nueva.',
+    openCaseInNewTab: 'Abrir en nueva pestaña',
     phaseN: 'Fase',
     phaseTabPlaceholder: 'Contenido de la fase en implementación.',
     notFoundInAvailable: 'No encontramos la sesión solicitada dentro de tus sesiones disponibles.'
@@ -88,7 +91,8 @@ const esCL = {
   errors: {
     invalidSessionId: 'sessionId inválido',
     invalidUserId: 'userId inválido',
-    fullStateFallback: 'No se pudo cargar el estado completo de la actividad'
+    fullStateFallback: 'No se pudo cargar el estado completo de la actividad',
+    currentPhaseStateFallback: 'No se pudo cargar el estado inicial de la fase actual'
   }
 };
 

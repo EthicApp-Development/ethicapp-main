@@ -3,13 +3,38 @@ import axios from 'axios';
 import { useI18n } from '../app/providers.jsx';
 import { legacyUserApi } from '../api/studentApi.js';
 
-const StudentActivityStateContext = createContext(null);
+const defaultStudentActivityStateContext = {
+  stateBySession: {},
+  loadingBySession: {},
+  errorBySession: {},
+  loadFullState: async () => null,
+  loadCurrentPhaseState: async () => null
+};
+
+const StudentActivityStateContext = createContext(defaultStudentActivityStateContext);
 
 export function StudentActivityStateProvider({ children }) {
   const { t } = useI18n();
   const [stateBySession, setStateBySession] = useState({});
   const [loadingBySession, setLoadingBySession] = useState({});
   const [errorBySession, setErrorBySession] = useState({});
+
+  const mergePhaseIntoSessionState = useCallback((previousState, phase) => {
+    if (!phase || typeof phase !== 'object') {
+      return previousState ?? null;
+    }
+
+    const previousPhases = Array.isArray(previousState?.phases) ? previousState.phases : [];
+    const nextPhases = previousPhases.filter((existingPhase) => existingPhase?.id !== phase.id);
+
+    nextPhases.push(phase);
+    nextPhases.sort((leftPhase, rightPhase) => Number(leftPhase?.number ?? 0) - Number(rightPhase?.number ?? 0));
+
+    return {
+      ...(previousState ?? {}),
+      phases: nextPhases
+    };
+  }, []);
 
   const loadFullState = useCallback(async ({ sessionId, userId, invalidate = false }) => {
     const parsedSessionId = Number(sessionId);
@@ -54,14 +79,48 @@ export function StudentActivityStateProvider({ children }) {
     }
   }, [t]);
 
+  const loadCurrentPhaseState = useCallback(async ({ sessionId, invalidate = false }) => {
+    const parsedSessionId = Number(sessionId);
+
+    if (!Number.isInteger(parsedSessionId) || parsedSessionId <= 0) {
+      throw new Error(t('errors.invalidSessionId'));
+    }
+
+    setErrorBySession((prev) => ({ ...prev, [parsedSessionId]: '' }));
+
+    try {
+      const { data } = await legacyUserApi.get(`/activities/${parsedSessionId}/current_phase_state`, {
+        params: {
+          invalidate
+        }
+      });
+      const currentPhaseState = data?.phase ?? null;
+
+      setStateBySession((prev) => ({
+        ...prev,
+        [parsedSessionId]: mergePhaseIntoSessionState(prev[parsedSessionId], currentPhaseState)
+      }));
+
+      return currentPhaseState;
+    } catch (error) {
+      const message = axios.isAxiosError(error)
+        ? (error.response?.data?.error ?? t('errors.currentPhaseStateFallback'))
+        : t('errors.currentPhaseStateFallback');
+
+      setErrorBySession((prev) => ({ ...prev, [parsedSessionId]: message }));
+      throw error;
+    }
+  }, [mergePhaseIntoSessionState, t]);
+
   const value = useMemo(
     () => ({
       stateBySession,
       loadingBySession,
       errorBySession,
-      loadFullState
+      loadFullState,
+      loadCurrentPhaseState
     }),
-    [errorBySession, loadFullState, loadingBySession, stateBySession]
+    [errorBySession, loadCurrentPhaseState, loadFullState, loadingBySession, stateBySession]
   );
 
   return <StudentActivityStateContext.Provider value={value}>{children}</StudentActivityStateContext.Provider>;
@@ -70,8 +129,8 @@ export function StudentActivityStateProvider({ children }) {
 export function useStudentActivityState() {
   const context = useContext(StudentActivityStateContext);
 
-  if (!context) {
-    throw new Error('useStudentActivityState must be used within StudentActivityStateProvider');
+  if (context === defaultStudentActivityStateContext && import.meta.env?.DEV) {
+    console.warn('useStudentActivityState is running without StudentActivityStateProvider. Using fallback context.');
   }
 
   return context;

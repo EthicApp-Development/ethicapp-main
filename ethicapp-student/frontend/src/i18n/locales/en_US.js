@@ -71,11 +71,14 @@ const enUS = {
     waitingTitle: 'Please wait while the activity starts',
     waitingDescription: 'Stay tuned to your teacher instructions',
     loadingActivityState: 'Loading full activity state...',
+    activityFinished: 'This activity has finished',
     loadingCaseDocument: 'Loading case document...',
     caseLoadErrorFallback: 'Unable to load case document',
     activityPhasesLabel: 'Activity phases',
     phasesTitle: 'Phases',
     caseTab: 'Case',
+    caseViewerHint: 'If the embedded viewer does not load, open the PDF in a new tab.',
+    openCaseInNewTab: 'Open in new tab',
     phaseN: 'Phase',
     phaseTabPlaceholder: 'Phase content is under implementation.',
     notFoundInAvailable: 'We could not find the requested session in your available sessions.'
@@ -88,7 +91,8 @@ const enUS = {
   errors: {
     invalidSessionId: 'Invalid sessionId',
     invalidUserId: 'Invalid userId',
-    fullStateFallback: 'Unable to load full activity state'
+    fullStateFallback: 'Unable to load full activity state',
+    currentPhaseStateFallback: 'Unable to load the initial state of the current phase'
   }
 };
 
