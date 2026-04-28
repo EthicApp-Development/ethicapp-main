@@ -20,7 +20,7 @@ export default function SessionDetailPage() {
   const { session, sessionRefreshKey } = useOutletContext();
   const { sessionId } = useParams();
   const [localState, dispatch] = useReducer(sessionDetailReducer, initialSessionDetailState);
-  const { stateBySession, loadingBySession, errorBySession, loadFullState } = useStudentActivityState();
+  const { stateBySession, loadingBySession, errorBySession, loadFullState, loadCurrentPhaseState } = useStudentActivityState();
 
   useEffect(() => {
     if (!session.isAuthenticated) {
@@ -99,6 +99,7 @@ export default function SessionDetailPage() {
 
   const shouldShowWaitingScreen = activityStatusCode === SESSION_STATUS.initiated;
   const shouldLoadActivityData = activityStatusCode >= SESSION_STATUS.inProgress;
+  const isSessionFinished = activityStatusCode === SESSION_STATUS.finished;
 
   useEffect(() => {
     if (!session.isAuthenticated || !selectedSession || !session.uid || !shouldLoadActivityData) {
@@ -185,6 +186,9 @@ export default function SessionDetailPage() {
       });
 
       dispatch({ type: 'ACTIVITY_FORCE_IN_PROGRESS' });
+      loadCurrentPhaseState({ sessionId: activeSessionId }).catch(() => {
+        // Errors are already reflected in the context state.
+      });
     };
 
     const handleShareResponse = (payload) => {
@@ -199,6 +203,8 @@ export default function SessionDetailPage() {
         sessionId: activeSessionId,
         payload
       });
+
+      dispatch({ type: 'ACTIVITY_FORCE_FINISHED' });
     };
 
     const handleChatMessage = (payload) => {
@@ -241,7 +247,7 @@ export default function SessionDetailPage() {
       socket.off('onEndSession', handleEndSession);
       socket.off('onChatMessage', handleChatMessage);
     };
-  }, [selectedSession, session.isAuthenticated]);
+  }, [loadCurrentPhaseState, selectedSession, session.isAuthenticated]);
 
   const phaseTabs = useMemo(() => {
     return Array.isArray(activityState?.phases) ? activityState.phases : [];
@@ -343,14 +349,22 @@ export default function SessionDetailPage() {
               ) : null}
 
               {!shouldShowWaitingScreen && !loadingActivityState && !activityStateError && tabEntries.length > 0 ? (
-                <ActivityTabsPanel
-                  tabEntries={tabEntries}
-                  activeTab={localState.activeTab}
-                  setActiveTab={(nextTab) => dispatch({ type: 'ACTIVE_TAB_SET', payload: nextTab })}
-                  hasCaseTab={hasCaseTab}
-                  caseDocumentUrl={localState.caseDocumentUrl}
-                  t={t}
-                />
+                <>
+                  {isSessionFinished ? (
+                    <div className="alert alert-warning mt-3 mb-0" role="alert">
+                      {t('sessionDetail.activityFinished')}
+                    </div>
+                  ) : null}
+                  <ActivityTabsPanel
+                    tabEntries={tabEntries}
+                    activeTab={localState.activeTab}
+                    setActiveTab={(nextTab) => dispatch({ type: 'ACTIVE_TAB_SET', payload: nextTab })}
+                    hasCaseTab={hasCaseTab}
+                    caseDocumentUrl={localState.caseDocumentUrl}
+                    readOnly={isSessionFinished}
+                    t={t}
+                  />
+                </>
               ) : null}
             </div>
           </article>

@@ -71,6 +71,7 @@ const enUS = {
     waitingTitle: 'Please wait while the activity starts',
     waitingDescription: 'Stay tuned to your teacher instructions',
     loadingActivityState: 'Loading full activity state...',
+    activityFinished: 'This activity has finished',
     loadingCaseDocument: 'Loading case document...',
     caseLoadErrorFallback: 'Unable to load case document',
     activityPhasesLabel: 'Activity phases',
@@ -90,7 +91,8 @@ const enUS = {
   errors: {
     invalidSessionId: 'Invalid sessionId',
     invalidUserId: 'Invalid userId',
-    fullStateFallback: 'Unable to load full activity state'
+    fullStateFallback: 'Unable to load full activity state',
+    currentPhaseStateFallback: 'Unable to load the initial state of the current phase'
   }
 };
 
