@@ -1,7 +1,10 @@
 <div>
     <h4>{{ "responses_title_text" | translate }}</h4>
     <div ng-if="ctrl.phaseData.descriptor.mode !== 'team'">
-        <individual-phase-table phase-data="ctrl.phaseData" design-type="ctrl.designType">
+        <individual-phase-table
+            phase-data="ctrl.phaseData"
+            design-type="ctrl.designType"
+            on-select-response="ctrl.onSelectResponse({ response: response, phaseData: phaseData })">
         </individual-phase-table>
     </div>
     <div ng-if="ctrl.phaseData.descriptor.mode === 'team'">
