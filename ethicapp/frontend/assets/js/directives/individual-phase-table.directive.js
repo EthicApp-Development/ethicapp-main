@@ -46,12 +46,16 @@ let individualPhaseTableDirective = function() {
                     !iptCtrl.phaseData.state ||
                     !iptCtrl.phaseData.descriptor) {
                     console.error("Invalid phase data structure provided.");
+                    iptCtrl.sortedResponses = [];
+                    iptCtrl.totalChatMessages = 0;
                     return;
                 }
 
-                if (iptCtrl.phaseData.state.length === 0 ||
-                    iptCtrl.phaseData.descriptor.questions.length === 0) {
-                    console.warn("No responses or questions available. Initialization skipped.");
+                const questions = iptCtrl.phaseData.descriptor.questions || [];
+                if (questions.length === 0) {
+                    console.warn("No questions available for this phase.");
+                    iptCtrl.sortedResponses = [];
+                    iptCtrl.totalChatMessages = 0;
                     return;
                 }
 
@@ -61,6 +65,8 @@ let individualPhaseTableDirective = function() {
 
                 iptCtrl.phaseData.state = processedData;
                 iptCtrl.sortedResponses = [...processedData];
+                iptCtrl.totalChatMessages = processedData.reduce((acc, response) =>
+                    acc + Number(response.chatCount || 0), 0);
             };
 
             // Lifecycle hook: Called when the directive is initialized

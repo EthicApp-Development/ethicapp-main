@@ -175,7 +175,7 @@ let rankingPhaseDataJoiner = (phaseDescriptor, responses, users,
         } else {
             const existingUser = existingDataMap[user.uid];
             // Update ranked items and actor IDs
-            phaseResponses
+            responses
                 .filter(response => response.uid === user.uid)
                 .forEach(response => {
                     existingUser[`r${response.orden}`] = response.description || null;
