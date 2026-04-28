@@ -6,6 +6,14 @@ let activityControlsDirective = function() {
             isLastPhase: '<',
             parentCtrl: '<'  // Reference to the parent controller
         },
+        controller: ["$scope", async function($scope) {
+            $scope.startNextPhaseAndNotify = async function() {
+                const phaseStarted = await $scope.parentCtrl.startNextPhase();
+                if (phaseStarted) {
+                    $scope.$emit("activity:phase-advanced");
+                }
+            };
+        }],
         template: `
             <div class="panel panel-default">
                 <div class="panel-body">
@@ -13,7 +21,7 @@ let activityControlsDirective = function() {
                         <div class="col-md-12 text-center">
                             <!-- Section 1: Main Actions -->
                             <div ng-if="!isFinished" class="action-buttons">
-                                <button ng-if="!isLastPhase" class="btn btn-default btn-sm" ng-click="parentCtrl.startNextPhase()">
+                                <button ng-if="!isLastPhase" class="btn btn-default btn-sm" ng-click="startNextPhaseAndNotify()">
                                     <i class="fa-solid fa-forward text-success"></i> {{ 'start_next_phase_button' | translate }}
                                 </button>
                                 <button class="btn btn-default btn-sm" ng-click="parentCtrl.endActivity()">

@@ -151,7 +151,7 @@ export function DashboardController($scope, $routeParams, $http,
             // Check if we've already reached the last phase
             if (currentPhaseNumber === vm.designObj.phases.length) {
                 console.error("Cannot advance any further, reached the last phase already.");
-                return;
+                return false;
             }
     
             const nextPhaseIndex = currentPhaseNumber;
@@ -178,7 +178,7 @@ export function DashboardController($scope, $routeParams, $http,
                 );
             } else {
                 console.error("Error creating activity phase.");
-                return;
+                return false;
             }
     
             // Transition to the newly created phase
@@ -196,9 +196,11 @@ export function DashboardController($scope, $routeParams, $http,
             });
     
             // Update data for the current phase
-            vm.updateDashboardPhaseData(phaseId);
+            await vm.updateDashboardPhaseData(phaseId);
+            return true;
         } catch (error) {
             console.error("Error in startNextPhase:", error);
+            return false;
         }
     };
 
@@ -408,6 +410,13 @@ export function DashboardController($scope, $routeParams, $http,
         }
         vm.updateDashboardPhaseData(currentPhaseId);
     };
+
+    $scope.$on("activity:phase-advanced", () => {
+        vm.activeTab = "info";
+        if (vm.dashboardPhaseData.length > 0) {
+            vm.selectedTab = vm.dashboardPhaseData.length - 1;
+        }
+    });
 
     vm.lastPhaseReached = function() {
         return vm.activityState?.descriptor.currentPhase !== null && 
