@@ -8,9 +8,9 @@ let activityControlsDirective = function() {
         },
         controller: ["$scope", async function($scope) {
             $scope.startNextPhaseAndNotify = async function() {
-                const phaseStarted = await $scope.parentCtrl.startNextPhase();
-                if (phaseStarted) {
-                    $scope.$emit("activity:phase-advanced");
+                const phaseId = await $scope.parentCtrl.startNextPhase();
+                if (phaseId) {
+                    $scope.$emit("activity:phase-advanced", { phaseId });
                 }
             };
         }],

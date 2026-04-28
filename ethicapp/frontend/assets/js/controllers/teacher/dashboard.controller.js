@@ -151,7 +151,7 @@ export function DashboardController($scope, $routeParams, $http,
             // Check if we've already reached the last phase
             if (currentPhaseNumber === vm.designObj.phases.length) {
                 console.error("Cannot advance any further, reached the last phase already.");
-                return false;
+                return null;
             }
     
             const nextPhaseIndex = currentPhaseNumber;
@@ -178,7 +178,7 @@ export function DashboardController($scope, $routeParams, $http,
                 );
             } else {
                 console.error("Error creating activity phase.");
-                return false;
+                return null;
             }
     
             // Transition to the newly created phase
@@ -197,10 +197,10 @@ export function DashboardController($scope, $routeParams, $http,
     
             // Update data for the current phase
             await vm.updateDashboardPhaseData(phaseId);
-            return true;
+            return phaseId;
         } catch (error) {
             console.error("Error in startNextPhase:", error);
-            return false;
+            return null;
         }
     };
 
@@ -411,10 +411,33 @@ export function DashboardController($scope, $routeParams, $http,
         vm.updateDashboardPhaseData(currentPhaseId);
     };
 
-    $scope.$on("activity:phase-advanced", () => {
-        vm.activeTab = "info";
-        if (vm.dashboardPhaseData.length > 0) {
+    vm.activatePhaseTabById = function(phaseId, retryCount = 8) {
+        const phaseIndex = vm.dashboardPhaseData.findIndex((phase) => phase?.descriptor?.id == phaseId);
+        if (phaseIndex >= 0) {
+            vm.selectedTab = phaseIndex;
+            return;
+        }
+
+        if (retryCount <= 0) {
             vm.selectedTab = vm.dashboardPhaseData.length - 1;
+            return;
+        }
+
+        $timeout(() => vm.activatePhaseTabById(phaseId, retryCount - 1), 100);
+    };
+
+    $scope.$on("activity:phase-advanced", (event, data) => {
+        vm.activeTab = "info";
+        const phaseId = data?.phaseId;
+        if (phaseId) {
+            vm.activatePhaseTabById(phaseId);
+            return;
+        }
+
+        if (vm.dashboardPhaseData.length > 0) { 
+            $timeout(() => {
+                vm.selectedTab = vm.dashboardPhaseData.length - 1;
+            }, 0);
         }
     });
 
