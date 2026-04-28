@@ -1,6 +1,7 @@
 import * as PhaseCreationHelpers from "../../helpers/phase-creation-helpers.js";
 import * as DesignHelpers from "../../helpers/design-helpers.js";
 import { DashboardDataJoiners } from "../../helpers/dashboard-data-joiners.js";
+import { openSemanticDifferentialIndividualResponseModal } from "../../helpers/dashboard-individual-response-modal.helper.js";
 
 /*eslint func-style: ["error", "expression"]*/
 export function DashboardController($scope, $routeParams, $http, 
@@ -18,6 +19,14 @@ export function DashboardController($scope, $routeParams, $http,
 
     vm.selectTab = function(index) {
         vm.selectedTab = index; // Update the selected tab index
+    };
+
+    vm.openIndividualResponseModal = function(response, phaseData) {
+        if (!response || !phaseData || vm.designObj?.type !== "semantic_differential") {
+            return;
+        }
+
+        openSemanticDifferentialIndividualResponseModal($uibModal, response, phaseData);
     };
 
     vm.init = async function () {

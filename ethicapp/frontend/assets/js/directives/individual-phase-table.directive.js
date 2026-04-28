@@ -5,7 +5,8 @@ let individualPhaseTableDirective = function() {
         restrict: 'E',
         scope: {
             phaseData: '<',
-            designType: '<'
+            designType: '<',
+            onSelectResponse: '&?'
         },
         bindToController: true, // Bind the scope properties to the controller
         controllerAs: 'iptCtrl', // Alias for the controller
@@ -101,6 +102,19 @@ let individualPhaseTableDirective = function() {
                     return `/assets/static/views/teacher/fragments/default-template.html`;
                 }
                 return template;
+            };
+
+            iptCtrl.onResponseRowClick = function(response) {
+                if (iptCtrl.designType !== 'semantic_differential') {
+                    return;
+                }
+
+                if (typeof iptCtrl.onSelectResponse === 'function') {
+                    iptCtrl.onSelectResponse({
+                        response,
+                        phaseData: iptCtrl.phaseData,
+                    });
+                }
             };
         },
         template: `

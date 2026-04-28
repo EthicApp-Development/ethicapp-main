@@ -67,7 +67,11 @@
                                      ng-if="dc.dashboardPhaseData.length > 0"
                                      ng-repeat="phase in dc.dashboardPhaseData track by $index">
                                     <phase-description phase-number="phase.descriptor.number" design-object="dc.designObj"></phase-description>
-                                    <phase-state phase-data="phase" design-type="dc.designObj.type"></phase-state>
+                                    <phase-state
+                                        phase-data="phase"
+                                        design-type="dc.designObj.type"
+                                        on-select-response="dc.openIndividualResponseModal(response, phaseData)">
+                                    </phase-state>
                                 </div>
                             </div>
                         </div>
