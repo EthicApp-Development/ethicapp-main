@@ -4,13 +4,23 @@ function mapResponsesByTaskId(phase) {
   const responseList = Array.isArray(phase?.responses) ? phase.responses : [];
 
   return responseList.reduce((acc, response) => {
-    const taskId = Number(response?.taskId);
+    const taskId = Number(response?.taskId ?? response?.questionId);
 
     if (!Number.isInteger(taskId) || taskId <= 0) {
       return acc;
     }
 
-    acc[taskId] = response;
+    const normalizedValue = Number(
+      response?.selection
+      ?? response?.value
+      ?? response?.responseValue
+      ?? response?.response_value
+    );
+
+    acc[taskId] = {
+      ...response,
+      normalizedValue: Number.isInteger(normalizedValue) ? normalizedValue : null
+    };
     return acc;
   }, {});
 }
@@ -25,7 +35,7 @@ export default function SemanticDifferentialPhaseView({
   const responsesByTask = useMemo(() => mapResponsesByTaskId(phase), [phase]);
   const [draftByTaskId, setDraftByTaskId] = useState({});
   const [submittingTaskId, setSubmittingTaskId] = useState(null);
-  const [feedback, setFeedback] = useState(null);
+  const [feedbackByTaskId, setFeedbackByTaskId] = useState({});
 
   const tasks = useMemo(() => {
     const phaseTasks = Array.isArray(phase?.tasks) ? phase.tasks : [];
@@ -48,8 +58,7 @@ export default function SemanticDifferentialPhaseView({
       return draftValue;
     }
 
-    const persistedValue = Number(responsesByTask[taskId]?.selection);
-    return Number.isInteger(persistedValue) ? persistedValue : null;
+    return Number.isInteger(responsesByTask[taskId]?.normalizedValue) ? responsesByTask[taskId].normalizedValue : null;
   };
 
   const getTaskJustification = (taskId) => {
@@ -67,14 +76,18 @@ export default function SemanticDifferentialPhaseView({
     const justification = getTaskJustification(taskId).trim();
 
     if (!Number.isInteger(value)) {
-      setFeedback({
-        type: 'danger',
-        message: t('sessionDetail.responseSelectScaleFirst')
-      });
+      setFeedbackByTaskId((prev) => ({
+        ...prev,
+        [taskId]: {
+          type: 'danger',
+          message: t('sessionDetail.responseSelectScaleFirst')
+        }
+      }));
       return;
     }
 
     setSubmittingTaskId(taskId);
+    setTaskDraft(taskId, { value, justification });
 
     const result = await onSubmitPhaseResponse({
       responseKey: taskId,
@@ -87,29 +100,25 @@ export default function SemanticDifferentialPhaseView({
 
     setSubmittingTaskId(null);
 
-    setFeedback({
-      type: result.ok ? 'success' : 'danger',
-      message: result.message
-    });
+    setFeedbackByTaskId((prev) => ({
+      ...prev,
+      [taskId]: {
+        type: result.ok ? 'success' : 'danger',
+        message: result.message
+      }
+    }));
 
     window.setTimeout(() => {
-      setFeedback(null);
+      setFeedbackByTaskId((prev) => {
+        const next = { ...prev };
+        delete next[taskId];
+        return next;
+      });
     }, 2600);
   };
 
   return (
     <div className="d-flex flex-column gap-3">
-      {feedback ? (
-        <div
-          className={`position-fixed top-0 end-0 mt-3 me-3 alert alert-${feedback.type} py-2 px-3 shadow-sm`}
-          role="status"
-          aria-live="polite"
-          style={{ zIndex: 1050 }}
-        >
-          {feedback.message}
-        </div>
-      ) : null}
-
       {!isActivePhase && !isReadOnly ? (
         <div className="alert alert-info py-2 mb-0" role="status">
           {t('sessionDetail.phaseReadOnlyWhileInactive')}
@@ -128,35 +137,40 @@ export default function SemanticDifferentialPhaseView({
         const disabled = isReadOnly || !isActivePhase;
         const selectedValue = getTaskValue(taskId);
         const justification = getTaskJustification(taskId);
+        const taskFeedback = feedbackByTaskId[taskId] ?? null;
 
         return (
           <article key={taskId}>
             <p className="fw-semibold mb-2">{task.title}</p>
-            <div className="d-flex justify-content-between align-items-center mb-2">
-              <small className="text-muted">{task.leftPole}</small>
-              <small className="text-muted">{task.rightPole}</small>
-            </div>
-            <div className="d-flex flex-wrap gap-2 mb-3">
-              {Array.from({ length: numValues }, (_, idx) => idx + 1).map((scaleValue) => {
-                const radioId = `task-${taskId}-value-${scaleValue}`;
+            <div className="row align-items-center g-2 mb-3">
+              <div className="col-3 text-start">
+                <small className="text-muted">{task.leftPole}</small>
+              </div>
+              <div className="col-6 d-flex justify-content-center flex-nowrap gap-2">
+                {Array.from({ length: numValues }, (_, idx) => idx + 1).map((scaleValue) => {
+                  const radioId = `task-${taskId}-value-${scaleValue}`;
 
-                return (
-                  <div key={radioId} className="form-check form-check-inline m-0">
-                    <input
-                      id={radioId}
-                      type="radio"
-                      name={`task-${taskId}-scale`}
-                      className="form-check-input"
-                      checked={selectedValue === scaleValue}
-                      disabled={disabled}
-                      onChange={() => setTaskDraft(taskId, { value: scaleValue })}
-                    />
-                    <label htmlFor={radioId} className="form-check-label">
-                      {scaleValue}
-                    </label>
-                  </div>
-                );
-              })}
+                  return (
+                    <div key={radioId} className="form-check form-check-inline m-0 d-inline-flex align-items-center">
+                      <input
+                        id={radioId}
+                        type="radio"
+                        name={`task-${taskId}-scale`}
+                        className="form-check-input"
+                        checked={selectedValue === scaleValue}
+                        disabled={disabled}
+                        onChange={() => setTaskDraft(taskId, { value: scaleValue })}
+                      />
+                      <label htmlFor={radioId} className="form-check-label ms-1">
+                        {scaleValue}
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="col-3 text-end">
+                <small className="text-muted">{task.rightPole}</small>
+              </div>
             </div>
 
             {task.requiresJustification ? (
@@ -176,14 +190,26 @@ export default function SemanticDifferentialPhaseView({
               </div>
             ) : null}
 
-            <div className="d-flex justify-content-end">
+            <div className="d-flex justify-content-end align-items-center gap-2">
+              {taskFeedback ? (
+                <div
+                  className={`alert alert-${taskFeedback.type} py-1 px-2 mb-0`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  {taskFeedback.message}
+                </div>
+              ) : null}
               <button
                 type="button"
                 className="btn btn-primary btn-sm"
                 disabled={disabled || submittingTaskId === taskId}
                 onClick={() => submitTask(task)}
               >
-                {submittingTaskId === taskId ? t('sessionDetail.submittingResponse') : t('sessionDetail.submitResponse')}
+                <span className="d-inline-flex align-items-center gap-2">
+                  <i className="fa-solid fa-paper-plane" aria-hidden="true" />
+                  <span>{submittingTaskId === taskId ? t('sessionDetail.submittingResponse') : t('sessionDetail.submitResponse')}</span>
+                </span>
               </button>
             </div>
 
