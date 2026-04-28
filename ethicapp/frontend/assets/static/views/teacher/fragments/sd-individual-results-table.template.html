@@ -10,7 +10,9 @@
         </tr>
     </thead>
     <tbody>
-        <tr ng-repeat="response in iptCtrl.sortedResponses track by response.userId">
+        <tr ng-repeat="response in iptCtrl.sortedResponses track by response.userId"
+            ng-click="iptCtrl.onResponseRowClick(response)"
+            style="cursor: pointer;">
             <td>{{ response.userName }}</td>
             <td ng-repeat="question in iptCtrl.phaseData.descriptor.questions">
                 {{ response['r' + question.number] || ('no_response' | translate) }}

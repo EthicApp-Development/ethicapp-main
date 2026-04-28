@@ -3,7 +3,8 @@ let phaseStateDirective = function() {
         restrict: 'E',
         scope: {
             designType: '<',
-            phaseData: '<'
+            phaseData: '<',
+            onSelectResponse: '&?'
         },
         bindToController: true,
         controllerAs: 'ctrl',
