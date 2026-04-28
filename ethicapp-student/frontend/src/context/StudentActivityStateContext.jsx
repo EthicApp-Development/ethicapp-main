@@ -8,7 +8,8 @@ const defaultStudentActivityStateContext = {
   loadingBySession: {},
   errorBySession: {},
   loadFullState: async () => null,
-  loadCurrentPhaseState: async () => null
+  loadCurrentPhaseState: async () => null,
+  submitActivityResponse: async () => null
 };
 
 const StudentActivityStateContext = createContext(defaultStudentActivityStateContext);
@@ -112,15 +113,41 @@ export function StudentActivityStateProvider({ children }) {
     }
   }, [mergePhaseIntoSessionState, t]);
 
+  const submitActivityResponse = useCallback(async ({ sessionId, responsePayload }) => {
+    const parsedSessionId = Number(sessionId);
+
+    if (!Number.isInteger(parsedSessionId) || parsedSessionId <= 0) {
+      throw new Error(t('errors.invalidSessionId'));
+    }
+
+    if (!responsePayload || typeof responsePayload !== 'object') {
+      throw new Error(t('errors.invalidResponsePayload'));
+    }
+
+    const parsedQuestionId = Number(responsePayload.questionId);
+
+    if (!Number.isInteger(parsedQuestionId) || parsedQuestionId <= 0) {
+      throw new Error(t('errors.invalidQuestionId'));
+    }
+
+    const { data } = await legacyUserApi.post(`/activities/${parsedSessionId}/response`, {
+      ...responsePayload,
+      questionId: parsedQuestionId
+    });
+
+    return data;
+  }, [t]);
+
   const value = useMemo(
     () => ({
       stateBySession,
       loadingBySession,
       errorBySession,
       loadFullState,
-      loadCurrentPhaseState
+      loadCurrentPhaseState,
+      submitActivityResponse
     }),
-    [errorBySession, loadCurrentPhaseState, loadFullState, loadingBySession, stateBySession]
+    [errorBySession, loadCurrentPhaseState, loadFullState, loadingBySession, stateBySession, submitActivityResponse]
   );
 
   return <StudentActivityStateContext.Provider value={value}>{children}</StudentActivityStateContext.Provider>;
