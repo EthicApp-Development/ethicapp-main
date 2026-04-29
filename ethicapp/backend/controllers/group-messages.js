@@ -149,7 +149,7 @@ router.post("/phases/:id/question/:question_id/chat_messages", async (req, res) 
     }
 
     try {
-        if (!saveChatMessage({userId, phaseId, questionId, parentId, content})) {
+        if (!await saveChatMessage({userId, phaseId, questionId, parentId, content})) {
             return res.status(400).json({
                 error: `Error saving the chat message`,
             });
