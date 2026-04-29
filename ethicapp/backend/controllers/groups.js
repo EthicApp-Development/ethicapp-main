@@ -126,7 +126,7 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
             sql: `
                 SELECT t.id AS team_id,
                        tu.uid AS user_id,
-                       tu.anon_character
+                       tu.anon_mask
                 FROM teams AS t
                 INNER JOIN teamusers AS tu
                     ON t.id = tu.tmid
@@ -153,7 +153,7 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
         const groupParticipants = await rpg2.execSQL({
             sql: `
                 SELECT tu.uid AS user_id,
-                       tu.anon_character
+                       tu.anon_mask
                 FROM teamusers AS tu
                 WHERE tu.tmid = $1
                 ORDER BY tu.uid
@@ -167,7 +167,7 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
             team_id: teamId,
             participants: groupParticipants.map(row => ({
                 user_id: row.user_id,
-                anon_character: row.anon_character,
+                anon_mask: row.anon_mask,
             })),
         });
     } catch (err) {

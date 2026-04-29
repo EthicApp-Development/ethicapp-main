@@ -79,6 +79,8 @@ export function openSemanticDifferentialIndividualResponseModal($uibModal, respo
         return null;
     }
 
+    console.log(`Phase Data for Modal: ${JSON.stringify(phaseData)}`);
+
     return $uibModal.open({
         animation: true,
         size: "lg",

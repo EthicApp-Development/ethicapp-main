@@ -130,6 +130,8 @@ let ActivityStateService = function($http, TeacherSocketService) {
         
             const subscriptions = [];
             
+            console.log(`Subscribing to activity events for session ${sessionId}...`);
+            
             // Subscribe to `onStudentJoined`
             subscriptions.push(
                 TeacherSocketService.fromEvent('onStudentJoined').subscribe({

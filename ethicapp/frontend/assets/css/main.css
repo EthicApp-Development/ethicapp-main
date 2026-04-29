@@ -587,9 +587,9 @@ div.boxed{
     padding: 8px;
 }
 
-p{
+/*p {
     white-space: pre-wrap;
-}
+}*/
 
 .bg-gray{
     background: #eee;
