@@ -241,12 +241,13 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
           {messages.map((message) => {
             const depth = getMessageDepth(message);
             const replyTarget = Number.isInteger(message.parentId) ? messagesById[message.parentId] ?? null : null;
+            const isOwnMessage = message.authorId === Number(userId);
 
             return (
-              <div key={message.id} className="mb-2" style={{ marginLeft: `${depth * 12}px` }}>
-                <small className="text-muted d-block">{message.authorId === Number(userId) ? t('sessionDetail.chatYouAuthor') : resolveDisplayName(message, participantsByUserId, isAnonymousPhase, t)}</small>
-                {replyTarget ? <div className="small text-muted border-start ps-2 mb-1">↪ {replyTarget.content}</div> : null}
-                <div className="bg-light rounded px-2 py-1">{message.content}</div>
+              <div key={message.id} className={`mb-2 d-flex flex-column ${isOwnMessage ? 'align-items-end' : 'align-items-start'}`} style={{ marginLeft: `${depth * 12}px` }}>
+                <small className="text-muted d-block">{isOwnMessage ? t('sessionDetail.chatYouAuthor') : resolveDisplayName(message, participantsByUserId, isAnonymousPhase, t)}</small>
+                {replyTarget ? <div className={`small text-muted mb-1 px-2 ${isOwnMessage ? 'border-end pe-2 text-end' : 'border-start ps-2 text-start'}`}>↪ {replyTarget.content}</div> : null}
+                <div className={`rounded px-2 py-1 ${isOwnMessage ? 'bg-white text-dark border shadow-sm' : 'bg-light text-dark'}`} style={{ maxWidth: '85%' }}>{message.content}</div>
                 <button
                   type="button"
                   className="btn btn-link btn-sm p-0 mt-1 text-decoration-none"
