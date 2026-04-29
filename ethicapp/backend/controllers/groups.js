@@ -126,10 +126,13 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
             sql: `
                 SELECT t.id AS team_id,
                        tu.uid AS user_id,
-                       tu.anon_character
+                       tu.anon_mask,
+                       st.anon AS phase_anonymous
                 FROM teams AS t
                 INNER JOIN teamusers AS tu
                     ON t.id = tu.tmid
+                INNER JOIN stages AS st
+                    ON st.id = t.stageid
                 WHERE t.stageid = $1 AND tu.uid = $2
                 ORDER BY tu.uid
             `,
@@ -153,8 +156,13 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
         const groupParticipants = await rpg2.execSQL({
             sql: `
                 SELECT tu.uid AS user_id,
-                       tu.anon_character
+                       tu.anon_mask,
+                       u.firstname,
+                       u.lastname,
+                       u.name
                 FROM teamusers AS tu
+                INNER JOIN users AS u
+                    ON u.id = tu.uid
                 WHERE tu.tmid = $1
                 ORDER BY tu.uid
             `,
@@ -165,9 +173,13 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
         // Respond with the team details and its participants
         res.status(200).json({
             team_id: teamId,
+            phase_anonymous: Boolean(results[0]?.phase_anonymous),
             participants: groupParticipants.map(row => ({
                 user_id: row.user_id,
-                anon_character: row.anon_character,
+                anon_mask: row.anon_mask,
+                firstname: row.firstname,
+                lastname: row.lastname,
+                name: row.name,
             })),
         });
     } catch (err) {
