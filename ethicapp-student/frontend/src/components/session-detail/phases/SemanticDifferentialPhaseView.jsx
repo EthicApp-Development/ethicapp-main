@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import PhaseChatOverlay from './PhaseChatOverlay.jsx';
 import SemanticDifferentialTaskView from './SemanticDifferentialTaskView.jsx';
 
 function mapResponsesByTaskId(phase) {
@@ -46,6 +47,8 @@ export default function SemanticDifferentialPhaseView({
   isReadOnly,
   isActivePhase,
   onSubmitPhaseResponse,
+  onRequestOpenChatRefreshToken,
+  userId,
   t
 }) {
   const responsesByTask = useMemo(() => mapResponsesByTaskId(phase), [phase]);
@@ -59,6 +62,7 @@ export default function SemanticDifferentialPhaseView({
   const safeDraftByTaskId = draftByTaskId ?? {};
   const [submittingTaskId, setSubmittingTaskId] = useState(null);
   const [feedbackByTaskId, setFeedbackByTaskId] = useState({});
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const tasks = useMemo(() => {
     const phaseTasks = Array.isArray(phase?.tasks) ? phase.tasks : [];
@@ -171,10 +175,21 @@ export default function SemanticDifferentialPhaseView({
             onTaskValueChange={(value) => setTaskDraft(taskId, { value })}
             onTaskJustificationChange={(nextJustification) => setTaskDraft(taskId, { justification: nextJustification })}
             onTaskSubmit={() => submitTask(task)}
+            showChatButton={taskId === Number(tasks[0]?.id) && phase?.features?.chat === true}
+            onOpenChat={() => setIsChatOpen(true)}
             t={t}
           />
         );
       })}
+
+      <PhaseChatOverlay
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        phase={phase}
+        userId={userId}
+        chatRefreshToken={onRequestOpenChatRefreshToken}
+        t={t}
+      />
     </div>
   );
 }

@@ -36,6 +36,8 @@ export default function ActivityTabsPanel({
   designType,
   isSessionFinished,
   onSubmitPhaseResponse,
+  chatRefreshTokenByPhaseId,
+  userId,
   t
 }) {
   const [semanticDraftByPhaseId, setSemanticDraftByPhaseId] = useState({});
@@ -129,6 +131,8 @@ export default function ActivityTabsPanel({
             isReadOnly={isSessionFinished}
             isActivePhase={isActivePhase}
             onSubmitPhaseResponse={onSubmitPhaseResponse}
+            onRequestOpenChatRefreshToken={chatRefreshTokenByPhaseId[activePhaseId] ?? 0}
+            userId={userId}
             t={t}
           />
         ) : null}
