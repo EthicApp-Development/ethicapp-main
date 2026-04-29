@@ -111,7 +111,7 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
   const sendMessage = async () => {
     const content = draftMessage.trim();
 
-    if (!content || sending || !Number.isInteger(fallbackQuestionId) || fallbackQuestionId <= 0) {
+    if (!content || sending || !Number.isInteger(groupId) || groupId <= 0 || !Number.isInteger(fallbackQuestionId) || fallbackQuestionId <= 0) {
       return;
     }
 

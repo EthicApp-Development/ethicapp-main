@@ -24,6 +24,7 @@ export default function ActivityPage() {
   const [localState, dispatch] = useReducer(sessionDetailReducer, initialSessionDetailState);
   const [lastSubmittedAtByResponse, setLastSubmittedAtByResponse] = useState({});
   const [chatRefreshTokenByPhaseId, setChatRefreshTokenByPhaseId] = useState({});
+  const [groupIdByPhaseId, setGroupIdByPhaseId] = useState({});
   const lastAutoSelectedPhaseIdRef = useRef(null);
   const currentGroupIdRef = useRef(null);
   const {
@@ -313,6 +314,20 @@ export default function ActivityPage() {
           const nextGroupId = Number(data?.team_id);
           const previousGroupId = Number(currentGroupIdRef.current);
 
+          if (Number.isInteger(nextGroupId) && nextGroupId > 0) {
+            setGroupIdByPhaseId((prev) => (prev[phaseId] === nextGroupId ? prev : { ...prev, [phaseId]: nextGroupId }));
+          } else {
+            setGroupIdByPhaseId((prev) => {
+              if (!(phaseId in prev)) {
+                return prev;
+              }
+
+              const next = { ...prev };
+              delete next[phaseId];
+              return next;
+            });
+          }
+
           if (Number.isInteger(previousGroupId) && previousGroupId > 0 && previousGroupId !== nextGroupId) {
             socket.emit('leaveGroup', previousGroupId);
           }
@@ -344,8 +359,22 @@ export default function ActivityPage() {
   }, [activityState?.descriptor?.currentPhaseId, selectedSession, session.isAuthenticated, session.uid]);
 
   const phaseTabs = useMemo(() => {
-    return Array.isArray(activityState?.phases) ? activityState.phases : [];
-  }, [activityState]);
+    const phases = Array.isArray(activityState?.phases) ? activityState.phases : [];
+
+    return phases.map((phase) => {
+      const phaseId = Number(phase?.id);
+      const groupId = groupIdByPhaseId[phaseId];
+
+      if (!Number.isInteger(groupId) || groupId <= 0) {
+        return phase;
+      }
+
+      return {
+        ...phase,
+        groupId
+      };
+    });
+  }, [activityState, groupIdByPhaseId]);
 
   const currentPhaseNumber = activityState?.descriptor?.currentPhaseNumber ?? null;
   const currentPhaseId = activityState?.descriptor?.currentPhaseId ?? null;
