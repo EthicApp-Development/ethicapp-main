@@ -28,6 +28,7 @@ export default function ActivityPage() {
   const [groupContextByPhaseId, setGroupContextByPhaseId] = useState({});
   const lastAutoSelectedPhaseIdRef = useRef(null);
   const currentGroupIdRef = useRef(null);
+  const currentPhaseIdRef = useRef(null);
   const {
     stateBySession,
     loadingBySession,
@@ -71,6 +72,17 @@ export default function ActivityPage() {
   const activityState = stateBySession[selectedSessionId] ?? null;
   const loadingActivityState = loadingBySession[selectedSessionId] ?? false;
   const activityStateError = errorBySession[selectedSessionId] ?? '';
+
+  useEffect(() => {
+    const phaseId = Number(activityState?.descriptor?.currentPhaseId);
+
+    if (!Number.isInteger(phaseId) || phaseId <= 0) {
+      currentPhaseIdRef.current = null;
+      return;
+    }
+
+    currentPhaseIdRef.current = phaseId;
+  }, [activityState?.descriptor?.currentPhaseId]);
 
   useEffect(() => {
     lastAutoSelectedPhaseIdRef.current = null;
@@ -236,10 +248,10 @@ export default function ActivityPage() {
     const handleChatMessage = () => {
       console.debug('[student socket] onChatMessage', {
         sessionId: activeSessionId,
-        phaseId: activityState?.descriptor?.currentPhaseId
+        phaseId: currentPhaseIdRef.current
       });
 
-      const phaseId = Number(activityState?.descriptor?.currentPhaseId);
+      const phaseId = Number(currentPhaseIdRef.current);
       if (!Number.isInteger(phaseId) || phaseId <= 0) {
         return;
       }
