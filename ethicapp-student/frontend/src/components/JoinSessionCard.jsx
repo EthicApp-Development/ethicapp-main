@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { useState } from 'react';
-import { studentApi } from '../api/studentApi.js';
+import { legacyUserApi } from '../api/studentApi.js';
 import { useI18n } from '../app/providers.jsx';
 
 export default function JoinSessionCard({ disabled, onJoined }) {
@@ -22,12 +22,15 @@ export default function JoinSessionCard({ disabled, onJoined }) {
     setJoinFeedback(null);
 
     try {
-      const { data } = await studentApi.post('sessions/join', {
-        code: normalizedCode,
+      const { data } = await legacyUserApi.post(`/sessions/join/${normalizedCode.toLowerCase()}`, {
         device: 'web'
       });
 
-      const alreadyJoined = Boolean(data?.alreadyJoined);
+      if (data?.status !== 'ok') {
+        throw new Error(t('joinSession.joinErrorFallback'));
+      }
+
+      const alreadyJoined = false;
       const sessionId = Number(data?.sesid);
 
       setJoinFeedback({

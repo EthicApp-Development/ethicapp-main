@@ -23,6 +23,7 @@ let teacherSocketInit = (socket, socketNamespace) => {
         console.debug(`Notification sent to session-${sessionId}:`, message);
     });
 
+
     // Handle socket disconnection
     socket.on('disconnect', () => {
         console.debug('Teacher disconnected');

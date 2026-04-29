@@ -9,6 +9,7 @@ function t(req, key) {
   return translateMessage(req, key, studentMessages);
 }
 
+
 function ensureStudentSession(req, res) {
   const uid = Number(req.session?.uid);
   const role = req.session?.role;
