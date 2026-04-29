@@ -7,7 +7,8 @@ import ActivityTabsPanel from '../components/session-detail/ActivityTabsPanel.js
 import SessionMetadata from '../components/session-detail/SessionMetadata.jsx';
 import WaitingStatePanel from '../components/session-detail/WaitingStatePanel.jsx';
 import { useStudentActivityState } from '../context/StudentActivityStateContext.jsx';
-import { getStudentSocket } from '../services/studentSocket.js';
+import { useActivityRealtimeSync } from './session-detail/hooks/useActivityRealtimeSync.js';
+import { usePhaseResponseSubmission } from './session-detail/hooks/usePhaseResponseSubmission.js';
 import {
   initialSessionDetailState,
   normalizeStatusCode,
@@ -15,14 +16,11 @@ import {
   sessionDetailReducer
 } from './session-detail/sessionDetailState.js';
 
-const RESPONSE_COOLDOWN_MS = 3000;
-
 export default function ActivityPage() {
   const { locale, t } = useI18n();
   const { session, sessionRefreshKey } = useOutletContext();
   const { sessionId } = useParams();
   const [localState, dispatch] = useReducer(sessionDetailReducer, initialSessionDetailState);
-  const [lastSubmittedAtByResponse, setLastSubmittedAtByResponse] = useState({});
   const [chatRefreshTokenByPhaseId, setChatRefreshTokenByPhaseId] = useState({});
   const [groupIdByPhaseId, setGroupIdByPhaseId] = useState({});
   const [groupContextByPhaseId, setGroupContextByPhaseId] = useState({});
@@ -201,205 +199,19 @@ export default function ActivityPage() {
     };
   }, [activityState, localState.activityDescriptor?.designId, selectedSession, session.isAuthenticated, shouldLoadActivityData, t]);
 
-  useEffect(() => {
-    if (!session.isAuthenticated || !selectedSession) {
-      return;
-    }
-
-    let isUnmounted = false;
-    let socket = null;
-    const activeSessionId = Number(selectedSession.id);
-
-    const handlePhaseTransition = (...payload) => {
-      console.debug('[student socket] onPhaseTransition', {
-        sessionId: activeSessionId,
-        payload
-      });
-
-      dispatch({ type: 'ACTIVITY_FORCE_IN_PROGRESS' });
-      loadCurrentPhaseState({ sessionId: activeSessionId }).catch(() => {
-        // Errors are already reflected in the context state.
-      });
-      loadFullState({
-        sessionId: activeSessionId,
-        userId: session.uid,
-        invalidate: true
-      }).catch(() => {
-        // Errors are already reflected in the context state.
-      });
-    };
-
-    const handleShareResponse = (payload) => {
-      console.debug('[student socket] onShareResponse', {
-        sessionId: activeSessionId,
-        payload
-      });
-    };
-
-    const handleEndSession = (payload) => {
-      console.debug('[student socket] onEndSession', {
-        sessionId: activeSessionId,
-        payload
-      });
-
-      dispatch({ type: 'ACTIVITY_FORCE_FINISHED' });
-    };
-
-    const handleChatMessage = () => {
-      console.debug('[student socket] onChatMessage', {
-        sessionId: activeSessionId,
-        phaseId: currentPhaseIdRef.current
-      });
-
-      const phaseId = Number(currentPhaseIdRef.current);
-      if (!Number.isInteger(phaseId) || phaseId <= 0) {
-        return;
-      }
-
-      setChatRefreshTokenByPhaseId((prev) => ({
-        ...prev,
-        [phaseId]: (prev[phaseId] ?? 0) + 1
-      }));
-    };
-
-    getStudentSocket()
-      .then((instance) => {
-        if (isUnmounted) {
-          return;
-        }
-
-        socket = instance;
-        socket.emit('joinSession', activeSessionId);
-        socket.on('onPhaseTransition', handlePhaseTransition);
-        socket.on('onShareResponse', handleShareResponse);
-        socket.on('onEndSession', handleEndSession);
-        socket.on('onChatMessage', handleChatMessage);
-      })
-      .catch((error) => {
-        console.debug('[student socket] could not initialize websocket client', {
-          sessionId: activeSessionId,
-          error
-        });
-      });
-
-    return () => {
-      isUnmounted = true;
-
-      if (!socket) {
-        return;
-      }
-
-      if (Number.isInteger(Number(currentGroupIdRef.current)) && Number(currentGroupIdRef.current) > 0) {
-        socket.emit('leaveGroup', Number(currentGroupIdRef.current));
-      }
-      socket.emit('leaveSession', activeSessionId);
-      socket.off('onPhaseTransition', handlePhaseTransition);
-      socket.off('onShareResponse', handleShareResponse);
-      socket.off('onEndSession', handleEndSession);
-      socket.off('onChatMessage', handleChatMessage);
-    };
-  }, [loadCurrentPhaseState, loadFullState, selectedSession, session.isAuthenticated, session.uid]);
-
-
-  useEffect(() => {
-    if (!session.isAuthenticated || !selectedSession || !session.uid || !activityState?.descriptor?.currentPhaseId) {
-      return;
-    }
-
-    let isUnmounted = false;
-    const phaseId = Number(activityState.descriptor.currentPhaseId);
-    if (!Number.isInteger(phaseId) || phaseId <= 0) {
-      return;
-    }
-
-    getStudentSocket()
-      .then(async (socket) => {
-        if (isUnmounted) {
-          return;
-        }
-
-        try {
-          const { data } = await legacyUserApi.get(`/phases/${phaseId}/user_group/${session.uid}`);
-          if (isUnmounted) {
-            return;
-          }
-
-          const nextGroupId = Number(data?.team_id);
-          const previousGroupId = Number(currentGroupIdRef.current);
-
-          if (Number.isInteger(nextGroupId) && nextGroupId > 0) {
-            setGroupIdByPhaseId((prev) => (prev[phaseId] === nextGroupId ? prev : { ...prev, [phaseId]: nextGroupId }));
-            setGroupContextByPhaseId((prev) => {
-              const nextContext = {
-                phaseAnonymous: Boolean(data?.phase_anonymous),
-                participants: Array.isArray(data?.participants) ? data.participants : []
-              };
-
-              const previousContext = prev[phaseId];
-              if (
-                previousContext?.phaseAnonymous === nextContext.phaseAnonymous
-                && JSON.stringify(previousContext?.participants ?? []) === JSON.stringify(nextContext.participants)
-              ) {
-                return prev;
-              }
-
-              return { ...prev, [phaseId]: nextContext };
-            });
-          } else {
-            setGroupIdByPhaseId((prev) => {
-              if (!(phaseId in prev)) {
-                return prev;
-              }
-
-              const next = { ...prev };
-              delete next[phaseId];
-              return next;
-            });
-            setGroupContextByPhaseId((prev) => {
-              if (!(phaseId in prev)) {
-                return prev;
-              }
-
-              const next = { ...prev };
-              delete next[phaseId];
-              return next;
-            });
-          }
-
-          if (Number.isInteger(previousGroupId) && previousGroupId > 0 && previousGroupId !== nextGroupId) {
-            socket.emit('leaveGroup', previousGroupId);
-          }
-
-          if (Number.isInteger(nextGroupId) && nextGroupId > 0 && previousGroupId !== nextGroupId) {
-            console.debug('[student socket] joining group for current phase', {
-              sessionId: Number(selectedSession.id),
-              phaseId,
-              groupId: nextGroupId
-            });
-            socket.emit('joinGroup', nextGroupId);
-            currentGroupIdRef.current = nextGroupId;
-            return;
-          }
-
-          if (!Number.isInteger(nextGroupId) || nextGroupId <= 0) {
-            currentGroupIdRef.current = null;
-          }
-        } catch (error) {
-          console.debug('[student socket] failed to resolve group for current phase', {
-            sessionId: Number(selectedSession.id),
-            phaseId,
-            error
-          });
-        }
-      })
-      .catch(() => {
-        // socket init issues are already logged elsewhere
-      });
-
-    return () => {
-      isUnmounted = true;
-    };
-  }, [activityState?.descriptor?.currentPhaseId, selectedSession, session.isAuthenticated, session.uid]);
+  useActivityRealtimeSync({
+    session,
+    selectedSession,
+    currentPhaseIdRef,
+    currentGroupIdRef,
+    loadCurrentPhaseState,
+    loadFullState,
+    dispatch,
+    setChatRefreshTokenByPhaseId,
+    activityCurrentPhaseId: activityState?.descriptor?.currentPhaseId,
+    setGroupIdByPhaseId,
+    setGroupContextByPhaseId
+  });
 
   const phaseTabs = useMemo(() => {
     const phases = Array.isArray(activityState?.phases) ? activityState.phases : [];
@@ -489,61 +301,13 @@ export default function ActivityPage() {
     }
   }, [currentPhaseId, isSessionFinished, localState.activeTab]);
 
-  const onSubmitPhaseResponse = async ({ responseKey, responsePayload }) => {
-    if (!responsePayload || typeof responsePayload !== 'object') {
-      return {
-        ok: false,
-        message: t('sessionDetail.responseSubmitError')
-      };
-    }
-
-    const now = Date.now();
-    const key = String(responseKey ?? responsePayload?.questionId ?? 'response');
-    const lastSubmittedAt = lastSubmittedAtByResponse[key] ?? 0;
-
-    if (now - lastSubmittedAt < RESPONSE_COOLDOWN_MS) {
-      const cooldownSeconds = Math.ceil((RESPONSE_COOLDOWN_MS - (now - lastSubmittedAt)) / 1000);
-      return {
-        ok: false,
-        message: `${t('sessionDetail.responseCooldown')} ${cooldownSeconds}s.`
-      };
-    }
-
-    if (!selectedSessionId || Number.isNaN(selectedSessionId)) {
-      return {
-        ok: false,
-        message: t('sessionDetail.responseSubmitError')
-      };
-    }
-
-    try {
-      await submitActivityResponse({
-        sessionId: selectedSessionId,
-        responsePayload
-      });
-
-      setLastSubmittedAtByResponse((prev) => ({
-        ...prev,
-        [key]: now
-      }));
-
-      await loadFullState({
-        sessionId: selectedSessionId,
-        userId: session.uid,
-        invalidate: true
-      });
-
-      return {
-        ok: true,
-        message: t('sessionDetail.responseSubmitted')
-      };
-    } catch {
-      return {
-        ok: false,
-        message: t('sessionDetail.responseSubmitError')
-      };
-    }
-  };
+  const { onSubmitPhaseResponse } = usePhaseResponseSubmission({
+    t,
+    selectedSessionId,
+    submitActivityResponse,
+    loadFullState,
+    userId: session.uid
+  });
 
   return (
     <section className="mx-auto" style={{ maxWidth: '860px' }}>
