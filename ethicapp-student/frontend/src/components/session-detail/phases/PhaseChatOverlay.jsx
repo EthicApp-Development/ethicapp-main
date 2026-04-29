@@ -42,13 +42,15 @@ function normalizeMessage(message) {
   const authorName = message?.display_name ?? message?.name ?? message?.username ?? '';
   const content = typeof message?.content === 'string' ? message.content.trim() : '';
   const createdAt = message?.date ?? message?.created_at ?? message?.createdAt ?? '';
+  const parentId = Number(message?.parent_id ?? message?.parentId);
 
   return {
     id: Number.isInteger(id) ? id : Math.random(),
     authorId: Number.isInteger(authorId) ? authorId : null,
     authorName: typeof authorName === 'string' ? authorName : '',
     content,
-    createdAt: typeof createdAt === 'string' ? createdAt : ''
+    createdAt: typeof createdAt === 'string' ? createdAt : '',
+    parentId: Number.isInteger(parentId) ? parentId : null
   };
 }
 
@@ -59,6 +61,7 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [replyToMessageId, setReplyToMessageId] = useState(null);
   const listRef = useRef(null);
 
   useEffect(() => {
@@ -86,6 +89,15 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
 
   const isAnonymousPhase = phase?.features?.anonymous === true || phase?.groupAnonymous === true;
 
+  const messagesById = useMemo(() => messages.reduce((acc, message) => {
+    acc[message.id] = message;
+    return acc;
+  }, {}), [messages]);
+
+  const selectedReplyMessage = useMemo(() => (
+    Number.isInteger(replyToMessageId) ? messagesById[replyToMessageId] ?? null : null
+  ), [replyToMessageId, messagesById]);
+
   const fallbackQuestionId = useMemo(() => {
     const orderedTasks = Array.isArray(phase?.tasks) ? [...phase.tasks] : [];
     orderedTasks.sort((leftTask, rightTask) => Number(leftTask?.order ?? 0) - Number(rightTask?.order ?? 0));
@@ -103,6 +115,11 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
       const { data } = await legacyUserApi.get(`/groups/${groupId}/question/${fallbackQuestionId}/chat_messages`);
       const chatTranscript = Array.isArray(data?.chat_transcript) ? data.chat_transcript : [];
       setMessages(chatTranscript.map(normalizeMessage).filter((message) => message.content.length > 0));
+      setReplyToMessageId((currentReplyToMessageId) => (
+        Number.isInteger(currentReplyToMessageId) && chatTranscript.some((message) => Number(message?.id ?? message?.msgid ?? message?.mid) === currentReplyToMessageId)
+          ? currentReplyToMessageId
+          : null
+      ));
       setErrorMessage('');
     } catch {
       setErrorMessage(t('sessionDetail.chatLoadError'));
@@ -168,15 +185,35 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
       await legacyUserApi.post(`/phases/${phase.id}/question/${fallbackQuestionId}/chat_messages`, {
         group_id: groupId,
         content,
-        parent_id: null
+        parent_id: Number.isInteger(replyToMessageId) ? replyToMessageId : null
       });
       setDraftMessage('');
+      setReplyToMessageId(null);
       await loadMessages();
     } catch {
       setErrorMessage(t('sessionDetail.chatSendError'));
     } finally {
       setSending(false);
     }
+  };
+
+  const getMessageDepth = (message) => {
+    const visited = new Set();
+    let current = message;
+    let depth = 0;
+
+    while (Number.isInteger(current?.parentId) && !visited.has(current.parentId)) {
+      visited.add(current.parentId);
+      const parent = messagesById[current.parentId];
+      if (!parent) {
+        break;
+      }
+
+      depth += 1;
+      current = parent;
+    }
+
+    return Math.min(depth, 3);
   };
 
   if (!isOpen) {
@@ -201,17 +238,53 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
         <div ref={listRef} className="flex-grow-1 overflow-auto px-3 py-2">
           {loading ? <p className="text-muted small mb-0">{t('sessionDetail.chatLoading')}</p> : null}
           {!loading && messages.length === 0 ? <p className="text-muted small mb-0">{t('sessionDetail.chatEmpty')}</p> : null}
-          {messages.map((message) => (
-            <div key={message.id} className="mb-2">
-              <small className="text-muted d-block">{message.authorId === Number(userId) ? t('sessionDetail.chatYouAuthor') : resolveDisplayName(message, participantsByUserId, isAnonymousPhase, t)}</small>
-              <div className="bg-light rounded px-2 py-1">{message.content}</div>
-            </div>
-          ))}
+          {messages.map((message) => {
+            const depth = getMessageDepth(message);
+            const replyTarget = Number.isInteger(message.parentId) ? messagesById[message.parentId] ?? null : null;
+
+            return (
+              <div key={message.id} className="mb-2" style={{ marginLeft: `${depth * 12}px` }}>
+                <small className="text-muted d-block">{message.authorId === Number(userId) ? t('sessionDetail.chatYouAuthor') : resolveDisplayName(message, participantsByUserId, isAnonymousPhase, t)}</small>
+                {replyTarget ? <div className="small text-muted border-start ps-2 mb-1">↪ {replyTarget.content}</div> : null}
+                <div className="bg-light rounded px-2 py-1">{message.content}</div>
+                <button
+                  type="button"
+                  className="btn btn-link btn-sm p-0 mt-1 text-decoration-none"
+                  onClick={() => setReplyToMessageId(message.id)}
+                >
+                  {t('sessionDetail.chatReply')}
+                </button>
+              </div>
+            );
+          })}
         </div>
         {errorMessage ? <div className="alert alert-danger rounded-0 py-1 px-2 mb-0">{errorMessage}</div> : null}
-        <div className="border-top p-2 d-flex gap-2">
-          <input className="form-control" value={draftMessage} onChange={(event) => setDraftMessage(event.target.value)} placeholder={t('sessionDetail.chatInputPlaceholder')} />
-          <button type="button" className="btn btn-danger" onClick={sendMessage} disabled={sending}>{sending ? t('sessionDetail.chatSending') : t('sessionDetail.chatSend')}</button>
+        <div className="border-top p-2">
+          {selectedReplyMessage ? (
+            <div className="small text-muted border-start ps-2 mb-2 d-flex justify-content-between align-items-start gap-2">
+              <span>
+                {t('sessionDetail.chatReplyingTo')}
+                <strong className="ms-1">{selectedReplyMessage.authorId === Number(userId) ? t('sessionDetail.chatYouAuthor') : resolveDisplayName(selectedReplyMessage, participantsByUserId, isAnonymousPhase, t)}</strong>
+                : {selectedReplyMessage.content}
+              </span>
+              <button type="button" className="btn btn-link btn-sm p-0 text-decoration-none" onClick={() => setReplyToMessageId(null)}>{t('sessionDetail.chatCancelReply')}</button>
+            </div>
+          ) : null}
+          <div className="d-flex gap-2">
+            <input
+              className="form-control"
+              value={draftMessage}
+              onChange={(event) => setDraftMessage(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                  event.preventDefault();
+                  sendMessage();
+                }
+              }}
+              placeholder={t('sessionDetail.chatInputPlaceholder')}
+            />
+            <button type="button" className="btn btn-danger" onClick={sendMessage} disabled={sending}>{sending ? t('sessionDetail.chatSending') : t('sessionDetail.chatSend')}</button>
+          </div>
         </div>
       </div>
     </section>
