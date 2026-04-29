@@ -386,7 +386,7 @@ router.post("/sessions/join/:code", async (req, res) => {
                 ? "ethics"
                 : "select";
 
-        return res.json({ status: "ok", redirect: redirectUrl });
+        return res.json({ status: "ok", redirect: redirectUrl, sesid });
     } catch (err) {
         console.error("Error joining session:", err);
         return res.status(500).json({ status: "error", message: "Internal server error." });
