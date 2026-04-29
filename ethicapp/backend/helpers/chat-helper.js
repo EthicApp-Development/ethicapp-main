@@ -1,6 +1,57 @@
 import * as config from "../config/config.js"; 
 import * as rpg2 from "../db/rest-pg-2.js";
+import * as Yup from "yup";
 import { getDesignTypeByPhaseId } from "./designs-helper.js";
+
+const flatChatMessageSchema = Yup.object({
+    userId: Yup.number().integer().positive().required(),
+    phaseId: Yup.number().integer().positive().required(),
+    questionId: Yup.number().integer().positive().nullable(),
+    parentId: Yup.number().integer().positive().nullable(),
+    content: Yup.string().trim().min(1).max(2000).required(),
+});
+
+const nestedChatMessageSchema = Yup.object({
+    header: Yup.object({
+        userId: Yup.number().integer().positive(),
+        uid: Yup.number().integer().positive(),
+        phaseId: Yup.number().integer().positive(),
+        stageId: Yup.number().integer().positive(),
+        itemId: Yup.number().integer().positive().nullable(),
+        questionId: Yup.number().integer().positive().nullable(),
+    }).required(),
+    payload: Yup.object({
+        parentId: Yup.number().integer().positive().nullable(),
+        parent_id: Yup.number().integer().positive().nullable(),
+        content: Yup.string().trim().min(1).max(2000).required(),
+    }).required(),
+});
+
+function normalizeChatMessageInput(data) {
+    if (data?.header && data?.payload) {
+        const userId = Number(data.header.userId ?? data.header.uid);
+        const phaseId = Number(data.header.phaseId ?? data.header.stageId);
+        const questionId = Number(data.header.questionId ?? data.header.itemId);
+        const parentId = data.payload.parentId ?? data.payload.parent_id ?? null;
+        const content = data.payload.content;
+
+        return {
+            userId,
+            phaseId,
+            questionId: Number.isFinite(questionId) ? questionId : null,
+            parentId,
+            content,
+        };
+    }
+
+    return {
+        userId: Number(data?.userId),
+        phaseId: Number(data?.phaseId),
+        questionId: data?.questionId == null ? null : Number(data.questionId),
+        parentId: data?.parentId ?? null,
+        content: data?.content,
+    };
+}
 
 /**
  * Handlers for message count queries based on design type.
@@ -45,29 +96,33 @@ export const chatInsertHandlers = {
 
 export const saveChatMessage = async function(data) {
     try {
-        // TODO: validate the incoming data with Yup
+        if (data?.header && data?.payload) {
+            await nestedChatMessageSchema.validate(data, { abortEarly: false, stripUnknown: true });
+        }
 
-        // Step 1: Determine the design type for the phase
+        const normalizedData = normalizeChatMessageInput(data);
+        const validatedData = await flatChatMessageSchema.validate(normalizedData, {
+            abortEarly: false,
+            stripUnknown: true,
+        });
+
+        const { userId, phaseId, questionId, parentId, content } = validatedData;
+
         const designType = await getDesignTypeByPhaseId(phaseId);
-
-        // Step 2: Fetch the appropriate handler for the design type
         const handler = chatInsertHandlers[designType];
         if (!handler) {
             throw new Error(`Unsupported design type: ${designType}`);
         }
 
-        const { userId, phaseId, itemId } = data.header;
-        const { parentId, content } = data.payload;
-
-        // Step 3: Execute the handler to insert the chat message
         await handler({
             userId,
             phaseId,
-            itemId,
+            questionId,
             content,
             parentId,
             dbcon: config.dbconnString,
         });
+
         return true;
     } catch(error) {
         console.error("[ChatHelper::saveChatMessage] Could not save the message. ", error);
