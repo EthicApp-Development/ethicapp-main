@@ -137,9 +137,13 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
             sqlParams: [rpg2.param('plain', phaseId), rpg2.param('plain', userId)],
         });
 
-        // If no group is found for the user, return a 404 error
+        // If no group is found for the user, return an empty success response
         if (results.length === 0) {
-            return res.status(404).json({ error: "User not found in any group for the given phase." });
+            return res.status(200).json({
+                error: "User not found in any group for the given phase.",
+                team_id: null,
+                participants: [],
+            });
         }
 
         // Extract the team ID from the results

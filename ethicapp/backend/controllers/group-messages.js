@@ -9,7 +9,7 @@ import { messageCountHandlers,
     chatTranscriptHandlers, 
     chatInsertHandlers, 
     saveChatMessage } from "../helpers/chat-helper.js";
-import { teacherNotifications } from "../config/socket.config.js";
+import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
 
 const router = express.Router();
 
@@ -42,7 +42,7 @@ router.get("/phases/:id/message_count", async (req, res) => {
         const results = await handler(id);
 
         if (!results || results.length === 0) {
-            return res.status(404).json({ error: "No messages found for the given phase." });
+            return res.status(200).json({ messageCount: [] });
         }
 
         // Log success and return the results
@@ -108,10 +108,8 @@ router.get("/groups/:group_id/question/:question_id/chat_messages", async (req, 
         // Step 4: Execute the handler and retrieve the chat transcript
         const results = await handler(groupId, questionId);
 
-        if (results.length === 0) {
-            return res.status(404).json({
-                error: "No messages found for the specified parameters.",
-            });
+        if (!results || results.length === 0) {
+            return res.status(200).json({ chat_transcript: [] });
         }
 
         res.status(200).json({ chat_transcript: results });
@@ -151,7 +149,7 @@ router.post("/phases/:id/question/:question_id/chat_messages", async (req, res) 
     }
 
     try {
-        if (!saveChatMessage({userId, phaseId, questionId, parentId, content})) {
+        if (!await saveChatMessage({userId, phaseId, questionId, parentId, content})) {
             return res.status(400).json({
                 error: `Error saving the chat message`,
             });
@@ -162,6 +160,7 @@ router.post("/phases/:id/question/:question_id/chat_messages", async (req, res) 
 
         // Step 4: Notify clients about the new message
         teacherNotifications.chatMessage(sessionId, phaseId, questionId, groupId, content);
+        studentNotifications?.chatMessage(groupId);
 
         // Respond with success
         res.status(201).json({

@@ -53,10 +53,8 @@ const toStudentsNotifications = (socketNamespace) => {
             socketNamespace.to(`session-${sessionId}`).
                 emit("onPhaseTransition");
         },
-
-        chatMessage: (groupId, messages) => {
-            socketNamespace.to(`group-${groupId}`).
-                emit("onChatMessage", { messages });            
+        chatMessage: (groupId) => {
+            socketNamespace.to(`group-${groupId}`).emit("onChatMessage");
         },
 
         shareResponse: (sessionId, content) => {
