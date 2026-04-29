@@ -23,6 +23,7 @@ export default function ActivityPage() {
   const { sessionId } = useParams();
   const [localState, dispatch] = useReducer(sessionDetailReducer, initialSessionDetailState);
   const [lastSubmittedAtByResponse, setLastSubmittedAtByResponse] = useState({});
+  const [chatRefreshTokenByPhaseId, setChatRefreshTokenByPhaseId] = useState({});
   const lastAutoSelectedPhaseIdRef = useRef(null);
   const {
     stateBySession,
@@ -234,6 +235,16 @@ export default function ActivityPage() {
         sessionId: activeSessionId,
         payload
       });
+
+      const phaseId = Number(payload?.phaseId ?? payload?.stid ?? payload?.stage_id);
+      if (!Number.isInteger(phaseId) || phaseId <= 0) {
+        return;
+      }
+
+      setChatRefreshTokenByPhaseId((prev) => ({
+        ...prev,
+        [phaseId]: (prev[phaseId] ?? 0) + 1
+      }));
     };
 
     getStudentSocket()
@@ -469,6 +480,8 @@ export default function ActivityPage() {
                     designType={designType}
                     isSessionFinished={isSessionFinished}
                     onSubmitPhaseResponse={onSubmitPhaseResponse}
+                    chatRefreshTokenByPhaseId={chatRefreshTokenByPhaseId}
+                    userId={session.uid}
                   />
                 </>
               ) : null}

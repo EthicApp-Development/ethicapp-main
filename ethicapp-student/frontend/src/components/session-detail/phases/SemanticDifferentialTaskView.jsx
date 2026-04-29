@@ -8,6 +8,8 @@ export default function SemanticDifferentialTaskView({
   onTaskValueChange,
   onTaskJustificationChange,
   onTaskSubmit,
+  onOpenChat,
+  showChatButton,
   t
 }) {
   const countWords = (text) => {
@@ -132,6 +134,19 @@ export default function SemanticDifferentialTaskView({
       ) : null}
 
       <div className="d-flex justify-content-end align-items-center gap-2">
+        {showChatButton ? (
+        <button
+          type="button"
+          className="btn btn-danger btn-sm"
+          onClick={onOpenChat}
+        >
+          <span className="d-inline-flex align-items-center gap-2">
+            <i className="fa-solid fa-cloud" aria-hidden="true" />
+            <span>{t('sessionDetail.openChat')}</span>
+          </span>
+        </button>
+      ) : null}
+
         {taskFeedback ? (
           <div
             className={`alert alert-${taskFeedback.type} py-1 px-2 mb-0`}
