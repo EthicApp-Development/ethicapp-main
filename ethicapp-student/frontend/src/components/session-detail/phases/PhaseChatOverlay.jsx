@@ -20,7 +20,7 @@ function normalizeMessage(message) {
   };
 }
 
-export default function PhaseChatOverlay({ isOpen, onClose, phase, chatRefreshToken, userId, t }) {
+export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phase, chatRefreshToken, userId, t }) {
   const [heightPx, setHeightPx] = useState(DEFAULT_HEIGHT_PX);
   const [messages, setMessages] = useState([]);
   const [draftMessage, setDraftMessage] = useState('');
@@ -28,6 +28,14 @@ export default function PhaseChatOverlay({ isOpen, onClose, phase, chatRefreshTo
   const [sending, setSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const listRef = useRef(null);
+
+  useEffect(() => {
+    if (typeof onHeightChange !== 'function') {
+      return;
+    }
+
+    onHeightChange(isOpen ? heightPx : 0);
+  }, [heightPx, isOpen, onHeightChange]);
 
   const groupId = Number(phase?.group?.id ?? phase?.groupId);
   const fallbackQuestionId = useMemo(() => {

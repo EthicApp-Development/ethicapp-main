@@ -63,6 +63,7 @@ export default function SemanticDifferentialPhaseView({
   const [submittingTaskId, setSubmittingTaskId] = useState(null);
   const [feedbackByTaskId, setFeedbackByTaskId] = useState({});
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatOverlayHeightPx, setChatOverlayHeightPx] = useState(0);
 
   const tasks = useMemo(() => {
     const phaseTasks = Array.isArray(phase?.tasks) ? phase.tasks : [];
@@ -182,9 +183,15 @@ export default function SemanticDifferentialPhaseView({
         );
       })}
 
+      {isChatOpen ? <div aria-hidden="true" style={{ height: `${chatOverlayHeightPx}px` }} /> : null}
+
       <PhaseChatOverlay
         isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
+        onClose={() => {
+          setIsChatOpen(false);
+          setChatOverlayHeightPx(0);
+        }}
+        onHeightChange={setChatOverlayHeightPx}
         phase={phase}
         userId={userId}
         chatRefreshToken={onRequestOpenChatRefreshToken}
