@@ -25,6 +25,7 @@ export default function ActivityPage() {
   const [lastSubmittedAtByResponse, setLastSubmittedAtByResponse] = useState({});
   const [chatRefreshTokenByPhaseId, setChatRefreshTokenByPhaseId] = useState({});
   const lastAutoSelectedPhaseIdRef = useRef(null);
+  const currentGroupIdRef = useRef(null);
   const {
     stateBySession,
     loadingBySession,
@@ -230,13 +231,13 @@ export default function ActivityPage() {
       dispatch({ type: 'ACTIVITY_FORCE_FINISHED' });
     };
 
-    const handleChatMessage = (payload) => {
+    const handleChatMessage = () => {
       console.debug('[student socket] onChatMessage', {
         sessionId: activeSessionId,
-        payload
+        phaseId: activityState?.descriptor?.currentPhaseId
       });
 
-      const phaseId = Number(payload?.phaseId ?? payload?.stid ?? payload?.stage_id);
+      const phaseId = Number(activityState?.descriptor?.currentPhaseId);
       if (!Number.isInteger(phaseId) || phaseId <= 0) {
         return;
       }
@@ -274,6 +275,9 @@ export default function ActivityPage() {
         return;
       }
 
+      if (Number.isInteger(Number(currentGroupIdRef.current)) && Number(currentGroupIdRef.current) > 0) {
+        socket.emit('leaveGroup', Number(currentGroupIdRef.current));
+      }
       socket.emit('leaveSession', activeSessionId);
       socket.off('onPhaseTransition', handlePhaseTransition);
       socket.off('onShareResponse', handleShareResponse);
@@ -281,6 +285,63 @@ export default function ActivityPage() {
       socket.off('onChatMessage', handleChatMessage);
     };
   }, [loadCurrentPhaseState, loadFullState, selectedSession, session.isAuthenticated, session.uid]);
+
+
+  useEffect(() => {
+    if (!session.isAuthenticated || !selectedSession || !session.uid || !activityState?.descriptor?.currentPhaseId) {
+      return;
+    }
+
+    let isUnmounted = false;
+    const phaseId = Number(activityState.descriptor.currentPhaseId);
+    if (!Number.isInteger(phaseId) || phaseId <= 0) {
+      return;
+    }
+
+    getStudentSocket()
+      .then(async (socket) => {
+        if (isUnmounted) {
+          return;
+        }
+
+        try {
+          const { data } = await legacyUserApi.get(`/phases/${phaseId}/user_group/${session.uid}`);
+          if (isUnmounted) {
+            return;
+          }
+
+          const nextGroupId = Number(data?.team_id);
+          const previousGroupId = Number(currentGroupIdRef.current);
+
+          if (Number.isInteger(previousGroupId) && previousGroupId > 0 && previousGroupId !== nextGroupId) {
+            socket.emit('leaveGroup', previousGroupId);
+          }
+
+          if (Number.isInteger(nextGroupId) && nextGroupId > 0 && previousGroupId !== nextGroupId) {
+            socket.emit('joinGroup', nextGroupId);
+            currentGroupIdRef.current = nextGroupId;
+            return;
+          }
+
+          if (!Number.isInteger(nextGroupId) || nextGroupId <= 0) {
+            currentGroupIdRef.current = null;
+          }
+        } catch (error) {
+          console.debug('[student socket] failed to resolve group for current phase', {
+            sessionId: Number(selectedSession.id),
+            phaseId,
+            error
+          });
+        }
+      })
+      .catch(() => {
+        // socket init issues are already logged elsewhere
+      });
+
+    return () => {
+      isUnmounted = true;
+    };
+  }, [activityState?.descriptor?.currentPhaseId, selectedSession, session.isAuthenticated, session.uid]);
 
   const phaseTabs = useMemo(() => {
     return Array.isArray(activityState?.phases) ? activityState.phases : [];
