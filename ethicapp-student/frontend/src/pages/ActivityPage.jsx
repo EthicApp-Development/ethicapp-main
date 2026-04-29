@@ -25,6 +25,7 @@ export default function ActivityPage() {
   const [lastSubmittedAtByResponse, setLastSubmittedAtByResponse] = useState({});
   const [chatRefreshTokenByPhaseId, setChatRefreshTokenByPhaseId] = useState({});
   const [groupIdByPhaseId, setGroupIdByPhaseId] = useState({});
+  const [groupContextByPhaseId, setGroupContextByPhaseId] = useState({});
   const lastAutoSelectedPhaseIdRef = useRef(null);
   const currentGroupIdRef = useRef(null);
   const {
@@ -316,8 +317,33 @@ export default function ActivityPage() {
 
           if (Number.isInteger(nextGroupId) && nextGroupId > 0) {
             setGroupIdByPhaseId((prev) => (prev[phaseId] === nextGroupId ? prev : { ...prev, [phaseId]: nextGroupId }));
+            setGroupContextByPhaseId((prev) => {
+              const nextContext = {
+                phaseAnonymous: Boolean(data?.phase_anonymous),
+                participants: Array.isArray(data?.participants) ? data.participants : []
+              };
+
+              const previousContext = prev[phaseId];
+              if (
+                previousContext?.phaseAnonymous === nextContext.phaseAnonymous
+                && JSON.stringify(previousContext?.participants ?? []) === JSON.stringify(nextContext.participants)
+              ) {
+                return prev;
+              }
+
+              return { ...prev, [phaseId]: nextContext };
+            });
           } else {
             setGroupIdByPhaseId((prev) => {
+              if (!(phaseId in prev)) {
+                return prev;
+              }
+
+              const next = { ...prev };
+              delete next[phaseId];
+              return next;
+            });
+            setGroupContextByPhaseId((prev) => {
               if (!(phaseId in prev)) {
                 return prev;
               }
@@ -374,12 +400,16 @@ export default function ActivityPage() {
         return phase;
       }
 
+      const groupContext = groupContextByPhaseId[phaseId];
+
       return {
         ...phase,
-        groupId
+        groupId,
+        groupParticipants: Array.isArray(groupContext?.participants) ? groupContext.participants : [],
+        groupAnonymous: typeof groupContext?.phaseAnonymous === 'boolean' ? groupContext.phaseAnonymous : undefined
       };
     });
-  }, [activityState, groupIdByPhaseId]);
+  }, [activityState, groupContextByPhaseId, groupIdByPhaseId]);
 
   const currentPhaseNumber = activityState?.descriptor?.currentPhaseNumber ?? null;
   const currentPhaseId = activityState?.descriptor?.currentPhaseId ?? null;

@@ -4,6 +4,38 @@ import { legacyUserApi } from '../../../api/studentApi.js';
 const DEFAULT_HEIGHT_PX = 320;
 const MIN_HEIGHT_PX = 220;
 
+function resolveDisplayName(message, participantsByUserId, isAnonymous, t) {
+  const participant = participantsByUserId[Number(message.authorId)] ?? null;
+
+  if (isAnonymous) {
+    if (participant?.anon_mask) {
+      return participant.anon_mask;
+    }
+
+    return t('sessionDetail.chatAnonymousAuthor');
+  }
+
+  if (participant) {
+    const firstName = typeof participant.firstname === 'string' ? participant.firstname.trim() : '';
+    const lastName = typeof participant.lastname === 'string' ? participant.lastname.trim() : '';
+    const fullName = `${firstName} ${lastName}`.trim();
+
+    if (fullName.length > 0) {
+      return fullName;
+    }
+
+    if (typeof participant.name === 'string' && participant.name.trim().length > 0) {
+      return participant.name.trim();
+    }
+  }
+
+  if (typeof message.authorName === 'string' && message.authorName.trim().length > 0) {
+    return message.authorName.trim();
+  }
+
+  return t('sessionDetail.chatPeerAuthor');
+}
+
 function normalizeMessage(message) {
   const id = Number(message?.id ?? message?.msgid ?? message?.mid);
   const authorId = Number(message?.uid ?? message?.user_id ?? message?.author_id);
@@ -38,6 +70,22 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
   }, [heightPx, isOpen, onHeightChange]);
 
   const groupId = Number(phase?.group?.id ?? phase?.groupId);
+  const participantsByUserId = useMemo(() => {
+    const participants = Array.isArray(phase?.groupParticipants) ? phase.groupParticipants : [];
+
+    return participants.reduce((acc, participant) => {
+      const participantUserId = Number(participant?.user_id);
+      if (!Number.isInteger(participantUserId) || participantUserId <= 0) {
+        return acc;
+      }
+
+      acc[participantUserId] = participant;
+      return acc;
+    }, {});
+  }, [phase]);
+
+  const isAnonymousPhase = phase?.features?.anonymous === true || phase?.groupAnonymous === true;
+
   const fallbackQuestionId = useMemo(() => {
     const orderedTasks = Array.isArray(phase?.tasks) ? [...phase.tasks] : [];
     orderedTasks.sort((leftTask, rightTask) => Number(leftTask?.order ?? 0) - Number(rightTask?.order ?? 0));
@@ -155,7 +203,7 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
           {!loading && messages.length === 0 ? <p className="text-muted small mb-0">{t('sessionDetail.chatEmpty')}</p> : null}
           {messages.map((message) => (
             <div key={message.id} className="mb-2">
-              <small className="text-muted d-block">{phase?.features?.anonymous ? t('sessionDetail.chatAnonymousAuthor') : (message.authorId === Number(userId) ? t('sessionDetail.chatYouAuthor') : (message.authorName || t('sessionDetail.chatPeerAuthor')))}</small>
+              <small className="text-muted d-block">{message.authorId === Number(userId) ? t('sessionDetail.chatYouAuthor') : resolveDisplayName(message, participantsByUserId, isAnonymousPhase, t)}</small>
               <div className="bg-light rounded px-2 py-1">{message.content}</div>
             </div>
           ))}
