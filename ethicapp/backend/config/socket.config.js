@@ -8,6 +8,8 @@ let studentNotifications = null;
 let teacherNotifications = null;
 
 const initializeSockets = (server) => {
+    console.log("[socket.config] Initializing Socket.IO...");
+    
     if (!server) {
         throw new Error("Server instance is required to initialize sockets.");
     }

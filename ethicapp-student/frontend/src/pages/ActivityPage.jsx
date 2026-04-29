@@ -359,6 +359,11 @@ export default function ActivityPage() {
           }
 
           if (Number.isInteger(nextGroupId) && nextGroupId > 0 && previousGroupId !== nextGroupId) {
+            console.debug('[student socket] joining group for current phase', {
+              sessionId: Number(selectedSession.id),
+              phaseId,
+              groupId: nextGroupId
+            });
             socket.emit('joinGroup', nextGroupId);
             currentGroupIdRef.current = nextGroupId;
             return;

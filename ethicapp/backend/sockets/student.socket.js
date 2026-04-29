@@ -54,6 +54,7 @@ const toStudentsNotifications = (socketNamespace) => {
                 emit("onPhaseTransition");
         },
         chatMessage: (groupId) => {
+            console.debug(`[student socket] Emitting chat message notification to group ${groupId}`);
             socketNamespace.to(`group-${groupId}`).emit("onChatMessage");
         },
 
