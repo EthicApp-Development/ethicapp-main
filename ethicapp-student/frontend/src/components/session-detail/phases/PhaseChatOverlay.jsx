@@ -247,7 +247,7 @@ export default function PhaseChatOverlay({ isOpen, onClose, onHeightChange, phas
               <div key={message.id} className={`mb-2 d-flex flex-column ${isOwnMessage ? 'align-items-end' : 'align-items-start'}`} style={{ marginLeft: `${depth * 12}px` }}>
                 <small className="text-muted d-block">{isOwnMessage ? t('sessionDetail.chatYouAuthor') : resolveDisplayName(message, participantsByUserId, isAnonymousPhase, t)}</small>
                 {replyTarget ? <div className={`small text-muted mb-1 px-2 ${isOwnMessage ? 'border-end pe-2 text-end' : 'border-start ps-2 text-start'}`}>↪ {replyTarget.content}</div> : null}
-                <div className={`rounded px-2 py-1 ${isOwnMessage ? 'bg-primary text-white' : 'bg-light text-dark'}`} style={{ maxWidth: '85%' }}>{message.content}</div>
+                <div className={`rounded px-2 py-1 ${isOwnMessage ? 'bg-white text-dark border shadow-sm' : 'bg-light text-dark'}`} style={{ maxWidth: '85%' }}>{message.content}</div>
                 <button
                   type="button"
                   className="btn btn-link btn-sm p-0 mt-1 text-decoration-none"
