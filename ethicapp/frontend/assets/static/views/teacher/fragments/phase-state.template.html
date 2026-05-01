@@ -8,7 +8,10 @@
         </individual-phase-table>
     </div>
     <div ng-if="ctrl.phaseData.descriptor.mode === 'team'">
-        <group-phase-table phase-data="ctrl.phaseData" design-type="ctrl.designType">
+        <group-phase-table
+            phase-data="ctrl.phaseData"
+            design-type="ctrl.designType"
+            on-select-group="ctrl.onSelectGroup({ group: group, phaseData: phaseData })">
         </group-phase-table>
     </div>
 </div>

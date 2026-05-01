@@ -186,6 +186,43 @@ router.get("/activities/:session_id/responses", async (req, res) => {
     }
 });
 
+router.get("/groups/:group_id/responses", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const { group_id: groupId } = req.params;
+    const { phase_id: phaseId } = req.query;
+
+    if (!groupId || isNaN(Number(groupId))) {
+        return res.status(400).json({ error: "Invalid or missing required parameter: group_id" });
+    }
+
+    if (!phaseId || isNaN(Number(phaseId))) {
+        return res.status(400).json({ error: "Invalid or missing required query parameter: phase_id" });
+    }
+
+    try {
+        const designType = await getDesignTypeByGroupAndPhase(groupId, phaseId);
+
+        const handler = groupResponsesFetchHandlers[designType];
+        if (!handler) {
+            return res.status(400).json({ error: `Unsupported design type: ${designType}` });
+        }
+
+        const responses = await handler(groupId, phaseId);
+
+        return res.status(200).json({ responses });
+    } catch (err) {
+        if (err.message === "GROUP_PHASE_MISMATCH") {
+            return res.status(404).json({ error: "Group not found for this phase." });
+        }
+
+        console.error(`Error fetching responses for group_id: ${groupId}, phase_id: ${phaseId}`, err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
 router.post("/activities/:session_id/phase_transition", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
@@ -438,6 +475,46 @@ async function fetchSemanticDifferentialResponses(sessionId) {
     return results;
 }
 
+async function fetchSemanticDifferentialGroupResponses(groupId, phaseId) {
+    const results = await rpg2.execSQL({
+        sql: `
+            SELECT d.stageid,
+                   d.orden,
+                   d.id AS did,
+                   tu.uid,
+                   u.name AS user_name,
+                   tu.tmid,
+                   s.sel,
+                   s.comment,
+                   s.stime
+            FROM differential AS d
+            INNER JOIN teamusers AS tu
+                ON tu.tmid = $1
+            INNER JOIN users AS u
+                ON u.id = tu.uid
+            LEFT JOIN differential_selection AS s
+                ON s.did = d.id
+               AND s.uid = tu.uid
+            WHERE d.stageid = $2
+            ORDER BY d.orden, u.name
+        `,
+        dbcon: config.dbconnString,
+        sqlParams: [rpg2.param("plain", groupId), rpg2.param("plain", phaseId)],
+    });
+
+    return results.map(row => ({
+        phaseId: row.stageid,
+        questionOrder: row.orden,
+        questionId: row.did,
+        userId: row.uid,
+        userName: row.user_name,
+        groupId: row.tmid,
+        value: row.sel,
+        comment: row.comment,
+        submittedAt: row.stime,
+    }));
+}
+
 async function fetchRankingResponses(sessionId) {
     const results = await rpg2.execSQL({
         sql: `
@@ -460,9 +537,80 @@ async function fetchRankingResponses(sessionId) {
     return results;
 }
 
+async function fetchRankingGroupResponses(groupId, phaseId) {
+    const results = await rpg2.execSQL({
+        sql: `
+            SELECT a.id,
+                   a.description,
+                   a.orden,
+                   a.actorid,
+                   tu.uid,
+                   u.name AS user_name,
+                   tu.tmid,
+                   a.stime
+            FROM teamusers AS tu
+            INNER JOIN users AS u
+                ON u.id = tu.uid
+            LEFT JOIN actor_selection AS a
+                ON a.uid = tu.uid
+               AND a.stageid = $2
+            WHERE tu.tmid = $1
+            ORDER BY tu.uid, a.orden
+        `,
+        dbcon: config.dbconnString,
+        sqlParams: [rpg2.param("plain", groupId), rpg2.param("plain", phaseId)],
+    });
+
+    return results.map(row => ({
+        phaseId,
+        selectionId: row.id,
+        description: row.description,
+        order: row.orden,
+        actorId: row.actorid,
+        userId: row.uid,
+        userName: row.user_name,
+        groupId: row.tmid,
+        submittedAt: row.stime,
+    }));
+}
+
+async function getDesignTypeByGroupAndPhase(groupId, phaseId) {
+    const groupPhase = await rpg2.execSQL({
+        sql: `
+            SELECT id
+            FROM teams
+            WHERE id = $1
+              AND stageid = $2
+        `,
+        dbcon: config.dbconnString,
+        sqlParams: [rpg2.param("plain", groupId), rpg2.param("plain", phaseId)],
+    });
+
+    if (groupPhase.length === 0) {
+        throw new Error("GROUP_PHASE_MISMATCH");
+    }
+
+    return getDesignTypeBySessionId(
+        await rpg2.singleSQL({
+            sql: `
+                SELECT sesid
+                FROM stages
+                WHERE id = $1
+            `,
+            dbcon: config.dbconnString,
+            sqlParams: [rpg2.param("plain", phaseId)],
+        }).then(row => row.sesid)
+    );
+}
+
 const activityResponsesFetchHandlers = {
     semantic_differential: fetchSemanticDifferentialResponses,
     ranking: fetchRankingResponses,
+};
+
+const groupResponsesFetchHandlers = {
+    semantic_differential: fetchSemanticDifferentialGroupResponses,
+    ranking: fetchRankingGroupResponses,
 };
 
 export default router;

@@ -4,7 +4,8 @@ let phaseStateDirective = function() {
         scope: {
             designType: '<',
             phaseData: '<',
-            onSelectResponse: '&?'
+            onSelectResponse: '&?',
+            onSelectGroup: '&?'
         },
         bindToController: true,
         controllerAs: 'ctrl',

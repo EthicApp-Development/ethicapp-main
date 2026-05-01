@@ -2,6 +2,7 @@ import * as PhaseCreationHelpers from "../../helpers/phase-creation-helpers.js";
 import * as DesignHelpers from "../../helpers/design-helpers.js";
 import { DashboardDataJoiners } from "../../helpers/dashboard-data-joiners.js";
 import { openSemanticDifferentialIndividualResponseModal } from "../../helpers/dashboard-individual-response-modal.helper.js";
+import { openSemanticDifferentialGroupResponseModal } from "../../helpers/dashboard-group-response-modal.helper.js";
 
 /*eslint func-style: ["error", "expression"]*/
 export function DashboardController($scope, $routeParams, $http, 
@@ -28,6 +29,37 @@ export function DashboardController($scope, $routeParams, $http,
 
         const hydratedPhaseData = vm.hydratePhaseDataForIndividualModal(phaseData);
         openSemanticDifferentialIndividualResponseModal($uibModal, response, hydratedPhaseData);
+    };
+
+    vm.openGroupResponseModal = async function(group, phaseData) {
+        if (!group?.groupStatistics || !group.groupId || !phaseData || vm.designObj?.type !== "semantic_differential") {
+            return;
+        }
+
+        const hydratedPhaseData = vm.hydratePhaseDataForIndividualModal(phaseData);
+        const phaseId = hydratedPhaseData?.descriptor?.id;
+        const firstQuestionId = hydratedPhaseData?.descriptor?.questions?.[0]?.id;
+
+        if (!phaseId || !firstQuestionId) {
+            return;
+        }
+
+        try {
+            const [responses, chatMessages] = await Promise.all([
+                ActivityStateService.getGroupResponses(group.groupId, phaseId),
+                ActivityStateService.getChatMessages(group.groupId, firstQuestionId),
+            ]);
+
+            openSemanticDifferentialGroupResponseModal(
+                $uibModal,
+                group,
+                hydratedPhaseData,
+                responses,
+                chatMessages
+            );
+        } catch (error) {
+            console.error("Error opening group response modal:", error);
+        }
     };
 
     vm.hydratePhaseDataForIndividualModal = function(phaseData) {

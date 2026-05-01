@@ -1,0 +1,88 @@
+<div class="modal-header">
+    <button type="button" class="close" ng-click="$ctrl.close()" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+    <h4 class="modal-title">
+        {{ $ctrl.group.groupName || $ctrl.getGroupFallbackTitle() }}
+    </h4>
+</div>
+
+<div class="modal-body" ng-if="$ctrl.questions.length > 0">
+    <div class="panel panel-default" ng-repeat="question in $ctrl.questions track by question.number">
+        <div class="panel-heading">
+            <strong>{{ 'item_label' | translate }} {{ $index + 1 }}</strong>
+        </div>
+        <div class="panel-body">
+            <p>
+                {{ question.text || ('no_response' | translate) }}
+            </p>
+
+            <div ng-if="$ctrl.getQuestionResponses(question).length === 0">
+                <p class="text-muted">{{ 'no_response' | translate }}</p>
+            </div>
+
+            <div class="panel panel-default"
+                 ng-repeat="response in $ctrl.getQuestionResponses(question) track by response.userId"
+                 style="margin-bottom: .75em;">
+                <div class="panel-heading">
+                    <strong>{{ response.userName }}</strong>
+                </div>
+                <div class="panel-body">
+                    <div class="row" style="margin-top: .25em; margin-bottom: .75em;">
+                        <div class="col-sm-3 text-right">
+                            <strong>{{ question.leftPole || ('left_pole_label' | translate) }}</strong>
+                        </div>
+                        <div class="col-sm-6 text-center">
+                            <label class="radio-inline"
+                                   ng-repeat="option in $ctrl.buildScaleOptions(question) track by option"
+                                   style="margin-right: .5em; margin-left: .5em;">
+                                <input type="radio"
+                                       disabled
+                                       ng-checked="response.value == option">
+                                {{ option }}
+                            </label>
+                        </div>
+                        <div class="col-sm-3 text-left">
+                            <strong>{{ question.rightPole || ('right_pole_label' | translate) }}</strong>
+                        </div>
+                    </div>
+
+                    <div class="form-group" ng-if="question.justify">
+                        <label>{{ 'comment' | translate }}</label>
+                        <textarea class="form-control"
+                                  rows="3"
+                                  readonly>{{ response.comment || ('no_response' | translate) }}</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>{{ 'chat_messages_label' | translate }}</strong>
+        </div>
+        <div class="panel-body">
+            <p class="text-muted" ng-if="$ctrl.chatMessages.length === 0">{{ 'no_response' | translate }}</p>
+            <div class="media" ng-repeat="message in $ctrl.chatMessages track by message.id">
+                <div class="media-body">
+                    <h5 class="media-heading">
+                        {{ $ctrl.getUserName(message.uid) }}
+                        <small>{{ message.stime | date:'short' }}</small>
+                    </h5>
+                    <p>{{ message.content }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-body" ng-if="$ctrl.questions.length === 0">
+    <p>{{ 'no_response' | translate }}</p>
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-default btn-sm" ng-click="$ctrl.close()">
+        {{ 'back' | translate }}
+    </button>
+</div>
