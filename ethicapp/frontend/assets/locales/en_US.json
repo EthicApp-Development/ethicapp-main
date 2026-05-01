@@ -614,5 +614,10 @@
 	"password_reset_modal_message": "Do you confirm sending the password reset email to",
 	"accept": "Accept",
 	"admin_inspection_mode": "Administrator inspection",
-	"back_to_management_console": "Back to management console"
+	"back_to_management_console": "Back to management console",
+	"teacher_chat_author_label": "Teacher",
+	"teacher_group_chat_placeholder": "Write a message to the group",
+	"teacher_group_chat_readonly_hint": "This chat is read-only.",
+	"loading": "Loading...",
+	"send": "Send"
 }

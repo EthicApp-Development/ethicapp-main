@@ -623,5 +623,10 @@
 	"password_reset_modal_message": "¿Confirmas que deseas enviar el correo para cambio de contraseña a",
 	"accept": "Aceptar",
 	"admin_inspection_mode": "Inspección de administrador",
-	"back_to_management_console": "Volver a consola de administración"
+	"back_to_management_console": "Volver a consola de administración",
+	"teacher_chat_author_label": "Profesor",
+	"teacher_group_chat_placeholder": "Escribe un mensaje al grupo",
+	"teacher_group_chat_readonly_hint": "Este chat está en modo lectura.",
+	"loading": "Cargando...",
+	"send": "Enviar"
 }

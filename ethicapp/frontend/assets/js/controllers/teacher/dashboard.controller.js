@@ -7,7 +7,7 @@ import { openSemanticDifferentialGroupResponseModal } from "../../helpers/dashbo
 /*eslint func-style: ["error", "expression"]*/
 export function DashboardController($scope, $routeParams, $http, 
     $translate, $timeout, $uibModal, 
-    ActivityStateService, ActivityCatalogService, DesignCatalogService) {
+    ActivityStateService, ActivityCatalogService, DesignCatalogService, TeacherGroupChatService) {
 
     const vm = this;
 
@@ -53,14 +53,26 @@ export function DashboardController($scope, $routeParams, $http,
 
             openSemanticDifferentialGroupResponseModal(
                 $uibModal,
+                TeacherGroupChatService,
                 group,
                 hydratedPhaseData,
                 responses,
-                chatMessages
+                chatMessages,
+                vm.canUseLiveGroupChat(hydratedPhaseData)
             );
         } catch (error) {
             console.error("Error opening group response modal:", error);
         }
+    };
+
+    vm.canUseLiveGroupChat = function(phaseData) {
+        const phaseDescriptor = phaseData?.descriptor;
+        const currentPhaseId = vm.activityState?.descriptor?.currentPhase?.id;
+        const activityStatus = vm.activityState?.descriptor?.status;
+
+        return Boolean(phaseDescriptor?.chat)
+            && Number(phaseDescriptor?.id) === Number(currentPhaseId)
+            && activityStatus !== "finished";
     };
 
     vm.hydratePhaseDataForIndividualModal = function(phaseData) {
@@ -390,6 +402,13 @@ export function DashboardController($scope, $routeParams, $http,
     
             if (DesignHelpers.isGroupPhaseByPhaseDescriptor(phaseDescriptor)) {
                 phaseState = builderSteps.addGroupInfo(phaseState, groups);
+                if (typeof builderSteps.addExternalGroupChatInfo === "function") {
+                    phaseState = builderSteps.addExternalGroupChatInfo(
+                        phaseState,
+                        chatMessageCount,
+                        phaseDescriptor.questions
+                    );
+                }
                 phaseState = builderSteps.updateGroupStatistics(phaseState, $translate.instant);
             }
     

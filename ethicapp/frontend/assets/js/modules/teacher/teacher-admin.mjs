@@ -6,6 +6,7 @@ import { ActivityCatalogService } from "../../services/activity-catalog.service.
 import { DesignStateService } from "../../services/design-state.service.js";
 import { DesignCatalogService } from "../../services/design-catalog.service.js";
 import { CasesCatalogService } from "../../services/cases-catalog.service.js";
+import { TeacherGroupChatService } from "../../services/teacher-group-chat.service.js";
 import UserProfileService from "../../services/user-profile.service.js";
 import SocketService from '../../services/socket.service.js';
 
@@ -22,6 +23,7 @@ app.factory("TeacherSocketService", ["SocketService", function (SocketService) {
 }]);
 
 app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivityStateService])
+    .factory("TeacherGroupChatService", ["$http", "TeacherSocketService", TeacherGroupChatService])
     .factory("ActivityCatalogService", ["$http", ActivityCatalogService])
     .factory("DesignCatalogService", ["$rootScope", "$http", DesignCatalogService])
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
@@ -104,7 +106,8 @@ app.controller("CreateDesignController",
     ["$scope", "DesignCatalogService", "UserProfileService", CreateDesignController]);
 app.controller("DashboardController", 
     ["$scope", "$routeParams", "$http", "$translate", "$timeout", "$uibModal",
-        "ActivityStateService", "ActivityCatalogService", "DesignCatalogService", DashboardController]);  
+        "ActivityStateService", "ActivityCatalogService", "DesignCatalogService",
+        "TeacherGroupChatService", DashboardController]);
 app.controller("DesignViewerController", 
     ["$scope", "$routeParams", "DesignCatalogService", DesignViewerController]);
 app.controller("CasesController",

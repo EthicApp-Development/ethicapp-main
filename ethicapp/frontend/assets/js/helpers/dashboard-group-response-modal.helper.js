@@ -47,13 +47,23 @@ function normalizeQuestion(question, index) {
 }
 
 function createModalController() {
-    return ["$uibModalInstance", "data", function($uibModalInstance, data) {
+    return ["$scope", "$timeout", "$translate", "$uibModalInstance", "data",
+        function($scope, $timeout, $translate, $uibModalInstance, data) {
         const $ctrl = this;
 
         $ctrl.group = data.group;
         $ctrl.phaseData = data.phaseData;
+        $ctrl.groupChatService = data.groupChatService;
+        $ctrl.canUseLiveChat = data.canUseLiveChat === true;
         $ctrl.responses = data.responses || [];
-        $ctrl.chatMessages = data.chatMessages || [];
+        $ctrl.chatMessages = (data.chatMessages || [])
+            .map((message) => $ctrl.groupChatService.normalizeMessage(message))
+            .filter((message) => message.content.length > 0);
+        $ctrl.draftMessage = "";
+        $ctrl.chatLoading = false;
+        $ctrl.chatSending = false;
+        $ctrl.chatError = "";
+        $ctrl.unsubscribeFromGroupChat = null;
         $ctrl.questions = (data.phaseData?.descriptor?.questions || [])
             .map((question, index) => normalizeQuestion(question, index));
 
@@ -88,13 +98,147 @@ function createModalController() {
             return participantNames[userId] || `User ${userId}`;
         };
 
+        $ctrl.getChatAuthorName = function(message) {
+            if (message?.authorRole === "P") {
+                const translatedLabel = $translate.instant("teacher_chat_author_label");
+                return translatedLabel && translatedLabel !== "teacher_chat_author_label"
+                    ? translatedLabel
+                    : "Teacher";
+            }
+
+            return participantNames[message.uid] || message.authorName || $ctrl.getUserName(message.uid);
+        };
+
+        $ctrl.isTeacherMessage = function(message) {
+            return message?.authorRole === "P";
+        };
+
+        $ctrl.getFirstQuestionId = function() {
+            return Number($ctrl.questions?.[0]?.id);
+        };
+
+        $ctrl.scrollChatToBottom = function() {
+            $timeout(() => {
+                const chatTranscript = document.getElementById("teacher-group-chat-transcript");
+                if (chatTranscript) {
+                    chatTranscript.scrollTop = chatTranscript.scrollHeight;
+                }
+            }, 0);
+        };
+
+        $ctrl.reloadChatMessages = async function() {
+            const questionId = $ctrl.getFirstQuestionId();
+            if (!questionId || !$ctrl.group?.groupId) {
+                return;
+            }
+
+            $ctrl.chatLoading = true;
+            $ctrl.chatError = "";
+            try {
+                const messages = await $ctrl.groupChatService.loadMessages($ctrl.group.groupId, questionId);
+                $scope.$applyAsync(() => {
+                    $ctrl.chatMessages = messages;
+                    $ctrl.chatLoading = false;
+                    $ctrl.scrollChatToBottom();
+                });
+            } catch (error) {
+                console.error("Error loading group chat messages:", error);
+                $scope.$applyAsync(() => {
+                    $ctrl.chatLoading = false;
+                    $ctrl.chatError = "Unable to load chat messages.";
+                });
+            }
+        };
+
+        $ctrl.sendMessage = async function() {
+            const content = $ctrl.draftMessage.trim();
+            const questionId = $ctrl.getFirstQuestionId();
+
+            if (!content || !$ctrl.canUseLiveChat || $ctrl.chatSending || !questionId || !$ctrl.group?.groupId) {
+                return;
+            }
+
+            $ctrl.chatSending = true;
+            $ctrl.chatError = "";
+            try {
+                const sentMessage = await $ctrl.groupChatService.sendMessage({
+                    phaseId: $ctrl.phaseData.descriptor.id,
+                    questionId,
+                    groupId: $ctrl.group.groupId,
+                    content,
+                });
+
+                $scope.$applyAsync(() => {
+                    if (sentMessage?.content) {
+                        const existingMessage = $ctrl.chatMessages.find((chatMessage) =>
+                            Number(chatMessage.id) === Number(sentMessage.id)
+                        );
+                        if (!existingMessage) {
+                            $ctrl.chatMessages.push(sentMessage);
+                        }
+                    }
+                    $ctrl.draftMessage = "";
+                    $ctrl.chatSending = false;
+                    $ctrl.scrollChatToBottom();
+                });
+            } catch (error) {
+                console.error("Error sending teacher group chat message:", error);
+                $scope.$applyAsync(() => {
+                    $ctrl.chatSending = false;
+                    $ctrl.chatError = "Unable to send chat message.";
+                });
+            }
+        };
+
+        $ctrl.onChatKeyDown = function(event) {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                $ctrl.sendMessage();
+            }
+        };
+
+        $ctrl.$onInit = function() {
+            if ($ctrl.canUseLiveChat && $ctrl.group?.groupId) {
+                $ctrl.unsubscribeFromGroupChat = $ctrl.groupChatService.subscribeToGroup(
+                    $ctrl.group.groupId,
+                    (message) => {
+                        $scope.$applyAsync(() => {
+                            const existingMessage = $ctrl.chatMessages.find((chatMessage) =>
+                                Number(chatMessage.id) === Number(message.id)
+                            );
+                            if (!existingMessage) {
+                                $ctrl.chatMessages.push(message);
+                            }
+                            $ctrl.scrollChatToBottom();
+                        });
+                    }
+                );
+            }
+
+            $ctrl.scrollChatToBottom();
+        };
+
+        $ctrl.$onDestroy = function() {
+            if (typeof $ctrl.unsubscribeFromGroupChat === "function") {
+                $ctrl.unsubscribeFromGroupChat();
+            }
+        };
+
         $ctrl.close = function() {
             $uibModalInstance.dismiss("close");
         };
     }];
 }
 
-export function openSemanticDifferentialGroupResponseModal($uibModal, group, phaseData, responses, chatMessages) {
+export function openSemanticDifferentialGroupResponseModal(
+    $uibModal,
+    groupChatService,
+    group,
+    phaseData,
+    responses,
+    chatMessages,
+    canUseLiveChat = false
+) {
     if (!group || !phaseData) {
         return null;
     }
@@ -107,7 +251,7 @@ export function openSemanticDifferentialGroupResponseModal($uibModal, group, pha
         controllerAs: "$ctrl",
         controller: createModalController(),
         resolve: {
-            data: () => ({ group, phaseData, responses, chatMessages }),
+            data: () => ({ groupChatService, group, phaseData, responses, chatMessages, canUseLiveChat }),
         },
     });
 }

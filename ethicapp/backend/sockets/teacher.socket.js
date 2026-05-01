@@ -16,6 +16,16 @@ let teacherSocketInit = (socket, socketNamespace) => {
         console.debug(`A teacher has left session-${sessionId}`);
     });
 
+    socket.on('joinGroupChat', (groupId) => {
+        socket.join(`teacher-group-${groupId}`);
+        console.debug(`A teacher has joined teacher-group-${groupId}`);
+    });
+
+    socket.on('leaveGroupChat', (groupId) => {
+        socket.leave(`teacher-group-${groupId}`);
+        console.debug(`A teacher has left teacher-group-${groupId}`);
+    });
+
     // Broadcast a message to all sockets in a specific session
     socket.on('broadcastToSession', (sessionId, message) => {
         // Emit a notification to all clients in the room `session-{sessionId}`
@@ -53,6 +63,11 @@ const toTeacherNotifications = (socketNamespace) => {
                     groupId,
                     message
                 });
+        },
+
+        groupChatMessage: (groupId, message) => {
+            socketNamespace.to(`teacher-group-${groupId}`).
+                emit("onGroupChatMessage", message);
         }
     };
 };

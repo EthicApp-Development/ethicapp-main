@@ -3,11 +3,10 @@
 import express from "express";
 import * as config from "../config/config.js"; 
 import * as rpg2 from "../db/rest-pg-2.js";
-import { getDesignById, getDesignTypeByPhaseId } from "../helpers/designs-helper.js";
-import * as SessionsHelper from "../helpers/sessions-helper.js"
+import { getDesignTypeByPhaseId } from "../helpers/designs-helper.js";
+import { getStatusCode } from "../../common/modules/session-status.js";
 import { messageCountHandlers, 
     chatTranscriptHandlers, 
-    chatInsertHandlers, 
     saveChatMessage } from "../helpers/chat-helper.js";
 import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
 
@@ -67,6 +66,8 @@ router.get("/phases/:id/message_count", async (req, res) => {
  */
 router.get("/groups/:group_id/question/:question_id/chat_messages", async (req, res) => {
     const { group_id: groupId, question_id: questionId } = req.params;
+    const userId = req.session.uid;
+    const role = req.session.role;
 
     if (!groupId || !questionId) {
         return res.status(400).json({
@@ -75,27 +76,23 @@ router.get("/groups/:group_id/question/:question_id/chat_messages", async (req, 
     }
 
     try {
-        // Step 1: Determine the phase (stage) ID using the group (team) ID
-        const phaseIdResult = await rpg2.execSQL({
-            sql: `
-                SELECT stageid
-                FROM teams
-                WHERE id = $1
-            `,
-            dbcon: config.dbconnString,
-            sqlParams: [rpg2.param('plain', groupId)],
+        const accessContext = await resolveGroupChatAccessContext({
+            groupId,
+            questionId,
+            userId,
+            role,
         });
 
-        if (phaseIdResult.length === 0) {
-            return res.status(404).json({
-                error: "Group not found or not associated with any phase.",
-            });
+        if (!accessContext) {
+            return res.status(404).json({ error: "Group not found or not associated with any phase." });
         }
 
-        const phaseId = phaseIdResult[0].stageid;
+        if (!accessContext.canRead) {
+            return res.status(403).json({ error: "Access denied for this group chat." });
+        }
 
         // Step 2: Determine the design type for the phase
-        const designType = await getDesignTypeByPhaseId(phaseId);
+        const designType = await getDesignTypeByPhaseId(accessContext.phaseId);
 
         // Step 3: Fetch the appropriate handler for the design type
         const handler = chatTranscriptHandlers[designType];
@@ -142,36 +139,139 @@ router.post("/phases/:id/question/:question_id/chat_messages", async (req, res) 
     const userId = req.session.uid; // User ID from session
 
     // Validate required parameters
-    if (!phaseId || !questionId || !content) {
+    if (!phaseId || !questionId || !groupId || !content) {
         return res.status(400).json({
-            error: "Missing required parameters: phaseId, questionId, or content.",
+            error: "Missing required parameters: phaseId, questionId, groupId, or content.",
         });
     }
 
     try {
-        if (!await saveChatMessage({userId, phaseId, questionId, parentId, content})) {
+        const accessContext = await resolveGroupChatAccessContext({
+            groupId,
+            phaseId,
+            questionId,
+            userId,
+            role: req.session.role,
+        });
+
+        if (!accessContext) {
+            return res.status(404).json({ error: "Group not found for this phase." });
+        }
+
+        if (!accessContext.canPost) {
+            return res.status(403).json({ error: "Access denied or chat is read-only for this phase." });
+        }
+
+        const savedMessage = await saveChatMessage({userId, phaseId, questionId, groupId, parentId, content});
+        if (!savedMessage) {
             return res.status(400).json({
                 error: `Error saving the chat message`,
             });
         }
 
-        // Get the session Id
-        const sessionId = await SessionsHelper.getSessionIdByPhaseId(phaseId);
-
         // Step 4: Notify clients about the new message
-        teacherNotifications.chatMessage(sessionId, phaseId, questionId, groupId, content);
+        const notificationPayload = normalizeChatNotificationPayload(savedMessage, req.session.role);
+        teacherNotifications.chatMessage(accessContext.sessionId, phaseId, questionId, groupId, content);
+        teacherNotifications.groupChatMessage(groupId, {
+            ...notificationPayload,
+            phaseId: Number(phaseId),
+            questionId: Number(questionId),
+            groupId: Number(groupId),
+        });
         studentNotifications?.chatMessage(groupId);
 
         // Respond with success
         res.status(201).json({
             status: "ok",
             message: "Message posted successfully.",
+            chat_message: notificationPayload,
         });
     } catch (err) {
         console.error("Error posting chat message:", err); // Log the error for debugging
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
+async function resolveGroupChatAccessContext({ groupId, phaseId = null, questionId, userId, role }) {
+    const rows = await rpg2.execSQL({
+        sql: `
+            SELECT t.id AS group_id,
+                   t.stageid AS phase_id,
+                   s.id AS session_id,
+                   s.creator,
+                   s.current_stage,
+                   s.status,
+                   st.chat,
+                   EXISTS (
+                       SELECT 1
+                       FROM teamusers AS tu
+                       WHERE tu.tmid = t.id
+                         AND tu.uid = $4
+                   ) AS is_group_member,
+                   EXISTS (
+                       SELECT 1
+                       FROM differential AS d
+                       WHERE d.id = $3
+                         AND d.stageid = t.stageid
+                   ) AS question_belongs_to_phase
+            FROM teams AS t
+            INNER JOIN stages AS st
+                ON st.id = t.stageid
+            INNER JOIN sessions AS s
+                ON s.id = st.sesid
+            WHERE t.id = $1
+              AND ($2::integer IS NULL OR t.stageid = $2)
+            LIMIT 1
+        `,
+        dbcon: config.dbconnString,
+        sqlParams: [
+            Number(groupId),
+            phaseId == null ? null : Number(phaseId),
+            Number(questionId),
+            Number(userId),
+        ],
+    });
+
+    if (rows.length === 0) {
+        return null;
+    }
+
+    const row = rows[0];
+    const designType = await getDesignTypeByPhaseId(row.phase_id);
+    if (designType === "semantic_differential" && !row.question_belongs_to_phase) {
+        return null;
+    }
+
+    const isTeacherOwner = role === "P" && Number(row.creator) === Number(userId);
+    const isStudentMember = role === "A" && row.is_group_member === true;
+    const activeStatus = getStatusCode("in_progress");
+    const isActiveChatPhase = Boolean(row.chat)
+        && Number(row.current_stage) === Number(row.phase_id)
+        && Number(row.status) === Number(activeStatus);
+
+    return {
+        phaseId: Number(row.phase_id),
+        sessionId: Number(row.session_id),
+        groupId: Number(row.group_id),
+        designType,
+        canRead: isTeacherOwner || isStudentMember,
+        canPost: (isTeacherOwner || isStudentMember) && isActiveChatPhase,
+    };
+}
+
+function normalizeChatNotificationPayload(message, role) {
+    return {
+        id: message.id,
+        uid: message.uid,
+        author_role: role,
+        groupId: message.tmid,
+        phaseId: message.stageid,
+        questionId: message.did,
+        content: message.content,
+        stime: message.stime,
+        parent_id: message.parent_id,
+    };
+}
 
 
 
