@@ -64,13 +64,16 @@
         </div>
         <div class="panel-body">
             <p class="text-muted" ng-if="$ctrl.chatMessages.length === 0">{{ 'no_response' | translate }}</p>
-            <div class="media" ng-repeat="message in $ctrl.chatMessages track by message.id">
-                <div class="media-body">
-                    <h5 class="media-heading">
-                        {{ $ctrl.getUserName(message.uid) }}
-                        <small>{{ message.stime | date:'short' }}</small>
-                    </h5>
-                    <p>{{ message.content }}</p>
+            <div ng-if="$ctrl.chatMessages.length > 0"
+                 style="max-height: 24em; overflow-y: auto; padding-right: .5em;">
+                <div class="media" ng-repeat="message in $ctrl.chatMessages track by message.id">
+                    <div class="media-body">
+                        <h5 class="media-heading">
+                            {{ $ctrl.getUserName(message.uid) }}
+                            <small>{{ message.stime | date:'short' }}</small>
+                        </h5>
+                        <p>{{ message.content }}</p>
+                    </div>
                 </div>
             </div>
         </div>
