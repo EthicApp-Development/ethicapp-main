@@ -8,6 +8,9 @@ export const DashboardDataJoiners = {
         addGroupInfo: (phaseState, groups) => {
             return addParticipantGroupInfo(phaseState, groups);
         },
+        addExternalGroupChatInfo: (phaseState, chatMessageCount, questions) => {
+            return addExternalGroupChatInfo(phaseState, chatMessageCount, questions);
+        },
         updateGroupStatistics: (phaseState, translator) => {
             return updateGroupStatistics(phaseState, translator);
         },
@@ -300,6 +303,41 @@ function addParticipantGroupInfo(phaseData, groups) {
     });
 }
 
+function addExternalGroupChatInfo(phaseState, chatMessageCount, questions) {
+    const usersById = new Set(phaseState.map(user => Number(user.userId)));
+    const questionsById = (questions || []).reduce((acc, question) => {
+        acc[Number(question.id)] = question;
+        return acc;
+    }, {});
+
+    (chatMessageCount || []).forEach(chat => {
+        if (usersById.has(Number(chat.userId))) {
+            return;
+        }
+
+        const question = questionsById[Number(chat.questionId)];
+        const questionNumber = Number(question?.number);
+        const teamId = Number(chat.teamId);
+
+        if (!questionNumber || !teamId) {
+            return;
+        }
+
+        const targetGroupMember = phaseState.find(user =>
+            !user.groupStatistics && Number(user.groupId) === teamId
+        );
+
+        if (!targetGroupMember) {
+            return;
+        }
+
+        const key = `__groupChatR${questionNumber}`;
+        targetGroupMember[key] = Number(targetGroupMember[key] || 0) + Number(chat.messageCount || 0);
+    });
+
+    return phaseState;
+}
+
 let updateGroupStatistics = function(data, translator) {
     // Step 0: Filter out existing group summary objects
     const filteredData = data.filter(user => !user.groupStatistics);
@@ -332,6 +370,10 @@ let updateGroupStatistics = function(data, translator) {
             Object.keys(user).forEach(key => {
                 if (key.startsWith("chatR")) {
                     stats[key] = (stats[key] || 0) + (user[key] || 0);
+                }
+                if (key.startsWith("__groupChatR")) {
+                    const summaryKey = key.replace("__groupChatR", "chatR");
+                    stats[summaryKey] = (stats[summaryKey] || 0) + (user[key] || 0);
                 }
             });
             return stats;

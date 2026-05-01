@@ -63,19 +63,57 @@
             <strong>{{ 'chat_messages_label' | translate }}</strong>
         </div>
         <div class="panel-body">
-            <p class="text-muted" ng-if="$ctrl.chatMessages.length === 0">{{ 'no_response' | translate }}</p>
+            <p class="text-muted" ng-if="$ctrl.chatLoading">{{ 'loading' | translate }}</p>
+            <p class="text-muted" ng-if="!$ctrl.chatLoading && $ctrl.chatMessages.length === 0">{{ 'no_response' | translate }}</p>
             <div ng-if="$ctrl.chatMessages.length > 0"
+                 id="teacher-group-chat-transcript"
                  style="max-height: 24em; overflow-y: auto; padding-right: .5em;">
-                <div class="media" ng-repeat="message in $ctrl.chatMessages track by message.id">
-                    <div class="media-body">
-                        <h5 class="media-heading">
-                            {{ $ctrl.getUserName(message.uid) }}
-                            <small>{{ message.stime | date:'short' }}</small>
-                        </h5>
-                        <p>{{ message.content }}</p>
+                <div class="clearfix" ng-repeat="message in $ctrl.chatMessages track by message.id" style="margin-bottom: .75em;">
+                    <div ng-class="{'pull-right text-right': $ctrl.isTeacherMessage(message), 'pull-left text-left': !$ctrl.isTeacherMessage(message)}"
+                         style="max-width: 85%;">
+                        <small class="text-muted">
+                            {{ $ctrl.getChatAuthorName(message) }}
+                            <span>{{ message.stime | date:'short' }}</span>
+                        </small>
+                        <div class="text-dark"
+                             ng-style="{
+                                'background-color': $ctrl.isTeacherMessage(message) ? '#deffcf' : '#ffffff',
+                                'border': '1px solid #ddd',
+                                'border-radius': '4px',
+                                'box-shadow': '0 1px 2px rgba(0,0,0,.075)',
+                                'padding': '.4em .6em',
+                                'display': 'inline-block',
+                                'white-space': 'pre-wrap'
+                             }">
+                            {{ message.content }}
+                        </div>
                     </div>
                 </div>
             </div>
+            <div class="alert alert-danger" ng-if="$ctrl.chatError" style="margin-top: .75em; margin-bottom: 0;">
+                {{ $ctrl.chatError }}
+            </div>
+            <div ng-if="$ctrl.canUseLiveChat" style="border-top: 1px solid #ddd; margin-top: .75em; padding-top: .75em;">
+                <div class="input-group">
+                    <input type="text"
+                           class="form-control"
+                           ng-model="$ctrl.draftMessage"
+                           ng-keydown="$ctrl.onChatKeyDown($event)"
+                           ng-disabled="$ctrl.chatSending"
+                           placeholder="{{ 'teacher_group_chat_placeholder' | translate }}">
+                    <span class="input-group-btn">
+                        <button type="button"
+                                class="btn btn-danger"
+                                ng-click="$ctrl.sendMessage()"
+                                ng-disabled="$ctrl.chatSending || !$ctrl.draftMessage.trim()">
+                            {{ 'send' | translate }}
+                        </button>
+                    </span>
+                </div>
+            </div>
+            <p class="text-muted small" ng-if="!$ctrl.canUseLiveChat" style="margin-top: .75em; margin-bottom: 0;">
+                {{ 'teacher_group_chat_readonly_hint' | translate }}
+            </p>
         </div>
     </div>
 </div>
