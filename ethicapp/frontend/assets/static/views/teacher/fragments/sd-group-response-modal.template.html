@@ -1,3 +1,54 @@
+<style>
+    .teacher-group-chat-transcript {
+        max-height: 24em;
+        overflow-y: auto;
+        padding-right: .5em;
+    }
+
+    .teacher-group-chat-message {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: .75em;
+    }
+
+    .teacher-group-chat-message-peer {
+        align-items: flex-start;
+    }
+
+    .teacher-group-chat-message-teacher {
+        align-items: flex-end;
+    }
+
+    .teacher-group-chat-message-meta {
+        display: block;
+        max-width: 85%;
+        margin-bottom: .2em;
+        line-height: 1.35;
+    }
+
+    .teacher-group-chat-bubble {
+        display: block;
+        max-width: 85%;
+        padding: .35em .6em;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, .075);
+        color: #333;
+        line-height: 1.4;
+        text-align: left;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .teacher-group-chat-bubble-peer {
+        background-color: #fff;
+    }
+
+    .teacher-group-chat-bubble-teacher {
+        background-color: #deffcf;
+    }
+</style>
+
 <div class="modal-header">
     <button type="button" class="close" ng-click="$ctrl.close()" aria-label="Close">
         <span aria-hidden="true">&times;</span>
@@ -67,26 +118,23 @@
             <p class="text-muted" ng-if="!$ctrl.chatLoading && $ctrl.chatMessages.length === 0">{{ 'no_response' | translate }}</p>
             <div ng-if="$ctrl.chatMessages.length > 0"
                  id="teacher-group-chat-transcript"
-                 style="max-height: 24em; overflow-y: auto; padding-right: .5em;">
-                <div class="clearfix" ng-repeat="message in $ctrl.chatMessages track by message.id" style="margin-bottom: .75em;">
-                    <div ng-class="{'pull-right text-right': $ctrl.isTeacherMessage(message), 'pull-left text-left': !$ctrl.isTeacherMessage(message)}"
-                         style="max-width: 85%;">
-                        <small class="text-muted">
-                            {{ $ctrl.getChatAuthorName(message) }}
-                            <span>{{ message.stime | date:'short' }}</span>
-                        </small>
-                        <div class="text-dark"
-                             ng-style="{
-                                'background-color': $ctrl.isTeacherMessage(message) ? '#deffcf' : '#ffffff',
-                                'border': '1px solid #ddd',
-                                'border-radius': '4px',
-                                'box-shadow': '0 1px 2px rgba(0,0,0,.075)',
-                                'padding': '.4em .6em',
-                                'display': 'inline-block',
-                                'white-space': 'pre-wrap'
-                             }">
-                            {{ message.content }}
-                        </div>
+                 class="teacher-group-chat-transcript">
+                <div class="teacher-group-chat-message"
+                     ng-class="{
+                        'teacher-group-chat-message-teacher': $ctrl.isTeacherMessage(message),
+                        'teacher-group-chat-message-peer': !$ctrl.isTeacherMessage(message)
+                     }"
+                     ng-repeat="message in $ctrl.chatMessages track by message.id">
+                    <small class="text-muted teacher-group-chat-message-meta">
+                        {{ $ctrl.getChatAuthorName(message) }}
+                        <span>{{ message.stime | date:'short' }}</span>
+                    </small>
+                    <div class="teacher-group-chat-bubble"
+                         ng-class="{
+                            'teacher-group-chat-bubble-teacher': $ctrl.isTeacherMessage(message),
+                            'teacher-group-chat-bubble-peer': !$ctrl.isTeacherMessage(message)
+                         }">
+                        {{ message.content }}
                     </div>
                 </div>
             </div>
