@@ -5,7 +5,8 @@ let groupPhaseTableDirective = function() {
         restrict: 'E',
         scope: {
             phaseData: '<',  // Processed group-phase data
-            designType: '<'  // Design type ('ranking', 'semantic_differential', etc.)
+            designType: '<',  // Design type ('ranking', 'semantic_differential', etc.)
+            onSelectGroup: '&?'
         },
         bindToController: true, // Bind the scope properties to the controller
         controllerAs: 'gptCtrl', // Alias for the controller        
@@ -150,7 +151,20 @@ let groupPhaseTableDirective = function() {
                     return `/assets/static/views/teacher/fragments/default-template.html`;
                 }
                 return template;
-            };            
+            };
+
+            gptCtrl.onGroupRowClick = function(group) {
+                if (gptCtrl.designType !== 'semantic_differential' || !group?.groupStatistics) {
+                    return;
+                }
+
+                if (typeof gptCtrl.onSelectGroup === 'function') {
+                    gptCtrl.onSelectGroup({
+                        group,
+                        phaseData: gptCtrl.phaseData,
+                    });
+                }
+            };
         },
         template: `
         <div>

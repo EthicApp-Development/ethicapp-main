@@ -85,9 +85,9 @@ let sdPhaseDataJoiner = (phaseDescriptor, responses, users,
 
         // Assign chat statistics (e.g., chatR1, chatR2) to corresponding users
         relevantChats
-            .filter(chat => chat.did === question.id)
+            .filter(chat => Number(chat.did || chat.questionId) === Number(question.id))
             .forEach(chat => {
-                const user = usersMap[chat.uid];
+                const user = usersMap[chat.uid || chat.userId];
                 if (user) {
                     user[`chatR${questionNumber}`] = chat.messageCount; // Assign chat count
                 }
@@ -169,7 +169,7 @@ let rankingPhaseDataJoiner = (phaseDescriptor, responses, users,
 
         // Sum up chat counts for each user
         relevantChats.forEach(chat => {
-            const user = usersMap[chat.uid];
+            const user = usersMap[chat.uid || chat.userId];
             if (user) {
                 user.chatCount += chat.messageCount || 0;
             }
@@ -209,7 +209,7 @@ let rankingPhaseDataJoiner = (phaseDescriptor, responses, users,
 
             // Update chat counts
             relevantChats
-                .filter(chat => chat.uid === user.uid)
+                .filter(chat => (chat.uid || chat.userId) === user.uid)
                 .forEach(chat => {
                     existingUser.chatCount += chat.messageCount || 0;
                 });
@@ -338,6 +338,7 @@ let updateGroupStatistics = function(data, translator) {
         // Create the group summary object
         const groupSummary = {
             groupStatistics: true,
+            groupId,
             groupName,
             groupNumber,
             ...chatStats,

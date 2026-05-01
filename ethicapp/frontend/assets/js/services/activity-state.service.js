@@ -387,8 +387,8 @@ let ActivityStateService = function($http, TeacherSocketService) {
                 const response = await $http.get(`/phases/${phaseId}/message_count`);
                 
                 // Check if the response data is valid and contains the expected "messages" field
-                if (response && response.data && Array.isArray(response.messageCount)) {
-                    return response.messageCount; // Return the list of message counts
+                if (response && response.data && Array.isArray(response.data.messageCount)) {
+                    return response.data.messageCount; // Return the list of message counts
                 } else {
                     console.warn("Unexpected response format:", response);
                     return []; // Return an empty array if the format is not as expected
@@ -421,7 +421,7 @@ let ActivityStateService = function($http, TeacherSocketService) {
         getChatMessages: async function(groupId, questionId) {
             try {
                 // Make the HTTP GET request to the endpoint
-                const response = await $http.get(`/groups/${groupId}/question/${questionId}/chat`);
+                const response = await $http.get(`/groups/${groupId}/question/${questionId}/chat_messages`);
                 
                 // Check if the response data is valid and contains the expected "chat_transcript" field
                 if (response && response.data && Array.isArray(response.data.chat_transcript)) {
@@ -434,6 +434,24 @@ let ActivityStateService = function($http, TeacherSocketService) {
                 // Log the error for debugging purposes
                 console.error("Error fetching chat messages:", error);
                 return []; // Return an empty array in case of an error
+            }
+        },
+
+        getGroupResponses: async function(groupId, phaseId) {
+            try {
+                const response = await $http.get(`/groups/${groupId}/responses`, {
+                    params: { phase_id: phaseId },
+                });
+
+                if (response?.data && Array.isArray(response.data.responses)) {
+                    return response.data.responses;
+                }
+
+                console.warn("Unexpected response format:", response);
+                return [];
+            } catch (error) {
+                console.error(`Error fetching responses for group ${groupId} in phase ${phaseId}:`, error);
+                return [];
             }
         },
 
