@@ -69,10 +69,29 @@ export function DashboardController($scope, $routeParams, $http,
         const phaseDescriptor = phaseData?.descriptor;
         const currentPhaseId = vm.activityState?.descriptor?.currentPhase?.id;
         const activityStatus = vm.activityState?.descriptor?.status;
+        const isFinishedStatus = activityStatus === "finished" || Number(activityStatus) === 3;
 
-        return Boolean(phaseDescriptor?.chat)
+        return Boolean(vm.isChatEnabledForPhase(phaseDescriptor))
             && Number(phaseDescriptor?.id) === Number(currentPhaseId)
-            && activityStatus !== "finished";
+            && !isFinishedStatus;
+    };
+
+    vm.getDesignPhaseForDescriptor = function(phaseDescriptor) {
+        const designPhases = vm.designObj?.phases || [];
+        const phaseNumber = Number(phaseDescriptor?.number);
+
+        return designPhases.find((phase, index) => {
+            const designPhaseNumber = Number(phase?.number || index + 1);
+            return designPhaseNumber === phaseNumber;
+        }) || designPhases[phaseNumber - 1] || null;
+    };
+
+    vm.isChatEnabledForPhase = function(phaseDescriptor) {
+        if (typeof phaseDescriptor?.chat === "boolean") {
+            return phaseDescriptor.chat;
+        }
+
+        return vm.getDesignPhaseForDescriptor(phaseDescriptor)?.chat === true;
     };
 
     vm.hydratePhaseDataForIndividualModal = function(phaseData) {
@@ -84,11 +103,17 @@ export function DashboardController($scope, $routeParams, $http,
         }
 
         const phaseIndex = Number(descriptor.number) - 1;
-        const designPhase = vm.designObj?.phases?.[phaseIndex];
+        const designPhase = vm.getDesignPhaseForDescriptor(descriptor) || vm.designObj?.phases?.[phaseIndex];
         const designQuestions = designPhase?.questions || [];
 
         if (designQuestions.length === 0) {
-            return phaseData;
+            return {
+                ...phaseData,
+                descriptor: {
+                    ...descriptor,
+                    chat: vm.isChatEnabledForPhase(descriptor),
+                },
+            };
         }
 
         const mergedQuestions = descriptorQuestions.map((question, index) => {
@@ -123,6 +148,7 @@ export function DashboardController($scope, $routeParams, $http,
             ...phaseData,
             descriptor: {
                 ...descriptor,
+                chat: vm.isChatEnabledForPhase(descriptor),
                 questions: mergedQuestions,
             },
         };
