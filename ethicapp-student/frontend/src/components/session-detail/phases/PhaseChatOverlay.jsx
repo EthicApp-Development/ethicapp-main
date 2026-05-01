@@ -5,6 +5,10 @@ const DEFAULT_HEIGHT_PX = 320;
 const MIN_HEIGHT_PX = 220;
 
 function resolveDisplayName(message, participantsByUserId, isAnonymous, t) {
+  if (message.authorRole === 'P') {
+    return t('sessionDetail.chatTeacherAuthor');
+  }
+
   const participant = participantsByUserId[Number(message.authorId)] ?? null;
 
   if (isAnonymous) {
@@ -40,6 +44,7 @@ function normalizeMessage(message) {
   const id = Number(message?.id ?? message?.msgid ?? message?.mid);
   const authorId = Number(message?.uid ?? message?.user_id ?? message?.author_id);
   const authorName = message?.display_name ?? message?.name ?? message?.username ?? '';
+  const authorRole = message?.author_role ?? message?.authorRole ?? '';
   const content = typeof message?.content === 'string' ? message.content.trim() : '';
   const createdAt = message?.date ?? message?.created_at ?? message?.createdAt ?? '';
   const parentId = Number(message?.parent_id ?? message?.parentId);
@@ -48,6 +53,7 @@ function normalizeMessage(message) {
     id: Number.isInteger(id) ? id : Math.random(),
     authorId: Number.isInteger(authorId) ? authorId : null,
     authorName: typeof authorName === 'string' ? authorName : '',
+    authorRole: typeof authorRole === 'string' ? authorRole : '',
     content,
     createdAt: typeof createdAt === 'string' ? createdAt : '',
     parentId: Number.isInteger(parentId) ? parentId : null

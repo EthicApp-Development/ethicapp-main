@@ -100,6 +100,7 @@ const enUS = {
     chatResizeAria: 'Drag to resize chat',
     chatAnonymousAuthor: 'Anonymous teammate',
     chatYouAuthor: 'You',
+    chatTeacherAuthor: 'Teacher',
     chatPeerAuthor: 'Teammate',
     chatReply: 'Reply',
     chatReplyingTo: 'Replying to',

@@ -381,6 +381,9 @@
 	"teacher_chat_author_label": "Profesor",
 	"teacher_group_chat_placeholder": "Escribe un mensaje al grupo",
 	"teacher_group_chat_readonly_hint": "Este chat está en modo lectura.",
+	"teacher_group_chat_reply_label": "Responder",
+	"teacher_group_chat_replying_to_label": "Respondiendo a",
+	"teacher_group_chat_cancel_reply_label": "Cancelar",
 	"loading": "Cargando...",
 	"send": "Enviar"
 }

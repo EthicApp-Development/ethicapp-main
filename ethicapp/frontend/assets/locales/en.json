@@ -380,6 +380,9 @@
 	"teacher_chat_author_label": "Teacher",
 	"teacher_group_chat_placeholder": "Write a message to the group",
 	"teacher_group_chat_readonly_hint": "This chat is read-only.",
+	"teacher_group_chat_reply_label": "Reply",
+	"teacher_group_chat_replying_to_label": "Replying to",
+	"teacher_group_chat_cancel_reply_label": "Cancel",
 	"loading": "Loading...",
 	"send": "Send"
 }

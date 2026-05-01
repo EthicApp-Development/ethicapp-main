@@ -60,6 +60,7 @@ function createModalController() {
             .map((message) => $ctrl.groupChatService.normalizeMessage(message))
             .filter((message) => message.content.length > 0);
         $ctrl.draftMessage = "";
+        $ctrl.replyToMessageId = null;
         $ctrl.chatLoading = false;
         $ctrl.chatSending = false;
         $ctrl.chatError = "";
@@ -113,6 +114,66 @@ function createModalController() {
             return message?.authorRole === "P";
         };
 
+        $ctrl.getChatMessageById = function(messageId) {
+            const normalizedMessageId = Number(messageId);
+            return $ctrl.chatMessages.find((message) =>
+                Number(message.id) === normalizedMessageId
+            ) || null;
+        };
+
+        $ctrl.getSelectedReplyMessage = function() {
+            return $ctrl.getChatMessageById($ctrl.replyToMessageId);
+        };
+
+        $ctrl.selectReplyTarget = function(message) {
+            const normalizedMessageId = Number(message?.id);
+            if (!$ctrl.canUseLiveChat || !Number.isInteger(normalizedMessageId)) {
+                return;
+            }
+
+            $ctrl.replyToMessageId = normalizedMessageId;
+        };
+
+        $ctrl.clearReplyTarget = function() {
+            $ctrl.replyToMessageId = null;
+        };
+
+        $ctrl.getReplyTarget = function(message) {
+            return Number.isInteger(message?.parentId)
+                ? $ctrl.getChatMessageById(message.parentId)
+                : null;
+        };
+
+        $ctrl.getMessageDepth = function(message) {
+            const visited = new Set();
+            let current = message;
+            let depth = 0;
+
+            while (Number.isInteger(current?.parentId) && !visited.has(current.parentId)) {
+                visited.add(current.parentId);
+                const parent = $ctrl.getChatMessageById(current.parentId);
+                if (!parent) {
+                    break;
+                }
+
+                depth += 1;
+                current = parent;
+            }
+
+            return Math.min(depth, 3);
+        };
+
+        $ctrl.getReplyIndentStyle = function(message) {
+            const depth = $ctrl.getMessageDepth(message);
+            const offset = `${depth * 12}px`;
+
+            if ($ctrl.isTeacherMessage(message)) {
+                return { "margin-right": offset };
+            }
+
+            return { "margin-left": offset };
+        };
+
         $ctrl.getFirstQuestionId = function() {
             return Number($ctrl.questions?.[0]?.id);
         };
@@ -138,6 +199,9 @@ function createModalController() {
                 const messages = await $ctrl.groupChatService.loadMessages($ctrl.group.groupId, questionId);
                 $scope.$applyAsync(() => {
                     $ctrl.chatMessages = messages;
+                    if ($ctrl.replyToMessageId && !$ctrl.getSelectedReplyMessage()) {
+                        $ctrl.clearReplyTarget();
+                    }
                     $ctrl.chatLoading = false;
                     $ctrl.scrollChatToBottom();
                 });
@@ -166,6 +230,7 @@ function createModalController() {
                     questionId,
                     groupId: $ctrl.group.groupId,
                     content,
+                    parentId: Number.isInteger($ctrl.replyToMessageId) ? $ctrl.replyToMessageId : null,
                 });
 
                 $scope.$applyAsync(() => {
@@ -178,6 +243,7 @@ function createModalController() {
                         }
                     }
                     $ctrl.draftMessage = "";
+                    $ctrl.clearReplyTarget();
                     $ctrl.chatSending = false;
                     $ctrl.scrollChatToBottom();
                 });
