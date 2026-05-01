@@ -14,8 +14,8 @@
     <tbody>
         <tr ng-repeat="user in gptCtrl.phaseData.state track by $index"
             ng-class="{'group-summary': user.groupStatistics}"
-            ng-click="gptCtrl.onGroupRowClick(user)"
-            ng-style="user.groupStatistics && {'cursor': 'pointer'}">
+            ng-click="gptCtrl.onRowClick(user)"
+            style="cursor: pointer;">
             <td>
                 <span ng-if="!user.groupStatistics">{{ user.userName }}</span>
                 <strong ng-if="user.groupStatistics">{{ user.groupName }}</strong>

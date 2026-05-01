@@ -6,6 +6,7 @@ let groupPhaseTableDirective = function() {
         scope: {
             phaseData: '<',  // Processed group-phase data
             designType: '<',  // Design type ('ranking', 'semantic_differential', etc.)
+            onSelectResponse: '&?',
             onSelectGroup: '&?'
         },
         bindToController: true, // Bind the scope properties to the controller
@@ -153,14 +154,22 @@ let groupPhaseTableDirective = function() {
                 return template;
             };
 
-            gptCtrl.onGroupRowClick = function(group) {
-                if (gptCtrl.designType !== 'semantic_differential' || !group?.groupStatistics) {
+            gptCtrl.onRowClick = function(row) {
+                if (gptCtrl.designType !== 'semantic_differential') {
                     return;
                 }
 
-                if (typeof gptCtrl.onSelectGroup === 'function') {
+                if (row?.groupStatistics && typeof gptCtrl.onSelectGroup === 'function') {
                     gptCtrl.onSelectGroup({
-                        group,
+                        group: row,
+                        phaseData: gptCtrl.phaseData,
+                    });
+                    return;
+                }
+
+                if (!row?.groupStatistics && typeof gptCtrl.onSelectResponse === 'function') {
+                    gptCtrl.onSelectResponse({
+                        response: row,
                         phaseData: gptCtrl.phaseData,
                     });
                 }

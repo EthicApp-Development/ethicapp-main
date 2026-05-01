@@ -11,6 +11,7 @@
         <group-phase-table
             phase-data="ctrl.phaseData"
             design-type="ctrl.designType"
+            on-select-response="ctrl.onSelectResponse({ response: response, phaseData: phaseData })"
             on-select-group="ctrl.onSelectGroup({ group: group, phaseData: phaseData })">
         </group-phase-table>
     </div>
