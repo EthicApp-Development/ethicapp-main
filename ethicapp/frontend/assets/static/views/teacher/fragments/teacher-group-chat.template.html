@@ -1,0 +1,177 @@
+<style>
+    .teacher-group-chat-transcript {
+        max-height: 24em;
+        overflow-y: auto;
+        padding-right: .5em;
+    }
+
+    .teacher-group-chat-message {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: .75em;
+    }
+
+    .teacher-group-chat-message-peer {
+        align-items: flex-start;
+    }
+
+    .teacher-group-chat-message-own {
+        align-items: flex-end;
+    }
+
+    .teacher-group-chat-message-meta {
+        display: block;
+        max-width: 85%;
+        margin-bottom: .2em;
+        line-height: 1.35;
+    }
+
+    .teacher-group-chat-bubble {
+        display: block;
+        max-width: 85%;
+        padding: .35em .6em;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, .075);
+        color: #333;
+        line-height: 1.4;
+        text-align: left;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .teacher-group-chat-bubble-peer {
+        background-color: #fff;
+    }
+
+    .teacher-group-chat-bubble-own {
+        background-color: #deffcf;
+    }
+
+    .teacher-group-chat-reply-context {
+        max-width: 85%;
+        margin-bottom: .25em;
+        padding: .2em .5em;
+        border-left: 2px solid #bbb;
+        color: #777;
+        font-size: 12px;
+        line-height: 1.35;
+        text-align: left;
+    }
+
+    .teacher-group-chat-message-own .teacher-group-chat-reply-context {
+        border-right: 2px solid #bbb;
+        border-left: 0;
+        text-align: right;
+    }
+
+    .teacher-group-chat-reply-button {
+        margin-top: .15em;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #337ab7;
+        font-size: 12px;
+        line-height: 1.35;
+    }
+
+    .teacher-group-chat-reply-button:hover,
+    .teacher-group-chat-reply-button:focus {
+        color: #23527c;
+        text-decoration: underline;
+    }
+
+    .teacher-group-chat-reply-preview {
+        margin-bottom: .5em;
+        padding: .35em .5em;
+        border-left: 2px solid #bbb;
+        color: #777;
+        font-size: 12px;
+        line-height: 1.35;
+    }
+
+    .teacher-group-chat-reply-preview-content {
+        display: block;
+        margin-top: .15em;
+        color: #555;
+    }
+
+    .teacher-group-chat-reply-preview-dismiss {
+        float: right;
+    }
+</style>
+
+<p class="text-muted" ng-if="$ctrl.chatLoading">{{ 'loading' | translate }}</p>
+<p class="text-muted" ng-if="!$ctrl.chatLoading && $ctrl.getMessages().length === 0">{{ 'no_response' | translate }}</p>
+<div ng-if="$ctrl.getMessages().length > 0"
+     class="teacher-group-chat-transcript">
+    <div class="teacher-group-chat-message"
+         ng-class="{
+            'teacher-group-chat-message-own': $ctrl.isOwnMessage(message),
+            'teacher-group-chat-message-peer': !$ctrl.isOwnMessage(message)
+         }"
+         ng-style="$ctrl.getReplyIndentStyle(message)"
+         ng-repeat="message in $ctrl.getMessages() track by message.id">
+        <small class="text-muted teacher-group-chat-message-meta">
+            {{ $ctrl.getChatAuthorName(message) }}
+            <span>{{ message.stime | date:'short' }}</span>
+        </small>
+        <div class="teacher-group-chat-reply-context"
+             ng-if="$ctrl.getReplyTarget(message)">
+            <strong>{{ $ctrl.getChatAuthorName($ctrl.getReplyTarget(message)) }}</strong>:
+            {{ $ctrl.getReplyTarget(message).content }}
+        </div>
+        <div class="teacher-group-chat-bubble"
+             ng-class="{
+                'teacher-group-chat-bubble-own': $ctrl.isOwnMessage(message),
+                'teacher-group-chat-bubble-peer': !$ctrl.isOwnMessage(message)
+             }">
+            {{ message.content }}
+        </div>
+        <button type="button"
+                class="teacher-group-chat-reply-button"
+                ng-if="$ctrl.canUseLiveChat"
+                ng-click="$ctrl.selectReplyTarget(message)">
+            {{ 'teacher_group_chat_reply_label' | translate }}
+        </button>
+    </div>
+</div>
+<div class="alert alert-danger" ng-if="$ctrl.chatError" style="margin-top: .75em; margin-bottom: 0;">
+    {{ $ctrl.chatError }}
+</div>
+<div ng-if="$ctrl.canUseLiveChat" style="border-top: 1px solid #ddd; margin-top: .75em; padding-top: .75em;">
+    <div class="teacher-group-chat-reply-preview"
+         ng-if="$ctrl.getSelectedReplyMessage()">
+        <div>
+            {{ 'teacher_group_chat_replying_to_label' | translate }}
+            <strong>{{ $ctrl.getChatAuthorName($ctrl.getSelectedReplyMessage()) }}</strong>
+            <button type="button"
+                    class="teacher-group-chat-reply-button teacher-group-chat-reply-preview-dismiss"
+                    ng-click="$ctrl.clearReplyTarget()">
+                {{ 'teacher_group_chat_cancel_reply_label' | translate }}
+            </button>
+        </div>
+        <span class="teacher-group-chat-reply-preview-content">
+            {{ $ctrl.getSelectedReplyMessage().content }}
+        </span>
+    </div>
+    <div class="input-group">
+        <input type="text"
+               class="form-control"
+               ng-model="$ctrl.draftMessage"
+               ng-keydown="$ctrl.onChatKeyDown($event)"
+               ng-disabled="$ctrl.chatSending"
+               placeholder="{{ 'teacher_group_chat_placeholder' | translate }}">
+        <span class="input-group-btn">
+            <button type="button"
+                    class="btn btn-danger"
+                    ng-click="$ctrl.sendMessage()"
+                    ng-disabled="$ctrl.chatSending || !$ctrl.draftMessage.trim()">
+                {{ 'send' | translate }}
+            </button>
+        </span>
+    </div>
+</div>
+<p class="text-muted small" ng-if="!$ctrl.canUseLiveChat" style="margin-top: .75em; margin-bottom: 0;">
+    {{ 'teacher_group_chat_readonly_hint' | translate }}
+</p>

@@ -47,8 +47,8 @@ function normalizeQuestion(question, index) {
 }
 
 function createModalController() {
-    return ["$scope", "$timeout", "$translate", "$uibModalInstance", "data",
-        function($scope, $timeout, $translate, $uibModalInstance, data) {
+    return ["$scope", "$translate", "$uibModalInstance", "data",
+        function($scope, $translate, $uibModalInstance, data) {
         const $ctrl = this;
 
         $ctrl.group = data.group;
@@ -59,8 +59,6 @@ function createModalController() {
         $ctrl.chatMessages = (data.chatMessages || [])
             .map((message) => $ctrl.groupChatService.normalizeMessage(message))
             .filter((message) => message.content.length > 0);
-        $ctrl.draftMessage = "";
-        $ctrl.replyToMessageId = null;
         $ctrl.chatLoading = false;
         $ctrl.chatSending = false;
         $ctrl.chatError = "";
@@ -114,77 +112,8 @@ function createModalController() {
             return message?.authorRole === "P";
         };
 
-        $ctrl.getChatMessageById = function(messageId) {
-            const normalizedMessageId = Number(messageId);
-            return $ctrl.chatMessages.find((message) =>
-                Number(message.id) === normalizedMessageId
-            ) || null;
-        };
-
-        $ctrl.getSelectedReplyMessage = function() {
-            return $ctrl.getChatMessageById($ctrl.replyToMessageId);
-        };
-
-        $ctrl.selectReplyTarget = function(message) {
-            const normalizedMessageId = Number(message?.id);
-            if (!$ctrl.canUseLiveChat || !Number.isInteger(normalizedMessageId)) {
-                return;
-            }
-
-            $ctrl.replyToMessageId = normalizedMessageId;
-        };
-
-        $ctrl.clearReplyTarget = function() {
-            $ctrl.replyToMessageId = null;
-        };
-
-        $ctrl.getReplyTarget = function(message) {
-            return Number.isInteger(message?.parentId)
-                ? $ctrl.getChatMessageById(message.parentId)
-                : null;
-        };
-
-        $ctrl.getMessageDepth = function(message) {
-            const visited = new Set();
-            let current = message;
-            let depth = 0;
-
-            while (Number.isInteger(current?.parentId) && !visited.has(current.parentId)) {
-                visited.add(current.parentId);
-                const parent = $ctrl.getChatMessageById(current.parentId);
-                if (!parent) {
-                    break;
-                }
-
-                depth += 1;
-                current = parent;
-            }
-
-            return Math.min(depth, 3);
-        };
-
-        $ctrl.getReplyIndentStyle = function(message) {
-            const depth = $ctrl.getMessageDepth(message);
-            const offset = `${depth * 12}px`;
-
-            if ($ctrl.isTeacherMessage(message)) {
-                return { "margin-right": offset };
-            }
-
-            return { "margin-left": offset };
-        };
-
         $ctrl.getFirstQuestionId = function() {
             return Number($ctrl.questions?.[0]?.id);
-        };
-
-        $ctrl.scrollChatToBottom = function() {
-            $timeout(() => {
-                const chatTranscript = document.getElementById("teacher-group-chat-transcript");
-                if (chatTranscript) {
-                    chatTranscript.scrollTop = chatTranscript.scrollHeight;
-                }
-            }, 0);
         };
 
         $ctrl.reloadChatMessages = async function() {
@@ -199,11 +128,7 @@ function createModalController() {
                 const messages = await $ctrl.groupChatService.loadMessages($ctrl.group.groupId, questionId);
                 $scope.$applyAsync(() => {
                     $ctrl.chatMessages = messages;
-                    if ($ctrl.replyToMessageId && !$ctrl.getSelectedReplyMessage()) {
-                        $ctrl.clearReplyTarget();
-                    }
                     $ctrl.chatLoading = false;
-                    $ctrl.scrollChatToBottom();
                 });
             } catch (error) {
                 console.error("Error loading group chat messages:", error);
@@ -214,8 +139,7 @@ function createModalController() {
             }
         };
 
-        $ctrl.sendMessage = async function() {
-            const content = $ctrl.draftMessage.trim();
+        $ctrl.sendChatMessage = async function(content, parentId = null) {
             const questionId = $ctrl.getFirstQuestionId();
 
             if (!content || !$ctrl.canUseLiveChat || $ctrl.chatSending || !questionId || !$ctrl.group?.groupId) {
@@ -230,7 +154,7 @@ function createModalController() {
                     questionId,
                     groupId: $ctrl.group.groupId,
                     content,
-                    parentId: Number.isInteger($ctrl.replyToMessageId) ? $ctrl.replyToMessageId : null,
+                    parentId,
                 });
 
                 $scope.$applyAsync(() => {
@@ -242,10 +166,7 @@ function createModalController() {
                             $ctrl.chatMessages.push(sentMessage);
                         }
                     }
-                    $ctrl.draftMessage = "";
-                    $ctrl.clearReplyTarget();
                     $ctrl.chatSending = false;
-                    $ctrl.scrollChatToBottom();
                 });
             } catch (error) {
                 console.error("Error sending teacher group chat message:", error);
@@ -253,13 +174,7 @@ function createModalController() {
                     $ctrl.chatSending = false;
                     $ctrl.chatError = "Unable to send chat message.";
                 });
-            }
-        };
-
-        $ctrl.onChatKeyDown = function(event) {
-            if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                $ctrl.sendMessage();
+                throw error;
             }
         };
 
@@ -275,13 +190,10 @@ function createModalController() {
                             if (!existingMessage) {
                                 $ctrl.chatMessages.push(message);
                             }
-                            $ctrl.scrollChatToBottom();
                         });
                     }
                 );
             }
-
-            $ctrl.scrollChatToBottom();
         };
 
         $ctrl.$onDestroy = function() {

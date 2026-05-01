@@ -187,6 +187,7 @@ import itemMoverComponent from '../../components/item-mover.component.js';
 import designItemComponent from '../../components/design-item.component.js';
 import caseFormEditorComponent from "../../components/case-form-editor.component.js";
 import phaseInstructionsEditComponent from "../../components/phase-instructions-edit.component.js";
+import teacherGroupChatComponent from "../../components/teacher-group-chat.component.js";
 
 app.component('activityDescription', activityDescriptionComponent);
 app.component('designDescription', designDescriptionComponent);
@@ -203,6 +204,7 @@ app.component('sdItemEditor', sdItemEditorComponent);
 app.component('designItem', designItemComponent);
 app.component("caseFormEditor", caseFormEditorComponent);
 app.component("phaseInstructionsEdit", phaseInstructionsEditComponent);
+app.component("teacherGroupChat", teacherGroupChatComponent);
 
 import { userRolesFilter } from '../../filters/user-roles.filter.js';
 app.filter("roleTranslate", ["$translate", userRolesFilter]);
