@@ -35,18 +35,6 @@ watch_esbuild "teacher-admin.mjs" "../../dist"
 cd "$SCRIPT_DIR/../ethicapp/frontend/assets/js/modules/common"
 watch_esbuild "user-common.mjs" "../../dist"
 
-# Students' Sessions App
-cd "$SCRIPT_DIR/../ethicapp/frontend/assets/js/modules/student"
-watch_esbuild "sessions.mjs" "../../dist"
-
-# StudentEthics App
-cd "$SCRIPT_DIR/../ethicapp/frontend/assets/js/modules/student"
-watch_esbuild "ethics.mjs" "../../dist"
-
-# RolePlaying App
-cd "$SCRIPT_DIR/../ethicapp/frontend/assets/js/modules/student"
-watch_esbuild "role-playing.mjs" "../../dist"
-
 # CSS dependencies (SASS Watch)
 cd "$SCRIPT_DIR/../ethicapp/frontend/assets/css"
 sass --watch styles.scss:dist/assets-bundle.css &

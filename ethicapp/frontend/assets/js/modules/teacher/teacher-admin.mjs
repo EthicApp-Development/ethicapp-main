@@ -31,13 +31,8 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
 import { LocalesController } from "../../controllers/common/locales.controller.js";
 import { ActivityController } from "../../controllers/teacher/activity.controller.js";
 import { BrowseDesignsController } from "../../controllers/teacher/browse-designs.controller.js";
-import { ConfirmModalController } from "../../controllers/teacher/confirm_modal_controller.js";
-import { ContentModalController } from "../../controllers/teacher/content_modal_controller.js";
 import { CreateDesignController } from "../../controllers/teacher/create_design.controller.js";
 import { DashboardController } from "../../controllers/teacher/dashboard.controller.js";
-import { DesignAttachmentsController } from "../../controllers/teacher/design-attachments-controller.js";
-import { DocumentsController } from "../../controllers/teacher/documents.controller.js";
-import { EthicsModalController } from "../../controllers/teacher/ethics_modal_controller.js";
 import { ErrorController } from "../../controllers/teacher/error.controller.js";
 import { VoidController } from "../../controllers/common/void.controller.js";
 import { ngQuillConfigProvider } from "../../helpers/util.js";
@@ -105,26 +100,15 @@ app.controller("ActivityController",
 app.controller("BrowseDesignsController", 
     ["$scope", "$routeParams", "toast", "$translate", "ActivityStateService", "DesignCatalogService", 
         BrowseDesignsController]); 
-app.controller("ConfirmModalController", 
-    ["$uibModalInstance", ConfirmModalController]);
-app.controller("ContentModalController", 
-    ["$scope", "$uibModalInstance", "data", ContentModalController]); 
 app.controller("CreateDesignController", 
     ["$scope", "DesignCatalogService", "UserProfileService", CreateDesignController]);
 app.controller("DashboardController", 
     ["$scope", "$routeParams", "$http", "$translate", "$timeout", "$uibModal",
         "ActivityStateService", "ActivityCatalogService", "DesignCatalogService", DashboardController]);  
-app.controller("DesignAttachmentsController", 
-    ["$scope", "DesignStateService" ,"$http", "Notification", "$timeout", DesignAttachmentsController]);
 app.controller("DesignViewerController", 
     ["$scope", "$routeParams", "DesignCatalogService", DesignViewerController]);
 app.controller("CasesController",
     ["$scope", "$routeParams", "CasesCatalogService", CasesController]);
-app.controller("DocumentsController", 
-    ["$scope", "$http", "Notification", "$timeout", "ActivityStateService",
-        DocumentsController]);
-app.controller("EthicsModalController", 
-    ["$scope", "$http", "$uibModalInstance", "Notification", "data", EthicsModalController]);
 app.controller("ErrorController", 
     ["$scope", "$window", "$routeParams",
         ErrorController]);
