@@ -1,8 +1,13 @@
 import * as PhaseCreationHelpers from "../helpers/phase-creation-helpers.js";
 
 let ActivityStateService = function($http, TeacherSocketService) {
+    const CHAT_NOTIFY_THROTTLE_MS = 3000;
+    const CHAT_REFRESH_WATCHDOG_MS = 10000;
+
     const service = {
         subscriptionsMap: new Map(), // Subscription to socket events
+        chatNotificationState: new Map(),
+        chatRefreshIntervals: new Map(),
         activityStates: {}, // Activity states
         listeners: {}, // Subscribed listeners
         rankingResponseMerger: async function(sessionId, response, responses) {
@@ -207,15 +212,14 @@ let ActivityStateService = function($http, TeacherSocketService) {
                 })                
             );
         
+            service.startChatRefreshWatchdog(sessionId);
+
             // Subscribe to `onChatMessage`
             subscriptions.push(
                 TeacherSocketService.fromEvent('onChatMessage').subscribe({
                     next: (data) => {
                         console.debug(`New chat message ${sessionId}:`, data);
-
-                        // Notify listeners
-                        service.notifyListeners("onChatMessage", { 
-                            messages: data.messages });                        
+                        service.handleChatMessageNotification(sessionId, data);
                     },
                     error: (err) => console.error(`Websocket error for phaseChanged in session ${sessionId}:`, err),
                 })
@@ -225,6 +229,8 @@ let ActivityStateService = function($http, TeacherSocketService) {
             const unsubscribeAll = () => {
                 subscriptions.forEach((subscription) => subscription.unsubscribe());
                 TeacherSocketService.leaveSession(sessionId);
+                service.stopChatRefreshWatchdog(sessionId);
+                service.clearChatNotificationState(sessionId);
                 service.subscriptionsMap.delete(sessionId); // Remove from the map
             };
         
@@ -232,6 +238,128 @@ let ActivityStateService = function($http, TeacherSocketService) {
             service.subscriptionsMap.set(sessionId, { subscriptions, unsubscribeAll });
         
             return unsubscribeAll; // Return the unsubscribe function
+        },
+
+        handleChatMessageNotification: function(sessionId, data) {
+            const phaseId = Number(data?.phaseId);
+            if (!phaseId) {
+                console.warn("[ActivityStateService] Received chat notification without phaseId.", data);
+                return;
+            }
+
+            const notificationKey = `${sessionId}:${phaseId}`;
+            const now = Date.now();
+            const state = service.chatNotificationState.get(notificationKey) || {
+                lastNotifiedAt: 0,
+                trailingTimeoutId: null,
+                latestData: null,
+            };
+
+            state.latestData = data;
+            const elapsed = now - state.lastNotifiedAt;
+
+            if (elapsed >= CHAT_NOTIFY_THROTTLE_MS) {
+                if (state.trailingTimeoutId) {
+                    clearTimeout(state.trailingTimeoutId);
+                    state.trailingTimeoutId = null;
+                }
+
+                service.emitChatDashboardRefresh(sessionId, phaseId, data, "socket");
+                state.lastNotifiedAt = now;
+                service.chatNotificationState.set(notificationKey, state);
+                return;
+            }
+
+            if (!state.trailingTimeoutId) {
+                state.trailingTimeoutId = setTimeout(() => {
+                    const latestState = service.chatNotificationState.get(notificationKey);
+                    if (!latestState) {
+                        return;
+                    }
+
+                    latestState.trailingTimeoutId = null;
+                    latestState.lastNotifiedAt = Date.now();
+                    service.emitChatDashboardRefresh(
+                        sessionId,
+                        phaseId,
+                        latestState.latestData,
+                        "socket-trailing"
+                    );
+                    service.chatNotificationState.set(notificationKey, latestState);
+                }, CHAT_NOTIFY_THROTTLE_MS - elapsed);
+            }
+
+            service.chatNotificationState.set(notificationKey, state);
+        },
+
+        emitChatDashboardRefresh: function(sessionId, phaseId, data, reason) {
+            service.notifyListeners("onChatMessage", {
+                ...data,
+                sessionId,
+                phaseId,
+                refreshReason: reason,
+            });
+        },
+
+        startChatRefreshWatchdog: function(sessionId) {
+            if (service.chatRefreshIntervals.has(sessionId)) {
+                return;
+            }
+
+            const intervalId = setInterval(() => {
+                const activityState = service.activityStates[sessionId];
+                const descriptor = activityState?.descriptor;
+                const currentPhase = descriptor?.currentPhase;
+                const currentPhaseDescriptor = descriptor?.phases?.find((phase) =>
+                    Number(phase.id) === Number(currentPhase?.id)
+                ) || currentPhase;
+
+                if (!currentPhase || descriptor?.status === "finished" || !currentPhaseDescriptor?.chat) {
+                    return;
+                }
+
+                const phaseId = Number(currentPhase.id);
+                const notificationKey = `${sessionId}:${phaseId}`;
+                const state = service.chatNotificationState.get(notificationKey);
+                const lastNotifiedAt = state?.lastNotifiedAt || 0;
+
+                if (Date.now() - lastNotifiedAt >= CHAT_REFRESH_WATCHDOG_MS) {
+                    service.emitChatDashboardRefresh(sessionId, phaseId, {
+                        phaseId,
+                    }, "watchdog");
+                    service.chatNotificationState.set(notificationKey, {
+                        ...(state || {}),
+                        lastNotifiedAt: Date.now(),
+                        trailingTimeoutId: state?.trailingTimeoutId || null,
+                        latestData: state?.latestData || null,
+                    });
+                }
+            }, CHAT_REFRESH_WATCHDOG_MS);
+
+            service.chatRefreshIntervals.set(sessionId, intervalId);
+        },
+
+        stopChatRefreshWatchdog: function(sessionId) {
+            const intervalId = service.chatRefreshIntervals.get(sessionId);
+            if (intervalId) {
+                clearInterval(intervalId);
+                service.chatRefreshIntervals.delete(sessionId);
+            }
+        },
+
+        clearChatNotificationState: function(sessionId) {
+            const prefix = `${sessionId}:`;
+            Array.from(service.chatNotificationState.entries()).forEach(([key, state]) => {
+                if (!key.startsWith(prefix)) {
+                    return;
+                }
+
+                if (state?.trailingTimeoutId) {
+                    clearTimeout(state.trailingTimeoutId);
+                }
+
+                service.chatNotificationState.delete(key);
+            });
         },
         
         getSessionUsers: async function(sessionId, refresh = false) {

@@ -15,6 +15,7 @@ export function DashboardController($scope, $routeParams, $http,
     vm.userList = [];
     vm.reachedLastPhase = false;
     vm.dashboardPhaseData = [];
+    vm.dashboardPhaseUpdateState = new Map();
     
     vm.selectedTab = 0; // Default to the first tab
 
@@ -279,6 +280,22 @@ export function DashboardController($scope, $routeParams, $http,
     };
 
     vm.updateDashboardPhaseData = async (phaseId) => {    
+        const updateKey = Number(phaseId);
+        const updateState = vm.dashboardPhaseUpdateState.get(updateKey) || {
+            inProgress: false,
+            queued: false,
+        };
+
+        if (updateState.inProgress) {
+            updateState.queued = true;
+            vm.dashboardPhaseUpdateState.set(updateKey, updateState);
+            return;
+        }
+
+        updateState.inProgress = true;
+        updateState.queued = false;
+        vm.dashboardPhaseUpdateState.set(updateKey, updateState);
+
         try {
             let phaseData = vm.dashboardPhaseData.find(pd => pd.descriptor.id == phaseId);
 
@@ -302,6 +319,17 @@ export function DashboardController($scope, $routeParams, $http,
             }
         } catch(error) {
             console.error("Error updating dashboard phase state:", error);
+        } finally {
+            const latestUpdateState = vm.dashboardPhaseUpdateState.get(updateKey);
+            if (latestUpdateState?.queued) {
+                latestUpdateState.inProgress = false;
+                latestUpdateState.queued = false;
+                vm.dashboardPhaseUpdateState.set(updateKey, latestUpdateState);
+                vm.updateDashboardPhaseData(phaseId);
+                return;
+            }
+
+            vm.dashboardPhaseUpdateState.delete(updateKey);
         }
     };
     
@@ -438,12 +466,12 @@ export function DashboardController($scope, $routeParams, $http,
     };
 
     vm.defaultEventHandler = function (data) {
-        const currentPhaseId = vm?.activityState?.descriptor?.currentPhase?.id;
-        if (!currentPhaseId) {
-            console.warn("Unable to resolve the current phase");
+        const phaseId = data?.phaseId || data?.response?.phaseId || vm?.activityState?.descriptor?.currentPhase?.id;
+        if (!phaseId) {
+            console.warn("Unable to resolve the phase to refresh");
             return;
         }
-        vm.updateDashboardPhaseData(currentPhaseId);
+        vm.updateDashboardPhaseData(phaseId);
     };
 
     vm.activatePhaseTabById = function(phaseId, retryCount = 8) {

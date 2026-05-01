@@ -94,6 +94,11 @@ let sdPhaseDataJoiner = (phaseDescriptor, responses, users,
             });
     });
 
+    Object.values(usersMap).forEach(user => {
+        user.totalChatCount = questions.reduce((total, question) =>
+            total + Number(user[`chatR${question.number}`] || 0), 0);
+    });
+
     // If no existingData is provided, return the newly created data structure
     if (!existingData) {
         return Object.values(usersMap);
