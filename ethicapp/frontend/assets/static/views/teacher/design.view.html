@@ -13,6 +13,18 @@
                     on-toggle-public="dvc.designPublic">
                 </design-item>                
             </div>
+            <div class="panel panel-default" style="margin-top: 1em">
+                <div class="panel-body">
+                    <h4 style="margin-top: 0">{{ 'design_associated_case_label' | translate }}</h4>
+                    <p class="help-block" ng-if="!dvc.associatedCase">
+                        {{ 'design_no_case_associated' | translate }}
+                    </p>
+                    <p class="help-block" ng-if="dvc.associatedCase">
+                        <strong>{{ 'design_associated_case_current' | translate }}:</strong>
+                        {{ dvc.formatCaseLabel(dvc.associatedCase) }}
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
     <div class="row">

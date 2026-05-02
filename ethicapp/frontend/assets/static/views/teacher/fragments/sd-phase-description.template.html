@@ -6,7 +6,7 @@
         <li ng-if="ctrl.phaseMode === 'team'"><strong>{{ 'chat_enabled_label' | translate }}:</strong> {{ ctrl.phaseDetails.chat ? ('yes_label' | translate) : ('no_label' | translate) }}</li>
         <li ng-if="ctrl.phaseMode === 'team'"><strong>{{ 'grouping_algorithm_label' | translate }}:</strong> {{ ctrl.phaseDetails.grouping_algorithm | translate }}</li>
         <li ng-if="ctrl.phaseMode === 'team'"><strong>{{ 'group_size_label' | translate }}:</strong> {{ ctrl.phaseDetails.stdntAmount }}</li>
-        <li ng-if="$ctrl.phaseDetails.prevPhasesResponse.length > 0"><strong>{{ 'previous_phases_label' | translate }}:</strong> {{ ctrl.phaseDetails.prevPhasesResponse.join(', ') }}</li>
+        <li ng-if="ctrl.phaseDetails.prevPhasesResponse && ctrl.phaseDetails.prevPhasesResponse.length > 0"><strong>{{ 'previous_phases_label' | translate }}:</strong> {{ ctrl.phaseDetails.prevPhasesResponse.join(', ') }}</li>
     </ul>
     <hr>
     <div ng-if="ctrl.phaseDetails.instructions && ctrl.phaseDetails.instructions.trim().length > 0">
