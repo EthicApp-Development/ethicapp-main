@@ -15,7 +15,7 @@
         <p>
             <strong>{{ 'group_size_label' | translate }}:</strong> {{ ctrl.phaseDetails.stdntAmount }}
         </p>
-        <p ng-if="ctrl.phaseDetails.prevPhasesResponse.length > 0">
+        <p ng-if="ctrl.phaseDetails.prevPhasesResponse && ctrl.phaseDetails.prevPhasesResponse.length > 0">
             <strong>{{ 'previous_phases_label' | translate }}:</strong>
             {{ ctrl.phaseDetails.prevPhasesResponse.join(', ') }}
         </p>

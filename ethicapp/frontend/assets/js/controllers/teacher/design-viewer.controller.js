@@ -1,20 +1,50 @@
-export function DesignViewerController($scope, $routeParams, DesignCatalogService) {
+export function DesignViewerController($scope, $routeParams, DesignCatalogService, CasesCatalogService) {
     const vm = this;
     vm.designId = 0;
+    vm.design = null;
+    vm.associatedCase = null;
 
     vm.init = async function() {
         vm.designId = Number($routeParams.id);
         if (!isNaN(vm.designId)) {
             vm.design = await DesignCatalogService.getDesignById(vm.designId);
+            await vm.loadAssociatedCase();
 
-            $scope.$applyAsync(async () => {
+            $scope.$applyAsync(() => {
                 console.log(`[DesignViewerController::init] Design: ${JSON.stringify(vm.design)}`);
             });
         } else {
             console.error("[DesignViewerController::init] Design not found.");
             $scope.navigateTo("/error/404/2");
         }
-    }
+    };
+
+    vm.loadAssociatedCase = async function() {
+        vm.associatedCase = null;
+        if (!vm.designId) {
+            return;
+        }
+
+        try {
+            vm.associatedCase = await CasesCatalogService.getCaseByDesignId(vm.designId);
+        } catch (error) {
+            console.error("[DesignViewerController::loadAssociatedCase] Error loading associated case.", error);
+            vm.associatedCase = null;
+        } finally {
+            $scope.$applyAsync();
+        }
+    };
+
+    vm.formatCaseLabel = function(caseItem) {
+        if (!caseItem) {
+            return "";
+        }
+        const hasAuthor = caseItem.authorFirstname || caseItem.authorLastname;
+        if (hasAuthor) {
+            return `${caseItem.title} (${caseItem.authorFirstname || ""} ${caseItem.authorLastname || ""})`.trim();
+        }
+        return caseItem.title;
+    };
     
     vm.handleLaunch = function() {
         $scope.navigateTo('/activities/new/' + vm.designId);

@@ -109,7 +109,7 @@ app.controller("DashboardController",
         "ActivityStateService", "ActivityCatalogService", "DesignCatalogService",
         "TeacherGroupChatService", DashboardController]);
 app.controller("DesignViewerController", 
-    ["$scope", "$routeParams", "DesignCatalogService", DesignViewerController]);
+    ["$scope", "$routeParams", "DesignCatalogService", "CasesCatalogService", DesignViewerController]);
 app.controller("CasesController",
     ["$scope", "$routeParams", "CasesCatalogService", CasesController]);
 app.controller("ErrorController", 
