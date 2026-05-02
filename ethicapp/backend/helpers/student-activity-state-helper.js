@@ -148,7 +148,7 @@ export async function getCachedStudentActivityPhases(sessionId, invalidate = fal
         return { phases: [] };
     }
 
-    const cacheKey = `session:${sessionId}:phases`;
+    const cacheKey = `session:${sessionId}:phases:v2`;
 
     try {
         // Handle cache invalidation
@@ -226,23 +226,30 @@ export async function getStudentActivityPhases(sessionId) {
         });
 
         // Transform phases into the desired format
-        const phases = phasesResult.map(phase => ({
-            id: phase.id,
-            number: phase.number,
-            instructions: typeof (designPhases[Number(phase.number) - 1]?.instructions) === "string"
-                ? designPhases[Number(phase.number) - 1].instructions
-                : (typeof phase.instructions === "string" ? phase.instructions : ""),
-            features: {
-                mode: phase.mode,
-                chat: phase.chat,
-                anonymity: phase.anon,
-            },
-            tasks: [], // Placeholder: Add query to retrieve tasks
-            responses: [], // Placeholder: Add query to retrieve responses
-            peerResponses: [], // Placeholder: Add query to retrieve peer responses
-            group: {}, // Placeholder: Add query to retrieve group info
-            groupMessages: [], // Placeholder: Add query to retrieve group messages
-        }));
+        const phases = phasesResult.map(phase => {
+            const phaseDesign = designPhases[Number(phase.number) - 1] || {};
+
+            return {
+                id: phase.id,
+                number: phase.number,
+                instructions: typeof phaseDesign.instructions === "string"
+                    ? phaseDesign.instructions
+                    : (typeof phase.instructions === "string" ? phase.instructions : ""),
+                features: {
+                    mode: phase.mode,
+                    chat: phase.chat,
+                    anonymity: phase.anon,
+                    previousResponses: Array.isArray(phaseDesign.prevPhasesResponse)
+                        ? phaseDesign.prevPhasesResponse
+                        : [],
+                },
+                tasks: [], // Placeholder: Add query to retrieve tasks
+                responses: [], // Placeholder: Add query to retrieve responses
+                peerResponses: [], // Placeholder: Add query to retrieve peer responses
+                group: {}, // Placeholder: Add query to retrieve group info
+                groupMessages: [], // Placeholder: Add query to retrieve group messages
+            };
+        });
 
         return { phases };
     } catch (error) {
