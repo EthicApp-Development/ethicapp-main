@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { legacyUserApi } from '../../../api/studentApi.js';
 import PhaseChatOverlay from './PhaseChatOverlay.jsx';
+import PreviousPhaseResponsesAccordion from './PreviousPhaseResponsesAccordion.jsx';
 import SemanticDifferentialTaskView from './SemanticDifferentialTaskView.jsx';
 
 function mapResponsesByTaskId(phase) {
@@ -64,11 +66,78 @@ export default function SemanticDifferentialPhaseView({
   const [feedbackByTaskId, setFeedbackByTaskId] = useState({});
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatOverlayHeightPx, setChatOverlayHeightPx] = useState(0);
+  const [previousResponsesState, setPreviousResponsesState] = useState({
+    loading: false,
+    error: '',
+    data: null
+  });
 
   const tasks = useMemo(() => {
     const phaseTasks = Array.isArray(phase?.tasks) ? phase.tasks : [];
     return [...phaseTasks].sort((leftTask, rightTask) => Number(leftTask?.order ?? 0) - Number(rightTask?.order ?? 0));
   }, [phase]);
+
+  const previousPhaseNumbers = useMemo(() => {
+    const configuredPreviousResponses = Array.isArray(phase?.features?.previousResponses)
+      ? phase.features.previousResponses
+      : [];
+
+    return Array.from(new Set(
+      configuredPreviousResponses
+        .map((phaseNumber) => Number(phaseNumber))
+        .filter((phaseNumber) => Number.isInteger(phaseNumber) && phaseNumber > 0)
+    )).sort((left, right) => left - right);
+  }, [phase]);
+  const previousPhaseNumbersKey = previousPhaseNumbers.join(',');
+
+  useEffect(() => {
+    const phaseId = Number(phase?.id);
+    const normalizedUserId = Number(userId);
+
+    if (previousPhaseNumbersKey.length === 0 || !Number.isInteger(phaseId) || phaseId <= 0 || !Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+      setPreviousResponsesState({ loading: false, error: '', data: null });
+      return;
+    }
+
+    let isCancelled = false;
+    setPreviousResponsesState((current) => ({
+      ...current,
+      loading: true,
+      error: ''
+    }));
+
+    legacyUserApi.get(`/phases/${phaseId}/user_group/${normalizedUserId}/previous_responses`, {
+      params: {
+        phase_numbers: previousPhaseNumbersKey
+      }
+    })
+      .then(({ data }) => {
+        if (isCancelled) {
+          return;
+        }
+
+        setPreviousResponsesState({
+          loading: false,
+          error: '',
+          data
+        });
+      })
+      .catch(() => {
+        if (isCancelled) {
+          return;
+        }
+
+        setPreviousResponsesState({
+          loading: false,
+          error: t('sessionDetail.previousResponsesLoadError'),
+          data: null
+        });
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [phase?.id, previousPhaseNumbersKey, t, userId]);
 
   const setTaskDraft = (taskId, partialUpdate) => {
     if (typeof onTaskDraftChange !== 'function') {
@@ -173,6 +242,23 @@ export default function SemanticDifferentialPhaseView({
             justification={justification}
             taskFeedback={taskFeedback}
             submitting={submittingTaskId === taskId}
+            previousResponsesContent={
+              previousPhaseNumbers.length > 0 ? (
+                <PreviousPhaseResponsesAccordion
+                  previousResponses={previousResponsesState.data}
+                  task={task}
+                  useAnonymousLabels={
+                    phase?.groupAnonymous === true
+                    || previousResponsesState.data?.phaseAnonymous === true
+                    || phase?.features?.anonymity === true
+                    || phase?.features?.anonymous === true
+                  }
+                  loading={previousResponsesState.loading}
+                  errorMessage={previousResponsesState.error}
+                  t={t}
+                />
+              ) : null
+            }
             onTaskValueChange={(value) => setTaskDraft(taskId, { value })}
             onTaskJustificationChange={(nextJustification) => setTaskDraft(taskId, { justification: nextJustification })}
             onTaskSubmit={() => submitTask(task)}

@@ -5,6 +5,7 @@ export default function SemanticDifferentialTaskView({
   justification,
   taskFeedback,
   submitting,
+  previousResponsesContent,
   onTaskValueChange,
   onTaskJustificationChange,
   onTaskSubmit,
@@ -168,6 +169,8 @@ export default function SemanticDifferentialTaskView({
           </span>
         </button>
       </div>
+
+      {previousResponsesContent}
 
       <hr className="my-3" />
     </article>
