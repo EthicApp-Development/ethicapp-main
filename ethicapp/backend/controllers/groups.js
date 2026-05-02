@@ -5,6 +5,8 @@ import * as config from "../config/config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as GroupsHelper from "../helpers/groups-helper.js"
 import * as ActivitiesHelper from "../helpers/activities-helper.js";
+import * as StudentActivityStatusHelper from "../helpers/student-activity-state-helper.js";
+import { requireRole, requireOwnershipOrRole } from "../helpers/auth-helper.js";
 
 const router = express.Router();
 
@@ -188,6 +190,47 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
 
         // Respond with a 500 error for any internal server issue
         res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+router.get("/phases/:id/user_group/:user_id/previous_responses", async (req, res) => {
+    const { id: phaseId, user_id: userId } = req.params;
+    const rawPhaseNumbers = req.query.phase_numbers || req.query.phases || "";
+    const invalidate = req.query.invalidate === "true";
+
+    if (!phaseId || !userId || isNaN(Number(phaseId)) || isNaN(Number(userId))) {
+        return res.status(400).json({ error: "Invalid or missing required parameters: phase_id and/or user_id" });
+    }
+
+    if (!requireRole(req, res, "A")) {
+        return;
+    }
+
+    if (!requireOwnershipOrRole(req, res, userId, [])) {
+        return;
+    }
+
+    const phaseNumbers = String(rawPhaseNumbers)
+        .split(",")
+        .map(value => Number(value.trim()))
+        .filter(value => Number.isInteger(value) && value > 0);
+
+    if (phaseNumbers.length === 0) {
+        return res.status(400).json({ error: "Query parameter phase_numbers must include at least one phase number." });
+    }
+
+    try {
+        const previousResponses = await StudentActivityStatusHelper.getCachedPreviousGroupResponses(
+            Number(phaseId),
+            Number(userId),
+            phaseNumbers,
+            invalidate
+        );
+
+        return res.status(200).json(previousResponses);
+    } catch (err) {
+        console.error("Error fetching previous group responses:", err);
+        return res.status(500).json({ error: "Internal server error" });
     }
 });
 

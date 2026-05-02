@@ -877,6 +877,385 @@ const studentActivityPeerResponseGetters = {
     ranking: getStudentActivityPeerResponses_ranking,
 };
 
+function normalizePhaseNumberList(phaseNumbers) {
+    if (!Array.isArray(phaseNumbers)) {
+        return [];
+    }
+
+    return Array.from(new Set(
+        phaseNumbers
+            .map(number => Number(number))
+            .filter(number => Number.isInteger(number) && number > 0)
+    )).sort((left, right) => left - right);
+}
+
+async function getCurrentPhaseGroupContext(phaseId, userId) {
+    const groupRows = await rpg2.execSQL({
+        dbcon: config.dbconnString,
+        sql: `
+            SELECT t.id AS team_id,
+                   t.stageid AS phase_id,
+                   st.sesid AS session_id,
+                   st.anon AS phase_anonymous
+            FROM teams AS t
+            INNER JOIN teamusers AS tu
+                ON tu.tmid = t.id
+            INNER JOIN stages AS st
+                ON st.id = t.stageid
+            WHERE t.stageid = $1
+              AND tu.uid = $2
+            LIMIT 1
+        `,
+        sqlParams: [
+            rpg2.param('plain', Number(phaseId)),
+            rpg2.param('plain', Number(userId)),
+        ],
+    });
+
+    if (groupRows.length === 0) {
+        return null;
+    }
+
+    const group = groupRows[0];
+    const participantRows = await rpg2.execSQL({
+        dbcon: config.dbconnString,
+        sql: `
+            SELECT tu.uid AS user_id,
+                   tu.anon_mask,
+                   u.firstname,
+                   u.lastname,
+                   u.name
+            FROM teamusers AS tu
+            INNER JOIN users AS u
+                ON u.id = tu.uid
+            WHERE tu.tmid = $1
+            ORDER BY tu.uid
+        `,
+        sqlParams: [rpg2.param('plain', group.team_id)],
+    });
+
+    return {
+        groupId: Number(group.team_id),
+        phaseId: Number(group.phase_id),
+        sessionId: Number(group.session_id),
+        phaseAnonymous: Boolean(group.phase_anonymous),
+        participants: participantRows.map(row => ({
+            userId: Number(row.user_id),
+            anonMask: row.anon_mask,
+            firstname: row.firstname,
+            lastname: row.lastname,
+            name: row.name,
+        })),
+    };
+}
+
+function buildParticipantLookup(participants, userId) {
+    return participants.reduce((acc, participant) => {
+        const participantUserId = Number(participant.userId);
+        const firstname = typeof participant.firstname === "string" ? participant.firstname.trim() : "";
+        const lastname = typeof participant.lastname === "string" ? participant.lastname.trim() : "";
+        const fullName = `${firstname} ${lastname}`.trim();
+
+        acc[participantUserId] = {
+            userId: participantUserId,
+            name: fullName || participant.name || `User ${participantUserId}`,
+            anonMask: participant.anonMask || "",
+            isSelf: participantUserId === Number(userId),
+        };
+        return acc;
+    }, {});
+}
+
+function markPreviousGroupResponsesForUser(responsePayload, userId) {
+    const normalizedUserId = Number(userId);
+
+    return {
+        ...responsePayload,
+        participants: (responsePayload.participants || []).map(participant => ({
+            ...participant,
+            isSelf: Number(participant.userId) === normalizedUserId,
+        })),
+        phases: (responsePayload.phases || []).map(phase => ({
+            ...phase,
+            tasks: (phase.tasks || []).map(task => ({
+                ...task,
+                responses: (task.responses || []).map(response => ({
+                    ...response,
+                    isSelf: Number(response.userId) === normalizedUserId,
+                })),
+            })),
+        })),
+    };
+}
+
+function attachResponsesToTasks(phaseRows, taskRows, responseRows, participantsByUserId, designType) {
+    const phasesByNumber = phaseRows.reduce((acc, row) => {
+        acc[Number(row.phase_number)] = {
+            phaseId: Number(row.phase_id),
+            phaseNumber: Number(row.phase_number),
+            tasks: [],
+        };
+        return acc;
+    }, {});
+
+    const tasksById = {};
+    taskRows.forEach(row => {
+        const phaseNumber = Number(row.phase_number);
+        const phase = phasesByNumber[phaseNumber];
+        if (!phase) {
+            return;
+        }
+
+        const task = designType === "semantic_differential"
+            ? {
+                taskId: Number(row.task_id),
+                order: Number(row.task_order),
+                title: row.task_title,
+                leftPole: row.left_pole,
+                rightPole: row.right_pole,
+                numValues: row.num_values,
+                responses: [],
+            }
+            : {
+                taskId: Number(row.task_id),
+                order: Number(row.task_order),
+                name: row.task_name,
+                responses: [],
+            };
+
+        phase.tasks.push(task);
+        tasksById[task.taskId] = task;
+    });
+
+    responseRows.forEach(row => {
+        const task = tasksById[Number(row.task_id)];
+        const author = participantsByUserId[Number(row.user_id)];
+        if (!task || !author) {
+            return;
+        }
+
+        const baseResponse = {
+            userId: Number(row.user_id),
+            authorName: author.name,
+            anonMask: author.anonMask,
+            isSelf: author.isSelf,
+            timestamp: row.timestamp,
+        };
+
+        task.responses.push(designType === "semantic_differential"
+            ? {
+                ...baseResponse,
+                selection: row.selection,
+                justification: row.justification || "",
+            }
+            : {
+                ...baseResponse,
+                rankOrder: row.rank_order,
+                justification: row.justification || "",
+            });
+    });
+
+    return Object.values(phasesByNumber)
+        .map(phase => ({
+            ...phase,
+            tasks: phase.tasks.sort((left, right) => Number(left.order) - Number(right.order)),
+        }))
+        .sort((left, right) => Number(left.phaseNumber) - Number(right.phaseNumber));
+}
+
+const previousGroupResponseHandlers = {
+    semantic_differential: async (sessionId, phaseNumbers, participantIds, participantsByUserId) => {
+        const phasePlaceholders = phaseNumbers.map((_, index) => `$${index + 2}`).join(", ");
+        const participantPlaceholders = participantIds.map((_, index) => `$${index + phaseNumbers.length + 2}`).join(", ");
+        const phaseSqlParams = [
+            rpg2.param('plain', Number(sessionId)),
+            ...phaseNumbers.map(number => rpg2.param('plain', number)),
+        ];
+        const responseSqlParams = [
+            ...phaseSqlParams,
+            ...participantIds.map(id => rpg2.param('plain', id)),
+        ];
+
+        const phaseRows = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT id AS phase_id,
+                       number AS phase_number
+                FROM stages
+                WHERE sesid = $1
+                  AND number IN (${phasePlaceholders})
+                ORDER BY number
+            `,
+            sqlParams: phaseSqlParams,
+        });
+
+        const taskRows = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT st.number AS phase_number,
+                       d.id AS task_id,
+                       d.title AS task_title,
+                       d.tleft AS left_pole,
+                       d.tright AS right_pole,
+                       d.orden AS task_order,
+                       d.num AS num_values
+                FROM differential AS d
+                INNER JOIN stages AS st
+                    ON st.id = d.stageid
+                WHERE st.sesid = $1
+                  AND st.number IN (${phasePlaceholders})
+                ORDER BY st.number, d.orden
+            `,
+            sqlParams: phaseSqlParams,
+        });
+
+        const responseRows = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT st.number AS phase_number,
+                       ds.uid AS user_id,
+                       ds.did AS task_id,
+                       ds.sel AS selection,
+                       ds.comment AS justification,
+                       ds.stime AS timestamp
+                FROM differential_selection AS ds
+                INNER JOIN differential AS d
+                    ON d.id = ds.did
+                INNER JOIN stages AS st
+                    ON st.id = d.stageid
+                WHERE st.sesid = $1
+                  AND st.number IN (${phasePlaceholders})
+                  AND ds.uid IN (${participantPlaceholders})
+                ORDER BY st.number, d.orden, ds.uid
+            `,
+            sqlParams: responseSqlParams,
+        });
+
+        return attachResponsesToTasks(phaseRows, taskRows, responseRows, participantsByUserId, "semantic_differential");
+    },
+
+    ranking: async (sessionId, phaseNumbers, participantIds, participantsByUserId) => {
+        const phasePlaceholders = phaseNumbers.map((_, index) => `$${index + 2}`).join(", ");
+        const participantPlaceholders = participantIds.map((_, index) => `$${index + phaseNumbers.length + 2}`).join(", ");
+        const phaseSqlParams = [
+            rpg2.param('plain', Number(sessionId)),
+            ...phaseNumbers.map(number => rpg2.param('plain', number)),
+        ];
+        const responseSqlParams = [
+            ...phaseSqlParams,
+            ...participantIds.map(id => rpg2.param('plain', id)),
+        ];
+
+        const phaseRows = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT id AS phase_id,
+                       number AS phase_number
+                FROM stages
+                WHERE sesid = $1
+                  AND number IN (${phasePlaceholders})
+                ORDER BY number
+            `,
+            sqlParams: phaseSqlParams,
+        });
+
+        const taskRows = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT st.number AS phase_number,
+                       a.id AS task_id,
+                       a.name AS task_name,
+                       a.jorder AS task_order
+                FROM actors AS a
+                INNER JOIN stages AS st
+                    ON st.id = a.stageid
+                WHERE st.sesid = $1
+                  AND st.number IN (${phasePlaceholders})
+                ORDER BY st.number, a.jorder
+            `,
+            sqlParams: phaseSqlParams,
+        });
+
+        const responseRows = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT st.number AS phase_number,
+                       asel.uid AS user_id,
+                       asel.actorid AS task_id,
+                       asel.orden AS rank_order,
+                       asel.description AS justification,
+                       asel.stime AS timestamp
+                FROM actor_selection AS asel
+                INNER JOIN actors AS a
+                    ON a.id = asel.actorid
+                INNER JOIN stages AS st
+                    ON st.id = a.stageid
+                WHERE st.sesid = $1
+                  AND st.number IN (${phasePlaceholders})
+                  AND asel.uid IN (${participantPlaceholders})
+                ORDER BY st.number, a.jorder, asel.uid
+            `,
+            sqlParams: responseSqlParams,
+        });
+
+        return attachResponsesToTasks(phaseRows, taskRows, responseRows, participantsByUserId, "ranking");
+    },
+};
+
+export async function getCachedPreviousGroupResponses(phaseId, userId, phaseNumbers, invalidate = false) {
+    const normalizedPhaseNumbers = normalizePhaseNumberList(phaseNumbers);
+    if (!phaseId || isNaN(Number(phaseId)) || !userId || isNaN(Number(userId)) || normalizedPhaseNumbers.length === 0) {
+        return {
+            phaseAnonymous: false,
+            participants: [],
+            phases: [],
+        };
+    }
+
+    const groupContext = await getCurrentPhaseGroupContext(phaseId, userId);
+    if (!groupContext || groupContext.participants.length === 0) {
+        return {
+            phaseAnonymous: false,
+            participants: [],
+            phases: [],
+        };
+    }
+
+    const participantIds = groupContext.participants.map(participant => Number(participant.userId));
+    const designType = await DesignsHelper.getDesignTypeByPhaseId(phaseId);
+    const cacheKey = `phase:${phaseId}:group:${groupContext.groupId}:previous_group_responses:${designType}:${normalizedPhaseNumbers.join(",")}`;
+
+    if (!invalidate) {
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) {
+            return markPreviousGroupResponsesForUser(JSON.parse(cachedData), userId);
+        }
+    }
+
+    const handler = previousGroupResponseHandlers[designType];
+    if (!handler) {
+        throw new Error(`Unsupported design type: ${designType}`);
+    }
+
+    const participantsByUserId = buildParticipantLookup(groupContext.participants, null);
+    const phases = await handler(
+        groupContext.sessionId,
+        normalizedPhaseNumbers,
+        participantIds,
+        participantsByUserId
+    );
+
+    const responsePayload = {
+        groupId: groupContext.groupId,
+        phaseAnonymous: groupContext.phaseAnonymous,
+        participants: Object.values(participantsByUserId),
+        phases,
+    };
+
+    await redisClient.set(cacheKey, JSON.stringify(responsePayload), 'EX', 300);
+    return markPreviousGroupResponsesForUser(responsePayload, userId);
+}
+
 /**
  * Wrapper function to get student activity peer responses with Redis caching.
  * @param {string} designType - The type of instructional design.
