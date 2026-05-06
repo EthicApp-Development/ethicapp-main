@@ -42,6 +42,7 @@ export function useActivityRealtimeSync({
     };
 
     const handleChatMessage = () => {
+      console.debug(`[student socket] onChatMessage received for session ${activeSessionId} and phase ${currentPhaseIdRef.current}`);
       const phaseId = Number(currentPhaseIdRef.current);
       if (!Number.isInteger(phaseId) || phaseId <= 0) return;
 
