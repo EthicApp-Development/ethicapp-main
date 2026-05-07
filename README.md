@@ -199,8 +199,8 @@ The root [`package.json`](./package.json) includes helper scripts for developmen
 | `fix-sql` | Applies automatic SQL lint fixes where supported. |
 | `build:ethicapp-assets` | Builds production-style legacy EthicApp frontend assets through Docker. |
 | `psql` | Opens a PostgreSQL client against the containerized development database. |
-| `pgdump` | Dumps the containerized development database. |
-| `pgrestore` | Restores the containerized development database. |
+| `pgdump` | Dumps the containerized development database to `database/dumps/` or a provided path. |
+| `pgrestore` | Restores the containerized development database from a provided dump path. |
 | `clear-sessions` | Clears local legacy session files when needed for debugging. |
 
 ## 8. Production

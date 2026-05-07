@@ -1,10 +1,26 @@
-#!/bin/bash -exu
-# --------------------------------------------------------------------------------------------------
-# Quick script for connecting to an interactive PostgreSQL console directly to the dockerized
-# database.
-# --------------------------------------------------------------------------------------------------
+#!/bin/sh
+set -eu
 
-source .env
+CONTAINER_NAME="${POSTGRES_CONTAINER_NAME:-ethicapp-db}"
+PGUSER_VALUE="${PGUSER:-postgres}"
+PGPASSWORD_VALUE="${PGPASSWORD:-postgres}"
+PGDATABASE_VALUE="${PGDATABASE:-ethicapp}"
 
-docker exec -it $DB_CONTAINER_NAME /bin/bash -c \
-    "psql postgresql://$DB_USERNAME:$DB_PASSWORD@localhost:5432/$DB_NAME"
+if ! RUNNING_CONTAINERS="$(docker ps --format '{{.Names}}')"; then
+  echo "Unable to query Docker containers. Is Docker running and accessible?"
+  exit 1
+fi
+
+if ! printf '%s\n' "$RUNNING_CONTAINERS" | grep -qx "$CONTAINER_NAME"; then
+  echo "Container $CONTAINER_NAME is not running."
+  exit 1
+fi
+
+exec docker exec -it \
+  -e PGPASSWORD="$PGPASSWORD_VALUE" \
+  "$CONTAINER_NAME" \
+  psql \
+    --host=localhost \
+    --port=5432 \
+    --username="$PGUSER_VALUE" \
+    --dbname="$PGDATABASE_VALUE"

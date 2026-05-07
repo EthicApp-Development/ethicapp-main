@@ -1,76 +1,87 @@
-#!/bin/bash -exu
-# --------------------------------------------------------------------------------------------------
-# Restores a "dump" for the containerized EthicApp database server from the host's /tmp directory.
-# --------------------------------------------------------------------------------------------------
+#!/bin/sh
+set -eu
 
-source .env
+CONTAINER_NAME="${POSTGRES_CONTAINER_NAME:-ethicapp-db}"
+PGUSER_VALUE="${PGUSER:-postgres}"
+PGPASSWORD_VALUE="${PGPASSWORD:-postgres}"
+PGDATABASE_VALUE="${PGDATABASE:-ethicapp}"
+DUMP_FILE="${1:-}"
+FORCE="${PGRESTORE_FORCE:-false}"
 
-DUMP_FILE="/tmp/dump-$DB_NAME.tar.gz"
-UNCOMPRESSED_DUMP_FILE="/tmp/dump-$DB_NAME.tar"
-CONTAINER_NAME=$DB_CONTAINER_NAME
-
-# Check whether the database container is running
-if ! docker ps --format '{{.Names}}' | grep -q "^$CONTAINER_NAME$"; then
-    echo "Container $CONTAINER_NAME is not running."
-    exit 1
+if [ -z "$DUMP_FILE" ]; then
+  echo "Usage: npm run pgrestore -- path/to/dump.dump"
+  exit 1
 fi
 
-# Check whether the dump file exists
 if [ ! -f "$DUMP_FILE" ]; then
-    echo "File $DUMP_FILE does not exist."
-    exit 1
+  echo "Dump file $DUMP_FILE does not exist."
+  exit 1
 fi
 
-# Function to ask for user confirmation
-confirm_action() {
-    read -r -p "$1 [y/N]: " response
-    case "$response" in
-        [yY][eE][sS]|[yY])
-            true
-            ;;
-        *)
-            false
-            ;;
-    esac
-}
-
-# Check if the database exists
-if docker exec $CONTAINER_NAME psql -U "$DB_USERNAME" -d postgres -c "\l" | grep -qw "$DB_NAME"; then
-    echo "The database $DB_NAME already exists."
-    if confirm_action "Do you want to drop the existing database $DB_NAME?"; then
-        # Drop the database
-        docker exec $CONTAINER_NAME psql -U "$DB_USERNAME" -d postgres -c "DROP DATABASE $DB_NAME;"
-        echo "Database $DB_NAME dropped."
-    else
-        echo "Operation cancelled by the user."
-        exit 0
-    fi
+if ! RUNNING_CONTAINERS="$(docker ps --format '{{.Names}}')"; then
+  echo "Unable to query Docker containers. Is Docker running and accessible?"
+  exit 1
 fi
 
-# Create the database
-docker exec $CONTAINER_NAME psql -U "$DB_USERNAME" -d postgres -c "CREATE DATABASE $DB_NAME;"
-echo "Database $DB_NAME created."
+if ! printf '%s\n' "$RUNNING_CONTAINERS" | grep -qx "$CONTAINER_NAME"; then
+  echo "Container $CONTAINER_NAME is not running."
+  exit 1
+fi
 
-# Inflate the dump file
-echo "Inflating dump file $DUMP_FILE..."
-gzip -dk "$DUMP_FILE"
+if [ "$FORCE" != "true" ]; then
+  printf "This will replace database %s in container %s. Continue? [y/N]: " "$PGDATABASE_VALUE" "$CONTAINER_NAME"
+  read -r response
+  case "$response" in
+    [yY]|[yY][eE][sS]) ;;
+    *)
+      echo "Restore cancelled."
+      exit 0
+      ;;
+  esac
+fi
 
-# Copy the dump file to the container
-docker cp $UNCOMPRESSED_DUMP_FILE $CONTAINER_NAME:/tmp/dump-$DB_NAME.tar
+docker exec \
+  -e PGPASSWORD="$PGPASSWORD_VALUE" \
+  "$CONTAINER_NAME" \
+  psql \
+    --host=localhost \
+    --port=5432 \
+    --username="$PGUSER_VALUE" \
+    --dbname=postgres \
+    --set=ON_ERROR_STOP=1 \
+    --command="SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$PGDATABASE_VALUE' AND pid <> pg_backend_pid();"
 
-# Restore the dump within the container
-docker exec $CONTAINER_NAME /bin/bash -c "
-    PGPASSWORD=$DB_PASSWORD pg_restore \
-        --no-password \
-        --host=localhost \
-        --port=5432 \
-        --dbname=$DB_NAME \
-        --username=$DB_USERNAME \
-        --no-owner \
-        /tmp/dump-$DB_NAME.tar
-"
+docker exec \
+  -e PGPASSWORD="$PGPASSWORD_VALUE" \
+  "$CONTAINER_NAME" \
+  dropdb \
+    --host=localhost \
+    --port=5432 \
+    --username="$PGUSER_VALUE" \
+    --if-exists \
+    "$PGDATABASE_VALUE"
 
-# Remove the uncompressed dump file
-rm -f "$UNCOMPRESSED_DUMP_FILE"
+docker exec \
+  -e PGPASSWORD="$PGPASSWORD_VALUE" \
+  "$CONTAINER_NAME" \
+  createdb \
+    --host=localhost \
+    --port=5432 \
+    --username="$PGUSER_VALUE" \
+    "$PGDATABASE_VALUE"
 
-echo "Database restore operation complete."
+docker exec -i \
+  -e PGPASSWORD="$PGPASSWORD_VALUE" \
+  "$CONTAINER_NAME" \
+  pg_restore \
+    --host=localhost \
+    --port=5432 \
+    --username="$PGUSER_VALUE" \
+    --dbname="$PGDATABASE_VALUE" \
+    --no-owner \
+    --no-privileges \
+    --clean \
+    --if-exists \
+  < "$DUMP_FILE"
+
+echo "Database restored from $DUMP_FILE"

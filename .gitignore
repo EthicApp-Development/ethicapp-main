@@ -19,5 +19,6 @@ secrets/
 *.lock
 node_modules/
 *.backup
+database/dumps/
 
 .codegpt

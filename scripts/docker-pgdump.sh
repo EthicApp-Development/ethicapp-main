@@ -1,36 +1,37 @@
-#!/bin/bash -exu
-# --------------------------------------------------------------------------------------------------
-# Executes a "dump" for the containerized EthicApp database server, into the host's /tmp directory.
-# --------------------------------------------------------------------------------------------------
+#!/bin/sh
+set -eu
 
-source .env
+CONTAINER_NAME="${POSTGRES_CONTAINER_NAME:-ethicapp-db}"
+PGUSER_VALUE="${PGUSER:-postgres}"
+PGPASSWORD_VALUE="${PGPASSWORD:-postgres}"
+PGDATABASE_VALUE="${PGDATABASE:-ethicapp}"
+DUMP_DIR="${PGDUMP_DIR:-./database/dumps}"
+TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
+DUMP_FILE="${1:-$DUMP_DIR/$PGDATABASE_VALUE-$TIMESTAMP.dump}"
 
-DUMP_FILE="/tmp/dump-$DB_NAME.tar.gz"
-CONTAINER_NAME=$DB_CONTAINER_NAME
-
-# Check whether the container is running
-if ! docker ps --format '{{.Names}}' | grep -q "^$CONTAINER_NAME$"; then
-    echo "Container $CONTAINER_NAME is not running."
-    exit 1
+if ! RUNNING_CONTAINERS="$(docker ps --format '{{.Names}}')"; then
+  echo "Unable to query Docker containers. Is Docker running and accessible?"
+  exit 1
 fi
 
-# Eliminate any previous dump that was generated
-if [ -f "$DUMP_FILE" ]; then
-    echo "Deleted previous dump: $DUMP_FILE"
-    rm -f "$DUMP_FILE"
+if ! printf '%s\n' "$RUNNING_CONTAINERS" | grep -qx "$CONTAINER_NAME"; then
+  echo "Container $CONTAINER_NAME is not running."
+  exit 1
 fi
 
-docker exec $CONTAINER_NAME /bin/bash -c "
-    PGPASSWORD=$DB_PASSWORD pg_dump \
-        --no-password \
-        --host=localhost \
-        --port=5432 \
-        --dbname=$DB_NAME \
-        --username=$DB_USERNAME \
-        --no-owner \
-        --format=tar \
-        --file=/tmp/dump-$DB_NAME.tar && \
-    gzip /tmp/dump-$DB_NAME.tar
-"
+mkdir -p "$(dirname "$DUMP_FILE")"
 
-docker cp $CONTAINER_NAME:/tmp/dump-$DB_NAME.tar.gz $DUMP_FILE
+docker exec \
+  -e PGPASSWORD="$PGPASSWORD_VALUE" \
+  "$CONTAINER_NAME" \
+  pg_dump \
+    --host=localhost \
+    --port=5432 \
+    --username="$PGUSER_VALUE" \
+    --dbname="$PGDATABASE_VALUE" \
+    --no-owner \
+    --no-privileges \
+    --format=custom \
+  > "$DUMP_FILE"
+
+echo "Database dump written to $DUMP_FILE"
