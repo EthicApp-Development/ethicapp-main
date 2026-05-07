@@ -2,7 +2,8 @@ import PropTypes from 'prop-types';
 import { Button, Container, Nav, Navbar } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
 import { useI18n } from '../../app/providers.jsx';
-import logo from '../../assets/logos/ethicapp-logo.svg';
+
+const ETHICAPP_LOGO_SRC = '/images/logos/ethicapp-logo.svg';
 
 function ManagementLayout({ children }) {
   const { t } = useI18n();
@@ -19,7 +20,7 @@ function ManagementLayout({ children }) {
               rel="noreferrer"
               className="ethicapp-logo-topbar"
             >
-              <img src={logo} alt="EthicApp" className="ethicapp-logo-topbar-img" />
+              <img src={ETHICAPP_LOGO_SRC} alt="EthicApp" className="ethicapp-logo-topbar-img" />
             </a>
           </Navbar.Brand>
           <Navbar.Text className="text-muted">{t('app.title')}&nbsp;|&nbsp;</Navbar.Text>

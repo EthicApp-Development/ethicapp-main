@@ -1,10 +1,11 @@
 import PropTypes from 'prop-types';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ethicappLogo from '../../assets/logos/ethicapp-logo.svg';
 import { useI18n } from '../../app/providers';
 import { DEFAULT_LOCALE } from '../../i18n/languages';
 import MarkdownArticle from './MarkdownArticle';
+
+const ETHICAPP_LOGO_SRC = '/images/logos/ethicapp-logo.svg';
 
 const markdownLoaders = import.meta.glob('../../content/legal/**/*.md', {
   query: '?raw',
@@ -87,7 +88,7 @@ function LegalDocumentPage({
 
             <div className="text-center mb-3">
               <img
-                src={ethicappLogo}
+                src={ETHICAPP_LOGO_SRC}
                 alt="EthicApp"
                 style={{ height: '48px' }}
               />

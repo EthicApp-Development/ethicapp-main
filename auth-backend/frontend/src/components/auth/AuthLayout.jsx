@@ -1,6 +1,8 @@
 import PropTypes from 'prop-types';
-import logo from '../../assets/logos/ethicapp-logo.svg';
 import { Link } from 'react-router-dom';
+
+const ETHICAPP_LOGO_SRC = '/images/logos/ethicapp-logo.svg';
+
 function AuthLayout({ title, subtitle, children, footer }) {
   return (
     <main className="auth-page">
@@ -10,7 +12,7 @@ function AuthLayout({ title, subtitle, children, footer }) {
             <header className="auth-header">
               <Link to="https://www.ethicapp.info" target="_blank" className="auth-logo-link">
                 <img
-                  src={logo}
+                  src={ETHICAPP_LOGO_SRC}
                   alt="EthicApp"
                   className="auth-logo-img"
                 />
