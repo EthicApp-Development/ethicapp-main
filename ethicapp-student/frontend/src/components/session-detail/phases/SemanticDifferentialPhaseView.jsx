@@ -244,6 +244,9 @@ export default function SemanticDifferentialPhaseView({
             submitting={submittingTaskId === taskId}
             previousResponsesContent={
               previousPhaseNumbers.length > 0 ? (
+                <>
+                <br/>
+                <hr/>
                 <PreviousPhaseResponsesAccordion
                   previousResponses={previousResponsesState.data}
                   task={task}
@@ -257,6 +260,7 @@ export default function SemanticDifferentialPhaseView({
                   errorMessage={previousResponsesState.error}
                   t={t}
                 />
+                </>
               ) : null
             }
             onTaskValueChange={(value) => setTaskDraft(taskId, { value })}
