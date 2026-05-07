@@ -8,7 +8,7 @@ EthicApp is a multi-application workspace for case-based ethics education in Hig
 - `management-console/`: super-admin management console built with React + Vite, Bootstrap 5, Express, and PostgreSQL access.
 - `nginx/`: development and production NGINX facade for the applications.
 - `database/`: PostgreSQL schema, migrations, and seed assets used by the database container.
-- `devops/`: helper scripts exposed through the root `package.json`.
+- `scripts/`: helper scripts exposed through the root `package.json`.
 
 For repository conventions and agent/human working expectations, also review [`AGENTS.md`](./AGENTS.md). It contains important routing, i18n, and implementation guidance.
 
@@ -158,22 +158,21 @@ If you need a clean database, stop the stack and remove the Compose volume for t
 
 ### 6.1. Legacy EthicApp assets
 
-The legacy teacher frontend in `ethicapp/frontend` requires bundled static assets. The root `package.json` exposes the important scripts:
+The legacy teacher frontend in `ethicapp/frontend` requires bundled static assets. In Docker development, the `ethicapp` container starts the asset watcher from its entrypoint, so host-side `build-devel` and `watch-devel` scripts are no longer used.
 
 ```bash
-npm run build-devel
-npm run watch-devel
-npm run build
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
-Use `build-devel` for development bundles, `watch-devel` while actively changing legacy frontend assets, and `build` for the standard production-style asset build.
+The container performs the initial development build and then watches the legacy asset inputs for changes.
 
-Related lower-level scripts are also available:
+For production-style legacy assets, run the one-shot build from the host through Docker:
 
-- `build-js`
-- `build-css`
-- `build-assets`
-- `bundle-teacher-module`
+```bash
+npm run build:ethicapp-assets
+```
+
+The `ethicapp` Docker image also runs this production asset build while the image is built.
 
 ### 6.2. React + Vite applications
 
@@ -191,9 +190,6 @@ The root [`package.json`](./package.json) includes helper scripts for developmen
 
 | Script | Description |
 | --- | --- |
-| `build-devel` | Builds legacy EthicApp frontend assets for development. |
-| `watch-devel` | Watches and rebuilds legacy EthicApp frontend assets during development. |
-| `build` | Runs the standard legacy frontend asset build. |
 | `lint-js` | Runs JavaScript lint checks for the legacy app scope configured in the root package. |
 | `lint-html` | Runs HTML lint checks for configured legacy templates. |
 | `lint-css` | Runs CSS lint checks for configured legacy styles. |
@@ -201,6 +197,7 @@ The root [`package.json`](./package.json) includes helper scripts for developmen
 | `fix-js` | Applies automatic JavaScript lint fixes where supported. |
 | `fix-css` | Applies automatic CSS lint fixes where supported. |
 | `fix-sql` | Applies automatic SQL lint fixes where supported. |
+| `build:ethicapp-assets` | Builds production-style legacy EthicApp frontend assets through Docker. |
 | `psql` | Opens a PostgreSQL client against the containerized development database. |
 | `pgdump` | Dumps the containerized development database. |
 | `pgrestore` | Restores the containerized development database. |

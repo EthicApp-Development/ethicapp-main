@@ -27,21 +27,7 @@ install_dependencies() {
 
 start_asset_watcher() {
   echo "Starting EthicApp frontend asset watcher..."
-
-  cd /app/frontend/assets/js/modules/teacher
-  npx esbuild teacher-admin.mjs --bundle --sourcemap --outdir=../../dist --watch=forever &
-  WATCH_PIDS="$WATCH_PIDS $!"
-
-  cd /app/frontend/assets/js/modules/common
-  npx esbuild user-common.mjs --bundle --sourcemap --outdir=../../dist --watch=forever &
-  WATCH_PIDS="$WATCH_PIDS $!"
-
-  cd /app/frontend/assets/css
-  npx sass --watch styles.scss:dist/assets-bundle.css &
-  WATCH_PIDS="$WATCH_PIDS $!"
-
-  cd /app/frontend/assets/js
-  npx esbuild common-ethicapp-deps.js --bundle --sourcemap --outdir=dist --watch=forever &
+  /app/scripts/watch-frontend-assets.sh &
   WATCH_PIDS="$WATCH_PIDS $!"
 }
 

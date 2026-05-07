@@ -41,7 +41,7 @@ When opening the project with `vscode` and its required extensions for this proj
 
 | Directory    | Description                                                        |
 | ------------ | ------------------------------------------------------------------ |
-| `devops/`   | Shell scripts for automated tasks related to development (DevOps). |
+| `scripts/`  | Shell scripts for automated tasks related to development and operations. |
 | `ethicapp/`  | Contains the Node web application.                                 |
 | `pgadmin/`   | Configuration for PgAdmin in development runtime.                  |
 | `web-nginx/` | Configuration for NGINX in production runtime.                     |

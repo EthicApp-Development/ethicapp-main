@@ -11,11 +11,18 @@ RUN apt-get update \
 
 # Application files
 COPY backend /app/backend
+COPY common /app/common
 COPY frontend /app/frontend
+COPY scripts /app/scripts
 
 # Entrypoint script
 COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh /app/scripts/*.sh
+
+RUN cd /app/frontend \
+    && npm ci \
+    && /app/scripts/build-frontend-assets.sh \
+    && rm -rf /app/frontend/node_modules
 
 # Crear directorios persistentes
 RUN mkdir -p /app/backend/uploads /app/backend/sessions \

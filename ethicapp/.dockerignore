@@ -1,5 +1,6 @@
 **/node_modules/
 **/package-lock.json
+!frontend/package-lock.json
 
 **/Dockerfile
 **/Dockerfile.production
@@ -15,7 +16,6 @@ backend/sessions/
 #frontend/assets/js/**/*.min.js
 #frontend/assets/minjs/**/*.min.js
 frontend/assets/uploads/
-frontend/package-lock.json
 
 !frontend/assets/js/dist/
 !frontend/assets/css/dist/

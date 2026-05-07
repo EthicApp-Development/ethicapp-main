@@ -1,5 +1,5 @@
 {
-  "name": "ethicapp-devops",
+  "name": "ethicapp-scripts",
   "description": "Core node packages for developing (and initializing) the EthicApp project",
   "private": true,
   "type": "module",
@@ -12,17 +12,11 @@
     "fix-css": "npx stylelint --fix './ethicapp/frontend/assets/css/**/*.css'",
     "fix-sql": "sqlfluff fix --show-lint-violations --force ./postgres-db/",
     "clear-sessions": "sudo rm -f -v ./ethicapp/backend/sessions/*",
-    "pgdump": "./devops/docker-pgdump.sh",
-    "pgrestore": "./devops/docker-pgrestore.sh",
-    "psql": "./devops/docker-psql.sh",
-    "build-js": "./devops/build-js.sh",
-    "build-css": "./devops/build-css.sh",
-    "build-assets": "npm run build-js & npm run build-css",
-    "bundle-teacher-module": "./devops/bundle-teacher-module.sh",
-    "build": "./devops/build-frontend.sh",
-    "build-devel": "./devops/build-frontend-development.sh",
-    "watch-devel": "./devops/watch-frontend.sh",
-    "admin-panel": "./devops/admin-panel.sh"
+    "pgdump": "./scripts/docker-pgdump.sh",
+    "pgrestore": "./scripts/docker-pgrestore.sh",
+    "psql": "./scripts/docker-psql.sh",
+    "build:ethicapp-assets": "./scripts/build-ethicapp-assets.sh",
+    "build-and-push": "./scripts/build-and-push.sh"
   },
   "devDependencies": {
     "esbuild": "^0.18.20",

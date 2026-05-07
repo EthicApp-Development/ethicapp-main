@@ -18,7 +18,7 @@ This repository is a multi-project workspace. Important areas:
   - Includes user administration workflows (list/filter/pagination, account detail/edit, password reset trigger, and professor impersonation trigger).
 - `nginx/`: NGINX configuration for development and production environments.
 - `database/`: EthicApp database DDL and related SQL assets shared by all applications.
-- `devops/`: deployment and environment automation scripts. Many are exposed from root `package.json` scripts.
+- `scripts/`: deployment and environment automation scripts. Many are exposed from root `package.json` scripts.
 
 > Note: some directories may appear with repository-specific names (for example `dev-ops/`, `web-nginx/`, or `postgres-db/`) depending on branch/history. Prefer existing on-disk names when implementing changes.
 
@@ -46,7 +46,6 @@ docker compose build
 Common repository-level commands (run from repository root when available):
 
 ```bash
-npm run build
 npm run lint-js
 npm run lint-html
 npm run lint-css
@@ -120,7 +119,7 @@ When adding teacher-facing features in legacy EthicApp:
 
 1. Register API routes via controller modules mounted from `ethicapp/app.js`.
 2. Expose AngularJS services for API communication in `assets/js/services`.
-3. Wire controllers/services in `teacher_admin.mjs`.
+3. Wire controllers/services in `teacher-admin.mjs`.
 4. Add/update teacher navigation entry points in `ethicapp/frontend/views/home.ejs`.
 5. When adding or modifying UI text in legacy EthicApp AngularJS views, add/update the corresponding translation keys in `ethicapp/frontend/assets/locales/` and use `{{'key'|translate}}` in templates instead of hardcoded strings.
 6. For role-based authorization in legacy backend endpoints, prefer `requireRole` from `ethicapp/backend/helpers/auth-helper.js`; it accepts either a single role (`"P"`) or an array (for example `["P", "A"]`) for professor/student shared access.
