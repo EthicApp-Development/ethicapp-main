@@ -22,8 +22,25 @@ node scripts/create-user.js <firstname> <lastname> <rut> <email> <password> [rol
     process.exit(1);
   }
 
-  const hash = await bcrypt.hash(password, 12);
   const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const existing = await pool.query(
+    `
+      SELECT id
+      FROM users
+      WHERE mail = $1 OR rut = $2
+      LIMIT 1
+    `,
+    [normalizedEmail, rut]
+  );
+
+  if (existing.rowCount > 0) {
+    console.log(`✔ User already exists: ${normalizedEmail}`);
+    process.exit(0);
+  }
+
+  const hash = await bcrypt.hash(password, 12);
 
   await pool.query(
     `
@@ -32,14 +49,19 @@ node scripts/create-user.js <firstname> <lastname> <rut> <email> <password> [rol
       VALUES
         ($1, $2, $3, $4, $5, $6, $7, $8, 'local', true)
     `,
-    [firstname, lastname, fullName, rut, email, sex, role, hash]
+    [firstname, lastname, fullName, rut, normalizedEmail, sex, role, hash]
   );
 
-  console.log(`✔ Usuario creado: ${email}`);
+  console.log(`✔ User created: ${normalizedEmail}`);
   process.exit(0);
 }
 
 main().catch((err) => {
+  if (err.code === '23505') {
+    console.log('✔ User already exists');
+    process.exit(0);
+  }
+
   console.error(err);
   process.exit(1);
 });

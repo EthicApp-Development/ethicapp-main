@@ -59,6 +59,7 @@ const esCL = {
     alreadyHaveAccount: '¿Ya tienes cuenta?',
     signInLink: 'Iniciar sesión',
     successMessage: 'Cuenta creada correctamente. Ya puedes iniciar sesión.',
+    recoverPasswordLink: 'Recuperar contraseña',
     errors: {
       firstnameRequired: 'El nombre es obligatorio.',
       lastnameRequired: 'El apellido es obligatorio.',
@@ -72,6 +73,7 @@ const esCL = {
       passwordMismatch: 'Las contraseñas no coinciden.',
       privacyAcceptanceRequired: 'Debes aceptar la Política de Privacidad para crear una cuenta.',
       recaptchaRequired: 'Debes completar el reCAPTCHA.',
+      emailAlreadyRegistered: 'Ya existe una cuenta con ese correo electrónico.',
       genericRegisterError: 'No se ha podido completar el registro. Inténtalo de nuevo.'
     }
   },

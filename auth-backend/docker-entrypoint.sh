@@ -16,12 +16,12 @@ fi
 
 if [ "$CREATE_ADMIN" = "true" ]; then
   echo "👤 Creating admin user..."
-  node scripts/create-admin.js || true
+  node scripts/create-admin.js
 fi
 
 if [ "$SEED_USERS" = "true" ]; then
   echo "🌱 Seeding test users..."
-  node scripts/seed-users.js || true
+  node scripts/seed-users.js
 fi
 
 echo "🚀 Launching server..."
