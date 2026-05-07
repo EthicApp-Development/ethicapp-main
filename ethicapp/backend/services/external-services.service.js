@@ -145,6 +145,8 @@ class ExternalServicesRegistry {
             context: {
                 sessionId: context.sessionId,
                 phaseId: context.phaseId,
+                startedPhaseId: context.startedPhaseId,
+                endedPhaseId: context.endedPhaseId,
                 userId: context.userId,
                 questionId: context.questionId,
             },

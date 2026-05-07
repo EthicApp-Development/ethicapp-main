@@ -13,6 +13,23 @@ function extractResponseText(responsePayload) {
     return candidates.find(value => typeof value === "string" && value.trim().length > 0)?.trim() || "";
 }
 
+async function callbackPhaseTransition({ service, context, callback, hook }) {
+    await callback({
+        serviceId: service.id,
+        hook,
+        status:    "completed",
+        payload:   {
+            sessionId:      context.sessionId,
+            phaseId:        context.phaseId,
+            startedPhaseId: context.startedPhaseId,
+            endedPhaseId:   context.endedPhaseId,
+            summary:        hook === "phaseStarted"
+                ? `Mock service observed phase ${context.startedPhaseId} starting.`
+                : `Mock service observed phase ${context.endedPhaseId} ending.`,
+        },
+    });
+}
+
 export async function register({ service, subscribe }) {
     subscribe("student-response-submitted", async (context, { callback }) => {
         const responseText = extractResponseText(context);
@@ -36,5 +53,13 @@ export async function register({ service, subscribe }) {
                 },
             },
         });
+    });
+
+    subscribe("phaseStarted", async (context, { callback }) => {
+        await callbackPhaseTransition({ service, context, callback, hook: "phaseStarted" });
+    });
+
+    subscribe("phaseEnded", async (context, { callback }) => {
+        await callbackPhaseTransition({ service, context, callback, hook: "phaseEnded" });
     });
 }

@@ -4,7 +4,7 @@
       "id": "mock-ai-response-review",
       "description": "PoC adapter that simulates an AI service reviewing student responses.",
       "adapter": "./adapters/mock-ai-response-review.adapter.js",
-      "hooks": ["student-response-submitted"],
+      "hooks": ["student-response-submitted", "phaseStarted", "phaseEnded"],
       "enabled": true
     }
   ]
