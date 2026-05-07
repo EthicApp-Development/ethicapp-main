@@ -155,6 +155,8 @@ app.locals.ETHICAPP_BUILD_HASH = ETHICAPP_BUILD_HASH;
 
 await externalServicesRegistry.initialize();
 
+app.use("/", externalServices);
+
 app.use("/", requireLegacyAuth, user_profile);
 app.use("/", requireLegacyAuth, impersonation);
 app.use("/", requireLegacyAuth, sessions);
@@ -164,7 +166,6 @@ app.use("/", requireLegacyAuth, activitiesStudent);
 app.use("/", requireLegacyAuth, phases);
 app.use("/", requireLegacyAuth, groups);
 app.use("/", requireLegacyAuth, designs);
-app.use("/", requireLegacyAuth, externalServices);
 app.use("/", requireLegacyAuth, group_messages);
 app.use("/", requireLegacyAuth, cases);
 

@@ -104,6 +104,11 @@ class ExternalServicesRegistry {
         return this.results.slice(-100);
     }
 
+    hasEnabledService(serviceId) {
+        const service = this.services.get(serviceId);
+        return Boolean(service?.enabled);
+    }
+
     async dispatchHook(hookName, context, options = {}) {
         if (!this.initialized) {
             await this.initialize();
@@ -122,6 +127,39 @@ class ExternalServicesRegistry {
                 ...context,
                 serviceId,
                 enabledServiceIds: Array.from(enabledServiceIds),
+            };
+
+            return handler(serviceContext, {
+                callback: result => this.recordCallbackResult({
+                    hookName,
+                    serviceId,
+                    result,
+                    context: serviceContext,
+                }),
+            });
+        }));
+    }
+
+    async dispatchServiceHook(hookName, serviceId, context) {
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
+        if (!this.hasEnabledService(serviceId)) {
+            const error = new Error(`Unknown or disabled external service: ${serviceId}`);
+            error.statusCode = 404;
+            throw error;
+        }
+
+        const subscribers = this.hookSubscribers.get(hookName) || [];
+        const selectedSubscribers = subscribers.filter(
+            subscriber => subscriber.serviceId === serviceId
+        );
+
+        return Promise.allSettled(selectedSubscribers.map(({ handler }) => {
+            const serviceContext = {
+                ...context,
+                serviceId,
             };
 
             return handler(serviceContext, {

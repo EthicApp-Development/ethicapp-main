@@ -30,6 +30,21 @@ async function callbackPhaseTransition({ service, context, callback, hook }) {
     });
 }
 
+function sanitizeExternalResultPayload(payload) {
+    const input = payload && typeof payload === "object" ? payload : {};
+    const status = typeof input.status === "string" && input.status.trim()
+        ? input.status.trim()
+        : "received";
+
+    return {
+        serviceId:  input.serviceId,
+        status:     status,
+        payload:    input.payload && typeof input.payload === "object" ? input.payload : {},
+        message:    typeof input.message === "string" ? input.message.trim() : "",
+        receivedAt: new Date().toISOString(),
+    };
+}
+
 export async function register({ service, subscribe }) {
     subscribe("student-response-submitted", async (context, { callback }) => {
         const responseText = extractResponseText(context);
@@ -61,5 +76,14 @@ export async function register({ service, subscribe }) {
 
     subscribe("phaseEnded", async (context, { callback }) => {
         await callbackPhaseTransition({ service, context, callback, hook: "phaseEnded" });
+    });
+
+    subscribe("external-service-result", async (context, { callback }) => {
+        await callback({
+            serviceId: service.id,
+            hook:      "external-service-result",
+            status:    "completed",
+            payload:   sanitizeExternalResultPayload(context.requestPayload),
+        });
     });
 }
