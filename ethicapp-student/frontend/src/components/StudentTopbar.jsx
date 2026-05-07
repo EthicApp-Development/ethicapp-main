@@ -1,5 +1,6 @@
-import logo from '../assets/logos/ethicapp-logo.svg';
 import { useI18n } from '../app/providers.jsx';
+
+const ETHICAPP_LOGO_SRC = '/images/logos/ethicapp-logo.svg';
 
 export default function StudentTopbar({ loadingSession, userDisplayName, onLogout }) {
   const { t } = useI18n();
@@ -10,7 +11,7 @@ export default function StudentTopbar({ loadingSession, userDisplayName, onLogou
         <span className="navbar-brand mb-0">
           <a href="https://www.ethicapp.info" target="_blank" className="ethicapp-logo-topbar" rel="noreferrer">
             <img
-              src={logo}
+              src={ETHICAPP_LOGO_SRC}
               alt={t('common.appName')}
               className="ethicapp-logo-topbar-img"
             />
