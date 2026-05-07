@@ -44,6 +44,7 @@ function genericPhaseBuilder(params = {}) {
     const phaseObj = {
         mode: params.mode ?? "individual",
         prevPhasesResponse: params.prevPhasesResponse ?? [],
+        externalServices: params.externalServices ?? { enabledServiceIds: [] },
         ...params,
     };
     return phaseObj;
@@ -127,6 +128,10 @@ const designEditActions = {
         phase.chat = true;
         phase.grouping_algorithm = phase.grouping_algorithm || null;
         phase.stdntAmount = phase.stdntAmount || 3;
+        phase.externalServices = phase.externalServices || { enabledServiceIds: [] };
+        phase.externalServices.enabledServiceIds = Array.isArray(phase.externalServices.enabledServiceIds)
+            ? phase.externalServices.enabledServiceIds
+            : [];
     }
 };
 

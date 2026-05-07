@@ -329,6 +329,8 @@
 	"error_no_previous_grouping": "No previous phase has formed groups",	
 	"use_anonimity_label": "Enable anonimity",
 	"use_chat_label": "Enable chat",
+	"external_services_title": "External services",
+	"external_services_phase_help": "Select the external services that may process student responses submitted during this phase.",
 	"save_design_success": "Design saved",
 	"design_imported_text": "Design imported into your collection",
 	"save_design_failure": "Failed to save the design. Please try again in a few minutes.",

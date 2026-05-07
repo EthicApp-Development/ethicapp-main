@@ -23,9 +23,11 @@ import activitiesTeacher from "./controllers/activities/activities-teacher.js";
 import activitiesStudent from "./controllers/activities/activities-student.js";
 import phases from "./controllers/phases.js";
 import designs from "./controllers/designs.js";
+import externalServices from "./controllers/external-services.js";
 import groups from "./controllers/groups.js";
 import group_messages from "./controllers/group-messages.js";
 import cases from "./controllers/cases.js";
+import externalServicesRegistry from "./services/external-services.service.js";
 
 import fs from "fs";
 
@@ -151,6 +153,8 @@ try {
 // Make ETHICAPP_BUILD_HASH available in the entire application
 app.locals.ETHICAPP_BUILD_HASH = ETHICAPP_BUILD_HASH;
 
+await externalServicesRegistry.initialize();
+
 app.use("/", requireLegacyAuth, user_profile);
 app.use("/", requireLegacyAuth, impersonation);
 app.use("/", requireLegacyAuth, sessions);
@@ -160,6 +164,7 @@ app.use("/", requireLegacyAuth, activitiesStudent);
 app.use("/", requireLegacyAuth, phases);
 app.use("/", requireLegacyAuth, groups);
 app.use("/", requireLegacyAuth, designs);
+app.use("/", requireLegacyAuth, externalServices);
 app.use("/", requireLegacyAuth, group_messages);
 app.use("/", requireLegacyAuth, cases);
 

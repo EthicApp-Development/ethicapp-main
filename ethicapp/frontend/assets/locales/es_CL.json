@@ -354,6 +354,8 @@
 	"error_no_previous_grouping": "Ninguna fase anterior forma grupos en el diseño",
 	"use_anonimity_label": "Usar anonimato",
 	"use_chat_label": "Usar Chat",
+	"external_services_title": "Servicios externos",
+	"external_services_phase_help": "Selecciona los servicios externos que podrán procesar las respuestas enviadas por estudiantes durante esta fase.",
 	"save_design_success": "Diseño guardado",
 	"design_imported_text": "Diseño importado en tu colección",
 	"save_design_failure": "Hubo un error al guardar el diseño. Inténtalo nuevamente en unos minutos.",	

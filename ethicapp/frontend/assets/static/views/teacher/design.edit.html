@@ -131,6 +131,22 @@
                             <previous-phases-selector phase="phase" phase-index="phaseIndex" design="dec.design"></previous-phases-selector>
                         </div>
                     </div>
+                    <div class="row" ng-if="dec.externalServices.length > 0">
+                        <div class="col-md-12">
+                            <h4>{{ 'external_services_title' | translate }}</h4>
+                            <p class="help-block">{{ 'external_services_phase_help' | translate }}</p>
+                            <div class="checkbox" ng-repeat="service in dec.externalServices track by service.id">
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        ng-checked="dec.isExternalServiceEnabled(phase, service.id)"
+                                        ng-click="dec.setExternalServiceEnabled(phase, service.id, !dec.isExternalServiceEnabled(phase, service.id))">
+                                    <strong>{{ service.id }}</strong>
+                                    <span ng-if="service.description"> - {{ service.description }}</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                     <div class="row">
                         <div class="col-md-12">
                             <phase-instructions-edit

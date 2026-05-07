@@ -7,6 +7,8 @@ import * as config from "../../config/config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
 import { teacherNotifications } from "../../config/socket.config.js";
 import { getDesignTypeBySessionId } from "./activities-common.js";
+import { getPhaseDesignByPhaseId } from "../../helpers/designs-helper.js";
+import externalServicesRegistry from "../../services/external-services.service.js";
 
 const router = express.Router();
 
@@ -176,6 +178,15 @@ router.post("/activities/:id/response", async (req, res) => {
         });
 
         emitResponseSubmittedNotification(sessionId, phaseId, notificationData);
+        dispatchStudentResponseHook({
+            sessionId,
+            phaseId,
+            userId,
+            questionId: Number(questionId),
+            designType,
+            requestPayload: req.body,
+            responsePayload: notificationData,
+        });
 
         return res.status(201).json({
             status:  "ok",
@@ -195,6 +206,35 @@ const responseSubmissionHandlers = {
     semantic_differential: submitSemanticDifferentialResponse,
     ranking:               submitRankingResponse,
 };
+
+async function dispatchStudentResponseHook(context) {
+    try {
+        const phaseDesign = await getPhaseDesignByPhaseId(context.phaseId);
+        const enabledServiceIds = getEnabledExternalServiceIds(phaseDesign);
+
+        if (enabledServiceIds.length === 0) {
+            return;
+        }
+
+        await externalServicesRegistry.dispatchHook("student-response-submitted", context, {
+            enabledServiceIds,
+        });
+    } catch (error) {
+        console.error("[external-services] Error dispatching student response hook.", error);
+    }
+}
+
+function getEnabledExternalServiceIds(phaseDesign) {
+    const enabledServiceIds = phaseDesign?.externalServices?.enabledServiceIds;
+
+    if (!Array.isArray(enabledServiceIds)) {
+        return [];
+    }
+
+    return enabledServiceIds
+        .map(serviceId => String(serviceId).trim())
+        .filter(Boolean);
+}
 
 async function submitSemanticDifferentialResponse({ phaseId, userId, questionId, payload }) {
     const value = Number(payload.value);

@@ -384,5 +384,7 @@
 	"teacher_group_chat_replying_to_label": "Replying to",
 	"teacher_group_chat_cancel_reply_label": "Cancel",
 	"loading": "Loading...",
-	"send": "Send"
+	"send": "Send",
+	"external_services_title": "External services",
+	"external_services_phase_help": "Select the external services that may process student responses submitted during this phase."
 }

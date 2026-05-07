@@ -3,7 +3,7 @@ import * as phaseValidationHelpers from "../../helpers/phase-validation-helpers.
 import accordionStateHelpers from "../../helpers/accordeon-state-helpers.js"
 
 export function DesignEditorController($scope, $translate, $timeout,
-    $routeParams, DesignStateService, DesignCatalogService, CasesCatalogService, toast) {
+    $routeParams, DesignStateService, DesignCatalogService, CasesCatalogService, ExternalServicesCatalogService, toast) {
 
     const vm = this;
     vm.designId = 0;
@@ -15,6 +15,7 @@ export function DesignEditorController($scope, $translate, $timeout,
         phases: {}, // Specific per-phase errors
     };
     vm.associatedCase = null;
+    vm.externalServices = [];
     
     vm.init = async function() {
         // Retrieve the design from the route path
@@ -37,10 +38,22 @@ export function DesignEditorController($scope, $translate, $timeout,
             });
 
             await DesignStateService.setDesign(designId, designObj);
+            await vm.loadExternalServices();
             await vm.loadAssociatedCase();
 
-            //vm.initializePhases();
+            vm.initializeExternalServicesConfig();
             vm.initializeAccordionStates();
+        }
+    };
+
+    vm.loadExternalServices = async function() {
+        try {
+            vm.externalServices = await ExternalServicesCatalogService.getServices();
+        } catch (error) {
+            console.error("[DesignEditorController::loadExternalServices] Error loading external services.", error);
+            vm.externalServices = [];
+        } finally {
+            $scope.$applyAsync();
         }
     };
 
@@ -128,11 +141,47 @@ export function DesignEditorController($scope, $translate, $timeout,
         }
     };
 
+    vm.initializeExternalServicesConfig = function() {
+        try {
+            vm.design.phases.forEach(vm.initExternalServicesConfig);
+        } catch (error) {
+            console.warn("The current design does not have phases to initialize external services.");
+        }
+    };
+
     vm.initPhase = function(phase) {
         $scope.$applyAsync(() => {
             designEditActions.initPhase(phase);
+            vm.initExternalServicesConfig(phase);
         });
     };    
+
+    vm.initExternalServicesConfig = function(phase) {
+        if (!phase.externalServices) {
+            phase.externalServices = { enabledServiceIds: [] };
+        }
+        if (!Array.isArray(phase.externalServices.enabledServiceIds)) {
+            phase.externalServices.enabledServiceIds = [];
+        }
+    };
+
+    vm.isExternalServiceEnabled = function(phase, serviceId) {
+        vm.initExternalServicesConfig(phase);
+        return phase.externalServices.enabledServiceIds.includes(serviceId);
+    };
+
+    vm.setExternalServiceEnabled = function(phase, serviceId, enabled) {
+        vm.initExternalServicesConfig(phase);
+        const enabledServiceIds = phase.externalServices.enabledServiceIds;
+        const index = enabledServiceIds.indexOf(serviceId);
+
+        if (enabled && index === -1) {
+            enabledServiceIds.push(serviceId);
+        }
+        if (!enabled && index !== -1) {
+            enabledServiceIds.splice(index, 1);
+        }
+    };
 
     vm.updatePhaseType = function(phase) {
         $scope.$applyAsync(() => {
