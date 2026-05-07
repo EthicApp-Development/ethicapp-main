@@ -3,12 +3,13 @@
 import express from "express";
 import * as config from "../config/config.js"; 
 import * as rpg2 from "../db/rest-pg-2.js";
-import { getDesignTypeByPhaseId } from "../helpers/designs-helper.js";
+import { getDesignTypeByPhaseId, getPhaseDesignByPhaseId } from "../helpers/designs-helper.js";
 import { getStatusCode } from "../../common/modules/session-status.js";
 import { messageCountHandlers, 
     chatTranscriptHandlers, 
     saveChatMessage } from "../helpers/chat-helper.js";
 import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
+import externalServicesRegistry from "../services/external-services.service.js";
 
 const router = express.Router();
 
@@ -174,16 +175,28 @@ router.post("/phases/:id/question/:question_id/chat_messages", async (req, res) 
         teacherNotifications.chatMessage(accessContext.sessionId, phaseId, questionId, groupId, content);
         teacherNotifications.groupChatMessage(groupId, {
             ...notificationPayload,
+            phaseId:    Number(phaseId),
+            questionId: Number(questionId),
+            groupId:    Number(groupId),
+        });
+        studentNotifications?.chatMessage(groupId);
+        dispatchIncomingChatMessageHook({
+            sessionId: accessContext.sessionId,
             phaseId: Number(phaseId),
             questionId: Number(questionId),
             groupId: Number(groupId),
+            userId: Number(userId),
+            parentId: parentId == null ? null : Number(parentId),
+            content,
+            savedMessage,
+            notificationPayload,
+            designType: accessContext.designType,
         });
-        studentNotifications?.chatMessage(groupId);
 
         // Respond with success
         res.status(201).json({
-            status: "ok",
-            message: "Message posted successfully.",
+            status:       "ok",
+            message:      "Message posted successfully.",
             chat_message: notificationPayload,
         });
     } catch (err) {
@@ -191,6 +204,35 @@ router.post("/phases/:id/question/:question_id/chat_messages", async (req, res) 
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
+async function dispatchIncomingChatMessageHook(context) {
+    try {
+        const phaseDesign = await getPhaseDesignByPhaseId(context.phaseId);
+        const enabledServiceIds = getEnabledExternalServiceIds(phaseDesign);
+
+        if (enabledServiceIds.length === 0) {
+            return;
+        }
+
+        await externalServicesRegistry.dispatchHook("chat-message-received", context, {
+            enabledServiceIds,
+        });
+    } catch (error) {
+        console.error("[external-services] Error dispatching incoming chat message hook.", error);
+    }
+}
+
+function getEnabledExternalServiceIds(phaseDesign) {
+    const enabledServiceIds = phaseDesign?.externalServices?.enabledServiceIds;
+
+    if (!Array.isArray(enabledServiceIds)) {
+        return [];
+    }
+
+    return enabledServiceIds
+        .map(serviceId => String(serviceId).trim())
+        .filter(Boolean);
+}
 
 async function resolveGroupChatAccessContext({ groupId, phaseId = null, questionId, userId, role }) {
     const rows = await rpg2.execSQL({

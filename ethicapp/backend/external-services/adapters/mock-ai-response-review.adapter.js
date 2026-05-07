@@ -45,6 +45,28 @@ function sanitizeExternalResultPayload(payload) {
     };
 }
 
+function summarizeChatMessage(context) {
+    const content = typeof context.content === "string" ? context.content.trim() : "";
+    const wordCount = content ? content.split(/\s+/u).length : 0;
+
+    return {
+        sessionId:  context.sessionId,
+        phaseId:    context.phaseId,
+        questionId: context.questionId,
+        groupId:    context.groupId,
+        userId:     context.userId,
+        messageId:  context.savedMessage?.id,
+        parentId:   context.parentId,
+        summary:    content
+            ? `Mock chat observer received ${wordCount} word(s).`
+            : "Mock chat observer received an empty chat message.",
+        analysis: {
+            wordCount,
+            hasContent: content.length > 0,
+        },
+    };
+}
+
 export async function register({ service, subscribe }) {
     subscribe("student-response-submitted", async (context, { callback }) => {
         const responseText = extractResponseText(context);
@@ -84,6 +106,15 @@ export async function register({ service, subscribe }) {
             hook:      "external-service-result",
             status:    "completed",
             payload:   sanitizeExternalResultPayload(context.requestPayload),
+        });
+    });
+
+    subscribe("chat-message-received", async (context, { callback }) => {
+        await callback({
+            serviceId: service.id,
+            hook:      "chat-message-received",
+            status:    "completed",
+            payload:   summarizeChatMessage(context),
         });
     });
 }

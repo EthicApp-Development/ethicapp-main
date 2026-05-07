@@ -66,6 +66,8 @@ Current event hooks:
 - `phaseStarted`: dispatched when the teacher transitions a session into a phase.
 - `phaseEnded`: dispatched when the teacher transitions a session away from the
   previously active phase.
+- `chat-message-received`: dispatched when a chat message is posted to a phase
+  group chat.
 
 The phase transition hooks are dispatched from:
 
@@ -80,6 +82,26 @@ The student response hook is dispatched from:
 ethicapp/backend/controllers/activities/activities-student.js
 POST /activities/:id/response
 ```
+
+The chat message hook is dispatched from:
+
+```text
+ethicapp/backend/controllers/group-messages.js
+POST /phases/:id/question/:question_id/chat_messages
+```
+
+Chat message hook context includes:
+
+- `sessionId`
+- `phaseId`
+- `questionId`
+- `groupId`
+- `userId`
+- `parentId`
+- `content`
+- `savedMessage`
+- `notificationPayload`
+- `designType`
 
 ## External Result Callback
 

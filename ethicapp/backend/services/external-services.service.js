@@ -181,12 +181,14 @@ class ExternalServicesRegistry {
             receivedAt: new Date().toISOString(),
             result,
             context: {
-                sessionId: context.sessionId,
-                phaseId: context.phaseId,
+                sessionId:      context.sessionId,
+                phaseId:        context.phaseId,
                 startedPhaseId: context.startedPhaseId,
-                endedPhaseId: context.endedPhaseId,
-                userId: context.userId,
-                questionId: context.questionId,
+                endedPhaseId:   context.endedPhaseId,
+                userId:         context.userId,
+                questionId:     context.questionId,
+                groupId:        context.groupId,
+                messageId:      context.savedMessage?.id,
             },
         };
 
