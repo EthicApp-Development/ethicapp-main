@@ -18,7 +18,7 @@ export function ActivityController($scope, $http,
     };
 
     vm.init = async function() {
-        console.debug("[ActivityController::init] initializing");
+        console.debug("[ActivityController::init] initializing funcioó!!!");
 
         const updateHandler = function() {
             $scope.$applyAsync(() => {

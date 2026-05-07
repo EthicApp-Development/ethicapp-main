@@ -1,6 +1,15 @@
 version: '3.8'
 
 services:
+  ethicapp:
+    environment:
+      - NODE_ENV=development
+      - ETHICAPP_WATCH_FRONTEND=true
+    volumes:
+      - ethicapp_frontend_node_modules:/app/frontend/node_modules
+    expose:
+      - "9229"
+
   auth-backend:
     env_file:
       - ./.env.shared
@@ -81,6 +90,7 @@ services:
       - ./nginx/conf.d/dev.conf:/etc/nginx/nginx.conf:ro
 
 volumes:
+  ethicapp_frontend_node_modules:
   auth_backend_node_modules:
   auth_frontend_node_modules:
   ethicapp_student_backend_node_modules:
