@@ -2,7 +2,7 @@ const enUS = {
   login: {
     title: 'Sign in',
     subtitle: 'Access with your credentials',
-    noAccount: "Don\'t have an account?",
+    noAccount: "Don't have an account?",
     createAccount: 'Create account',
     usernameLabel: 'Username',
     passwordLabel: 'Password',
@@ -59,6 +59,7 @@ const enUS = {
     alreadyHaveAccount: 'Already have an account?',
     signInLink: 'Sign in',
     successMessage: 'Account created successfully. You can now sign in.',
+    recoverPasswordLink: 'Recover password',
     errors: {
       firstnameRequired: 'First name is required.',
       lastnameRequired: 'Last name is required.',
@@ -72,6 +73,7 @@ const enUS = {
       passwordMismatch: 'Passwords do not match.',
       privacyAcceptanceRequired: 'You must accept the Privacy Policy to create an account.',
       recaptchaRequired: 'You must complete the reCAPTCHA.',
+      emailAlreadyRegistered: 'An account with that email already exists.',
       genericRegisterError: 'We could not complete sign up. Please try again.'
     }
   },

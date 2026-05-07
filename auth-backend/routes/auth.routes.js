@@ -48,6 +48,30 @@ function getPostLoginRedirect(role) {
   return '/login';
 }
 
+function isUniqueViolation(err) {
+  return err && err.code === '23505';
+}
+
+function isUniqueMailViolation(err) {
+  if (!isUniqueViolation(err)) {
+    return false;
+  }
+
+  return (
+    err.constraint === 'users_mail_key' ||
+    err.constraint === 'users_mail_unique' ||
+    (typeof err.detail === 'string' && err.detail.includes('(mail)='))
+  );
+}
+
+function duplicateEmailResponse(req) {
+  return {
+    error: t(req, 'emailAlreadyRegistered'),
+    code: 'email_already_registered',
+    recovery_path: '/forgot'
+  };
+}
+
 
 
 function t(req, key) {
@@ -194,7 +218,7 @@ router.post('/admin/verify-password', async (req, res) => {
  *   lastname,
  *   dni,
  *   gender,
- *   email,                  // optional, but recommended
+ *   email,
  *   password,
  *   password_confirmation
  * }
@@ -212,7 +236,7 @@ router.post('/register', async (req, res) => {
     const recaptchaToken = (req.body.recaptcha_token || '').trim();
     const preferredLocale = normalizePreferredLocale((req.body.preferred_locale || '').trim() || inferPreferredLocaleFromRequest(req));
 
-    if (!firstname || !lastname || !dni || !gender || !password || !passwordConfirmation) {
+    if (!firstname || !lastname || !dni || !email || !gender || !password || !passwordConfirmation) {
       return res.status(400).json({
         error: t(req, 'requiredFieldsMissing')
       });
@@ -251,17 +275,23 @@ router.post('/register', async (req, res) => {
 
     const existingUserResult = await db.query(
       `
-        SELECT id
+        SELECT id, mail, rut
         FROM users
         WHERE rut = $1
-           OR ($2 <> '' AND mail = $2)
+           OR mail = $2
+        ORDER BY (mail = $2) DESC
         LIMIT 1
       `,
       [dni, email]
     );
 
     if (existingUserResult.rowCount > 0) {
+      if (existingUserResult.rows[0].mail === email) {
+        return res.status(409).json(duplicateEmailResponse(req));
+      }
+
       return res.status(409).json({
+        code: 'duplicate_user_identifier',
         error: t(req, 'duplicateUserIdentifier')
       });
     }
@@ -288,8 +318,13 @@ router.post('/register', async (req, res) => {
   } catch (err) {
     console.error('REGISTER ERROR:', err);
 
-    if (err.code === '23505') {
+    if (isUniqueMailViolation(err)) {
+      return res.status(409).json(duplicateEmailResponse(req));
+    }
+
+    if (isUniqueViolation(err)) {
       return res.status(409).json({
+        code: 'duplicate_user_identifier',
         error: t(req, 'duplicateUserIdentifier')
       });
     }

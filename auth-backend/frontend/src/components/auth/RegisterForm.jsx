@@ -26,6 +26,7 @@ function RegisterForm() {
 
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
+  const [showPasswordRecoveryLink, setShowPasswordRecoveryLink] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recaptchaResetCounter, setRecaptchaResetCounter] = useState(0);
@@ -60,6 +61,7 @@ function RegisterForm() {
     }));
 
     setServerError('');
+    setShowPasswordRecoveryLink(false);
     setSuccessMessage('');
   }
 
@@ -121,6 +123,7 @@ function RegisterForm() {
     const validationErrors = validate();
     setErrors(validationErrors);
     setServerError('');
+    setShowPasswordRecoveryLink(false);
     setSuccessMessage('');
 
     if (Object.keys(validationErrors).length > 0) {
@@ -148,10 +151,14 @@ function RegisterForm() {
         navigate('/login', { replace: true });
       }, 1200);
     } catch (error) {
-      const message =
-        error?.response?.data?.error || error?.message || t('register.errors.genericRegisterError');
+      const responseData = error?.response?.data || {};
+      const isEmailAlreadyRegistered = responseData.code === 'email_already_registered';
+      const message = isEmailAlreadyRegistered
+        ? t('register.errors.emailAlreadyRegistered')
+        : responseData.error || error?.message || t('register.errors.genericRegisterError');
 
       setServerError(message);
+      setShowPasswordRecoveryLink(isEmailAlreadyRegistered);
     } finally {
       setIsSubmitting(false);
       setRecaptchaResetCounter((current) => current + 1);
@@ -164,6 +171,14 @@ function RegisterForm() {
       {serverError ? (
         <div className="alert alert-danger auth-alert" role="alert">
           {serverError}
+          {showPasswordRecoveryLink ? (
+            <>
+              {' '}
+              <Link className="alert-link" to="/forgot">
+                {t('register.recoverPasswordLink')}
+              </Link>
+            </>
+          ) : null}
         </div>
       ) : null}
 

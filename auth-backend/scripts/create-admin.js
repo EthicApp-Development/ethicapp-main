@@ -61,6 +61,11 @@ Optional:
 }
 
 main().catch((err) => {
+  if (err.code === '23505') {
+    console.log(`✔ Admin already exists: ${(process.env.ADMIN_EMAIL || '').trim().toLowerCase()}`);
+    process.exit(0);
+  }
+
   console.error(err);
   process.exit(1);
 });

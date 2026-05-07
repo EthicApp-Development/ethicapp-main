@@ -5,7 +5,7 @@ create table if not exists users (
     name text not null,
     rut text not null,
     pass text not null,
-    mail text not null,
+    mail text not null constraint users_mail_unique unique,
     sex char(1),
     role char(1),
     primary key(id)
