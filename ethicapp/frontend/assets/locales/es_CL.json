@@ -341,6 +341,7 @@
 	"error_must_select_grouping_algorithm" : "Debes seleccionar un método para formar los grupos, dado que la fase es grupal",
 	"preserve_groups_description_text": "Preservar agrupaciones",	  
 	"show_previous_phase_responses_text": "Mostrar respuestas de fases anteriores",	
+	"previous_phases_label": "Mostrar respuestas de fases anteriores",
 	"features_title_text": "Caraterísticas",
 	"phase_instructions_title": "Instrucciones",
 	"phase_instructions_enabled_label": "La fase presenta instrucciones al estudiante",

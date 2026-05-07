@@ -316,6 +316,7 @@
 	"error_must_select_grouping_algorithm" : "You must select a grouping mode, given that the phase requires groups to be formed",
 	"preserve_groups_description_text": "Preserve previous groups",	
 	"show_previous_phase_responses_text": "Show responses from previous phases",
+	"previous_phases_label": "Show responses from previous phases",
 	"features_title_text": "Features",
 	"phase_instructions_title": "Instructions",
 	"phase_instructions_enabled_label": "The phase displays instructions to the student",
