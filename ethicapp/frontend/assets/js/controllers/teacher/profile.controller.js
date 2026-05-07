@@ -17,7 +17,7 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
     };
 
     vm.selectedAvatarFile = null;
-    vm.defaultProfileAvatar = "/assets/images/user-placeholder/profile-placeholder.svg";
+    vm.defaultProfileAvatar = "/assets/images/user-placeholder/incognito-user.svg";
     vm.defaultTopbarAvatar = "/assets/images/user-placeholder/avatar-placeholder-64.svg";
     vm.avatarCacheToken = Date.now();
     vm.isRecaptchaEnabled = window.__ETHICAPP_RECAPTCHA_ENABLED__ === true;
