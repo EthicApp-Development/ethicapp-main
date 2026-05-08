@@ -16,6 +16,16 @@ The manifest stores canonical EthicApp designs and their ethical case metadata.
 PDF files are stored as regular seed assets under `assets/` and copied into
 EthicApp uploads during seeding.
 
+In development Docker Compose environments, the `ethicapp` container runs this
+seed automatically during startup. The seed is idempotent, so repeated container
+starts update the canonical records instead of duplicating them.
+
+To disable automatic development seeding:
+
+```bash
+ETHICAPP_SEED_CANONICAL_ACTIVITIES=false docker compose up ethicapp
+```
+
 Typical export from an existing Docker Compose database:
 
 ```bash
