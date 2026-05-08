@@ -30,6 +30,7 @@ services:
       - "8501"
     volumes:
       - ./ethicapp:/app
+      - ./database/seeds:/database/seeds
       - ethicapp_node_modules:/app/backend/node_modules
       - uploads:/app/backend/uploads
       - sessions:/app/backend/sessions

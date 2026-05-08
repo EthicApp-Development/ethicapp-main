@@ -9,6 +9,8 @@
     "dev_node": "node --inspect=0.0.0.0:9229 --nolazy ./ethicapp",
     "start": "node ./ethicapp",
     "debug": "node --inspect=0.0.0.0:9229 --nolazy ./ethicapp",
+    "export:canonical-activities": "node scripts/export-canonical-activity-seeds.js",
+    "seed:canonical-activities": "node scripts/seed-canonical-activities.js",
     "test": "jest --no-cache"
   },
   "dependencies": {
