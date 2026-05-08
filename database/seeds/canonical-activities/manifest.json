@@ -1,0 +1,512 @@
+{
+  "version": 1,
+  "exportedAt": "2026-05-08T22:56:14.629Z",
+  "activities": [
+    {
+      "key": "caso-sebastian-una-sola-fase-con-servicios-mock-de-ia",
+      "sourceDesignId": 1,
+      "ownerEmail": "profesor@test",
+      "title": "Caso Sebastián (Una sola fase, con servicios mock de IA)",
+      "public": false,
+      "locked": false,
+      "design": {
+        "type": "semantic_differential",
+        "roles": [],
+        "valid": true,
+        "caseId": 1,
+        "locked": false,
+        "phases": [
+          {
+            "chat": false,
+            "mode": "individual",
+            "anonymous": true,
+            "questions": [
+              {
+                "q_text": "Sebastián, un muy buen amigo tuyo, necesita pasar el curso de Contabilidad para poder mantenerse en la carrera; está muy complicado y te pide que le ayudes a contestar el examen online. ¿Qué harías tú?",
+                "ans_format": {
+                  "l_pole": "Lo ayudo a contestar el examen",
+                  "r_pole": "No lo ayudo a contestar el examen",
+                  "values": 4,
+                  "just_required": true,
+                  "min_just_length": 10,
+                  "justification_minimum_length_required": true
+                }
+              }
+            ],
+            "stdntAmount": 3,
+            "instructions": "Responde el diferencial semántico, proporcionando argumentos que  justifiquen tu respuesta.\nTiempo límite: 5 minutos.",
+            "externalServices": {
+              "enabledServiceIds": [
+                "mock-ai-response-review"
+              ]
+            },
+            "grouping_algorithm": "random",
+            "prevPhasesResponse": []
+          }
+        ],
+        "public": false,
+        "metainfo": {
+          "email": "profesor@test",
+          "title": "Caso Sebastián (Una sola fase, con servicios mock de IA)",
+          "author": "Profesor Demo",
+          "institution": "Unknown",
+          "creation_date": 1778277779367
+        },
+        "userOwned": true
+      },
+      "case": {
+        "sourceCaseId": 1,
+        "title": "Caso Sebastián",
+        "authorFirstname": "Antonio",
+        "authorLastname": "Farías",
+        "authorEmail": "anfari@fen.uchile.cl",
+        "pdfAsset": "assets/caso-sebastian-una-sola-fase-con-servicios-mock-de-ia.pdf",
+        "sourcePdfPath": "/uploads/seed-assets/caso-sebastian-una-sola-fase-con-servicios-mock-de-ia.pdf"
+      }
+    },
+    {
+      "key": "caso-sebastian-cinco-fases",
+      "sourceDesignId": 2,
+      "ownerEmail": "profesor@test",
+      "title": "Caso Sebastián (Cinco Fases)",
+      "public": false,
+      "locked": false,
+      "design": {
+        "type": "semantic_differential",
+        "roles": [],
+        "valid": true,
+        "caseId": 1,
+        "locked": false,
+        "phases": [
+          {
+            "chat": false,
+            "mode": "individual",
+            "anonymous": true,
+            "questions": [
+              {
+                "q_text": "Sebastián, un muy buen amigo tuyo, necesita pasar el curso de Contabilidad para poder mantenerse en la carrera; está muy complicado y te pide que le ayudes a contestar el examen online. ¿Qué harías tú?",
+                "ans_format": {
+                  "l_pole": "Lo ayudo a contestar el examen",
+                  "r_pole": "No lo ayudo a contestar el examen",
+                  "values": 4,
+                  "just_required": false,
+                  "min_just_length": 0,
+                  "justification_minimum_length_required": false
+                }
+              }
+            ],
+            "stdntAmount": 3,
+            "instructions": "Responde el siguiente diferencial semántico.\nTiempo límite: 30 segundos.",
+            "externalServices": {
+              "enabledServiceIds": []
+            },
+            "grouping_algorithm": "random",
+            "prevPhasesResponse": []
+          },
+          {
+            "chat": false,
+            "mode": "individual",
+            "anonymous": true,
+            "questions": [
+              {
+                "q_text": "Sebastián, un muy buen amigo tuyo, necesita pasar el curso de Contabilidad para poder mantenerse en la carrera; está muy complicado y te pide que le ayudes a contestar el examen online. ¿Qué harías tú?",
+                "ans_format": {
+                  "l_pole": "Lo ayudo a contestar el examen",
+                  "r_pole": "No lo ayudo a contestar el examen",
+                  "values": 4,
+                  "just_required": false,
+                  "min_just_length": 0,
+                  "justification_minimum_length_required": false
+                }
+              }
+            ],
+            "stdntAmount": 3,
+            "instructions": "Responde el siguiente diferencial semántico.\nTiempo límite: 30 segundos.",
+            "externalServices": {
+              "enabledServiceIds": []
+            },
+            "grouping_algorithm": "random",
+            "prevPhasesResponse": []
+          },
+          {
+            "chat": false,
+            "mode": "individual",
+            "anonymous": true,
+            "questions": [
+              {
+                "q_text": "Por un lado, Sebastián necesita pasar el examen y le debo mucho por su lealtad y amistad. Incluso él y su familia me acogieron durante unos meses en pandemia. Además, si no termina bien el curso, tendrá serios problemas financieros para seguir estudiando. Y, por otro lado, con Sebastián hemos sido muy críticos de quienes copian o hacen trampa para avanzar en los cursos de la carrera. Siempre peleamos con los “vivos”. Nos esforzamos mucho para pasar los cursoss y realmente queremos ser buenos profesionales. Dada la situación de Sebastian, mi decisión sería:",
+                "ans_format": {
+                  "l_pole": "Lo ayudo a contestar el examen",
+                  "r_pole": "No lo ayudo a contestar el examen",
+                  "values": 4,
+                  "just_required": true,
+                  "min_just_length": 10,
+                  "justification_minimum_length_required": true
+                }
+              }
+            ],
+            "stdntAmount": 3,
+            "instructions": "Responde el diferencial semántico, proporcionando argumentos que justifiquen tu respuesta.\nTiempo límite: 5 minutos.",
+            "externalServices": {
+              "enabledServiceIds": []
+            },
+            "grouping_algorithm": "random",
+            "prevPhasesResponse": []
+          },
+          {
+            "chat": true,
+            "mode": "team",
+            "anonymous": true,
+            "questions": [
+              {
+                "q_text": "Dada la situación de Sebastian, mi decisión sería:",
+                "ans_format": {
+                  "l_pole": "Lo ayudo a contestar el examen",
+                  "r_pole": "No lo ayudo a contestar el examen",
+                  "values": 4,
+                  "just_required": true,
+                  "min_just_length": 10,
+                  "justification_minimum_length_required": true
+                }
+              }
+            ],
+            "stdntAmount": 3,
+            "instructions": "Acordar entre todas/os la respuesta, discutiendo vía chat de forma anónima, aspectos que ya consideraste u otros que no hayas considerado en las preguntas anteriores. Es decir, todos deben elegir el mismo valor numérico en la respuesta, aun cuando cada quien puede proporcionar argumentos de justificación diferentes\nTiempo límite: 15 minutos.",
+            "externalServices": {
+              "enabledServiceIds": []
+            },
+            "grouping_algorithm": "random",
+            "prevPhasesResponse": [
+              3
+            ]
+          },
+          {
+            "chat": true,
+            "mode": "individual",
+            "anonymous": true,
+            "questions": [
+              {
+                "q_text": "Dada la situación de Sebastian, mi decisión sería:",
+                "ans_format": {
+                  "l_pole": "Lo ayudo a contestar el examen",
+                  "r_pole": "No lo ayudo a contestar el examen",
+                  "values": 4,
+                  "just_required": true,
+                  "min_just_length": 10,
+                  "justification_minimum_length_required": true
+                }
+              }
+            ],
+            "stdntAmount": 3,
+            "instructions": "Considerando todo lo anterior y sobre todo después de acordar la respuesta con tus compañeros, tienes nuevamente la oportunidad de dar tu respuesta de forma individual.\nTiempo límite: 5 minutos",
+            "externalServices": {
+              "enabledServiceIds": []
+            },
+            "grouping_algorithm": null,
+            "prevPhasesResponse": []
+          }
+        ],
+        "public": false,
+        "metainfo": {
+          "email": "profesor@test",
+          "title": "Caso Sebastián (Cinco Fases)",
+          "author": "Profesor Demo",
+          "institution": "Unknown",
+          "creation_date": 1778277779367
+        },
+        "userOwned": true
+      },
+      "case": {
+        "sourceCaseId": 1,
+        "title": "Caso Sebastián",
+        "authorFirstname": "Antonio",
+        "authorLastname": "Farías",
+        "authorEmail": "anfari@fen.uchile.cl",
+        "pdfAsset": "assets/caso-sebastian-cinco-fases.pdf",
+        "sourcePdfPath": "/uploads/seed-assets/caso-sebastian-una-sola-fase-con-servicios-mock-de-ia.pdf"
+      }
+    },
+    {
+      "key": "caso-sebastian-cinco-fases-con-servicios-mock-de-ia",
+      "sourceDesignId": 3,
+      "ownerEmail": "profesor@test",
+      "title": "Caso Sebastián (Cinco Fases, con servicios mock de IA)",
+      "public": false,
+      "locked": false,
+      "design": {
+        "type": "semantic_differential",
+        "roles": [],
+        "valid": true,
+        "caseId": 1,
+        "locked": false,
+        "phases": [
+          {
+            "chat": false,
+            "mode": "individual",
+            "anonymous": true,
+            "questions": [
+              {
+                "q_text": "Sebastián, un muy buen amigo tuyo, necesita pasar el curso de Contabilidad para poder mantenerse en la carrera; está muy complicado y te pide que le ayudes a contestar el examen online. ¿Qué harías tú?",
+                "ans_format": {
+                  "l_pole": "Lo ayudo a contestar el examen",
+                  "r_pole": "No lo ayudo a contestar el examen",
+                  "values": 4,
+                  "just_required": false,
+                  "min_just_length": 0,
+                  "justification_minimum_length_required": false
+                }
+              }
+            ],
+            "stdntAmount": 3,
+            "instructions": "Responde el siguiente diferencial semántico.\nTiempo límite: 30 segundos.",
+            "externalServices": {
+              "enabledServiceIds": []
+            },
+            "grouping_algorithm": "random",
+            "prevPhasesResponse": []
+          },
+          {
+            "chat": false,
+            "mode": "individual",
+            "anonymous": true,
+            "questions": [
+              {
+                "q_text": "Sebastián, un muy buen amigo tuyo, necesita pasar el curso de Contabilidad para poder mantenerse en la carrera; está muy complicado y te pide que le ayudes a contestar el examen online. ¿Qué harías tú?",
+                "ans_format": {
+                  "l_pole": "Lo ayudo a contestar el examen",
+                  "r_pole": "No lo ayudo a contestar el examen",
+                  "values": 4,
+                  "just_required": false,
+                  "min_just_length": 0,
+                  "justification_minimum_length_required": false
+                }
+              }
+            ],
+            "stdntAmount": 3,
+            "instructions": "Responde el siguiente diferencial semántico.\nTiempo límite: 30 segundos.",
+            "externalServices": {
+              "enabledServiceIds": []
+            },
+            "grouping_algorithm": "random",
+            "prevPhasesResponse": []
+          },
+          {
+            "chat": false,
+            "mode": "individual",
+            "anonymous": true,
+            "questions": [
+              {
+                "q_text": "Por un lado, Sebastián necesita pasar el examen y le debo mucho por su lealtad y amistad. Incluso él y su familia me acogieron durante unos meses en pandemia. Además, si no termina bien el curso, tendrá serios problemas financieros para seguir estudiando. Y, por otro lado, con Sebastián hemos sido muy críticos de quienes copian o hacen trampa para avanzar en los cursos de la carrera. Siempre peleamos con los “vivos”. Nos esforzamos mucho para pasar los cursoss y realmente queremos ser buenos profesionales. Dada la situación de Sebastian, mi decisión sería:",
+                "ans_format": {
+                  "l_pole": "Lo ayudo a contestar el examen",
+                  "r_pole": "No lo ayudo a contestar el examen",
+                  "values": 4,
+                  "just_required": true,
+                  "min_just_length": 10,
+                  "justification_minimum_length_required": true
+                }
+              }
+            ],
+            "stdntAmount": 3,
+            "instructions": "Responde el diferencial semántico, proporcionando argumentos que justifiquen tu respuesta.\nTiempo límite: 5 minutos.",
+            "externalServices": {
+              "enabledServiceIds": [
+                "mock-ai-response-review"
+              ]
+            },
+            "grouping_algorithm": "random",
+            "prevPhasesResponse": []
+          },
+          {
+            "chat": true,
+            "mode": "team",
+            "anonymous": true,
+            "questions": [
+              {
+                "q_text": "Dada la situación de Sebastian, mi decisión sería:",
+                "ans_format": {
+                  "l_pole": "Lo ayudo a contestar el examen",
+                  "r_pole": "No lo ayudo a contestar el examen",
+                  "values": 4,
+                  "just_required": true,
+                  "min_just_length": 10,
+                  "justification_minimum_length_required": true
+                }
+              }
+            ],
+            "stdntAmount": 3,
+            "instructions": "Acordar entre todas/os la respuesta, discutiendo vía chat de forma anónima, aspectos que ya consideraste u otros que no hayas considerado en las preguntas anteriores. Es decir, todos deben elegir el mismo valor numérico en la respuesta, aun cuando cada quien puede proporcionar argumentos de justificación diferentes\nTiempo límite: 15 minutos.",
+            "externalServices": {
+              "enabledServiceIds": [
+                "mock-chat-agent"
+              ]
+            },
+            "grouping_algorithm": "random",
+            "prevPhasesResponse": [
+              3
+            ]
+          },
+          {
+            "chat": true,
+            "mode": "individual",
+            "anonymous": true,
+            "questions": [
+              {
+                "q_text": "Dada la situación de Sebastian, mi decisión sería:",
+                "ans_format": {
+                  "l_pole": "Lo ayudo a contestar el examen",
+                  "r_pole": "No lo ayudo a contestar el examen",
+                  "values": 4,
+                  "just_required": true,
+                  "min_just_length": 10,
+                  "justification_minimum_length_required": true
+                }
+              }
+            ],
+            "stdntAmount": 3,
+            "instructions": "Considerando todo lo anterior y sobre todo después de acordar la respuesta con tus compañeros, tienes nuevamente la oportunidad de dar tu respuesta de forma individual.\nTiempo límite: 5 minutos",
+            "externalServices": {
+              "enabledServiceIds": []
+            },
+            "grouping_algorithm": null,
+            "prevPhasesResponse": []
+          }
+        ],
+        "public": false,
+        "metainfo": {
+          "email": "profesor@test",
+          "title": "Caso Sebastián (Cinco Fases, con servicios mock de IA)",
+          "author": "Profesor Demo",
+          "institution": "Unknown",
+          "creation_date": 1778277779367
+        },
+        "userOwned": true
+      },
+      "case": {
+        "sourceCaseId": 1,
+        "title": "Caso Sebastián",
+        "authorFirstname": "Antonio",
+        "authorLastname": "Farías",
+        "authorEmail": "anfari@fen.uchile.cl",
+        "pdfAsset": "assets/caso-sebastian-cinco-fases-con-servicios-mock-de-ia.pdf",
+        "sourcePdfPath": "/uploads/seed-assets/caso-sebastian-una-sola-fase-con-servicios-mock-de-ia.pdf"
+      }
+    },
+    {
+      "key": "caso-sebastian-tres-fases-con-servicios-mock-de-ia",
+      "sourceDesignId": 4,
+      "ownerEmail": "profesor@test",
+      "title": "Caso Sebastián (Tres Fases, con servicios mock de IA)",
+      "public": false,
+      "locked": false,
+      "design": {
+        "type": "semantic_differential",
+        "roles": [],
+        "valid": true,
+        "caseId": 1,
+        "locked": false,
+        "phases": [
+          {
+            "chat": false,
+            "mode": "individual",
+            "anonymous": true,
+            "questions": [
+              {
+                "q_text": "Sebastián, un muy buen amigo tuyo, necesita pasar el curso de Contabilidad para poder mantenerse en la carrera; está muy complicado y te pide que le ayudes a contestar el examen online. ¿Qué harías tú?",
+                "ans_format": {
+                  "l_pole": "Lo ayudo a contestar el examen",
+                  "r_pole": "No lo ayudo a contestar el examen",
+                  "values": 4,
+                  "just_required": true,
+                  "min_just_length": 10,
+                  "justification_minimum_length_required": true
+                }
+              }
+            ],
+            "stdntAmount": 3,
+            "instructions": "Responde el diferencial semántico, proporcionando argumentos que  justifiquen tu respuesta.\nTiempo límite: 5 minutos.",
+            "externalServices": {
+              "enabledServiceIds": [
+                "mock-ai-response-review"
+              ]
+            },
+            "grouping_algorithm": "random",
+            "prevPhasesResponse": []
+          },
+          {
+            "chat": true,
+            "mode": "team",
+            "anonymous": true,
+            "questions": [
+              {
+                "q_text": "Dada la situación de Sebastian, mi decisión sería:",
+                "ans_format": {
+                  "l_pole": "Lo ayudo a contestar el examen",
+                  "r_pole": "No lo ayudo a contestar el examen",
+                  "values": 4,
+                  "just_required": true,
+                  "min_just_length": 10,
+                  "justification_minimum_length_required": true
+                }
+              }
+            ],
+            "stdntAmount": 3,
+            "instructions": "Acordar entre todas/os la respuesta, discutiendo vía chat de forma anónima, aspectos que ya consideraste u otros que no hayas considerado en las preguntas anteriores. Es decir, todos deben elegir el mismo valor numérico en la respuesta, aun cuando cada quien puede proporcionar argumentos de justificación diferentes\nTiempo límite: 15 minutos.",
+            "externalServices": {
+              "enabledServiceIds": [
+                "mock-chat-agent"
+              ]
+            },
+            "grouping_algorithm": "random",
+            "prevPhasesResponse": []
+          },
+          {
+            "chat": true,
+            "mode": "individual",
+            "anonymous": true,
+            "questions": [
+              {
+                "q_text": "Dada la situación de Sebastian, mi decisión sería:",
+                "ans_format": {
+                  "l_pole": "Lo ayudo a contestar el examen",
+                  "r_pole": "No lo ayudo a contestar el examen",
+                  "values": 4,
+                  "just_required": true,
+                  "min_just_length": 10,
+                  "justification_minimum_length_required": true
+                }
+              }
+            ],
+            "stdntAmount": 3,
+            "instructions": "Considerando todo lo anterior y sobre todo después de acordar la respuesta con tus compañeros, tienes nuevamente la oportunidad de dar tu respuesta de forma individual.",
+            "externalServices": {
+              "enabledServiceIds": [
+                "mock-ai-response-review"
+              ]
+            },
+            "grouping_algorithm": null,
+            "prevPhasesResponse": []
+          }
+        ],
+        "public": false,
+        "metainfo": {
+          "email": "profesor@test",
+          "title": "Caso Sebastián (Tres Fases, con servicios mock de IA)",
+          "author": "Profesor Demo",
+          "institution": "Unknown",
+          "creation_date": 1778277779367
+        },
+        "userOwned": true
+      },
+      "case": {
+        "sourceCaseId": 1,
+        "title": "Caso Sebastián",
+        "authorFirstname": "Antonio",
+        "authorLastname": "Farías",
+        "authorEmail": "anfari@fen.uchile.cl",
+        "pdfAsset": "assets/caso-sebastian-tres-fases-con-servicios-mock-de-ia.pdf",
+        "sourcePdfPath": "/uploads/seed-assets/caso-sebastian-una-sola-fase-con-servicios-mock-de-ia.pdf"
+      }
+    }
+  ]
+}

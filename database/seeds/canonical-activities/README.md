@@ -16,11 +16,10 @@ The manifest stores canonical EthicApp designs and their ethical case metadata.
 PDF files are stored as regular seed assets under `assets/` and copied into
 EthicApp uploads during seeding.
 
-Typical export from an existing database:
+Typical export from an existing Docker Compose database:
 
 ```bash
-cd ethicapp/backend
-npm run export:canonical-activities -- --design-ids=1,2,3
+docker compose exec ethicapp sh -lc "cd /app/backend && npm run export:canonical-activities -- --design-ids=1,2,3"
 ```
 
 The exporter writes `manifest.json` and copies referenced PDFs into `assets/`.
@@ -29,8 +28,7 @@ Use `--out=/path/to/manifest.json` to write a different seed bundle.
 Typical idempotent seed:
 
 ```bash
-cd ethicapp/backend
-npm run seed:canonical-activities
+docker compose exec ethicapp sh -lc "cd /app/backend && npm run seed:canonical-activities"
 ```
 
 Use `--manifest=/path/to/manifest.json` to load a non-default bundle. PDFs are
