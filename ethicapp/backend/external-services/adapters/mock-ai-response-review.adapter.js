@@ -13,6 +13,40 @@ function extractResponseText(responsePayload) {
     return candidates.find(value => typeof value === "string" && value.trim().length > 0)?.trim() || "";
 }
 
+async function postExternalMock(path, payload) {
+    const baseUrl = process.env.EXTERNAL_MOCK_SERVICE_URL || "http://external-mock-service:8510";
+    const response = await fetch(`${baseUrl}${path}`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        throw new Error(`External mock service responded with HTTP ${response.status}`);
+    }
+
+    return response.json();
+}
+
+async function reverseResponseText(responseText) {
+    try {
+        return await postExternalMock("/response-review/reverse", { text: responseText });
+    } catch (error) {
+        console.warn("[external-services] Falling back to local mock response review.", error);
+        const reversedText = Array.from(responseText).reverse().join("");
+
+        return {
+            status:  "completed",
+            summary: reversedText || "No text was provided.",
+            payload: {
+                originalText: responseText,
+                reversedText,
+                characterCount: responseText.length,
+            },
+        };
+    }
+}
+
 async function callbackPhaseTransition({ service, context, callback, hook }) {
     await callback({
         serviceId: service.id,
@@ -35,11 +69,23 @@ function sanitizeExternalResultPayload(payload) {
     const status = typeof input.status === "string" && input.status.trim()
         ? input.status.trim()
         : "received";
+    const resultPayload = input.payload && typeof input.payload === "object" ? input.payload : {};
+    const component = input.component && typeof input.component === "object"
+        ? input.component
+        : {
+            componentId: "argument-tutor-report",
+            propsPath:   "payload",
+        };
 
     return {
         serviceId:  input.serviceId,
+        sessionId:  Number(input.sessionId) || null,
+        phaseId:    Number(input.phaseId) || null,
+        questionId: Number(input.questionId) || null,
+        userId:     Number(input.userId) || null,
         status:     status,
-        payload:    input.payload && typeof input.payload === "object" ? input.payload : {},
+        component,
+        payload:    resultPayload,
         message:    typeof input.message === "string" ? input.message.trim() : "",
         receivedAt: new Date().toISOString(),
     };
@@ -67,10 +113,11 @@ function summarizeChatMessage(context) {
     };
 }
 
-export async function register({ service, subscribe }) {
+export async function register({ service, subscribe, publishStudentResult }) {
     subscribe("student-response-submitted", async (context, { callback }) => {
         const responseText = extractResponseText(context);
         const wordCount = responseText ? responseText.split(/\s+/u).length : 0;
+        const review = await reverseResponseText(responseText);
 
         await callback({
             serviceId: service.id,
@@ -81,12 +128,11 @@ export async function register({ service, subscribe }) {
                 phaseId:   context.phaseId,
                 userId:    context.userId,
                 questionId: context.questionId,
-                summary:   responseText
-                    ? `Mock review received ${wordCount} word(s).`
-                    : "Mock review received a response without free-text justification.",
+                summary:   review.summary,
                 analysis: {
                     wordCount,
                     hasFreeText: responseText.length > 0,
+                    externalMock: review.payload,
                 },
             },
         });
@@ -101,11 +147,26 @@ export async function register({ service, subscribe }) {
     });
 
     subscribe("external-service-result", async (context, { callback }) => {
+        const payload = sanitizeExternalResultPayload(context.requestPayload);
+
+        if (payload.userId) {
+            await publishStudentResult({
+                userId: payload.userId,
+                sessionId: payload.sessionId,
+                phaseId: payload.phaseId,
+                questionId: payload.questionId,
+                component: payload.component,
+                payload: payload.payload,
+                message: payload.message,
+                status: payload.status,
+            });
+        }
+
         await callback({
             serviceId: service.id,
             hook:      "external-service-result",
             status:    "completed",
-            payload:   sanitizeExternalResultPayload(context.requestPayload),
+            payload,
         });
     });
 

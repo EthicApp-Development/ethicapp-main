@@ -1,6 +1,10 @@
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";
+import * as config from "../config/config.js";
+import * as rpg2 from "../db/rest-pg-2.js";
+import { saveChatMessage } from "../helpers/chat-helper.js";
+import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -75,6 +79,8 @@ class ExternalServicesRegistry {
             subscribe: (hookName, handler) => {
                 this.subscribe(normalizedService.id, hookName, handler);
             },
+            publishStudentResult: payload => this.publishStudentResult(normalizedService.id, payload),
+            publishGroupChatMessage: payload => this.publishGroupChatMessage(normalizedService.id, payload),
         });
     }
 
@@ -199,6 +205,137 @@ class ExternalServicesRegistry {
 
         console.info(`[external-services] Callback received from ${serviceId} for ${hookName}.`, entry);
         return entry;
+    }
+
+    async publishStudentResult(serviceId, payload) {
+        const userId = Number(payload?.userId);
+
+        if (!Number.isInteger(userId) || userId <= 0) {
+            console.warn(`[external-services] Cannot publish student result without a valid userId from ${serviceId}.`);
+            return false;
+        }
+
+        if (!studentNotifications?.externalServiceResult) {
+            console.warn("[external-services] Student socket notification service is not initialized.");
+            return false;
+        }
+
+        studentNotifications.externalServiceResult(userId, {
+            ...payload,
+            serviceId,
+            receivedAt: new Date().toISOString(),
+        });
+
+        return true;
+    }
+
+    async publishGroupChatMessage(serviceId, payload) {
+        const content = typeof payload?.content === "string" ? payload.content.trim() : "";
+        const sessionId = Number(payload?.sessionId);
+        const phaseId = Number(payload?.phaseId);
+        const questionId = Number(payload?.questionId);
+        const groupId = Number(payload?.groupId);
+        const parentId = payload?.parentId == null ? null : Number(payload.parentId);
+
+        if (!content || !phaseId || !questionId || !groupId) {
+            console.warn(`[external-services] Cannot publish chat message with incomplete payload from ${serviceId}.`);
+            return null;
+        }
+
+        const agent = await this.getOrCreateExternalAgent({
+            serviceId,
+            displayName: payload?.agentDisplayName,
+        });
+
+        if (!agent) {
+            console.warn(`[external-services] Cannot resolve chat agent identity for ${serviceId}.`);
+            return null;
+        }
+
+        const savedMessage = await saveChatMessage({
+            userId: null,
+            externalAgentId: agent.id,
+            phaseId,
+            questionId,
+            groupId,
+            parentId,
+            content,
+        });
+
+        if (!savedMessage) {
+            console.warn(`[external-services] Chat message from ${serviceId} could not be saved.`);
+            return null;
+        }
+
+        const notificationPayload = this.normalizeServiceChatNotificationPayload({
+            message: savedMessage,
+            agent,
+            phaseId,
+            questionId,
+        });
+        teacherNotifications?.chatMessage(sessionId, phaseId, questionId, groupId, content);
+        teacherNotifications?.groupChatMessage(groupId, {
+            ...notificationPayload,
+            phaseId,
+            questionId,
+            groupId,
+        });
+        studentNotifications?.chatMessage(groupId);
+
+        return {
+            savedMessage,
+            notificationPayload,
+        };
+    }
+
+    async getOrCreateExternalAgent({ serviceId, displayName }) {
+        const normalizedDisplayName = typeof displayName === "string" && displayName.trim()
+            ? displayName.trim()
+            : serviceId;
+
+        const rows = await rpg2.execSQL({
+            sql: `
+                INSERT INTO external_service_agents (service_id, display_name)
+                VALUES ($1, $2)
+                ON CONFLICT (service_id)
+                DO UPDATE
+                SET display_name = EXCLUDED.display_name
+                RETURNING id, service_id, display_name
+            `,
+            dbcon: config.dbconnString,
+            sqlParams: [
+                rpg2.param("plain", serviceId),
+                rpg2.param("plain", normalizedDisplayName),
+            ],
+        });
+
+        const agent = rows[0];
+        if (!agent) {
+            return null;
+        }
+
+        return {
+            id: Number(agent.id),
+            serviceId: agent.service_id,
+            displayName: agent.display_name,
+        };
+    }
+
+    normalizeServiceChatNotificationPayload({ message, agent, phaseId, questionId }) {
+        return {
+            id: message.id,
+            uid: message.uid,
+            author_role: "external_service",
+            author_name: agent.displayName,
+            external_service_id: agent.serviceId,
+            external_agent_id: agent.id,
+            groupId: message.tmid,
+            phaseId: message.stageid || phaseId,
+            questionId: message.did || questionId,
+            content: message.content,
+            stime: message.stime,
+            parent_id: message.parent_id,
+        };
     }
 }
 

@@ -24,6 +24,8 @@ services:
       - ./.env.shared
       - ./.env
       - ./ethicapp/.env
+    environment:
+      - EXTERNAL_MOCK_SERVICE_URL=http://external-mock-service:8510
     expose:
       - "8501"
     volumes:
@@ -34,6 +36,17 @@ services:
     depends_on:
       - postgresql
       - redis
+      - external-mock-service
+
+  external-mock-service:
+    build:
+      context: ./external-mock-service
+      dockerfile: Dockerfile
+    container_name: ethicapp-external-mock-service
+    environment:
+      - PORT=8510
+    expose:
+      - "8510"
   ethicapp-student:
     build:
       context: ./ethicapp-student

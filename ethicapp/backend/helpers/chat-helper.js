@@ -4,18 +4,23 @@ import * as Yup from "yup";
 import { getDesignTypeByPhaseId } from "./designs-helper.js";
 
 const flatChatMessageSchema = Yup.object({
-    userId: Yup.number().integer().positive().required(),
+    userId: Yup.number().integer().positive().nullable(),
+    externalAgentId: Yup.number().integer().positive().nullable(),
     phaseId: Yup.number().integer().positive().required(),
     questionId: Yup.number().integer().positive().nullable(),
     groupId: Yup.number().integer().positive().nullable(),
     parentId: Yup.number().integer().positive().nullable(),
     content: Yup.string().trim().min(1).max(2000).required(),
-});
-
+}).test(
+    "human-or-external-author",
+    "A chat message requires either userId or externalAgentId.",
+    value => Boolean(value?.userId || value?.externalAgentId)
+);
 const nestedChatMessageSchema = Yup.object({
     header: Yup.object({
         userId: Yup.number().integer().positive(),
         uid: Yup.number().integer().positive(),
+        externalAgentId: Yup.number().integer().positive().nullable(),
         phaseId: Yup.number().integer().positive(),
         stageId: Yup.number().integer().positive(),
         itemId: Yup.number().integer().positive().nullable(),
@@ -31,7 +36,8 @@ const nestedChatMessageSchema = Yup.object({
 
 function normalizeChatMessageInput(data) {
     if (data?.header && data?.payload) {
-        const userId = Number(data.header.userId ?? data.header.uid);
+        const rawUserId = data.header.userId ?? data.header.uid;
+        const userId = rawUserId == null ? null : Number(rawUserId);
         const phaseId = Number(data.header.phaseId ?? data.header.stageId);
         const questionId = Number(data.header.questionId ?? data.header.itemId);
         const parentId = data.payload.parentId ?? data.payload.parent_id ?? null;
@@ -39,6 +45,9 @@ function normalizeChatMessageInput(data) {
 
         return {
             userId,
+            externalAgentId: data.header.externalAgentId == null
+                ? null
+                : Number(data.header.externalAgentId),
             phaseId,
             questionId: Number.isFinite(questionId) ? questionId : null,
             groupId: data.header.groupId == null ? null : Number(data.header.groupId),
@@ -48,7 +57,8 @@ function normalizeChatMessageInput(data) {
     }
 
     return {
-        userId: Number(data?.userId),
+        userId: data?.userId == null ? null : Number(data.userId),
+        externalAgentId: data?.externalAgentId == null ? null : Number(data.externalAgentId),
         phaseId: Number(data?.phaseId),
         questionId: data?.questionId == null ? null : Number(data.questionId),
         groupId: data?.groupId == null ? null : Number(data.groupId),
@@ -72,15 +82,16 @@ export const chatTranscriptHandlers = {
 };
 
 export const chatInsertHandlers = {
-    ranking: async ({ userId, phaseId, groupId, content, parentId, dbcon }) => {
+    ranking: async ({ userId, externalAgentId, phaseId, groupId, content, parentId, dbcon }) => {
         const result = await rpg2.execSQL({
             sql: `
-                INSERT INTO chat (uid, stageid, tmid, content, parent_id)
-                VALUES ($1, $2, $3, $4, $5)
-                RETURNING id, uid, stageid, tmid, content, stime, parent_id
+                INSERT INTO chat (uid, external_agent_id, stageid, tmid, content, parent_id)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING id, uid, external_agent_id, stageid, tmid, content, stime, parent_id
             `,
             dbcon,
-            sqlParams: [rpg2.param('plain', userId), rpg2.param('plain', phaseId), 
+            sqlParams: [rpg2.param('plain', userId) || null,
+                rpg2.param('plain', externalAgentId) || null, rpg2.param('plain', phaseId),
                 rpg2.param('plain', groupId) || null, rpg2.param('plain', content),
                 rpg2.param('plain', parentId) || null],
         });
@@ -88,16 +99,25 @@ export const chatInsertHandlers = {
         return result[0] || null;
     },
 
-    semantic_differential: async ({ userId, questionId, groupId, content, parentId, dbcon }) => {
+    semantic_differential: async ({
+        userId,
+        externalAgentId,
+        questionId,
+        groupId,
+        content,
+        parentId,
+        dbcon
+    }) => {
         const result = await rpg2.execSQL({
             sql: `
-                INSERT INTO differential_chat (uid, did, tmid, content, parent_id)
-                VALUES ($1, $2, $3, $4, $5)
-                RETURNING id, uid, did, tmid, content, stime, parent_id
+                INSERT INTO differential_chat (uid, external_agent_id, did, tmid, content, parent_id)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING id, uid, external_agent_id, did, tmid, content, stime, parent_id
             `,
             dbcon,
-            sqlParams: [rpg2.param('plain', userId), 
-                rpg2.param('plain', questionId), rpg2.param('plain', groupId) || null,
+            sqlParams: [rpg2.param('plain', userId) || null,
+                rpg2.param('plain', externalAgentId) || null, rpg2.param('plain', questionId),
+                rpg2.param('plain', groupId) || null,
                 rpg2.param('plain', content),
                 rpg2.param('plain', parentId) || null],
         });
@@ -118,7 +138,7 @@ export const saveChatMessage = async function(data) {
             stripUnknown: true,
         });
 
-        const { userId, phaseId, questionId, groupId, parentId, content } = validatedData;
+        const { userId, externalAgentId, phaseId, questionId, groupId, parentId, content } = validatedData;
 
         const designType = await getDesignTypeByPhaseId(phaseId);
         const handler = chatInsertHandlers[designType];
@@ -128,6 +148,7 @@ export const saveChatMessage = async function(data) {
 
         const savedMessage = await handler({
             userId,
+            externalAgentId,
             phaseId,
             questionId,
             groupId,
@@ -208,14 +229,20 @@ async function semanticDifferentialChatTranscriptByGroup(groupId, questionId) {
         sql: `
             SELECT c.id,
                    c.uid,
-                   u.role AS author_role,
-                   u.name AS author_name,
+                   CASE
+                       WHEN esa.id IS NOT NULL THEN 'external_service'
+                       ELSE u.role
+                   END AS author_role,
+                   COALESCE(esa.display_name, u.name) AS author_name,
+                   esa.service_id AS external_service_id,
                    c.content,
                    c.stime,
                    c.parent_id
             FROM differential_chat AS c
-            INNER JOIN users AS u
+            LEFT JOIN users AS u
                 ON u.id = c.uid
+            LEFT JOIN external_service_agents AS esa
+                ON esa.id = c.external_agent_id
             WHERE c.did = $1
               AND (
                   c.tmid = $2
@@ -240,14 +267,20 @@ async function rankingChatTranscriptByGroup(groupId, questionId) {
         sql: `
             SELECT s.id,
                    s.uid,
-                   u.role AS author_role,
-                   u.name AS author_name,
+                   CASE
+                       WHEN esa.id IS NOT NULL THEN 'external_service'
+                       ELSE u.role
+                   END AS author_role,
+                   COALESCE(esa.display_name, u.name) AS author_name,
+                   esa.service_id AS external_service_id,
                    s.content,
                    s.stime,
                    s.parent_id
             FROM chat AS s
-            INNER JOIN users AS u
+            LEFT JOIN users AS u
                 ON u.id = s.uid
+            LEFT JOIN external_service_agents AS esa
+                ON esa.id = s.external_agent_id
             WHERE s.stageid = (
                 SELECT stageid
                 FROM teams

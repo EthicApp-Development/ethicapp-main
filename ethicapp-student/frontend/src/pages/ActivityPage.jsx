@@ -1,9 +1,10 @@
 import axios from 'axios';
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import { studentApi, legacyUserApi } from '../api/studentApi.js';
 import { useI18n } from '../app/providers.jsx';
 import ActivityTabsPanel from '../components/session-detail/ActivityTabsPanel.jsx';
+import ExternalServiceResultPanel from '../components/session-detail/external-services/ExternalServiceResultPanel.jsx';
 import SessionMetadata from '../components/session-detail/SessionMetadata.jsx';
 import WaitingStatePanel from '../components/session-detail/WaitingStatePanel.jsx';
 import { useStudentActivityState } from '../context/StudentActivityStateContext.jsx';
@@ -22,6 +23,7 @@ export default function ActivityPage() {
   const { sessionId } = useParams();
   const [localState, dispatch] = useReducer(sessionDetailReducer, initialSessionDetailState);
   const [chatRefreshTokenByPhaseId, setChatRefreshTokenByPhaseId] = useState({});
+  const [externalServiceResults, setExternalServiceResults] = useState([]);
   const [groupIdByPhaseId, setGroupIdByPhaseId] = useState({});
   const [groupContextByPhaseId, setGroupContextByPhaseId] = useState({});
   const lastAutoSelectedPhaseIdRef = useRef(null);
@@ -130,6 +132,16 @@ export default function ActivityPage() {
   const shouldLoadActivityData = activityStatusCode >= SESSION_STATUS.inProgress;
   const isSessionFinished = activityStatusCode === SESSION_STATUS.finished;
 
+  const handleExternalServiceResult = useCallback((payload) => {
+    setExternalServiceResults((previousResults) => [
+      {
+        id: payload?.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        ...payload
+      },
+      ...previousResults
+    ].slice(0, 10));
+  }, []);
+
   useEffect(() => {
     if (!session.isAuthenticated || !selectedSession || !session.uid || !shouldLoadActivityData) {
       return;
@@ -210,7 +222,8 @@ export default function ActivityPage() {
     setChatRefreshTokenByPhaseId,
     activityCurrentPhaseId: activityState?.descriptor?.currentPhaseId,
     setGroupIdByPhaseId,
-    setGroupContextByPhaseId
+    setGroupContextByPhaseId,
+    onExternalServiceResult: handleExternalServiceResult
   });
 
   const phaseTabs = useMemo(() => {
@@ -383,6 +396,15 @@ export default function ActivityPage() {
                     onSubmitPhaseResponse={onSubmitPhaseResponse}
                     chatRefreshTokenByPhaseId={chatRefreshTokenByPhaseId}
                     userId={session.uid}
+                  />
+                  <ExternalServiceResultPanel
+                    results={externalServiceResults}
+                    t={t}
+                    onDismiss={(resultId) => {
+                      setExternalServiceResults((previousResults) => {
+                        return previousResults.filter((result) => result.id !== resultId);
+                      });
+                    }}
                   />
                 </>
               ) : null}

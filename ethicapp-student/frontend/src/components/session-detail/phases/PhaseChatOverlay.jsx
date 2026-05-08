@@ -5,6 +5,10 @@ const DEFAULT_HEIGHT_PX = 320;
 const MIN_HEIGHT_PX = 220;
 
 function resolveDisplayName(message, participantsByUserId, isAnonymous, t) {
+  if (message.authorRole === 'external_service') {
+    return message.authorName || t('sessionDetail.chatExternalAgentAuthor');
+  }
+
   if (message.authorRole === 'P') {
     return t('sessionDetail.chatTeacherAuthor');
   }
@@ -45,6 +49,7 @@ function normalizeMessage(message) {
   const authorId = Number(message?.uid ?? message?.user_id ?? message?.author_id);
   const authorName = message?.display_name ?? message?.name ?? message?.username ?? '';
   const authorRole = message?.author_role ?? message?.authorRole ?? '';
+  const externalServiceId = message?.external_service_id ?? message?.externalServiceId ?? '';
   const content = typeof message?.content === 'string' ? message.content.trim() : '';
   const createdAt = message?.date ?? message?.created_at ?? message?.createdAt ?? '';
   const parentId = Number(message?.parent_id ?? message?.parentId);
@@ -54,6 +59,7 @@ function normalizeMessage(message) {
     authorId: Number.isInteger(authorId) ? authorId : null,
     authorName: typeof authorName === 'string' ? authorName : '',
     authorRole: typeof authorRole === 'string' ? authorRole : '',
+    externalServiceId: typeof externalServiceId === 'string' ? externalServiceId : '',
     content,
     createdAt: typeof createdAt === 'string' ? createdAt : '',
     parentId: Number.isInteger(parentId) ? parentId : null

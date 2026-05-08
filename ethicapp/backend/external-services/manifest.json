@@ -12,6 +12,15 @@
         "external-service-result"
       ],
       "enabled": true
+    },
+    {
+      "id": "mock-chat-agent",
+      "description": "PoC adapter that simulates a chat agent replying to group chat messages.",
+      "adapter": "./adapters/mock-chat-agent.adapter.js",
+      "hooks": [
+        "chat-message-received"
+      ],
+      "enabled": true
     }
   ]
 }

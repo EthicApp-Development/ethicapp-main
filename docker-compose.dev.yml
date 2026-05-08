@@ -5,10 +5,21 @@ services:
     environment:
       - NODE_ENV=development
       - ETHICAPP_WATCH_FRONTEND=true
+      - EXTERNAL_MOCK_SERVICE_URL=http://external-mock-service:8510
     volumes:
       - ethicapp_frontend_node_modules:/app/frontend/node_modules
     expose:
       - "9229"
+
+  external-mock-service:
+    volumes:
+      - ./external-mock-service:/app
+      - external_mock_service_node_modules:/app/node_modules
+    command: >
+      sh -lc '
+        npm install &&
+        exec npm start
+      '
 
   auth-backend:
     env_file:
@@ -97,3 +108,4 @@ volumes:
   ethicapp_student_frontend_node_modules:
   management_console_backend_node_modules:
   management_console_frontend_node_modules:
+  external_mock_service_node_modules:
