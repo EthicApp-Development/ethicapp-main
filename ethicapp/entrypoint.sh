@@ -31,6 +31,36 @@ start_asset_watcher() {
   WATCH_PIDS="$WATCH_PIDS $!"
 }
 
+seed_canonical_activities() {
+  if [ "${ETHICAPP_SEED_CANONICAL_ACTIVITIES:-true}" != "true" ]; then
+    echo "Canonical activity seed disabled."
+    return 0
+  fi
+
+  if [ ! -f /database/seeds/canonical-activities/manifest.json ]; then
+    echo "Canonical activity seed manifest not found. Skipping seed."
+    return 0
+  fi
+
+  echo "Seeding canonical activities..."
+
+  attempts=1
+  max_attempts="${ETHICAPP_SEED_CANONICAL_ACTIVITIES_ATTEMPTS:-12}"
+
+  while [ "$attempts" -le "$max_attempts" ]; do
+    if npm run seed:canonical-activities; then
+      echo "Canonical activity seed completed."
+      return 0
+    fi
+
+    echo "Canonical activity seed attempt $attempts/$max_attempts failed."
+    attempts=$((attempts + 1))
+    sleep 5
+  done
+
+  echo "Canonical activity seed could not be completed after $max_attempts attempts. Continuing startup."
+}
+
 install_dependencies /app/backend node_modules/dotenv
 
 if [ "$NODE_ENV" = "development" ]; then
@@ -51,6 +81,8 @@ echo "NODE_ENV=${NODE_ENV}"
 
 # Decide how to run the app
 if [ "$NODE_ENV" = "development" ]; then
+  seed_canonical_activities
+
   echo "Running in development mode with nodemon..."
   trap cleanup EXIT INT TERM
   npx nodemon --inspect=0.0.0.0:9229 --nolazy ./ethicapp &
