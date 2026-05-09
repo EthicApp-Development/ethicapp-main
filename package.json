@@ -1,16 +1,16 @@
 {
   "name": "ethicapp-scripts",
-  "description": "Core node packages for developing (and initializing) the EthicApp project",
+  "description": "Repository-level development and maintenance scripts for EthicApp",
   "private": true,
   "type": "module",
   "scripts": {
     "lint-js": "npx eslint './ethicapp/**/*.js' ./ethicapp/backend/ethicapp",
-    "lint-html": "npx htmlhint './ethicapp/frontend/static/**/*.html'",
+    "lint-html": "npx htmlhint './ethicapp/frontend/assets/static/**/*.html'",
     "lint-css": "npx stylelint './ethicapp/frontend/assets/css/**/*.css'",
-    "lint-sql": "sqlfluff lint ./postgres-db/",
+    "lint-sql": "sqlfluff lint ./database/",
     "fix-js": "npx eslint --fix './ethicapp/**/*.js' ./ethicapp/backend/ethicapp",
     "fix-css": "npx stylelint --fix './ethicapp/frontend/assets/css/**/*.css'",
-    "fix-sql": "sqlfluff fix --show-lint-violations --force ./postgres-db/",
+    "fix-sql": "sqlfluff fix --show-lint-violations --force ./database/",
     "clear-sessions": "sudo rm -f -v ./ethicapp/backend/sessions/*",
     "pgdump": "./scripts/docker-pgdump.sh",
     "pgrestore": "./scripts/docker-pgrestore.sh",
@@ -19,21 +19,16 @@
     "build-and-push": "./scripts/build-and-push.sh"
   },
   "devDependencies": {
-    "esbuild": "^0.18.20",
-    "eslint": "^8.24.0",
+    "eslint": "^8.57.1",
     "eslint-plugin-angular": "^4.1.0",
-    "htmlhint": "^1.1.4",
-    "sass": "^1.63.6",
-    "stylelint": "^14.13.0",
-    "stylelint-config-prettier": "^9.0.3",
-    "stylelint-config-standard": "^28.0.0",
-    "terser": "^5.21.0"
+    "htmlhint": "^1.9.2",
+    "stylelint": "^17.11.0",
+    "stylelint-config-standard": "^40.0.0"
   },
-  "dependencies": {
-    "bcrypt": "^5.1.1",
-    "concurrently": "^9.0.1",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "linq": "^4.0.3"
+  "overrides": {
+    "brace-expansion": "^1.1.13",
+    "cross-spawn": "^7.0.6",
+    "minimatch": "^3.1.4",
+    "picomatch": "^2.3.2"
   }
 }
