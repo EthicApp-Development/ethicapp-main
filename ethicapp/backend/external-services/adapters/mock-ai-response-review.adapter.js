@@ -118,6 +118,44 @@ export async function register({ service, subscribe, publishStudentResult }) {
         const responseText = extractResponseText(context);
         const wordCount = responseText ? responseText.split(/\s+/u).length : 0;
         const review = await reverseResponseText(responseText);
+        const hasFreeText = responseText.length > 0;
+        const characterCount = review.payload?.characterCount ?? responseText.length;
+        const reviewPayload = {
+            title: "Argument tutor mock report",
+            summary: review.summary,
+            score: hasFreeText ? Math.min(1, Math.max(0.25, wordCount / 80)) : 0,
+            strengths: hasFreeText
+                ? [
+                    `The response includes ${wordCount} word(s).`,
+                    "The mock external service processed the submitted text.",
+                ]
+                : [],
+            suggestions: hasFreeText
+                ? [
+                    "Review whether the justification states a clear ethical criterion.",
+                    `The reversed mock output has ${characterCount} character(s).`,
+                ]
+                : [
+                    "Add a written justification so the argument tutor can review it.",
+                ],
+            externalMock: review.payload,
+        };
+
+        if (context.userId) {
+            await publishStudentResult({
+                userId: context.userId,
+                sessionId: context.sessionId,
+                phaseId: context.phaseId,
+                questionId: context.questionId,
+                component: {
+                    componentId: "argument-tutor-report",
+                    title: "Argument tutor mock report",
+                },
+                payload: reviewPayload,
+                message: "A mock argument tutor report is available for your response.",
+                status: review.status || "completed",
+            });
+        }
 
         await callback({
             serviceId: service.id,
@@ -128,10 +166,10 @@ export async function register({ service, subscribe, publishStudentResult }) {
                 phaseId:   context.phaseId,
                 userId:    context.userId,
                 questionId: context.questionId,
-                summary:   review.summary,
+                summary:   reviewPayload.summary,
                 analysis: {
                     wordCount,
-                    hasFreeText: responseText.length > 0,
+                    hasFreeText,
                     externalMock: review.payload,
                 },
             },

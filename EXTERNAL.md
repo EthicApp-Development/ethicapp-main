@@ -105,6 +105,12 @@ ethicapp/backend/controllers/activities/activities-student.js
 POST /activities/:id/response
 ```
 
+The `mock-ai-response-review` adapter uses this hook to demonstrate a
+student-facing result without requiring a real asynchronous provider. It sends
+the submitted free-text response to the mock service, records the callback result
+for inspection, and publishes an `argument-tutor-report` payload to the student
+who submitted the response through `publishStudentResult(...)`.
+
 The chat message hook is dispatched from:
 
 ```text
