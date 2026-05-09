@@ -1,5 +1,6 @@
 **/node_modules/
 **/package-lock.json
+**/.npm_dependency_state
 
 config/config.js
 config/keys-n-secrets.js
