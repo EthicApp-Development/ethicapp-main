@@ -7,6 +7,7 @@ import * as rpg from "../db/rest-pg.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as ViewsHelper from "../helpers/views-helper.js";
 import { teacherNotifications } from "../config/socket.config.js";
+import { moveUploadedFile, pdfUpload, removeUploadedFile } from "../middleware/upload.js";
 
 const router = express.Router();
 
@@ -522,59 +523,90 @@ router.post("/update-session", await rpg.execSQL({
 }));
 
 
-router.post("/upload-file", async (req, res) => {
-    if (
-        req.session.uid != null && req.body.title != null && req.body.title != "" &&
-        req.files.pdf != null && req.files.pdf.mimetype == "application/pdf" &&
-        req.body.sesid != null
+router.post("/upload-file", pdfUpload, async (req, res) => {
+    if (req.session.uid == null || req.body.title == null || req.body.title == "" ||
+        req.file == null || req.file.mimetype != "application/pdf" || req.body.sesid == null
     ) {
-        await rpg.execSQL({
+        await removeUploadedFile(req.file);
+        return res.end('{"status":"err"}');
+    }
+
+    try {
+        const documentIdResult = await rpg2.singleSQL({
             dbcon: pass.dbcon,
-            sql:   `
-            INSERT INTO documents(title, PATH, sesid, uploader)
-            VALUES ($1,$2,$3,$4)
+            sql: "SELECT nextval(pg_get_serial_sequence('documents', 'id')) AS id;",
+        });
+        const documentId = Number(documentIdResult.id);
+        const sessionId = Number(req.body.sesid);
+        const documentPath = `uploads/sessions/${sessionId}/documents/${documentId}.pdf`;
+
+        await moveUploadedFile(req.file, documentPath);
+
+        await rpg2.singleSQL({
+            dbcon: pass.dbcon,
+            sql: `
+                INSERT INTO documents(id, title, path, sesid, uploader)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING id;
             `,
             sqlParams: [
-                rpg.param("post", "title"), rpg.param("calc", "path"),
-                rpg.param("post", "sesid"), rpg.param("ses", "uid")
+                rpg2.param("plain", documentId),
+                rpg2.param("plain", req.body.title),
+                rpg2.param("plain", documentPath),
+                rpg2.param("plain", sessionId),
+                rpg2.param("plain", req.session.uid),
             ],
-            onStart: (ses, data, calc) => {
-                calc.path = "uploads" + req.files.pdf.file.split("uploads")[1];
-            },
-            onEnd: () => {
-            }
-        })(req, res);
-        res.end('{"status":"ok"}');
+        });
+
+        return res.end('{"status":"ok"}');
+    } catch (error) {
+        await removeUploadedFile(req.file);
+        console.error("Error uploading session document:", error);
+        return res.end('{"status":"err"}');
     }
-    res.end('{"status":"err"}');
 });
 
 
-router.post("/upload-design-file", async (req, res) => {
-    if (
-        req.session.uid != null  && req.files.pdf != null
-        && req.files.pdf.mimetype == "application/pdf"
+router.post("/upload-design-file", pdfUpload, async (req, res) => {
+    if (req.session.uid == null || req.file == null ||
+        req.file.mimetype != "application/pdf" || req.body.dsgnid == null
     ) {
-        await rpg.execSQL({
+        await removeUploadedFile(req.file);
+        return res.end('{"status":"err"}');
+    }
+
+    try {
+        const documentIdResult = await rpg2.singleSQL({
             dbcon: pass.dbcon,
-            sql:   `
-            INSERT INTO designs_documents(PATH, dsgnid, uploader)
-            VALUES ($1,$2,$3)
+            sql: "SELECT nextval(pg_get_serial_sequence('designs_documents', 'id')) AS id;",
+        });
+        const documentId = Number(documentIdResult.id);
+        const designId = Number(req.body.dsgnid);
+        const documentPath = `assets/uploads/designs/${designId}/documents/${documentId}.pdf`;
+
+        await moveUploadedFile(req.file, documentPath);
+
+        await rpg2.singleSQL({
+            dbcon: pass.dbcon,
+            sql: `
+                INSERT INTO designs_documents(id, path, dsgnid, uploader)
+                VALUES ($1, $2, $3, $4)
+                RETURNING id;
             `,
             sqlParams: [
-                rpg.param("calc", "path"), 
-                rpg.param("post", "dsgnid"), 
-                rpg.param("ses", "uid")
+                rpg2.param("plain", documentId),
+                rpg2.param("plain", documentPath),
+                rpg2.param("plain", designId),
+                rpg2.param("plain", req.session.uid),
             ],
-            onStart: (ses, data, calc) => {
-                calc.path = "assets/uploads" + req.files.pdf.file.split("uploads")[1];
-            },
-            onEnd: () => {
-            }
-        })(req, res);
-        res.end('{"status":"ok"}');
+        });
+
+        return res.end('{"status":"ok"}');
+    } catch (error) {
+        await removeUploadedFile(req.file);
+        console.error("Error uploading design document:", error);
+        return res.end('{"status":"err"}');
     }
-    res.end('{"status":"err"}');
 });
 
 
