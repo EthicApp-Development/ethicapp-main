@@ -27,8 +27,11 @@ For repository conventions and agent/human working expectations, also review [`A
   - [6. Static Assets and Builds](#6-static-assets-and-builds)
     - [6.1. Legacy EthicApp assets](#61-legacy-ethicapp-assets)
     - [6.2. React + Vite applications](#62-react--vite-applications)
-  - [7. Useful Root Scripts](#7-useful-root-scripts)
-  - [8. Production](#8-production)
+  - [7. Tests](#7-tests)
+    - [7.1. Backend tests](#71-backend-tests)
+    - [7.2. Docker build test stages](#72-docker-build-test-stages)
+  - [8. Useful Root Scripts](#8-useful-root-scripts)
+  - [9. Production](#9-production)
 
 ## 1. Developing
 
@@ -184,7 +187,41 @@ The newer frontends use React + Vite:
 
 In the Docker development flow, Vite is started by `docker-compose.dev.yml`. For focused work inside a subproject, use that subproject's local npm scripts.
 
-## 7. Useful Root Scripts
+## 7. Tests
+
+The repository is gradually adding focused automated tests around backend behavior that has been modernized or is security-sensitive. Tests currently use the built-in Node.js test runner and live beside the backend code they exercise.
+
+### 7.1. Backend tests
+
+Run focused backend suites from each service directory:
+
+```bash
+cd ethicapp/backend
+npm test
+```
+
+```bash
+cd management-console/backend
+npm test
+```
+
+Current coverage includes:
+
+- `ethicapp/backend`: upload middleware behavior for PDF validation, size limits, wrong fields, temporary cleanup, and final file moves.
+- `management-console/backend`: professor impersonation route behavior, including reCAPTCHA rejection, role rejection, and EthicApp session cookie forwarding.
+
+### 7.2. Docker build test stages
+
+The production image builds for these services run backend tests during Docker build:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml build ethicapp
+docker compose -f docker-compose.yml -f docker-compose.dev.yml build management-console
+```
+
+If those tests fail, the image build fails. This keeps the local Compose build path aligned with the minimum verification expected before merging backend changes.
+
+## 8. Useful Root Scripts
 
 The root [`package.json`](./package.json) includes helper scripts for development and maintenance:
 
@@ -203,6 +240,6 @@ The root [`package.json`](./package.json) includes helper scripts for developmen
 | `pgrestore` | Restores the containerized development database from a provided dump path. |
 | `clear-sessions` | Clears local legacy session files when needed for debugging. |
 
-## 8. Production
+## 9. Production
 
 For production deployment notes, see [`INSTALL.md`](./INSTALL.md). Production values must be provided through environment variables and should not reuse local development credentials.
