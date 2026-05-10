@@ -9,13 +9,23 @@ import {
 } from '../services/authBackend.service.js';
 import { impersonateProfessorInEthicapp } from '../services/ethicapp.service.js';
 
-const router = express.Router();
+export function createUsersRouter({
+  requireManagementRoleMiddleware = requireManagementRole,
+  getUserByIdService = getUserById,
+  listUsersService = listUsers,
+  updateUserByIdService = updateUserById,
+  verifyRecaptchaTokenService = verifyRecaptchaToken,
+  triggerForgotPasswordWithAuthBackendService = triggerForgotPasswordWithAuthBackend,
+  verifyAdminPasswordWithAuthBackendService = verifyAdminPasswordWithAuthBackend,
+  impersonateProfessorInEthicappService = impersonateProfessorInEthicapp
+} = {}) {
+  const router = express.Router();
 
-router.get('/mng/api/users', requireManagementRole, async (req, res, next) => {
+  router.get('/mng/api/users', requireManagementRoleMiddleware, async (req, res, next) => {
   try {
     const { q = '', role = '', page = '1' } = req.query;
 
-    const result = await listUsers({
+    const result = await listUsersService({
       keywords: q,
       role,
       page: Number(page),
@@ -26,11 +36,11 @@ router.get('/mng/api/users', requireManagementRole, async (req, res, next) => {
   } catch (error) {
     return next(error);
   }
-});
+  });
 
-router.get('/mng/api/users/:id', requireManagementRole, async (req, res, next) => {
+  router.get('/mng/api/users/:id', requireManagementRoleMiddleware, async (req, res, next) => {
   try {
-    const user = await getUserById(req.params.id);
+    const user = await getUserByIdService(req.params.id);
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -40,14 +50,14 @@ router.get('/mng/api/users/:id', requireManagementRole, async (req, res, next) =
   } catch (error) {
     return next(error);
   }
-});
+  });
 
-router.put('/mng/api/users/:id', requireManagementRole, async (req, res, next) => {
+  router.put('/mng/api/users/:id', requireManagementRoleMiddleware, async (req, res, next) => {
   try {
     const adminPassword = String(req.body.admin_password || '');
     const recaptchaToken = String(req.body.recaptcha_token || '');
 
-    const isHuman = await verifyRecaptchaToken({
+    const isHuman = await verifyRecaptchaTokenService({
       token: recaptchaToken,
       remoteIp: req.ip
     });
@@ -56,7 +66,7 @@ router.put('/mng/api/users/:id', requireManagementRole, async (req, res, next) =
       return res.status(400).json({ error: 'Invalid recaptcha token' });
     }
 
-    const isAdminPasswordValid = await verifyAdminPasswordWithAuthBackend({
+    const isAdminPasswordValid = await verifyAdminPasswordWithAuthBackendService({
       password: adminPassword,
       cookie: req.headers.cookie,
       language: req.headers['accept-language']
@@ -66,7 +76,7 @@ router.put('/mng/api/users/:id', requireManagementRole, async (req, res, next) =
       return res.status(401).json({ error: 'Invalid administrator password' });
     }
 
-    const updatedUser = await updateUserById(req.params.id, req.body);
+    const updatedUser = await updateUserByIdService(req.params.id, req.body);
     return res.status(200).json(updatedUser);
   } catch (error) {
     const errorsByCode = {
@@ -88,11 +98,11 @@ router.put('/mng/api/users/:id', requireManagementRole, async (req, res, next) =
 
     return next(error);
   }
-});
+  });
 
-router.post('/mng/api/users/:id/password-reset', requireManagementRole, async (req, res, next) => {
+  router.post('/mng/api/users/:id/password-reset', requireManagementRoleMiddleware, async (req, res, next) => {
   try {
-    const user = await getUserById(req.params.id);
+    const user = await getUserByIdService(req.params.id);
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -105,7 +115,7 @@ router.post('/mng/api/users/:id/password-reset', requireManagementRole, async (r
     const adminPassword = String(req.body.admin_password || '');
     const recaptchaToken = String(req.body.recaptcha_token || '');
 
-    const isAdminPasswordValid = await verifyAdminPasswordWithAuthBackend({
+    const isAdminPasswordValid = await verifyAdminPasswordWithAuthBackendService({
       password: adminPassword,
       cookie: req.headers.cookie,
       language: req.headers['accept-language']
@@ -115,7 +125,7 @@ router.post('/mng/api/users/:id/password-reset', requireManagementRole, async (r
       return res.status(401).json({ error: 'Invalid administrator password' });
     }
 
-    await triggerForgotPasswordWithAuthBackend({
+    await triggerForgotPasswordWithAuthBackendService({
       email: user.email,
       recaptchaToken,
       cookie: req.headers.cookie,
@@ -134,11 +144,11 @@ router.post('/mng/api/users/:id/password-reset', requireManagementRole, async (r
 
     return next(error);
   }
-});
+  });
 
-router.post('/mng/api/users/:id/impersonate-professor', requireManagementRole, async (req, res, next) => {
+  router.post('/mng/api/users/:id/impersonate-professor', requireManagementRoleMiddleware, async (req, res, next) => {
   try {
-    const user = await getUserById(req.params.id);
+    const user = await getUserByIdService(req.params.id);
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -151,7 +161,7 @@ router.post('/mng/api/users/:id/impersonate-professor', requireManagementRole, a
     const adminPassword = String(req.body.admin_password || '');
     const recaptchaToken = String(req.body.recaptcha_token || '');
 
-    const isHuman = await verifyRecaptchaToken({
+    const isHuman = await verifyRecaptchaTokenService({
       token: recaptchaToken,
       remoteIp: req.ip
     });
@@ -160,7 +170,7 @@ router.post('/mng/api/users/:id/impersonate-professor', requireManagementRole, a
       return res.status(400).json({ error: 'Invalid recaptcha token' });
     }
 
-    const isAdminPasswordValid = await verifyAdminPasswordWithAuthBackend({
+    const isAdminPasswordValid = await verifyAdminPasswordWithAuthBackendService({
       password: adminPassword,
       cookie: req.headers.cookie,
       language: req.headers['accept-language']
@@ -170,15 +180,24 @@ router.post('/mng/api/users/:id/impersonate-professor', requireManagementRole, a
       return res.status(401).json({ error: 'Invalid administrator password' });
     }
 
-    const response = await impersonateProfessorInEthicapp({
+    const response = await impersonateProfessorInEthicappService({
       professorId: user.id,
-      cookie: req.headers.cookie
+      cookie: req.headers.cookie,
+      userId: req.session.uid,
+      userRole: req.session.role
     });
 
-    return res.status(200).json(response);
+    for (const setCookie of response.setCookies) {
+      res.append('Set-Cookie', setCookie);
+    }
+
+    return res.status(200).json(response.body);
   } catch (error) {
     return next(error);
   }
-});
+  });
 
-export default router;
+  return router;
+}
+
+export default createUsersRouter();
