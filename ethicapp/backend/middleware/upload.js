@@ -8,6 +8,7 @@ const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
 const PDF_MIME_TYPES = new Set(["application/pdf"]);
 const IMAGE_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/jpg"]);
 const uploadsRoot = path.resolve(process.cwd(), config.uploadsPath);
+const temporaryUploadsRoot = path.join(uploadsRoot, "tmp");
 
 function sanitizeFilename(filename) {
     return path.basename(filename || "upload").replace(/[^\w.-]/g, "_");
@@ -17,7 +18,7 @@ function createStorage() {
     return multer.diskStorage({
         destination(req, file, callback) {
             const uploadId = crypto.randomUUID();
-            const destination = path.join(uploadsRoot, "tmp", uploadId, file.fieldname);
+            const destination = path.join(temporaryUploadsRoot, uploadId, file.fieldname);
 
             fs.mkdir(destination, { recursive: true }, (error) => {
                 callback(error, destination);
@@ -95,18 +96,45 @@ export async function moveUploadedFile(uploadedFile, publicPath) {
     return publicPath;
 }
 
+function isInsideDirectory(candidatePath, parentDirectory) {
+    const relativePath = path.relative(parentDirectory, candidatePath);
+    return relativePath && !relativePath.startsWith("..") && !path.isAbsolute(relativePath);
+}
+
+async function pruneEmptyTemporaryDirectories(startDirectory) {
+    let currentDirectory = path.resolve(startDirectory);
+
+    while (isInsideDirectory(currentDirectory, temporaryUploadsRoot)) {
+        try {
+            await fs.promises.rmdir(currentDirectory);
+        } catch (error) {
+            if (error.code !== "ENOENT" && error.code !== "ENOTEMPTY") {
+                console.warn("Unable to remove empty temporary upload directory:", error);
+            }
+            return;
+        }
+
+        currentDirectory = path.dirname(currentDirectory);
+    }
+}
+
 export async function removeUploadedFile(uploadedFile) {
     if (!uploadedFile?.path) {
         return;
     }
 
+    const uploadedFilePath = path.resolve(uploadedFile.path);
+
     try {
-        await fs.promises.unlink(uploadedFile.path);
+        await fs.promises.unlink(uploadedFilePath);
     } catch (error) {
         if (error.code !== "ENOENT") {
             console.warn("Unable to remove temporary uploaded file:", error);
+            return;
         }
     }
+
+    await pruneEmptyTemporaryDirectories(path.dirname(uploadedFilePath));
 }
 
 export const pdfUpload = withUpload(createUpload(PDF_MIME_TYPES).single("pdf"));
