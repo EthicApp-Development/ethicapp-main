@@ -1,3 +1,11 @@
+FROM node:24 AS backend-test
+
+WORKDIR /app/backend
+COPY backend/package*.json ./
+RUN npm ci
+COPY backend ./
+RUN npm test && touch /tmp/backend-tests-passed
+
 FROM node:24
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -8,6 +16,9 @@ WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends imagemagick \
     && rm -rf /var/lib/apt/lists/*
+
+COPY --from=backend-test /tmp/backend-tests-passed /tmp/backend-tests-passed
+RUN rm /tmp/backend-tests-passed
 
 # Application files
 COPY backend /app/backend
