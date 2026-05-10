@@ -2,12 +2,12 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import multer from "multer";
-import * as config from "../config/config.js";
+import { uploadsPath } from "../config/uploads.config.js";
 
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
 const PDF_MIME_TYPES = new Set(["application/pdf"]);
 const IMAGE_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/jpg"]);
-const uploadsRoot = path.resolve(process.cwd(), config.uploadsPath);
+const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
 const temporaryUploadsRoot = path.join(uploadsRoot, "tmp");
 
 function sanitizeFilename(filename) {
