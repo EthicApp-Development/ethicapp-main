@@ -1,8 +1,11 @@
 **/node_modules/
 **/package-lock.json
+!package-lock.json
+**/.npm_dependency_state
 
 config/config.js
 config/keys-n-secrets.js
 node_modules/
 package-lock.json
+!package-lock.json
 sessions/

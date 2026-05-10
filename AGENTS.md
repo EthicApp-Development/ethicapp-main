@@ -43,6 +43,18 @@ Common build command for service images:
 docker compose build
 ```
 
+Some service image builds run backend tests as part of their Dockerfile stages. In particular:
+
+- `docker compose build ethicapp` runs `npm test` in `ethicapp/backend` before building the final image.
+- `docker compose build management-console` runs `npm test` in `management-console/backend` before building the final image.
+
+Focused backend test commands:
+
+```bash
+cd ethicapp/backend && npm test
+cd management-console/backend && npm test
+```
+
 Common repository-level commands (run from repository root when available):
 
 ```bash
@@ -56,6 +68,8 @@ npm run fix-sql
 ```
 
 If a subproject has its own scripts, run its local build/test/lint commands from that subproject directory.
+
+When adding or changing backend behavior in `ethicapp/` or `management-console/`, prefer adding focused Node test coverage under the local backend test conventions (`*.node-test.mjs`). Keep tests deterministic, avoid depending on local-only config files, and make them safe to run both on the host and inside Docker build stages.
 
 ## 4) Engineering conventions and PR expectations
 
@@ -97,7 +111,9 @@ A change is considered done when:
 Minimum verification checklist:
 
 - Build succeeds for modified services/apps.
+- Docker image builds pass for services whose Dockerfiles include test stages.
 - Lint succeeds for modified languages/components.
+- Focused tests pass for modified backend behavior.
 - Core endpoint flows and helper logic paths are validated with basic cases.
 - Any known limitations are explicitly documented in the PR.
 

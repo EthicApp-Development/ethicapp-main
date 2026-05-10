@@ -15,13 +15,29 @@ install_dependencies() {
 
   cd "$directory"
 
-  if [ ! -d "$dependency_path" ]; then
+  dependency_state_file=".npm_dependency_state"
+  current_dependency_state="$(
+    {
+      sha256sum package.json
+      if [ -f package-lock.json ]; then
+        sha256sum package-lock.json
+      fi
+    } | sha256sum | cut -d ' ' -f 1
+  )"
+  installed_dependency_state=""
+
+  if [ -f "$dependency_state_file" ]; then
+    installed_dependency_state="$(cat "$dependency_state_file")"
+  fi
+
+  if [ ! -d "$dependency_path" ] || [ "$installed_dependency_state" != "$current_dependency_state" ]; then
     echo "Installing dependencies in $directory..."
     if [ -f package-lock.json ]; then
       npm ci
     else
       npm install
     fi
+    echo "$current_dependency_state" > "$dependency_state_file"
   fi
 }
 

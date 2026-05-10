@@ -26,6 +26,8 @@ services:
       - ./ethicapp/.env
     environment:
       - EXTERNAL_MOCK_SERVICE_URL=http://external-mock-service:8510
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     expose:
       - "8501"
     volumes:
@@ -33,7 +35,6 @@ services:
       - ./database/seeds:/database/seeds
       - ethicapp_node_modules:/app/backend/node_modules
       - uploads:/app/backend/uploads
-      - sessions:/app/backend/sessions
     depends_on:
       - postgresql
       - redis
@@ -73,10 +74,13 @@ services:
       - ./auth-backend/.env
     environment:
       - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     expose:
       - "8502"
     depends_on:
       - postgresql
+      - redis
 
   management-console:
     build:
@@ -113,6 +117,5 @@ services:
 
 volumes:
   ethicapp_node_modules:
-  sessions:
   pgdata:
   uploads:

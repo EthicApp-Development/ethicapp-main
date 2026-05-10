@@ -8,12 +8,10 @@ import cors from "cors";
 import logger from "morgan";
 import cookieParser from "cookie-parser";
 
-import busboy from "express-busboy";
 import assetVersions from "express-asset-versions";
 
 import session from "express-session";
-import { default as fileStoreFactory } from "session-file-store"; 
-const FileStore = fileStoreFactory(session);
+import { createLegacySessionStore } from "./db/session-redis.js";
 
 import user_profile from "./controllers/users/user-profile.js";
 import impersonation from "./controllers/users/impersonation.js";
@@ -102,30 +100,25 @@ logger.token("utc-date", function () {
 
 app.use(logger("[:utc-date | EthicApp] :method :url :status - :response-time ms"));
 
-// Setup busboy for uploads
-busboy.extend(app, {
-    upload:        true,
-    mimeTypeLimit: ["application/pdf", "image/png", "image/jpeg", "image/jpg"],
-    path:          config.uploadsPath,
-    limits:        { fileSize: 5*1024*1024 }
-});
-
 // Static path for frontend files
 app.use(express.static(path.join(__dirname, "../frontend")));
 
 // Set up cookies and session management
 app.use(cookieParser());
 app.use(session({
-    store: new FileStore({
-        path:     path.join(__dirname, "/sessions"),
-        retries:  0,
-        logFn:    function(msg) { console.log("FileStore Log:", msg); },
-        fileMode: 0o600,
-    }),
+    store:             createLegacySessionStore(),
+    name:              process.env.ETHICAPP_SESSION_COOKIE_NAME || "ethicapp.sid",
     secret:            process.env.SESSION_SECRET || "legacy-dev-secret",
     resave:            false,
     saveUninitialized: false,
-    cookie:            { maxAge: 24 * 60 * 60 * 1000 } // Cookie para 1 día
+    cookie:            {
+        httpOnly: true,
+        secure:   process.env.ETHICAPP_SESSION_COOKIE_SECURE
+            ? process.env.ETHICAPP_SESSION_COOKIE_SECURE === "true"
+            : process.env.NODE_ENV === "production",
+        sameSite: process.env.ETHICAPP_SESSION_COOKIE_SAMESITE || "lax",
+        maxAge:   Number(process.env.ETHICAPP_SESSION_COOKIE_MAX_AGE_MS || 24 * 60 * 60 * 1000),
+    },
 }));
 
 app.use(hydrateLegacySession);

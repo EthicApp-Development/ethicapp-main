@@ -1,7 +1,6 @@
 ---
 extends:
   - stylelint-config-standard
-  - stylelint-config-prettier
 ignoreFiles:
   # Ignoring libraries
   - "**/*.js"
@@ -12,9 +11,6 @@ ignoreFiles:
   - "ethicapp/frontend/assets/css/minimal.css"
   - "ethicapp/frontend/assets/css/assets-bundle.css"
 rules:
-  indentation: 4
-  linebreaks: unix
-  max-empty-lines: 3
   color-no-invalid-hex: true
   color-function-notation: modern
   no-duplicate-selectors: true

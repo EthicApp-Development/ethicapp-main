@@ -1,29 +1,12 @@
 "use strict";
 
 import express from "express";
-import path from "path";
 import * as config from "../config/config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { requireRole } from "../helpers/auth-helper.js";
+import { moveUploadedFile, pdfUpload, removeUploadedFile } from "../middleware/upload.js";
 
 const router = express.Router();
-
-function buildPublicUploadPath(uploadedFilePath) {
-    if (!uploadedFilePath || typeof uploadedFilePath !== "string") {
-        return null;
-    }
-
-    const normalizedPath = path.normalize(uploadedFilePath).replaceAll("\\", "/");
-    const uploadPathMatch = normalizedPath.match(/(?:^|\/)uploads\/(.+)$/);
-
-    if (!uploadPathMatch) {
-        return null;
-    }
-
-    const relativeToUploads = uploadPathMatch[1];
-
-    return `/uploads/${relativeToUploads}`;
-}
 
 function normalizeCase(row) {
     return {
@@ -37,6 +20,11 @@ function normalizeCase(row) {
         createdAt: row.created_at,
         updatedAt: row.updated_at,
     };
+}
+
+function parseCaseId(id) {
+    const caseId = Number(id);
+    return Number.isSafeInteger(caseId) && caseId > 0 ? caseId : null;
 }
 
 router.get("/cases", async (req, res) => {
@@ -64,42 +52,6 @@ router.get("/cases", async (req, res) => {
     } catch (error) {
         console.error("Error fetching cases:", error);
         return res.status(500).json({ status: "err", message: "Failed to load cases." });
-    }
-});
-
-router.get("/cases/:id(\\d+)", async (req, res) => {
-    if (!requireRole(req, res, "P")) {
-        return;
-    }
-
-    const caseId = Number(req.params.id);
-    if (!Number.isInteger(caseId)) {
-        return res.status(400).json({ status: "err", message: "Invalid case id." });
-    }
-
-    try {
-        const caseObj = await rpg2.singleSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                SELECT id, title, author_firstname, author_lastname, author_email,
-                       pdf_path, creator, created_at, updated_at
-                FROM ethical_cases
-                WHERE id = $1 AND creator = $2;
-            `,
-            sqlParams: [
-                rpg2.param("plain", caseId),
-                rpg2.param("plain", req.session.uid),
-            ],
-        });
-
-        if (!caseObj || !caseObj.id) {
-            return res.status(404).json({ status: "err", message: "Case not found." });
-        }
-
-        return res.status(200).json({ status: "ok", result: normalizeCase(caseObj) });
-    } catch (error) {
-        console.error("Error retrieving case by id:", error);
-        return res.status(500).json({ status: "err", message: "Failed to load case." });
     }
 });
 
@@ -139,13 +91,13 @@ router.get("/cases/search", async (req, res) => {
     }
 });
 
-router.get("/cases/:id(\\d+)/download-link", async (req, res) => {
+router.get("/cases/:id/download-link", async (req, res) => {
     if (!requireRole(req, res, ["P", "A"])) {
         return;
     }
 
-    const caseId = Number(req.params.id);
-    if (!Number.isInteger(caseId)) {
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
         return res.status(400).json({ status: "err", message: "Invalid case id." });
     }
 
@@ -177,7 +129,43 @@ router.get("/cases/:id(\\d+)/download-link", async (req, res) => {
     }
 });
 
-router.post("/cases", async (req, res) => {
+router.get("/cases/:id", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
+        return res.status(400).json({ status: "err", message: "Invalid case id." });
+    }
+
+    try {
+        const caseObj = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT id, title, author_firstname, author_lastname, author_email,
+                       pdf_path, creator, created_at, updated_at
+                FROM ethical_cases
+                WHERE id = $1 AND creator = $2;
+            `,
+            sqlParams: [
+                rpg2.param("plain", caseId),
+                rpg2.param("plain", req.session.uid),
+            ],
+        });
+
+        if (!caseObj || !caseObj.id) {
+            return res.status(404).json({ status: "err", message: "Case not found." });
+        }
+
+        return res.status(200).json({ status: "ok", result: normalizeCase(caseObj) });
+    } catch (error) {
+        console.error("Error retrieving case by id:", error);
+        return res.status(500).json({ status: "err", message: "Failed to load case." });
+    }
+});
+
+router.post("/cases", pdfUpload, async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
     }
@@ -190,31 +178,35 @@ router.post("/cases", async (req, res) => {
     } = req.body;
 
     if (!title || !authorFirstname || !authorLastname || !authorEmail) {
+        await removeUploadedFile(req.file);
         return res.status(400).json({ status: "err", message: "Missing required fields." });
     }
 
-    if (!req.files?.pdf || req.files.pdf.mimetype !== "application/pdf") {
+    if (!req.file || req.file.mimetype !== "application/pdf") {
         return res.status(400).json({ status: "err", message: "A PDF file is required." });
     }
 
     try {
-        const pdfPath = buildPublicUploadPath(req.files.pdf.file);
-
-        if (!pdfPath) {
-            return res.status(500).json({ status: "err", message: "Failed to persist PDF path." });
-        }
+        const caseIdResult = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: "SELECT nextval(pg_get_serial_sequence('ethical_cases', 'id')) AS id;",
+        });
+        const caseId = Number(caseIdResult.id);
+        const pdfPath = `/uploads/cases/${caseId}/case.pdf`;
+        await moveUploadedFile(req.file, pdfPath);
 
         const createdCase = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
                 INSERT INTO ethical_cases
-                    (title, author_firstname, author_lastname, author_email, pdf_path, creator)
+                    (id, title, author_firstname, author_lastname, author_email, pdf_path, creator)
                 VALUES
-                    ($1, $2, $3, $4, $5, $6)
+                    ($1, $2, $3, $4, $5, $6, $7)
                 RETURNING id, title, author_firstname, author_lastname, author_email,
                           pdf_path, creator, created_at, updated_at;
             `,
             sqlParams: [
+                rpg2.param("plain", caseId),
                 rpg2.param("plain", title),
                 rpg2.param("plain", authorFirstname),
                 rpg2.param("plain", authorLastname),
@@ -226,18 +218,19 @@ router.post("/cases", async (req, res) => {
 
         return res.status(201).json({ status: "ok", result: normalizeCase(createdCase) });
     } catch (error) {
+        await removeUploadedFile(req.file);
         console.error("Error creating case:", error);
         return res.status(500).json({ status: "err", message: "Failed to create case." });
     }
 });
 
-router.patch("/cases/:id(\\d+)", async (req, res) => {
+router.patch("/cases/:id", pdfUpload, async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
     }
 
-    const caseId = Number(req.params.id);
-    if (!Number.isInteger(caseId)) {
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
         return res.status(400).json({ status: "err", message: "Invalid case id." });
     }
 
@@ -249,6 +242,7 @@ router.patch("/cases/:id(\\d+)", async (req, res) => {
     } = req.body;
 
     if (!title || !authorFirstname || !authorLastname || !authorEmail) {
+        await removeUploadedFile(req.file);
         return res.status(400).json({ status: "err", message: "Missing required fields." });
     }
 
@@ -260,16 +254,12 @@ router.patch("/cases/:id(\\d+)", async (req, res) => {
         });
 
         if (!existingCase || !existingCase.id) {
+            await removeUploadedFile(req.file);
             return res.status(404).json({ status: "err", message: "Case not found." });
         }
 
-        const hasPdf = req.files?.pdf && req.files.pdf.mimetype === "application/pdf";
-        const uploadedPdfPath = hasPdf ? buildPublicUploadPath(req.files.pdf.file) : null;
-        const pdfPath = hasPdf ? uploadedPdfPath : existingCase.pdf_path;
-
-        if (hasPdf && !pdfPath) {
-            return res.status(500).json({ status: "err", message: "Failed to persist PDF path." });
-        }
+        const hasPdf = req.file && req.file.mimetype === "application/pdf";
+        const pdfPath = hasPdf ? `/uploads/cases/${caseId}/case.pdf` : existingCase.pdf_path;
 
         const updatedCase = await rpg2.singleSQL({
             dbcon: config.dbconnString,
@@ -296,20 +286,25 @@ router.patch("/cases/:id(\\d+)", async (req, res) => {
             ],
         });
 
+        if (hasPdf) {
+            await moveUploadedFile(req.file, pdfPath);
+        }
+
         return res.status(200).json({ status: "ok", result: normalizeCase(updatedCase) });
     } catch (error) {
+        await removeUploadedFile(req.file);
         console.error("Error updating case:", error);
         return res.status(500).json({ status: "err", message: "Failed to update case." });
     }
 });
 
-router.delete("/cases/:id(\\d+)", async (req, res) => {
+router.delete("/cases/:id", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
     }
 
-    const caseId = Number(req.params.id);
-    if (!Number.isInteger(caseId)) {
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
         return res.status(400).json({ status: "err", message: "Invalid case id." });
     }
 
