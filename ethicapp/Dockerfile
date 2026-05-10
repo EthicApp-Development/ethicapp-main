@@ -24,9 +24,8 @@ RUN cd /app/frontend \
     && /app/scripts/build-frontend-assets.sh \
     && rm -rf /app/frontend/node_modules
 
-# Crear directorios persistentes
-RUN mkdir -p /app/backend/uploads /app/backend/sessions \
-    && chmod 777 /app/backend/uploads \
-    && chmod 755 /app/backend/sessions
+# Persistent upload directory
+RUN mkdir -p /app/backend/uploads \
+    && chmod 777 /app/backend/uploads
 
 ENTRYPOINT ["/app/entrypoint.sh"]

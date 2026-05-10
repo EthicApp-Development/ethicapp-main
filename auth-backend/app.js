@@ -5,6 +5,7 @@ const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 
 const userService = require('./services/user.service');
+const { createSessionStore } = require('./services/session-store.service');
 
 const viewRoutes = require('./routes/view.routes');
 const authRoutes = require('./routes/auth.routes');
@@ -41,6 +42,7 @@ app.use(express.static(path.join(__dirname, 'public', 'app')));
 // --------------------------------------------------
 app.use(
   session({
+    store: createSessionStore(),
     name: process.env.SESSION_COOKIE_NAME || 'auth.sid',
     secret: process.env.SESSION_SECRET,
     resave: false,
@@ -48,9 +50,11 @@ app.use(
     rolling: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 1000 * 60 * 60 * 8 // 8 hours
+      secure: process.env.SESSION_COOKIE_SECURE
+        ? process.env.SESSION_COOKIE_SECURE === 'true'
+        : process.env.NODE_ENV === 'production',
+      sameSite: process.env.SESSION_COOKIE_SAMESITE || 'lax',
+      maxAge: Number(process.env.AUTH_SESSION_COOKIE_MAX_AGE_MS || 1000 * 60 * 60 * 8)
     }
   })
 );
