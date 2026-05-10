@@ -105,15 +105,6 @@ router.post('/mng/api/users/:id/password-reset', requireManagementRole, async (r
     const adminPassword = String(req.body.admin_password || '');
     const recaptchaToken = String(req.body.recaptcha_token || '');
 
-    const isHuman = await verifyRecaptchaToken({
-      token: recaptchaToken,
-      remoteIp: req.ip
-    });
-
-    if (!isHuman) {
-      return res.status(400).json({ error: 'Invalid recaptcha token' });
-    }
-
     const isAdminPasswordValid = await verifyAdminPasswordWithAuthBackend({
       password: adminPassword,
       cookie: req.headers.cookie,
