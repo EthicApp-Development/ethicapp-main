@@ -22,6 +22,11 @@ function normalizeCase(row) {
     };
 }
 
+function parseCaseId(id) {
+    const caseId = Number(id);
+    return Number.isSafeInteger(caseId) && caseId > 0 ? caseId : null;
+}
+
 router.get("/cases", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
@@ -47,42 +52,6 @@ router.get("/cases", async (req, res) => {
     } catch (error) {
         console.error("Error fetching cases:", error);
         return res.status(500).json({ status: "err", message: "Failed to load cases." });
-    }
-});
-
-router.get("/cases/:id(\\d+)", async (req, res) => {
-    if (!requireRole(req, res, "P")) {
-        return;
-    }
-
-    const caseId = Number(req.params.id);
-    if (!Number.isInteger(caseId)) {
-        return res.status(400).json({ status: "err", message: "Invalid case id." });
-    }
-
-    try {
-        const caseObj = await rpg2.singleSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                SELECT id, title, author_firstname, author_lastname, author_email,
-                       pdf_path, creator, created_at, updated_at
-                FROM ethical_cases
-                WHERE id = $1 AND creator = $2;
-            `,
-            sqlParams: [
-                rpg2.param("plain", caseId),
-                rpg2.param("plain", req.session.uid),
-            ],
-        });
-
-        if (!caseObj || !caseObj.id) {
-            return res.status(404).json({ status: "err", message: "Case not found." });
-        }
-
-        return res.status(200).json({ status: "ok", result: normalizeCase(caseObj) });
-    } catch (error) {
-        console.error("Error retrieving case by id:", error);
-        return res.status(500).json({ status: "err", message: "Failed to load case." });
     }
 });
 
@@ -122,13 +91,13 @@ router.get("/cases/search", async (req, res) => {
     }
 });
 
-router.get("/cases/:id(\\d+)/download-link", async (req, res) => {
+router.get("/cases/:id/download-link", async (req, res) => {
     if (!requireRole(req, res, ["P", "A"])) {
         return;
     }
 
-    const caseId = Number(req.params.id);
-    if (!Number.isInteger(caseId)) {
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
         return res.status(400).json({ status: "err", message: "Invalid case id." });
     }
 
@@ -157,6 +126,42 @@ router.get("/cases/:id(\\d+)/download-link", async (req, res) => {
     } catch (error) {
         console.error("Error retrieving case download link:", error);
         return res.status(500).json({ status: "err", message: "Failed to load case file link." });
+    }
+});
+
+router.get("/cases/:id", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
+        return res.status(400).json({ status: "err", message: "Invalid case id." });
+    }
+
+    try {
+        const caseObj = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT id, title, author_firstname, author_lastname, author_email,
+                       pdf_path, creator, created_at, updated_at
+                FROM ethical_cases
+                WHERE id = $1 AND creator = $2;
+            `,
+            sqlParams: [
+                rpg2.param("plain", caseId),
+                rpg2.param("plain", req.session.uid),
+            ],
+        });
+
+        if (!caseObj || !caseObj.id) {
+            return res.status(404).json({ status: "err", message: "Case not found." });
+        }
+
+        return res.status(200).json({ status: "ok", result: normalizeCase(caseObj) });
+    } catch (error) {
+        console.error("Error retrieving case by id:", error);
+        return res.status(500).json({ status: "err", message: "Failed to load case." });
     }
 });
 
@@ -219,13 +224,13 @@ router.post("/cases", pdfUpload, async (req, res) => {
     }
 });
 
-router.patch("/cases/:id(\\d+)", pdfUpload, async (req, res) => {
+router.patch("/cases/:id", pdfUpload, async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
     }
 
-    const caseId = Number(req.params.id);
-    if (!Number.isInteger(caseId)) {
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
         return res.status(400).json({ status: "err", message: "Invalid case id." });
     }
 
@@ -293,13 +298,13 @@ router.patch("/cases/:id(\\d+)", pdfUpload, async (req, res) => {
     }
 });
 
-router.delete("/cases/:id(\\d+)", async (req, res) => {
+router.delete("/cases/:id", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
     }
 
-    const caseId = Number(req.params.id);
-    if (!Number.isInteger(caseId)) {
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
         return res.status(400).json({ status: "err", message: "Invalid case id." });
     }
 
