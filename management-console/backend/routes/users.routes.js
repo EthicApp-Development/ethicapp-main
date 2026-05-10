@@ -172,10 +172,16 @@ router.post('/mng/api/users/:id/impersonate-professor', requireManagementRole, a
 
     const response = await impersonateProfessorInEthicapp({
       professorId: user.id,
-      cookie: req.headers.cookie
+      cookie: req.headers.cookie,
+      userId: req.session.uid,
+      userRole: req.session.role
     });
 
-    return res.status(200).json(response);
+    for (const setCookie of response.setCookies) {
+      res.append('Set-Cookie', setCookie);
+    }
+
+    return res.status(200).json(response.body);
   } catch (error) {
     return next(error);
   }
