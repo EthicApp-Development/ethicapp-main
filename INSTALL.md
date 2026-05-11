@@ -4,6 +4,22 @@ The production deployment strategy is being redesigned around immutable Docker i
 
 This document covers the current image publishing flow for GitHub Container Registry (GHCR).
 
+## Configuration Contract
+
+EthicApp's canonical environment-variable contract lives in [`config/env.contract.yml`](./config/env.contract.yml). Deployment repositories should consume that file from the same git tag as the images being deployed, then provide environment-specific values and secrets.
+
+The deployment repository should not redefine the variable catalog from scratch. Instead, it should:
+
+1. Select an EthicApp release tag.
+2. Fetch `config/env.contract.yml` from that tag.
+3. Validate environment-specific values against the contract.
+4. Render the concrete `.env` files needed by the target runtime.
+5. Deploy image tags built from the same EthicApp release tag.
+
+See [`config/README.md`](./config/README.md) for the contract usage model.
+
+Pay special attention to `VITE_*` variables. They are public frontend variables and are read when Vite builds frontend assets, not when a container starts. EthicApp uses a per-environment image strategy for these values: build and tag images with the intended public values for the target environment.
+
 ## Publishable Images
 
 The repository can build and publish these project images:
