@@ -1,5 +1,5 @@
-const { createClient } = require('redis');
-const RedisStore = require('connect-redis').default;
+import { createClient } from 'redis';
+import RedisStore from 'connect-redis';
 
 function createSessionRedisClient() {
   const host = process.env.REDIS_HOST || '127.0.0.1';
@@ -31,6 +31,4 @@ function createSessionStore() {
   });
 }
 
-module.exports = {
-  createSessionStore
-};
+export { createSessionStore };

@@ -1,7 +1,10 @@
-const express = require('express');
-const path = require('path');
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import express from 'express';
 
 const router = express.Router();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const spaIndexPath = path.join(__dirname, '..', 'public', 'app', 'index.html');
 
 router.get('/', (req, res) => {
@@ -24,4 +27,4 @@ router.get('/reset-password', (req, res) => {
   res.sendFile(spaIndexPath);
 });
 
-module.exports = router;
+export default router;
