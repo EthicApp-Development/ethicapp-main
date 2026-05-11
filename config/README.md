@@ -25,3 +25,8 @@ Vite reads `VITE_*` variables when frontend assets are built, so EthicApp uses a
 per-environment image strategy for production deployments. The deployment pipeline
 must build and tag images with the intended public values for the target environment
 instead of expecting those values to change when a container starts.
+
+Redis is role-specific in production. Use `REDIS_SESSION_*` for Express session
+storage and `REDIS_CACHE_*` for database-derived cache entries. Development may map
+both roles to the same Redis instance. The default production memory limits are
+`REDIS_SESSION_MAXMEMORY=128mb` and `REDIS_CACHE_MAXMEMORY=256mb`.

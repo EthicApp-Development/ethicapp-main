@@ -25,8 +25,10 @@ services:
       - ./.env
       - ./ethicapp/.env
     environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - REDIS_SESSION_HOST=redis
+      - REDIS_SESSION_PORT=6379
+      - REDIS_CACHE_HOST=redis-cache
+      - REDIS_CACHE_PORT=6379
     expose:
       - "8501"
     volumes:
@@ -62,8 +64,8 @@ services:
       - ./auth-backend/.env
     environment:
       - NODE_ENV=production
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - REDIS_SESSION_HOST=redis
+      - REDIS_SESSION_PORT=6379
     expose:
       - "8502"
     depends_on:
@@ -101,7 +103,19 @@ services:
 
   redis:
     container_name: ethicapp-redis
-    image: redis:alpine      
+    image: redis:alpine
+    command: >
+      sh -c 'exec redis-server
+      --maxmemory "${REDIS_SESSION_MAXMEMORY:-128mb}"
+      --maxmemory-policy "${REDIS_SESSION_MAXMEMORY_POLICY:-volatile-ttl}"'
+
+  redis-cache:
+    container_name: ethicapp-redis-cache
+    image: redis:alpine
+    command: >
+      sh -c 'exec redis-server
+      --maxmemory "${REDIS_CACHE_MAXMEMORY:-256mb}"
+      --maxmemory-policy "${REDIS_CACHE_MAXMEMORY_POLICY:-allkeys-lru}"'
 
 volumes:
   ethicapp_node_modules:

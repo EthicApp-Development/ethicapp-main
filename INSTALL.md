@@ -20,6 +20,35 @@ See [`config/README.md`](./config/README.md) for the contract usage model.
 
 Pay special attention to `VITE_*` variables. They are public frontend variables and are read when Vite builds frontend assets, not when a container starts. EthicApp uses a per-environment image strategy for these values: build and tag images with the intended public values for the target environment.
 
+## Redis Topology
+
+Production deployments use two Redis instances:
+
+- `redis`: Express session storage for `ethicapp` and `auth-backend`.
+- `redis-cache`: database-derived cache entries used by the legacy `ethicapp` application.
+
+Development keeps a single Redis instance. In development, both `REDIS_SESSION_*` and `REDIS_CACHE_*` point to the same `redis` service.
+
+Use role-specific variables in deployment environments:
+
+```bash
+REDIS_SESSION_HOST=redis
+REDIS_SESSION_PORT=6379
+REDIS_CACHE_HOST=redis-cache
+REDIS_CACHE_PORT=6379
+```
+
+Set Redis container memory limits through the Compose environment:
+
+```bash
+REDIS_SESSION_MAXMEMORY=128mb
+REDIS_SESSION_MAXMEMORY_POLICY=volatile-ttl
+REDIS_CACHE_MAXMEMORY=256mb
+REDIS_CACHE_MAXMEMORY_POLICY=allkeys-lru
+```
+
+The older `REDIS_HOST`, `REDIS_PORT`, and `REDIS_URL` variables remain as fallbacks for local development and backwards compatibility.
+
 ## Publishable Images
 
 The repository can build and publish these project images:
