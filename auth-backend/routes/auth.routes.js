@@ -1,12 +1,12 @@
-const express = require('express');
-const bcrypt = require('bcrypt');
-const crypto = require('crypto');
+import crypto from 'node:crypto';
+import express from 'express';
+import bcrypt from 'bcrypt';
 
-const db = require('../config/database');
-const mailService = require('../services/mail.service');
-const recaptchaService = require('../services/recaptcha.service');
-const authMessages = require('../i18n/messages/auth-messages');
-const { inferPreferredLocaleFromRequest, normalizePreferredLocale, translateMessage } = require('../i18n/locale');
+import db from '../config/database.js';
+import mailService from '../services/mail.service.js';
+import recaptchaService from '../services/recaptcha.service.js';
+import authMessages from '../i18n/messages/auth-messages.js';
+import { inferPreferredLocaleFromRequest, normalizePreferredLocale, translateMessage } from '../i18n/locale.js';
 
 const router = express.Router();
 
@@ -744,4 +744,4 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

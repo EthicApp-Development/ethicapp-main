@@ -1,16 +1,20 @@
-const path = require('path');
-const express = require('express');
-const session = require('express-session');
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import express from 'express';
+import session from 'express-session';
+import passport from 'passport';
+import passportLocal from 'passport-local';
 
-const userService = require('./services/user.service');
-const { createSessionStore } = require('./services/session-store.service');
+import userService from './services/user.service.js';
+import { createSessionStore } from './services/session-store.service.js';
 
-const viewRoutes = require('./routes/view.routes');
-const authRoutes = require('./routes/auth.routes');
+import viewRoutes from './routes/view.routes.js';
+import authRoutes from './routes/auth.routes.js';
 
 const app = express();
+const { Strategy: LocalStrategy } = passportLocal;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // --------------------------------------------------
 // Basic Express setup
@@ -177,4 +181,4 @@ app.use(function errorHandler(err, req, res, next) {
 });
 
 
-module.exports = app;
+export default app;

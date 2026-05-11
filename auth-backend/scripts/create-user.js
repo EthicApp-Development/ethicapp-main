@@ -1,7 +1,8 @@
-require('dotenv').config();
+import 'dotenv/config';
 
-const pool = require('../config/database.js');
-const bcrypt = require('bcrypt');
+import bcrypt from 'bcrypt';
+
+import db from '../config/database.js';
 
 async function main() {
   const [
@@ -25,7 +26,7 @@ node scripts/create-user.js <firstname> <lastname> <rut> <email> <password> [rol
   const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
   const normalizedEmail = email.trim().toLowerCase();
 
-  const existing = await pool.query(
+  const existing = await db.query(
     `
       SELECT id
       FROM users
@@ -42,7 +43,7 @@ node scripts/create-user.js <firstname> <lastname> <rut> <email> <password> [rol
 
   const hash = await bcrypt.hash(password, 12);
 
-  await pool.query(
+  await db.query(
     `
       INSERT INTO users
         (firstname, lastname, name, rut, mail, sex, role, password_bcrypt, auth_provider, active)

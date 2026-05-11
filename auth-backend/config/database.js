@@ -1,4 +1,6 @@
-const { Pool } = require('pg');
+import pg from 'pg';
+
+const { Pool } = pg;
 
 const useSsl = process.env.PGSSLMODE === 'require';
 
@@ -46,7 +48,10 @@ async function query(text, params) {
   }
 }
 
-module.exports = {
+const db = {
   pool,
   query
 };
+
+export { pool, query };
+export default db;
