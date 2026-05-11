@@ -235,6 +235,7 @@ The root [`package.json`](./package.json) includes helper scripts for developmen
 | `fix-css` | Applies automatic CSS lint fixes where supported. |
 | `fix-sql` | Applies automatic SQL lint fixes where supported. |
 | `build:ethicapp-assets` | Builds production-style legacy EthicApp frontend assets through Docker. |
+| `publish:ghcr` | Builds and publishes EthicApp project images to GitHub Container Registry. |
 | `psql` | Opens a PostgreSQL client against the containerized development database. |
 | `pgdump` | Dumps the containerized development database to `database/dumps/` or a provided path. |
 | `pgrestore` | Restores the containerized development database from a provided dump path. |
@@ -242,4 +243,4 @@ The root [`package.json`](./package.json) includes helper scripts for developmen
 
 ## 9. Production
 
-For production deployment notes, see [`INSTALL.md`](./INSTALL.md). Production values must be provided through environment variables and should not reuse local development credentials.
+For production image publishing and deployment notes, see [`INSTALL.md`](./INSTALL.md). Production values must be provided through environment variables and should not reuse local development credentials.
