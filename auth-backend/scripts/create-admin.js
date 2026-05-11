@@ -1,7 +1,8 @@
-require('dotenv').config();
+import 'dotenv/config';
 
-const pool = require('../config/database.js');
-const bcrypt = require('bcrypt');
+import bcrypt from 'bcrypt';
+
+import db from '../config/database.js';
 
 async function main() {
   const firstname = (process.env.ADMIN_FIRSTNAME || '').trim();
@@ -28,7 +29,7 @@ Optional:
     process.exit(1);
   }
 
-  const existing = await pool.query(
+  const existing = await db.query(
     `
       SELECT id, mail, rut
       FROM users
@@ -46,7 +47,7 @@ Optional:
   const hash = await bcrypt.hash(password, 12);
   const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
 
-  await pool.query(
+  await db.query(
     `
       INSERT INTO users
         (firstname, lastname, name, rut, pass, mail, sex, role, password_bcrypt, auth_provider, active)
