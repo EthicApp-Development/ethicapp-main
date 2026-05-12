@@ -121,19 +121,19 @@ Minimum verification checklist:
 
 Production-oriented changes must stay aligned with the repository-owned deployment contract:
 
-- The canonical environment-variable contract lives in `config/env.contract.yml`.
+- The canonical environment-variable contract lives in `deploy/env.contract.yml`.
 - When adding, removing, or renaming environment variables, update:
-  - `config/env.contract.yml`,
+  - `deploy/env.contract.yml`,
   - relevant `.env.example` files,
-  - deployment notes in `INSTALL.md` or `config/README.md` when operator behavior changes.
-- Deployment repositories should consume `config/env.contract.yml` from the same git tag as the images they deploy. Do not redefine the production variable catalog only in a deployment repository.
+  - deployment notes in `INSTALL.md` or `deploy/README.md` when operator behavior changes.
+- Deployment repositories should consume `deploy/env.contract.yml` from the same git tag as the images they deploy. Do not redefine the production variable catalog only in a deployment repository.
 - Image publishing to GitHub Container Registry uses `npm run publish:ghcr`; keep image names, tags, and release documentation aligned with `INSTALL.md`.
 - `VITE_*` variables are public build-time frontend variables. Production uses per-environment image builds for those values; do not treat `VITE_*` variables as runtime secrets.
 - Production Redis topology is role-specific:
   - `REDIS_SESSION_*` is for Express session storage used by `ethicapp` and `auth-backend`.
   - `REDIS_CACHE_*` is for database-derived cache entries used by legacy `ethicapp`.
   - Development may map both roles to the same Redis service.
-  - Keep Redis memory defaults and eviction policies in sync across `docker-compose.yml`, `.env.example`, `config/env.contract.yml`, and `INSTALL.md`.
+  - Keep Redis memory defaults and eviction policies in sync across `docker-compose.yml`, `.env.example`, `deploy/env.contract.yml`, and `INSTALL.md`.
 - The generic `REDIS_HOST`, `REDIS_PORT`, and `REDIS_URL` variables are backwards-compatible fallbacks; prefer the role-specific variables in new production work.
 
 ## 8) Legacy EthicApp routing conventions (important)

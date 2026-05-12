@@ -1,4 +1,4 @@
-# EthicApp Configuration Contract
+# EthicApp Deployment Configuration Contract
 
 `env.contract.yml` is the canonical environment-variable contract for EthicApp.
 
@@ -7,10 +7,17 @@ Deployment repositories should consume this file from the same git tag as the Do
 Recommended deployment flow:
 
 1. Select an EthicApp release tag.
-2. Fetch `config/env.contract.yml` from that tag.
+2. Fetch `deploy/env.contract.yml` from that tag.
 3. Validate the deployment environment values against the contract.
 4. Render runtime-specific `.env` files from the contract projections.
 5. Deploy the images built from the same release tag.
+
+For partial releases, keep an explicit deployment manifest in the deployment
+repository. Use [`deployment.manifest.example.yml`](./deployment.manifest.example.yml)
+as the starting format: pin the contract source ref/revision, every project
+image, and external images such as Redis. The contract should come from the
+source ref that reflects the deployed runtime contract, not from the newest tag
+by date.
 
 The contract distinguishes:
 

@@ -6,17 +6,33 @@ This document covers the current image publishing flow for GitHub Container Regi
 
 ## Configuration Contract
 
-EthicApp's canonical environment-variable contract lives in [`config/env.contract.yml`](./config/env.contract.yml). Deployment repositories should consume that file from the same git tag as the images being deployed, then provide environment-specific values and secrets.
+EthicApp's canonical environment-variable contract lives in [`deploy/env.contract.yml`](./deploy/env.contract.yml). Deployment repositories should consume that file from the same git tag as the images being deployed, then provide environment-specific values and secrets.
 
 The deployment repository should not redefine the variable catalog from scratch. Instead, it should:
 
 1. Select an EthicApp release tag.
-2. Fetch `config/env.contract.yml` from that tag.
+2. Fetch `deploy/env.contract.yml` from that tag.
 3. Validate environment-specific values against the contract.
 4. Render the concrete `.env` files needed by the target runtime.
 5. Deploy image tags built from the same EthicApp release tag.
 
-See [`config/README.md`](./config/README.md) for the contract usage model.
+See [`deploy/README.md`](./deploy/README.md) for the contract usage model.
+
+For partial releases, use an explicit deployment manifest instead of inferring
+the contract from the newest image tag. This repository includes
+[`deploy/deployment.manifest.example.yml`](./deploy/deployment.manifest.example.yml)
+as a template for pinning:
+
+- the `env.contract.yml` source ref and commit,
+- every EthicApp project image by tag and, preferably, digest,
+- unchanged service images that remain part of the deployment,
+- external images such as Redis.
+
+The deployment repository should copy or render this manifest for each promoted
+environment. When only `ethicapp` and `nginx` are rebuilt, those two entries can
+move to the new tag while the other services stay pinned to their previous tags.
+The contract entry should point to the source ref whose `env.contract.yml`
+matches the environment files being rendered.
 
 Pay special attention to `VITE_*` variables. They are public frontend variables and are read when Vite builds frontend assets, not when a container starts. EthicApp uses a per-environment image strategy for these values: build and tag images with the intended public values for the target environment.
 
