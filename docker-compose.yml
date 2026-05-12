@@ -11,6 +11,7 @@ services:
     depends_on:
       - ethicapp
       - auth-backend
+      - ethicapp-student
       - management-console
     volumes:
       - uploads:/var/www/uploads:ro
