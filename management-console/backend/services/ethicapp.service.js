@@ -31,7 +31,10 @@ export async function impersonateProfessorInEthicapp({
   professorId,
   cookie,
   userId,
-  userRole
+  userRole,
+  forwardedProto,
+  forwardedHost,
+  forwardedPort
 }) {
   const response = await fetch(buildUrl(`/api/admin/impersonation/professor/${professorId}`), {
     method: 'POST',
@@ -41,7 +44,10 @@ export async function impersonateProfessorInEthicapp({
       Accept: 'application/json',
       Cookie: cookie || '',
       'X-User-Id': String(userId || ''),
-      'X-User-Role': String(userRole || '')
+      'X-User-Role': String(userRole || ''),
+      'X-Forwarded-Proto': forwardedProto || 'https',
+      'X-Forwarded-Host': forwardedHost || '',
+      'X-Forwarded-Port': forwardedPort || ''
     }
   });
 
