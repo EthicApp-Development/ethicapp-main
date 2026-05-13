@@ -2,9 +2,9 @@ import { createClient } from 'redis';
 import RedisStore from 'connect-redis';
 
 function createSessionRedisClient() {
-  const host = process.env.REDIS_SESSION_HOST || process.env.REDIS_HOST || '127.0.0.1';
-  const port = process.env.REDIS_SESSION_PORT || process.env.REDIS_PORT || '6379';
-  const url = process.env.REDIS_SESSION_URL || process.env.REDIS_URL || `redis://${host}:${port}`;
+  const host = process.env.REDIS_SESSION_HOST || 'redis-session';
+  const port = process.env.REDIS_SESSION_PORT || '6379';
+  const url = process.env.REDIS_SESSION_URL || `redis://${host}:${port}`;
 
   const client = createClient({ url });
 

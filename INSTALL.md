@@ -40,7 +40,7 @@ Pay special attention to `VITE_*` variables. They are public frontend variables 
 
 Production deployments use two Redis instances:
 
-- `redis`: Express session storage for `ethicapp` and `auth-backend`.
+- `redis-session`: Express session storage for `ethicapp` and `auth-backend`.
 - `redis-cache`: database-derived cache entries used by the legacy `ethicapp` application.
 
 Development keeps a single Redis instance. In development, both `REDIS_SESSION_*` and `REDIS_CACHE_*` point to the same `redis` service.
@@ -48,7 +48,7 @@ Development keeps a single Redis instance. In development, both `REDIS_SESSION_*
 Use role-specific variables in deployment environments:
 
 ```bash
-REDIS_SESSION_HOST=redis
+REDIS_SESSION_HOST=redis-session
 REDIS_SESSION_PORT=6379
 REDIS_CACHE_HOST=redis-cache
 REDIS_CACHE_PORT=6379
@@ -63,7 +63,7 @@ REDIS_CACHE_MAXMEMORY=256mb
 REDIS_CACHE_MAXMEMORY_POLICY=allkeys-lru
 ```
 
-The older `REDIS_HOST`, `REDIS_PORT`, and `REDIS_URL` variables remain as fallbacks for local development and backwards compatibility.
+Do not use generic `REDIS_HOST`, `REDIS_PORT`, or `REDIS_URL` values in production. The services resolve Redis by role-specific variables only, which avoids accidentally routing session traffic and cache traffic to the same Docker DNS name.
 
 ## Publishable Images
 

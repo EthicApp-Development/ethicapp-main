@@ -34,6 +34,9 @@ must build and tag images with the intended public values for the target environ
 instead of expecting those values to change when a container starts.
 
 Redis is role-specific in production. Use `REDIS_SESSION_*` for Express session
-storage and `REDIS_CACHE_*` for database-derived cache entries. Development may map
-both roles to the same Redis instance. The default production memory limits are
-`REDIS_SESSION_MAXMEMORY=128mb` and `REDIS_CACHE_MAXMEMORY=256mb`.
+storage and `REDIS_CACHE_*` for database-derived cache entries. Production
+deployments should expose distinct service names, normally `redis-session` and
+`redis-cache`, and should not provide generic `REDIS_HOST`, `REDIS_PORT`, or
+`REDIS_URL` fallbacks. Development may map both roles to the same Redis instance.
+The default production memory limits are `REDIS_SESSION_MAXMEMORY=128mb` and
+`REDIS_CACHE_MAXMEMORY=256mb`.
