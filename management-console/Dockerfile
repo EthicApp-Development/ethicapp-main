@@ -31,5 +31,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=backend-runtime /app/backend ./backend
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
+COPY scripts ./scripts
 EXPOSE 8504
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["node", "backend/server.js"]

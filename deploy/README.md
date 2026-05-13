@@ -22,16 +22,16 @@ by date.
 The contract distinguishes:
 
 - `secret: true`: values that must come from a secret manager or protected deployment store.
-- `phase: build`: values required while building frontend assets.
+- `phase: build`: values required while building artifacts.
 - `phase: runtime`: values required when containers start.
 - `phase: build-and-runtime`: values needed in both places.
 
 All `VITE_*` variables are public frontend variables. They must never contain secrets.
 
-Vite reads `VITE_*` variables when frontend assets are built, so EthicApp uses a
-per-environment image strategy for production deployments. The deployment pipeline
-must build and tag images with the intended public values for the target environment
-instead of expecting those values to change when a container starts.
+Production images keep frontend bundles environment-neutral. Container entrypoints
+emit public `VITE_*` values into each frontend's `runtime-config.js` when the
+container starts, so deployment repositories should provide those values as
+runtime environment variables instead of rebuilding images per environment.
 
 Redis is role-specific in production. Use `REDIS_SESSION_*` for Express session
 storage and `REDIS_CACHE_*` for database-derived cache entries. Production

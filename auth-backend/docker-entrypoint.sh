@@ -24,5 +24,8 @@ if [ "$SEED_USERS" = "true" ]; then
   node scripts/seed-users.js
 fi
 
+echo "🧩 Writing auth frontend runtime config..."
+node scripts/write-runtime-config.js
+
 echo "🚀 Launching server..."
 exec "$@"

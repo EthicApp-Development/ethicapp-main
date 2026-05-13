@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../../app/providers';
+import { dataPrivacyContact, institutionName } from '../../config/env';
 import { DEFAULT_LOCALE } from '../../i18n/languages';
 import MarkdownArticle from './MarkdownArticle';
 
@@ -34,8 +35,8 @@ function LegalDocumentPage({
 
   const resolvedMarkdownVariables = useMemo(
     () => ({
-      institutionName: import.meta.env.VITE_INSTITUTION_NAME,
-      privacyContact: import.meta.env.VITE_DATAPRIVACY_CONTACT,
+      institutionName,
+      privacyContact: dataPrivacyContact,
       ...markdownVariables
     }),
     [markdownVariables]

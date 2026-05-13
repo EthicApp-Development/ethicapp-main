@@ -128,7 +128,7 @@ Production-oriented changes must stay aligned with the repository-owned deployme
   - deployment notes in `INSTALL.md` or `deploy/README.md` when operator behavior changes.
 - Deployment repositories should consume `deploy/env.contract.yml` from the same git tag as the images they deploy. Do not redefine the production variable catalog only in a deployment repository.
 - Image publishing to GitHub Container Registry uses `npm run publish:ghcr`; keep image names, tags, and release documentation aligned with `INSTALL.md`.
-- `VITE_*` variables are public build-time frontend variables. Production uses per-environment image builds for those values; do not treat `VITE_*` variables as runtime secrets.
+- `VITE_*` variables are public frontend variables. Production images must stay environment-neutral; service entrypoints emit those values into frontend `runtime-config.js` files at container startup. Do not treat `VITE_*` variables as secrets.
 - Production Redis topology is role-specific:
   - `REDIS_SESSION_*` is for Express session storage used by `ethicapp` and `auth-backend`.
   - `REDIS_CACHE_*` is for database-derived cache entries used by legacy `ethicapp`.

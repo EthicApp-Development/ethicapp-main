@@ -2,13 +2,37 @@ function removeTrailingSlash(value) {
   return value.endsWith('/') ? value.slice(0, -1) : value;
 }
 
+const runtimeConfig = typeof window !== 'undefined'
+  ? window.__AUTH_RUNTIME_CONFIG__ || {}
+  : {};
+
+const runtimeAuthApiBaseUrl = (runtimeConfig.authApiBaseUrl || '').trim();
 const viteAuthApiBaseUrl = (import.meta.env.VITE_AUTH_API_BASE_URL || '').trim();
 
-// Siempre fallback a ruta relativa
-const authApiBaseUrl = viteAuthApiBaseUrl
-  ? removeTrailingSlash(viteAuthApiBaseUrl)
-  : '/api/auth';
+const authApiBaseUrl = runtimeAuthApiBaseUrl
+  ? removeTrailingSlash(runtimeAuthApiBaseUrl)
+  : (
+      viteAuthApiBaseUrl
+        ? removeTrailingSlash(viteAuthApiBaseUrl)
+        : '/api/auth'
+    );
 
-const recaptchaSiteKey = (import.meta.env.VITE_RECAPTCHA_SITE_KEY || '').trim();
+const recaptchaSiteKey = (
+  runtimeConfig.recaptchaSiteKey ||
+  import.meta.env.VITE_RECAPTCHA_SITE_KEY ||
+  ''
+).trim();
 
-export { authApiBaseUrl, recaptchaSiteKey };
+const institutionName = (
+  runtimeConfig.institutionName ||
+  import.meta.env.VITE_INSTITUTION_NAME ||
+  ''
+).trim();
+
+const dataPrivacyContact = (
+  runtimeConfig.dataPrivacyContact ||
+  import.meta.env.VITE_DATAPRIVACY_CONTACT ||
+  ''
+).trim();
+
+export { authApiBaseUrl, dataPrivacyContact, institutionName, recaptchaSiteKey };

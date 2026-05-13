@@ -34,7 +34,7 @@ move to the new tag while the other services stay pinned to their previous tags.
 The contract entry should point to the source ref whose `env.contract.yml`
 matches the environment files being rendered.
 
-Pay special attention to `VITE_*` variables. They are public frontend variables and are read when Vite builds frontend assets, not when a container starts. EthicApp uses a per-environment image strategy for these values: build and tag images with the intended public values for the target environment.
+Pay special attention to `VITE_*` variables. They are public frontend variables, not secrets. Production images keep frontend bundles environment-neutral; each container writes its frontend `runtime-config.js` from runtime environment variables when it starts.
 
 ## Redis Topology
 
