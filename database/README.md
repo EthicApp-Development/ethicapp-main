@@ -7,9 +7,9 @@ versions in local development, recreate the `pgdata` Docker volume so the
 database can be initialized from these scripts again.
 
 If you run the development stack with an explicit Compose project name, use the
-same project name and Compose files when removing volumes:
+same project name when removing volumes:
 
 ```bash
-docker compose -p ethicapp -f docker-compose.yml -f docker-compose.dev.yml down -v --remove-orphans
-docker compose -p ethicapp -f docker-compose.yml -f docker-compose.dev.yml up --build
+docker compose -p ethicapp down -v --remove-orphans
+docker compose -p ethicapp up --build
 ```

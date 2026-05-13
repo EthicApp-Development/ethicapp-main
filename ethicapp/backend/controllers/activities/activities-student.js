@@ -3,7 +3,7 @@
 import express from "express";
 import { requireOwnershipOrRole, requireRole } from "../../helpers/auth-helper.js";
 import * as StudentActivityStatusHelper from "../../helpers/student-activity-state-helper.js";
-import * as config from "../../config/config.js";
+import * as config from "../../config/database.config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
 import { teacherNotifications } from "../../config/socket.config.js";
 import { getDesignTypeBySessionId } from "./activities-common.js";

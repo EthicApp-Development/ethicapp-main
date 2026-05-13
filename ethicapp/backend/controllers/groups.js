@@ -1,7 +1,7 @@
 "use strict";
 
 import express from "express";
-import * as config from "../config/config.js"; 
+import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as GroupsHelper from "../helpers/groups-helper.js"
 import * as ActivitiesHelper from "../helpers/activities-helper.js";
@@ -16,11 +16,11 @@ const router = express.Router();
  *              The response includes the group ID, a sequential number for the group, and a list of participant IDs.
  * @param {string} id - The ID of the phase (from the URL path).
  * @returns {Object} - A JSON object containing the list of groups and their participants.
- * 
+ *
  * @example
  * // Request
  * GET /phases/123/groups
- * 
+ *
  * // Response (success)
  * {
  *   "groups": [
@@ -36,17 +36,17 @@ const router = express.Router();
  *     }
  *   ]
  * }
- * 
+ *
  * // Response (missing required parameter)
  * {
  *   "error": "Missing required parameter: id."
  * }
- * 
+ *
  * // Response (no groups found)
  * {
  *   "error": "No groups found for the given phase."
  * }
- * 
+ *
  * // Response (internal server error)
  * {
  *   "error": "Internal server error."
@@ -333,7 +333,7 @@ router.post("/phases/:id/groups", async (req, res) => {
                         INSERT INTO teamusers (tmid, uid, anon_mask)
                         VALUES ($1, $2, $3)
                     `,
-                    sqlParams: [rpg2.param('plain', team.id), rpg2.param('plain', uid), 
+                    sqlParams: [rpg2.param('plain', team.id), rpg2.param('plain', uid),
                         rpg2.param('plain', mask)],
                 });
                 maskCode++;

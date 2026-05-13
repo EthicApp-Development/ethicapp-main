@@ -1,8 +1,8 @@
 "use strict";
 
 import express from "express";
-import pass from "../helpers/compat-helper.js"; 
-import * as config from "../config/config.js"; 
+import pass from "../helpers/compat-helper.js";
+import * as config from "../config/database.config.js";
 import * as rpg from "../db/rest-pg.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as ViewsHelper from "../helpers/views-helper.js";
@@ -131,12 +131,12 @@ router.post("/sessions", async (req, res) => {
                 VALUES ($1, $2, $3, now(), 1, $4)
                 RETURNING id;
             `,
-            sqlParams: [rpg2.param('plain', name), 
-                        rpg2.param('plain', description), 
-                        rpg2.param('plain', uid), 
+            sqlParams: [rpg2.param('plain', name),
+                        rpg2.param('plain', description),
+                        rpg2.param('plain', uid),
                         rpg2.param('plain', type)]
         });
-        
+
         const sessionId = sessionResult.id;
 
         if (!sessionId) {
@@ -151,7 +151,7 @@ router.post("/sessions", async (req, res) => {
                 INSERT INTO sesusers(sesid, uid)
                 VALUES ($1, $2);
             `,
-            sqlParams: [rpg2.param('plain', sessionId), 
+            sqlParams: [rpg2.param('plain', sessionId),
                 rpg2.param('plain', uid)]
         });
 
@@ -188,7 +188,7 @@ router.post("/add-activity", async (req, res) => {
                 VALUES ($1, $2)
             `,
             sqlParams: [
-                rpg2.param('plain', dsgnid), 
+                rpg2.param('plain', dsgnid),
                 rpg2.param('plain', sesid)]
         });
 
@@ -213,7 +213,7 @@ router.post("/add-activity", async (req, res) => {
             `,
             sqlParams: [rpg2.param('plain', dsgnid)]
         });
-        
+
         res.status(200).json({ status: 'ok', result: result.design });
     } catch (error) {
         console.error("Error in /add-activity endpoint:", error);
@@ -223,7 +223,7 @@ router.post("/add-activity", async (req, res) => {
 
 /**
  * @route GET /sessions/:id/users
- * @description Retrieves a list of users in a session. Validates that the requesting user is 
+ * @description Retrieves a list of users in a session. Validates that the requesting user is
  *              the creator of the session and has the role of "P" (teacher/professor).
  * @param {string} id - The ID of the session (from the URL path).
  * @returns {Object} - A JSON object containing a list of users in the session.
@@ -328,7 +328,7 @@ router.post("/sessions/join/:code", async (req, res) => {
                   )
                 RETURNING sesid
             `,
-            sqlParams: [rpg2.param('plain', uid), rpg2.param('plain', device), 
+            sqlParams: [rpg2.param('plain', uid), rpg2.param('plain', device),
                 rpg2.param('plain', code)],
         });
 
@@ -355,7 +355,7 @@ router.post("/sessions/join/:code", async (req, res) => {
 
         const { name, role, mail } = userResult[0];
 
-        teacherNotifications.studentJoined(sesid, { 
+        teacherNotifications.studentJoined(sesid, {
             id: uid,
             name,
             device,
@@ -393,7 +393,7 @@ router.post("/sessions/join/:code", async (req, res) => {
         return res.status(500).json({ status: "error", message: "Internal server error." });
     }
 });
-    
+
 router.post("/check-design", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
@@ -498,7 +498,7 @@ router.get("/home", function(req, res) {
                 renderScripts: (scripts) => ViewsHelper.renderScripts(scripts, res),
                 recaptchaEnabled: String(process.env.RECAPTCHA_ENABLED || "false").toLowerCase() === "true",
                 recaptchaSiteKey: process.env.VITE_RECAPTCHA_SITE_KEY || ""
-            });        
+            });
         } catch (error) {
             console.error(error);
             return res.status(500);
@@ -657,7 +657,7 @@ router.post("/get-design", await rpg.singleSQL({
         WHERE id = $1
     `,
     sqlParams: [rpg.param("body", "id")],
-    onStart:   (req, res) => { 
+    onStart:   (req, res) => {
         //console.log(`[get-design] onStart - Received request body: ${JSON.stringify(req)}`);
         // const id = req.body?.id || "undefined";
         // console.log(`[get-design] Fetching design with id: ${id}`);
@@ -1218,7 +1218,7 @@ router.post("/add-differential", await rpg.execSQL({
     ]
 }));
 
-router.post("/add-differential-stage", async (req, res) => { 
+router.post("/add-differential-stage", async (req, res) => {
     console.log(`/add-differential-stage: ${JSON.stringify(req.body)}`)
     await rpg.execSQL({
         dbcon: pass.dbcon,
@@ -1475,31 +1475,31 @@ router.post("/enter-session-code", await rpg.singleSQL({
 router.post("/stage-state-df", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
-    SELECT COUNT(*), query1.stage_id1 as id FROM (SELECT 
-        stages.id AS stage_id1, 
+    SELECT COUNT(*), query1.stage_id1 as id FROM (SELECT
+        stages.id AS stage_id1,
         differential_selection.uid as uid,
         COUNT(differential_selection.uid) AS num_answers
-      FROM 
-        stages 
-        JOIN differential ON stages.id = differential.stageid 
-        JOIN differential_selection ON differential.id = differential_selection.did 
-      WHERE 
+      FROM
+        stages
+        JOIN differential ON stages.id = differential.stageid
+        JOIN differential_selection ON differential.id = differential_selection.did
+      WHERE
         stages.sesid = $1
-      GROUP BY 
+      GROUP BY
         stages.id, differential_selection.uid
       ) as query1 JOIN (
-      SELECT 
-        stages.id AS stage_id2, 
+      SELECT
+        stages.id AS stage_id2,
         COUNT(differential.id) AS questions
-      FROM 
-        stages 
-        JOIN differential ON stages.id = differential.stageid 
-      WHERE 
+      FROM
+        stages
+        JOIN differential ON stages.id = differential.stageid
+      WHERE
         stages.sesid = $1
-      GROUP BY 
+      GROUP BY
         stages.id
         ) as query2 ON query1.stage_id1= query2.stage_id2
-      
+
         WHERE query1.num_answers = query2.questions GROUP BY query1.stage_id1;
     `,
     postReqData: ["sesid"], //differential_selection uid
@@ -1515,7 +1515,7 @@ router.post("/stage-state-df", await rpg.multiSQL({
 router.post("/stage-state-r", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
-    SELECT COUNT(act.id), s.id FROM actor_selection act 
+    SELECT COUNT(act.id), s.id FROM actor_selection act
     INNER JOIN stages s ON act.stageid = s.id AND s.sesid = $1 GROUP BY s.id;
     `,
     postReqData: ["sesid"],

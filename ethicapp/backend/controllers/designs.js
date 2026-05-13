@@ -1,7 +1,7 @@
 "use strict";
 
 import express from "express";
-import * as config from "../config/config.js"; 
+import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { hasTheUserRoleById } from '../helpers/users-helper.js';
 import { requireRole } from "../helpers/auth-helper.js";
@@ -247,7 +247,7 @@ router.get("/designs", async (req, res) => {
         const rows = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT DISTINCT ON (id) id, design, public, locked, 
+                SELECT DISTINCT ON (id) id, design, public, locked,
                        case_id,
                        CASE WHEN creator = $1 THEN TRUE ELSE FALSE END AS user_owned
                 FROM designs
@@ -383,7 +383,7 @@ router.post("/designs/:id/duplicate", async (req, res) => {
                 RETURNING id
             `,
             sqlParams: [
-                rpg2.param("plain", sessionUid), 
+                rpg2.param("plain", sessionUid),
                 rpg2.param("plain", clonedDesign), // Use rpg2.param for the serialized design
             ],
         });
@@ -481,7 +481,7 @@ router.get('/designs/:id/valid', async (req, res) => {
 
         // Convert 'valid' to a boolean
         const isValid = result.valid === 'true';
-        return res.status(200).json({ status: 'ok', valid: isValid });        
+        return res.status(200).json({ status: 'ok', valid: isValid });
 
     } catch (err) {
         console.error('Error in GET /designs/:id/valid:', err);

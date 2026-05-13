@@ -1,10 +1,10 @@
-import * as config from "../config/config.js"; 
+import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 
 /**
 * Retrieves the list of phases (stages) for a given session.
 * Each phase includes its number, ID, and whether it is active.
-* 
+*
 * @param {string} sessionId - The ID of the session.
 * @returns {Array<Object>} - A list of phase objects with `number`, `id`, and `active` fields.
 * @throws {Error} - Throws an error if the query or processing fails.
@@ -84,4 +84,3 @@ export async function getPhaseNumberByPhaseId(phaseId) {
         throw new Error(`Unable to fetch phase number for ID: ${phaseId}`);
     }
 }
-    

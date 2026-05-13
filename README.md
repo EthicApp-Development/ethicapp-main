@@ -117,11 +117,11 @@ Treat these as development/bootstrap settings. Use strong credentials and produc
 
 ### 5.1. Start the application
 
-Use Docker Compose from the repository root. The recommended project name is `ethicapp`, so all containers and volumes are grouped in a predictable namespace and do not collide with other local projects:
+Use Docker Compose from the repository root for local development. The recommended project name is `ethicapp`, so all containers and volumes are grouped in a predictable namespace and do not collide with other local projects:
 
 ```bash
-docker compose -p ethicapp -f docker-compose.yml -f docker-compose.dev.yml down --remove-orphans
-docker compose -p ethicapp -f docker-compose.yml -f docker-compose.dev.yml up --build --detach
+docker compose -p ethicapp down --remove-orphans
+docker compose -p ethicapp up --build --detach
 ```
 
 NGINX exposes the application facade at:
@@ -130,7 +130,7 @@ NGINX exposes the application facade at:
 http://localhost
 ```
 
-The Compose setup starts PostgreSQL, Redis, NGINX, the legacy EthicApp service, the auth service, the student app, and the management console.
+The Compose setup starts PostgreSQL, Redis, NGINX, the legacy EthicApp service, the auth service, the student app, and the management console. Production Compose or orchestration templates belong to the deployment repository and should consume this repository's published images plus `deploy/` contract files.
 
 ### 5.2. Logs and shell access
 
@@ -164,7 +164,7 @@ If you need a clean database, stop the stack and remove the Compose volume for t
 The legacy teacher frontend in `ethicapp/frontend` requires bundled static assets. In Docker development, the `ethicapp` container starts the asset watcher from its entrypoint, so host-side `build-devel` and `watch-devel` scripts are no longer used.
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+docker compose up --build
 ```
 
 The container performs the initial development build and then watches the legacy asset inputs for changes.
@@ -185,7 +185,7 @@ The newer frontends use React + Vite:
 - `ethicapp-student/frontend`
 - `management-console/frontend`
 
-In the Docker development flow, Vite is started by `docker-compose.dev.yml`. For focused work inside a subproject, use that subproject's local npm scripts.
+In the Docker development flow, Vite is started by the root `docker-compose.yml`. For focused work inside a subproject, use that subproject's local npm scripts.
 
 ## 7. Tests
 
@@ -215,8 +215,8 @@ Current coverage includes:
 The production image builds for these services run backend tests during Docker build:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml build ethicapp
-docker compose -f docker-compose.yml -f docker-compose.dev.yml build management-console
+docker compose build ethicapp
+docker compose build management-console
 ```
 
 If those tests fail, the image build fails. This keeps the local Compose build path aligned with the minimum verification expected before merging backend changes.

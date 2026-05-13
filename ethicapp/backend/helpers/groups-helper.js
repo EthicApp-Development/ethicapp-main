@@ -1,7 +1,7 @@
-import * as config from "../config/config.js"; 
+import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 
-export const groupingAlgorithms = { 
+export const groupingAlgorithms = {
     random : createRandomGroups,
     preserve: preserveGroups
 };
@@ -65,7 +65,7 @@ async function preserveGroups(sessionId, phases, groupSize) {
         throw new Error("No active phase found for this session.");
     }
 
-    // Identify the previous group phase 
+    // Identify the previous group phase
     const previousPhase = phases
         .slice(0, phases.findIndex(p => p.id === activePhase.id) + 1) // Include the active phase
         .reverse()
@@ -84,7 +84,7 @@ async function preserveGroups(sessionId, phases, groupSize) {
             INNER JOIN teamusers tu ON t.id = tu.tmid
             WHERE t.sesid = $1 AND t.stageid = $2
         `,
-        sqlParams: [rpg2.param('plain', sessionId), 
+        sqlParams: [rpg2.param('plain', sessionId),
             rpg2.param('plain', previousPhase.id)],
     });
 
@@ -107,7 +107,7 @@ async function preserveGroups(sessionId, phases, groupSize) {
 
 /**
  * Deletes all existing groups and their members for a given phase.
- * 
+ *
  * @param {string} phaseId - The ID of the phase for which to delete groups.
  * @throws {Error} Throws an error if the operation fails.
  */

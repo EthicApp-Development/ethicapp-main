@@ -132,8 +132,8 @@ Production-oriented changes must stay aligned with the repository-owned deployme
 - Production Redis topology is role-specific:
   - `REDIS_SESSION_*` is for Express session storage used by `ethicapp` and `auth-backend`.
   - `REDIS_CACHE_*` is for database-derived cache entries used by legacy `ethicapp`.
-  - Development may map both roles to the same Redis service.
-  - Keep Redis memory defaults and eviction policies in sync across `docker-compose.yml`, `.env.example`, `deploy/env.contract.yml`, and `INSTALL.md`.
+  - Development may map both roles to the same Redis service in the root local-development Compose file.
+  - Keep Redis memory defaults and eviction policies in sync across `.env.example`, `deploy/env.contract.yml`, and `INSTALL.md`.
 - The generic `REDIS_HOST`, `REDIS_PORT`, and `REDIS_URL` variables are backwards-compatible fallbacks; prefer the role-specific variables in new production work.
 
 ## 8) Legacy EthicApp routing conventions (important)

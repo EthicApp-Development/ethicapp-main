@@ -1,4 +1,4 @@
-import * as config from "../config/config.js"
+import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js"
 import redisClient from "../db/redis.js";
 import { responseFactories } from  "../../common/modules/design-types.js";

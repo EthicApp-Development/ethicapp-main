@@ -27,7 +27,7 @@ import cases from "./controllers/cases.js";
 
 import fs from "fs";
 
-import * as config from "./config/config.js";
+import { uploadsPath } from "./config/uploads.config.js";
 import i18n from "i18n";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -72,7 +72,7 @@ app.use(cors(corsOptions));
 
 // Asset handling
 const assetPath = path.join(__dirname, "../frontend/assets");
-const uploadsAbsolutePath = path.resolve(process.cwd(), config.uploadsPath);
+const uploadsAbsolutePath = path.resolve(process.cwd(), uploadsPath);
 app.use(express.static(assetPath));
 app.use(assetVersions("/assets", assetPath));
 

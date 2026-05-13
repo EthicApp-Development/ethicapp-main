@@ -2,7 +2,8 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
-import { dbconnString, uploadsPath } from "../config/config.js";
+import { dbconnString } from "../config/database.config.js";
+import { uploadsPath } from "../config/uploads.config.js";
 
 const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
