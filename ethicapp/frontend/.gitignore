@@ -1,5 +1,7 @@
 **/node_modules/
 **/package-lock.json
+!package-lock.json
+**/.npm_dependency_state
 
 assets/uploads/
 

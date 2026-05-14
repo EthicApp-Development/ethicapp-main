@@ -1,5 +1,5 @@
-const { query } = require('../config/database');
-const { hashPassword, verifyPassword, generateResetToken } = require('./password.service');
+import { query } from '../config/database.js';
+import { hashPassword, verifyPassword, generateResetToken } from './password.service.js';
 
 function mapUser(row) {
   if (!row) return null;
@@ -168,7 +168,7 @@ async function deletePasswordResetToken(token) {
   );
 }
 
-module.exports = {
+const userService = {
   findById,
   findByLogin,
   findByEmail,
@@ -179,3 +179,16 @@ module.exports = {
   updatePasswordByEmail,
   deletePasswordResetToken
 };
+
+export {
+  findById,
+  findByLogin,
+  findByEmail,
+  authenticateLocal,
+  createUser,
+  createPasswordReset,
+  findPasswordResetByToken,
+  updatePasswordByEmail,
+  deletePasswordResetToken
+};
+export default userService;

@@ -1,9 +1,9 @@
 "use strict";
 
 import express from "express";
-import pass from "../helpers/compat-helper.js"; 
+import pass from "../helpers/compat-helper.js";
 import * as rpg from "../db/rest-pg.js";
-import * as config from "../config/config.js"; 
+import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { studentNotifications } from "../config/socket.config.js";
 import * as ViewsHelper from "../helpers/views-helper.js";
@@ -22,7 +22,7 @@ router.get("/ethics", (req, res) => {
                 ["libs/angular-glue.min.js"],
                 ["js/dist/ethics.js", "js/dist/ethics.min.js"]
             ],
-            renderScripts: (scripts) => ViewsHelper.renderScripts(scripts, res)            
+            renderScripts: (scripts) => ViewsHelper.renderScripts(scripts, res)
         });
     else
         res.redirect(".");
@@ -290,10 +290,10 @@ router.post("/get-differentials-stage", await rpg.multiSQL({
 }));
 
 router.post("/send-diff-selection", async (req, res, next) => {
-    
+
     if (isContentAnalysisAvailable()){
         initializeContentAnalysis(req, res);
-    }    
+    }
 
     return await rpg.execSQL({
         dbcon: pass.dbcon,

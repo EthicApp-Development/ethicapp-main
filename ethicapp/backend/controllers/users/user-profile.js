@@ -5,17 +5,17 @@ import fs from "fs";
 import path from "path";
 import { promisify } from "util";
 import { execFile } from "child_process";
-import * as config from "../../config/config.js";
+import * as config from "../../config/database.config.js";
+import { uploadsPath } from "../../config/uploads.config.js";
 import { execSQL, param } from "../../db/rest-pg-2.js";
 import { requireRole } from "../../helpers/auth-helper.js";
 import * as RecaptchaHelper from "../../helpers/recaptcha-helper.js";
+import { avatarUpload, removeUploadedFile } from "../../middleware/upload.js";
 
 const execFileAsync = promisify(execFile);
 const router = express.Router();
 
-const uploadsRoot = path.resolve(process.cwd(), config.uploadsPath);
-const profileUploadsRelativeDir = path.join("user-profile");
-const profileUploadsDir = path.join(uploadsRoot, profileUploadsRelativeDir);
+const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
 const AVATAR_MAX_SIZE_BYTES = 300 * 1024;
 
 const allowedMimeTypes = new Set(["image/jpeg", "image/jpg", "image/png"]);
@@ -41,7 +41,7 @@ const getAbsoluteUploadPath = (reqFilePath) => {
         return normalized;
     }
 
-    const uploadsPathPrefix = `${config.uploadsPath.replaceAll("\\", "/").replace(/\/+$/, "")}/`;
+    const uploadsPathPrefix = `${uploadsPath.replaceAll("\\", "/").replace(/\/+$/, "")}/`;
     const relativePath = normalized.startsWith(uploadsPathPrefix)
         ? normalized.slice(uploadsPathPrefix.length)
         : normalized;
@@ -50,11 +50,14 @@ const getAbsoluteUploadPath = (reqFilePath) => {
 };
 
 const buildAvatarPaths = (uid) => {
+    const profileUploadsRelativeDir = path.join("user-profiles", String(uid));
+    const profileUploadsDir = path.join(uploadsRoot, profileUploadsRelativeDir);
     const baseName = `user-${uid}`;
     const originalFilename = `${baseName}-original.jpg`;
     const topbarFilename = `${baseName}-topbar-64.jpg`;
 
     return {
+        directoryAbsolute: profileUploadsDir,
         originalAbsolute: path.join(profileUploadsDir, originalFilename),
         topbarAbsolute: path.join(profileUploadsDir, topbarFilename),
         originalRelative: `/uploads/${profileUploadsRelativeDir}/${originalFilename}`,
@@ -106,7 +109,10 @@ router.post("/users/profile", async (req, res) => {
     if (!requireRole(req, res, "P")) return;
 
     try {
-        if (!(await validateProfileRecaptcha(req, res))) return;
+        if (!(await validateProfileRecaptcha(req, res))) {
+            await removeUploadedFile(req.file);
+            return;
+        }
 
         const firstname = (req.body.firstname || "").trim();
         const lastname = (req.body.lastname || "").trim();
@@ -145,32 +151,37 @@ router.post("/users/profile", async (req, res) => {
     }
 });
 
-router.post("/users/profile/avatar", async (req, res) => {
+router.post("/users/profile/avatar", avatarUpload, async (req, res) => {
     if (!requireRole(req, res, "P")) return;
 
     try {
-        if (!(await validateProfileRecaptcha(req, res))) return;
+        if (!(await validateProfileRecaptcha(req, res))) {
+            await removeUploadedFile(req.file);
+            return;
+        }
 
-        const avatarFile = req.files?.avatar;
+        const avatarFile = req.file;
         if (!avatarFile) {
             return res.status(400).json({ success: false, error: "avatar_required" });
         }
 
         if (!allowedMimeTypes.has(avatarFile.mimetype)) {
+            await removeUploadedFile(avatarFile);
             return res.status(400).json({ success: false, error: "invalid_avatar_type" });
         }
 
         if (avatarFile.size > AVATAR_MAX_SIZE_BYTES) {
+            await removeUploadedFile(avatarFile);
             return res.status(400).json({ success: false, error: "avatar_size_limit_exceeded" });
         }
 
-        const sourcePath = getAbsoluteUploadPath(avatarFile.file);
+        const sourcePath = getAbsoluteUploadPath(avatarFile.path);
         if (!sourcePath) {
             return res.status(400).json({ success: false, error: "avatar_upload_failed" });
         }
 
         const avatarPaths = buildAvatarPaths(req.session.uid);
-        await fs.promises.mkdir(profileUploadsDir, { recursive: true });
+        await fs.promises.mkdir(avatarPaths.directoryAbsolute, { recursive: true });
 
         await execFileAsync("convert", [
             sourcePath,
@@ -205,6 +216,8 @@ router.post("/users/profile/avatar", async (req, res) => {
             ]
         });
 
+        await removeUploadedFile(avatarFile);
+
         return res.status(200).json({
             success: true,
             data: {
@@ -213,6 +226,7 @@ router.post("/users/profile/avatar", async (req, res) => {
             }
         });
     } catch (error) {
+        await removeUploadedFile(req.file);
         console.error("Error in POST /users/profile/avatar:", error);
         return res.status(500).json({ success: false, error: "avatar_upload_failed" });
     }

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import AuthLayout from '../components/auth/AuthLayout';
 import LoginForm from '../components/auth/LoginForm';
 import CookieNoticeOverlay from '../components/common/CookieNoticeOverlay';
-import { useI18n } from '../app/providers';
+import { useI18n } from '../app/i18n-context';
 import useCookieNotice from '../hooks/useCookieNotice';
 
 function LoginPage() {

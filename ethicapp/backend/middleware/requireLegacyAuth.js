@@ -3,5 +3,5 @@ export default function requireLegacyAuth(req, res, next) {
     return next();
   }
 
-  return res.redirect('/login');
+  return res.redirect('/auth/login');
 }

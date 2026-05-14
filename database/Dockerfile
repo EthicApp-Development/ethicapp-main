@@ -1,4 +1,4 @@
-FROM postgres:10
+FROM postgres:16
 
 # Crea y define directorio de trabajo
 WORKDIR /docker-entrypoint-initdb.d

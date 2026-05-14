@@ -1,4 +1,4 @@
-import * as config from "../config/config.js"; 
+import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as Yup from "yup";
 import { getDesignTypeByPhaseId } from "./designs-helper.js";
@@ -80,7 +80,7 @@ export const chatInsertHandlers = {
                 RETURNING id, uid, stageid, tmid, content, stime, parent_id
             `,
             dbcon,
-            sqlParams: [rpg2.param('plain', userId), rpg2.param('plain', phaseId), 
+            sqlParams: [rpg2.param('plain', userId), rpg2.param('plain', phaseId),
                 rpg2.param('plain', groupId) || null, rpg2.param('plain', content),
                 rpg2.param('plain', parentId) || null],
         });
@@ -96,7 +96,7 @@ export const chatInsertHandlers = {
                 RETURNING id, uid, did, tmid, content, stime, parent_id
             `,
             dbcon,
-            sqlParams: [rpg2.param('plain', userId), 
+            sqlParams: [rpg2.param('plain', userId),
                 rpg2.param('plain', questionId), rpg2.param('plain', groupId) || null,
                 rpg2.param('plain', content),
                 rpg2.param('plain', parentId) || null],

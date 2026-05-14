@@ -43,6 +43,18 @@ Common build command for service images:
 docker compose build
 ```
 
+Some service image builds run backend tests as part of their Dockerfile stages. In particular:
+
+- `docker compose build ethicapp` runs `npm test` in `ethicapp/backend` before building the final image.
+- `docker compose build management-console` runs `npm test` in `management-console/backend` before building the final image.
+
+Focused backend test commands:
+
+```bash
+cd ethicapp/backend && npm test
+cd management-console/backend && npm test
+```
+
 Common repository-level commands (run from repository root when available):
 
 ```bash
@@ -56,6 +68,8 @@ npm run fix-sql
 ```
 
 If a subproject has its own scripts, run its local build/test/lint commands from that subproject directory.
+
+When adding or changing backend behavior in `ethicapp/` or `management-console/`, prefer adding focused Node test coverage under the local backend test conventions (`*.node-test.mjs`). Keep tests deterministic, avoid depending on local-only config files, and make them safe to run both on the host and inside Docker build stages.
 
 ## 4) Engineering conventions and PR expectations
 
@@ -97,11 +111,33 @@ A change is considered done when:
 Minimum verification checklist:
 
 - Build succeeds for modified services/apps.
+- Docker image builds pass for services whose Dockerfiles include test stages.
 - Lint succeeds for modified languages/components.
+- Focused tests pass for modified backend behavior.
 - Core endpoint flows and helper logic paths are validated with basic cases.
 - Any known limitations are explicitly documented in the PR.
 
-## 7) Legacy EthicApp routing conventions (important)
+## 7) Production deployment and environment contract
+
+Production-oriented changes must stay aligned with the repository-owned deployment contract:
+
+- The canonical environment-variable contract lives in `deploy/env.contract.yml`.
+- When adding, removing, or renaming environment variables, update:
+  - `deploy/env.contract.yml`,
+  - relevant `.env.example` files,
+  - deployment notes in `INSTALL.md` or `deploy/README.md` when operator behavior changes.
+- Deployment repositories should consume `deploy/env.contract.yml` from the same git tag as the images they deploy. Do not redefine the production variable catalog only in a deployment repository.
+- Image publishing to GitHub Container Registry uses `npm run publish:ghcr`; keep image names, tags, and release documentation aligned with `INSTALL.md`.
+- `VITE_*` variables are public frontend variables. Production images must stay environment-neutral; service entrypoints emit those values into frontend `runtime-config.js` files at container startup. Do not treat `VITE_*` variables as secrets.
+- Production Redis topology is role-specific:
+  - `REDIS_SESSION_*` is for Express session storage used by `ethicapp` and `auth-backend`.
+  - `REDIS_CACHE_*` is for database-derived cache entries used by legacy `ethicapp`.
+  - Production deployments must provide distinct Redis service DNS names, normally `redis-session` and `redis-cache`.
+  - Development may map both roles to the same Redis service in the root local-development Compose file.
+  - Keep Redis memory defaults and eviction policies in sync across `.env.example`, `deploy/env.contract.yml`, and `INSTALL.md`.
+- Do not add generic `REDIS_HOST`, `REDIS_PORT`, or `REDIS_URL` production fallbacks; prefer role-specific Redis variables.
+
+## 8) Legacy EthicApp routing conventions (important)
 
 For the legacy app inside `ethicapp/`, keep backend and frontend routing concerns separated and colocated:
 
@@ -125,7 +161,7 @@ When adding teacher-facing features in legacy EthicApp:
 6. For role-based authorization in legacy backend endpoints, prefer `requireRole` from `ethicapp/backend/helpers/auth-helper.js`; it accepts either a single role (`"P"`) or an array (for example `["P", "A"]`) for professor/student shared access.
 7. For teacher view actions, prefer Bootstrap 3 small default buttons (`btn btn-default btn-sm`) unless the action semantics require another contextual style.
 
-## 8) Translation and i18n policy (auth-backend + management-console + ethicapp)
+## 9) Translation and i18n policy (auth-backend + management-console + ethicapp)
 
 Use this policy for all new i18n-related changes in this repository.
 

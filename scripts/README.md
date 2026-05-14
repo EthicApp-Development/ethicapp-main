@@ -9,3 +9,11 @@ npm run psql
 npm run pgdump
 npm run pgrestore -- database/dumps/ethicapp-YYYYMMDD-HHMMSS.dump
 ```
+
+Production image publishing is handled by `ghcr-build-push.sh`:
+
+```bash
+npm run publish:ghcr -- --owner github-org-or-user --tag v2026.05.11
+```
+
+See [`../INSTALL.md`](../INSTALL.md) for the current production image publishing workflow.

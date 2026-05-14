@@ -1,7 +1,10 @@
-const path = require('path');
-const ejs = require('ejs');
-const nodemailer = require('nodemailer');
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import ejs from 'ejs';
+import nodemailer from 'nodemailer';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const EMAIL_TEMPLATES_PATH = path.join(__dirname, '..', 'views', 'emails');
 const SMTP_HOST = process.env.SMTP_HOST;
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
@@ -98,9 +101,17 @@ async function sendPasswordResetEmail({ to, rawToken, preferredLocale }) {
   };
 }
 
-module.exports = {
+const mailService = {
   sendPasswordResetEmail,
   buildResetUrl,
   normalizePreferredLocale,
   resolvePreferredLocale
 };
+
+export {
+  sendPasswordResetEmail,
+  buildResetUrl,
+  normalizePreferredLocale,
+  resolvePreferredLocale
+};
+export default mailService;

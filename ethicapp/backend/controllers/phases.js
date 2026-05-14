@@ -1,7 +1,7 @@
 "use strict";
 
 import express from "express";
-import * as config from "../config/config.js"; 
+import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as SessionsHelper from "../helpers/sessions-helper.js"
 import * as DesignTypes from "../../common/modules/design-types.js";
@@ -40,11 +40,11 @@ const designStatistics = {
  *              The logic to fetch responses is determined dynamically based on the phase's design type.
  * @param {string} id - The ID of the phase (from the URL path).
  * @returns {Object} - A JSON object containing the responses for the phase.
- * 
+ *
  * @example
  * // Request
  * GET /phases/123/responses
- * 
+ *
  * // Response (success)
  * {
  *   "responses": [
@@ -58,22 +58,22 @@ const designStatistics = {
  *     }
  *   ]
  * }
- * 
+ *
  * // Response (missing required parameter)
  * {
  *   "error": "Missing required parameter: id."
  * }
- * 
+ *
  * // Response (unsupported design type)
  * {
  *   "error": "Unsupported design type: example_type."
  * }
- * 
+ *
  * // Response (no responses found)
  * {
  *   "error": "No responses found for the given phase."
  * }
- * 
+ *
  * // Response (internal server error)
  * {
  *   "error": "Internal server error."
@@ -241,7 +241,7 @@ router.post("/phases/:id/responses", async (req, res) => {
  * @param {string} id - The ID of the phase (stage) (from the URL path).
  * @param {Object} payload - The details of the item to be added (from the request body).
  * @returns {Object} - A JSON object indicating the success or failure of the operation.
- * 
+ *
  * @example
  * // Request (for semantic_differential phase)
  * POST /phases/123/items
@@ -254,7 +254,7 @@ router.post("/phases/:id/responses", async (req, res) => {
  *   "justified": true,
  *   "word_count": 50
  * }
- * 
+ *
  * // Request (for ranking phase)
  * POST /phases/123/items
  * {
@@ -263,23 +263,23 @@ router.post("/phases/:id/responses", async (req, res) => {
  *   "justified": false,
  *   "word_count": 30
  * }
- * 
+ *
  * // Response (success)
  * {
  *   "status": "ok",
  *   "message": "Item added successfully."
  * }
- * 
+ *
  * // Response (missing required parameter)
  * {
  *   "error": "Missing required parameter: id."
  * }
- * 
+ *
  * // Response (unsupported design type)
  * {
  *   "error": "Unsupported design type: example_type."
  * }
- * 
+ *
  * // Response (internal server error)
  * {
  *   "error": "Internal server error."
@@ -323,7 +323,7 @@ router.post("/phases/:id/items", async (req, res) => {
  * Fetches responses for semantic_differential activities in a specific phase (stage).
  * This query retrieves responses grouped by stage and includes details such as user IDs, team IDs,
  * selections, and comments. It focuses on responses within a single stage.
- * 
+ *
  * @async
  * @function fetchSemanticDifferentialResponsesByPhase
  * @param {string} phaseId - The ID of the phase (stage) for which to fetch responses.
@@ -335,14 +335,14 @@ router.post("/phases/:id/items", async (req, res) => {
  *   - `did`: The differential ID of the item.
  *   - `sel`: The user's selection.
  *   - `comment`: Any comment associated with the response.
- * 
+ *
  * @throws {Error} If the SQL query fails.
- * 
+ *
  * @example
  * // Usage
  * const responses = await fetchSemanticDifferentialResponsesByStage('456');
  * console.log(responses);
- * 
+ *
  * // Example response
  * [
  *   {
@@ -390,7 +390,7 @@ async function fetchSemanticDifferentialResponsesByPhase(phaseId) {
             ORDER BY d.stageid, s.uid, d.orden
         `,
         dbcon: config.dbconnString,
-        sqlParams: [rpg2.param('plain', phaseId), 
+        sqlParams: [rpg2.param('plain', phaseId),
             rpg2.param('plain', phaseId)],
     });
 
@@ -401,7 +401,7 @@ async function fetchSemanticDifferentialResponsesByPhase(phaseId) {
  * Fetches responses for ranking activities in a specific phase (stage).
  * This query retrieves data related to user rankings, including item descriptions, order, and user selections,
  * focusing on responses within a single stage.
- * 
+ *
  * @async
  * @function fetchRankingResponsesByPhase
  * @param {string} phaseId - The ID of the phase (stage) for which to fetch ranking responses.
@@ -411,14 +411,14 @@ async function fetchSemanticDifferentialResponsesByPhase(phaseId) {
  *   - `orden`: The order in which the item was ranked.
  *   - `actorid`: The ID of the actor or choice being ranked.
  *   - `uid`: The user ID of the respondent.
- * 
+ *
  * @throws {Error} If the SQL query fails.
- * 
+ *
  * @example
  * // Usage
  * const responses = await fetchRankingResponsesByStage('456');
  * console.log(responses);
- * 
+ *
  * // Example response
  * [
  *   {
@@ -458,7 +458,7 @@ async function fetchRankingResponsesByPhase(phaseId) {
 
 /**
  * Retrieves a student's responses to semantic differential questions in a given phase.
- * 
+ *
  * @param {number} phaseId - The ID of the phase (stage) in the database.
  * @param {number} userId - The ID of the student whose responses are to be retrieved.
  * @returns {Promise<Array<Object>>} - A list of responses including question and answer details.
@@ -481,7 +481,7 @@ async function fetchSemanticDifferentialStudentResponsesByPhase(phaseId, userId)
               AND s.uid = $2
             ORDER BY d.orden
         `,
-        sqlParams: [rpg2.param('plain', phaseId), 
+        sqlParams: [rpg2.param('plain', phaseId),
             rpg2.param('plain', userId)],
     });
 
@@ -490,7 +490,7 @@ async function fetchSemanticDifferentialStudentResponsesByPhase(phaseId, userId)
 
 /**
  * Retrieves a student's ranking responses for a given phase.
- * 
+ *
  * @param {number} phaseId - The ID of the phase (stage) in the database.
  * @param {number} userId - The ID of the student whose responses are to be retrieved.
  * @returns {Promise<Array<Object>>} - A list of ranking responses for the student.
@@ -510,7 +510,7 @@ async function fetchRankingStudentResponsesByPhase(phaseId, userId) {
             ORDER BY orden
         `,
         dbcon: config.dbconnString,
-        sqlParams: [rpg2.param('plain', phaseId), 
+        sqlParams: [rpg2.param('plain', phaseId),
             rpg2.param('plain', userId)],
     });
 
@@ -520,7 +520,7 @@ async function fetchRankingStudentResponsesByPhase(phaseId, userId) {
 /**
  * Adds a new item to a semantic_differential phase.
  * This function inserts a new semantic_differential item into the `differential` table, associating it with a specific phase (stage).
- * 
+ *
  * @async
  * @function addSemanticDifferentialItem
  * @param {Object} params - The parameters for the new item.
@@ -533,9 +533,9 @@ async function fetchRankingStudentResponsesByPhase(phaseId, userId) {
  * @param {boolean} params.justify - Whether justification is required for the item.
  * @param {number} params.wordCount - The word count limit for justification.
  * @returns {Promise<void>} - Resolves when the item is successfully added.
- * 
+ *
  * @throws {Error} If the SQL query fails.
- * 
+ *
  * @example
  * // Usage
  * await addSemanticDifferentialItem({
@@ -548,7 +548,7 @@ async function fetchRankingStudentResponsesByPhase(phaseId, userId) {
  *   justify: true,
  *   word_count: 50
  * });
- * 
+ *
  * // Inserts an item with the provided parameters into the database.
  */
 async function addSemanticDifferentialItem({
@@ -588,7 +588,7 @@ async function addSemanticDifferentialItem({
 /**
  * Adds a new item to a ranking phase.
  * This function inserts a new ranking item into the `actors` table, associating it with a specific phase (stage).
- * 
+ *
  * @async
  * @function addRankingItem
  * @param {Object} params - The parameters for the new ranking item.
@@ -598,9 +598,9 @@ async function addSemanticDifferentialItem({
  * @param {boolean} params.justified - Whether justification is required for the item.
  * @param {number} params.wordCount - The word count limit for justification.
  * @returns {Promise<void>} - Resolves when the item is successfully added.
- * 
+ *
  * @throws {Error} If the SQL query fails.
- * 
+ *
  * @example
  * // Usage
  * await addRankingItem({
@@ -610,7 +610,7 @@ async function addSemanticDifferentialItem({
  *   justified: true,
  *   word_count: 30
  * });
- * 
+ *
  * // Inserts a ranking item with the provided parameters into the database.
  */
 async function addRankingItem({ stageId, name, jorder, justified, wordCount }) {
@@ -638,7 +638,7 @@ async function handleSemanticDifferentialResponse(
         throw new Error(
             "Invalid response format. Either it is not an array, or its length is greater than 1");
     }
-    
+
     // Only one response is expected for a semantic differential question
     const { did, sel, comment, iteration } = response[0];
 
@@ -683,10 +683,10 @@ async function handleSemanticDifferentialResponse(
     notificationEmitter.responseSubmitted(
         sessionId,
         phaseId,
-        { 
+        {
           type: "semantic_differential",
           uid: userId,
-          did: did, 
+          did: did,
           sel: sel,
           comment: comment
         });
@@ -723,9 +723,9 @@ async function handleRankingResponse(
             `,
             dbcon: config.dbconnString,
             sqlParams: [
-                rpg2.param('plain', orden), 
+                rpg2.param('plain', orden),
                 rpg2.param('plain', description),
-                rpg2.param('plain', actorid), 
+                rpg2.param('plain', actorid),
                 rpg2.param('plain', userId),
                 rpg2.param('plain', phaseId),
                 rpg2.param('plain', userId),
@@ -744,7 +744,7 @@ async function handleRankingResponse(
           phaseId: phaseId,
           uid: userId,
           items: response
-        });    
+        });
 }
 
 /**

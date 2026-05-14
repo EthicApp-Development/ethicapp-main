@@ -47,4 +47,4 @@ const authMessages = {
   }
 };
 
-module.exports = authMessages;
+export default authMessages;

@@ -42,6 +42,9 @@ async function verifyRecaptchaToken({ token, remoteIp }) {
   return body.success === true;
 }
 
-module.exports = {
+const recaptchaService = {
   verifyRecaptchaToken
 };
+
+export { verifyRecaptchaToken };
+export default recaptchaService;

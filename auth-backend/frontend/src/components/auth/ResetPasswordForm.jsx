@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import PasswordField from './PasswordField';
 import { resetPassword } from '../../api/authApi';
-import { useI18n } from '../../app/providers';
+import { useI18n } from '../../app/i18n-context';
 
 function ResetPasswordForm() {
   const { t } = useI18n();

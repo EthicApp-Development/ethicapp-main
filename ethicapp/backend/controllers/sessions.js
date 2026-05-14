@@ -1,12 +1,13 @@
 "use strict";
 
 import express from "express";
-import pass from "../helpers/compat-helper.js"; 
-import * as config from "../config/config.js"; 
+import pass from "../helpers/compat-helper.js";
+import * as config from "../config/database.config.js";
 import * as rpg from "../db/rest-pg.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as ViewsHelper from "../helpers/views-helper.js";
 import { teacherNotifications } from "../config/socket.config.js";
+import { moveUploadedFile, pdfUpload, removeUploadedFile } from "../middleware/upload.js";
 
 const router = express.Router();
 
@@ -130,12 +131,12 @@ router.post("/sessions", async (req, res) => {
                 VALUES ($1, $2, $3, now(), 1, $4)
                 RETURNING id;
             `,
-            sqlParams: [rpg2.param('plain', name), 
-                        rpg2.param('plain', description), 
-                        rpg2.param('plain', uid), 
+            sqlParams: [rpg2.param('plain', name),
+                        rpg2.param('plain', description),
+                        rpg2.param('plain', uid),
                         rpg2.param('plain', type)]
         });
-        
+
         const sessionId = sessionResult.id;
 
         if (!sessionId) {
@@ -150,7 +151,7 @@ router.post("/sessions", async (req, res) => {
                 INSERT INTO sesusers(sesid, uid)
                 VALUES ($1, $2);
             `,
-            sqlParams: [rpg2.param('plain', sessionId), 
+            sqlParams: [rpg2.param('plain', sessionId),
                 rpg2.param('plain', uid)]
         });
 
@@ -187,7 +188,7 @@ router.post("/add-activity", async (req, res) => {
                 VALUES ($1, $2)
             `,
             sqlParams: [
-                rpg2.param('plain', dsgnid), 
+                rpg2.param('plain', dsgnid),
                 rpg2.param('plain', sesid)]
         });
 
@@ -212,7 +213,7 @@ router.post("/add-activity", async (req, res) => {
             `,
             sqlParams: [rpg2.param('plain', dsgnid)]
         });
-        
+
         res.status(200).json({ status: 'ok', result: result.design });
     } catch (error) {
         console.error("Error in /add-activity endpoint:", error);
@@ -222,7 +223,7 @@ router.post("/add-activity", async (req, res) => {
 
 /**
  * @route GET /sessions/:id/users
- * @description Retrieves a list of users in a session. Validates that the requesting user is 
+ * @description Retrieves a list of users in a session. Validates that the requesting user is
  *              the creator of the session and has the role of "P" (teacher/professor).
  * @param {string} id - The ID of the session (from the URL path).
  * @returns {Object} - A JSON object containing a list of users in the session.
@@ -327,7 +328,7 @@ router.post("/sessions/join/:code", async (req, res) => {
                   )
                 RETURNING sesid
             `,
-            sqlParams: [rpg2.param('plain', uid), rpg2.param('plain', device), 
+            sqlParams: [rpg2.param('plain', uid), rpg2.param('plain', device),
                 rpg2.param('plain', code)],
         });
 
@@ -354,7 +355,7 @@ router.post("/sessions/join/:code", async (req, res) => {
 
         const { name, role, mail } = userResult[0];
 
-        teacherNotifications.studentJoined(sesid, { 
+        teacherNotifications.studentJoined(sesid, {
             id: uid,
             name,
             device,
@@ -392,7 +393,7 @@ router.post("/sessions/join/:code", async (req, res) => {
         return res.status(500).json({ status: "error", message: "Internal server error." });
     }
 });
-    
+
 router.post("/check-design", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql:   `
@@ -497,7 +498,7 @@ router.get("/home", function(req, res) {
                 renderScripts: (scripts) => ViewsHelper.renderScripts(scripts, res),
                 recaptchaEnabled: String(process.env.RECAPTCHA_ENABLED || "false").toLowerCase() === "true",
                 recaptchaSiteKey: process.env.VITE_RECAPTCHA_SITE_KEY || ""
-            });        
+            });
         } catch (error) {
             console.error(error);
             return res.status(500);
@@ -522,59 +523,90 @@ router.post("/update-session", await rpg.execSQL({
 }));
 
 
-router.post("/upload-file", async (req, res) => {
-    if (
-        req.session.uid != null && req.body.title != null && req.body.title != "" &&
-        req.files.pdf != null && req.files.pdf.mimetype == "application/pdf" &&
-        req.body.sesid != null
+router.post("/upload-file", pdfUpload, async (req, res) => {
+    if (req.session.uid == null || req.body.title == null || req.body.title == "" ||
+        req.file == null || req.file.mimetype != "application/pdf" || req.body.sesid == null
     ) {
-        await rpg.execSQL({
+        await removeUploadedFile(req.file);
+        return res.end('{"status":"err"}');
+    }
+
+    try {
+        const documentIdResult = await rpg2.singleSQL({
             dbcon: pass.dbcon,
-            sql:   `
-            INSERT INTO documents(title, PATH, sesid, uploader)
-            VALUES ($1,$2,$3,$4)
+            sql: "SELECT nextval(pg_get_serial_sequence('documents', 'id')) AS id;",
+        });
+        const documentId = Number(documentIdResult.id);
+        const sessionId = Number(req.body.sesid);
+        const documentPath = `uploads/sessions/${sessionId}/documents/${documentId}.pdf`;
+
+        await moveUploadedFile(req.file, documentPath);
+
+        await rpg2.singleSQL({
+            dbcon: pass.dbcon,
+            sql: `
+                INSERT INTO documents(id, title, path, sesid, uploader)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING id;
             `,
             sqlParams: [
-                rpg.param("post", "title"), rpg.param("calc", "path"),
-                rpg.param("post", "sesid"), rpg.param("ses", "uid")
+                rpg2.param("plain", documentId),
+                rpg2.param("plain", req.body.title),
+                rpg2.param("plain", documentPath),
+                rpg2.param("plain", sessionId),
+                rpg2.param("plain", req.session.uid),
             ],
-            onStart: (ses, data, calc) => {
-                calc.path = "uploads" + req.files.pdf.file.split("uploads")[1];
-            },
-            onEnd: () => {
-            }
-        })(req, res);
-        res.end('{"status":"ok"}');
+        });
+
+        return res.end('{"status":"ok"}');
+    } catch (error) {
+        await removeUploadedFile(req.file);
+        console.error("Error uploading session document:", error);
+        return res.end('{"status":"err"}');
     }
-    res.end('{"status":"err"}');
 });
 
 
-router.post("/upload-design-file", async (req, res) => {
-    if (
-        req.session.uid != null  && req.files.pdf != null
-        && req.files.pdf.mimetype == "application/pdf"
+router.post("/upload-design-file", pdfUpload, async (req, res) => {
+    if (req.session.uid == null || req.file == null ||
+        req.file.mimetype != "application/pdf" || req.body.dsgnid == null
     ) {
-        await rpg.execSQL({
+        await removeUploadedFile(req.file);
+        return res.end('{"status":"err"}');
+    }
+
+    try {
+        const documentIdResult = await rpg2.singleSQL({
             dbcon: pass.dbcon,
-            sql:   `
-            INSERT INTO designs_documents(PATH, dsgnid, uploader)
-            VALUES ($1,$2,$3)
+            sql: "SELECT nextval(pg_get_serial_sequence('designs_documents', 'id')) AS id;",
+        });
+        const documentId = Number(documentIdResult.id);
+        const designId = Number(req.body.dsgnid);
+        const documentPath = `assets/uploads/designs/${designId}/documents/${documentId}.pdf`;
+
+        await moveUploadedFile(req.file, documentPath);
+
+        await rpg2.singleSQL({
+            dbcon: pass.dbcon,
+            sql: `
+                INSERT INTO designs_documents(id, path, dsgnid, uploader)
+                VALUES ($1, $2, $3, $4)
+                RETURNING id;
             `,
             sqlParams: [
-                rpg.param("calc", "path"), 
-                rpg.param("post", "dsgnid"), 
-                rpg.param("ses", "uid")
+                rpg2.param("plain", documentId),
+                rpg2.param("plain", documentPath),
+                rpg2.param("plain", designId),
+                rpg2.param("plain", req.session.uid),
             ],
-            onStart: (ses, data, calc) => {
-                calc.path = "assets/uploads" + req.files.pdf.file.split("uploads")[1];
-            },
-            onEnd: () => {
-            }
-        })(req, res);
-        res.end('{"status":"ok"}');
+        });
+
+        return res.end('{"status":"ok"}');
+    } catch (error) {
+        await removeUploadedFile(req.file);
+        console.error("Error uploading design document:", error);
+        return res.end('{"status":"err"}');
     }
-    res.end('{"status":"err"}');
 });
 
 
@@ -625,7 +657,7 @@ router.post("/get-design", await rpg.singleSQL({
         WHERE id = $1
     `,
     sqlParams: [rpg.param("body", "id")],
-    onStart:   (req, res) => { 
+    onStart:   (req, res) => {
         //console.log(`[get-design] onStart - Received request body: ${JSON.stringify(req)}`);
         // const id = req.body?.id || "undefined";
         // console.log(`[get-design] Fetching design with id: ${id}`);
@@ -1186,7 +1218,7 @@ router.post("/add-differential", await rpg.execSQL({
     ]
 }));
 
-router.post("/add-differential-stage", async (req, res) => { 
+router.post("/add-differential-stage", async (req, res) => {
     console.log(`/add-differential-stage: ${JSON.stringify(req.body)}`)
     await rpg.execSQL({
         dbcon: pass.dbcon,
@@ -1443,31 +1475,31 @@ router.post("/enter-session-code", await rpg.singleSQL({
 router.post("/stage-state-df", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
-    SELECT COUNT(*), query1.stage_id1 as id FROM (SELECT 
-        stages.id AS stage_id1, 
+    SELECT COUNT(*), query1.stage_id1 as id FROM (SELECT
+        stages.id AS stage_id1,
         differential_selection.uid as uid,
         COUNT(differential_selection.uid) AS num_answers
-      FROM 
-        stages 
-        JOIN differential ON stages.id = differential.stageid 
-        JOIN differential_selection ON differential.id = differential_selection.did 
-      WHERE 
+      FROM
+        stages
+        JOIN differential ON stages.id = differential.stageid
+        JOIN differential_selection ON differential.id = differential_selection.did
+      WHERE
         stages.sesid = $1
-      GROUP BY 
+      GROUP BY
         stages.id, differential_selection.uid
       ) as query1 JOIN (
-      SELECT 
-        stages.id AS stage_id2, 
+      SELECT
+        stages.id AS stage_id2,
         COUNT(differential.id) AS questions
-      FROM 
-        stages 
-        JOIN differential ON stages.id = differential.stageid 
-      WHERE 
+      FROM
+        stages
+        JOIN differential ON stages.id = differential.stageid
+      WHERE
         stages.sesid = $1
-      GROUP BY 
+      GROUP BY
         stages.id
         ) as query2 ON query1.stage_id1= query2.stage_id2
-      
+
         WHERE query1.num_answers = query2.questions GROUP BY query1.stage_id1;
     `,
     postReqData: ["sesid"], //differential_selection uid
@@ -1483,7 +1515,7 @@ router.post("/stage-state-df", await rpg.multiSQL({
 router.post("/stage-state-r", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
-    SELECT COUNT(act.id), s.id FROM actor_selection act 
+    SELECT COUNT(act.id), s.id FROM actor_selection act
     INNER JOIN stages s ON act.stageid = s.id AND s.sesid = $1 GROUP BY s.id;
     `,
     postReqData: ["sesid"],

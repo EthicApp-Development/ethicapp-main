@@ -1,15 +1,20 @@
-const path = require('path');
-const express = require('express');
-const session = require('express-session');
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import express from 'express';
+import session from 'express-session';
+import passport from 'passport';
+import passportLocal from 'passport-local';
 
-const userService = require('./services/user.service');
+import userService from './services/user.service.js';
+import { createSessionStore } from './services/session-store.service.js';
 
-const viewRoutes = require('./routes/view.routes');
-const authRoutes = require('./routes/auth.routes');
+import viewRoutes from './routes/view.routes.js';
+import authRoutes from './routes/auth.routes.js';
 
 const app = express();
+const { Strategy: LocalStrategy } = passportLocal;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // --------------------------------------------------
 // Basic Express setup
@@ -41,6 +46,7 @@ app.use(express.static(path.join(__dirname, 'public', 'app')));
 // --------------------------------------------------
 app.use(
   session({
+    store: createSessionStore(),
     name: process.env.SESSION_COOKIE_NAME || 'auth.sid',
     secret: process.env.SESSION_SECRET,
     resave: false,
@@ -48,9 +54,11 @@ app.use(
     rolling: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 1000 * 60 * 60 * 8 // 8 hours
+      secure: process.env.SESSION_COOKIE_SECURE
+        ? process.env.SESSION_COOKIE_SECURE === 'true'
+        : process.env.NODE_ENV === 'production',
+      sameSite: process.env.SESSION_COOKIE_SAMESITE || 'lax',
+      maxAge: Number(process.env.AUTH_SESSION_COOKIE_MAX_AGE_MS || 1000 * 60 * 60 * 8)
     }
   })
 );
@@ -173,4 +181,4 @@ app.use(function errorHandler(err, req, res, next) {
 });
 
 
-module.exports = app;
+export default app;

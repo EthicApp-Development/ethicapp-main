@@ -1,6 +1,6 @@
-require('dotenv').config();
+import 'dotenv/config';
 
-const { spawnSync } = require('child_process');
+import { spawnSync } from 'node:child_process';
 
 function createUser(args) {
   const result = spawnSync(

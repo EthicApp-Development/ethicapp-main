@@ -1,4 +1,4 @@
-import * as config from "../config/config.js";
+import * as config from "../config/database.config.js";
 import * as pglib from "../db/rest-pg-2.js";
 import bcrypt from "bcrypt";
 

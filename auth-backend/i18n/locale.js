@@ -31,7 +31,7 @@ function translateMessage(req, key, catalog) {
   return catalog[locale]?.[key] || catalog[DEFAULT_LOCALE]?.[key] || key;
 }
 
-module.exports = {
+export {
   DEFAULT_LOCALE,
   normalizePreferredLocale,
   inferPreferredLocaleFromRequest,
