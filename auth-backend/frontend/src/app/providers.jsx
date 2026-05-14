@@ -1,12 +1,9 @@
 import PropTypes from 'prop-types';
-import { createContext, useContext, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import translations from '../i18n/translations';
 import { DEFAULT_LOCALE, detectPreferredLocale } from '../i18n/languages';
-
-const I18nContext = createContext({
-  locale: DEFAULT_LOCALE,
-  t: (key) => key
-});
+import { I18nContext } from './i18n-context';
+import { emptyRegisterDraft, RegisterDraftContext } from './register-draft-context';
 
 function getByPath(dictionary, dottedPath) {
   return dottedPath
@@ -16,8 +13,9 @@ function getByPath(dictionary, dottedPath) {
 
 export function AppProviders({ children }) {
   const locale = detectPreferredLocale();
+  const [registerDraft, setRegisterDraft] = useState(emptyRegisterDraft);
 
-  const contextValue = useMemo(() => {
+  const i18nContextValue = useMemo(() => {
     const localeDictionary = translations[locale] || translations[DEFAULT_LOCALE] || {};
 
     function t(key) {
@@ -28,13 +26,35 @@ export function AppProviders({ children }) {
     return { locale, t };
   }, [locale]);
 
-  return <I18nContext.Provider value={contextValue}>{children}</I18nContext.Provider>;
+  const updateRegisterDraft = useCallback((updater) => {
+    setRegisterDraft((current) => {
+      const nextDraft = typeof updater === 'function' ? updater(current) : updater;
+      return {
+        ...current,
+        ...nextDraft
+      };
+    });
+  }, []);
+
+  const clearRegisterDraft = useCallback(() => {
+    setRegisterDraft(emptyRegisterDraft);
+  }, []);
+
+  const registerDraftContextValue = useMemo(() => ({
+    draft: registerDraft,
+    updateDraft: updateRegisterDraft,
+    clearDraft: clearRegisterDraft
+  }), [clearRegisterDraft, registerDraft, updateRegisterDraft]);
+
+  return (
+    <I18nContext.Provider value={i18nContextValue}>
+      <RegisterDraftContext.Provider value={registerDraftContextValue}>
+        {children}
+      </RegisterDraftContext.Provider>
+    </I18nContext.Provider>
+  );
 }
 
 AppProviders.propTypes = {
   children: PropTypes.node.isRequired
 };
-
-export function useI18n() {
-  return useContext(I18nContext);
-}

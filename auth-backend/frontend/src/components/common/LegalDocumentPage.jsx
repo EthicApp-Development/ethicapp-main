@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useI18n } from '../../app/providers';
+import { useI18n } from '../../app/i18n-context';
 import { dataPrivacyContact, institutionName } from '../../config/env';
 import { DEFAULT_LOCALE } from '../../i18n/languages';
 import MarkdownArticle from './MarkdownArticle';

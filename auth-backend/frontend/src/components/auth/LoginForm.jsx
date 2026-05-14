@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { login } from '../../api/authApi';
-import { useI18n } from '../../app/providers';
+import { useI18n } from '../../app/i18n-context';
 import TextField from '../common/TextField';
 import PasswordField from './PasswordField';
 
