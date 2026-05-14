@@ -13,7 +13,8 @@ export function useActivityRealtimeSync({
   setChatRefreshTokenByPhaseId,
   activityCurrentPhaseId,
   setGroupIdByPhaseId,
-  setGroupContextByPhaseId
+  setGroupContextByPhaseId,
+  onExternalServiceResult
 }) {
   useEffect(() => {
     if (!session.isAuthenticated || !selectedSession) {
@@ -49,16 +50,29 @@ export function useActivityRealtimeSync({
       setChatRefreshTokenByPhaseId((prev) => ({ ...prev, [phaseId]: (prev[phaseId] ?? 0) + 1 }));
     };
 
+    const handleExternalServiceResult = (payload) => {
+      console.debug('[student socket] onExternalServiceResult', { sessionId: activeSessionId, payload });
+
+      const payloadSessionId = Number(payload?.sessionId);
+      if (Number.isInteger(payloadSessionId) && payloadSessionId > 0 && payloadSessionId !== activeSessionId) {
+        return;
+      }
+
+      onExternalServiceResult?.(payload);
+    };
+
     getStudentSocket()
       .then((instance) => {
         if (isUnmounted) return;
 
         socket = instance;
         socket.emit('joinSession', activeSessionId);
+        socket.emit('joinUser', session.uid);
         socket.on('onPhaseTransition', handlePhaseTransition);
         socket.on('onShareResponse', handleShareResponse);
         socket.on('onEndSession', handleEndSession);
         socket.on('onChatMessage', handleChatMessage);
+        socket.on('onExternalServiceResult', handleExternalServiceResult);
       })
       .catch((error) => {
         console.debug('[student socket] could not initialize websocket client', { sessionId: activeSessionId, error });
@@ -72,10 +86,12 @@ export function useActivityRealtimeSync({
         socket.emit('leaveGroup', Number(currentGroupIdRef.current));
       }
       socket.emit('leaveSession', activeSessionId);
+      socket.emit('leaveUser', session.uid);
       socket.off('onPhaseTransition', handlePhaseTransition);
       socket.off('onShareResponse', handleShareResponse);
       socket.off('onEndSession', handleEndSession);
       socket.off('onChatMessage', handleChatMessage);
+      socket.off('onExternalServiceResult', handleExternalServiceResult);
     };
   }, [
     currentGroupIdRef,
@@ -83,6 +99,7 @@ export function useActivityRealtimeSync({
     dispatch,
     loadCurrentPhaseState,
     loadFullState,
+    onExternalServiceResult,
     selectedSession,
     session,
     setChatRefreshTokenByPhaseId

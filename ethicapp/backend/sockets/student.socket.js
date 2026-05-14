@@ -16,6 +16,16 @@ let studentSocketInit = (socket, socketNamespace) => {
         console.debug(`A student has left session-${sessionId}`);
     });
 
+    socket.on('joinUser', (userId) => {
+        socket.join(`user-${userId}`);
+        console.debug(`Student joined user-${userId}`);
+    });
+
+    socket.on('leaveUser', (userId) => {
+        socket.leave(`user-${userId}`);
+        console.debug(`Student left user-${userId}`);
+    });
+
     // Join a group
     socket.on('joinGroup', (groupId) => {
         socket.join(`group-${groupId}`);
@@ -66,6 +76,10 @@ const toStudentsNotifications = (socketNamespace) => {
         endSession:  (sessionId, content) => {
             socketNamespace.to(`session-${sessionId}`).emit("onEndSession", 
                 { content });
+        },
+
+        externalServiceResult: (userId, payload) => {
+            socketNamespace.to(`user-${userId}`).emit("onExternalServiceResult", payload);
         }
     };
 };

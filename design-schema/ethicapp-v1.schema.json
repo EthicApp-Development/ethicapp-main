@@ -88,11 +88,27 @@
           },
           "uniqueItems": true
         },
+        "externalServices": { "$ref": "#/$defs/externalServices" },
         "instructions": {
           "type": "string",
           "minLength": 1
         }
       }
+    },
+
+    "externalServices": {
+      "type": "object",
+      "properties": {
+        "enabledServiceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": true
     },
 
     "semanticDifferentialPhase": {

@@ -9,6 +9,8 @@ import { requireRole } from "../../helpers/auth-helper.js";
 import { studentNotifications } from "../../config/socket.config.js";
 import redisClient from "../../db/redis.js";
 import { getDesignTypeBySessionId } from "./activities-common.js";
+import { getPhaseDesignByPhaseId } from "../../helpers/designs-helper.js";
+import externalServicesRegistry from "../../services/external-services.service.js";
 
 const router = express.Router();
 
@@ -227,8 +229,8 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
     }
-    const { session_id: sessionId } = req.params;
-    const { phaseId } = req.body;
+    const sessionId = Number(req.params.session_id);
+    const phaseId = Number(req.body.phaseId);
 
     if (!sessionId || !phaseId) {
         return res.status(400).json({ error: "Missing required parameters: session_id or phase_id." });
@@ -251,6 +253,22 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
             return res.status(400).json({ error: "The phase does not exist." });
         }
 
+        const sessionState = await rpg2.singleSQL({
+            sql: `
+                SELECT current_stage
+                FROM sessions
+                WHERE id = $1
+            `,
+            dbcon: config.dbconnString,
+            sqlParams: [rpg2.param('plain', sessionId)],
+        });
+
+        if (!sessionState) {
+            return res.status(404).json({ error: "Session not found." });
+        }
+
+        const previousPhaseId = Number(sessionState.current_stage) || null;
+
         result = await rpg2.execSQL({
             sql: `
                 UPDATE sessions
@@ -268,6 +286,11 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
 
         await redisClient.del(`descriptor:${sessionId}`);
         studentNotifications.phaseTransition(sessionId);
+        dispatchPhaseTransitionHooks({
+            sessionId,
+            startedPhaseId: phaseId,
+            endedPhaseId:   previousPhaseId,
+        });
 
         res.status(200).json({ status: "ok", message: "Session transitioned to the new phase." });
     } catch (err) {
@@ -275,6 +298,53 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
+async function dispatchPhaseTransitionHooks({ sessionId, startedPhaseId, endedPhaseId }) {
+    try {
+        if (endedPhaseId && endedPhaseId !== startedPhaseId) {
+            await dispatchPhaseHook("phaseEnded", {
+                sessionId,
+                phaseId: endedPhaseId,
+                startedPhaseId,
+                endedPhaseId,
+            });
+        }
+
+        await dispatchPhaseHook("phaseStarted", {
+            sessionId,
+            phaseId: startedPhaseId,
+            startedPhaseId,
+            endedPhaseId,
+        });
+    } catch (error) {
+        console.error("[external-services] Error dispatching phase transition hooks.", error);
+    }
+}
+
+async function dispatchPhaseHook(hookName, context) {
+    const phaseDesign = await getPhaseDesignByPhaseId(context.phaseId);
+    const enabledServiceIds = getEnabledExternalServiceIds(phaseDesign);
+
+    if (enabledServiceIds.length === 0) {
+        return;
+    }
+
+    await externalServicesRegistry.dispatchHook(hookName, context, {
+        enabledServiceIds,
+    });
+}
+
+function getEnabledExternalServiceIds(phaseDesign) {
+    const enabledServiceIds = phaseDesign?.externalServices?.enabledServiceIds;
+
+    if (!Array.isArray(enabledServiceIds)) {
+        return [];
+    }
+
+    return enabledServiceIds
+        .map(serviceId => String(serviceId).trim())
+        .filter(Boolean);
+}
 
 router.post("/activities/:session_id/finish", async (req, res) => {
     if (!requireRole(req, res, "P")) {
