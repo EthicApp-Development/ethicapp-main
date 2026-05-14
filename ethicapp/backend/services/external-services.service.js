@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";
-import * as config from "../config/config.js";
+import { dbconnString } from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { saveChatMessage } from "../helpers/chat-helper.js";
 import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
@@ -302,7 +302,7 @@ class ExternalServicesRegistry {
                 SET display_name = EXCLUDED.display_name
                 RETURNING id, service_id, display_name
             `,
-            dbcon: config.dbconnString,
+            dbcon: dbconnString,
             sqlParams: [
                 rpg2.param("plain", serviceId),
                 rpg2.param("plain", normalizedDisplayName),
