@@ -54,3 +54,8 @@ export async function resetPassword(payload) {
   const response = await authApiClient.post('/reset-password', payload);
   return response.data;
 }
+
+export async function logout() {
+  const response = await authApiClient.post('/logout');
+  return response.data;
+}
