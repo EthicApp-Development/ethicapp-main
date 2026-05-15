@@ -1,8 +1,29 @@
 const AUTH_BACKEND_INTERNAL_BASE_URL =
   process.env.AUTH_BACKEND_INTERNAL_BASE_URL || 'http://auth-backend:8502/api/auth';
+const DEVELOPMENT_INTERNAL_SERVICE_TOKEN = 'development-internal-service-token';
+
+function getInternalServiceToken() {
+  const configuredToken = (process.env.AUTH_INTERNAL_SERVICE_TOKEN || '').trim();
+
+  if (configuredToken) {
+    return configuredToken;
+  }
+
+  return process.env.NODE_ENV === 'production'
+    ? ''
+    : DEVELOPMENT_INTERNAL_SERVICE_TOKEN;
+}
 
 function buildUrl(pathname) {
   return `${AUTH_BACKEND_INTERNAL_BASE_URL.replace(/\/$/, '')}${pathname}`;
+}
+
+function internalServiceHeaders() {
+  const token = getInternalServiceToken();
+
+  return token
+    ? { 'X-Internal-Service-Token': token }
+    : {};
 }
 
 export async function verifyAdminPasswordWithAuthBackend({ password, cookie, language }) {
@@ -11,7 +32,8 @@ export async function verifyAdminPasswordWithAuthBackend({ password, cookie, lan
     headers: {
       'Content-Type': 'application/json',
       Cookie: cookie || '',
-      'Accept-Language': language || 'en-US'
+      'Accept-Language': language || 'en-US',
+      ...internalServiceHeaders()
     },
     body: JSON.stringify({ password })
   });
@@ -30,7 +52,8 @@ export async function triggerForgotPasswordWithAuthBackend({ email, recaptchaTok
     headers: {
       'Content-Type': 'application/json',
       Cookie: cookie || '',
-      'Accept-Language': language || 'en-US'
+      'Accept-Language': language || 'en-US',
+      ...internalServiceHeaders()
     },
     body: JSON.stringify({
       email,

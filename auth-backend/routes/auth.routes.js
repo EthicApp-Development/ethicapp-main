@@ -7,6 +7,7 @@ import mailService from '../services/mail.service.js';
 import recaptchaService from '../services/recaptcha.service.js';
 import authMessages from '../i18n/messages/auth-messages.js';
 import { inferPreferredLocaleFromRequest, normalizePreferredLocale, translateMessage } from '../i18n/locale.js';
+import { csrfTokenHandler } from '../middleware/csrfProtection.js';
 
 const router = express.Router();
 
@@ -77,6 +78,8 @@ function duplicateEmailResponse(req) {
 function t(req, key) {
   return translateMessage(req, key, authMessages);
 }
+
+router.get('/csrf-token', csrfTokenHandler);
 
 router.post('/login', async (req, res, next) => {
   try {

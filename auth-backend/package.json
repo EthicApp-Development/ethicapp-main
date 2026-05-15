@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
+    "test": "node --test \"**/*.node-test.mjs\"",
     "create:user": "node scripts/create-user.js",
     "create:admin": "node scripts/create-admin.js",
     "frontend:dev": "cd frontend && npm run dev",
