@@ -28,6 +28,20 @@ The contract distinguishes:
 
 All `VITE_*` variables are public frontend variables. They must never contain secrets.
 
+Use service-specific session secrets where the contract provides them. For
+example, `auth-backend` uses `AUTH_SESSION_SECRET` for `auth.sid`, while
+`management-console` uses `MNG_SESSION_SECRET` for `ethicapp.mng.sid`. These
+values do not need to match. `SESSION_SECRET` remains a shared fallback for
+legacy-compatible services, not the preferred production setting.
+
+`AUTH_INTERNAL_SERVICE_TOKEN` is a shared secret between `management-console`
+and `auth-backend`. It allows management-console to make server-to-server auth
+calls that are exempt from browser CSRF checks. Production deployments must set
+the same non-placeholder value in both services. The deployment contract marks
+this variable as required and intentionally provides no default. This token is
+service authentication for internal calls, not a browser CSRF token; do not
+expose it in frontend runtime config or any `VITE_*` variable.
+
 Production images keep frontend bundles environment-neutral. Container entrypoints
 emit public `VITE_*` values into each frontend's `runtime-config.js` when the
 container starts, so deployment repositories should provide those values as
