@@ -4,6 +4,7 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
 
     const vm = this;
     vm.selectedDesignId = 0;
+    vm.dsgnMode = 0;
     vm.hasFetchedUserDesigns = false;
     vm.userSearch = "";
     vm.designSearchQuery = "";
@@ -46,7 +47,7 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
     }
 
     vm.forceFetchDesigns = async function() {
-        vm.userDesigns = await DesignCatalogService.getUserDesigns();
+        vm.userDesigns = await DesignCatalogService.getUserDesigns(true);
         vm.publicDesigns = await DesignCatalogService.getPublicDesigns();
         vm.designs = await DesignCatalogService.getDesigns();
 

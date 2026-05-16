@@ -21,16 +21,19 @@
                     </div>
                     <div class="col-md-12" ng-if="bdc.userDesigns.length > 0">
                         <p>{{'choose_design_for_new_activity' | translate}}</p>
-                        <input
-                            class="form-control launch-activity-search fontAwesome"
-                            type="text"
-                            placeholder="{{'search'|translate}} &#xF002;"
-                            ng-model="bdc.designSearchQuery"
-                            ng-change="bdc.handleDesignSearchChange()"
-                            uib-typeahead="design as bdc.formatDesignLabel(design) for design in bdc.searchUserDesigns($viewValue)"
-                            typeahead-on-select="bdc.selectDesignFromSearch($item)"
-                            typeahead-input-formatter="bdc.formatDesignLabel($model)"
-                            typeahead-min-length="1">
+                        <div class="search-field-wrapper launch-activity-search-wrapper">
+                            <input
+                                class="form-control launch-activity-search search-decorated-input"
+                                type="text"
+                                placeholder="{{'search'|translate}}"
+                                ng-model="bdc.designSearchQuery"
+                                ng-change="bdc.handleDesignSearchChange()"
+                                uib-typeahead="design as bdc.formatDesignLabel(design) for design in bdc.searchUserDesigns($viewValue)"
+                                typeahead-on-select="bdc.selectDesignFromSearch($item)"
+                                typeahead-input-formatter="bdc.formatDesignLabel($model)"
+                                typeahead-min-length="1">
+                            <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+                        </div>
                     </div>
                 </div>
                 <div class="row" ng-if="bdc.userDesigns.length > 0">
@@ -62,29 +65,6 @@
                     <div class="form-group">
                         <p>{{'provide_activity_description' | translate}}</p>
                         <input type="text" class="form-control launch-activity-description" ng-model="ac.activityDescription" />
-                    </div>
-                    <div class="row" style="margin-bottom: 1em;">
-                        <div class="col-lg-6">
-                            <button type="button" class="btn btn-link" ng-click="showAdvanced = !showAdvanced">
-                                <i class="fa" ng-class="{'fa-angle-right': !showAdvanced, 'fa-angle-down': showAdvanced}"></i>
-                                {{ showAdvanced ? ('hide_advanced_options' | translate) : ('show_advanced_options' | translate) }}
-                            </button>
-                        </div>
-                    </div>
-                    <div class="row" ng-show="showAdvanced">
-                        <div class="col-lg-12">
-                            <div class="form-group">
-                                <div class="panel panel-default">
-                                    <div class="panel-body">
-                                        <label class="control-label" style="font-weight: bolder;">{{'content_analysis_title' | translate}}</label>
-                                        <p>{{'content_analysis_description' | translate}}</p>
-                                        <div class="ml-1">
-                                            <div toggle-switch ng-model="ac.additionalConfig.contentAnalysis" ng-disabled="!ac.isContentAnalysisEnabled" class="ats-switch switch-primary"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                     <div class="row">
                         <div class="col-lg-6">
