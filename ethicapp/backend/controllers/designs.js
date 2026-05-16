@@ -372,7 +372,7 @@ router.post("/designs/:id/duplicate", async (req, res) => {
         const design = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT id, creator, design, public
+                SELECT id, creator, design, public, case_id
                 FROM designs
                 WHERE id = $1
             `,
@@ -402,13 +402,14 @@ router.post("/designs/:id/duplicate", async (req, res) => {
         const result = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
-                INSERT INTO designs (creator, design)
-                VALUES ($1, $2)
+                INSERT INTO designs (creator, design, case_id)
+                VALUES ($1, $2, $3)
                 RETURNING id
             `,
             sqlParams: [
                 rpg2.param("plain", sessionUid),
                 rpg2.param("plain", clonedDesign), // Use rpg2.param for the serialized design
+                rpg2.param("plain", design.case_id),
             ],
         });
 

@@ -50,7 +50,7 @@
                     </div>
             
                     <!-- Import Button for Non-Owners -->
-                    <div class="ml-3" ng-show="$ctrl.isOwner && $ctrl.isFunction($ctrl.onImport)">
+                    <div class="ml-3" ng-show="!$ctrl.isOwner && $ctrl.isFunction($ctrl.onImport)">
                         <button class="btn btn-default btn-sm" ng-click="$ctrl.onImport($ctrl.design.id)">
                             <i class="fa fa-download"></i> {{ 'import_design_button_text' | translate }}
                         </button>
