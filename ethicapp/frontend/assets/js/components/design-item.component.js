@@ -1,7 +1,30 @@
 const DesignItemController = function() {
+    const normalizeKnownText = function(value) {
+        if (value === undefined || value === null) {
+            return "";
+        }
+        const normalizedValue = String(value).trim();
+        const tokens = normalizedValue.split(/[,\s]+/).filter(Boolean);
+        if (normalizedValue === "" || tokens.every(token => token.toLowerCase() === "unknown")) {
+            return "";
+        }
+        return normalizedValue;
+    };
+
     this.isFunction = function(variable) {
         // console.log("[DesignItemController::isFunction]", variable, typeof variable === 'function');
         return typeof variable === 'function';
+    };
+
+    this.getAuthorLabel = function() {
+        const metainfo = this.design?.metainfo || {};
+        const authorName = normalizeKnownText(metainfo.authorName);
+        const institution = normalizeKnownText(metainfo.institution);
+        return [authorName, institution].filter(Boolean).join(", ");
+    };
+
+    this.hasAuthorEmail = function() {
+        return Boolean(normalizeKnownText(this.design?.metainfo?.email));
     };
 
     this.getAssociatedCase = function() {
