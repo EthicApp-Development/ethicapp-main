@@ -32,7 +32,7 @@
                         <button ng-show="$ctrl.isFunction($ctrl.onDuplicate)" class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onDuplicate($ctrl.design.id)">
                             <i class="fa-regular fa-clone"></i> {{ 'duplicate_item_button_text' | translate }}
                         </button>                        
-                        <button ng-show="$ctrl.isFunction($ctrl.onDelete) && !$ctrl.design.locked" class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onDelete($ctrl.design.id)">
+                        <button ng-show="$ctrl.isFunction($ctrl.onDelete) && !$ctrl.design.locked" class="btn btn-danger btn-sm ml-1" ng-click="$ctrl.onDelete($ctrl.design.id)">
                             <i class="fa fa-trash"></i> {{ 'delete' | translate }}
                         </button>
                         <button ng-show="$ctrl.isFunction($ctrl.onSelect)" class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onSelect($ctrl.design.id)">

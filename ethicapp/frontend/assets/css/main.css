@@ -2555,6 +2555,31 @@ h2{
     margin-bottom: 5px; /* Reduce spacing */
 }
 
+.case-card-panel .panel-body .row {
+    align-items: center;
+    display: flex;
+}
+
+.case-card-actions {
+    align-items: center;
+    display: flex;
+    gap: 5px;
+    justify-content: flex-end;
+    width: 100%;
+}
+
+.case-pagination-controls {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin: 16px 0;
+}
+
+.case-pagination-status {
+    color: #555;
+}
+
 .design-item-panel .design-item-actions {
     align-items: center;
     display: flex;

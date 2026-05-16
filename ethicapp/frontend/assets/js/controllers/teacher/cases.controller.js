@@ -3,6 +3,8 @@ export function CasesController($scope, $routeParams, $window, CasesCatalogServi
     const vm = this;
     vm.cases = [];
     vm.caseObj = null;
+    vm.currentPage = 1;
+    vm.pageSize = 5;
     vm.form = {
         title: "",
         authorFirstname: "",
@@ -14,6 +16,7 @@ export function CasesController($scope, $routeParams, $window, CasesCatalogServi
 
     vm.loadCases = async function() {
         vm.cases = await CasesCatalogService.getCases(true);
+        vm.currentPage = 1;
         $scope.$applyAsync();
     };
 
@@ -55,6 +58,32 @@ export function CasesController($scope, $routeParams, $window, CasesCatalogServi
         return vm.getContentRepresentation(caseObj)?.href || caseObj?.pdfPath || "";
     };
 
+    vm.getTotalPages = function() {
+        return Math.max(1, Math.ceil(vm.cases.length / vm.pageSize));
+    };
+
+    vm.getPaginatedCases = function() {
+        const startIndex = (vm.currentPage - 1) * vm.pageSize;
+        return vm.cases.slice(startIndex, startIndex + vm.pageSize);
+    };
+
+    vm.setPage = function(pageNumber) {
+        const nextPage = Number(pageNumber);
+        if (!Number.isInteger(nextPage)) {
+            return;
+        }
+
+        vm.currentPage = Math.min(Math.max(nextPage, 1), vm.getTotalPages());
+    };
+
+    vm.previousPage = function() {
+        vm.setPage(vm.currentPage - 1);
+    };
+
+    vm.nextPage = function() {
+        vm.setPage(vm.currentPage + 1);
+    };
+
     vm.goBack = function() {
         if ($window.history.length > 1) {
             $window.history.back();
@@ -86,5 +115,18 @@ export function CasesController($scope, $routeParams, $window, CasesCatalogServi
     vm.deleteCase = async function(caseId) {
         await CasesCatalogService.deleteCase(caseId);
         await vm.loadCases();
+        vm.setPage(vm.currentPage);
+    };
+
+    vm.viewCase = function(caseItem) {
+        $scope.navigateTo(`/cases/${caseItem.id}`);
+    };
+
+    vm.editCase = function(caseItem) {
+        $scope.navigateTo(`/cases/${caseItem.id}/edit`);
+    };
+
+    vm.deleteCaseFromCard = async function(caseItem) {
+        await vm.deleteCase(caseItem.id);
     };
 }

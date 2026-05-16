@@ -186,6 +186,7 @@ import itemDuplicatorComponent from "../../components/item-duplicator.component.
 import designErrorSummaryComponent from "../../components/design-error-summary.component.js";
 import itemMoverComponent from '../../components/item-mover.component.js';
 import designItemComponent from '../../components/design-item.component.js';
+import caseCardComponent from "../../components/case-card.component.js";
 import caseFormEditorComponent from "../../components/case-form-editor.component.js";
 import phaseInstructionsEditComponent from "../../components/phase-instructions-edit.component.js";
 import teacherGroupChatComponent from "../../components/teacher-group-chat.component.js";
@@ -203,6 +204,7 @@ app.component('designErrorSummary', designErrorSummaryComponent);
 app.component('rankingItemEditor', rankingItemEditorComponent);
 app.component('sdItemEditor', sdItemEditorComponent);
 app.component('designItem', designItemComponent);
+app.component("caseCard", caseCardComponent);
 app.component("caseFormEditor", caseFormEditorComponent);
 app.component("phaseInstructionsEdit", phaseInstructionsEditComponent);
 app.component("teacherGroupChat", teacherGroupChatComponent);
