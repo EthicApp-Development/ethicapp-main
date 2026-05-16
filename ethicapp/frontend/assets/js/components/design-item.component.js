@@ -5,7 +5,7 @@ const DesignItemController = function() {
     };
 
     this.getAssociatedCase = function() {
-        return this.design?.associatedCase || null;
+        return this.associatedCase || this.design?.associatedCase || null;
     };
 
     this.formatCaseLabel = function(caseItem) {
@@ -23,6 +23,7 @@ const DesignItemController = function() {
 const designItemComponent = {
     bindings: {
         design: '<',
+        associatedCase: '<?',
         isOwner: '<',
         onLaunch: '<?',
         onEdit: '<?',

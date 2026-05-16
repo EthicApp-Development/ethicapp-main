@@ -39,6 +39,9 @@ function TeacherRouter($routeProvider) {
         .when('/cases/new', {
             templateUrl: 'static/views/teacher/cases.new.html',
         })
+        .when('/cases/:id', {
+            templateUrl: 'static/views/teacher/cases.view.html',
+        })
         .when('/cases/:id/edit', {
             templateUrl: 'static/views/teacher/cases.edit.html',
         })

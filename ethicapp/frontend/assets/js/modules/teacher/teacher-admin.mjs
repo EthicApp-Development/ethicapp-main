@@ -108,11 +108,11 @@ app.controller("CreateDesignController",
 app.controller("DashboardController", 
     ["$scope", "$routeParams", "$http", "$translate", "$timeout", "$uibModal",
         "ActivityStateService", "ActivityCatalogService", "DesignCatalogService",
-        "TeacherGroupChatService", DashboardController]);
+        "CasesCatalogService", "TeacherGroupChatService", DashboardController]);
 app.controller("DesignViewerController", 
     ["$scope", "$routeParams", "DesignCatalogService", "CasesCatalogService", DesignViewerController]);
 app.controller("CasesController",
-    ["$scope", "$routeParams", "CasesCatalogService", CasesController]);
+    ["$scope", "$routeParams", "$window", "CasesCatalogService", CasesController]);
 app.controller("ErrorController", 
     ["$scope", "$window", "$routeParams",
         ErrorController]);

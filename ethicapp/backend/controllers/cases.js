@@ -9,6 +9,12 @@ import { moveUploadedFile, pdfUpload, removeUploadedFile } from "../middleware/u
 const router = express.Router();
 
 function normalizeCase(row) {
+    const representations = row.pdf_path ? [{
+        rel: "content",
+        mediaType: "application/pdf",
+        href: row.pdf_path,
+    }] : [];
+
     return {
         id: row.id,
         title: row.title,
@@ -19,6 +25,7 @@ function normalizeCase(row) {
         creator: row.creator,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
+        representations,
     };
 }
 
@@ -130,7 +137,7 @@ router.get("/cases/:id/download-link", async (req, res) => {
 });
 
 router.get("/cases/:id", async (req, res) => {
-    if (!requireRole(req, res, "P")) {
+    if (!requireRole(req, res, ["P", "A"])) {
         return;
     }
 
@@ -143,10 +150,27 @@ router.get("/cases/:id", async (req, res) => {
         const caseObj = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT id, title, author_firstname, author_lastname, author_email,
-                       pdf_path, creator, created_at, updated_at
-                FROM ethical_cases
-                WHERE id = $1 AND creator = $2;
+                SELECT c.id, c.title, c.author_firstname, c.author_lastname, c.author_email,
+                       c.pdf_path, c.creator, c.created_at, c.updated_at
+                FROM ethical_cases c
+                WHERE c.id = $1
+                  AND (
+                    c.creator = $2
+                    OR EXISTS (
+                        SELECT 1
+                        FROM designs d
+                        WHERE d.case_id = c.id
+                          AND (d.creator = $2 OR d.public = TRUE)
+                    )
+                    OR EXISTS (
+                        SELECT 1
+                        FROM designs d
+                        INNER JOIN activity a ON a.design = d.id
+                        INNER JOIN sessions s ON s.id = a.session
+                        WHERE d.case_id = c.id
+                          AND s.creator = $2
+                    )
+                  );
             `,
             sqlParams: [
                 rpg2.param("plain", caseId),

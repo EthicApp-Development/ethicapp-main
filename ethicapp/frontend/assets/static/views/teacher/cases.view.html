@@ -1,0 +1,39 @@
+<div ng-controller="CasesController as vm" ng-init="vm.loadCase()">
+    <div class="row">
+        <div class="col-md-12">
+            <h2><i class="fa fa-book"></i> {{ 'ethical_cases_view_title' | translate }}</h2>
+            <button type="button" class="btn btn-default btn-sm mb-2" ng-click="vm.goBack()">
+                <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
+            </button>
+            <br>
+        </div>
+    </div>
+
+    <div class="panel panel-default" ng-if="vm.caseObj">
+        <div class="panel-body">
+            <h3 style="margin-top: 0">{{ vm.caseObj.title }}</h3>
+            <p>
+                <strong>{{ 'author' | translate }}:</strong>
+                {{ vm.formatAuthor(vm.caseObj) }}
+                <span ng-if="vm.caseObj.authorEmail">
+                    (<a ng-href="mailto:{{ vm.caseObj.authorEmail }}">{{ vm.caseObj.authorEmail }}</a>)
+                </span>
+            </p>
+            <p ng-if="vm.getCaseContentUrl(vm.caseObj)">
+                <a class="btn btn-default btn-sm" ng-href="{{ vm.getCaseContentUrl(vm.caseObj) }}" target="_blank" rel="noopener noreferrer">
+                    <i class="fa fa-external-link" aria-hidden="true"></i> {{ 'ethical_cases_open_file' | translate }}
+                </a>
+            </p>
+        </div>
+    </div>
+
+    <div class="panel panel-default" ng-if="vm.caseObj && vm.getCaseContentUrl(vm.caseObj)">
+        <div class="panel-body">
+            <embed
+                ng-src="{{ vm.getCaseContentUrl(vm.caseObj) }}"
+                type="application/pdf"
+                width="100%"
+                height="720px" />
+        </div>
+    </div>
+</div>

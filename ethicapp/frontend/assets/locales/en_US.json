@@ -567,13 +567,14 @@
 	"resource_not_found_explanation": "Sorry, the page you are looking for does not exist.",
 	"internal_server_error": "Internal Server Error (500)",
 	"internal_server_error_explanation": "Something went wrong, please try again later.",
-	"go_back": "Go Back to the Previous Page"
+	"go_back": "Volver"
 ,
 	"nav_pill_title_cases": "Cases",
 	"ethical_cases_title": "Ethical Cases",
 	"ethical_cases_create": "New Case",
-	"ethical_cases_new_title": "Create Ethical Case",
-	"ethical_cases_edit_title": "Edit Ethical Case",
+	"ethical_cases_new_title": "Create Case",
+	"ethical_cases_edit_title": "Edit Case",
+	"ethical_cases_view_title": "View Case",
 	"ethical_cases_file": "Case PDF",
 	"ethical_cases_open_file": "Open file",
 	"ethical_cases_current_file": "Current file",

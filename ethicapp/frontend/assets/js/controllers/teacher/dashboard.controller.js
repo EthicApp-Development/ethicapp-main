@@ -7,11 +7,12 @@ import { openSemanticDifferentialGroupResponseModal } from "../../helpers/dashbo
 /*eslint func-style: ["error", "expression"]*/
 export function DashboardController($scope, $routeParams, $http, 
     $translate, $timeout, $uibModal, 
-    ActivityStateService, ActivityCatalogService, DesignCatalogService, TeacherGroupChatService) {
+    ActivityStateService, ActivityCatalogService, DesignCatalogService, CasesCatalogService, TeacherGroupChatService) {
 
     const vm = this;
 
     vm.designObj = null;
+    vm.associatedCase = null;
     vm.userList = [];
     vm.reachedLastPhase = false;
     vm.dashboardPhaseData = [];
@@ -21,6 +22,23 @@ export function DashboardController($scope, $routeParams, $http,
 
     vm.selectTab = function(index) {
         vm.selectedTab = index; // Update the selected tab index
+    };
+
+    vm.loadAssociatedCase = async function(designId) {
+        if (!designId) {
+            return null;
+        }
+
+        if (vm.designObj?.associatedCase) {
+            return vm.designObj.associatedCase;
+        }
+
+        try {
+            return await CasesCatalogService.getCaseByDesignId(designId);
+        } catch (error) {
+            console.error("[DashboardController::loadAssociatedCase] Error loading associated case.", error);
+            return null;
+        }
     };
 
     vm.openIndividualResponseModal = function(response, phaseData) {
@@ -282,7 +300,16 @@ export function DashboardController($scope, $routeParams, $http,
             vm.userList = vm.activityState?.users ?? [];
                     
             // Get the design of the activity
-            vm.designObj = await DesignCatalogService.getDesignById(vm.activityState.descriptor.designId);
+            vm.designObj = await DesignCatalogService.getDesignById(vm.activityState.descriptor.designId)
+                || {
+                    ...vm.activityState.descriptor.design,
+                    id: vm.activityState.descriptor.designId,
+                    userOwned: true,
+                };
+            vm.associatedCase = await vm.loadAssociatedCase(vm.activityState.descriptor.designId);
+            if (vm.designObj) {
+                vm.designObj.associatedCase = vm.associatedCase;
+            }
     
             // Check if the activity is finished
             vm.isActivityFinished = vm.checkActivityFinished();

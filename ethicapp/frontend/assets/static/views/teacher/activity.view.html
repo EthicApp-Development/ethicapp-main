@@ -33,7 +33,7 @@
     <div class="row">
         <div class="col-md-12">
             <div ng-show="dc.activeTab === 'info'" class="margin-top-8">
-                <activity-description activity="dc.activityState.descriptor" enable-link="false"></activity-description>
+                <activity-description activity="dc.activityState.descriptor" associated-case="dc.associatedCase" enable-link="false"></activity-description>
                 <activity-controls is-last-phase="dc.reachedLastPhase" is-finished="dc.isActivityFinished" parent-ctrl="dc"></activity-controls>              
                 <!-- Horizontal Rule -->
                 <hr>
@@ -90,6 +90,7 @@
             <div ng-show="dc.activeTab === 'design'" class="margin-top-8">
                 <design-item
                     design="dc.designObj"
+                    associated-case="dc.associatedCase"
                     is-owner="dc.designObj.userOwned">
                 </design-item>
                 <h4 style="margin-top:1em; margin-bottom:2em">

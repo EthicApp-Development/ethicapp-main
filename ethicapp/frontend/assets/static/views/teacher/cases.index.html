@@ -33,6 +33,9 @@
                             </a>
                         </td>
                         <td>
+                            <button class="btn btn-default btn-sm" ng-click="navigateTo('/cases/' + caseItem.id)">
+                                {{ 'view' | translate }}
+                            </button>
                             <button class="btn btn-default btn-sm" ng-click="navigateTo('/cases/' + caseItem.id + '/edit')">
                                 {{ 'edit' | translate }}
                             </button>

@@ -10,7 +10,7 @@
                 <p ng-if="$ctrl.design.valid"><i class="text-success fa-solid fa-check" aria-hidden="true"></i></i> {{ 'valid_design_text' | translate }}</p>
                 <p><i class="fa-solid fa-calendar-alt" aria-hidden="true"></i> {{ 'creation_date_colon' | translate }} {{$ctrl.design.metainfo.creation_date | date}}</p>
                 <p><i class="fa-solid fa-paint-brush" aria-hidden="true"></i> {{ 'design_type_colon' | translate }} {{$ctrl.design.type === "semantic_differential" ? ("semantic_differential" | translate) : ("ranking_activity" | translate)}}</p>
-                <p ng-if="$ctrl.getAssociatedCase()"><i class="fa-solid fa-book" aria-hidden="true"></i> {{ 'design_associated_case_label' | translate }}: {{$ctrl.formatCaseLabel($ctrl.getAssociatedCase())}}</p>
+                <p ng-if="$ctrl.getAssociatedCase()"><i class="fa-solid fa-book" aria-hidden="true"></i> {{ 'design_associated_case_label' | translate }}: <a ng-href="#!/cases/{{$ctrl.getAssociatedCase().id}}" ng-click="$event.stopPropagation()">{{$ctrl.formatCaseLabel($ctrl.getAssociatedCase())}}</a></p>
                 <p ng-if="!$ctrl.getAssociatedCase()"><i class="fa-solid fa-book" aria-hidden="true"></i> {{ 'design_no_case_associated' | translate }}</p>
                 <p><i class="fa-solid fa-layer-group" aria-hidden="true"></i> {{ 'number_of_phases_colon' | translate }} {{$ctrl.design.phases.length}}</p>
             </div>
