@@ -446,7 +446,7 @@
 	"searchSharedDesign": "Buscar Diseños Compartidos",
 	"gotoActivity": "Ir a la Actividad",
 	"recent_activities_title_text": "Actividades Recientes",
-	"no_activities_text": "No tienes actividades recientes. Puedes comenzar por lanzar una actividad o crear un nuevo diseño",
+	"no_recent_activities_text": "No tienes actividades recientes. Puedes comenzar por lanzar una actividad o crear un nuevo diseño",
 	"code": "Código",
 	"launched": "Lanzada en",
 	"homeMsg": "Diseña una nueva actividad para realizar con tu curso, o lanza una actividad basada en algún diseño. También puedes compartir una actividad con colegas y buscar actividades compartidas por otros.",

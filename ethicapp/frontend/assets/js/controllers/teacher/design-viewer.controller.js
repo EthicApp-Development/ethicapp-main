@@ -11,7 +11,7 @@ export function DesignViewerController($scope, $routeParams, DesignCatalogServic
             await vm.loadAssociatedCase();
 
             $scope.$applyAsync(() => {
-                console.log(`[DesignViewerController::init] Design: ${JSON.stringify(vm.design)}`);
+                // console.log(`[DesignViewerController::init] Design: ${JSON.stringify(vm.design)}`);
             });
         } else {
             console.error("[DesignViewerController::init] Design not found.");

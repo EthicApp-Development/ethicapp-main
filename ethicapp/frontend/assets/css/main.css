@@ -1860,8 +1860,25 @@ h2{
 .line-row-nd {
     display: flex;
     flex-direction: row;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 2rem; 
+}
+
+.line-row-nd > label {
+    min-width: 10rem;
+    padding-top: 0.7rem;
+}
+
+.line-control-nd {
+    display: flex;
+    flex-direction: column;
+}
+
+.validation-message {
+    margin: 0.4rem 0 0 10px;
+    color: #a94442;
+    font-size: 0.9em;
+    line-height: 1.3;
 }
 
 
