@@ -265,9 +265,14 @@ router.get("/designs", async (req, res) => {
                        c.author_firstname AS case_author_firstname,
                        c.author_lastname AS case_author_lastname,
                        c.author_email AS case_author_email,
+                       u.firstname AS creator_firstname,
+                       u.lastname AS creator_lastname,
+                       u.name AS creator_name,
+                       u.mail AS creator_email,
                        CASE WHEN d.creator = $1 THEN TRUE ELSE FALSE END AS user_owned
                 FROM designs d
                 LEFT JOIN ethical_cases c ON c.id = d.case_id
+                LEFT JOIN users u ON u.id = d.creator
                 WHERE d.creator = $1 OR d.public = TRUE
                 ORDER BY d.id DESC, user_owned DESC;
             `,
@@ -275,21 +280,36 @@ router.get("/designs", async (req, res) => {
         });
 
         // Process the rows to map to the desired structure
-        const designs = rows.map(row => ({
-            ...row.design,
-            id: row.id,
-            public: row.public,
-            locked: row.locked,
-            caseId: row.case_id,
-            associatedCase: row.case_id ? {
-                id: row.case_id,
-                title: row.case_title,
-                authorFirstname: row.case_author_firstname,
-                authorLastname: row.case_author_lastname,
-                authorEmail: row.case_author_email,
-            } : null,
-            userOwned: row.user_owned,
-        }));
+        const designs = rows.map(row => {
+            const creatorName = [row.creator_firstname, row.creator_lastname]
+                .filter(Boolean)
+                .join(" ") || row.creator_name;
+            const design = {
+                ...row.design,
+                id: row.id,
+                public: row.public,
+                locked: row.locked,
+                caseId: row.case_id,
+                associatedCase: row.case_id ? {
+                    id: row.case_id,
+                    title: row.case_title,
+                    authorFirstname: row.case_author_firstname,
+                    authorLastname: row.case_author_lastname,
+                    authorEmail: row.case_author_email,
+                } : null,
+                userOwned: row.user_owned,
+            };
+
+            if (!row.user_owned && creatorName) {
+                design.metainfo = {
+                    ...(design.metainfo || {}),
+                    authorName: creatorName,
+                    email: row.creator_email || design.metainfo?.email,
+                };
+            }
+
+            return design;
+        });
 
         // Respond with the processed designs
         return res.json({ status: "ok", result: designs });
