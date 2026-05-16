@@ -2555,6 +2555,21 @@ h2{
     margin-bottom: 5px; /* Reduce spacing */
 }
 
+.design-item-panel .design-item-actions {
+    align-items: center;
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+}
+
+.design-item-panel.design-item-selection-layout .panel-body {
+    padding: 15px;
+}
+
+.design-item-panel.design-item-selection-layout p {
+    max-width: 780px;
+}
+
 .activity-item-panel .btn, 
 .design-item-panel .btn {
     margin-left: 5px; /* Add spacing between buttons */

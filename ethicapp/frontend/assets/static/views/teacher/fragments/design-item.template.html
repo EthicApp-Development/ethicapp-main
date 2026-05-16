@@ -1,7 +1,7 @@
 <div class="panel panel-default design-item-panel" 
      ng-click="$ctrl.onSelect($ctrl.design.id)" 
-     ng-class="{'dsgn_sel': $ctrl.design.id === $ctrl.selectedDesignId}">
-    <div class="panel-body" ng-init="left_width = $ctrl.isOwner ? 'col-sm-4' : 'col-sm-8'; right_width = $ctrl.isOwner ? 'col-sm-8' : 'col-sm-4'">
+     ng-class="{'dsgn_sel': $ctrl.design.id === $ctrl.selectedDesignId, 'design-item-selection-layout': $ctrl.selectionLayout}">
+    <div class="panel-body" ng-init="left_width = $ctrl.selectionLayout ? 'col-sm-7' : ($ctrl.isOwner ? 'col-sm-4' : 'col-sm-8'); right_width = $ctrl.selectionLayout ? 'col-sm-5' : ($ctrl.isOwner ? 'col-sm-8' : 'col-sm-4')">
         <div class="row">
             <div class="{{left_width}}">
                 <p><i class="fa-solid fa-info-circle" aria-hidden="true"></i> {{ 'title_colon' | translate }} <a ng-href="#!/designs/{{$ctrl.design.id}}" class="text-decoration-none">{{$ctrl.design.metainfo.title}}</a></p>
@@ -10,10 +10,12 @@
                 <p ng-if="$ctrl.design.valid"><i class="text-success fa-solid fa-check" aria-hidden="true"></i></i> {{ 'valid_design_text' | translate }}</p>
                 <p><i class="fa-solid fa-calendar-alt" aria-hidden="true"></i> {{ 'creation_date_colon' | translate }} {{$ctrl.design.metainfo.creation_date | date}}</p>
                 <p><i class="fa-solid fa-paint-brush" aria-hidden="true"></i> {{ 'design_type_colon' | translate }} {{$ctrl.design.type === "semantic_differential" ? ("semantic_differential" | translate) : ("ranking_activity" | translate)}}</p>
+                <p ng-if="$ctrl.getAssociatedCase()"><i class="fa-solid fa-book" aria-hidden="true"></i> {{ 'design_associated_case_label' | translate }}: {{$ctrl.formatCaseLabel($ctrl.getAssociatedCase())}}</p>
+                <p ng-if="!$ctrl.getAssociatedCase()"><i class="fa-solid fa-book" aria-hidden="true"></i> {{ 'design_no_case_associated' | translate }}</p>
                 <p><i class="fa-solid fa-layer-group" aria-hidden="true"></i> {{ 'number_of_phases_colon' | translate }} {{$ctrl.design.phases.length}}</p>
             </div>
             <div class="{{right_width}}">
-                <div style="width: 100%; display: flex; justify-content: flex-end; align-items: center;">
+                <div class="design-item-actions">
                     <!-- Buttons Section -->
                     <div ng-if="$ctrl.isOwner" class="d-inline-flex align-items-center">
                         <img class="locked-svg"

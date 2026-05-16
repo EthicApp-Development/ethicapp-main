@@ -100,7 +100,8 @@ app.controller("LocalesController",
 app.controller("ActivityController", 
     ["$scope", "$http", "ActivityCatalogService", "DesignCatalogService", ActivityController]);
 app.controller("BrowseDesignsController", 
-    ["$scope", "$routeParams", "toast", "$translate", "ActivityStateService", "DesignCatalogService", 
+    ["$scope", "$routeParams", "toast", "$translate", "ActivityStateService", "DesignCatalogService",
+        "$timeout", "$window",
         BrowseDesignsController]); 
 app.controller("CreateDesignController", 
     ["$scope", "DesignCatalogService", "UserProfileService", CreateDesignController]);

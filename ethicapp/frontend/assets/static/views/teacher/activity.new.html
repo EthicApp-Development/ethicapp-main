@@ -47,6 +47,7 @@
                                     selected-design-id="bdc.selectedDesignId"
                                     on-view="bdc.handleView" 
                                     is-owner="true"
+                                    selection-layout="true"
                                     on-select="bdc.handleSelectDesign">
                                 </design-item>
                             </div>
@@ -55,7 +56,7 @@
                 </div>
             </div>
         </div>
-        <div ng-controller="ActivityController as ac" class="panel panel-default" 
+        <div id="activity-launch-step" ng-controller="ActivityController as ac" class="panel panel-default"
             ng-show="bdc.selectedDesignId != 0 && bdc.selectedDesignId != NaN">
             <div class="panel-heading">
                 <label>{{'step_2_prepare_activity' | translate}}</label>
@@ -64,7 +65,11 @@
                 <form ng-submit="ac.createSession(bdc.selectedDesignId)">                    
                     <div class="form-group">
                         <p>{{'provide_activity_description' | translate}}</p>
-                        <input type="text" class="form-control launch-activity-description" ng-model="ac.activityDescription" />
+                        <input
+                            id="activity-description-input"
+                            type="text"
+                            class="form-control launch-activity-description"
+                            ng-model="ac.activityDescription" />
                     </div>
                     <div class="row">
                         <div class="col-lg-6">

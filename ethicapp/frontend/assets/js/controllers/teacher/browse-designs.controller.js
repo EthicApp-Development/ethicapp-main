@@ -1,6 +1,6 @@
 /*eslint func-style: ["error", "expression"]*/
 export function BrowseDesignsController($scope, $routeParams, toast, $translate,
-    ActivityStateService, DesignCatalogService) {
+    ActivityStateService, DesignCatalogService, $timeout, $window) {
 
     const vm = this;
     vm.selectedDesignId = 0;
@@ -11,6 +11,19 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
     vm.userDesigns = [];
     vm.publicDesigns = [];
     vm.designs = [];
+
+    vm.scrollToActivitySetup = function() {
+        $timeout(() => {
+            const stepPanel = $window.document.getElementById("activity-launch-step");
+            if (stepPanel) {
+                stepPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+            const descriptionInput = $window.document.getElementById("activity-description-input");
+            if (descriptionInput) {
+                descriptionInput.focus({ preventScroll: true });
+            }
+        }, 0, false);
+    };
 
     vm.init = async function() {
         const updateHandler = function() {
@@ -43,6 +56,7 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
     vm.handleSelectDesign = function(id) {
         $scope.$applyAsync(() => {
             vm.selectedDesignId = id;
+            vm.scrollToActivitySetup();
         });
     }
 
@@ -94,6 +108,7 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
         vm.selectedDesignId = design.id;
         vm.designSearchQuery = vm.formatDesignLabel(design);
         vm.userSearch = vm.designSearchQuery;
+        vm.scrollToActivitySetup();
     };
 
     vm.handleLaunch = function(designId) {

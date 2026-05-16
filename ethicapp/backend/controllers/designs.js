@@ -209,11 +209,16 @@ router.get("/users/:id/designs", async (req, res) => {
         const designs = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT id, design, public, locked
-                       , case_id
-                FROM designs
+                SELECT d.id, d.design, d.public, d.locked,
+                       d.case_id,
+                       c.title AS case_title,
+                       c.author_firstname AS case_author_firstname,
+                       c.author_lastname AS case_author_lastname,
+                       c.author_email AS case_author_email
+                FROM designs d
+                LEFT JOIN ethical_cases c ON c.id = d.case_id
                 WHERE creator = $1
-                ORDER BY id DESC;
+                ORDER BY d.id DESC;
             `,
             sqlParams: [userId], // Pass the user ID as a parameter
         });
@@ -225,6 +230,13 @@ router.get("/users/:id/designs", async (req, res) => {
             public: row.public,
             locked: row.locked,
             caseId: row.case_id,
+            associatedCase: row.case_id ? {
+                id: row.case_id,
+                title: row.case_title,
+                authorFirstname: row.case_author_firstname,
+                authorLastname: row.case_author_lastname,
+                authorEmail: row.case_author_email,
+            } : null,
         }));
 
         // Return the formatted designs
@@ -247,12 +259,17 @@ router.get("/designs", async (req, res) => {
         const rows = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT DISTINCT ON (id) id, design, public, locked,
-                       case_id,
-                       CASE WHEN creator = $1 THEN TRUE ELSE FALSE END AS user_owned
-                FROM designs
-                WHERE creator = $1 OR public = TRUE
-                ORDER BY id DESC, user_owned DESC;
+                SELECT DISTINCT ON (d.id) d.id, d.design, d.public, d.locked,
+                       d.case_id,
+                       c.title AS case_title,
+                       c.author_firstname AS case_author_firstname,
+                       c.author_lastname AS case_author_lastname,
+                       c.author_email AS case_author_email,
+                       CASE WHEN d.creator = $1 THEN TRUE ELSE FALSE END AS user_owned
+                FROM designs d
+                LEFT JOIN ethical_cases c ON c.id = d.case_id
+                WHERE d.creator = $1 OR d.public = TRUE
+                ORDER BY d.id DESC, user_owned DESC;
             `,
             sqlParams: [sessionUid], // Pass session user ID as the parameter
         });
@@ -264,6 +281,13 @@ router.get("/designs", async (req, res) => {
             public: row.public,
             locked: row.locked,
             caseId: row.case_id,
+            associatedCase: row.case_id ? {
+                id: row.case_id,
+                title: row.case_title,
+                authorFirstname: row.case_author_firstname,
+                authorLastname: row.case_author_lastname,
+                authorEmail: row.case_author_email,
+            } : null,
             userOwned: row.user_owned,
         }));
 

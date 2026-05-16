@@ -3,6 +3,21 @@ const DesignItemController = function() {
         // console.log("[DesignItemController::isFunction]", variable, typeof variable === 'function');
         return typeof variable === 'function';
     };
+
+    this.getAssociatedCase = function() {
+        return this.design?.associatedCase || null;
+    };
+
+    this.formatCaseLabel = function(caseItem) {
+        if (!caseItem) {
+            return "";
+        }
+        const hasAuthor = caseItem.authorFirstname || caseItem.authorLastname;
+        if (hasAuthor) {
+            return `${caseItem.title} (${caseItem.authorFirstname || ""} ${caseItem.authorLastname || ""})`.trim();
+        }
+        return caseItem.title;
+    };
 }
 
 const designItemComponent = {
@@ -17,6 +32,7 @@ const designItemComponent = {
         onDuplicate: '<?',
         onTogglePublic: '<?',
         onImport: '<?',
+        selectionLayout: '<?',
         selectedDesignId: '<'
     },
     controller: DesignItemController,
