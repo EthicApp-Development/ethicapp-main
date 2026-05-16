@@ -31,7 +31,9 @@
             </p>
             <p class="help-block" ng-if="dec.associatedCase">
                 <strong>{{ 'design_associated_case_current' | translate }}:</strong>
-                {{ dec.formatCaseLabel(dec.associatedCase) }}
+                <a ng-href="#!/cases/{{dec.associatedCase.id}}">
+                    {{ dec.formatCaseLabel(dec.associatedCase) }}
+                </a>
                 <button type="button" class="btn btn-link btn-xs" ng-click="dec.clearAssociatedCase()">
                     {{ 'remove' | translate }}
                 </button>
@@ -185,7 +187,7 @@
                                         </div>
                                     </div>
                                     <div ng-switch-when="ranking">
-                                        <input style="margin-top: 1em;" ng-model="phase.randomize_item_order" type="checkbox"></input> <label>{{ 'item_random_order_label' | translate }}</label>
+                                        <input style="margin-top: 1em;" ng-model="phase.randomize_item_order" type="checkbox"> <label>{{ 'item_random_order_label' | translate }}</label>
                                         <div ng-repeat="item in phase.roles track by $index">
                                             <ranking-item-editor 
                                                 phase-number="phaseIndex+1"

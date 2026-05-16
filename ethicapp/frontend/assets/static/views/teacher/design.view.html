@@ -22,7 +22,9 @@
                     </p>
                     <p class="help-block" ng-if="dvc.associatedCase">
                         <strong>{{ 'design_associated_case_current' | translate }}:</strong>
-                        {{ dvc.formatCaseLabel(dvc.associatedCase) }}
+                        <a ng-href="#!/cases/{{dvc.associatedCase.id}}">
+                            {{ dvc.formatCaseLabel(dvc.associatedCase) }}
+                        </a>
                     </p>
                 </div>
             </div>
