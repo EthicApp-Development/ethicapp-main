@@ -7,7 +7,6 @@ import * as rpg from "../db/rest-pg.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import * as ViewsHelper from "../helpers/views-helper.js";
 import { teacherNotifications } from "../config/socket.config.js";
-import { moveUploadedFile, pdfUpload, removeUploadedFile } from "../middleware/upload.js";
 
 const router = express.Router();
 
@@ -53,16 +52,9 @@ router.post("/get-session-list", await rpg.multiSQL({
             (
                 s.id in (SELECT sesid FROM teams)
             ) AS grouped,
-            (
-                SELECT count(*)
-                FROM report_pair
-                WHERE sesid = s.id
-            ) AS paired,
-            sr.stime
-        FROM sessions AS s
-        LEFT OUTER JOIN status_record AS sr
-        ON sr.sesid = s.id
-            AND s.status = sr.status,
+            0 AS paired,
+            NULL::timestamp AS stime
+        FROM sessions AS s,
         sesusers AS su,
         users AS u
         WHERE su.uid = $1
@@ -264,7 +256,6 @@ router.get("/sessions/:id/users", async (req, res) => {
                 SELECT u.id,
                        u.name,
                        u.mail,
-                       u.aprendizaje,
                        u.role,
                        su.device
                 FROM users AS u
@@ -523,104 +514,6 @@ router.post("/update-session", await rpg.execSQL({
 }));
 
 
-router.post("/upload-file", pdfUpload, async (req, res) => {
-    if (req.session.uid == null || req.body.title == null || req.body.title == "" ||
-        req.file == null || req.file.mimetype != "application/pdf" || req.body.sesid == null
-    ) {
-        await removeUploadedFile(req.file);
-        return res.end('{"status":"err"}');
-    }
-
-    try {
-        const documentIdResult = await rpg2.singleSQL({
-            dbcon: pass.dbcon,
-            sql: "SELECT nextval(pg_get_serial_sequence('documents', 'id')) AS id;",
-        });
-        const documentId = Number(documentIdResult.id);
-        const sessionId = Number(req.body.sesid);
-        const documentPath = `uploads/sessions/${sessionId}/documents/${documentId}.pdf`;
-
-        await moveUploadedFile(req.file, documentPath);
-
-        await rpg2.singleSQL({
-            dbcon: pass.dbcon,
-            sql: `
-                INSERT INTO documents(id, title, path, sesid, uploader)
-                VALUES ($1, $2, $3, $4, $5)
-                RETURNING id;
-            `,
-            sqlParams: [
-                rpg2.param("plain", documentId),
-                rpg2.param("plain", req.body.title),
-                rpg2.param("plain", documentPath),
-                rpg2.param("plain", sessionId),
-                rpg2.param("plain", req.session.uid),
-            ],
-        });
-
-        return res.end('{"status":"ok"}');
-    } catch (error) {
-        await removeUploadedFile(req.file);
-        console.error("Error uploading session document:", error);
-        return res.end('{"status":"err"}');
-    }
-});
-
-
-router.post("/upload-design-file", pdfUpload, async (req, res) => {
-    if (req.session.uid == null || req.file == null ||
-        req.file.mimetype != "application/pdf" || req.body.dsgnid == null
-    ) {
-        await removeUploadedFile(req.file);
-        return res.end('{"status":"err"}');
-    }
-
-    try {
-        const documentIdResult = await rpg2.singleSQL({
-            dbcon: pass.dbcon,
-            sql: "SELECT nextval(pg_get_serial_sequence('designs_documents', 'id')) AS id;",
-        });
-        const documentId = Number(documentIdResult.id);
-        const designId = Number(req.body.dsgnid);
-        const documentPath = `assets/uploads/designs/${designId}/documents/${documentId}.pdf`;
-
-        await moveUploadedFile(req.file, documentPath);
-
-        await rpg2.singleSQL({
-            dbcon: pass.dbcon,
-            sql: `
-                INSERT INTO designs_documents(id, path, dsgnid, uploader)
-                VALUES ($1, $2, $3, $4)
-                RETURNING id;
-            `,
-            sqlParams: [
-                rpg2.param("plain", documentId),
-                rpg2.param("plain", documentPath),
-                rpg2.param("plain", designId),
-                rpg2.param("plain", req.session.uid),
-            ],
-        });
-
-        return res.end('{"status":"ok"}');
-    } catch (error) {
-        await removeUploadedFile(req.file);
-        console.error("Error uploading design document:", error);
-        return res.end('{"status":"err"}');
-    }
-});
-
-
-router.post("/delete-design-document", await rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    UPDATE designs_documents
-    SET active = FALSE
-    WHERE id = $1
-    `,
-    postReqData: ["dsgnid"],
-    sqlParams:   [rpg.param("post", "dsgnid")]
-}));
-
 router.post("/upload-design", await rpg.singleSQL({
     dbcon: pass.dbcon,
     sql: `
@@ -805,34 +698,6 @@ router.post("/delete-design", await rpg.singleSQL({
     }
 }));
 
-router.post("/designs-documents", await rpg.multiSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    SELECT id,
-        PATH
-    FROM designs_documents
-    WHERE dsgnid = $1
-        AND active = TRUE
-    `,
-    sqlParams:   [rpg.param("post", "dsgnid")]
-}));
-
-
-//############################################
-router.post("/documents-session", await rpg.multiSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    SELECT id,
-        title,
-        PATH
-    FROM documents
-    WHERE sesid = $1
-        AND active = TRUE
-    `,
-    postReqData: ["sesid"],
-    sqlParams:   [rpg.param("post", "sesid")]
-}));
-
 router.post("/questions-session", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
@@ -878,7 +743,6 @@ router.post("/get-ses-users", await rpg.multiSQL({
     SELECT u.id,
         u.name,
         u.mail,
-        u.aprendizaje,
         u.role,
         su.device
     FROM users AS u,
@@ -974,183 +838,6 @@ router.post("/delete-ses-user", await rpg.execSQL({
     `,
     postReqData: ["sesid", "uid"],
     sqlParams:   [rpg.param("post", "sesid"), rpg.param("post", "uid")]
-}));
-
-
-router.post("/get-selection-comment", await rpg.singleSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    SELECT answer,
-        COMMENT,
-        confidence
-    FROM selection
-    WHERE UID = $1
-        AND qid = $2
-        AND iteration = $3
-    `,
-    postReqData: ["qid", "uid", "iteration"],
-    sqlParams:   [
-        rpg.param("post", "uid"), rpg.param("post", "qid"), rpg.param("post", "iteration")
-    ]
-}));
-
-
-router.post("/get-selection-team-comment", await rpg.multiSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    SELECT s.answer,
-        s.comment,
-        s.confidence,
-        u.name AS uname
-    FROM selection AS s
-    INNER JOIN teamusers AS tu
-    ON tu.uid = s.uid
-    INNER JOIN users AS u
-    ON u.id = s.uid
-    WHERE tu.tmid = $1
-        AND s.qid = $2
-        AND iteration = 3
-    `,
-    postReqData: ["qid", "tmid"],
-    sqlParams:   [rpg.param("post", "tmid"), rpg.param("post", "qid")]
-}));
-
-router.post("/semantic-documents", await rpg.multiSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    SELECT id,
-        title,
-        content
-    FROM semantic_document
-    WHERE sesid = $1
-    ORDER BY orden ASC
-    `,
-    postReqData: ["sesid"],
-    sqlParams:   [rpg.param("post", "sesid")]
-}));
-
-router.post("/get-semantic-documents", await rpg.multiSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    SELECT id,
-        title,
-        content
-    FROM semantic_document
-    WHERE sesid = $1
-    ORDER BY orden ASC
-    `,
-    sesReqData: ["ses"],
-    sqlParams:  [rpg.param("ses", "ses")]
-}));
-
-
-router.post("/add-semantic-unit", await rpg.singleSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    INSERT INTO semantic_unit(sentences, docs, COMMENT, UID, sesid, iteration)
-    VALUES ($1,$2,$3,$4,$5,$6)
-    RETURNING id
-    `,
-    postReqData: ["comment", "sentences", "docs", "iteration"],
-    sesReqData:  ["uid", "ses"],
-    sqlParams:   [
-        rpg.param("post", "sentences"), rpg.param("post", "docs"), rpg.param("post", "comment"),
-        rpg.param("ses", "uid"), rpg.param("ses", "ses"), rpg.param("post", "iteration")
-    ]
-}));
-
-router.post("/add-sync-semantic-unit", await rpg.singleSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    INSERT INTO semantic_unit(sentences, docs, COMMENT, UID, sesid, iteration)
-    VALUES ($1,$2,$3,$4,$5,$6)
-    RETURNING id
-    `,
-    postReqData: ["comment", "sentences", "docs", "iteration", "uidoriginal"],
-    sesReqData:  ["uid", "ses"],
-    sqlParams:   [
-        rpg.param("post", "sentences"), rpg.param("post", "docs"), rpg.param("post", "comment"),
-        rpg.param("post", "uidoriginal"), rpg.param("ses", "ses"), rpg.param("post", "iteration")
-    ]
-}));
-
-
-router.post("/update-semantic-unit", await rpg.execSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    UPDATE semantic_unit
-    SET
-        (sentences, COMMENT, docs) = ($1, $2, $3)
-    WHERE id = $4
-    `,
-    postReqData: ["comment", "sentences", "docs", "id"],
-    sesReqData:  ["uid"],
-    sqlParams:   [
-        rpg.param("post", "sentences"), rpg.param("post", "comment"),
-        rpg.param("post", "docs"), rpg.param("post", "id")
-    ]
-}));
-
-
-router.post("/get-semantic-units", await rpg.multiSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    SELECT u.id,
-        u.sentences,
-        u.comment,
-        u.docs,
-        u.iteration
-    FROM semantic_unit AS u
-    WHERE u.uid = $1
-        AND u.sesid = $2
-        AND (
-            u.iteration = $3
-            OR u.iteration <= 0
-        )
-    `,
-    sesReqData:  ["uid", "ses"],
-    postReqData: ["iteration"],
-    sqlParams:   [
-        rpg.param("ses", "uid"), rpg.param("ses", "ses"), rpg.param("post", "iteration")
-    ]
-}));
-
-
-router.post("/get-team-sync-units", await rpg.multiSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    SELECT u.id,
-        u.sentences,
-        u.comment,
-        u.docs,
-        u.iteration
-    FROM semantic_unit AS u
-    WHERE u.uid in (
-        SELECT original_leader
-        FROM teams
-        INNER JOIN teamusers
-        ON tmid = id
-        WHERE UID = $1
-        AND sesid = $2
-    )
-        AND u.sesid = $3
-        AND u.iteration = 3
-    ORDER BY u.id ASC
-    `,
-    sesReqData: ["uid", "ses"],
-    sqlParams:  [rpg.param("ses", "uid"), rpg.param("ses", "ses"), rpg.param("ses", "ses")]
-}));
-
-
-router.post("/delete-semantic-unit", await rpg.multiSQL({
-    dbcon: pass.dbcon,
-    sql:   `
-    DELETE
-    FROM semantic_unit
-    WHERE id = $1
-    `,
-    postReqData: ["id"],
-    sqlParams:   [rpg.param("post", "id")]
 }));
 
 
@@ -1296,23 +983,6 @@ router.post("/duplicate-session", async (req, res) => {
                         sql:   `
                         INSERT INTO sesusers(sesid, UID)
                         VALUES (${sesid}, ${req.session.uid})
-                        `,
-                        preventResEnd: true,
-                        onEnd:         () => {}
-                    })(req,res);
-                }
-                if (req.body.copyDocuments) {
-                    await rpg.execSQL({
-                        dbcon: pass.dbcon,
-                        sql:   `
-                        INSERT INTO documents(sesid, title, PATH, uploader, active)
-                        SELECT ${sesid} AS sesid,
-                            title,
-                            PATH,
-                            uploader,
-                            active
-                        FROM documents
-                        WHERE sesid = ${oldsesid}
                         `,
                         preventResEnd: true,
                         onEnd:         () => {}

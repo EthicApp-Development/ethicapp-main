@@ -1,4 +1,5 @@
-create table report_ideas(
-    rid integer references reports(id),
-    idea_id integer references ideas(id)
-);
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS profile_image_path TEXT;
+
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS profile_image_topbar_path TEXT;

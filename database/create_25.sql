@@ -1,1 +1,2 @@
-alter table actors add column word_count integer default 0;
+ALTER TABLE users
+  ALTER COLUMN pass DROP NOT NULL;

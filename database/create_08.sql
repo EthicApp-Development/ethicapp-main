@@ -1,1 +1,1 @@
-alter table questions add column plugin_data varchar(255);
+alter table sesusers add constraint no_dup_users unique(uid,sesid);

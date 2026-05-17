@@ -1,15 +1,8 @@
-create table status_record(
+create table question_text(
+    id serial,
     sesid integer references sessions(id),
-    status integer,
-    stime timestamp
+    title text,
+    content text
 );
 
-create table finish_session(
-    uid integer references users(id),
-    sesid integer references sessions(id),
-    status integer,
-    stime timestamp
-);
-
-alter table ideas add column stime timestamp;
-alter table selection add column stime timestamp;
+alter table questions add column textid integer default null;

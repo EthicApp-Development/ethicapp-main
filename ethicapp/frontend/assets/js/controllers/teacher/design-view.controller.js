@@ -14,14 +14,12 @@ export function DesignViewController($scope, $routeParams, DesignCatalogService)
     vm.methods = [
         vm.keyGroups("random"), vm.keyGroups("performance", "homog"),
         vm.keyGroups("performance", "heterg"), 
-        vm.keyGroups("knowledgeType", "homog"), vm.keyGroups("knowledgeType", "heterg"), 
         vm.keyGroups("previous")
     ];
 
     vm.groupType = [vm.keyGroups("individual"), vm.keyGroups("team")];
     vm.busy = false; //upload file
     vm.extraOpts = false;
-    vm.documents = null;
     vm.prevStages = false;
     vm.error = false;
     vm.saved = false;
@@ -41,7 +39,6 @@ export function DesignViewController($scope, $routeParams, DesignCatalogService)
     vm.methods = [
         vm.keyGroups("random"), vm.keyGroups("performance", "homog"),
         vm.keyGroups("performance", "heterg"), 
-        vm.keyGroups("knowledgeType", "homog"), vm.keyGroups("knowledgeType", "heterg"), 
         vm.keyGroups("previous")
     ];
 

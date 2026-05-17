@@ -214,6 +214,30 @@ describe("upload middleware", () => {
         await assertTemporaryUploadsClean();
     });
 
+    it("rejects legacy assets upload paths", async () => {
+        const app = createApp((testApp) => {
+            testApp.post("/upload", pdfUpload, async (req, res) => {
+                await assert.rejects(
+                    () => moveUploadedFile(req.file, "/assets/uploads/designs/123/documents/1.pdf"),
+                    /Invalid upload public path/,
+                );
+                await removeUploadedFile(req.file);
+                res.status(400).json({ status: "err" });
+            });
+        });
+
+        await withServer(app, async (baseUrl) => {
+            const response = await fetch(`${baseUrl}/upload`, {
+                method: "POST",
+                body: buildForm("pdf", "%PDF-1.4", "sample.pdf", "application/pdf"),
+            });
+
+            assert.equal(response.status, 400);
+        });
+
+        await assertTemporaryUploadsClean();
+    });
+
     it("removes uploaded files and prunes empty temporary directories", async () => {
         const app = createApp((testApp) => {
             testApp.post("/upload", pdfUpload, async (req, res) => {

@@ -79,7 +79,6 @@ app.use(assetVersions("/assets", assetPath));
 
 // Uploads
 app.use("/uploads", express.static(uploadsAbsolutePath));
-app.use("/assets/uploads", express.static(uploadsAbsolutePath));
 
 // view engine setup
 app.set("views", path.join(__dirname, "views"));

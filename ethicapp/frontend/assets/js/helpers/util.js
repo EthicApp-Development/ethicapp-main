@@ -56,26 +56,8 @@ export let isDifferent = (type) => {
         return false;
     case "performance heterg":
         return true;
-    case "knowledgeType homog":
-        return false;
-    case "knowledgeType heterg":
-        return true;
     }
     return false;
-};
-
-export let habMetric = (u) => {
-    switch (u.aprendizaje) {
-    case "Teorico":
-        return -2;
-    case "Reflexivo":
-        return -1;
-    case "Activo":
-        return 1;
-    case "Pragmatico":
-        return 2;
-    }
-    return 0;
 };
 
 export let ngQuillConfigProvider = (ngQuillConfigProvider) => {

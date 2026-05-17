@@ -1,10 +1,28 @@
--- Uncomment Legacy Fix code below if J option was used inverted (legacy code)
+create table if not exists differential(
+    id      serial,
+    title   text default '',
+    tleft   text not null,
+    tright  text not null,
+    orden   integer not null,
+    creator integer references users(id),
+    sesid   integer references sessions(id),
+    primary key(id)
+);
 
--- Legacy Fix
--- UPDATE sessions set options = 'T' where options is null;
--- UPDATE sessions set options = null where options = 'J';
--- UPDATE sessions set options = 'J' where options = 'T';
--- UPDATE sessions set options = trim(both 'J' from options) where char_length(options) > 1;
--- End of Legacy Fix
+create table if not exists differential_selection(
+    id      serial,
+    uid     integer references users(id),
+    did     integer references differential(id),
+    sel     integer not null,
+    iteration   integer,
+    comment text,
+    stime   timestamp default now()
+);
 
-ALTER TABLE sessions ALTER COLUMN options SET DEFAULT 'J';
+create table if not exists differential_chat(
+    id      serial,
+    uid     integer references users(id),
+    did     integer references differential(id),
+    content text,
+    stime   timestamp default now()
+);

@@ -1,1 +1,1 @@
-alter table sessions add column current_stage integer references stages(id);
+alter table actors add column word_count integer default 0;

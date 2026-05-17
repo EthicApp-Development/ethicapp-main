@@ -71,10 +71,6 @@ function withUpload(uploadMiddleware) {
 function getRelativeUploadPath(publicPath) {
     const normalizedPath = String(publicPath || "").replaceAll("\\", "/").replace(/^\/+/, "");
 
-    if (normalizedPath.startsWith("assets/uploads/")) {
-        return normalizedPath.slice("assets/uploads/".length);
-    }
-
     if (normalizedPath.startsWith("uploads/")) {
         return normalizedPath.slice("uploads/".length);
     }

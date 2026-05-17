@@ -1,1 +1,7 @@
-ALTER TABLE users ADD COLUMN preferred_locale varchar(10) DEFAULT 'en_US';
+create table pass_reset(
+    id serial,
+    mail varchar(32) not null,
+    token varchar(64) not null,
+    ctime timestamp,
+    primary key(id)
+);

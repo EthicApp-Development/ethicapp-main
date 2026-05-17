@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-import { generateTeams, habMetric } from "../../helpers/util.js";
+import { generateTeams } from "../../helpers/util.js";
 
 export function GroupController($scope, $http, ActivityStateService, Notification) {
     var self = $scope;
@@ -10,8 +10,7 @@ export function GroupController($scope, $http, ActivityStateService, Notificatio
 
     self.shared.verifyGroups = function () {
         self.methods = [
-            klg("random"), klg("performance", "homog"), klg("performance", "heterg"),
-            klg("knowledgeType", "homog"), klg("knowledgeType", "heterg")
+            klg("random"), klg("performance", "homog"), klg("performance", "heterg")
         ];
         self.groupNum = 3;
         self.groupMet = self.methods[0].key;
@@ -71,11 +70,7 @@ export function GroupController($scope, $http, ActivityStateService, Notificatio
         });
         console.log(users);
 
-        if (self.groupMet == "knowledgeType homog" || self.groupMet == "knowledgeType heterg") {
-            self.groups = generateTeams(
-                users, habMetric, self.groupNum, isDifferent(self.groupMet)
-            );
-        } else if (self.groupMet == "random") {
+        if (self.groupMet == "random") {
             var arr = users.map(function (e) {
                 e.rnd = Math.random();
                 return e;

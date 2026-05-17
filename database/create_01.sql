@@ -34,31 +34,6 @@ create table if not exists sesusers (
 );
 
 
-create table if not exists documents (
-    id serial,
-    title text not null,
-    path text not null,
-    sesid integer,
-    uploader integer,
-    primary key(id),
-    foreign key(sesid) references sessions(id),
-    foreign key(uploader) references users(id)
-);
-
-
-create table if not exists ideas (
-    id serial,
-    content text,
-    descr text,
-    serial varchar(255),
-    iteration integer default 1,
-    uid integer,
-    docid integer,
-    primary key(id),
-    foreign key(uid) references users(id),
-    foreign key(docid) references documents(id)
-);
-
 create table if not exists questions (
     id serial,
     content text,
@@ -69,17 +44,6 @@ create table if not exists questions (
     sesid integer,
     primary key(id),
     foreign key(sesid) references sessions(id)
-);
-
-create table if not exists selection (
-    answer integer,
-    uid integer,
-    iteration integer default 1,
-    comment text,
-    qid integer,
-    primary key(uid,qid),
-    foreign key(uid) references users(id),
-    foreign key(qid) references questions(id)
 );
 
 create table if not exists teams (

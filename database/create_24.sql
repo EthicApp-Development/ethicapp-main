@@ -1,1 +1,1 @@
-alter table differential add column word_count integer default 0;
+alter table teams add column progress integer default 0;

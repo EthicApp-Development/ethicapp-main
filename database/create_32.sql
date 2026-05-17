@@ -1,8 +1,8 @@
-create table question_text(
-    id serial,
-    sesid integer references sessions(id),
-    title text,
-    content text
-);
+ALTER TABLE differential_chat
+ADD COLUMN IF NOT EXISTS tmid integer references teams(id);
 
-alter table questions add column textid integer default null;
+ALTER TABLE chat
+ADD COLUMN IF NOT EXISTS tmid integer references teams(id);
+
+CREATE INDEX IF NOT EXISTS idx_differential_chat_tmid ON differential_chat(tmid);
+CREATE INDEX IF NOT EXISTS idx_chat_tmid ON chat(tmid);

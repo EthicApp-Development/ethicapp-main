@@ -1,7 +1,6 @@
-alter table sesusers add column device varchar(255);
-
-create table if not exists drafts(
-    id serial,
-    sesid integer references sessions(id),
-    data text
-);
+ALTER TABLE users
+ADD COLUMN firstname VARCHAR(255);
+ALTER TABLE users
+ADD COLUMN lastname VARCHAR(255);
+ALTER TABLE pass_reset
+ALTER COLUMN mail TYPE text;

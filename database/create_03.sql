@@ -1,1 +1,1 @@
-alter table selection add column confidence integer;
+alter table questions add column plugin_data varchar(255);

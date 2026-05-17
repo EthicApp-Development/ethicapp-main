@@ -1,4 +1,4 @@
-import { generateTeams, isDifferent, habMetric } from "../../helpers/util.js";
+import { generateTeams, isDifferent } from "../../helpers/util.js";
 export function StagesController($scope, $http, Notification, $uibModal,
     ActivityStateService) {
     var self = $scope;
@@ -411,8 +411,7 @@ export function StagesController($scope, $http, Notification, $uibModal,
     self.setGroupal = function () {
         self.stage.type = "team";
         self.methods = [
-            klg("random"), klg("performance", "homog"), klg("performance", "heterg"),
-            klg("knowledgeType", "homog"), klg("knowledgeType", "heterg")
+            klg("random"), klg("performance", "homog"), klg("performance", "heterg")
         ];
         if (self.groups.length > 0) {
             self.methods.unshift(klg("previous"));
@@ -458,11 +457,6 @@ export function StagesController($scope, $http, Notification, $uibModal,
             const users = Object.values(self.users).filter(user => user.role === "A");
             
             switch (self.groupopt.met) {
-                case "knowledgeType homog":
-                case "knowledgeType heterg":
-                    self.groups = generateTeams(users, habMetric, self.groupopt.num, isDifferent(self.groupopt.met));
-                    break;
-                
                 case "random":
                     const randomUsers = users.map(user => ({ ...user, rnd: Math.random() }));
                     self.groups = generateTeams(randomUsers, s => s.rnd, self.groupopt.num, false);
@@ -537,16 +531,14 @@ export function StagesController($scope, $http, Notification, $uibModal,
                     uid: user.id,
                     score: (result && result.arr && result.arr.length > 0)
                         ? result.arr.reduce((sum, entry) => sum + (entry.sel != null ? entry.sel : -1), 0) / result.arr.length
-                        : -1,
-                    aprendizaje: user.aprendizaje
+                        : -1
                 };
             });
             self.groups = generateTeams(scores, s => s.score, self.groupopt.num, isDifferent(self.groupopt.met));
         } else if (ActivityStateService.sessionDescriptor.type === "R") {
             const scores = users.map(user => ({
                 uid: user.id,
-                score: self.shared.roleIndTable[user.id] ? self.shared.roleIndTable[user.id].lnum : -1,
-                aprendizaje: user.aprendizaje
+                score: self.shared.roleIndTable[user.id] ? self.shared.roleIndTable[user.id].lnum : -1
             }));
             self.groups = generateTeams(scores, s => s.score, self.groupopt.num, isDifferent(self.groupopt.met));
         }
