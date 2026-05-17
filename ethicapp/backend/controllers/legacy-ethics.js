@@ -19,7 +19,6 @@ router.get("/ethics", (req, res) => {
             ngApp: "StudentEthics",
             controller:  "EthicsController",
             scripts:    [
-                ["libs/angular-glue.min.js"],
                 ["js/dist/ethics.js", "js/dist/ethics.min.js"]
             ],
             renderScripts: (scripts) => ViewsHelper.renderScripts(scripts, res)

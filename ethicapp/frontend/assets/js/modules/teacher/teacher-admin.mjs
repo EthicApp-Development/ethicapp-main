@@ -11,7 +11,7 @@ import UserProfileService from "../../services/user-profile.service.js";
 import SocketService from '../../services/socket.service.js';
 
 var app = angular.module("TeacherApp", ["ngSanitize",
-    "ui.bootstrap", "ui.multiselect", "timer", "ngFileUpload",
+    "ui.bootstrap", "timer", "ngFileUpload",
     "ui-notification", "tableSort", "pascalprecht.translate",
     "ngRoute", "checklist-model", "ngDialog", "toggle-switch", 'angularjsToast',
     'ngAnimate']

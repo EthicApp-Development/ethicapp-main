@@ -12,8 +12,6 @@ import 'angular-ui-tree';
 import 'angular-timer';
 import 'angular-ui-notification';
 import 'ng-dialog';
-import '../libs/angular-bootstrap-multiselect.js';
-import 'angularjs-dropdown-multiselect';
 import 'angular-tablesort';
 import 'ng-file-upload';
 import 'checklist-model';
