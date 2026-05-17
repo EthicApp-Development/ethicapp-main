@@ -32,6 +32,7 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
 
 import { LocalesController } from "../../controllers/common/locales.controller.js";
 import { ActivityController } from "../../controllers/teacher/activity.controller.js";
+import { ActivityReportsController } from "../../controllers/teacher/activity-reports.controller.js";
 import { BrowseDesignsController } from "../../controllers/teacher/browse-designs.controller.js";
 import { CreateDesignController } from "../../controllers/teacher/create_design.controller.js";
 import { DashboardController } from "../../controllers/teacher/dashboard.controller.js";
@@ -99,6 +100,8 @@ app.controller("LocalesController",
     ["$translate", "$scope", "$rootScope", LocalesController]); 
 app.controller("ActivityController", 
     ["$scope", "$http", "ActivityCatalogService", "DesignCatalogService", ActivityController]);
+app.controller("ActivityReportsController",
+    ["$scope", "$routeParams", "$window", ActivityReportsController]);
 app.controller("BrowseDesignsController", 
     ["$scope", "$routeParams", "toast", "$translate", "ActivityStateService", "DesignCatalogService",
         "$timeout", "$window",
