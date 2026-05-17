@@ -85,7 +85,7 @@
                         <p>{{ 'connected_users_colon' | translate }} {{ dc.userList.length }}</p>
                     </div>
                 </div>
-                <connected-users session-id="{{dc.sessionId}}">
+                <connected-users session-id="{{dc.sessionId}}"></connected-users>
             </div>
             <div ng-show="dc.activeTab === 'design'" class="margin-top-8">
                 <design-item

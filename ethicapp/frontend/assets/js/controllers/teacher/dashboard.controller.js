@@ -512,12 +512,8 @@ export function DashboardController($scope, $routeParams, $http,
         vm.isActivityFinished = true;
     };
 
-    vm.downloadAnswersReport = function() {
-        console.log('Downloading answers report...');
-    };
-
-    vm.downloadChatLog = function() {
-        console.log('Downloading chat log...');
+    vm.openActivityReports = function() {
+        $scope.navigateTo(`/activities/${vm.sessionId}/reports`);
     };
 
     vm.studentJoinHandler = function () {
