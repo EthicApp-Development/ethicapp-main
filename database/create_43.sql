@@ -1,3 +1,17 @@
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE contype = 'p'
+          AND conrelid = 'activity'::regclass
+    ) THEN
+        ALTER TABLE activity
+        ADD CONSTRAINT activity_pk
+        PRIMARY KEY (id);
+    END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS activity_report_exports (
     id serial PRIMARY KEY,
     activity_id integer REFERENCES activity(id) ON DELETE SET NULL,
