@@ -19,11 +19,19 @@ ngapp_user_common.config(function($translateProvider) {
         suffix: ".json",
     });
 
+    $translateProvider.registerAvailableLanguageKeys(["en_US", "es_CL"], {
+        "en": "en_US",
+        "en_*": "en_US",
+        "es": "es_CL",
+        "es_*": "es_CL",
+        "*": "en_US",
+    });
+
     // Detect browser language
     $translateProvider.determinePreferredLanguage();
     
     // Set default language
-    $translateProvider.fallbackLanguage("en");
+    $translateProvider.fallbackLanguage("en_US");
 
     $translateProvider.useSanitizeValueStrategy("escape"); 
 });

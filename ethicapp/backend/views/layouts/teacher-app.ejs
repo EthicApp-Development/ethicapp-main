@@ -2,7 +2,7 @@
 <html ng-app="TeacherApp">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=1200" />
   <title><%= typeof title !== 'undefined' ? title : "EthicApp" %></title>
   <script src="<%= asset('/js/dist/common-ethicapp-deps.js', '/js/dist/common-ethicapp-deps.min.js') %>" defer></script>
   <link rel="stylesheet" href="<%= asset('/css/dist/assets-bundle.css') %>">
@@ -11,6 +11,7 @@
     body.teacher-app {
       --global-font-family: "Nunito", "Helvetica Neue", "Helvetica", "Verdana", sans-serif;
       font-family: var(--global-font-family);
+      min-width: 1200px;
     }
 
     body.teacher-app button,

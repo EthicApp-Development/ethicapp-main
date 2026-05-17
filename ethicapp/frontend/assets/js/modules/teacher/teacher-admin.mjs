@@ -76,11 +76,19 @@ app.config(function($translateProvider) {
         suffix: ".json"
     });
 
+    $translateProvider.registerAvailableLanguageKeys(["en_US", "es_CL"], {
+        "en": "en_US",
+        "en_*": "en_US",
+        "es": "es_CL",
+        "es_*": "es_CL",
+        "*": "en_US",
+    });
+
     // Automatically determine the preferred language based on the browser
     $translateProvider.determinePreferredLanguage();
 
     // Fallback to a default language if the browser's language is not supported
-    $translateProvider.fallbackLanguage("en");
+    $translateProvider.fallbackLanguage("en_US");
 });
 
 const config = toastProvider => {
