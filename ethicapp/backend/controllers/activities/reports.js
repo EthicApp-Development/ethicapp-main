@@ -17,7 +17,7 @@ const REPORT_NOT_IMPLEMENTED = "REPORT_NOT_IMPLEMENTED";
 const SEMANTIC_DIFFERENTIAL_RESPONSE_COLUMNS = [
     "id",
     "user_id",
-    "team_id",
+    "group_id",
     "name",
     "rut",
     "gender",
@@ -34,7 +34,7 @@ const SEMANTIC_DIFFERENTIAL_RESPONSE_COLUMNS = [
 const SEMANTIC_DIFFERENTIAL_CHAT_COLUMNS = [
     "id",
     "user_id",
-    "team_id",
+    "group_id",
     "name",
     "rut",
     "gender",
@@ -167,7 +167,7 @@ async function buildSemanticDifferentialResponsesReport(context) {
             SELECT
                 ds.id,
                 ds.uid AS user_id,
-                tu.tmid AS team_id,
+                tu.group_id AS group_id,
                 u.name,
                 u.rut,
                 u.sex AS gender,
@@ -178,23 +178,23 @@ async function buildSemanticDifferentialResponsesReport(context) {
                 d.num AS max_scale_range,
                 ds.sel AS selected_value,
                 ds.comment,
-                st.number AS phase_number,
+                st.phase_number AS phase_number,
                 ds.stime AS time
             FROM differential_selection AS ds
             INNER JOIN differential AS d
                 ON ds.did = d.id
-            INNER JOIN stages AS st
-                ON d.stageid = st.id
+            INNER JOIN phases AS st
+                ON d.phase_id = st.id
             INNER JOIN users AS u
                 ON ds.uid = u.id
-            LEFT JOIN teams AS t
-                ON t.sesid = st.sesid
-               AND t.stageid = st.id
-            LEFT JOIN teamusers AS tu
-                ON tu.tmid = t.id
-               AND tu.uid = ds.uid
-            WHERE st.sesid = $1
-            ORDER BY st.number, d.orden, u.name, ds.id
+            LEFT JOIN groups AS t
+                ON t.session_id = st.session_id
+               AND t.phase_id = st.id
+            LEFT JOIN groups_users AS tu
+                ON tu.group_id = t.id
+               AND tu.user_id = ds.uid
+            WHERE st.session_id = $1
+            ORDER BY st.phase_number, d.orden, u.name, ds.id
         `,
         sqlParams: [rpg2.param("plain", context.sessionId)],
     });
@@ -218,7 +218,7 @@ async function buildSemanticDifferentialChatTranscript(context) {
             SELECT
                 dc.id,
                 dc.uid AS user_id,
-                COALESCE(dc.tmid, tu.tmid) AS team_id,
+                COALESCE(dc.group_id, tu.group_id) AS group_id,
                 u.name,
                 u.rut,
                 u.sex AS gender,
@@ -227,24 +227,24 @@ async function buildSemanticDifferentialChatTranscript(context) {
                 d.tleft AS left_pole,
                 d.tright AS right_pole,
                 dc.content AS message,
-                st.number AS phase_number,
+                st.phase_number AS phase_number,
                 dc.stime AS time,
                 dc.parent_id AS reply_to
             FROM differential_chat AS dc
             INNER JOIN differential AS d
                 ON dc.did = d.id
-            INNER JOIN stages AS st
-                ON d.stageid = st.id
+            INNER JOIN phases AS st
+                ON d.phase_id = st.id
             INNER JOIN users AS u
                 ON dc.uid = u.id
-            LEFT JOIN teams AS t
-                ON t.sesid = st.sesid
-               AND t.stageid = st.id
-            LEFT JOIN teamusers AS tu
-                ON tu.tmid = t.id
-               AND tu.uid = dc.uid
-            WHERE st.sesid = $1
-            ORDER BY st.number, d.orden, team_id, dc.stime, dc.id
+            LEFT JOIN groups AS t
+                ON t.session_id = st.session_id
+               AND t.phase_id = st.id
+            LEFT JOIN groups_users AS tu
+                ON tu.group_id = t.id
+               AND tu.user_id = dc.uid
+            WHERE st.session_id = $1
+            ORDER BY st.phase_number, d.orden, group_id, dc.stime, dc.id
         `,
         sqlParams: [rpg2.param("plain", context.sessionId)],
     });

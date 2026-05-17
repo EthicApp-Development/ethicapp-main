@@ -154,10 +154,12 @@ async function getPhasesForSessionByDesignType(sessionId, designType) {
     const results = await rpg2.execSQL({
         dbcon: config.dbconnString,
         sql: `
-            SELECT id, type, number
-            FROM stages
-            WHERE sesid = $1
-            ORDER BY id ASC
+            SELECT id,
+                   phase_type AS type,
+                   phase_number AS number
+            FROM phases
+            WHERE session_id = $1
+            ORDER BY phase_number ASC
         `,
         sqlParams: [rpg2.param('plain', sessionId)],
     });
@@ -198,7 +200,7 @@ const questionFetchHandlers = {
                 orden,
                 num
                 FROM differential
-                WHERE stageid = $1
+                WHERE phase_id = $1
                 ORDER BY orden ASC
             `,
             sqlParams: [rpg2.param('plain', phaseId)],
@@ -218,7 +220,7 @@ const questionFetchHandlers = {
             sql: `
                 SELECT id
                 FROM actors
-                WHERE stageid = $1
+                WHERE phase_id = $1
                 ORDER BY id ASC
             `,
             sqlParams: [rpg2.param('plain', phaseId)],

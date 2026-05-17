@@ -10,6 +10,94 @@ import { getDesignTypeBySessionId } from "./activities-common.js";
 
 const router = express.Router();
 
+router.post("/sessions/join/:code", async (req, res) => {
+    if (!requireRole(req, res, "A")) {
+        return;
+    }
+
+    const code = String(req.params.code || "").trim().toLowerCase();
+    const device = req.body?.device || null;
+    const userId = Number(req.session.uid);
+
+    if (!code || !userId) {
+        return res.status(400).json({ status: "error", message: "Missing required parameters." });
+    }
+
+    try {
+        const insertResult = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                INSERT INTO sessions_users(user_id, session_id, device)
+                SELECT $1::int AS user_id,
+                       id AS session_id,
+                       $2 AS device
+                FROM sessions
+                WHERE code = $3
+                  AND NOT EXISTS (
+                      SELECT su.session_id
+                      FROM sessions_users AS su,
+                           sessions AS s
+                      WHERE su.user_id = $1
+                        AND s.code = $3
+                        AND su.session_id = s.id
+                  )
+                  AND NOT EXISTS (
+                      SELECT st.id
+                      FROM phases AS st,
+                           sessions AS ss
+                      WHERE st.session_id = ss.id
+                        AND ss.code = $3
+                        AND st.phase_type = 'team'
+                  )
+                RETURNING session_id AS sesid
+            `,
+            sqlParams: [
+                rpg2.param("plain", userId),
+                rpg2.param("plain", device),
+                rpg2.param("plain", code),
+            ],
+        });
+
+        if (insertResult.length === 0 || !insertResult[0].sesid) {
+            return res.status(400).json({ status: "end" });
+        }
+
+        const sessionId = Number(insertResult[0].sesid);
+
+        const userResult = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT name, $1 AS device, role, mail
+                FROM users
+                WHERE id = $2
+            `,
+            sqlParams: [
+                rpg2.param("plain", device),
+                rpg2.param("plain", userId),
+            ],
+        });
+
+        if (userResult.length === 0) {
+            return res.status(404).json({ status: "error", message: "User not found." });
+        }
+
+        const { name, role, mail } = userResult[0];
+
+        teacherNotifications.studentJoined(sessionId, {
+            id: userId,
+            name,
+            device,
+            role,
+            mail,
+        });
+
+        return res.json({ status: "ok", sesid: sessionId });
+    } catch (error) {
+        console.error("Error joining session:", error);
+        return res.status(500).json({ status: "error", message: "Internal server error." });
+    }
+});
+
 router.get("/activities/:session_id/current_phase_state", async (req, res) => {
     const sessionId = Number(req.params.session_id);
     const invalidate = req.query.invalidate === "true";
@@ -291,10 +379,10 @@ async function submitRankingResponse({ phaseId, userId, questionId, payload }) {
                     stime = now()
                 WHERE actorid = $3
                     AND uid = $4
-                    AND stageid = $5
+                    AND phase_id = $5
                 RETURNING 1
             )
-            INSERT INTO actor_selection (uid, actorid, orden, description, stageid, stime)
+            INSERT INTO actor_selection (uid, actorid, orden, description, phase_id, stime)
             SELECT $6, $7, $8, $9, $10, now()
             WHERE NOT EXISTS (
                 SELECT 1 FROM updated
@@ -344,7 +432,7 @@ async function getCurrentPhaseIdForSession(sessionId) {
     const result = await rpg2.execSQL({
         dbcon: config.dbconnString,
         sql:   `
-            SELECT current_stage
+            SELECT current_phase_id
             FROM sessions
             WHERE id = $1
             LIMIT 1;
@@ -356,7 +444,7 @@ async function getCurrentPhaseIdForSession(sessionId) {
         throw notFound("Session not found.");
     }
 
-    return result[0].current_stage;
+    return result[0].current_phase_id;
 }
 
 async function getSemanticDifferentialTask(phaseId, questionId) {
@@ -365,7 +453,7 @@ async function getSemanticDifferentialTask(phaseId, questionId) {
         sql:   `
             SELECT id, num AS num_values, justify AS requires_justification, word_count AS min_word_count
             FROM differential
-            WHERE stageid = $1
+            WHERE phase_id = $1
               AND id = $2
             LIMIT 1;
         `,
@@ -381,7 +469,7 @@ async function getRankingTask(phaseId, itemId) {
         sql:   `
             SELECT id, justified AS requires_justification, word_count AS min_word_count
             FROM actors
-            WHERE stageid = $1
+            WHERE phase_id = $1
               AND id = $2
             LIMIT 1;
         `,

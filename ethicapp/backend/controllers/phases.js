@@ -150,7 +150,7 @@ router.get("/phases/:id/stats", async (req, res) => {
                 SELECT d.design
                 FROM designs d
                 INNER JOIN activity a ON d.id = a.design
-                INNER JOIN stages s ON a.session = s.sesid
+                INNER JOIN phases s ON a.session = s.session_id
                 WHERE s.id = $1
             `,
             sqlParams: [rpg2.param('plain', phaseId)],
@@ -174,9 +174,9 @@ router.get("/phases/:id/stats", async (req, res) => {
             dbcon: config.dbconnString,
             sql: `
                 SELECT COUNT(*) AS student_count
-                FROM sesusers su
-                INNER JOIN users u ON su.uid = u.id
-                WHERE su.sesid = (SELECT sesid FROM stages WHERE id = $1)
+                FROM sessions_users su
+                INNER JOIN users u ON su.user_id = u.id
+                WHERE su.session_id = (SELECT session_id FROM phases WHERE id = $1)
                 AND u.role = 'A'
             `,
             sqlParams: [rpg2.param('plain', phaseId)],
@@ -328,10 +328,10 @@ router.post("/phases/:id/items", async (req, res) => {
  * @function fetchSemanticDifferentialResponsesByPhase
  * @param {string} phaseId - The ID of the phase (stage) for which to fetch responses.
  * @returns {Promise<Array>} - Resolves with an array of response objects, each containing:
- *   - `stageid`: The ID of the stage (phase).
+ *   - `phase_id`: The ID of the stage (phase).
  *   - `orden`: The order of the item.
  *   - `uid`: The user ID of the respondent.
- *   - `tmid`: The team ID of the respondent (if applicable).
+ *   - `tmid`: The group ID of the respondent (legacy response field).
  *   - `did`: The differential ID of the item.
  *   - `sel`: The user's selection.
  *   - `comment`: Any comment associated with the response.
@@ -346,7 +346,7 @@ router.post("/phases/:id/items", async (req, res) => {
  * // Example response
  * [
  *   {
- *     "stageid": 2,
+ *     "phase_id": 2,
  *     "orden": 1,
  *     "uid": 101,
  *     "tmid": 7,
@@ -355,7 +355,7 @@ router.post("/phases/:id/items", async (req, res) => {
  *     "comment": "Interesting choice"
  *   },
  *   {
- *     "stageid": 2,
+ *     "phase_id": 2,
  *     "orden": 2,
  *     "uid": 102,
  *     "tmid": 8,
@@ -368,10 +368,10 @@ router.post("/phases/:id/items", async (req, res) => {
 async function fetchSemanticDifferentialResponsesByPhase(phaseId) {
     const results = await rpg2.execSQL({
         sql: `
-            SELECT d.stageid,
+            SELECT d.phase_id,
                    d.orden,
                    s.uid,
-                   r.tmid,
+                   r.group_id AS tmid,
                    s.did,
                    s.sel,
                    s.comment
@@ -380,14 +380,14 @@ async function fetchSemanticDifferentialResponsesByPhase(phaseId) {
                 ON s.did = d.id
             LEFT JOIN (
                 SELECT tu.*
-                FROM teamusers AS tu
-                INNER JOIN teams AS t
-                    ON tu.tmid = t.id
-                    AND t.stageid = $1
+                FROM groups_users AS tu
+                INNER JOIN groups AS t
+                    ON tu.group_id = t.id
+                    AND t.phase_id = $1
             ) AS r
-                ON r.uid = s.uid
-            WHERE d.stageid = $2
-            ORDER BY d.stageid, s.uid, d.orden
+                ON r.user_id = s.uid
+            WHERE d.phase_id = $2
+            ORDER BY d.phase_id, s.uid, d.orden
         `,
         dbcon: config.dbconnString,
         sqlParams: [rpg2.param('plain', phaseId),
@@ -446,7 +446,7 @@ async function fetchRankingResponsesByPhase(phaseId) {
                    actorid,
                    uid
             FROM actor_selection
-            WHERE stageid = $1
+            WHERE phase_id = $1
             ORDER BY uid, orden
         `,
         dbcon: config.dbconnString,
@@ -468,7 +468,7 @@ async function fetchSemanticDifferentialStudentResponsesByPhase(phaseId, userId)
     const results = await rpg2.execSQL({
         dbcon: config.dbconnString,
         sql: `
-            SELECT d.stageid,
+            SELECT d.phase_id,
                    d.orden,
                    s.uid,
                    s.did,
@@ -477,7 +477,7 @@ async function fetchSemanticDifferentialStudentResponsesByPhase(phaseId, userId)
             FROM differential_selection AS s
             INNER JOIN differential AS d
                 ON s.did = d.id
-            WHERE d.stageid = $1
+            WHERE d.phase_id = $1
               AND s.uid = $2
             ORDER BY d.orden
         `,
@@ -505,7 +505,7 @@ async function fetchRankingStudentResponsesByPhase(phaseId, userId) {
                    actorid,
                    uid
             FROM actor_selection
-            WHERE stageid = $1
+            WHERE phase_id = $1
               AND uid = $2
             ORDER BY orden
         `,
@@ -566,7 +566,7 @@ async function addSemanticDifferentialItem({
     await rpg2.execSQL({
         sql: `
             INSERT INTO differential(
-                title, tleft, tright, orden, creator, stageid, num, justify, sesid, word_count
+                title, tleft, tright, orden, creator, phase_id, num, justify, session_id, word_count
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         `,
         dbcon: config.dbconnString,
@@ -616,7 +616,7 @@ async function addSemanticDifferentialItem({
 async function addRankingItem({ stageId, name, jorder, justified, wordCount }) {
     await rpg2.execSQL({
         sql: `
-            INSERT INTO actors (name, jorder, stageid, justified, word_count)
+            INSERT INTO actors (name, jorder, phase_id, justified, word_count)
             VALUES ($1, $2, $3, $4, $5)
         `,
         dbcon: config.dbconnString,
@@ -711,10 +711,10 @@ async function handleRankingResponse(
                         stime = now()
                     WHERE actorid = $3
                         AND uid = $4
-                        AND stageid = $5
+                        AND phase_id = $5
                     RETURNING 1
                 )
-                INSERT INTO actor_selection (uid, actorid, orden, description, stageid, stime)
+                INSERT INTO actor_selection (uid, actorid, orden, description, phase_id, stime)
                 SELECT $6, $7, $8, $9, $10, now()
                 WHERE NOT EXISTS (
                     SELECT 1
@@ -757,9 +757,9 @@ async function getDesignTypeByPhaseId(phaseId) {
     const result = await rpg2.execSQL({
         sql: `
             SELECT d.design->>'type' AS design_type
-            FROM stages AS st
+            FROM phases AS st
             INNER JOIN activity AS a
-                ON st.sesid = a.session
+                ON st.session_id = a.session
             INNER JOIN designs AS d
                 ON a.design = d.id
             WHERE st.id = $1
@@ -793,7 +793,7 @@ async function computeRankingStats(stageId) {
         sql: `
             SELECT a.id AS actor_id, a.justified
             FROM actors a
-            WHERE a.stageid = $1
+            WHERE a.phase_id = $1
             ORDER BY a.id
         `,
         sqlParams: [rpg2.param('plain', stageId)],
@@ -812,7 +812,7 @@ async function computeRankingStats(stageId) {
             SELECT asel.uid AS user_id, COUNT(*) AS response_count
             FROM actor_selection asel
             INNER JOIN actors a ON asel.actorid = a.id
-            WHERE asel.stageid = $1
+            WHERE asel.phase_id = $1
             AND (
                 a.justified = false OR
                 (asel.description IS NOT NULL AND TRIM(asel.description) != '')
@@ -846,7 +846,7 @@ async function computeSemanticDifferentialStats(stageId) {
         sql: `
             SELECT d.id AS question_id, d.justify
             FROM differential d
-            WHERE d.stageid = $1
+            WHERE d.phase_id = $1
             ORDER BY d.id
         `,
         sqlParams: [rpg2.param('plain', stageId)],
@@ -887,4 +887,3 @@ async function computeSemanticDifferentialStats(stageId) {
 }
 
 export default router;
-

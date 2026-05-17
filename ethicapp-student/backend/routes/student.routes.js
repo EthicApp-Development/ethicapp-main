@@ -57,19 +57,19 @@ router.get('/sessions', async (req, res, next) => {
                 s.code,
                 s.options,
                 s.archived,
-                s.current_stage,
+                s.current_phase_id,
                 (
-                    s.id in (SELECT sesid FROM teams)
+                    s.id in (SELECT session_id FROM groups)
                 ) AS grouped,
                 0 AS paired,
                 NULL::timestamp AS stime
             FROM sessions AS s,
-            sesusers AS su,
+            sessions_users AS su,
             users AS u
-            WHERE su.uid = $1
+            WHERE su.user_id = $1
               AND (OPTIONS like 'X%') IS NOT TRUE
-              AND u.id = su.uid
-              AND su.sesid = s.id
+              AND u.id = su.user_id
+              AND su.session_id = s.id
         ) AS v
         ORDER BY v.time DESC
       `,
@@ -106,10 +106,10 @@ router.post('/sessions/join', async (req, res, next) => {
     const existingMembership = await query(
       `
         SELECT s.id AS sesid
-        FROM sesusers AS su
+        FROM sessions_users AS su
         JOIN sessions AS s
-          ON s.id = su.sesid
-        WHERE su.uid = $1
+          ON s.id = su.session_id
+        WHERE su.user_id = $1
           AND s.code = $2
         LIMIT 1
       `,
@@ -125,29 +125,29 @@ router.post('/sessions/join', async (req, res, next) => {
 
     const result = await query(
       `
-        INSERT INTO sesusers(uid, sesid, device)
-        SELECT $1::int AS uid,
-               id,
+        INSERT INTO sessions_users(user_id, session_id, device)
+        SELECT $1::int AS user_id,
+               id AS session_id,
                $2 AS device
         FROM sessions
         WHERE code = $3
           AND NOT EXISTS (
-              SELECT su.sesid
-              FROM sesusers AS su,
+              SELECT su.session_id
+              FROM sessions_users AS su,
                    sessions AS s
-              WHERE su.uid = $1
+              WHERE su.user_id = $1
                 AND s.code = $3
-                AND su.sesid = s.id
+                AND su.session_id = s.id
           )
           AND NOT EXISTS (
               SELECT st.id
-              FROM stages AS st,
+              FROM phases AS st,
                    sessions AS ss
-              WHERE st.sesid = ss.id
+              WHERE st.session_id = ss.id
                 AND ss.code = $3
-                AND st.type = 'team'
+                AND st.phase_type = 'team'
           )
-        RETURNING sesid
+        RETURNING session_id AS sesid
       `,
       [uid, device ?? null, code]
     );

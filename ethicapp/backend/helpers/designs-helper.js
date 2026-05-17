@@ -43,12 +43,12 @@ export async function getDesignById(id) {
  */
 export async function getDesignTypeByPhaseId(phaseId) {
     try {
-        // Step 1: Fetch the session ID (sesid) from the stage
+        // Step 1: Fetch the session ID from the phase
         const sessionResult = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT sesid
-                FROM stages
+                SELECT session_id
+                FROM phases
                 WHERE id = $1
             `,
             sqlParams: [rpg2.param('plain', phaseId)],
@@ -58,7 +58,7 @@ export async function getDesignTypeByPhaseId(phaseId) {
             throw new Error(`No session ID found for phase (stage) ID: ${phaseId}`);
         }
 
-        const sessionId = sessionResult.sesid;
+        const sessionId = sessionResult.session_id;
 
         // Step 2: Fetch the activity associated with the session
         const activityResult = await rpg2.singleSQL({
@@ -100,12 +100,12 @@ export async function getDesignTypeByPhaseId(phaseId) {
  */
 export async function getPhaseDesignByPhaseId(phaseId) {
     try {
-        // Step 1: Fetch the session ID (`sesid`) and stage number from the `stages` table
+        // Step 1: Fetch the session ID and phase number from the `phases` table
         const stageResult = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT sesid, number
-                FROM stages
+                SELECT session_id, phase_number
+                FROM phases
                 WHERE id = $1
             `,
             sqlParams: [rpg2.param('plain', phaseId)],
@@ -115,8 +115,8 @@ export async function getPhaseDesignByPhaseId(phaseId) {
             throw new Error(`No session ID or stage number found for phase (stage) ID: ${phaseId}`);
         }
 
-        const sessionId = stageResult.sesid;
-        const stageNumber = stageResult.number;
+        const sessionId = stageResult.session_id;
+        const stageNumber = stageResult.phase_number;
 
         // Step 2: Fetch the design ID associated with the session from the `activity` table
         const activityResult = await rpg2.singleSQL({
@@ -169,5 +169,3 @@ export async function getPhaseDesignByPhaseId(phaseId) {
         throw new Error("Unable to fetch phase design.");
     }
 }
-
-

@@ -88,7 +88,7 @@ export async function getStudentActivityDescriptor(sessionId) {
             SELECT 
                 s.descr AS description,
                 d.design AS design,
-                st.number AS currentphasenumber,
+                st.phase_number AS currentphasenumber,
                 st.id AS currentphaseid
             FROM 
                 sessions s
@@ -97,7 +97,7 @@ export async function getStudentActivityDescriptor(sessionId) {
             JOIN
                 designs d ON d.id = a.design
             JOIN 
-                stages st ON st.id = s.current_stage
+                phases st ON st.id = s.current_phase_id
             WHERE 
                 s.id = $1;
         `;
@@ -207,16 +207,16 @@ export async function getStudentActivityPhases(sessionId) {
         // Query to get the phases
         const phasesQuery = `
             SELECT
-                st.id,
-                st.number, 
-                st.type AS mode, 
-                st.anon, 
-                st.chat,
+                st.id AS id,
+                st.phase_number AS number,
+                st.phase_type AS mode,
+                st.anonymous AS anon,
+                st.chat_enabled AS chat,
                 st.question AS instructions
             FROM 
-                stages st
+                phases st
             WHERE 
-                st.sesid = $1;
+                st.session_id = $1;
         `;
 
         const phasesResult = await rpg2.execSQL({
@@ -326,23 +326,23 @@ export async function getStudentActivityGroups(sessionId, userId, phases) {
     try {
         const groupsQuery = `
             SELECT 
-                st.number AS phase_number,
+                st.phase_number AS phase_number,
                 t.id AS group_id,
                 u.id AS user_id,
                 u.name AS user_name,
                 tu.anon_mask AS anonymity_mask
             FROM 
-                teamusers tu
+                groups_users tu
             JOIN 
-                users u ON tu.uid = u.id
+                users u ON tu.user_id = u.id
             JOIN 
-                teams t ON tu.tmid = t.id
+                groups t ON tu.group_id = t.id
             JOIN 
-                stages st ON t.stageid = st.id
+                phases st ON t.phase_id = st.id
             WHERE 
-                st.sesid = $1 AND u.id = $2
+                st.session_id = $1 AND u.id = $2
             ORDER BY 
-                st.number, t.id, u.id;
+                st.phase_number, t.id, u.id;
         `;
 
         const groupsResult = await rpg2.execSQL({
@@ -485,11 +485,11 @@ export async function getStudentActivityTasksForPhase(phaseId) {
             dbcon: config.dbconnString,
             sql: `
                 SELECT
-                    st.sesid AS session_id,
-                    st.number AS phase_number,
+                    st.session_id AS session_id,
+                    st.phase_number AS phase_number,
                     d.design AS design_json
-                FROM stages st
-                JOIN activity a ON a.session = st.sesid
+                FROM phases st
+                JOIN activity a ON a.session = st.session_id
                 JOIN designs d ON d.id = a.design
                 WHERE st.id = $1
             `,
@@ -543,8 +543,8 @@ export async function getStudentActivityTasksForPhase(phaseId) {
 export async function getStudentActivityTasks_semanticDifferential(sessionId, phases) {
     const query = `
         SELECT
-            st.number as phase_number, 
-            d.stageid AS phase_id,
+            st.phase_number as phase_number,
+            d.phase_id AS phase_id,
             d.id AS task_id,
             d.title AS task_title,
             d.tleft AS left_pole,
@@ -556,9 +556,9 @@ export async function getStudentActivityTasks_semanticDifferential(sessionId, ph
         FROM 
             differential d
         JOIN
-            stages st
+            phases st
         ON
-            d.stageid = st.id
+            d.phase_id = st.id
         WHERE 
             d.sesid = $1;
     `;
@@ -608,8 +608,8 @@ export async function getStudentActivityTasks_semanticDifferential(sessionId, ph
 export async function getStudentActivityTasks_ranking(sessionId, phases) {
     const query = `
                     SELECT
-                        st.number AS phase_number,
-                        a.stageid AS phase_id,
+                        st.phase_number AS phase_number,
+                        a.phase_id AS phase_id,
                         a.id AS item_id,
                         a.name AS item_name,
                         a.jorder AS justify_order,
@@ -618,11 +618,11 @@ export async function getStudentActivityTasks_ranking(sessionId, phases) {
                     FROM 
                         actors a
                     JOIN
-                        stages st
+                        phases st
                     ON
-                        st.id = a.stageid
+                        st.id = a.phase_id
                     WHERE 
-                        st.sesid = $1;
+                        st.session_id = $1;
                     `;
 
     try {
@@ -763,18 +763,18 @@ async function getStudentActivityResponses(designType, sessionId, userId, phases
 export async function getStudentActivityResponses_semanticDifferential(sessionId, userId, phases) {
     const query = `
         SELECT
-            st.number AS phase_number,
+            st.phase_number AS phase_number,
             ds.did AS task_id,
             ds.sel AS selection,
             ds.comment AS justification,
             ds.stime AS timestamp,
-            d.stageid AS phase_id
+            d.phase_id AS phase_id
         FROM 
             differential_selection ds
         JOIN 
             differential d ON ds.did = d.id
         JOIN
-            stages st ON st.id = d.stageid
+            phases st ON st.id = d.phase_id
         WHERE 
             ds.uid = $1
             AND d.sesid = $2;
@@ -825,22 +825,22 @@ export async function getStudentActivityResponses_semanticDifferential(sessionId
 export async function getStudentActivityResponses_ranking(sessionId, userId, phases) {
     const query = `
         SELECT 
-            st.number AS phase_number,
+            st.phase_number AS phase_number,
             asel.actorid AS actor_id,
             asel.orden AS order,
             asel.description AS description,
             asel.stime AS timestamp,
-            a.stageid AS phase_id
+            a.phase_id AS phase_id
         FROM 
             actor_selection asel
         JOIN 
             actors a ON asel.actorid = a.id
         JOIN
-            stages st ON st.id = a.stageid
+            phases st ON st.id = a.phase_id
         WHERE 
             asel.uid = $1
-            AND a.stageid IN (
-                SELECT id FROM stages WHERE sesid = $2
+            AND a.phase_id IN (
+                SELECT id FROM phases WHERE session_id = $2
             );
     `;
 
@@ -901,16 +901,16 @@ async function getCurrentPhaseGroupContext(phaseId, userId) {
         dbcon: config.dbconnString,
         sql: `
             SELECT t.id AS team_id,
-                   t.stageid AS phase_id,
-                   st.sesid AS session_id,
-                   st.anon AS phase_anonymous
-            FROM teams AS t
-            INNER JOIN teamusers AS tu
-                ON tu.tmid = t.id
-            INNER JOIN stages AS st
-                ON st.id = t.stageid
-            WHERE t.stageid = $1
-              AND tu.uid = $2
+                   t.phase_id AS phase_id,
+                   st.session_id AS session_id,
+                   st.anonymous AS phase_anonymous
+            FROM groups AS t
+            INNER JOIN groups_users AS tu
+                ON tu.group_id = t.id
+            INNER JOIN phases AS st
+                ON st.id = t.phase_id
+            WHERE t.phase_id = $1
+              AND tu.user_id = $2
             LIMIT 1
         `,
         sqlParams: [
@@ -927,16 +927,16 @@ async function getCurrentPhaseGroupContext(phaseId, userId) {
     const participantRows = await rpg2.execSQL({
         dbcon: config.dbconnString,
         sql: `
-            SELECT tu.uid AS user_id,
+            SELECT tu.user_id AS user_id,
                    tu.anon_mask,
                    u.firstname,
                    u.lastname,
                    u.name
-            FROM teamusers AS tu
+            FROM groups_users AS tu
             INNER JOIN users AS u
-                ON u.id = tu.uid
-            WHERE tu.tmid = $1
-            ORDER BY tu.uid
+                ON u.id = tu.user_id
+            WHERE tu.group_id = $1
+            ORDER BY tu.user_id
         `,
         sqlParams: [rpg2.param('plain', group.team_id)],
     });
@@ -1087,11 +1087,11 @@ const previousGroupResponseHandlers = {
             dbcon: config.dbconnString,
             sql: `
                 SELECT id AS phase_id,
-                       number AS phase_number
-                FROM stages
-                WHERE sesid = $1
-                  AND number IN (${phasePlaceholders})
-                ORDER BY number
+                       phase_number
+                FROM phases
+                WHERE session_id = $1
+                  AND phase_number IN (${phasePlaceholders})
+                ORDER BY phase_number
             `,
             sqlParams: phaseSqlParams,
         });
@@ -1099,7 +1099,7 @@ const previousGroupResponseHandlers = {
         const taskRows = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT st.number AS phase_number,
+                SELECT st.phase_number AS phase_number,
                        d.id AS task_id,
                        d.title AS task_title,
                        d.tleft AS left_pole,
@@ -1107,11 +1107,11 @@ const previousGroupResponseHandlers = {
                        d.orden AS task_order,
                        d.num AS num_values
                 FROM differential AS d
-                INNER JOIN stages AS st
-                    ON st.id = d.stageid
-                WHERE st.sesid = $1
-                  AND st.number IN (${phasePlaceholders})
-                ORDER BY st.number, d.orden
+                INNER JOIN phases AS st
+                    ON st.id = d.phase_id
+                WHERE st.session_id = $1
+                  AND st.phase_number IN (${phasePlaceholders})
+                ORDER BY st.phase_number, d.orden
             `,
             sqlParams: phaseSqlParams,
         });
@@ -1119,7 +1119,7 @@ const previousGroupResponseHandlers = {
         const responseRows = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT st.number AS phase_number,
+                SELECT st.phase_number AS phase_number,
                        ds.uid AS user_id,
                        ds.did AS task_id,
                        ds.sel AS selection,
@@ -1128,12 +1128,12 @@ const previousGroupResponseHandlers = {
                 FROM differential_selection AS ds
                 INNER JOIN differential AS d
                     ON d.id = ds.did
-                INNER JOIN stages AS st
-                    ON st.id = d.stageid
-                WHERE st.sesid = $1
-                  AND st.number IN (${phasePlaceholders})
+                INNER JOIN phases AS st
+                    ON st.id = d.phase_id
+                WHERE st.session_id = $1
+                  AND st.phase_number IN (${phasePlaceholders})
                   AND ds.uid IN (${participantPlaceholders})
-                ORDER BY st.number, d.orden, ds.uid
+                ORDER BY st.phase_number, d.orden, ds.uid
             `,
             sqlParams: responseSqlParams,
         });
@@ -1157,11 +1157,11 @@ const previousGroupResponseHandlers = {
             dbcon: config.dbconnString,
             sql: `
                 SELECT id AS phase_id,
-                       number AS phase_number
-                FROM stages
-                WHERE sesid = $1
-                  AND number IN (${phasePlaceholders})
-                ORDER BY number
+                       phase_number
+                FROM phases
+                WHERE session_id = $1
+                  AND phase_number IN (${phasePlaceholders})
+                ORDER BY phase_number
             `,
             sqlParams: phaseSqlParams,
         });
@@ -1169,16 +1169,16 @@ const previousGroupResponseHandlers = {
         const taskRows = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT st.number AS phase_number,
+                SELECT st.phase_number AS phase_number,
                        a.id AS task_id,
                        a.name AS task_name,
                        a.jorder AS task_order
                 FROM actors AS a
-                INNER JOIN stages AS st
-                    ON st.id = a.stageid
-                WHERE st.sesid = $1
-                  AND st.number IN (${phasePlaceholders})
-                ORDER BY st.number, a.jorder
+                INNER JOIN phases AS st
+                    ON st.id = a.phase_id
+                WHERE st.session_id = $1
+                  AND st.phase_number IN (${phasePlaceholders})
+                ORDER BY st.phase_number, a.jorder
             `,
             sqlParams: phaseSqlParams,
         });
@@ -1186,7 +1186,7 @@ const previousGroupResponseHandlers = {
         const responseRows = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT st.number AS phase_number,
+                SELECT st.phase_number AS phase_number,
                        asel.uid AS user_id,
                        asel.actorid AS task_id,
                        asel.orden AS rank_order,
@@ -1195,12 +1195,12 @@ const previousGroupResponseHandlers = {
                 FROM actor_selection AS asel
                 INNER JOIN actors AS a
                     ON a.id = asel.actorid
-                INNER JOIN stages AS st
-                    ON st.id = a.stageid
-                WHERE st.sesid = $1
-                  AND st.number IN (${phasePlaceholders})
+                INNER JOIN phases AS st
+                    ON st.id = a.phase_id
+                WHERE st.session_id = $1
+                  AND st.phase_number IN (${phasePlaceholders})
                   AND asel.uid IN (${participantPlaceholders})
-                ORDER BY st.number, a.jorder, asel.uid
+                ORDER BY st.phase_number, a.jorder, asel.uid
             `,
             sqlParams: responseSqlParams,
         });
@@ -1360,37 +1360,37 @@ export async function getStudentActivityPeerResponses_semanticDifferential(sessi
     try {
         const query = `
             SELECT 
-                st.number AS phase_number,
+                st.phase_number AS phase_number,
                 ds.did AS task_id,
                 ds.sel AS selection,
                 ds.comment AS justification,
                 ds.stime AS timestamp,
-                d.stageid AS phase_id,
-                tu.uid AS peer_id,
+                d.phase_id AS phase_id,
+                tu.user_id AS peer_id,
                 u.name AS peer_name,
                 tu.anon_mask AS peer_anonymity
             FROM 
-                teamusers tu
+                groups_users tu
             JOIN 
-                users u ON tu.uid = u.id
+                users u ON tu.user_id = u.id
             JOIN 
-                teams t ON tu.tmid = t.id
+                groups t ON tu.group_id = t.id
             JOIN 
-                stages st ON t.stageid = st.id
+                phases st ON t.phase_id = st.id
             JOIN 
-                differential_selection ds ON ds.uid = tu.uid
+                differential_selection ds ON ds.uid = tu.user_id
             JOIN 
                 differential d ON ds.did = d.id
             WHERE 
-                st.sesid = $1
+                st.session_id = $1
                 AND ds.uid != $2
-                AND tu.tmid IN (
-                    SELECT tmid 
-                    FROM teamusers 
-                    WHERE uid = $2
+                AND tu.group_id IN (
+                    SELECT group_id
+                    FROM groups_users
+                    WHERE user_id = $2
                 )
             ORDER BY 
-                st.number, ds.did;
+                st.phase_number, ds.did;
         `;
 
         const results = await rpg2.execSQL({
@@ -1435,35 +1435,35 @@ export async function getStudentActivityPeerResponses_ranking(sessionId, userId)
     try {
         const query = `
             SELECT
-                st.number AS phase_number,
+                st.phase_number AS phase_number,
                 asel.actorid AS task_id,
                 asel.orden AS rank_order,
                 asel.description AS justification,
                 asel.stime AS timestamp,
-                asel.stageid AS phase_id,
-                tu.uid AS peer_id,
+                asel.phase_id AS phase_id,
+                tu.user_id AS peer_id,
                 u.name AS peer_name,
                 tu.anon_mask AS peer_anonymity
             FROM 
-                teamusers tu
+                groups_users tu
             JOIN 
-                users u ON tu.uid = u.id
+                users u ON tu.user_id = u.id
             JOIN 
-                teams t ON tu.tmid = t.id
+                groups t ON tu.group_id = t.id
             JOIN 
-                stages st ON t.stageid = st.id
+                phases st ON t.phase_id = st.id
             JOIN 
-                actor_selection asel ON asel.uid = tu.uid
+                actor_selection asel ON asel.uid = tu.user_id
             WHERE 
-                st.sesid = $1
+                st.session_id = $1
                 AND asel.uid != $2
-                AND tu.tmid IN (
-                    SELECT tmid 
-                    FROM teamusers 
-                    WHERE uid = $2
+                AND tu.group_id IN (
+                    SELECT group_id
+                    FROM groups_users
+                    WHERE user_id = $2
                 )
             ORDER BY 
-                st.number, asel.actorid;
+                st.phase_number, asel.actorid;
         `;
 
         const results = await rpg2.execSQL({
@@ -1641,7 +1641,7 @@ export async function getStudentActivityGroupMessages_semanticDifferential(sessi
     try {
         const messagesQuery = `
             SELECT
-                st.number AS phase_number,
+                st.phase_number AS phase_number,
                 dc.did AS task_id,
                 dc.id AS message_id,
                 dc.uid AS peer_id,
@@ -1652,16 +1652,16 @@ export async function getStudentActivityGroupMessages_semanticDifferential(sessi
             JOIN 
                 differential d ON dc.did = d.id
             JOIN 
-                stages st ON d.stageid = st.id
+                phases st ON d.phase_id = st.id
             JOIN 
-                teams t ON st.id = t.stageid
+                groups t ON st.id = t.phase_id
             JOIN 
-                teamusers tu ON t.id = tu.tmid
+                groups_users tu ON t.id = tu.group_id
             WHERE 
-                st.sesid = $1
-                AND tu.uid = $2
+                st.session_id = $1
+                AND tu.user_id = $2
             ORDER BY 
-                st.number, dc.did, dc.id;
+                st.phase_number, dc.did, dc.id;
         `;
 
         const messagesResult = await rpg2.execSQL({
@@ -1721,8 +1721,8 @@ export async function getStudentActivityGroupMessages_ranking(sessionId, userId,
     try {
         const messagesQuery = `
             SELECT 
-                st.number AS phase_number,
-                c.stageid AS phase_id,
+                st.phase_number AS phase_number,
+                c.phase_id AS phase_id,
                 c.id AS message_id,
                 c.uid AS peer_id,
                 c.content AS message,
@@ -1730,16 +1730,16 @@ export async function getStudentActivityGroupMessages_ranking(sessionId, userId,
             FROM 
                 chat c
             JOIN 
-                stages st ON c.stageid = st.id
+                phases st ON c.phase_id = st.id
             JOIN 
-                teams t ON st.id = t.stageid
+                groups t ON st.id = t.phase_id
             JOIN 
-                teamusers tu ON t.id = tu.tmid
+                groups_users tu ON t.id = tu.group_id
             WHERE 
-                st.sesid = $1
-                AND tu.uid = $2
+                st.session_id = $1
+                AND tu.user_id = $2
             ORDER BY 
-                st.number, c.stageid, c.id;
+                st.phase_number, c.phase_id, c.id;
         `;
 
         const messagesResult = await rpg2.execSQL({
@@ -1811,10 +1811,10 @@ export async function getCachedPhaseTasks(phaseId, invalidate = false) {
             dbcon: config.dbconnString,
             sql: `
                 SELECT
-                    st.sesid AS session_id,
+                    st.session_id AS session_id,
                     d.design AS design_json
-                FROM stages st
-                JOIN activity a ON a.session = st.sesid
+                FROM phases st
+                JOIN activity a ON a.session = st.session_id
                 JOIN designs d ON d.id = a.design
                 WHERE st.id = $1
             `,
@@ -1909,7 +1909,7 @@ export async function getTasksForPhase_semanticDifferential(phaseId) {
         FROM 
             differential d
         WHERE 
-            d.stageid = $1;
+            d.phase_id = $1;
     `;
 
     try {
@@ -1954,7 +1954,7 @@ export async function getTasksForPhase_ranking(phaseId) {
         FROM 
             actors a
         WHERE 
-            a.stageid = $1;
+            a.phase_id = $1;
     `;
 
     try {

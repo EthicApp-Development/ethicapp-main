@@ -12,7 +12,7 @@ const router = express.Router();
 
 /**
  * @route GET /phases/:id/groups
- * @description Retrieves all groups (teams) for a given phase (stage), along with their participants.
+ * @description Retrieves all groups for a given phase (stage), along with their participants.
  *              The response includes the group ID, a sequential number for the group, and a list of participant IDs.
  * @param {string} id - The ID of the phase (from the URL path).
  * @returns {Object} - A JSON object containing the list of groups and their participants.
@@ -65,13 +65,13 @@ router.get("/phases/:id/groups", async (req, res) => {
         const results = await rpg2.execSQL({
             sql: `
                 SELECT t.id AS team_id,
-                       tu.uid AS user_id,
+                       tu.user_id AS user_id,
                        tu.anon_mask
-                FROM teams AS t
-                LEFT JOIN teamusers AS tu
-                    ON t.id = tu.tmid
-                WHERE t.stageid = $1
-                ORDER BY t.id, tu.uid
+                FROM groups AS t
+                LEFT JOIN groups_users AS tu
+                    ON t.id = tu.group_id
+                WHERE t.phase_id = $1
+                ORDER BY t.id, tu.user_id
             `,
             dbcon: config.dbconnString,
             sqlParams: [rpg2.param('plain', id)],
@@ -127,16 +127,16 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
         const results = await rpg2.execSQL({
             sql: `
                 SELECT t.id AS team_id,
-                       tu.uid AS user_id,
+                       tu.user_id AS user_id,
                        tu.anon_mask,
-                       st.anon AS phase_anonymous
-                FROM teams AS t
-                INNER JOIN teamusers AS tu
-                    ON t.id = tu.tmid
-                INNER JOIN stages AS st
-                    ON st.id = t.stageid
-                WHERE t.stageid = $1 AND tu.uid = $2
-                ORDER BY tu.uid
+                       st.anonymous AS phase_anonymous
+                FROM groups AS t
+                INNER JOIN groups_users AS tu
+                    ON t.id = tu.group_id
+                INNER JOIN phases AS st
+                    ON st.id = t.phase_id
+                WHERE t.phase_id = $1 AND tu.user_id = $2
+                ORDER BY tu.user_id
             `,
             dbcon: config.dbconnString,
             sqlParams: [rpg2.param('plain', phaseId), rpg2.param('plain', userId)],
@@ -157,16 +157,16 @@ router.get("/phases/:id/user_group/:user_id", async (req, res) => {
         // Query to get all participants in the same team
         const groupParticipants = await rpg2.execSQL({
             sql: `
-                SELECT tu.uid AS user_id,
+                SELECT tu.user_id AS user_id,
                        tu.anon_mask,
                        u.firstname,
                        u.lastname,
                        u.name
-                FROM teamusers AS tu
+                FROM groups_users AS tu
                 INNER JOIN users AS u
-                    ON u.id = tu.uid
-                WHERE tu.tmid = $1
-                ORDER BY tu.uid
+                    ON u.id = tu.user_id
+                WHERE tu.group_id = $1
+                ORDER BY tu.user_id
             `,
             dbcon: config.dbconnString,
             sqlParams: [rpg2.param('plain', teamId)],
@@ -246,8 +246,8 @@ router.post("/phases/:id/groups", async (req, res) => {
         const sessionResult = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT sesid
-                FROM stages
+                SELECT session_id
+                FROM phases
                 WHERE id = $1
             `,
             sqlParams: [rpg2.param('plain', phaseId)],
@@ -257,7 +257,7 @@ router.post("/phases/:id/groups", async (req, res) => {
             return res.status(404).json({ error: "Phase not found." });
         }
 
-        const sessionId = sessionResult[0].sesid;
+        const sessionId = sessionResult[0].session_id;
 
         // Retrieve the design associated with the session
         const designResult = await rpg2.execSQL({
@@ -308,13 +308,12 @@ router.post("/phases/:id/groups", async (req, res) => {
 
         // Save the created groups into the database
         for (const group of groups) {
-            // Insert a new team record for each group
-            const team = await rpg2.singleSQL({
+            const savedGroup = await rpg2.singleSQL({
                 dbcon: config.dbconnString,
                 sql: `
-                    INSERT INTO teams (sesid, stageid)
+                    INSERT INTO groups (session_id, phase_id)
                     VALUES ($1, $2)
-                    RETURNING id
+                    RETURNING id AS group_id
                 `,
                 sqlParams: [rpg2.param('plain', sessionId), rpg2.param('plain', phaseId)],
             });
@@ -330,10 +329,10 @@ router.post("/phases/:id/groups", async (req, res) => {
                 await rpg2.execSQL({
                     dbcon: config.dbconnString,
                     sql: `
-                        INSERT INTO teamusers (tmid, uid, anon_mask)
+                        INSERT INTO groups_users (group_id, user_id, anon_mask)
                         VALUES ($1, $2, $3)
                     `,
-                    sqlParams: [rpg2.param('plain', team.id), rpg2.param('plain', uid),
+                    sqlParams: [rpg2.param('plain', savedGroup.group_id), rpg2.param('plain', uid),
                         rpg2.param('plain', mask)],
                 });
                 maskCode++;

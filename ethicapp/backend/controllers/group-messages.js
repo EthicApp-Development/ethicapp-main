@@ -196,31 +196,31 @@ async function resolveGroupChatAccessContext({ groupId, phaseId = null, question
     const rows = await rpg2.execSQL({
         sql: `
             SELECT t.id AS group_id,
-                   t.stageid AS phase_id,
+                   t.phase_id AS phase_id,
                    s.id AS session_id,
                    s.creator,
-                   s.current_stage,
+                   s.current_phase_id,
                    s.status,
-                   st.chat,
+                   st.chat_enabled AS chat,
                    EXISTS (
                        SELECT 1
-                       FROM teamusers AS tu
-                       WHERE tu.tmid = t.id
-                         AND tu.uid = $4
+                       FROM groups_users AS tu
+                       WHERE tu.group_id = t.id
+                         AND tu.user_id = $4
                    ) AS is_group_member,
                    EXISTS (
                        SELECT 1
                        FROM differential AS d
                        WHERE d.id = $3
-                         AND d.stageid = t.stageid
+                         AND d.phase_id = t.phase_id
                    ) AS question_belongs_to_phase
-            FROM teams AS t
-            INNER JOIN stages AS st
-                ON st.id = t.stageid
+            FROM groups AS t
+            INNER JOIN phases AS st
+                ON st.id = t.phase_id
             INNER JOIN sessions AS s
-                ON s.id = st.sesid
+                ON s.id = st.session_id
             WHERE t.id = $1
-              AND ($2::integer IS NULL OR t.stageid = $2)
+              AND ($2::integer IS NULL OR t.phase_id = $2)
             LIMIT 1
         `,
         dbcon: config.dbconnString,
@@ -246,7 +246,7 @@ async function resolveGroupChatAccessContext({ groupId, phaseId = null, question
     const isStudentMember = role === "A" && row.is_group_member === true;
     const activeStatus = getStatusCode("in_progress");
     const isActiveChatPhase = Boolean(row.chat)
-        && Number(row.current_stage) === Number(row.phase_id)
+        && Number(row.current_phase_id) === Number(row.phase_id)
         && Number(row.status) === Number(activeStatus);
 
     return {
@@ -264,8 +264,8 @@ function normalizeChatNotificationPayload(message, role) {
         id: message.id,
         uid: message.uid,
         author_role: role,
-        groupId: message.tmid,
-        phaseId: message.stageid,
+        groupId: message.group_id,
+        phaseId: message.phase_id,
         questionId: message.did,
         content: message.content,
         stime: message.stime,

@@ -1,10 +1,12 @@
--- Uncomment Legacy Fix code below if J option was used inverted (legacy code)
+CREATE TABLE IF NOT EXISTS jigsaw_role (
+    id serial PRIMARY KEY,
+    name varchar(255) NOT NULL,
+    description text,
+    sesid integer REFERENCES sessions(id)
+);
 
--- Legacy Fix
--- UPDATE sessions set options = 'T' where options is null;
--- UPDATE sessions set options = null where options = 'J';
--- UPDATE sessions set options = 'J' where options = 'T';
--- UPDATE sessions set options = trim(both 'J' from options) where char_length(options) > 1;
--- End of Legacy Fix
-
-ALTER TABLE sessions ALTER COLUMN options SET DEFAULT 'J';
+CREATE TABLE IF NOT EXISTS jigsaw_users (
+    phase_id integer REFERENCES phases(id),
+    user_id integer REFERENCES users(id),
+    role_id integer REFERENCES jigsaw_role(id)
+);

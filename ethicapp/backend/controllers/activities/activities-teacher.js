@@ -12,6 +12,114 @@ import { getDesignTypeBySessionId } from "./activities-common.js";
 
 const router = express.Router();
 
+router.post("/sessions", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const uid = Number(req.session.uid);
+    const { name, description, type } = req.body;
+
+    if (!name || !type) {
+        return res.status(400).json({ status: "err", message: "Missing activity session data." });
+    }
+
+    try {
+        const sessionResult = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                INSERT INTO sessions(name, descr, creator, time, status, type)
+                VALUES ($1, $2, $3, now(), 1, $4)
+                RETURNING id;
+            `,
+            sqlParams: [
+                rpg2.param("plain", name),
+                rpg2.param("plain", description || null),
+                rpg2.param("plain", uid),
+                rpg2.param("plain", type),
+            ],
+        });
+
+        const sessionId = Number(sessionResult?.id);
+
+        if (!sessionId) {
+            throw new Error("Failed to retrieve session ID.");
+        }
+
+        await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                INSERT INTO sessions_users(session_id, user_id)
+                VALUES ($1, $2);
+            `,
+            sqlParams: [
+                rpg2.param("plain", sessionId),
+                rpg2.param("plain", uid),
+            ],
+        });
+
+        return res.status(201).json({ status: 200, id: sessionId });
+    } catch (err) {
+        console.error("Error in POST /sessions:", err);
+        return res.status(400).json({ status: 400, message: "Error creating activity session." });
+    }
+});
+
+router.get("/sessions/:id/users", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const sessionId = Number(req.params.id);
+    const userId = Number(req.session.uid);
+
+    if (!sessionId || !userId) {
+        return res.status(400).json({ error: "Missing required parameters: session id or user id." });
+    }
+
+    try {
+        const validationResult = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT id
+                FROM sessions
+                WHERE id = $1
+                  AND creator = $2
+            `,
+            sqlParams: [
+                rpg2.param("plain", sessionId),
+                rpg2.param("plain", userId),
+            ],
+        });
+
+        if (validationResult.length === 0) {
+            return res.status(403).json({ error: "Access denied. User is not authorized for this session." });
+        }
+
+        const users = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT u.id,
+                       u.name,
+                       u.mail,
+                       u.role,
+                       su.device
+                FROM users AS u
+                INNER JOIN sessions_users AS su
+                    ON u.id = su.user_id
+                WHERE su.session_id = $1
+                ORDER BY u.role DESC
+            `,
+            sqlParams: [rpg2.param("plain", sessionId)],
+        });
+
+        return res.status(200).json({ users });
+    } catch (err) {
+        console.error("Error fetching users for session:", err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
 router.get("/activities", async (req, res) => {
     try {
         if (!requireRole(req, res, "P")) {
@@ -240,7 +348,7 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
         let result = await rpg2.execSQL({
             sql: `
                 SELECT COUNT(*)::integer
-                FROM stages
+                FROM phases
                 WHERE id = $1
             `,
             dbcon: config.dbconnString,
@@ -255,7 +363,7 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
             sql: `
                 UPDATE sessions
                 SET status = $1,
-                    current_stage = $2
+                    current_phase_id = $2
                 WHERE id = $3
             `,
             dbcon: config.dbconnString,
@@ -293,7 +401,7 @@ router.post("/activities/:session_id/finish", async (req, res) => {
             sql: `
                 UPDATE sessions
                 SET status = $1,
-                    current_stage = NULL
+                    current_phase_id = NULL
                 WHERE id = $2
             `,
             dbcon: config.dbconnString,
@@ -328,15 +436,16 @@ router.get("/activities/:session_id/phases", async (req, res) => {
             dbcon: config.dbconnString,
             sql: `
                 SELECT id,
-                       number,
-                       type,
-                       anon,
-                       chat,
-                       prev_ans,
+                       phase_number AS number,
+                       phase_type AS type,
+                       anonymous AS anon,
+                       chat_enabled AS chat,
+                       previous_answers AS prev_ans,
                        question,
                        grouping
-                FROM stages
-                WHERE sesid = $1
+                FROM phases
+                WHERE session_id = $1
+                ORDER BY phase_number
             `,
             sqlParams: [rpg2.param('plain', session_id)],
         });
@@ -389,9 +498,18 @@ router.post("/activities/:session_id/phases", async (req, res) => {
     try {
         const result = await rpg2.execSQL({
             sql: `
-                INSERT INTO stages (number, type, anon, chat, sesid, prev_ans, question, grouping)
+                INSERT INTO phases (
+                    phase_number,
+                    phase_type,
+                    anonymous,
+                    chat_enabled,
+                    session_id,
+                    previous_answers,
+                    question,
+                    grouping
+                )
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                RETURNING id
+                RETURNING id AS phase_id
             `,
             dbcon: config.dbconnString,
             sqlParams: queryParams,
@@ -405,7 +523,7 @@ router.post("/activities/:session_id/phases", async (req, res) => {
 
         res.status(201).json({
             status: "ok",
-            phaseId: result[0].id,
+            phaseId: result[0].phase_id,
             message: "Phase added successfully.",
         });
     } catch (err) {
@@ -445,28 +563,28 @@ router.patch("/activities/:session_id/toggle_archived", async (req, res) => {
 async function fetchSemanticDifferentialResponses(sessionId) {
     const results = await rpg2.execSQL({
         sql: `
-            SELECT d.stageid,
+            SELECT d.phase_id,
                    d.orden,
                    s.uid,
-                   r.tmid,
+                   r.group_id,
                    s.did,
                    s.sel,
                    s.comment,
-                   st.number AS phase_number
+                   st.phase_number AS phase_number
             FROM differential_selection AS s
             INNER JOIN differential AS d
                 ON s.did = d.id
-            INNER JOIN stages AS st
-                ON d.stageid = st.id
+            INNER JOIN phases AS st
+                ON d.phase_id = st.id
             LEFT JOIN (
                 SELECT tu.*
-                FROM teamusers AS tu
-                INNER JOIN teams AS t
-                    ON tu.tmid = t.id
+                FROM groups_users AS tu
+                INNER JOIN groups AS t
+                    ON tu.group_id = t.id
             ) AS r
-                ON r.uid = s.uid
-            WHERE st.sesid = $1
-            ORDER BY d.stageid, s.uid, d.orden
+                ON r.user_id = s.uid
+            WHERE st.session_id = $1
+            ORDER BY d.phase_id, s.uid, d.orden
         `,
         dbcon: config.dbconnString,
         sqlParams: [rpg2.param('plain', sessionId)],
@@ -478,24 +596,24 @@ async function fetchSemanticDifferentialResponses(sessionId) {
 async function fetchSemanticDifferentialGroupResponses(groupId, phaseId) {
     const results = await rpg2.execSQL({
         sql: `
-            SELECT d.stageid,
+            SELECT d.phase_id,
                    d.orden,
                    d.id AS did,
-                   tu.uid,
+                   tu.user_id AS uid,
                    u.name AS user_name,
-                   tu.tmid,
+                   tu.group_id,
                    s.sel,
                    s.comment,
                    s.stime
             FROM differential AS d
-            INNER JOIN teamusers AS tu
-                ON tu.tmid = $1
+            INNER JOIN groups_users AS tu
+                ON tu.group_id = $1
             INNER JOIN users AS u
-                ON u.id = tu.uid
+                ON u.id = tu.user_id
             LEFT JOIN differential_selection AS s
                 ON s.did = d.id
-               AND s.uid = tu.uid
-            WHERE d.stageid = $2
+               AND s.uid = tu.user_id
+            WHERE d.phase_id = $2
             ORDER BY d.orden, u.name
         `,
         dbcon: config.dbconnString,
@@ -503,12 +621,12 @@ async function fetchSemanticDifferentialGroupResponses(groupId, phaseId) {
     });
 
     return results.map(row => ({
-        phaseId: row.stageid,
+        phaseId: row.phase_id,
         questionOrder: row.orden,
         questionId: row.did,
         userId: row.uid,
         userName: row.user_name,
-        groupId: row.tmid,
+        groupId: row.group_id,
         value: row.sel,
         comment: row.comment,
         submittedAt: row.stime,
@@ -523,11 +641,11 @@ async function fetchRankingResponses(sessionId) {
                    a.orden,
                    a.actorid,
                    a.uid,
-                   st.number AS phase_number
+                   st.phase_number AS phase_number
             FROM actor_selection AS a
-            INNER JOIN stages AS st
-                ON a.stageid = st.id
-            WHERE st.sesid = $1
+            INNER JOIN phases AS st
+                ON a.phase_id = st.id
+            WHERE st.session_id = $1
             ORDER BY a.uid, a.orden
         `,
         dbcon: config.dbconnString,
@@ -544,18 +662,18 @@ async function fetchRankingGroupResponses(groupId, phaseId) {
                    a.description,
                    a.orden,
                    a.actorid,
-                   tu.uid,
+                   tu.user_id AS uid,
                    u.name AS user_name,
-                   tu.tmid,
+                   tu.group_id,
                    a.stime
-            FROM teamusers AS tu
+            FROM groups_users AS tu
             INNER JOIN users AS u
-                ON u.id = tu.uid
+                ON u.id = tu.user_id
             LEFT JOIN actor_selection AS a
-                ON a.uid = tu.uid
-               AND a.stageid = $2
-            WHERE tu.tmid = $1
-            ORDER BY tu.uid, a.orden
+                ON a.uid = tu.user_id
+               AND a.phase_id = $2
+            WHERE tu.group_id = $1
+            ORDER BY tu.user_id, a.orden
         `,
         dbcon: config.dbconnString,
         sqlParams: [rpg2.param("plain", groupId), rpg2.param("plain", phaseId)],
@@ -569,7 +687,7 @@ async function fetchRankingGroupResponses(groupId, phaseId) {
         actorId: row.actorid,
         userId: row.uid,
         userName: row.user_name,
-        groupId: row.tmid,
+        groupId: row.group_id,
         submittedAt: row.stime,
     }));
 }
@@ -577,10 +695,10 @@ async function fetchRankingGroupResponses(groupId, phaseId) {
 async function getDesignTypeByGroupAndPhase(groupId, phaseId) {
     const groupPhase = await rpg2.execSQL({
         sql: `
-            SELECT id
-            FROM teams
+            SELECT id AS group_id
+            FROM groups
             WHERE id = $1
-              AND stageid = $2
+              AND phase_id = $2
         `,
         dbcon: config.dbconnString,
         sqlParams: [rpg2.param("plain", groupId), rpg2.param("plain", phaseId)],
@@ -593,13 +711,13 @@ async function getDesignTypeByGroupAndPhase(groupId, phaseId) {
     return getDesignTypeBySessionId(
         await rpg2.singleSQL({
             sql: `
-                SELECT sesid
-                FROM stages
+                SELECT session_id
+                FROM phases
                 WHERE id = $1
             `,
             dbcon: config.dbconnString,
             sqlParams: [rpg2.param("plain", phaseId)],
-        }).then(row => row.sesid)
+        }).then(row => row.session_id)
     );
 }
 

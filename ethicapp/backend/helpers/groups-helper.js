@@ -13,9 +13,9 @@ async function createRandomGroups(sessionId, phases, groupSize) {
         dbcon: config.dbconnString,
         sql: `
             SELECT u.id AS uid
-            FROM sesusers su
-            INNER JOIN users u ON su.uid = u.id
-            WHERE su.sesid = $1 AND u.role = 'A'
+            FROM sessions_users su
+            INNER JOIN users u ON su.user_id = u.id
+            WHERE su.session_id = $1 AND u.role = 'A'
         `,
         sqlParams: [rpg2.param('plain', sessionId)],
     });
@@ -79,10 +79,10 @@ async function preserveGroups(sessionId, phases, groupSize) {
     const previousGroups = await rpg2.execSQL({
         dbcon: config.dbconnString,
         sql: `
-            SELECT t.id AS team_id, tu.uid AS user_id
-            FROM teams t
-            INNER JOIN teamusers tu ON t.id = tu.tmid
-            WHERE t.sesid = $1 AND t.stageid = $2
+            SELECT t.id AS team_id, tu.user_id AS user_id
+            FROM groups t
+            INNER JOIN groups_users tu ON t.id = tu.group_id
+            WHERE t.session_id = $1 AND t.phase_id = $2
         `,
         sqlParams: [rpg2.param('plain', sessionId),
             rpg2.param('plain', previousPhase.id)],
@@ -93,7 +93,7 @@ async function preserveGroups(sessionId, phases, groupSize) {
         return [];
     }
 
-    // Organize users into their respective teams
+    // Organize users into their respective groups
     const groupedUsers = {};
     previousGroups.forEach(row => {
         if (!groupedUsers[row.team_id]) {
@@ -122,19 +122,19 @@ export async function deleteGroupsForPhase(phaseId) {
     await rpg2.execSQL({
         dbcon,
         sql: `
-            DELETE FROM teamusers AS tu
-            USING teams AS t
-            WHERE tu.tmid = t.id AND t.stageid = $1
+            DELETE FROM groups_users AS tu
+            USING groups AS t
+            WHERE tu.group_id = t.id AND t.phase_id = $1
         `,
         sqlParams: [rpg2.param('plain', phaseId)],
     });
 
-    // Delete teams linked to the phase
+    // Delete groups linked to the phase
     await rpg2.execSQL({
         dbcon,
         sql: `
-            DELETE FROM teams
-            WHERE stageid = $1
+            DELETE FROM groups
+            WHERE phase_id = $1
         `,
         sqlParams: [rpg2.param('plain', phaseId)],
     });

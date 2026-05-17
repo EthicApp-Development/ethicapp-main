@@ -15,7 +15,7 @@ import { createLegacySessionStore } from "./db/session-redis.js";
 
 import user_profile from "./controllers/users/user-profile.js";
 import impersonation from "./controllers/users/impersonation.js";
-import sessions from "./controllers/sessions.js";
+import teacherHome from "./controllers/teacher-home.js";
 import activitiesCommon from "./controllers/activities/activities-common.js";
 import activitiesTeacher from "./controllers/activities/activities-teacher.js";
 import activitiesStudent from "./controllers/activities/activities-student.js";
@@ -146,7 +146,7 @@ app.locals.ETHICAPP_BUILD_HASH = ETHICAPP_BUILD_HASH;
 
 app.use("/", requireLegacyAuth, user_profile);
 app.use("/", requireLegacyAuth, impersonation);
-app.use("/", requireLegacyAuth, sessions);
+app.use("/", requireLegacyAuth, teacherHome);
 app.use("/", requireLegacyAuth, activitiesCommon);
 app.use("/", requireLegacyAuth, activitiesTeacher);
 app.use("/", requireLegacyAuth, activitiesStudent);

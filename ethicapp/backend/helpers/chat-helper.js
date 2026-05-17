@@ -75,9 +75,9 @@ export const chatInsertHandlers = {
     ranking: async ({ userId, phaseId, groupId, content, parentId, dbcon }) => {
         const result = await rpg2.execSQL({
             sql: `
-                INSERT INTO chat (uid, stageid, tmid, content, parent_id)
+                INSERT INTO chat (uid, phase_id, group_id, content, parent_id)
                 VALUES ($1, $2, $3, $4, $5)
-                RETURNING id, uid, stageid, tmid, content, stime, parent_id
+                RETURNING id, uid, phase_id, group_id, content, stime, parent_id
             `,
             dbcon,
             sqlParams: [rpg2.param('plain', userId), rpg2.param('plain', phaseId),
@@ -91,9 +91,9 @@ export const chatInsertHandlers = {
     semantic_differential: async ({ userId, questionId, groupId, content, parentId, dbcon }) => {
         const result = await rpg2.execSQL({
             sql: `
-                INSERT INTO differential_chat (uid, did, tmid, content, parent_id)
+                INSERT INTO differential_chat (uid, did, group_id, content, parent_id)
                 VALUES ($1, $2, $3, $4, $5)
-                RETURNING id, uid, did, tmid, content, stime, parent_id
+                RETURNING id, uid, did, group_id, content, stime, parent_id
             `,
             dbcon,
             sqlParams: [rpg2.param('plain', userId),
@@ -148,19 +148,19 @@ async function countSemanticDifferentialMessages(phaseId) {
         sql: `
             SELECT c.did,
                    c.uid,
-                   COALESCE(c.tmid, u.tmid) AS tmid,
+                   COALESCE(c.group_id, u.group_id) AS group_id,
                    COUNT(*) AS message_count
             FROM differential_chat AS c
-            LEFT JOIN teamusers AS u
-                ON u.uid = c.uid
-               AND (c.tmid IS NULL OR c.tmid = u.tmid)
+            LEFT JOIN groups_users AS u
+                ON u.user_id = c.uid
+               AND (c.group_id IS NULL OR c.group_id = u.group_id)
             INNER JOIN differential AS d
                 ON d.id = c.did
-            INNER JOIN teams AS tm
-                ON tm.id = COALESCE(c.tmid, u.tmid)
-            WHERE d.stageid = $1
-              AND tm.stageid = $1
-            GROUP BY c.did, c.uid, COALESCE(c.tmid, u.tmid)
+            INNER JOIN groups AS tm
+                ON tm.id = COALESCE(c.group_id, u.group_id)
+            WHERE d.phase_id = $1
+              AND tm.phase_id = $1
+            GROUP BY c.did, c.uid, COALESCE(c.group_id, u.group_id)
         `,
         dbcon: config.dbconnString,
         sqlParams: [rpg2.param('plain', phaseId)],
@@ -169,7 +169,7 @@ async function countSemanticDifferentialMessages(phaseId) {
     return results.map(row => ({
         questionId: row.did,
         userId: row.uid,
-        teamId: row.tmid,
+        teamId: row.group_id,
         messageCount: parseInt(row.message_count, 10),
     }));
 }
@@ -177,28 +177,28 @@ async function countSemanticDifferentialMessages(phaseId) {
 async function countRankingMessages(phaseId) {
     const results = await rpg2.execSQL({
         sql: `
-            SELECT c.stageid,
+            SELECT c.phase_id,
                    c.uid,
-                   COALESCE(c.tmid, u.tmid) AS tmid,
+                   COALESCE(c.group_id, u.group_id) AS group_id,
                    COUNT(*) AS message_count
             FROM chat AS c
-            LEFT JOIN teamusers AS u
-                ON u.uid = c.uid
-               AND (c.tmid IS NULL OR c.tmid = u.tmid)
-            INNER JOIN teams AS tm
-                ON tm.id = COALESCE(c.tmid, u.tmid)
-            WHERE c.stageid = $1
-              AND tm.stageid = $1
-            GROUP BY c.stageid, c.uid, COALESCE(c.tmid, u.tmid)
+            LEFT JOIN groups_users AS u
+                ON u.user_id = c.uid
+               AND (c.group_id IS NULL OR c.group_id = u.group_id)
+            INNER JOIN groups AS tm
+                ON tm.id = COALESCE(c.group_id, u.group_id)
+            WHERE c.phase_id = $1
+              AND tm.phase_id = $1
+            GROUP BY c.phase_id, c.uid, COALESCE(c.group_id, u.group_id)
         `,
         dbcon: config.dbconnString,
         sqlParams: [rpg2.param('plain', phaseId)],
     });
 
     return results.map(row => ({
-        phaseId: row.stageid,
+        phaseId: row.phase_id,
         userId: row.uid,
-        teamId: row.tmid,
+        teamId: row.group_id,
         messageCount: parseInt(row.message_count, 10),
     }));
 }
@@ -218,13 +218,13 @@ async function semanticDifferentialChatTranscriptByGroup(groupId, questionId) {
                 ON u.id = c.uid
             WHERE c.did = $1
               AND (
-                  c.tmid = $2
+                  c.group_id = $2
                   OR (
-                      c.tmid IS NULL
+                      c.group_id IS NULL
                       AND c.uid IN (
-                          SELECT tu.uid
-                          FROM teamusers AS tu
-                          WHERE tu.tmid = $2
+                          SELECT tu.user_id
+                          FROM groups_users AS tu
+                          WHERE tu.group_id = $2
                       )
                   )
               )
@@ -248,19 +248,19 @@ async function rankingChatTranscriptByGroup(groupId, questionId) {
             FROM chat AS s
             INNER JOIN users AS u
                 ON u.id = s.uid
-            WHERE s.stageid = (
-                SELECT stageid
-                FROM teams
+            WHERE s.phase_id = (
+                SELECT phase_id
+                FROM groups
                 WHERE id = $1
             )
               AND (
-                  s.tmid = $1
+                  s.group_id = $1
                   OR (
-                      s.tmid IS NULL
+                      s.group_id IS NULL
                       AND s.uid IN (
-                          SELECT tu.uid
-                          FROM teamusers AS tu
-                          WHERE tu.tmid = $1
+                          SELECT tu.user_id
+                          FROM groups_users AS tu
+                          WHERE tu.group_id = $1
                       )
                   )
               )
