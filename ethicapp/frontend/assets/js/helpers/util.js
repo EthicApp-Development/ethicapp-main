@@ -77,23 +77,3 @@ export let habMetric = (u) => {
     }
     return 0;
 };
-
-export let ngQuillConfigProvider = (ngQuillConfigProvider) => {
-    ngQuillConfigProvider.set({
-        modules: {
-            formula: true,
-            toolbar: {
-                container: [["bold", "italic", "underline", "strike"], // toggled buttons
-                    [{ "color": [] }, { "background": [] }], // dropdown with defaults from theme
-                    [{ "font": [] }], [{ "align": [] }],
-                    [{ "list": "ordered" }, { "list": "bullet" }],
-                    [{ "script": "sub" }, { "script": "super" }], // superscript/subscript
-                    [{ "size": ["small", false, "large", "huge"] }], // custom dropdown
-                    ["clean"], // remove formatting button
-                    ["image", "link", "video"], // remove formatting button
-                    ["formula"]
-                ]
-            }
-        }
-    });
-};

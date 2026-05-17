@@ -12,9 +12,6 @@ build_esbuild() {
 cd /app/frontend/assets/js/modules/teacher
 build_esbuild teacher-admin.mjs ../../dist/teacher-admin.min.js
 
-cd /app/frontend/assets/js/modules/common
-build_esbuild user-common.mjs ../../dist/user-common.min.js
-
 cd /app/frontend/assets/css
 echo "Building styles.scss..."
 npx sass --style=compressed styles.scss:dist/assets-bundle.css

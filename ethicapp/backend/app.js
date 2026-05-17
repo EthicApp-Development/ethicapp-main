@@ -85,7 +85,7 @@ app.use("/assets/uploads", express.static(uploadsAbsolutePath));
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
 app.use(expressLayouts); // Usar express-ejs-layouts
-app.set("layout", "./layouts/user-common"); 
+app.set("layout", "./layouts/teacher-app");
 
 // JSON handling for requests
 app.use(express.json());

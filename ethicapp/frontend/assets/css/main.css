@@ -690,36 +690,6 @@ div.boxed{
     padding-bottom: 8px;
 }
 
-ng-quill-editor {
-    display: block;
-    height: 100px;
-    margin-bottom: 24px;
-}
-
-ng-quill-editor.large{
-    height: 200px;
-}
-
-.quill-disabled::after {
-    display: block;
-    width: 100%;
-    background: rgb(200 200 200 /30%);
-    height: 120px;
-    content: "";
-    position: relative;
-    top: -120px;
-    z-index: 500;
-}
-
-.quill-disabled.large::after {
-    height: 220px;
-    top: -220px;
-}
-
-.ql-map{
-    background: url('../images/logos/ethicapp-logo.svg') no-repeat !important;
-}
-
 .map-block{
     display: block;
     background: #fbd387;
@@ -732,14 +702,6 @@ ng-quill-editor.large{
 .map-tbl{
     margin-top: 8px;
     margin-bottom: 8px;
-}
-
-ng-quill-editor .ql-editor{
-    height: 75px;
-}
-
-ng-quill-editor.large .ql-editor{
-    height: 175px;
 }
 
 .question-block img{

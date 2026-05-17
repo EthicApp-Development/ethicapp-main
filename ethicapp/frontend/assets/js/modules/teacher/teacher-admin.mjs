@@ -12,7 +12,7 @@ import SocketService from '../../services/socket.service.js';
 
 var app = angular.module("TeacherApp", ["ngSanitize",
     "ui.bootstrap", "ui.multiselect", "timer", "ngFileUpload",
-    "ui-notification", "ngQuill", "tableSort", "pascalprecht.translate", 
+    "ui-notification", "tableSort", "pascalprecht.translate",
     "ngRoute", "checklist-model", "ngDialog", "toggle-switch", 'angularjsToast',
     'ngAnimate']
 );
@@ -38,7 +38,6 @@ import { CreateDesignController } from "../../controllers/teacher/create_design.
 import { DashboardController } from "../../controllers/teacher/dashboard.controller.js";
 import { ErrorController } from "../../controllers/teacher/error.controller.js";
 import { VoidController } from "../../controllers/common/void.controller.js";
-import { ngQuillConfigProvider } from "../../helpers/util.js";
 import { DesignEditorController } from "../../controllers/teacher/design-editor.controller.js";
 import { DesignViewerController } from "../../controllers/teacher/design-viewer.controller.js";
 import { CasesController } from "../../controllers/teacher/cases.controller.js";
@@ -61,9 +60,6 @@ app.run(function($rootScope) {
         console.error('Failed to load route:', current.originalPath);
     });
 });
-
-// Rich text editor configuration
-app.config(["ngQuillConfigProvider", ngQuillConfigProvider]);
 
 // Set up language
 app.config(function($translateProvider) {

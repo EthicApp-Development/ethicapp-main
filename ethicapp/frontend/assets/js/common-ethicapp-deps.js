@@ -12,7 +12,6 @@ import 'angular-ui-tree';
 import 'angular-timer';
 import 'angular-ui-notification';
 import 'ng-dialog';
-import 'ng-quill';
 import '../libs/angular-bootstrap-multiselect.js';
 import 'angularjs-dropdown-multiselect';
 import 'angular-tablesort';
