@@ -108,7 +108,7 @@ app.controller("DashboardController",
 app.controller("DesignViewerController", 
     ["$scope", "$routeParams", "DesignCatalogService", "CasesCatalogService", DesignViewerController]);
 app.controller("CasesController",
-    ["$scope", "$routeParams", "$window", "CasesCatalogService", CasesController]);
+    ["$scope", "$routeParams", "$window", "$interval", "CasesCatalogService", CasesController]);
 app.controller("ErrorController", 
     ["$scope", "$window", "$routeParams",
         ErrorController]);

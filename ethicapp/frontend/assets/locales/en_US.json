@@ -587,6 +587,13 @@
 	"ethical_cases_file": "Case PDF",
 	"ethical_cases_open_file": "Open file",
 	"ethical_cases_current_file": "Current file",
+	"ethical_cases_document_processing": "Document processing",
+	"ethical_cases_document_processing_pending": "Queued",
+	"ethical_cases_document_processing_processing": "Processing",
+	"ethical_cases_document_processing_completed": "Ready",
+	"ethical_cases_document_processing_failed": "Failed",
+	"ethical_cases_document_processing_unknown": "Unknown",
+	"ethical_cases_document_processing_pages": "({count} pages)",
 
 	"ethical_cases_validation_required": "This field is required.",
 	"ethical_cases_validation_email": "Please enter a valid email address.",
