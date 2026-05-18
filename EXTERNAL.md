@@ -50,6 +50,12 @@ Current mock chat agent adapter:
 ethicapp/backend/external-services/adapters/mock-chat-agent.adapter.js
 ```
 
+Devil's Advocate bridge adapter (connects to the Polyadic Agents backend):
+
+```text
+ethicapp/backend/external-services/adapters/polyadic-bridge.adapter.js
+```
+
 The Docker Compose PoC also includes a tiny external Express service:
 
 ```text
@@ -65,6 +71,13 @@ outside Compose and the mock service locally, set
 - `POST /chat-agent/respond`: receives a chat message and returns a processed
   chat-agent reply containing the processed message followed by its character
   count.
+
+The polyadic bridge adapter connects to the Polyadic Agents backend through
+`POLYADIC_AGENTS_URL`, which defaults to `http://localhost:5000`. In Docker
+Compose, point it to the polyadic service host (e.g.
+`http://polyadic-agents:5000`). The adapter opens one Socket.IO client per
+EthicApp group chat and maps each group to a dedicated polyadic room so that the
+Devil's Advocate pipeline can evaluate conversations independently per group.
 
 ## Hook Dispatch
 

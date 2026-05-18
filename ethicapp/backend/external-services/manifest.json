@@ -21,6 +21,17 @@
         "chat-message-received"
       ],
       "enabled": true
+    },
+    {
+      "id": "polyadic-devils-advocate",
+      "description": "Bridge adapter that connects EthicApp group chats to the Polyadic Agents backend (Devil's Advocate pipeline).",
+      "adapter": "./adapters/polyadic-bridge.adapter.js",
+      "hooks": [
+        "chat-message-received",
+        "phaseStarted",
+        "phaseEnded"
+      ],
+      "enabled": true
     }
   ]
 }

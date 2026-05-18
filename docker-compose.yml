@@ -13,6 +13,9 @@ services:
     volumes:
       - ./nginx/conf.d/dev.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/static:/usr/share/nginx/html/static:ro
+      - uploads:/var/www/uploads:ro
+    networks:
+      - global_network
 
   ethicapp:
     build:
@@ -26,6 +29,7 @@ services:
       - NODE_ENV=development
       - ETHICAPP_WATCH_FRONTEND=true
       - EXTERNAL_MOCK_SERVICE_URL=http://external-mock-service:8510
+      - POLYADIC_AGENTS_URL=http://poly-backend:5000
       - REDIS_SESSION_HOST=redis
       - REDIS_SESSION_PORT=6379
       - REDIS_CACHE_HOST=redis
@@ -43,6 +47,8 @@ services:
       - postgresql
       - redis
       - external-mock-service
+    networks:
+      - global_network
 
   external-mock-service:
     build:
@@ -60,6 +66,8 @@ services:
       '
     expose:
       - "8510"
+    networks:
+      - global_network
 
   ethicapp-pdf-worker:
     build:
@@ -113,6 +121,8 @@ services:
     depends_on:
       - postgresql
       - redis
+    networks:
+      - global_network
 
   ethicapp-student:
     build:
@@ -145,6 +155,8 @@ services:
       - "5174"
     depends_on:
       - postgresql
+    networks:
+      - global_network
 
   management-console:
     build:
@@ -176,6 +188,8 @@ services:
       - "5175"
     depends_on:
       - postgresql
+    networks:
+      - global_network
 
   postgresql:
     build:
@@ -189,6 +203,8 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - global_network
 
   redis:
     image: redis:alpine
@@ -196,6 +212,12 @@ services:
       sh -c 'exec redis-server
       --maxmemory "${REDIS_SESSION_MAXMEMORY:-128mb}"
       --maxmemory-policy "${REDIS_SESSION_MAXMEMORY_POLICY:-volatile-ttl}"'
+    networks:
+      - global_network
+
+networks:
+  global_network:
+    external: true
 
 volumes:
   auth_backend_node_modules:
