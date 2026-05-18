@@ -593,10 +593,10 @@
 	"ethical_cases_document_processing_completed": "Ready",
 	"ethical_cases_document_processing_failed": "Failed",
 	"ethical_cases_document_processing_unknown": "Unknown",
-	"ethical_cases_document_processing_pages": "({count} pages)",
+	"ethical_cases_document_processing_pages": "({{count}} pages)",
 	"ethical_cases_document_viewer_title": "Case document",
-	"ethical_cases_document_page_label": "Page {page}",
-	"ethical_cases_document_page_alt": "Case document page {page}",
+	"ethical_cases_document_page_label": "Page {{page}}",
+	"ethical_cases_document_page_alt": "Case document page {{page}}",
 	"ethical_cases_document_processing_wait": "The document is being processed.",
 	"ethical_cases_document_processing_failed_viewer": "The document could not be processed.",
 

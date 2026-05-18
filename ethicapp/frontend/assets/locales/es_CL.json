@@ -602,10 +602,10 @@
 	"ethical_cases_document_processing_completed": "Listo",
 	"ethical_cases_document_processing_failed": "Falló",
 	"ethical_cases_document_processing_unknown": "Desconocido",
-	"ethical_cases_document_processing_pages": "({count} páginas)",
+	"ethical_cases_document_processing_pages": "({{count}} páginas)",
 	"ethical_cases_document_viewer_title": "Documento del caso",
-	"ethical_cases_document_page_label": "Página {page}",
-	"ethical_cases_document_page_alt": "Página {page} del documento del caso",
+	"ethical_cases_document_page_label": "Página {{page}}",
+	"ethical_cases_document_page_alt": "Página {{page}} del documento del caso",
 	"ethical_cases_document_processing_wait": "El documento se está procesando.",
 	"ethical_cases_document_processing_failed_viewer": "No se pudo procesar el documento.",
 
