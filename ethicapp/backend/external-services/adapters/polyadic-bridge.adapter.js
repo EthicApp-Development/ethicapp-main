@@ -85,8 +85,17 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
                 continue;
             }
 
+            const agenteLower = String(r.agente).toLowerCase();
+
+            if (agenteLower !== "orientador") {
+                console.debug(
+                    `[polyadic-bridge] Skipping ${r.agente} response (only Orientador is published)`
+                );
+                continue;
+            }
+
             console.info(
-                `[polyadic-bridge] Publishing ${r.agente} response to group ${entry.groupId}`
+                `[polyadic-bridge] Publishing Orientador response to group ${entry.groupId}`
             );
             await publishGroupChatMessage({
                 sessionId: entry.sessionId,
