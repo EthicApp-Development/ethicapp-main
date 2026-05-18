@@ -8,6 +8,11 @@
   <link rel="stylesheet" href="<%= asset('/css/dist/assets-bundle.css') %>">
   <link rel="stylesheet" href="/static/fonts/nunito/nunito.css">
   <style>
+    [ng-cloak],
+    .ng-cloak {
+      display: none !important;
+    }
+
     body.teacher-app {
       --global-font-family: "Nunito", "Helvetica Neue", "Helvetica", "Verdana", sans-serif;
       font-family: var(--global-font-family);
@@ -24,6 +29,54 @@
     body.teacher-app .nvtooltip {
       font-family: var(--global-font-family);
     }
+
+    .teacher-bootstrap-screen {
+      align-items: center;
+      background: #f7f8fa;
+      bottom: 0;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      left: 0;
+      position: fixed;
+      right: 0;
+      top: 0;
+      z-index: 10000;
+    }
+
+    .teacher-bootstrap-logo {
+      display: block;
+      height: auto;
+      margin-bottom: 24px;
+      width: 240px;
+    }
+
+    .teacher-bootstrap-loader {
+      animation: teacherBootstrapPulse 900ms ease-in-out infinite alternate;
+      background: #3150f4;
+      border-radius: 999px;
+      height: 5px;
+      width: 140px;
+    }
+
+    .teacher-bootstrap-message {
+      color: #667085;
+      font-size: 16px;
+      margin-top: 18px;
+    }
+
+    @keyframes teacherBootstrapPulse {
+      from {
+        opacity: 0.35;
+        transform: scaleX(0.72);
+      }
+
+      to {
+        opacity: 1;
+        transform: scaleX(1);
+      }
+    }
   </style>
   <%- include('../partials/favicon.ejs') %>
   <% if (typeof renderScripts === "function") { %>
@@ -31,10 +84,19 @@
   <% } %>
 </head>
 <body class="teacher-app" ng-controller="LocalesController">
-  <div class="loading-overlay" ng-if="!translationsLoaded" ng-class="{'loading': !translationsLoaded}">
-    <p>Loading...</p>
+  <div class="teacher-bootstrap-screen" ng-if="!translationsLoaded">
+    <img
+      src="/images/logos/ethicapp-logo.svg"
+      class="teacher-bootstrap-logo"
+      alt="EthicApp">
+    <div class="teacher-bootstrap-loader"></div>
+    <div class="teacher-bootstrap-message">Loading workspace...</div>
   </div>
-  <div ng-if="translationsLoaded" ng-controller="<%= typeof controller !== 'undefined' ? controller : 'VoidController' %>">
+  <div
+    class="teacher-angular-shell"
+    ng-cloak
+    ng-if="translationsLoaded"
+    ng-controller="<%= typeof controller !== 'undefined' ? controller : 'VoidController' %>">
   <%- body %>
   </div>
   <%- typeof bottomScripts !== 'undefined' ? bottomScripts : '' %>
