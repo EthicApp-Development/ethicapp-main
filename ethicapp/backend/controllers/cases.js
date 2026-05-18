@@ -4,6 +4,7 @@ import express from "express";
 import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { requireRole } from "../helpers/auth-helper.js";
+import { enqueueCasePdfRenderJob } from "../helpers/pdf-render-jobs-helper.js";
 import { moveUploadedFile, pdfUpload, removeUploadedFile } from "../middleware/upload.js";
 
 const router = express.Router();
@@ -33,6 +34,28 @@ function normalizeCase(row) {
 function parseCaseId(id) {
     const caseId = Number(id);
     return Number.isSafeInteger(caseId) && caseId > 0 ? caseId : null;
+}
+
+async function enqueueCaseRenderSafely(caseObj) {
+    try {
+        const job = await enqueueCasePdfRenderJob({
+            caseId:  Number(caseObj.id),
+            pdfPath: caseObj.pdf_path,
+            metadata: {
+                reason:   "case_pdf_uploaded",
+                caseUuid: caseObj.case_uuid,
+            },
+        });
+        console.info("Queued PDF render job for case document.", {
+            caseId: caseObj.id,
+            jobId:  job.id,
+        });
+    } catch (error) {
+        console.error("Unable to queue PDF render job for case document:", {
+            caseId: caseObj?.id,
+            error,
+        });
+    }
 }
 
 router.get("/cases", async (req, res) => {
@@ -241,6 +264,8 @@ router.post("/cases", pdfUpload, async (req, res) => {
             ],
         });
 
+        await enqueueCaseRenderSafely(createdCase);
+
         return res.status(201).json({ status: "ok", result: normalizeCase(createdCase) });
     } catch (error) {
         await removeUploadedFile(req.file);
@@ -313,6 +338,7 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
 
         if (hasPdf) {
             await moveUploadedFile(req.file, pdfPath);
+            await enqueueCaseRenderSafely(updatedCase);
         }
 
         return res.status(200).json({ status: "ok", result: normalizeCase(updatedCase) });

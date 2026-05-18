@@ -1,7 +1,10 @@
 import { execFile } from "child_process";
+import pg from "pg";
 import { promisify } from "util";
+import { dbconnString } from "../config/database.config.js";
 
 const execFileAsync = promisify(execFile);
+const { Pool } = pg;
 
 const config = {
     pollIntervalMs: Number(process.env.PDF_RENDER_WORKER_POLL_INTERVAL_MS || 2000),
@@ -12,6 +15,9 @@ const config = {
 };
 
 let shuttingDown = false;
+const pool = new Pool({
+    connectionString: dbconnString,
+});
 
 function sleep(ms) {
     return new Promise(resolve => {
@@ -44,9 +50,88 @@ async function assertRuntimeReady() {
     await assertCommandAvailable("pdftoppm", ["-v"]);
 }
 
+async function claimNextPendingJob() {
+    const client = await pool.connect();
+
+    try {
+        await client.query("BEGIN");
+
+        const result = await client.query(`
+            WITH next_job AS (
+                SELECT id
+                FROM pdf_render_jobs
+                WHERE status = 'pending'
+                  AND next_attempt_at <= now()
+                ORDER BY requested_at ASC, id ASC
+                LIMIT 1
+                FOR UPDATE SKIP LOCKED
+            )
+            UPDATE pdf_render_jobs AS job
+            SET status = 'processing',
+                started_at = now(),
+                completed_at = NULL,
+                error_message = NULL
+            FROM next_job
+            WHERE job.id = next_job.id
+            RETURNING job.*;
+        `);
+
+        await client.query("COMMIT");
+        return result.rows[0] || null;
+    } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
+async function requeueClaimedJobUntilRendererLands(job) {
+    const delaySeconds = Math.max(Math.ceil(config.pollIntervalMs / 1000), 300);
+    await pool.query(`
+        UPDATE pdf_render_jobs
+        SET status = 'pending',
+            started_at = NULL,
+            next_attempt_at = now() + ($2::int * interval '1 second'),
+            error_message = $3,
+            metadata = metadata || jsonb_build_object(
+                'lastWorkerObservation',
+                jsonb_build_object(
+                    'code', 'renderer_pending_implementation',
+                    'observedAt', now()
+                )
+            )
+        WHERE id = $1;
+    `, [
+        job.id,
+        delaySeconds,
+        "PDF render worker claimed the job; rendering implementation is pending.",
+    ]);
+}
+
+async function processClaimedJob(job) {
+    console.info("[pdf-render-worker] Claimed PDF render job.", {
+        jobId:     job.id,
+        ownerType: job.owner_type,
+        ownerId:   job.owner_id,
+        source:    job.source_path,
+    });
+
+    await requeueClaimedJobUntilRendererLands(job);
+
+    console.info("[pdf-render-worker] Requeued claimed job until rendering is implemented.", {
+        jobId: job.id,
+    });
+}
+
 async function pollOnce() {
-    // Job claiming/rendering will be wired when pdf_render_jobs lands.
-    return null;
+    const job = await claimNextPendingJob();
+    if (!job) {
+        return false;
+    }
+
+    await processClaimedJob(job);
+    return true;
 }
 
 function handleShutdown(signal) {
@@ -69,10 +154,15 @@ async function main() {
     });
 
     while (!shuttingDown) {
-        await pollOnce();
+        try {
+            await pollOnce();
+        } catch (error) {
+            console.error("[pdf-render-worker] Poll failed:", error);
+        }
         await sleep(config.pollIntervalMs);
     }
 
+    await pool.end();
     console.info("[pdf-render-worker] Stopped.");
 }
 
