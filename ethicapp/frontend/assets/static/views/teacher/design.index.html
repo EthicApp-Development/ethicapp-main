@@ -9,7 +9,7 @@
             <p class="designContext">{{'designContext' | translate}}</p>
         </div>
     </div>
-    <div class="row" ng-init="vm.dsgnMode = 0; vm.forceFetchDesigns();" style="position: relative;">
+    <div class="row" style="position: relative;">
         <!-- Nav Tabs -->
         <ul class="nav nav-tabs" style="margin-left: 16px; display: inline-block;">
             <li ng-class="{'active': vm.dsgnMode === 0}">
@@ -22,8 +22,11 @@
 
         <!-- Search box -->
         <div style="position: absolute; left: 200px; top: 6px; min-width: 80px; max-width: 200px;">
-            <input class="form-control search-input fontAwesome" type="text" 
-                   placeholder="{{'search' | translate}} &#xF002;" ng-model="vm.userSearch">
+            <div class="search-field-wrapper">
+                <input class="form-control search-input search-decorated-input" type="text"
+                    placeholder="{{'search' | translate}}" ng-model="vm.userSearch">
+                <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+            </div>
         </div>
     </div>
     <div class="row" style="margin-left:-14px; margin-top: -6px;">

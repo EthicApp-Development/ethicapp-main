@@ -19,6 +19,7 @@ import sessions from "./controllers/sessions.js";
 import activitiesCommon from "./controllers/activities/activities-common.js";
 import activitiesTeacher from "./controllers/activities/activities-teacher.js";
 import activitiesStudent from "./controllers/activities/activities-student.js";
+import activityReports from "./controllers/activities/reports.js";
 import phases from "./controllers/phases.js";
 import designs from "./controllers/designs.js";
 import externalServices from "./controllers/external-services.js";
@@ -86,7 +87,7 @@ app.use("/assets/uploads", express.static(uploadsAbsolutePath));
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
 app.use(expressLayouts); // Usar express-ejs-layouts
-app.set("layout", "./layouts/user-common"); 
+app.set("layout", "./layouts/teacher-app");
 
 // JSON handling for requests
 app.use(express.json());
@@ -156,6 +157,7 @@ app.use("/", requireLegacyAuth, sessions);
 app.use("/", requireLegacyAuth, activitiesCommon);
 app.use("/", requireLegacyAuth, activitiesTeacher);
 app.use("/", requireLegacyAuth, activitiesStudent);
+app.use("/", requireLegacyAuth, activityReports);
 app.use("/", requireLegacyAuth, phases);
 app.use("/", requireLegacyAuth, groups);
 app.use("/", requireLegacyAuth, designs);

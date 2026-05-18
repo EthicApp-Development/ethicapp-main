@@ -1,7 +1,10 @@
 /*eslint func-style: ["error", "expression"]*/
-export function CasesController($scope, $routeParams, CasesCatalogService) {
+export function CasesController($scope, $routeParams, $window, CasesCatalogService) {
     const vm = this;
     vm.cases = [];
+    vm.caseObj = null;
+    vm.currentPage = 1;
+    vm.pageSize = 5;
     vm.form = {
         title: "",
         authorFirstname: "",
@@ -13,6 +16,7 @@ export function CasesController($scope, $routeParams, CasesCatalogService) {
 
     vm.loadCases = async function() {
         vm.cases = await CasesCatalogService.getCases(true);
+        vm.currentPage = 1;
         $scope.$applyAsync();
     };
 
@@ -23,12 +27,70 @@ export function CasesController($scope, $routeParams, CasesCatalogService) {
         }
 
         const caseObj = await CasesCatalogService.getCaseById(caseId);
+        vm.caseObj = caseObj;
         vm.form.title = caseObj.title;
         vm.form.authorFirstname = caseObj.authorFirstname;
         vm.form.authorLastname = caseObj.authorLastname;
         vm.form.authorEmail = caseObj.authorEmail;
         vm.form.currentPdfPath = caseObj.pdfPath;
         $scope.$applyAsync();
+    };
+
+    vm.formatAuthor = function(caseObj) {
+        if (!caseObj) {
+            return "";
+        }
+
+        return [caseObj.authorFirstname, caseObj.authorLastname].filter(Boolean).join(" ");
+    };
+
+    vm.getContentRepresentation = function(caseObj) {
+        if (!caseObj || !Array.isArray(caseObj.representations)) {
+            return null;
+        }
+
+        return caseObj.representations.find((representation) => {
+            return representation.rel === "content";
+        }) || null;
+    };
+
+    vm.getCaseContentUrl = function(caseObj) {
+        return vm.getContentRepresentation(caseObj)?.href || caseObj?.pdfPath || "";
+    };
+
+    vm.getTotalPages = function() {
+        return Math.max(1, Math.ceil(vm.cases.length / vm.pageSize));
+    };
+
+    vm.getPaginatedCases = function() {
+        const startIndex = (vm.currentPage - 1) * vm.pageSize;
+        return vm.cases.slice(startIndex, startIndex + vm.pageSize);
+    };
+
+    vm.setPage = function(pageNumber) {
+        const nextPage = Number(pageNumber);
+        if (!Number.isInteger(nextPage)) {
+            return;
+        }
+
+        vm.currentPage = Math.min(Math.max(nextPage, 1), vm.getTotalPages());
+    };
+
+    vm.previousPage = function() {
+        vm.setPage(vm.currentPage - 1);
+    };
+
+    vm.nextPage = function() {
+        vm.setPage(vm.currentPage + 1);
+    };
+
+    vm.goBack = function() {
+        if ($window.history.length > 1) {
+            $window.history.back();
+            return;
+        }
+
+        $scope.navigateTo("/cases");
     };
 
     vm.handlePdfSelected = function(files) {
@@ -53,5 +115,18 @@ export function CasesController($scope, $routeParams, CasesCatalogService) {
     vm.deleteCase = async function(caseId) {
         await CasesCatalogService.deleteCase(caseId);
         await vm.loadCases();
+        vm.setPage(vm.currentPage);
+    };
+
+    vm.viewCase = function(caseItem) {
+        $scope.navigateTo(`/cases/${caseItem.id}`);
+    };
+
+    vm.editCase = function(caseItem) {
+        $scope.navigateTo(`/cases/${caseItem.id}/edit`);
+    };
+
+    vm.deleteCaseFromCard = async function(caseItem) {
+        await vm.deleteCase(caseItem.id);
     };
 }

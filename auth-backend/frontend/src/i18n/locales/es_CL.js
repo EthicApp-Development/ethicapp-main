@@ -1,4 +1,11 @@
 const esCL = {
+  passwordField: {
+    defaultLabel: 'Contraseña',
+    visibility: {
+      show: 'Ver',
+      hide: 'Ocultar'
+    }
+  },
   login: {
     title: 'Iniciar sesión',
     subtitle: 'Accede con tus credenciales',

@@ -102,7 +102,7 @@ function GroupingModeSelectorController() {
     };
 
     vm.$onDestroy = function() {
-        console.log(`[GroupingModeSelectorController] on destroy`);
+        // console.debug(`[GroupingModeSelectorController] on destroy`);
         vm.selectedMode = null;
         if (vm.validateCallback) {
             const validation = vm.validate();
@@ -111,16 +111,16 @@ function GroupingModeSelectorController() {
     }
 
     vm.$onChanges = function (changes) {
-        console.log(`[GroupingModeSelectorController] something changed`);
+        // console.debug(`[GroupingModeSelectorController] something changed`);
         if (changes.phase && changes.phase.currentValue) {
             const currentMode = changes.phase.currentValue.mode;
             const previousMode = changes.phase.previousValue
                 ? changes.phase.previousValue.mode
                 : undefined;
-            console.log(`[GroupingModeSelectorController] mode changed`);
+            // console.debug(`[GroupingModeSelectorController] mode changed`);
 
             if (currentMode === 'individual') {
-                console.log(`[GroupingModeSelectorController] mode changed to individual`);
+                // console.debug(`[GroupingModeSelectorController] mode changed to individual`);
                 vm.selectedMode = null;
                 
                 if (vm.validateCallback) {

@@ -15,7 +15,7 @@ export function CreateDesignController($scope,
             const userInformation = await UserInformationService.getUserInformation();
             const design = factory(title, userInformation.name);
             
-            design.metainfo.institution = userInformation.institution_name ?? "Unknown";
+            design.metainfo.institution = userInformation.institution_name || "";
             design.metainfo.email = userInformation.email;
 
             const designId = await DesignCatalogService.createDesign(design);

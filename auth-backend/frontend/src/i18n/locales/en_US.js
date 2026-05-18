@@ -1,4 +1,11 @@
 const enUS = {
+  passwordField: {
+    defaultLabel: 'Password',
+    visibility: {
+      show: 'Show',
+      hide: 'Hide'
+    }
+  },
   login: {
     title: 'Sign in',
     subtitle: 'Access with your credentials',

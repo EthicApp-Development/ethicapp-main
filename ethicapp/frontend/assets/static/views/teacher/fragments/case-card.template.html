@@ -1,0 +1,25 @@
+<div class="panel panel-default case-card-panel">
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-sm-8">
+                <p><i class="fa-solid fa-book" aria-hidden="true"></i> {{ 'title_colon' | translate }} <a ng-href="#!/cases/{{$ctrl.caseItem.id}}">{{$ctrl.caseItem.title}}</a></p>
+                <p><i class="fa-solid fa-user" aria-hidden="true"></i> {{ 'author' | translate }}: {{$ctrl.formatAuthor()}}</p>
+                <p ng-if="$ctrl.caseItem.authorEmail"><i class="fa-solid fa-envelope" aria-hidden="true"></i> {{ 'email' | translate }}: <a ng-href="mailto:{{$ctrl.caseItem.authorEmail}}">{{$ctrl.caseItem.authorEmail}}</a></p>
+                <p ng-if="$ctrl.getContentUrl()"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> {{ 'ethical_cases_file' | translate }}: <a ng-href="{{$ctrl.getContentUrl()}}" target="_blank" rel="noopener noreferrer">{{ 'ethical_cases_open_file' | translate }}</a></p>
+            </div>
+            <div class="col-sm-4">
+                <div class="case-card-actions" ng-if="$ctrl.showActions">
+                    <button ng-show="$ctrl.isFunction($ctrl.onView)" class="btn btn-default btn-sm" ng-click="$ctrl.onView($ctrl.caseItem)">
+                        <i class="fa fa-eye"></i> {{ 'view' | translate }}
+                    </button>
+                    <button ng-show="$ctrl.isFunction($ctrl.onEdit)" class="btn btn-default btn-sm" ng-click="$ctrl.onEdit($ctrl.caseItem)">
+                        <i class="fa fa-pencil"></i> {{ 'edit' | translate }}
+                    </button>
+                    <button ng-show="$ctrl.isFunction($ctrl.onDelete)" class="btn btn-danger btn-sm" ng-click="$ctrl.onDelete($ctrl.caseItem)">
+                        <i class="fa fa-trash"></i> {{ 'delete' | translate }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

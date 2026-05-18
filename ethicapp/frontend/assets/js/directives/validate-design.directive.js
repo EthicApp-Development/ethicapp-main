@@ -22,7 +22,7 @@ const validateDesignDirective = function () {
                         messages: []
                     };
                     scope.onValidate({ result });
-                    console.log('[validateDesignDirective] Validation passed.');
+                    // console.debug('[validateDesignDirective] Validation passed.');
                 }
             }
 

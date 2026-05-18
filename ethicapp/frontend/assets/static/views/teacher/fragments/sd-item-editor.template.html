@@ -2,12 +2,13 @@
     <div class="panel-body">
         <div class="form-group">
             <label for="questionText">{{ 'questionText' | translate }}</label>
-            <input id="questionText" type="text" 
-                   class="form-control" 
-                   ng-class="{'input-warning': !$ctrl.question.q_text}" 
-                   placeholder="{{ 'title' | translate }}" 
-                   ng-model="$ctrl.question.q_text"
-                   ng-change="$ctrl.validateItem()">
+            <textarea id="questionText"
+                      class="form-control"
+                      rows="2"
+                      ng-class="{'input-warning': !$ctrl.question.q_text}"
+                      placeholder="{{ 'title' | translate }}"
+                      ng-model="$ctrl.question.q_text"
+                      ng-change="$ctrl.validateItem()"></textarea>
         </div>
 
         <div class="row">

@@ -491,9 +491,7 @@ router.get("/home", function(req, res) {
                 layout:     "./layouts/teacher-app",
                 ngApp:      "TeacherApp",
                 scripts:    [
-                    ["libs/angular-glue.min.js"],
-                    ["js/dist/teacher-admin.js", "js/dist/teacher-admin.min.js"],
-                    ["libs/save-csv.min.js"]
+                    ["js/dist/teacher-admin.js", "js/dist/teacher-admin.min.js"]
                 ],
                 renderScripts: (scripts) => ViewsHelper.renderScripts(scripts, res),
                 recaptchaEnabled: String(process.env.RECAPTCHA_ENABLED || "false").toLowerCase() === "true",
