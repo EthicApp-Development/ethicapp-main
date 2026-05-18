@@ -79,7 +79,7 @@ async function enqueueCaseRenderSafely(caseObj) {
     }
 }
 
-async function getReadableCaseWithDocumentProcessing(caseId, userId) {
+async function getReadableCaseWithDocumentProcessing(caseId, userId, role = "") {
     return rpg2.singleSQL({
         dbcon: config.dbconnString,
         sql: `
@@ -90,6 +90,8 @@ async function getReadableCaseWithDocumentProcessing(caseId, userId) {
             ${pdfRenderJobJoinSql}
             WHERE c.id = $1
               AND (
+                $3 = 'A'
+                OR
                 c.creator = $2
                 OR EXISTS (
                     SELECT 1
@@ -103,13 +105,22 @@ async function getReadableCaseWithDocumentProcessing(caseId, userId) {
                     INNER JOIN activity a ON a.design = d.id
                     INNER JOIN sessions s ON s.id = a.session
                     WHERE d.case_id = c.id
-                      AND s.creator = $2
+                      AND (
+                        s.creator = $2
+                        OR EXISTS (
+                            SELECT 1
+                            FROM sesusers su
+                            WHERE su.sesid = s.id
+                              AND su.uid = $2
+                        )
+                      )
                 )
               );
         `,
         sqlParams: [
             rpg2.param("plain", caseId),
             rpg2.param("plain", userId),
+            rpg2.param("plain", role || ""),
         ],
     });
 }
@@ -183,7 +194,7 @@ router.get("/cases/search", async (req, res) => {
 });
 
 router.get("/cases/:id/download-link", async (req, res) => {
-    if (!requireRole(req, res, ["P", "A"])) {
+    if (!requireRole(req, res, ["P", "A", "S"])) {
         return;
     }
 
@@ -193,15 +204,7 @@ router.get("/cases/:id/download-link", async (req, res) => {
     }
 
     try {
-        const caseObj = await rpg2.singleSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                SELECT id, pdf_path
-                FROM ethical_cases
-                WHERE id = $1;
-            `,
-            sqlParams: [rpg2.param("plain", caseId)],
-        });
+        const caseObj = await getReadableCaseWithDocumentProcessing(caseId, req.session.uid, req.session.role);
 
         if (!caseObj || !caseObj.id) {
             return res.status(404).json({ status: "err", message: "Case not found." });
@@ -221,7 +224,7 @@ router.get("/cases/:id/download-link", async (req, res) => {
 });
 
 router.get("/cases/:id/document-processing", async (req, res) => {
-    if (!requireRole(req, res, ["P", "A"])) {
+    if (!requireRole(req, res, ["P", "A", "S"])) {
         return;
     }
 
@@ -231,7 +234,7 @@ router.get("/cases/:id/document-processing", async (req, res) => {
     }
 
     try {
-        const caseObj = await getReadableCaseWithDocumentProcessing(caseId, req.session.uid);
+        const caseObj = await getReadableCaseWithDocumentProcessing(caseId, req.session.uid, req.session.role);
 
         if (!caseObj || !caseObj.id) {
             return res.status(404).json({ status: "err", message: "Case not found." });
@@ -255,7 +258,7 @@ router.get("/cases/:id/document-processing", async (req, res) => {
 });
 
 router.get("/cases/:id", async (req, res) => {
-    if (!requireRole(req, res, ["P", "A"])) {
+    if (!requireRole(req, res, ["P", "A", "S"])) {
         return;
     }
 
@@ -265,7 +268,7 @@ router.get("/cases/:id", async (req, res) => {
     }
 
     try {
-        const caseObj = await getReadableCaseWithDocumentProcessing(caseId, req.session.uid);
+        const caseObj = await getReadableCaseWithDocumentProcessing(caseId, req.session.uid, req.session.role);
 
         if (!caseObj || !caseObj.id) {
             return res.status(404).json({ status: "err", message: "Case not found." });

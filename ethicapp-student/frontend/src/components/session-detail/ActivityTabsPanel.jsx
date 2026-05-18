@@ -1,35 +1,14 @@
 import { useMemo, useState } from 'react';
+import CaseDocumentViewer from './CaseDocumentViewer.jsx';
 import RankingPhaseView from './phases/RankingPhaseView.jsx';
 import SemanticDifferentialPhaseView from './phases/SemanticDifferentialPhaseView.jsx';
-
-function buildCaseViewerUrl(caseDocumentUrl) {
-  if (typeof caseDocumentUrl !== 'string' || caseDocumentUrl.trim().length === 0) {
-    return '';
-  }
-
-  const normalizedCaseDocumentUrl = caseDocumentUrl.trim();
-
-  try {
-    const parsedUrl = new URL(normalizedCaseDocumentUrl, window.location.origin);
-    const isHttpUrl = parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
-    const isLocalHost = ['localhost', '127.0.0.1', '::1'].includes(parsedUrl.hostname);
-
-    if (isHttpUrl && !isLocalHost) {
-      return `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(parsedUrl.toString())}`;
-    }
-  } catch {
-    // Keep fallback behavior when the URL cannot be parsed.
-  }
-
-  const hash = '#toolbar=0&navpanes=0&scrollbar=1';
-  return normalizedCaseDocumentUrl.includes('#') ? normalizedCaseDocumentUrl : `${normalizedCaseDocumentUrl}${hash}`;
-}
 
 export default function ActivityTabsPanel({
   tabEntries,
   activeTab,
   setActiveTab,
   hasCaseTab,
+  caseDocument,
   caseDocumentUrl,
   phases,
   currentPhaseId,
@@ -41,7 +20,6 @@ export default function ActivityTabsPanel({
   t
 }) {
   const [semanticDraftByPhaseId, setSemanticDraftByPhaseId] = useState({});
-  const caseViewerUrl = buildCaseViewerUrl(caseDocumentUrl);
 
   const activePhase = useMemo(() => {
     if (typeof activeTab !== 'string' || !activeTab.startsWith('phase-')) {
@@ -101,26 +79,7 @@ export default function ActivityTabsPanel({
 
       <div className="border border-top-0 rounded-bottom p-3">
         {activeTab === 'case' && hasCaseTab ? (
-          <div className="d-flex flex-column gap-2">
-            <iframe
-              title={t('sessionDetail.caseTab')}
-              src={caseViewerUrl}
-              width="100%"
-              height="640"
-              className="border rounded"
-            />
-            <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
-              <small className="text-muted">{t('sessionDetail.caseViewerHint')}</small>
-              <a
-                href={caseDocumentUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="btn btn-outline-secondary btn-sm"
-              >
-                {t('sessionDetail.openCaseInNewTab')}
-              </a>
-            </div>
-          </div>
+          <CaseDocumentViewer caseDocument={caseDocument} caseDocumentUrl={caseDocumentUrl} t={t} />
         ) : null}
 
         {activeTab !== 'case' && activePhase && designType === 'semantic_differential' ? (
