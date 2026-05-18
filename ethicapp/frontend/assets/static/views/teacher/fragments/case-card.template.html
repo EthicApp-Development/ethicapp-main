@@ -6,6 +6,19 @@
                 <p><i class="fa-solid fa-user" aria-hidden="true"></i> {{ 'author' | translate }}: {{$ctrl.formatAuthor()}}</p>
                 <p ng-if="$ctrl.caseItem.authorEmail"><i class="fa-solid fa-envelope" aria-hidden="true"></i> {{ 'email' | translate }}: <a ng-href="mailto:{{$ctrl.caseItem.authorEmail}}">{{$ctrl.caseItem.authorEmail}}</a></p>
                 <p ng-if="$ctrl.getContentUrl()"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> {{ 'ethical_cases_file' | translate }}: <a ng-href="{{$ctrl.getContentUrl()}}" target="_blank" rel="noopener noreferrer">{{ 'ethical_cases_open_file' | translate }}</a></p>
+                <p ng-if="$ctrl.getDocumentProcessing()">
+                    <i class="fa-solid fa-gears" aria-hidden="true"></i>
+                    {{ 'ethical_cases_document_processing' | translate }}:
+                    <span ng-class="$ctrl.getDocumentProcessingLabelClass()">
+                        {{ $ctrl.getDocumentProcessingLabelKey() | translate }}
+                    </span>
+                    <span ng-if="$ctrl.getDocumentProcessing().status === 'completed' && $ctrl.getDocumentProcessing().pageCount">
+                        {{ 'ethical_cases_document_processing_pages' | translate:{ count: $ctrl.getDocumentProcessing().pageCount } }}
+                    </span>
+                    <span class="text-danger" ng-if="$ctrl.getDocumentProcessing().status === 'failed' && $ctrl.getDocumentProcessing().errorMessage">
+                        {{$ctrl.getDocumentProcessing().errorMessage}}
+                    </span>
+                </p>
             </div>
             <div class="col-sm-4">
                 <div class="case-card-actions" ng-if="$ctrl.showActions">

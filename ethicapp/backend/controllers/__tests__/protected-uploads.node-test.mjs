@@ -68,6 +68,24 @@ test("ethical case authorization keeps shared, imported, and activity-based acce
     );
 });
 
+test("getAuthorizedUpload authorizes rendered case document images through case access", async () => {
+    const authorized = await getAuthorizedUpload(
+        "cases/7/rendered/page-1.png",
+        { uid: 12, role: "P" },
+        async ({ sql, sqlParams }) => {
+            if (sql.includes("FROM ethical_cases c")) {
+                assert.equal(sqlParams[3], 7);
+                assert.match(sql, /c\.pdf_path = ANY\(\$1\) OR c\.id = \$4/);
+                return [{ id: 7, pdf_path: "/uploads/cases/7/case.pdf" }];
+            }
+
+            return [];
+        }
+    );
+
+    assert.deepEqual(authorized, { id: 7, pdf_path: "/uploads/cases/7/case.pdf" });
+});
+
 test("getAuthorizedUpload allows authenticated users to read registered profile avatars", async () => {
     const authorized = await getAuthorizedUpload(
         "user-profiles/99/user-99-topbar-64.jpg",

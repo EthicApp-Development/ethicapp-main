@@ -13,15 +13,26 @@ function getByPath(dictionary, dottedPath) {
     .reduce((value, segment) => (value && value[segment] !== undefined ? value[segment] : undefined), dictionary);
 }
 
+function interpolate(localizedText, params = {}) {
+  if (typeof localizedText !== 'string') {
+    return localizedText;
+  }
+
+  return localizedText.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, key) => {
+    const value = params[key];
+    return value === undefined || value === null ? match : String(value);
+  });
+}
+
 export function AppProviders({ children }) {
   const locale = detectPreferredLocale();
 
   const contextValue = useMemo(() => {
     const localeDictionary = translations[locale] || translations[DEFAULT_LOCALE] || {};
 
-    function t(key) {
+    function t(key, params) {
       const localizedText = getByPath(localeDictionary, key);
-      return localizedText ?? key;
+      return interpolate(localizedText ?? key, params);
     }
 
     return { locale, t };

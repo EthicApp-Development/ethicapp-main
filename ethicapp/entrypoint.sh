@@ -15,7 +15,7 @@ install_dependencies() {
 
   cd "$directory"
 
-  dependency_state_file=".npm_dependency_state"
+  dependency_state_file="node_modules/.npm_dependency_state"
   current_dependency_state="$(
     {
       sha256sum package.json
@@ -37,6 +37,7 @@ install_dependencies() {
     else
       npm install
     fi
+    mkdir -p node_modules
     echo "$current_dependency_state" > "$dependency_state_file"
   fi
 }
@@ -78,6 +79,13 @@ seed_canonical_activities() {
 }
 
 install_dependencies /app/backend node_modules/dotenv
+
+if [ "${ETHICAPP_PROCESS_ROLE:-web}" = "pdf-render-worker" ]; then
+  cd /app/backend
+  echo "Starting EthicApp PDF render worker..."
+  echo "NODE_ENV=${NODE_ENV}"
+  exec npm run worker:pdf-render
+fi
 
 if [ "$NODE_ENV" = "development" ]; then
   install_dependencies /app/frontend node_modules/esbuild

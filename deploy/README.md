@@ -54,3 +54,10 @@ deployments should expose distinct service names, normally `redis-session` and
 `REDIS_URL` fallbacks. Development may map both roles to the same Redis instance.
 The default production memory limits are `REDIS_SESSION_MAXMEMORY=128mb` and
 `REDIS_CACHE_MAXMEMORY=256mb`.
+
+The PDF render worker is a separate process that uses the same `ethicapp` image.
+Deploy it as its own service with `ETHICAPP_PROCESS_ROLE=pdf-render-worker`,
+provide the `PDF_RENDER_*` variables from the contract, and mount the same
+protected uploads volume used by `ethicapp`. Do not expose rendered PDF pages or
+manifests through NGINX/static mounts; they must stay behind authorization-aware
+application endpoints.
