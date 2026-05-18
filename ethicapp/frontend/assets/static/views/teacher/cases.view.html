@@ -11,13 +11,5 @@
 
     <case-card case-item="vm.caseObj" show-actions="false" ng-if="vm.caseObj"></case-card>
 
-    <div class="panel panel-default" ng-if="vm.caseObj && vm.getCaseContentUrl(vm.caseObj)">
-        <div class="panel-body">
-            <embed
-                ng-src="{{ vm.getCaseContentUrl(vm.caseObj) }}"
-                type="application/pdf"
-                width="100%"
-                height="720px" />
-        </div>
-    </div>
+    <case-document-viewer case-item="vm.caseObj" ng-if="vm.caseObj"></case-document-viewer>
 </div>
