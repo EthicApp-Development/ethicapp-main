@@ -60,7 +60,7 @@ services:
       - PDF_RENDER_TIMEOUT_MS=120000
     volumes:
       - ./ethicapp:/app
-      - ethicapp_backend_node_modules:/app/backend/node_modules
+      - ethicapp_pdf_worker_backend_node_modules:/app/backend/node_modules
       - uploads:/app/backend/uploads
     depends_on:
       - postgresql
@@ -182,6 +182,7 @@ volumes:
   auth_backend_node_modules:
   auth_frontend_node_modules:
   ethicapp_backend_node_modules:
+  ethicapp_pdf_worker_backend_node_modules:
   ethicapp_frontend_node_modules:
   ethicapp_student_backend_node_modules:
   ethicapp_student_frontend_node_modules:
