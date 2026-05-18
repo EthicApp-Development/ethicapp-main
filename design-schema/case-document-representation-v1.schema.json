@@ -125,6 +125,13 @@
         },
         "originalFilename": {
           "type": "string"
+        },
+        "assets": {
+          "type": "array",
+          "description": "Source-level assets referenced by the original document, for example images embedded from Markdown. These are distinct from rendered output images.",
+          "items": {
+            "$ref": "#/$defs/sourceAsset"
+          }
         }
       },
       "allOf": [
@@ -155,6 +162,61 @@
             "properties": { "contentType": { "const": "text/plain" } }
           }
         }
+      ],
+      "additionalProperties": false
+    },
+    "sourceAsset": {
+      "type": "object",
+      "required": ["kind", "reference", "contentType"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["image"]
+        },
+        "reference": {
+          "type": "string",
+          "description": "Original reference as it appears in the source document, such as a Markdown image URL or relative path."
+        },
+        "contentType": {
+          "type": "string",
+          "pattern": "^image/",
+          "description": "MIME type of the referenced source asset."
+        },
+        "externalUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Original external URL when the source document referenced a remote asset."
+        },
+        "packagePath": {
+          "type": "string",
+          "description": "Relative path for the captured asset inside a future export package."
+        },
+        "storagePath": {
+          "type": "string",
+          "description": "Internal protected storage path. Not portable across instances."
+        },
+        "dataUri": {
+          "type": "string",
+          "pattern": "^data:image/[^;]+;base64,",
+          "description": "Inline source asset payload for compact exports or tests."
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "byteCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "altText": {
+          "type": "string",
+          "description": "Alternative text from the source document when available."
+        }
+      },
+      "oneOf": [
+        { "required": ["externalUrl"] },
+        { "required": ["packagePath"] },
+        { "required": ["storagePath"] },
+        { "required": ["dataUri"] }
       ],
       "additionalProperties": false
     },
