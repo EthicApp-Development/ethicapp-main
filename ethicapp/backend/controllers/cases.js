@@ -20,6 +20,19 @@ function normalizeCase(row) {
         mediaType: "application/pdf",
         href: row.pdf_path,
     }] : [];
+    const documentProcessing = normalizePdfRenderJob(row);
+
+    if (documentProcessing?.status === "completed" && documentProcessing.pageCount) {
+        for (let pageNumber = 1; pageNumber <= documentProcessing.pageCount; pageNumber += 1) {
+            representations.push({
+                rel:            "rendered-image",
+                mediaType:      "image/png",
+                href:           `/uploads/cases/${row.id}/rendered/page-${pageNumber}.png`,
+                sequenceNumber: pageNumber,
+                pageNumber,
+            });
+        }
+    }
 
     return {
         id: row.id,
@@ -32,7 +45,7 @@ function normalizeCase(row) {
         creator: row.creator,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
-        documentProcessing: normalizePdfRenderJob(row),
+        documentProcessing,
         representations,
     };
 }

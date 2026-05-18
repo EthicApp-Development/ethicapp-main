@@ -76,11 +76,23 @@ async function queryOne(sql, sqlParams, query = rpg2.execSQL) {
     return rows[0] || null;
 }
 
+function getCaseIdFromRenderedDocumentPath(relativePath) {
+    const match = String(relativePath || "").match(/^cases\/(\d+)\/(?:rendered\/page-\d+\.png|representation\.json)$/);
+    if (!match) {
+        return null;
+    }
+
+    const caseId = Number(match[1]);
+    return Number.isSafeInteger(caseId) && caseId > 0 ? caseId : null;
+}
+
 async function findCaseDocument(relativePath, uid, role, query) {
+    const renderedCaseId = getCaseIdFromRenderedDocumentPath(relativePath);
+
     return queryOne(`
         SELECT c.id, c.pdf_path
         FROM ethical_cases c
-        WHERE c.pdf_path = ANY($1)
+        WHERE (c.pdf_path = ANY($1) OR c.id = $4)
           AND (
             $3 = 'A'
             OR c.creator = $2
@@ -108,7 +120,7 @@ async function findCaseDocument(relativePath, uid, role, query) {
             )
           )
         LIMIT 1;
-    `, [publicPathCandidates(relativePath), uid, role], query);
+    `, [publicPathCandidates(relativePath), uid, role, renderedCaseId], query);
 }
 
 async function findProfileImage(relativePath, query) {
