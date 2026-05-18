@@ -13,7 +13,6 @@ services:
     volumes:
       - ./nginx/conf.d/dev.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/static:/usr/share/nginx/html/static:ro
-      - uploads:/var/www/uploads:ro
 
   ethicapp:
     build:

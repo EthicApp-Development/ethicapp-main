@@ -25,10 +25,10 @@ import designs from "./controllers/designs.js";
 import groups from "./controllers/groups.js";
 import group_messages from "./controllers/group-messages.js";
 import cases from "./controllers/cases.js";
+import protectedUploads from "./controllers/protected-uploads.js";
 
 import fs from "fs";
 
-import { uploadsPath } from "./config/uploads.config.js";
 import i18n from "i18n";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -73,13 +73,8 @@ app.use(cors(corsOptions));
 
 // Asset handling
 const assetPath = path.join(__dirname, "../frontend/assets");
-const uploadsAbsolutePath = path.resolve(process.cwd(), uploadsPath);
 app.use(express.static(assetPath));
 app.use(assetVersions("/assets", assetPath));
-
-// Uploads
-app.use("/uploads", express.static(uploadsAbsolutePath));
-app.use("/assets/uploads", express.static(uploadsAbsolutePath));
 
 // view engine setup
 app.set("views", path.join(__dirname, "views"));
@@ -122,6 +117,7 @@ app.use(session({
 
 app.use(hydrateLegacySession);
 app.use(exposeLegacySession);
+app.use("/", requireLegacyAuth, protectedUploads);
 
 // Middleware for handling redis errors
 app.use((req, res, next) => {
