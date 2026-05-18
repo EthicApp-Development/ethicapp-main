@@ -4,7 +4,12 @@ import express from "express";
 import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { requireRole } from "../helpers/auth-helper.js";
-import { enqueueCasePdfRenderJob } from "../helpers/pdf-render-jobs-helper.js";
+import {
+    enqueueCasePdfRenderJob,
+    normalizePdfRenderJob,
+    pdfRenderJobJoinSql,
+    pdfRenderJobSelectSql,
+} from "../helpers/pdf-render-jobs-helper.js";
 import { moveUploadedFile, pdfUpload, removeUploadedFile } from "../middleware/upload.js";
 
 const router = express.Router();
@@ -27,6 +32,7 @@ function normalizeCase(row) {
         creator: row.creator,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
+        documentProcessing: normalizePdfRenderJob(row),
         representations,
     };
 }
@@ -48,14 +54,51 @@ async function enqueueCaseRenderSafely(caseObj) {
         });
         console.info("Queued PDF render job for case document.", {
             caseId: caseObj.id,
-            jobId:  job.id,
+            jobId:  job.pdf_render_job_id,
         });
+        return job;
     } catch (error) {
         console.error("Unable to queue PDF render job for case document:", {
             caseId: caseObj?.id,
             error,
         });
+        return null;
     }
+}
+
+async function getReadableCaseWithDocumentProcessing(caseId, userId) {
+    return rpg2.singleSQL({
+        dbcon: config.dbconnString,
+        sql: `
+            SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
+                   c.pdf_path, c.creator, c.created_at, c.updated_at,
+                   ${pdfRenderJobSelectSql}
+            FROM ethical_cases c
+            ${pdfRenderJobJoinSql}
+            WHERE c.id = $1
+              AND (
+                c.creator = $2
+                OR EXISTS (
+                    SELECT 1
+                    FROM designs d
+                    WHERE d.case_id = c.id
+                      AND (d.creator = $2 OR d.public = TRUE)
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM designs d
+                    INNER JOIN activity a ON a.design = d.id
+                    INNER JOIN sessions s ON s.id = a.session
+                    WHERE d.case_id = c.id
+                      AND s.creator = $2
+                )
+              );
+        `,
+        sqlParams: [
+            rpg2.param("plain", caseId),
+            rpg2.param("plain", userId),
+        ],
+    });
 }
 
 router.get("/cases", async (req, res) => {
@@ -67,11 +110,13 @@ router.get("/cases", async (req, res) => {
         const cases = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT id, case_uuid, title, author_firstname, author_lastname, author_email,
-                       pdf_path, creator, created_at, updated_at
-                FROM ethical_cases
-                WHERE creator = $1
-                ORDER BY id DESC;
+                SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
+                       c.pdf_path, c.creator, c.created_at, c.updated_at,
+                       ${pdfRenderJobSelectSql}
+                FROM ethical_cases c
+                ${pdfRenderJobJoinSql}
+                WHERE c.creator = $1
+                ORDER BY c.id DESC;
             `,
             sqlParams: [rpg2.param("plain", req.session.uid)],
         });
@@ -100,13 +145,15 @@ router.get("/cases/search", async (req, res) => {
         const cases = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT id, case_uuid, title, author_firstname, author_lastname, author_email,
-                       pdf_path, creator, created_at, updated_at
-                FROM ethical_cases
-                WHERE LOWER(title) LIKE LOWER($1)
-                   OR LOWER(author_firstname) LIKE LOWER($1)
-                   OR LOWER(author_lastname) LIKE LOWER($1)
-                ORDER BY updated_at DESC, id DESC
+                SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
+                       c.pdf_path, c.creator, c.created_at, c.updated_at,
+                       ${pdfRenderJobSelectSql}
+                FROM ethical_cases c
+                ${pdfRenderJobJoinSql}
+                WHERE LOWER(c.title) LIKE LOWER($1)
+                   OR LOWER(c.author_firstname) LIKE LOWER($1)
+                   OR LOWER(c.author_lastname) LIKE LOWER($1)
+                ORDER BY c.updated_at DESC, c.id DESC
                 LIMIT 20;
             `,
             sqlParams: [rpg2.param("plain", `%${query}%`)],
@@ -160,6 +207,40 @@ router.get("/cases/:id/download-link", async (req, res) => {
     }
 });
 
+router.get("/cases/:id/document-processing", async (req, res) => {
+    if (!requireRole(req, res, ["P", "A"])) {
+        return;
+    }
+
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
+        return res.status(400).json({ status: "err", message: "Invalid case id." });
+    }
+
+    try {
+        const caseObj = await getReadableCaseWithDocumentProcessing(caseId, req.session.uid);
+
+        if (!caseObj || !caseObj.id) {
+            return res.status(404).json({ status: "err", message: "Case not found." });
+        }
+
+        return res.status(200).json({
+            status: "ok",
+            result: {
+                caseId: caseObj.id,
+                caseUuid: caseObj.case_uuid,
+                documentProcessing: normalizePdfRenderJob(caseObj),
+            },
+        });
+    } catch (error) {
+        console.error("Error retrieving case document processing status:", error);
+        return res.status(500).json({
+            status:  "err",
+            message: "Failed to load case document processing status.",
+        });
+    }
+});
+
 router.get("/cases/:id", async (req, res) => {
     if (!requireRole(req, res, ["P", "A"])) {
         return;
@@ -171,36 +252,7 @@ router.get("/cases/:id", async (req, res) => {
     }
 
     try {
-        const caseObj = await rpg2.singleSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
-                       c.pdf_path, c.creator, c.created_at, c.updated_at
-                FROM ethical_cases c
-                WHERE c.id = $1
-                  AND (
-                    c.creator = $2
-                    OR EXISTS (
-                        SELECT 1
-                        FROM designs d
-                        WHERE d.case_id = c.id
-                          AND (d.creator = $2 OR d.public = TRUE)
-                    )
-                    OR EXISTS (
-                        SELECT 1
-                        FROM designs d
-                        INNER JOIN activity a ON a.design = d.id
-                        INNER JOIN sessions s ON s.id = a.session
-                        WHERE d.case_id = c.id
-                          AND s.creator = $2
-                    )
-                  );
-            `,
-            sqlParams: [
-                rpg2.param("plain", caseId),
-                rpg2.param("plain", req.session.uid),
-            ],
-        });
+        const caseObj = await getReadableCaseWithDocumentProcessing(caseId, req.session.uid);
 
         if (!caseObj || !caseObj.id) {
             return res.status(404).json({ status: "err", message: "Case not found." });
@@ -264,9 +316,15 @@ router.post("/cases", pdfUpload, async (req, res) => {
             ],
         });
 
-        await enqueueCaseRenderSafely(createdCase);
+        const renderJob = await enqueueCaseRenderSafely(createdCase);
 
-        return res.status(201).json({ status: "ok", result: normalizeCase(createdCase) });
+        return res.status(201).json({
+            status: "ok",
+            result: normalizeCase({
+                ...createdCase,
+                ...renderJob,
+            }),
+        });
     } catch (error) {
         await removeUploadedFile(req.file);
         console.error("Error creating case:", error);
@@ -338,7 +396,8 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
 
         if (hasPdf) {
             await moveUploadedFile(req.file, pdfPath);
-            await enqueueCaseRenderSafely(updatedCase);
+            const renderJob = await enqueueCaseRenderSafely(updatedCase);
+            Object.assign(updatedCase, renderJob);
         }
 
         return res.status(200).json({ status: "ok", result: normalizeCase(updatedCase) });
