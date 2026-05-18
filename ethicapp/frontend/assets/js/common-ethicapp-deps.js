@@ -10,7 +10,6 @@ import 'angular-socket-io';
 import 'ua-parser-js';
 import 'angular-ui-tree';
 import 'angular-timer';
-import 'angular-ui-notification';
 import 'ng-dialog';
 import 'angular-tablesort';
 import 'ng-file-upload';

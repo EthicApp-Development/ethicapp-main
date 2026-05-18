@@ -1,5 +1,4 @@
 import 'angular-animate';
-import 'angularjs-toast';
 import "angular-toggle-switch";
 import { ActivityStateService } from "../../services/activity-state.service.js";
 import { ActivityCatalogService } from "../../services/activity-catalog.service.js";
@@ -7,13 +6,14 @@ import { DesignStateService } from "../../services/design-state.service.js";
 import { DesignCatalogService } from "../../services/design-catalog.service.js";
 import { CasesCatalogService } from "../../services/cases-catalog.service.js";
 import { TeacherGroupChatService } from "../../services/teacher-group-chat.service.js";
+import { TeacherToastService } from "../../services/teacher-toast.service.js";
 import UserProfileService from "../../services/user-profile.service.js";
 import SocketService from '../../services/socket.service.js';
 
 var app = angular.module("TeacherApp", ["ngSanitize",
     "ui.bootstrap", "timer", "ngFileUpload",
-    "ui-notification", "tableSort", "pascalprecht.translate",
-    "ngRoute", "checklist-model", "ngDialog", "toggle-switch", 'angularjsToast',
+    "tableSort", "pascalprecht.translate",
+    "ngRoute", "checklist-model", "ngDialog", "toggle-switch",
     'ngAnimate']
 );
 
@@ -29,6 +29,7 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
     .factory("UserProfileService", ["$http", "$rootScope", "Upload", UserProfileService])
     .factory("CasesCatalogService", ["$http", CasesCatalogService]);
+app.service("toast", ["$rootScope", "$timeout", TeacherToastService]);
 
 import { LocalesController } from "../../controllers/common/locales.controller.js";
 import { ActivityController } from "../../controllers/teacher/activity.controller.js";
@@ -86,18 +87,6 @@ app.config(function($translateProvider) {
     // Fallback to a default language if the browser's language is not supported
     $translateProvider.fallbackLanguage("en_US");
 });
-
-const config = toastProvider => {
-    toastProvider.configure({
-      maxToast: 1,
-      timeout: 5 * 1000,
-      dismissible: true,
-      insertFromTop: true,
-    });
-  };
-  
-config.$inject = ['toastProvider'];
-app.config(config);
 
 // Inject controllers into application
 app.controller("LocalesController", 
@@ -197,6 +186,7 @@ import caseCardComponent from "../../components/case-card.component.js";
 import caseFormEditorComponent from "../../components/case-form-editor.component.js";
 import phaseInstructionsEditComponent from "../../components/phase-instructions-edit.component.js";
 import teacherGroupChatComponent from "../../components/teacher-group-chat.component.js";
+import teacherToastComponent from "../../components/teacher-toast.component.js";
 
 app.component('activityDescription', activityDescriptionComponent);
 app.component('designDescription', designDescriptionComponent);
@@ -215,6 +205,7 @@ app.component("caseCard", caseCardComponent);
 app.component("caseFormEditor", caseFormEditorComponent);
 app.component("phaseInstructionsEdit", phaseInstructionsEditComponent);
 app.component("teacherGroupChat", teacherGroupChatComponent);
+app.component("toast", teacherToastComponent);
 
 import { userRolesFilter } from '../../filters/user-roles.filter.js';
 app.filter("roleTranslate", ["$translate", userRolesFilter]);

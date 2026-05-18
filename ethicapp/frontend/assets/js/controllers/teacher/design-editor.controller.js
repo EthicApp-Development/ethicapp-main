@@ -205,7 +205,7 @@ export function DesignEditorController($scope, $translate, $timeout,
                 $translate("save_design_failure").then((result) => {
                     toast.create({
                         timeout: 5 * 1000,
-                        message: 'Failed to save design',
+                        message: result,
                         className: 'alert-danger',
                         dismissible: false,
                         containerClass: 'design-editor-toast-container',
