@@ -17,6 +17,7 @@ function normalizeCase(row) {
 
     return {
         id: row.id,
+        caseUuid: row.case_uuid,
         title: row.title,
         authorFirstname: row.author_firstname,
         authorLastname: row.author_lastname,
@@ -43,7 +44,7 @@ router.get("/cases", async (req, res) => {
         const cases = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT id, title, author_firstname, author_lastname, author_email,
+                SELECT id, case_uuid, title, author_firstname, author_lastname, author_email,
                        pdf_path, creator, created_at, updated_at
                 FROM ethical_cases
                 WHERE creator = $1
@@ -76,7 +77,7 @@ router.get("/cases/search", async (req, res) => {
         const cases = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT id, title, author_firstname, author_lastname, author_email,
+                SELECT id, case_uuid, title, author_firstname, author_lastname, author_email,
                        pdf_path, creator, created_at, updated_at
                 FROM ethical_cases
                 WHERE LOWER(title) LIKE LOWER($1)
@@ -150,7 +151,7 @@ router.get("/cases/:id", async (req, res) => {
         const caseObj = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT c.id, c.title, c.author_firstname, c.author_lastname, c.author_email,
+                SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
                        c.pdf_path, c.creator, c.created_at, c.updated_at
                 FROM ethical_cases c
                 WHERE c.id = $1
@@ -226,7 +227,7 @@ router.post("/cases", pdfUpload, async (req, res) => {
                     (id, title, author_firstname, author_lastname, author_email, pdf_path, creator)
                 VALUES
                     ($1, $2, $3, $4, $5, $6, $7)
-                RETURNING id, title, author_firstname, author_lastname, author_email,
+                RETURNING id, case_uuid, title, author_firstname, author_lastname, author_email,
                           pdf_path, creator, created_at, updated_at;
             `,
             sqlParams: [
@@ -296,7 +297,7 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
                     pdf_path = $5,
                     updated_at = NOW()
                 WHERE id = $6 AND creator = $7
-                RETURNING id, title, author_firstname, author_lastname, author_email,
+                RETURNING id, case_uuid, title, author_firstname, author_lastname, author_email,
                           pdf_path, creator, created_at, updated_at;
             `,
             sqlParams: [

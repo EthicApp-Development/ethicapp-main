@@ -79,6 +79,13 @@ seed_canonical_activities() {
 
 install_dependencies /app/backend node_modules/dotenv
 
+if [ "${ETHICAPP_PROCESS_ROLE:-web}" = "pdf-render-worker" ]; then
+  cd /app/backend
+  echo "Starting EthicApp PDF render worker..."
+  echo "NODE_ENV=${NODE_ENV}"
+  exec npm run worker:pdf-render
+fi
+
 if [ "$NODE_ENV" = "development" ]; then
   install_dependencies /app/frontend node_modules/esbuild
 

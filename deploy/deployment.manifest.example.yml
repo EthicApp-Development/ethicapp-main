@@ -22,6 +22,13 @@ images:
     source_ref: "v2026.05.12"
     source_revision: "77d69072a165afa1d335601ac307ea9c60ca2dd8"
 
+  ethicapp-pdf-worker:
+    image: "ghcr.io/example-org/ethicapp"
+    tag: "v2026.05.12"
+    digest: ""
+    source_ref: "v2026.05.12"
+    source_revision: "77d69072a165afa1d335601ac307ea9c60ca2dd8"
+
   nginx:
     image: "ghcr.io/example-org/ethicapp-nginx"
     tag: "v2026.05.12"
@@ -72,3 +79,4 @@ notes:
   - "Prefer digest pins in production once images are published."
   - "The env_contract source_ref/source_revision should match the contract used to render runtime .env files."
   - "For partial releases, only changed services need new image tags, but every deployed service should remain pinned here."
+  - "ethicapp-pdf-worker intentionally uses the ethicapp image and must mount the same protected uploads volume as ethicapp."

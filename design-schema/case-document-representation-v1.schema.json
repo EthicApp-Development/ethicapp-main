@@ -1,0 +1,281 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ethicapp.local/case-document-representation-v1.schema.json",
+  "title": "EthicApp Case Document Representation",
+  "description": "Portable representation of a PDF-backed ethical case document rendered as text plus ordered page images.",
+  "type": "object",
+  "required": ["schemaVersion", "kind", "metadata", "content"],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "case-document-representation/v1"
+    },
+    "kind": {
+      "type": "string",
+      "const": "ethical_case_document"
+    },
+    "metadata": {
+      "$ref": "#/$defs/caseDocumentMetadata"
+    },
+    "content": {
+      "$ref": "#/$defs/caseDocumentContent"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "caseDocumentMetadata": {
+      "type": "object",
+      "required": [
+        "caseUuid",
+        "title",
+        "author",
+        "createdAt",
+        "source",
+        "imageRepresentation"
+      ],
+      "properties": {
+        "caseUuid": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Stable EthicApp case UUID used for export/import across instances."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "author": {
+          "$ref": "#/$defs/caseAuthor"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Case creation timestamp in EthicApp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "source": {
+          "$ref": "#/$defs/sourcePdf"
+        },
+        "imageRepresentation": {
+          "$ref": "#/$defs/imageRepresentationMetadata"
+        },
+        "export": {
+          "$ref": "#/$defs/exportMetadata"
+        }
+      },
+      "additionalProperties": false
+    },
+    "caseAuthor": {
+      "type": "object",
+      "required": ["firstname", "lastname", "email"],
+      "properties": {
+        "firstname": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lastname": {
+          "type": "string",
+          "minLength": 1
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        }
+      },
+      "additionalProperties": false
+    },
+    "sourcePdf": {
+      "type": "object",
+      "required": ["contentType"],
+      "properties": {
+        "contentType": {
+          "type": "string",
+          "const": "application/pdf"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "byteCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pageCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "storagePath": {
+          "type": "string",
+          "description": "Internal protected storage path. Not portable across instances."
+        },
+        "packagePath": {
+          "type": "string",
+          "description": "Relative path for the source PDF inside a future export package."
+        }
+      },
+      "additionalProperties": false
+    },
+    "imageRepresentationMetadata": {
+      "type": "object",
+      "required": ["status", "format", "resolution"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pending", "processing", "completed", "failed"]
+        },
+        "format": {
+          "type": "string",
+          "enum": ["png"]
+        },
+        "resolution": {
+          "$ref": "#/$defs/imageResolution"
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "renderer": {
+          "type": "string",
+          "description": "Renderer/toolchain that produced the page images."
+        },
+        "errorMessage": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "imageResolution": {
+      "type": "object",
+      "required": ["dpi"],
+      "properties": {
+        "dpi": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "unit": {
+          "type": "string",
+          "const": "dpi",
+          "default": "dpi"
+        }
+      },
+      "additionalProperties": false
+    },
+    "caseDocumentContent": {
+      "type": "object",
+      "required": ["text", "images"],
+      "properties": {
+        "text": {
+          "$ref": "#/$defs/extractedText"
+        },
+        "images": {
+          "type": "array",
+          "description": "Ordered sequence of images generated from the PDF pages.",
+          "items": {
+            "$ref": "#/$defs/pageImage"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "extractedText": {
+      "type": "object",
+      "required": ["content", "contentType"],
+      "properties": {
+        "contentType": {
+          "type": "string",
+          "const": "text/plain"
+        },
+        "content": {
+          "type": "string",
+          "description": "Raw text extracted from the source PDF, suitable for LLM ingestion."
+        },
+        "extractedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "extractor": {
+          "type": "string",
+          "description": "Text extraction toolchain, for example pdftotext."
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "additionalProperties": false
+    },
+    "pageImage": {
+      "type": "object",
+      "required": ["pageNumber", "contentType", "width", "height"],
+      "properties": {
+        "pageNumber": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "contentType": {
+          "type": "string",
+          "const": "image/png"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "url": {
+          "type": "string",
+          "description": "Authorization-aware application endpoint for this rendered page."
+        },
+        "packagePath": {
+          "type": "string",
+          "description": "Relative path for this rendered image inside a future export package."
+        },
+        "dataUri": {
+          "type": "string",
+          "pattern": "^data:image/png;base64,",
+          "description": "Inline image payload for compact exports or tests."
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "byteCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "storagePath": {
+          "type": "string",
+          "description": "Internal protected storage path. Not portable across instances."
+        }
+      },
+      "oneOf": [
+        { "required": ["url"] },
+        { "required": ["packagePath"] },
+        { "required": ["dataUri"] }
+      ],
+      "additionalProperties": false
+    },
+    "exportMetadata": {
+      "type": "object",
+      "properties": {
+        "exportedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "sourceInstance": {
+          "type": "string"
+        },
+        "packageFormat": {
+          "type": "string",
+          "description": "Future export package format identifier."
+        }
+      },
+      "additionalProperties": false
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

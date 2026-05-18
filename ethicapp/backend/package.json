@@ -11,6 +11,7 @@
     "debug": "node --inspect=0.0.0.0:9229 --nolazy ./ethicapp",
     "export:canonical-activities": "node scripts/export-canonical-activity-seeds.js",
     "seed:canonical-activities": "node scripts/seed-canonical-activities.js",
+    "worker:pdf-render": "node workers/pdf-render-worker.js",
     "test": "node --test \"**/*.node-test.mjs\"",
     "test:uploads": "node --test middleware/__tests__/upload.node-test.mjs"
   },
