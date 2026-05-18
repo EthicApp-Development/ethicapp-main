@@ -11,6 +11,7 @@ export const initialSessionDetailState = {
   activityDescriptor: null,
   loadingDescriptor: false,
   descriptorError: '',
+  caseDocument: null,
   caseDocumentUrl: '',
   loadingCaseDocument: false,
   caseDocumentError: '',
@@ -100,13 +101,15 @@ export function sessionDetailReducer(state, action) {
     case 'CASE_LOAD_SUCCESS':
       return {
         ...state,
-        caseDocumentUrl: action.payload,
+        caseDocument: action.payload?.caseDocument ?? null,
+        caseDocumentUrl: action.payload?.caseDocumentUrl ?? '',
         loadingCaseDocument: false,
         caseDocumentError: ''
       };
     case 'CASE_LOAD_ERROR':
       return {
         ...state,
+        caseDocument: null,
         caseDocumentUrl: '',
         loadingCaseDocument: false,
         caseDocumentError: action.payload
@@ -114,6 +117,7 @@ export function sessionDetailReducer(state, action) {
     case 'CASE_CLEAR':
       return {
         ...state,
+        caseDocument: null,
         caseDocumentUrl: '',
         loadingCaseDocument: false,
         caseDocumentError: ''

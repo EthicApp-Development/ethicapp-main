@@ -108,7 +108,7 @@ app.controller("DashboardController",
 app.controller("DesignViewerController", 
     ["$scope", "$routeParams", "DesignCatalogService", "CasesCatalogService", DesignViewerController]);
 app.controller("CasesController",
-    ["$scope", "$routeParams", "$window", "CasesCatalogService", CasesController]);
+    ["$scope", "$routeParams", "$window", "$interval", "CasesCatalogService", CasesController]);
 app.controller("ErrorController", 
     ["$scope", "$window", "$routeParams",
         ErrorController]);
@@ -183,6 +183,7 @@ import designErrorSummaryComponent from "../../components/design-error-summary.c
 import itemMoverComponent from '../../components/item-mover.component.js';
 import designItemComponent from '../../components/design-item.component.js';
 import caseCardComponent from "../../components/case-card.component.js";
+import caseDocumentViewerComponent from "../../components/case-document-viewer.component.js";
 import caseFormEditorComponent from "../../components/case-form-editor.component.js";
 import phaseInstructionsEditComponent from "../../components/phase-instructions-edit.component.js";
 import teacherGroupChatComponent from "../../components/teacher-group-chat.component.js";
@@ -202,6 +203,7 @@ app.component('rankingItemEditor', rankingItemEditorComponent);
 app.component('sdItemEditor', sdItemEditorComponent);
 app.component('designItem', designItemComponent);
 app.component("caseCard", caseCardComponent);
+app.component("caseDocumentViewer", caseDocumentViewerComponent);
 app.component("caseFormEditor", caseFormEditorComponent);
 app.component("phaseInstructionsEdit", phaseInstructionsEditComponent);
 app.component("teacherGroupChat", teacherGroupChatComponent);
