@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.ethicapp.local/case-document-representation-v1.schema.json",
   "title": "EthicApp Case Document Representation",
-  "description": "Portable representation of a PDF-backed ethical case document rendered as text plus ordered page images.",
+  "description": "Portable representation of an ethical case document rendered as text plus ordered images, independent of the original source format.",
   "type": "object",
   "required": ["schemaVersion", "kind", "metadata", "content"],
   "properties": {
@@ -56,7 +56,7 @@
           "format": "date-time"
         },
         "source": {
-          "$ref": "#/$defs/sourcePdf"
+          "$ref": "#/$defs/sourceDocument"
         },
         "imageRepresentation": {
           "$ref": "#/$defs/imageRepresentationMetadata"
@@ -86,13 +86,22 @@
       },
       "additionalProperties": false
     },
-    "sourcePdf": {
+    "sourceDocument": {
       "type": "object",
-      "required": ["contentType"],
+      "required": ["format", "contentType"],
       "properties": {
+        "format": {
+          "type": "string",
+          "enum": ["pdf", "markdown", "plain_text"],
+          "description": "Original source format used to author or import the case document."
+        },
         "contentType": {
           "type": "string",
-          "const": "application/pdf"
+          "enum": ["application/pdf", "text/markdown", "text/plain"]
+        },
+        "encoding": {
+          "type": "string",
+          "description": "Character encoding for text-based source formats, for example utf-8."
         },
         "sha256": {
           "$ref": "#/$defs/sha256"
@@ -103,7 +112,8 @@
         },
         "pageCount": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "description": "Number of source pages when the original format has pages, for example PDF."
         },
         "storagePath": {
           "type": "string",
@@ -111,9 +121,41 @@
         },
         "packagePath": {
           "type": "string",
-          "description": "Relative path for the source PDF inside a future export package."
+          "description": "Relative path for the original source document inside a future export package."
+        },
+        "originalFilename": {
+          "type": "string"
         }
       },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "format": { "const": "pdf" } },
+            "required": ["format"]
+          },
+          "then": {
+            "properties": { "contentType": { "const": "application/pdf" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "format": { "const": "markdown" } },
+            "required": ["format"]
+          },
+          "then": {
+            "properties": { "contentType": { "const": "text/markdown" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "format": { "const": "plain_text" } },
+            "required": ["format"]
+          },
+          "then": {
+            "properties": { "contentType": { "const": "text/plain" } }
+          }
+        }
+      ],
       "additionalProperties": false
     },
     "imageRepresentationMetadata": {
@@ -137,7 +179,7 @@
         },
         "renderer": {
           "type": "string",
-          "description": "Renderer/toolchain that produced the page images."
+          "description": "Renderer/toolchain that produced the ordered images."
         },
         "errorMessage": {
           "type": "string"
@@ -170,9 +212,9 @@
         },
         "images": {
           "type": "array",
-          "description": "Ordered sequence of images generated from the PDF pages.",
+          "description": "Ordered sequence of images rendered from the case document source.",
           "items": {
-            "$ref": "#/$defs/pageImage"
+            "$ref": "#/$defs/renderedImage"
           }
         }
       },
@@ -184,19 +226,25 @@
       "properties": {
         "contentType": {
           "type": "string",
-          "const": "text/plain"
+          "enum": ["text/plain", "text/markdown"]
         },
         "content": {
           "type": "string",
-          "description": "Raw text extracted from the source PDF, suitable for LLM ingestion."
+          "description": "Text representation of the case source, suitable for LLM ingestion."
         },
         "extractedAt": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Timestamp for extraction from a binary source such as PDF."
+        },
+        "capturedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp for capturing or normalizing text from an already textual source."
         },
         "extractor": {
           "type": "string",
-          "description": "Text extraction toolchain, for example pdftotext."
+          "description": "Text extraction or normalization toolchain, for example pdftotext or markdown parser."
         },
         "sha256": {
           "$ref": "#/$defs/sha256"
@@ -204,13 +252,19 @@
       },
       "additionalProperties": false
     },
-    "pageImage": {
+    "renderedImage": {
       "type": "object",
-      "required": ["pageNumber", "contentType", "width", "height"],
+      "required": ["sequenceNumber", "contentType", "width", "height"],
       "properties": {
+        "sequenceNumber": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Position of this image in the rendered case document sequence."
+        },
         "pageNumber": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "description": "Source page number when the source format has pages, for example PDF."
         },
         "contentType": {
           "type": "string",
