@@ -15,7 +15,7 @@ install_dependencies() {
 
   cd "$directory"
 
-  dependency_state_file=".npm_dependency_state"
+  dependency_state_file="node_modules/.npm_dependency_state"
   current_dependency_state="$(
     {
       sha256sum package.json
@@ -37,6 +37,7 @@ install_dependencies() {
     else
       npm install
     fi
+    mkdir -p node_modules
     echo "$current_dependency_state" > "$dependency_state_file"
   fi
 }
