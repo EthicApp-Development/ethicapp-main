@@ -1,4 +1,6 @@
 import { io } from "socket.io-client";
+import { getCaseDocumentRawText } from "../../helpers/case-document-content-helper.js";
+import { getCaseIdBySessionId } from "../../helpers/sessions-helper.js";
 
 const POLYADIC_BASE_URL = process.env.POLYADIC_AGENTS_URL || "http://localhost:5000";
 const BRIDGE_USERNAME = "ethicapp-bridge";
@@ -225,13 +227,39 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
     });
 
     subscribe("phaseStarted", async (context, { callback }) => {
+        const { sessionId, phaseId } = context;
+
+        try {
+            const caseId = await getCaseIdBySessionId(sessionId);
+
+            if (!caseId) {
+                console.warn(
+                    `[polyadic-bridge] No case found for session ${sessionId}; case text will not be logged.`
+                );
+            } else {
+                const caseText = await getCaseDocumentRawText(caseId);
+
+                console.info(
+                    `[polyadic-bridge] Raw case text for session ${sessionId}, case ${caseId}:`
+                );
+                console.info("----- BEGIN ETHICAPP CASE RAW TEXT -----");
+                console.info(caseText);
+                console.info("----- END ETHICAPP CASE RAW TEXT -----");
+            }
+        } catch (error) {
+            console.warn(
+                `[polyadic-bridge] Unable to load raw case text for session ${sessionId}:`,
+                error
+            );
+        }
+
         await callback({
             serviceId: service.id,
             hook: "phaseStarted",
             status: "completed",
             payload: {
-                sessionId: context.sessionId,
-                phaseId: context.phaseId,
+                sessionId,
+                phaseId,
                 ready: true,
             },
         });
