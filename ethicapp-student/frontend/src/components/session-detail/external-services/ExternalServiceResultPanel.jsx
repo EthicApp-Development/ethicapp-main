@@ -1,8 +1,10 @@
 import { Component, Suspense, lazy, useMemo } from 'react';
 import ArgumentTutorReport from './ArgumentTutorReport.jsx';
+import ArgumentTutorChatFeedback from './ArgumentTutorChatFeedback.jsx';
 
 const localComponentRegistry = {
-  'argument-tutor-report': ArgumentTutorReport
+  'argument-tutor-report': ArgumentTutorReport,
+  'argument-tutor-chat-feedback': ArgumentTutorChatFeedback
 };
 
 function loadRemoteComponent({ url, exportName = 'default' }) {

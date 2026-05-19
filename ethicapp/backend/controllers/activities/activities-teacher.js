@@ -359,6 +359,22 @@ router.post("/activities/:session_id/finish", async (req, res) => {
     const status = StatusCodes.getStatusCode("finished");
 
     try {
+        const sessionState = await rpg2.singleSQL({
+            sql: `
+                SELECT current_stage
+                FROM sessions
+                WHERE id = $1
+            `,
+            dbcon: config.dbconnString,
+            sqlParams: [rpg2.param('plain', sessionId)],
+        });
+
+        if (!sessionState) {
+            return res.status(404).json({ error: "Session not found." });
+        }
+
+        const previousPhaseId = Number(sessionState.current_stage) || null;
+
         const result = await rpg2.execSQL({
             sql: `
                 UPDATE sessions
@@ -372,6 +388,15 @@ router.post("/activities/:session_id/finish", async (req, res) => {
 
         if (result.rowCount === 0) {
             return res.status(404).json({ error: "Session not found or no update performed." });
+        }
+
+        if (previousPhaseId) {
+            await dispatchPhaseHook("phaseEnded", {
+                sessionId: Number(sessionId),
+                phaseId: previousPhaseId,
+                startedPhaseId: null,
+                endedPhaseId: previousPhaseId,
+            });
         }
 
         studentNotifications.endSession(sessionId);
