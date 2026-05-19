@@ -5,7 +5,7 @@ const watchObjects = {
 
 const itemValidators = {
     semantic_differential : function(scope, phaseNumber) {
-        console.log("[validatePhaseDirective] semantic_differential validator");
+        // console.debug("[validatePhaseDirective] semantic_differential validator");
         const phase = scope.phase;
         if (!phase.questions || phase.questions.length === 0) {
             const result = {
@@ -26,7 +26,7 @@ const itemValidators = {
                 messages: []
             };
             scope.onValidate({ result });
-            console.log('[validatePhaseDirective] Validation passed.');
+            // console.debug('[validatePhaseDirective] Validation passed.');
         }
 
         validatePhaseInstructions(scope, phaseNumber);
@@ -42,7 +42,7 @@ const itemValidators = {
                 messages: ['error_no_items_defined']
             };
             scope.onValidate({ result });
-            console.warn('[validatePhaseDirective] No roles defined.');
+            // console.warn('[validatePhaseDirective] No roles defined.');
         } else {
             const result = {
                 type: 'phase',
@@ -52,7 +52,7 @@ const itemValidators = {
                 messages: []
             };
             scope.onValidate({ result });
-            console.log('[validatePhaseDirective] Validation passed.');
+            // console.debug('[validatePhaseDirective] Validation passed.');
         }
 
         validatePhaseInstructions(scope, phaseNumber);
@@ -104,11 +104,13 @@ const validatePhaseDirective = function () {
             if (Array.isArray(watchObject)) {
                 watchObject.forEach((path) => {
                     scope.$watch(path, function () {
+                        // console.debug(`[validatePhaseDirective] Watching ${path}`);
                         validator(scope, scope.phaseNumber);
                     }, true);
                 });
             } else {
                 scope.$watch(watchObject, function () {
+                    // console.debug(`[validatePhaseDirective] Watching ${watchObject}`);
                     validator(scope, scope.phaseNumber);
                 }, true);
             }

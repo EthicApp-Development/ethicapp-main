@@ -2,7 +2,7 @@ function ItemDeleterController($translate) {
     const vm = this;
 
     vm.$onInit = function () {
-        console.log(`[itemDeleterComponent] index: ${vm.index} phaseNumber: ${vm.phaseNumber}`);
+        // console.debug(`[itemDeleterComponent] index: ${vm.index} phaseNumber: ${vm.phaseNumber}`);
     };
 
     vm.deleteItem = function () {

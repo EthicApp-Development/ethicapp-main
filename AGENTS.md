@@ -18,6 +18,7 @@ This repository is a multi-project workspace. Important areas:
   - Includes user administration workflows (list/filter/pagination, account detail/edit, password reset trigger, and professor impersonation trigger).
 - `nginx/`: NGINX configuration for development and production environments.
 - `database/`: EthicApp database DDL and related SQL assets shared by all applications.
+- `canonical-schemas/`: JSON Schemas for portable EthicApp objects, including legacy activity designs and canonical rendered case-document representations.
 - `scripts/`: deployment and environment automation scripts. Many are exposed from root `package.json` scripts.
 
 > Note: some directories may appear with repository-specific names (for example `dev-ops/`, `web-nginx/`, or `postgres-db/`) depending on branch/history. Prefer existing on-disk names when implementing changes.
@@ -27,6 +28,7 @@ This repository is a multi-project workspace. Important areas:
 - Preferred local development flow: **Docker Compose**.
 - Backend apps are expected to run with **nodemon** in development.
 - Frontend apps for `auth-backend` and `ethicapp-student` are expected to run with **Vite**.
+- The PDF render worker runs as the `ethicapp-pdf-worker` Compose service using the same `ethicapp` image with `ETHICAPP_PROCESS_ROLE=pdf-render-worker`.
 
 Typical development start:
 
@@ -115,9 +117,32 @@ Minimum verification checklist:
 - Lint succeeds for modified languages/components.
 - Focused tests pass for modified backend behavior.
 - Core endpoint flows and helper logic paths are validated with basic cases.
+- Case-document rendering changes validate the worker/job contract, protected upload authorization for rendered images/manifests, and frontend fallback behavior when rendered images are not ready.
 - Any known limitations are explicitly documented in the PR.
 
-## 7) Legacy EthicApp routing conventions (important)
+## 7) Production deployment and environment contract
+
+Production-oriented changes must stay aligned with the repository-owned deployment contract:
+
+- The canonical environment-variable contract lives in `deploy/env.contract.yml`.
+- When adding, removing, or renaming environment variables, update:
+  - `deploy/env.contract.yml`,
+  - relevant `.env.example` files,
+  - deployment notes in `INSTALL.md` or `deploy/README.md` when operator behavior changes.
+- Deployment repositories should consume `deploy/env.contract.yml` from the same git tag as the images they deploy. Do not redefine the production variable catalog only in a deployment repository.
+- Image publishing to GitHub Container Registry uses `npm run publish:ghcr`; keep image names, tags, and release documentation aligned with `INSTALL.md`.
+- `VITE_*` variables are public frontend variables. Production images must stay environment-neutral; service entrypoints emit those values into frontend `runtime-config.js` files at container startup. Do not treat `VITE_*` variables as secrets.
+- The PDF render worker is production-relevant. Keep `PDF_RENDER_*` defaults aligned across `deploy/env.contract.yml`, `ethicapp/.env.example`, `docker-compose.yml`, and deployment notes when changing rendering behavior.
+- Rendered case-document images and manifests must stay in protected uploads storage and be served through authorization-aware application endpoints. Do not expose them through public static NGINX mounts.
+- Production Redis topology is role-specific:
+  - `REDIS_SESSION_*` is for Express session storage used by `ethicapp` and `auth-backend`.
+  - `REDIS_CACHE_*` is for database-derived cache entries used by legacy `ethicapp`.
+  - Production deployments must provide distinct Redis service DNS names, normally `redis-session` and `redis-cache`.
+  - Development may map both roles to the same Redis service in the root local-development Compose file.
+  - Keep Redis memory defaults and eviction policies in sync across `.env.example`, `deploy/env.contract.yml`, and `INSTALL.md`.
+- Do not add generic `REDIS_HOST`, `REDIS_PORT`, or `REDIS_URL` production fallbacks; prefer role-specific Redis variables.
+
+## 8) Legacy EthicApp routing conventions (important)
 
 For the legacy app inside `ethicapp/`, keep backend and frontend routing concerns separated and colocated:
 
@@ -141,7 +166,15 @@ When adding teacher-facing features in legacy EthicApp:
 6. For role-based authorization in legacy backend endpoints, prefer `requireRole` from `ethicapp/backend/helpers/auth-helper.js`; it accepts either a single role (`"P"`) or an array (for example `["P", "A"]`) for professor/student shared access.
 7. For teacher view actions, prefer Bootstrap 3 small default buttons (`btn btn-default btn-sm`) unless the action semantics require another contextual style.
 
-## 8) Translation and i18n policy (auth-backend + management-console + ethicapp)
+### Case documents and rendered representations
+
+- Uploaded case PDFs are registered through `ethical_cases.pdf_path` and protected by `ethicapp/backend/controllers/protected-uploads.js`.
+- PDF conversion jobs live in `pdf_render_jobs`; the worker implementation is `ethicapp/backend/workers/pdf-render-worker.js`.
+- The worker converts PDFs into raw text, ordered PNG page images, and a manifest compatible with `canonical-schemas/case-document-representation-v1.schema.json`.
+- Teacher and student UIs should prefer rendered images when available and fall back to the protected PDF while rendering is pending, failed, or not yet available.
+- Access rules for rendered pages and manifests must mirror legitimate case access: owners, authorized teachers/admins, shared designs, activity owners, and participating students.
+
+## 9) Translation and i18n policy (auth-backend + management-console + ethicapp)
 
 Use this policy for all new i18n-related changes in this repository.
 

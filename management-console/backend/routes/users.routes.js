@@ -184,7 +184,10 @@ export function createUsersRouter({
       professorId: user.id,
       cookie: req.headers.cookie,
       userId: req.session.uid,
-      userRole: req.session.role
+      userRole: req.session.role,
+      forwardedProto: req.get('X-Forwarded-Proto') || req.protocol,
+      forwardedHost: req.get('X-Forwarded-Host') || req.get('Host'),
+      forwardedPort: req.get('X-Forwarded-Port') || ''
     });
 
     for (const setCookie of response.setCookies) {

@@ -20,6 +20,36 @@ async function parseJson(response) {
   return json;
 }
 
+let csrfTokenPromise = null;
+
+async function getCsrfToken() {
+  if (!csrfTokenPromise) {
+    csrfTokenPromise = fetch('/mng/api/csrf-token', {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json'
+      }
+    })
+      .then(parseJson)
+      .then((json) => json.csrfToken)
+      .catch((error) => {
+        csrfTokenPromise = null;
+        throw error;
+      });
+  }
+
+  return csrfTokenPromise;
+}
+
+async function mutatingJsonHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    'X-CSRF-Token': await getCsrfToken()
+  };
+}
+
 export async function fetchUsers({ keywords = '', role = '', page = 1 }) {
   const query = toQueryString({ q: keywords, role, page });
   const response = await fetch(`/mng/api/users?${query}`, {
@@ -49,10 +79,7 @@ export async function updateUser(userId, payload) {
   const response = await fetch(`/mng/api/users/${userId}`, {
     method: 'PUT',
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
+    headers: await mutatingJsonHeaders(),
     body: JSON.stringify(payload)
   });
 
@@ -63,10 +90,7 @@ export async function triggerPasswordReset(userId, payload) {
   const response = await fetch(`/mng/api/users/${userId}/password-reset`, {
     method: 'POST',
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
+    headers: await mutatingJsonHeaders(),
     body: JSON.stringify(payload)
   });
 
@@ -77,10 +101,7 @@ export async function impersonateProfessor(userId, payload) {
   const response = await fetch(`/mng/api/users/${userId}/impersonate-professor`, {
     method: 'POST',
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
+    headers: await mutatingJsonHeaders(),
     body: JSON.stringify(payload)
   });
 

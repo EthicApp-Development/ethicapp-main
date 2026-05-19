@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useI18n } from '../app/providers';
+import { useI18n } from '../app/i18n-context';
 import AuthLayout from '../components/auth/AuthLayout';
 
 function NotFoundPage() {

@@ -44,15 +44,14 @@ let UserProfileService = function ($http, $rootScope, Upload) {
 
         async requestPasswordReset(email, recaptchaResponse) {
             const payload = {
-                email,
-                lang: "es_CL"
+                email
             };
 
             if (recaptchaResponse) {
-                payload.g_recaptcha_response = recaptchaResponse;
+                payload.recaptcha_token = recaptchaResponse;
             }
 
-            return $http.post("/forgot", payload);
+            return $http.post("/api/auth/forgot", payload);
         }
     };
 

@@ -2,6 +2,10 @@
     <div class="row">
         <div class="col-md-12">
             <h2><i class="fa-solid fa-drum"></i> {{'activities' | translate}}</h2>
+            <button type="button" class="btn btn-default btn-sm mb-2" ng-click="ac.goBack()">
+                <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
+            </button>
+            <br>            
             <button class="btn btn-primary" ng-click="navigateTo('/activities/new')" 
                 style="margin-bottom: 2rem; margin-top: 1rem;">
                 <i class="fa fa-rocket" aria-hidden="true"></i> {{'launch_activity' | translate}}
@@ -21,8 +25,11 @@
             </li>
         </ul>
         <div style="position: absolute; right: 400px; top: 6px; max-width: 200px;">
-            <input class="form-control search-input fontAwesome" type="text" 
-                placeholder="{{'search' | translate}} &#xF002;" ng-model="ac.userSearch">
+            <div class="search-field-wrapper">
+                <input class="form-control search-input search-decorated-input" type="text"
+                    placeholder="{{'search' | translate}}" ng-model="ac.userSearch">
+                <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+            </div>
         </div>
     </div>
     <div class="row" style="margin-left:-14px; margin-top: -6px;">
@@ -52,5 +59,4 @@
         </div>
     </div>
 </div>
-
 

@@ -4,6 +4,7 @@ import LoginPage from '../pages/LoginPage';
 import RegisterPage from '../pages/RegisterPage';
 import ForgotPasswordPage from '../pages/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/ResetPasswordPage';
+import LogoutPage from '../pages/LogoutPage';
 
 import NotFoundPage from '../pages/NotFoundPage';
 import PrivacyPolicyPage from '../pages/PrivacyPolicyPage';
@@ -20,7 +21,7 @@ const router = createBrowserRouter([
   },
   {
     path: '/logout',
-    element: <LoginPage />
+    element: <LogoutPage />
   },  
   {
     path: '/register',

@@ -99,6 +99,9 @@ describe('management-console user routes', () => {
         headers: {
           'Content-Type': 'application/json',
           Cookie: 'auth.sid=auth-session; ethicapp.mng.sid=mng-session',
+          'X-Forwarded-Proto': 'https',
+          'X-Forwarded-Host': 'platform.ethicapp.info',
+          'X-Forwarded-Port': '443',
           'Accept-Language': 'es-CL'
         },
         body: JSON.stringify({
@@ -133,7 +136,10 @@ describe('management-console user routes', () => {
         professorId: 22,
         cookie: 'auth.sid=auth-session; ethicapp.mng.sid=mng-session',
         userId: 7,
-        userRole: 'S'
+        userRole: 'S',
+        forwardedProto: 'https',
+        forwardedHost: 'platform.ethicapp.info',
+        forwardedPort: '443'
       }
     ]);
   });

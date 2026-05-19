@@ -5,7 +5,8 @@ import fs from "fs";
 import path from "path";
 import { promisify } from "util";
 import { execFile } from "child_process";
-import * as config from "../../config/config.js";
+import * as config from "../../config/database.config.js";
+import { uploadsPath } from "../../config/uploads.config.js";
 import { execSQL, param } from "../../db/rest-pg-2.js";
 import { requireRole } from "../../helpers/auth-helper.js";
 import * as RecaptchaHelper from "../../helpers/recaptcha-helper.js";
@@ -14,7 +15,7 @@ import { avatarUpload, removeUploadedFile } from "../../middleware/upload.js";
 const execFileAsync = promisify(execFile);
 const router = express.Router();
 
-const uploadsRoot = path.resolve(process.cwd(), config.uploadsPath);
+const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
 const AVATAR_MAX_SIZE_BYTES = 300 * 1024;
 
 const allowedMimeTypes = new Set(["image/jpeg", "image/jpg", "image/png"]);
@@ -40,7 +41,7 @@ const getAbsoluteUploadPath = (reqFilePath) => {
         return normalized;
     }
 
-    const uploadsPathPrefix = `${config.uploadsPath.replaceAll("\\", "/").replace(/\/+$/, "")}/`;
+    const uploadsPathPrefix = `${uploadsPath.replaceAll("\\", "/").replace(/\/+$/, "")}/`;
     const relativePath = normalized.startsWith(uploadsPathPrefix)
         ? normalized.slice(uploadsPathPrefix.length)
         : normalized;

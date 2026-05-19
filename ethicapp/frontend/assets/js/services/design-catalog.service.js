@@ -12,10 +12,6 @@ let DesignCatalogService = ($rootScope, $http) => {
                 if (response.data.status === "ok" && Array.isArray(response.data.result)) {
                     service.designs = response.data.result; // Assign the fetched designs
                     service.hasLoadedDesigns = true;
-                    
-                    // Notify listeners
-                    service.notifyListeners("onDesignCatalogUpdated", { 
-                        response: null });                      
                 } else {
                     console.error("Error: Unexpected response format", response.data);
                     // Optional: Handle unexpected response formats (e.g., show an error to the user)
@@ -70,6 +66,9 @@ let DesignCatalogService = ($rootScope, $http) => {
 
                     // Add the ID to the design object
                     design.id = newDesignId;
+                    design.public = false;
+                    design.locked = false;
+                    design.userOwned = true;
 
                     // Add the new design to the service's local list
                     service.designs.unshift(design);
@@ -193,6 +192,8 @@ let DesignCatalogService = ($rootScope, $http) => {
                 if (data.status === "ok") {
                     // Reload the designs after successful deletion
                     await service.getDesigns(true);
+                    service.notifyListeners("onDesignCatalogUpdated", {
+                        response: null });
                 } else {
                     console.error("Error deleting design: Unexpected response status", data);
                 }
@@ -217,6 +218,8 @@ let DesignCatalogService = ($rootScope, $http) => {
                 if (response.data.status === "ok") {
                     // Reload the designs after successful update
                     await service.loadDesigns();
+                    service.notifyListeners("onDesignCatalogUpdated", {
+                        response: null });
                     return true;
                 } else {
                     throw new Error("Failed to update design");

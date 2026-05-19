@@ -6,24 +6,15 @@ import SelectField from '../common/SelectField';
 import { register } from '../../api/authApi';
 import RecaptchaField from '../common/RecaptchaField';
 import { recaptchaSiteKey } from '../../config/env';
-import { useI18n } from '../../app/providers';
+import { useI18n } from '../../app/i18n-context';
+import { useRegisterDraft } from '../../app/register-draft-context';
 
 function RegisterForm() {
   const { locale, t } = useI18n();
+  const { draft, updateDraft, clearDraft } = useRegisterDraft();
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    firstname: '',
-    lastname: '',
-    dni: '',
-    email: '',
-    gender: '',
-    password: '',
-    password_confirmation: '',
-    acceptPrivacy: false,
-    recaptchaToken: ''
-  });
-
+  const [recaptchaToken, setRecaptchaToken] = useState('');
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
   const [showPasswordRecoveryLink, setShowPasswordRecoveryLink] = useState(false);
@@ -38,19 +29,19 @@ function RegisterForm() {
   ];
 
   const passwordChecks = useMemo(() => {
-    const password = formData.password || '';
+    const password = draft.password || '';
     const symbolCount = (password.match(/[^a-zA-Z0-9]/g) || []).length;
 
     return {
       minLength: password.length >= 10,
       twoSymbols: symbolCount >= 2
     };
-  }, [formData.password]);
+  }, [draft.password]);
 
   function handleChange(event) {
     const { name, type, value, checked } = event.target;
 
-    setFormData((current) => ({
+    updateDraft((current) => ({
       ...current,
       [name]: type === 'checkbox' ? checked : value
     }));
@@ -72,45 +63,45 @@ function RegisterForm() {
   function validate() {
     const nextErrors = {};
 
-    if (!formData.firstname.trim()) {
+    if (!draft.firstname.trim()) {
       nextErrors.firstname = t('register.errors.firstnameRequired');
     }
 
-    if (!formData.lastname.trim()) {
+    if (!draft.lastname.trim()) {
       nextErrors.lastname = t('register.errors.lastnameRequired');
     }
 
-    if (!formData.dni.trim()) {
+    if (!draft.dni.trim()) {
       nextErrors.dni = t('register.errors.dniRequired');
     }
 
-    if (!formData.email.trim()) {
+    if (!draft.email.trim()) {
       nextErrors.email = t('register.errors.emailRequired');
-    } else if (!isValidEmail(formData.email.trim())) {
+    } else if (!isValidEmail(draft.email.trim())) {
       nextErrors.email = t('register.errors.emailInvalid');
     }
 
-    if (!formData.gender) {
+    if (!draft.gender) {
       nextErrors.gender = t('register.errors.genderRequired');
     }
 
-    if (!formData.password) {
+    if (!draft.password) {
       nextErrors.password = t('register.errors.passwordRequired');
     } else if (!passwordChecks.minLength || !passwordChecks.twoSymbols) {
       nextErrors.password = t('register.errors.passwordInvalid');
     }
 
-    if (!formData.password_confirmation) {
+    if (!draft.password_confirmation) {
       nextErrors.password_confirmation = t('register.errors.passwordConfirmationRequired');
-    } else if (formData.password !== formData.password_confirmation) {
+    } else if (draft.password !== draft.password_confirmation) {
       nextErrors.password_confirmation = t('register.errors.passwordMismatch');
     }
 
-    if (!formData.acceptPrivacy) {
+    if (!draft.acceptPrivacy) {
       nextErrors.acceptPrivacy = t('register.errors.privacyAcceptanceRequired');
     }
 
-    if (recaptchaSiteKey && !formData.recaptchaToken) {
+    if (recaptchaSiteKey && !recaptchaToken) {
       nextErrors.recaptcha = t('register.errors.recaptchaRequired');
     }
 
@@ -134,17 +125,18 @@ function RegisterForm() {
       setIsSubmitting(true);
 
       await register({
-        firstname: formData.firstname.trim(),
-        lastname: formData.lastname.trim(),
-        dni: formData.dni.trim(),
-        email: formData.email.trim(),
-        gender: formData.gender,
-        password: formData.password,
-        password_confirmation: formData.password_confirmation,
-        recaptcha_token: formData.recaptchaToken,
+        firstname: draft.firstname.trim(),
+        lastname: draft.lastname.trim(),
+        dni: draft.dni.trim(),
+        email: draft.email.trim(),
+        gender: draft.gender,
+        password: draft.password,
+        password_confirmation: draft.password_confirmation,
+        recaptcha_token: recaptchaToken,
         preferred_locale: locale
       });
 
+      clearDraft();
       setSuccessMessage(t('register.successMessage'));
 
       setTimeout(() => {
@@ -162,7 +154,7 @@ function RegisterForm() {
     } finally {
       setIsSubmitting(false);
       setRecaptchaResetCounter((current) => current + 1);
-      setFormData((current) => ({ ...current, recaptchaToken: '' }));
+      setRecaptchaToken('');
     }
   }
 
@@ -192,7 +184,7 @@ function RegisterForm() {
         id="firstname"
         name="firstname"
         label={t('register.fields.firstname')}
-        value={formData.firstname}
+        value={draft.firstname}
         onChange={handleChange}
         error={errors.firstname}
         autoComplete="given-name"
@@ -204,7 +196,7 @@ function RegisterForm() {
         id="lastname"
         name="lastname"
         label={t('register.fields.lastname')}
-        value={formData.lastname}
+        value={draft.lastname}
         onChange={handleChange}
         error={errors.lastname}
         autoComplete="family-name"
@@ -215,7 +207,7 @@ function RegisterForm() {
         id="dni"
         name="dni"
         label={t('register.fields.dni')}
-        value={formData.dni}
+        value={draft.dni}
         onChange={handleChange}
         error={errors.dni}
         placeholder={t('register.placeholders.dni')}
@@ -227,7 +219,7 @@ function RegisterForm() {
         name="email"
         label={t('register.fields.email')}
         type="email"
-        value={formData.email}
+        value={draft.email}
         onChange={handleChange}
         error={errors.email}
         autoComplete="email"
@@ -238,7 +230,7 @@ function RegisterForm() {
         id="gender"
         name="gender"
         label={t('register.fields.gender')}
-        value={formData.gender}
+        value={draft.gender}
         onChange={handleChange}
         error={errors.gender}
         options={genderOptions}
@@ -250,7 +242,7 @@ function RegisterForm() {
         id="password"
         name="password"
         label={t('register.fields.password')}
-        value={formData.password}
+        value={draft.password}
         onChange={handleChange}
         error={errors.password}
         autoComplete="new-password"
@@ -271,7 +263,7 @@ function RegisterForm() {
         id="password_confirmation"
         name="password_confirmation"
         label={t('register.fields.passwordConfirmation')}
-        value={formData.password_confirmation}
+        value={draft.password_confirmation}
         onChange={handleChange}
         error={errors.password_confirmation}
         autoComplete="new-password"
@@ -281,10 +273,7 @@ function RegisterForm() {
       <RecaptchaField
         siteKey={recaptchaSiteKey}
         onChange={(token) => {
-          setFormData((current) => ({
-            ...current,
-            recaptchaToken: token
-          }));
+          setRecaptchaToken(token);
           setErrors((current) => ({
             ...current,
             recaptcha: ''
@@ -319,7 +308,7 @@ function RegisterForm() {
             type="checkbox"
             id="acceptPrivacy"
             name="acceptPrivacy"
-            checked={formData.acceptPrivacy}
+            checked={draft.acceptPrivacy}
             onChange={handleChange}
           />
           <label className="form-check-label" htmlFor="acceptPrivacy">

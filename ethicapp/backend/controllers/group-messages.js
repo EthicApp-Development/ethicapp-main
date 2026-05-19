@@ -1,12 +1,12 @@
 "use strict";
 
 import express from "express";
-import * as config from "../config/config.js"; 
+import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { getDesignTypeByPhaseId, getPhaseDesignByPhaseId } from "../helpers/designs-helper.js";
 import { getStatusCode } from "../../common/modules/session-status.js";
-import { messageCountHandlers, 
-    chatTranscriptHandlers, 
+import { messageCountHandlers,
+    chatTranscriptHandlers,
     saveChatMessage } from "../helpers/chat-helper.js";
 import { studentNotifications, teacherNotifications } from "../config/socket.config.js";
 import externalServicesRegistry from "../services/external-services.service.js";
@@ -119,7 +119,7 @@ router.get("/groups/:group_id/question/:question_id/chat_messages", async (req, 
 
 /**
  * @route POST /phases/:id/question/:question_id/chat
- * @description Inserts a new chat message for a specific question in a phase. 
+ * @description Inserts a new chat message for a specific question in a phase.
  *              The insertion behavior depends on the design type of the phase.
  *              For "semantic_differential", the message is associated with a specific question,
  *              while for "ranking", the message is associated with the phase as a whole.

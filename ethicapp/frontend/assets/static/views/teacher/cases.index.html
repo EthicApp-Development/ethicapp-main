@@ -2,6 +2,10 @@
     <div class="row">
         <div class="col-md-12">
             <h2><i class="fa fa-book"></i> {{ 'ethical_cases_title' | translate }}</h2>
+            <button type="button" class="btn btn-default btn-sm mb-2" ng-click="vm.goBack()">
+                <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
+            </button>
+            <br>            
             <button class="btn btn-primary" ng-click="navigateTo('/cases/new')" style="margin-top: 1rem; margin-bottom: 1rem;">
                 <i class="fa fa-plus" aria-hidden="true"></i> {{ 'ethical_cases_create' | translate }}
             </button>
@@ -10,39 +14,27 @@
 
     <div class="row">
         <div class="col-md-12">
-            <table class="table table-striped" ng-if="vm.cases.length > 0">
-                <thead>
-                    <tr>
-                        <th>{{ 'title' | translate }}</th>
-                        <th>{{ 'author_firstname' | translate }}</th>
-                        <th>{{ 'author_lastname' | translate }}</th>
-                        <th>{{ 'email' | translate }}</th>
-                        <th>{{ 'ethical_cases_file' | translate }}</th>
-                        <th>{{ 'actions' | translate }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr ng-repeat="caseItem in vm.cases track by caseItem.id">
-                        <td>{{ caseItem.title }}</td>
-                        <td>{{ caseItem.authorFirstname }}</td>
-                        <td>{{ caseItem.authorLastname }}</td>
-                        <td>{{ caseItem.authorEmail }}</td>
-                        <td>
-                            <a ng-if="caseItem.pdfPath" ng-href="{{ caseItem.pdfPath }}" target="_blank" rel="noopener noreferrer">
-                                {{ 'ethical_cases_open_file' | translate }}
-                            </a>
-                        </td>
-                        <td>
-                            <button class="btn btn-default btn-sm" ng-click="navigateTo('/cases/' + caseItem.id + '/edit')">
-                                {{ 'edit' | translate }}
-                            </button>
-                            <button class="btn btn-danger btn-sm" ng-click="vm.deleteCase(caseItem.id)">
-                                {{ 'delete' | translate }}
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            <div ng-if="vm.cases.length > 0">
+                <case-card
+                    ng-repeat="caseItem in vm.getPaginatedCases() track by caseItem.id"
+                    case-item="caseItem"
+                    on-view="vm.viewCase"
+                    on-edit="vm.editCase"
+                    on-delete="vm.deleteCaseFromCard">
+                </case-card>
+
+                <div class="case-pagination-controls" ng-if="vm.getTotalPages() > 1">
+                    <button class="btn btn-default btn-sm" ng-click="vm.previousPage()" ng-disabled="vm.currentPage === 1">
+                        <i class="fa fa-chevron-left" aria-hidden="true"></i> {{ 'pagination_previous' | translate }}
+                    </button>
+                    <span class="case-pagination-status">
+                        {{ 'pagination_page' | translate }} {{ vm.currentPage }} / {{ vm.getTotalPages() }}
+                    </span>
+                    <button class="btn btn-default btn-sm" ng-click="vm.nextPage()" ng-disabled="vm.currentPage === vm.getTotalPages()">
+                        {{ 'pagination_next' | translate }} <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
 
             <div class="alert alert-info" ng-if="vm.cases.length === 0">
                 <span>{{ 'empty_cases_message' | translate }}</span>

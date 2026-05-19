@@ -13,22 +13,27 @@
     <div class="panel panel-default">
         <div class="panel-body">
             <label for="designCaseSearch">{{ 'design_associated_case_label' | translate }}</label>
-            <input
-                id="designCaseSearch"
-                type="text"
-                class="form-control launch-activity-search fontAwesome"
-                placeholder="{{ 'design_associated_case_placeholder' | translate }} &#xF002;"
-                ng-model="dec.selectedCase"
-                uib-typeahead="caseItem as dec.formatCaseLabel(caseItem) for caseItem in dec.searchCases($viewValue)"
-                typeahead-on-select="dec.selectCase($item)"
-                typeahead-editable="false"
-                typeahead-min-length="2">
+            <div class="search-field-wrapper launch-activity-search-wrapper">
+                <input
+                    id="designCaseSearch"
+                    type="text"
+                    class="form-control launch-activity-search search-decorated-input"
+                    placeholder="{{ 'design_associated_case_placeholder' | translate }}"
+                    ng-model="dec.selectedCase"
+                    uib-typeahead="caseItem as dec.formatCaseLabel(caseItem) for caseItem in dec.searchCases($viewValue)"
+                    typeahead-on-select="dec.selectCase($item)"
+                    typeahead-editable="false"
+                    typeahead-min-length="2">
+                <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+            </div>
             <p class="help-block" ng-if="!dec.associatedCase">
                 {{ 'design_no_case_associated' | translate }}
             </p>
             <p class="help-block" ng-if="dec.associatedCase">
                 <strong>{{ 'design_associated_case_current' | translate }}:</strong>
-                {{ dec.formatCaseLabel(dec.associatedCase) }}
+                <a ng-href="#!/cases/{{dec.associatedCase.id}}">
+                    {{ dec.formatCaseLabel(dec.associatedCase) }}
+                </a>
                 <button type="button" class="btn btn-link btn-xs" ng-click="dec.clearAssociatedCase()">
                     {{ 'remove' | translate }}
                 </button>
@@ -198,7 +203,7 @@
                                         </div>
                                     </div>
                                     <div ng-switch-when="ranking">
-                                        <input style="margin-top: 1em;" ng-model="phase.randomize_item_order" type="checkbox"></input> <label>{{ 'item_random_order_label' | translate }}</label>
+                                        <input style="margin-top: 1em;" ng-model="phase.randomize_item_order" type="checkbox"> <label>{{ 'item_random_order_label' | translate }}</label>
                                         <div ng-repeat="item in phase.roles track by $index">
                                             <ranking-item-editor 
                                                 phase-number="phaseIndex+1"

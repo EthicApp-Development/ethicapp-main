@@ -3,7 +3,7 @@ import { statusCodes } from  "../../../../../common/modules/session-status.js";
 
 /*eslint func-style: ["error", "expression"]*/
 export function ActivityController($scope, $http,
-    ActivityCatalogService, DesignCatalogService) {
+    ActivityCatalogService, DesignCatalogService, $window) {
     
     const vm = this;
 
@@ -18,8 +18,6 @@ export function ActivityController($scope, $http,
     };
 
     vm.init = async function() {
-        console.debug("[ActivityController::init] initializing funcioó!!!");
-
         const updateHandler = function() {
             $scope.$applyAsync(() => {
                 vm.updateActivities();
@@ -35,8 +33,15 @@ export function ActivityController($scope, $http,
         }); 
 
         await ActivityCatalogService.loadActivities();
+    };
 
-        console.log(`[ActivityController::init] ${vm.activities.ongoing.length} ongoing, ${vm.activities.finished.length} finished and ${vm.activities.archived.length} archived activities loaded.`);
+    vm.goBack = function() {
+        if ($window.history.length > 1) {
+            $window.history.back();
+            return;
+        }
+
+        $scope.navigateTo("/");
     };
 
     vm.createSession = async function (designId) {
@@ -160,13 +165,11 @@ export function ActivityController($scope, $http,
 
     vm.handleSelect = function(activity) {
         // Switch to the page of the activity
-        console.debug("[ActivityController::handleSelect] Navigating to activity", activity);
         $scope.navigateTo(`/activities/${activity.sessionId}`);
     };
 
     vm.handleView = function(activity) {
         // Switch to the page of the activity
-        console.debug("[ActivityController::handleView] Navigating to activity", activity);
         $scope.navigateTo(`/activities/${activity.sessionId}`);
     };
 

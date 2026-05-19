@@ -4,6 +4,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import hydrateSessionFromAuthProxy from './middleware/hydrateSessionFromAuthProxy.js';
+import { csrfProtection } from './middleware/csrfProtection.js';
+import csrfRoutes from './routes/csrf.routes.js';
 import runtimeConfigRoutes from './routes/runtime-config.routes.js';
 import viewRoutes from './routes/view.routes.js';
 import usersRoutes from './routes/users.routes.js';
@@ -35,6 +37,8 @@ app.use(
 app.use(hydrateSessionFromAuthProxy);
 app.use(runtimeConfigRoutes);
 app.use('/mng/assets', express.static(path.join(__dirname, '../frontend/dist/assets')));
+app.use(csrfRoutes);
+app.use('/mng/api', csrfProtection);
 app.use(usersRoutes);
 app.use(viewRoutes);
 

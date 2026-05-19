@@ -200,7 +200,7 @@ export function DesignEditorController($scope, $translate, $timeout,
 
     vm.addItemToPhase = function(phase) {
         const item = designEditActions.buildBlankItem(vm.design);
-        console.debug(`[vm.addItemToPhase] ${JSON.stringify(item)}`);
+        // console.debug(`[vm.addItemToPhase] ${JSON.stringify(item)}`);
         $scope.$applyAsync(() => {
             designEditActions.addPhaseItem(vm.design, phase, item);
         });
@@ -254,7 +254,7 @@ export function DesignEditorController($scope, $translate, $timeout,
                 $translate("save_design_failure").then((result) => {
                     toast.create({
                         timeout: 5 * 1000,
-                        message: 'Failed to save design',
+                        message: result,
                         className: 'alert-danger',
                         dismissible: false,
                         containerClass: 'design-editor-toast-container',
@@ -272,7 +272,7 @@ export function DesignEditorController($scope, $translate, $timeout,
         
         // Handle global errors
         if (type === "global") {
-            console.debug(`[vm.handleValidationResult] global error handling`);
+            // console.debug(`[vm.handleValidationResult] global error handling`);
             if (messages.length > 0) {
                 vm.validationErrors.global = messages;
             } else {
@@ -348,7 +348,7 @@ export function DesignEditorController($scope, $translate, $timeout,
             }
         }
 
-        console.debug("Validation Errors:", JSON.stringify(vm.validationErrors));        
+        // console.debug("Validation Errors:", JSON.stringify(vm.validationErrors));
     };
 
     vm.isDesignValid = function() {
@@ -367,7 +367,7 @@ export function DesignEditorController($scope, $translate, $timeout,
     };
 
     vm.handleItemDeletion = function({ phaseNumber, deletedItem, index }) {
-        console.log("[handleItemDeletion]");
+        // console.log("[handleItemDeletion]");
     
         // Validate that phaseNumber is provided and valid
         if (phaseNumber === undefined || phaseNumber === null) {
@@ -411,7 +411,7 @@ export function DesignEditorController($scope, $translate, $timeout,
         $scope.$applyAsync(() => {
             // Remove validation errors associated with the deleted item
             delete vm.validationErrors.phases[phaseKey].items[itemKey];
-            console.debug(`[handleItemDeletion] Validation errors for item '${itemKey}' in phase '${phaseKey}' deleted.`);
+            // console.debug(`[handleItemDeletion] Validation errors for item '${itemKey}' in phase '${phaseKey}' deleted.`);
         
             // Update keys for subsequent items
             const itemKeys = Object.keys(vm.validationErrors.phases[phaseKey].items).sort();
@@ -421,7 +421,7 @@ export function DesignEditorController($scope, $translate, $timeout,
                     const newKey = `item_${currentIndex - 1}`;
                     vm.validationErrors.phases[phaseKey].items[newKey] = vm.validationErrors.phases[phaseKey].items[currentKey];
                     delete vm.validationErrors.phases[phaseKey].items[currentKey];
-                    console.debug(`[handleItemDeletion] Item key updated from '${currentKey}' to '${newKey}'.`);
+                    // console.debug(`[handleItemDeletion] Item key updated from '${currentKey}' to '${newKey}'.`);
                 }
             });
         
@@ -433,13 +433,13 @@ export function DesignEditorController($scope, $translate, $timeout,
                 phaseErrors.other.length === 0
             ) {
                 delete vm.validationErrors.phases[phaseKey];
-                console.debug(`[handleItemDeletion] Phase '${phaseKey}' has no errors left and was removed.`);
+                // console.debug(`[handleItemDeletion] Phase '${phaseKey}' has no errors left and was removed.`);
             }
         });
     };
 
     vm.handlePhaseDeletion = function (deletedIndex) {
-        console.debug(`[handlePhaseDeletion] Deleted phase at index: ${deletedIndex}`);
+        // console.debug(`[handlePhaseDeletion] Deleted phase at index: ${deletedIndex}`);
     
         const phaseKeyPrefix = 'phase_';
 
@@ -451,8 +451,8 @@ export function DesignEditorController($scope, $translate, $timeout,
             const phaseKey = `${phaseKeyPrefix}${deletedIndex + 1}`;
             if (vm.validationErrors.phases && vm.validationErrors.phases[phaseKey]) {
                 delete vm.validationErrors.phases[phaseKey];
-                console.debug(`[handlePhaseDeletion] Removed validation errors for ${phaseKey}`);
-                console.debug(`[handlePhaseDeletion] validation errors ${JSON.stringify(vm.validationErrors.phases)}`);
+                // console.debug(`[handlePhaseDeletion] Removed validation errors for ${phaseKey}`);
+                // console.debug(`[handlePhaseDeletion] validation errors ${JSON.stringify(vm.validationErrors.phases)}`);
             }
         
             // Updates the keys of the remaining phases
@@ -463,19 +463,19 @@ export function DesignEditorController($scope, $translate, $timeout,
                     if (phaseNumber > deletedIndex + 1) {
                         const newPhaseKey = `${phaseKeyPrefix}${phaseNumber - 1}`;
                         updatedPhases[newPhaseKey] = vm.validationErrors.phases[key];
-                        console.debug(`[handlePhaseDeletion] Updated phase key: ${key} -> ${newPhaseKey}`);
+                        // console.debug(`[handlePhaseDeletion] Updated phase key: ${key} -> ${newPhaseKey}`);
                     } else {
                         updatedPhases[key] = vm.validationErrors.phases[key];
                     }
                 });
-                console.debug(`[handlePhaseDeletion] validation errors post update ${JSON.stringify(vm.validationErrors.phases)}`);
+                // console.debug(`[handlePhaseDeletion] validation errors post update ${JSON.stringify(vm.validationErrors.phases)}`);
                 vm.validationErrors.phases = updatedPhases;
             }
         });
     };
 
     vm.handlePhaseMove = function ({ fromIndex, toIndex }) {
-        console.log(`[handlePhaseMove] Moving phase from ${fromIndex + 1} to ${toIndex + 1}`);
+        // console.log(`[handlePhaseMove] Moving phase from ${fromIndex + 1} to ${toIndex + 1}`);
     
         const fromPhaseKey = `phase_${fromIndex + 1}`;
         const toPhaseKey = `phase_${toIndex + 1}`;
@@ -500,34 +500,32 @@ export function DesignEditorController($scope, $translate, $timeout,
                 const temp = vm.validationErrors.phases[fromPhaseKey];
                 vm.validationErrors.phases[fromPhaseKey] = vm.validationErrors.phases[toPhaseKey];
                 vm.validationErrors.phases[toPhaseKey] = temp;
-                console.debug(`[handlePhaseMove] Swapped validation errors for phases ${fromPhaseKey} and ${toPhaseKey}.`);
+                // console.debug(`[handlePhaseMove] Swapped validation errors for phases ${fromPhaseKey} and ${toPhaseKey}.`);
             }
             // Case 2: Only the "from" phase exists in validationErrors
             else if (vm.validationErrors.phases[fromPhaseKey] && !vm.validationErrors.phases[toPhaseKey]) {
                 vm.validationErrors.phases[toPhaseKey] = vm.validationErrors.phases[fromPhaseKey];
                 delete vm.validationErrors.phases[fromPhaseKey];
-                console.debug(`[handlePhaseMove] Moved validation errors from ${fromPhaseKey} to ${toPhaseKey}.`);
+                // console.debug(`[handlePhaseMove] Moved validation errors from ${fromPhaseKey} to ${toPhaseKey}.`);
             }
             // Case 3: Only the "to" phase exists in validationErrors
             else if (!vm.validationErrors.phases[fromPhaseKey] && vm.validationErrors.phases[toPhaseKey]) {
                 vm.validationErrors.phases[fromPhaseKey] = vm.validationErrors.phases[toPhaseKey];
                 delete vm.validationErrors.phases[toPhaseKey];
-                console.debug(`[handlePhaseMove] Moved validation errors from ${toPhaseKey} to ${fromPhaseKey}.`);
+                // console.debug(`[handlePhaseMove] Moved validation errors from ${toPhaseKey} to ${fromPhaseKey}.`);
             }
             // Case 4: Neither phase exists in validationErrors
             else {
-                console.debug("[handlePhaseMove] Neither phase has validation errors. No updates needed.");
+                // console.debug("[handlePhaseMove] Neither phase has validation errors. No updates needed.");
             }
         });
     };
 
     vm.handleItemMove = function ({ phaseNumber, fromIndex, toIndex }) {
-        console.log(`[DesignEditorController::handleItemMove] ${phaseNumber} ${fromIndex} ${toIndex}`);
-        
         const phaseKey = `phase_${phaseNumber}`;
         const fromItemKey = `item_${fromIndex + 1}`;
         const toItemKey = `item_${toIndex + 1}`;
-        
+
         $scope.$applyAsync(function() {
             // Case 1: Both items exist in validationErrors
             const phaseErrors = vm.validationErrors.phases[phaseKey];
@@ -535,31 +533,32 @@ export function DesignEditorController($scope, $translate, $timeout,
                 const temp = phaseErrors.items[fromItemKey];
                 phaseErrors.items[fromItemKey] = phaseErrors.items[toItemKey];
                 phaseErrors.items[toItemKey] = temp;
-                console.debug(
-                    `[handleItemMove] Swapped validation errors for items ${fromItemKey} and ${toItemKey} in phase ${phaseNumber}.`);
+                // console.debug(
+                //     `[handleItemMove] Swapped validation errors for items ${fromItemKey} and ${toItemKey} in phase ${phaseNumber}.`);
             }
             // Case 2: Only the "from" item exists in validationErrors
             else if (phaseErrors && !phaseErrors.items[toItemKey]) {
                 phaseErrors.items[toItemKey] = phaseErrors.items[fromItemKey];
                 delete phaseErrors.items[fromItemKey];
-                console.debug(`[handleItemMove] Moved validation errors from ${fromItemKey} to ${toItemKey} in phase ${phaseNumber}.`);
+                // console.debug(`[handleItemMove] Moved validation errors from ${fromItemKey} to ${toItemKey} in phase ${phaseNumber}.`);
             }
             // Case 3: Only the "to" item exists in validationErrors
             else if (!phaseErrors.items[fromItemKey] && phaseErrors.items[toItemKey]) {
                 phaseErrors.items[fromItemKey] = phaseErrors.items[toItemKey];
                 delete phaseErrors.items[toItemKey];
-                console.debug(`[handleItemMove] Moved validation errors from ${toItemKey} to ${fromItemKey}.`);        }
+                // console.debug(`[handleItemMove] Moved validation errors from ${toItemKey} to ${fromItemKey}.`);
+            }
 
             // Case 4: Neither phase exists in validationErrors
             else {
-                console.debug("[handleItemMove] Neither phase has validation errors. No updates needed.");
+                // console.debug("[handleItemMove] Neither phase has validation errors. No updates needed.");
             }
         });
     };
 
     vm.handleItemDeletion = function ({ phaseNumber, deletedIndex }) {
-        console.debug(
-            `[handleItemDeletion] Deleted item at index: ${deletedIndex}, phase ${phaseNumber}`);
+        // console.debug(
+        //    `[handleItemDeletion] Deleted item at index: ${deletedIndex}, phase ${phaseNumber}`);
     
         const phaseKeyPrefix = "phase_";
         const phaseKey = `${phaseKeyPrefix}${phaseNumber}`;
@@ -580,15 +579,15 @@ export function DesignEditorController($scope, $translate, $timeout,
                 if (phaseValid) {
                     delete vm.validationErrors.phases[phaseKey];
 
-                    console.debug(`[handleItemDeletion] Removed validation errors for ${phaseKey}`);
-                    console.debug(
-                        `[handleItemDeletion] No further operations are required for ${phaseKey}, deleting it from validation errors.`);
+                    // console.debug(`[handleItemDeletion] Removed validation errors for ${phaseKey}`);
+                    // console.debug(
+                    //     `[handleItemDeletion] No further operations are required for ${phaseKey}, deleting it from validation errors.`);
                     
                     // No further updates are required
                     return;
                 }
     
-                console.debug(`[handleItemDeletion] validation errors ${JSON.stringify(vm.validationErrors.phases)}`);
+                // console.debug(`[handleItemDeletion] validation errors ${JSON.stringify(vm.validationErrors.phases)}`);
             }
         
             // Updates the keys of the remaining items
@@ -599,7 +598,7 @@ export function DesignEditorController($scope, $translate, $timeout,
                     if (itemNumber > deletedIndex + 1) {
                         const newItemKey = `${phaseKeyPrefix}${itemNumber - 1}`;
                         updatedItems[newItemKey] = phaseErrors.items[key];
-                        console.debug(`[handleItemDeletion] Updated phase key: ${key} -> ${newItemKey}`);
+                        // console.debug(`[handleItemDeletion] Updated phase key: ${key} -> ${newItemKey}`);
                     } else {
                         updatedItems[key] = phaseErrors.items[key];
                     }

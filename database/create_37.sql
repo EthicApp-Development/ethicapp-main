@@ -30,7 +30,7 @@ ADD FOREIGN KEY (dsgnid) REFERENCES designs
 ON DELETE CASCADE;
 
 CREATE TABLE IF NOT EXISTS activity (
-    id serial,
+    id serial PRIMARY KEY,
     design integer,
     session integer,
     FOREIGN KEY (design) REFERENCES designs (id),

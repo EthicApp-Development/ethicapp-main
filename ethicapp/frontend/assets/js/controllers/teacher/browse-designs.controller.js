@@ -1,15 +1,38 @@
 /*eslint func-style: ["error", "expression"]*/
 export function BrowseDesignsController($scope, $routeParams, toast, $translate,
-    ActivityStateService, DesignCatalogService) {
+    ActivityStateService, DesignCatalogService, $timeout, $window) {
 
     const vm = this;
     vm.selectedDesignId = 0;
+    vm.dsgnMode = 0;
     vm.hasFetchedUserDesigns = false;
     vm.userSearch = "";
     vm.designSearchQuery = "";
     vm.userDesigns = [];
     vm.publicDesigns = [];
     vm.designs = [];
+
+    vm.goBack = function() {
+        if ($window.history.length > 1) {
+            $window.history.back();
+            return;
+        }
+
+        $scope.navigateTo("/");
+    };
+
+    vm.scrollToActivitySetup = function() {
+        $timeout(() => {
+            const stepPanel = $window.document.getElementById("activity-launch-step");
+            if (stepPanel) {
+                stepPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+            const descriptionInput = $window.document.getElementById("activity-description-input");
+            if (descriptionInput) {
+                descriptionInput.focus({ preventScroll: true });
+            }
+        }, 0, false);
+    };
 
     vm.init = async function() {
         const updateHandler = function() {
@@ -42,11 +65,12 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
     vm.handleSelectDesign = function(id) {
         $scope.$applyAsync(() => {
             vm.selectedDesignId = id;
+            vm.scrollToActivitySetup();
         });
     }
 
     vm.forceFetchDesigns = async function() {
-        vm.userDesigns = await DesignCatalogService.getUserDesigns();
+        vm.userDesigns = await DesignCatalogService.getUserDesigns(true);
         vm.publicDesigns = await DesignCatalogService.getPublicDesigns();
         vm.designs = await DesignCatalogService.getDesigns();
 
@@ -93,6 +117,7 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
         vm.selectedDesignId = design.id;
         vm.designSearchQuery = vm.formatDesignLabel(design);
         vm.userSearch = vm.designSearchQuery;
+        vm.scrollToActivitySetup();
     };
 
     vm.handleLaunch = function(designId) {
