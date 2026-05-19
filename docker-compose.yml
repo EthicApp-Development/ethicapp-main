@@ -91,6 +91,8 @@ services:
       - uploads:/app/backend/uploads
     depends_on:
       - postgresql
+    networks:
+      - global_network
 
   auth-backend:
     build:
