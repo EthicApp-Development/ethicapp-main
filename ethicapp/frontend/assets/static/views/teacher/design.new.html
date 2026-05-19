@@ -1,15 +1,15 @@
-<br>
-<br>
-<a ng-click="navigateTo('/designs')">{{'back'|translate}}</a>
-<br>
-<h2>{{'designMsg'|translate}}</h2>
-<div>
+<div ng-controller="CreateDesignController as cdc">
+    <h2><i class="fa fa-paint-brush"></i> {{'designMsg'|translate}}</h2>
+    <button type="button" class="btn btn-default btn-sm mb-2" ng-click="cdc.goBack()">
+        <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
+    </button>
+    <br>
+
     <div class="modal-header pl-0">
         <h4>{{'designMsgInfo'|translate}}</h4>
     </div>
     <form class="modal-body form-new-design"
         name="formDesign"
-        ng-controller="CreateDesignController as cdc"
         ng-submit="formDesign.$valid && cdc.uploadDesign(cdc.title, cdc.selectedOption)"
         novalidate>
         <div class="wrapper_nd">

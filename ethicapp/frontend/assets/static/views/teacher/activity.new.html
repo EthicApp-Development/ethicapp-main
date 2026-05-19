@@ -1,10 +1,15 @@
+<div ng-controller="BrowseDesignsController as bdc">
 <div class="row">
     <div class="col-md-12 mb-2">
         <h2><i class="fa-brands fa-space-awesome"></i> {{'launch_activity_title' | translate}}</h2>
+        <button type="button" class="btn btn-default btn-sm mb-2" ng-click="bdc.goBack()">
+            <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
+        </button>
+        <br>
     </div>
 </div>
 <div class="row">
-    <div class="col-md-10" ng-controller="BrowseDesignsController as bdc">
+    <div class="col-md-10">
         <div class="panel panel-default">
             <div class="panel-heading">
                 <label>{{'step_1_prepare_activity' | translate}}</label>
@@ -99,4 +104,5 @@
     </div>
     <div class="col-md-2">
     </div>
+</div>
 </div>

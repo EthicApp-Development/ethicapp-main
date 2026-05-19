@@ -21,44 +21,108 @@ hr{
     background: #000;
 }
 
+.teacher-workbench-panel {
+    padding: 20px;
+}
+
+.home-card-container {
+    max-width: 980px;
+    margin-left: 0;
+}
+
+.home-card-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 22px;
+    justify-content: space-between;
+}
+
 .home-card {
-    display: inline-block;
-    width: 200px;
-    cursor: pointer;
     position: relative;
-    margin-bottom: 20px;
+    flex: 0 1 calc(25% - 17px);
+    min-width: 190px;
+    height: 190px;
+    padding: 0;
+    overflow: hidden;
+    cursor: pointer;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+    transition: transform 220ms ease, box-shadow 220ms ease, filter 220ms ease;
 }
 
 .home-card img {
-    width: 80%;
-    height: auto;
-    transition: filter 0.3s ease;
-}
-
-.home-card:hover img {
-    filter: brightness(1.2) saturate(1.3);
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: filter 220ms ease;
 }
 
 .home-card-caption {
     position: absolute;
+    left: 0;
+    right: 0;
     bottom: 0;
-    width: 80%;
-    padding: 5px 0;
-    background: rgba(0, 0, 0, 0.8);
+    min-height: 42px;
+    padding: 9px 12px;
+    background: rgba(0, 0, 0, 0.82);
     color: white;
     text-align: center;
+    font-weight: 600;
+    transition: color 220ms ease;
 }
 
-.home-card-container {
-    max-width: 800px;
-    margin-left: 0;
+.home-card:hover,
+.home-card:focus {
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
+    transform: translateX(2px);
+    outline: none;
+}
+
+.home-card:hover img,
+.home-card:focus img {
+    filter: brightness(1.12) saturate(1.18);
+}
+
+.home-card:hover .home-card-caption,
+.home-card:focus .home-card-caption,
+.home-card-caption:hover,
+.home-card-caption:focus {
+    color: rgb(255, 255, 166);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .home-card,
+    .home-card img {
+        transition: none;
+    }
+}
+
+@media (max-width: 1199px) {
+    .home-card {
+        flex-basis: calc(50% - 11px);
+    }
+
+    .home-card img {
+        object-position: center 40%;
+    }
 }
 
 @media (max-width: 768px) {
     .home-card-container {
-        width: 300px; /* Ancho completo en pantallas pequeñas */
-        max-width: 100%; /* No limita el ancho en pantallas pequeñas */
-        padding: 0 15px; /* Espacio lateral para que no toque los bordes de la pantalla */
+        width: 100%;
+        max-width: 100%;
+        padding: 0 15px;
+    }
+
+    .home-card {
+        flex-basis: 100%;
+        height: 174px;
+    }
+
+    .home-card img {
+        object-position: center 30%;
     }
 }
 

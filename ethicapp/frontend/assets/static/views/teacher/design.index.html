@@ -2,6 +2,10 @@
     <div class="row">
         <div class="col-md-12">
             <h2><i class="fa fa-paint-brush"></i> {{'activity_designs' | translate}}</h2>
+            <button type="button" class="btn btn-default btn-sm mb-2" ng-click="vm.goBack()">
+                <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
+            </button>
+            <br>
             <button class="btn btn-primary" ng-click="navigateTo('/designs/new')" 
                 style="margin-bottom: 2rem; margin-top: 1rem;">
                 <i class="fa fa-plus" aria-hidden="true"></i> {{'create_design' | translate}}
