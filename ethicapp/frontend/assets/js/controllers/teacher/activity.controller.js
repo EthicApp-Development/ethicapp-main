@@ -3,7 +3,7 @@ import { statusCodes } from  "../../../../../common/modules/session-status.js";
 
 /*eslint func-style: ["error", "expression"]*/
 export function ActivityController($scope, $http,
-    ActivityCatalogService, DesignCatalogService) {
+    ActivityCatalogService, DesignCatalogService, $window) {
     
     const vm = this;
 
@@ -33,6 +33,15 @@ export function ActivityController($scope, $http,
         }); 
 
         await ActivityCatalogService.loadActivities();
+    };
+
+    vm.goBack = function() {
+        if ($window.history.length > 1) {
+            $window.history.back();
+            return;
+        }
+
+        $scope.navigateTo("/");
     };
 
     vm.createSession = async function (designId) {

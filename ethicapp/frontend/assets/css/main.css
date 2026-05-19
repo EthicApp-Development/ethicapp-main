@@ -70,6 +70,7 @@ hr{
     color: white;
     text-align: center;
     font-weight: 600;
+    transition: color 220ms ease;
 }
 
 .home-card:hover,
@@ -82,6 +83,13 @@ hr{
 .home-card:hover img,
 .home-card:focus img {
     filter: brightness(1.12) saturate(1.18);
+}
+
+.home-card:hover .home-card-caption,
+.home-card:focus .home-card-caption,
+.home-card-caption:hover,
+.home-card-caption:focus {
+    color: rgb(255, 255, 166);
 }
 
 @media (prefers-reduced-motion: reduce) {

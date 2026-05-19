@@ -1,9 +1,18 @@
 import { designFactories } from  "../../../../../common/modules/design-types.js";
 
 /*eslint func-style: ["error", "expression"]*/
-export function CreateDesignController($scope,
+export function CreateDesignController($scope, $window,
     DesignCatalogService, UserInformationService) {
     const vm = this;
+
+    vm.goBack = function() {
+        if ($window.history.length > 1) {
+            $window.history.back();
+            return;
+        }
+
+        $scope.navigateTo("/designs");
+    };
 
     vm.uploadDesign = async function (title, type) {
         try {

@@ -92,7 +92,7 @@ app.config(function($translateProvider) {
 app.controller("LocalesController", 
     ["$translate", "$scope", "$rootScope", LocalesController]); 
 app.controller("ActivityController", 
-    ["$scope", "$http", "ActivityCatalogService", "DesignCatalogService", ActivityController]);
+    ["$scope", "$http", "ActivityCatalogService", "DesignCatalogService", "$window", ActivityController]);
 app.controller("ActivityReportsController",
     ["$scope", "$routeParams", "$window", ActivityReportsController]);
 app.controller("BrowseDesignsController", 
@@ -100,7 +100,7 @@ app.controller("BrowseDesignsController",
         "$timeout", "$window",
         BrowseDesignsController]); 
 app.controller("CreateDesignController", 
-    ["$scope", "DesignCatalogService", "UserProfileService", CreateDesignController]);
+    ["$scope", "$window", "DesignCatalogService", "UserProfileService", CreateDesignController]);
 app.controller("DashboardController", 
     ["$scope", "$routeParams", "$http", "$translate", "$timeout", "$uibModal",
         "ActivityStateService", "ActivityCatalogService", "DesignCatalogService",

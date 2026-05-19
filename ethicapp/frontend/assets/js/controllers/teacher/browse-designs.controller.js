@@ -12,6 +12,15 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
     vm.publicDesigns = [];
     vm.designs = [];
 
+    vm.goBack = function() {
+        if ($window.history.length > 1) {
+            $window.history.back();
+            return;
+        }
+
+        $scope.navigateTo("/");
+    };
+
     vm.scrollToActivitySetup = function() {
         $timeout(() => {
             const stepPanel = $window.document.getElementById("activity-launch-step");

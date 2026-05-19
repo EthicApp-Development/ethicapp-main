@@ -2,6 +2,10 @@
     <div class="row">
         <div class="col-md-12">
             <h2><i class="fa fa-book"></i> {{ 'ethical_cases_title' | translate }}</h2>
+            <button type="button" class="btn btn-default btn-sm mb-2" ng-click="vm.goBack()">
+                <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
+            </button>
+            <br>            
             <button class="btn btn-primary" ng-click="navigateTo('/cases/new')" style="margin-top: 1rem; margin-bottom: 1rem;">
                 <i class="fa fa-plus" aria-hidden="true"></i> {{ 'ethical_cases_create' | translate }}
             </button>
