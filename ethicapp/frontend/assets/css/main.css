@@ -2803,3 +2803,46 @@ h2{
 tr.group-summary {
     background-color: #ddd !important;
 }
+
+.case-document-image-scroll {
+    height: 72vh;
+    max-height: 760px;
+    min-height: 480px;
+    overflow-y: auto;
+    padding: 12px;
+    background: #f7f7f7;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.case-document-image-sequence {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.case-document-page {
+    margin: 0;
+    padding: 10px;
+    background: #fff;
+    border: 1px solid #ddd;
+}
+
+.case-document-page img {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+}
+
+.case-document-page figcaption {
+    margin-top: 8px;
+}
+
+@media (max-width: 767px) {
+    .case-document-image-scroll {
+        height: 65vh;
+        min-height: 340px;
+        padding: 8px;
+    }
+}

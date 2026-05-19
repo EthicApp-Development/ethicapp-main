@@ -17,6 +17,23 @@ import {
   sessionDetailReducer
 } from './session-detail/sessionDetailState.js';
 
+function getCaseDocumentUrl(caseDocument) {
+  if (!caseDocument) {
+    return '';
+  }
+
+  const contentRepresentation = Array.isArray(caseDocument.representations)
+    ? caseDocument.representations.find((representation) => representation.rel === 'content')
+    : null;
+
+  return contentRepresentation?.href || caseDocument.pdfPath || '';
+}
+
+function isCaseDocumentProcessingActive(caseDocument) {
+  const status = caseDocument?.documentProcessing?.status;
+  return status === 'pending' || status === 'processing';
+}
+
 export default function ActivityPage() {
   const { locale, t } = useI18n();
   const { session, sessionRefreshKey } = useOutletContext();
@@ -181,17 +198,20 @@ export default function ActivityPage() {
           return { data: { result: null } };
         }
 
-        return legacyUserApi.get(`/cases/${caseId}/download-link`);
+        return legacyUserApi.get(`/cases/${caseId}`);
       })
       .then(({ data }) => {
         if (isUnmounted) {
           return;
         }
 
-        const url = data?.result?.downloadUrl;
+        const caseDocument = data?.result ?? null;
         dispatch({
           type: 'CASE_LOAD_SUCCESS',
-          payload: typeof url === 'string' ? url : ''
+          payload: {
+            caseDocument,
+            caseDocumentUrl: getCaseDocumentUrl(caseDocument)
+          }
         });
       })
       .catch((error) => {
@@ -210,6 +230,42 @@ export default function ActivityPage() {
       isUnmounted = true;
     };
   }, [activityState, localState.activityDescriptor?.designId, selectedSession, session.isAuthenticated, shouldLoadActivityData, t]);
+
+  useEffect(() => {
+    const caseId = Number(localState.caseDocument?.id);
+    if (!Number.isInteger(caseId) || caseId <= 0 || !isCaseDocumentProcessingActive(localState.caseDocument)) {
+      return undefined;
+    }
+
+    let isCancelled = false;
+
+    const intervalId = window.setInterval(() => {
+      legacyUserApi
+        .get(`/cases/${caseId}`)
+        .then(({ data }) => {
+          if (isCancelled) {
+            return;
+          }
+
+          const caseDocument = data?.result ?? null;
+          dispatch({
+            type: 'CASE_LOAD_SUCCESS',
+            payload: {
+              caseDocument,
+              caseDocumentUrl: getCaseDocumentUrl(caseDocument)
+            }
+          });
+        })
+        .catch(() => {
+          // Keep the last successfully loaded case document visible.
+        });
+    }, 5000);
+
+    return () => {
+      isCancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [localState.caseDocument]);
 
   useActivityRealtimeSync({
     session,
@@ -251,7 +307,7 @@ export default function ActivityPage() {
   const currentPhaseNumber = activityState?.descriptor?.currentPhaseNumber ?? null;
   const currentPhaseId = activityState?.descriptor?.currentPhaseId ?? null;
   const designType = activityState?.descriptor?.design?.type ?? localState.activityDescriptor?.design?.type ?? '';
-  const hasCaseTab = localState.caseDocumentUrl.trim().length > 0;
+  const hasCaseTab = localState.caseDocumentUrl.trim().length > 0 || Boolean(localState.caseDocument);
 
   const tabEntries = useMemo(() => {
     const entries = [];
@@ -387,6 +443,7 @@ export default function ActivityPage() {
                     activeTab={localState.activeTab}
                     setActiveTab={(nextTab) => dispatch({ type: 'ACTIVE_TAB_SET', payload: nextTab })}
                     hasCaseTab={hasCaseTab}
+                    caseDocument={localState.caseDocument}
                     caseDocumentUrl={localState.caseDocumentUrl}
                     t={t}
                     phases={phaseTabs}

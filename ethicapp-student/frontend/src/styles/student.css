@@ -51,3 +51,43 @@ body {
 .external-service-result__body {
   font-size: 0.95rem;
 }
+
+.case-document-image-scroll {
+  height: clamp(22rem, calc(100vh - 12rem), 52rem);
+  height: clamp(22rem, calc(100dvh - 12rem), 52rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  background: #fff;
+  padding: 0.25rem;
+}
+
+.activity-tabs-panel-content .case-document-image-scroll {
+  margin: 0;
+}
+
+.case-document-page {
+  flex: 0 0 auto;
+}
+
+.case-document-page-image {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 575.98px) {
+  .activity-tabs-panel {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-bottom: max(7rem, env(safe-area-inset-bottom));
+  }
+
+  .case-document-image-scroll {
+    height: clamp(16rem, calc(100vh - 16rem), 30rem);
+    height: clamp(16rem, calc(100dvh - 16rem), 30rem);
+    padding: 0.125rem;
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "case-document-representation/v1",
+  "kind": "ethical_case_document",
+  "metadata": {
+    "caseUuid": "6a1c5b31-9837-49c2-80bb-817319c600e7",
+    "title": "Caso Sebastián",
+    "author": {
+      "firstname": "Antonio",
+      "lastname": "Farías",
+      "email": "anfari@fen.uchile.cl"
+    },
+    "createdAt": "2026-05-19T13:08:47.529Z",
+    "updatedAt": "2026-05-19T13:08:47.529Z",
+    "source": {
+      "format": "pdf",
+      "contentType": "application/pdf",
+      "sha256": "79318b0a7aaa1519692ad0c9b747cc8cfe7fe58b5bd83fdce9786bd03c4235ab",
+      "byteCount": 59425,
+      "pageCount": 2,
+      "storagePath": "/uploads/cases/3/case.pdf",
+      "packagePath": "source/case.pdf"
+    },
+    "imageRepresentation": {
+      "status": "completed",
+      "format": "png",
+      "resolution": {
+        "dpi": 200,
+        "unit": "dpi"
+      },
+      "generatedAt": "2026-05-19T13:08:49.764Z",
+      "renderer": "poppler-utils pdftoppm"
+    }
+  },
+  "content": {
+    "text": {
+      "contentType": "text/plain",
+      "content": "1                                               CASO “SEBASTIÁN”\n2\n3            Creo que me fue bien en la prueba de matemáticas. Eso sí, en la parte de álgebra lineal tan bien no me fue,\n4    pero creo que salvé con las otras preguntas.\n\n5            Justo estaba por salir a tomarme unas cervezas a la casa de una amiga, cuando me llamó Sebastián, mi mejor\n6    amigo, para decirme que estaba complicado con el examen de contabilidad; que había estudiado harto pero que\n7    creía que no iba a lograr la nota para aprobar el curso. Lo entiendo, el curso es bastante difícil. Es cierto que yo me\n8    eximí, pero de que lo pasé mal durante el semestre con los ejercicios y las solemnes, lo pasé mal.\n\n9            Durante la conversación, Sebastián se notaba muy nervioso y angustiado; tan angustiado que yo mismo\n10   comencé a angustiarme. No es para menos, si reprueba el curso se atrasa un año y no tendrá plata para pagar el\n11   arancel de la carrera (Sebastián estudia con gratuidad completa). Muchas veces hemos discutido esto con los papás\n12   de Sebastián cuando estamos almorzando o cenando en su casa. Ellos son una familia esforzada: ambos papás\n13   trabajan para poder sacar adelante a la Francisca y a Sebastián. No entienden por qué han puesto esta regla de\n14   financiar sólo los 5 años que dura la carrera (de acuerdo al plan de estudios), cuando todos sabemos que la mayoría\n15   de los estudiantes no logra terminarla en ese tiempo.\n\n16           A pesar de todo el esfuerzo que realizan, los papás de Sebastián, Alberto y Alejandra, son muy generosos\n17   y acogedores. Me recibieron durante un par de meses en plena pandemia, cuando tenía problemas con mi propia\n18   familia, sin poner complicaciones cuando Sebastián preguntó si acaso podía quedarme con ellos un tiempo. En ese\n19   tiempo me di cuenta de que Alberto, Alejandra, Sebastián y Francisca son una familia trabajadora y honrada, que\n20   no quiere nada regalado.\n\n21           Durante mi estadía con la familia de Sebastián, estudiamos juntos en múltiples ocasiones. Con el tiempo,\n22   él me ayudó en los ramos que más me costaban, y viceversa. Pero había un ramo con el cual Sebastián batallaba\n23   incesantemente: contabilidad. Volví a mi casa, arreglé las cosas con mi familia y, en unos meses, la pandemia\n24   comenzó a menguar: había menos restricciones para moverse y era más fácil salir de la casa, pero, por seguridad,\n25   los ramos los seguíamos teniendo online. Por eso no me extrañó que, visiblemente incómodo, Sebastián me pidiera\n26   que lo ayudara a contestar el examen de contabilidad. Me imagino la angustia y vergüenza que debe haber tenido\n27   para pedírmelo. Ahí entendí por qué me había llamado por teléfono y no había venido a la casa para hablar un tema\n28   tan importante.\n\n29           Le pregunté a Sebastián por qué tenía tanta vergüenza. Me dijo que, al hablar con su papá, éste le dijo que\n30   no podía darse el lujo de reprobar un ramo, que tenía que pasarlo sí o sí, estudiando día y noche, o de otro modo\n31   la familia se vería en serios problemas financieros. Pero le dejó muy claro, también que: “en esta familia nos\n32   ganamos las cosas, nadie nos regaló nada y no hacemos las cosas a medias o tomando atajos; trabaja duro y verás\n33   los resultados”. Y Alejandra, su mamá, le sugirió que hablara conmigo, para que lo ayudara. Después de todo,\n\f1    Sebastián me había ayudado “en las malas”, ¿por qué no iba a hacer lo mismo por él? Sebastián me dijo que estaba\n2    muy confundido, sabe que lo que pide me compromete, pero no ve mucha salida al problema.\n\n3            Ni a Sebastián ni a mí nos gusta esto de la copia. De hecho, muchas veces hemos peleado con algunos\n4    compañeros porque nos hemos sentido perjudicados por su comportamiento: “ustedes sacan mejor nota que\n5    nosotros que no copiamos”, es lo que siempre les decimos. Incluso lo hemos hablado con varios profesores, porque\n6    nos molesta mucho que las conductas deshonestas finalmente sean premiadas. Parece que nos gusta vivir en un\n7    país en el que “hacerse el vivo” es una cualidad positiva. Los docentes siempre nos han dicho que, al final, por\n8    mucho que nuestros compañeros saquen mejores notas, serán siempre peores profesionales que nosotros: primero\n9    porque saldremos de la carrera literalmente sabiendo más (y, por consiguiente, mejor preparados); en segundo\n10   lugar, porque la honestidad y el trabajo esforzado son virtudes tremendamente deseables en el ámbito laboral. De\n11   todas formas, siempre quedamos con la sensación desagradable de que los compañeros que hacen trampa nos\n12   pasan a llevar.\n\n13           En fin, me complica mucho la situación de Sebastián y francamente estoy confundido. Y yo que estaba tan\n14   contento por el examen de matemáticas. Ahora estoy metido en un lío. Este periodo de exámenes no lo olvidaré\n15   fácilmente. Realmente no sé qué hacer. Me siento muy angustiado.”\n\f",
+      "extractedAt": "2026-05-19T13:08:49.764Z",
+      "extractor": "poppler-utils pdftotext -layout",
+      "sha256": "76ecf82fb66c2b7e89593736879df5cd546898b549ed4d387560a2ad9669818b"
+    },
+    "images": [
+      {
+        "sequenceNumber": 1,
+        "pageNumber": 1,
+        "contentType": "image/png",
+        "width": 1700,
+        "height": 2200,
+        "url": "/uploads/cases/3/rendered/page-1.png",
+        "packagePath": "rendered/page-1.png",
+        "storagePath": "/uploads/cases/3/rendered/page-1.png",
+        "sha256": "a14e979ae65419fde19ccaf77cfe7d817f9e06c59bca475e39518ad42a621864",
+        "byteCount": 524192
+      },
+      {
+        "sequenceNumber": 2,
+        "pageNumber": 2,
+        "contentType": "image/png",
+        "width": 1700,
+        "height": 2200,
+        "url": "/uploads/cases/3/rendered/page-2.png",
+        "packagePath": "rendered/page-2.png",
+        "storagePath": "/uploads/cases/3/rendered/page-2.png",
+        "sha256": "fb701d762d43d7f87aa97ef2a1926da81dc5596cb7ce17ff95ec58a6dbea21d7",
+        "byteCount": 258200
+      }
+    ]
+  }
+}
