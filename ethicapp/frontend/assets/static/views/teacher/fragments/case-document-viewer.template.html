@@ -3,18 +3,20 @@
         <strong>{{ 'ethical_cases_document_viewer_title' | translate }}</strong>
     </div>
     <div class="panel-body">
-        <div class="case-document-image-sequence" ng-if="$ctrl.hasRenderedImages()">
-            <figure
-                class="case-document-page"
-                ng-repeat="image in $ctrl.getRenderedImages() track by image.sequenceNumber">
-                <img
-                    class="img-responsive center-block"
-                    ng-src="{{ image.src }}"
-                    alt="{{ 'ethical_cases_document_page_alt' | translate:{ page: image.pageNumber || image.sequenceNumber } }}">
-                <figcaption class="text-muted text-center">
-                    {{ 'ethical_cases_document_page_label' | translate:{ page: image.pageNumber || image.sequenceNumber } }}
-                </figcaption>
-            </figure>
+        <div class="case-document-image-scroll" ng-if="$ctrl.hasRenderedImages()">
+            <div class="case-document-image-sequence">
+                <figure
+                    class="case-document-page"
+                    ng-repeat="image in $ctrl.getRenderedImages() track by image.sequenceNumber">
+                    <img
+                        class="img-responsive center-block"
+                        ng-src="{{ image.src }}"
+                        alt="{{ 'ethical_cases_document_page_alt' | translate:{ page: image.pageNumber || image.sequenceNumber } }}">
+                    <figcaption class="text-muted text-center">
+                        {{ 'ethical_cases_document_page_label' | translate:{ page: image.pageNumber || image.sequenceNumber } }}
+                    </figcaption>
+                </figure>
+            </div>
         </div>
 
         <div class="alert alert-info" ng-if="!$ctrl.hasRenderedImages() && $ctrl.isProcessing()">

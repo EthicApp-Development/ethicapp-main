@@ -54,8 +54,10 @@ export default function ActivityTabsPanel({
     }));
   };
 
+  const panelPaddingClass = activeTab === 'case' ? 'p-1 p-sm-3' : 'p-3';
+
   return (
-    <section className="mt-4" aria-label={t('sessionDetail.activityPhasesLabel')}>
+    <section className="activity-tabs-panel mt-4" aria-label={t('sessionDetail.activityPhasesLabel')}>
       <ul className="nav nav-tabs" role="tablist">
         {tabEntries.map((tabEntry) => (
           <li key={tabEntry.id} className="nav-item" role="presentation">
@@ -77,7 +79,7 @@ export default function ActivityTabsPanel({
         ))}
       </ul>
 
-      <div className="border border-top-0 rounded-bottom p-3">
+      <div className={`activity-tabs-panel-content border border-top-0 rounded-bottom ${panelPaddingClass}`}>
         {activeTab === 'case' && hasCaseTab ? (
           <CaseDocumentViewer caseDocument={caseDocument} caseDocumentUrl={caseDocumentUrl} t={t} />
         ) : null}

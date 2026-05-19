@@ -65,17 +65,17 @@ export default function CaseDocumentViewer({ caseDocument, caseDocumentUrl, t })
   const hasFailed = processingStatus === 'failed';
 
   return (
-    <div className="d-flex flex-column gap-3">
+    <div className="case-document-viewer d-flex flex-column gap-3">
       {renderedImages.length > 0 ? (
-        <div className="d-flex flex-column gap-3">
+        <div className="case-document-image-scroll d-flex flex-column gap-2">
           {renderedImages.map((image) => {
             const pageNumber = image.pageNumber || image.sequenceNumber;
             return (
-              <figure key={image.sequenceNumber} className="m-0 border rounded bg-white p-2">
+              <figure key={image.sequenceNumber} className="case-document-page m-0 bg-white">
                 <img
                   src={image.src}
                   alt={t('sessionDetail.caseDocumentPageAlt', { page: pageNumber })}
-                  className="img-fluid d-block mx-auto"
+                  className="case-document-page-image img-fluid d-block mx-auto"
                   loading={image.sequenceNumber > 1 ? 'lazy' : 'eager'}
                 />
                 <figcaption className="text-center text-muted small mt-2">
