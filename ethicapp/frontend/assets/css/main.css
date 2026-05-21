@@ -21,44 +21,108 @@ hr{
     background: #000;
 }
 
+.teacher-workbench-panel {
+    padding: 20px;
+}
+
+.home-card-container {
+    max-width: 980px;
+    margin-left: 0;
+}
+
+.home-card-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 22px;
+    justify-content: space-between;
+}
+
 .home-card {
-    display: inline-block;
-    width: 200px;
-    cursor: pointer;
     position: relative;
-    margin-bottom: 20px;
+    flex: 0 1 calc(25% - 17px);
+    min-width: 190px;
+    height: 190px;
+    padding: 0;
+    overflow: hidden;
+    cursor: pointer;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+    transition: transform 220ms ease, box-shadow 220ms ease, filter 220ms ease;
 }
 
 .home-card img {
-    width: 80%;
-    height: auto;
-    transition: filter 0.3s ease;
-}
-
-.home-card:hover img {
-    filter: brightness(1.2) saturate(1.3);
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: filter 220ms ease;
 }
 
 .home-card-caption {
     position: absolute;
+    left: 0;
+    right: 0;
     bottom: 0;
-    width: 80%;
-    padding: 5px 0;
-    background: rgba(0, 0, 0, 0.8);
+    min-height: 42px;
+    padding: 9px 12px;
+    background: rgba(0, 0, 0, 0.82);
     color: white;
     text-align: center;
+    font-weight: 600;
+    transition: color 220ms ease;
 }
 
-.home-card-container {
-    max-width: 800px;
-    margin-left: 0;
+.home-card:hover,
+.home-card:focus {
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
+    transform: translateX(2px);
+    outline: none;
+}
+
+.home-card:hover img,
+.home-card:focus img {
+    filter: brightness(1.12) saturate(1.18);
+}
+
+.home-card:hover .home-card-caption,
+.home-card:focus .home-card-caption,
+.home-card-caption:hover,
+.home-card-caption:focus {
+    color: rgb(255, 255, 166);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .home-card,
+    .home-card img {
+        transition: none;
+    }
+}
+
+@media (max-width: 1199px) {
+    .home-card {
+        flex-basis: calc(50% - 11px);
+    }
+
+    .home-card img {
+        object-position: center 40%;
+    }
 }
 
 @media (max-width: 768px) {
     .home-card-container {
-        width: 300px; /* Ancho completo en pantallas pequeñas */
-        max-width: 100%; /* No limita el ancho en pantallas pequeñas */
-        padding: 0 15px; /* Espacio lateral para que no toque los bordes de la pantalla */
+        width: 100%;
+        max-width: 100%;
+        padding: 0 15px;
+    }
+
+    .home-card {
+        flex-basis: 100%;
+        height: 174px;
+    }
+
+    .home-card img {
+        object-position: center 30%;
     }
 }
 
@@ -690,36 +754,6 @@ div.boxed{
     padding-bottom: 8px;
 }
 
-ng-quill-editor {
-    display: block;
-    height: 100px;
-    margin-bottom: 24px;
-}
-
-ng-quill-editor.large{
-    height: 200px;
-}
-
-.quill-disabled::after {
-    display: block;
-    width: 100%;
-    background: rgb(200 200 200 /30%);
-    height: 120px;
-    content: "";
-    position: relative;
-    top: -120px;
-    z-index: 500;
-}
-
-.quill-disabled.large::after {
-    height: 220px;
-    top: -220px;
-}
-
-.ql-map{
-    background: url('../images/logos/ethicapp-logo.svg') no-repeat !important;
-}
-
 .map-block{
     display: block;
     background: #fbd387;
@@ -732,14 +766,6 @@ ng-quill-editor.large{
 .map-tbl{
     margin-top: 8px;
     margin-bottom: 8px;
-}
-
-ng-quill-editor .ql-editor{
-    height: 75px;
-}
-
-ng-quill-editor.large .ql-editor{
-    height: 175px;
 }
 
 .question-block img{
@@ -1712,13 +1738,6 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 }
 
 
-.teacher-profile-page .profile-toast-container ul,
-.teacher-profile-page .profile-toast-container li {
-    list-style: none !important;
-    margin: 0;
-    padding: 0;
-}
-
 .teacher-profile-page .profile-toast-anchor {
     margin-top: 0rem;
 }
@@ -2483,54 +2502,33 @@ h2{
     color: #a94442;
 }
 
-.profile-toast-container .alert,
-.designs-toast-container .alert,
-.design-editor-toast-container .alert {
+.teacher-toast {
+    width: 100%;
+}
+
+.teacher-toast-alert {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+    line-height: 1.35;
+}
+
+.profile-toast-container .teacher-toast-alert,
+.designs-toast-container .teacher-toast-alert,
+.design-editor-toast-container .teacher-toast-alert {
     min-height: 1.75em !important;
     height: auto !important;
     margin-left: auto;
     margin-right: auto;
     margin-top: 6px;
     margin-bottom: 32px !important;
-    padding-top: 2px;
-    padding-left: 8px;
-    padding-right: 8px;
+    padding: 5px 28px 5px 8px;
     opacity: 1;
-    background: #fff;
-    border: 0px;
     font-size: small;
-    animation: fadeOut 5.0s ease-in-out forwards;
 }
 
-.designs-list .designs-toast-container ul, .designs-list .designs-toast-container li {
-    list-style: none !important;
-    margin: 0;
-    padding: 0;
-}
-
-.designs-list .designs-toast-container .alert {
+.designs-list .designs-toast-container .teacher-toast-alert {
     height: 1 !important;
-    background: transparent;
     margin-top: 0px;
     margin-bottom: 0px;
-};
-
-.profile-toast-container ul, .profile-toast-container li,
-.designs-toast-container ul, .designs-toast-container li,
-.design-editor-toast-container ul, .design-editor-toast-container li {
-    list-style: none !important;
-    margin: 0;
-    padding: 0;
-}
-
-@keyframes fadeOut {
-    0% {
-        opacity: 1;
-    }
-    100% {
-        opacity: 0;
-        visibility: hidden;
-    }
 }
 
 .activity-item-panel .panel-body .row, 
@@ -2868,4 +2866,47 @@ h2{
 
 tr.group-summary {
     background-color: #ddd !important;
+}
+
+.case-document-image-scroll {
+    height: 72vh;
+    max-height: 760px;
+    min-height: 480px;
+    overflow-y: auto;
+    padding: 12px;
+    background: #f7f7f7;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.case-document-image-sequence {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.case-document-page {
+    margin: 0;
+    padding: 10px;
+    background: #fff;
+    border: 1px solid #ddd;
+}
+
+.case-document-page img {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+}
+
+.case-document-page figcaption {
+    margin-top: 8px;
+}
+
+@media (max-width: 767px) {
+    .case-document-image-scroll {
+        height: 65vh;
+        min-height: 340px;
+        padding: 8px;
+    }
 }

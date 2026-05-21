@@ -14,7 +14,7 @@ WORKDIR /app
 
 # Runtime dependencies
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends imagemagick \
+    && apt-get install -y --no-install-recommends imagemagick poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=backend-test /tmp/backend-tests-passed /tmp/backend-tests-passed

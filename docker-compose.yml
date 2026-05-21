@@ -13,7 +13,6 @@ services:
     volumes:
       - ./nginx/conf.d/dev.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/static:/usr/share/nginx/html/static:ro
-      - uploads:/var/www/uploads:ro
 
   ethicapp:
     build:
@@ -42,6 +41,29 @@ services:
     depends_on:
       - postgresql
       - redis
+
+  ethicapp-pdf-worker:
+    build:
+      context: ./ethicapp
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env.shared
+      - ./.env
+      - ./ethicapp/.env
+    environment:
+      - NODE_ENV=development
+      - ETHICAPP_PROCESS_ROLE=pdf-render-worker
+      - PDF_RENDER_WORKER_CONCURRENCY=1
+      - PDF_RENDER_WORKER_POLL_INTERVAL_MS=2000
+      - PDF_RENDER_DPI=200
+      - PDF_RENDER_MAX_PAGES=50
+      - PDF_RENDER_TIMEOUT_MS=120000
+    volumes:
+      - ./ethicapp:/app
+      - ethicapp_pdf_worker_backend_node_modules:/app/backend/node_modules
+      - uploads:/app/backend/uploads
+    depends_on:
+      - postgresql
 
   auth-backend:
     build:
@@ -160,6 +182,7 @@ volumes:
   auth_backend_node_modules:
   auth_frontend_node_modules:
   ethicapp_backend_node_modules:
+  ethicapp_pdf_worker_backend_node_modules:
   ethicapp_frontend_node_modules:
   ethicapp_student_backend_node_modules:
   ethicapp_student_frontend_node_modules:

@@ -22,9 +22,6 @@ trap cleanup EXIT INT TERM
 cd /app/frontend/assets/js/modules/teacher
 watch_esbuild teacher-admin.mjs ../../dist
 
-cd /app/frontend/assets/js/modules/common
-watch_esbuild user-common.mjs ../../dist
-
 cd /app/frontend/assets/css
 echo "Watching styles.scss..."
 npx sass --watch styles.scss:dist/assets-bundle.css &

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exportedAt": "2026-05-08T22:56:14.629Z",
+  "exportedAt": "2026-05-19T13:16:41.223Z",
   "activities": [
     {
       "key": "caso-sebastian-una-sola-fase-con-servicios-mock-de-ia",
@@ -55,13 +55,22 @@
         "userOwned": true
       },
       "case": {
-        "sourceCaseId": 1,
+        "sourceCaseId": 3,
         "title": "Caso Sebastián",
         "authorFirstname": "Antonio",
         "authorLastname": "Farías",
         "authorEmail": "anfari@fen.uchile.cl",
-        "pdfAsset": "assets/caso-sebastian-una-sola-fase-con-servicios-mock-de-ia.pdf",
-        "sourcePdfPath": "/uploads/seed-assets/caso-sebastian-una-sola-fase-con-servicios-mock-de-ia.pdf"
+        "pdfAsset": "assets/caso-sebastian.pdf",
+        "sourcePdfPath": "/uploads/seed-assets/caso-sebastian.pdf",
+        "renderedRepresentation": {
+          "manifestAsset": "assets/caso-sebastian-rendered-representation.json",
+          "imageAssets": [
+            "assets/caso-sebastian-rendered/page-1.png",
+            "assets/caso-sebastian-rendered/page-2.png"
+          ],
+          "pageCount": 2,
+          "dpi": 200
+        }
       }
     },
     {
@@ -217,13 +226,22 @@
         "userOwned": true
       },
       "case": {
-        "sourceCaseId": 1,
+        "sourceCaseId": 3,
         "title": "Caso Sebastián",
         "authorFirstname": "Antonio",
         "authorLastname": "Farías",
         "authorEmail": "anfari@fen.uchile.cl",
-        "pdfAsset": "assets/caso-sebastian-cinco-fases.pdf",
-        "sourcePdfPath": "/uploads/seed-assets/caso-sebastian-una-sola-fase-con-servicios-mock-de-ia.pdf"
+        "pdfAsset": "assets/caso-sebastian.pdf",
+        "sourcePdfPath": "/uploads/seed-assets/caso-sebastian.pdf",
+        "renderedRepresentation": {
+          "manifestAsset": "assets/caso-sebastian-rendered-representation.json",
+          "imageAssets": [
+            "assets/caso-sebastian-rendered/page-1.png",
+            "assets/caso-sebastian-rendered/page-2.png"
+          ],
+          "pageCount": 2,
+          "dpi": 200
+        }
       }
     },
     {
@@ -383,13 +401,22 @@
         "userOwned": true
       },
       "case": {
-        "sourceCaseId": 1,
+        "sourceCaseId": 3,
         "title": "Caso Sebastián",
         "authorFirstname": "Antonio",
         "authorLastname": "Farías",
         "authorEmail": "anfari@fen.uchile.cl",
-        "pdfAsset": "assets/caso-sebastian-cinco-fases-con-servicios-mock-de-ia.pdf",
-        "sourcePdfPath": "/uploads/seed-assets/caso-sebastian-una-sola-fase-con-servicios-mock-de-ia.pdf"
+        "pdfAsset": "assets/caso-sebastian.pdf",
+        "sourcePdfPath": "/uploads/seed-assets/caso-sebastian.pdf",
+        "renderedRepresentation": {
+          "manifestAsset": "assets/caso-sebastian-rendered-representation.json",
+          "imageAssets": [
+            "assets/caso-sebastian-rendered/page-1.png",
+            "assets/caso-sebastian-rendered/page-2.png"
+          ],
+          "pageCount": 2,
+          "dpi": 200
+        }
       }
     },
     {
@@ -499,13 +526,22 @@
         "userOwned": true
       },
       "case": {
-        "sourceCaseId": 1,
+        "sourceCaseId": 3,
         "title": "Caso Sebastián",
         "authorFirstname": "Antonio",
         "authorLastname": "Farías",
         "authorEmail": "anfari@fen.uchile.cl",
-        "pdfAsset": "assets/caso-sebastian-tres-fases-con-servicios-mock-de-ia.pdf",
-        "sourcePdfPath": "/uploads/seed-assets/caso-sebastian-una-sola-fase-con-servicios-mock-de-ia.pdf"
+        "pdfAsset": "assets/caso-sebastian.pdf",
+        "sourcePdfPath": "/uploads/seed-assets/caso-sebastian.pdf",
+        "renderedRepresentation": {
+          "manifestAsset": "assets/caso-sebastian-rendered-representation.json",
+          "imageAssets": [
+            "assets/caso-sebastian-rendered/page-1.png",
+            "assets/caso-sebastian-rendered/page-2.png"
+          ],
+          "pageCount": 2,
+          "dpi": 200
+        }
       }
     }
   ]

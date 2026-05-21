@@ -8,6 +8,7 @@ EthicApp is a multi-application workspace for case-based ethics education in Hig
 - `management-console/`: super-admin management console built with React + Vite, Bootstrap 5, Express, and PostgreSQL access.
 - `nginx/`: development and production NGINX facade for the applications.
 - `database/`: PostgreSQL schema, migrations, and seed assets used by the database container.
+- `canonical-schemas/`: JSON Schemas for portable EthicApp objects, including activity designs and rendered case-document representations.
 - `scripts/`: helper scripts exposed through the root `package.json`.
 
 For repository conventions and agent/human working expectations, also review [`AGENTS.md`](./AGENTS.md). It contains important routing, i18n, and implementation guidance.
@@ -24,14 +25,16 @@ For repository conventions and agent/human working expectations, also review [`A
     - [5.1. Start the application](#51-start-the-application)
     - [5.2. Logs and shell access](#52-logs-and-shell-access)
     - [5.3. Database initialization](#53-database-initialization)
-  - [6. Static Assets and Builds](#6-static-assets-and-builds)
-    - [6.1. Legacy EthicApp assets](#61-legacy-ethicapp-assets)
-    - [6.2. React + Vite applications](#62-react--vite-applications)
-  - [7. Tests](#7-tests)
-    - [7.1. Backend tests](#71-backend-tests)
-    - [7.2. Docker build test stages](#72-docker-build-test-stages)
-  - [8. Useful Root Scripts](#8-useful-root-scripts)
-  - [9. Production](#9-production)
+  - [6. Case Document Rendering](#6-case-document-rendering)
+  - [7. Static Assets and Builds](#7-static-assets-and-builds)
+    - [7.1. Legacy EthicApp assets](#71-legacy-ethicapp-assets)
+    - [7.2. React + Vite applications](#72-react--vite-applications)
+  - [8. Tests](#8-tests)
+    - [8.1. Backend tests](#81-backend-tests)
+    - [8.2. Docker build test stages](#82-docker-build-test-stages)
+    - [8.3. Integration regression tests](#83-integration-regression-tests)
+  - [9. Useful Root Scripts](#9-useful-root-scripts)
+  - [10. Production](#10-production)
 
 ## 1. Developing
 
@@ -130,7 +133,7 @@ NGINX exposes the application facade at:
 http://localhost
 ```
 
-The Compose setup starts PostgreSQL, Redis, NGINX, the legacy EthicApp service, the auth service, the student app, and the management console. Production Compose or orchestration templates belong to the deployment repository and should consume this repository's published images plus `deploy/` contract files.
+The Compose setup starts PostgreSQL, Redis, NGINX, the legacy EthicApp service, the PDF render worker, the auth service, the student app, and the management console. Production Compose or orchestration templates belong to the deployment repository and should consume this repository's published images plus `deploy/` contract files.
 
 ### 5.2. Logs and shell access
 
@@ -140,6 +143,7 @@ Follow logs for a service:
 docker compose -p ethicapp logs -f nginx
 docker compose -p ethicapp logs -f auth-backend
 docker compose -p ethicapp logs -f ethicapp
+docker compose -p ethicapp logs -f ethicapp-pdf-worker
 docker compose -p ethicapp logs -f ethicapp-student
 docker compose -p ethicapp logs -f management-console
 docker compose -p ethicapp logs -f postgresql
@@ -157,9 +161,23 @@ Database migrations and initialization scripts in `database/` run automatically 
 
 If you need a clean database, stop the stack and remove the Compose volume for the `ethicapp` project, then start the stack again. This deletes local database state.
 
-## 6. Static Assets and Builds
+## 6. Case Document Rendering
 
-### 6.1. Legacy EthicApp assets
+EthicApp stores uploaded case PDFs behind authorization-aware upload routes. A separate `ethicapp-pdf-worker` service consumes `pdf_render_jobs` rows and converts case PDFs into:
+
+- extracted raw text,
+- ordered PNG page images under the protected uploads volume,
+- a canonical case-document representation manifest.
+
+The manifest schema lives in [`canonical-schemas/case-document-representation-v1.schema.json`](./canonical-schemas/case-document-representation-v1.schema.json). The legacy teacher UI and the student React app prefer rendered page images when available, and fall back to the protected PDF while processing is pending or unavailable.
+
+Local development uses `PDF_RENDER_DPI=200` by default to keep rendered pages sharp on high-density displays. Other worker settings are exposed through `PDF_RENDER_*` variables in `ethicapp/.env.example` and the production environment contract.
+
+The worker shares the protected `uploads` volume with `ethicapp`, but uses its own backend `node_modules` volume so development-time dependency installs do not race with the web service.
+
+## 7. Static Assets and Builds
+
+### 7.1. Legacy EthicApp assets
 
 The legacy teacher frontend in `ethicapp/frontend` requires bundled static assets. In Docker development, the `ethicapp` container starts the asset watcher from its entrypoint, so host-side `build-devel` and `watch-devel` scripts are no longer used.
 
@@ -177,7 +195,7 @@ npm run build:ethicapp-assets
 
 The `ethicapp` Docker image also runs this production asset build while the image is built.
 
-### 6.2. React + Vite applications
+### 7.2. React + Vite applications
 
 The newer frontends use React + Vite:
 
@@ -187,16 +205,23 @@ The newer frontends use React + Vite:
 
 In the Docker development flow, Vite is started by the root `docker-compose.yml`. For focused work inside a subproject, use that subproject's local npm scripts.
 
-## 7. Tests
+## 8. Tests
 
-The repository is gradually adding focused automated tests around backend behavior that has been modernized or is security-sensitive. Tests currently use the built-in Node.js test runner and live beside the backend code they exercise.
+The repository uses a layered testing strategy. The first layer is lightweight guardrail coverage: deterministic Node.js tests that use mocks, fakes, or in-memory Express apps and are safe to run during Docker image builds. The second planned layer is broader integration regression coverage against real infrastructure, especially PostgreSQL, for development and CI verification. See [`TESTING.md`](./TESTING.md) for the full testing policy.
 
-### 7.1. Backend tests
+At the moment, automated coverage is mostly the lightweight guardrail layer. These tests use the built-in Node.js test runner and live beside the backend code they exercise.
+
+### 8.1. Backend tests
 
 Run focused backend suites from each service directory:
 
 ```bash
 cd ethicapp/backend
+npm test
+```
+
+```bash
+cd auth-backend
 npm test
 ```
 
@@ -207,21 +232,31 @@ npm test
 
 Current coverage includes:
 
-- `ethicapp/backend`: upload middleware behavior for PDF validation, size limits, wrong fields, temporary cleanup, and final file moves.
+- `ethicapp/backend`: upload middleware behavior for PDF validation, size limits, wrong fields, temporary cleanup, final file moves, protected upload authorization, and PDF render job status helpers.
+- `auth-backend`: CSRF protection plus authentication route behavior for login, registration validation, duplicate account handling, locale normalization, forgot-password token creation, and password reset.
 - `management-console/backend`: professor impersonation route behavior, including reCAPTCHA rejection, role rejection, and EthicApp session cookie forwarding.
 
-### 7.2. Docker build test stages
+### 8.2. Docker build test stages
 
 The production image builds for these services run backend tests during Docker build:
 
 ```bash
 docker compose build ethicapp
+docker compose build auth-backend
 docker compose build management-console
 ```
 
 If those tests fail, the image build fails. This keeps the local Compose build path aligned with the minimum verification expected before merging backend changes.
 
-## 8. Useful Root Scripts
+The tests executed during image build must stay fast, deterministic, and independent from running services. They should not require PostgreSQL, Redis, SMTP, external HTTP APIs, or local-only configuration. When database behavior needs to be covered in this layer, use mocks/fakes and assert the service contract, SQL shape, transaction flow, or error handling path.
+
+### 8.3. Integration regression tests
+
+Integration regression tests are intended to validate behavior that lightweight guardrails cannot prove, including real PostgreSQL schema compatibility, constraints, transactions, migrations/seeds, and cross-service session or proxy flows. These tests should run as a dedicated development/CI step, not as part of Docker image construction.
+
+This layer is not yet consistently implemented. Until it exists for a touched area, changes that depend on real database behavior should be manually verified against the local Docker Compose stack and should document that limitation in PR verification notes. The intended conventions for this layer are documented in [`TESTING.md`](./TESTING.md).
+
+## 9. Useful Root Scripts
 
 The root [`package.json`](./package.json) includes helper scripts for development and maintenance:
 
@@ -241,6 +276,6 @@ The root [`package.json`](./package.json) includes helper scripts for developmen
 | `pgrestore` | Restores the containerized development database from a provided dump path. |
 | `clear-sessions` | Clears local legacy session files when needed for debugging. |
 
-## 9. Production
+## 10. Production
 
-For production image publishing and deployment notes, see [`INSTALL.md`](./INSTALL.md). Production values must be provided through environment variables and should not reuse local development credentials.
+For production image publishing and deployment notes, see [`INSTALL.md`](./INSTALL.md) and [`deploy/README.md`](./deploy/README.md). Production values must be provided through environment variables and should not reuse local development credentials. Deploy the PDF render worker as a separate process using the same `ethicapp` image with `ETHICAPP_PROCESS_ROLE=pdf-render-worker`, the same protected uploads volume, and the `PDF_RENDER_*` variables from [`deploy/env.contract.yml`](./deploy/env.contract.yml).

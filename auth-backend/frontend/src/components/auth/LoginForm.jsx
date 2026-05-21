@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { login } from '../../api/authApi';
 import { useI18n } from '../../app/i18n-context';
 import TextField from '../common/TextField';
@@ -7,6 +7,8 @@ import PasswordField from './PasswordField';
 
 function LoginForm() {
   const { t } = useI18n();
+  const [searchParams] = useSearchParams();
+  const confirmationStatus = searchParams.get('confirmed') || '';
 
   const [formData, setFormData] = useState({
     username: '',
@@ -83,6 +85,24 @@ function LoginForm() {
       {serverError ? (
         <div className="alert alert-danger auth-alert" role="alert">
           {serverError}
+        </div>
+      ) : null}
+
+      {confirmationStatus === '1' ? (
+        <div className="alert alert-success auth-alert" role="alert">
+          {t('login.notices.accountConfirmed')}
+        </div>
+      ) : null}
+
+      {confirmationStatus === 'invalid' ? (
+        <div className="alert alert-warning auth-alert" role="alert">
+          {t('login.notices.confirmationInvalid')}
+        </div>
+      ) : null}
+
+      {confirmationStatus === 'error' ? (
+        <div className="alert alert-danger auth-alert" role="alert">
+          {t('login.notices.confirmationError')}
         </div>
       ) : null}
 

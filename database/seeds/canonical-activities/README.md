@@ -9,12 +9,19 @@ Expected layout:
 database/seeds/canonical-activities/
   manifest.json
   assets/
-    case-sebastian.pdf
+    caso-sebastian.pdf
+    caso-sebastian-rendered-representation.json
+    caso-sebastian-rendered/
+      page-1.png
+      page-2.png
 ```
 
 The manifest stores canonical EthicApp designs and their ethical case metadata.
 PDF files are stored as regular seed assets under `assets/` and copied into
 EthicApp uploads during seeding.
+When pre-rendered case-document assets are present, the seed also copies PNG
+pages into protected uploads and marks the corresponding `pdf_render_jobs` row
+as completed so teacher and student UIs can prefer images immediately.
 
 In development Docker Compose environments, the `ethicapp` container runs this
 seed automatically during startup. The seed is idempotent, so repeated container

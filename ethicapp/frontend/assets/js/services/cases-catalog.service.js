@@ -41,6 +41,11 @@ let CasesCatalogService = ($http) => {
             return response.data.result;
         },
 
+        async getCaseDocumentProcessing(caseId) {
+            const response = await $http.get(`/cases/${caseId}/document-processing`);
+            return response.data.result;
+        },
+
         async createCase(caseData) {
             const formData = new FormData();
             formData.append("title", caseData.title);

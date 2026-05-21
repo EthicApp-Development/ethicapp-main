@@ -164,13 +164,14 @@ function UsersPage() {
                   <th>{t('pages.users.columns.lastname')}</th>
                   <th>{t('pages.users.columns.email')}</th>
                   <th>{t('pages.users.columns.role')}</th>
+                  <th>{t('pages.users.columns.status')}</th>
                   <th>{t('pages.users.columns.actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {usersResponse.items.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center text-secondary">
+                    <td colSpan={6} className="text-center text-secondary">
                       {t('pages.users.empty')}
                     </td>
                   </tr>
@@ -181,6 +182,15 @@ function UsersPage() {
                       <td>{user.lastname}</td>
                       <td>{user.email}</td>
                       <td>{roleLabel(user.role)}</td>
+                      <td>
+                        {!user.emailConfirmed ? (
+                          <span className="badge text-bg-warning">{t('pages.users.status.pending')}</span>
+                        ) : user.active ? (
+                          <span className="badge text-bg-success">{t('pages.users.status.active')}</span>
+                        ) : (
+                          <span className="badge text-bg-secondary">{t('pages.users.status.inactive')}</span>
+                        )}
+                      </td>
                       <td>
                         <Button as={Link} to={`/users/${user.id}`} size="sm" variant="outline-secondary">
                           <i className="fa-solid fa-eye me-2" aria-hidden="true" />

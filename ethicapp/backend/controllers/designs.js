@@ -535,7 +535,7 @@ router.get('/designs/:id/valid', async (req, res) => {
 });
 
 router.get("/designs/:id/case", async (req, res) => {
-    if (!requireRole(req, res, ["P", "A"])) {
+    if (!requireRole(req, res, ["P", "A", "S"])) {
         return;
     }
 
@@ -556,9 +556,33 @@ router.get("/designs/:id/case", async (req, res) => {
                        c.author_email
                 FROM designs d
                 LEFT JOIN ethical_cases c ON c.id = d.case_id
-                WHERE d.id = $1;
+                WHERE d.id = $1
+                  AND (
+                    $3 = 'A'
+                    OR d.creator = $2
+                    OR d.public = TRUE
+                    OR EXISTS (
+                        SELECT 1
+                        FROM activity a
+                        INNER JOIN sessions s ON s.id = a.session
+                        WHERE a.design = d.id
+                          AND (
+                            s.creator = $2
+                            OR EXISTS (
+                                SELECT 1
+                                FROM sesusers su
+                                WHERE su.sesid = s.id
+                                  AND su.uid = $2
+                            )
+                          )
+                    )
+                  );
             `,
-            sqlParams: [rpg2.param("plain", designId)],
+            sqlParams: [
+                rpg2.param("plain", designId),
+                rpg2.param("plain", req.session.uid),
+                rpg2.param("plain", req.session.role || ""),
+            ],
         });
 
         if (!result || !result.design_id) {

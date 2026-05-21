@@ -60,22 +60,16 @@ export let isDifferent = (type) => {
     return false;
 };
 
-export let ngQuillConfigProvider = (ngQuillConfigProvider) => {
-    ngQuillConfigProvider.set({
-        modules: {
-            formula: true,
-            toolbar: {
-                container: [["bold", "italic", "underline", "strike"], // toggled buttons
-                    [{ "color": [] }, { "background": [] }], // dropdown with defaults from theme
-                    [{ "font": [] }], [{ "align": [] }],
-                    [{ "list": "ordered" }, { "list": "bullet" }],
-                    [{ "script": "sub" }, { "script": "super" }], // superscript/subscript
-                    [{ "size": ["small", false, "large", "huge"] }], // custom dropdown
-                    ["clean"], // remove formatting button
-                    ["image", "link", "video"], // remove formatting button
-                    ["formula"]
-                ]
-            }
-        }
-    });
+export let habMetric = (u) => {
+    switch (u.aprendizaje) {
+    case "Teorico":
+        return -2;
+    case "Reflexivo":
+        return -1;
+    case "Activo":
+        return 1;
+    case "Pragmatico":
+        return 2;
+    }
+    return 0;
 };

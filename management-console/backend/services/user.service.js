@@ -60,7 +60,9 @@ export async function listUsers({ keywords = '', role = null, page = 1, pageSize
         firstname,
         lastname,
         mail,
-        role
+        role,
+        active,
+        email_confirmed
       FROM users
       ${whereSql}
       ORDER BY id DESC
@@ -75,7 +77,9 @@ export async function listUsers({ keywords = '', role = null, page = 1, pageSize
     firstname: row.firstname || '',
     lastname: row.lastname || '',
     email: row.mail || '',
-    role: row.role || ''
+    role: row.role || '',
+    active: row.active !== false,
+    emailConfirmed: row.email_confirmed !== false
   }));
 
   return {
@@ -102,7 +106,9 @@ export async function getUserById(userId) {
         lastname,
         sex,
         mail,
-        role
+        role,
+        active,
+        email_confirmed
       FROM users
       WHERE id = $1
       LIMIT 1
@@ -122,7 +128,9 @@ export async function getUserById(userId) {
     lastname: row.lastname || '',
     sex: row.sex || '',
     email: row.mail || '',
-    role: row.role || ''
+    role: row.role || '',
+    active: row.active !== false,
+    emailConfirmed: row.email_confirmed !== false
   };
 }
 
@@ -158,7 +166,7 @@ export async function updateUserById(userId, payload) {
 
   const currentResult = await query(
     `
-      SELECT id, role, mail
+      SELECT id, role, mail, active
       FROM users
       WHERE id = $1
       LIMIT 1
@@ -171,6 +179,9 @@ export async function updateUserById(userId, payload) {
   }
 
   const currentUser = currentResult.rows[0];
+  const active = Object.prototype.hasOwnProperty.call(payload, 'active')
+    ? payload.active === true || payload.active === 'true' || payload.active === 'on'
+    : currentUser.active !== false;
   const isRoleChanged = (currentUser.role || '') !== role;
   const validTransition =
     (currentUser.role === 'A' && role === 'P') ||
@@ -206,11 +217,13 @@ export async function updateUserById(userId, payload) {
           name = $3,
           sex = $4,
           mail = $5,
-          role = $6
-      WHERE id = $7
-      RETURNING id, firstname, lastname, sex, mail, role
+          role = $6,
+          active = $7,
+          email_confirmed = CASE WHEN $7 = true THEN true ELSE email_confirmed END
+      WHERE id = $8
+      RETURNING id, firstname, lastname, sex, mail, role, active, email_confirmed
     `,
-    [firstname, lastname, fullName, sex, email, role, normalizedId]
+    [firstname, lastname, fullName, sex, email, role, active, normalizedId]
   );
 
   const row = updateResult.rows[0];
@@ -221,6 +234,8 @@ export async function updateUserById(userId, payload) {
     lastname: row.lastname || '',
     sex: row.sex || '',
     email: row.mail || '',
-    role: row.role || ''
+    role: row.role || '',
+    active: row.active !== false,
+    emailConfirmed: row.email_confirmed !== false
   };
 }
