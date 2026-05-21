@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en-US">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confirm your account</title>
+</head>
+
+<body style="font-family: Arial, sans-serif; line-height: 1.5; color: #222;">
+  <h2>Confirm your EthicApp account</h2>
+  <p>
+    Your EthicApp account has been created. Confirm your email address using the following link:
+  </p>
+
+  <p>
+    <a href="<%= confirmationUrl %>" target="_blank" rel="noopener noreferrer">
+      <%= confirmationUrl %>
+    </a>
+  </p>
+
+  <p>
+    This link expires in <strong><%= confirmationTokenTtlMinutes %> minutes</strong>.
+  </p>
+
+  <p>
+    If the link expires, use password recovery to receive a new link and activate your account while setting a new password.
+  </p>
+</body>
+
+</html>

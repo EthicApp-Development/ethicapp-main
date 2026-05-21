@@ -7,7 +7,10 @@ import bcrypt from 'bcrypt';
 
 const dbMock = { query: mock.fn() };
 const recaptchaMock = { verifyRecaptchaToken: mock.fn() };
-const mailMock = { sendPasswordResetEmail: mock.fn() };
+const mailMock = {
+  sendPasswordResetEmail: mock.fn(),
+  sendAccountConfirmationEmail: mock.fn()
+};
 
 mock.module('../config/database.js', { defaultExport: dbMock });
 mock.module('../services/recaptcha.service.js', { defaultExport: recaptchaMock });
@@ -35,6 +38,7 @@ function createUser(overrides = {}) {
     role: 'A',
     auth_provider: 'local',
     active: true,
+    email_confirmed: true,
     password_bcrypt: '',
     ...overrides
   };
@@ -69,6 +73,8 @@ describe('Auth Routes', () => {
     recaptchaMock.verifyRecaptchaToken.mock.restore();
     mailMock.sendPasswordResetEmail.mock.resetCalls();
     mailMock.sendPasswordResetEmail.mock.restore();
+    mailMock.sendAccountConfirmationEmail.mock.resetCalls();
+    mailMock.sendAccountConfirmationEmail.mock.restore();
   });
 
   test('POST /login - missing credentials', async () => {
@@ -204,7 +210,7 @@ describe('Auth Routes', () => {
     assert.strictEqual(res.body.code, 'duplicate_user_identifier');
   });
 
-  test('POST /register - valid registration stores normalized locale and hashed password', async () => {
+  test('POST /register - valid registration stores inactive pending account and sends confirmation mail', async () => {
     recaptchaMock.verifyRecaptchaToken.mock.mockImplementationOnce(() => Promise.resolve(true));
     dbMock.query.mock.mockImplementation((queryStr) => {
       if (queryStr.includes('SELECT id, mail, rut')) {
@@ -215,6 +221,7 @@ describe('Auth Routes', () => {
       }
       return Promise.resolve({ rowCount: 0, rows: [] });
     });
+    mailMock.sendAccountConfirmationEmail.mock.mockImplementationOnce(() => Promise.resolve());
 
     const res = await supertest(app)
       .post('/register')
@@ -237,6 +244,81 @@ describe('Auth Routes', () => {
     ]);
     assert.strictEqual(await bcrypt.compare('StrongPassword123!@', insertCall.arguments[1][8]), true);
     assert.strictEqual(insertCall.arguments[1][9], 'local');
+
+    const insertSql = insertCall.arguments[0];
+    assert.match(insertSql, /active,\s*email_confirmed/);
+    assert.match(insertSql, /false,\s*false/);
+
+    const tokenInsertCall = dbMock.query.mock.calls.find((call) => call.arguments[0].includes('INSERT INTO pass_reset'));
+    assert.strictEqual(tokenInsertCall.arguments[1][0], 'john@example.com');
+
+    assert.strictEqual(mailMock.sendAccountConfirmationEmail.mock.calls.length, 1);
+    const mailArgs = mailMock.sendAccountConfirmationEmail.mock.calls[0].arguments[0];
+    assert.strictEqual(mailArgs.to, 'john@example.com');
+    assert.strictEqual(mailArgs.preferredLocale, 'es_CL');
+    assert.strictEqual(sha256Hex(mailArgs.rawToken), tokenInsertCall.arguments[1][1]);
+  });
+
+  test('POST /register - account remains recoverable when confirmation email fails', async () => {
+    const consoleError = mock.method(console, 'error', () => {});
+    recaptchaMock.verifyRecaptchaToken.mock.mockImplementationOnce(() => Promise.resolve(true));
+    dbMock.query.mock.mockImplementation((queryStr) => {
+      if (queryStr.includes('SELECT id, mail, rut')) {
+        return Promise.resolve({ rowCount: 0, rows: [] });
+      }
+      if (queryStr.includes('INSERT INTO users')) {
+        return Promise.resolve({ rowCount: 1, rows: [{ id: 43 }] });
+      }
+      return Promise.resolve({ rowCount: 0, rows: [] });
+    });
+    mailMock.sendAccountConfirmationEmail.mock.mockImplementationOnce(() => Promise.reject(new Error('smtp down')));
+
+    const res = await supertest(app)
+      .post('/register')
+      .send(validRegistrationPayload());
+
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.body.code, 'confirmation_email_failed');
+    assert.strictEqual(res.body.user_id, 43);
+    assert.strictEqual(consoleError.mock.calls.length, 1);
+    consoleError.mock.restore();
+  });
+
+  test('GET /confirm-account - activates pending accounts with a valid token', async () => {
+    dbMock.query.mock.mockImplementation((queryStr) => {
+      if (queryStr.includes('FROM pass_reset pr')) {
+        return Promise.resolve({
+          rowCount: 1,
+          rows: [{ mail: 'pending@example.com' }]
+        });
+      }
+
+      return Promise.resolve({ rowCount: 0, rows: [] });
+    });
+
+    const res = await supertest(app)
+      .get('/confirm-account/confirmation-token');
+
+    assert.strictEqual(res.status, 302);
+    assert.strictEqual(res.headers.location, '/auth/login?confirmed=1');
+
+    const lookupCall = dbMock.query.mock.calls.find((call) => call.arguments[0].includes('FROM pass_reset pr'));
+    assert.deepStrictEqual(lookupCall.arguments[1], [sha256Hex('confirmation-token'), 60]);
+
+    const updateCall = dbMock.query.mock.calls.find((call) => call.arguments[0].includes('email_confirmed = true'));
+    assert.deepStrictEqual(updateCall.arguments[1], ['pending@example.com']);
+  });
+
+  test('GET /confirm-account - keeps query-token links compatible', async () => {
+    dbMock.query.mock.mockImplementationOnce(() => Promise.resolve({ rowCount: 0, rows: [] }));
+
+    const res = await supertest(app)
+      .get('/confirm-account')
+      .query({ token: 'old-link-token' });
+
+    assert.strictEqual(res.status, 302);
+    assert.strictEqual(res.headers.location, '/auth/login?confirmed=invalid');
+    assert.deepStrictEqual(dbMock.query.mock.calls[0].arguments[1], [sha256Hex('old-link-token'), 60]);
   });
 
   test('POST /forgot - unknown email returns generic response without sending mail', async () => {
@@ -264,7 +346,8 @@ describe('Auth Routes', () => {
           rows: [{
             id: 9,
             mail: 'person@example.com',
-            active: true
+            active: true,
+            email_confirmed: true
           }]
         });
       }
@@ -310,7 +393,7 @@ describe('Auth Routes', () => {
 
     assert.strictEqual(res.status, 400);
     assert.strictEqual(res.body.error, 'Token is invalid or has expired');
-    assert.deepStrictEqual(dbMock.query.mock.calls[0].arguments[1], [sha256Hex('expired-token')]);
+    assert.deepStrictEqual(dbMock.query.mock.calls[0].arguments[1], [sha256Hex('expired-token'), 60]);
   });
 
   test('POST /reset-password - updates password and consumes reset token', async () => {
@@ -325,7 +408,7 @@ describe('Auth Routes', () => {
       if (queryStr.includes('FROM users')) {
         return Promise.resolve({
           rowCount: 1,
-          rows: [{ id: 9 }]
+          rows: [{ id: 9, active: false, email_confirmed: false }]
         });
       }
 
@@ -348,5 +431,7 @@ describe('Auth Routes', () => {
     assert.strictEqual(await bcrypt.compare('FreshPassword123!@', updateCall.arguments[1][0]), true);
     assert.strictEqual(updateCall.arguments[1][1], 9);
     assert.deepStrictEqual(deleteCall.arguments[1], ['person@example.com']);
+    assert.match(updateCall.arguments[0], /active = CASE WHEN email_confirmed = false THEN true ELSE active END/);
+    assert.match(updateCall.arguments[0], /email_confirmed = true/);
   });
 });
