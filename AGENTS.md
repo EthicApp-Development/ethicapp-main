@@ -48,12 +48,14 @@ docker compose build
 Some service image builds run backend tests as part of their Dockerfile stages. In particular:
 
 - `docker compose build ethicapp` runs `npm test` in `ethicapp/backend` before building the final image.
+- `docker compose build auth-backend` runs `npm test` in `auth-backend` before building the final image.
 - `docker compose build management-console` runs `npm test` in `management-console/backend` before building the final image.
 
 Focused backend test commands:
 
 ```bash
 cd ethicapp/backend && npm test
+cd auth-backend && npm test
 cd management-console/backend && npm test
 ```
 
@@ -71,7 +73,13 @@ npm run fix-sql
 
 If a subproject has its own scripts, run its local build/test/lint commands from that subproject directory.
 
-When adding or changing backend behavior in `ethicapp/` or `management-console/`, prefer adding focused Node test coverage under the local backend test conventions (`*.node-test.mjs`). Keep tests deterministic, avoid depending on local-only config files, and make them safe to run both on the host and inside Docker build stages.
+When adding or changing backend behavior in `ethicapp/`, `auth-backend/`, or `management-console/`, prefer adding focused Node test coverage under the local backend test conventions (`*.node-test.mjs`). Keep tests deterministic, avoid depending on local-only config files, and make them safe to run both on the host and inside Docker build stages. The full repository testing policy lives in `TESTING.md`.
+
+Testing strategy:
+
+- Lightweight guardrail tests (`*.node-test.mjs`) are the current automated baseline. They should use mocks, fakes, injected services, or in-memory Express apps rather than real PostgreSQL/Redis/SMTP/external HTTP dependencies. These are the tests allowed to run during Docker image builds.
+- Integrated regression tests with real PostgreSQL are a planned second layer for development and CI. When introduced, keep them out of Dockerfile image construction and run them through an explicit command such as `npm run test:integration`, a dedicated Compose test file, or a test-container style harness.
+- Database-dependent behavior should eventually be covered by integration tests that validate schema compatibility, constraints, transactions, migrations/seeds, and cross-service flows. Until that layer exists for the touched area, document manual Docker Compose verification and residual risk in the PR.
 
 ## 4) Engineering conventions and PR expectations
 

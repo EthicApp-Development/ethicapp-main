@@ -12,11 +12,25 @@ COPY frontend ./
 RUN npm run build
 
 # -----------------------------
-# Stage 2: build backend
+# Stage 2: run backend tests
+# -----------------------------
+FROM node:22-alpine AS backend-test
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm test && touch /tmp/backend-tests-passed
+
+# -----------------------------
+# Stage 3: build backend
 # -----------------------------
 FROM node:22-alpine AS backend-builder
 
 WORKDIR /app
+
+COPY --from=backend-test /tmp/backend-tests-passed /tmp/backend-tests-passed
+RUN rm /tmp/backend-tests-passed
 
 COPY package*.json ./
 RUN npm ci --omit=dev
@@ -27,7 +41,7 @@ COPY . .
 COPY --from=frontend-builder /app/frontend/dist ./public/app
 
 # -----------------------------
-# Stage 3: runtime
+# Stage 4: runtime
 # -----------------------------
 FROM node:22-alpine
 

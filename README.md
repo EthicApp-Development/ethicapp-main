@@ -32,6 +32,7 @@ For repository conventions and agent/human working expectations, also review [`A
   - [8. Tests](#8-tests)
     - [8.1. Backend tests](#81-backend-tests)
     - [8.2. Docker build test stages](#82-docker-build-test-stages)
+    - [8.3. Integration regression tests](#83-integration-regression-tests)
   - [9. Useful Root Scripts](#9-useful-root-scripts)
   - [10. Production](#10-production)
 
@@ -206,7 +207,9 @@ In the Docker development flow, Vite is started by the root `docker-compose.yml`
 
 ## 8. Tests
 
-The repository is gradually adding focused automated tests around backend behavior that has been modernized or is security-sensitive. Tests currently use the built-in Node.js test runner and live beside the backend code they exercise.
+The repository uses a layered testing strategy. The first layer is lightweight guardrail coverage: deterministic Node.js tests that use mocks, fakes, or in-memory Express apps and are safe to run during Docker image builds. The second planned layer is broader integration regression coverage against real infrastructure, especially PostgreSQL, for development and CI verification. See [`TESTING.md`](./TESTING.md) for the full testing policy.
+
+At the moment, automated coverage is mostly the lightweight guardrail layer. These tests use the built-in Node.js test runner and live beside the backend code they exercise.
 
 ### 8.1. Backend tests
 
@@ -218,6 +221,11 @@ npm test
 ```
 
 ```bash
+cd auth-backend
+npm test
+```
+
+```bash
 cd management-console/backend
 npm test
 ```
@@ -225,6 +233,7 @@ npm test
 Current coverage includes:
 
 - `ethicapp/backend`: upload middleware behavior for PDF validation, size limits, wrong fields, temporary cleanup, final file moves, protected upload authorization, and PDF render job status helpers.
+- `auth-backend`: CSRF protection plus authentication route behavior for login, registration validation, duplicate account handling, locale normalization, forgot-password token creation, and password reset.
 - `management-console/backend`: professor impersonation route behavior, including reCAPTCHA rejection, role rejection, and EthicApp session cookie forwarding.
 
 ### 8.2. Docker build test stages
@@ -233,10 +242,19 @@ The production image builds for these services run backend tests during Docker b
 
 ```bash
 docker compose build ethicapp
+docker compose build auth-backend
 docker compose build management-console
 ```
 
 If those tests fail, the image build fails. This keeps the local Compose build path aligned with the minimum verification expected before merging backend changes.
+
+The tests executed during image build must stay fast, deterministic, and independent from running services. They should not require PostgreSQL, Redis, SMTP, external HTTP APIs, or local-only configuration. When database behavior needs to be covered in this layer, use mocks/fakes and assert the service contract, SQL shape, transaction flow, or error handling path.
+
+### 8.3. Integration regression tests
+
+Integration regression tests are intended to validate behavior that lightweight guardrails cannot prove, including real PostgreSQL schema compatibility, constraints, transactions, migrations/seeds, and cross-service session or proxy flows. These tests should run as a dedicated development/CI step, not as part of Docker image construction.
+
+This layer is not yet consistently implemented. Until it exists for a touched area, changes that depend on real database behavior should be manually verified against the local Docker Compose stack and should document that limitation in PR verification notes. The intended conventions for this layer are documented in [`TESTING.md`](./TESTING.md).
 
 ## 9. Useful Root Scripts
 

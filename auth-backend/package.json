@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "test": "node --test \"**/*.node-test.mjs\"",
+    "test": "node --experimental-test-module-mocks --test \"**/*.node-test.mjs\"",
     "create:user": "node scripts/create-user.js",
     "create:admin": "node scripts/create-admin.js",
     "frontend:dev": "cd frontend && npm run dev",
@@ -30,6 +30,7 @@
     "redis": "^4.7.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "supertest": "^7.2.2"
   }
 }
