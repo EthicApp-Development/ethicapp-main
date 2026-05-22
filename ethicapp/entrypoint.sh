@@ -78,6 +78,41 @@ seed_canonical_activities() {
   echo "Canonical activity seed could not be completed after $max_attempts attempts. Continuing startup."
 }
 
+seed_tag_taxonomies() {
+  if [ "${ETHICAPP_SEED_TAG_TAXONOMIES:-true}" != "true" ]; then
+    echo "Tag taxonomy seed disabled."
+    return 0
+  fi
+
+  if [ ! -d /database/seeds/tag-taxonomies ]; then
+    echo "Tag taxonomy seed directory not found. Skipping seed."
+    return 0
+  fi
+
+  if ! find /database/seeds/tag-taxonomies -maxdepth 1 -name '*.json' -type f | grep -q .; then
+    echo "No tag taxonomy seed files found. Skipping seed."
+    return 0
+  fi
+
+  echo "Seeding tag taxonomies..."
+
+  attempts=1
+  max_attempts="${ETHICAPP_SEED_TAG_TAXONOMIES_ATTEMPTS:-12}"
+
+  while [ "$attempts" -le "$max_attempts" ]; do
+    if npm run seed:tag-taxonomies -- --seedDir=/database/seeds/tag-taxonomies; then
+      echo "Tag taxonomy seed completed."
+      return 0
+    fi
+
+    echo "Tag taxonomy seed attempt $attempts/$max_attempts failed."
+    attempts=$((attempts + 1))
+    sleep 5
+  done
+
+  echo "Tag taxonomy seed could not be completed after $max_attempts attempts. Continuing startup."
+}
+
 install_dependencies /app/backend node_modules/dotenv
 
 if [ "${ETHICAPP_PROCESS_ROLE:-web}" = "pdf-render-worker" ]; then
@@ -105,6 +140,7 @@ echo "NODE_ENV=${NODE_ENV}"
 
 # Decide how to run the app
 if [ "$NODE_ENV" = "development" ]; then
+  seed_tag_taxonomies
   seed_canonical_activities
 
   echo "Running in development mode with nodemon..."

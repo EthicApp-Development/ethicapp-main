@@ -25,6 +25,11 @@ const enUS = {
       usernameRequired: 'Username is required.',
       passwordRequired: 'Password is required.',
       genericLoginError: 'We could not sign you in. Check your credentials.'
+    },
+    notices: {
+      accountConfirmed: 'Your account has been confirmed. You can now sign in.',
+      confirmationInvalid: 'The confirmation link is invalid or has expired. Use password recovery to request a new link.',
+      confirmationError: 'We could not confirm your account. Use password recovery to request a new link.'
     }
   },
   register: {
@@ -65,7 +70,7 @@ const enUS = {
     privacyNoticePartThreeSuffix: '.',
     alreadyHaveAccount: 'Already have an account?',
     signInLink: 'Sign in',
-    successMessage: 'Account created successfully. You can now sign in.',
+    successMessage: 'Account created successfully. Check your email to confirm it before signing in.',
     recoverPasswordLink: 'Recover password',
     errors: {
       firstnameRequired: 'First name is required.',
@@ -92,7 +97,7 @@ const enUS = {
     submit: 'Send instructions',
     submitting: 'Sending...',
     backToLogin: 'Back to sign in',
-    successMessage: 'If an account exists for that email, you will receive reset instructions.',
+    successMessage: 'If an account exists for that email, you will receive reset instructions. Pending accounts can be activated from that link.',
     errors: {
       emailRequired: 'Email is required.',
       emailInvalid: 'Enter a valid email address.',
@@ -108,7 +113,7 @@ const enUS = {
     submit: 'Update password',
     submitting: 'Updating...',
     backToLogin: 'Back to sign in',
-    successMessage: 'Password updated successfully. You will be redirected to sign in.',
+    successMessage: 'Password updated successfully. If your account was pending confirmation, it is now active. You will be redirected to sign in.',
     passwordRules: {
       helpText: 'Minimum 10 characters and at least 2 symbols.',
       minLength: 'Minimum 10 characters',

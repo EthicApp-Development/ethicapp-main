@@ -4,6 +4,8 @@ import { designFactories } from  "../../../../../common/modules/design-types.js"
 export function CreateDesignController($scope, $window,
     DesignCatalogService, UserInformationService) {
     const vm = this;
+    vm.selectedOption = "semantic_differential";
+    vm.associatedCase = null;
 
     vm.goBack = function() {
         if ($window.history.length > 1) {
@@ -12,6 +14,14 @@ export function CreateDesignController($scope, $window,
         }
 
         $scope.navigateTo("/designs");
+    };
+
+    vm.selectCase = function(caseItem) {
+        vm.associatedCase = caseItem || null;
+    };
+
+    vm.clearAssociatedCase = function() {
+        vm.associatedCase = null;
     };
 
     vm.uploadDesign = async function (title, type) {
@@ -26,6 +36,7 @@ export function CreateDesignController($scope, $window,
             
             design.metainfo.institution = userInformation.institution_name || "";
             design.metainfo.email = userInformation.email;
+            design.caseId = vm.associatedCase?.id || null;
 
             const designId = await DesignCatalogService.createDesign(design);
 

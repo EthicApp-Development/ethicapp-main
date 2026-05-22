@@ -68,26 +68,19 @@ export function DesignEditorController($scope, $translate, $timeout,
         }
     };
 
-    vm.searchCases = async function(query) {
-        return CasesCatalogService.searchCases(query);
-    };
-
     vm.selectCase = function(caseItem) {
         if (!caseItem) {
             vm.design.caseId = null;
             vm.associatedCase = null;
-            vm.selectedCase = "";
             return;
         }
         vm.design.caseId = caseItem.id;
         vm.associatedCase = caseItem;
-        vm.selectedCase = vm.formatCaseLabel(caseItem);
     };
 
     vm.clearAssociatedCase = function() {
         vm.design.caseId = null;
         vm.associatedCase = null;
-        vm.selectedCase = "";
     };
 
     vm.formatCaseLabel = function(caseItem) {

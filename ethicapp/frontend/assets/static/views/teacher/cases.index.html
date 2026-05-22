@@ -12,33 +12,100 @@
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-12">
-            <div ng-if="vm.cases.length > 0">
-                <case-card
-                    ng-repeat="caseItem in vm.getPaginatedCases() track by caseItem.id"
-                    case-item="caseItem"
-                    on-view="vm.viewCase"
-                    on-edit="vm.editCase"
-                    on-delete="vm.deleteCaseFromCard">
-                </case-card>
+    <div class="row" style="position: relative;">
+        <ul class="nav nav-tabs" style="margin-left: 16px; display: inline-block;">
+            <li ng-class="{'active': vm.caseMode === 0}">
+                <a href="" ng-click="vm.setCaseMode(0)">{{ 'yours' | translate }}</a>
+            </li>
+            <li ng-class="{'active': vm.caseMode === 1}">
+                <a href="" ng-click="vm.setCaseMode(1)">{{ 'byOthers' | translate }}</a>
+            </li>
+            <li ng-class="{'active': vm.caseMode === 2}">
+                <a href="" ng-click="vm.setCaseMode(2)">{{ 'archived' | translate }}</a>
+            </li>
+        </ul>
 
-                <div class="case-pagination-controls" ng-if="vm.getTotalPages() > 1">
-                    <button class="btn btn-default btn-sm" ng-click="vm.previousPage()" ng-disabled="vm.currentPage === 1">
-                        <i class="fa fa-chevron-left" aria-hidden="true"></i> {{ 'pagination_previous' | translate }}
-                    </button>
-                    <span class="case-pagination-status">
-                        {{ 'pagination_page' | translate }} {{ vm.currentPage }} / {{ vm.getTotalPages() }}
-                    </span>
-                    <button class="btn btn-default btn-sm" ng-click="vm.nextPage()" ng-disabled="vm.currentPage === vm.getTotalPages()">
-                        {{ 'pagination_next' | translate }} <i class="fa fa-chevron-right" aria-hidden="true"></i>
-                    </button>
-                </div>
+        <div style="position: absolute; left: 280px; top: 6px; min-width: 80px; max-width: 240px;">
+            <div class="search-field-wrapper">
+                <input
+                    class="form-control search-input search-decorated-input"
+                    type="text"
+                    placeholder="{{ 'search_cases_placeholder' | translate }}"
+                    ng-model="vm.caseSearch"
+                    ng-change="vm.setPage(1)">
+                <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
             </div>
+        </div>
+    </div>
 
-            <div class="alert alert-info" ng-if="vm.cases.length === 0">
-                <span>{{ 'empty_cases_message' | translate }}</span>
-                <a href="" ng-click="navigateTo('/cases/new')">{{ 'empty_cases_link' | translate }}</a>.
+    <div class="row" style="margin-left:-14px; margin-top: -6px;">
+        <div class="col-md-12">
+            <div class="panel panel-default">
+                <div class="panel-heading designs-list" style="padding-top: 0px; padding-left: 8px; min-height: 1.25em; max-height: 1.25em; background: white;">
+                    <div class="cases-toast-container">
+                        <toast></toast>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div ng-if="vm.getFilteredCases().length > 0">
+                        <div ng-if="vm.caseMode === 0">
+                            <case-card
+                                ng-repeat="caseItem in vm.getPaginatedCases() track by caseItem.id"
+                                case-item="caseItem"
+                                on-view="vm.viewCase"
+                                on-edit="vm.editCase"
+                                on-delete="vm.deleteCaseFromCard"
+                                on-duplicate="vm.duplicateCase"
+                                on-archive="vm.archiveCase"
+                                on-toggle-public="vm.toggleCaseVisibility">
+                            </case-card>
+                        </div>
+
+                        <div ng-if="vm.caseMode === 1">
+                            <case-card
+                                ng-repeat="caseItem in vm.getPaginatedCases() track by caseItem.id"
+                                case-item="caseItem"
+                                on-view="vm.viewCase"
+                                on-import="vm.importCase">
+                            </case-card>
+                        </div>
+
+                        <div ng-if="vm.caseMode === 2">
+                            <case-card
+                                ng-repeat="caseItem in vm.getPaginatedCases() track by caseItem.id"
+                                case-item="caseItem"
+                                on-view="vm.viewCase"
+                                on-duplicate="vm.duplicateCase"
+                                on-archive="vm.archiveCase">
+                            </case-card>
+                        </div>
+
+                        <div class="case-pagination-controls" ng-if="vm.getTotalPages() > 1">
+                            <button class="btn btn-default btn-sm" ng-click="vm.previousPage()" ng-disabled="vm.currentPage === 1">
+                                <i class="fa fa-chevron-left" aria-hidden="true"></i> {{ 'pagination_previous' | translate }}
+                            </button>
+                            <span class="case-pagination-status">
+                                {{ 'pagination_page' | translate }} {{ vm.currentPage }} / {{ vm.getTotalPages() }}
+                            </span>
+                            <button class="btn btn-default btn-sm" ng-click="vm.nextPage()" ng-disabled="vm.currentPage === vm.getTotalPages()">
+                                {{ 'pagination_next' | translate }} <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info" ng-if="vm.caseMode === 0 && vm.getFilteredCases().length === 0">
+                        <span>{{ 'empty_cases_message' | translate }}</span>
+                        <a href="" ng-click="navigateTo('/cases/new')">{{ 'empty_cases_link' | translate }}</a>.
+                    </div>
+
+                    <div class="alert alert-info" ng-if="vm.caseMode === 1 && vm.getFilteredCases().length === 0">
+                        <span>{{ 'empty_shared_cases_message' | translate }}</span>
+                    </div>
+
+                    <div class="alert alert-info" ng-if="vm.caseMode === 2 && vm.getFilteredCases().length === 0">
+                        <span>{{ 'empty_archived_cases_message' | translate }}</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

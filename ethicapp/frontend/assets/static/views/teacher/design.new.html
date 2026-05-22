@@ -1,60 +1,71 @@
-<div ng-controller="CreateDesignController as cdc">
-    <h2><i class="fa fa-paint-brush"></i> {{'designMsg'|translate}}</h2>
-    <button type="button" class="btn btn-default btn-sm mb-2" ng-click="cdc.goBack()">
-        <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
-    </button>
-    <br>
-
-    <div class="modal-header pl-0">
-        <h4>{{'designMsgInfo'|translate}}</h4>
+<div class="container" ng-controller="CreateDesignController as cdc">
+    <div class="row">
+        <div class="col-md-12 mb-2">
+            <h2><i class="fa fa-paint-brush"></i> {{ 'design_create_activity_design' | translate }}</h2>
+            <button type="button" class="btn btn-default btn-sm" ng-click="cdc.goBack()">
+                <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
+            </button>
+        </div>
     </div>
-    <form class="modal-body form-new-design"
+
+    <div class="row">
+        <div class="col-md-12 mb-2">
+            <h4>
+                {{ 'design_new_intro_before_create_link' | translate }}
+                <a href="" ng-click="navigateTo('/cases/new')">{{ 'design_new_intro_create_case_link' | translate }}</a>
+                {{ 'design_new_intro_after_create_link' | translate }}
+            </h4>
+        </div>
+    </div>
+
+    <form
         name="formDesign"
         ng-submit="formDesign.$valid && cdc.uploadDesign(cdc.title, cdc.selectedOption)"
         novalidate>
-        <div class="wrapper_nd">
-            <div class="line-form-nd">
-                <div class="line-row-nd">
-                    <label>{{'activityType'|translate}}</label>
-                    <div class="line-control-nd">
-                        <select
-                            name="activityType"
-                            ng-model="cdc.selectedOption"
-                            class="form-control line_input w-22"
-                            ng-required="true"
-                            ng-class="{'input-warning': formDesign.activityType.$invalid && formDesign.$submitted}">
-                            <option value="" selected disabled>{{'selectActivityType'|translate}}</option>
-                            <option value="semantic_differential">{{'semantic_differential'|translate}}</option>
-                            <option value="ranking">{{'ranking_activity'|translate}}</option>
-                        </select>
-                        <p class="validation-message"
-                            ng-if="formDesign.activityType.$error.required && formDesign.$submitted">
-                            {{'design_activity_type_required_error' | translate}}
-                        </p>
-                    </div>
-                </div>
-                <div class="line-row-nd">
-                    <label>{{'title'|translate}}:</label>
-                    <div class="line-control-nd">
-                        <input type="text"
-                            class="form-control line_input"
+        <div class="row">
+            <div class="col-md-12">
+                <fieldset>
+                    <legend>{{ 'design_new_case_section' | translate }}</legend>
+                    <case-search-selector
+                        associated-case="cdc.associatedCase"
+                        on-select="cdc.selectCase(caseItem)"
+                        on-clear="cdc.clearAssociatedCase()">
+                    </case-search-selector>
+                </fieldset>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <fieldset>
+                    <legend>{{ 'design_new_title_section' | translate }}</legend>
+                    <div class="form-group case-form-field">
+                        <label for="designNewTitle">
+                            {{ 'design_title_input_label' | translate }}
+                            <span class="text-danger" aria-hidden="true">*</span>
+                        </label>
+                        <input id="designNewTitle"
+                            type="text"
+                            class="form-control"
                             name="title"
                             ng-model="cdc.title"
                             ng-required="true"
                             ng-class="{'input-warning': formDesign.title.$invalid && (formDesign.$submitted || formDesign.title.$touched)}">
-                        <p class="validation-message"
+                        <p class="help-block">{{ 'required_field_note' | translate }}</p>
+                        <p class="help-block text-danger"
                             ng-if="formDesign.title.$error.required && (formDesign.$submitted || formDesign.title.$touched)">
-                            {{'design_title_required_error' | translate}}
+                            {{ 'design_title_required_error' | translate }}
                         </p>
                     </div>
-                </div>
+                </fieldset>
             </div>
         </div>
-        <br>
-        <hr class="mt-1medio">
-        <br>
-        <div class="new-design-bottom">
-            <button class="btn btn-primary" type="submit">{{'next'|translate}}</button>
+
+        <div class="row">
+            <div class="col-md-12">
+                <hr class="mt-1medio">
+                <button class="btn btn-primary" type="submit">{{ 'next' | translate }}</button>
+            </div>
         </div>
     </form>
 </div>

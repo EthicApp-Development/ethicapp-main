@@ -4,6 +4,7 @@ import { ActivityStateService } from "../../services/activity-state.service.js";
 import { ActivityCatalogService } from "../../services/activity-catalog.service.js";
 import { DesignStateService } from "../../services/design-state.service.js";
 import { DesignCatalogService } from "../../services/design-catalog.service.js";
+import { DesignPublicationService } from "../../services/design-publication.service.js";
 import { CasesCatalogService } from "../../services/cases-catalog.service.js";
 import { TeacherGroupChatService } from "../../services/teacher-group-chat.service.js";
 import { TeacherToastService } from "../../services/teacher-toast.service.js";
@@ -26,9 +27,10 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("TeacherGroupChatService", ["$http", "TeacherSocketService", TeacherGroupChatService])
     .factory("ActivityCatalogService", ["$http", ActivityCatalogService])
     .factory("DesignCatalogService", ["$rootScope", "$http", DesignCatalogService])
+    .factory("DesignPublicationService", ["$uibModal", "DesignCatalogService", "CasesCatalogService", DesignPublicationService])
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
     .factory("UserProfileService", ["$http", "$rootScope", "Upload", UserProfileService])
-    .factory("CasesCatalogService", ["$http", CasesCatalogService]);
+    .factory("CasesCatalogService", ["$rootScope", "$http", CasesCatalogService]);
 app.service("toast", ["$rootScope", "$timeout", TeacherToastService]);
 
 import { LocalesController } from "../../controllers/common/locales.controller.js";
@@ -97,7 +99,7 @@ app.controller("ActivityReportsController",
     ["$scope", "$routeParams", "$window", ActivityReportsController]);
 app.controller("BrowseDesignsController", 
     ["$scope", "$routeParams", "toast", "$translate", "ActivityStateService", "DesignCatalogService",
-        "$timeout", "$window",
+        "DesignPublicationService", "$timeout", "$window",
         BrowseDesignsController]); 
 app.controller("CreateDesignController", 
     ["$scope", "$window", "DesignCatalogService", "UserProfileService", CreateDesignController]);
@@ -106,9 +108,11 @@ app.controller("DashboardController",
         "ActivityStateService", "ActivityCatalogService", "DesignCatalogService",
         "CasesCatalogService", "TeacherGroupChatService", DashboardController]);
 app.controller("DesignViewerController", 
-    ["$scope", "$routeParams", "DesignCatalogService", "CasesCatalogService", DesignViewerController]);
+    ["$scope", "$routeParams", "$window", "DesignCatalogService", "CasesCatalogService",
+        "DesignPublicationService", DesignViewerController]);
 app.controller("CasesController",
-    ["$scope", "$routeParams", "$window", "$interval", "CasesCatalogService", CasesController]);
+    ["$scope", "$routeParams", "$window", "$interval", "$translate", "toast",
+        "CasesCatalogService", "UserProfileService", CasesController]);
 app.controller("ErrorController", 
     ["$scope", "$window", "$routeParams",
         ErrorController]);
@@ -182,9 +186,12 @@ import itemDuplicatorComponent from "../../components/item-duplicator.component.
 import designErrorSummaryComponent from "../../components/design-error-summary.component.js";
 import itemMoverComponent from '../../components/item-mover.component.js';
 import designItemComponent from '../../components/design-item.component.js';
+import caseSearchSelectorComponent from "../../components/case-search-selector.component.js";
 import caseCardComponent from "../../components/case-card.component.js";
 import caseDocumentViewerComponent from "../../components/case-document-viewer.component.js";
+import caseAuthorEditorComponent from "../../components/case-author-editor.component.js";
 import caseFormEditorComponent from "../../components/case-form-editor.component.js";
+import caseRightsEditorComponent from "../../components/case-rights-editor.component.js";
 import phaseInstructionsEditComponent from "../../components/phase-instructions-edit.component.js";
 import teacherGroupChatComponent from "../../components/teacher-group-chat.component.js";
 import teacherToastComponent from "../../components/teacher-toast.component.js";
@@ -202,9 +209,12 @@ app.component('designErrorSummary', designErrorSummaryComponent);
 app.component('rankingItemEditor', rankingItemEditorComponent);
 app.component('sdItemEditor', sdItemEditorComponent);
 app.component('designItem', designItemComponent);
+app.component("caseSearchSelector", caseSearchSelectorComponent);
 app.component("caseCard", caseCardComponent);
 app.component("caseDocumentViewer", caseDocumentViewerComponent);
+app.component("caseAuthorEditor", caseAuthorEditorComponent);
 app.component("caseFormEditor", caseFormEditorComponent);
+app.component("caseRightsEditor", caseRightsEditorComponent);
 app.component("phaseInstructionsEdit", phaseInstructionsEditComponent);
 app.component("teacherGroupChat", teacherGroupChatComponent);
 app.component("toast", teacherToastComponent);

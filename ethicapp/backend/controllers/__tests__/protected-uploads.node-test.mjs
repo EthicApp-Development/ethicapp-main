@@ -57,7 +57,8 @@ test("ethical case authorization keeps shared, imported, and activity-based acce
         { uid: 12, role: "P" },
         async ({ sql }) => {
             if (sql.includes("FROM ethical_cases c")) {
-                assert.match(sql, /d\.creator = \$2 OR d\.public = TRUE/);
+                assert.match(sql, /c\.visibility = 'public'/);
+                assert.match(sql, /d\.creator = \$2 OR d\.visibility = 'public'/);
                 assert.match(sql, /INNER JOIN activity a ON a\.design = d\.id/);
                 assert.match(sql, /FROM sesusers su/);
                 return [{ id: 7, pdf_path: "/uploads/cases/7/case.pdf" }];

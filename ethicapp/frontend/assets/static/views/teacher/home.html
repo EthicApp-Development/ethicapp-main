@@ -1,7 +1,7 @@
 <div class="row">
     <div class="col-md-12 mb-2">
         <h2><i class="fa fa-home" aria-hidden="true"></i> {{'teacher_workbench' | translate}}</h2>
-        <p class="margin-top-24" style="width: 60em;">{{'homeMsg' | translate}}</p>
+        <p class="margin-top-24" style="width: 60em;">{{'teacher_workbench_intro' | translate}}</p>
     </div>
 </div>
 
@@ -15,19 +15,29 @@
                             type="button"
                             ng-click="navigateTo('/cases/new')"
                             class="home-card">
-                            <img src="/assets/images/cards/create-case.jpg" class="img-responsive" alt="Create a case">
+                            <img src="/assets/images/cards/create-case.jpg" class="img-responsive" alt="{{'create_case' | translate}}">
                             <span class="home-card-caption">
-                                {{'createACase' | translate}}
+                                {{'create_case' | translate}}
                             </span>
                         </button>
 
                         <button
                             type="button"
+                            ng-click="navigateTo('/cases')"
+                            class="home-card">
+                            <img src="/assets/images/cards/search-cases.jpg" class="img-responsive" alt="{{'search_cases' | translate}}">
+                            <span class="home-card-caption">
+                                {{'search_cases' | translate}}
+                            </span>
+                        </button>                        
+
+                        <button
+                            type="button"
                             ng-click="navigateTo('/designs/new')"
                             class="home-card">
-                            <img src="/assets/images/cards/design-activity.jpg" class="img-responsive" alt="Design an activity">
+                            <img src="/assets/images/cards/design-activity.jpg" class="img-responsive" alt="{{'design_activity' | translate}}">
                             <span class="home-card-caption">
-                                {{'designActivity' | translate}}
+                                {{'design_activity' | translate}}
                             </span>
                         </button>
 
@@ -35,9 +45,9 @@
                             type="button"
                             ng-click="navigateTo('/activities/new')"
                             class="home-card">
-                            <img src="/assets/images/cards/launch-activity.jpg" class="img-responsive" alt="Launch an activity">
+                            <img src="/assets/images/cards/launch-activity.jpg" class="img-responsive" alt="{{'launch_activity' | translate}}">
                             <span class="home-card-caption">
-                                {{'launchAnActivity' | translate}}
+                                {{'launch_activity' | translate}}
                             </span>
                         </button>
 
@@ -45,11 +55,21 @@
                             type="button"
                             ng-click="navigateTo('/designs')"
                             class="home-card">
-                            <img src="/assets/images/cards/search-designs.jpg" class="img-responsive" alt="Search designs">
+                            <img src="/assets/images/cards/search-designs.jpg" class="img-responsive" alt="{{'search_designs' | translate}}">
                             <span class="home-card-caption">
-                                {{'searchDesigns' | translate}}
+                                {{'search_designs' | translate}}
                             </span>
                         </button>
+
+                        <button
+                            type="button"
+                            ng-click="navigateTo('/activities')"
+                            class="home-card">
+                            <img src="/assets/images/cards/search-activities.jpg" class="img-responsive" alt="{{'view_activities' | translate}}">
+                            <span class="home-card-caption">
+                                {{'view_activities' | translate}}
+                            </span>
+                        </button>                        
                     </div>
                 </div>
             </div>

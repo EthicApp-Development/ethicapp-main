@@ -12,32 +12,11 @@
     </div>
     <div class="panel panel-default">
         <div class="panel-body">
-            <label for="designCaseSearch">{{ 'design_associated_case_label' | translate }}</label>
-            <div class="search-field-wrapper launch-activity-search-wrapper">
-                <input
-                    id="designCaseSearch"
-                    type="text"
-                    class="form-control launch-activity-search search-decorated-input"
-                    placeholder="{{ 'design_associated_case_placeholder' | translate }}"
-                    ng-model="dec.selectedCase"
-                    uib-typeahead="caseItem as dec.formatCaseLabel(caseItem) for caseItem in dec.searchCases($viewValue)"
-                    typeahead-on-select="dec.selectCase($item)"
-                    typeahead-editable="false"
-                    typeahead-min-length="2">
-                <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
-            </div>
-            <p class="help-block" ng-if="!dec.associatedCase">
-                {{ 'design_no_case_associated' | translate }}
-            </p>
-            <p class="help-block" ng-if="dec.associatedCase">
-                <strong>{{ 'design_associated_case_current' | translate }}:</strong>
-                <a ng-href="#!/cases/{{dec.associatedCase.id}}">
-                    {{ dec.formatCaseLabel(dec.associatedCase) }}
-                </a>
-                <button type="button" class="btn btn-link btn-xs" ng-click="dec.clearAssociatedCase()">
-                    {{ 'remove' | translate }}
-                </button>
-            </p>
+            <case-search-selector
+                associated-case="dec.associatedCase"
+                on-select="dec.selectCase(caseItem)"
+                on-clear="dec.clearAssociatedCase()">
+            </case-search-selector>
         </div>
     </div>
 
