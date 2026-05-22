@@ -13,6 +13,17 @@
                 </p>
                 <p><i class="fa-solid fa-calendar-alt" aria-hidden="true"></i> {{ 'creation_date_colon' | translate }} {{$ctrl.design.metainfo.creation_date | date}}</p>
                 <p><i class="fa-solid fa-paint-brush" aria-hidden="true"></i> {{ 'design_type_colon' | translate }} {{$ctrl.design.type === "semantic_differential" ? ("semantic_differential" | translate) : ("ranking_activity" | translate)}}</p>
+                <p><i class="fa-solid fa-eye" aria-hidden="true"></i> {{ 'visibility' | translate }}: {{ $ctrl.getVisibilityLabelKey() | translate }}</p>
+                <p><i class="fa-solid fa-certificate" aria-hidden="true"></i> {{ 'license' | translate }}: {{$ctrl.design.licenseCode}}</p>
+                <p ng-if="$ctrl.hasOriginalDesign()">
+                    <i class="fa-solid fa-code-branch" aria-hidden="true"></i>
+                    {{ 'original_design_title' | translate }}:
+                    <a ng-if="$ctrl.design.originalDesignId" ng-href="#!/designs/{{$ctrl.design.originalDesignId}}" ng-click="$event.stopPropagation()">{{$ctrl.design.sourceDesignTitle || ('unknown' | translate)}}</a>
+                    <span ng-if="!$ctrl.design.originalDesignId">{{$ctrl.design.sourceDesignTitle || ('unknown' | translate)}}</span>
+                </p>
+                <p ng-if="$ctrl.design.sourceDesignAuthor">
+                    <i class="fa-solid fa-user-pen" aria-hidden="true"></i> {{ 'original_design_author' | translate }}: {{$ctrl.design.sourceDesignAuthor}}
+                </p>
                 <p ng-if="$ctrl.getAssociatedCase()"><i class="fa-solid fa-book" aria-hidden="true"></i> {{ 'design_associated_case_label' | translate }}: <a ng-href="#!/cases/{{$ctrl.getAssociatedCase().id}}" ng-click="$event.stopPropagation()">{{$ctrl.formatCaseLabel($ctrl.getAssociatedCase())}}</a></p>
                 <p ng-if="!$ctrl.getAssociatedCase()"><i class="fa-solid fa-book" aria-hidden="true"></i> {{ 'design_no_case_associated' | translate }}</p>
                 <p><i class="fa-solid fa-layer-group" aria-hidden="true"></i> {{ 'number_of_phases_colon' | translate }} {{$ctrl.design.phases.length}}</p>
@@ -45,7 +56,7 @@
             
                     <!-- Toggle Switch with Text -->
                     <div ng-show="$ctrl.isFunction($ctrl.onTogglePublic) && $ctrl.isOwner && $ctrl.design.valid" style="margin-top: 1em" class="ml-3 text-center">
-                        <div toggle-switch ng-model="$ctrl.design.public" 
+                        <div toggle-switch ng-model="$ctrl.design.public"
                              ng-click="$ctrl.onTogglePublic($ctrl.design.id)"
                              class="ats-switch switch-primary d-inline-block">
                         </div>

@@ -31,6 +31,14 @@ const DesignItemController = function() {
         return this.associatedCase || this.design?.associatedCase || null;
     };
 
+    this.getVisibilityLabelKey = function() {
+        return this.design?.visibility === "public" ? "visibility_public" : "visibility_private";
+    };
+
+    this.hasOriginalDesign = function() {
+        return Boolean(this.design?.originalDesignId || this.design?.sourceDesignTitle || this.design?.sourceDesignAuthor);
+    };
+
     this.formatCaseLabel = function(caseItem) {
         if (!caseItem) {
             return "";

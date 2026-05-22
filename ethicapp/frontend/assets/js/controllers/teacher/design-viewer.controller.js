@@ -1,13 +1,20 @@
-export function DesignViewerController($scope, $routeParams, DesignCatalogService, CasesCatalogService) {
+export function DesignViewerController($scope, $routeParams, $window, DesignCatalogService, CasesCatalogService) {
     const vm = this;
     vm.designId = 0;
     vm.design = null;
     vm.associatedCase = null;
+    vm.isDesignUnavailable = false;
 
     vm.init = async function() {
         vm.designId = Number($routeParams.id);
         if (!isNaN(vm.designId)) {
             vm.design = await DesignCatalogService.getDesignById(vm.designId);
+            if (!vm.design) {
+                vm.isDesignUnavailable = true;
+                $scope.$applyAsync();
+                return;
+            }
+
             await vm.loadAssociatedCase();
 
             $scope.$applyAsync(() => {
@@ -44,6 +51,15 @@ export function DesignViewerController($scope, $routeParams, DesignCatalogServic
             return `${caseItem.title} (${caseItem.authorFirstname || ""} ${caseItem.authorLastname || ""})`.trim();
         }
         return caseItem.title;
+    };
+
+    vm.goBack = function() {
+        if ($window.history.length > 1) {
+            $window.history.back();
+            return;
+        }
+
+        $scope.navigateTo("/designs");
     };
     
     vm.handleLaunch = function() {

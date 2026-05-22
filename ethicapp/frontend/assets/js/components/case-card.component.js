@@ -3,6 +3,9 @@ const CaseCardController = function() {
         if (angular.isUndefined(this.showActions)) {
             this.showActions = true;
         }
+        if (angular.isUndefined(this.showExtendedInfo)) {
+            this.showExtendedInfo = false;
+        }
     };
 
     this.isFunction = function(variable) {
@@ -106,6 +109,7 @@ const caseCardComponent = {
     bindings: {
         caseItem: "<",
         showActions: "<?",
+        showExtendedInfo: "<?",
         onView: "<?",
         onEdit: "<?",
         onDelete: "<?",

@@ -400,16 +400,31 @@ router.get("/cases/search", async (req, res) => {
                        ${pdfRenderJobSelectSql}
                 FROM ethical_cases c
                 ${pdfRenderJobJoinSql}
-                WHERE c.visibility = 'public'
+                WHERE (c.creator = $2 OR c.visibility = 'public')
                   AND (
                     LOWER(c.title) LIKE LOWER($1)
                     OR LOWER(c.author_firstname) LIKE LOWER($1)
                     OR LOWER(c.author_lastname) LIKE LOWER($1)
+                    OR EXISTS (
+                        SELECT 1
+                        FROM ethical_cases_authors ca
+                        INNER JOIN ethical_case_author author
+                            ON author.id = ca.author_id
+                        WHERE ca.case_id = c.id
+                          AND (
+                            LOWER(author.author_firstname) LIKE LOWER($1)
+                            OR LOWER(author.author_lastname) LIKE LOWER($1)
+                            OR LOWER(author.author_email) LIKE LOWER($1)
+                          )
+                    )
                   )
                 ORDER BY c.updated_at DESC, c.id DESC
                 LIMIT 20;
             `,
-            sqlParams: [rpg2.param("plain", `%${query}%`)],
+            sqlParams: [
+                rpg2.param("plain", `%${query}%`),
+                rpg2.param("plain", req.session.uid),
+            ],
         });
 
         return res.status(200).json({

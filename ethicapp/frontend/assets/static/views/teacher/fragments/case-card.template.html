@@ -2,14 +2,13 @@
     <div class="panel-body">
         <div class="row">
             <div class="col-sm-8">
-                <p><i class="fa-solid fa-book" aria-hidden="true"></i> {{ 'title_colon' | translate }} <a ng-href="#!/cases/{{$ctrl.caseItem.id}}">{{$ctrl.caseItem.title}}</a></p>
+                <p><i class="fa-solid fa-info-circle" aria-hidden="true"></i> {{ 'title_colon' | translate }} <a ng-href="#!/cases/{{$ctrl.caseItem.id}}">{{$ctrl.caseItem.title}}</a></p>
                 <p><i class="fa-solid fa-user" aria-hidden="true"></i> {{ 'author' | translate }}: {{$ctrl.formatAuthor()}}</p>
                 <p ng-if="$ctrl.caseItem.authorEmail"><i class="fa-solid fa-envelope" aria-hidden="true"></i> {{ 'email' | translate }} <a ng-href="mailto:{{$ctrl.caseItem.authorEmail}}">{{$ctrl.caseItem.authorEmail}}</a></p>
                 <p><i class="fa-solid fa-language" aria-hidden="true"></i> {{ 'language' | translate }}: {{$ctrl.getLanguageLabel()}}</p>
                 <p><i class="fa-solid fa-eye" aria-hidden="true"></i> {{ 'visibility' | translate }}: {{ $ctrl.getVisibilityLabelKey() | translate }}</p>
                 <p><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> {{ 'rights_status' | translate }}: {{ $ctrl.getRightsStatusLabelKey() | translate }}</p>
                 <p><i class="fa-solid fa-certificate" aria-hidden="true"></i> {{ 'license' | translate }}: {{$ctrl.caseItem.licenseCode}}</p>
-                <p ng-if="$ctrl.caseItem.attributionText"><i class="fa-solid fa-quote-left" aria-hidden="true"></i> {{ 'attribution_text' | translate }}: {{$ctrl.caseItem.attributionText}}</p>
                 <p ng-if="$ctrl.isFunction($ctrl.onTogglePublic) && !$ctrl.caseItem.canBeSharedPublicly">
                     <i class="text-warning fa-solid fa-triangle-exclamation" aria-hidden="true"></i> {{ 'case_not_publicly_shareable' | translate }}
                 </p>
@@ -30,6 +29,17 @@
                         {{$ctrl.getDocumentProcessing().errorMessage}}
                     </span>
                 </p>
+                <div ng-if="$ctrl.showExtendedInfo && ($ctrl.caseItem.attributionText || $ctrl.caseItem.licenseNotes)">
+                    <br> 
+                    <hr>
+                    <br> 
+                    <p ng-if="$ctrl.caseItem.attributionText">
+                        <i class="fa-solid fa-quote-left" aria-hidden="true"></i> {{ 'attribution_text' | translate }}: {{$ctrl.caseItem.attributionText}}
+                    </p>
+                    <p ng-if="$ctrl.caseItem.licenseNotes">
+                        <i class="fa-solid fa-note-sticky" aria-hidden="true"></i> {{ 'license_notes' | translate }}: {{$ctrl.caseItem.licenseNotes}}
+                    </p>
+                </div>
             </div>
             <div class="col-sm-4">
                 <div class="case-card-actions" ng-if="$ctrl.showActions">

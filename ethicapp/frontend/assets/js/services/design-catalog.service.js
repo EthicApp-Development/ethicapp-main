@@ -40,7 +40,7 @@ let DesignCatalogService = ($rootScope, $http) => {
             if (reload || !service.hasLoadedDesigns) {
                 await service.loadDesigns();
             }
-            const result = service.designs.filter(design => design.public === true && 
+            const result = service.designs.filter(design => design.visibility === "public" &&
                 design.valid === true && design.userOwned === false);
             return result;
         },
@@ -67,6 +67,7 @@ let DesignCatalogService = ($rootScope, $http) => {
                     // Add the ID to the design object
                     design.id = newDesignId;
                     design.public = false;
+                    design.visibility = "private";
                     design.locked = false;
                     design.userOwned = true;
 
@@ -90,11 +91,15 @@ let DesignCatalogService = ($rootScope, $http) => {
             const design = service.designs.find(d => d.id === id);
             if (!design) return;
         
-            const previousValue = design.public; // Save the previous state
+            const previousPublic = design.public;
+            const previousVisibility = design.visibility || (design.public ? "public" : "private");
         
             try {        
-                // Make the API call to toggle the public property
-                await $http({ url: `/designs/${id}/toggle_public`, method: "PATCH" });
+                const response = await $http({ url: `/designs/${id}/toggle_public`, method: "PATCH" });
+                const result = response.data?.result || {};
+                design.visibility = result.visibility || (design.public ? "public" : "private");
+                design.public = result.public === true || design.visibility === "public";
+                design.caseId = result.caseId ?? design.caseId;
         
                 // Notify listeners
                 service.notifyListeners("onDesignCatalogUpdated", { 
@@ -102,8 +107,8 @@ let DesignCatalogService = ($rootScope, $http) => {
             } catch (error) {
                 console.error(`Failed to change public property of design with id: '${id}'`, error);
         
-                // Revert on API failure
-                design.public = previousValue;
+                design.public = previousPublic;
+                design.visibility = previousVisibility;
 
                 // Notify listeners
                 service.notifyListeners("onDesignCatalogUpdated", { 
@@ -151,6 +156,7 @@ let DesignCatalogService = ($rootScope, $http) => {
                             ...originalDesign,
                             id: newDesignId,
                             public: false,
+                            visibility: "private",
                             locked: false,
                             userOwned: true,
                         };
