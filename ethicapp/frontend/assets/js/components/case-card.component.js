@@ -14,9 +14,31 @@ const CaseCardController = function() {
             return "";
         }
 
+        if (Array.isArray(this.caseItem.authors) && this.caseItem.authors.length > 0) {
+            return this.caseItem.authors.map((author) => {
+                return [author.authorFirstname, author.authorLastname].filter(Boolean).join(" ");
+            }).filter(Boolean).join("; ");
+        }
+
         return [this.caseItem.authorFirstname, this.caseItem.authorLastname]
             .filter(Boolean)
             .join(" ");
+    };
+
+    this.getLanguageLabel = function() {
+        return this.caseItem?.languageCode || "";
+    };
+
+    this.getVisibilityLabelKey = function() {
+        return this.caseItem?.visibility === "public" ? "visibility_public" : "visibility_private";
+    };
+
+    this.getRightsStatusLabelKey = function() {
+        return `rights_status_${this.caseItem?.rightsStatus || "unknown"}`;
+    };
+
+    this.canToggleVisibility = function() {
+        return this.isFunction(this.onTogglePublic) && this.caseItem?.canBeSharedPublicly === true;
     };
 
     this.getContentRepresentation = function() {
@@ -77,6 +99,7 @@ const caseCardComponent = {
         onView: "<?",
         onEdit: "<?",
         onDelete: "<?",
+        onTogglePublic: "<?",
     },
     controller: CaseCardController,
     templateUrl: "/assets/static/views/teacher/fragments/case-card.template.html",

@@ -15,25 +15,6 @@
         <div class="wrapper_nd">
             <div class="line-form-nd">
                 <div class="line-row-nd">
-                    <label>{{'activityType'|translate}}</label>
-                    <div class="line-control-nd">
-                        <select
-                            name="activityType"
-                            ng-model="cdc.selectedOption"
-                            class="form-control line_input w-22"
-                            ng-required="true"
-                            ng-class="{'input-warning': formDesign.activityType.$invalid && formDesign.$submitted}">
-                            <option value="" selected disabled>{{'selectActivityType'|translate}}</option>
-                            <option value="semantic_differential">{{'semantic_differential'|translate}}</option>
-                            <option value="ranking">{{'ranking_activity'|translate}}</option>
-                        </select>
-                        <p class="validation-message"
-                            ng-if="formDesign.activityType.$error.required && formDesign.$submitted">
-                            {{'design_activity_type_required_error' | translate}}
-                        </p>
-                    </div>
-                </div>
-                <div class="line-row-nd">
                     <label>{{'title'|translate}}:</label>
                     <div class="line-control-nd">
                         <input type="text"

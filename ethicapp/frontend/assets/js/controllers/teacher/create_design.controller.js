@@ -4,6 +4,7 @@ import { designFactories } from  "../../../../../common/modules/design-types.js"
 export function CreateDesignController($scope, $window,
     DesignCatalogService, UserInformationService) {
     const vm = this;
+    vm.selectedOption = "semantic_differential";
 
     vm.goBack = function() {
         if ($window.history.length > 1) {

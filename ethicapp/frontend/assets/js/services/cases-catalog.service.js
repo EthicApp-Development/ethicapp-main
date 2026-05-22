@@ -15,6 +15,7 @@ let CasesCatalogService = ($http) => {
 
     const service = {
         cases: [],
+        publicCases: [],
         licenses: [],
         languages: [],
 
@@ -24,11 +25,26 @@ let CasesCatalogService = ($http) => {
             return service.cases;
         },
 
+        async loadPublicCases() {
+            const response = await $http.get("/cases", {
+                params: { scope: "public" },
+            });
+            service.publicCases = Array.isArray(response.data.result) ? response.data.result : [];
+            return service.publicCases;
+        },
+
         async getCases(reload = false) {
             if (reload || service.cases.length === 0) {
                 await service.loadCases();
             }
             return service.cases;
+        },
+
+        async getPublicCases(reload = false) {
+            if (reload || service.publicCases.length === 0) {
+                await service.loadPublicCases();
+            }
+            return service.publicCases;
         },
 
         async getCaseById(caseId) {
@@ -89,6 +105,7 @@ let CasesCatalogService = ($http) => {
             });
 
             await service.getCases(true);
+            await service.getPublicCases(true);
             return response.data.result;
         },
 
@@ -106,12 +123,21 @@ let CasesCatalogService = ($http) => {
             });
 
             await service.getCases(true);
+            await service.getPublicCases(true);
             return response.data.result;
         },
 
         async deleteCase(caseId) {
             await $http.delete(`/cases/${caseId}`);
             await service.getCases(true);
+            await service.getPublicCases(true);
+        },
+
+        async updateCaseVisibility(caseId, visibility) {
+            const response = await $http.patch(`/cases/${caseId}/visibility`, { visibility });
+            await service.getCases(true);
+            await service.getPublicCases(true);
+            return response.data.result;
         },
     };
 

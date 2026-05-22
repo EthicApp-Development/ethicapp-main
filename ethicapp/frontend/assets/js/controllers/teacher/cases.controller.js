@@ -1,17 +1,50 @@
 /*eslint func-style: ["error", "expression"]*/
-export function CasesController($scope, $routeParams, $window, $interval, CasesCatalogService, UserProfileService) {
+export function CasesController($scope, $routeParams, $window, $interval, $translate, toast, CasesCatalogService, UserProfileService) {
     const vm = this;
     const documentProcessingPollIntervalMs = 5000;
     const activeDocumentProcessingStatuses = ["pending", "processing"];
     let documentProcessingPoll = null;
+    const TOAST_INFO_TIMEOUT_MS = 4 * 1000;
+    const TOAST_ERROR_TIMEOUT_MS = 6 * 1000;
 
     vm.cases = [];
+    vm.ownCases = [];
+    vm.publicCases = [];
+    vm.caseMode = 0;
+    vm.caseSearch = "";
     vm.caseObj = null;
     vm.currentPage = 1;
     vm.pageSize = 5;
     vm.licenses = [];
     vm.languages = [];
     vm.currentUserProfile = null;
+
+    vm.translate = function(key) {
+        return $translate.instant(key);
+    };
+
+    vm.showInfoToast = function(message) {
+        toast.create({
+            timeout: TOAST_INFO_TIMEOUT_MS,
+            message,
+            containerClass: "cases-toast-container",
+            dismissible: false,
+            defaultToastClass: "toast",
+            insertFromTop: true,
+        });
+    };
+
+    vm.showErrorToast = function(message) {
+        toast.create({
+            timeout: TOAST_ERROR_TIMEOUT_MS,
+            message,
+            className: "alert-danger",
+            containerClass: "cases-toast-container",
+            dismissible: false,
+            defaultToastClass: "toast",
+            insertFromTop: true,
+        });
+    };
 
     vm.createEmptyCaseForm = function() {
         return {
@@ -55,7 +88,13 @@ export function CasesController($scope, $routeParams, $window, $interval, CasesC
     };
 
     vm.loadCases = async function() {
-        vm.cases = await CasesCatalogService.getCases(true);
+        const [ownCases, publicCases] = await Promise.all([
+            CasesCatalogService.getCases(true),
+            CasesCatalogService.getPublicCases(true),
+        ]);
+        vm.ownCases = ownCases;
+        vm.publicCases = publicCases;
+        vm.cases = ownCases;
         vm.currentPage = 1;
         await vm.refreshDocumentProcessingStatuses();
         vm.syncDocumentProcessingPolling();
@@ -135,7 +174,7 @@ export function CasesController($scope, $routeParams, $window, $interval, CasesC
             return vm.isDocumentProcessingActive(vm.caseObj.documentProcessing) ? [vm.caseObj] : [];
         }
 
-        return vm.cases.filter((caseObj) => {
+        return [...vm.ownCases, ...vm.publicCases].filter((caseObj) => {
             return vm.isDocumentProcessingActive(caseObj.documentProcessing);
         });
     };
@@ -188,13 +227,65 @@ export function CasesController($scope, $routeParams, $window, $interval, CasesC
         vm.stopDocumentProcessingPolling();
     };
 
+    vm.setCaseMode = function(mode) {
+        const nextMode = Number(mode);
+        if (!Number.isInteger(nextMode)) {
+            return;
+        }
+
+        vm.caseMode = nextMode === 1 ? 1 : 0;
+        vm.currentPage = 1;
+    };
+
+    vm.getActiveCases = function() {
+        return vm.caseMode === 1 ? vm.publicCases : vm.ownCases;
+    };
+
+    vm.getCaseSearchText = function(caseObj) {
+        const authorText = Array.isArray(caseObj?.authors)
+            ? caseObj.authors.map((author) => {
+                return [
+                    author.authorFirstname,
+                    author.authorLastname,
+                    author.authorEmail,
+                ].filter(Boolean).join(" ");
+            }).join(" ")
+            : "";
+
+        return [
+            caseObj?.title,
+            caseObj?.authorFirstname,
+            caseObj?.authorLastname,
+            caseObj?.authorEmail,
+            authorText,
+        ].filter(Boolean).join(" ").toLowerCase();
+    };
+
+    vm.caseMatchesSearch = function(caseObj) {
+        const keywords = String(vm.caseSearch || "")
+            .trim()
+            .toLowerCase()
+            .split(/\s+/)
+            .filter(Boolean);
+        if (keywords.length === 0) {
+            return true;
+        }
+
+        const searchText = vm.getCaseSearchText(caseObj);
+        return keywords.every((keyword) => searchText.includes(keyword));
+    };
+
+    vm.getFilteredCases = function() {
+        return vm.getActiveCases().filter(vm.caseMatchesSearch);
+    };
+
     vm.getTotalPages = function() {
-        return Math.max(1, Math.ceil(vm.cases.length / vm.pageSize));
+        return Math.max(1, Math.ceil(vm.getFilteredCases().length / vm.pageSize));
     };
 
     vm.getPaginatedCases = function() {
         const startIndex = (vm.currentPage - 1) * vm.pageSize;
-        return vm.cases.slice(startIndex, startIndex + vm.pageSize);
+        return vm.getFilteredCases().slice(startIndex, startIndex + vm.pageSize);
     };
 
     vm.setPage = function(pageNumber) {
@@ -228,8 +319,15 @@ export function CasesController($scope, $routeParams, $window, $interval, CasesC
     };
 
     vm.createCase = async function() {
-        await CasesCatalogService.createCase(vm.form);
-        $scope.navigateTo("/cases");
+        try {
+            await CasesCatalogService.createCase(vm.form);
+            vm.showInfoToast(vm.translate("ethical_cases_create_success"));
+            $scope.navigateTo("/cases");
+        } catch (error) {
+            console.error("[CasesController::createCase] Error creating case.", error);
+            vm.showErrorToast(vm.translate("ethical_cases_save_error"));
+            $scope.$applyAsync();
+        }
     };
 
     vm.updateCase = async function() {
@@ -238,14 +336,28 @@ export function CasesController($scope, $routeParams, $window, $interval, CasesC
             return;
         }
 
-        await CasesCatalogService.updateCase(caseId, vm.form);
-        $scope.navigateTo("/cases");
+        try {
+            await CasesCatalogService.updateCase(caseId, vm.form);
+            vm.showInfoToast(vm.translate("ethical_cases_update_success"));
+            $scope.$applyAsync();
+        } catch (error) {
+            console.error("[CasesController::updateCase] Error updating case.", error);
+            vm.showErrorToast(vm.translate("ethical_cases_save_error"));
+            $scope.$applyAsync();
+        }
     };
 
     vm.deleteCase = async function(caseId) {
-        await CasesCatalogService.deleteCase(caseId);
-        await vm.loadCases();
-        vm.setPage(vm.currentPage);
+        try {
+            await CasesCatalogService.deleteCase(caseId);
+            vm.showInfoToast(vm.translate("ethical_cases_delete_success"));
+            await vm.loadCases();
+            vm.setPage(vm.currentPage);
+        } catch (error) {
+            console.error("[CasesController::deleteCase] Error deleting case.", error);
+            vm.showErrorToast(vm.translate("ethical_cases_delete_error"));
+            $scope.$applyAsync();
+        }
     };
 
     vm.viewCase = function(caseItem) {
@@ -258,6 +370,26 @@ export function CasesController($scope, $routeParams, $window, $interval, CasesC
 
     vm.deleteCaseFromCard = async function(caseItem) {
         await vm.deleteCase(caseItem.id);
+    };
+
+    vm.toggleCaseVisibility = async function(caseItem) {
+        const previousVisibility = caseItem.visibility || "private";
+        const nextVisibility = previousVisibility === "public" ? "private" : "public";
+        caseItem.visibility = nextVisibility;
+        caseItem.public = nextVisibility === "public";
+
+        try {
+            const result = await CasesCatalogService.updateCaseVisibility(caseItem.id, nextVisibility);
+            caseItem.visibility = result.visibility;
+            caseItem.public = result.public;
+            caseItem.canBeSharedPublicly = result.canBeSharedPublicly;
+        } catch (error) {
+            caseItem.visibility = previousVisibility;
+            caseItem.public = previousVisibility === "public";
+            console.error("[CasesController::toggleCaseVisibility] Error updating case visibility.", error);
+        } finally {
+            $scope.$applyAsync();
+        }
     };
 
     $scope.$on("$destroy", () => {

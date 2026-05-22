@@ -1,0 +1,295 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ethicapp.local/tag-taxonomy-v1.schema.json",
+  "title": "EthicApp Tag Taxonomy",
+  "description": "Portable taxonomy for controlled semantic tags used by ethical cases and activity designs. Tag translations are domain content and intentionally live outside UI translation catalogs.",
+  "type": "object",
+  "required": ["schemaVersion", "kind", "metadata", "locales", "categories"],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "tag-taxonomy/v1"
+    },
+    "kind": {
+      "type": "string",
+      "const": "ethicapp_tag_taxonomy"
+    },
+    "metadata": {
+      "$ref": "#/$defs/taxonomyMetadata"
+    },
+    "locales": {
+      "$ref": "#/$defs/taxonomyLocales"
+    },
+    "categories": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/tagCategory"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "taxonomyMetadata": {
+      "type": "object",
+      "required": ["code", "version", "createdAt"],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/code",
+          "description": "Stable taxonomy code, for example ethicapp_default."
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "description": "Semantic version for this taxonomy content."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "source": {
+          "type": "string",
+          "description": "Human-readable provenance, such as internal curation, imported standard, or assisted generation process."
+        },
+        "curation": {
+          "$ref": "#/$defs/curationMetadata"
+        }
+      },
+      "additionalProperties": false
+    },
+    "curationMetadata": {
+      "type": "object",
+      "properties": {
+        "generatedWith": {
+          "type": "string",
+          "description": "Optional tool or model used to draft the taxonomy."
+        },
+        "reviewedBy": {
+          "type": "string"
+        },
+        "reviewedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "taxonomyLocales": {
+      "type": "object",
+      "required": ["defaultLocale", "supportedLocales"],
+      "properties": {
+        "defaultLocale": {
+          "$ref": "#/$defs/locale"
+        },
+        "supportedLocales": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/locale"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "tagCategory": {
+      "type": "object",
+      "required": ["code", "usableFor", "translations", "tags"],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/code"
+        },
+        "usableFor": {
+          "$ref": "#/$defs/resourceScope"
+        },
+        "sortOrder": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "isActive": {
+          "type": "boolean",
+          "default": true
+        },
+        "translations": {
+          "$ref": "#/$defs/translationMap"
+        },
+        "tags": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/tag"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "usableFor": {
+                "properties": {
+                  "cases": { "const": true }
+                },
+                "required": ["cases"]
+              }
+            },
+            "required": ["usableFor"]
+          },
+          "then": {
+            "properties": {
+              "usableFor": {
+                "properties": {
+                  "designs": { "const": true }
+                },
+                "required": ["designs"]
+              }
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "tag": {
+      "type": "object",
+      "required": ["code", "usableFor", "translations"],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/code"
+        },
+        "usableFor": {
+          "$ref": "#/$defs/resourceScope"
+        },
+        "sortOrder": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "isActive": {
+          "type": "boolean",
+          "default": true
+        },
+        "translations": {
+          "$ref": "#/$defs/translationMap"
+        },
+        "aliases": {
+          "type": "array",
+          "description": "Stable non-localized aliases useful for import compatibility. Visible localized synonyms belong in translation searchKeywords.",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/code"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "usableFor": {
+                "properties": {
+                  "cases": { "const": true }
+                },
+                "required": ["cases"]
+              }
+            },
+            "required": ["usableFor"]
+          },
+          "then": {
+            "properties": {
+              "usableFor": {
+                "properties": {
+                  "designs": { "const": true }
+                },
+                "required": ["designs"]
+              }
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "resourceScope": {
+      "type": "object",
+      "required": ["cases", "designs"],
+      "properties": {
+        "cases": {
+          "type": "boolean"
+        },
+        "designs": {
+          "type": "boolean"
+        }
+      },
+      "anyOf": [
+        {
+          "properties": {
+            "cases": { "const": true }
+          },
+          "required": ["cases"]
+        },
+        {
+          "properties": {
+            "designs": { "const": true }
+          },
+          "required": ["designs"]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "translationMap": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "$ref": "#/$defs/locale"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/translation"
+      }
+    },
+    "translation": {
+      "type": "object",
+      "required": ["label"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "searchKeywords": {
+          "type": "array",
+          "description": "Localized synonyms or search terms for controlled lookup. These are not shown as canonical labels.",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "locale": {
+      "type": "string",
+      "pattern": "^[a-z]{2}(_[A-Z]{2})?$"
+    },
+    "code": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$",
+      "minLength": 1,
+      "maxLength": 120
+    }
+  }
+}

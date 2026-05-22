@@ -2507,13 +2507,27 @@ h2{
 }
 
 .teacher-toast-alert {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+    border: 1px solid #8bbf8f;
+    box-shadow: none;
     line-height: 1.35;
+}
+
+.teacher-toast-alert.alert-danger {
+    border-color: #a94442;
+}
+
+.teacher-toast-alert.alert-warning {
+    border-color: #8a6d3b;
+}
+
+.teacher-toast-alert.alert-info {
+    border-color: #31708f;
 }
 
 .profile-toast-container .teacher-toast-alert,
 .designs-toast-container .teacher-toast-alert,
-.design-editor-toast-container .teacher-toast-alert {
+.design-editor-toast-container .teacher-toast-alert,
+.cases-toast-container .teacher-toast-alert {
     min-height: 1.75em !important;
     height: auto !important;
     margin-left: auto;

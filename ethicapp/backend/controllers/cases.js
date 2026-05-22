@@ -104,6 +104,7 @@ function normalizeCase(row) {
         commercialSource: row.commercial_source,
         canBeSharedPublicly: row.can_be_shared_publicly === true,
         canBeCopiedByOthers: row.can_be_copied_by_others === true,
+        public: (row.visibility || PRIVATE_VISIBILITY) === PUBLIC_VISIBILITY,
         languageCode: row.language_code || DEFAULT_LANGUAGE_CODE,
         authors: Array.isArray(row.authors) && row.authors.length > 0
             ? row.authors
@@ -295,6 +296,9 @@ router.get("/cases", async (req, res) => {
         return;
     }
 
+    const scope = String(req.query.scope || "own").trim().toLowerCase();
+    const isPublicScope = scope === "public";
+
     try {
         const cases = await rpg2.execSQL({
             dbcon: config.dbconnString,
@@ -305,7 +309,11 @@ router.get("/cases", async (req, res) => {
                        ${pdfRenderJobSelectSql}
                 FROM ethical_cases c
                 ${pdfRenderJobJoinSql}
-                WHERE c.creator = $1
+                WHERE ${
+                    isPublicScope
+                        ? "c.visibility = 'public' AND c.creator <> $1"
+                        : "c.creator = $1"
+                }
                 ORDER BY c.id DESC;
             `,
             sqlParams: [rpg2.param("plain", req.session.uid)],
