@@ -41,6 +41,16 @@ const CaseCardController = function() {
         return this.isFunction(this.onTogglePublic) && this.caseItem?.canBeSharedPublicly === true;
     };
 
+    this.canImport = function() {
+        return this.isFunction(this.onImport)
+            && this.caseItem?.visibility === "public"
+            && this.caseItem?.canBeCopiedByOthers === true;
+    };
+
+    this.canDelete = function() {
+        return this.isFunction(this.onDelete) && this.caseItem?.hasLaunchedDesignActivity !== true;
+    };
+
     this.getContentRepresentation = function() {
         if (!this.caseItem || !Array.isArray(this.caseItem.representations)) {
             return null;
@@ -100,6 +110,7 @@ const caseCardComponent = {
         onEdit: "<?",
         onDelete: "<?",
         onTogglePublic: "<?",
+        onImport: "<?",
     },
     controller: CaseCardController,
     templateUrl: "/assets/static/views/teacher/fragments/case-card.template.html",

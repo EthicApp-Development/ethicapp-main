@@ -355,7 +355,10 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             vm.setPage(vm.currentPage);
         } catch (error) {
             console.error("[CasesController::deleteCase] Error deleting case.", error);
-            vm.showErrorToast(vm.translate("ethical_cases_delete_error"));
+            const messageKey = error?.data?.code === "CASE_USED_BY_LAUNCHED_ACTIVITY"
+                ? "case_cannot_delete_used_by_activity"
+                : "ethical_cases_delete_error";
+            vm.showErrorToast(vm.translate(messageKey));
             $scope.$applyAsync();
         }
     };
@@ -370,6 +373,19 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
 
     vm.deleteCaseFromCard = async function(caseItem) {
         await vm.deleteCase(caseItem.id);
+    };
+
+    vm.importCase = async function(caseItem) {
+        try {
+            await CasesCatalogService.importCase(caseItem.id);
+            vm.showInfoToast(vm.translate("ethical_cases_import_success"));
+            await vm.loadCases();
+            vm.setCaseMode(0);
+        } catch (error) {
+            console.error("[CasesController::importCase] Error importing case.", error);
+            vm.showErrorToast(vm.translate("ethical_cases_import_error"));
+            $scope.$applyAsync();
+        }
     };
 
     vm.toggleCaseVisibility = async function(caseItem) {

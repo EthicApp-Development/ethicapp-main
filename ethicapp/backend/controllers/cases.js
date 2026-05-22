@@ -1,7 +1,10 @@
 "use strict";
 
 import express from "express";
+import fs from "fs/promises";
+import path from "path";
 import * as config from "../config/database.config.js";
+import { uploadsPath } from "../config/uploads.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 import { requireRole } from "../helpers/auth-helper.js";
 import {
@@ -9,8 +12,11 @@ import {
     DEFAULT_LANGUAGE_CODE,
     PRIVATE_VISIBILITY,
     PUBLIC_VISIBILITY,
+    buildAttributionText,
+    canCaseBeCopiedByOthers,
     canCaseBeSharedPublicly,
     deriveCaseSharingFlags,
+    getCaseAuthorName,
     normalizeLicenseCode,
     normalizeLanguageCode,
     normalizeRightsStatus,
@@ -25,6 +31,7 @@ import {
 import { moveUploadedFile, pdfUpload, removeUploadedFile } from "../middleware/upload.js";
 
 const router = express.Router();
+const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
 
 const caseSharingSelectSql = `
     c.visibility, c.license_code, c.attribution_text,
@@ -58,6 +65,13 @@ const caseSharingSelectSql = `
         WHERE d.case_id = c.id
           AND d.visibility = 'public'
     ), '[]'::json) AS public_designs
+    ,
+    EXISTS (
+        SELECT 1
+        FROM designs d
+        INNER JOIN activity a ON a.design = d.id
+        WHERE d.case_id = c.id
+    ) AS has_launched_design_activity
 `;
 
 function normalizeCase(row) {
@@ -106,6 +120,7 @@ function normalizeCase(row) {
         canBeCopiedByOthers: row.can_be_copied_by_others === true,
         public: (row.visibility || PRIVATE_VISIBILITY) === PUBLIC_VISIBILITY,
         languageCode: row.language_code || DEFAULT_LANGUAGE_CODE,
+        hasLaunchedDesignActivity: row.has_launched_design_activity === true,
         authors: Array.isArray(row.authors) && row.authors.length > 0
             ? row.authors
             : [{
@@ -240,6 +255,42 @@ async function enqueueCaseRenderSafely(caseObj) {
             error,
         });
         return null;
+    }
+}
+
+function uploadPublicPathToAbsolute(publicPath) {
+    const normalized = String(publicPath || "").replaceAll("\\", "/").replace(/^\/+/, "");
+    const relativePath = normalized.startsWith("uploads/")
+        ? normalized.slice("uploads/".length)
+        : normalized.startsWith("assets/uploads/")
+            ? normalized.slice("assets/uploads/".length)
+            : normalized;
+
+    if (!relativePath || relativePath.startsWith("../") || relativePath.includes("/../")) {
+        return null;
+    }
+
+    return path.resolve(uploadsRoot, relativePath);
+}
+
+async function copyCasePdfIfPresent(sourcePdfPath, destinationPdfPath) {
+    const sourcePath = uploadPublicPathToAbsolute(sourcePdfPath);
+    const destinationPath = uploadPublicPathToAbsolute(destinationPdfPath);
+    if (!sourcePath || !destinationPath) {
+        return false;
+    }
+
+    try {
+        await fs.mkdir(path.dirname(destinationPath), { recursive: true });
+        await fs.copyFile(sourcePath, destinationPath);
+        return true;
+    } catch (error) {
+        console.warn("Unable to copy imported case PDF; retaining source PDF path.", {
+            sourcePdfPath,
+            destinationPdfPath,
+            error: error.message,
+        });
+        return false;
     }
 }
 
@@ -724,6 +775,142 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
     }
 });
 
+router.post("/cases/:id/import", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
+        return res.status(400).json({ status: "err", message: "Invalid case id." });
+    }
+
+    const db = await rpg2.getDBInstance(config.dbconnString);
+    const client = await db.connect();
+
+    try {
+        await client.query("BEGIN");
+        const sourceResult = await client.query(`
+            SELECT id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
+                   visibility, license_code, attribution_text, original_case_id,
+                   rights_status, license_notes, permission_statement, commercial_source,
+                   can_be_shared_publicly, can_be_copied_by_others, language_code
+            FROM ethical_cases
+            WHERE id = $1
+              AND creator <> $2
+              AND visibility = 'public'
+              AND can_be_copied_by_others = true
+            LIMIT 1;
+        `, [caseId, req.session.uid]);
+        const sourceCase = sourceResult.rows[0];
+
+        if (!sourceCase || !canCaseBeCopiedByOthers(sourceCase)) {
+            await client.query("ROLLBACK");
+            return res.status(403).json({
+                status:  "err",
+                message: "This case cannot be imported.",
+                code:    "CASE_NOT_IMPORTABLE",
+            });
+        }
+
+        const nextIdResult = await client.query("SELECT nextval(pg_get_serial_sequence('ethical_cases', 'id')) AS id;");
+        const importedCaseId = Number(nextIdResult.rows[0].id);
+        const destinationPdfPath = `/uploads/cases/${importedCaseId}/case.pdf`;
+        const pdfCopied = await copyCasePdfIfPresent(sourceCase.pdf_path, destinationPdfPath);
+        const sourceAuthor = getCaseAuthorName(sourceCase);
+        const sourceLicenseCode = sourceCase.license_code || CASE_DEFAULT_LICENSE;
+        const rootCaseId = sourceCase.original_case_id || sourceCase.id;
+
+        await client.query(`
+            INSERT INTO ethical_cases
+                (id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
+                 visibility, license_code, attribution_text, original_case_id, imported_from_case_id,
+                 source_case_title, source_case_author, source_case_license_code, is_editable_copy,
+                 rights_status, license_notes, permission_statement, commercial_source,
+                 can_be_shared_publicly, can_be_copied_by_others, language_code)
+            VALUES
+                ($1, $2, $3, $4, $5, $6, $7,
+                 'private', $8, COALESCE($9, $10), $11, $12,
+                 $13, $14, $15, true,
+                 $16, $17, $18, $19,
+                 $20, $21, $22);
+        `, [
+            importedCaseId,
+            sourceCase.title,
+            sourceCase.author_firstname,
+            sourceCase.author_lastname,
+            sourceCase.author_email,
+            pdfCopied ? destinationPdfPath : sourceCase.pdf_path,
+            req.session.uid,
+            sourceLicenseCode,
+            sourceCase.attribution_text,
+            buildAttributionText({
+                title:       sourceCase.title,
+                author:      sourceAuthor,
+                licenseCode: sourceLicenseCode,
+            }),
+            rootCaseId,
+            sourceCase.id,
+            sourceCase.title,
+            sourceAuthor,
+            sourceLicenseCode,
+            sourceCase.rights_status,
+            sourceCase.license_notes,
+            sourceCase.permission_statement,
+            sourceCase.commercial_source,
+            sourceCase.can_be_shared_publicly === true,
+            sourceCase.can_be_copied_by_others === true,
+            normalizeLanguageCode(sourceCase.language_code),
+        ]);
+
+        await client.query(`
+            INSERT INTO ethical_cases_authors (case_id, author_id, user_id, author_order, is_primary)
+            SELECT $1,
+                   ca.author_id,
+                   u.id,
+                   ca.author_order,
+                   ca.is_primary
+            FROM ethical_cases_authors ca
+            INNER JOIN ethical_case_author a
+                ON a.id = ca.author_id
+            LEFT JOIN users u
+                ON LOWER(u.mail) = LOWER(a.author_email)
+            WHERE ca.case_id = $2
+            ON CONFLICT (case_id, author_id) DO UPDATE
+            SET user_id = EXCLUDED.user_id,
+                author_order = EXCLUDED.author_order,
+                is_primary = EXCLUDED.is_primary,
+                updated_at = NOW();
+        `, [importedCaseId, sourceCase.id]);
+
+        const importedCase = await client.query(`
+            SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
+                   c.pdf_path, c.creator, c.created_at, c.updated_at,
+                   ${caseSharingSelectSql},
+                   ${pdfRenderJobSelectSql}
+            FROM ethical_cases c
+            ${pdfRenderJobJoinSql}
+            WHERE c.id = $1;
+        `, [importedCaseId]);
+
+        await client.query("COMMIT");
+
+        const caseObj = importedCase.rows[0];
+        if (pdfCopied) {
+            const renderJob = await enqueueCaseRenderSafely(caseObj);
+            Object.assign(caseObj, renderJob);
+        }
+
+        return res.status(201).json({ status: "ok", result: normalizeCase(caseObj) });
+    } catch (error) {
+        await client.query("ROLLBACK");
+        console.error("Error importing case:", error);
+        return res.status(500).json({ status: "err", message: "Failed to import case." });
+    } finally {
+        client.release();
+    }
+});
+
 router.patch("/cases/:id/visibility", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
@@ -794,6 +981,43 @@ router.delete("/cases/:id", async (req, res) => {
     }
 
     try {
+        const ownedCase = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT id
+                FROM ethical_cases
+                WHERE id = $1 AND creator = $2;
+            `,
+            sqlParams: [
+                rpg2.param("plain", caseId),
+                rpg2.param("plain", req.session.uid),
+            ],
+        });
+
+        if (!ownedCase?.id) {
+            return res.status(404).json({ status: "err", message: "Case not found." });
+        }
+
+        const launchedActivity = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT a.id
+                FROM designs d
+                INNER JOIN activity a ON a.design = d.id
+                WHERE d.case_id = $1
+                LIMIT 1;
+            `,
+            sqlParams: [rpg2.param("plain", caseId)],
+        });
+
+        if (launchedActivity?.id) {
+            return res.status(409).json({
+                status:  "err",
+                message: "This case cannot be deleted because it is associated with a design used by an activity.",
+                code:    "CASE_USED_BY_LAUNCHED_ACTIVITY",
+            });
+        }
+
         const deleted = await rpg2.singleSQL({
             dbcon: config.dbconnString,
             sql: `

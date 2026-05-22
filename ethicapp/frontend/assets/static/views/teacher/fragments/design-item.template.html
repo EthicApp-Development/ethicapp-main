@@ -8,6 +8,9 @@
                 <p ng-if="!$ctrl.isOwner"><i class="fa-solid fa-user" aria-hidden="true"></i> {{ 'author' | translate }}: <a ng-if="$ctrl.getAuthorLabel() && $ctrl.hasAuthorEmail()" href="mailto:{{$ctrl.design.metainfo.email}}" target="_blank">{{$ctrl.getAuthorLabel()}}</a><span ng-if="$ctrl.getAuthorLabel() && !$ctrl.hasAuthorEmail()">{{$ctrl.getAuthorLabel()}}</span><span ng-if="!$ctrl.getAuthorLabel()">{{ 'unknown' | translate }}</span></p>
                 <p ng-if="!$ctrl.design.valid"><i class="text-warning fa-solid fa-xmark" aria-hidden="true"></i> {{ 'invalid_design_warning_text' | translate }}</p>
                 <p ng-if="$ctrl.design.valid"><i class="text-success fa-solid fa-check" aria-hidden="true"></i></i> {{ 'valid_design_text' | translate }}</p>
+                <p ng-if="$ctrl.isOwner && $ctrl.design.locked">
+                    <i class="text-warning fa-solid fa-triangle-exclamation" aria-hidden="true"></i> {{ 'design_cannot_delete_used_by_activity' | translate }}
+                </p>
                 <p><i class="fa-solid fa-calendar-alt" aria-hidden="true"></i> {{ 'creation_date_colon' | translate }} {{$ctrl.design.metainfo.creation_date | date}}</p>
                 <p><i class="fa-solid fa-paint-brush" aria-hidden="true"></i> {{ 'design_type_colon' | translate }} {{$ctrl.design.type === "semantic_differential" ? ("semantic_differential" | translate) : ("ranking_activity" | translate)}}</p>
                 <p ng-if="$ctrl.getAssociatedCase()"><i class="fa-solid fa-book" aria-hidden="true"></i> {{ 'design_associated_case_label' | translate }}: <a ng-href="#!/cases/{{$ctrl.getAssociatedCase().id}}" ng-click="$event.stopPropagation()">{{$ctrl.formatCaseLabel($ctrl.getAssociatedCase())}}</a></p>

@@ -139,6 +139,13 @@ let CasesCatalogService = ($http) => {
             await service.getPublicCases(true);
             return response.data.result;
         },
+
+        async importCase(caseId) {
+            const response = await $http.post(`/cases/${caseId}/import`);
+            await service.getCases(true);
+            await service.getPublicCases(true);
+            return response.data.result;
+        },
     };
 
     return service;

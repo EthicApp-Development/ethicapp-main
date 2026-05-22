@@ -90,6 +90,10 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
         vm.hasFetchedUserDesigns = true;
     };
 
+    vm.getLaunchableUserDesigns = function() {
+        return vm.userDesigns.filter((design) => design.valid === true);
+    };
+
     vm.searchUserDesigns = function(searchText) {
         const query = (searchText || "").toLowerCase().trim();
         if (query.length < 1) {
@@ -97,6 +101,18 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
         }
 
         return vm.userDesigns
+            .filter((design) => vm.formatDesignLabel(design).toLowerCase().includes(query))
+            .slice(0, 8);
+    };
+
+    vm.searchLaunchableUserDesigns = function(searchText) {
+        const launchableDesigns = vm.getLaunchableUserDesigns();
+        const query = (searchText || "").toLowerCase().trim();
+        if (query.length < 1) {
+            return launchableDesigns.slice(0, 8);
+        }
+
+        return launchableDesigns
             .filter((design) => vm.formatDesignLabel(design).toLowerCase().includes(query))
             .slice(0, 8);
     };
