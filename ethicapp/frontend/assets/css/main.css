@@ -31,16 +31,14 @@ hr{
 }
 
 .home-card-grid {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
     gap: 22px;
-    justify-content: space-between;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .home-card {
     position: relative;
-    flex: 0 1 calc(25% - 17px);
-    min-width: 190px;
+    width: 100%;
     height: 190px;
     padding: 0;
     overflow: hidden;
@@ -99,9 +97,9 @@ hr{
     }
 }
 
-@media (max-width: 1199px) {
-    .home-card {
-        flex-basis: calc(50% - 11px);
+@media (max-width: 900px) {
+    .home-card-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .home-card img {
@@ -117,8 +115,11 @@ hr{
     }
 
     .home-card {
-        flex-basis: 100%;
         height: 174px;
+    }
+
+    .home-card-grid {
+        grid-template-columns: 1fr;
     }
 
     .home-card img {
@@ -2575,9 +2576,30 @@ h2{
 .case-card-actions {
     align-items: center;
     display: flex;
-    gap: 5px;
+    flex-wrap: wrap;
+    column-gap: 12px;
     justify-content: flex-end;
+    row-gap: 12px;
     width: 100%;
+}
+
+.case-card-button-group {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 8px;
+    justify-content: flex-end;
+    row-gap: 10px;
+}
+
+.case-card-button-group > .btn,
+.case-card-button-group > .locked-svg {
+    margin-bottom: 10px;
+}
+
+.case-card-share-control {
+    flex: 0 0 auto;
+    margin-bottom: 10px;
 }
 
 .case-pagination-controls {
@@ -2595,8 +2617,38 @@ h2{
 .design-item-panel .design-item-actions {
     align-items: center;
     display: flex;
+    flex-wrap: wrap;
+    column-gap: 12px;
     justify-content: flex-end;
+    row-gap: 12px;
     width: 100%;
+}
+
+.design-item-panel .design-item-button-group {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 8px;
+    justify-content: flex-end;
+    row-gap: 10px;
+}
+
+.design-item-panel .design-item-button-group > .btn,
+.design-item-panel .design-item-button-group > .locked-svg {
+    margin-bottom: 10px;
+}
+
+.design-item-panel .design-item-share-control {
+    flex: 0 0 auto;
+    margin-bottom: 10px;
+}
+
+.design-item-panel .design-item-warning {
+    max-width: 320px;
+}
+
+.design-item-panel .design-item-warning p {
+    margin: 0;
 }
 
 .design-item-panel.design-item-selection-layout .panel-body {
@@ -2609,7 +2661,7 @@ h2{
 
 .activity-item-panel .btn, 
 .design-item-panel .btn {
-    margin-left: 5px; /* Add spacing between buttons */
+    margin-left: 0;
 }
 
 .activity-item-panel .small.text-muted, 

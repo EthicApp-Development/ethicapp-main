@@ -13,9 +13,7 @@ import {
     PRIVATE_VISIBILITY,
     PUBLIC_VISIBILITY,
     buildAttributionText,
-    canCaseBeCopiedByOthers,
-    canCaseBeSharedPublicly,
-    deriveCaseSharingFlags,
+    buildLocalizedCopyTitle,
     getCaseAuthorName,
     normalizeLicenseCode,
     normalizeLanguageCode,
@@ -33,13 +31,22 @@ import { moveUploadedFile, pdfUpload, removeUploadedFile } from "../middleware/u
 const router = express.Router();
 const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
 
+const launchedActivityByCaseSql = `
+    SELECT a.id
+    FROM designs d
+    INNER JOIN activity a ON a.design = d.id
+    WHERE d.case_id = $1
+    LIMIT 1;
+`;
+
 const caseSharingSelectSql = `
     c.visibility, c.license_code, c.attribution_text,
     c.original_case_id, c.imported_from_case_id,
     c.source_case_title, c.source_case_author, c.source_case_license_code,
     c.is_editable_copy, c.rights_status, c.license_notes, c.permission_statement,
-    c.commercial_source, c.can_be_shared_publicly, c.can_be_copied_by_others,
+    c.commercial_source,
     c.language_code,
+    c.archived,
     COALESCE((
         SELECT json_agg(json_build_object(
             'id', a.id,
@@ -64,6 +71,7 @@ const caseSharingSelectSql = `
         FROM designs d
         WHERE d.case_id = c.id
           AND d.visibility = 'public'
+          AND COALESCE(d.archived, false) = false
     ), '[]'::json) AS public_designs
     ,
     EXISTS (
@@ -116,10 +124,9 @@ function normalizeCase(row) {
         licenseNotes: row.license_notes,
         permissionStatement: row.permission_statement,
         commercialSource: row.commercial_source,
-        canBeSharedPublicly: row.can_be_shared_publicly === true,
-        canBeCopiedByOthers: row.can_be_copied_by_others === true,
         public: (row.visibility || PRIVATE_VISIBILITY) === PUBLIC_VISIBILITY,
         languageCode: row.language_code || DEFAULT_LANGUAGE_CODE,
+        archived: row.archived === true,
         hasLaunchedDesignActivity: row.has_launched_design_activity === true,
         authors: Array.isArray(row.authors) && row.authors.length > 0
             ? row.authors
@@ -294,6 +301,25 @@ async function copyCasePdfIfPresent(sourcePdfPath, destinationPdfPath) {
     }
 }
 
+async function getUniqueCaseCopyTitle(client, userId, baseTitle, languageCode) {
+    for (let copyIndex = 0; copyIndex < 1000; copyIndex += 1) {
+        const candidateTitle = buildLocalizedCopyTitle(baseTitle, languageCode, copyIndex);
+        const existingResult = await client.query(`
+            SELECT id
+            FROM ethical_cases
+            WHERE creator = $1
+              AND title = $2
+            LIMIT 1;
+        `, [userId, candidateTitle]);
+
+        if (!existingResult.rows[0]) {
+            return candidateTitle;
+        }
+    }
+
+    return buildLocalizedCopyTitle(baseTitle, languageCode, Date.now());
+}
+
 async function getReadableCaseWithDocumentProcessing(caseId, userId, role = "") {
     return rpg2.singleSQL({
         dbcon: config.dbconnString,
@@ -342,6 +368,24 @@ async function getReadableCaseWithDocumentProcessing(caseId, userId, role = "") 
     });
 }
 
+async function hasLaunchedDesignActivity(caseId) {
+    const launchedActivity = await rpg2.singleSQL({
+        dbcon: config.dbconnString,
+        sql: launchedActivityByCaseSql,
+        sqlParams: [rpg2.param("plain", caseId)],
+    });
+
+    return Boolean(launchedActivity?.id);
+}
+
+function lockedCaseResponse(res) {
+    return res.status(409).json({
+        status:  "err",
+        message: "This case cannot be modified because it is associated with a design used by an activity.",
+        code:    "CASE_USED_BY_LAUNCHED_ACTIVITY",
+    });
+}
+
 router.get("/cases", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
@@ -349,6 +393,7 @@ router.get("/cases", async (req, res) => {
 
     const scope = String(req.query.scope || "own").trim().toLowerCase();
     const isPublicScope = scope === "public";
+    const isArchivedScope = scope === "archived";
 
     try {
         const cases = await rpg2.execSQL({
@@ -362,8 +407,10 @@ router.get("/cases", async (req, res) => {
                 ${pdfRenderJobJoinSql}
                 WHERE ${
                     isPublicScope
-                        ? "c.visibility = 'public' AND c.creator <> $1"
-                        : "c.creator = $1"
+                        ? "c.visibility = 'public' AND c.creator <> $1 AND COALESCE(c.archived, false) = false"
+                        : isArchivedScope
+                            ? "c.creator = $1 AND c.archived = true"
+                            : "c.creator = $1 AND COALESCE(c.archived, false) = false"
                 }
                 ORDER BY c.id DESC;
             `,
@@ -401,6 +448,7 @@ router.get("/cases/search", async (req, res) => {
                 FROM ethical_cases c
                 ${pdfRenderJobJoinSql}
                 WHERE (c.creator = $2 OR c.visibility = 'public')
+                  AND COALESCE(c.archived, false) = false
                   AND (
                     LOWER(c.title) LIKE LOWER($1)
                     OR LOWER(c.author_firstname) LIKE LOWER($1)
@@ -545,10 +593,6 @@ router.post("/cases", pdfUpload, async (req, res) => {
         permissionStatement: permissionStatementCamel,
         commercial_source: commercialSource,
         commercialSource: commercialSourceCamel,
-        can_be_shared_publicly: canBeSharedPublicly,
-        canBeSharedPublicly: canBeSharedPubliclyCamel,
-        can_be_copied_by_others: canBeCopiedByOthers,
-        canBeCopiedByOthers: canBeCopiedByOthersCamel,
         language_code: languageCode,
         languageCode: languageCodeCamel,
     } = req.body;
@@ -566,21 +610,7 @@ router.post("/cases", pdfUpload, async (req, res) => {
 
     const normalizedLicenseCode = normalizeLicenseCode(licenseCode ?? licenseCodeCamel, CASE_DEFAULT_LICENSE);
     const normalizedRightsStatus = normalizeRightsStatus(rightsStatus ?? rightsStatusCamel);
-    const sharingFlags = deriveCaseSharingFlags({
-        licenseCode:          normalizedLicenseCode,
-        rightsStatus:         normalizedRightsStatus,
-        canBeSharedPublicly:  canBeSharedPublicly ?? canBeSharedPubliclyCamel,
-        canBeCopiedByOthers:  canBeCopiedByOthers ?? canBeCopiedByOthersCamel,
-    });
     const normalizedVisibility = normalizeVisibility(visibility);
-    if (normalizedVisibility === PUBLIC_VISIBILITY && !sharingFlags.canBeSharedPublicly) {
-        await removeUploadedFile(req.file);
-        return res.status(409).json({
-            status:  "err",
-            message: "This case needs explicit public sharing rights before it can be published.",
-            code:    "CASE_PUBLIC_SHARING_RIGHTS_REQUIRED",
-        });
-    }
 
     try {
         const caseIdResult = await rpg2.singleSQL({
@@ -597,17 +627,15 @@ router.post("/cases", pdfUpload, async (req, res) => {
                 INSERT INTO ethical_cases
                     (id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
                      visibility, license_code, attribution_text, rights_status, license_notes,
-                     permission_statement, commercial_source, can_be_shared_publicly, can_be_copied_by_others,
-                     language_code)
+                     permission_statement, commercial_source, language_code)
                 VALUES
-                    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+                    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                 RETURNING id, case_uuid, title, author_firstname, author_lastname, author_email,
                           pdf_path, creator, visibility, license_code, attribution_text,
                           original_case_id, imported_from_case_id, source_case_title,
                           source_case_author, source_case_license_code, is_editable_copy,
                           rights_status, license_notes, permission_statement, commercial_source,
-                          can_be_shared_publicly, can_be_copied_by_others, language_code,
-                          created_at, updated_at;
+                          language_code, created_at, updated_at;
             `,
             sqlParams: [
                 rpg2.param("plain", caseId),
@@ -624,8 +652,6 @@ router.post("/cases", pdfUpload, async (req, res) => {
                 rpg2.param("plain", licenseNotes ?? licenseNotesCamel ?? null),
                 rpg2.param("plain", permissionStatement ?? permissionStatementCamel ?? null),
                 rpg2.param("plain", commercialSource ?? commercialSourceCamel ?? null),
-                rpg2.param("plain", sharingFlags.canBeSharedPublicly),
-                rpg2.param("plain", sharingFlags.canBeCopiedByOthers),
                 rpg2.param("plain", normalizeLanguageCode(languageCode ?? languageCodeCamel)),
             ],
         });
@@ -672,10 +698,6 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
         permissionStatement: permissionStatementCamel,
         commercial_source: commercialSource,
         commercialSource: commercialSourceCamel,
-        can_be_shared_publicly: canBeSharedPublicly,
-        canBeSharedPublicly: canBeSharedPubliclyCamel,
-        can_be_copied_by_others: canBeCopiedByOthers,
-        canBeCopiedByOthers: canBeCopiedByOthersCamel,
         language_code: languageCode,
         languageCode: languageCodeCamel,
     } = req.body;
@@ -692,8 +714,7 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
             dbcon: config.dbconnString,
             sql: `
                 SELECT id, pdf_path, visibility, license_code, attribution_text, rights_status,
-                       license_notes, permission_statement, commercial_source,
-                       can_be_shared_publicly, can_be_copied_by_others, language_code
+                       license_notes, permission_statement, commercial_source, language_code
                 FROM ethical_cases
                 WHERE id = $1 AND creator = $2;
             `,
@@ -705,25 +726,16 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
             return res.status(404).json({ status: "err", message: "Case not found." });
         }
 
+        if (await hasLaunchedDesignActivity(caseId)) {
+            await removeUploadedFile(req.file);
+            return lockedCaseResponse(res);
+        }
+
         const hasPdf = req.file && req.file.mimetype === "application/pdf";
         const pdfPath = hasPdf ? `/uploads/cases/${caseId}/case.pdf` : existingCase.pdf_path;
         const normalizedLicenseCode = normalizeLicenseCode(licenseCode ?? licenseCodeCamel, existingCase.license_code || CASE_DEFAULT_LICENSE);
         const normalizedRightsStatus = normalizeRightsStatus(rightsStatus ?? rightsStatusCamel, existingCase.rights_status);
-        const sharingFlags = deriveCaseSharingFlags({
-            licenseCode:          normalizedLicenseCode,
-            rightsStatus:         normalizedRightsStatus,
-            canBeSharedPublicly:  canBeSharedPublicly ?? canBeSharedPubliclyCamel ?? existingCase.can_be_shared_publicly,
-            canBeCopiedByOthers:  canBeCopiedByOthers ?? canBeCopiedByOthersCamel ?? existingCase.can_be_copied_by_others,
-        });
         const normalizedVisibility = normalizeVisibility(visibility, existingCase.visibility || PRIVATE_VISIBILITY);
-        if (normalizedVisibility === PUBLIC_VISIBILITY && !sharingFlags.canBeSharedPublicly) {
-            await removeUploadedFile(req.file);
-            return res.status(409).json({
-                status:  "err",
-                message: "This case needs explicit public sharing rights before it can be published.",
-                code:    "CASE_PUBLIC_SHARING_RIGHTS_REQUIRED",
-            });
-        }
 
         const updatedCase = await rpg2.singleSQL({
             dbcon: config.dbconnString,
@@ -741,9 +753,7 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
                     license_notes = $12,
                     permission_statement = $13,
                     commercial_source = $14,
-                    can_be_shared_publicly = $15,
-                    can_be_copied_by_others = $16,
-                    language_code = $17,
+                    language_code = $15,
                     updated_at = NOW()
                 WHERE id = $6 AND creator = $7
                 RETURNING id, case_uuid, title, author_firstname, author_lastname, author_email,
@@ -751,8 +761,7 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
                           original_case_id, imported_from_case_id, source_case_title,
                           source_case_author, source_case_license_code, is_editable_copy,
                           rights_status, license_notes, permission_statement, commercial_source,
-                          can_be_shared_publicly, can_be_copied_by_others, language_code,
-                          created_at, updated_at;
+                          language_code, created_at, updated_at;
             `,
             sqlParams: [
                 rpg2.param("plain", title),
@@ -769,8 +778,6 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
                 rpg2.param("plain", licenseNotes ?? licenseNotesCamel ?? existingCase.license_notes ?? null),
                 rpg2.param("plain", permissionStatement ?? permissionStatementCamel ?? existingCase.permission_statement ?? null),
                 rpg2.param("plain", commercialSource ?? commercialSourceCamel ?? existingCase.commercial_source ?? null),
-                rpg2.param("plain", sharingFlags.canBeSharedPublicly),
-                rpg2.param("plain", sharingFlags.canBeCopiedByOthers),
                 rpg2.param("plain", normalizeLanguageCode(languageCode ?? languageCodeCamel, existingCase.language_code || DEFAULT_LANGUAGE_CODE)),
             ],
         });
@@ -809,17 +816,17 @@ router.post("/cases/:id/import", async (req, res) => {
             SELECT id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
                    visibility, license_code, attribution_text, original_case_id,
                    rights_status, license_notes, permission_statement, commercial_source,
-                   can_be_shared_publicly, can_be_copied_by_others, language_code
+                   language_code
             FROM ethical_cases
             WHERE id = $1
               AND creator <> $2
               AND visibility = 'public'
-              AND can_be_copied_by_others = true
+              AND COALESCE(archived, false) = false
             LIMIT 1;
         `, [caseId, req.session.uid]);
         const sourceCase = sourceResult.rows[0];
 
-        if (!sourceCase || !canCaseBeCopiedByOthers(sourceCase)) {
+        if (!sourceCase) {
             await client.query("ROLLBACK");
             return res.status(403).json({
                 status:  "err",
@@ -835,23 +842,28 @@ router.post("/cases/:id/import", async (req, res) => {
         const sourceAuthor = getCaseAuthorName(sourceCase);
         const sourceLicenseCode = sourceCase.license_code || CASE_DEFAULT_LICENSE;
         const rootCaseId = sourceCase.original_case_id || sourceCase.id;
+        const importedTitle = await getUniqueCaseCopyTitle(
+            client,
+            req.session.uid,
+            sourceCase.title,
+            sourceCase.language_code
+        );
 
         await client.query(`
             INSERT INTO ethical_cases
                 (id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
                  visibility, license_code, attribution_text, original_case_id, imported_from_case_id,
                  source_case_title, source_case_author, source_case_license_code, is_editable_copy,
-                 rights_status, license_notes, permission_statement, commercial_source,
-                 can_be_shared_publicly, can_be_copied_by_others, language_code)
+                 rights_status, license_notes, permission_statement, commercial_source, language_code)
             VALUES
                 ($1, $2, $3, $4, $5, $6, $7,
                  'private', $8, COALESCE($9, $10), $11, $12,
                  $13, $14, $15, true,
                  $16, $17, $18, $19,
-                 $20, $21, $22);
+                 $20);
         `, [
             importedCaseId,
-            sourceCase.title,
+            importedTitle,
             sourceCase.author_firstname,
             sourceCase.author_lastname,
             sourceCase.author_email,
@@ -873,8 +885,6 @@ router.post("/cases/:id/import", async (req, res) => {
             sourceCase.license_notes,
             sourceCase.permission_statement,
             sourceCase.commercial_source,
-            sourceCase.can_be_shared_publicly === true,
-            sourceCase.can_be_copied_by_others === true,
             normalizeLanguageCode(sourceCase.language_code),
         ]);
 
@@ -926,6 +936,140 @@ router.post("/cases/:id/import", async (req, res) => {
     }
 });
 
+router.post("/cases/:id/duplicate", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
+        return res.status(400).json({ status: "err", message: "Invalid case id." });
+    }
+
+    const db = await rpg2.getDBInstance(config.dbconnString);
+    const client = await db.connect();
+
+    try {
+        await client.query("BEGIN");
+        const sourceResult = await client.query(`
+            SELECT id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
+                   visibility, license_code, attribution_text, original_case_id,
+                   rights_status, license_notes, permission_statement, commercial_source,
+                   language_code
+            FROM ethical_cases
+            WHERE id = $1
+              AND creator = $2
+            LIMIT 1;
+        `, [caseId, req.session.uid]);
+        const sourceCase = sourceResult.rows[0];
+
+        if (!sourceCase) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({ status: "err", message: "Case not found." });
+        }
+
+        const nextIdResult = await client.query("SELECT nextval(pg_get_serial_sequence('ethical_cases', 'id')) AS id;");
+        const duplicatedCaseId = Number(nextIdResult.rows[0].id);
+        const destinationPdfPath = `/uploads/cases/${duplicatedCaseId}/case.pdf`;
+        const pdfCopied = await copyCasePdfIfPresent(sourceCase.pdf_path, destinationPdfPath);
+        const sourceAuthor = getCaseAuthorName(sourceCase);
+        const sourceLicenseCode = sourceCase.license_code || CASE_DEFAULT_LICENSE;
+        const rootCaseId = sourceCase.original_case_id || sourceCase.id;
+        const duplicatedTitle = await getUniqueCaseCopyTitle(
+            client,
+            req.session.uid,
+            sourceCase.title,
+            sourceCase.language_code
+        );
+
+        await client.query(`
+            INSERT INTO ethical_cases
+                (id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
+                 visibility, license_code, attribution_text, original_case_id, imported_from_case_id,
+                 source_case_title, source_case_author, source_case_license_code, is_editable_copy,
+                 rights_status, license_notes, permission_statement, commercial_source, language_code,
+                 archived)
+            VALUES
+                ($1, $2, $3, $4, $5, $6, $7,
+                 'private', $8, COALESCE($9, $10), $11, $12,
+                 $13, $14, $15, true,
+                 $16, $17, $18, $19, $20,
+                 false);
+        `, [
+            duplicatedCaseId,
+            duplicatedTitle,
+            sourceCase.author_firstname,
+            sourceCase.author_lastname,
+            sourceCase.author_email,
+            pdfCopied ? destinationPdfPath : sourceCase.pdf_path,
+            req.session.uid,
+            sourceLicenseCode,
+            sourceCase.attribution_text,
+            buildAttributionText({
+                title:       sourceCase.title,
+                author:      sourceAuthor,
+                licenseCode: sourceLicenseCode,
+            }),
+            rootCaseId,
+            sourceCase.id,
+            sourceCase.title,
+            sourceAuthor,
+            sourceLicenseCode,
+            sourceCase.rights_status,
+            sourceCase.license_notes,
+            sourceCase.permission_statement,
+            sourceCase.commercial_source,
+            normalizeLanguageCode(sourceCase.language_code),
+        ]);
+
+        await client.query(`
+            INSERT INTO ethical_cases_authors (case_id, author_id, user_id, author_order, is_primary)
+            SELECT $1,
+                   ca.author_id,
+                   u.id,
+                   ca.author_order,
+                   ca.is_primary
+            FROM ethical_cases_authors ca
+            INNER JOIN ethical_case_author a
+                ON a.id = ca.author_id
+            LEFT JOIN users u
+                ON LOWER(u.mail) = LOWER(a.author_email)
+            WHERE ca.case_id = $2
+            ON CONFLICT (case_id, author_id) DO UPDATE
+            SET user_id = EXCLUDED.user_id,
+                author_order = EXCLUDED.author_order,
+                is_primary = EXCLUDED.is_primary,
+                updated_at = NOW();
+        `, [duplicatedCaseId, sourceCase.id]);
+
+        const duplicatedCase = await client.query(`
+            SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
+                   c.pdf_path, c.creator, c.created_at, c.updated_at,
+                   ${caseSharingSelectSql},
+                   ${pdfRenderJobSelectSql}
+            FROM ethical_cases c
+            ${pdfRenderJobJoinSql}
+            WHERE c.id = $1;
+        `, [duplicatedCaseId]);
+
+        await client.query("COMMIT");
+
+        const caseObj = duplicatedCase.rows[0];
+        if (pdfCopied) {
+            const renderJob = await enqueueCaseRenderSafely(caseObj);
+            Object.assign(caseObj, renderJob);
+        }
+
+        return res.status(201).json({ status: "ok", result: normalizeCase(caseObj) });
+    } catch (error) {
+        await client.query("ROLLBACK");
+        console.error("Error duplicating case:", error);
+        return res.status(500).json({ status: "err", message: "Failed to duplicate case." });
+    } finally {
+        client.release();
+    }
+});
+
 router.patch("/cases/:id/visibility", async (req, res) => {
     if (!requireRole(req, res, "P")) {
         return;
@@ -938,36 +1082,57 @@ router.patch("/cases/:id/visibility", async (req, res) => {
 
     const visibility = normalizeVisibility(req.body?.visibility);
 
+    const db = await rpg2.getDBInstance(config.dbconnString);
+    const client = await db.connect();
+
     try {
-        const updated = await rpg2.singleSQL({
-            dbcon: config.dbconnString,
-            sql: `
+        await client.query("BEGIN");
+
+        if (await hasLaunchedDesignActivity(caseId)) {
+            await client.query("ROLLBACK");
+            return lockedCaseResponse(res);
+        }
+
+        const updatedResult = await client.query(
+            `
                 UPDATE ethical_cases
                 SET visibility = $1,
                     license_code = COALESCE(license_code, $4),
                     updated_at = NOW()
                 WHERE id = $2
                   AND creator = $3
-                  AND ($1 <> 'public' OR can_be_shared_publicly = true)
-                RETURNING id, visibility, license_code, can_be_shared_publicly;
+                RETURNING id, visibility, license_code;
             `,
-            sqlParams: [
-                rpg2.param("plain", visibility),
-                rpg2.param("plain", caseId),
-                rpg2.param("plain", req.session.uid),
-                rpg2.param("plain", CASE_DEFAULT_LICENSE),
-            ],
-        });
+            [visibility, caseId, req.session.uid, CASE_DEFAULT_LICENSE]
+        );
+        const updated = updatedResult.rows[0];
 
         if (!updated || !updated.id) {
-            return res.status(409).json({
+            await client.query("ROLLBACK");
+            return res.status(404).json({
                 status:  "err",
-                message: visibility === PUBLIC_VISIBILITY
-                    ? "This case needs explicit public sharing rights before it can be published."
-                    : "Case not found.",
-                code: visibility === PUBLIC_VISIBILITY ? "CASE_PUBLIC_SHARING_RIGHTS_REQUIRED" : "CASE_NOT_FOUND",
+                message: "Case not found.",
+                code:    "CASE_NOT_FOUND",
             });
         }
+
+        let affectedDesignIds = [];
+        if (visibility === PRIVATE_VISIBILITY) {
+            const affectedDesigns = await client.query(
+                `
+                    UPDATE designs
+                    SET visibility = 'private',
+                        public = false
+                    WHERE case_id = $1
+                      AND visibility = 'public'
+                    RETURNING id;
+                `,
+                [caseId]
+            );
+            affectedDesignIds = affectedDesigns.rows.map(row => row.id);
+        }
+
+        await client.query("COMMIT");
 
         return res.status(200).json({
             status: "ok",
@@ -976,12 +1141,62 @@ router.patch("/cases/:id/visibility", async (req, res) => {
                 visibility: updated.visibility,
                 public: updated.visibility === PUBLIC_VISIBILITY,
                 licenseCode: updated.license_code,
-                canBeSharedPublicly: canCaseBeSharedPublicly(updated),
+                affectedDesignIds,
             },
         });
     } catch (error) {
+        await client.query("ROLLBACK");
         console.error("Error updating case visibility:", error);
         return res.status(500).json({ status: "err", message: "Failed to update case visibility." });
+    } finally {
+        client.release();
+    }
+});
+
+router.patch("/cases/:id/archive", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const caseId = parseCaseId(req.params.id);
+    if (!caseId) {
+        return res.status(400).json({ status: "err", message: "Invalid case id." });
+    }
+
+    const archived = req.body?.archived === true;
+
+    try {
+        const updated = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                UPDATE ethical_cases
+                SET archived = $1,
+                    updated_at = NOW()
+                WHERE id = $2
+                  AND creator = $3
+                RETURNING id, archived;
+            `,
+            sqlParams: [
+                rpg2.param("plain", archived),
+                rpg2.param("plain", caseId),
+                rpg2.param("plain", req.session.uid),
+            ],
+        });
+
+        if (!updated || !updated.id) {
+            return res.status(404).json({ status: "err", message: "Case not found." });
+        }
+
+        return res.status(200).json({
+            status: "ok",
+            result: {
+                id: updated.id,
+                archived: updated.archived === true,
+            },
+        });
+    } catch (error) {
+        console.error("Error archiving case:", error);
+        return res.status(500).json({ status: "err", message: "Failed to update case archive status." });
     }
 });
 
@@ -1013,24 +1228,8 @@ router.delete("/cases/:id", async (req, res) => {
             return res.status(404).json({ status: "err", message: "Case not found." });
         }
 
-        const launchedActivity = await rpg2.singleSQL({
-            dbcon: config.dbconnString,
-            sql: `
-                SELECT a.id
-                FROM designs d
-                INNER JOIN activity a ON a.design = d.id
-                WHERE d.case_id = $1
-                LIMIT 1;
-            `,
-            sqlParams: [rpg2.param("plain", caseId)],
-        });
-
-        if (launchedActivity?.id) {
-            return res.status(409).json({
-                status:  "err",
-                message: "This case cannot be deleted because it is associated with a design used by an activity.",
-                code:    "CASE_USED_BY_LAUNCHED_ACTIVITY",
-            });
+        if (await hasLaunchedDesignActivity(caseId)) {
+            return lockedCaseResponse(res);
         }
 
         const deleted = await rpg2.singleSQL({

@@ -20,9 +20,12 @@
             <li ng-class="{'active': vm.caseMode === 1}">
                 <a href="" ng-click="vm.setCaseMode(1)">{{ 'byOthers' | translate }}</a>
             </li>
+            <li ng-class="{'active': vm.caseMode === 2}">
+                <a href="" ng-click="vm.setCaseMode(2)">{{ 'archived' | translate }}</a>
+            </li>
         </ul>
 
-        <div style="position: absolute; left: 200px; top: 6px; min-width: 80px; max-width: 240px;">
+        <div style="position: absolute; left: 280px; top: 6px; min-width: 80px; max-width: 240px;">
             <div class="search-field-wrapper">
                 <input
                     class="form-control search-input search-decorated-input"
@@ -52,6 +55,8 @@
                                 on-view="vm.viewCase"
                                 on-edit="vm.editCase"
                                 on-delete="vm.deleteCaseFromCard"
+                                on-duplicate="vm.duplicateCase"
+                                on-archive="vm.archiveCase"
                                 on-toggle-public="vm.toggleCaseVisibility">
                             </case-card>
                         </div>
@@ -62,6 +67,16 @@
                                 case-item="caseItem"
                                 on-view="vm.viewCase"
                                 on-import="vm.importCase">
+                            </case-card>
+                        </div>
+
+                        <div ng-if="vm.caseMode === 2">
+                            <case-card
+                                ng-repeat="caseItem in vm.getPaginatedCases() track by caseItem.id"
+                                case-item="caseItem"
+                                on-view="vm.viewCase"
+                                on-duplicate="vm.duplicateCase"
+                                on-archive="vm.archiveCase">
                             </case-card>
                         </div>
 
@@ -85,6 +100,10 @@
 
                     <div class="alert alert-info" ng-if="vm.caseMode === 1 && vm.getFilteredCases().length === 0">
                         <span>{{ 'empty_shared_cases_message' | translate }}</span>
+                    </div>
+
+                    <div class="alert alert-info" ng-if="vm.caseMode === 2 && vm.getFilteredCases().length === 0">
+                        <span>{{ 'empty_archived_cases_message' | translate }}</span>
                     </div>
                 </div>
             </div>

@@ -100,9 +100,8 @@ ADD COLUMN IF NOT EXISTS rights_status varchar(30) DEFAULT 'own_work',
 ADD COLUMN IF NOT EXISTS license_notes text,
 ADD COLUMN IF NOT EXISTS permission_statement text,
 ADD COLUMN IF NOT EXISTS commercial_source text,
-ADD COLUMN IF NOT EXISTS can_be_shared_publicly boolean DEFAULT false,
-ADD COLUMN IF NOT EXISTS can_be_copied_by_others boolean DEFAULT false,
-ADD COLUMN IF NOT EXISTS language_code varchar(10) DEFAULT 'es_CL';
+ADD COLUMN IF NOT EXISTS language_code varchar(10) DEFAULT 'es_CL',
+ADD COLUMN IF NOT EXISTS archived boolean DEFAULT false;
 
 ALTER TABLE ethical_cases
 ALTER COLUMN author_firstname DROP NOT NULL,
@@ -119,7 +118,8 @@ ADD COLUMN IF NOT EXISTS source_design_title text,
 ADD COLUMN IF NOT EXISTS source_design_author text,
 ADD COLUMN IF NOT EXISTS source_design_license_code varchar(30),
 ADD COLUMN IF NOT EXISTS is_editable_copy boolean DEFAULT true,
-ADD COLUMN IF NOT EXISTS language_code varchar(10) DEFAULT 'es_CL';
+ADD COLUMN IF NOT EXISTS language_code varchar(10) DEFAULT 'es_CL',
+ADD COLUMN IF NOT EXISTS archived boolean DEFAULT false;
 
 UPDATE designs
 SET visibility = CASE WHEN public = true THEN 'public' ELSE 'private' END
@@ -143,12 +143,6 @@ END
 WHERE rights_status IS NULL
    OR rights_status NOT IN ('own_work', 'open_license', 'used_with_permission', 'commercial_license', 'public_domain', 'unknown');
 
-UPDATE ethical_cases
-SET can_be_shared_publicly = true,
-    can_be_copied_by_others = true
-WHERE license_code IN ('CC-BY-4.0', 'CC-BY-SA-4.0', 'CC-BY-NC-SA-4.0')
-  AND rights_status = 'open_license';
-
 UPDATE designs
 SET license_code = 'CC-BY-SA-4.0'
 WHERE license_code IS NULL;
@@ -160,6 +154,14 @@ WHERE language_code IS NULL;
 UPDATE designs
 SET language_code = 'es_CL'
 WHERE language_code IS NULL;
+
+UPDATE ethical_cases
+SET archived = false
+WHERE archived IS NULL;
+
+UPDATE designs
+SET archived = false
+WHERE archived IS NULL;
 
 ALTER TABLE ethical_cases
 DROP CONSTRAINT IF EXISTS ethical_cases_visibility_check,
@@ -180,12 +182,6 @@ ADD CONSTRAINT ethical_cases_rights_status_check CHECK (
         'public_domain',
         'unknown'
     )
-);
-
-ALTER TABLE ethical_cases
-DROP CONSTRAINT IF EXISTS ethical_cases_public_visibility_shareable_check,
-ADD CONSTRAINT ethical_cases_public_visibility_shareable_check CHECK (
-    visibility <> 'public' OR can_be_shared_publicly = true
 );
 
 ALTER TABLE ethical_cases
@@ -221,13 +217,14 @@ FOREIGN KEY (source_design_license_code) REFERENCES licenses(code);
 CREATE INDEX IF NOT EXISTS idx_ethical_cases_visibility ON ethical_cases (visibility);
 CREATE INDEX IF NOT EXISTS idx_ethical_cases_language_code ON ethical_cases (language_code);
 CREATE INDEX IF NOT EXISTS idx_ethical_cases_rights_status ON ethical_cases (rights_status);
-CREATE INDEX IF NOT EXISTS idx_ethical_cases_share_copy ON ethical_cases (can_be_shared_publicly, can_be_copied_by_others);
 CREATE INDEX IF NOT EXISTS idx_ethical_cases_original_case_id ON ethical_cases (original_case_id);
 CREATE INDEX IF NOT EXISTS idx_ethical_cases_imported_from_case_id ON ethical_cases (imported_from_case_id);
+CREATE INDEX IF NOT EXISTS idx_ethical_cases_archived ON ethical_cases (archived);
 CREATE INDEX IF NOT EXISTS idx_designs_visibility ON designs (visibility);
 CREATE INDEX IF NOT EXISTS idx_designs_language_code ON designs (language_code);
 CREATE INDEX IF NOT EXISTS idx_designs_original_design_id ON designs (original_design_id);
 CREATE INDEX IF NOT EXISTS idx_designs_imported_from_design_id ON designs (imported_from_design_id);
+CREATE INDEX IF NOT EXISTS idx_designs_archived ON designs (archived);
 
 INSERT INTO ethical_case_author (author_firstname, author_lastname, author_email)
 SELECT DISTINCT ON (LOWER(author_email))

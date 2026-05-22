@@ -29,6 +29,7 @@ const caseAuthorEditorComponent = {
         isDuplicateEmail:   "<",
         currentUserProfile: "<",
         useCurrentUser:     "=",
+        isReadonly:         "<",
         onRemove:           "&",
     },
     controller:  CaseAuthorEditorController,

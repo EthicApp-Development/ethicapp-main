@@ -1,12 +1,10 @@
-let CasesCatalogService = ($http) => {
+let CasesCatalogService = ($rootScope, $http) => {
     function appendCaseSharingFields(formData, caseData) {
         formData.append("authors", JSON.stringify(caseData.authors || []));
         formData.append("visibility", caseData.visibility || "private");
         formData.append("license_code", caseData.licenseCode || "CC-BY-NC-SA-4.0");
         formData.append("rights_status", caseData.rightsStatus || "own_work");
         formData.append("language_code", caseData.languageCode || "es_CL");
-        formData.append("can_be_shared_publicly", caseData.canBeSharedPublicly === true ? "true" : "false");
-        formData.append("can_be_copied_by_others", caseData.canBeCopiedByOthers === true ? "true" : "false");
         formData.append("attribution_text", caseData.attributionText || "");
         formData.append("license_notes", caseData.licenseNotes || "");
         formData.append("permission_statement", caseData.permissionStatement || "");
@@ -16,6 +14,7 @@ let CasesCatalogService = ($http) => {
     const service = {
         cases: [],
         publicCases: [],
+        archivedCases: [],
         licenses: [],
         languages: [],
 
@@ -33,6 +32,14 @@ let CasesCatalogService = ($http) => {
             return service.publicCases;
         },
 
+        async loadArchivedCases() {
+            const response = await $http.get("/cases", {
+                params: { scope: "archived" },
+            });
+            service.archivedCases = Array.isArray(response.data.result) ? response.data.result : [];
+            return service.archivedCases;
+        },
+
         async getCases(reload = false) {
             if (reload || service.cases.length === 0) {
                 await service.loadCases();
@@ -45,6 +52,13 @@ let CasesCatalogService = ($http) => {
                 await service.loadPublicCases();
             }
             return service.publicCases;
+        },
+
+        async getArchivedCases(reload = false) {
+            if (reload || service.archivedCases.length === 0) {
+                await service.loadArchivedCases();
+            }
+            return service.archivedCases;
         },
 
         async getCaseById(caseId) {
@@ -106,6 +120,7 @@ let CasesCatalogService = ($http) => {
 
             await service.getCases(true);
             await service.getPublicCases(true);
+            await service.getArchivedCases(true);
             return response.data.result;
         },
 
@@ -124,6 +139,7 @@ let CasesCatalogService = ($http) => {
 
             await service.getCases(true);
             await service.getPublicCases(true);
+            await service.getArchivedCases(true);
             return response.data.result;
         },
 
@@ -131,12 +147,21 @@ let CasesCatalogService = ($http) => {
             await $http.delete(`/cases/${caseId}`);
             await service.getCases(true);
             await service.getPublicCases(true);
+            await service.getArchivedCases(true);
         },
 
         async updateCaseVisibility(caseId, visibility) {
             const response = await $http.patch(`/cases/${caseId}/visibility`, { visibility });
             await service.getCases(true);
             await service.getPublicCases(true);
+            await service.getArchivedCases(true);
+            if (Array.isArray(response.data.result?.affectedDesignIds) && response.data.result.affectedDesignIds.length > 0) {
+                $rootScope.$broadcast("caseVisibilityUpdatedDesigns", {
+                    caseId,
+                    affectedDesignIds: response.data.result.affectedDesignIds,
+                    visibility,
+                });
+            }
             return response.data.result;
         },
 
@@ -144,6 +169,23 @@ let CasesCatalogService = ($http) => {
             const response = await $http.post(`/cases/${caseId}/import`);
             await service.getCases(true);
             await service.getPublicCases(true);
+            await service.getArchivedCases(true);
+            return response.data.result;
+        },
+
+        async duplicateCase(caseId) {
+            const response = await $http.post(`/cases/${caseId}/duplicate`);
+            await service.getCases(true);
+            await service.getPublicCases(true);
+            await service.getArchivedCases(true);
+            return response.data.result;
+        },
+
+        async updateCaseArchived(caseId, archived) {
+            const response = await $http.patch(`/cases/${caseId}/archive`, { archived });
+            await service.getCases(true);
+            await service.getPublicCases(true);
+            await service.getArchivedCases(true);
             return response.data.result;
         },
     };

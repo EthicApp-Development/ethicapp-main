@@ -5,6 +5,7 @@
                 <input
                     type="checkbox"
                     ng-model="$ctrl.useCurrentUser"
+                    ng-disabled="$ctrl.isReadonly"
                     ng-change="$ctrl.onUseCurrentUserChanged()">
                 {{ 'ethical_cases_i_am_primary_author' | translate }}
             </label>
@@ -20,7 +21,7 @@
                         name="authorFirstname{{$ctrl.authorIndex}}"
                         class="form-control"
                         ng-model="$ctrl.author.authorFirstname"
-                        ng-readonly="$ctrl.isPrimary && $ctrl.useCurrentUser"
+                        ng-readonly="$ctrl.isReadonly || ($ctrl.isPrimary && $ctrl.useCurrentUser)"
                         required>
                 </div>
             </div>
@@ -33,7 +34,7 @@
                         name="authorLastname{{$ctrl.authorIndex}}"
                         class="form-control"
                         ng-model="$ctrl.author.authorLastname"
-                        ng-readonly="$ctrl.isPrimary && $ctrl.useCurrentUser"
+                        ng-readonly="$ctrl.isReadonly || ($ctrl.isPrimary && $ctrl.useCurrentUser)"
                         required>
                 </div>
             </div>
@@ -46,7 +47,7 @@
                         name="authorEmail{{$ctrl.authorIndex}}"
                         class="form-control"
                         ng-model="$ctrl.author.authorEmail"
-                        ng-readonly="$ctrl.isPrimary && $ctrl.useCurrentUser"
+                        ng-readonly="$ctrl.isReadonly || ($ctrl.isPrimary && $ctrl.useCurrentUser)"
                         required>
                     <p class="help-block text-danger" ng-if="$ctrl.isDuplicateEmail">
                         {{ 'ethical_cases_validation_duplicate_author_email' | translate }}
@@ -59,7 +60,7 @@
         <button
             type="button"
             class="btn btn-default btn-sm pull-right"
-            ng-if="$ctrl.canRemove"
+            ng-if="$ctrl.canRemove && !$ctrl.isReadonly"
             ng-click="$ctrl.onRemove()">
             <i class="fa fa-trash" aria-hidden="true"></i> {{ 'remove_author' | translate }}
         </button>

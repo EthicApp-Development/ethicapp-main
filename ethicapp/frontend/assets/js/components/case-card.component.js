@@ -41,13 +41,15 @@ const CaseCardController = function() {
     };
 
     this.canToggleVisibility = function() {
-        return this.isFunction(this.onTogglePublic) && this.caseItem?.canBeSharedPublicly === true;
+        return this.isFunction(this.onTogglePublic)
+            && this.caseItem?.hasLaunchedDesignActivity !== true
+            && this.caseItem?.archived !== true;
     };
 
     this.canImport = function() {
         return this.isFunction(this.onImport)
             && this.caseItem?.visibility === "public"
-            && this.caseItem?.canBeCopiedByOthers === true;
+            && this.caseItem?.archived !== true;
     };
 
     this.canDelete = function() {
@@ -113,6 +115,8 @@ const caseCardComponent = {
         onView: "<?",
         onEdit: "<?",
         onDelete: "<?",
+        onDuplicate: "<?",
+        onArchive: "<?",
         onTogglePublic: "<?",
         onImport: "<?",
     },

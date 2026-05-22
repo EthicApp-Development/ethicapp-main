@@ -12,12 +12,6 @@ export const COMMERCIAL_LICENSE_RIGHTS_STATUS = "commercial_license";
 export const PUBLIC_DOMAIN_RIGHTS_STATUS = "public_domain";
 export const UNKNOWN_RIGHTS_STATUS = "unknown";
 
-const openLicenseCodes = new Set([
-    "CC-BY-4.0",
-    "CC-BY-SA-4.0",
-    "CC-BY-NC-SA-4.0",
-]);
-
 const rightsStatuses = new Set([
     OWN_WORK_RIGHTS_STATUS,
     OPEN_LICENSE_RIGHTS_STATUS,
@@ -45,48 +39,8 @@ export function normalizeLanguageCode(value, fallback = DEFAULT_LANGUAGE_CODE) {
     return languageCode || fallback;
 }
 
-export function parseOptionalBoolean(value) {
-    if (value === undefined || value === null || value === "") {
-        return undefined;
-    }
-
-    return value === true || value === "true" || value === "1" || value === 1;
-}
-
 export function normalizeRightsStatus(value, fallback = OWN_WORK_RIGHTS_STATUS) {
     return rightsStatuses.has(value) ? value : fallback;
-}
-
-export function isOpenLicenseCode(licenseCode) {
-    return openLicenseCodes.has(licenseCode);
-}
-
-export function canCaseBeSharedPublicly(caseObj) {
-    return parseOptionalBoolean(caseObj?.can_be_shared_publicly ?? caseObj?.canBeSharedPublicly) === true;
-}
-
-export function canCaseBeCopiedByOthers(caseObj) {
-    return parseOptionalBoolean(caseObj?.can_be_copied_by_others ?? caseObj?.canBeCopiedByOthers) === true;
-}
-
-export function deriveCaseSharingFlags({ licenseCode, rightsStatus, canBeSharedPublicly, canBeCopiedByOthers }) {
-    const normalizedLicenseCode = normalizeLicenseCode(licenseCode, CASE_DEFAULT_LICENSE);
-    const normalizedRightsStatus = normalizeRightsStatus(rightsStatus);
-    const isOwnWork = normalizedRightsStatus === OWN_WORK_RIGHTS_STATUS;
-    const isClearlyOpen = normalizedRightsStatus === OPEN_LICENSE_RIGHTS_STATUS && isOpenLicenseCode(normalizedLicenseCode);
-    const isPublicDomain = normalizedRightsStatus === PUBLIC_DOMAIN_RIGHTS_STATUS;
-
-    const explicitSharedPublicly = parseOptionalBoolean(canBeSharedPublicly);
-    const explicitCopiedByOthers = parseOptionalBoolean(canBeCopiedByOthers);
-
-    return {
-        canBeSharedPublicly: explicitSharedPublicly === undefined
-            ? isOwnWork || isClearlyOpen || isPublicDomain
-            : explicitSharedPublicly,
-        canBeCopiedByOthers: explicitCopiedByOthers === undefined
-            ? isOwnWork || isClearlyOpen || isPublicDomain
-            : explicitCopiedByOthers,
-    };
 }
 
 export function getCaseAuthorName(caseObj) {
@@ -98,6 +52,17 @@ export function getCaseAuthorName(caseObj) {
 
 export function getDesignTitle(design) {
     return design?.metainfo?.title || design?.title || "Untitled design";
+}
+
+export function getLocalizedCopyLabel(languageCode) {
+    return String(languageCode || "").toLowerCase().startsWith("es") ? "copia" : "copy";
+}
+
+export function buildLocalizedCopyTitle(title, languageCode, copyIndex = 0) {
+    const baseTitle = String(title || "").trim() || "Untitled";
+    const copyLabel = getLocalizedCopyLabel(languageCode);
+    const suffix = copyIndex > 0 ? ` (${copyLabel} ${copyIndex})` : ` (${copyLabel})`;
+    return `${baseTitle}${suffix}`;
 }
 
 export function getUserDisplayName(user) {

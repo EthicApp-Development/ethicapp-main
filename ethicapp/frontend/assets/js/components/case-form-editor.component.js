@@ -8,17 +8,17 @@ const CaseFormEditorController = function() {
             { value: "private", labelKey: "visibility_private" },
             { value: "public", labelKey: "visibility_public" },
         ];
-        vm.rightsStatusOptions = [
-            { value: "own_work", labelKey: "rights_status_own_work" },
-            { value: "open_license", labelKey: "rights_status_open_license" },
-            { value: "used_with_permission", labelKey: "rights_status_used_with_permission" },
-            { value: "commercial_license", labelKey: "rights_status_commercial_license" },
-            { value: "public_domain", labelKey: "rights_status_public_domain" },
-            { value: "unknown", labelKey: "rights_status_unknown" },
-        ];
+    };
+
+    vm.isLocked = function() {
+        return vm.formModel?.hasLaunchedDesignActivity === true;
     };
 
     vm.onSubmit = function(form) {
+        if (vm.isLocked()) {
+            return;
+        }
+
         vm.hasAttemptedSubmit = true;
         vm.ensureAuthors();
         if (!form || !form.$valid || vm.hasDuplicateAuthorEmails() || !vm.onSave) {
@@ -111,40 +111,6 @@ const CaseFormEditorController = function() {
         vm.ensureAuthors();
     };
 
-    vm.syncRightsDefaults = function() {
-        if (!vm.formModel) {
-            return;
-        }
-
-        switch (vm.formModel.rightsStatus) {
-        case "commercial_license":
-            vm.formModel.licenseCode = "COMMERCIAL_LICENSE";
-            vm.formModel.canBeSharedPublicly = false;
-            vm.formModel.canBeCopiedByOthers = false;
-            break;
-        case "used_with_permission":
-            vm.formModel.licenseCode = "USED_WITH_PERMISSION";
-            vm.formModel.canBeSharedPublicly = false;
-            vm.formModel.canBeCopiedByOthers = false;
-            break;
-        case "open_license":
-            vm.formModel.licenseCode = vm.formModel.licenseCode && vm.formModel.licenseCode.startsWith("CC-")
-                ? vm.formModel.licenseCode
-                : "CC-BY-NC-SA-4.0";
-            vm.formModel.canBeSharedPublicly = true;
-            vm.formModel.canBeCopiedByOthers = true;
-            break;
-        case "public_domain":
-        case "own_work":
-            vm.formModel.canBeSharedPublicly = true;
-            vm.formModel.canBeCopiedByOthers = true;
-            break;
-        default:
-            vm.formModel.canBeSharedPublicly = false;
-            vm.formModel.canBeCopiedByOthers = false;
-            break;
-        }
-    };
 };
 
 const caseFormEditorComponent = {

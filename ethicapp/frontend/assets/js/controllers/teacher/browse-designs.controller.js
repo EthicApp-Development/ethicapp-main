@@ -1,6 +1,6 @@
 /*eslint func-style: ["error", "expression"]*/
 export function BrowseDesignsController($scope, $routeParams, toast, $translate,
-    ActivityStateService, DesignCatalogService, $timeout, $window) {
+    ActivityStateService, DesignCatalogService, DesignPublicationService, $timeout, $window) {
 
     const vm = this;
     vm.selectedDesignId = 0;
@@ -10,6 +10,7 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
     vm.designSearchQuery = "";
     vm.userDesigns = [];
     vm.publicDesigns = [];
+    vm.archivedDesigns = [];
     vm.designs = [];
 
     vm.goBack = function() {
@@ -46,6 +47,10 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
             DesignCatalogService.unregisterListener("onDesignCatalogUpdated", 
                 updateHandler);    
         });
+        $scope.$on("caseVisibilityUpdatedDesigns", function(_event, data) {
+            DesignCatalogService.applyPrivateVisibilityToDesigns(data?.affectedDesignIds || []);
+            vm.forceFetchDesigns();
+        });
         
         try {
             await vm.forceFetchDesigns();
@@ -71,14 +76,41 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
 
     vm.forceFetchDesigns = async function() {
         vm.userDesigns = await DesignCatalogService.getUserDesigns(true);
+        vm.archivedDesigns = await DesignCatalogService.getArchivedDesigns();
         vm.publicDesigns = await DesignCatalogService.getPublicDesigns();
         vm.designs = await DesignCatalogService.getDesigns();
 
         $scope.$applyAsync();
     }
 
-    vm.designPublic = async function(id) {
-        await DesignCatalogService.togglePublicVisibility(id);
+    vm.showDesignToast = function(messageKey, className = undefined) {
+        $scope.$applyAsync(() => {
+            $translate(messageKey).then((result) => {
+                toast.create({
+                    timeout: 6 * 1000,
+                    message: result,
+                    className,
+                    containerClass: 'designs-toast-container',
+                    dismissible: false,
+                    defaultToastClass: 'toast',
+                    insertFromTop: true,
+                });
+            });
+        });
+    };
+
+    vm.designPublic = async function(design) {
+        try {
+            const result = await DesignPublicationService.togglePublicVisibility(design);
+            if (result.status === "case_not_ready") {
+                vm.showDesignToast("case_publication_settings_not_public", "alert-warning");
+            }
+        } catch (error) {
+            console.error("[BrowseDesignsController::designPublic] Error changing design visibility.", error);
+            vm.showDesignToast("design_visibility_update_error", "alert-danger");
+        } finally {
+            $scope.$applyAsync();
+        }
     };
     
     vm.designLock = async function(id) {
@@ -87,6 +119,7 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
     
     vm.getDesigns = async function() {
         vm.userDesigns = await DesignCatalogService.getUserDesigns();
+        vm.archivedDesigns = await DesignCatalogService.getArchivedDesigns();
         vm.hasFetchedUserDesigns = true;
     };
 
@@ -156,25 +189,47 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
         await DesignCatalogService.deleteDesign(id);
     };
 
+    vm.archiveDesign = async function(id) {
+        const design = await DesignCatalogService.getDesignById(id);
+        const nextArchived = design?.archived !== true;
+        try {
+            await DesignCatalogService.updateDesignArchived(id, nextArchived);
+            vm.showDesignToast(nextArchived ? "design_archive_success" : "design_unarchive_success");
+            if (!nextArchived) {
+                vm.dsgnMode = 0;
+            }
+        } catch (error) {
+            console.error("[BrowseDesignsController::archiveDesign] Error updating archived status.", error);
+            vm.showDesignToast("design_archive_error", "alert-danger");
+        }
+    };
+
     vm.duplicateDesign = async function(id) {
         await DesignCatalogService.duplicateDesign(id);
     };
 
     vm.importDesign = async function(id) {
-        await DesignCatalogService.importDesign(id);
-        
-        $scope.$applyAsync(() => {
-            $translate("design_imported_text").then((result) => {
-                toast.create({
-                    timeout: 100 * 1000,
-                    message: result,
-                    containerClass: 'designs-toast-container',
-                    dismissible: false,
-                    defaultToastClass: 'toast',
-                    insertFromTop: true,
-                  });
+        try {
+            await DesignCatalogService.importDesign(id);
+            
+            $scope.$applyAsync(() => {
+                $translate("design_imported_text").then((result) => {
+                    toast.create({
+                        timeout: 100 * 1000,
+                        message: result,
+                        containerClass: 'designs-toast-container',
+                        dismissible: false,
+                        defaultToastClass: 'toast',
+                        insertFromTop: true,
+                    });
+                });
             });
-        });        
+        } catch (error) {
+            const messageKey = error?.data?.code === "DESIGN_CASE_NOT_IMPORTABLE"
+                ? "design_import_blocked_by_case"
+                : "design_import_error";
+            vm.showDesignToast(messageKey, "alert-danger");
+        }
     };
     
     vm.getDesign = async function(id) {

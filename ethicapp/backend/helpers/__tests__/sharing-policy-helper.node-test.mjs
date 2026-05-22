@@ -9,14 +9,14 @@ import {
     PRIVATE_VISIBILITY,
     PUBLIC_VISIBILITY,
     buildAttributionText,
-    deriveCaseSharingFlags,
+    buildLocalizedCopyTitle,
     getCaseAuthorName,
     getDesignTitle,
+    getLocalizedCopyLabel,
     normalizeLanguageCode,
     normalizeLicenseCode,
     normalizeRightsStatus,
     normalizeVisibility,
-    parseOptionalBoolean,
 } from "../sharing-policy-helper.js";
 
 test("normalizeVisibility only accepts public and private values", () => {
@@ -37,52 +37,10 @@ test("normalizeLanguageCode applies the resource language default", () => {
     assert.equal(normalizeLanguageCode(""), "es_CL");
 });
 
-test("parseOptionalBoolean accepts multipart form boolean strings", () => {
-    assert.equal(parseOptionalBoolean("true"), true);
-    assert.equal(parseOptionalBoolean("false"), false);
-    assert.equal(parseOptionalBoolean(undefined), undefined);
-});
-
 test("normalizeRightsStatus only accepts explicit rights categories", () => {
     assert.equal(normalizeRightsStatus("open_license"), OPEN_LICENSE_RIGHTS_STATUS);
     assert.equal(normalizeRightsStatus("commercial_license"), COMMERCIAL_LICENSE_RIGHTS_STATUS);
     assert.equal(normalizeRightsStatus("private_use_only"), "own_work");
-});
-
-test("deriveCaseSharingFlags separates private use from public sharing rights", () => {
-    assert.deepEqual(
-        deriveCaseSharingFlags({
-            licenseCode:  "ALL_RIGHTS_RESERVED",
-            rightsStatus: "own_work",
-        }),
-        { canBeSharedPublicly: true, canBeCopiedByOthers: true }
-    );
-
-    assert.deepEqual(
-        deriveCaseSharingFlags({
-            licenseCode:  "COMMERCIAL_LICENSE",
-            rightsStatus: "commercial_license",
-        }),
-        { canBeSharedPublicly: false, canBeCopiedByOthers: false }
-    );
-
-    assert.deepEqual(
-        deriveCaseSharingFlags({
-            licenseCode:  "CC-BY-NC-SA-4.0",
-            rightsStatus: "open_license",
-        }),
-        { canBeSharedPublicly: true, canBeCopiedByOthers: true }
-    );
-
-    assert.deepEqual(
-        deriveCaseSharingFlags({
-            licenseCode:          "USED_WITH_PERMISSION",
-            rightsStatus:         "used_with_permission",
-            canBeSharedPublicly:  true,
-            canBeCopiedByOthers:  false,
-        }),
-        { canBeSharedPublicly: true, canBeCopiedByOthers: false }
-    );
 });
 
 test("buildAttributionText creates a compact attribution snapshot", () => {
@@ -101,4 +59,11 @@ test("title and author helpers normalize existing case and design shapes", () =>
     assert.equal(getDesignTitle({ title: "Flat title" }), "Flat title");
     assert.equal(getDesignTitle({}), "Untitled design");
     assert.equal(getCaseAuthorName({ author_firstname: "Jane", author_lastname: "Doe" }), "Jane Doe");
+});
+
+test("localized copy title helpers use the content language", () => {
+    assert.equal(getLocalizedCopyLabel("es_CL"), "copia");
+    assert.equal(getLocalizedCopyLabel("en_US"), "copy");
+    assert.equal(buildLocalizedCopyTitle("Caso base", "es_CL"), "Caso base (copia)");
+    assert.equal(buildLocalizedCopyTitle("Base case", "en_US", 2), "Base case (copy 2)");
 });

@@ -9,9 +9,6 @@
                 <p><i class="fa-solid fa-eye" aria-hidden="true"></i> {{ 'visibility' | translate }}: {{ $ctrl.getVisibilityLabelKey() | translate }}</p>
                 <p><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> {{ 'rights_status' | translate }}: {{ $ctrl.getRightsStatusLabelKey() | translate }}</p>
                 <p><i class="fa-solid fa-certificate" aria-hidden="true"></i> {{ 'license' | translate }}: {{$ctrl.caseItem.licenseCode}}</p>
-                <p ng-if="$ctrl.isFunction($ctrl.onTogglePublic) && !$ctrl.caseItem.canBeSharedPublicly">
-                    <i class="text-warning fa-solid fa-triangle-exclamation" aria-hidden="true"></i> {{ 'case_not_publicly_shareable' | translate }}
-                </p>
                 <p ng-if="$ctrl.caseItem.hasLaunchedDesignActivity">
                     <i class="text-warning fa-solid fa-triangle-exclamation" aria-hidden="true"></i> {{ 'case_cannot_delete_used_by_activity' | translate }}
                 </p>
@@ -43,23 +40,34 @@
             </div>
             <div class="col-sm-4">
                 <div class="case-card-actions" ng-if="$ctrl.showActions">
-                    <img class="locked-svg"
-                         src="/assets/images/iconsets/gray-lineart/design-lock-active.svg"
-                         alt="locked"
-                         ng-show="$ctrl.caseItem.hasLaunchedDesignActivity">
-                    <button ng-show="$ctrl.isFunction($ctrl.onView)" class="btn btn-default btn-sm" ng-click="$ctrl.onView($ctrl.caseItem)">
-                        <i class="fa fa-eye"></i> {{ 'view' | translate }}
-                    </button>
-                    <button ng-show="$ctrl.isFunction($ctrl.onEdit)" class="btn btn-default btn-sm" ng-click="$ctrl.onEdit($ctrl.caseItem)">
-                        <i class="fa fa-pencil"></i> {{ 'edit' | translate }}
-                    </button>
-                    <button ng-show="$ctrl.canDelete()" class="btn btn-danger btn-sm" ng-click="$ctrl.onDelete($ctrl.caseItem)">
-                        <i class="fa fa-trash"></i> {{ 'delete' | translate }}
-                    </button>
-                    <button ng-show="$ctrl.canImport()" class="btn btn-default btn-sm" ng-click="$ctrl.onImport($ctrl.caseItem)">
-                        <i class="fa fa-download"></i> {{ 'import_case_button_text' | translate }}
-                    </button>
-                    <div ng-show="$ctrl.canToggleVisibility()" style="margin-top: 1em" class="text-center">
+                    <div class="case-card-button-group">
+                        <img class="locked-svg"
+                             src="/assets/images/iconsets/gray-lineart/design-lock-active.svg"
+                             alt="locked"
+                             ng-show="$ctrl.caseItem.hasLaunchedDesignActivity">
+                        <button ng-show="$ctrl.isFunction($ctrl.onView)" class="btn btn-default btn-sm" ng-click="$ctrl.onView($ctrl.caseItem)">
+                            <i class="fa fa-eye"></i> {{ 'view' | translate }}
+                        </button>
+                        <button ng-show="$ctrl.isFunction($ctrl.onEdit)" class="btn btn-default btn-sm" ng-click="$ctrl.onEdit($ctrl.caseItem)">
+                            <i class="fa fa-pencil"></i> {{ 'edit' | translate }}
+                        </button>
+                        <button ng-show="$ctrl.isFunction($ctrl.onDuplicate)" class="btn btn-default btn-sm" ng-click="$ctrl.onDuplicate($ctrl.caseItem)">
+                            <i class="fa-regular fa-clone"></i> {{ 'duplicate_item_button_text' | translate }}
+                        </button>
+                        <button ng-show="$ctrl.isFunction($ctrl.onArchive) && !$ctrl.caseItem.archived" class="btn btn-default btn-sm" ng-click="$ctrl.onArchive($ctrl.caseItem)">
+                            <i class="fa-solid fa-box-archive"></i> {{ 'archive_button_text' | translate }}
+                        </button>
+                        <button ng-show="$ctrl.isFunction($ctrl.onArchive) && $ctrl.caseItem.archived" class="btn btn-default btn-sm" ng-click="$ctrl.onArchive($ctrl.caseItem)">
+                            <i class="fa-regular fa-star"></i> {{ 'unarchive_button_text' | translate }}
+                        </button>
+                        <button ng-show="$ctrl.canDelete()" class="btn btn-danger btn-sm" ng-click="$ctrl.onDelete($ctrl.caseItem)">
+                            <i class="fa fa-trash"></i> {{ 'delete' | translate }}
+                        </button>
+                        <button ng-show="$ctrl.canImport()" class="btn btn-default btn-sm" ng-click="$ctrl.onImport($ctrl.caseItem)">
+                            <i class="fa fa-download"></i> {{ 'import_case_button_text' | translate }}
+                        </button>
+                    </div>
+                    <div ng-show="$ctrl.canToggleVisibility()" class="case-card-share-control text-center">
                         <div toggle-switch ng-model="$ctrl.caseItem.public"
                              ng-click="$ctrl.onTogglePublic($ctrl.caseItem)"
                              class="ats-switch switch-primary d-inline-block">

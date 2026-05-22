@@ -15,8 +15,7 @@ import {
     PRIVATE_VISIBILITY,
     PUBLIC_VISIBILITY,
     buildAttributionText,
-    canCaseBeCopiedByOthers,
-    canCaseBeSharedPublicly,
+    buildLocalizedCopyTitle,
     getCaseAuthorName,
     getDesignTitle,
     getUserDisplayName,
@@ -92,6 +91,7 @@ function normalizeDesignRow(row) {
         public: isPublicVisibility(visibility),
         visibility,
         locked: row.locked,
+        archived: row.archived === true,
         licenseCode: row.license_code || DESIGN_DEFAULT_LICENSE,
         languageCode: row.language_code || DEFAULT_LANGUAGE_CODE,
         attributionText: row.attribution_text,
@@ -111,6 +111,7 @@ function normalizeDesignRow(row) {
             visibility: row.case_visibility || PRIVATE_VISIBILITY,
             licenseCode: row.case_license_code || CASE_DEFAULT_LICENSE,
             languageCode: row.case_language_code || DEFAULT_LANGUAGE_CODE,
+            archived: row.case_archived === true,
             attributionText: row.case_attribution_text,
             originalCaseId: row.case_original_case_id,
             importedFromCaseId: row.case_imported_from_case_id,
@@ -122,8 +123,6 @@ function normalizeDesignRow(row) {
             licenseNotes: row.case_license_notes,
             permissionStatement: row.case_permission_statement,
             commercialSource: row.case_commercial_source,
-            canBeSharedPublicly: row.case_can_be_shared_publicly === true,
-            canBeCopiedByOthers: row.case_can_be_copied_by_others === true,
         } : null,
         userOwned: row.user_owned,
     };
@@ -175,6 +174,25 @@ async function copyCasePdfIfPresent(sourcePdfPath, destinationPdfPath) {
     }
 }
 
+async function getUniqueDesignCopyTitle(client, userId, baseTitle, languageCode) {
+    for (let copyIndex = 0; copyIndex < 1000; copyIndex += 1) {
+        const candidateTitle = buildLocalizedCopyTitle(baseTitle, languageCode, copyIndex);
+        const existingResult = await client.query(`
+            SELECT id
+            FROM designs
+            WHERE creator = $1
+              AND COALESCE(design #>> '{metainfo,title}', design ->> 'title') = $2
+            LIMIT 1;
+        `, [userId, candidateTitle]);
+
+        if (!existingResult.rows[0]) {
+            return candidateTitle;
+        }
+    }
+
+    return buildLocalizedCopyTitle(baseTitle, languageCode, Date.now());
+}
+
 async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVATE_VISIBILITY, options = {}) {
     if (!sourceCaseId) {
         return null;
@@ -182,9 +200,8 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
 
     const sourceResult = await client.query(`
         SELECT id, title, author_firstname, author_lastname, author_email, pdf_path, creator,
-               visibility, license_code, attribution_text, original_case_id,
-               language_code,
-               can_be_copied_by_others
+               visibility, license_code, attribution_text, original_case_id, archived,
+               language_code
         FROM ethical_cases
         WHERE id = $1
           AND (
@@ -204,7 +221,10 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
         return null;
     }
 
-    if (!sameId(sourceCase.creator, userId) && !canCaseBeCopiedByOthers(sourceCase)) {
+    if (
+        !sameId(sourceCase.creator, userId) &&
+        (!isPublicVisibility(sourceCase.visibility) || sourceCase.archived === true)
+    ) {
         return null;
     }
 
@@ -357,7 +377,7 @@ router.post("/designs", async (req, res) => {
             const associatedCase = await rpg2.singleSQL({
                 dbcon: config.dbconnString,
                 sql: `
-                    SELECT id, creator, visibility, license_code, can_be_shared_publicly
+                    SELECT id, creator, visibility, license_code
                     FROM ethical_cases
                     WHERE id = $1;
                 `,
@@ -368,10 +388,10 @@ router.post("/designs", async (req, res) => {
                 return res.status(400).json({ status: "err", message: "A public design needs an associated case with a license." });
             }
 
-            if (!isPublicVisibility(associatedCase.visibility) || !canCaseBeSharedPublicly(associatedCase)) {
+            if (!isPublicVisibility(associatedCase.visibility)) {
                 return res.status(409).json({
                     status:  "err",
-                    message: "The associated case must be publicly shareable before publishing this design.",
+                    message: "The associated case must be public before publishing this design.",
                     code:    "CASE_VISIBILITY_REQUIRED",
                 });
             }
@@ -462,7 +482,7 @@ router.patch("/designs/:id", async (req, res) => {
             const associatedCase = await rpg2.singleSQL({
                 dbcon: config.dbconnString,
                 sql: `
-                    SELECT id, visibility, license_code, can_be_shared_publicly
+                    SELECT id, visibility, license_code
                     FROM ethical_cases
                     WHERE id = $1;
                 `,
@@ -473,10 +493,10 @@ router.patch("/designs/:id", async (req, res) => {
                 return res.status(400).json({ status: "err", message: "A public design needs an associated case with a license." });
             }
 
-            if (!isPublicVisibility(associatedCase.visibility) || !canCaseBeSharedPublicly(associatedCase)) {
+            if (!isPublicVisibility(associatedCase.visibility)) {
                 return res.status(409).json({
                     status:  "err",
-                    message: "The associated case must be publicly shareable before publishing this design.",
+                    message: "The associated case must be public before publishing this design.",
                     code:    "CASE_VISIBILITY_REQUIRED",
                 });
             }
@@ -577,7 +597,7 @@ router.get("/users/:id/designs", async (req, res) => {
         const designs = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT d.id, d.design, d.public, d.visibility, d.locked, d.license_code,
+                SELECT d.id, d.design, d.public, d.visibility, d.locked, d.archived, d.license_code,
                        d.language_code,
                        d.attribution_text, d.original_design_id, d.imported_from_design_id,
                        d.source_design_title, d.source_design_author, d.source_design_license_code,
@@ -590,6 +610,7 @@ router.get("/users/:id/designs", async (req, res) => {
                        c.visibility AS case_visibility,
                        c.license_code AS case_license_code,
                        c.language_code AS case_language_code,
+                       c.archived AS case_archived,
                        c.attribution_text AS case_attribution_text,
                        c.original_case_id AS case_original_case_id,
                        c.imported_from_case_id AS case_imported_from_case_id,
@@ -601,8 +622,6 @@ router.get("/users/:id/designs", async (req, res) => {
                        c.license_notes AS case_license_notes,
                        c.permission_statement AS case_permission_statement,
                        c.commercial_source AS case_commercial_source,
-                       c.can_be_shared_publicly AS case_can_be_shared_publicly,
-                       c.can_be_copied_by_others AS case_can_be_copied_by_others,
                        TRUE AS user_owned
                 FROM designs d
                 LEFT JOIN ethical_cases c ON c.id = d.case_id
@@ -635,7 +654,7 @@ router.get("/designs", async (req, res) => {
         const rows = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT DISTINCT ON (d.id) d.id, d.design, d.public, d.visibility, d.locked, d.license_code,
+                SELECT DISTINCT ON (d.id) d.id, d.design, d.public, d.visibility, d.locked, d.archived, d.license_code,
                        d.language_code,
                        d.attribution_text, d.original_design_id, d.imported_from_design_id,
                        d.source_design_title, d.source_design_author, d.source_design_license_code,
@@ -648,6 +667,7 @@ router.get("/designs", async (req, res) => {
                        c.visibility AS case_visibility,
                        c.license_code AS case_license_code,
                        c.language_code AS case_language_code,
+                       c.archived AS case_archived,
                        c.attribution_text AS case_attribution_text,
                        c.original_case_id AS case_original_case_id,
                        c.imported_from_case_id AS case_imported_from_case_id,
@@ -659,8 +679,6 @@ router.get("/designs", async (req, res) => {
                        c.license_notes AS case_license_notes,
                        c.permission_statement AS case_permission_statement,
                        c.commercial_source AS case_commercial_source,
-                       c.can_be_shared_publicly AS case_can_be_shared_publicly,
-                       c.can_be_copied_by_others AS case_can_be_copied_by_others,
                        u.firstname AS creator_firstname,
                        u.lastname AS creator_lastname,
                        u.name AS creator_name,
@@ -669,7 +687,7 @@ router.get("/designs", async (req, res) => {
                 FROM designs d
                 LEFT JOIN ethical_cases c ON c.id = d.case_id
                 LEFT JOIN users u ON u.id = d.creator
-                WHERE d.creator = $1 OR d.visibility = 'public'
+                WHERE d.creator = $1 OR (d.visibility = 'public' AND COALESCE(d.archived, false) = false)
                 ORDER BY d.id DESC, user_owned DESC;
             `,
             sqlParams: [sessionUid], // Pass session user ID as the parameter
@@ -708,9 +726,7 @@ router.patch("/designs/:id/toggle_public", async (req, res) => {
             const result = await client.query(`
                 SELECT d.id, d.creator, d.visibility, d.license_code, d.case_id,
                        c.creator AS case_creator, c.visibility AS case_visibility,
-                       c.license_code AS case_license_code,
-                       c.can_be_shared_publicly AS case_can_be_shared_publicly,
-                       c.can_be_copied_by_others AS case_can_be_copied_by_others
+                       c.license_code AS case_license_code
                 FROM designs d
                 LEFT JOIN ethical_cases c ON c.id = d.case_id
                 WHERE d.id = $1
@@ -743,11 +759,10 @@ router.patch("/designs/:id/toggle_public", async (req, res) => {
                         return res.status(400).json({ status: "err", message: "The associated case needs a license before the design can be published." });
                     }
 
-                    if (!isPublicVisibility(design.case_visibility) || design.case_can_be_shared_publicly !== true) {
+                    if (!isPublicVisibility(design.case_visibility)) {
                         if (
                             req.body?.publishCase === true
                             && sameId(design.case_creator, sessionUid)
-                            && design.case_can_be_shared_publicly === true
                         ) {
                             await client.query(`
                                 UPDATE ethical_cases
@@ -759,17 +774,17 @@ router.patch("/designs/:id/toggle_public", async (req, res) => {
                             nextCaseId = await copyCaseForUser(client, design.case_id, sessionUid, PUBLIC_VISIBILITY, { forceNew: true });
                             if (!nextCaseId) {
                                 await client.query("ROLLBACK");
-                                return res.status(409).json({
-                                    status:  "err",
-                                    message: "The associated case cannot be copied or shared publicly. Publish the design with a different shareable case.",
-                                    code:    "CASE_COPY_RIGHTS_REQUIRED",
+                            return res.status(409).json({
+                                status:  "err",
+                                message: "The associated case cannot be copied publicly. Publish the design with a different public case.",
+                                code:    "CASE_COPY_RIGHTS_REQUIRED",
                                 });
                             }
                         } else {
                             await client.query("ROLLBACK");
                             return res.status(409).json({
                                 status:  "err",
-                                message: "The associated case must be publicly shareable before publishing this design.",
+                                message: "The associated case must be public before publishing this design.",
                                 code:    "CASE_VISIBILITY_REQUIRED",
                             });
                         }
@@ -835,6 +850,66 @@ router.patch("/designs/:id/lock", async (req, res) => {
     }
 });
 
+router.patch("/designs/:id/archive", async (req, res) => {
+    try {
+        const sessionUid = req.session?.uid;
+        const designId = parseInt(req.params.id, 10);
+
+        if (!sessionUid) {
+            return res.status(401).json({ status: "err", message: "Unauthorized" });
+        }
+
+        if (!designId) {
+            return res.status(400).json({ status: "err", message: "Design ID is required" });
+        }
+
+        const design = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT id, creator
+                FROM designs
+                WHERE id = $1;
+            `,
+            sqlParams: [rpg2.param("plain", designId)],
+        });
+
+        if (!design) {
+            return res.status(404).json({ status: "err", message: "Design not found" });
+        }
+
+        const isAdmin = await hasTheUserRoleById(sessionUid, 'A');
+        if (!isAdmin && !sameId(sessionUid, design.creator)) {
+            return res.status(403).json({ status: "err", message: "Forbidden: You do not have permission to archive this design." });
+        }
+
+        const archived = req.body?.archived === true;
+        const updated = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                UPDATE designs
+                SET archived = $1
+                WHERE id = $2
+                RETURNING id, archived;
+            `,
+            sqlParams: [
+                rpg2.param("plain", archived),
+                rpg2.param("plain", designId),
+            ],
+        });
+
+        return res.json({
+            status: "ok",
+            result: {
+                id: updated.id,
+                archived: updated.archived === true,
+            },
+        });
+    } catch (err) {
+        console.error("Error in /designs/:id/archive:", err);
+        return res.status(500).json({ status: "err", message: "Internal Server Error" });
+    }
+});
+
 router.post("/designs/:id/duplicate", async (req, res) => {
     try {
         const sessionUid = req.session?.uid;
@@ -856,11 +931,13 @@ router.post("/designs/:id/duplicate", async (req, res) => {
             await client.query("BEGIN");
             const designResult = await client.query(`
                 SELECT d.id, d.creator, d.design, d.visibility, d.license_code, d.attribution_text,
-                       d.language_code,
+                       d.language_code, d.archived,
                        d.case_id, d.original_design_id,
+                       c.language_code AS case_language_code,
                        u.firstname AS creator_firstname, u.lastname AS creator_lastname,
                        u.name AS creator_name, u.mail AS creator_email
                 FROM designs d
+                LEFT JOIN ethical_cases c ON c.id = d.case_id
                 LEFT JOIN users u ON u.id = d.creator
                 WHERE d.id = $1
                 LIMIT 1;
@@ -872,7 +949,7 @@ router.post("/designs/:id/duplicate", async (req, res) => {
                 return res.status(404).json({ status: "err", message: "Design not found" });
             }
 
-            if (!sameId(sessionUid, design.creator) && !isPublicVisibility(design.visibility)) {
+            if (!sameId(sessionUid, design.creator) && (!isPublicVisibility(design.visibility) || design.archived === true)) {
                 await client.query("ROLLBACK");
                 return res.status(403).json({ status: "err", message: "Forbidden: You cannot clone a private design you do not own." });
             }
@@ -881,10 +958,28 @@ router.post("/designs/:id/duplicate", async (req, res) => {
             designNoId.public = false;
             designNoId.visibility = PRIVATE_VISIBILITY;
             designNoId.locked = false;
+            designNoId.metainfo = {
+                ...(designNoId.metainfo || {}),
+                title: await getUniqueDesignCopyTitle(
+                    client,
+                    sessionUid,
+                    getDesignTitle(design.design),
+                    design.case_language_code || design.language_code
+                ),
+            };
 
             const copiedCaseId = design.case_id
                 ? await copyCaseForUser(client, design.case_id, sessionUid, PRIVATE_VISIBILITY)
                 : null;
+            if (design.case_id && !copiedCaseId) {
+                await client.query("ROLLBACK");
+                return res.status(409).json({
+                    status:  "err",
+                    message: "This design cannot be imported because its associated case is no longer publicly shareable.",
+                    code:    "DESIGN_CASE_NOT_IMPORTABLE",
+                });
+            }
+
             const sourceTitle = getDesignTitle(design.design);
             const sourceAuthor = getUserDisplayName({
                 firstname: design.creator_firstname,
@@ -897,10 +992,12 @@ router.post("/designs/:id/duplicate", async (req, res) => {
                 INSERT INTO designs
                     (creator, design, case_id, visibility, public, locked, license_code, attribution_text,
                      original_design_id, imported_from_design_id, source_design_title,
-                     source_design_author, source_design_license_code, is_editable_copy, language_code)
+                     source_design_author, source_design_license_code, is_editable_copy, language_code,
+                     archived)
                 VALUES
                     ($1, $2, $3, 'private', false, false, $4, COALESCE($5, $6),
-                     $7, $8, $9, $10, $11, true, $12)
+                     $7, $8, $9, $10, $11, true, $12,
+                     false)
                 RETURNING id;
             `, [
                 sessionUid,
@@ -1056,8 +1153,6 @@ router.get("/designs/:id/case", async (req, res) => {
                        c.license_notes,
                        c.permission_statement,
                        c.commercial_source,
-                       c.can_be_shared_publicly,
-                       c.can_be_copied_by_others,
                        c.language_code
                 FROM designs d
                 LEFT JOIN ethical_cases c ON c.id = d.case_id
@@ -1113,8 +1208,6 @@ router.get("/designs/:id/case", async (req, res) => {
                 licenseNotes: result.license_notes,
                 permissionStatement: result.permission_statement,
                 commercialSource: result.commercial_source,
-                canBeSharedPublicly: result.can_be_shared_publicly === true,
-                canBeCopiedByOthers: result.can_be_copied_by_others === true,
             },
         });
     } catch (err) {

@@ -31,43 +31,55 @@
             <div class="{{right_width}}">
                 <div class="design-item-actions">
                     <!-- Buttons Section -->
-                    <div ng-if="$ctrl.isOwner" class="d-inline-flex align-items-center">
+                    <div ng-if="$ctrl.isOwner" class="design-item-button-group">
                         <img class="locked-svg"
                             src="/assets/images/iconsets/gray-lineart/design-lock-active.svg" alt="locked" ng-show="$ctrl.design.locked">
-                        <button ng-show="$ctrl.isFunction($ctrl.onLaunch) && $ctrl.design.valid" class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onLaunch($ctrl.design.id)">
+                        <button ng-show="$ctrl.isFunction($ctrl.onLaunch) && $ctrl.design.valid" class="btn btn-default btn-sm" ng-click="$ctrl.onLaunch($ctrl.design.id)">
                             <i class="fa fa-rocket"></i> {{ 'launch_activity_button_text' | translate }}
                         </button>
-                        <button ng-show="$ctrl.isFunction($ctrl.onEdit) && !$ctrl.design.locked" class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onEdit($ctrl.design.id)">
+                        <button ng-show="$ctrl.isFunction($ctrl.onEdit) && !$ctrl.design.locked" class="btn btn-default btn-sm" ng-click="$ctrl.onEdit($ctrl.design.id)">
                             <i class="fa fa-pencil"></i> {{ 'edit' | translate }}
                         </button>
-                        <button ng-show="$ctrl.isFunction($ctrl.onView)" class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onView($ctrl.design.id)">
+                        <button ng-show="$ctrl.isFunction($ctrl.onView)" class="btn btn-default btn-sm" ng-click="$ctrl.onView($ctrl.design.id)">
                             <i class="fa fa-eye"></i> {{ 'view' | translate }}
                         </button>
-                        <button ng-show="$ctrl.isFunction($ctrl.onDuplicate)" class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onDuplicate($ctrl.design.id)">
+                        <button ng-show="$ctrl.isFunction($ctrl.onDuplicate)" class="btn btn-default btn-sm" ng-click="$ctrl.onDuplicate($ctrl.design.id)">
                             <i class="fa-regular fa-clone"></i> {{ 'duplicate_item_button_text' | translate }}
-                        </button>                        
-                        <button ng-show="$ctrl.isFunction($ctrl.onDelete) && !$ctrl.design.locked" class="btn btn-danger btn-sm ml-1" ng-click="$ctrl.onDelete($ctrl.design.id)">
+                        </button>
+                        <button ng-show="$ctrl.isFunction($ctrl.onArchive) && !$ctrl.design.archived" class="btn btn-default btn-sm" ng-click="$ctrl.onArchive($ctrl.design.id)">
+                            <i class="fa-solid fa-box-archive"></i> {{ 'archive_button_text' | translate }}
+                        </button>
+                        <button ng-show="$ctrl.isFunction($ctrl.onArchive) && $ctrl.design.archived" class="btn btn-default btn-sm" ng-click="$ctrl.onArchive($ctrl.design.id)">
+                            <i class="fa-regular fa-star"></i> {{ 'unarchive_button_text' | translate }}
+                        </button>
+                        <button ng-show="$ctrl.isFunction($ctrl.onDelete) && !$ctrl.design.locked" class="btn btn-danger btn-sm" ng-click="$ctrl.onDelete($ctrl.design.id)">
                             <i class="fa fa-trash"></i> {{ 'delete' | translate }}
                         </button>
-                        <button ng-show="$ctrl.isFunction($ctrl.onSelect)" class="btn btn-default btn-sm ml-1" ng-click="$ctrl.onSelect($ctrl.design.id)">
+                        <button ng-show="$ctrl.isFunction($ctrl.onSelect)" class="btn btn-default btn-sm" ng-click="$ctrl.onSelect($ctrl.design.id)">
                             <i class="fa-regular fa-hand-pointer"></i> {{ 'select_button_text' | translate }}
                         </button>
                     </div>
             
                     <!-- Toggle Switch with Text -->
-                    <div ng-show="$ctrl.isFunction($ctrl.onTogglePublic) && $ctrl.isOwner && $ctrl.design.valid" style="margin-top: 1em" class="ml-3 text-center">
+                    <div ng-show="$ctrl.isFunction($ctrl.onTogglePublic) && $ctrl.isOwner && $ctrl.design.valid && !$ctrl.design.archived" class="design-item-share-control text-center">
                         <div toggle-switch ng-model="$ctrl.design.public"
-                             ng-click="$ctrl.onTogglePublic($ctrl.design.id)"
+                             ng-click="$ctrl.onTogglePublic($ctrl.design)"
                              class="ats-switch switch-primary d-inline-block">
                         </div>
                         <div class="small text-muted">{{ 'share_design' | translate }}</div>
                     </div>
             
                     <!-- Import Button for Non-Owners -->
-                    <div class="ml-3" ng-show="!$ctrl.isOwner && $ctrl.isFunction($ctrl.onImport)">
+                    <div class="design-item-button-group" ng-show="$ctrl.canImportDesign()">
                         <button class="btn btn-default btn-sm" ng-click="$ctrl.onImport($ctrl.design.id)">
                             <i class="fa fa-download"></i> {{ 'import_design_button_text' | translate }}
                         </button>
+                    </div>
+                    <div class="design-item-warning" ng-show="$ctrl.isImportBlockedByCase()">
+                        <p class="text-warning">
+                            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                            {{ 'design_import_blocked_by_case' | translate }}
+                        </p>
                     </div>
                 </div>
             </div>            

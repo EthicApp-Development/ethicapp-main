@@ -10,6 +10,7 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
     vm.cases = [];
     vm.ownCases = [];
     vm.publicCases = [];
+    vm.archivedCases = [];
     vm.caseMode = 0;
     vm.caseSearch = "";
     vm.caseObj = null;
@@ -65,8 +66,6 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             licenseNotes: "",
             permissionStatement: "",
             commercialSource: "",
-            canBeSharedPublicly: true,
-            canBeCopiedByOthers: true,
             languageCode: "es_CL",
         };
     };
@@ -88,12 +87,14 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
     };
 
     vm.loadCases = async function() {
-        const [ownCases, publicCases] = await Promise.all([
+        const [ownCases, publicCases, archivedCases] = await Promise.all([
             CasesCatalogService.getCases(true),
             CasesCatalogService.getPublicCases(true),
+            CasesCatalogService.getArchivedCases(true),
         ]);
         vm.ownCases = ownCases;
         vm.publicCases = publicCases;
+        vm.archivedCases = archivedCases;
         vm.cases = ownCases;
         vm.currentPage = 1;
         await vm.refreshDocumentProcessingStatuses();
@@ -135,9 +136,8 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
         vm.form.licenseNotes = caseObj.licenseNotes || "";
         vm.form.permissionStatement = caseObj.permissionStatement || "";
         vm.form.commercialSource = caseObj.commercialSource || "";
-        vm.form.canBeSharedPublicly = caseObj.canBeSharedPublicly === true;
-        vm.form.canBeCopiedByOthers = caseObj.canBeCopiedByOthers === true;
         vm.form.languageCode = caseObj.languageCode || "es_CL";
+        vm.form.hasLaunchedDesignActivity = caseObj.hasLaunchedDesignActivity === true;
         await vm.refreshDocumentProcessingStatuses();
         vm.syncDocumentProcessingPolling();
         $scope.$applyAsync();
@@ -233,12 +233,18 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             return;
         }
 
-        vm.caseMode = nextMode === 1 ? 1 : 0;
+        vm.caseMode = [0, 1, 2].includes(nextMode) ? nextMode : 0;
         vm.currentPage = 1;
     };
 
     vm.getActiveCases = function() {
-        return vm.caseMode === 1 ? vm.publicCases : vm.ownCases;
+        if (vm.caseMode === 1) {
+            return vm.publicCases;
+        }
+        if (vm.caseMode === 2) {
+            return vm.archivedCases;
+        }
+        return vm.ownCases;
     };
 
     vm.getCaseSearchText = function(caseObj) {
@@ -342,7 +348,10 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             $scope.$applyAsync();
         } catch (error) {
             console.error("[CasesController::updateCase] Error updating case.", error);
-            vm.showErrorToast(vm.translate("ethical_cases_save_error"));
+            const messageKey = error?.data?.code === "CASE_USED_BY_LAUNCHED_ACTIVITY"
+                ? "case_cannot_delete_used_by_activity"
+                : "ethical_cases_save_error";
+            vm.showErrorToast(vm.translate(messageKey));
             $scope.$applyAsync();
         }
     };
@@ -375,6 +384,33 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
         await vm.deleteCase(caseItem.id);
     };
 
+    vm.archiveCase = async function(caseItem) {
+        const nextArchived = caseItem.archived !== true;
+        try {
+            await CasesCatalogService.updateCaseArchived(caseItem.id, nextArchived);
+            vm.showInfoToast(vm.translate(nextArchived ? "ethical_cases_archive_success" : "ethical_cases_unarchive_success"));
+            await vm.loadCases();
+            vm.setCaseMode(0);
+        } catch (error) {
+            console.error("[CasesController::archiveCase] Error updating case archive status.", error);
+            vm.showErrorToast(vm.translate("ethical_cases_archive_error"));
+            $scope.$applyAsync();
+        }
+    };
+
+    vm.duplicateCase = async function(caseItem) {
+        try {
+            await CasesCatalogService.duplicateCase(caseItem.id);
+            vm.showInfoToast(vm.translate("ethical_cases_duplicate_success"));
+            await vm.loadCases();
+            vm.setCaseMode(0);
+        } catch (error) {
+            console.error("[CasesController::duplicateCase] Error duplicating case.", error);
+            vm.showErrorToast(vm.translate("ethical_cases_duplicate_error"));
+            $scope.$applyAsync();
+        }
+    };
+
     vm.importCase = async function(caseItem) {
         try {
             await CasesCatalogService.importCase(caseItem.id);
@@ -398,11 +434,14 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             const result = await CasesCatalogService.updateCaseVisibility(caseItem.id, nextVisibility);
             caseItem.visibility = result.visibility;
             caseItem.public = result.public;
-            caseItem.canBeSharedPublicly = result.canBeSharedPublicly;
         } catch (error) {
             caseItem.visibility = previousVisibility;
             caseItem.public = previousVisibility === "public";
             console.error("[CasesController::toggleCaseVisibility] Error updating case visibility.", error);
+            const messageKey = error?.data?.code === "CASE_USED_BY_LAUNCHED_ACTIVITY"
+                ? "case_cannot_delete_used_by_activity"
+                : "ethical_cases_save_error";
+            vm.showErrorToast(vm.translate(messageKey));
         } finally {
             $scope.$applyAsync();
         }

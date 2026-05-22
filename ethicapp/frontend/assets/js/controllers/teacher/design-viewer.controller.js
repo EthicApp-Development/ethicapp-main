@@ -1,4 +1,5 @@
-export function DesignViewerController($scope, $routeParams, $window, DesignCatalogService, CasesCatalogService) {
+export function DesignViewerController($scope, $routeParams, $window, DesignCatalogService, CasesCatalogService,
+    DesignPublicationService) {
     const vm = this;
     vm.designId = 0;
     vm.design = null;
@@ -70,8 +71,14 @@ export function DesignViewerController($scope, $routeParams, $window, DesignCata
         $scope.navigateTo('/designs/' + vm.designId + '/edit');
     };
 
-    vm.designPublic = async function() {
-        await DesignCatalogService.togglePublicVisibility(vm.designId);
+    vm.designPublic = async function(design) {
+        try {
+            await DesignPublicationService.togglePublicVisibility(design);
+        } catch (error) {
+            console.error("[DesignViewerController::designPublic] Error changing design visibility.", error);
+        } finally {
+            $scope.$applyAsync();
+        }
     };
 
     vm.init();

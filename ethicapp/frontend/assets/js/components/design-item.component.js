@@ -39,6 +39,19 @@ const DesignItemController = function() {
         return Boolean(this.design?.originalDesignId || this.design?.sourceDesignTitle || this.design?.sourceDesignAuthor);
     };
 
+    this.canImportDesign = function() {
+        if (!this.isFunction(this.onImport) || this.isOwner) {
+            return false;
+        }
+
+        const associatedCase = this.getAssociatedCase();
+        return !associatedCase || (associatedCase.visibility === "public" && associatedCase.archived !== true);
+    };
+
+    this.isImportBlockedByCase = function() {
+        return !this.isOwner && this.isFunction(this.onImport) && !this.canImportDesign();
+    };
+
     this.formatCaseLabel = function(caseItem) {
         if (!caseItem) {
             return "";
@@ -62,6 +75,7 @@ const designItemComponent = {
         onSelect: '<?',
         onDelete: '<?',
         onDuplicate: '<?',
+        onArchive: '<?',
         onTogglePublic: '<?',
         onImport: '<?',
         selectionLayout: '<?',

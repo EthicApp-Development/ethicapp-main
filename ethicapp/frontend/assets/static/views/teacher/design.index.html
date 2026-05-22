@@ -22,10 +22,13 @@
             <li ng-class="{'active': vm.dsgnMode === 1}">
                 <a href="" ng-click="vm.dsgnMode = 1; vm.getPublicDesigns()">{{'byOthers' | translate}}</a>
             </li>
+            <li ng-class="{'active': vm.dsgnMode === 2}">
+                <a href="" ng-click="vm.dsgnMode = 2; vm.getDesigns()">{{'archived' | translate}}</a>
+            </li>
         </ul>
 
         <!-- Search box -->
-        <div style="position: absolute; left: 200px; top: 6px; min-width: 80px; max-width: 200px;">
+        <div style="position: absolute; left: 280px; top: 6px; min-width: 80px; max-width: 200px;">
             <div class="search-field-wrapper">
                 <input class="form-control search-input search-decorated-input" type="text"
                     placeholder="{{'search' | translate}}" ng-model="vm.userSearch">
@@ -51,6 +54,7 @@
                         on-view="vm.handleView"
                         on-delete="vm.deleteDesign"
                         on-duplicate="vm.duplicateDesign"
+                        on-archive="vm.archiveDesign"
                         on-toggle-public="vm.designPublic">
                     </design-item>
 
@@ -62,6 +66,15 @@
                         on-import="vm.importDesign">
                     </design-item>
 
+                    <design-item ng-repeat="design in vm.archivedDesigns | filter: { metainfo: { title: vm.userSearch } } track by design.id"
+                        ng-if="vm.dsgnMode === 2"
+                        design="design"
+                        is-owner="true"
+                        on-view="vm.handleView"
+                        on-duplicate="vm.duplicateDesign"
+                        on-archive="vm.archiveDesign">
+                    </design-item>
+
                     <div class="alert alert-info"
                         ng-if="vm.dsgnMode === 0 && (vm.userDesigns | filter: { metainfo: { title: vm.userSearch } }).length === 0">
                         <span>{{'empty_designs_message' | translate}}</span>
@@ -71,6 +84,11 @@
                     <div class="alert alert-info"
                         ng-if="vm.dsgnMode === 1 && (vm.publicDesigns | filter: { metainfo: { title: vm.userSearch } }).length === 0">
                         <span>{{'empty_shared_designs_message' | translate}}</span>
+                    </div>
+
+                    <div class="alert alert-info"
+                        ng-if="vm.dsgnMode === 2 && (vm.archivedDesigns | filter: { metainfo: { title: vm.userSearch } }).length === 0">
+                        <span>{{'empty_archived_designs_message' | translate}}</span>
                     </div>
                 </div>
             </div>
