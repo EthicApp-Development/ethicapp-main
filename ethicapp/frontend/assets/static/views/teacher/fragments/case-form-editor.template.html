@@ -1,87 +1,197 @@
 <form name="caseForm" ng-submit="$ctrl.onSubmit(caseForm)" novalidate>
     <div class="form-group case-form-field">
-        <label for="caseTitle">{{ 'title' | translate }}</label>
+        <label for="caseTitle">{{ 'title' | translate }} <span class="text-danger" aria-hidden="true">*</span></label>
         <input
             id="caseTitle"
             type="text"
             name="title"
-            class="form-control"
+            class="form-control input-lg"
             ng-model="$ctrl.formModel.title"
             ng-class="{'input-warning': $ctrl.shouldShowError(caseForm.title)}"
             required>
+        <p class="help-block">{{ 'required_field_note' | translate }}</p>
         <p class="help-block text-danger" ng-if="$ctrl.shouldShowError(caseForm.title)">
             {{ 'ethical_cases_validation_required' | translate }}
         </p>
     </div>
 
-    <div class="form-group case-form-field">
-        <label for="caseAuthorFirstname">{{ 'author_firstname' | translate }}</label>
-        <input
-            id="caseAuthorFirstname"
-            type="text"
-            name="authorFirstname"
-            class="form-control"
-            ng-model="$ctrl.formModel.authorFirstname"
-            ng-class="{'input-warning': $ctrl.shouldShowError(caseForm.authorFirstname)}"
-            required>
-        <p class="help-block text-danger" ng-if="$ctrl.shouldShowError(caseForm.authorFirstname)">
-            {{ 'ethical_cases_validation_required' | translate }}
+    <fieldset>
+        <legend>{{ 'ethical_case_authors' | translate }} <span class="text-danger" aria-hidden="true">*</span></legend>
+        <case-author-editor
+            ng-repeat="author in $ctrl.formModel.authors track by $index"
+            author="author"
+            author-index="$index"
+            is-primary="$index === 0"
+            can-remove="$ctrl.formModel.authors.length > 1"
+            is-duplicate-email="$ctrl.isDuplicateAuthorEmail(author)"
+            current-user-profile="$ctrl.currentUserProfile"
+            use-current-user="$ctrl.formModel.isFirstAuthorCurrentUser"
+            on-remove="$ctrl.removeAuthor($index)">
+        </case-author-editor>
+        <p class="help-block text-danger" ng-if="$ctrl.hasAttemptedSubmit && $ctrl.hasDuplicateAuthorEmails()">
+            {{ 'ethical_cases_validation_duplicate_author_email' | translate }}
         </p>
-    </div>
+        <button type="button" class="btn btn-default btn-sm" ng-click="$ctrl.addAuthor()">
+            <i class="fa fa-plus" aria-hidden="true"></i> {{ 'add_author' | translate }}
+        </button>
+    </fieldset>
+    <br>
+    <fieldset>
+        <legend>{{ 'ethical_case_language_and_visibility' | translate }} <span class="text-danger" aria-hidden="true">*</span></legend>
+        <div class="form-group case-form-field">
+            <label for="caseLanguage">{{ 'language' | translate }} <span class="text-danger" aria-hidden="true">*</span></label>
+            <select
+                id="caseLanguage"
+                name="languageCode"
+                class="form-control"
+                ng-model="$ctrl.formModel.languageCode"
+                ng-options="language.code as language.native_name for language in $ctrl.languages"
+                ng-class="{'input-warning': $ctrl.shouldShowError(caseForm.languageCode)}"
+                required>
+            </select>
+            <p class="help-block text-danger" ng-if="$ctrl.shouldShowError(caseForm.languageCode)">
+                {{ 'ethical_cases_validation_required' | translate }}
+            </p>
+        </div>
 
-    <div class="form-group case-form-field">
-        <label for="caseAuthorLastname">{{ 'author_lastname' | translate }}</label>
-        <input
-            id="caseAuthorLastname"
-            type="text"
-            name="authorLastname"
-            class="form-control"
-            ng-model="$ctrl.formModel.authorLastname"
-            ng-class="{'input-warning': $ctrl.shouldShowError(caseForm.authorLastname)}"
-            required>
-        <p class="help-block text-danger" ng-if="$ctrl.shouldShowError(caseForm.authorLastname)">
-            {{ 'ethical_cases_validation_required' | translate }}
-        </p>
-    </div>
+        <div class="form-group case-form-field">
+            <label for="caseVisibility">{{ 'visibility' | translate }} <span class="text-danger" aria-hidden="true">*</span></label>
+            <select
+                id="caseVisibility"
+                name="visibility"
+                class="form-control"
+                ng-model="$ctrl.formModel.visibility"
+                ng-options="option.value as (option.labelKey | translate) for option in $ctrl.visibilityOptions"
+                ng-class="{'input-warning': $ctrl.shouldShowError(caseForm.visibility)}"
+                required>
+            </select>
+            <p class="help-block text-danger" ng-if="$ctrl.shouldShowError(caseForm.visibility)">
+                {{ 'ethical_cases_validation_required' | translate }}
+            </p>
+        </div>
+    </fieldset> 
+    <fieldset>
+       <legend>{{ 'ethical_case_rights_and_license' | translate }} <span class="text-danger" aria-hidden="true">*</span></legend>
+       <div class="form-group case-form-field">
+            <label for="caseRightsStatus">{{ 'rights_status' | translate }} <span class="text-danger" aria-hidden="true">*</span></label>
+            <select
+                id="caseRightsStatus"
+                name="rightsStatus"
+                class="form-control"
+                ng-model="$ctrl.formModel.rightsStatus"
+                ng-options="option.value as (option.labelKey | translate) for option in $ctrl.rightsStatusOptions"
+                ng-change="$ctrl.syncRightsDefaults()"
+                ng-class="{'input-warning': $ctrl.shouldShowError(caseForm.rightsStatus)}"
+                required>
+            </select>
+            <p class="help-block text-danger" ng-if="$ctrl.shouldShowError(caseForm.rightsStatus)">
+                {{ 'ethical_cases_validation_required' | translate }}
+            </p>
+        </div>
 
-    <div class="form-group case-form-field">
-        <label for="caseAuthorEmail">{{ 'email' | translate }}</label>
-        <input
-            id="caseAuthorEmail"
-            type="email"
-            name="authorEmail"
-            class="form-control"
-            ng-model="$ctrl.formModel.authorEmail"
-            ng-class="{'input-warning': $ctrl.shouldShowError(caseForm.authorEmail)}"
-            required>
-        <p class="help-block text-danger" ng-if="$ctrl.shouldShowError(caseForm.authorEmail) && caseForm.authorEmail.$error.required">
-            {{ 'ethical_cases_validation_required' | translate }}
-        </p>
-        <p class="help-block text-danger" ng-if="$ctrl.shouldShowError(caseForm.authorEmail) && caseForm.authorEmail.$error.email">
-            {{ 'ethical_cases_validation_email' | translate }}
-        </p>
-    </div>
+        <div class="form-group case-form-field">
+            <label for="caseLicense">{{ 'license' | translate }} <span class="text-danger" aria-hidden="true">*</span></label>
+            <select
+                id="caseLicense"
+                name="licenseCode"
+                class="form-control"
+                ng-model="$ctrl.formModel.licenseCode"
+                ng-options="license.code as license.name for license in $ctrl.licenses"
+                ng-class="{'input-warning': $ctrl.shouldShowError(caseForm.licenseCode)}"
+                required>
+            </select>
+            <p class="help-block text-danger" ng-if="$ctrl.shouldShowError(caseForm.licenseCode)">
+                {{ 'ethical_cases_validation_required' | translate }}
+            </p>
+        </div>
 
-    <div class="form-group case-form-field">
-        <label for="casePdf">{{ 'ethical_cases_file' | translate }}</label>
-        <p ng-if="$ctrl.showCurrentPdf && $ctrl.formModel.currentPdfPath">
-            <a ng-href="{{ $ctrl.formModel.currentPdfPath }}" target="_blank" rel="noopener noreferrer">
-                {{ 'ethical_cases_current_file' | translate }}
-            </a>
-        </p>
-        <input
-            id="casePdf"
-            type="file"
-            name="pdf"
-            class="form-control"
-            accept="application/pdf"
-            ngf-select="$ctrl.handlePdfSelected($files)"
-            ng-class="{'input-warning': $ctrl.shouldShowError(caseForm.pdf)}"
-            ng-required="$ctrl.isPdfRequired">
-        <p class="help-block text-danger" ng-if="$ctrl.shouldShowError(caseForm.pdf) && caseForm.pdf.$error.required">
-            {{ 'ethical_cases_validation_pdf_required' | translate }}
-        </p>
-    </div>
+        <div class="checkbox">
+            <label>
+                <input type="checkbox" ng-model="$ctrl.formModel.canBeSharedPublicly">
+                {{ 'ethical_cases_can_share_publicly' | translate }}
+            </label>
+        </div>
 
-    <button type="submit" class="btn btn-primary">{{ $ctrl.submitLabelKey | translate }}</button>
+        <div class="checkbox">
+            <label>
+                <input type="checkbox" ng-model="$ctrl.formModel.canBeCopiedByOthers">
+                {{ 'ethical_cases_can_copy_by_others' | translate }}
+            </label>
+        </div>
+
+        <div class="form-group case-form-field">
+            <label for="caseAttributionText">{{ 'attribution_text' | translate }}</label>
+            <textarea
+                id="caseAttributionText"
+                name="attributionText"
+                class="form-control"
+                rows="2"
+                ng-model="$ctrl.formModel.attributionText">
+            </textarea>
+        </div>
+
+        <div class="form-group case-form-field">
+            <label for="caseLicenseNotes">{{ 'license_notes' | translate }}</label>
+            <textarea
+                id="caseLicenseNotes"
+                name="licenseNotes"
+                class="form-control"
+                rows="2"
+                ng-model="$ctrl.formModel.licenseNotes">
+            </textarea>
+        </div>
+
+        <div class="form-group case-form-field" ng-if="$ctrl.formModel.rightsStatus === 'used_with_permission'">
+            <label for="casePermissionStatement">{{ 'permission_statement' | translate }}</label>
+            <textarea
+                id="casePermissionStatement"
+                name="permissionStatement"
+                class="form-control"
+                rows="3"
+                ng-model="$ctrl.formModel.permissionStatement">
+            </textarea>
+        </div>
+
+        <div class="form-group case-form-field" ng-if="$ctrl.formModel.rightsStatus === 'commercial_license'">
+            <label for="caseCommercialSource">{{ 'commercial_source' | translate }}</label>
+            <input
+                id="caseCommercialSource"
+                type="text"
+                name="commercialSource"
+                class="form-control"
+                ng-model="$ctrl.formModel.commercialSource">
+        </div>
+    </fieldset>
+    <fieldset>
+        <legend>{{ 'ethical_cases_file' | translate }} <span class="text-danger" aria-hidden="true">*</span></legend>
+        <div class="form-group case-form-field">
+            <label for="casePdf">{{ 'ethical_cases_attach_file' | translate }} <span class="text-danger" ng-if="$ctrl.isPdfRequired" aria-hidden="true">*</span></label>
+            <p ng-if="$ctrl.showCurrentPdf && $ctrl.formModel.currentPdfPath">
+                <a ng-href="{{ $ctrl.formModel.currentPdfPath }}" target="_blank" rel="noopener noreferrer">
+                    {{ 'ethical_cases_current_file' | translate }}
+                </a>
+            </p>
+            <input
+                id="casePdf"
+                type="file"
+                name="pdf"
+                class="form-control"
+                accept="application/pdf"
+                ngf-select="$ctrl.handlePdfSelected($files)"
+                ng-class="{'input-warning': $ctrl.shouldShowError(caseForm.pdf)}"
+                ng-required="$ctrl.isPdfRequired">
+            <p class="help-block text-danger" ng-if="$ctrl.shouldShowError(caseForm.pdf) && caseForm.pdf.$error.required">
+                {{ 'ethical_cases_validation_pdf_required' | translate }}
+            </p>
+        </div>
+
+        <button type="submit" class="btn btn-primary">{{ $ctrl.submitLabelKey | translate }}</button>
+        <button type="button" class="btn btn-default" ng-click="$ctrl.onCancel()">{{ 'cancel' | translate }}</button>
+    </fieldset>
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <p>&nbsp;</p>
+            <p>&nbsp;</p>
+        </div>
+    </div>
 </form>

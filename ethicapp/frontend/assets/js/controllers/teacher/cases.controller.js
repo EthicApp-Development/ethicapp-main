@@ -1,5 +1,5 @@
 /*eslint func-style: ["error", "expression"]*/
-export function CasesController($scope, $routeParams, $window, $interval, CasesCatalogService) {
+export function CasesController($scope, $routeParams, $window, $interval, CasesCatalogService, UserProfileService) {
     const vm = this;
     const documentProcessingPollIntervalMs = 5000;
     const activeDocumentProcessingStatuses = ["pending", "processing"];
@@ -9,13 +9,49 @@ export function CasesController($scope, $routeParams, $window, $interval, CasesC
     vm.caseObj = null;
     vm.currentPage = 1;
     vm.pageSize = 5;
-    vm.form = {
-        title: "",
-        authorFirstname: "",
-        authorLastname: "",
-        authorEmail: "",
-        pdf: null,
-        currentPdfPath: null,
+    vm.licenses = [];
+    vm.languages = [];
+    vm.currentUserProfile = null;
+
+    vm.createEmptyCaseForm = function() {
+        return {
+            title: "",
+            authors: [{
+                authorFirstname: "",
+                authorLastname: "",
+                authorEmail: "",
+                isPrimary: true,
+            }],
+            isFirstAuthorCurrentUser: false,
+            pdf: null,
+            currentPdfPath: null,
+            visibility: "private",
+            licenseCode: "CC-BY-NC-SA-4.0",
+            attributionText: "",
+            rightsStatus: "own_work",
+            licenseNotes: "",
+            permissionStatement: "",
+            commercialSource: "",
+            canBeSharedPublicly: true,
+            canBeCopiedByOthers: true,
+            languageCode: "es_CL",
+        };
+    };
+    vm.form = vm.createEmptyCaseForm();
+
+    vm.loadCaseFormOptions = async function() {
+        const [licenses, languages] = await Promise.all([
+            CasesCatalogService.getLicenses(),
+            CasesCatalogService.getLanguages(),
+        ]);
+        vm.licenses = licenses;
+        vm.languages = languages;
+        try {
+            vm.currentUserProfile = await UserProfileService.getProfile();
+        } catch (error) {
+            console.error("[CasesController::loadCaseFormOptions] Could not load user profile.", error);
+        }
+        $scope.$applyAsync();
     };
 
     vm.loadCases = async function() {
@@ -32,13 +68,37 @@ export function CasesController($scope, $routeParams, $window, $interval, CasesC
             return;
         }
 
+        await vm.loadCaseFormOptions();
         const caseObj = await CasesCatalogService.getCaseById(caseId);
         vm.caseObj = caseObj;
         vm.form.title = caseObj.title;
-        vm.form.authorFirstname = caseObj.authorFirstname;
-        vm.form.authorLastname = caseObj.authorLastname;
-        vm.form.authorEmail = caseObj.authorEmail;
+        vm.form.authors = Array.isArray(caseObj.authors) && caseObj.authors.length > 0
+            ? caseObj.authors.map((author, index) => ({
+                authorFirstname: author.authorFirstname || "",
+                authorLastname:  author.authorLastname || "",
+                authorEmail:     author.authorEmail || "",
+                isPrimary:       index === 0,
+            }))
+            : [{
+                authorFirstname: caseObj.authorFirstname || "",
+                authorLastname:  caseObj.authorLastname || "",
+                authorEmail:     caseObj.authorEmail || "",
+                isPrimary:       true,
+            }];
+        vm.form.isFirstAuthorCurrentUser = vm.currentUserProfile
+            ? vm.form.authors[0]?.authorEmail === (vm.currentUserProfile.email || vm.currentUserProfile.mail)
+            : false;
         vm.form.currentPdfPath = caseObj.pdfPath;
+        vm.form.visibility = caseObj.visibility || "private";
+        vm.form.licenseCode = caseObj.licenseCode || "CC-BY-NC-SA-4.0";
+        vm.form.attributionText = caseObj.attributionText || "";
+        vm.form.rightsStatus = caseObj.rightsStatus || "own_work";
+        vm.form.licenseNotes = caseObj.licenseNotes || "";
+        vm.form.permissionStatement = caseObj.permissionStatement || "";
+        vm.form.commercialSource = caseObj.commercialSource || "";
+        vm.form.canBeSharedPublicly = caseObj.canBeSharedPublicly === true;
+        vm.form.canBeCopiedByOthers = caseObj.canBeCopiedByOthers === true;
+        vm.form.languageCode = caseObj.languageCode || "es_CL";
         await vm.refreshDocumentProcessingStatuses();
         vm.syncDocumentProcessingPolling();
         $scope.$applyAsync();

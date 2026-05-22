@@ -1,0 +1,67 @@
+<div class="panel panel-default">
+    <div class="panel-body">
+        <div class="checkbox" ng-if="$ctrl.isPrimary && $ctrl.currentUserProfile">
+            <label>
+                <input
+                    type="checkbox"
+                    ng-model="$ctrl.useCurrentUser"
+                    ng-change="$ctrl.onUseCurrentUserChanged()">
+                {{ 'ethical_cases_i_am_primary_author' | translate }}
+            </label>
+        </div>
+
+        <div class="row">
+            <div class="col-sm-4">
+                <div class="form-group case-form-field">
+                    <label for="caseAuthorFirstname{{$ctrl.authorIndex}}">{{ 'author_firstname' | translate }} <span class="text-danger" aria-hidden="true">*</span></label>
+                    <input
+                        id="caseAuthorFirstname{{$ctrl.authorIndex}}"
+                        type="text"
+                        name="authorFirstname{{$ctrl.authorIndex}}"
+                        class="form-control"
+                        ng-model="$ctrl.author.authorFirstname"
+                        ng-readonly="$ctrl.isPrimary && $ctrl.useCurrentUser"
+                        required>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="form-group case-form-field">
+                    <label for="caseAuthorLastname{{$ctrl.authorIndex}}">{{ 'author_lastname' | translate }} <span class="text-danger" aria-hidden="true">*</span></label>
+                    <input
+                        id="caseAuthorLastname{{$ctrl.authorIndex}}"
+                        type="text"
+                        name="authorLastname{{$ctrl.authorIndex}}"
+                        class="form-control"
+                        ng-model="$ctrl.author.authorLastname"
+                        ng-readonly="$ctrl.isPrimary && $ctrl.useCurrentUser"
+                        required>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="form-group case-form-field" ng-class="{'has-error': $ctrl.isDuplicateEmail}">
+                    <label for="caseAuthorEmail{{$ctrl.authorIndex}}">{{ 'email' | translate }} <span class="text-danger" aria-hidden="true">*</span></label>
+                    <input
+                        id="caseAuthorEmail{{$ctrl.authorIndex}}"
+                        type="email"
+                        name="authorEmail{{$ctrl.authorIndex}}"
+                        class="form-control"
+                        ng-model="$ctrl.author.authorEmail"
+                        ng-readonly="$ctrl.isPrimary && $ctrl.useCurrentUser"
+                        required>
+                    <p class="help-block text-danger" ng-if="$ctrl.isDuplicateEmail">
+                        {{ 'ethical_cases_validation_duplicate_author_email' | translate }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <span class="label label-default" ng-if="$ctrl.isPrimary">{{ 'primary_author' | translate }}</span>
+        <button
+            type="button"
+            class="btn btn-default btn-sm pull-right"
+            ng-if="$ctrl.canRemove"
+            ng-click="$ctrl.onRemove()">
+            <i class="fa fa-trash" aria-hidden="true"></i> {{ 'remove_author' | translate }}
+        </button>
+    </div>
+</div>

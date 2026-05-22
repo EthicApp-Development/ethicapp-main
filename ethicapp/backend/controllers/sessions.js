@@ -680,7 +680,7 @@ router.post("/get-design", await rpg.singleSQL({
 router.get("/get-user-designs", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
-        SELECT id, design, public, locked
+        SELECT id, design, visibility, locked
         FROM DESIGNS
         WHERE creator = $1
         ORDER BY id DESC;
@@ -694,7 +694,8 @@ router.get("/get-user-designs", await rpg.execSQL({
         const designs = rows.map(row => ({
             ...row.design,
             id:     row.id,
-            public: row.public,
+            public: row.visibility === "public",
+            visibility: row.visibility || "private",
             locked: row.locked
         }));
 
@@ -711,9 +712,9 @@ router.get("/get-user-designs", await rpg.execSQL({
 router.get("/get-public-designs", await rpg.execSQL({
     dbcon: pass.dbcon,
     sql:   `
-        SELECT id, design
+        SELECT id, design, visibility
         FROM DESIGNS
-        WHERE public = true
+        WHERE visibility = 'public'
             AND creator != $1
         ORDER BY id DESC;
     `,
@@ -741,7 +742,8 @@ router.post("/design-public", await rpg.multiSQL({
     dbcon: pass.dbcon,
     sql:   `
     UPDATE DESIGNS
-    SET PUBLIC = NOT PUBLIC
+    SET visibility = CASE WHEN visibility = 'public' THEN 'private' ELSE 'public' END,
+        public = CASE WHEN visibility = 'public' THEN false ELSE true END
     WHERE id = $1;
     `,
     sqlParams:   [rpg.param("post", "dsgnid")]

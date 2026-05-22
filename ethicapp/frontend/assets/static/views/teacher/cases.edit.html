@@ -6,6 +6,9 @@
         submit-label-key="saveChanges"
         is-pdf-required="false"
         show-current-pdf="true"
+        licenses="vm.licenses"
+        languages="vm.languages"
+        current-user-profile="vm.currentUserProfile"
         on-save="vm.updateCase()"
         on-cancel="navigateTo('/cases')"
         on-pdf-selected="vm.handlePdfSelected(files)">

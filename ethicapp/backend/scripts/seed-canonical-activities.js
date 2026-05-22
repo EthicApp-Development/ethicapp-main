@@ -400,6 +400,7 @@ async function upsertDesign(pool, activity, ownerId, caseId) {
                 UPDATE designs
                 SET design = $2,
                     public = $3,
+                    visibility = $6,
                     locked = $4,
                     case_id = $5
                 WHERE id = $1
@@ -410,6 +411,7 @@ async function upsertDesign(pool, activity, ownerId, caseId) {
                 activity.public === true,
                 activity.locked === true,
                 caseId,
+                activity.public === true ? "public" : "private",
             ]
         );
 
@@ -418,14 +420,15 @@ async function upsertDesign(pool, activity, ownerId, caseId) {
 
     const inserted = await pool.query(
         `
-            INSERT INTO designs (creator, design, public, locked, case_id)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO designs (creator, design, public, visibility, locked, case_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING id
         `,
         [
             ownerId,
             activity.design,
             activity.public === true,
+            activity.public === true ? "public" : "private",
             activity.locked === true,
             caseId,
         ]
