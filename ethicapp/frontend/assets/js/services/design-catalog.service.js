@@ -85,6 +85,7 @@ let DesignCatalogService = ($rootScope, $http) => {
                 const response = await $http.post("/designs", {
                     design,
                     caseId: design.caseId ?? null,
+                    languageCode: design.languageCode,
                     tagIds,
                 });
 
@@ -99,6 +100,7 @@ let DesignCatalogService = ($rootScope, $http) => {
                     design.locked = false;
                     design.archived = false;
                     design.userOwned = true;
+                    design.languageCode = design.languageCode || "en_US";
 
                     // Add the new design to the service's local list
                     service.designs.unshift(design);
@@ -249,6 +251,7 @@ let DesignCatalogService = ($rootScope, $http) => {
                     data: {
                         design: designObj,
                         caseId: designObj.caseId ?? null,
+                        languageCode: designObj.languageCode,
                         tagIds,
                     }, // Send the updated design object in the request body
                 });

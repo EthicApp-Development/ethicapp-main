@@ -1,6 +1,6 @@
 <div class="tag-selector">
     <div class="tag-selector-selected" ng-if="$ctrl.selectedTags.length > 0">
-        <span class="label label-default tag-selector-chip" ng-repeat="tag in $ctrl.selectedTags track by tag.id">
+        <span class="label tag-selector-chip" ng-repeat="tag in $ctrl.selectedTags track by tag.id">
             {{ tag.label }}
             <button
                 type="button"

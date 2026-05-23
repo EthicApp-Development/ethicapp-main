@@ -13,6 +13,7 @@ import assetVersions from "express-asset-versions";
 import session from "express-session";
 import { createLegacySessionStore } from "./db/session-redis.js";
 
+import teacherHome from "./controllers/teacher-home.js";
 import user_profile from "./controllers/users/user-profile.js";
 import impersonation from "./controllers/users/impersonation.js";
 import activitiesCommon from "./controllers/activities/activities-common.js";
@@ -141,6 +142,7 @@ try {
 // Make ETHICAPP_BUILD_HASH available in the entire application
 app.locals.ETHICAPP_BUILD_HASH = ETHICAPP_BUILD_HASH;
 
+app.use("/", requireLegacyAuth, teacherHome);
 app.use("/", requireLegacyAuth, user_profile);
 app.use("/", requireLegacyAuth, impersonation);
 app.use("/", requireLegacyAuth, activitiesCommon);

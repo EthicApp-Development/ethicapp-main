@@ -6,6 +6,7 @@ import { DesignStateService } from "../../services/design-state.service.js";
 import { DesignCatalogService } from "../../services/design-catalog.service.js";
 import { DesignPublicationService } from "../../services/design-publication.service.js";
 import { CasesCatalogService } from "../../services/cases-catalog.service.js";
+import { LanguageCatalogService } from "../../services/language-catalog.service.js";
 import { TagCatalogService } from "../../services/tag-catalog.service.js";
 import { TeacherGroupChatService } from "../../services/teacher-group-chat.service.js";
 import { TeacherToastService } from "../../services/teacher-toast.service.js";
@@ -32,6 +33,7 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
     .factory("UserProfileService", ["$http", "$rootScope", "Upload", UserProfileService])
     .factory("CasesCatalogService", ["$rootScope", "$http", CasesCatalogService])
+    .factory("LanguageCatalogService", ["$http", "$translate", LanguageCatalogService])
     .factory("TagCatalogService", ["$http", "$translate", TagCatalogService]);
 app.service("toast", ["$rootScope", "$timeout", TeacherToastService]);
 
@@ -104,7 +106,8 @@ app.controller("BrowseDesignsController",
         "DesignPublicationService", "$timeout", "$window",
         BrowseDesignsController]); 
 app.controller("CreateDesignController", 
-    ["$scope", "$window", "DesignCatalogService", "UserProfileService", CreateDesignController]);
+    ["$scope", "$window", "DesignCatalogService", "UserProfileService",
+        "LanguageCatalogService", CreateDesignController]);
 app.controller("DashboardController", 
     ["$scope", "$routeParams", "$http", "$translate", "$timeout", "$uibModal",
         "ActivityStateService", "ActivityCatalogService", "DesignCatalogService",
@@ -114,13 +117,14 @@ app.controller("DesignViewerController",
         "DesignPublicationService", DesignViewerController]);
 app.controller("CasesController",
     ["$scope", "$routeParams", "$window", "$interval", "$translate", "toast",
-        "CasesCatalogService", "UserProfileService", CasesController]);
+        "CasesCatalogService", "LanguageCatalogService", "UserProfileService", CasesController]);
 app.controller("ErrorController", 
     ["$scope", "$window", "$routeParams",
         ErrorController]);
 app.controller("DesignEditorController", 
     ["$scope", "$translate", "$timeout", "$routeParams", "DesignStateService", 
-        "DesignCatalogService", "CasesCatalogService", "toast", DesignEditorController]);         
+        "DesignCatalogService", "CasesCatalogService", "LanguageCatalogService",
+        "toast", DesignEditorController]);         
 app.controller("VoidController", [VoidController]);
 app.controller("ProfileController", ["$scope", "$translate", "toast", "UserProfileService", ProfileController]);
 
