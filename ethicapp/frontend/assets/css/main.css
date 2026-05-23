@@ -25,10 +25,6 @@ hr{
     padding: 20px;
 }
 
-.home-card-container {
-    max-width: 980px;
-}
-
 .home-card-grid {
     display: grid;
     gap: 22px;
@@ -107,12 +103,6 @@ hr{
 }
 
 @media (max-width: 768px) {
-    .home-card-container {
-        width: 100%;
-        max-width: 100%;
-        padding: 0 15px;
-    }
-
     .home-card {
         height: 174px;
     }
