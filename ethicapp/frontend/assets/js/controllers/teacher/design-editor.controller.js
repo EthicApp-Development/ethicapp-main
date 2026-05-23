@@ -29,7 +29,10 @@ export function DesignEditorController($scope, $translate, $timeout,
             if (designObj === null) {
                 console.error("[DesignEditorController::init] Design not found.");
                 $scope.navigateTo("/error/404/2");
+                return;
             }
+
+            vm.design.tags = Array.isArray(vm.design.tags) ? vm.design.tags : [];
 
             // Ensure the design is properly digested
             $scope.$applyAsync(() => {

@@ -9,6 +9,7 @@ let CasesCatalogService = ($rootScope, $http) => {
         formData.append("license_notes", caseData.licenseNotes || "");
         formData.append("permission_statement", caseData.permissionStatement || "");
         formData.append("commercial_source", caseData.commercialSource || "");
+        formData.append("tag_ids", JSON.stringify((caseData.tags || []).map(tag => tag.id)));
     }
 
     const service = {

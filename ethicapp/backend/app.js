@@ -25,6 +25,7 @@ import designs from "./controllers/designs.js";
 import groups from "./controllers/groups.js";
 import group_messages from "./controllers/group-messages.js";
 import cases from "./controllers/cases.js";
+import tags from "./controllers/tags.js";
 import protectedUploads from "./controllers/protected-uploads.js";
 
 import fs from "fs";
@@ -153,6 +154,7 @@ app.use("/", requireLegacyAuth, groups);
 app.use("/", requireLegacyAuth, designs);
 app.use("/", requireLegacyAuth, group_messages);
 app.use("/", requireLegacyAuth, cases);
+app.use("/", requireLegacyAuth, tags);
 
 // Catch 404 and forward to error handler
 app.use((req, res, next) => {

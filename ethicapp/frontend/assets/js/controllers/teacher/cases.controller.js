@@ -67,6 +67,7 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             permissionStatement: "",
             commercialSource: "",
             languageCode: "es_CL",
+            tags: [],
         };
     };
     vm.form = vm.createEmptyCaseForm();
@@ -138,6 +139,7 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
         vm.form.commercialSource = caseObj.commercialSource || "";
         vm.form.languageCode = caseObj.languageCode || "es_CL";
         vm.form.hasLaunchedDesignActivity = caseObj.hasLaunchedDesignActivity === true;
+        vm.form.tags = Array.isArray(caseObj.tags) ? caseObj.tags : [];
         await vm.refreshDocumentProcessingStatuses();
         vm.syncDocumentProcessingPolling();
         $scope.$applyAsync();

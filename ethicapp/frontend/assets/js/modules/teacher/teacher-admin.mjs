@@ -6,6 +6,7 @@ import { DesignStateService } from "../../services/design-state.service.js";
 import { DesignCatalogService } from "../../services/design-catalog.service.js";
 import { DesignPublicationService } from "../../services/design-publication.service.js";
 import { CasesCatalogService } from "../../services/cases-catalog.service.js";
+import { TagCatalogService } from "../../services/tag-catalog.service.js";
 import { TeacherGroupChatService } from "../../services/teacher-group-chat.service.js";
 import { TeacherToastService } from "../../services/teacher-toast.service.js";
 import UserProfileService from "../../services/user-profile.service.js";
@@ -30,7 +31,8 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("DesignPublicationService", ["$uibModal", "DesignCatalogService", "CasesCatalogService", DesignPublicationService])
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
     .factory("UserProfileService", ["$http", "$rootScope", "Upload", UserProfileService])
-    .factory("CasesCatalogService", ["$rootScope", "$http", CasesCatalogService]);
+    .factory("CasesCatalogService", ["$rootScope", "$http", CasesCatalogService])
+    .factory("TagCatalogService", ["$http", "$translate", TagCatalogService]);
 app.service("toast", ["$rootScope", "$timeout", TeacherToastService]);
 
 import { LocalesController } from "../../controllers/common/locales.controller.js";
@@ -192,6 +194,7 @@ import caseDocumentViewerComponent from "../../components/case-document-viewer.c
 import caseAuthorEditorComponent from "../../components/case-author-editor.component.js";
 import caseFormEditorComponent from "../../components/case-form-editor.component.js";
 import caseRightsEditorComponent from "../../components/case-rights-editor.component.js";
+import tagSelectorComponent from "../../components/tag-selector.component.js";
 import phaseInstructionsEditComponent from "../../components/phase-instructions-edit.component.js";
 import teacherGroupChatComponent from "../../components/teacher-group-chat.component.js";
 import teacherToastComponent from "../../components/teacher-toast.component.js";
@@ -215,6 +218,7 @@ app.component("caseDocumentViewer", caseDocumentViewerComponent);
 app.component("caseAuthorEditor", caseAuthorEditorComponent);
 app.component("caseFormEditor", caseFormEditorComponent);
 app.component("caseRightsEditor", caseRightsEditorComponent);
+app.component("tagSelector", tagSelectorComponent);
 app.component("phaseInstructionsEdit", phaseInstructionsEditComponent);
 app.component("teacherGroupChat", teacherGroupChatComponent);
 app.component("toast", teacherToastComponent);

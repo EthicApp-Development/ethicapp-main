@@ -30,6 +30,7 @@ import { moveUploadedFile, pdfUpload, removeUploadedFile } from "../middleware/u
 
 const router = express.Router();
 const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
+const MAX_SEMANTIC_TAGS = 5;
 
 const launchedActivityByCaseSql = `
     SELECT a.id
@@ -61,6 +62,32 @@ const caseSharingSelectSql = `
         INNER JOIN ethical_case_author a ON a.id = ca.author_id
         WHERE ca.case_id = c.id
     ), '[]'::json) AS authors,
+    COALESCE((
+        SELECT json_agg(json_build_object(
+            'id', t.id,
+            'code', t.code,
+            'label', COALESCE(tt.label, fallback_tt.label, t.code),
+            'description', COALESCE(tt.description, fallback_tt.description),
+            'categoryCode', tc.code,
+            'categoryLabel', COALESCE(tct.label, fallback_tct.label, tc.code)
+        ) ORDER BY tc.sort_order, t.sort_order, t.id)
+        FROM ethical_cases_tags ect
+        INNER JOIN tags t ON t.id = ect.tag_id
+        INNER JOIN tag_categories tc ON tc.id = t.category_id
+        LEFT JOIN tag_translations tt
+            ON tt.tag_id = t.id
+           AND tt.locale = c.language_code
+        LEFT JOIN tag_translations fallback_tt
+            ON fallback_tt.tag_id = t.id
+           AND fallback_tt.locale = 'en_US'
+        LEFT JOIN tag_category_translations tct
+            ON tct.category_id = tc.id
+           AND tct.locale = c.language_code
+        LEFT JOIN tag_category_translations fallback_tct
+            ON fallback_tct.category_id = tc.id
+           AND fallback_tct.locale = 'en_US'
+        WHERE ect.case_id = c.id
+    ), '[]'::json) AS tags,
     COALESCE((
         SELECT json_agg(json_build_object(
             'id', d.id,
@@ -137,6 +164,7 @@ function normalizeCase(row) {
                 authorOrder:     1,
                 isPrimary:       true,
             }],
+        tags: Array.isArray(row.tags) ? row.tags : [],
         publicDesigns: row.public_designs || [],
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -174,6 +202,62 @@ function parseCaseAuthors(body) {
         authorLastname:  body?.author_lastname || body?.authorLastname,
         authorEmail:     body?.author_email || body?.authorEmail,
     }, 0)];
+}
+
+function parseTagIds(value) {
+    if (!value) {
+        return [];
+    }
+
+    try {
+        const parsed = typeof value === "string" ? JSON.parse(value) : value;
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+
+        return Array.from(new Set(parsed.map(tagId => Number(tagId)).filter(Number.isSafeInteger)));
+    } catch {
+        return [];
+    }
+}
+
+function areTagIdsValid(tagIds) {
+    return tagIds.length <= MAX_SEMANTIC_TAGS;
+}
+
+async function replaceCaseTags(caseId, tagIds, assignedBy, client = null) {
+    const db = client ? null : await rpg2.getDBInstance(config.dbconnString);
+    const localClient = client || await db.connect();
+
+    try {
+        if (!client) {
+            await localClient.query("BEGIN");
+        }
+
+        await localClient.query("DELETE FROM ethical_cases_tags WHERE case_id = $1;", [caseId]);
+
+        for (const tagId of tagIds) {
+            await localClient.query(`
+                INSERT INTO ethical_cases_tags (case_id, tag_id, assigned_by)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (case_id, tag_id) DO UPDATE
+                SET assigned_by = EXCLUDED.assigned_by;
+            `, [caseId, tagId, assignedBy]);
+        }
+
+        if (!client) {
+            await localClient.query("COMMIT");
+        }
+    } catch (error) {
+        if (!client) {
+            await localClient.query("ROLLBACK");
+        }
+        throw error;
+    } finally {
+        if (!client) {
+            localClient.release();
+        }
+    }
 }
 
 function areCaseAuthorsValid(authors) {
@@ -598,7 +682,8 @@ router.post("/cases", pdfUpload, async (req, res) => {
     } = req.body;
 
     const authors = parseCaseAuthors(req.body);
-    if (!title || !areCaseAuthorsValid(authors) || hasDuplicateCaseAuthorEmails(authors)) {
+    const tagIds = parseTagIds(req.body.tag_ids || req.body.tagIds);
+    if (!title || !areCaseAuthorsValid(authors) || hasDuplicateCaseAuthorEmails(authors) || !areTagIdsValid(tagIds)) {
         await removeUploadedFile(req.file);
         return res.status(400).json({ status: "err", message: "Missing required fields." });
     }
@@ -656,6 +741,7 @@ router.post("/cases", pdfUpload, async (req, res) => {
             ],
         });
         await replaceCaseAuthors(caseId, authors);
+        await replaceCaseTags(caseId, tagIds, req.session.uid);
 
         const renderJob = await enqueueCaseRenderSafely(createdCase);
 
@@ -703,7 +789,8 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
     } = req.body;
 
     const authors = parseCaseAuthors(req.body);
-    if (!title || !areCaseAuthorsValid(authors) || hasDuplicateCaseAuthorEmails(authors)) {
+    const tagIds = parseTagIds(req.body.tag_ids || req.body.tagIds);
+    if (!title || !areCaseAuthorsValid(authors) || hasDuplicateCaseAuthorEmails(authors) || !areTagIdsValid(tagIds)) {
         await removeUploadedFile(req.file);
         return res.status(400).json({ status: "err", message: "Missing required fields." });
     }
@@ -782,6 +869,7 @@ router.patch("/cases/:id", pdfUpload, async (req, res) => {
             ],
         });
         await replaceCaseAuthors(caseId, authors);
+        await replaceCaseTags(caseId, tagIds, req.session.uid);
 
         if (hasPdf) {
             await moveUploadedFile(req.file, pdfPath);
@@ -907,6 +995,15 @@ router.post("/cases/:id/import", async (req, res) => {
                 is_primary = EXCLUDED.is_primary,
                 updated_at = NOW();
         `, [importedCaseId, sourceCase.id]);
+
+        await client.query(`
+            INSERT INTO ethical_cases_tags (case_id, tag_id, assigned_by)
+            SELECT $1, ect.tag_id, $3
+            FROM ethical_cases_tags ect
+            WHERE ect.case_id = $2
+            ON CONFLICT (case_id, tag_id) DO UPDATE
+            SET assigned_by = EXCLUDED.assigned_by;
+        `, [importedCaseId, sourceCase.id, req.session.uid]);
 
         const importedCase = await client.query(`
             SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,
@@ -1041,6 +1138,15 @@ router.post("/cases/:id/duplicate", async (req, res) => {
                 is_primary = EXCLUDED.is_primary,
                 updated_at = NOW();
         `, [duplicatedCaseId, sourceCase.id]);
+
+        await client.query(`
+            INSERT INTO ethical_cases_tags (case_id, tag_id, assigned_by)
+            SELECT $1, ect.tag_id, $3
+            FROM ethical_cases_tags ect
+            WHERE ect.case_id = $2
+            ON CONFLICT (case_id, tag_id) DO UPDATE
+            SET assigned_by = EXCLUDED.assigned_by;
+        `, [duplicatedCaseId, sourceCase.id, req.session.uid]);
 
         const duplicatedCase = await client.query(`
             SELECT c.id, c.case_uuid, c.title, c.author_firstname, c.author_lastname, c.author_email,

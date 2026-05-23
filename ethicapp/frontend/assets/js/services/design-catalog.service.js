@@ -80,10 +80,12 @@ let DesignCatalogService = ($rootScope, $http) => {
 
         async createDesign(design) {
             try {
+                const tagIds = (design.tags || []).map(tag => tag.id);
                 // Make the POST request to the API
                 const response = await $http.post("/designs", {
                     design,
                     caseId: design.caseId ?? null,
+                    tagIds,
                 });
 
                 // Check the response status
@@ -239,6 +241,7 @@ let DesignCatalogService = ($rootScope, $http) => {
 
         async updateDesign(designId, designObj) {
             try {
+                const tagIds = (designObj.tags || []).map(tag => tag.id);
                 // Make the PATCH request to the API
                 const response = await $http({
                     url: `/designs/${designId}`,
@@ -246,6 +249,7 @@ let DesignCatalogService = ($rootScope, $http) => {
                     data: {
                         design: designObj,
                         caseId: designObj.caseId ?? null,
+                        tagIds,
                     }, // Send the updated design object in the request body
                 });
         

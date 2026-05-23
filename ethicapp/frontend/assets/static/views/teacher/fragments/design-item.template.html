@@ -15,6 +15,15 @@
                 <p><i class="fa-solid fa-paint-brush" aria-hidden="true"></i> {{ 'design_type_colon' | translate }} {{$ctrl.design.type === "semantic_differential" ? ("semantic_differential" | translate) : ("ranking_activity" | translate)}}</p>
                 <p><i class="fa-solid fa-eye" aria-hidden="true"></i> {{ 'visibility' | translate }}: {{ $ctrl.getVisibilityLabelKey() | translate }}</p>
                 <p><i class="fa-solid fa-certificate" aria-hidden="true"></i> {{ 'license' | translate }}: {{$ctrl.design.licenseCode}}</p>
+                <div class="resource-tags" ng-if="$ctrl.hasTags()">
+                    <i class="fa-solid fa-tags" aria-hidden="true"></i>
+                    <span>{{ 'semantic_tags' | translate }}:</span>
+                    <span class="label label-default resource-tag-chip"
+                        ng-repeat="tag in $ctrl.getTags() track by tag.id"
+                        title="{{ tag.categoryLabel || tag.categoryCode }}">
+                        {{ tag.label }}
+                    </span>
+                </div>
                 <p ng-if="$ctrl.hasOriginalDesign()">
                     <i class="fa-solid fa-code-branch" aria-hidden="true"></i>
                     {{ 'original_design_title' | translate }}:

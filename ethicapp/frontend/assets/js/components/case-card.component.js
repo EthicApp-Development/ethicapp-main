@@ -40,6 +40,14 @@ const CaseCardController = function() {
         return `rights_status_${this.caseItem?.rightsStatus || "unknown"}`;
     };
 
+    this.getTags = function() {
+        return Array.isArray(this.caseItem?.tags) ? this.caseItem.tags : [];
+    };
+
+    this.hasTags = function() {
+        return this.getTags().length > 0;
+    };
+
     this.canToggleVisibility = function() {
         return this.isFunction(this.onTogglePublic)
             && this.caseItem?.hasLaunchedDesignActivity !== true

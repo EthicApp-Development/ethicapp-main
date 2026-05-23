@@ -3,22 +3,33 @@
         <i class="fa-solid fa-lock" aria-hidden="true"></i>
         {{ 'case_locked_by_activity_explanation' | translate }}
     </div>
-    <div class="form-group case-form-field">
-        <label for="caseTitle">{{ 'title' | translate }} <span class="text-danger" aria-hidden="true">*</span></label>
-        <input
-            id="caseTitle"
-            type="text"
-            name="title"
-            class="form-control input-lg"
-            ng-model="$ctrl.formModel.title"
-            ng-class="{'input-warning': $ctrl.shouldShowError(caseForm.title)}"
-            ng-readonly="$ctrl.isLocked()"
-            required>
-        <p class="help-block">{{ 'required_field_note' | translate }}</p>
-        <p class="help-block text-danger" ng-if="$ctrl.shouldShowError(caseForm.title)">
-            {{ 'ethical_cases_validation_required' | translate }}
-        </p>
-    </div>
+    <fieldset>
+        <legend>{{ 'case_title_and_tags' | translate }} <span class="text-danger" aria-hidden="true">*</span></legend>
+        <div class="form-group case-form-field">
+            <label for="caseTitle">{{ 'title' | translate }} <span class="text-danger" aria-hidden="true">*</span></label>
+            <input
+                id="caseTitle"
+                type="text"
+                name="title"
+                class="form-control input-lg"
+                ng-model="$ctrl.formModel.title"
+                ng-class="{'input-warning': $ctrl.shouldShowError(caseForm.title)}"
+                ng-readonly="$ctrl.isLocked()"
+                required>
+            <p class="help-block">{{ 'required_field_note' | translate }}</p>
+            <p class="help-block text-danger" ng-if="$ctrl.shouldShowError(caseForm.title)">
+                {{ 'ethical_cases_validation_required' | translate }}
+            </p>
+        </div>
+        <div class="form-group case-form-field">
+            <label>{{ 'semantic_tags' | translate }}</label>
+            <tag-selector
+                selected-tags="$ctrl.formModel.tags"
+                scope="case"
+                readonly="$ctrl.isLocked()">
+            </tag-selector>
+        </div>
+    </fieldset>
 
     <fieldset>
         <legend>{{ 'ethical_case_authors' | translate }} <span class="text-danger" aria-hidden="true">*</span></legend>

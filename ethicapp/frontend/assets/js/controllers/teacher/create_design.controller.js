@@ -6,6 +6,7 @@ export function CreateDesignController($scope, $window,
     const vm = this;
     vm.selectedOption = "semantic_differential";
     vm.associatedCase = null;
+    vm.tags = [];
 
     vm.goBack = function() {
         if ($window.history.length > 1) {
@@ -37,6 +38,7 @@ export function CreateDesignController($scope, $window,
             design.metainfo.institution = userInformation.institution_name || "";
             design.metainfo.email = userInformation.email;
             design.caseId = vm.associatedCase?.id || null;
+            design.tags = vm.tags;
 
             const designId = await DesignCatalogService.createDesign(design);
 

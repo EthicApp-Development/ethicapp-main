@@ -38,7 +38,7 @@
         <div class="row">
             <div class="col-md-12">
                 <fieldset>
-                    <legend>{{ 'design_new_title_section' | translate }}</legend>
+                    <legend>{{ 'design_title_and_tags' | translate }}</legend>
                     <div class="form-group case-form-field">
                         <label for="designNewTitle">
                             {{ 'design_title_input_label' | translate }}
@@ -56,6 +56,10 @@
                             ng-if="formDesign.title.$error.required && (formDesign.$submitted || formDesign.title.$touched)">
                             {{ 'design_title_required_error' | translate }}
                         </p>
+                    </div>
+                    <div class="form-group case-form-field">
+                        <label>{{ 'semantic_tags' | translate }}</label>
+                        <tag-selector selected-tags="cdc.tags" scope="design"></tag-selector>
                     </div>
                 </fieldset>
             </div>
