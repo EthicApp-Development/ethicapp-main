@@ -1,9 +1,9 @@
 "use strict";
 
 import express from "express";
-import pass from "../helpers/compat-helper.js"
-import * as rpg from "../db/rest-pg.js";
-import configSocket from "../config/socket.config.js";
+import pass from "../../helpers/compat-helper.js"
+import * as rpg from "../../db/rest-pg.js";
+import configSocket from "../../config/socket.config.js";
 
 let router = express.Router();
 

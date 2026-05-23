@@ -1,12 +1,12 @@
 "use strict";
 
 import express from "express";
-import pass from "../helpers/compat-helper.js";
-import * as rpg from "../db/rest-pg.js";
-import * as config from "../config/database.config.js";
-import * as rpg2 from "../db/rest-pg-2.js";
-import { studentNotifications } from "../config/socket.config.js";
-import * as ViewsHelper from "../helpers/views-helper.js";
+import pass from "../../helpers/compat-helper.js";
+import * as rpg from "../../db/rest-pg.js";
+import * as config from "../../config/database.config.js";
+import * as rpg2 from "../../db/rest-pg-2.js";
+import { studentNotifications } from "../../config/socket.config.js";
+import * as ViewsHelper from "../../helpers/views-helper.js";
 
 const router = express.Router();
 
