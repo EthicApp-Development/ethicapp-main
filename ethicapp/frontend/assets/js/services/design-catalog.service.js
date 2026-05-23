@@ -80,10 +80,13 @@ let DesignCatalogService = ($rootScope, $http) => {
 
         async createDesign(design) {
             try {
+                const tagIds = (design.tags || []).map(tag => tag.id);
                 // Make the POST request to the API
                 const response = await $http.post("/designs", {
                     design,
                     caseId: design.caseId ?? null,
+                    languageCode: design.languageCode,
+                    tagIds,
                 });
 
                 // Check the response status
@@ -97,6 +100,7 @@ let DesignCatalogService = ($rootScope, $http) => {
                     design.locked = false;
                     design.archived = false;
                     design.userOwned = true;
+                    design.languageCode = design.languageCode || "en_US";
 
                     // Add the new design to the service's local list
                     service.designs.unshift(design);
@@ -239,6 +243,7 @@ let DesignCatalogService = ($rootScope, $http) => {
 
         async updateDesign(designId, designObj) {
             try {
+                const tagIds = (designObj.tags || []).map(tag => tag.id);
                 // Make the PATCH request to the API
                 const response = await $http({
                     url: `/designs/${designId}`,
@@ -246,6 +251,8 @@ let DesignCatalogService = ($rootScope, $http) => {
                     data: {
                         design: designObj,
                         caseId: designObj.caseId ?? null,
+                        languageCode: designObj.languageCode,
+                        tagIds,
                     }, // Send the updated design object in the request body
                 });
         

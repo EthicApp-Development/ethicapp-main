@@ -13,9 +13,9 @@ import assetVersions from "express-asset-versions";
 import session from "express-session";
 import { createLegacySessionStore } from "./db/session-redis.js";
 
+import teacherHome from "./controllers/teacher-home.js";
 import user_profile from "./controllers/users/user-profile.js";
 import impersonation from "./controllers/users/impersonation.js";
-import sessions from "./controllers/sessions.js";
 import activitiesCommon from "./controllers/activities/activities-common.js";
 import activitiesTeacher from "./controllers/activities/activities-teacher.js";
 import activitiesStudent from "./controllers/activities/activities-student.js";
@@ -25,6 +25,7 @@ import designs from "./controllers/designs.js";
 import groups from "./controllers/groups.js";
 import group_messages from "./controllers/group-messages.js";
 import cases from "./controllers/cases.js";
+import tags from "./controllers/tags.js";
 import protectedUploads from "./controllers/protected-uploads.js";
 
 import fs from "fs";
@@ -141,9 +142,9 @@ try {
 // Make ETHICAPP_BUILD_HASH available in the entire application
 app.locals.ETHICAPP_BUILD_HASH = ETHICAPP_BUILD_HASH;
 
+app.use("/", requireLegacyAuth, teacherHome);
 app.use("/", requireLegacyAuth, user_profile);
 app.use("/", requireLegacyAuth, impersonation);
-app.use("/", requireLegacyAuth, sessions);
 app.use("/", requireLegacyAuth, activitiesCommon);
 app.use("/", requireLegacyAuth, activitiesTeacher);
 app.use("/", requireLegacyAuth, activitiesStudent);
@@ -153,6 +154,7 @@ app.use("/", requireLegacyAuth, groups);
 app.use("/", requireLegacyAuth, designs);
 app.use("/", requireLegacyAuth, group_messages);
 app.use("/", requireLegacyAuth, cases);
+app.use("/", requireLegacyAuth, tags);
 
 // Catch 404 and forward to error handler
 app.use((req, res, next) => {

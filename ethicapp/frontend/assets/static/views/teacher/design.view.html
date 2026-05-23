@@ -12,6 +12,9 @@
         <div class="col-md-12">
             <div>
                 <h2><i class="fa fa-paint-brush"></i> {{ 'view_design_title' | translate }}: {{ dvc.design.metainfo.title }}</h2>
+                <button type="button" class="btn btn-default btn-sm" ng-click="dvc.goBack()">
+                    <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
+                </button>
             </div>
             <div style="margin-top: 2em">
                 <design-item

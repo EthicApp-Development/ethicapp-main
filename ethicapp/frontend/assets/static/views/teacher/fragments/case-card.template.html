@@ -9,6 +9,15 @@
                 <p><i class="fa-solid fa-eye" aria-hidden="true"></i> {{ 'visibility' | translate }}: {{ $ctrl.getVisibilityLabelKey() | translate }}</p>
                 <p><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> {{ 'rights_status' | translate }}: {{ $ctrl.getRightsStatusLabelKey() | translate }}</p>
                 <p><i class="fa-solid fa-certificate" aria-hidden="true"></i> {{ 'license' | translate }}: {{$ctrl.caseItem.licenseCode}}</p>
+                <div class="resource-tags" ng-if="$ctrl.hasTags()">
+                    <i class="fa-solid fa-tags" aria-hidden="true"></i>
+                    <span>{{ 'semantic_tags' | translate }}:</span>
+                    <span class="label label-default resource-tag-chip"
+                        ng-repeat="tag in $ctrl.getTags() track by tag.id"
+                        title="{{ tag.categoryLabel || tag.categoryCode }}">
+                        {{ tag.label }}
+                    </span>
+                </div>
                 <p ng-if="$ctrl.caseItem.hasLaunchedDesignActivity">
                     <i class="text-warning fa-solid fa-triangle-exclamation" aria-hidden="true"></i> {{ 'case_cannot_delete_used_by_activity' | translate }}
                 </p>

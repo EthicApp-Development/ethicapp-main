@@ -9,6 +9,7 @@ let CasesCatalogService = ($rootScope, $http) => {
         formData.append("license_notes", caseData.licenseNotes || "");
         formData.append("permission_statement", caseData.permissionStatement || "");
         formData.append("commercial_source", caseData.commercialSource || "");
+        formData.append("tag_ids", JSON.stringify((caseData.tags || []).map(tag => tag.id)));
     }
 
     const service = {
@@ -16,7 +17,6 @@ let CasesCatalogService = ($rootScope, $http) => {
         publicCases: [],
         archivedCases: [],
         licenses: [],
-        languages: [],
 
         async loadCases() {
             const response = await $http.get("/cases");
@@ -98,14 +98,6 @@ let CasesCatalogService = ($rootScope, $http) => {
                 service.licenses = Array.isArray(response.data.result) ? response.data.result : [];
             }
             return service.licenses;
-        },
-
-        async getLanguages(reload = false) {
-            if (reload || service.languages.length === 0) {
-                const response = await $http.get("/languages");
-                service.languages = Array.isArray(response.data.result) ? response.data.result : [];
-            }
-            return service.languages;
         },
 
         async createCase(caseData) {

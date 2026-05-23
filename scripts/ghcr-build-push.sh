@@ -61,7 +61,7 @@ append_service() {
 }
 
 default_services() {
-  echo "ethicapp auth-backend ethicapp-student management-console nginx database"
+  echo "ethicapp auth-backend ethicapp-student management-console nginx"
 }
 
 service_context() {
@@ -71,7 +71,6 @@ service_context() {
     ethicapp-student) echo "ethicapp-student" ;;
     management-console) echo "management-console" ;;
     nginx) echo "nginx" ;;
-    database) echo "database" ;;
     *) return 1 ;;
   esac
 }
@@ -83,7 +82,6 @@ service_dockerfile() {
     ethicapp-student) echo "ethicapp-student/Dockerfile" ;;
     management-console) echo "management-console/Dockerfile" ;;
     nginx) echo "nginx/Dockerfile" ;;
-    database) echo "database/Dockerfile" ;;
     *) return 1 ;;
   esac
 }

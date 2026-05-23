@@ -1,4 +1,4 @@
-<div ng-controller="ActivityController as ac">
+<div class="container" ng-controller="ActivityController as ac">
     <div class="row">
         <div class="col-md-12">
             <h2><i class="fa-solid fa-drum"></i> {{'activities' | translate}}</h2>
@@ -12,51 +12,60 @@
             </button>
         </div>
     </div>
-    <div class="row" ng-init="ac.dsgnMode = 0" style="position: relative;">
-        <ul class="nav nav-tabs" style="margin-left: 16px; display: inline-block;">
-            <li ng-class="{'active': ac.dsgnMode === 0}">
-                <a href="" ng-click="ac.dsgnMode = 0">{{'currentTab' | translate}}</a>
-            </li>
-            <li ng-class="{'active': ac.dsgnMode === 1}">
-                <a href="" ng-click="ac.dsgnMode = 1">{{'finishedTab' | translate}}</a>
-            </li>
-            <li ng-class="{'active': ac.dsgnMode === 2}">
-                <a href="" ng-click="ac.dsgnMode = 2">{{'archived' | translate}}</a>
-            </li>
-        </ul>
-        <div style="position: absolute; right: 400px; top: 6px; max-width: 200px;">
-            <div class="search-field-wrapper">
-                <input class="form-control search-input search-decorated-input" type="text"
-                    placeholder="{{'search' | translate}}" ng-model="ac.userSearch">
-                <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
-            </div>
-        </div>
-    </div>
-    <div class="row" style="margin-left:-14px; margin-top: -6px;">
-        <div class="col-md-12">
-            <div class="panel panel-default">
-                <div class="panel-body">
-                    <activity-description on-view="ac.handleView" ng-if="ac.dsgnMode === 0" ng-repeat="act in ac.activities.ongoing | filter:{title: ac.userSearch} | orderBy: '-time'" activity="act"></activity-description>
-                    <activity-description on-view="ac.handleView" on-archive="ac.handleArchive" ng-if="ac.dsgnMode === 1" ng-repeat="act in ac.activities.finished | filter:{title: ac.userSearch} | orderBy: '-time'" activity="act"></activity-description>
-                    <activity-description on-view="ac.handleView" on-unarchive="ac.handleArchive" ng-if="ac.dsgnMode === 2" ng-repeat="act in ac.activities.archived | filter:{title: ac.userSearch} | orderBy: '-time'" activity="act"></activity-description>
-
-                    <div class="alert alert-info" ng-if="ac.dsgnMode === 0 && (ac.activities.ongoing | filter:{title: ac.userSearch}).length === 0">
-                        <span>{{'empty_ongoing_activities_message' | translate}}</span>
-                        <a href="" ng-click="navigateTo('/designs/new')">{{'empty_activities_create_design_link' | translate}}</a>.
-                        <span>{{'empty_activities_then_launch_message' | translate}}</span>
-                        <a href="" ng-click="navigateTo('/activities/new')">{{'empty_activities_launch_link' | translate}}</a>.
-                    </div>
-
-                    <div class="alert alert-info" ng-if="ac.dsgnMode === 1 && (ac.activities.finished | filter:{title: ac.userSearch}).length === 0">
-                        <span>{{'empty_finished_activities_message' | translate}}</span>
-                    </div>
-
-                    <div class="alert alert-info" ng-if="ac.dsgnMode === 2 && (ac.activities.archived | filter:{title: ac.userSearch}).length === 0">
-                        <span>{{'empty_archived_activities_message' | translate}}</span>
-                    </div>
+    <div class="row">
+        <div class="col-md-12" style="position: relative;">
+            <ul class="nav nav-tabs" style="display: inline-block;">
+                <li ng-class="{'active': ac.dsgnMode === 0}">
+                    <a href="" ng-click="ac.setActivityMode(0)">{{'currentTab' | translate}}</a>
+                </li>
+                <li ng-class="{'active': ac.dsgnMode === 1}">
+                    <a href="" ng-click="ac.setActivityMode(1)">{{'finishedTab' | translate}}</a>
+                </li>
+                <li ng-class="{'active': ac.dsgnMode === 2}">
+                    <a href="" ng-click="ac.setActivityMode(2)">{{'archived' | translate}}</a>
+                </li>
+            </ul>
+            <div style="position: absolute; right: 400px; top: 6px; max-width: 200px;">
+                <div class="search-field-wrapper">
+                    <input class="form-control search-input search-decorated-input" type="text"
+                        placeholder="{{'search' | translate}}" ng-model="ac.userSearch" ng-change="ac.setPage(1)">
+                    <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
                 </div>
             </div>
         </div>
     </div>
-</div>
+    <div class="row teacher-index-content">
+        <div class="col-md-12">
+            <activity-description on-view="ac.handleView" ng-if="ac.dsgnMode === 0" ng-repeat="act in ac.getPaginatedActivities() track by act.sessionId" activity="act"></activity-description>
+            <activity-description on-view="ac.handleView" on-archive="ac.handleArchive" ng-if="ac.dsgnMode === 1" ng-repeat="act in ac.getPaginatedActivities() track by act.sessionId" activity="act"></activity-description>
+            <activity-description on-view="ac.handleView" on-unarchive="ac.handleArchive" ng-if="ac.dsgnMode === 2" ng-repeat="act in ac.getPaginatedActivities() track by act.sessionId" activity="act"></activity-description>
 
+            <div class="resource-pagination-controls" ng-if="ac.getTotalPages() > 1">
+                <button class="btn btn-default btn-sm" ng-click="ac.previousPage()" ng-disabled="ac.currentPage === 1">
+                    <i class="fa fa-chevron-left" aria-hidden="true"></i> {{ 'pagination_previous' | translate }}
+                </button>
+                <span class="resource-pagination-status">
+                    {{ 'pagination_page' | translate }} {{ ac.currentPage }} / {{ ac.getTotalPages() }}
+                </span>
+                <button class="btn btn-default btn-sm" ng-click="ac.nextPage()" ng-disabled="ac.currentPage === ac.getTotalPages()">
+                    {{ 'pagination_next' | translate }} <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <div class="alert alert-info" ng-if="ac.dsgnMode === 0 && ac.getFilteredActivities().length === 0">
+                <span>{{'empty_ongoing_activities_message' | translate}}</span>
+                <a href="" ng-click="navigateTo('/designs/new')">{{'empty_activities_create_design_link' | translate}}</a>.
+                <span>{{'empty_activities_then_launch_message' | translate}}</span>
+                <a href="" ng-click="navigateTo('/activities/new')">{{'empty_activities_launch_link' | translate}}</a>.
+            </div>
+
+            <div class="alert alert-info" ng-if="ac.dsgnMode === 1 && ac.getFilteredActivities().length === 0">
+                <span>{{'empty_finished_activities_message' | translate}}</span>
+            </div>
+
+            <div class="alert alert-info" ng-if="ac.dsgnMode === 2 && ac.getFilteredActivities().length === 0">
+                <span>{{'empty_archived_activities_message' | translate}}</span>
+            </div>
+        </div>
+    </div>
+</div>

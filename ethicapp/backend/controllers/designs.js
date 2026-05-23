@@ -27,9 +27,57 @@ import {
 
 const router = express.Router();
 const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
+const MAX_SEMANTIC_TAGS = 5;
 
 function sameId(left, right) {
     return Number(left) === Number(right);
+}
+
+function parseTagIds(value) {
+    if (!value) {
+        return [];
+    }
+
+    const parsed = Array.isArray(value) ? value : [];
+    return Array.from(new Set(parsed.map(tagId => Number(tagId)).filter(Number.isSafeInteger)));
+}
+
+function areTagIdsValid(tagIds) {
+    return tagIds.length <= MAX_SEMANTIC_TAGS;
+}
+
+async function replaceDesignTags(designId, tagIds, assignedBy, client = null) {
+    const db = client ? null : await rpg2.getDBInstance(config.dbconnString);
+    const localClient = client || await db.connect();
+
+    try {
+        if (!client) {
+            await localClient.query("BEGIN");
+        }
+
+        await localClient.query("DELETE FROM designs_tags WHERE design_id = $1;", [designId]);
+        for (const tagId of tagIds) {
+            await localClient.query(`
+                INSERT INTO designs_tags (design_id, tag_id, assigned_by)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (design_id, tag_id) DO UPDATE
+                SET assigned_by = EXCLUDED.assigned_by;
+            `, [designId, tagId, assignedBy]);
+        }
+
+        if (!client) {
+            await localClient.query("COMMIT");
+        }
+    } catch (error) {
+        if (!client) {
+            await localClient.query("ROLLBACK");
+        }
+        throw error;
+    } finally {
+        if (!client) {
+            localClient.release();
+        }
+    }
 }
 
 router.get("/licenses", async (req, res) => {
@@ -102,6 +150,7 @@ function normalizeDesignRow(row) {
         sourceDesignLicenseCode: row.source_design_license_code,
         isEditableCopy: row.is_editable_copy !== false,
         caseId: row.case_id,
+        tags: Array.isArray(row.tags) ? row.tags : [],
         associatedCase: row.case_id ? {
             id: row.case_id,
             title: row.case_title,
@@ -301,6 +350,15 @@ async function copyCaseForUser(client, sourceCaseId, userId, visibility = PRIVAT
             updated_at = NOW();
     `, [caseId, sourceCase.id]);
 
+    await client.query(`
+        INSERT INTO ethical_cases_tags (case_id, tag_id, assigned_by)
+        SELECT $1, ect.tag_id, $3
+        FROM ethical_cases_tags ect
+        WHERE ect.case_id = $2
+        ON CONFLICT (case_id, tag_id) DO UPDATE
+        SET assigned_by = EXCLUDED.assigned_by;
+    `, [caseId, sourceCase.id, userId]);
+
     return inserted.rows[0].id;
 }
 
@@ -359,6 +417,8 @@ router.post("/designs", async (req, res) => {
             attribution_text: attributionTextSnake,
             languageCode,
             language_code: languageCodeSnake,
+            tagIds = [],
+            tag_ids: tagIdsSnake = [],
         } = req.body;
 
         // Validate session
@@ -369,6 +429,11 @@ router.post("/designs", async (req, res) => {
         // Validate input
         if (!design) {
             return res.status(400).json({ status: "err", message: "Invalid input: Design data is required." });
+        }
+
+        const parsedTagIds = parseTagIds(tagIdsSnake.length ? tagIdsSnake : tagIds);
+        if (!areTagIdsValid(parsedTagIds)) {
+            return res.status(400).json({ status: "err", message: "A design can have at most five semantic tags." });
         }
 
         let { id, ...designNoId } = design;
@@ -419,6 +484,7 @@ router.post("/designs", async (req, res) => {
 
         // Check if the design was successfully created
         if (result && result.id) {
+            await replaceDesignTags(result.id, parsedTagIds, sessionUid);
             return res.json({ status: "ok", id: result.id });
         } else {
             return res.status(500).json({ status: "err", message: "Failed to create design." });
@@ -443,6 +509,8 @@ router.patch("/designs/:id", async (req, res) => {
             attribution_text: attributionTextSnake,
             languageCode,
             language_code: languageCodeSnake,
+            tagIds = [],
+            tag_ids: tagIdsSnake = [],
         } = req.body;
 
         // Validate session
@@ -453,6 +521,11 @@ router.patch("/designs/:id", async (req, res) => {
         // Validate input
         if (!designId || !design) {
             return res.status(400).json({ status: "err", message: "Invalid input" });
+        }
+
+        const parsedTagIds = parseTagIds(tagIdsSnake.length ? tagIdsSnake : tagIds);
+        if (!areTagIdsValid(parsedTagIds)) {
+            return res.status(400).json({ status: "err", message: "A design can have at most five semantic tags." });
         }
 
         // Fetch the design and check permissions
@@ -527,6 +600,7 @@ router.patch("/designs/:id", async (req, res) => {
                 rpg2.param("plain", normalizeLanguageCode(languageCode ?? languageCodeSnake, existingDesign.language_code || DEFAULT_LANGUAGE_CODE)),
             ],
         });
+        await replaceDesignTags(designId, parsedTagIds, sessionUid);
 
         return res.json({ status: "ok", message: "Design updated successfully" });
     } catch (err) {
@@ -622,6 +696,32 @@ router.get("/users/:id/designs", async (req, res) => {
                        c.license_notes AS case_license_notes,
                        c.permission_statement AS case_permission_statement,
                        c.commercial_source AS case_commercial_source,
+                       COALESCE((
+                           SELECT json_agg(json_build_object(
+                               'id', t.id,
+                               'code', t.code,
+                               'label', COALESCE(tt.label, fallback_tt.label, t.code),
+                               'description', COALESCE(tt.description, fallback_tt.description),
+                               'categoryCode', tc.code,
+                               'categoryLabel', COALESCE(tct.label, fallback_tct.label, tc.code)
+                           ) ORDER BY tc.sort_order, t.sort_order, t.id)
+                           FROM designs_tags dt
+                           INNER JOIN tags t ON t.id = dt.tag_id
+                           INNER JOIN tag_categories tc ON tc.id = t.category_id
+                           LEFT JOIN tag_translations tt
+                               ON tt.tag_id = t.id
+                              AND tt.locale = d.language_code
+                           LEFT JOIN tag_translations fallback_tt
+                               ON fallback_tt.tag_id = t.id
+                              AND fallback_tt.locale = 'en_US'
+                           LEFT JOIN tag_category_translations tct
+                               ON tct.category_id = tc.id
+                              AND tct.locale = d.language_code
+                           LEFT JOIN tag_category_translations fallback_tct
+                               ON fallback_tct.category_id = tc.id
+                              AND fallback_tct.locale = 'en_US'
+                           WHERE dt.design_id = d.id
+                       ), '[]'::json) AS tags,
                        TRUE AS user_owned
                 FROM designs d
                 LEFT JOIN ethical_cases c ON c.id = d.case_id
@@ -679,6 +779,32 @@ router.get("/designs", async (req, res) => {
                        c.license_notes AS case_license_notes,
                        c.permission_statement AS case_permission_statement,
                        c.commercial_source AS case_commercial_source,
+                       COALESCE((
+                           SELECT json_agg(json_build_object(
+                               'id', t.id,
+                               'code', t.code,
+                               'label', COALESCE(tt.label, fallback_tt.label, t.code),
+                               'description', COALESCE(tt.description, fallback_tt.description),
+                               'categoryCode', tc.code,
+                               'categoryLabel', COALESCE(tct.label, fallback_tct.label, tc.code)
+                           ) ORDER BY tc.sort_order, t.sort_order, t.id)
+                           FROM designs_tags dt
+                           INNER JOIN tags t ON t.id = dt.tag_id
+                           INNER JOIN tag_categories tc ON tc.id = t.category_id
+                           LEFT JOIN tag_translations tt
+                               ON tt.tag_id = t.id
+                              AND tt.locale = d.language_code
+                           LEFT JOIN tag_translations fallback_tt
+                               ON fallback_tt.tag_id = t.id
+                              AND fallback_tt.locale = 'en_US'
+                           LEFT JOIN tag_category_translations tct
+                               ON tct.category_id = tc.id
+                              AND tct.locale = d.language_code
+                           LEFT JOIN tag_category_translations fallback_tct
+                               ON fallback_tct.category_id = tc.id
+                              AND fallback_tct.locale = 'en_US'
+                           WHERE dt.design_id = d.id
+                       ), '[]'::json) AS tags,
                        u.firstname AS creator_firstname,
                        u.lastname AS creator_lastname,
                        u.name AS creator_name,
@@ -1017,6 +1143,15 @@ router.post("/designs/:id/duplicate", async (req, res) => {
                 sourceLicenseCode,
                 normalizeLanguageCode(design.language_code),
             ]);
+
+            await client.query(`
+                INSERT INTO designs_tags (design_id, tag_id, assigned_by)
+                SELECT $1, dt.tag_id, $3
+                FROM designs_tags dt
+                WHERE dt.design_id = $2
+                ON CONFLICT (design_id, tag_id) DO UPDATE
+                SET assigned_by = EXCLUDED.assigned_by;
+            `, [result.rows[0].id, design.id, sessionUid]);
             await client.query("COMMIT");
 
             if (result.rows[0]?.id) {

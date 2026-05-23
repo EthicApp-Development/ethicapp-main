@@ -1,5 +1,6 @@
 /*eslint func-style: ["error", "expression"]*/
-export function CasesController($scope, $routeParams, $window, $interval, $translate, toast, CasesCatalogService, UserProfileService) {
+export function CasesController($scope, $routeParams, $window, $interval, $translate, toast,
+    CasesCatalogService, LanguageCatalogService, UserProfileService) {
     const vm = this;
     const documentProcessingPollIntervalMs = 5000;
     const activeDocumentProcessingStatuses = ["pending", "processing"];
@@ -66,7 +67,8 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             licenseNotes: "",
             permissionStatement: "",
             commercialSource: "",
-            languageCode: "es_CL",
+            languageCode: LanguageCatalogService.getDefaultLanguageCode(vm.languages, "es_CL"),
+            tags: [],
         };
     };
     vm.form = vm.createEmptyCaseForm();
@@ -74,10 +76,13 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
     vm.loadCaseFormOptions = async function() {
         const [licenses, languages] = await Promise.all([
             CasesCatalogService.getLicenses(),
-            CasesCatalogService.getLanguages(),
+            LanguageCatalogService.getLanguages(),
         ]);
         vm.licenses = licenses;
         vm.languages = languages;
+        if (!vm.caseObj) {
+            vm.form.languageCode = LanguageCatalogService.getDefaultLanguageCode(languages, vm.form.languageCode);
+        }
         try {
             vm.currentUserProfile = await UserProfileService.getProfile();
         } catch (error) {
@@ -138,6 +143,7 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
         vm.form.commercialSource = caseObj.commercialSource || "";
         vm.form.languageCode = caseObj.languageCode || "es_CL";
         vm.form.hasLaunchedDesignActivity = caseObj.hasLaunchedDesignActivity === true;
+        vm.form.tags = Array.isArray(caseObj.tags) ? caseObj.tags : [];
         await vm.refreshDocumentProcessingStatuses();
         vm.syncDocumentProcessingPolling();
         $scope.$applyAsync();

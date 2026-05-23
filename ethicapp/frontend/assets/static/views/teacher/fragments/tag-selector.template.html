@@ -1,0 +1,42 @@
+<div class="tag-selector">
+    <div class="tag-selector-selected" ng-if="$ctrl.selectedTags.length > 0">
+        <span class="label tag-selector-chip" ng-repeat="tag in $ctrl.selectedTags track by tag.id">
+            {{ tag.label }}
+            <button
+                type="button"
+                class="tag-selector-chip-remove"
+                ng-click="$ctrl.removeTag(tag)"
+                ng-disabled="$ctrl.isReadonly()"
+                aria-label="{{ 'remove_tag' | translate }}">
+                &times;
+            </button>
+        </span>
+    </div>
+
+    <div class="tag-selector-search" ng-if="!$ctrl.isReadonly()">
+        <input
+            type="text"
+            class="form-control"
+            placeholder="{{ 'tag_search_placeholder' | translate }}"
+            ng-model="$ctrl.searchText"
+            ng-change="$ctrl.searchTags()"
+            ng-disabled="!$ctrl.canAddMoreTags()">
+        <p class="help-block" ng-if="$ctrl.canAddMoreTags()">
+            {{ 'tag_selector_limit_hint' | translate:{ max: $ctrl.getMaxTags() } }}
+        </p>
+        <p class="help-block text-muted" ng-if="!$ctrl.canAddMoreTags()">
+            {{ 'tag_selector_limit_reached' | translate:{ max: $ctrl.getMaxTags() } }}
+        </p>
+        <div class="list-group tag-selector-suggestions" ng-if="$ctrl.suggestions.length > 0">
+            <button
+                type="button"
+                class="list-group-item tag-selector-suggestion"
+                ng-repeat="tag in $ctrl.suggestions track by tag.id"
+                ng-click="$ctrl.addTag(tag)">
+                <strong>{{ tag.label }}</strong>
+                <span class="text-muted"> - {{ tag.categoryLabel }}</span>
+                <span class="small text-muted" ng-if="tag.description"><br>{{ tag.description }}</span>
+            </button>
+        </div>
+    </div>
+</div>

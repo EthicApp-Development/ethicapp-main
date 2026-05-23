@@ -39,8 +39,10 @@ services:
       - ethicapp_frontend_node_modules:/app/frontend/node_modules
       - uploads:/app/backend/uploads
     depends_on:
-      - postgresql
-      - redis
+      flyway:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
 
   ethicapp-pdf-worker:
     build:
@@ -63,7 +65,8 @@ services:
       - ethicapp_pdf_worker_backend_node_modules:/app/backend/node_modules
       - uploads:/app/backend/uploads
     depends_on:
-      - postgresql
+      flyway:
+        condition: service_completed_successfully
 
   auth-backend:
     build:
@@ -92,8 +95,10 @@ services:
       - "8502"
       - "5173"
     depends_on:
-      - postgresql
-      - redis
+      flyway:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
 
   ethicapp-student:
     build:
@@ -125,7 +130,8 @@ services:
       - "8503"
       - "5174"
     depends_on:
-      - postgresql
+      flyway:
+        condition: service_completed_successfully
 
   management-console:
     build:
@@ -156,12 +162,11 @@ services:
       - "8504"
       - "5175"
     depends_on:
-      - postgresql
+      flyway:
+        condition: service_completed_successfully
 
   postgresql:
-    build:
-      context: ./database
-      dockerfile: Dockerfile
+    image: postgres:16
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -170,6 +175,27 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ethicapp"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  flyway:
+    image: flyway/flyway:11-alpine
+    command: migrate
+    environment:
+      - FLYWAY_URL=jdbc:postgresql://postgresql:5432/ethicapp
+      - FLYWAY_USER=postgres
+      - FLYWAY_PASSWORD=postgres
+      - FLYWAY_CONNECT_RETRIES=60
+      - FLYWAY_LOCATIONS=filesystem:/flyway/migrations
+    volumes:
+      - ./database/migrations:/flyway/migrations:ro
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    restart: "no"
 
   redis:
     image: redis:alpine

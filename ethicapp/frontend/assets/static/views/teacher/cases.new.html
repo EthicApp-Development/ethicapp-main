@@ -1,20 +1,27 @@
-<div ng-controller="CasesController as vm" ng-init="vm.loadCaseFormOptions()">
-    <h2><i class="fa fa-book"></i> {{ 'ethical_cases_new_title' | translate }}</h2>
-    <button type="button" class="btn btn-default btn-sm mb-2" ng-click="vm.goBack()">
-        <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
-    </button>
-    <br>
+<div class="container" ng-controller="CasesController as vm" ng-init="vm.loadCaseFormOptions()">
+    <div class="row">
+        <div class="col-md-12 mb-2">
+            <h2><i class="fa fa-book"></i> {{ 'ethical_cases_new_title' | translate }}</h2>
+            <button type="button" class="btn btn-default btn-sm" ng-click="vm.goBack()">
+                <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
+            </button>
+        </div>
+    </div>
 
-    <case-form-editor
-        form-model="vm.form"
-        submit-label-key="save"
-        is-pdf-required="true"
-        show-current-pdf="false"
-        licenses="vm.licenses"
-        languages="vm.languages"
-        current-user-profile="vm.currentUserProfile"
-        on-save="vm.createCase()"
-        on-cancel="navigateTo('/cases')"
-        on-pdf-selected="vm.handlePdfSelected(files)">
-    </case-form-editor>
+    <div class="row">
+        <div class="col-md-12">
+            <case-form-editor
+                form-model="vm.form"
+                submit-label-key="save"
+                is-pdf-required="true"
+                show-current-pdf="false"
+                licenses="vm.licenses"
+                languages="vm.languages"
+                current-user-profile="vm.currentUserProfile"
+                on-save="vm.createCase()"
+                on-cancel="navigateTo('/cases')"
+                on-pdf-selected="vm.handlePdfSelected(files)">
+            </case-form-editor>
+        </div>
+    </div>
 </div>

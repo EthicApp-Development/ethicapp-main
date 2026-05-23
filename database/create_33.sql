@@ -1,1 +1,0 @@
-alter table teams add column progress integer default 0;

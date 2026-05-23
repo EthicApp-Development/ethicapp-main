@@ -1,6 +1,0 @@
-ALTER TABLE users
-ADD COLUMN firstname VARCHAR(255);
-ALTER TABLE users
-ADD COLUMN lastname VARCHAR(255);
-ALTER TABLE pass_reset
-ALTER COLUMN mail TYPE text;

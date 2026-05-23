@@ -7,7 +7,7 @@ EthicApp is a multi-application workspace for case-based ethics education in Hig
 - `ethicapp-student/`: student-facing application under active development, built with React + Vite and Express.
 - `management-console/`: super-admin management console built with React + Vite, Bootstrap 5, Express, and PostgreSQL access.
 - `nginx/`: development and production NGINX facade for the applications.
-- `database/`: PostgreSQL schema, migrations, and seed assets used by the database container.
+- `database/`: Flyway PostgreSQL migrations and seed assets shared by the application services.
 - `canonical-schemas/`: JSON Schemas for portable EthicApp objects, including activity designs and rendered case-document representations.
 - `scripts/`: helper scripts exposed through the root `package.json`.
 
@@ -133,7 +133,7 @@ NGINX exposes the application facade at:
 http://localhost
 ```
 
-The Compose setup starts PostgreSQL, Redis, NGINX, the legacy EthicApp service, the PDF render worker, the auth service, the student app, and the management console. Production Compose or orchestration templates belong to the deployment repository and should consume this repository's published images plus `deploy/` contract files.
+The Compose setup starts PostgreSQL, runs Flyway migrations, then starts Redis, NGINX, the legacy EthicApp service, the PDF render worker, the auth service, the student app, and the management console. Production Compose or orchestration templates belong to the deployment repository and should consume this repository's published images plus `deploy/` contract files.
 
 ### 5.2. Logs and shell access
 
@@ -147,6 +147,7 @@ docker compose -p ethicapp logs -f ethicapp-pdf-worker
 docker compose -p ethicapp logs -f ethicapp-student
 docker compose -p ethicapp logs -f management-console
 docker compose -p ethicapp logs -f postgresql
+docker compose -p ethicapp logs -f flyway
 ```
 
 Open a shell in a running service:
@@ -157,7 +158,29 @@ docker compose -p ethicapp exec auth-backend sh
 
 ### 5.3. Database initialization
 
-Database migrations and initialization scripts in `database/` run automatically when the PostgreSQL container initializes its data volume.
+The development database uses the official `postgres:16` image directly. Schema
+management is handled by Flyway, not by PostgreSQL entrypoint scripts.
+
+Flyway migrations live in [`database/migrations`](./database/migrations) and use
+Flyway's standard versioned naming convention, for example:
+
+```text
+V1__base_active_schema.sql
+V2__designs_and_activities.sql
+```
+
+On `docker compose up`, Compose waits until PostgreSQL is healthy, runs the
+`flyway` service, and only starts application services after Flyway exits
+successfully. Flyway is a short-lived migration job: it records applied versions
+in `flyway_schema_history`, applies only pending migrations, and terminates.
+
+Useful Flyway commands:
+
+```bash
+npm run db:migrate
+npm run db:info
+npm run db:validate
+```
 
 If you need a clean database, stop the stack and remove the Compose volume for the `ethicapp` project, then start the stack again. This deletes local database state.
 
@@ -269,6 +292,9 @@ The root [`package.json`](./package.json) includes helper scripts for developmen
 | `fix-js` | Applies automatic JavaScript lint fixes where supported. |
 | `fix-css` | Applies automatic CSS lint fixes where supported. |
 | `fix-sql` | Applies automatic SQL lint fixes where supported. |
+| `db:migrate` | Runs Flyway migrations against the Compose PostgreSQL service. |
+| `db:info` | Shows Flyway migration status for the Compose PostgreSQL service. |
+| `db:validate` | Validates Flyway migration checksums and naming. |
 | `build:ethicapp-assets` | Builds production-style legacy EthicApp frontend assets through Docker. |
 | `publish:ghcr` | Builds and publishes EthicApp project images to GitHub Container Registry. |
 | `psql` | Opens a PostgreSQL client against the containerized development database. |

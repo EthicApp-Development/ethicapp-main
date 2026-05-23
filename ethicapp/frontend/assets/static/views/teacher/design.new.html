@@ -1,6 +1,6 @@
 <div class="container" ng-controller="CreateDesignController as cdc">
     <div class="row">
-        <div class="col-md-12 mb-2">
+        <div class="col-md-12">
             <h2><i class="fa fa-paint-brush"></i> {{ 'design_create_activity_design' | translate }}</h2>
             <button type="button" class="btn btn-default btn-sm" ng-click="cdc.goBack()">
                 <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
@@ -9,12 +9,18 @@
     </div>
 
     <div class="row">
-        <div class="col-md-12 mb-2">
-            <h4>
-                {{ 'design_new_intro_before_create_link' | translate }}
-                <a href="" ng-click="navigateTo('/cases/new')">{{ 'design_new_intro_create_case_link' | translate }}</a>
-                {{ 'design_new_intro_after_create_link' | translate }}
-            </h4>
+        <div class="col-md-12">
+            <section class="fieldset-heading-section">
+                <h3 class="fieldset-heading">{{ 'design_new_indications_heading' | translate }}</h3>
+                <ul>
+                    <li>
+                        {{ 'design_new_indication_case_before_link' | translate }}
+                        <a href="" ng-click="navigateTo('/cases/new')">{{ 'design_new_indication_case_link' | translate }}</a>
+                        {{ 'design_new_indication_case_after_link' | translate }}
+                    </li>
+                    <li>{{ 'design_new_indication_title_tags' | translate }}</li>
+                </ul>
+            </section>
         </div>
     </div>
 
@@ -23,7 +29,7 @@
         ng-submit="formDesign.$valid && cdc.uploadDesign(cdc.title, cdc.selectedOption)"
         novalidate>
         <div class="row">
-            <div class="col-md-12">
+            <div class="col-md-12 mb-2">
                 <fieldset>
                     <legend>{{ 'design_new_case_section' | translate }}</legend>
                     <case-search-selector
@@ -38,7 +44,7 @@
         <div class="row">
             <div class="col-md-12">
                 <fieldset>
-                    <legend>{{ 'design_new_title_section' | translate }}</legend>
+                    <legend>{{ 'design_title_and_tags' | translate }}</legend>
                     <div class="form-group case-form-field">
                         <label for="designNewTitle">
                             {{ 'design_title_input_label' | translate }}
@@ -57,13 +63,31 @@
                             {{ 'design_title_required_error' | translate }}
                         </p>
                     </div>
+                    <div class="form-group case-form-field">
+                        <label>{{ 'semantic_tags' | translate }}</label>
+                        <tag-selector selected-tags="cdc.tags" scope="design"></tag-selector>
+                    </div>
+                    <div class="form-group case-form-field">
+                        <label for="designNewLanguage">
+                            {{ 'language' | translate }}
+                            <span class="text-danger" aria-hidden="true">*</span>
+                        </label>
+                        <select
+                            id="designNewLanguage"
+                            name="languageCode"
+                            class="form-control"
+                            ng-model="cdc.languageCode"
+                            ng-options="language.code as language.native_name for language in cdc.languages"
+                            required>
+                        </select>
+                    </div>
                 </fieldset>
             </div>
         </div>
 
         <div class="row">
             <div class="col-md-12">
-                <hr class="mt-1medio">
+                <hr class="mt-1medio mb-2">
                 <button class="btn btn-primary" type="submit">{{ 'next' | translate }}</button>
             </div>
         </div>

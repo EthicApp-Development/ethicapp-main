@@ -1,11 +1,11 @@
-<div class="row">
-    <div class="col-md-12 mb-2">
-        <h2><i class="fa fa-home" aria-hidden="true"></i> {{'teacher_workbench' | translate}}</h2>
-        <p class="margin-top-24" style="width: 60em;">{{'teacher_workbench_intro' | translate}}</p>
+<div class="container">
+    <div class="row">
+        <div class="col-md-12 mb-2">
+            <h2><i class="fa fa-home" aria-hidden="true"></i> {{'teacher_workbench' | translate}}</h2>
+            <p class="margin-top-24">{{'teacher_workbench_intro' | translate}}</p>
+        </div>
     </div>
-</div>
 
-<div class="container home-card-container">
     <div class="row">
         <div class="col-md-12">
             <div class="panel panel-default teacher-workbench-panel">
@@ -75,8 +75,9 @@
             </div>
         </div>
     </div>
+
     <div class="row">
-        <div class="col-md-12" ng-controller= "ActivityController as ac">
+        <div class="col-md-12" ng-controller="ActivityController as ac">
             <div class="panel panel-default">
                 <div class="panel-heading">
                     {{ 'recent_activities_title_text'| translate }}

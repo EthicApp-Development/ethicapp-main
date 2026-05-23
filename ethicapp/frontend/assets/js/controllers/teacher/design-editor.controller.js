@@ -3,7 +3,8 @@ import * as phaseValidationHelpers from "../../helpers/phase-validation-helpers.
 import accordionStateHelpers from "../../helpers/accordeon-state-helpers.js"
 
 export function DesignEditorController($scope, $translate, $timeout,
-    $routeParams, DesignStateService, DesignCatalogService, CasesCatalogService, toast) {
+    $routeParams, DesignStateService, DesignCatalogService, CasesCatalogService,
+    LanguageCatalogService, toast) {
 
     const vm = this;
     vm.designId = 0;
@@ -15,8 +16,11 @@ export function DesignEditorController($scope, $translate, $timeout,
         phases: {}, // Specific per-phase errors
     };
     vm.associatedCase = null;
+    vm.languages = [];
     
     vm.init = async function() {
+        vm.languages = await LanguageCatalogService.getLanguages();
+
         // Retrieve the design from the route path
         if ($routeParams.id !== undefined) {
 
@@ -29,7 +33,12 @@ export function DesignEditorController($scope, $translate, $timeout,
             if (designObj === null) {
                 console.error("[DesignEditorController::init] Design not found.");
                 $scope.navigateTo("/error/404/2");
+                return;
             }
+
+            vm.design.tags = Array.isArray(vm.design.tags) ? vm.design.tags : [];
+            vm.design.languageCode = vm.design.languageCode ||
+                LanguageCatalogService.getDefaultLanguageCode(vm.languages, "en_US");
 
             // Ensure the design is properly digested
             $scope.$applyAsync(() => {

@@ -25,11 +25,6 @@ hr{
     padding: 20px;
 }
 
-.home-card-container {
-    max-width: 980px;
-    margin-left: 0;
-}
-
 .home-card-grid {
     display: grid;
     gap: 22px;
@@ -108,12 +103,6 @@ hr{
 }
 
 @media (max-width: 768px) {
-    .home-card-container {
-        width: 100%;
-        max-width: 100%;
-        padding: 0 15px;
-    }
-
     .home-card {
         height: 174px;
     }
@@ -2503,6 +2492,89 @@ h2{
     color: #a94442;
 }
 
+.fieldset-heading-section {
+    margin-bottom: 20px;
+}
+
+.fieldset-heading {
+    border-bottom: 1px solid #e5e5e5;
+    font-size: 21px;
+    line-height: inherit;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+}
+
+.fieldset-heading-section ul {
+    margin-bottom: 0;
+    padding-left: 20px;
+}
+
+.tag-selector-selected {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.tag-selector-chip {
+    align-items: center;
+    background-color: #fff3cd;
+    border: 1px solid #ffe69c;
+    color: #222;
+    display: inline-flex;
+    font-size: 75%;
+    gap: 6px;
+    font-weight: normal;
+    line-height: 1;
+    padding: 0.2em 0.6em 0.3em;
+    white-space: normal;
+}
+
+.tag-selector-chip-remove {
+    background: transparent;
+    border: 0;
+    color: inherit;
+    line-height: 1;
+    padding: 0;
+}
+
+.tag-selector-chip-remove:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.tag-selector-search {
+    position: relative;
+}
+
+.tag-selector-suggestions {
+    margin-top: 6px;
+}
+
+.tag-selector-suggestion {
+    text-align: left;
+    white-space: normal;
+}
+
+.resource-tags {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.resource-tag-chip {
+    background-color: #fff3cd;
+    border: 1px solid #ffe69c;
+    color: #222;
+    font-size: 75%;
+    font-weight: normal;
+    line-height: 1;
+    padding: 0.2em 0.6em 0.3em;
+    white-space: normal;
+}
+
 .teacher-toast {
     width: 100%;
 }
@@ -2544,6 +2616,19 @@ h2{
     height: 1 !important;
     margin-top: 0px;
     margin-bottom: 0px;
+}
+
+.teacher-index-content {
+    margin-top: 14px;
+}
+
+.teacher-index-toast-container:empty {
+    display: none;
+}
+
+.teacher-index-toast-container .teacher-toast-alert {
+    margin-left: 0;
+    margin-right: 0;
 }
 
 .activity-item-panel .panel-body .row, 
@@ -2602,7 +2687,7 @@ h2{
     margin-bottom: 10px;
 }
 
-.case-pagination-controls {
+.resource-pagination-controls {
     align-items: center;
     display: flex;
     gap: 10px;
@@ -2610,7 +2695,7 @@ h2{
     margin: 16px 0;
 }
 
-.case-pagination-status {
+.resource-pagination-status {
     color: #555;
 }
 

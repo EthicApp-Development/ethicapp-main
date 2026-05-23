@@ -35,6 +35,14 @@ const DesignItemController = function() {
         return this.design?.visibility === "public" ? "visibility_public" : "visibility_private";
     };
 
+    this.getTags = function() {
+        return Array.isArray(this.design?.tags) ? this.design.tags : [];
+    };
+
+    this.hasTags = function() {
+        return this.getTags().length > 0;
+    };
+
     this.hasOriginalDesign = function() {
         return Boolean(this.design?.originalDesignId || this.design?.sourceDesignTitle || this.design?.sourceDesignAuthor);
     };

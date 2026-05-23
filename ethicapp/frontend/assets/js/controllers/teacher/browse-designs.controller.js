@@ -12,6 +12,8 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
     vm.publicDesigns = [];
     vm.archivedDesigns = [];
     vm.designs = [];
+    vm.currentPage = 1;
+    vm.pageSize = 5;
 
     vm.goBack = function() {
         if ($window.history.length > 1) {
@@ -79,6 +81,7 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
         vm.archivedDesigns = await DesignCatalogService.getArchivedDesigns();
         vm.publicDesigns = await DesignCatalogService.getPublicDesigns();
         vm.designs = await DesignCatalogService.getDesigns();
+        vm.setPage(vm.currentPage);
 
         $scope.$applyAsync();
     }
@@ -121,10 +124,107 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
         vm.userDesigns = await DesignCatalogService.getUserDesigns();
         vm.archivedDesigns = await DesignCatalogService.getArchivedDesigns();
         vm.hasFetchedUserDesigns = true;
+        vm.setPage(vm.currentPage);
+        $scope.$applyAsync();
+    };
+
+    vm.getUserDesigns = async function() {
+        vm.userDesigns = await DesignCatalogService.getUserDesigns();
+        vm.setPage(vm.currentPage);
+        $scope.$applyAsync();
+    };
+
+    vm.setDesignMode = function(mode) {
+        const nextMode = Number(mode);
+        if (!Number.isInteger(nextMode)) {
+            return;
+        }
+
+        vm.dsgnMode = [0, 1, 2].includes(nextMode) ? nextMode : 0;
+        vm.currentPage = 1;
+    };
+
+    vm.getActiveDesigns = function() {
+        if (vm.dsgnMode === 1) {
+            return vm.publicDesigns;
+        }
+        if (vm.dsgnMode === 2) {
+            return vm.archivedDesigns;
+        }
+        return vm.userDesigns;
+    };
+
+    vm.designMatchesSearch = function(design) {
+        const query = String(vm.userSearch || "").trim().toLowerCase();
+        if (query.length === 0) {
+            return true;
+        }
+
+        return vm.formatDesignLabel(design).toLowerCase().includes(query);
+    };
+
+    vm.getFilteredDesigns = function() {
+        return vm.getActiveDesigns().filter(vm.designMatchesSearch);
+    };
+
+    vm.getTotalPages = function() {
+        return Math.max(1, Math.ceil(vm.getFilteredDesigns().length / vm.pageSize));
+    };
+
+    vm.getPaginatedDesigns = function() {
+        const startIndex = (vm.currentPage - 1) * vm.pageSize;
+        return vm.getFilteredDesigns().slice(startIndex, startIndex + vm.pageSize);
+    };
+
+    vm.setPage = function(pageNumber) {
+        const nextPage = Number(pageNumber);
+        if (!Number.isInteger(nextPage)) {
+            return;
+        }
+
+        vm.currentPage = Math.min(Math.max(nextPage, 1), vm.getTotalPages());
+    };
+
+    vm.previousPage = function() {
+        vm.setPage(vm.currentPage - 1);
+    };
+
+    vm.nextPage = function() {
+        vm.setPage(vm.currentPage + 1);
     };
 
     vm.getLaunchableUserDesigns = function() {
         return vm.userDesigns.filter((design) => design.valid === true);
+    };
+
+    vm.getFilteredLaunchableUserDesigns = function() {
+        return vm.getLaunchableUserDesigns().filter(vm.designMatchesSearch);
+    };
+
+    vm.getLaunchableTotalPages = function() {
+        return Math.max(1, Math.ceil(vm.getFilteredLaunchableUserDesigns().length / vm.pageSize));
+    };
+
+    vm.getPaginatedLaunchableUserDesigns = function() {
+        const startIndex = (vm.currentPage - 1) * vm.pageSize;
+        return vm.getFilteredLaunchableUserDesigns().slice(startIndex, startIndex + vm.pageSize);
+    };
+
+    vm.setLaunchablePage = function(pageNumber) {
+        const nextPage = Number(pageNumber);
+        if (!Number.isInteger(nextPage)) {
+            return;
+        }
+
+        vm.currentPage = Math.min(Math.max(nextPage, 1), vm.getLaunchableTotalPages());
+    };
+
+    vm.previousLaunchablePage = function() {
+        vm.setLaunchablePage(vm.currentPage - 1);
+    };
+
+    vm.nextLaunchablePage = function() {
+        vm.setLaunchablePage(vm.currentPage + 1);
     };
 
     vm.searchUserDesigns = function(searchText) {
@@ -156,6 +256,7 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
 
     vm.handleDesignSearchChange = function() {
         vm.userSearch = vm.designSearchQuery || "";
+        vm.setPage(1);
     };
 
     vm.selectDesignFromSearch = function(design) {
@@ -183,6 +284,8 @@ export function BrowseDesignsController($scope, $routeParams, toast, $translate,
 
     vm.getPublicDesigns = async function() {
         vm.publicDesigns = await DesignCatalogService.getPublicDesigns();
+        vm.setPage(vm.currentPage);
+        $scope.$applyAsync();
     };
     
     vm.deleteDesign = async function(id) {
