@@ -1,17 +1,25 @@
-export function DesignViewerController($scope, $routeParams, DesignCatalogService, CasesCatalogService) {
+export function DesignViewerController($scope, $routeParams, $window, DesignCatalogService, CasesCatalogService,
+    DesignPublicationService) {
     const vm = this;
     vm.designId = 0;
     vm.design = null;
     vm.associatedCase = null;
+    vm.isDesignUnavailable = false;
 
     vm.init = async function() {
         vm.designId = Number($routeParams.id);
         if (!isNaN(vm.designId)) {
             vm.design = await DesignCatalogService.getDesignById(vm.designId);
+            if (!vm.design) {
+                vm.isDesignUnavailable = true;
+                $scope.$applyAsync();
+                return;
+            }
+
             await vm.loadAssociatedCase();
 
             $scope.$applyAsync(() => {
-                console.log(`[DesignViewerController::init] Design: ${JSON.stringify(vm.design)}`);
+                // console.log(`[DesignViewerController::init] Design: ${JSON.stringify(vm.design)}`);
             });
         } else {
             console.error("[DesignViewerController::init] Design not found.");
@@ -45,6 +53,15 @@ export function DesignViewerController($scope, $routeParams, DesignCatalogServic
         }
         return caseItem.title;
     };
+
+    vm.goBack = function() {
+        if ($window.history.length > 1) {
+            $window.history.back();
+            return;
+        }
+
+        $scope.navigateTo("/designs");
+    };
     
     vm.handleLaunch = function() {
         $scope.navigateTo('/activities/new/' + vm.designId);
@@ -54,8 +71,14 @@ export function DesignViewerController($scope, $routeParams, DesignCatalogServic
         $scope.navigateTo('/designs/' + vm.designId + '/edit');
     };
 
-    vm.designPublic = async function() {
-        await DesignCatalogService.togglePublicVisibility(vm.designId);
+    vm.designPublic = async function(design) {
+        try {
+            await DesignPublicationService.togglePublicVisibility(design);
+        } catch (error) {
+            console.error("[DesignViewerController::designPublic] Error changing design visibility.", error);
+        } finally {
+            $scope.$applyAsync();
+        }
     };
 
     vm.init();

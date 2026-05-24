@@ -11,12 +11,15 @@
     "fix-js": "npx eslint --fix './ethicapp/**/*.js' ./ethicapp/backend/ethicapp",
     "fix-css": "npx stylelint --fix './ethicapp/frontend/assets/css/**/*.css'",
     "fix-sql": "sqlfluff fix --show-lint-violations --force ./database/",
+    "db:migrate": "docker compose run --rm flyway migrate",
+    "db:info": "docker compose run --rm flyway info",
+    "db:validate": "docker compose run --rm flyway validate",
     "clear-sessions": "sudo rm -f -v ./ethicapp/backend/sessions/*",
     "pgdump": "./scripts/docker-pgdump.sh",
     "pgrestore": "./scripts/docker-pgrestore.sh",
     "psql": "./scripts/docker-psql.sh",
     "build:ethicapp-assets": "./scripts/build-ethicapp-assets.sh",
-    "build-and-push": "./scripts/build-and-push.sh"
+    "publish:ghcr": "./scripts/ghcr-build-push.sh"
   },
   "devDependencies": {
     "eslint": "^8.57.1",

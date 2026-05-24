@@ -1,0 +1,397 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ethicapp.local/case-document-representation-v1.schema.json",
+  "title": "EthicApp Case Document Representation",
+  "description": "Portable representation of an ethical case document rendered as text plus ordered images, independent of the original source format.",
+  "type": "object",
+  "required": ["schemaVersion", "kind", "metadata", "content"],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "case-document-representation/v1"
+    },
+    "kind": {
+      "type": "string",
+      "const": "ethical_case_document"
+    },
+    "metadata": {
+      "$ref": "#/$defs/caseDocumentMetadata"
+    },
+    "content": {
+      "$ref": "#/$defs/caseDocumentContent"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "caseDocumentMetadata": {
+      "type": "object",
+      "required": [
+        "caseUuid",
+        "title",
+        "author",
+        "createdAt",
+        "source",
+        "imageRepresentation"
+      ],
+      "properties": {
+        "caseUuid": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Stable EthicApp case UUID used for export/import across instances."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "author": {
+          "$ref": "#/$defs/caseAuthor"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Case creation timestamp in EthicApp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "source": {
+          "$ref": "#/$defs/sourceDocument"
+        },
+        "imageRepresentation": {
+          "$ref": "#/$defs/imageRepresentationMetadata"
+        },
+        "export": {
+          "$ref": "#/$defs/exportMetadata"
+        }
+      },
+      "additionalProperties": false
+    },
+    "caseAuthor": {
+      "type": "object",
+      "required": ["firstname", "lastname", "email"],
+      "properties": {
+        "firstname": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lastname": {
+          "type": "string",
+          "minLength": 1
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        }
+      },
+      "additionalProperties": false
+    },
+    "sourceDocument": {
+      "type": "object",
+      "required": ["format", "contentType"],
+      "properties": {
+        "format": {
+          "type": "string",
+          "enum": ["pdf", "markdown", "plain_text"],
+          "description": "Original source format used to author or import the case document."
+        },
+        "contentType": {
+          "type": "string",
+          "enum": ["application/pdf", "text/markdown", "text/plain"]
+        },
+        "encoding": {
+          "type": "string",
+          "description": "Character encoding for text-based source formats, for example utf-8."
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "byteCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pageCount": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of source pages when the original format has pages, for example PDF."
+        },
+        "storagePath": {
+          "type": "string",
+          "description": "Internal protected storage path. Not portable across instances."
+        },
+        "packagePath": {
+          "type": "string",
+          "description": "Relative path for the original source document inside a future export package."
+        },
+        "originalFilename": {
+          "type": "string"
+        },
+        "assets": {
+          "type": "array",
+          "description": "Source-level assets referenced by the original document, for example images embedded from Markdown. These are distinct from rendered output images.",
+          "items": {
+            "$ref": "#/$defs/sourceAsset"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "format": { "const": "pdf" } },
+            "required": ["format"]
+          },
+          "then": {
+            "properties": { "contentType": { "const": "application/pdf" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "format": { "const": "markdown" } },
+            "required": ["format"]
+          },
+          "then": {
+            "properties": { "contentType": { "const": "text/markdown" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "format": { "const": "plain_text" } },
+            "required": ["format"]
+          },
+          "then": {
+            "properties": { "contentType": { "const": "text/plain" } }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "sourceAsset": {
+      "type": "object",
+      "required": ["kind", "reference", "contentType"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["image"]
+        },
+        "reference": {
+          "type": "string",
+          "description": "Original reference as it appears in the source document, such as a Markdown image URL or relative path."
+        },
+        "contentType": {
+          "type": "string",
+          "pattern": "^image/",
+          "description": "MIME type of the referenced source asset."
+        },
+        "externalUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Original external URL when the source document referenced a remote asset."
+        },
+        "packagePath": {
+          "type": "string",
+          "description": "Relative path for the captured asset inside a future export package."
+        },
+        "storagePath": {
+          "type": "string",
+          "description": "Internal protected storage path. Not portable across instances."
+        },
+        "dataUri": {
+          "type": "string",
+          "pattern": "^data:image/[^;]+;base64,",
+          "description": "Inline source asset payload for compact exports or tests."
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "byteCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "altText": {
+          "type": "string",
+          "description": "Alternative text from the source document when available."
+        }
+      },
+      "oneOf": [
+        { "required": ["externalUrl"] },
+        { "required": ["packagePath"] },
+        { "required": ["storagePath"] },
+        { "required": ["dataUri"] }
+      ],
+      "additionalProperties": false
+    },
+    "imageRepresentationMetadata": {
+      "type": "object",
+      "required": ["status", "format", "resolution"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pending", "processing", "completed", "failed"]
+        },
+        "format": {
+          "type": "string",
+          "enum": ["png"]
+        },
+        "resolution": {
+          "$ref": "#/$defs/imageResolution"
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "renderer": {
+          "type": "string",
+          "description": "Renderer/toolchain that produced the ordered images."
+        },
+        "errorMessage": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "imageResolution": {
+      "type": "object",
+      "required": ["dpi"],
+      "properties": {
+        "dpi": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "unit": {
+          "type": "string",
+          "const": "dpi",
+          "default": "dpi"
+        }
+      },
+      "additionalProperties": false
+    },
+    "caseDocumentContent": {
+      "type": "object",
+      "required": ["text", "images"],
+      "properties": {
+        "text": {
+          "$ref": "#/$defs/extractedText"
+        },
+        "images": {
+          "type": "array",
+          "description": "Ordered sequence of images rendered from the case document source.",
+          "items": {
+            "$ref": "#/$defs/renderedImage"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "extractedText": {
+      "type": "object",
+      "required": ["content", "contentType"],
+      "properties": {
+        "contentType": {
+          "type": "string",
+          "enum": ["text/plain", "text/markdown"]
+        },
+        "content": {
+          "type": "string",
+          "description": "Text representation of the case source, suitable for LLM ingestion."
+        },
+        "extractedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp for extraction from a binary source such as PDF."
+        },
+        "capturedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp for capturing or normalizing text from an already textual source."
+        },
+        "extractor": {
+          "type": "string",
+          "description": "Text extraction or normalization toolchain, for example pdftotext or markdown parser."
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "additionalProperties": false
+    },
+    "renderedImage": {
+      "type": "object",
+      "required": ["sequenceNumber", "contentType", "width", "height"],
+      "properties": {
+        "sequenceNumber": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Position of this image in the rendered case document sequence."
+        },
+        "pageNumber": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Source page number when the source format has pages, for example PDF."
+        },
+        "contentType": {
+          "type": "string",
+          "const": "image/png"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "url": {
+          "type": "string",
+          "description": "Authorization-aware application endpoint for this rendered page."
+        },
+        "packagePath": {
+          "type": "string",
+          "description": "Relative path for this rendered image inside a future export package."
+        },
+        "dataUri": {
+          "type": "string",
+          "pattern": "^data:image/png;base64,",
+          "description": "Inline image payload for compact exports or tests."
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "byteCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "storagePath": {
+          "type": "string",
+          "description": "Internal protected storage path. Not portable across instances."
+        }
+      },
+      "oneOf": [
+        { "required": ["url"] },
+        { "required": ["packagePath"] },
+        { "required": ["dataUri"] }
+      ],
+      "additionalProperties": false
+    },
+    "exportMetadata": {
+      "type": "object",
+      "properties": {
+        "exportedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "sourceInstance": {
+          "type": "string"
+        },
+        "packageFormat": {
+          "type": "string",
+          "description": "Future export package format identifier."
+        }
+      },
+      "additionalProperties": false
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

@@ -31,11 +31,8 @@ let activityControlsDirective = function() {
             
                             <!-- Section 2: Reports -->
                             <div ng-if="isFinished" class="report-buttons">
-                                <button class="btn btn-default btn-sm" ng-click="parentCtrl.downloadAnswersReport()">
-                                    <i class="fa-solid fa-file-alt text-primary"></i> {{ 'answers_report_button' | translate }}
-                                </button>
-                                <button class="btn btn-default btn-sm" ng-click="parentCtrl.downloadChatLog()">
-                                    <i class="fa-solid fa-comments text-info"></i> {{ 'chat_log_button' | translate }}
+                                <button class="btn btn-default btn-sm" ng-click="parentCtrl.openActivityReports()">
+                                    <i class="fa-solid fa-file-export text-primary"></i> {{ 'activity_reports_button' | translate }}
                                 </button>
                             </div>
                         </div>

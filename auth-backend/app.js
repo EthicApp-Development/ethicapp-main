@@ -7,6 +7,7 @@ import passportLocal from 'passport-local';
 
 import userService from './services/user.service.js';
 import { createSessionStore } from './services/session-store.service.js';
+import { csrfProtection } from './middleware/csrfProtection.js';
 
 import viewRoutes from './routes/view.routes.js';
 import authRoutes from './routes/auth.routes.js';
@@ -48,7 +49,7 @@ app.use(
   session({
     store: createSessionStore(),
     name: process.env.SESSION_COOKIE_NAME || 'auth.sid',
-    secret: process.env.SESSION_SECRET,
+    secret: process.env.AUTH_SESSION_SECRET || process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     rolling: false,
@@ -107,7 +108,7 @@ passport.deserializeUser(async function deserializeUser(id, done) {
   try {
     const user = await userService.findById(id);
 
-    if (!user) {
+    if (!user || !user.isActive) {
       return done(null, false);
     }
 
@@ -130,6 +131,7 @@ app.use(function exposeAuthState(req, res, next) {
 // Routes
 // --------------------------------------------------
 app.use('/', viewRoutes);
+app.use('/api/auth', csrfProtection);
 app.use('/api/auth', authRoutes);
 
 // --------------------------------------------------

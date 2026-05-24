@@ -24,6 +24,9 @@ function TeacherRouter($routeProvider) {
         .when('/activities/new/:designId', {
             templateUrl: 'static/views/teacher/activity.new.html',
         })
+        .when('/activities/:session_id/reports', {
+            templateUrl: 'static/views/teacher/activity.reports.html',
+        })
         .when('/activities/:id', {
             templateUrl: 'static/views/teacher/activity.view.html',
         })                  
@@ -38,6 +41,9 @@ function TeacherRouter($routeProvider) {
         })
         .when('/cases/new', {
             templateUrl: 'static/views/teacher/cases.new.html',
+        })
+        .when('/cases/:id', {
+            templateUrl: 'static/views/teacher/cases.view.html',
         })
         .when('/cases/:id/edit', {
             templateUrl: 'static/views/teacher/cases.edit.html',

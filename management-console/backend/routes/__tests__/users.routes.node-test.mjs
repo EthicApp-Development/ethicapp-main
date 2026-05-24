@@ -89,6 +89,76 @@ function createImpersonationRouter(overrides = {}) {
 }
 
 describe('management-console user routes', () => {
+  it('updates account active state after admin confirmation', async () => {
+    const calls = {
+      password: [],
+      update: []
+    };
+    const router = createUsersRouter({
+      verifyRecaptchaTokenService: async () => true,
+      verifyAdminPasswordWithAuthBackendService: async (payload) => {
+        calls.password.push(payload);
+        return true;
+      },
+      updateUserByIdService: async (id, payload) => {
+        calls.update.push({ id, payload });
+        return {
+          id: Number(id),
+          active: payload.active,
+          emailConfirmed: payload.active
+        };
+      }
+    });
+    const app = createTestApp(router);
+
+    await withServer(app, async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/mng/api/users/22`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: 'auth.sid=auth-session',
+          'Accept-Language': 'en-US'
+        },
+        body: JSON.stringify({
+          firstname: 'Pat',
+          lastname: 'Teacher',
+          sex: 'O',
+          email: 'pat@example.com',
+          email_confirmation: 'pat@example.com',
+          role: 'P',
+          active: true,
+          admin_password: 'admin-secret',
+          recaptcha_token: 'test-recaptcha-token'
+        })
+      });
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), {
+        id: 22,
+        active: true,
+        emailConfirmed: true
+      });
+    });
+
+    assert.equal(calls.password.length, 1);
+    assert.deepEqual(calls.update, [
+      {
+        id: '22',
+        payload: {
+          firstname: 'Pat',
+          lastname: 'Teacher',
+          sex: 'O',
+          email: 'pat@example.com',
+          email_confirmation: 'pat@example.com',
+          role: 'P',
+          active: true,
+          admin_password: 'admin-secret',
+          recaptcha_token: 'test-recaptcha-token'
+        }
+      }
+    ]);
+  });
+
   it('starts professor impersonation and forwards the EthicApp session cookie', async () => {
     const { calls, router } = createImpersonationRouter();
     const app = createTestApp(router);
@@ -99,6 +169,9 @@ describe('management-console user routes', () => {
         headers: {
           'Content-Type': 'application/json',
           Cookie: 'auth.sid=auth-session; ethicapp.mng.sid=mng-session',
+          'X-Forwarded-Proto': 'https',
+          'X-Forwarded-Host': 'platform.ethicapp.info',
+          'X-Forwarded-Port': '443',
           'Accept-Language': 'es-CL'
         },
         body: JSON.stringify({
@@ -133,7 +206,10 @@ describe('management-console user routes', () => {
         professorId: 22,
         cookie: 'auth.sid=auth-session; ethicapp.mng.sid=mng-session',
         userId: 7,
-        userRole: 'S'
+        userRole: 'S',
+        forwardedProto: 'https',
+        forwardedHost: 'platform.ethicapp.info',
+        forwardedPort: '443'
       }
     ]);
   });

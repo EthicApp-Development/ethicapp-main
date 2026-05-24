@@ -80,8 +80,6 @@ let ActivityCatalogService = ($http) => {
         },
         
         async loadActivities() {
-            console.log("[ActivityCatalogService::loadActivities]");
-            
             try {
                 const response = await $http({
                     url: "/activities",

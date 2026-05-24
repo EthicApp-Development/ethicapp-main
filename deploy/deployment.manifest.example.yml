@@ -1,0 +1,89 @@
+version: 1
+name: ethicapp-deployment-manifest
+description: >
+  Example manifest for pinning an EthicApp deployment when services are released
+  with different image tags or digests.
+
+release:
+  id: "production-2026-05-12"
+  source_repository: "https://github.com/example-org/ethicapp"
+  source_ref: "v2026.05.12"
+  source_revision: "77d69072a165afa1d335601ac307ea9c60ca2dd8"
+  env_contract:
+    path: "deploy/env.contract.yml"
+    source_ref: "v2026.05.12"
+    source_revision: "77d69072a165afa1d335601ac307ea9c60ca2dd8"
+
+images:
+  ethicapp:
+    image: "ghcr.io/example-org/ethicapp"
+    tag: "v2026.05.12"
+    digest: ""
+    source_ref: "v2026.05.12"
+    source_revision: "77d69072a165afa1d335601ac307ea9c60ca2dd8"
+
+  ethicapp-pdf-worker:
+    image: "ghcr.io/example-org/ethicapp"
+    tag: "v2026.05.12"
+    digest: ""
+    source_ref: "v2026.05.12"
+    source_revision: "77d69072a165afa1d335601ac307ea9c60ca2dd8"
+
+  nginx:
+    image: "ghcr.io/example-org/ethicapp-nginx"
+    tag: "v2026.05.12"
+    digest: ""
+    source_ref: "v2026.05.12"
+    source_revision: "77d69072a165afa1d335601ac307ea9c60ca2dd8"
+
+  auth-backend:
+    image: "ghcr.io/example-org/ethicapp-auth-backend"
+    tag: "v2026.05.11"
+    digest: ""
+    source_ref: "v2026.05.11"
+    source_revision: "32b29471b464f85b9a9b6830723a808bbe1ed84e"
+
+  ethicapp-student:
+    image: "ghcr.io/example-org/ethicapp-student"
+    tag: "v2026.05.11"
+    digest: ""
+    source_ref: "v2026.05.11"
+    source_revision: "32b29471b464f85b9a9b6830723a808bbe1ed84e"
+
+  management-console:
+    image: "ghcr.io/example-org/ethicapp-management-console"
+    tag: "v2026.05.11"
+    digest: ""
+    source_ref: "v2026.05.11"
+    source_revision: "32b29471b464f85b9a9b6830723a808bbe1ed84e"
+
+  db-migrations:
+    image: "ghcr.io/example-org/ethicapp-db-migrations"
+    tag: "v2026.05.12"
+    digest: ""
+    source_ref: "v2026.05.12"
+    source_revision: "77d69072a165afa1d335601ac307ea9c60ca2dd8"
+
+external_images:
+  postgresql:
+    image: "postgres"
+    tag: "16"
+    digest: ""
+
+  redis_session:
+    image: "redis"
+    tag: "7.4-alpine"
+    digest: ""
+
+  redis_cache:
+    image: "redis"
+    tag: "7.4-alpine"
+    digest: ""
+
+notes:
+  - "Prefer digest pins in production once images are published."
+  - "The env_contract source_ref/source_revision should match the contract used to render runtime .env files."
+  - "For partial releases, only changed services need new image tags, but every deployed service should remain pinned here."
+  - "ethicapp-pdf-worker intentionally uses the ethicapp image and must mount the same protected uploads volume as ethicapp."
+  - "PostgreSQL now uses the official postgres image directly; this repository no longer publishes an ethicapp-database image."
+  - "db-migrations is a short-lived Flyway-based job image with database/migrations baked into the image. Run it before application services start."

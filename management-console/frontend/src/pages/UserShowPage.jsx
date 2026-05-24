@@ -31,6 +31,8 @@ function UserShowPage() {
     email: '',
     email_confirmation: '',
     role: 'A',
+    active: true,
+    emailConfirmed: true,
     admin_password: ''
   });
 
@@ -55,6 +57,8 @@ function UserShowPage() {
           email: user.email || '',
           email_confirmation: user.email || '',
           role: user.role || 'A',
+          active: user.active !== false,
+          emailConfirmed: user.emailConfirmed !== false,
           admin_password: ''
         });
       } catch (requestError) {
@@ -197,6 +201,22 @@ function UserShowPage() {
                 {form.role === 'S' ? <option value="S">{t('roles.S')}</option> : null}
               </Form.Select>
               <Form.Text>{t('pages.userShow.roleHelp')}</Form.Text>
+            </Col>
+
+            <Col md={6}>
+              <Form.Label>{t('pages.userShow.fields.status')}</Form.Label>
+              <Form.Check
+                type="switch"
+                id="account-active"
+                label={form.active ? t('pages.userShow.status.active') : t('pages.userShow.status.inactive')}
+                checked={form.active}
+                onChange={(event) => onFieldChange('active', event.target.checked)}
+              />
+              <Form.Text>
+                {form.emailConfirmed
+                  ? t('pages.userShow.status.emailConfirmed')
+                  : t('pages.userShow.status.emailPending')}
+              </Form.Text>
             </Col>
 
             <Col md={6}>

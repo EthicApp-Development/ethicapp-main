@@ -13,12 +13,13 @@ import assetVersions from "express-asset-versions";
 import session from "express-session";
 import { createLegacySessionStore } from "./db/session-redis.js";
 
+import teacherHome from "./controllers/teacher-home.js";
 import user_profile from "./controllers/users/user-profile.js";
 import impersonation from "./controllers/users/impersonation.js";
-import sessions from "./controllers/sessions.js";
 import activitiesCommon from "./controllers/activities/activities-common.js";
 import activitiesTeacher from "./controllers/activities/activities-teacher.js";
 import activitiesStudent from "./controllers/activities/activities-student.js";
+import activityReports from "./controllers/activities/reports.js";
 import phases from "./controllers/phases.js";
 import designs from "./controllers/designs.js";
 import externalServices from "./controllers/external-services.js";
@@ -26,10 +27,11 @@ import groups from "./controllers/groups.js";
 import group_messages from "./controllers/group-messages.js";
 import cases from "./controllers/cases.js";
 import externalServicesRegistry from "./services/external-services.service.js";
+import tags from "./controllers/tags.js";
+import protectedUploads from "./controllers/protected-uploads.js";
 
 import fs from "fs";
 
-import * as config from "./config/config.js";
 import i18n from "i18n";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -74,19 +76,14 @@ app.use(cors(corsOptions));
 
 // Asset handling
 const assetPath = path.join(__dirname, "../frontend/assets");
-const uploadsAbsolutePath = path.resolve(process.cwd(), config.uploadsPath);
 app.use(express.static(assetPath));
 app.use(assetVersions("/assets", assetPath));
-
-// Uploads
-app.use("/uploads", express.static(uploadsAbsolutePath));
-app.use("/assets/uploads", express.static(uploadsAbsolutePath));
 
 // view engine setup
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
 app.use(expressLayouts); // Usar express-ejs-layouts
-app.set("layout", "./layouts/user-common"); 
+app.set("layout", "./layouts/teacher-app");
 
 // JSON handling for requests
 app.use(express.json());
@@ -123,6 +120,7 @@ app.use(session({
 
 app.use(hydrateLegacySession);
 app.use(exposeLegacySession);
+app.use("/", requireLegacyAuth, protectedUploads);
 
 // Middleware for handling redis errors
 app.use((req, res, next) => {
@@ -149,18 +147,19 @@ app.locals.ETHICAPP_BUILD_HASH = ETHICAPP_BUILD_HASH;
 await externalServicesRegistry.initialize();
 
 app.use("/", externalServices);
-
+app.use("/", requireLegacyAuth, teacherHome);
 app.use("/", requireLegacyAuth, user_profile);
 app.use("/", requireLegacyAuth, impersonation);
-app.use("/", requireLegacyAuth, sessions);
 app.use("/", requireLegacyAuth, activitiesCommon);
 app.use("/", requireLegacyAuth, activitiesTeacher);
 app.use("/", requireLegacyAuth, activitiesStudent);
+app.use("/", requireLegacyAuth, activityReports);
 app.use("/", requireLegacyAuth, phases);
 app.use("/", requireLegacyAuth, groups);
 app.use("/", requireLegacyAuth, designs);
 app.use("/", requireLegacyAuth, group_messages);
 app.use("/", requireLegacyAuth, cases);
+app.use("/", requireLegacyAuth, tags);
 
 // Catch 404 and forward to error handler
 app.use((req, res, next) => {

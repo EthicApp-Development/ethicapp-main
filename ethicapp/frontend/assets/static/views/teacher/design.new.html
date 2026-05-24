@@ -1,46 +1,95 @@
-<br>
-<br>
-<a ng-click="navigateTo('/designs')">{{'back'|translate}}</a>
-<br>
-<h2>{{'designMsg'|translate}}</h2>
-<div>
-    <div class="modal-header pl-0">
-        <h4>{{'designMsgInfo'|translate}}</h4>
+<div class="container" ng-controller="CreateDesignController as cdc">
+    <div class="row">
+        <div class="col-md-12">
+            <h2><i class="fa fa-paint-brush"></i> {{ 'design_create_activity_design' | translate }}</h2>
+            <button type="button" class="btn btn-default btn-sm" ng-click="cdc.goBack()">
+                <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
+            </button>
+        </div>
     </div>
-    <form class="modal-body form-new-design" name="formDesign" ng-controller="CreateDesignController as cdc">
-        <div class="wrapper_nd">
-            <div class="line-form-nd">
-                <div class="line-row-nd">
-                    <label>{{'activityType'|translate}}</label>
-                    <select ng-model="cdc.selectedOption" class="form-control line_input w-22" ng-required="true">
-                        <option value="" selected disabled>{{'selectActivityType'|translate}}</option>
-                        <option value="semantic_differential">{{'semantic_differential'|translate}}</option>
-                        <option value="ranking">{{'ranking_activity'|translate}}</option>
-                    </select>
-                </div>
-                <div class="line-row-nd">
-                    <label>{{'title'|translate}}:</label>
-                    <input type="text" class="form-control line_input" name="name" 
-                        ng-model="cdc.title" ng-required="true">
-                </div>
-            </div>
-            <div class="vertical_help_panel" ng-show="selectedOption.length > 0">
-                <img src="../../assets/images/iconsets/exclamation-mark.png" alt="signoExclamacion"
-                    class="exclamation-mark-image">
-                <div class="vertical-help-container">
-                    <p ng-show="selectedOption === ''">{{'selectActivityType'|translate}}</p>
-                    <p ng-show="selectedOption === 'semantic_differential'">{{'SemanticDescription'|translate}}</p>
-                    <p ng-show="selectedOption === 'ranking'">{{'RankingDescription'|translate}}</p>
-                </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <section class="fieldset-heading-section">
+                <h3 class="fieldset-heading">{{ 'design_new_indications_heading' | translate }}</h3>
+                <ul>
+                    <li>
+                        {{ 'design_new_indication_case_before_link' | translate }}
+                        <a href="" ng-click="navigateTo('/cases/new')">{{ 'design_new_indication_case_link' | translate }}</a>
+                        {{ 'design_new_indication_case_after_link' | translate }}
+                    </li>
+                    <li>{{ 'design_new_indication_title_tags' | translate }}</li>
+                </ul>
+            </section>
+        </div>
+    </div>
+
+    <form
+        name="formDesign"
+        ng-submit="formDesign.$valid && cdc.uploadDesign(cdc.title, cdc.selectedOption)"
+        novalidate>
+        <div class="row">
+            <div class="col-md-12 mb-2">
+                <fieldset>
+                    <legend>{{ 'design_new_case_section' | translate }}</legend>
+                    <case-search-selector
+                        associated-case="cdc.associatedCase"
+                        on-select="cdc.selectCase(caseItem)"
+                        on-clear="cdc.clearAssociatedCase()">
+                    </case-search-selector>
+                </fieldset>
             </div>
         </div>
-        <br>
-        <hr class="mt-1medio">
-        <br>
-        <div class="new-design-bottom">
-            <button class="btn btn-primary"
-                ng-click="formDesign.$valid && cdc.uploadDesign(cdc.title, cdc.selectedOption)"
-                type="submit">{{'next'|translate}}</button>
+
+        <div class="row">
+            <div class="col-md-12">
+                <fieldset>
+                    <legend>{{ 'design_title_and_tags' | translate }}</legend>
+                    <div class="form-group case-form-field">
+                        <label for="designNewTitle">
+                            {{ 'design_title_input_label' | translate }}
+                            <span class="text-danger" aria-hidden="true">*</span>
+                        </label>
+                        <input id="designNewTitle"
+                            type="text"
+                            class="form-control"
+                            name="title"
+                            ng-model="cdc.title"
+                            ng-required="true"
+                            ng-class="{'input-warning': formDesign.title.$invalid && (formDesign.$submitted || formDesign.title.$touched)}">
+                        <p class="help-block">{{ 'required_field_note' | translate }}</p>
+                        <p class="help-block text-danger"
+                            ng-if="formDesign.title.$error.required && (formDesign.$submitted || formDesign.title.$touched)">
+                            {{ 'design_title_required_error' | translate }}
+                        </p>
+                    </div>
+                    <div class="form-group case-form-field">
+                        <label>{{ 'semantic_tags' | translate }}</label>
+                        <tag-selector selected-tags="cdc.tags" scope="design"></tag-selector>
+                    </div>
+                    <div class="form-group case-form-field">
+                        <label for="designNewLanguage">
+                            {{ 'language' | translate }}
+                            <span class="text-danger" aria-hidden="true">*</span>
+                        </label>
+                        <select
+                            id="designNewLanguage"
+                            name="languageCode"
+                            class="form-control"
+                            ng-model="cdc.languageCode"
+                            ng-options="language.code as language.native_name for language in cdc.languages"
+                            required>
+                        </select>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <hr class="mt-1medio mb-2">
+                <button class="btn btn-primary" type="submit">{{ 'next' | translate }}</button>
+            </div>
         </div>
     </form>
 </div>

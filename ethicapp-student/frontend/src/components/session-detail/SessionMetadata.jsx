@@ -1,13 +1,11 @@
 import { useState } from 'react';
+import { showDevMetadata } from '../../config/env.js';
 import { formatSessionDate, sessionStatusLabel } from '../../utils/sessionFormat.js';
-
-const SHOW_DEV_METADATA = import.meta.env.DEV
-  && String(import.meta.env.VITE_SHOW_DEV_METADATA ?? 'false').toLowerCase() === 'true';
 
 export default function SessionMetadata({ selectedSession, locale, t, currentPhaseNumber, currentPhaseId }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  if (!SHOW_DEV_METADATA) {
+  if (!showDevMetadata) {
     return null;
   }
 

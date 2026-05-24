@@ -1,5 +1,5 @@
 "use strict";
-import * as config from "../../config/config.js";
+import * as config from "../../config/database.config.js";
 import { param, execSQL } from  "../../db/rest-pg-2.js";
 
 export async function userLogin() {

@@ -12,7 +12,8 @@ function mapUser(row) {
     sex: row.sex,
     role: row.role,
     preferredLocale: row.preferred_locale,
-    isActive: row.active !== false,
+    isActive: row.active !== false && row.email_confirmed !== false,
+    emailConfirmed: row.email_confirmed !== false,
     authProvider: row.auth_provider || 'local',
     passwordHash: row.password_bcrypt
   };
@@ -21,7 +22,7 @@ function mapUser(row) {
 async function findById(id) {
   const result = await query(
     `
-      SELECT id, name, rut, mail, sex, role, preferred_locale, active, auth_provider, password_bcrypt
+      SELECT id, name, rut, mail, sex, role, preferred_locale, active, email_confirmed, auth_provider, password_bcrypt
       FROM users
       WHERE id = $1
       LIMIT 1
@@ -37,7 +38,7 @@ async function findByLogin(login) {
 
   const result = await query(
     `
-      SELECT id, name, rut, mail, sex, role, preferred_locale, active, auth_provider, password_bcrypt
+      SELECT id, name, rut, mail, sex, role, preferred_locale, active, email_confirmed, auth_provider, password_bcrypt
       FROM users
       WHERE lower(mail) = $1 OR lower(rut) = $1
       LIMIT 1
@@ -53,7 +54,7 @@ async function findByEmail(email) {
 
   const result = await query(
     `
-      SELECT id, name, rut, mail, sex, role, preferred_locale, active, auth_provider, password_bcrypt
+      SELECT id, name, rut, mail, sex, role, preferred_locale, active, email_confirmed, auth_provider, password_bcrypt
       FROM users
       WHERE lower(mail) = $1
       LIMIT 1
@@ -135,6 +136,7 @@ async function findPasswordResetByToken(token) {
       SELECT id, mail, token, ctime
       FROM pass_reset
       WHERE token = $1
+        AND token_purpose = 'password_reset'
       ORDER BY ctime DESC
       LIMIT 1
     `,
@@ -163,6 +165,7 @@ async function deletePasswordResetToken(token) {
     `
       DELETE FROM pass_reset
       WHERE token = $1
+        AND token_purpose = 'password_reset'
     `,
     [token]
   );

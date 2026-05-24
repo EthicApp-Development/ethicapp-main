@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
+import { useI18n } from '../../app/i18n-context';
 
 function PasswordField({
   id,
@@ -15,12 +16,18 @@ function PasswordField({
   children
 }) {
   const [isVisible, setIsVisible] = useState(false);
+  const { t } = useI18n();
+  const fieldLabel = label || t('passwordField.defaultLabel');
+  const visibleButtonLabel = t('passwordField.visibility.hide');
+  const hiddenButtonLabel = t('passwordField.visibility.show');
+  const buttonLabel = isVisible ? visibleButtonLabel : hiddenButtonLabel;
+  const accessibleLabel = `${buttonLabel} ${fieldLabel.toLowerCase()}`;
 
   return (
     <div className="mb-3">
       {showLabel ? (
         <label htmlFor={id} className="form-label">
-          {label}
+          {fieldLabel}
         </label>
       ) : null}
 
@@ -40,13 +47,9 @@ function PasswordField({
           type="button"
           className="btn btn-outline-secondary"
           onClick={() => setIsVisible((current) => !current)}
-          aria-label={
-            isVisible
-              ? `Ocultar ${label.toLowerCase()}`
-              : `Mostrar ${label.toLowerCase()}`
-          }
+          aria-label={accessibleLabel}
         >
-          {isVisible ? 'Ocultar' : 'Ver'}
+          {buttonLabel}
         </button>
       </div>
 
@@ -72,7 +75,7 @@ PasswordField.propTypes = {
 };
 
 PasswordField.defaultProps = {
-  label: 'Contraseña',
+  label: '',
   showLabel: true,
   error: '',
   autoComplete: 'current-password',

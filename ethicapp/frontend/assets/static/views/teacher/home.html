@@ -1,59 +1,83 @@
-<div class="row">
-    <div class="col-md-12 mb-2">
-        <h2><i class="fa fa-home" aria-hidden="true"></i> {{'teacher_workbench' | translate}}</h2>
-        <p class="margin-top-24" style="width: 60em;">{{'homeMsg' | translate}}</p>
+<div class="container">
+    <div class="row">
+        <div class="col-md-12 mb-2">
+            <h2><i class="fa fa-home" aria-hidden="true"></i> {{'teacher_workbench' | translate}}</h2>
+            <p class="margin-top-24">{{'teacher_workbench_intro' | translate}}</p>
+        </div>
     </div>
-</row>
 
-<div class="container home-card-container">
     <div class="row">
         <div class="col-md-12">
-            <div class="panel panel-default" style="padding: 20px;">
+            <div class="panel panel-default teacher-workbench-panel">
                 <div class="panel-body">
-                    <div class="row">
-                        <!-- Tarjeta 1 -->
-                        <div class="col-md-3 col-sm-6 col-xs-12 text-center">
-                            <div ng-click="navigateTo('/cases/new')" class="home-card">
-                                <img src="/assets/images/cards/create-case.jpeg" class="img-responsive" alt="Create a case">
-                                <div class="home-card-caption">
-                                    {{'createACase' | translate}}
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Tarjeta 2 -->
-                        <div class="col-md-3 col-sm-6 col-xs-12 text-center">
-                            <div ng-click="navigateTo('/designs/new')" class="home-card">
-                                <img src="/assets/images/cards/design-activity.jpeg" class="img-responsive" alt="Design an activity">
-                                <div class="home-card-caption">
-                                    {{'designActivity' | translate}}
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Tarjeta 3 -->
-                        <div class="col-md-3 col-sm-6 col-xs-12 text-center">
-                            <div ng-click="navigateTo('/activities/new')" class="home-card">
-                                <img src="/assets/images/cards/launch-activity.jpeg" class="img-responsive" alt="Launch an activity">
-                                <div class="home-card-caption">
-                                    {{'launchAnActivity' | translate}}
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Tarjeta 4 -->
-                        <div class="col-md-3 col-sm-6 col-xs-12 text-center">
-                            <div ng-click="navigateTo('/designs')" class="home-card">
-                                <img src="/assets/images/cards/search-designs.jpeg" class="img-responsive" alt="Search designs">
-                                <div class="home-card-caption">
-                                    {{'searchDesigns' | translate}}
-                                </div>
-                            </div>
-                        </div>    
+                    <div class="home-card-grid" aria-label="{{'teacher_workbench' | translate}}">
+                        <button
+                            type="button"
+                            ng-click="navigateTo('/cases/new')"
+                            class="home-card">
+                            <img src="/assets/images/cards/create-case.jpg" class="img-responsive" alt="{{'create_case' | translate}}">
+                            <span class="home-card-caption">
+                                {{'create_case' | translate}}
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            ng-click="navigateTo('/cases')"
+                            class="home-card">
+                            <img src="/assets/images/cards/search-cases.jpg" class="img-responsive" alt="{{'search_cases' | translate}}">
+                            <span class="home-card-caption">
+                                {{'search_cases' | translate}}
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            ng-click="navigateTo('/designs/new')"
+                            class="home-card">
+                            <img src="/assets/images/cards/design-activity.jpg" class="img-responsive" alt="{{'design_activity' | translate}}">
+                            <span class="home-card-caption">
+                                {{'design_activity' | translate}}
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            ng-click="navigateTo('/designs')"
+                            class="home-card">
+                            <img src="/assets/images/cards/search-designs.jpg" class="img-responsive" alt="{{'search_designs' | translate}}">
+                            <span class="home-card-caption">
+                                {{'search_designs' | translate}}
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            ng-click="navigateTo('/activities/new')"
+                            class="home-card">
+                            <img src="/assets/images/cards/launch-activity.jpg" class="img-responsive" alt="{{'launch_activity' | translate}}">
+                            <span class="home-card-caption">
+                                {{'launch_activity' | translate}}
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            ng-click="navigateTo('/activities')"
+                            class="home-card">
+                            <img src="/assets/images/cards/search-activities.jpg" class="img-responsive" alt="{{'view_activities' | translate}}">
+                            <span class="home-card-caption">
+                                {{'view_activities' | translate}}
+                            </span>
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
     <div class="row">
-        <div class="col-md-12" ng-controller= "ActivityController as ac">
+        <div class="col-md-12" ng-controller="ActivityController as ac">
             <div class="panel panel-default">
                 <div class="panel-heading">
                     {{ 'recent_activities_title_text'| translate }}
@@ -76,7 +100,7 @@
                         <i class="fa-brands fa-space-awesome" aria-hidden="true"></i> {{'launch_activity' | translate}}
                     </button>
                 </div>
-                <div class="panel-body" ng-show="ac.activities.ongoing.length > 0 || ac.activities.finished.length > 0">                     
+                <div class="panel-body" ng-show="ac.activities.ongoing.length > 0 || ac.activities.finished.length > 0">
                     <activity-description on-view="ac.handleView" ng-repeat="act in ac.activities.ongoing | limitTo: 3 | orderBy : '-time'" activity="act"></activity-description>
                     <activity-description on-view="ac.handleView" ng-repeat="act in ac.activities.finished | limitTo: 3 | orderBy : '-time'" activity="act"></activity-description>
                 </div>

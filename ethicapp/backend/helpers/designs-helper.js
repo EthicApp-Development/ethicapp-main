@@ -1,4 +1,4 @@
-import * as config from "../config/config.js"; 
+import * as config from "../config/database.config.js";
 import * as rpg2 from "../db/rest-pg-2.js";
 
 /**
@@ -13,7 +13,8 @@ export async function getDesignById(id) {
         const result = await rpg2.execSQL({
             dbcon: config.dbconnString,
             sql: `
-                SELECT id, design, creator, public, locked
+                SELECT id, design, creator, visibility, locked,
+                       (visibility = 'public') AS public
                 FROM designs
                 WHERE id = $1
             `,
@@ -169,5 +170,4 @@ export async function getPhaseDesignByPhaseId(phaseId) {
         throw new Error("Unable to fetch phase design.");
     }
 }
-
 

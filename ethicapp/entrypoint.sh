@@ -15,7 +15,7 @@ install_dependencies() {
 
   cd "$directory"
 
-  dependency_state_file=".npm_dependency_state"
+  dependency_state_file="node_modules/.npm_dependency_state"
   current_dependency_state="$(
     {
       sha256sum package.json
@@ -37,6 +37,7 @@ install_dependencies() {
     else
       npm install
     fi
+    mkdir -p node_modules
     echo "$current_dependency_state" > "$dependency_state_file"
   fi
 }
@@ -77,7 +78,51 @@ seed_canonical_activities() {
   echo "Canonical activity seed could not be completed after $max_attempts attempts. Continuing startup."
 }
 
+seed_tag_taxonomies() {
+  if [ "${ETHICAPP_SEED_TAG_TAXONOMIES:-true}" != "true" ]; then
+    echo "Tag taxonomy seed disabled."
+    return 0
+  fi
+
+  seed_dir="${ETHICAPP_TAG_TAXONOMY_SEED_DIR:-/database/seeds/tag-taxonomies}"
+
+  if [ ! -d "$seed_dir" ]; then
+    echo "Tag taxonomy seed directory not found at $seed_dir. Skipping seed."
+    return 0
+  fi
+
+  if ! find "$seed_dir" -maxdepth 1 -name '*.json' -type f | grep -q .; then
+    echo "No tag taxonomy seed files found in $seed_dir. Skipping seed."
+    return 0
+  fi
+
+  echo "Seeding tag taxonomies..."
+
+  attempts=1
+  max_attempts="${ETHICAPP_SEED_TAG_TAXONOMIES_ATTEMPTS:-12}"
+
+  while [ "$attempts" -le "$max_attempts" ]; do
+    if npm run seed:tag-taxonomies -- --seedDir="$seed_dir"; then
+      echo "Tag taxonomy seed completed."
+      return 0
+    fi
+
+    echo "Tag taxonomy seed attempt $attempts/$max_attempts failed."
+    attempts=$((attempts + 1))
+    sleep 5
+  done
+
+  echo "Tag taxonomy seed could not be completed after $max_attempts attempts. Continuing startup."
+}
+
 install_dependencies /app/backend node_modules/dotenv
+
+if [ "${ETHICAPP_PROCESS_ROLE:-web}" = "pdf-render-worker" ]; then
+  cd /app/backend
+  echo "Starting EthicApp PDF render worker..."
+  echo "NODE_ENV=${NODE_ENV}"
+  exec npm run worker:pdf-render
+fi
 
 if [ "$NODE_ENV" = "development" ]; then
   install_dependencies /app/frontend node_modules/esbuild
@@ -94,6 +139,8 @@ cd /app/backend
 
 echo "Starting EthicApp on port ${PORT:-8501}..."
 echo "NODE_ENV=${NODE_ENV}"
+
+seed_tag_taxonomies
 
 # Decide how to run the app
 if [ "$NODE_ENV" = "development" ]; then

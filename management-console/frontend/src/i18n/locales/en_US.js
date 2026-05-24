@@ -32,7 +32,13 @@ export default {
         lastname: 'Last name',
         email: 'Email',
         role: 'Role',
+        status: 'Status',
         actions: 'Actions'
+      },
+      status: {
+        active: 'Active',
+        inactive: 'Inactive',
+        pending: 'Pending confirmation'
       },
       actions: {
         view: 'View details'
@@ -55,9 +61,16 @@ export default {
         lastname: 'Last name',
         gender: 'Gender',
         role: 'Role',
+        status: 'Account status',
         email: 'Email',
         emailConfirmation: 'Confirm email',
         adminPassword: 'Administrator password'
+      },
+      status: {
+        active: 'Active account',
+        inactive: 'Inactive account',
+        emailConfirmed: 'Email confirmed',
+        emailPending: 'Email confirmation pending'
       },
       actions: {
         save: 'Save changes',

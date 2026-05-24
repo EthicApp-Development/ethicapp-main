@@ -1,0 +1,22 @@
+<div class="container" ng-controller="CasesController as vm" ng-init="vm.loadCase()">
+    <div class="row">
+        <div class="col-md-12">
+            <h2><i class="fa fa-book"></i> {{ 'ethical_cases_view_title' | translate }}</h2>
+            <button type="button" class="btn btn-default btn-sm" ng-click="vm.goBack()">
+                <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
+            </button>
+        </div>
+    </div>
+
+    <div class="row margin-top-24" ng-if="vm.caseObj">
+        <div class="col-md-12">
+            <case-card case-item="vm.caseObj" show-actions="false" show-extended-info="true"></case-card>
+        </div>
+    </div>
+
+    <div class="row" ng-if="vm.caseObj">
+        <div class="col-md-12">
+            <case-document-viewer case-item="vm.caseObj"></case-document-viewer>
+        </div>
+    </div>
+</div>

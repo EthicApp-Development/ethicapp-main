@@ -35,7 +35,7 @@ module.exports = function hydrateLegacySession(req, res, next) {
 
     // Normal case: keep session aligned with canonical auth identity
     if (req.session.uid === incomingUid) {
-      if (!req.session.role && incomingRole) {
+      if (incomingRole && req.session.role !== incomingRole) {
         req.session.role = incomingRole;
       }
       req.session.authUid = incomingUid;

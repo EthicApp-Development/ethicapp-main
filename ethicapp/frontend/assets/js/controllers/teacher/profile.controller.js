@@ -17,6 +17,7 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
     };
 
     vm.selectedAvatarFile = null;
+    vm.selectedAvatarPreviewUrl = null;
     vm.defaultProfileAvatar = "/assets/images/user-placeholder/incognito-user.svg";
     vm.defaultTopbarAvatar = "/assets/images/user-placeholder/avatar-placeholder-64.svg";
     vm.avatarCacheToken = Date.now();
@@ -48,7 +49,13 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
         return `${url}${separator}v=${vm.avatarCacheToken}`;
     };
     vm.getTopbarAvatar = () => vm.withCacheToken(vm.profile.profile_image_topbar_path || vm.defaultTopbarAvatar);
-    vm.getProfileAvatar = () => vm.withCacheToken(vm.profile.profile_image_path || vm.defaultProfileAvatar);
+    vm.getProfileAvatar = () => {
+        if (vm.selectedAvatarPreviewUrl) {
+            return vm.selectedAvatarPreviewUrl;
+        }
+
+        return vm.withCacheToken(vm.profile.profile_image_path || vm.defaultProfileAvatar);
+    };
     vm.showInfoToast = (message) => {
         toast.create({
             timeout: TOAST_INFO_TIMEOUT_MS,
@@ -162,12 +169,23 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
                 return;
             }
 
-            await UserProfileService.updateProfile({
+            const result = await UserProfileService.updateProfile({
                 firstname: vm.profile.firstname,
                 lastname: vm.profile.lastname,
                 sex: vm.profile.sex,
+                avatar: vm.selectedAvatarFile,
                 g_recaptcha_response: recaptchaResponse
             });
+
+            if (result?.data) {
+                vm.profile = {
+                    ...vm.profile,
+                    ...result.data
+                };
+                vm.avatarCacheToken = Date.now();
+            }
+
+            vm.clearSelectedAvatar();
 
             if (vm.isRecaptchaEnabled && window.grecaptcha && vm.profileRecaptchaWidgetId !== null) {
                 window.grecaptcha.reset(vm.profileRecaptchaWidgetId);
@@ -176,13 +194,46 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
             vm.applyChanges();
         } catch (error) {
             console.error("Could not update profile:", error);
-            vm.showErrorToast(vm.translate("profile_update_error"));
+            vm.showErrorToast(vm.getProfileSaveErrorMessage(error));
             vm.applyChanges();
         }
     };
 
     vm.onAvatarSelected = (file) => {
+        if (vm.selectedAvatarPreviewUrl) {
+            URL.revokeObjectURL(vm.selectedAvatarPreviewUrl);
+            vm.selectedAvatarPreviewUrl = null;
+        }
+
         vm.selectedAvatarFile = file;
+        if (file) {
+            vm.selectedAvatarPreviewUrl = URL.createObjectURL(file);
+        }
+        vm.applyChanges();
+    };
+
+    vm.clearSelectedAvatar = () => {
+        if (vm.selectedAvatarPreviewUrl) {
+            URL.revokeObjectURL(vm.selectedAvatarPreviewUrl);
+        }
+        vm.selectedAvatarFile = null;
+        vm.selectedAvatarPreviewUrl = null;
+    };
+
+    vm.getProfileSaveErrorMessage = (error) => {
+        if (error?.data?.error === "avatar_size_limit_exceeded") {
+            return vm.translate("profile_avatar_size_limit_error");
+        }
+
+        if (error?.data?.error === "invalid_avatar_type") {
+            return vm.translate("profile_avatar_invalid_type_error");
+        }
+
+        if (error?.data?.error === "avatar_upload_failed") {
+            return vm.translate("profile_avatar_upload_error");
+        }
+
+        return vm.translate("profile_update_error");
     };
 
     vm.uploadAvatar = async () => {
@@ -265,5 +316,6 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
     $scope.$on("$destroy", () => {
         languageChangeListener();
         profileUpdateListener();
+        vm.clearSelectedAvatar();
     });
 };

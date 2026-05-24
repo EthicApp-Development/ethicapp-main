@@ -1,0 +1,37 @@
+<div class="container" ng-controller="ActivityReportsController as arc">
+    <div class="row">
+        <div class="col-md-12 mb-2">
+            <h2><i class="fa-solid fa-file-export"></i> {{ 'activity_reports_title' | translate }}</h2>
+            <button type="button" class="btn btn-default btn-sm mb-2" ng-click="arc.goBack()">
+                <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
+            </button>
+            <br>
+        </div>
+    </div>
+
+    <div class="panel panel-default">
+        <div class="panel-body">
+            <p>{{ 'activity_reports_notice' | translate }}</p>
+
+            <div class="checkbox">
+                <label>
+                    <input type="checkbox" ng-model="arc.consentAccepted">
+                    {{ 'activity_reports_consent_label' | translate }}
+                </label>
+            </div>
+
+            <div class="alert alert-warning" ng-if="!arc.isValidSession()" role="alert">
+                {{ 'activity_reports_invalid_session' | translate }}
+            </div>
+
+            <div class="activity-report-downloads" ng-if="arc.consentAccepted && arc.isValidSession()">
+                <button class="btn btn-default btn-sm" ng-click="arc.downloadFullReport()">
+                    <i class="fa-solid fa-file-alt text-primary"></i> {{ 'answers_report_button' | translate }}
+                </button>
+                <button class="btn btn-default btn-sm" ng-click="arc.downloadChatTranscript()">
+                    <i class="fa-solid fa-comments text-info"></i> {{ 'chat_log_button' | translate }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

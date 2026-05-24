@@ -1,20 +1,23 @@
 import 'angular-animate';
-import 'angularjs-toast';
 import "angular-toggle-switch";
 import { ActivityStateService } from "../../services/activity-state.service.js";
 import { ActivityCatalogService } from "../../services/activity-catalog.service.js";
 import { DesignStateService } from "../../services/design-state.service.js";
 import { DesignCatalogService } from "../../services/design-catalog.service.js";
+import { DesignPublicationService } from "../../services/design-publication.service.js";
 import { CasesCatalogService } from "../../services/cases-catalog.service.js";
 import { ExternalServicesCatalogService } from "../../services/external-services-catalog.service.js";
+import { LanguageCatalogService } from "../../services/language-catalog.service.js";
+import { TagCatalogService } from "../../services/tag-catalog.service.js";
 import { TeacherGroupChatService } from "../../services/teacher-group-chat.service.js";
+import { TeacherToastService } from "../../services/teacher-toast.service.js";
 import UserProfileService from "../../services/user-profile.service.js";
 import SocketService from '../../services/socket.service.js';
 
 var app = angular.module("TeacherApp", ["ngSanitize",
-    "ui.bootstrap", "ui.multiselect", "timer", "ngFileUpload",
-    "ui-notification", "ngQuill", "tableSort", "pascalprecht.translate", 
-    "ngRoute", "checklist-model", "ngDialog", "toggle-switch", 'angularjsToast',
+    "ui.bootstrap", "timer", "ngFileUpload",
+    "tableSort", "pascalprecht.translate",
+    "ngRoute", "checklist-model", "ngDialog", "toggle-switch",
     'ngAnimate']
 );
 
@@ -27,19 +30,23 @@ app.factory("ActivityStateService", ["$http", "TeacherSocketService", ActivitySt
     .factory("TeacherGroupChatService", ["$http", "TeacherSocketService", TeacherGroupChatService])
     .factory("ActivityCatalogService", ["$http", ActivityCatalogService])
     .factory("DesignCatalogService", ["$rootScope", "$http", DesignCatalogService])
+    .factory("DesignPublicationService", ["$uibModal", "DesignCatalogService", "CasesCatalogService", DesignPublicationService])
     .factory("DesignStateService", ["$rootScope", "$http", DesignStateService])
     .factory("ExternalServicesCatalogService", ["$http", ExternalServicesCatalogService])
     .factory("UserProfileService", ["$http", "$rootScope", "Upload", UserProfileService])
-    .factory("CasesCatalogService", ["$http", CasesCatalogService]);
+    .factory("CasesCatalogService", ["$rootScope", "$http", CasesCatalogService])
+    .factory("LanguageCatalogService", ["$http", "$translate", LanguageCatalogService])
+    .factory("TagCatalogService", ["$http", "$translate", TagCatalogService]);
+app.service("toast", ["$rootScope", "$timeout", TeacherToastService]);
 
 import { LocalesController } from "../../controllers/common/locales.controller.js";
 import { ActivityController } from "../../controllers/teacher/activity.controller.js";
+import { ActivityReportsController } from "../../controllers/teacher/activity-reports.controller.js";
 import { BrowseDesignsController } from "../../controllers/teacher/browse-designs.controller.js";
 import { CreateDesignController } from "../../controllers/teacher/create_design.controller.js";
 import { DashboardController } from "../../controllers/teacher/dashboard.controller.js";
 import { ErrorController } from "../../controllers/teacher/error.controller.js";
 import { VoidController } from "../../controllers/common/void.controller.js";
-import { ngQuillConfigProvider } from "../../helpers/util.js";
 import { DesignEditorController } from "../../controllers/teacher/design-editor.controller.js";
 import { DesignViewerController } from "../../controllers/teacher/design-viewer.controller.js";
 import { CasesController } from "../../controllers/teacher/cases.controller.js";
@@ -55,6 +62,15 @@ app.run(function($rootScope, $location) {
             $location.path(path);
         });
     };
+
+    $rootScope.isTeacherNavActive = function(path) {
+        const currentPath = $location.path() || "/";
+        if (path === "/") {
+            return currentPath === "/";
+        }
+
+        return currentPath === path || currentPath.startsWith(`${path}/`);
+    };
 });
 
 app.run(function($rootScope) {
@@ -62,9 +78,6 @@ app.run(function($rootScope) {
         console.error('Failed to load route:', current.originalPath);
     });
 });
-
-// Rich text editor configuration
-app.config(["ngQuillConfigProvider", ngQuillConfigProvider]);
 
 // Set up language
 app.config(function($translateProvider) {
@@ -77,49 +90,52 @@ app.config(function($translateProvider) {
         suffix: ".json"
     });
 
+    $translateProvider.registerAvailableLanguageKeys(["en_US", "es_CL"], {
+        "en": "en_US",
+        "en_*": "en_US",
+        "es": "es_CL",
+        "es_*": "es_CL",
+        "*": "en_US",
+    });
+
     // Automatically determine the preferred language based on the browser
     $translateProvider.determinePreferredLanguage();
 
     // Fallback to a default language if the browser's language is not supported
-    $translateProvider.fallbackLanguage("en");
+    $translateProvider.fallbackLanguage("en_US");
 });
-
-const config = toastProvider => {
-    toastProvider.configure({
-      maxToast: 1,
-      timeout: 5 * 1000,
-      dismissible: true,
-      insertFromTop: true,
-    });
-  };
-  
-config.$inject = ['toastProvider'];
-app.config(config);
 
 // Inject controllers into application
 app.controller("LocalesController", 
     ["$translate", "$scope", "$rootScope", LocalesController]); 
 app.controller("ActivityController", 
-    ["$scope", "$http", "ActivityCatalogService", "DesignCatalogService", ActivityController]);
+    ["$scope", "$http", "ActivityCatalogService", "DesignCatalogService", "$window", ActivityController]);
+app.controller("ActivityReportsController",
+    ["$scope", "$routeParams", "$window", ActivityReportsController]);
 app.controller("BrowseDesignsController", 
-    ["$scope", "$routeParams", "toast", "$translate", "ActivityStateService", "DesignCatalogService", 
+    ["$scope", "$routeParams", "toast", "$translate", "ActivityStateService", "DesignCatalogService",
+        "DesignPublicationService", "$timeout", "$window",
         BrowseDesignsController]); 
 app.controller("CreateDesignController", 
-    ["$scope", "DesignCatalogService", "UserProfileService", CreateDesignController]);
+    ["$scope", "$window", "DesignCatalogService", "UserProfileService",
+        "LanguageCatalogService", CreateDesignController]);
 app.controller("DashboardController", 
     ["$scope", "$routeParams", "$http", "$translate", "$timeout", "$uibModal",
         "ActivityStateService", "ActivityCatalogService", "DesignCatalogService",
-        "TeacherGroupChatService", DashboardController]);
+        "CasesCatalogService", "TeacherGroupChatService", DashboardController]);
 app.controller("DesignViewerController", 
-    ["$scope", "$routeParams", "DesignCatalogService", "CasesCatalogService", DesignViewerController]);
+    ["$scope", "$routeParams", "$window", "DesignCatalogService", "CasesCatalogService",
+        "DesignPublicationService", DesignViewerController]);
 app.controller("CasesController",
-    ["$scope", "$routeParams", "CasesCatalogService", CasesController]);
+    ["$scope", "$routeParams", "$window", "$interval", "$translate", "toast",
+        "CasesCatalogService", "LanguageCatalogService", "UserProfileService", CasesController]);
 app.controller("ErrorController", 
     ["$scope", "$window", "$routeParams",
         ErrorController]);
 app.controller("DesignEditorController", 
-    ["$scope", "$translate", "$timeout", "$routeParams", "DesignStateService", 
-        "DesignCatalogService", "CasesCatalogService", "ExternalServicesCatalogService", "toast", DesignEditorController]);         
+    ["$scope", "$translate", "$timeout", "$routeParams", "DesignStateService",
+        "DesignCatalogService", "CasesCatalogService", "LanguageCatalogService",
+        "ExternalServicesCatalogService", "toast", DesignEditorController]);
 app.controller("VoidController", [VoidController]);
 app.controller("ProfileController", ["$scope", "$translate", "toast", "UserProfileService", ProfileController]);
 
@@ -187,9 +203,16 @@ import itemDuplicatorComponent from "../../components/item-duplicator.component.
 import designErrorSummaryComponent from "../../components/design-error-summary.component.js";
 import itemMoverComponent from '../../components/item-mover.component.js';
 import designItemComponent from '../../components/design-item.component.js';
+import caseSearchSelectorComponent from "../../components/case-search-selector.component.js";
+import caseCardComponent from "../../components/case-card.component.js";
+import caseDocumentViewerComponent from "../../components/case-document-viewer.component.js";
+import caseAuthorEditorComponent from "../../components/case-author-editor.component.js";
 import caseFormEditorComponent from "../../components/case-form-editor.component.js";
+import caseRightsEditorComponent from "../../components/case-rights-editor.component.js";
+import tagSelectorComponent from "../../components/tag-selector.component.js";
 import phaseInstructionsEditComponent from "../../components/phase-instructions-edit.component.js";
 import teacherGroupChatComponent from "../../components/teacher-group-chat.component.js";
+import teacherToastComponent from "../../components/teacher-toast.component.js";
 
 app.component('activityDescription', activityDescriptionComponent);
 app.component('designDescription', designDescriptionComponent);
@@ -204,9 +227,16 @@ app.component('designErrorSummary', designErrorSummaryComponent);
 app.component('rankingItemEditor', rankingItemEditorComponent);
 app.component('sdItemEditor', sdItemEditorComponent);
 app.component('designItem', designItemComponent);
+app.component("caseSearchSelector", caseSearchSelectorComponent);
+app.component("caseCard", caseCardComponent);
+app.component("caseDocumentViewer", caseDocumentViewerComponent);
+app.component("caseAuthorEditor", caseAuthorEditorComponent);
 app.component("caseFormEditor", caseFormEditorComponent);
+app.component("caseRightsEditor", caseRightsEditorComponent);
+app.component("tagSelector", tagSelectorComponent);
 app.component("phaseInstructionsEdit", phaseInstructionsEditComponent);
 app.component("teacherGroupChat", teacherGroupChatComponent);
+app.component("toast", teacherToastComponent);
 
 import { userRolesFilter } from '../../filters/user-roles.filter.js';
 app.filter("roleTranslate", ["$translate", userRolesFilter]);
