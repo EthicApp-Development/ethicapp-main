@@ -171,7 +171,7 @@ function RegisterForm() {
 
       clearDraft();
       setSuccessMessage(t('register.successMessage'));
-      setRedirectCountdown(5);
+      setRedirectCountdown(10);
     } catch (error) {
       const responseData = error?.response?.data || {};
       const isEmailAlreadyRegistered = responseData.code === 'email_already_registered';
