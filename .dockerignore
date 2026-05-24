@@ -1,0 +1,13 @@
+**/node_modules/
+**/.git/
+**/.DS_Store
+**/.env
+**/.env.*
+**/sessions/
+**/uploads/
+
+auth-backend/frontend/dist/
+ethicapp-student/frontend/dist/
+management-console/frontend/dist/
+
+npm-debug.log*

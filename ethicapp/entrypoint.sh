@@ -84,13 +84,15 @@ seed_tag_taxonomies() {
     return 0
   fi
 
-  if [ ! -d /database/seeds/tag-taxonomies ]; then
-    echo "Tag taxonomy seed directory not found. Skipping seed."
+  seed_dir="${ETHICAPP_TAG_TAXONOMY_SEED_DIR:-/database/seeds/tag-taxonomies}"
+
+  if [ ! -d "$seed_dir" ]; then
+    echo "Tag taxonomy seed directory not found at $seed_dir. Skipping seed."
     return 0
   fi
 
-  if ! find /database/seeds/tag-taxonomies -maxdepth 1 -name '*.json' -type f | grep -q .; then
-    echo "No tag taxonomy seed files found. Skipping seed."
+  if ! find "$seed_dir" -maxdepth 1 -name '*.json' -type f | grep -q .; then
+    echo "No tag taxonomy seed files found in $seed_dir. Skipping seed."
     return 0
   fi
 
@@ -100,7 +102,7 @@ seed_tag_taxonomies() {
   max_attempts="${ETHICAPP_SEED_TAG_TAXONOMIES_ATTEMPTS:-12}"
 
   while [ "$attempts" -le "$max_attempts" ]; do
-    if npm run seed:tag-taxonomies -- --seedDir=/database/seeds/tag-taxonomies; then
+    if npm run seed:tag-taxonomies -- --seedDir="$seed_dir"; then
       echo "Tag taxonomy seed completed."
       return 0
     fi
@@ -138,9 +140,10 @@ cd /app/backend
 echo "Starting EthicApp on port ${PORT:-8501}..."
 echo "NODE_ENV=${NODE_ENV}"
 
+seed_tag_taxonomies
+
 # Decide how to run the app
 if [ "$NODE_ENV" = "development" ]; then
-  seed_tag_taxonomies
   seed_canonical_activities
 
   echo "Running in development mode with nodemon..."

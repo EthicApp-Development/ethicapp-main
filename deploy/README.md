@@ -56,6 +56,14 @@ connection variables used by the application services and maps them to Flyway
 configuration at startup. It also falls back to `POSTGRES_DB`, `POSTGRES_USER`,
 and `POSTGRES_PASSWORD` when the migration job uses the database env file.
 
+Semantic tag taxonomies are delivered with the `ethicapp` image under
+`/database/seeds/tag-taxonomies`. The web entrypoint runs the taxonomy seed
+before starting the application in every runtime mode. The seed is idempotent:
+new or edited JSON taxonomy files from the deployed release are upserted into
+`tag_taxonomies`, `tag_categories`, `tags`, translations, and aliases. Leave
+`ETHICAPP_SEED_TAG_TAXONOMIES=true` in production unless the deployment mounts
+and manages a different seed directory through `ETHICAPP_TAG_TAXONOMY_SEED_DIR`.
+
 Redis is role-specific in production. Use `REDIS_SESSION_*` for Express session
 storage and `REDIS_CACHE_*` for database-derived cache entries. Production
 deployments should expose distinct service names, normally `redis-session` and

@@ -1,9 +1,9 @@
 FROM node:24 AS backend-test
 
 WORKDIR /app/backend
-COPY backend/package*.json ./
+COPY ethicapp/backend/package*.json ./
 RUN npm ci
-COPY backend ./
+COPY ethicapp/backend ./
 RUN npm test && touch /tmp/backend-tests-passed
 
 FROM node:24
@@ -21,13 +21,14 @@ COPY --from=backend-test /tmp/backend-tests-passed /tmp/backend-tests-passed
 RUN rm /tmp/backend-tests-passed
 
 # Application files
-COPY backend /app/backend
-COPY common /app/common
-COPY frontend /app/frontend
-COPY scripts /app/scripts
+COPY ethicapp/backend /app/backend
+COPY ethicapp/common /app/common
+COPY ethicapp/frontend /app/frontend
+COPY ethicapp/scripts /app/scripts
+COPY database/seeds /database/seeds
 
 # Entrypoint script
-COPY entrypoint.sh /app/entrypoint.sh
+COPY ethicapp/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh /app/scripts/*.sh
 
 RUN cd /app/frontend \

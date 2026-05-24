@@ -16,8 +16,8 @@ services:
 
   ethicapp:
     build:
-      context: ./ethicapp
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ethicapp/Dockerfile
     env_file:
       - ./.env.shared
       - ./.env
@@ -46,8 +46,8 @@ services:
 
   ethicapp-pdf-worker:
     build:
-      context: ./ethicapp
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ethicapp/Dockerfile
     env_file:
       - ./.env.shared
       - ./.env

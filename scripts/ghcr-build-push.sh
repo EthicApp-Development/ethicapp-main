@@ -66,7 +66,7 @@ default_services() {
 
 service_context() {
   case "$1" in
-    ethicapp) echo "ethicapp" ;;
+    ethicapp) echo "." ;;
     auth-backend) echo "auth-backend" ;;
     ethicapp-student) echo "ethicapp-student" ;;
     management-console) echo "management-console" ;;

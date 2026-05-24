@@ -71,12 +71,20 @@ The repository can build and publish these project images:
 
 | Service | Context | Default image |
 | --- | --- | --- |
-| `ethicapp` | `ethicapp/` | `ghcr.io/<owner>/ethicapp:<tag>` |
+| `ethicapp` | repository root (`ethicapp/Dockerfile`) | `ghcr.io/<owner>/ethicapp:<tag>` |
 | `auth-backend` | `auth-backend/` | `ghcr.io/<owner>/ethicapp-auth-backend:<tag>` |
 | `ethicapp-student` | `ethicapp-student/` | `ghcr.io/<owner>/ethicapp-student:<tag>` |
 | `management-console` | `management-console/` | `ghcr.io/<owner>/ethicapp-management-console:<tag>` |
 | `nginx` | `nginx/` | `ghcr.io/<owner>/ethicapp-nginx:<tag>` |
 | `db-migrations` | `database/` | `ghcr.io/<owner>/ethicapp-db-migrations:<tag>` |
+
+The `ethicapp` image includes `database/seeds` from the same source revision.
+On startup it runs the semantic tag taxonomy seed from
+`/database/seeds/tag-taxonomies` before the web process starts. The seed is
+idempotent, so adding or editing tag taxonomy JSON files and publishing a new
+`ethicapp` image updates production without manual SQL. To override this
+behavior, use `ETHICAPP_SEED_TAG_TAXONOMIES=false` or point
+`ETHICAPP_TAG_TAXONOMY_SEED_DIR` at a mounted seed directory.
 
 `db-migrations` is a short-lived Flyway-based image with `database/migrations`
 baked into the image. Production deployments should run it before application
