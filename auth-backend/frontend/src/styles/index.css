@@ -1,17 +1,25 @@
 :root {
   --ea-font-sans: "Nunito", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ea-primary: #2649ec;
+  --ea-primary-hover: #071c78;
   --bs-font-sans-serif: var(--ea-font-sans);
   --bs-body-font-family: var(--ea-font-sans);
+  --bs-primary: var(--ea-primary);
+  --bs-primary-rgb: 38, 73, 236;
 
   font-family: var(--ea-font-sans);
   line-height: 1.5;
   font-weight: 400;
   color: #212529;
-  background-color: #f8f9fa;
+  background: var(--ea-surface-gradient);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
+  --ea-surface-gradient:
+    radial-gradient(1200px 600px at 10% -10%, #6365f16e, transparent 55%),
+    radial-gradient(900px 500px at 90% -20%, #14b8a61f, transparent 50%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
   --auth-bg: #f8f9fa;
   --auth-surface: #ffffff;
   --auth-border: #e9ecef;
@@ -35,9 +43,8 @@ body,
 
 body {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top, rgba(13, 110, 253, 0.06), transparent 30%),
-    var(--auth-bg);
+  background: var(--ea-surface-gradient);
+  background-attachment: fixed;
   color: var(--auth-text);
 }
 
@@ -50,4 +57,15 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--ea-primary);
+  --bs-btn-border-color: var(--ea-primary);
+  --bs-btn-hover-bg: var(--ea-primary-hover);
+  --bs-btn-hover-border-color: var(--ea-primary-hover);
+  --bs-btn-active-bg: var(--ea-primary-hover);
+  --bs-btn-active-border-color: var(--ea-primary-hover);
+  --bs-btn-disabled-bg: #8f99bf;
+  --bs-btn-disabled-border-color: #8f99bf;
 }

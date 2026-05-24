@@ -60,6 +60,15 @@ app.run(function($rootScope, $location) {
             $location.path(path);
         });
     };
+
+    $rootScope.isTeacherNavActive = function(path) {
+        const currentPath = $location.path() || "/";
+        if (path === "/") {
+            return currentPath === "/";
+        }
+
+        return currentPath === path || currentPath.startsWith(`${path}/`);
+    };
 });
 
 app.run(function($rootScope) {

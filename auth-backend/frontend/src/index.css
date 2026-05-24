@@ -1,4 +1,6 @@
 :root {
+  --ea-primary: #2649ec;
+  --ea-primary-hover: #071c78;
   --text: #6b6375;
   --text-h: #08060d;
   --bg: #fff;
@@ -8,6 +10,10 @@
   --accent-bg: rgba(170, 59, 255, 0.1);
   --accent-border: rgba(170, 59, 255, 0.5);
   --social-bg: rgba(244, 243, 236, 0.5);
+  --ea-surface-gradient:
+    radial-gradient(1200px 600px at 10% -10%, #6365f16e, transparent 55%),
+    radial-gradient(900px 500px at 90% -20%, #14b8a61f, transparent 50%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 
@@ -19,7 +25,7 @@
   letter-spacing: 0.18px;
   color-scheme: light dark;
   color: var(--text);
-  background: var(--bg);
+  background: var(--ea-surface-gradient);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -28,6 +34,17 @@
   @media (max-width: 1024px) {
     font-size: 16px;
   }
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--ea-primary);
+  --bs-btn-border-color: var(--ea-primary);
+  --bs-btn-hover-bg: var(--ea-primary-hover);
+  --bs-btn-hover-border-color: var(--ea-primary-hover);
+  --bs-btn-active-bg: var(--ea-primary-hover);
+  --bs-btn-active-border-color: var(--ea-primary-hover);
+  --bs-btn-disabled-bg: #8f99bf;
+  --bs-btn-disabled-border-color: #8f99bf;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -52,6 +69,8 @@
 
 body {
   margin: 0;
+  background: var(--ea-surface-gradient);
+  background-attachment: fixed;
 }
 
 #root {

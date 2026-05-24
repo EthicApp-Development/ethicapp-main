@@ -13,7 +13,7 @@
                         <legend>{{ 'design_title_and_tags' | translate }}</legend>
                         <div class="form-group case-form-field">
                             <label for="designTitle">{{ 'design_title_input_label' | translate }}</label>
-                            <input id="designTitle" type="text" class="form-control input-lg"
+                            <input id="designTitle" type="text" class="form-control"
                                 placeholder="{{ 'title_input_hint_text' | translate }}"
                                 ng-model="dec.design.metainfo.title">
                         </div>
@@ -85,8 +85,8 @@
 
                 <div ng-init="phaseIndex = $index">
                     <div uib-accordion-heading ng-attr-id="phase_{{phaseIndex+1}}">
-                        <div style="background: #f5f5f5;">
-                            <div class="d-flex align-items-center">
+                        <div class="phase-editor-heading-content">
+                            <div class="d-flex align-items-center phase-editor-heading-row">
                                 <h4>{{ 'phase_title_prefix' | translate }} {{ phaseIndex + 1 }}</h4>
                                 <i class="fa-regular fa-copy  ms-auto"
                                     style="cursor: pointer;"

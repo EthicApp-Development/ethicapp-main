@@ -162,34 +162,42 @@ hr{
 }
 
 .btn-primary {
-    background-color: #2649EC;
-    border-color: #102AA0;
+    background-color: #2649ec;
+    border-color: #2649ec;
 }
 
-.btn-primary:hover {
-    background-color: #102AA0;
-    border-color: #102AA0;
+.btn-primary.focus,
+.btn-primary:focus,
+.btn-primary:hover,
+.btn-primary.active,
+.btn-primary:active,
+.open > .dropdown-toggle.btn-primary {
+    background-color: #071c78;
+    border-color: #071c78;
+    color: #fff;
 }
 
-.btn-primary:hover {
-    background-color: #102AA0;
-    border-color: #102AA0;
-}
-
+.btn-primary.disabled,
+.btn-primary.disabled.active,
 .btn-primary.disabled.focus,
+.btn-primary.disabled:active,
 .btn-primary.disabled:focus,
 .btn-primary.disabled:hover,
+.btn-primary[disabled],
+.btn-primary[disabled].active,
 .btn-primary[disabled].focus,
+.btn-primary[disabled]:active,
 .btn-primary[disabled]:focus,
 .btn-primary[disabled]:hover,
-fieldset[disabled],
-.btn-primary.focus,
-fieldset[disabled],
-.btn-primary:focus,
-fieldset[disabled],
-.btn-primary:hover {
-    background-color: #777;
-    border-color: #999;    
+fieldset[disabled] .btn-primary,
+fieldset[disabled] .btn-primary.active,
+fieldset[disabled] .btn-primary.focus,
+fieldset[disabled] .btn-primary:active,
+fieldset[disabled] .btn-primary:focus,
+fieldset[disabled] .btn-primary:hover {
+    background-color: #8f99bf;
+    border-color: #8f99bf;
+    color: #fff;
 }
 
 a {
@@ -1693,12 +1701,12 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 .profile {
     display: flex;
     align-items: center;
-    margin-top: 4rem;
+    margin-top: 3rem;
     margin-bottom: 2rem;
 }
 
 .profile-pic {
-    border: 5px solid #555;
+    border: 1px solid #555;
     max-width: 100px;
     max-height: 100px;
 }
@@ -1719,6 +1727,10 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 
 .teacher-profile-page .form-horizontal {
     max-width: 720px;
+}
+
+.teacher-profile-page .profile-header-row {
+    margin-bottom: 0;
 }
 
 .teacher-profile-page .profile-toast-container {
@@ -1757,6 +1769,7 @@ input.flat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
 h2{
     font-weight: bold;
     margin-top: 4rem;
+    color: #2649ec;
 }
 
 .language-dropdown {
@@ -2460,6 +2473,30 @@ h2{
     color: inherit;
 }
 
+.design-editor .phase-editor-item-heading > .panel-heading {
+    background-color: rgb(231, 235, 255);
+    border-color: #b5c2fd;
+    color: #2649ec;
+    padding: 0;
+}
+
+.design-editor .phase-editor-heading-content {
+    background-color: rgb(231, 235, 255);
+    padding: 12px 16px;
+}
+
+.design-editor .phase-editor-heading-row h4 {
+    margin: 0;
+}
+
+.design-editor .phase-editor-item-heading > .panel-heading a,
+.design-editor .phase-editor-item-heading > .panel-heading a:hover,
+.design-editor .phase-editor-item-heading > .panel-heading a:focus {
+    color: inherit;
+    display: block;
+    text-decoration: none;
+}
+
 .phase-editor-item-heading a:hover {
     text-decoration: none;
     color: #0056b3;
@@ -3019,6 +3056,11 @@ tr.group-summary {
     background-color: #ddd !important;
 }
 
+.dashboard-phase-mobile-header,
+.dashboard-phase-questions-mobile-legend {
+    display: none;
+}
+
 .case-document-image-scroll {
     height: 72vh;
     max-height: 760px;
@@ -3055,6 +3097,53 @@ tr.group-summary {
 }
 
 @media (max-width: 767px) {
+    .activity-dashboard-page .dashboard-phase-questions-table {
+        font-size: 0.78em;
+        line-height: 1.25;
+        table-layout: fixed;
+    }
+
+    .activity-dashboard-page .dashboard-phase-questions-table > thead > tr > th,
+    .activity-dashboard-page .dashboard-phase-questions-table > tbody > tr > td {
+        overflow-wrap: anywhere;
+        padding: 5px 6px;
+    }
+
+    .activity-dashboard-page .dashboard-phase-question-text-col {
+        width: 24%;
+    }
+
+    .activity-dashboard-page .dashboard-phase-left-pole-col,
+    .activity-dashboard-page .dashboard-phase-right-pole-col {
+        width: 19%;
+    }
+
+    .activity-dashboard-page .dashboard-phase-range-col {
+        width: 9%;
+    }
+
+    .activity-dashboard-page .dashboard-phase-justification-col {
+        width: 18%;
+    }
+
+    .activity-dashboard-page .dashboard-phase-min-words-col {
+        width: 11%;
+    }
+
+    .activity-dashboard-page .dashboard-phase-full-header {
+        display: none;
+    }
+
+    .activity-dashboard-page .dashboard-phase-mobile-header {
+        display: inline;
+    }
+
+    .activity-dashboard-page .dashboard-phase-questions-mobile-legend {
+        display: block;
+        font-size: 0.78em;
+        margin-top: -12px;
+    }
+
     .case-document-image-scroll {
         height: 65vh;
         min-height: 340px;

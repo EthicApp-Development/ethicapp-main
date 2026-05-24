@@ -221,7 +221,7 @@
 	"complete_request_error": "Sorry, there was an error completing your request.",
 	"create_request_error": "There was an error creating your request.",
 	"registration_error": "We could not complete your registration. Please try again later.",
-	"launch_activity_title": "Launch a New Activity",
+	"launch_activity_title": "Launch an Activity",
 	"activity_new_indications_heading": "Indications",
 	"activity_new_indication_choose_design": "First, choose a valid design from your collection. Only designs without errors can be used to launch activities.",
 	"activity_new_indication_contextual_data": "Then, enter the contextual data for this activity and launch it when everything is ready.",

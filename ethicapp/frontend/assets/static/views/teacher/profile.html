@@ -1,9 +1,15 @@
 <div ng-controller="ProfileController as vm" class="teacher-profile-page">
-    <div class="profile">
-        <img ng-src="{{ vm.getProfileAvatar() }}" alt="Profile avatar" class="profile-pic">
-        <div class="profile-info">
-            <strong class="profile-username">{{ vm.getDisplayName() }}</strong>
-            <h3 ng-if="vm.profile.role == 'P'" class="profile-role">{{ 'teacher' | translate }}</h3>
+    <div class="form-horizontal">
+        <div class="form-group profile-header-row">
+            <div class="col-sm-offset-3 col-sm-9">
+                <div class="profile">
+                    <img ng-src="{{ vm.getProfileAvatar() }}" alt="Profile avatar" class="profile-pic">
+                    <div class="profile-info">
+                        <strong class="profile-username">{{ vm.getDisplayName() }}</strong>
+                        <h3 ng-if="vm.profile.role == 'P'" class="profile-role">{{ 'teacher' | translate }}</h3>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

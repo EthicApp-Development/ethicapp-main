@@ -10,40 +10,330 @@ body {
     width: 100%;
 }
 
-.sidenav {
-    border-right: 1px solid #bbb;
-    height: 100%;
-    width: 14em;
+.teacher-workspace {
+    --teacher-sidebar-width: 244px;
+    --teacher-sidebar-collapsed-width: 76px;
+    --teacher-topbar-height: 68px;
+    --teacher-link-color: #2649ec;
+    --teacher-link-hover-color: #071c78;
+    background: #f5f7ff;
+    min-height: 100vh;
+}
+
+.teacher-topbar {
+    align-items: center;
+    background: linear-gradient(90deg, #f7faff 0%, #eef4ff 42%, #dfe9ff 100%);
+    box-shadow: 0 4px 18px rgba(7, 28, 120, 0.08);
+    color: #071c78;
+    display: flex;
+    height: var(--teacher-topbar-height);
+    justify-content: space-between;
+    left: 0;
+    padding: 0 28px;
     position: fixed;
+    right: 0;
     top: 0;
+    z-index: 1030;
+}
+
+.teacher-workspace-admin-inspection .teacher-topbar {
+    border-top: 3px solid #d62828;
+}
+
+.teacher-topbar-left,
+.teacher-topbar-actions {
+    align-items: center;
+    display: flex;
+    min-width: 0;
+}
+
+.teacher-topbar-left {
+    gap: 18px;
+}
+
+.teacher-topbar-actions {
+    gap: 16px;
+}
+
+.teacher-nav-toggle {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 10px;
+    color: #071c78;
+    display: inline-flex;
+    font-size: 21px;
+    height: 42px;
+    justify-content: center;
+    padding: 0;
+    width: 42px;
+}
+
+.teacher-nav-toggle:hover,
+.teacher-nav-toggle:focus {
+    background: rgba(38, 73, 236, 0.1);
+    color: var(--teacher-link-hover-color);
+    outline: none;
+}
+
+.teacher-topbar-brand {
+    align-items: center;
+    display: inline-flex;
+}
+
+.teacher-topbar-logo {
+    display: block;
+    height: auto;
+    width: 152px;
+}
+
+.teacher-admin-return {
+    white-space: nowrap;
+}
+
+.teacher-topbar-language {
+    color: #071c78;
+    margin-right: 0;
+    padding: 7px 9px;
+}
+
+.teacher-topbar-language:hover {
+    background: rgba(38, 73, 236, 0.1);
+}
+
+.teacher-topbar-language i {
+    font-size: 18px;
+}
+
+.teacher-profile-link {
+    align-items: center;
+    color: var(--teacher-link-color);
+    display: inline-flex;
+    gap: 8px;
+    min-width: 0;
+    text-decoration: none;
+}
+
+.teacher-profile-link:visited {
+    color: var(--teacher-link-color);
+}
+
+.teacher-profile-link:hover,
+.teacher-profile-link:focus {
+    color: var(--teacher-link-hover-color);
+    text-decoration: none;
+}
+
+.teacher-profile-name {
+    display: inline-block;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.teacher-logout-link {
+    align-items: center;
+    border-radius: 10px;
+    color: var(--teacher-link-color);
+    display: inline-flex;
+    font-size: 22px;
+    height: 40px;
+    justify-content: center;
+    text-decoration: none;
+    width: 40px;
+}
+
+.teacher-logout-link:visited {
+    color: var(--teacher-link-color);
+}
+
+.teacher-logout-link:hover,
+.teacher-logout-link:focus {
+    background: rgba(38, 73, 236, 0.1);
+    color: var(--teacher-link-hover-color);
+    text-decoration: none;
+}
+
+.teacher-sidebar {
+    background: #fff;
+    bottom: 0;
+    box-shadow: 7px 0 25px rgba(7, 28, 120, 0.08);
     left: 0;
     overflow-x: hidden;
-    margin-top: 5rem;
-    background-color: #fff;
+    overflow-y: auto;
+    padding: 28px 16px;
+    position: fixed;
+    top: var(--teacher-topbar-height);
+    transition: transform 220ms ease, width 220ms ease;
+    width: var(--teacher-sidebar-width);
+    z-index: 1020;
 }
 
-.sidenav a {
-    padding: 6px 8px 6px 16px;
+.teacher-nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.teacher-nav-list li + li {
+    margin-top: 8px;
+}
+
+.teacher-nav-list a {
+    align-items: center;
+    border-radius: 12px;
+    color: #5f6b85;
+    display: flex;
+    font-size: 16px;
+    gap: 14px;
+    line-height: 1.25;
+    min-height: 48px;
+    padding: 12px 14px;
     text-decoration: none;
-    font-size: 10pt;
-    color: #555;
-    display: block;
-    border-bottom: 1px solid #bbb;
+    transition: background 160ms ease, color 160ms ease;
+    white-space: nowrap;
 }
 
-.vl {
-    height:100%;
-    position: absolute;
-    margin-left: -3px;
+.teacher-nav-list a:visited {
+    color: #5f6b85;
 }
 
-.sidenav a:hover {
-    color: #818181;
+.teacher-nav-list a:hover,
+.teacher-nav-list a:focus {
+    background: rgba(38, 73, 236, 0.1);
+    color: var(--teacher-link-hover-color);
+    outline: none;
+    text-decoration: none;
 }
 
-.main_body {
-    margin-left: 14em; /* Same as the width of the sidenav */
-    padding: 0 10px;
+.teacher-nav-list a.active,
+.teacher-nav-list a.active:visited {
+    background: linear-gradient(135deg, #2649ec 0%, #526df0 100%);
+    color: #fff;
+}
+
+.teacher-nav-list a.active i {
+    color: #fff;
+}
+
+.teacher-nav-list i {
+    color: var(--teacher-link-color);
+    flex: 0 0 22px;
+    font-size: 18px;
+    text-align: center;
+}
+
+.teacher-main {
+    margin-left: var(--teacher-sidebar-width);
+    min-height: 100vh;
+    padding-top: var(--teacher-topbar-height);
+    transition: margin-left 220ms ease;
+}
+
+.teacher-main-inner {
+    padding: 12px 12px 40px;
+}
+
+.teacher-main-inner > .container {
+    width: 100%;
+}
+
+.teacher-sidebar-collapsed .teacher-sidebar {
+    padding-left: 12px;
+    padding-right: 12px;
+    width: var(--teacher-sidebar-collapsed-width);
+}
+
+.teacher-sidebar-collapsed .teacher-nav-list a {
+    justify-content: center;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.teacher-sidebar-collapsed .teacher-nav-list span {
+    display: none;
+}
+
+.teacher-sidebar-collapsed .teacher-main {
+    margin-left: var(--teacher-sidebar-collapsed-width);
+}
+
+.teacher-mobile-backdrop {
+    display: none;
+}
+
+@media (max-width: 767px) {
+    .teacher-topbar {
+        height: 62px;
+        padding: 0 14px;
+    }
+
+    .teacher-topbar-left {
+        gap: 10px;
+    }
+
+    .teacher-topbar-actions {
+        gap: 8px;
+    }
+
+    .teacher-topbar-logo {
+        width: 126px;
+    }
+
+    .teacher-profile-name,
+    .teacher-topbar-language .fa-angle-down {
+        display: none;
+    }
+
+    .teacher-sidebar {
+        max-width: calc(100vw - 48px);
+        padding-top: 22px;
+        top: 62px;
+        transform: translateX(-105%);
+        width: 248px;
+    }
+
+    .teacher-sidebar-collapsed .teacher-sidebar {
+        padding-left: 16px;
+        padding-right: 16px;
+        width: 248px;
+    }
+
+    .teacher-sidebar-collapsed .teacher-nav-list a {
+        justify-content: flex-start;
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .teacher-sidebar-collapsed .teacher-nav-list span {
+        display: inline;
+    }
+
+    .teacher-sidebar-open .teacher-sidebar {
+        transform: translateX(0);
+    }
+
+    .teacher-sidebar-open .teacher-mobile-backdrop {
+        background: rgba(7, 28, 120, 0.24);
+        bottom: 0;
+        display: block;
+        left: 0;
+        position: fixed;
+        right: 0;
+        top: 62px;
+        z-index: 1010;
+    }
+
+    .teacher-main,
+    .teacher-sidebar-collapsed .teacher-main {
+        margin-left: 0;
+        padding-top: 62px;
+    }
+
+    .teacher-main-inner {
+        padding: 18px 4px 32px;
+    }
 }
 
 .thumbnail_image{
@@ -337,4 +627,64 @@ input:checked + .slider::before {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.alert-info {
+    background-color: rgb(231, 235, 255);
+    border-color: rgb(93, 117, 223);
+    color: rgb(93, 117, 223);
+}
+
+.tab-pane {
+    background-color: #fff;
+}
+
+.panel-default {
+    background-color: #ffffff;
+    border-color: #b5c2fd;
+}
+
+.nav-tabs>li.active>a, .nav-tabs>li.active>a:focus, .nav-tabs>li.active>a:hover {
+    color: #2649ec;
+    background-color: #fff;
+    border: 1px solid #b5c2fd;
+    border-bottom-color: transparent;
+}
+
+.nav-tabs>li>a:hover {
+    background-color: rgb(231, 235, 255);
+}
+
+.nav-tabs {
+    border-bottom: 1px solid #b5c2fd;
+}
+
+.btn-default {
+    color: #2649ec;
+    background-color: #fff;
+    border-color: #b5c2fd;
+}
+
+.btn-default:hover {
+    color: #071c78;
+    background-color: rgb(231, 235, 255);
+    border-color: #b5c2fd;
+}
+
+.panel-default>.panel-heading {
+    color: #2649ec;
+    background-color: rgb(231, 235, 255);
+    border-color: #b5c2fd;
+}
+
+.panel-footer {
+    background-color: rgb(231, 235, 255);
+}
+
+table {
+    background-color: #fff;
+}
+
+.panel-group .panel-heading+.panel-collapse>.list-group, .panel-group .panel-heading+.panel-collapse>.panel-body {
+    border-top: 1px solid #b5c2fd;
 }
