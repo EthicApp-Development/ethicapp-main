@@ -11,12 +11,18 @@
                 <i class="fa fa-plus" aria-hidden="true"></i> {{'create_design' | translate}}
             </button>
             <p class="designContext">{{'designContext' | translate}}</p>
+            <div class="teacher-index-search">
+                <div class="search-field-wrapper">
+                    <input class="form-control search-input search-decorated-input" type="text"
+                        placeholder="{{'search_designs_placeholder' | translate}}" ng-model="vm.userSearch" ng-change="vm.setPage(1)">
+                    <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+                </div>
+            </div>
         </div>
     </div>
     <div class="row">
-        <div class="col-md-12" style="position: relative;">
-            <!-- Nav Tabs -->
-            <ul class="nav nav-tabs" style="display: inline-block;">
+        <div class="col-md-12 teacher-index-tabs">
+            <ul class="nav nav-tabs">
                 <li ng-class="{'active': vm.dsgnMode === 0}">
                     <a href="" ng-click="vm.setDesignMode(0); vm.getUserDesigns()">{{'yours' | translate}}</a>
                 </li>
@@ -27,15 +33,6 @@
                     <a href="" ng-click="vm.setDesignMode(2); vm.getDesigns()">{{'archived' | translate}}</a>
                 </li>
             </ul>
-
-            <!-- Search box -->
-            <div style="position: absolute; left: 280px; top: 6px; min-width: 80px; max-width: 200px;">
-                <div class="search-field-wrapper">
-                    <input class="form-control search-input search-decorated-input" type="text"
-                        placeholder="{{'search' | translate}}" ng-model="vm.userSearch" ng-change="vm.setPage(1)">
-                    <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
-                </div>
-            </div>
         </div>
     </div>
     <div class="row teacher-index-content">

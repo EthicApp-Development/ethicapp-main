@@ -10,11 +10,18 @@
                 style="margin-bottom: 2rem; margin-top: 1rem;">
                 <i class="fa fa-rocket" aria-hidden="true"></i> {{'launch_activity' | translate}}
             </button>
+            <div class="teacher-index-search">
+                <div class="search-field-wrapper">
+                    <input class="form-control search-input search-decorated-input" type="text"
+                        placeholder="{{'search_activities_placeholder' | translate}}" ng-model="ac.userSearch" ng-change="ac.setPage(1)">
+                    <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+                </div>
+            </div>
         </div>
     </div>
     <div class="row">
-        <div class="col-md-12" style="position: relative;">
-            <ul class="nav nav-tabs" style="display: inline-block;">
+        <div class="col-md-12 teacher-index-tabs">
+            <ul class="nav nav-tabs">
                 <li ng-class="{'active': ac.dsgnMode === 0}">
                     <a href="" ng-click="ac.setActivityMode(0)">{{'currentTab' | translate}}</a>
                 </li>
@@ -25,13 +32,6 @@
                     <a href="" ng-click="ac.setActivityMode(2)">{{'archived' | translate}}</a>
                 </li>
             </ul>
-            <div style="position: absolute; right: 400px; top: 6px; max-width: 200px;">
-                <div class="search-field-wrapper">
-                    <input class="form-control search-input search-decorated-input" type="text"
-                        placeholder="{{'search' | translate}}" ng-model="ac.userSearch" ng-change="ac.setPage(1)">
-                    <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
-                </div>
-            </div>
         </div>
     </div>
     <div class="row teacher-index-content">

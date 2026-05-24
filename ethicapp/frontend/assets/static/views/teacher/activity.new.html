@@ -42,7 +42,7 @@
                                 <input
                                     class="form-control launch-activity-search search-decorated-input"
                                     type="text"
-                                    placeholder="{{'search'|translate}}"
+                                    placeholder="{{'search_designs_placeholder'|translate}}"
                                     ng-model="bdc.designSearchQuery"
                                     ng-change="bdc.handleDesignSearchChange()"
                                     uib-typeahead="design as bdc.formatDesignLabel(design) for design in bdc.searchLaunchableUserDesigns($viewValue)"

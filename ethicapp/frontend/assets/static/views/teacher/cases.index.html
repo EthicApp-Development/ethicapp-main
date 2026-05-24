@@ -9,24 +9,7 @@
             <button class="btn btn-primary" ng-click="navigateTo('/cases/new')" style="margin-top: 1rem; margin-bottom: 1rem;">
                 <i class="fa fa-plus" aria-hidden="true"></i> {{ 'ethical_cases_create' | translate }}
             </button>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-md-12" style="position: relative;">
-            <ul class="nav nav-tabs" style="display: inline-block;">
-                <li ng-class="{'active': vm.caseMode === 0}">
-                    <a href="" ng-click="vm.setCaseMode(0)">{{ 'yours' | translate }}</a>
-                </li>
-                <li ng-class="{'active': vm.caseMode === 1}">
-                    <a href="" ng-click="vm.setCaseMode(1)">{{ 'byOthers' | translate }}</a>
-                </li>
-                <li ng-class="{'active': vm.caseMode === 2}">
-                    <a href="" ng-click="vm.setCaseMode(2)">{{ 'archived' | translate }}</a>
-                </li>
-            </ul>
-
-            <div style="position: absolute; left: 280px; top: 6px; min-width: 80px; max-width: 240px;">
+            <div class="teacher-index-search">
                 <div class="search-field-wrapper">
                     <input
                         class="form-control search-input search-decorated-input"
@@ -37,6 +20,22 @@
                     <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12 teacher-index-tabs">
+            <ul class="nav nav-tabs">
+                <li ng-class="{'active': vm.caseMode === 0}">
+                    <a href="" ng-click="vm.setCaseMode(0)">{{ 'yours' | translate }}</a>
+                </li>
+                <li ng-class="{'active': vm.caseMode === 1}">
+                    <a href="" ng-click="vm.setCaseMode(1)">{{ 'byOthers' | translate }}</a>
+                </li>
+                <li ng-class="{'active': vm.caseMode === 2}">
+                    <a href="" ng-click="vm.setCaseMode(2)">{{ 'archived' | translate }}</a>
+                </li>
+            </ul>
         </div>
     </div>
 

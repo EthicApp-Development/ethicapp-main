@@ -638,6 +638,8 @@
 	"empty_shared_cases_message": "No hay casos públicos que coincidan con tu búsqueda.",
 	"empty_archived_cases_message": "Aún no hay casos archivados.",
 	"search_cases_placeholder": "Buscar casos",
+	"search_designs_placeholder": "Buscar diseños",
+	"search_activities_placeholder": "Buscar actividades",
 	"ethical_cases_create_success": "Caso creado",
 	"ethical_cases_update_success": "Caso actualizado",
 	"ethical_cases_save_error": "No se pudo guardar el caso",

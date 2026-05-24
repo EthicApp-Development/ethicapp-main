@@ -629,6 +629,8 @@
 	"empty_shared_cases_message": "No public cases match your search.",
 	"empty_archived_cases_message": "There are no archived cases yet.",
 	"search_cases_placeholder": "Search cases",
+	"search_designs_placeholder": "Search designs",
+	"search_activities_placeholder": "Search Activities",
 	"ethical_cases_create_success": "Case created",
 	"ethical_cases_update_success": "Case updated",
 	"ethical_cases_save_error": "Could not save the case",

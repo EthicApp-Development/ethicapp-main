@@ -64,6 +64,10 @@ const CaseCardController = function() {
         return this.isFunction(this.onDelete) && this.caseItem?.hasLaunchedDesignActivity !== true;
     };
 
+    this.canEdit = function() {
+        return this.isFunction(this.onEdit) && this.caseItem?.hasLaunchedDesignActivity !== true;
+    };
+
     this.getContentRepresentation = function() {
         if (!this.caseItem || !Array.isArray(this.caseItem.representations)) {
             return null;
