@@ -2755,11 +2755,6 @@ h2{
     row-gap: 10px;
 }
 
-.design-item-panel .design-item-button-group > .btn,
-.design-item-panel .design-item-button-group > .locked-svg {
-    margin-bottom: 10px;
-}
-
 .design-item-panel .design-item-share-control {
     flex: 0 0 auto;
     margin-bottom: 10px;
