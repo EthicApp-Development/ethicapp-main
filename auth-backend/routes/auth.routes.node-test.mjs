@@ -251,6 +251,7 @@ describe('Auth Routes', () => {
 
     const tokenInsertCall = dbMock.query.mock.calls.find((call) => call.arguments[0].includes('INSERT INTO pass_reset'));
     assert.strictEqual(tokenInsertCall.arguments[1][0], 'john@example.com');
+    assert.strictEqual(tokenInsertCall.arguments[1][2], 'account_confirmation');
 
     assert.strictEqual(mailMock.sendAccountConfirmationEmail.mock.calls.length, 1);
     const mailArgs = mailMock.sendAccountConfirmationEmail.mock.calls[0].arguments[0];
@@ -321,6 +322,28 @@ describe('Auth Routes', () => {
     assert.deepStrictEqual(dbMock.query.mock.calls[0].arguments[1], [sha256Hex('old-link-token'), 60]);
   });
 
+  test('GET /confirm-account - treats already confirmed accounts as successful while token is valid', async () => {
+    dbMock.query.mock.mockImplementation((queryStr) => {
+      if (queryStr.includes('FROM pass_reset pr')) {
+        return Promise.resolve({
+          rowCount: 1,
+          rows: [{ mail: 'confirmed@example.com', email_confirmed: true }]
+        });
+      }
+
+      return Promise.resolve({ rowCount: 0, rows: [] });
+    });
+
+    const res = await supertest(app)
+      .get('/confirm-account/scanner-opened-token');
+
+    assert.strictEqual(res.status, 302);
+    assert.strictEqual(res.headers.location, '/auth/login?confirmed=1');
+
+    const updateCall = dbMock.query.mock.calls.find((call) => call.arguments[0].includes('UPDATE users'));
+    assert.strictEqual(updateCall, undefined);
+  });
+
   test('POST /forgot - unknown email returns generic response without sending mail', async () => {
     recaptchaMock.verifyRecaptchaToken.mock.mockImplementationOnce(() => Promise.resolve(true));
     dbMock.query.mock.mockImplementationOnce(() => Promise.resolve({ rowCount: 0, rows: [] }));
@@ -368,9 +391,10 @@ describe('Auth Routes', () => {
 
     const deleteCall = dbMock.query.mock.calls.find((call) => call.arguments[0].includes('DELETE FROM pass_reset'));
     const insertCall = dbMock.query.mock.calls.find((call) => call.arguments[0].includes('INSERT INTO pass_reset'));
-    assert.deepStrictEqual(deleteCall.arguments[1], ['person@example.com']);
+    assert.deepStrictEqual(deleteCall.arguments[1], ['person@example.com', 'password_reset']);
     assert.strictEqual(insertCall.arguments[1][0], 'person@example.com');
     assert.match(insertCall.arguments[1][1], /^[a-f0-9]{64}$/);
+    assert.strictEqual(insertCall.arguments[1][2], 'password_reset');
 
     assert.strictEqual(mailMock.sendPasswordResetEmail.mock.calls.length, 1);
     const mailArgs = mailMock.sendPasswordResetEmail.mock.calls[0].arguments[0];

@@ -136,6 +136,7 @@ async function findPasswordResetByToken(token) {
       SELECT id, mail, token, ctime
       FROM pass_reset
       WHERE token = $1
+        AND token_purpose = 'password_reset'
       ORDER BY ctime DESC
       LIMIT 1
     `,
@@ -164,6 +165,7 @@ async function deletePasswordResetToken(token) {
     `
       DELETE FROM pass_reset
       WHERE token = $1
+        AND token_purpose = 'password_reset'
     `,
     [token]
   );

@@ -65,17 +65,24 @@ function duplicateEmailResponse(req) {
   };
 }
 
-async function createSingleUseTokenForEmail(email) {
+async function createSingleUseTokenForEmail(email, purpose = 'password_reset') {
   const rawToken = generateResetToken();
   const tokenDigest = sha256Hex(rawToken);
 
-  await db.query(`DELETE FROM pass_reset WHERE mail = $1`, [email]);
   await db.query(
     `
-      INSERT INTO pass_reset (mail, token, ctime)
-      VALUES ($1, $2, NOW())
+      DELETE FROM pass_reset
+      WHERE lower(mail) = lower($1)
+        AND token_purpose = $2
     `,
-    [email, tokenDigest]
+    [email, purpose]
+  );
+  await db.query(
+    `
+      INSERT INTO pass_reset (mail, token, ctime, token_purpose)
+      VALUES ($1, $2, NOW(), $3)
+    `,
+    [email, tokenDigest, purpose]
   );
 
   return rawToken;
@@ -114,7 +121,7 @@ router.post('/login', async (req, res, next) => {
         FROM users
         WHERE active = true
           AND email_confirmed = true
-          AND (rut = $1 OR mail = $1)
+          AND (lower(rut) = lower($1) OR lower(mail) = lower($1))
         LIMIT 1
       `,
       [username]
@@ -330,7 +337,7 @@ router.post('/register', async (req, res) => {
         [firstname, lastname, fullName, dni, gender, email, 'A', preferredLocale, passwordBcrypt, 'local']
         );
 
-      rawConfirmationToken = await createSingleUseTokenForEmail(email);
+      rawConfirmationToken = await createSingleUseTokenForEmail(email, 'account_confirmation');
       await db.query('COMMIT');
     } catch (txErr) {
       await db.query('ROLLBACK');
@@ -389,12 +396,12 @@ router.get(['/confirm-account', '/confirm-account/:token'], async (req, res) => 
 
     const confirmationResult = await db.query(
       `
-        SELECT pr.mail
+        SELECT pr.mail, u.email_confirmed
         FROM pass_reset pr
         INNER JOIN users u ON lower(u.mail) = lower(pr.mail)
         WHERE pr.token = $1
+          AND pr.token_purpose = 'account_confirmation'
           AND pr.ctime > NOW() - ($2 * INTERVAL '1 minute')
-          AND u.email_confirmed = false
         LIMIT 1
       `,
       [tokenDigest, RESET_TOKEN_TTL_MINUTES]
@@ -404,7 +411,12 @@ router.get(['/confirm-account', '/confirm-account/:token'], async (req, res) => 
       return res.redirect('/auth/login?confirmed=invalid');
     }
 
-    const email = confirmationResult.rows[0].mail;
+    const confirmationRequest = confirmationResult.rows[0];
+    const email = confirmationRequest.mail;
+
+    if (confirmationRequest.email_confirmed === true) {
+      return res.redirect('/auth/login?confirmed=1');
+    }
 
     await db.query('BEGIN');
 
@@ -419,7 +431,6 @@ router.get(['/confirm-account', '/confirm-account/:token'], async (req, res) => 
         [email]
       );
 
-      await db.query(`DELETE FROM pass_reset WHERE mail = $1`, [email]);
       await db.query('COMMIT');
     } catch (txErr) {
       await db.query('ROLLBACK');
@@ -700,7 +711,7 @@ router.post('/forgot', async (req, res) => {
     let rawToken;
 
     try {
-      rawToken = await createSingleUseTokenForEmail(user.mail);
+      rawToken = await createSingleUseTokenForEmail(user.mail, 'password_reset');
       await db.query('COMMIT');
     } catch (txErr) {
       await db.query('ROLLBACK');
@@ -763,6 +774,7 @@ router.post('/reset-password', async (req, res) => {
         SELECT mail
         FROM pass_reset
         WHERE token = $1
+          AND token_purpose = 'password_reset'
           AND ctime > NOW() - ($2 * INTERVAL '1 minute')
         LIMIT 1
       `,
@@ -814,7 +826,8 @@ router.post('/reset-password', async (req, res) => {
       await db.query(
         `
           DELETE FROM pass_reset
-          WHERE mail = $1
+          WHERE lower(mail) = lower($1)
+            AND token_purpose = 'password_reset'
         `,
         [resetRequest.mail]
       );
