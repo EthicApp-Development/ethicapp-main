@@ -82,7 +82,7 @@ hr{
 .home-card:focus .home-card-caption,
 .home-card-caption:hover,
 .home-card-caption:focus {
-    color: rgb(255, 255, 166);
+    color: #b5c2fd;
 }
 
 @media (prefers-reduced-motion: reduce) {

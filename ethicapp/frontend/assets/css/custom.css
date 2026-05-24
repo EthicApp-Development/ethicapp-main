@@ -393,6 +393,77 @@ body {
     margin-top: 6px;
 }
 
+.case-document-viewer-heading,
+.case-document-fullscreen-heading {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+}
+
+.case-document-fullscreen-button,
+.case-document-fullscreen-close {
+    align-items: center;
+    color: #2649ec;
+    display: inline-flex;
+    justify-content: center;
+}
+
+.case-document-fullscreen-button:hover,
+.case-document-fullscreen-button:focus,
+.case-document-fullscreen-close:hover,
+.case-document-fullscreen-close:focus {
+    color: #071c78;
+}
+
+.case-document-fullscreen-overlay {
+    background: linear-gradient(90deg, #f7faff 0%, #eef4ff 42%, #dfe9ff 100%);
+    bottom: 0;
+    left: 0;
+    padding: 18px;
+    position: fixed;
+    right: 0;
+    top: 0;
+    z-index: 2000;
+}
+
+.case-document-fullscreen-panel {
+    background: #f5f7ff;
+    border: 1px solid #b5c2fd;
+    border-radius: 8px;
+    box-shadow: 0 20px 60px rgba(7, 28, 120, 0.34);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.case-document-fullscreen-heading {
+    background: #b5c2fd;
+    color: #071c78;
+    flex: 0 0 auto;
+    padding: 10px 14px;
+}
+
+.case-document-fullscreen-body {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 12px;
+}
+
+.case-document-fullscreen-body .case-document-image-scroll-fullscreen {
+    flex: 1 1 auto;
+    height: 100%;
+    max-height: none;
+    min-height: 0;
+    width: 100%;
+}
+
+.case-document-fullscreen-overlay .case-document-page {
+    box-shadow: 0 2px 12px rgba(7, 28, 120, 0.14);
+}
+
 @media (min-width: 768px) and (max-width: 1199px) {
     .teacher-index-search {
         width: min(100%, 460px);
@@ -537,6 +608,14 @@ body {
         flex: 0 0 auto;
         max-height: 92px;
         max-width: 92px;
+    }
+
+    .case-document-fullscreen-overlay {
+        padding: 8px;
+    }
+
+    .case-document-fullscreen-body {
+        padding: 8px;
     }
 }
 

@@ -1,6 +1,15 @@
 <div class="panel panel-default" ng-if="$ctrl.caseItem">
-    <div class="panel-heading">
+    <div class="panel-heading case-document-viewer-heading">
         <strong>{{ 'ethical_cases_document_viewer_title' | translate }}</strong>
+        <button
+            type="button"
+            class="btn btn-default btn-sm case-document-fullscreen-button"
+            ng-if="$ctrl.hasRenderedImages()"
+            ng-click="$ctrl.openFullscreen()"
+            title="{{ 'ethical_cases_document_fullscreen_open' | translate }}">
+            <i class="fa fa-expand" aria-hidden="true"></i>
+            <span class="sr-only">{{ 'ethical_cases_document_fullscreen_open' | translate }}</span>
+        </button>
     </div>
     <div class="panel-body">
         <div class="case-document-image-scroll" ng-if="$ctrl.hasRenderedImages()">
@@ -35,5 +44,44 @@
             type="application/pdf"
             width="100%"
             height="720px" />
+    </div>
+</div>
+
+<div
+    class="case-document-fullscreen-overlay"
+    ng-if="$ctrl.isFullscreenOpen"
+    ng-click="$ctrl.closeFullscreen()"
+    role="dialog"
+    aria-modal="true"
+    aria-label="{{ 'ethical_cases_document_viewer_title' | translate }}">
+    <div class="case-document-fullscreen-panel" ng-click="$event.stopPropagation()">
+        <div class="case-document-fullscreen-heading">
+            <strong>{{ 'ethical_cases_document_viewer_title' | translate }}</strong>
+            <button
+                type="button"
+                class="btn btn-default btn-sm case-document-fullscreen-close"
+                ng-click="$ctrl.closeFullscreen()"
+                title="{{ 'ethical_cases_document_fullscreen_close' | translate }}">
+                <i class="fa fa-times" aria-hidden="true"></i>
+                <span class="sr-only">{{ 'ethical_cases_document_fullscreen_close' | translate }}</span>
+            </button>
+        </div>
+        <div class="case-document-fullscreen-body">
+            <div class="case-document-image-scroll case-document-image-scroll-fullscreen">
+                <div class="case-document-image-sequence">
+                    <figure
+                        class="case-document-page"
+                        ng-repeat="image in $ctrl.getRenderedImages() track by image.sequenceNumber">
+                        <img
+                            class="img-responsive center-block"
+                            ng-src="{{ image.src }}"
+                            alt="{{ 'ethical_cases_document_page_alt' | translate:{ page: image.pageNumber || image.sequenceNumber } }}">
+                        <figcaption class="text-muted text-center">
+                            {{ 'ethical_cases_document_page_label' | translate:{ page: image.pageNumber || image.sequenceNumber } }}
+                        </figcaption>
+                    </figure>
+                </div>
+            </div>
+        </div>
     </div>
 </div>

@@ -1,4 +1,8 @@
 const CaseDocumentViewerController = function() {
+    this.isFullscreenOpen = false;
+    this.renderedImagesCache = [];
+    this.renderedImagesCacheSources = {};
+
     this.getDocumentProcessing = function() {
         return this.caseItem?.documentProcessing || null;
     };
@@ -17,7 +21,7 @@ const CaseDocumentViewerController = function() {
         return this.getContentRepresentation()?.href || this.caseItem?.pdfPath || "";
     };
 
-    this.getRenderedImages = function() {
+    this.buildRenderedImages = function() {
         const documentImages = this.caseItem?.documentRepresentation?.content?.images;
         const renderedImages = Array.isArray(documentImages) ? documentImages : this.caseItem?.renderedImages;
         if (Array.isArray(renderedImages) && renderedImages.length > 0) {
@@ -51,6 +55,34 @@ const CaseDocumentViewerController = function() {
             .sort((left, right) => left.sequenceNumber - right.sequenceNumber);
     };
 
+    this.refreshRenderedImagesCache = function() {
+        const documentImages = this.caseItem?.documentRepresentation?.content?.images;
+        const renderedImages = this.caseItem?.renderedImages;
+        const representations = this.caseItem?.representations;
+        const sources = {
+            caseItem:        this.caseItem,
+            documentImages,
+            renderedImages,
+            representations,
+        };
+
+        const cacheSources = this.renderedImagesCacheSources;
+        const isCacheCurrent = cacheSources.caseItem === sources.caseItem
+            && cacheSources.documentImages === sources.documentImages
+            && cacheSources.renderedImages === sources.renderedImages
+            && cacheSources.representations === sources.representations;
+
+        if (!isCacheCurrent) {
+            this.renderedImagesCache = this.buildRenderedImages();
+            this.renderedImagesCacheSources = sources;
+        }
+    };
+
+    this.getRenderedImages = function() {
+        this.refreshRenderedImagesCache();
+        return this.renderedImagesCache;
+    };
+
     this.hasRenderedImages = function() {
         return this.getRenderedImages().length > 0;
     };
@@ -62,6 +94,18 @@ const CaseDocumentViewerController = function() {
 
     this.hasFailed = function() {
         return this.getDocumentProcessing()?.status === "failed";
+    };
+
+    this.openFullscreen = function() {
+        if (!this.hasRenderedImages()) {
+            return;
+        }
+
+        this.isFullscreenOpen = true;
+    };
+
+    this.closeFullscreen = function() {
+        this.isFullscreenOpen = false;
     };
 };
 
