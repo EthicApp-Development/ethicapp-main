@@ -57,14 +57,17 @@ images:
     source_ref: "v2026.05.11"
     source_revision: "32b29471b464f85b9a9b6830723a808bbe1ed84e"
 
-  database:
-    image: "ghcr.io/example-org/ethicapp-database"
-    tag: "v2026.05.11"
-    digest: ""
-    source_ref: "v2026.05.11"
-    source_revision: "32b29471b464f85b9a9b6830723a808bbe1ed84e"
-
 external_images:
+  postgresql:
+    image: "postgres"
+    tag: "16"
+    digest: ""
+
+  flyway:
+    image: "flyway/flyway"
+    tag: "11-alpine"
+    digest: ""
+
   redis_session:
     image: "redis"
     tag: "7.4-alpine"
@@ -80,3 +83,5 @@ notes:
   - "The env_contract source_ref/source_revision should match the contract used to render runtime .env files."
   - "For partial releases, only changed services need new image tags, but every deployed service should remain pinned here."
   - "ethicapp-pdf-worker intentionally uses the ethicapp image and must mount the same protected uploads volume as ethicapp."
+  - "PostgreSQL now uses the official postgres image directly; this repository no longer publishes an ethicapp-database image."
+  - "Flyway is a short-lived migration job that applies database/migrations from the same release before application services start."
