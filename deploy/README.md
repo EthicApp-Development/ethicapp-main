@@ -15,7 +15,7 @@ Recommended deployment flow:
 For partial releases, keep an explicit deployment manifest in the deployment
 repository. Use [`deployment.manifest.example.yml`](./deployment.manifest.example.yml)
 as the starting format: pin the contract source ref/revision, every project
-image, and external images such as Redis. The contract should come from the
+image, and external images such as PostgreSQL and Redis. The contract should come from the
 source ref that reflects the deployed runtime contract, not from the newest tag
 by date.
 
@@ -46,6 +46,15 @@ Production images keep frontend bundles environment-neutral. Container entrypoin
 emit public `VITE_*` values into each frontend's `runtime-config.js` when the
 container starts, so deployment repositories should provide those values as
 runtime environment variables instead of rebuilding images per environment.
+
+Database schema changes are delivered through the `db-migrations` image. This
+image is based on Flyway and includes `database/migrations` from the release.
+Run it as a short-lived migration job before starting or updating application
+services. Production deployments should not rely on bind-mounted migration files
+or a git checkout on the target host. The image accepts the same `PG*`
+connection variables used by the application services and maps them to Flyway
+configuration at startup. It also falls back to `POSTGRES_DB`, `POSTGRES_USER`,
+and `POSTGRES_PASSWORD` when the migration job uses the database env file.
 
 Redis is role-specific in production. Use `REDIS_SESSION_*` for Express session
 storage and `REDIS_CACHE_*` for database-derived cache entries. Production

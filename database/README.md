@@ -16,6 +16,15 @@ service. On `docker compose up`, Compose waits for PostgreSQL to become healthy,
 runs Flyway from `filesystem:/flyway/migrations`, and starts the application
 services after migrations complete.
 
+Production deployments should use the `db-migrations` image built from this
+directory. That image is based on Flyway and copies `database/migrations` into
+`/flyway/migrations`, so production runtimes can execute migrations without a
+repository checkout or bind-mounted SQL directory. Its entrypoint accepts the
+same `PG*` connection variables used by the application services and maps them
+to Flyway configuration before running `flyway migrate`. It also falls back to
+`POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` for deployments that pass
+the PostgreSQL container env file to the migration job.
+
 Useful commands:
 
 ```bash

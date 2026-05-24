@@ -57,15 +57,17 @@ images:
     source_ref: "v2026.05.11"
     source_revision: "32b29471b464f85b9a9b6830723a808bbe1ed84e"
 
+  db-migrations:
+    image: "ghcr.io/example-org/ethicapp-db-migrations"
+    tag: "v2026.05.12"
+    digest: ""
+    source_ref: "v2026.05.12"
+    source_revision: "77d69072a165afa1d335601ac307ea9c60ca2dd8"
+
 external_images:
   postgresql:
     image: "postgres"
     tag: "16"
-    digest: ""
-
-  flyway:
-    image: "flyway/flyway"
-    tag: "11-alpine"
     digest: ""
 
   redis_session:
@@ -84,4 +86,4 @@ notes:
   - "For partial releases, only changed services need new image tags, but every deployed service should remain pinned here."
   - "ethicapp-pdf-worker intentionally uses the ethicapp image and must mount the same protected uploads volume as ethicapp."
   - "PostgreSQL now uses the official postgres image directly; this repository no longer publishes an ethicapp-database image."
-  - "Flyway is a short-lived migration job that applies database/migrations from the same release before application services start."
+  - "db-migrations is a short-lived Flyway-based job image with database/migrations baked into the image. Run it before application services start."

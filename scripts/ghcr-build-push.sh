@@ -44,7 +44,7 @@ Services:
   ethicapp-student
   management-console
   nginx
-  database
+  db-migrations
 
 Environment variables mirror the long options:
   REGISTRY, GHCR_OWNER, IMAGE_PREFIX, IMAGE_TAG, ADDITIONAL_TAGS,
@@ -61,7 +61,7 @@ append_service() {
 }
 
 default_services() {
-  echo "ethicapp auth-backend ethicapp-student management-console nginx"
+  echo "ethicapp auth-backend ethicapp-student management-console nginx db-migrations"
 }
 
 service_context() {
@@ -71,6 +71,7 @@ service_context() {
     ethicapp-student) echo "ethicapp-student" ;;
     management-console) echo "management-console" ;;
     nginx) echo "nginx" ;;
+    db-migrations) echo "database" ;;
     *) return 1 ;;
   esac
 }
@@ -82,6 +83,7 @@ service_dockerfile() {
     ethicapp-student) echo "ethicapp-student/Dockerfile" ;;
     management-console) echo "management-console/Dockerfile" ;;
     nginx) echo "nginx/Dockerfile" ;;
+    db-migrations) echo "database/Dockerfile" ;;
     *) return 1 ;;
   esac
 }
@@ -90,6 +92,7 @@ service_image_name() {
   case "$1" in
     ethicapp) echo "$IMAGE_PREFIX" ;;
     ethicapp-student) echo "$IMAGE_PREFIX-student" ;;
+    db-migrations) echo "$IMAGE_PREFIX-db-migrations" ;;
     *) echo "$IMAGE_PREFIX-$1" ;;
   esac
 }
