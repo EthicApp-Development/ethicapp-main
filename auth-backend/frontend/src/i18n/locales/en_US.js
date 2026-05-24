@@ -71,6 +71,8 @@ const enUS = {
     alreadyHaveAccount: 'Already have an account?',
     signInLink: 'Sign in',
     successMessage: 'Account created successfully. Check your email to confirm it before signing in.',
+    redirectingToLoginPrefix: 'Redirecting to sign in in ',
+    redirectingToLoginSuffix: ' s...',
     recoverPasswordLink: 'Recover password',
     errors: {
       firstnameRequired: 'First name is required.',

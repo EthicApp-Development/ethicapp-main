@@ -71,6 +71,8 @@ const esCL = {
     alreadyHaveAccount: '¿Ya tienes cuenta?',
     signInLink: 'Iniciar sesión',
     successMessage: 'Cuenta creada correctamente. Revisa tu correo para confirmarla antes de iniciar sesión.',
+    redirectingToLoginPrefix: 'Redirigiendo al inicio de sesión en ',
+    redirectingToLoginSuffix: ' s...',
     recoverPasswordLink: 'Recuperar contraseña',
     errors: {
       firstnameRequired: 'El nombre es obligatorio.',
