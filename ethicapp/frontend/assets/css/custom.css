@@ -344,6 +344,55 @@ body {
     min-width: max-content;
 }
 
+.teacher-profile-page .profile-avatar-control {
+    flex: 0 0 auto;
+    position: relative;
+}
+
+.teacher-profile-page .profile-avatar-control .profile-pic {
+    display: block;
+}
+
+.teacher-profile-page .profile-avatar-action {
+    align-items: center;
+    background: #2649ec;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    bottom: -8px;
+    box-shadow: 0 4px 12px rgba(7, 28, 120, 0.22);
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    height: 34px;
+    justify-content: center;
+    margin: 0;
+    position: absolute;
+    right: -8px;
+    transition: background-color 160ms ease, transform 160ms ease;
+    width: 34px;
+}
+
+.teacher-profile-page .profile-avatar-action:hover,
+.teacher-profile-page .profile-avatar-action:focus {
+    background: #071c78;
+    color: #fff;
+    outline: none;
+    transform: translateY(-1px);
+}
+
+.teacher-profile-page .profile-avatar-input {
+    height: 1px;
+    opacity: 0;
+    overflow: hidden;
+    position: absolute;
+    width: 1px;
+}
+
+.teacher-profile-page .profile-avatar-hint {
+    margin-bottom: 0;
+    margin-top: 6px;
+}
+
 @media (min-width: 768px) and (max-width: 1199px) {
     .teacher-index-search {
         width: min(100%, 460px);
@@ -447,6 +496,47 @@ body {
 
     .teacher-main-inner {
         padding: 18px 4px 32px;
+    }
+
+    .teacher-profile-page {
+        padding: 0 16px;
+    }
+
+    .teacher-profile-page .form-horizontal,
+    .teacher-profile-page .form-horizontal .form-group {
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    .teacher-profile-page .form-horizontal .form-group {
+        margin-bottom: 20px;
+    }
+
+    .teacher-profile-page .form-horizontal [class*="col-"] {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .teacher-profile-page .profile {
+        gap: 18px;
+        margin-top: 2rem;
+    }
+
+    .teacher-profile-page .profile-info {
+        margin-left: 0;
+        min-width: 0;
+    }
+
+    .teacher-profile-page .profile-username {
+        font-size: 24px;
+        line-height: 1.15;
+        overflow-wrap: anywhere;
+    }
+
+    .teacher-profile-page .profile-pic {
+        flex: 0 0 auto;
+        max-height: 92px;
+        max-width: 92px;
     }
 }
 
@@ -911,4 +1001,17 @@ table {
     .design-item-warning {
         text-align: left;
     }
+}
+
+.dropdown-menu>.active>a, .dropdown-menu>.active>a:focus, .dropdown-menu>.active>a:hover {
+    color: #fff;
+    text-decoration: none;
+    background-color: #2649ec;
+    outline: 0;
+}
+
+.btn-link {
+    font-weight: 400;
+    color: #2649ec;
+    border-radius: 0;
 }

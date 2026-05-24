@@ -22,7 +22,20 @@ let UserProfileService = function ($http, $rootScope, Upload) {
         },
 
         async updateProfile(payload) {
-            const response = await $http.post("/users/profile", payload);
+            const avatar = payload.avatar;
+            const requestPayload = { ...payload };
+            delete requestPayload.avatar;
+
+            const response = avatar
+                ? await Upload.upload({
+                    url: "/users/profile",
+                    data: {
+                        ...requestPayload,
+                        avatar
+                    }
+                })
+                : await $http.post("/users/profile", requestPayload);
+
             service.notifyProfileChanged();
             return response.data;
         },
