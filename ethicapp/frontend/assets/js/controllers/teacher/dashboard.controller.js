@@ -18,10 +18,41 @@ export function DashboardController($scope, $routeParams, $http,
     vm.dashboardPhaseData = [];
     vm.dashboardPhaseUpdateState = new Map();
     
-    vm.selectedTab = 0; // Default to the first tab
+    vm.selectedTab = null;
 
-    vm.selectTab = function(index) {
-        vm.selectedTab = index; // Update the selected tab index
+    vm.hasAssociatedCaseTab = function() {
+        return Boolean(vm.associatedCase);
+    };
+
+    vm.getPhaseTabId = function(phaseData) {
+        return `phase:${phaseData?.descriptor?.id}`;
+    };
+
+    vm.selectCaseTab = function() {
+        vm.selectedTab = "case";
+    };
+
+    vm.selectPhaseTab = function(phaseData) {
+        vm.selectedTab = vm.getPhaseTabId(phaseData);
+    };
+
+    vm.isCaseTabSelected = function() {
+        return vm.selectedTab === "case";
+    };
+
+    vm.isPhaseTabSelected = function(phaseData) {
+        return vm.selectedTab === vm.getPhaseTabId(phaseData);
+    };
+
+    vm.selectDefaultProgressTab = function() {
+        if (vm.hasAssociatedCaseTab()) {
+            vm.selectCaseTab();
+            return;
+        }
+
+        if (vm.dashboardPhaseData.length > 0) {
+            vm.selectPhaseTab(vm.dashboardPhaseData[0]);
+        }
     };
 
     vm.loadAssociatedCase = async function(designId) {
@@ -29,11 +60,22 @@ export function DashboardController($scope, $routeParams, $http,
             return null;
         }
 
-        if (vm.designObj?.associatedCase) {
-            return vm.designObj.associatedCase;
-        }
-
         try {
+            if (vm.designObj?.associatedCase?.id) {
+                const associatedCase = vm.designObj.associatedCase;
+                const hasDocumentPayload = associatedCase.pdfPath
+                    || associatedCase.documentProcessing
+                    || Array.isArray(associatedCase.representations)
+                    || Array.isArray(associatedCase.renderedImages)
+                    || associatedCase.documentRepresentation;
+
+                if (hasDocumentPayload) {
+                    return associatedCase;
+                }
+
+                return await CasesCatalogService.getCaseById(associatedCase.id);
+            }
+
             return await CasesCatalogService.getCaseByDesignId(designId);
         } catch (error) {
             console.error("[DashboardController::loadAssociatedCase] Error loading associated case.", error);
@@ -337,6 +379,9 @@ export function DashboardController($scope, $routeParams, $http,
 
             $scope.$applyAsync(() => {
                 vm.dashboardPhaseData = resolvedPhaseStates.filter(state => state !== null);
+                if (!vm.selectedTab) {
+                    vm.selectDefaultProgressTab();
+                }
             });
 
         } catch (error) {
@@ -369,6 +414,9 @@ export function DashboardController($scope, $routeParams, $http,
                 if (phaseData) {
                     $scope.$applyAsync(() => {  
                         vm.dashboardPhaseData.push(phaseData);
+                        if (!vm.selectedTab) {
+                            vm.selectDefaultProgressTab();
+                        }
                     });
                 }
             }
@@ -545,12 +593,14 @@ export function DashboardController($scope, $routeParams, $http,
     vm.activatePhaseTabById = function(phaseId, retryCount = 8) {
         const phaseIndex = vm.dashboardPhaseData.findIndex((phase) => phase?.descriptor?.id == phaseId);
         if (phaseIndex >= 0) {
-            vm.selectedTab = phaseIndex;
+            vm.selectPhaseTab(vm.dashboardPhaseData[phaseIndex]);
             return;
         }
 
         if (retryCount <= 0) {
-            vm.selectedTab = vm.dashboardPhaseData.length - 1;
+            if (vm.dashboardPhaseData.length > 0) {
+                vm.selectPhaseTab(vm.dashboardPhaseData[vm.dashboardPhaseData.length - 1]);
+            }
             return;
         }
 
@@ -567,7 +617,7 @@ export function DashboardController($scope, $routeParams, $http,
 
         if (vm.dashboardPhaseData.length > 0) { 
             $timeout(() => {
-                vm.selectedTab = vm.dashboardPhaseData.length - 1;
+                vm.selectPhaseTab(vm.dashboardPhaseData[vm.dashboardPhaseData.length - 1]);
             }, 0);
         }
     });

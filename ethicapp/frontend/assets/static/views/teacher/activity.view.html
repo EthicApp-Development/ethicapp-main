@@ -51,18 +51,31 @@
                         <h3 style="margin-bottom: 1em;">{{ 'activity_progress_title' | translate }}</h3>
                         <div>
                             <ul class="nav nav-tabs" role="tablist">
+                                <li role="presentation" ng-if="dc.hasAssociatedCaseTab()"
+                                    ng-class="{active: dc.isCaseTabSelected()}">
+                                    <a href="" ng-click="dc.selectCaseTab()" role="tab">
+                                        <i class="fa-solid fa-book" aria-hidden="true"></i>
+                                        {{ 'activity_case_tab_title' | translate }}
+                                    </a>
+                                </li>
                                 <!-- Tab headers -->
                                 <li role="presentation" ng-repeat="phase in dc.dashboardPhaseData track by $index" 
-                                    ng-class="{active: dc.selectedTab === $index}">
-                                    <a href="" ng-click="dc.selectTab($index)" role="tab">
+                                    ng-class="{active: dc.isPhaseTabSelected(phase)}">
+                                    <a href="" ng-click="dc.selectPhaseTab(phase)" role="tab">
                                         {{ 'phase_title_text' | translate }} {{ phase.descriptor.number }}
                                     </a>
                                 </li>
                             </ul>
                         
                             <div class="tab-content">
+                                <div role="tabpanel"
+                                     class="tab-pane activity-case-tab-pane"
+                                     ng-class="{active: dc.isCaseTabSelected()}"
+                                     ng-if="dc.hasAssociatedCaseTab()">
+                                    <case-document-viewer case-item="dc.associatedCase" frameless="true"></case-document-viewer>
+                                </div>
                                 <div role="tabpanel" class="tab-pane" style="margin-bottom: 2em; padding:1em; border-bottom: 1px solid #ddd; border-left: 1px solid #ddd; border-right: 1px solid #ddd;"
-                                     ng-class="{active: dc.selectedTab === $index}" 
+                                     ng-class="{active: dc.isPhaseTabSelected(phase)}"
                                      id="phase-{{ $index }}" 
                                      ng-if="dc.dashboardPhaseData.length > 0"
                                      ng-repeat="phase in dc.dashboardPhaseData track by $index">

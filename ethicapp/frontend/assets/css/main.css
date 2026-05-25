@@ -3111,6 +3111,29 @@ tr.group-summary {
     margin-top: 8px;
 }
 
+.activity-case-tab-pane {
+    border-bottom: 1px solid #ddd;
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+    margin-bottom: 2em;
+    padding: 1em;
+}
+
+.case-document-viewer-frameless {
+    position: relative;
+}
+
+.case-document-viewer-body {
+    min-width: 0;
+}
+
+.case-document-viewer-frameless-actions {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    z-index: 2;
+}
+
 @media (max-width: 767px) {
     .activity-dashboard-page .dashboard-phase-questions-table {
         font-size: 0.78em;
