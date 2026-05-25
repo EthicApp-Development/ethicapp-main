@@ -96,6 +96,18 @@ const CaseDocumentViewerController = function() {
         return this.getDocumentProcessing()?.status === "failed";
     };
 
+    this.isFrameless = function() {
+        return this.frameless === true;
+    };
+
+    this.getContainerClass = function() {
+        return this.isFrameless() ? "case-document-viewer-frameless" : "panel panel-default";
+    };
+
+    this.getBodyClass = function() {
+        return this.isFrameless() ? "case-document-viewer-body" : "panel-body";
+    };
+
     this.openFullscreen = function() {
         if (!this.hasRenderedImages()) {
             return;
@@ -111,7 +123,8 @@ const CaseDocumentViewerController = function() {
 
 const caseDocumentViewerComponent = {
     bindings: {
-        caseItem: "<",
+        caseItem:  "<",
+        frameless: "<?",
     },
     controller:  CaseDocumentViewerController,
     templateUrl: "/assets/static/views/teacher/fragments/case-document-viewer.template.html",
