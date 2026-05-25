@@ -1,6 +1,8 @@
 import * as config from "../../config/config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
 import { getPhaseDesignByPhaseId } from "../../helpers/designs-helper.js";
+import { getCaseIdBySessionId } from "../../helpers/sessions-helper.js";
+import { getCaseDocumentRawText } from "../../helpers/case-document-content-helper.js";
 
 const DEFAULT_ATS_BASE_URL = "http://host.docker.internal:5001";
 const DEFAULT_KEYCLOAK_BASE_URL = "http://host.docker.internal:8080";
@@ -267,19 +269,58 @@ async function resolveSessionMetadata(context) {
 
     const sessionTitle = normalizeText(sessionRow?.name) || `EthicApp session ${context.sessionId}`;
     const sessionDescription = normalizeText(sessionRow?.descr);
+    const caseData = await resolveCaseData(context.sessionId);
     const phaseDesign = await getPhaseDesignByPhaseId(context.phaseId);
     const phaseInstructions = normalizeText(phaseDesign?.instructions);
-    const questionText = await resolveQuestionText(context);
+    const questionFromDesign = resolveQuestionTextFromPhaseDesign(phaseDesign);
+    const questionText = questionFromDesign || await resolveQuestionText(context);
 
-    const caseText = sessionDescription || phaseInstructions || questionText || "Ethical discussion prompt.";
+    const caseText = caseData.rawText || sessionDescription || phaseInstructions || questionText || "Ethical discussion prompt.";
     const question = questionText || phaseInstructions || "Provide your ethical justification for the submitted response.";
+    const caseId = caseData.caseId
+        ? `ethicapp-case-${caseData.caseId}`
+        : `ethicapp-session-${context.sessionId}-phase-${context.phaseId}`;
 
     return {
-        caseId: `ethicapp-session-${context.sessionId}-phase-${context.phaseId}`,
+        caseId,
         caseTitle: sessionTitle,
         caseText,
         question,
     };
+}
+
+async function resolveCaseData(sessionId) {
+    try {
+        const caseId = await getCaseIdBySessionId(sessionId);
+        if (!Number.isInteger(caseId) || caseId <= 0) {
+            return { caseId: null, rawText: "" };
+        }
+
+        const rawText = normalizeText(await getCaseDocumentRawText(caseId));
+        return { caseId, rawText };
+    } catch (error) {
+        console.warn("[external-services][ats] Unable to load case raw text. Falling back to session metadata.", {
+            sessionId,
+            error: normalizeText(error?.message) || "Unknown error",
+        });
+        return { caseId: null, rawText: "" };
+    }
+}
+
+function resolveQuestionTextFromPhaseDesign(phaseDesign) {
+    const questions = Array.isArray(phaseDesign?.questions) ? phaseDesign.questions : [];
+    if (questions.length === 0) {
+        return "";
+    }
+
+    for (const question of questions) {
+        const questionText = normalizeText(question?.q_text);
+        if (questionText) {
+            return questionText;
+        }
+    }
+
+    return "";
 }
 
 async function resolveQuestionText(context) {
