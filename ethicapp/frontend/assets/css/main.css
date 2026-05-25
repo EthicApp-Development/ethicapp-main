@@ -2736,6 +2736,26 @@ h2{
     color: #555;
 }
 
+.hold-button {
+    overflow: hidden;
+    position: relative;
+}
+
+.hold-progress {
+    background: rgba(255, 255, 255, 0.85);
+    bottom: 0;
+    height: 4px;
+    left: 0;
+    position: absolute;
+    transition-property: width;
+    transition-timing-function: linear;
+    width: 0%;
+}
+
+.hold-button.holding .hold-progress {
+    width: 100%;
+}
+
 .design-item-panel .design-item-actions {
     align-items: center;
     display: flex;
