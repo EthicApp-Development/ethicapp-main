@@ -1,5 +1,5 @@
-<div class="panel panel-default" ng-if="$ctrl.caseItem">
-    <div class="panel-heading case-document-viewer-heading">
+<div ng-class="$ctrl.getContainerClass()" ng-if="$ctrl.caseItem">
+    <div class="panel-heading case-document-viewer-heading" ng-if="!$ctrl.isFrameless()">
         <strong>{{ 'ethical_cases_document_viewer_title' | translate }}</strong>
         <button
             type="button"
@@ -11,7 +11,17 @@
             <span class="sr-only">{{ 'ethical_cases_document_fullscreen_open' | translate }}</span>
         </button>
     </div>
-    <div class="panel-body">
+    <div ng-class="$ctrl.getBodyClass()">
+        <div class="case-document-viewer-frameless-actions" ng-if="$ctrl.isFrameless() && $ctrl.hasRenderedImages()">
+            <button
+                type="button"
+                class="btn btn-default btn-sm case-document-fullscreen-button"
+                ng-click="$ctrl.openFullscreen()"
+                title="{{ 'ethical_cases_document_fullscreen_open' | translate }}">
+                <i class="fa fa-expand" aria-hidden="true"></i>
+                <span class="sr-only">{{ 'ethical_cases_document_fullscreen_open' | translate }}</span>
+            </button>
+        </div>
         <div class="case-document-image-scroll" ng-if="$ctrl.hasRenderedImages()">
             <div class="case-document-image-sequence">
                 <figure

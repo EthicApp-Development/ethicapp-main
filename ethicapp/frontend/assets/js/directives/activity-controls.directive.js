@@ -21,11 +21,13 @@ let activityControlsDirective = function() {
                         <div class="col-md-12 text-center">
                             <!-- Section 1: Main Actions -->
                             <div ng-if="!isFinished" class="action-buttons">
-                                <button ng-if="!isLastPhase" class="btn btn-default btn-sm" ng-click="startNextPhaseAndNotify()">
+                                <button ng-if="!isLastPhase" type="button" class="btn btn-default btn-sm hold-button" hold-to-confirm hold-ms="2500" on-confirm="startNextPhaseAndNotify()">
                                     <i class="fa-solid fa-forward text-success"></i> {{ 'start_next_phase_button' | translate }}
+                                    <span class="hold-progress" aria-hidden="true"></span>
                                 </button>
-                                <button class="btn btn-default btn-sm" ng-click="parentCtrl.endActivity()">
+                                <button type="button" class="btn btn-default btn-sm hold-button" hold-to-confirm hold-ms="2500" on-confirm="parentCtrl.endActivity()">
                                     <i class="fa-solid fa-stop-circle text-danger"></i> {{ 'end_activity_button' | translate }}
+                                    <span class="hold-progress" aria-hidden="true"></span>
                                 </button>
                             </div>
             
