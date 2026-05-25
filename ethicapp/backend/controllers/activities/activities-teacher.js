@@ -14,6 +14,57 @@ import externalServicesRegistry from "../../services/external-services.service.j
 
 const router = express.Router();
 
+router.post("/sessions", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const teacherId = req.session.uid;
+    const { name, description, type } = req.body;
+
+    if (!name || !type) {
+        return res.status(400).json({ status: "err", message: "Missing required session fields." });
+    }
+
+    try {
+        const session = await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                INSERT INTO sessions (name, descr, creator, time, status, type)
+                VALUES ($1, $2, $3, now(), 1, $4)
+                RETURNING id;
+            `,
+            sqlParams: [
+                rpg2.param("plain", name),
+                rpg2.param("plain", description || ""),
+                rpg2.param("plain", teacherId),
+                rpg2.param("plain", type),
+            ],
+        });
+
+        if (!session?.id) {
+            throw new Error("Session insert did not return an id.");
+        }
+
+        await rpg2.singleSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                INSERT INTO sesusers (sesid, uid)
+                VALUES ($1, $2);
+            `,
+            sqlParams: [
+                rpg2.param("plain", session.id),
+                rpg2.param("plain", teacherId),
+            ],
+        });
+
+        return res.status(201).json({ status: "ok", id: session.id });
+    } catch (err) {
+        console.error("Error in POST /sessions:", err);
+        return res.status(500).json({ status: "err", message: "Error creating session." });
+    }
+});
+
 router.get("/activities", async (req, res) => {
     try {
         if (!requireRole(req, res, "P")) {
@@ -67,6 +118,62 @@ router.get("/activities", async (req, res) => {
     } catch (err) {
         console.error("Error in GET /activities:", err);
         return res.status(500).json({ status: "err", error: "Error retrieving activities." });
+    }
+});
+
+router.get("/sessions/:id/users", async (req, res) => {
+    if (!requireRole(req, res, "P")) {
+        return;
+    }
+
+    const sessionId = Number(req.params.id);
+    const teacherId = req.session.uid;
+
+    if (!Number.isInteger(sessionId) || sessionId <= 0) {
+        return res.status(400).json({ error: "Invalid or missing required parameter: session id." });
+    }
+
+    try {
+        const sessionRows = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT id
+                FROM sessions
+                WHERE id = $1
+                  AND creator = $2
+            `,
+            sqlParams: [
+                rpg2.param("plain", sessionId),
+                rpg2.param("plain", teacherId),
+            ],
+        });
+
+        if (sessionRows.length === 0) {
+            return res.status(403).json({ error: "Access denied. User is not authorized for this session." });
+        }
+
+        const users = await rpg2.execSQL({
+            dbcon: config.dbconnString,
+            sql: `
+                SELECT u.id,
+                       u.name,
+                       u.mail,
+                       NULL AS aprendizaje,
+                       u.role,
+                       su.device
+                FROM users AS u
+                INNER JOIN sesusers AS su
+                    ON u.id = su.uid
+                WHERE su.sesid = $1
+                ORDER BY u.role DESC
+            `,
+            sqlParams: [rpg2.param("plain", sessionId)],
+        });
+
+        return res.status(200).json({ users });
+    } catch (err) {
+        console.error("Error in GET /sessions/:id/users:", err);
+        return res.status(500).json({ error: "Internal server error" });
     }
 });
 

@@ -25,6 +25,11 @@ const esCL = {
       usernameRequired: 'El usuario es obligatorio.',
       passwordRequired: 'La contraseña es obligatoria.',
       genericLoginError: 'No se ha podido iniciar sesión. Verifica tus credenciales.'
+    },
+    notices: {
+      accountConfirmed: 'Tu cuenta fue confirmada. Ya puedes iniciar sesión.',
+      confirmationInvalid: 'El enlace de confirmación es inválido o expiró. Usa recuperación de contraseña para solicitar uno nuevo.',
+      confirmationError: 'No fue posible confirmar tu cuenta. Usa recuperación de contraseña para solicitar un nuevo enlace.'
     }
   },
   register: {
@@ -65,7 +70,9 @@ const esCL = {
     privacyNoticePartThreeSuffix: '.',
     alreadyHaveAccount: '¿Ya tienes cuenta?',
     signInLink: 'Iniciar sesión',
-    successMessage: 'Cuenta creada correctamente. Ya puedes iniciar sesión.',
+    successMessage: 'Cuenta creada correctamente. Revisa tu correo para confirmarla antes de iniciar sesión.',
+    redirectingToLoginPrefix: 'Redirigiendo al inicio de sesión en ',
+    redirectingToLoginSuffix: ' s...',
     recoverPasswordLink: 'Recuperar contraseña',
     errors: {
       firstnameRequired: 'El nombre es obligatorio.',
@@ -94,7 +101,7 @@ const esCL = {
     submitting: 'Enviando...',
     backToLogin: 'Volver a iniciar sesión',
     successMessage:
-      'Si existe una cuenta asociada a ese correo, recibirás instrucciones para restablecer la contraseña.',
+      'Si existe una cuenta asociada a ese correo, recibirás instrucciones para restablecer la contraseña. Las cuentas pendientes se pueden activar desde ese enlace.',
     errors: {
       emailRequired: 'El correo electrónico es obligatorio.',
       emailInvalid: 'Introduce un correo electrónico válido.',
@@ -110,7 +117,7 @@ const esCL = {
     submit: 'Actualizar contraseña',
     submitting: 'Actualizando...',
     backToLogin: 'Volver a iniciar sesión',
-    successMessage: 'La contraseña se ha actualizado correctamente. Serás redirigido para iniciar sesión.',
+    successMessage: 'La contraseña se actualizó correctamente. Si tu cuenta estaba pendiente de confirmación, ya quedó activa. Serás redirigido para iniciar sesión.',
     passwordRules: {
       helpText: 'Mínimo 10 caracteres y al menos 2 símbolos.',
       minLength: 'Mínimo 10 caracteres',

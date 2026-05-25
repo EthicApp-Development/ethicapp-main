@@ -1,108 +1,135 @@
-<div ng-controller="BrowseDesignsController as bdc">
-<div class="row">
-    <div class="col-md-12 mb-2">
-        <h2><i class="fa-brands fa-space-awesome"></i> {{'launch_activity_title' | translate}}</h2>
-        <button type="button" class="btn btn-default btn-sm mb-2" ng-click="bdc.goBack()">
-            <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
-        </button>
-        <br>
+<div class="container" ng-controller="BrowseDesignsController as bdc">
+    <div class="row">
+        <div class="col-md-12">
+            <h2><i class="fa-brands fa-space-awesome"></i> {{'launch_activity_title' | translate}}</h2>
+            <button type="button" class="btn btn-default btn-sm" ng-click="bdc.goBack()">
+                <i class="fa fa-arrow-left" aria-hidden="true"></i> {{ 'go_back' | translate }}
+            </button>
+        </div>
     </div>
-</div>
-<div class="row">
-    <div class="col-md-10">
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <label>{{'step_1_prepare_activity' | translate}}</label>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="fieldset-heading-section">
+                <h3 class="fieldset-heading">{{ 'activity_new_indications_heading' | translate }}</h3>
+                <ul>
+                    <li>{{ 'activity_new_indication_choose_design' | translate }}</li>
+                    <li>{{ 'activity_new_indication_contextual_data' | translate }}</li>
+                </ul>
             </div>
-            <div class="panel-body">
-                <div class="row" ng-init="bdc.getDesigns()" style="display: none;"></div>
-                <div class="row">
-                    <div class="col-md-12" ng-if="bdc.hasFetchedUserDesigns && bdc.userDesigns.length === 0">
-                        <div class="alert alert-info">
-                            <span>{{'empty_launch_designs_message' | translate}}</span>
-                            <a href="" ng-click="navigateTo('/designs/new')">{{'empty_launch_designs_link' | translate}}</a>.
-                            <span>{{'empty_launch_designs_then_return' | translate}}</span>
-                        </div>
-                    </div>
-                    <div class="col-md-12" ng-if="bdc.userDesigns.length > 0">
-                        <p>{{'choose_design_for_new_activity' | translate}}</p>
-                        <div class="search-field-wrapper launch-activity-search-wrapper">
-                            <input
-                                class="form-control launch-activity-search search-decorated-input"
-                                type="text"
-                                placeholder="{{'search'|translate}}"
-                                ng-model="bdc.designSearchQuery"
-                                ng-change="bdc.handleDesignSearchChange()"
-                                uib-typeahead="design as bdc.formatDesignLabel(design) for design in bdc.searchUserDesigns($viewValue)"
-                                typeahead-on-select="bdc.selectDesignFromSearch($item)"
-                                typeahead-input-formatter="bdc.formatDesignLabel($model)"
-                                typeahead-min-length="1">
-                            <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
-                        </div>
-                    </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <label>{{'step_1_prepare_activity' | translate}}</label>
                 </div>
-                <div class="row" ng-if="bdc.userDesigns.length > 0">
-                    <div class="col-md-12">
-                        <p>{{'available_designs_colon' | translate}}</p>
-                        <div class="panel panel-default">
-                            <div class="panel-body">
-                                <design-item 
-                                    ng-repeat="design in bdc.userDesigns | filter:bdc.userSearch" 
-                                    design="design"
-                                    selected-design-id="bdc.selectedDesignId"
-                                    on-view="bdc.handleView" 
-                                    is-owner="true"
-                                    selection-layout="true"
-                                    on-select="bdc.handleSelectDesign">
-                                </design-item>
+                <div class="panel-body">
+                    <div class="row" ng-init="bdc.getDesigns()" style="display: none;"></div>
+                    <div class="row">
+                        <div class="col-md-12" ng-if="bdc.hasFetchedUserDesigns && bdc.getLaunchableUserDesigns().length === 0">
+                            <div class="alert alert-info">
+                                <span>{{'empty_launch_designs_message' | translate}}</span>
+                                <a href="" ng-click="navigateTo('/designs/new')">{{'empty_launch_designs_link' | translate}}</a>.
+                                <span>{{'empty_launch_designs_then_return' | translate}}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-12" ng-if="bdc.getLaunchableUserDesigns().length > 0">
+                            <p>{{'choose_design_for_new_activity' | translate}}</p>
+                            <div class="search-field-wrapper launch-activity-search-wrapper">
+                                <input
+                                    class="form-control launch-activity-search search-decorated-input"
+                                    type="text"
+                                    placeholder="{{'search_designs_placeholder'|translate}}"
+                                    ng-model="bdc.designSearchQuery"
+                                    ng-change="bdc.handleDesignSearchChange()"
+                                    uib-typeahead="design as bdc.formatDesignLabel(design) for design in bdc.searchLaunchableUserDesigns($viewValue)"
+                                    typeahead-on-select="bdc.selectDesignFromSearch($item)"
+                                    typeahead-input-formatter="bdc.formatDesignLabel($model)"
+                                    typeahead-min-length="1">
+                                <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="bdc.getLaunchableUserDesigns().length > 0">
+                        <div class="col-md-12">
+                            <p>{{'available_designs_colon' | translate}}</p>
+                            <div class="panel panel-default">
+                                <div class="panel-body">
+                                    <design-item
+                                        ng-repeat="design in bdc.getPaginatedLaunchableUserDesigns() track by design.id"
+                                        design="design"
+                                        selected-design-id="bdc.selectedDesignId"
+                                        on-view="bdc.handleView"
+                                        is-owner="true"
+                                        selection-layout="true"
+                                        on-select="bdc.handleSelectDesign">
+                                    </design-item>
+                                    <div class="resource-pagination-controls" ng-if="bdc.getLaunchableTotalPages() > 1">
+                                        <button class="btn btn-default btn-sm" ng-click="bdc.previousLaunchablePage()" ng-disabled="bdc.currentPage === 1">
+                                            <i class="fa fa-chevron-left" aria-hidden="true"></i> {{ 'pagination_previous' | translate }}
+                                        </button>
+                                        <span class="resource-pagination-status">
+                                            {{ 'pagination_page' | translate }} {{ bdc.currentPage }} / {{ bdc.getLaunchableTotalPages() }}
+                                        </span>
+                                        <button class="btn btn-default btn-sm" ng-click="bdc.nextLaunchablePage()" ng-disabled="bdc.currentPage === bdc.getLaunchableTotalPages()">
+                                            {{ 'pagination_next' | translate }} <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
+                                    <div class="alert alert-info" ng-if="bdc.getFilteredLaunchableUserDesigns().length === 0">
+                                        <span>{{ 'empty_launch_designs_search_message' | translate }}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div id="activity-launch-step" ng-controller="ActivityController as ac" class="panel panel-default"
-            ng-show="bdc.selectedDesignId != 0 && bdc.selectedDesignId != NaN">
-            <div class="panel-heading">
-                <label>{{'step_2_prepare_activity' | translate}}</label>
-            </div>                
-            <div class="panel-body">
-                <form ng-submit="ac.createSession(bdc.selectedDesignId)">                    
-                    <div class="form-group">
-                        <p>{{'provide_activity_description' | translate}}</p>
-                        <input
-                            id="activity-description-input"
-                            type="text"
-                            class="form-control launch-activity-description"
-                            ng-model="ac.activityDescription" />
-                    </div>
-                    <div class="row">
-                        <div class="col-lg-6">
-                            <button class="btn btn-primary" ng-disabled="bdc.selectedDesignId == 0 && bdc.selectedDesignId != NaN">
-                                {{'launch_the_activity' | translate}}
-                            </button>
+
+            <div id="activity-launch-step"
+                ng-controller="ActivityController as ac"
+                class="panel panel-default"
+                ng-show="bdc.selectedDesignId != 0 && bdc.selectedDesignId != NaN">
+                <div class="panel-heading">
+                    <label>{{'step_2_prepare_activity' | translate}}</label>
+                </div>
+                <div class="panel-body">
+                    <form ng-submit="ac.createSession(bdc.selectedDesignId)">
+                        <div class="form-group">
+                            <p>{{'provide_activity_description' | translate}}</p>
+                            <input
+                                id="activity-description-input"
+                                type="text"
+                                class="form-control launch-activity-description"
+                                ng-model="ac.activityDescription" />
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-lg-6 loading-container" ng-show="showSpinner">
-                            <i class="fa fa-spinner fa-spin"></i>
-                            <p>{{ 'preparing_dashboard' | translate }}</p>
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <button class="btn btn-primary" ng-disabled="bdc.selectedDesignId == 0 && bdc.selectedDesignId != NaN">
+                                    {{'launch_the_activity' | translate}}
+                                </button>
+                            </div>
                         </div>
-                    </div>                                        
-                    <div class="row" ng-show="error">
-                        <div class="col-lg-6">
-                            <h4 style="color:red; text-align: center; ">
-                                <strong>
-                                    {{ 'faulty_design' | translate }}
-                                </strong>
-                            </h4>
+                        <div class="row">
+                            <div class="col-lg-6 loading-container" ng-show="showSpinner">
+                                <i class="fa fa-spinner fa-spin"></i>
+                                <p>{{ 'preparing_dashboard' | translate }}</p>
+                            </div>
                         </div>
-                    </div>
-                </form>
+                        <div class="row" ng-show="error">
+                            <div class="col-lg-6">
+                                <h4 style="color:red; text-align: center; ">
+                                    <strong>
+                                        {{ 'faulty_design' | translate }}
+                                    </strong>
+                                </h4>
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-2">
-    </div>
-</div>
 </div>

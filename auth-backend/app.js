@@ -108,7 +108,7 @@ passport.deserializeUser(async function deserializeUser(id, done) {
   try {
     const user = await userService.findById(id);
 
-    if (!user) {
+    if (!user || !user.isActive) {
       return done(null, false);
     }
 

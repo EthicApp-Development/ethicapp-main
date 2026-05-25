@@ -21,15 +21,29 @@ async function fetchCanonicalDesigns(pool, designIds) {
             SELECT d.id AS design_id,
                    d.creator,
                    d.design,
-                   d.public,
+                   (d.visibility = 'public') AS public,
+                   d.visibility,
                    d.locked,
+                   d.license_code AS design_license_code,
+                   d.attribution_text AS design_attribution_text,
+                   d.language_code AS design_language_code,
+                   COALESCE(d.archived, false) AS design_archived,
                    u.mail AS owner_email,
                    c.id AS case_id,
                    c.title AS case_title,
                    c.author_firstname,
                    c.author_lastname,
                    c.author_email,
-                   c.pdf_path
+                   c.pdf_path,
+                   c.visibility AS case_visibility,
+                   c.license_code AS case_license_code,
+                   c.attribution_text AS case_attribution_text,
+                   c.rights_status AS case_rights_status,
+                   c.license_notes AS case_license_notes,
+                   c.permission_statement AS case_permission_statement,
+                   c.commercial_source AS case_commercial_source,
+                   c.language_code AS case_language_code,
+                   COALESCE(c.archived, false) AS case_archived
             FROM designs AS d
             INNER JOIN users AS u
                 ON u.id = d.creator
@@ -63,7 +77,12 @@ async function buildActivityEntry(row, usedKeys, assetsDir) {
         ownerEmail: row.owner_email,
         title,
         public: row.public === true,
+        visibility: row.visibility || (row.public === true ? "public" : "private"),
         locked: row.locked === true,
+        licenseCode: row.design_license_code || "CC-BY-SA-4.0",
+        attributionText: row.design_attribution_text || null,
+        languageCode: row.design_language_code || row.case_language_code || "es_CL",
+        archived: row.design_archived === true,
         design: row.design,
     };
 
@@ -87,6 +106,15 @@ async function buildActivityEntry(row, usedKeys, assetsDir) {
             authorEmail: row.author_email,
             pdfAsset: copied ? `assets/${assetName}` : null,
             sourcePdfPath: row.pdf_path,
+            visibility: row.case_visibility || (row.public === true ? "public" : "private"),
+            licenseCode: row.case_license_code || "CC-BY-NC-SA-4.0",
+            attributionText: row.case_attribution_text || null,
+            rightsStatus: row.case_rights_status || "open_license",
+            licenseNotes: row.case_license_notes || null,
+            permissionStatement: row.case_permission_statement || null,
+            commercialSource: row.case_commercial_source || null,
+            languageCode: row.case_language_code || "es_CL",
+            archived: row.case_archived === true,
         };
     }
 

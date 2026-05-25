@@ -15,27 +15,39 @@
     </div>
     <hr>
     <h4>{{ 'questions_title_text' | translate }}</h4>
-    <table class="table table-striped">
+    <table class="table table-striped dashboard-phase-questions-table">
         <thead>
             <tr>
-                <th>{{ 'question_text_label' | translate }}</th>
-                <th>{{ 'left_pole_label' | translate }}</th>
-                <th>{{ 'right_pole_label' | translate }}</th>
-                <th>{{ 'range_label' | translate }}</th>
-                <th>{{ 'justification_required_label' | translate }}</th>
-                <th>{{ 'min_words_label' | translate }}</th>
+                <th class="dashboard-phase-question-text-col">{{ 'question_text_label' | translate }}</th>
+                <th class="dashboard-phase-left-pole-col">{{ 'left_pole_label' | translate }}</th>
+                <th class="dashboard-phase-right-pole-col">{{ 'right_pole_label' | translate }}</th>
+                <th class="dashboard-phase-range-col">
+                    <span class="dashboard-phase-full-header">{{ 'range_label' | translate }}</span>
+                    <span class="dashboard-phase-mobile-header">R</span>
+                </th>
+                <th class="dashboard-phase-justification-col">
+                    <span class="dashboard-phase-full-header">{{ 'justification_required_label' | translate }}</span>
+                    <span class="dashboard-phase-mobile-header">JR</span>
+                </th>
+                <th class="dashboard-phase-min-words-col">
+                    <span class="dashboard-phase-full-header">{{ 'min_words_label' | translate }}</span>
+                    <span class="dashboard-phase-mobile-header">WM</span>
+                </th>
             </tr>
         </thead>
         <tbody>
             <tr ng-repeat="question in ctrl.phaseQuestions">
-                <td>{{ question.text }}</td>
-                <td>{{ question.leftPole }}</td>
-                <td>{{ question.rightPole }}</td>
-                <td>1-{{ question.range }}</td>
-                <td>{{ question.justificationRequired ? ('yes_label' | translate) : ('no_label' | translate) }}</td>
-                <td>{{ question.minJustificationLength }}</td>
+                <td class="dashboard-phase-question-text-col">{{ question.text }}</td>
+                <td class="dashboard-phase-left-pole-col">{{ question.leftPole }}</td>
+                <td class="dashboard-phase-right-pole-col">{{ question.rightPole }}</td>
+                <td class="dashboard-phase-range-col">1-{{ question.range }}</td>
+                <td class="dashboard-phase-justification-col">{{ question.justificationRequired ? ('yes_label' | translate) : ('no_label' | translate) }}</td>
+                <td class="dashboard-phase-min-words-col">{{ question.minJustificationLength }}</td>
             </tr>
         </tbody>
     </table>
+    <div class="dashboard-phase-questions-mobile-legend">
+        *{{ 'dashboard_questions_mobile_legend' | translate }}
+    </div>
     <hr>
 </div>

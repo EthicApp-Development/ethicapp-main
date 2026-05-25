@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import PasswordField from './PasswordField';
 import TextField from '../common/TextField';
@@ -19,8 +19,10 @@ function RegisterForm() {
   const [serverError, setServerError] = useState('');
   const [showPasswordRecoveryLink, setShowPasswordRecoveryLink] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [redirectCountdown, setRedirectCountdown] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recaptchaResetCounter, setRecaptchaResetCounter] = useState(0);
+  const successAlertRef = useRef(null);
 
   const genderOptions = [
     { value: 'F', label: t('register.genderOptions.female') },
@@ -38,6 +40,35 @@ function RegisterForm() {
     };
   }, [draft.password]);
 
+  useEffect(() => {
+    if (!successMessage || !successAlertRef.current) {
+      return;
+    }
+
+    successAlertRef.current.focus({ preventScroll: true });
+    successAlertRef.current.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (redirectCountdown === null) {
+      return undefined;
+    }
+
+    if (redirectCountdown <= 0) {
+      navigate('/login', { replace: true });
+      return undefined;
+    }
+
+    const countdownTimer = window.setTimeout(() => {
+      setRedirectCountdown((current) => (current === null ? null : current - 1));
+    }, 1000);
+
+    return () => window.clearTimeout(countdownTimer);
+  }, [navigate, redirectCountdown]);
+
   function handleChange(event) {
     const { name, type, value, checked } = event.target;
 
@@ -54,6 +85,7 @@ function RegisterForm() {
     setServerError('');
     setShowPasswordRecoveryLink(false);
     setSuccessMessage('');
+    setRedirectCountdown(null);
   }
 
   function isValidEmail(email) {
@@ -116,6 +148,7 @@ function RegisterForm() {
     setServerError('');
     setShowPasswordRecoveryLink(false);
     setSuccessMessage('');
+    setRedirectCountdown(null);
 
     if (Object.keys(validationErrors).length > 0) {
       return;
@@ -138,10 +171,7 @@ function RegisterForm() {
 
       clearDraft();
       setSuccessMessage(t('register.successMessage'));
-
-      setTimeout(() => {
-        navigate('/login', { replace: true });
-      }, 1200);
+      setRedirectCountdown(10);
     } catch (error) {
       const responseData = error?.response?.data || {};
       const isEmailAlreadyRegistered = responseData.code === 'email_already_registered';
@@ -175,8 +205,20 @@ function RegisterForm() {
       ) : null}
 
       {successMessage ? (
-        <div className="alert alert-success auth-alert" role="alert">
-          {successMessage}
+        <div
+          ref={successAlertRef}
+          className="alert alert-success auth-alert"
+          role="alert"
+          tabIndex="-1"
+        >
+          <p className="mb-1">{successMessage}</p>
+          {redirectCountdown !== null ? (
+            <p className="mb-0">
+              {t('register.redirectingToLoginPrefix')}
+              {redirectCountdown}
+              {t('register.redirectingToLoginSuffix')}
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -287,7 +329,7 @@ function RegisterForm() {
         <button
           type="submit"
           className="btn btn-primary btn-lg auth-btn-block"
-          disabled={isSubmitting}
+          disabled={isSubmitting || redirectCountdown !== null}
         >
           {isSubmitting ? (
             <span className="auth-spinner-gap">

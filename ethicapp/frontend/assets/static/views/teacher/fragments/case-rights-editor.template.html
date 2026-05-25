@@ -1,0 +1,91 @@
+<div>
+    <p class="help-block" ng-if="$ctrl.isReadonly">
+        <i class="fa-solid fa-lock text-muted"
+            tooltip="{{ 'case_rights_locked_tooltip' | translate }}"
+            title="{{ 'case_rights_locked_tooltip' | translate }}"
+            aria-hidden="true"></i>
+        {{ 'case_rights_locked_readonly' | translate }}
+    </p>
+
+    <div class="form-group case-form-field">
+        <label for="caseRightsStatus">{{ 'rights_status' | translate }} <span class="text-danger" aria-hidden="true">*</span></label>
+        <select
+            id="caseRightsStatus"
+            name="rightsStatus"
+            class="form-control"
+            ng-model="$ctrl.formModel.rightsStatus"
+            ng-options="option.value as (option.labelKey | translate) for option in $ctrl.rightsStatusOptions"
+            ng-change="$ctrl.syncRightsDefaults()"
+            ng-class="{'input-warning': $ctrl.shouldShowError($ctrl.formCtrl.rightsStatus)}"
+            ng-disabled="$ctrl.isReadonly"
+            required>
+        </select>
+        <p class="help-block text-danger" ng-if="$ctrl.shouldShowError($ctrl.formCtrl.rightsStatus)">
+            {{ 'ethical_cases_validation_required' | translate }}
+        </p>
+    </div>
+
+    <div class="form-group case-form-field">
+        <label for="caseLicense">{{ 'license' | translate }} <span class="text-danger" aria-hidden="true">*</span></label>
+        <select
+            id="caseLicense"
+            name="licenseCode"
+            class="form-control"
+            ng-model="$ctrl.formModel.licenseCode"
+            ng-options="license.code as license.name for license in $ctrl.licenses"
+            ng-class="{'input-warning': $ctrl.shouldShowError($ctrl.formCtrl.licenseCode)}"
+            ng-disabled="$ctrl.isReadonly"
+            required>
+        </select>
+        <p class="help-block text-danger" ng-if="$ctrl.shouldShowError($ctrl.formCtrl.licenseCode)">
+            {{ 'ethical_cases_validation_required' | translate }}
+        </p>
+    </div>
+
+    <div class="form-group case-form-field">
+        <label for="caseAttributionText">{{ 'attribution_text' | translate }}</label>
+        <textarea
+            id="caseAttributionText"
+            name="attributionText"
+            class="form-control"
+            rows="2"
+            ng-readonly="$ctrl.isReadonly"
+            ng-model="$ctrl.formModel.attributionText">
+        </textarea>
+    </div>
+
+    <div class="form-group case-form-field">
+        <label for="caseLicenseNotes">{{ 'license_notes' | translate }}</label>
+        <textarea
+            id="caseLicenseNotes"
+            name="licenseNotes"
+            class="form-control"
+            rows="2"
+            ng-readonly="$ctrl.isReadonly"
+            ng-model="$ctrl.formModel.licenseNotes">
+        </textarea>
+    </div>
+
+    <div class="form-group case-form-field" ng-if="$ctrl.formModel.rightsStatus === 'used_with_permission'">
+        <label for="casePermissionStatement">{{ 'permission_statement' | translate }}</label>
+        <textarea
+            id="casePermissionStatement"
+            name="permissionStatement"
+            class="form-control"
+            rows="3"
+            ng-readonly="$ctrl.isReadonly"
+            ng-model="$ctrl.formModel.permissionStatement">
+        </textarea>
+    </div>
+
+    <div class="form-group case-form-field" ng-if="$ctrl.formModel.rightsStatus === 'commercial_license'">
+        <label for="caseCommercialSource">{{ 'commercial_source' | translate }}</label>
+        <input
+            id="caseCommercialSource"
+            type="text"
+            name="commercialSource"
+            class="form-control"
+            ng-readonly="$ctrl.isReadonly"
+            ng-model="$ctrl.formModel.commercialSource">
+    </div>
+</div>

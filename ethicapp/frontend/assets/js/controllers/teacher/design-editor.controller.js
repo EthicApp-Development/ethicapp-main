@@ -3,7 +3,8 @@ import * as phaseValidationHelpers from "../../helpers/phase-validation-helpers.
 import accordionStateHelpers from "../../helpers/accordeon-state-helpers.js"
 
 export function DesignEditorController($scope, $translate, $timeout,
-    $routeParams, DesignStateService, DesignCatalogService, CasesCatalogService, ExternalServicesCatalogService, toast) {
+    $routeParams, DesignStateService, DesignCatalogService, CasesCatalogService,
+    LanguageCatalogService, ExternalServicesCatalogService, toast) {
 
     const vm = this;
     vm.designId = 0;
@@ -16,8 +17,11 @@ export function DesignEditorController($scope, $translate, $timeout,
     };
     vm.associatedCase = null;
     vm.externalServices = [];
+    vm.languages = [];
     
     vm.init = async function() {
+        vm.languages = await LanguageCatalogService.getLanguages();
+
         // Retrieve the design from the route path
         if ($routeParams.id !== undefined) {
 
@@ -30,7 +34,12 @@ export function DesignEditorController($scope, $translate, $timeout,
             if (designObj === null) {
                 console.error("[DesignEditorController::init] Design not found.");
                 $scope.navigateTo("/error/404/2");
+                return;
             }
+
+            vm.design.tags = Array.isArray(vm.design.tags) ? vm.design.tags : [];
+            vm.design.languageCode = vm.design.languageCode ||
+                LanguageCatalogService.getDefaultLanguageCode(vm.languages, "en_US");
 
             // Ensure the design is properly digested
             $scope.$applyAsync(() => {
@@ -81,26 +90,19 @@ export function DesignEditorController($scope, $translate, $timeout,
         }
     };
 
-    vm.searchCases = async function(query) {
-        return CasesCatalogService.searchCases(query);
-    };
-
     vm.selectCase = function(caseItem) {
         if (!caseItem) {
             vm.design.caseId = null;
             vm.associatedCase = null;
-            vm.selectedCase = "";
             return;
         }
         vm.design.caseId = caseItem.id;
         vm.associatedCase = caseItem;
-        vm.selectedCase = vm.formatCaseLabel(caseItem);
     };
 
     vm.clearAssociatedCase = function() {
         vm.design.caseId = null;
         vm.associatedCase = null;
-        vm.selectedCase = "";
     };
 
     vm.formatCaseLabel = function(caseItem) {
@@ -267,7 +269,7 @@ export function DesignEditorController($scope, $translate, $timeout,
         }
     };
 
-    vm.handleValidationResult = function (result) {    
+    vm.handleValidationResult = function (result) {
         const { type, context, messages } = result;
         
         // Handle global errors

@@ -22,6 +22,11 @@ const forgotPasswordSubjects = {
   en_US: 'Password reset'
 };
 
+const accountConfirmationSubjects = {
+  es_CL: 'Confirma tu cuenta de EthicApp',
+  en_US: 'Confirm your EthicApp account'
+};
+
 function ensureSmtpConfig() {
   if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS || !SMTP_FROM) {
     throw new Error(
@@ -53,6 +58,14 @@ function buildResetUrl(rawToken) {
   return `${normalizedBaseUrl}/reset-password?token=${encodeURIComponent(rawToken)}`;
 }
 
+function buildAccountConfirmationUrl(rawToken) {
+  const normalizedBaseUrl = AUTH_PUBLIC_URL.endsWith('/')
+    ? AUTH_PUBLIC_URL.slice(0, -1)
+    : AUTH_PUBLIC_URL;
+
+  return `${normalizedBaseUrl}/api/auth/confirm-account/${encodeURIComponent(rawToken)}`;
+}
+
 function createTransporter() {
   ensureSmtpConfig();
 
@@ -70,6 +83,14 @@ function createTransporter() {
 async function renderForgotPasswordHtml({ preferredLocale, templateData }) {
   const resolvedLocale = resolvePreferredLocale(preferredLocale);
   const templateFileName = `forgot-password.${resolvedLocale}.ejs`;
+  const templatePath = path.join(EMAIL_TEMPLATES_PATH, templateFileName);
+
+  return ejs.renderFile(templatePath, templateData);
+}
+
+async function renderAccountConfirmationHtml({ preferredLocale, templateData }) {
+  const resolvedLocale = resolvePreferredLocale(preferredLocale);
+  const templateFileName = `account-confirmation.${resolvedLocale}.ejs`;
   const templatePath = path.join(EMAIL_TEMPLATES_PATH, templateFileName);
 
   return ejs.renderFile(templatePath, templateData);
@@ -101,16 +122,46 @@ async function sendPasswordResetEmail({ to, rawToken, preferredLocale }) {
   };
 }
 
+async function sendAccountConfirmationEmail({ to, rawToken, preferredLocale }) {
+  const resolvedLocale = resolvePreferredLocale(preferredLocale);
+  const confirmationUrl = buildAccountConfirmationUrl(rawToken);
+  const html = await renderAccountConfirmationHtml({
+    preferredLocale: resolvedLocale,
+    templateData: {
+      confirmationUrl,
+      confirmationTokenTtlMinutes: RESET_TOKEN_TTL_MINUTES
+    }
+  });
+
+  const transporter = createTransporter();
+
+  await transporter.sendMail({
+    from: SMTP_FROM,
+    to,
+    subject: accountConfirmationSubjects[resolvedLocale],
+    html
+  });
+
+  return {
+    confirmationUrl,
+    preferredLocale: resolvedLocale
+  };
+}
+
 const mailService = {
   sendPasswordResetEmail,
+  sendAccountConfirmationEmail,
   buildResetUrl,
+  buildAccountConfirmationUrl,
   normalizePreferredLocale,
   resolvePreferredLocale
 };
 
 export {
   sendPasswordResetEmail,
+  sendAccountConfirmationEmail,
   buildResetUrl,
+  buildAccountConfirmationUrl,
   normalizePreferredLocale,
   resolvePreferredLocale
 };
