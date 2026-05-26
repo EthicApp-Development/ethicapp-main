@@ -36,6 +36,21 @@ async function getTeamIdsForPhase(phaseId) {
     return rows.map(row => Number(row.team_id));
 }
 
+async function getFirstQuestionIdForPhase(phaseId) {
+    const rows = await rpg2.execSQL({
+        sql: `
+            SELECT d.id AS question_id
+            FROM differential AS d
+            WHERE d.stageid = $1
+            ORDER BY d.orden, d.id
+            LIMIT 1
+        `,
+        dbcon: config.dbconnString,
+        sqlParams: [rpg2.param("plain", phaseId)],
+    });
+    return rows.length > 0 ? Number(rows[0].question_id) : null;
+}
+
 export async function register({ service, subscribe, publishGroupChatMessage }) {
     const phaseRooms = new Map();
     const roomContext = new Map();
@@ -156,6 +171,7 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
         }
 
         const teamIds = await getTeamIdsForPhase(phaseId);
+        const questionId = await getFirstQuestionIdForPhase(phaseId);
         const createdRooms = new Set();
 
         if (teamIds.length > 0) {
@@ -165,7 +181,7 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
                 const created = await ensurePolyadicSession(roomName, prompt);
                 if (created) {
                     createdRooms.add(roomName);
-                    registerRoomContext(roomName, sessionId, phaseId, groupId, null);
+                    registerRoomContext(roomName, sessionId, phaseId, groupId, questionId);
                 }
             }
         } else {
@@ -290,7 +306,7 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
         const ctx = roomContext.get(roomName) || parseRoomName(roomName);
 
         if (!ctx) {
-            console.warn(`[polyadic-bridge] Cannot resolve context for room ${roomName}.`);
+            console.warn(`[polyadic-bridge] Cannot resolve context for room ${roomName}. Known rooms: [${[...roomContext.keys()].join(', ')}]`);
             await callback({
                 serviceId: service.id,
                 hook: "external-service-result",
@@ -298,6 +314,13 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
                 payload: { reason: "unknown_room", room: roomName },
             });
             return;
+        }
+
+        if (ctx.questionId == null) {
+            ctx.questionId = await getFirstQuestionIdForPhase(ctx.phaseId);
+            if (ctx.questionId == null) {
+                console.warn(`[polyadic-bridge] Cannot resolve questionId for phase ${ctx.phaseId} in room ${roomName}.`);
+            }
         }
 
         for (const r of evaluations) {
