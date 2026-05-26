@@ -72,9 +72,6 @@ export default function ExternalServiceResultPanel({ results, t, onDismiss }) {
             <div className="d-flex justify-content-between gap-3 align-items-start mb-2">
               <div>
                 <h2 className="h6 mb-1">{result.component?.title || t('sessionDetail.externalResultTitle')}</h2>
-                <p className="text-secondary small mb-0">
-                  {result.serviceId ? `${t('sessionDetail.externalResultService')}: ${result.serviceId}` : null}
-                </p>
               </div>
               <button
                 className="btn btn-outline-secondary btn-sm"

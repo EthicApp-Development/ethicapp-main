@@ -43,6 +43,7 @@ export default function ActivityPage() {
   const [externalServiceResults, setExternalServiceResults] = useState([]);
   const [groupIdByPhaseId, setGroupIdByPhaseId] = useState({});
   const [groupContextByPhaseId, setGroupContextByPhaseId] = useState({});
+  const [atsPendingByPhaseId, setAtsPendingByPhaseId] = useState({});
   const lastAutoSelectedPhaseIdRef = useRef(null);
   const currentGroupIdRef = useRef(null);
   const currentPhaseIdRef = useRef(null);
@@ -106,6 +107,10 @@ export default function ActivityPage() {
   }, [selectedSessionId]);
 
   useEffect(() => {
+    setAtsPendingByPhaseId({});
+  }, [selectedSessionId]);
+
+  useEffect(() => {
     if (!session.isAuthenticated || !selectedSession) {
       dispatch({ type: 'DESCRIPTOR_CLEAR' });
       return;
@@ -150,6 +155,18 @@ export default function ActivityPage() {
   const isSessionFinished = activityStatusCode === SESSION_STATUS.finished;
 
   const handleExternalServiceResult = useCallback((payload) => {
+    const serviceId = String(payload?.serviceId || '').trim();
+    const payloadPhaseId = Number(payload?.phaseId);
+    if (serviceId === 'argumentation-tutor-system' && Number.isInteger(payloadPhaseId) && payloadPhaseId > 0) {
+      setAtsPendingByPhaseId((previous) => {
+        const current = Number(previous[payloadPhaseId]) || 0;
+        return {
+          ...previous,
+          [payloadPhaseId]: Math.max(0, current - 1)
+        };
+      });
+    }
+
     setExternalServiceResults((previousResults) => [
       {
         id: payload?.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -304,6 +321,43 @@ export default function ActivityPage() {
     });
   }, [activityState, groupContextByPhaseId, groupIdByPhaseId]);
 
+  const atsEnabledByPhaseId = useMemo(() => {
+    const design = activityState?.descriptor?.design || localState.activityDescriptor?.design;
+    const designPhases = Array.isArray(design?.phases) ? design.phases : [];
+    const enabledByPhaseId = {};
+
+    phaseTabs.forEach((phase) => {
+      const phaseId = Number(phase?.id);
+      const phaseNumber = Number(phase?.number);
+      if (!Number.isInteger(phaseId) || phaseId <= 0 || !Number.isInteger(phaseNumber) || phaseNumber <= 0) {
+        return;
+      }
+
+      const phaseDesign = designPhases[phaseNumber - 1];
+      const enabledServiceIds = Array.isArray(phaseDesign?.externalServices?.enabledServiceIds)
+        ? phaseDesign.externalServices.enabledServiceIds
+        : [];
+
+      enabledByPhaseId[phaseId] = enabledServiceIds.includes('argumentation-tutor-system');
+    });
+
+    return enabledByPhaseId;
+  }, [activityState?.descriptor?.design, localState.activityDescriptor?.design, phaseTabs]);
+
+  const atsProcessingByPhaseId = useMemo(() => {
+    const processingByPhaseId = {};
+    Object.entries(atsPendingByPhaseId).forEach(([phaseIdRaw, pendingCount]) => {
+      const phaseId = Number(phaseIdRaw);
+      if (!Number.isInteger(phaseId) || phaseId <= 0) {
+        return;
+      }
+
+      processingByPhaseId[phaseId] = Number(pendingCount) > 0;
+    });
+
+    return processingByPhaseId;
+  }, [atsPendingByPhaseId]);
+
   const currentPhaseNumber = activityState?.descriptor?.currentPhaseNumber ?? null;
   const currentPhaseId = activityState?.descriptor?.currentPhaseId ?? null;
   const designType = activityState?.descriptor?.design?.type ?? localState.activityDescriptor?.design?.type ?? '';
@@ -375,7 +429,22 @@ export default function ActivityPage() {
     selectedSessionId,
     submitActivityResponse,
     loadFullState,
-    userId: session.uid
+    userId: session.uid,
+    onResponseAccepted: ({ responsePayload }) => {
+      const phaseId = Number(responsePayload?.phaseId);
+      if (!Number.isInteger(phaseId) || phaseId <= 0) {
+        return;
+      }
+
+      if (!atsEnabledByPhaseId[phaseId]) {
+        return;
+      }
+
+      setAtsPendingByPhaseId((previous) => ({
+        ...previous,
+        [phaseId]: (Number(previous[phaseId]) || 0) + 1
+      }));
+    }
   });
 
   return (
@@ -452,6 +521,8 @@ export default function ActivityPage() {
                     isSessionFinished={isSessionFinished}
                     onSubmitPhaseResponse={onSubmitPhaseResponse}
                     chatRefreshTokenByPhaseId={chatRefreshTokenByPhaseId}
+                    atsEnabledByPhaseId={atsEnabledByPhaseId}
+                    atsProcessingByPhaseId={atsProcessingByPhaseId}
                     userId={session.uid}
                   />
                   <ExternalServiceResultPanel

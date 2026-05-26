@@ -123,6 +123,7 @@ const enUS = {
     responseSubmitError: 'Unable to submit your response.',
     responseSelectScaleFirst: 'Select a scale value before submitting.',
     responseCooldown: 'Please wait before submitting this question again.',
+    atsProcessing: 'The argument tutor is processing your response...',
     externalResultTitle: 'External service result',
     externalResultService: 'Service',
     externalResultLoading: 'Loading result component...',

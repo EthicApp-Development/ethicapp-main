@@ -337,7 +337,7 @@ router.post("/activities/:session_id/phase_transition", async (req, res) => {
         return;
     }
     const sessionId = Number(req.params.session_id);
-    const phaseId = Number(req.body.phaseId);
+    const phaseId = Number(req.body.phaseId || req.body.phase_id);
 
     if (!sessionId || !phaseId) {
         return res.status(400).json({ error: "Missing required parameters: session_id or phase_id." });
@@ -607,6 +607,7 @@ router.post("/activities/:session_id/phases", async (req, res) => {
 
         res.status(201).json({
             status: "ok",
+            id: result[0].id,
             phaseId: result[0].id,
             message: "Phase added successfully.",
         });

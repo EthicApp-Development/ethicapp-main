@@ -46,6 +46,8 @@ services:
         condition: service_started
       external-mock-service:
         condition: service_started
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   external-mock-service:
     build:

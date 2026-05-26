@@ -67,6 +67,131 @@ body {
   font-size: 0.95rem;
 }
 
+.ats-feedback-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.ats-feedback-compact__summary {
+  margin: 0;
+  color: #1f2937;
+}
+
+.ats-feedback-compact__criteria {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.ats-feedback-compact__criteria-pill {
+  display: inline-flex;
+  gap: 0.3rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  background: #e8eefc;
+  color: #1e3a8a;
+  font-size: 0.85rem;
+}
+
+.ats-feedback-compact__section-title {
+  margin: 0 0 0.45rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.ats-feedback-compact__score-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.5rem;
+}
+
+.ats-feedback-compact__score-item {
+  border: 1px solid #dbe2f5;
+  border-radius: 0.6rem;
+  background: #fff;
+  padding: 0.5rem 0.6rem;
+}
+
+.ats-feedback-compact__score-label {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.ats-feedback-compact__score-values {
+  margin-top: 0.15rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ats-feedback-compact__score-arrow {
+  font-weight: 600;
+  color: #64748b;
+}
+
+.ats-feedback-compact__delta {
+  margin-top: 0.2rem;
+  display: inline-block;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+}
+
+.ats-feedback-compact__delta--up {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.ats-feedback-compact__delta--down {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.ats-feedback-compact__delta--neutral {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.ats-feedback-compact__arguments {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.5rem;
+}
+
+.ats-feedback-compact__argument-card {
+  border: 1px solid #dbe2f5;
+  border-radius: 0.6rem;
+  background: #fff;
+  padding: 0.55rem 0.65rem;
+}
+
+.ats-feedback-compact__argument-card h4 {
+  margin: 0 0 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.ats-feedback-compact__argument-card p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #0f172a;
+}
+
+.ats-feedback-compact__bullets {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.ats-feedback-compact__bullets li {
+  margin-bottom: 0.2rem;
+}
+
 .case-document-image-scroll {
   height: clamp(22rem, calc(100vh - 12rem), 52rem);
   height: clamp(22rem, calc(100dvh - 12rem), 52rem);

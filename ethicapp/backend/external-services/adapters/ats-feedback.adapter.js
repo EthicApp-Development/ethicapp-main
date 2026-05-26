@@ -1,4 +1,4 @@
-import * as config from "../../config/config.js";
+import * as config from "../../config/database.config.js";
 import * as rpg2 from "../../db/rest-pg-2.js";
 import { getPhaseDesignByPhaseId } from "../../helpers/designs-helper.js";
 import { getCaseIdBySessionId } from "../../helpers/sessions-helper.js";
@@ -459,6 +459,7 @@ async function submitArgumentToAts(context, responseText, groupId) {
         atsSessionId,
         taskId,
         mode: "arguments",
+        revisedArgumentPreview: responseText,
     };
 }
 
@@ -499,6 +500,8 @@ async function submitArgumentComparisonToAts(context, responseText, groupId) {
             atsSessionId,
             taskId,
             mode: "compare",
+            initialArgumentPreview: normalizeText(response?.initial_argument_preview),
+            revisedArgumentPreview: responseText,
         };
     } catch (error) {
         if (!isMissingPreviousAnalysisError(error)) {
@@ -604,21 +607,87 @@ function normalizeBulletsFromAts(parsedResult) {
     return ["The argument was processed successfully by the external tutor."];
 }
 
-function buildFeedbackPayloadFromAtsStatus(statusResponse, context) {
+function normalizeScore(value) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+}
+
+function extractComparisonData(parsedResult, submissionMeta = {}) {
+    const initialScores = parsedResult?.initial_scores && typeof parsedResult.initial_scores === "object"
+        ? parsedResult.initial_scores
+        : null;
+    const revisedScores = parsedResult?.revised_scores && typeof parsedResult.revised_scores === "object"
+        ? parsedResult.revised_scores
+        : null;
+
+    if (!initialScores || !revisedScores) {
+        return null;
+    }
+
+    const improvementsSource = parsedResult?.improvements && typeof parsedResult.improvements === "object"
+        ? parsedResult.improvements
+        : {};
+
+    const normalizePair = (key) => {
+        const initial = normalizeScore(initialScores[key]);
+        const revised = normalizeScore(revisedScores[key]);
+        const improvement = normalizeScore(improvementsSource[key]);
+        return {
+            initial,
+            revised,
+            delta: improvement ?? (
+                Number.isFinite(initial) && Number.isFinite(revised)
+                    ? revised - initial
+                    : null
+            ),
+        };
+    };
+
+    return {
+        initialArgument: normalizeText(
+            parsedResult?.original_argument
+            || parsedResult?.initial_argument
+            || submissionMeta?.initialArgumentPreview
+        ),
+        revisedArgument: normalizeText(
+            parsedResult?.revised_argument
+            || submissionMeta?.revisedArgumentPreview
+        ),
+        scores: {
+            claim: normalizePair("claim"),
+            evidence: normalizePair("evidence"),
+            warrant: normalizePair("warrant"),
+            qualifier: normalizePair("qualifier"),
+        },
+    };
+}
+
+function buildFeedbackPayloadFromAtsStatus(statusResponse, context, submissionMeta = {}) {
     const rawMessage = statusResponse?.message;
     const parsedResult = typeof rawMessage === "string" ? safeJsonParse(rawMessage) : rawMessage;
 
     const criteria = normalizeCriteriaFromAts(parsedResult);
     const bullets = normalizeBulletsFromAts(parsedResult);
     const summary = normalizeText(parsedResult?.analysis) || "Argument feedback is now available.";
+    const comparison = extractComparisonData(parsedResult, submissionMeta);
+    const mode = comparison || submissionMeta?.mode === "compare" ? "comparison" : "analysis";
+    const argumentPreview = normalizeText(
+        parsedResult?.original_argument
+        || parsedResult?.revised_argument
+        || submissionMeta?.revisedArgumentPreview
+        || submissionMeta?.initialArgumentPreview
+    );
 
     return {
         version: "1",
         source: "argumentation-tutor-system",
         title: "Argument Tutor Feedback",
         summary,
+        mode,
         criteria,
         bullets,
+        argumentPreview,
+        comparison,
         meta: {
             sessionId: context.sessionId,
             phaseId: context.phaseId,
@@ -635,12 +704,15 @@ function buildFeedbackPayloadFromExternalResult(requestPayload, fallbackContext)
 
     const criteria = Array.isArray(input.criteria) ? input.criteria : [];
     const bullets = Array.isArray(input.bullets) ? input.bullets : [];
+    const mode = normalizeText(input.mode) || "analysis";
+    const comparison = input?.comparison && typeof input.comparison === "object" ? input.comparison : null;
 
     return {
         version: "1",
         source: "argumentation-tutor-system",
         title: normalizeText(input.title) || "Argument Tutor Feedback",
         summary: normalizeText(input.summary) || normalizeText(payloadRoot.message) || "Argument feedback is now available.",
+        mode,
         criteria: criteria
             .map(item => ({
                 key: normalizeText(item?.key) || normalizeText(item?.label).toLowerCase().replace(/\s+/gu, "-"),
@@ -653,6 +725,8 @@ function buildFeedbackPayloadFromExternalResult(requestPayload, fallbackContext)
             .map(item => normalizeText(item))
             .filter(Boolean)
             .slice(0, 6),
+        argumentPreview: normalizeText(input.argumentPreview),
+        comparison,
         meta: {
             sessionId: Number(payloadRoot.sessionId) || fallbackContext?.sessionId || null,
             phaseId: Number(payloadRoot.phaseId) || fallbackContext?.phaseId || null,
@@ -697,10 +771,11 @@ async function processStudentResponse({ context, callback, publishStudentResult 
     }
 
     const groupId = await resolveGroupId(context);
-    const { atsSessionId, taskId, mode } = await submitArgumentWithFlow(context, responseText, groupId);
+    const submissionMeta = await submitArgumentWithFlow(context, responseText, groupId);
+    const { atsSessionId, taskId, mode } = submissionMeta;
     incrementSubmissionCount(context);
     const statusResponse = await pollAtsTask({ atsSessionId, taskId });
-    const feedbackPayload = buildFeedbackPayloadFromAtsStatus(statusResponse, context);
+    const feedbackPayload = buildFeedbackPayloadFromAtsStatus(statusResponse, context, submissionMeta);
 
     await publishFeedbackToStudent({
         context,
