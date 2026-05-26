@@ -50,6 +50,9 @@ services:
       - postgresql
       - redis
       - external-mock-service
+    networks:
+      default:
+      shared-dev:
 
   external-mock-service:
     build:

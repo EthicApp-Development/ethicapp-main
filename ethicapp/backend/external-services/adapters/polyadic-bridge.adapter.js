@@ -41,6 +41,11 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
     const roomContext = new Map();
 
     function registerRoomContext(roomName, sessionId, phaseId, groupId, questionId) {
+        const existing = roomContext.get(roomName);
+        if (existing && existing.questionId == null && questionId != null) {
+            existing.questionId = questionId;
+            return;
+        }
         roomContext.set(roomName, { sessionId, phaseId, groupId, questionId });
     }
 
@@ -132,22 +137,16 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
     subscribe("phaseStarted", async (context, { callback }) => {
         const { sessionId, phaseId } = context;
 
+        let caseText = null;
         try {
             const caseId = await getCaseIdBySessionId(sessionId);
-
-            if (!caseId) {
-                console.warn(
-                    `[polyadic-bridge] No case found for session ${sessionId}; case text will not be logged.`
-                );
+            if (caseId) {
+                caseText = await getCaseDocumentRawText(caseId);
+                console.info(`[polyadic-bridge] Case text loaded for session ${sessionId}, case ${caseId} (${caseText.length} chars)`);
             } else {
-                const caseText = await getCaseDocumentRawText(caseId);
-
-                console.info(
-                    `[polyadic-bridge] Raw case text for session ${sessionId}, case ${caseId}:`
+                console.warn(
+                    `[polyadic-bridge] No case found for session ${sessionId}; case text will not be sent.`
                 );
-                console.info("----- BEGIN ETHICAPP CASE RAW TEXT -----");
-                console.info(caseText);
-                console.info("----- END ETHICAPP CASE RAW TEXT -----");
             }
         } catch (error) {
             console.warn(
@@ -162,7 +161,8 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
         if (teamIds.length > 0) {
             for (const groupId of teamIds) {
                 const roomName = getRoomName(sessionId, phaseId, groupId);
-                const created = await ensurePolyadicSession(roomName, `EthicApp session ${sessionId} phase ${phaseId}`);
+                const prompt = caseText || `EthicApp session ${sessionId} phase ${phaseId}`;
+                const created = await ensurePolyadicSession(roomName, prompt);
                 if (created) {
                     createdRooms.add(roomName);
                     registerRoomContext(roomName, sessionId, phaseId, groupId, null);
@@ -193,11 +193,29 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
         const { sessionId, phaseId, groupId, questionId, userId, content } = context;
         const roomName = getRoomName(sessionId, phaseId, groupId);
 
+        if (questionId != null) {
+            const existing = roomContext.get(roomName);
+            if (existing) {
+                existing.questionId = questionId;
+            }
+        }
+
         const phaseCreatedRooms = phaseRooms.get(phaseId);
         if (!phaseCreatedRooms || !phaseCreatedRooms.has(roomName)) {
+            let prompt = `EthicApp session ${sessionId} phase ${phaseId}`;
+            try {
+                const caseId = await getCaseIdBySessionId(sessionId);
+                if (caseId) {
+                    const caseText = await getCaseDocumentRawText(caseId);
+                    if (caseText) {
+                        prompt = caseText;
+                    }
+                }
+            } catch (_) {}
+
             const created = await ensurePolyadicSession(
                 roomName,
-                `EthicApp session ${sessionId} phase ${phaseId}`
+                prompt
             );
             if (!created) {
                 console.warn(

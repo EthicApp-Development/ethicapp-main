@@ -119,9 +119,13 @@ app.use(session({
 
 app.use(hydrateLegacySession);
 app.use(exposeLegacySession);
+
+await externalServicesRegistry.initialize();
+
+app.use("/", externalServices);
+
 app.use("/", requireLegacyAuth, protectedUploads);
 
-// Middleware for handling redis errors
 app.use((req, res, next) => {
     if (!redisClient.status || redisClient.status !== "ready") {
         return res.status(500).json({ error: "Redis is not connected" });
@@ -129,7 +133,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// Load build_hash.json
 const buildHashPath = path.join(__dirname, "build_hash.json");
 let ETHICAPP_BUILD_HASH = "";
 
@@ -137,15 +140,10 @@ try {
     const buildData = JSON.parse(fs.readFileSync(buildHashPath, "utf8"));
     ETHICAPP_BUILD_HASH = buildData.build_hash;
 } catch (error) {
-    console.error("Error loading build_hash.json:", error);
+    console.error("Error loading build_hash.json", error);
 }
 
-// Make ETHICAPP_BUILD_HASH available in the entire application
 app.locals.ETHICAPP_BUILD_HASH = ETHICAPP_BUILD_HASH;
-
-await externalServicesRegistry.initialize();
-
-app.use("/", externalServices);
 
 app.use("/", requireLegacyAuth, user_profile);
 app.use("/", requireLegacyAuth, impersonation);

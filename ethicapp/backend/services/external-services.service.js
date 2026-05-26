@@ -238,7 +238,7 @@ class ExternalServicesRegistry {
         const parentId = payload?.parentId == null ? null : Number(payload.parentId);
 
         if (!content || !phaseId || !questionId || !groupId) {
-            console.warn(`[external-services] Cannot publish chat message with incomplete payload from ${serviceId}.`);
+            console.warn(`[external-services] Cannot publish chat message with incomplete payload from ${serviceId}.`, { content: !!content, phaseId, questionId, groupId });
             return null;
         }
 
