@@ -29,7 +29,8 @@
       "hooks": [
         "chat-message-received",
         "phaseStarted",
-        "phaseEnded"
+        "phaseEnded",
+        "external-service-result"
       ],
       "enabled": true
     }

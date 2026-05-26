@@ -1,113 +1,47 @@
-import { io } from "socket.io-client";
 import { getCaseDocumentRawText } from "../../helpers/case-document-content-helper.js";
 import { getCaseIdBySessionId } from "../../helpers/sessions-helper.js";
+import * as rpg2 from "../../db/rest-pg-2.js";
+import * as config from "../../config/database.config.js";
 
 const POLYADIC_BASE_URL = process.env.POLYADIC_AGENTS_URL || "http://localhost:5000";
-const BRIDGE_USERNAME = "ethicapp-bridge";
 const PIPELINE_TYPE = "abogado-del-diablo";
 
 function getRoomName(sessionId, phaseId, groupId) {
     return `ethicapp-s${sessionId}-p${phaseId}-g${groupId}`;
 }
 
-export async function register({ service, subscribe, publishGroupChatMessage }) {
-    const activeRooms = new Map();
-    const phaseToRooms = new Map();
-
-    function getOrCreateRoomSocket(roomName, sessionId, phaseId, groupId, questionId) {
-        if (activeRooms.has(roomName)) {
-            return activeRooms.get(roomName);
-        }
-
-        const socket = io(POLYADIC_BASE_URL, {
-            transports: ["websocket", "polling"],
-            autoConnect: true,
-            reconnection: true,
-        });
-
-        socket.on("connect", () => {
-            console.info(`[polyadic-bridge] Socket connected for room ${roomName}`);
-            socket.emit("join", { username: BRIDGE_USERNAME, room: roomName });
-            const entry = activeRooms.get(roomName);
-            if (entry) {
-                entry.connected = true;
-            }
-        });
-
-        socket.on("disconnect", () => {
-            console.warn(`[polyadic-bridge] Socket disconnected for room ${roomName}`);
-            const entry = activeRooms.get(roomName);
-            if (entry) {
-                entry.connected = false;
-            }
-        });
-
-        socket.on("evaluacion", async (respuestas) => {
-            await handlePolyadicEvaluation(roomName, respuestas);
-        });
-
-        const entry = {
-            socket,
-            sessionId,
-            phaseId,
-            groupId,
-            questionId,
-            connected: false,
-        };
-        activeRooms.set(roomName, entry);
-
-        if (!phaseToRooms.has(phaseId)) {
-            phaseToRooms.set(phaseId, new Set());
-        }
-        phaseToRooms.get(phaseId).add(roomName);
-
-        return entry;
+function parseRoomName(roomName) {
+    const match = roomName.match(/^ethicapp-s(\d+)-p(\d+)-g(\d+)$/);
+    if (!match) {
+        return null;
     }
+    return {
+        sessionId: Number(match[1]),
+        phaseId: Number(match[2]),
+        groupId: Number(match[3]),
+    };
+}
 
-    async function handlePolyadicEvaluation(roomName, respuestas) {
-        const entry = activeRooms.get(roomName);
-        if (!entry) {
-            console.warn(`[polyadic-bridge] Received evaluation for unknown room ${roomName}`);
-            return;
-        }
+async function getTeamIdsForPhase(phaseId) {
+    const rows = await rpg2.execSQL({
+        sql: `
+            SELECT t.id AS team_id
+            FROM teams AS t
+            WHERE t.stageid = $1
+            ORDER BY t.id
+        `,
+        dbcon: config.dbconnString,
+        sqlParams: [rpg2.param("plain", phaseId)],
+    });
+    return rows.map(row => Number(row.team_id));
+}
 
-        if (!Array.isArray(respuestas)) {
-            console.warn(
-                `[polyadic-bridge] Expected array for evaluacion, got ${typeof respuestas}`
-            );
-            return;
-        }
+export async function register({ service, subscribe, publishGroupChatMessage }) {
+    const phaseRooms = new Map();
+    const roomContext = new Map();
 
-        for (const r of respuestas) {
-            if (!r || typeof r.respuesta !== "string") {
-                continue;
-            }
-            const content = r.respuesta.trim();
-            if (!content) {
-                continue;
-            }
-
-            const agenteLower = String(r.agente).toLowerCase();
-
-            if (agenteLower !== "orientador") {
-                console.debug(
-                    `[polyadic-bridge] Skipping ${r.agente} response (only Orientador is published)`
-                );
-                continue;
-            }
-
-            console.info(
-                `[polyadic-bridge] Publishing Orientador response to group ${entry.groupId}`
-            );
-            await publishGroupChatMessage({
-                sessionId: entry.sessionId,
-                phaseId: entry.phaseId,
-                questionId: entry.questionId,
-                groupId: entry.groupId,
-                agentDisplayName: r.agente,
-                content,
-            });
-        }
+    function registerRoomContext(roomName, sessionId, phaseId, groupId, questionId) {
+        roomContext.set(roomName, { sessionId, phaseId, groupId, questionId });
     }
 
     async function ensurePolyadicSession(roomName, topic) {
@@ -130,6 +64,7 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
             }
 
             if (response.status === 409) {
+                console.info(`[polyadic-bridge] Polyadic session already exists for ${roomName}`);
                 return true;
             }
 
@@ -164,67 +99,35 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
         }
     }
 
-    function disconnectRoom(roomName) {
-        const entry = activeRooms.get(roomName);
-        if (!entry) {
-            return;
-        }
-        if (entry.socket) {
-            try {
-                entry.socket.emit("leave", { username: BRIDGE_USERNAME, room: roomName });
-            } catch {
-                // ignore
-            }
-            entry.socket.disconnect();
-        }
-        activeRooms.delete(roomName);
-    }
-
-    async function forwardChatMessage(context) {
-        const { sessionId, phaseId, groupId, questionId, userId, content } = context;
-        const roomName = getRoomName(sessionId, phaseId, groupId);
-        const topic = `EthicApp session ${sessionId} phase ${phaseId}`;
-
-        const created = await ensurePolyadicSession(roomName, topic);
-        if (!created) {
-            console.warn(
-                `[polyadic-bridge] Skipping message forwarding: could not create polyadic session.`
+    async function forwardChatMessage(roomName, username, content) {
+        try {
+            const response = await fetch(
+                `${POLYADIC_BASE_URL}/api/rooms/${encodeURIComponent(roomName)}/messages`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, content }),
+                }
             );
-            return;
+
+            if (response.ok || response.status === 202) {
+                console.info(`[polyadic-bridge] Message forwarded to ${roomName}`);
+                return true;
+            }
+
+            const body = await response.text().catch(() => "");
+            console.warn(
+                `[polyadic-bridge] Failed to forward message to ${roomName}: HTTP ${response.status} - ${body}`
+            );
+            return false;
+        } catch (error) {
+            console.warn(
+                `[polyadic-bridge] Error forwarding message to ${roomName}:`,
+                error
+            );
+            return false;
         }
-
-        const entry = getOrCreateRoomSocket(roomName, sessionId, phaseId, groupId, questionId);
-
-        if (!entry.connected) {
-            await new Promise((resolve) => setTimeout(resolve, 500));
-        }
-
-        const messageContent = typeof content === "string" ? content.trim() : "";
-        if (!messageContent) {
-            return;
-        }
-
-        entry.socket.emit("message", {
-            room: roomName,
-            username: `user-${userId}`,
-            content: messageContent,
-        });
     }
-
-    subscribe("chat-message-received", async (context, { callback }) => {
-        await forwardChatMessage(context);
-        await callback({
-            serviceId: service.id,
-            hook: "chat-message-received",
-            status: "completed",
-            payload: {
-                sessionId: context.sessionId,
-                phaseId: context.phaseId,
-                groupId: context.groupId,
-                forwarded: true,
-            },
-        });
-    });
 
     subscribe("phaseStarted", async (context, { callback }) => {
         const { sessionId, phaseId } = context;
@@ -253,6 +156,26 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
             );
         }
 
+        const teamIds = await getTeamIdsForPhase(phaseId);
+        const createdRooms = new Set();
+
+        if (teamIds.length > 0) {
+            for (const groupId of teamIds) {
+                const roomName = getRoomName(sessionId, phaseId, groupId);
+                const created = await ensurePolyadicSession(roomName, `EthicApp session ${sessionId} phase ${phaseId}`);
+                if (created) {
+                    createdRooms.add(roomName);
+                    registerRoomContext(roomName, sessionId, phaseId, groupId, null);
+                }
+            }
+        } else {
+            console.warn(
+                `[polyadic-bridge] No groups found for phase ${phaseId}; sessions will be created on first message.`
+            );
+        }
+
+        phaseRooms.set(phaseId, createdRooms);
+
         await callback({
             serviceId: service.id,
             hook: "phaseStarted",
@@ -260,21 +183,156 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
             payload: {
                 sessionId,
                 phaseId,
+                roomsCreated: createdRooms.size,
                 ready: true,
+            },
+        });
+    });
+
+    subscribe("chat-message-received", async (context, { callback }) => {
+        const { sessionId, phaseId, groupId, questionId, userId, content } = context;
+        const roomName = getRoomName(sessionId, phaseId, groupId);
+
+        const phaseCreatedRooms = phaseRooms.get(phaseId);
+        if (!phaseCreatedRooms || !phaseCreatedRooms.has(roomName)) {
+            const created = await ensurePolyadicSession(
+                roomName,
+                `EthicApp session ${sessionId} phase ${phaseId}`
+            );
+            if (!created) {
+                console.warn(
+                    `[polyadic-bridge] Skipping message forwarding: could not create polyadic session.`
+                );
+                await callback({
+                    serviceId: service.id,
+                    hook: "chat-message-received",
+                    status: "failed",
+                    payload: {
+                        sessionId,
+                        phaseId,
+                        groupId,
+                        forwarded: false,
+                        reason: "session_creation_failed",
+                    },
+                });
+                return;
+            }
+            if (phaseCreatedRooms) {
+                phaseCreatedRooms.add(roomName);
+            }
+            registerRoomContext(roomName, sessionId, phaseId, groupId, questionId);
+        }
+
+        const messageContent = typeof content === "string" ? content.trim() : "";
+        if (!messageContent) {
+            await callback({
+                serviceId: service.id,
+                hook: "chat-message-received",
+                status: "completed",
+                payload: {
+                    sessionId,
+                    phaseId,
+                    groupId,
+                    forwarded: false,
+                    reason: "empty_content",
+                },
+            });
+            return;
+        }
+
+        const forwarded = await forwardChatMessage(roomName, `user-${userId}`, messageContent);
+
+        await callback({
+            serviceId: service.id,
+            hook: "chat-message-received",
+            status: forwarded ? "completed" : "failed",
+            payload: {
+                sessionId,
+                phaseId,
+                groupId,
+                forwarded,
+            },
+        });
+    });
+
+    subscribe("external-service-result", async (context, { callback }) => {
+        const { requestPayload } = context;
+        if (!requestPayload || !requestPayload.room || !Array.isArray(requestPayload.evaluations)) {
+            console.warn("[polyadic-bridge] Received callback with invalid payload.", requestPayload);
+            await callback({
+                serviceId: service.id,
+                hook: "external-service-result",
+                status: "failed",
+                payload: { reason: "invalid_payload" },
+            });
+            return;
+        }
+
+        const { room: roomName, evaluations } = requestPayload;
+        const ctx = roomContext.get(roomName) || parseRoomName(roomName);
+
+        if (!ctx) {
+            console.warn(`[polyadic-bridge] Cannot resolve context for room ${roomName}.`);
+            await callback({
+                serviceId: service.id,
+                hook: "external-service-result",
+                status: "failed",
+                payload: { reason: "unknown_room", room: roomName },
+            });
+            return;
+        }
+
+        for (const r of evaluations) {
+            if (!r || typeof r.respuesta !== "string") {
+                continue;
+            }
+            const content = r.respuesta.trim();
+            if (!content) {
+                continue;
+            }
+
+            const agenteLower = String(r.agente).toLowerCase();
+
+            if (agenteLower !== "orientador") {
+                console.debug(
+                    `[polyadic-bridge] Skipping ${r.agente} response (only Orientador is published)`
+                );
+                continue;
+            }
+
+            console.info(
+                `[polyadic-bridge] Publishing Orientador response to group ${ctx.groupId}`
+            );
+            await publishGroupChatMessage({
+                sessionId: ctx.sessionId,
+                phaseId: ctx.phaseId,
+                questionId: ctx.questionId,
+                groupId: ctx.groupId,
+                agentDisplayName: r.agente,
+                content,
+            });
+        }
+
+        await callback({
+            serviceId: service.id,
+            hook: "external-service-result",
+            status: "completed",
+            payload: {
+                room: roomName,
+                evaluationsProcessed: evaluations.length,
             },
         });
     });
 
     subscribe("phaseEnded", async (context, { callback }) => {
         const { sessionId, phaseId } = context;
-        const rooms = phaseToRooms.get(phaseId);
+        const rooms = phaseRooms.get(phaseId);
 
         if (rooms) {
             for (const roomName of rooms) {
                 await closePolyadicSession(roomName);
-                disconnectRoom(roomName);
             }
-            phaseToRooms.delete(phaseId);
+            phaseRooms.delete(phaseId);
         }
 
         await callback({
