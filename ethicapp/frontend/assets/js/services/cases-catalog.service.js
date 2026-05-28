@@ -68,7 +68,11 @@ let CasesCatalogService = ($rootScope, $http) => {
 
         async getCaseByDesignId(designId) {
             const response = await $http.get(`/designs/${designId}/case`);
-            return response.data.result;
+            const associatedCase = response.data.result;
+            if (!associatedCase?.id) {
+                return associatedCase;
+            }
+            return service.getCaseById(associatedCase.id);
         },
 
         async searchCases(query) {

@@ -183,6 +183,7 @@ import validatePhaseDirective from '../../directives/validate-phase.directive.js
 import { designViewerDirective } from '../../directives/design-viewer.directive.js';
 import copyToClipboardDirective from '../../directives/copy-to-clipboard.directive.js';
 import tooltipDirective from   '../../directives/tooltip.directive.js';
+import holdToConfirmDirective from "../../directives/hold-to-confirm.directive.js";
 
 app.directive("connectedUsers", connectedUsersDirective);
 app.directive("activityControls", activityControlsDirective);
@@ -197,6 +198,7 @@ app.directive("designViewer", designViewerDirective);
 app.directive("tooltip", ["$translate", "$timeout", tooltipDirective]);
 app.directive("copyToClipboard", copyToClipboardDirective);
 app.directive("phaseDeleter", ["$translate", phaseDeleterDirective]);
+app.directive("holdToConfirm", ["$timeout", holdToConfirmDirective]);
 
 app.controller("ConnectedUsersDirectiveController", ["$scope", "ActivityStateService", 
     ConnectedUsersDirectiveController]);
