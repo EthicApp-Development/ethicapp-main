@@ -46,6 +46,39 @@ export async function verifyAdminPasswordWithAuthBackend({ password, cookie, lan
   return body?.ok === true;
 }
 
+export async function changeAdminPasswordWithAuthBackend({
+  currentPassword,
+  newPassword,
+  passwordConfirmation,
+  cookie,
+  language
+}) {
+  const response = await fetch(buildUrl('/admin/change-password'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Cookie: cookie || '',
+      'Accept-Language': language || 'en-US',
+      ...internalServiceHeaders()
+    },
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+      password_confirmation: passwordConfirmation
+    })
+  });
+
+  const body = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const error = new Error(body.error || 'CHANGE_PASSWORD_FAILED');
+    error.status = response.status;
+    throw error;
+  }
+
+  return body;
+}
+
 export async function triggerForgotPasswordWithAuthBackend({ email, recaptchaToken, cookie, language }) {
   const response = await fetch(buildUrl('/forgot'), {
     method: 'POST',

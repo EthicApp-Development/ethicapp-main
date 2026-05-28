@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
-import { Button, Container, Nav, Navbar } from 'react-bootstrap';
+import { useState } from 'react';
+import { Button, Container, Nav } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
 import { useI18n } from '../../app/providers.jsx';
 
@@ -8,47 +9,87 @@ const ETHICAPP_LOGO_SRC = '/images/logos/ethicapp-logo.svg';
 function ManagementLayout({ children }) {
   const { t } = useI18n();
   const location = useLocation();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const activeNavKey = location.pathname.startsWith('/users') ? '/users' : location.pathname;
+
+  const navItems = [
+    {
+      to: '/users',
+      icon: 'fa-users',
+      label: t('nav.users')
+    },
+    {
+      to: '/institution',
+      icon: 'fa-building-columns',
+      label: t('nav.institution')
+    },
+    {
+      to: '/profile',
+      icon: 'fa-user-shield',
+      label: t('nav.profile')
+    }
+  ];
 
   return (
-    <div className="min-vh-100 bg-light">
-      <Navbar bg="dark" data-bs-theme="dark" expand="lg">
-        <Container>
-          <Navbar.Brand>
-            <a
-              href="https://www.ethicapp.info"
-              target="_blank"
-              rel="noreferrer"
-              className="ethicapp-logo-topbar"
-            >
-              <img src={ETHICAPP_LOGO_SRC} alt="EthicApp" className="ethicapp-logo-topbar-img" />
-            </a>
-          </Navbar.Brand>
-          <Navbar.Text className="text-muted">{t('app.title')}&nbsp;|&nbsp;</Navbar.Text>
-          <Navbar.Toggle aria-controls="mng-nav" />
-          <Navbar.Collapse id="mng-nav">
-            <Nav className="me-auto" activeKey={location.pathname}>
-              <Nav.Link as={Link} to="/users" eventKey="/users">
-                <i className="fa-solid fa-users me-2" aria-hidden="true" />
-                {t('nav.users')}
-              </Nav.Link>
-            </Nav>
-            <Button
-              variant="outline-light"
-              size="sm"
-              onClick={() => window.location.assign('/logout')}
-              className="d-inline-flex align-items-center"
-            >
-              <i className="fa-solid fa-right-from-bracket me-2" aria-hidden="true" />
-              {t('nav.logout')}
-            </Button>
-          </Navbar.Collapse>
-        </Container>
-      </Navbar>
+    <div className={`management-shell ${sidebarCollapsed ? 'management-shell-collapsed' : ''}`}>
+      <aside className="management-sidebar">
+        <div className="management-sidebar-header">
+          <a
+            href="https://www.ethicapp.info"
+            target="_blank"
+            rel="noreferrer"
+            className="ethicapp-logo-topbar"
+          >
+            <img src={ETHICAPP_LOGO_SRC} alt="EthicApp" className="ethicapp-logo-topbar-img" />
+          </a>
+          <Button
+            type="button"
+            variant="outline-light"
+            size="sm"
+            className="management-sidebar-toggle"
+            onClick={() => setSidebarCollapsed((current) => !current)}
+            aria-label={sidebarCollapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')}
+          >
+            <i className={`fa-solid ${sidebarCollapsed ? 'fa-angles-right' : 'fa-angles-left'}`} aria-hidden="true" />
+          </Button>
+        </div>
 
-      <Container className="py-4">
-        <p className="text-secondary mb-4">{t('app.subtitle')}</p>
-        {children}
-      </Container>
+        <div className="management-sidebar-title">{t('app.title')}</div>
+
+        <Nav className="management-sidebar-nav" activeKey={activeNavKey}>
+          {navItems.map((item) => (
+            <Nav.Link
+              as={Link}
+              key={item.to}
+              to={item.to}
+              eventKey={item.to}
+              className="management-sidebar-link"
+              title={item.label}
+            >
+              <i className={`fa-solid ${item.icon}`} aria-hidden="true" />
+              <span>{item.label}</span>
+            </Nav.Link>
+          ))}
+        </Nav>
+
+        <Button
+          variant="outline-light"
+          size="sm"
+          onClick={() => window.location.assign('/logout')}
+          className="management-sidebar-logout"
+          title={t('nav.logout')}
+        >
+          <i className="fa-solid fa-right-from-bracket" aria-hidden="true" />
+          <span>{t('nav.logout')}</span>
+        </Button>
+      </aside>
+
+      <main className="management-main">
+        <Container fluid className="management-main-inner">
+          <p className="text-secondary mb-4">{t('app.subtitle')}</p>
+          {children}
+        </Container>
+      </main>
     </div>
   );
 }

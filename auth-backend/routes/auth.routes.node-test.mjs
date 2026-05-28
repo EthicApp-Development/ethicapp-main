@@ -22,7 +22,14 @@ const app = express();
 app.use(express.json());
 app.use((req, res, next) => {
   req.login = mock.fn((user, cb) => cb());
-  req.isAuthenticated = mock.fn(() => false);
+  const testUserId = Number(req.get('X-Test-User-Id') || 0);
+  req.user = testUserId
+    ? {
+        id: testUserId,
+        role: req.get('X-Test-User-Role') || 'A'
+      }
+    : undefined;
+  req.isAuthenticated = mock.fn(() => Boolean(req.user));
   next();
 });
 app.use('/', authRoutes);
@@ -457,5 +464,53 @@ describe('Auth Routes', () => {
     assert.deepStrictEqual(deleteCall.arguments[1], ['person@example.com']);
     assert.match(updateCall.arguments[0], /active = CASE WHEN email_confirmed = false THEN true ELSE active END/);
     assert.match(updateCall.arguments[0], /email_confirmed = true/);
+  });
+
+  test('POST /admin/change-password - updates administrator password after current password verification', async () => {
+    const currentPasswordHash = await bcrypt.hash('CurrentPassword123!@', 1);
+    dbMock.query.mock.mockImplementation((queryStr) => {
+      if (queryStr.includes('SELECT password_bcrypt')) {
+        return Promise.resolve({
+          rowCount: 1,
+          rows: [{ password_bcrypt: currentPasswordHash }]
+        });
+      }
+
+      return Promise.resolve({ rowCount: 1, rows: [] });
+    });
+
+    const res = await supertest(app)
+      .post('/admin/change-password')
+      .set('X-Test-User-Id', '7')
+      .set('X-Test-User-Role', 'S')
+      .send({
+        current_password: 'CurrentPassword123!@',
+        new_password: 'FreshPassword123!@',
+        password_confirmation: 'FreshPassword123!@'
+      });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.message, 'Password updated successfully');
+
+    const updateCall = dbMock.query.mock.calls.find((call) => call.arguments[0].includes('UPDATE users'));
+    assert.ok(updateCall);
+    assert.strictEqual(await bcrypt.compare('FreshPassword123!@', updateCall.arguments[1][0]), true);
+    assert.strictEqual(updateCall.arguments[1][1], 7);
+  });
+
+  test('POST /admin/change-password - rejects weak new passwords before database access', async () => {
+    const res = await supertest(app)
+      .post('/admin/change-password')
+      .set('X-Test-User-Id', '7')
+      .set('X-Test-User-Role', 'S')
+      .send({
+        current_password: 'CurrentPassword123!@',
+        new_password: 'weak',
+        password_confirmation: 'weak'
+      });
+
+    assert.strictEqual(res.status, 400);
+    assert.strictEqual(res.body.error, 'Password must be at least 10 characters long and contain at least 2 symbols');
+    assert.strictEqual(dbMock.query.mock.calls.length, 0);
   });
 });

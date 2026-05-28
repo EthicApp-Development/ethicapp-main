@@ -5,7 +5,11 @@ export default {
   },
   nav: {
     users: 'Usuarios',
-    logout: 'Cerrar sesión'
+    institution: 'Institución',
+    profile: 'Perfil',
+    logout: 'Cerrar sesión',
+    collapseSidebar: 'Colapsar navegación',
+    expandSidebar: 'Expandir navegación'
   },
   filters: {
     keywords: 'Buscar por nombre, apellido, email o identificador',
@@ -77,6 +81,68 @@ export default {
         cancel: 'Cancelar',
         triggerPasswordReset: 'Gatillar recuperación de contraseña',
         impersonateProfessor: 'Ingresar como profesor'
+      }
+    },
+    profile: {
+      heading: 'Perfil de administrador',
+      loading: 'Cargando perfil...',
+      loadError: 'No fue posible cargar el perfil de administrador.',
+      passwordHeading: 'Cambiar contraseña',
+      passwordDescription: 'Actualiza tu contraseña de administrador sin usar recuperación de contraseña.',
+      passwordChangeSuccess: 'Contraseña actualizada correctamente.',
+      passwordChangeError: 'No fue posible actualizar la contraseña.',
+      fields: {
+        name: 'Nombre',
+        email: 'Email',
+        role: 'Rol',
+        currentPassword: 'Contraseña actual',
+        newPassword: 'Nueva contraseña',
+        passwordConfirmation: 'Confirmar nueva contraseña'
+      },
+      passwordRules: {
+        helpText: 'Mínimo 10 caracteres y al menos 2 símbolos.',
+        minLength: 'Al menos 10 caracteres',
+        twoSymbols: 'Al menos 2 símbolos'
+      },
+      errors: {
+        required: 'Completa todos los campos de contraseña.',
+        weakPassword: 'La nueva contraseña debe tener al menos 10 caracteres y 2 símbolos.',
+        passwordMismatch: 'La nueva contraseña y su confirmación no coinciden.'
+      },
+      actions: {
+        changePassword: 'Cambiar contraseña'
+      }
+    },
+    institution: {
+      heading: 'Institución',
+      description: 'Configura la identidad institucional y los contactos de soporte para esta instalación de EthicApp.',
+      loading: 'Cargando institución...',
+      loadError: 'No fue posible cargar la configuración institucional.',
+      saveSuccess: 'Configuración institucional actualizada correctamente.',
+      saveError: 'No fue posible actualizar la configuración institucional.',
+      logoHelp: 'PNG o JPG, máximo 1 MB.',
+      fields: {
+        name: 'Nombre de la institución',
+        logo: 'Logo institucional',
+        firstname: 'Nombre',
+        lastname: 'Apellido',
+        email: 'Email',
+        phoneCountryCode: 'Código de país',
+        phoneNumber: 'Teléfono'
+      },
+      contacts: {
+        technical: 'Contacto técnico',
+        academic: 'Contacto académico'
+      },
+      errors: {
+        nameRequired: 'El nombre de la institución es obligatorio.',
+        invalidLogoType: 'El logo debe ser una imagen PNG o JPG.',
+        invalidLogoData: 'No fue posible procesar el archivo del logo.',
+        logoTooLarge: 'El logo supera el límite de 1 MB.'
+      },
+      actions: {
+        save: 'Guardar institución',
+        removeLogo: 'Quitar logo'
       }
     }
   }

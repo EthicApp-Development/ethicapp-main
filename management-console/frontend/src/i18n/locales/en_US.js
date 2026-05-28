@@ -5,7 +5,11 @@ export default {
   },
   nav: {
     users: 'Users',
-    logout: 'Log out'
+    institution: 'Institution',
+    profile: 'Profile',
+    logout: 'Log out',
+    collapseSidebar: 'Collapse navigation',
+    expandSidebar: 'Expand navigation'
   },
   filters: {
     keywords: 'Search by first name, last name, email, or identifier',
@@ -77,6 +81,68 @@ export default {
         cancel: 'Cancel',
         triggerPasswordReset: 'Trigger password recovery',
         impersonateProfessor: 'Sign in as professor'
+      }
+    },
+    profile: {
+      heading: 'Administrator profile',
+      loading: 'Loading profile...',
+      loadError: 'Unable to load administrator profile.',
+      passwordHeading: 'Change password',
+      passwordDescription: 'Update your administrator password without using password recovery.',
+      passwordChangeSuccess: 'Password updated successfully.',
+      passwordChangeError: 'Unable to update password.',
+      fields: {
+        name: 'Name',
+        email: 'Email',
+        role: 'Role',
+        currentPassword: 'Current password',
+        newPassword: 'New password',
+        passwordConfirmation: 'Confirm new password'
+      },
+      passwordRules: {
+        helpText: 'Minimum 10 characters and at least 2 symbols.',
+        minLength: 'At least 10 characters',
+        twoSymbols: 'At least 2 symbols'
+      },
+      errors: {
+        required: 'Complete all password fields.',
+        weakPassword: 'The new password must have at least 10 characters and 2 symbols.',
+        passwordMismatch: 'New password and confirmation do not match.'
+      },
+      actions: {
+        changePassword: 'Change password'
+      }
+    },
+    institution: {
+      heading: 'Institution',
+      description: 'Configure the institutional identity and support contacts for this EthicApp installation.',
+      loading: 'Loading institution...',
+      loadError: 'Unable to load institution settings.',
+      saveSuccess: 'Institution settings updated successfully.',
+      saveError: 'Unable to update institution settings.',
+      logoHelp: 'PNG or JPG, maximum 1 MB.',
+      fields: {
+        name: 'Institution name',
+        logo: 'Institution logo',
+        firstname: 'First name',
+        lastname: 'Last name',
+        email: 'Email',
+        phoneCountryCode: 'Country code',
+        phoneNumber: 'Phone number'
+      },
+      contacts: {
+        technical: 'Technical contact',
+        academic: 'Academic contact'
+      },
+      errors: {
+        nameRequired: 'Institution name is required.',
+        invalidLogoType: 'The logo must be a PNG or JPG image.',
+        invalidLogoData: 'The logo file could not be processed.',
+        logoTooLarge: 'The logo exceeds the 1 MB limit.'
+      },
+      actions: {
+        save: 'Save institution',
+        removeLogo: 'Remove logo'
       }
     }
   }

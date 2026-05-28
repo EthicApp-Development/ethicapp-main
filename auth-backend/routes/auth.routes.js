@@ -229,6 +229,92 @@ router.post('/admin/verify-password', async (req, res) => {
   }
 });
 
+router.post('/admin/change-password', async (req, res) => {
+  try {
+    if (!req.isAuthenticated || !req.isAuthenticated()) {
+      return res.status(401).json({
+        error: t(req, 'unauthenticated')
+      });
+    }
+
+    if (!req.user || req.user.role !== 'S') {
+      return res.status(403).json({
+        error: t(req, 'unauthorized')
+      });
+    }
+
+    const currentPassword = req.body.current_password || '';
+    const newPassword = req.body.new_password || '';
+    const passwordConfirmation = req.body.password_confirmation || '';
+
+    if (!currentPassword || !newPassword || !passwordConfirmation) {
+      return res.status(400).json({
+        error: t(req, 'requiredFieldsMissing')
+      });
+    }
+
+    if (newPassword !== passwordConfirmation) {
+      return res.status(400).json({
+        error: t(req, 'passwordsDoNotMatch')
+      });
+    }
+
+    if (!isStrongPassword(newPassword)) {
+      return res.status(400).json({
+        error: t(req, 'weakPassword')
+      });
+    }
+
+    const userResult = await db.query(
+      `
+        SELECT password_bcrypt
+        FROM users
+        WHERE id = $1
+          AND active = true
+        LIMIT 1
+      `,
+      [req.user.id]
+    );
+
+    if (userResult.rowCount === 0) {
+      return res.status(401).json({
+        error: t(req, 'wrongCredentials')
+      });
+    }
+
+    const currentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      userResult.rows[0].password_bcrypt || ''
+    );
+
+    if (!currentPasswordValid) {
+      return res.status(401).json({
+        error: t(req, 'wrongCredentials')
+      });
+    }
+
+    const newPasswordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+    await db.query(
+      `
+        UPDATE users
+        SET password_bcrypt = $1
+        WHERE id = $2
+      `,
+      [newPasswordHash, req.user.id]
+    );
+
+    return res.status(200).json({
+      message: t(req, 'passwordUpdated')
+    });
+  } catch (err) {
+    console.error('ADMIN CHANGE PASSWORD ERROR:', err);
+    return res.status(500).json({
+      error: t(req, 'internalServerError')
+    });
+  }
+});
+
 /**
  * POST /register
  *

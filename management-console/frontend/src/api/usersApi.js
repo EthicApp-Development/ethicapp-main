@@ -10,7 +10,7 @@ function toQueryString(params) {
   return searchParams.toString();
 }
 
-async function parseJson(response) {
+export async function parseJson(response) {
   const json = await response.json().catch(() => ({}));
 
   if (!response.ok) {
@@ -42,7 +42,7 @@ async function getCsrfToken() {
   return csrfTokenPromise;
 }
 
-async function mutatingJsonHeaders() {
+export async function mutatingJsonHeaders() {
   return {
     'Content-Type': 'application/json',
     Accept: 'application/json',

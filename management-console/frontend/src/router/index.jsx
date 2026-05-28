@@ -1,5 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import ManagementLayout from '../components/layout/ManagementLayout.jsx';
+import InstitutionPage from '../pages/InstitutionPage.jsx';
+import ProfilePage from '../pages/ProfilePage.jsx';
 import UsersPage from '../pages/UsersPage.jsx';
 import UserShowPage from '../pages/UserShowPage.jsx';
 
@@ -21,6 +23,22 @@ const router = createBrowserRouter([
     element: (
       <ManagementLayout>
         <UserShowPage />
+      </ManagementLayout>
+    )
+  },
+  {
+    path: '/institution',
+    element: (
+      <ManagementLayout>
+        <InstitutionPage />
+      </ManagementLayout>
+    )
+  },
+  {
+    path: '/profile',
+    element: (
+      <ManagementLayout>
+        <ProfilePage />
       </ManagementLayout>
     )
   },
