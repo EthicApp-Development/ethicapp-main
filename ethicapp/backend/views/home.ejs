@@ -45,6 +45,13 @@
   <div class="teacher-mobile-backdrop" ng-click="teacherSidebarOpen = false"></div>
 
   <aside class="teacher-sidebar">
+    <div class="teacher-institution-logo-slot">
+      <img
+        src="/institution/logo"
+        alt="{{ 'institution' | translate }}"
+        class="teacher-institution-logo"
+        onerror="this.closest('.teacher-institution-logo-slot').style.display = 'none';">
+    </div>
     <nav aria-label="Teacher navigation">
       <ul class="teacher-nav-list">
         <li>

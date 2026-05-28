@@ -156,6 +156,23 @@ body {
     z-index: 1020;
 }
 
+.teacher-institution-logo-slot {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    margin: 8px 0 28px;
+    width: 100%;
+}
+
+.teacher-institution-logo {
+    display: block;
+    height: auto;
+    max-height: 140px;
+    max-width: 60%;
+    object-fit: contain;
+    opacity: 0.5;
+}
+
 .teacher-nav-list {
     list-style: none;
     margin: 0;
@@ -229,6 +246,10 @@ body {
     padding-left: 12px;
     padding-right: 12px;
     width: var(--teacher-sidebar-collapsed-width);
+}
+
+.teacher-sidebar-collapsed .teacher-institution-logo-slot {
+    display: none;
 }
 
 .teacher-sidebar-collapsed .teacher-nav-list a {
@@ -406,6 +427,10 @@ body {
         display: none;
     }
 
+    .teacher-institution-logo-slot {
+        display: none;
+    }
+
     .teacher-main,
     .teacher-sidebar-collapsed .teacher-main {
         margin-left: var(--teacher-sidebar-collapsed-width);
@@ -461,6 +486,10 @@ body {
 
     .teacher-sidebar-collapsed .teacher-nav-list span {
         display: inline;
+    }
+
+    .teacher-sidebar-collapsed .teacher-institution-logo-slot {
+        display: flex;
     }
 
     .teacher-sidebar-open .teacher-sidebar {
