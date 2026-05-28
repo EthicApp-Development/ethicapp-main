@@ -19,6 +19,37 @@ const uploadsRoot = path.resolve(process.cwd(), uploadsPath);
 const AVATAR_MAX_SIZE_BYTES = 500 * 1024;
 
 const allowedMimeTypes = new Set(["image/jpeg", "image/jpg", "image/png"]);
+const DEFAULT_PREFERRED_LOCALE = "en_US";
+
+function normalizePreferredLocale(value) {
+    return String(value || "").trim().replace("-", "_");
+}
+
+async function assertSupportedPreferredLocale(preferredLocale) {
+    const normalizedPreferredLocale = normalizePreferredLocale(preferredLocale);
+    if (!normalizedPreferredLocale) {
+        return DEFAULT_PREFERRED_LOCALE;
+    }
+
+    const languages = await execSQL({
+        dbcon: config.dbconnString,
+        sql: `
+            SELECT code
+            FROM languages
+            WHERE code = $1
+            LIMIT 1
+        `,
+        sqlParams: [param("plain", normalizedPreferredLocale)]
+    });
+
+    if (languages.length === 0) {
+        const error = new Error("invalid_preferred_locale");
+        error.status = 400;
+        throw error;
+    }
+
+    return normalizedPreferredLocale;
+}
 
 
 const validateProfileRecaptcha = async (req, res) => {
@@ -188,6 +219,9 @@ router.post("/users/profile", avatarUpload, async (req, res) => {
         const firstname = (req.body.firstname || "").trim();
         const lastname = (req.body.lastname || "").trim();
         const sex = (req.body.sex || "").trim().toUpperCase();
+        const preferredLocale = Object.hasOwn(req.body, "preferred_locale")
+            ? await assertSupportedPreferredLocale(req.body.preferred_locale)
+            : null;
 
         const validSex = new Set(["F", "M", "O"]);
         if (!validSex.has(sex)) {
@@ -203,14 +237,16 @@ router.post("/users/profile", avatarUpload, async (req, res) => {
                 SET firstname = $1,
                     lastname = $2,
                     sex = $3,
-                    name = $4
-                WHERE id = $5
+                    name = $4,
+                    preferred_locale = COALESCE($5, preferred_locale)
+                WHERE id = $6
             `,
             sqlParams: [
                 param("plain", firstname),
                 param("plain", lastname),
                 param("plain", sex),
                 param("plain", fullName),
+                param("plain", preferredLocale),
                 param("plain", req.session.uid)
             ]
         });
@@ -220,7 +256,10 @@ router.post("/users/profile", avatarUpload, async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "profile_updated",
-            data: avatarData || undefined
+            data: {
+                ...(avatarData || {}),
+                ...(preferredLocale ? { preferred_locale: preferredLocale } : {})
+            }
         });
     } catch (error) {
         await removeUploadedFile(req.file);

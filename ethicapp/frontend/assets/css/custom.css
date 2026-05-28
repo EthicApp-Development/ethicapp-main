@@ -91,86 +91,6 @@ body {
     white-space: nowrap;
 }
 
-.teacher-topbar-language {
-    align-items: center;
-    background: #fff;
-    border: 1px solid #2649ec;
-    border-radius: 8px;
-    color: #2649ec;
-    display: inline-flex;
-    gap: 10px;
-    justify-content: center;
-    margin-right: 0;
-    min-height: 42px;
-    min-width: 78px;
-    padding: 8px 12px;
-}
-
-.teacher-topbar-language:hover,
-.teacher-topbar-language:focus-within {
-    background: #071c78;
-    border-color: #2649ec;
-    color: #fff;
-}
-
-.teacher-topbar-language i {
-    color: inherit;
-    font-size: 20px;
-    margin-right: 0;
-}
-
-.teacher-topbar-language .topbar-lang-icon i {
-    font-size: 24px;
-}
-
-.teacher-topbar-language .language-options {
-    background: #fff;
-    border: 1px solid #b5c2fd;
-    border-radius: 8px;
-    box-shadow: 0 12px 28px rgba(7, 28, 120, 0.16);
-    left: auto;
-    margin-top: 0px;
-    min-width: 168px;
-    overflow: hidden;
-    padding: 6px;
-    right: 0;
-}
-
-.teacher-topbar-language .language-options li {
-    border-radius: 6px;
-    color: #071c78;
-    cursor: pointer;
-    font-size: 16px;
-    line-height: 1.25;
-    padding: 10px 12px;
-}
-
-.teacher-topbar-language .language-options li:hover,
-.teacher-topbar-language .language-options li:focus {
-    background: #b5c2fd;
-    color: #071c78;
-}
-
-.teacher-topbar-language .selected-language,
-.teacher-topbar-language .not-selected-language {
-    align-items: center;
-    display: flex;
-    justify-content: space-between;
-}
-
-.teacher-topbar-language .selected-language {
-    color: #2649ec;
-    font-weight: 600;
-}
-
-.teacher-topbar-language .selected-language i,
-.teacher-topbar-language .language-options li i {
-    color: inherit;
-    font-size: 14px;
-    margin-left: 10px;
-    margin-top: 0;
-}
-
 .teacher-profile-link {
     align-items: center;
     color: var(--teacher-link-color);
@@ -515,8 +435,7 @@ body {
         width: 126px;
     }
 
-    .teacher-profile-name,
-    .teacher-topbar-language .fa-angle-down {
+    .teacher-profile-name {
         display: none;
     }
 
@@ -675,11 +594,6 @@ body {
     object-fit: cover;
     object-position: center;
     display: block;
-}
-
-.topbar-lang-icon {
-    position: relative;
-    top: 2px;
 }
 
 .line_labels {
