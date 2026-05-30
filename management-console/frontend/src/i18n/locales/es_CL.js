@@ -55,6 +55,8 @@ export default {
       back: 'Volver',
       roleHelp: 'Solo se permite cambiar entre estudiante y profesor.',
       adminPasswordHelp: 'Debes confirmar tu contraseña de administrador para aplicar cambios.',
+      passkeyConfirmationHelp: 'Las acciones sensibles pedirán tu passkey de administrador en vez de contraseña y reCAPTCHA.',
+      passkeyUnsupported: 'Este administrador tiene passkeys configuradas, pero este navegador no soporta confirmación con passkey.',
       saveSuccess: 'Usuario actualizado correctamente.',
       saveError: 'No fue posible actualizar el usuario.',
       passwordResetSuccess: 'Se envió el correo de recuperación de contraseña.',
@@ -91,6 +93,29 @@ export default {
       passwordDescription: 'Actualiza tu contraseña de administrador sin usar recuperación de contraseña.',
       passwordChangeSuccess: 'Contraseña actualizada correctamente.',
       passwordChangeError: 'No fue posible actualizar la contraseña.',
+      passkeys: {
+        heading: 'Passkeys',
+        description: 'Registra una passkey para fortalecer la autenticación de administrador.',
+        empty: 'Este administrador aún no tiene passkeys registradas.',
+        unsupported: 'Este navegador no soporta passkeys.',
+        defaultName: 'Passkey sin nombre',
+        neverUsed: 'Nunca',
+        createdAt: 'Creada: {{date}}',
+        lastUsedAt: 'Último uso: {{date}}',
+        registerSuccess: 'Passkey registrada correctamente.',
+        registerError: 'No fue posible registrar la passkey.',
+        deleteSuccess: 'Passkey eliminada correctamente.',
+        deleteError: 'No fue posible eliminar la passkey.',
+        fields: {
+          name: 'Nombre de la passkey',
+          namePlaceholder: 'Touch ID del MacBook, YubiKey, teléfono...',
+          deletePassword: 'Contraseña actual para eliminar passkeys'
+        },
+        actions: {
+          add: 'Agregar passkey',
+          remove: 'Eliminar'
+        }
+      },
       fields: {
         name: 'Nombre',
         email: 'Email',

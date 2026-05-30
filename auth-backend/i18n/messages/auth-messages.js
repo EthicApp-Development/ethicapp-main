@@ -22,7 +22,15 @@ const authMessages = {
     emailRequired: 'Email is required',
     forgotSuccess: 'If the email exists, you will receive instructions to reset your password',
     invalidOrExpiredToken: 'Token is invalid or has expired',
-    passwordUpdated: 'Password updated successfully'
+    passwordUpdated: 'Password updated successfully',
+    passkeyRegistered: 'Passkey registered successfully',
+    passkeyDeleted: 'Passkey removed successfully',
+    passkeyRegistrationExpired: 'Passkey registration expired. Try again',
+    passkeyRegistrationFailed: 'Unable to register passkey',
+    passkeyAlreadyRegistered: 'That passkey is already registered',
+    passkeyNotConfigured: 'No passkey is configured for this administrator',
+    passkeyAuthenticationExpired: 'Passkey confirmation expired. Try again',
+    passkeyAuthenticationFailed: 'Unable to confirm passkey'
   },
   es_CL: {
     invalidCredentials: 'Credenciales inválidas',
@@ -47,7 +55,15 @@ const authMessages = {
     emailRequired: 'El correo es obligatorio',
     forgotSuccess: 'Si el correo existe, recibirás instrucciones para restablecer la contraseña',
     invalidOrExpiredToken: 'El token es inválido o ha expirado',
-    passwordUpdated: 'Contraseña actualizada correctamente'
+    passwordUpdated: 'Contraseña actualizada correctamente',
+    passkeyRegistered: 'Passkey registrada correctamente',
+    passkeyDeleted: 'Passkey eliminada correctamente',
+    passkeyRegistrationExpired: 'El registro de passkey expiró. Intenta nuevamente',
+    passkeyRegistrationFailed: 'No fue posible registrar la passkey',
+    passkeyAlreadyRegistered: 'Esa passkey ya está registrada',
+    passkeyNotConfigured: 'Este administrador no tiene passkeys configuradas',
+    passkeyAuthenticationExpired: 'La confirmación con passkey expiró. Intenta nuevamente',
+    passkeyAuthenticationFailed: 'No fue posible confirmar la passkey'
   }
 };
 

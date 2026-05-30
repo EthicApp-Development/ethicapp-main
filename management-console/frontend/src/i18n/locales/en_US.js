@@ -55,6 +55,8 @@ export default {
       back: 'Back',
       roleHelp: 'Only student/professor role transitions are allowed.',
       adminPasswordHelp: 'You must confirm your administrator password to apply changes.',
+      passkeyConfirmationHelp: 'Sensitive actions will ask for your administrator passkey instead of password and reCAPTCHA.',
+      passkeyUnsupported: 'This administrator has passkeys configured, but this browser does not support passkey confirmation.',
       saveSuccess: 'User updated successfully.',
       saveError: 'Unable to update user.',
       passwordResetSuccess: 'Password recovery email was sent.',
@@ -91,6 +93,29 @@ export default {
       passwordDescription: 'Update your administrator password without using password recovery.',
       passwordChangeSuccess: 'Password updated successfully.',
       passwordChangeError: 'Unable to update password.',
+      passkeys: {
+        heading: 'Passkeys',
+        description: 'Register a passkey for stronger administrator authentication.',
+        empty: 'No passkeys have been registered for this administrator yet.',
+        unsupported: 'This browser does not support passkeys.',
+        defaultName: 'Unnamed passkey',
+        neverUsed: 'Never',
+        createdAt: 'Created: {{date}}',
+        lastUsedAt: 'Last used: {{date}}',
+        registerSuccess: 'Passkey registered successfully.',
+        registerError: 'Unable to register passkey.',
+        deleteSuccess: 'Passkey removed successfully.',
+        deleteError: 'Unable to remove passkey.',
+        fields: {
+          name: 'Passkey name',
+          namePlaceholder: 'MacBook Touch ID, YubiKey, phone...',
+          deletePassword: 'Current password to remove passkeys'
+        },
+        actions: {
+          add: 'Add passkey',
+          remove: 'Remove'
+        }
+      },
       fields: {
         name: 'Name',
         email: 'Email',

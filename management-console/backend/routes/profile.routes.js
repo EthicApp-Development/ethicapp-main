@@ -2,7 +2,14 @@ import express from 'express';
 
 import requireManagementRole from '../middleware/requireManagementRole.js';
 import { getUserById } from '../services/user.service.js';
-import { changeAdminPasswordWithAuthBackend } from '../services/authBackend.service.js';
+import {
+  changeAdminPasswordWithAuthBackend,
+  deleteAdminPasskeyWithAuthBackend,
+  finishAdminPasskeyRegistrationWithAuthBackend,
+  listAdminPasskeysWithAuthBackend,
+  startAdminPasskeyAuthenticationWithAuthBackend,
+  startAdminPasskeyRegistrationWithAuthBackend
+} from '../services/authBackend.service.js';
 
 function mapProfileUser(user) {
   return {
@@ -26,7 +33,12 @@ function isStrongPassword(password) {
 export function createProfileRouter({
   requireManagementRoleMiddleware = requireManagementRole,
   getUserByIdService = getUserById,
-  changeAdminPasswordWithAuthBackendService = changeAdminPasswordWithAuthBackend
+  changeAdminPasswordWithAuthBackendService = changeAdminPasswordWithAuthBackend,
+  listAdminPasskeysWithAuthBackendService = listAdminPasskeysWithAuthBackend,
+  startAdminPasskeyRegistrationWithAuthBackendService = startAdminPasskeyRegistrationWithAuthBackend,
+  finishAdminPasskeyRegistrationWithAuthBackendService = finishAdminPasskeyRegistrationWithAuthBackend,
+  startAdminPasskeyAuthenticationWithAuthBackendService = startAdminPasskeyAuthenticationWithAuthBackend,
+  deleteAdminPasskeyWithAuthBackendService = deleteAdminPasskeyWithAuthBackend
 } = {}) {
   const router = express.Router();
 
@@ -73,6 +85,128 @@ export function createProfileRouter({
       return res.status(200).json({
         message: result.message || 'Password updated successfully'
       });
+    } catch (error) {
+      if (error.status) {
+        return res.status(error.status).json({
+          error: error.message
+        });
+      }
+
+      return next(error);
+    }
+  });
+
+  router.get('/mng/api/profile/passkeys', requireManagementRoleMiddleware, async (req, res, next) => {
+    try {
+      const result = await listAdminPasskeysWithAuthBackendService({
+        cookie: req.headers.cookie,
+        language: req.headers['accept-language']
+      });
+
+      return res.status(200).json({
+        passkeys: result.passkeys || []
+      });
+    } catch (error) {
+      if (error.status) {
+        return res.status(error.status).json({
+          error: error.message
+        });
+      }
+
+      return next(error);
+    }
+  });
+
+  router.post('/mng/api/profile/passkeys/registration-options', requireManagementRoleMiddleware, async (req, res, next) => {
+    try {
+      const password = String(req.body.password || '');
+
+      if (!password) {
+        return res.status(400).json({ error: 'MISSING_REQUIRED_FIELDS' });
+      }
+
+      const result = await startAdminPasskeyRegistrationWithAuthBackendService({
+        password,
+        cookie: req.headers.cookie,
+        language: req.headers['accept-language'],
+        ...(req.headers.origin ? { origin: req.headers.origin } : {})
+      });
+
+      return res.status(200).json(result);
+    } catch (error) {
+      if (error.status) {
+        return res.status(error.status).json({
+          error: error.message
+        });
+      }
+
+      return next(error);
+    }
+  });
+
+  router.post('/mng/api/profile/passkeys/register', requireManagementRoleMiddleware, async (req, res, next) => {
+    try {
+      if (!req.body.credential) {
+        return res.status(400).json({ error: 'MISSING_REQUIRED_FIELDS' });
+      }
+
+      const result = await finishAdminPasskeyRegistrationWithAuthBackendService({
+        credential: req.body.credential,
+        name: String(req.body.name || ''),
+        cookie: req.headers.cookie,
+        language: req.headers['accept-language'],
+        ...(req.headers.origin ? { origin: req.headers.origin } : {})
+      });
+
+      return res.status(201).json(result);
+    } catch (error) {
+      if (error.status) {
+        return res.status(error.status).json({
+          error: error.message
+        });
+      }
+
+      return next(error);
+    }
+  });
+
+  router.post('/mng/api/profile/passkeys/authentication-options', requireManagementRoleMiddleware, async (req, res, next) => {
+    try {
+      const result = await startAdminPasskeyAuthenticationWithAuthBackendService({
+        cookie: req.headers.cookie,
+        language: req.headers['accept-language'],
+        ...(req.headers.origin ? { origin: req.headers.origin } : {})
+      });
+
+      return res.status(200).json(result);
+    } catch (error) {
+      if (error.status) {
+        return res.status(error.status).json({
+          error: error.message
+        });
+      }
+
+      return next(error);
+    }
+  });
+
+  router.delete('/mng/api/profile/passkeys/:passkeyId', requireManagementRoleMiddleware, async (req, res, next) => {
+    try {
+      const passkeyId = Number(req.params.passkeyId);
+      const password = String(req.body.password || '');
+
+      if (!Number.isInteger(passkeyId) || passkeyId <= 0 || !password) {
+        return res.status(400).json({ error: 'MISSING_REQUIRED_FIELDS' });
+      }
+
+      const result = await deleteAdminPasskeyWithAuthBackendService({
+        passkeyId,
+        password,
+        cookie: req.headers.cookie,
+        language: req.headers['accept-language']
+      });
+
+      return res.status(200).json(result);
     } catch (error) {
       if (error.status) {
         return res.status(error.status).json({

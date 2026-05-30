@@ -145,4 +145,133 @@ describe('management-console profile routes', () => {
 
     assert.equal(calls.length, 0);
   });
+
+  it('starts passkey registration through auth-backend', async () => {
+    const calls = [];
+    const router = createProfileRouter({
+      startAdminPasskeyRegistrationWithAuthBackendService: async (payload) => {
+        calls.push(payload);
+        return {
+          challenge: 'challenge-123',
+          rp: { id: 'localhost', name: 'EthicApp' }
+        };
+      }
+    });
+    const app = createTestApp(router);
+
+    await withServer(app, async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/mng/api/profile/passkeys/registration-options`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: 'auth.sid=auth-session; ethicapp.mng.sid=mng-session',
+          'Accept-Language': 'es-CL'
+        },
+        body: JSON.stringify({
+          password: 'CurrentPassword123!@'
+        })
+      });
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), {
+        challenge: 'challenge-123',
+        rp: { id: 'localhost', name: 'EthicApp' }
+      });
+    });
+
+    assert.deepEqual(calls, [
+      {
+        password: 'CurrentPassword123!@',
+        cookie: 'auth.sid=auth-session; ethicapp.mng.sid=mng-session',
+        language: 'es-CL'
+      }
+    ]);
+  });
+
+  it('forwards completed passkey registration through auth-backend', async () => {
+    const calls = [];
+    const router = createProfileRouter({
+      finishAdminPasskeyRegistrationWithAuthBackendService: async (payload) => {
+        calls.push(payload);
+        return {
+          message: 'Passkey registered successfully',
+          passkeys: [{ id: 3, name: 'Touch ID' }]
+        };
+      }
+    });
+    const app = createTestApp(router);
+
+    await withServer(app, async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/mng/api/profile/passkeys/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: 'auth.sid=auth-session',
+          'Accept-Language': 'en-US'
+        },
+        body: JSON.stringify({
+          credential: { id: 'credential-id' },
+          name: 'Touch ID'
+        })
+      });
+
+      assert.equal(response.status, 201);
+      assert.deepEqual(await response.json(), {
+        message: 'Passkey registered successfully',
+        passkeys: [{ id: 3, name: 'Touch ID' }]
+      });
+    });
+
+    assert.deepEqual(calls, [
+      {
+        credential: { id: 'credential-id' },
+        name: 'Touch ID',
+        cookie: 'auth.sid=auth-session',
+        language: 'en-US'
+      }
+    ]);
+  });
+
+  it('deletes a passkey through auth-backend', async () => {
+    const calls = [];
+    const router = createProfileRouter({
+      deleteAdminPasskeyWithAuthBackendService: async (payload) => {
+        calls.push(payload);
+        return {
+          message: 'Passkey removed successfully',
+          passkeys: []
+        };
+      }
+    });
+    const app = createTestApp(router);
+
+    await withServer(app, async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/mng/api/profile/passkeys/8`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: 'auth.sid=auth-session',
+          'Accept-Language': 'en-US'
+        },
+        body: JSON.stringify({
+          password: 'CurrentPassword123!@'
+        })
+      });
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), {
+        message: 'Passkey removed successfully',
+        passkeys: []
+      });
+    });
+
+    assert.deepEqual(calls, [
+      {
+        passkeyId: 8,
+        password: 'CurrentPassword123!@',
+        cookie: 'auth.sid=auth-session',
+        language: 'en-US'
+      }
+    ]);
+  });
 });
