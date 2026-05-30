@@ -1,6 +1,12 @@
 import crypto from 'node:crypto';
 import express from 'express';
 import bcrypt from 'bcrypt';
+import {
+  generateAuthenticationOptions,
+  generateRegistrationOptions,
+  verifyAuthenticationResponse,
+  verifyRegistrationResponse
+} from '@simplewebauthn/server';
 
 import db from '../config/database.js';
 import mailService from '../services/mail.service.js';
@@ -13,6 +19,8 @@ const router = express.Router();
 
 const SALT_ROUNDS = Number(process.env.BCRYPT_SALT_ROUNDS || 10);
 const RESET_TOKEN_TTL_MINUTES = Number(process.env.RESET_TOKEN_TTL_MINUTES || 60);
+const PASSKEY_REGISTRATION_TIMEOUT_MS = Number(process.env.WEBAUTHN_REGISTRATION_TIMEOUT_MS || 60000);
+const PASSKEY_AUTHENTICATION_TIMEOUT_MS = Number(process.env.WEBAUTHN_AUTHENTICATION_TIMEOUT_MS || 60000);
 
 function isStrongPassword(password) {
   if (!password || password.length < 10) {
@@ -55,6 +63,159 @@ function isUniqueMailViolation(err) {
     err.constraint === 'users_mail_unique' ||
     (typeof err.detail === 'string' && err.detail.includes('(mail)='))
   );
+}
+
+function ensureAuthenticatedAdmin(req, res) {
+  if (!req.isAuthenticated || !req.isAuthenticated()) {
+    res.status(401).json({
+      error: t(req, 'unauthenticated')
+    });
+    return false;
+  }
+
+  if (!req.user || req.user.role !== 'S') {
+    res.status(403).json({
+      error: t(req, 'unauthorized')
+    });
+    return false;
+  }
+
+  return true;
+}
+
+function getRequestOrigin(req) {
+  const configuredOrigin = (process.env.WEBAUTHN_ORIGIN || '').trim();
+
+  if (configuredOrigin) {
+    return configuredOrigin;
+  }
+
+  const requestOrigin = (req.get('Origin') || '').trim();
+
+  if (requestOrigin) {
+    return requestOrigin;
+  }
+
+  return `${req.protocol}://${req.get('host')}`;
+}
+
+function getWebAuthnRpId(req) {
+  const configuredRpId = (process.env.WEBAUTHN_RP_ID || '').trim();
+
+  if (configuredRpId) {
+    return configuredRpId;
+  }
+
+  const origin = new URL(getRequestOrigin(req));
+  return origin.hostname;
+}
+
+function getWebAuthnRpName() {
+  return (process.env.WEBAUTHN_RP_NAME || 'EthicApp').trim();
+}
+
+function getUserDisplayName(user) {
+  const displayName = [user.firstname, user.lastname].filter(Boolean).join(' ').trim();
+  return displayName || user.mail;
+}
+
+function cleanPasskeyName(name) {
+  const cleanName = String(name || '').trim();
+  return cleanName ? cleanName.slice(0, 120) : null;
+}
+
+async function loadActiveUserForAdmin(userId) {
+  const userResult = await db.query(
+    `
+      SELECT id, mail, password_bcrypt, firstname, lastname
+      FROM users
+      WHERE id = $1
+        AND active = true
+      LIMIT 1
+    `,
+    [userId]
+  );
+
+  return userResult.rowCount > 0 ? userResult.rows[0] : null;
+}
+
+async function verifyCurrentAdminPassword(req, res, password) {
+  if (!password) {
+    res.status(400).json({
+      error: t(req, 'requiredFieldsMissing')
+    });
+    return null;
+  }
+
+  const user = await loadActiveUserForAdmin(req.user.id);
+
+  if (!user) {
+    res.status(401).json({
+      error: t(req, 'wrongCredentials')
+    });
+    return null;
+  }
+
+  const validPassword = await bcrypt.compare(password, user.password_bcrypt || '');
+
+  if (!validPassword) {
+    res.status(401).json({
+      error: t(req, 'wrongCredentials')
+    });
+    return null;
+  }
+
+  return user;
+}
+
+function mapPasskeyRow(row) {
+  return {
+    id: row.id,
+    name: row.name || '',
+    credential_device_type: row.credential_device_type || '',
+    credential_backed_up: row.credential_backed_up === true,
+    transports: Array.isArray(row.transports) ? row.transports : [],
+    created_at: row.created_at,
+    last_used_at: row.last_used_at
+  };
+}
+
+async function listPasskeysForUser(userId) {
+  const result = await db.query(
+    `
+      SELECT
+        id,
+        name,
+        credential_device_type,
+        credential_backed_up,
+        transports,
+        created_at,
+        last_used_at
+      FROM user_passkeys
+      WHERE user_id = $1
+      ORDER BY created_at DESC, id DESC
+    `,
+    [userId]
+  );
+
+  return result.rows.map(mapPasskeyRow);
+}
+
+async function listPasskeyCredentialsForUser(userId) {
+  const result = await db.query(
+    `
+      SELECT credential_id, transports
+      FROM user_passkeys
+      WHERE user_id = $1
+      ORDER BY created_at DESC, id DESC
+    `,
+    [userId]
+  );
+
+  return result.rows.map((passkey) => ({
+    id: passkey.credential_id,
+    transports: Array.isArray(passkey.transports) ? passkey.transports : undefined
+  }));
 }
 
 function duplicateEmailResponse(req) {
@@ -173,49 +334,15 @@ router.post('/login', async (req, res, next) => {
 
 router.post('/admin/verify-password', async (req, res) => {
   try {
-    if (!req.isAuthenticated || !req.isAuthenticated()) {
-      return res.status(401).json({
-        error: t(req, 'unauthenticated')
-      });
-    }
-
-    if (!req.user || req.user.role !== 'S') {
-      return res.status(403).json({
-        error: t(req, 'unauthorized')
-      });
+    if (!ensureAuthenticatedAdmin(req, res)) {
+      return undefined;
     }
 
     const password = req.body.password || '';
 
-    if (!password) {
-      return res.status(400).json({
-        error: t(req, 'requiredFieldsMissing')
-      });
-    }
-
-    const userResult = await db.query(
-      `
-        SELECT password_bcrypt
-        FROM users
-        WHERE id = $1
-          AND active = true
-        LIMIT 1
-      `,
-      [req.user.id]
-    );
-
-    if (userResult.rowCount === 0) {
-      return res.status(401).json({
-        error: t(req, 'wrongCredentials')
-      });
-    }
-
-    const validPassword = await bcrypt.compare(password, userResult.rows[0].password_bcrypt || '');
-
-    if (!validPassword) {
-      return res.status(401).json({
-        error: t(req, 'wrongCredentials')
-      });
+    const user = await verifyCurrentAdminPassword(req, res, password);
+    if (!user) {
+      return undefined;
     }
 
     return res.status(200).json({
@@ -231,16 +358,8 @@ router.post('/admin/verify-password', async (req, res) => {
 
 router.post('/admin/change-password', async (req, res) => {
   try {
-    if (!req.isAuthenticated || !req.isAuthenticated()) {
-      return res.status(401).json({
-        error: t(req, 'unauthenticated')
-      });
-    }
-
-    if (!req.user || req.user.role !== 'S') {
-      return res.status(403).json({
-        error: t(req, 'unauthorized')
-      });
+    if (!ensureAuthenticatedAdmin(req, res)) {
+      return undefined;
     }
 
     const currentPassword = req.body.current_password || '';
@@ -265,32 +384,9 @@ router.post('/admin/change-password', async (req, res) => {
       });
     }
 
-    const userResult = await db.query(
-      `
-        SELECT password_bcrypt
-        FROM users
-        WHERE id = $1
-          AND active = true
-        LIMIT 1
-      `,
-      [req.user.id]
-    );
-
-    if (userResult.rowCount === 0) {
-      return res.status(401).json({
-        error: t(req, 'wrongCredentials')
-      });
-    }
-
-    const currentPasswordValid = await bcrypt.compare(
-      currentPassword,
-      userResult.rows[0].password_bcrypt || ''
-    );
-
-    if (!currentPasswordValid) {
-      return res.status(401).json({
-        error: t(req, 'wrongCredentials')
-      });
+    const user = await verifyCurrentAdminPassword(req, res, currentPassword);
+    if (!user) {
+      return undefined;
     }
 
     const newPasswordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
@@ -309,6 +405,370 @@ router.post('/admin/change-password', async (req, res) => {
     });
   } catch (err) {
     console.error('ADMIN CHANGE PASSWORD ERROR:', err);
+    return res.status(500).json({
+      error: t(req, 'internalServerError')
+    });
+  }
+});
+
+router.post('/admin/password-reset', async (req, res) => {
+  try {
+    if (!ensureAuthenticatedAdmin(req, res)) {
+      return undefined;
+    }
+
+    const email = (req.body.email || '').trim().toLowerCase();
+
+    if (!email) {
+      return res.status(400).json({
+        error: t(req, 'emailRequired')
+      });
+    }
+
+    const rawToken = await createSingleUseTokenForEmail(email);
+    const preferredLocale = normalizePreferredLocale(req.body.preferred_locale || inferPreferredLocaleFromRequest(req));
+
+    await mailService.sendPasswordResetEmail({
+      to: email,
+      rawToken,
+      preferredLocale
+    });
+
+    return res.status(200).json({
+      message: t(req, 'forgotSuccess')
+    });
+  } catch (err) {
+    console.error('ADMIN PASSWORD RESET ERROR:', err);
+    return res.status(500).json({
+      error: t(req, 'internalServerError')
+    });
+  }
+});
+
+router.get('/admin/passkeys', async (req, res) => {
+  try {
+    if (!ensureAuthenticatedAdmin(req, res)) {
+      return undefined;
+    }
+
+    const passkeys = await listPasskeysForUser(req.user.id);
+
+    return res.status(200).json({ passkeys });
+  } catch (err) {
+    console.error('ADMIN LIST PASSKEYS ERROR:', err);
+    return res.status(500).json({
+      error: t(req, 'internalServerError')
+    });
+  }
+});
+
+router.post('/admin/passkeys/registration-options', async (req, res) => {
+  try {
+    if (!ensureAuthenticatedAdmin(req, res)) {
+      return undefined;
+    }
+
+    const password = req.body.password || '';
+    const user = await verifyCurrentAdminPassword(req, res, password);
+
+    if (!user) {
+      return undefined;
+    }
+
+    const existingPasskeysResult = await db.query(
+      `
+        SELECT credential_id, transports
+        FROM user_passkeys
+        WHERE user_id = $1
+      `,
+      [req.user.id]
+    );
+
+    const options = await generateRegistrationOptions({
+      rpName: getWebAuthnRpName(),
+      rpID: getWebAuthnRpId(req),
+      userID: new TextEncoder().encode(String(user.id)),
+      userName: user.mail,
+      userDisplayName: getUserDisplayName(user),
+      timeout: PASSKEY_REGISTRATION_TIMEOUT_MS,
+      attestationType: 'none',
+      excludeCredentials: existingPasskeysResult.rows.map((passkey) => ({
+        id: passkey.credential_id,
+        transports: Array.isArray(passkey.transports) ? passkey.transports : undefined
+      })),
+      authenticatorSelection: {
+        residentKey: 'preferred',
+        userVerification: 'preferred'
+      }
+    });
+
+    req.session.passkeyRegistration = {
+      challenge: options.challenge,
+      userId: req.user.id,
+      rpId: getWebAuthnRpId(req),
+      origin: getRequestOrigin(req)
+    };
+
+    return res.status(200).json(options);
+  } catch (err) {
+    console.error('ADMIN PASSKEY REGISTRATION OPTIONS ERROR:', err);
+    return res.status(500).json({
+      error: t(req, 'internalServerError')
+    });
+  }
+});
+
+router.post('/admin/passkeys/register', async (req, res) => {
+  try {
+    if (!ensureAuthenticatedAdmin(req, res)) {
+      return undefined;
+    }
+
+    const registrationState = req.session.passkeyRegistration;
+
+    if (!registrationState || registrationState.userId !== req.user.id) {
+      return res.status(400).json({
+        error: t(req, 'passkeyRegistrationExpired')
+      });
+    }
+
+    const verification = await verifyRegistrationResponse({
+      response: req.body.credential,
+      expectedChallenge: registrationState.challenge,
+      expectedOrigin: registrationState.origin,
+      expectedRPID: registrationState.rpId,
+      requireUserVerification: false
+    });
+
+    if (!verification.verified || !verification.registrationInfo) {
+      delete req.session.passkeyRegistration;
+      return res.status(400).json({
+        error: t(req, 'passkeyRegistrationFailed')
+      });
+    }
+
+    const {
+      credential,
+      credentialDeviceType,
+      credentialBackedUp
+    } = verification.registrationInfo;
+
+    await db.query(
+      `
+        INSERT INTO user_passkeys (
+          user_id,
+          credential_id,
+          credential_public_key,
+          counter,
+          credential_device_type,
+          credential_backed_up,
+          transports,
+          name
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `,
+      [
+        req.user.id,
+        credential.id,
+        Buffer.from(credential.publicKey),
+        credential.counter,
+        credentialDeviceType,
+        credentialBackedUp,
+        credential.transports || [],
+        cleanPasskeyName(req.body.name)
+      ]
+    );
+
+    delete req.session.passkeyRegistration;
+
+    const passkeys = await listPasskeysForUser(req.user.id);
+
+    return res.status(201).json({
+      message: t(req, 'passkeyRegistered'),
+      passkeys
+    });
+  } catch (err) {
+    delete req.session.passkeyRegistration;
+
+    if (isUniqueViolation(err)) {
+      return res.status(409).json({
+        error: t(req, 'passkeyAlreadyRegistered')
+      });
+    }
+
+    console.error('ADMIN PASSKEY REGISTER ERROR:', err);
+    return res.status(500).json({
+      error: t(req, 'internalServerError')
+    });
+  }
+});
+
+router.post('/admin/passkeys/authentication-options', async (req, res) => {
+  try {
+    if (!ensureAuthenticatedAdmin(req, res)) {
+      return undefined;
+    }
+
+    const allowCredentials = await listPasskeyCredentialsForUser(req.user.id);
+
+    if (allowCredentials.length === 0) {
+      return res.status(409).json({
+        error: t(req, 'passkeyNotConfigured')
+      });
+    }
+
+    const options = await generateAuthenticationOptions({
+      rpID: getWebAuthnRpId(req),
+      allowCredentials,
+      timeout: PASSKEY_AUTHENTICATION_TIMEOUT_MS,
+      userVerification: 'preferred'
+    });
+
+    req.session.passkeyAuthentication = {
+      challenge: options.challenge,
+      userId: req.user.id,
+      rpId: getWebAuthnRpId(req),
+      origin: getRequestOrigin(req)
+    };
+
+    return res.status(200).json(options);
+  } catch (err) {
+    console.error('ADMIN PASSKEY AUTHENTICATION OPTIONS ERROR:', err);
+    return res.status(500).json({
+      error: t(req, 'internalServerError')
+    });
+  }
+});
+
+router.post('/admin/passkeys/verify', async (req, res) => {
+  try {
+    if (!ensureAuthenticatedAdmin(req, res)) {
+      return undefined;
+    }
+
+    const authenticationState = req.session.passkeyAuthentication;
+
+    if (!authenticationState || authenticationState.userId !== req.user.id) {
+      return res.status(400).json({
+        error: t(req, 'passkeyAuthenticationExpired')
+      });
+    }
+
+    const assertion = req.body.assertion;
+
+    if (!assertion || !assertion.id) {
+      return res.status(400).json({
+        error: t(req, 'requiredFieldsMissing')
+      });
+    }
+
+    const passkeyResult = await db.query(
+      `
+        SELECT credential_id, credential_public_key, counter, transports
+        FROM user_passkeys
+        WHERE user_id = $1
+          AND credential_id = $2
+        LIMIT 1
+      `,
+      [req.user.id, assertion.id]
+    );
+
+    if (passkeyResult.rowCount === 0) {
+      delete req.session.passkeyAuthentication;
+      return res.status(401).json({
+        error: t(req, 'passkeyAuthenticationFailed')
+      });
+    }
+
+    const passkey = passkeyResult.rows[0];
+    const verification = await verifyAuthenticationResponse({
+      response: assertion,
+      expectedChallenge: authenticationState.challenge,
+      expectedOrigin: authenticationState.origin,
+      expectedRPID: authenticationState.rpId,
+      credential: {
+        id: passkey.credential_id,
+        publicKey: new Uint8Array(passkey.credential_public_key),
+        counter: Number(passkey.counter || 0),
+        transports: Array.isArray(passkey.transports) ? passkey.transports : undefined
+      },
+      requireUserVerification: false
+    });
+
+    if (!verification.verified) {
+      delete req.session.passkeyAuthentication;
+      return res.status(401).json({
+        error: t(req, 'passkeyAuthenticationFailed')
+      });
+    }
+
+    await db.query(
+      `
+        UPDATE user_passkeys
+        SET counter = $1,
+            last_used_at = NOW()
+        WHERE user_id = $2
+          AND credential_id = $3
+      `,
+      [
+        verification.authenticationInfo.newCounter,
+        req.user.id,
+        verification.authenticationInfo.credentialID
+      ]
+    );
+
+    delete req.session.passkeyAuthentication;
+
+    return res.status(200).json({
+      ok: true
+    });
+  } catch (err) {
+    delete req.session.passkeyAuthentication;
+    console.error('ADMIN PASSKEY VERIFY ERROR:', err);
+    return res.status(500).json({
+      error: t(req, 'internalServerError')
+    });
+  }
+});
+
+router.delete('/admin/passkeys/:passkeyId', async (req, res) => {
+  try {
+    if (!ensureAuthenticatedAdmin(req, res)) {
+      return undefined;
+    }
+
+    const password = req.body.password || '';
+    const user = await verifyCurrentAdminPassword(req, res, password);
+
+    if (!user) {
+      return undefined;
+    }
+
+    const passkeyId = Number(req.params.passkeyId);
+
+    if (!Number.isInteger(passkeyId) || passkeyId <= 0) {
+      return res.status(400).json({
+        error: t(req, 'requiredFieldsMissing')
+      });
+    }
+
+    await db.query(
+      `
+        DELETE FROM user_passkeys
+        WHERE id = $1
+          AND user_id = $2
+      `,
+      [passkeyId, req.user.id]
+    );
+
+    const passkeys = await listPasskeysForUser(req.user.id);
+
+    return res.status(200).json({
+      message: t(req, 'passkeyDeleted'),
+      passkeys
+    });
+  } catch (err) {
+    console.error('ADMIN PASSKEY DELETE ERROR:', err);
     return res.status(500).json({
       error: t(req, 'internalServerError')
     });
