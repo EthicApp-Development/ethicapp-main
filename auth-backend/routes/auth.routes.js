@@ -14,6 +14,7 @@ import recaptchaService from '../services/recaptcha.service.js';
 import authMessages from '../i18n/messages/auth-messages.js';
 import { inferPreferredLocaleFromRequest, normalizePreferredLocale, translateMessage } from '../i18n/locale.js';
 import { csrfTokenHandler } from '../middleware/csrfProtection.js';
+import { initializeSessionPolicy } from '../middleware/sessionPolicy.js';
 
 const router = express.Router();
 
@@ -315,6 +316,8 @@ router.post('/login', async (req, res, next) => {
         if (err) {
           return next(err);
         }
+
+        initializeSessionPolicy(req, user.role);
 
         const redirectTo = getPostLoginRedirect(user.role);
 
