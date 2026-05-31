@@ -322,11 +322,22 @@ router.post('/login', async (req, res, next) => {
         initializeSessionPolicy(req, user.role, Date.now(), Number(user.session_version || 1));
 
         const redirectTo = getPostLoginRedirect(user.role);
-
-        return res.json({
+        const sendLoginResponse = () => res.json({
           message: t(req, 'loginSuccess'),
           redirectTo
         });
+
+        if (req.session && typeof req.session.save === 'function') {
+          return req.session.save((saveError) => {
+            if (saveError) {
+              return next(saveError);
+            }
+
+            return sendLoginResponse();
+          });
+        }
+
+        return sendLoginResponse();
       }
     );
   } catch (err) {

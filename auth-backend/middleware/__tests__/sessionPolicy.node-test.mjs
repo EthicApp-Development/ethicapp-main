@@ -6,8 +6,10 @@ import {
   getDefaultAuthSessionMaxAgeMs,
   getDefaultAuthSessionTtlSeconds,
   getRoleSessionPolicy,
+  getSessionTouchIntervalMs,
   getUserSessionVersion,
-  initializeSessionPolicy
+  initializeSessionPolicy,
+  shouldBypassSessionPolicy
 } from '../sessionPolicy.js';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -56,6 +58,7 @@ describe('auth-backend session policy', () => {
     delete process.env.AUTH_SESSION_PROFESSOR_ABSOLUTE_TIMEOUT_MS;
     delete process.env.AUTH_SESSION_STUDENT_IDLE_TIMEOUT_MS;
     delete process.env.AUTH_SESSION_STUDENT_ABSOLUTE_TIMEOUT_MS;
+    delete process.env.AUTH_SESSION_TOUCH_INTERVAL_MS;
   });
 
   it('uses role-aware default timeout policies', () => {
@@ -86,6 +89,53 @@ describe('auth-backend session policy', () => {
       idleTimeoutMs: 60000,
       absoluteTimeoutMs: 120000
     });
+  });
+
+  it('uses a bounded touch interval to avoid excessive session writes', () => {
+    assert.equal(getSessionTouchIntervalMs(getRoleSessionPolicy('S')), 5 * 60 * 1000);
+
+    process.env.AUTH_SESSION_TOUCH_INTERVAL_MS = String(3 * HOUR_MS);
+
+    assert.equal(getSessionTouchIntervalMs(getRoleSessionPolicy('S')), HOUR_MS);
+  });
+
+  it('bypasses public authentication routes', () => {
+    assert.equal(shouldBypassSessionPolicy({ method: 'GET', path: '/api/auth/csrf-token' }), true);
+    assert.equal(shouldBypassSessionPolicy({ method: 'POST', path: '/api/auth/login' }), true);
+    assert.equal(shouldBypassSessionPolicy({ method: 'GET', path: '/login' }), true);
+    assert.equal(shouldBypassSessionPolicy({ method: 'GET', path: '/auth/session/check' }), false);
+    assert.equal(shouldBypassSessionPolicy({ method: 'POST', path: '/api/auth/admin/change-password' }), false);
+  });
+
+  it('does not expire stale sessions on public login dependencies', () => {
+    let destroyed = false;
+    const req = {
+      method: 'GET',
+      path: '/api/auth/csrf-token',
+      user: { role: 'S', sessionVersion: 5 },
+      session: {
+        cookie: {},
+        authPolicy: {
+          role: 'S',
+          sessionVersion: 4,
+          createdAt: 1000,
+          lastSeenAt: 1000
+        },
+        destroy(callback) {
+          destroyed = true;
+          callback();
+        }
+      }
+    };
+
+    const { nextCalled, res } = runMiddleware({
+      req,
+      nowMs: 1000 + HOUR_MS
+    });
+
+    assert.equal(nextCalled, true);
+    assert.equal(destroyed, false);
+    assert.equal(res.ended, false);
   });
 
   it('initializes session policy metadata and role-specific cookie lifetime', () => {
@@ -130,6 +180,31 @@ describe('auth-backend session policy', () => {
     assert.equal(req.session.authPolicy.lastSeenAt, 1000 + HOUR_MS);
     assert.equal(req.session.authPolicy.sessionVersion, 4);
     assert.equal(req.session.cookie.maxAge, 2 * HOUR_MS);
+  });
+
+  it('does not touch a valid session before the touch interval elapses', () => {
+    const req = {
+      user: { role: 'S', sessionVersion: 4 },
+      session: {
+        cookie: { maxAge: 123 },
+        authPolicy: {
+          role: 'S',
+          sessionVersion: 4,
+          createdAt: 1000,
+          lastSeenAt: 1000
+        }
+      }
+    };
+
+    const { nextCalled, res } = runMiddleware({
+      req,
+      nowMs: 1000 + (2 * 60 * 1000)
+    });
+
+    assert.equal(nextCalled, true);
+    assert.equal(res.ended, false);
+    assert.equal(req.session.authPolicy.lastSeenAt, 1000);
+    assert.equal(req.session.cookie.maxAge, 123);
   });
 
   it('normalizes user session version from known user shapes', () => {

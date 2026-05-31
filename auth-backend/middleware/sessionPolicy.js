@@ -16,6 +16,25 @@ const ROLE_POLICIES = {
   }
 };
 
+const PUBLIC_AUTH_API_PATHS = new Set([
+  '/api/auth/csrf-token',
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/forgot',
+  '/api/auth/reset-password',
+  '/api/auth/logout'
+]);
+
+const PUBLIC_AUTH_VIEW_PATHS = new Set([
+  '/',
+  '/login',
+  '/register',
+  '/forgot',
+  '/reset-password',
+  '/privacy',
+  '/terms'
+]);
+
 function parsePositiveInteger(value, fallback) {
   const numberValue = Number(value);
   return Number.isFinite(numberValue) && numberValue > 0
@@ -80,6 +99,15 @@ function getDefaultAuthSessionTtlSeconds() {
   return Math.ceil(getDefaultAuthSessionMaxAgeMs() / 1000);
 }
 
+function getSessionTouchIntervalMs(policy) {
+  const configuredIntervalMs = parsePositiveInteger(
+    process.env.AUTH_SESSION_TOUCH_INTERVAL_MS,
+    5 * 60 * 1000
+  );
+
+  return Math.min(configuredIntervalMs, Math.floor(policy.idleTimeoutMs / 2));
+}
+
 function getUserSessionVersion(user) {
   const sessionVersion = Number(user?.sessionVersion ?? user?.session_version ?? 1);
   return Number.isInteger(sessionVersion) && sessionVersion > 0 ? sessionVersion : 1;
@@ -128,8 +156,23 @@ function clearExpiredSession(req, res) {
   return req.session.destroy(() => res.status(401).end());
 }
 
+function shouldBypassSessionPolicy(req) {
+  const method = String(req.method || 'GET').toUpperCase();
+  const path = req.path || req.url || '';
+
+  if (PUBLIC_AUTH_API_PATHS.has(path)) {
+    return true;
+  }
+
+  return method === 'GET' && PUBLIC_AUTH_VIEW_PATHS.has(path);
+}
+
 function createSessionPolicyMiddleware({ nowProvider = Date.now } = {}) {
   return function sessionPolicyMiddleware(req, res, next) {
+    if (shouldBypassSessionPolicy(req)) {
+      return next();
+    }
+
     if (!req.session || !req.user) {
       return next();
     }
@@ -156,16 +199,20 @@ function createSessionPolicyMiddleware({ nowProvider = Date.now } = {}) {
 
     const createdAt = Number(req.session.authPolicy.createdAt || nowMs);
     const remainingAbsoluteMs = Math.max(policy.absoluteTimeoutMs - (nowMs - createdAt), 0);
+    const lastSeenAt = Number(req.session.authPolicy.lastSeenAt || createdAt);
+    const shouldTouchSession = nowMs - lastSeenAt >= getSessionTouchIntervalMs(policy);
 
-    req.session.authPolicy = {
-      ...req.session.authPolicy,
-      role: String(role || ''),
-      sessionVersion: currentSessionVersion,
-      lastSeenAt: nowMs
-    };
+    if (shouldTouchSession) {
+      req.session.authPolicy = {
+        ...req.session.authPolicy,
+        role: String(role || ''),
+        sessionVersion: currentSessionVersion,
+        lastSeenAt: nowMs
+      };
 
-    if (req.session.cookie) {
-      req.session.cookie.maxAge = Math.min(policy.idleTimeoutMs, remainingAbsoluteMs);
+      if (req.session.cookie) {
+        req.session.cookie.maxAge = Math.min(policy.idleTimeoutMs, remainingAbsoluteMs);
+      }
     }
 
     return next();
@@ -178,6 +225,8 @@ export {
   getDefaultAuthSessionMaxAgeMs,
   getDefaultAuthSessionTtlSeconds,
   getRoleSessionPolicy,
+  getSessionTouchIntervalMs,
   getUserSessionVersion,
-  initializeSessionPolicy
+  initializeSessionPolicy,
+  shouldBypassSessionPolicy
 };
