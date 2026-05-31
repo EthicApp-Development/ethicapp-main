@@ -29,7 +29,8 @@ const enUS = {
     notices: {
       accountConfirmed: 'Your account has been confirmed. You can now sign in.',
       confirmationInvalid: 'The confirmation link is invalid or has expired. Use password recovery to request a new link.',
-      confirmationError: 'We could not confirm your account. Use password recovery to request a new link.'
+      confirmationError: 'We could not confirm your account. Use password recovery to request a new link.',
+      passwordChanged: 'Your password was updated successfully. Please sign in again.'
     }
   },
   register: {
