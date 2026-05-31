@@ -65,6 +65,29 @@ REDIS_CACHE_MAXMEMORY_POLICY=allkeys-lru
 
 Do not use generic `REDIS_HOST`, `REDIS_PORT`, or `REDIS_URL` values in production. The services resolve Redis by role-specific variables only, which avoids accidentally routing session traffic and cache traffic to the same Docker DNS name.
 
+## Browser Sessions
+
+Browser authentication is centralized in `auth-backend` through opaque
+Redis-backed sessions. The role-aware defaults are:
+
+- Administrators: 2-hour idle timeout, 8-hour absolute timeout.
+- Professors: 7-day idle timeout, 30-day absolute timeout.
+- Students: 24-hour idle timeout, 7-day absolute timeout.
+
+Protected browser traffic renews sessions through NGINX `auth_request`, with
+touches throttled by `AUTH_SESSION_TOUCH_INTERVAL_MS` (default 5 minutes).
+Account-sensitive changes increment `users.session_version`, which revokes older
+browser sessions on their next authenticated request.
+
+`management-console` additionally uses a local `ethicapp.mng.sid` cookie for
+console-local state such as CSRF data. Its default lifetime is 2 hours through
+`MNG_SESSION_COOKIE_MAX_AGE_MS`, but the primary authentication decision remains
+the `auth-backend` session checked by NGINX.
+
+For the complete operator-facing session variable list, defaults, and
+revocation semantics, see the Browser Session Policy section in
+[`deploy/README.md`](./deploy/README.md#browser-session-policy).
+
 ## Publishable Images
 
 The repository can build and publish these project images:
