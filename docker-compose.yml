@@ -3,15 +3,13 @@ services:
     build:
       context: ./nginx
       dockerfile: Dockerfile
+    environment:
+      - NGINX_MAINTENANCE_MODE=${NGINX_MAINTENANCE_MODE:-false}
+      - NGINX_MAINTENANCE_RETRY_AFTER=${NGINX_MAINTENANCE_RETRY_AFTER:-3600}
     ports:
       - "80:80"
-    depends_on:
-      - ethicapp
-      - auth-backend
-      - ethicapp-student
-      - management-console
     volumes:
-      - ./nginx/conf.d/dev.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d/dev.conf:/etc/nginx/dev.conf:ro
       - ./nginx/static:/usr/share/nginx/html/static:ro
 
   ethicapp:
