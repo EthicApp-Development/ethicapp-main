@@ -232,6 +232,36 @@ async function anonymizeStudentAccount(pool, runId, user, options) {
                 [options.placeholderText, user.id]
             );
 
+            const rankingChatResult = await client.query(
+                `
+                    UPDATE chat
+                    SET content = $1
+                    WHERE uid = $2
+                      AND content IS NOT NULL
+                `,
+                [options.placeholderText, user.id]
+            );
+
+            const actorSelectionResult = await client.query(
+                `
+                    UPDATE actor_selection
+                    SET description = $1
+                    WHERE uid = $2
+                      AND description IS NOT NULL
+                `,
+                [options.placeholderText, user.id]
+            );
+
+            const sessionDeviceResult = await client.query(
+                `
+                    UPDATE sesusers
+                    SET device = NULL
+                    WHERE uid = $1
+                      AND device IS NOT NULL
+                `,
+                [user.id]
+            );
+
             const passwordResetResult = await client.query(
                 `
                     DELETE FROM pass_reset
@@ -248,8 +278,10 @@ async function anonymizeStudentAccount(pool, runId, user, options) {
                         lastname = $3,
                         mail = $4,
                         rut = $5,
+                        sex = NULL,
                         pass = '',
                         password_bcrypt = NULL,
+                        last_login_at = NULL,
                         active = false,
                         email_confirmed = false,
                         profile_image_path = NULL,
@@ -274,6 +306,9 @@ async function anonymizeStudentAccount(pool, runId, user, options) {
                 "Account anonymized.",
                 `differential_selection comments updated: ${differentialSelectionResult.rowCount || 0}.`,
                 `differential_chat messages updated: ${differentialChatResult.rowCount || 0}.`,
+                `chat messages updated: ${rankingChatResult.rowCount || 0}.`,
+                `actor_selection descriptions updated: ${actorSelectionResult.rowCount || 0}.`,
+                `session device values cleared: ${sessionDeviceResult.rowCount || 0}.`,
                 `password reset tokens deleted: ${passwordResetResult.rowCount || 0}.`,
             ].join(" ");
 

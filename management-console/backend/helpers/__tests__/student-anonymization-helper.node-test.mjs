@@ -124,13 +124,16 @@ test("runStudentAnonymization dry-run records skipped events without changing da
     assert.equal(pool.client.calls.some(call => call.sql.includes("UPDATE users SET")), false);
     assert.equal(pool.client.calls.some(call => call.sql.includes("UPDATE differential_selection")), false);
     assert.equal(pool.client.calls.some(call => call.sql.includes("UPDATE differential_chat")), false);
+    assert.equal(pool.client.calls.some(call => call.sql.includes("UPDATE chat")), false);
+    assert.equal(pool.client.calls.some(call => call.sql.includes("UPDATE actor_selection")), false);
+    assert.equal(pool.client.calls.some(call => call.sql.includes("UPDATE sesusers")), false);
     assert.equal(
         pool.client.calls.filter(call => call.sql.includes("'Dry run: account would be anonymized.'")).length,
         2
     );
 });
 
-test("runStudentAnonymization anonymizes account, free-text answers, and stale reset tokens", async () => {
+test("runStudentAnonymization anonymizes account, free-text data, session devices, and stale reset tokens", async () => {
     const pool = new FakePool(createQueryHandler({
         candidates: [{ id: 5, mail: "student5@example.test" }],
     }));
@@ -161,10 +164,15 @@ test("runStudentAnonymization anonymizes account, free-text answers, and stale r
     ]);
     assert.match(userUpdate.sql, /active = false/);
     assert.match(userUpdate.sql, /email_confirmed = false/);
+    assert.match(userUpdate.sql, /sex = NULL/);
+    assert.match(userUpdate.sql, /last_login_at = NULL/);
     assert.match(userUpdate.sql, /session_version = session_version \+ 1/);
 
     assert.ok(pool.client.calls.some(call => call.sql.includes("UPDATE differential_selection SET comment = $1")));
     assert.ok(pool.client.calls.some(call => call.sql.includes("UPDATE differential_chat SET content = $1")));
+    assert.ok(pool.client.calls.some(call => call.sql.includes("UPDATE chat SET content = $1")));
+    assert.ok(pool.client.calls.some(call => call.sql.includes("UPDATE actor_selection SET description = $1")));
+    assert.ok(pool.client.calls.some(call => call.sql.includes("UPDATE sesusers SET device = NULL")));
     assert.ok(pool.client.calls.some(call => call.sql.includes("DELETE FROM pass_reset")));
     assert.ok(pool.client.calls.some(call => call.sql === "COMMIT"));
 });
