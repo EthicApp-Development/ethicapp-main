@@ -3,6 +3,7 @@ import session from 'express-session';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import { getManagementSessionCookieMaxAgeMs } from './config/session.js';
 import hydrateSessionFromAuthProxy from './middleware/hydrateSessionFromAuthProxy.js';
 import { csrfProtection } from './middleware/csrfProtection.js';
 import csrfRoutes from './routes/csrf.routes.js';
@@ -31,7 +32,7 @@ app.use(
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 1000 * 60 * 60 * 8
+      maxAge: getManagementSessionCookieMaxAgeMs()
     }
   })
 );
