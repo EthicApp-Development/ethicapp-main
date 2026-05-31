@@ -80,6 +80,15 @@ function getDefaultAuthSessionTtlSeconds() {
   return Math.ceil(getDefaultAuthSessionMaxAgeMs() / 1000);
 }
 
+function getSessionTouchIntervalMs(policy) {
+  const configuredIntervalMs = parsePositiveInteger(
+    process.env.AUTH_SESSION_TOUCH_INTERVAL_MS,
+    5 * 60 * 1000
+  );
+
+  return Math.min(configuredIntervalMs, Math.floor(policy.idleTimeoutMs / 2));
+}
+
 function getUserSessionVersion(user) {
   const sessionVersion = Number(user?.sessionVersion ?? user?.session_version ?? 1);
   return Number.isInteger(sessionVersion) && sessionVersion > 0 ? sessionVersion : 1;
@@ -156,16 +165,20 @@ function createSessionPolicyMiddleware({ nowProvider = Date.now } = {}) {
 
     const createdAt = Number(req.session.authPolicy.createdAt || nowMs);
     const remainingAbsoluteMs = Math.max(policy.absoluteTimeoutMs - (nowMs - createdAt), 0);
+    const lastSeenAt = Number(req.session.authPolicy.lastSeenAt || createdAt);
+    const shouldTouchSession = nowMs - lastSeenAt >= getSessionTouchIntervalMs(policy);
 
-    req.session.authPolicy = {
-      ...req.session.authPolicy,
-      role: String(role || ''),
-      sessionVersion: currentSessionVersion,
-      lastSeenAt: nowMs
-    };
+    if (shouldTouchSession) {
+      req.session.authPolicy = {
+        ...req.session.authPolicy,
+        role: String(role || ''),
+        sessionVersion: currentSessionVersion,
+        lastSeenAt: nowMs
+      };
 
-    if (req.session.cookie) {
-      req.session.cookie.maxAge = Math.min(policy.idleTimeoutMs, remainingAbsoluteMs);
+      if (req.session.cookie) {
+        req.session.cookie.maxAge = Math.min(policy.idleTimeoutMs, remainingAbsoluteMs);
+      }
     }
 
     return next();
@@ -178,6 +191,7 @@ export {
   getDefaultAuthSessionMaxAgeMs,
   getDefaultAuthSessionTtlSeconds,
   getRoleSessionPolicy,
+  getSessionTouchIntervalMs,
   getUserSessionVersion,
   initializeSessionPolicy
 };
