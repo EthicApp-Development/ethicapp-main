@@ -8,7 +8,8 @@ import {
   getRoleSessionPolicy,
   getSessionTouchIntervalMs,
   getUserSessionVersion,
-  initializeSessionPolicy
+  initializeSessionPolicy,
+  shouldBypassSessionPolicy
 } from '../sessionPolicy.js';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -96,6 +97,45 @@ describe('auth-backend session policy', () => {
     process.env.AUTH_SESSION_TOUCH_INTERVAL_MS = String(3 * HOUR_MS);
 
     assert.equal(getSessionTouchIntervalMs(getRoleSessionPolicy('S')), HOUR_MS);
+  });
+
+  it('bypasses public authentication routes', () => {
+    assert.equal(shouldBypassSessionPolicy({ method: 'GET', path: '/api/auth/csrf-token' }), true);
+    assert.equal(shouldBypassSessionPolicy({ method: 'POST', path: '/api/auth/login' }), true);
+    assert.equal(shouldBypassSessionPolicy({ method: 'GET', path: '/login' }), true);
+    assert.equal(shouldBypassSessionPolicy({ method: 'GET', path: '/auth/session/check' }), false);
+    assert.equal(shouldBypassSessionPolicy({ method: 'POST', path: '/api/auth/admin/change-password' }), false);
+  });
+
+  it('does not expire stale sessions on public login dependencies', () => {
+    let destroyed = false;
+    const req = {
+      method: 'GET',
+      path: '/api/auth/csrf-token',
+      user: { role: 'S', sessionVersion: 5 },
+      session: {
+        cookie: {},
+        authPolicy: {
+          role: 'S',
+          sessionVersion: 4,
+          createdAt: 1000,
+          lastSeenAt: 1000
+        },
+        destroy(callback) {
+          destroyed = true;
+          callback();
+        }
+      }
+    };
+
+    const { nextCalled, res } = runMiddleware({
+      req,
+      nowMs: 1000 + HOUR_MS
+    });
+
+    assert.equal(nextCalled, true);
+    assert.equal(destroyed, false);
+    assert.equal(res.ended, false);
   });
 
   it('initializes session policy metadata and role-specific cookie lifetime', () => {

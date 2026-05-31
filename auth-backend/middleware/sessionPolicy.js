@@ -16,6 +16,25 @@ const ROLE_POLICIES = {
   }
 };
 
+const PUBLIC_AUTH_API_PATHS = new Set([
+  '/api/auth/csrf-token',
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/forgot',
+  '/api/auth/reset-password',
+  '/api/auth/logout'
+]);
+
+const PUBLIC_AUTH_VIEW_PATHS = new Set([
+  '/',
+  '/login',
+  '/register',
+  '/forgot',
+  '/reset-password',
+  '/privacy',
+  '/terms'
+]);
+
 function parsePositiveInteger(value, fallback) {
   const numberValue = Number(value);
   return Number.isFinite(numberValue) && numberValue > 0
@@ -137,8 +156,23 @@ function clearExpiredSession(req, res) {
   return req.session.destroy(() => res.status(401).end());
 }
 
+function shouldBypassSessionPolicy(req) {
+  const method = String(req.method || 'GET').toUpperCase();
+  const path = req.path || req.url || '';
+
+  if (PUBLIC_AUTH_API_PATHS.has(path)) {
+    return true;
+  }
+
+  return method === 'GET' && PUBLIC_AUTH_VIEW_PATHS.has(path);
+}
+
 function createSessionPolicyMiddleware({ nowProvider = Date.now } = {}) {
   return function sessionPolicyMiddleware(req, res, next) {
+    if (shouldBypassSessionPolicy(req)) {
+      return next();
+    }
+
     if (!req.session || !req.user) {
       return next();
     }
@@ -193,5 +227,6 @@ export {
   getRoleSessionPolicy,
   getSessionTouchIntervalMs,
   getUserSessionVersion,
-  initializeSessionPolicy
+  initializeSessionPolicy,
+  shouldBypassSessionPolicy
 };
