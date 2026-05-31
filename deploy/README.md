@@ -34,6 +34,53 @@ example, `auth-backend` uses `AUTH_SESSION_SECRET` for `auth.sid`, while
 values do not need to match. `SESSION_SECRET` remains a shared fallback for
 legacy-compatible services, not the preferred production setting.
 
+## Browser Session Policy
+
+Browser authentication uses opaque, Redis-backed Express sessions issued by
+`auth-backend`. The browser receives only the signed `auth.sid` cookie; session
+contents remain server-side in the session Redis store. Production deployments
+should use `REDIS_SESSION_*` for this Redis role and keep it separate from
+`REDIS_CACHE_*`.
+
+`auth-backend` enforces role-aware idle and absolute timeouts:
+
+| Role | Idle timeout variable | Default | Absolute timeout variable | Default |
+| --- | --- | --- | --- | --- |
+| Administrator (`S`) | `AUTH_SESSION_ADMIN_IDLE_TIMEOUT_MS` | `7200000` ms (2 hours) | `AUTH_SESSION_ADMIN_ABSOLUTE_TIMEOUT_MS` | `28800000` ms (8 hours) |
+| Professor (`P`) | `AUTH_SESSION_PROFESSOR_IDLE_TIMEOUT_MS` | `604800000` ms (7 days) | `AUTH_SESSION_PROFESSOR_ABSOLUTE_TIMEOUT_MS` | `2592000000` ms (30 days) |
+| Student (`A`) | `AUTH_SESSION_STUDENT_IDLE_TIMEOUT_MS` | `86400000` ms (24 hours) | `AUTH_SESSION_STUDENT_ABSOLUTE_TIMEOUT_MS` | `604800000` ms (7 days) |
+
+Sessions renew on protected browser traffic through NGINX `auth_request`.
+`auth-backend` updates the session's last-seen timestamp and emits a refreshed
+`Set-Cookie`; NGINX propagates that cookie to the browser. Renewal is throttled
+by `AUTH_SESSION_TOUCH_INTERVAL_MS`, which defaults to `300000` ms (5 minutes)
+and is capped internally at half of the role idle timeout to avoid excessive
+session-store writes.
+
+`AUTH_SESSION_COOKIE_MAX_AGE_MS` and `AUTH_SESSION_TTL_SECONDS` are upper bounds
+for the auth session cookie and Redis key lifetime. Their defaults are
+`2592000000` ms and `2592000` seconds, matching the longest default absolute
+timeout. Role-aware idle and absolute checks can invalidate an auth session
+earlier than those storage-level limits.
+
+Password reset, administrator password rotation, user role changes, disabling a
+user, and similar account-sensitive changes increment `users.session_version`.
+Every authenticated request compares the session's stored version with the
+current user record. A mismatch destroys the old session and returns `401`, so
+existing browser sessions are revoked even if their Redis TTL has not expired.
+
+`management-console` also has its own local application cookie,
+`ethicapp.mng.sid`. This cookie stores management-console-local state such as
+CSRF data and the user identity hydrated from the auth proxy. It is not the
+primary authentication session; authenticated access still depends on
+`auth-backend` and NGINX `auth_request`. Configure this local cookie with:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `MNG_SESSION_COOKIE_NAME` | `ethicapp.mng.sid` | Management-console local session cookie name. |
+| `MNG_SESSION_COOKIE_MAX_AGE_MS` | `7200000` ms (2 hours) | Management-console local cookie lifetime. |
+| `MNG_SESSION_SECRET` | no production default | Management-console local session signing secret. |
+
 `AUTH_INTERNAL_SERVICE_TOKEN` is a shared secret between `management-console`
 and `auth-backend`. It allows management-console to make server-to-server auth
 calls that are exempt from browser CSRF checks. Production deployments must set
