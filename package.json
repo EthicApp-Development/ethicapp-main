@@ -18,6 +18,7 @@
     "pgdump": "./scripts/docker-pgdump.sh",
     "pgrestore": "./scripts/docker-pgrestore.sh",
     "psql": "./scripts/docker-psql.sh",
+    "anonymization:maintenance": "./scripts/student-anonymization-maintenance.sh",
     "build:ethicapp-assets": "./scripts/build-ethicapp-assets.sh",
     "publish:ghcr": "./scripts/ghcr-build-push.sh"
   },
