@@ -94,6 +94,22 @@ emit public `VITE_*` values into each frontend's `runtime-config.js` when the
 container starts, so deployment repositories should provide those values as
 runtime environment variables instead of rebuilding images per environment.
 
+## NGINX Maintenance Mode
+
+The `nginx` image can start in maintenance mode by setting
+`NGINX_MAINTENANCE_MODE=true`. In that mode, NGINX does not proxy to
+application services. It serves a static English maintenance page with
+`503 Service Unavailable` for public application routes, including `/`,
+`/student/`, `/mng/`, and `/auth/login`.
+
+Set `NGINX_MAINTENANCE_RETRY_AFTER` to control the `Retry-After` header. The
+default is `3600`, which means clients should retry after one hour.
+
+The `/healthz` and `/readyz` endpoints return `200` with the text
+`maintenance`, so operators can verify that NGINX is up while application
+services are intentionally stopped. Disable maintenance mode by starting NGINX
+again with `NGINX_MAINTENANCE_MODE=false` or by unsetting the variable.
+
 Database schema changes are delivered through the `db-migrations` image. This
 image is based on Flyway and includes `database/migrations` from the release.
 Run it as a short-lived migration job before starting or updating application
