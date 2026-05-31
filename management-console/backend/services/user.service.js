@@ -183,6 +183,7 @@ export async function updateUserById(userId, payload) {
     ? payload.active === true || payload.active === 'true' || payload.active === 'on'
     : currentUser.active !== false;
   const isRoleChanged = (currentUser.role || '') !== role;
+  const isActiveChanged = (currentUser.active !== false) !== active;
   const validTransition =
     (currentUser.role === 'A' && role === 'P') ||
     (currentUser.role === 'P' && role === 'A') ||
@@ -219,11 +220,25 @@ export async function updateUserById(userId, payload) {
           mail = $5,
           role = $6,
           active = $7,
-          email_confirmed = CASE WHEN $7 = true THEN true ELSE email_confirmed END
+          email_confirmed = CASE WHEN $7 = true THEN true ELSE email_confirmed END,
+          session_version = CASE
+            WHEN $9 = true THEN session_version + 1
+            ELSE session_version
+          END
       WHERE id = $8
       RETURNING id, firstname, lastname, sex, mail, role, active, email_confirmed
     `,
-    [firstname, lastname, fullName, sex, email, role, active, normalizedId]
+    [
+      firstname,
+      lastname,
+      fullName,
+      sex,
+      email,
+      role,
+      active,
+      normalizedId,
+      isRoleChanged || isActiveChanged
+    ]
   );
 
   const row = updateResult.rows[0];

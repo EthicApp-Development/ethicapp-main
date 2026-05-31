@@ -279,7 +279,8 @@ router.post('/login', async (req, res, next) => {
           auth_provider,
           active,
           email_confirmed,
-          password_bcrypt
+          password_bcrypt,
+          session_version
         FROM users
         WHERE active = true
           AND email_confirmed = true
@@ -310,6 +311,7 @@ router.post('/login', async (req, res, next) => {
         role: user.role,
         email: user.mail,
         auth_provider: user.auth_provider || 'local',
+        sessionVersion: Number(user.session_version || 1),
         is_active: user.active && user.email_confirmed
       },
       function (err) {
@@ -317,7 +319,7 @@ router.post('/login', async (req, res, next) => {
           return next(err);
         }
 
-        initializeSessionPolicy(req, user.role);
+        initializeSessionPolicy(req, user.role, Date.now(), Number(user.session_version || 1));
 
         const redirectTo = getPostLoginRedirect(user.role);
 
@@ -397,7 +399,8 @@ router.post('/admin/change-password', async (req, res) => {
     await db.query(
       `
         UPDATE users
-        SET password_bcrypt = $1
+        SET password_bcrypt = $1,
+            session_version = session_version + 1
         WHERE id = $2
       `,
       [newPasswordHash, req.user.id]
@@ -1366,7 +1369,8 @@ router.post('/reset-password', async (req, res) => {
           UPDATE users
           SET password_bcrypt = $1,
               active = CASE WHEN email_confirmed = false THEN true ELSE active END,
-              email_confirmed = true
+              email_confirmed = true,
+              session_version = session_version + 1
           WHERE id = $2
         `,
         [passwordBcrypt, user.id]

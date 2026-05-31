@@ -55,7 +55,8 @@ Optional:
             password_bcrypt = $6,
             auth_provider = 'local',
             active = true,
-            email_confirmed = true
+            email_confirmed = true,
+            session_version = session_version + 1
         WHERE mail = $7
       `,
       [firstname, lastname, fullName, rut, sex, hash, email]
