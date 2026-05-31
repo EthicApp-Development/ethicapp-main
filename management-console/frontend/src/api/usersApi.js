@@ -1,3 +1,5 @@
+import { isLoginResponse, redirectToLogin } from './sessionRedirect.js';
+
 function toQueryString(params) {
   const searchParams = new URLSearchParams();
 
@@ -11,7 +13,15 @@ function toQueryString(params) {
 }
 
 export async function parseJson(response) {
-  const json = await response.json().catch(() => ({}));
+  if (response.status === 401 || isLoginResponse(response)) {
+    redirectToLogin();
+    throw new Error('SESSION_EXPIRED');
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  const json = contentType.includes('application/json')
+    ? await response.json().catch(() => ({}))
+    : {};
 
   if (!response.ok) {
     throw new Error(json.error || 'Request failed');

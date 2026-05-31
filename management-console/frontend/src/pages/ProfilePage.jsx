@@ -11,6 +11,7 @@ import {
   finishPasskeyRegistration,
   startPasskeyRegistration
 } from '../api/profileApi.js';
+import { redirectToLogin } from '../api/sessionRedirect.js';
 
 function getPasswordChecks(password) {
   const symbolCount = (password.match(/[^a-zA-Z0-9]/g) || []).length;
@@ -30,7 +31,6 @@ function ProfilePage() {
   const [passkeySaving, setPasskeySaving] = useState(false);
   const [deletingPasskeyId, setDeletingPasskeyId] = useState(null);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [passkeyError, setPasskeyError] = useState('');
   const [passkeySuccess, setPasskeySuccess] = useState('');
   const [form, setForm] = useState({
@@ -143,7 +143,6 @@ function ProfilePage() {
   async function onSubmit(event) {
     event.preventDefault();
     setError('');
-    setSuccess('');
 
     const validationError = validateForm();
     if (validationError) {
@@ -154,13 +153,8 @@ function ProfilePage() {
     setSaving(true);
 
     try {
-      const result = await changeOwnPassword(form);
-      setSuccess(result.message || t('pages.profile.passwordChangeSuccess'));
-      setForm({
-        current_password: '',
-        new_password: '',
-        password_confirmation: ''
-      });
+      await changeOwnPassword(form);
+      redirectToLogin();
     } catch (requestError) {
       setError(getPasswordRequestErrorMessage(requestError));
     } finally {
@@ -282,7 +276,6 @@ function ProfilePage() {
             <Card.Text>{t('pages.profile.passwordDescription')}</Card.Text>
 
             {error ? <Alert variant="danger">{error}</Alert> : null}
-            {success ? <Alert variant="success">{success}</Alert> : null}
 
             <Form onSubmit={onSubmit}>
               <Form.Group className="mb-3" controlId="profile-current-password">
