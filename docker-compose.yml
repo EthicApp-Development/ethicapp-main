@@ -68,6 +68,31 @@ services:
       flyway:
         condition: service_completed_successfully
 
+  management-console-student-anonymization:
+    build:
+      context: ./management-console
+      dockerfile: Dockerfile
+    profiles:
+      - maintenance
+    env_file:
+      - ./.env.shared
+      - ./management-console/.env
+    environment:
+      - NODE_ENV=development
+      - STUDENT_ANONYMIZATION_DRY_RUN=false
+    volumes:
+      - ./management-console:/app
+      - management_console_student_anonymization_backend_node_modules:/app/backend/node_modules
+    command: >
+      sh -lc '
+        cd /app/backend &&
+        npm install --include=dev &&
+        npm run anonymize:students
+      '
+    depends_on:
+      flyway:
+        condition: service_completed_successfully
+
   auth-backend:
     build:
       context: ./auth-backend
@@ -213,6 +238,7 @@ volumes:
   ethicapp_student_backend_node_modules:
   ethicapp_student_frontend_node_modules:
   management_console_backend_node_modules:
+  management_console_student_anonymization_backend_node_modules:
   management_console_frontend_node_modules:
   pgdata:
   uploads:
