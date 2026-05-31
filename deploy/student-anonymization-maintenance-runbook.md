@@ -3,6 +3,9 @@
 This runbook is the repository-owned command contract for the student
 anonymization maintenance window.
 
+The field-level coverage map is maintained in
+`deploy/student-anonymization-data-map.md`.
+
 The intended recurring windows are January 1 and July 1, but deployments must
 not hard-code those dates in this repository. Operators or deployment
 repositories should configure the actual schedule before deployment with:
@@ -110,7 +113,7 @@ scripts/student-anonymization-maintenance.sh execute
 The confirmation variable is required to avoid accidental destructive
 execution. The real run anonymizes eligible student accounts, deactivates them,
 invalidates sessions through `session_version`, anonymizes current free-text
-student responses, and writes audit rows.
+student responses and student-provided device metadata, and writes audit rows.
 
 ## Post-Run Checks
 
