@@ -29,7 +29,8 @@ const esCL = {
     notices: {
       accountConfirmed: 'Tu cuenta fue confirmada. Ya puedes iniciar sesión.',
       confirmationInvalid: 'El enlace de confirmación es inválido o expiró. Usa recuperación de contraseña para solicitar uno nuevo.',
-      confirmationError: 'No fue posible confirmar tu cuenta. Usa recuperación de contraseña para solicitar un nuevo enlace.'
+      confirmationError: 'No fue posible confirmar tu cuenta. Usa recuperación de contraseña para solicitar un nuevo enlace.',
+      passwordChanged: 'Tu contraseña fue actualizada correctamente. Debes volver a iniciar sesión.'
     }
   },
   register: {

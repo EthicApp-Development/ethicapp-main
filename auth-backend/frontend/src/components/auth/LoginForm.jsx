@@ -9,6 +9,7 @@ function LoginForm() {
   const { t } = useI18n();
   const [searchParams] = useSearchParams();
   const confirmationStatus = searchParams.get('confirmed') || '';
+  const notice = searchParams.get('notice') || '';
 
   const [formData, setFormData] = useState({
     username: '',
@@ -103,6 +104,12 @@ function LoginForm() {
       {confirmationStatus === 'error' ? (
         <div className="alert alert-danger auth-alert" role="alert">
           {t('login.notices.confirmationError')}
+        </div>
+      ) : null}
+
+      {notice === 'password_changed' ? (
+        <div className="alert alert-success auth-alert" role="alert">
+          {t('login.notices.passwordChanged')}
         </div>
       ) : null}
 

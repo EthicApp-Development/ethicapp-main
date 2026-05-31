@@ -154,7 +154,7 @@ function ProfilePage() {
 
     try {
       await changeOwnPassword(form);
-      redirectToLogin();
+      redirectToLogin({ notice: 'password_changed' });
     } catch (requestError) {
       setError(getPasswordRequestErrorMessage(requestError));
     } finally {
