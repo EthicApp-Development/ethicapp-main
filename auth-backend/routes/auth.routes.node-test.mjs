@@ -482,6 +482,7 @@ describe('Auth Routes', () => {
     assert.deepStrictEqual(deleteCall.arguments[1], ['person@example.com']);
     assert.match(updateCall.arguments[0], /active = CASE WHEN email_confirmed = false THEN true ELSE active END/);
     assert.match(updateCall.arguments[0], /email_confirmed = true/);
+    assert.match(updateCall.arguments[0], /session_version = session_version \+ 1/);
   });
 
   test('POST /admin/change-password - updates administrator password after current password verification', async () => {
@@ -520,6 +521,7 @@ describe('Auth Routes', () => {
     assert.ok(updateCall);
     assert.strictEqual(await bcrypt.compare('FreshPassword123!@', updateCall.arguments[1][0]), true);
     assert.strictEqual(updateCall.arguments[1][1], 7);
+    assert.match(updateCall.arguments[0], /session_version = session_version \+ 1/);
   });
 
   test('POST /admin/change-password - rejects weak new passwords before database access', async () => {

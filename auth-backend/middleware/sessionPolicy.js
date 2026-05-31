@@ -80,7 +80,12 @@ function getDefaultAuthSessionTtlSeconds() {
   return Math.ceil(getDefaultAuthSessionMaxAgeMs() / 1000);
 }
 
-function initializeSessionPolicy(req, role, nowMs = Date.now()) {
+function getUserSessionVersion(user) {
+  const sessionVersion = Number(user?.sessionVersion ?? user?.session_version ?? 1);
+  return Number.isInteger(sessionVersion) && sessionVersion > 0 ? sessionVersion : 1;
+}
+
+function initializeSessionPolicy(req, role, nowMs = Date.now(), sessionVersion = 1) {
   if (!req.session) {
     return;
   }
@@ -89,6 +94,7 @@ function initializeSessionPolicy(req, role, nowMs = Date.now()) {
 
   req.session.authPolicy = {
     role: String(role || ''),
+    sessionVersion,
     createdAt: nowMs,
     lastSeenAt: nowMs
   };
@@ -129,12 +135,19 @@ function createSessionPolicyMiddleware({ nowProvider = Date.now } = {}) {
     }
 
     const role = req.user.role || req.user.roleCode || '';
+    const currentSessionVersion = getUserSessionVersion(req.user);
     const nowMs = nowProvider();
     const policy = getRoleSessionPolicy(role);
 
     if (!req.session.authPolicy) {
-      initializeSessionPolicy(req, role, nowMs);
+      initializeSessionPolicy(req, role, nowMs, currentSessionVersion);
       return next();
+    }
+
+    const storedSessionVersion = Number(req.session.authPolicy.sessionVersion || currentSessionVersion);
+
+    if (storedSessionVersion !== currentSessionVersion) {
+      return clearExpiredSession(req, res);
     }
 
     if (sessionExpired(req.session.authPolicy, policy, nowMs)) {
@@ -147,6 +160,7 @@ function createSessionPolicyMiddleware({ nowProvider = Date.now } = {}) {
     req.session.authPolicy = {
       ...req.session.authPolicy,
       role: String(role || ''),
+      sessionVersion: currentSessionVersion,
       lastSeenAt: nowMs
     };
 
@@ -164,5 +178,6 @@ export {
   getDefaultAuthSessionMaxAgeMs,
   getDefaultAuthSessionTtlSeconds,
   getRoleSessionPolicy,
+  getUserSessionVersion,
   initializeSessionPolicy
 };

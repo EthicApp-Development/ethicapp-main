@@ -15,14 +15,15 @@ function mapUser(row) {
     isActive: row.active !== false && row.email_confirmed !== false,
     emailConfirmed: row.email_confirmed !== false,
     authProvider: row.auth_provider || 'local',
-    passwordHash: row.password_bcrypt
+    passwordHash: row.password_bcrypt,
+    sessionVersion: Number(row.session_version || 1)
   };
 }
 
 async function findById(id) {
   const result = await query(
     `
-      SELECT id, name, rut, mail, sex, role, preferred_locale, active, email_confirmed, auth_provider, password_bcrypt
+      SELECT id, name, rut, mail, sex, role, preferred_locale, active, email_confirmed, auth_provider, password_bcrypt, session_version
       FROM users
       WHERE id = $1
       LIMIT 1
@@ -38,7 +39,7 @@ async function findByLogin(login) {
 
   const result = await query(
     `
-      SELECT id, name, rut, mail, sex, role, preferred_locale, active, email_confirmed, auth_provider, password_bcrypt
+      SELECT id, name, rut, mail, sex, role, preferred_locale, active, email_confirmed, auth_provider, password_bcrypt, session_version
       FROM users
       WHERE lower(mail) = $1 OR lower(rut) = $1
       LIMIT 1
@@ -54,7 +55,7 @@ async function findByEmail(email) {
 
   const result = await query(
     `
-      SELECT id, name, rut, mail, sex, role, preferred_locale, active, email_confirmed, auth_provider, password_bcrypt
+      SELECT id, name, rut, mail, sex, role, preferred_locale, active, email_confirmed, auth_provider, password_bcrypt, session_version
       FROM users
       WHERE lower(mail) = $1
       LIMIT 1
@@ -153,7 +154,8 @@ async function updatePasswordByEmail(email, password) {
     `
       UPDATE users
       SET password_bcrypt = $2,
-          auth_provider = 'local'
+          auth_provider = 'local',
+          session_version = session_version + 1
       WHERE lower(mail) = lower($1)
     `,
     [email, passwordHash]

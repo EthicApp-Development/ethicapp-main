@@ -6,6 +6,7 @@ import {
   getDefaultAuthSessionMaxAgeMs,
   getDefaultAuthSessionTtlSeconds,
   getRoleSessionPolicy,
+  getUserSessionVersion,
   initializeSessionPolicy
 } from '../sessionPolicy.js';
 
@@ -94,10 +95,11 @@ describe('auth-backend session policy', () => {
       }
     };
 
-    initializeSessionPolicy(req, 'S', 1000);
+    initializeSessionPolicy(req, 'S', 1000, 3);
 
     assert.deepEqual(req.session.authPolicy, {
       role: 'S',
+      sessionVersion: 3,
       createdAt: 1000,
       lastSeenAt: 1000
     });
@@ -106,11 +108,12 @@ describe('auth-backend session policy', () => {
 
   it('updates lastSeenAt and cookie lifetime for a valid session', () => {
     const req = {
-      user: { role: 'S' },
+      user: { role: 'S', sessionVersion: 4 },
       session: {
         cookie: {},
         authPolicy: {
           role: 'S',
+          sessionVersion: 4,
           createdAt: 1000,
           lastSeenAt: 1000
         }
@@ -125,17 +128,55 @@ describe('auth-backend session policy', () => {
     assert.equal(nextCalled, true);
     assert.equal(res.ended, false);
     assert.equal(req.session.authPolicy.lastSeenAt, 1000 + HOUR_MS);
+    assert.equal(req.session.authPolicy.sessionVersion, 4);
     assert.equal(req.session.cookie.maxAge, 2 * HOUR_MS);
+  });
+
+  it('normalizes user session version from known user shapes', () => {
+    assert.equal(getUserSessionVersion({ sessionVersion: 7 }), 7);
+    assert.equal(getUserSessionVersion({ session_version: 8 }), 8);
+    assert.equal(getUserSessionVersion({}), 1);
+  });
+
+  it('expires sessions when stored session version differs from the current user version', () => {
+    let destroyed = false;
+    const req = {
+      user: { role: 'S', sessionVersion: 5 },
+      session: {
+        cookie: {},
+        authPolicy: {
+          role: 'S',
+          sessionVersion: 4,
+          createdAt: 1000,
+          lastSeenAt: 1000
+        },
+        destroy(callback) {
+          destroyed = true;
+          callback();
+        }
+      }
+    };
+
+    const { nextCalled, res } = runMiddleware({
+      req,
+      nowMs: 1000 + HOUR_MS
+    });
+
+    assert.equal(nextCalled, false);
+    assert.equal(destroyed, true);
+    assert.equal(res.statusCode, 401);
+    assert.equal(res.ended, true);
   });
 
   it('expires sessions that exceed idle timeout', () => {
     let destroyed = false;
     const req = {
-      user: { role: 'S' },
+      user: { role: 'S', sessionVersion: 1 },
       session: {
         cookie: {},
         authPolicy: {
           role: 'S',
+          sessionVersion: 1,
           createdAt: 1000,
           lastSeenAt: 1000
         },
@@ -164,11 +205,12 @@ describe('auth-backend session policy', () => {
   it('expires sessions that exceed absolute timeout even when recently active', () => {
     let destroyed = false;
     const req = {
-      user: { role: 'S' },
+      user: { role: 'S', sessionVersion: 1 },
       session: {
         cookie: {},
         authPolicy: {
           role: 'S',
+          sessionVersion: 1,
           createdAt: 1000,
           lastSeenAt: 1000 + (7 * HOUR_MS)
         },
