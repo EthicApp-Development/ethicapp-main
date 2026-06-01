@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { startAuthentication } from '@simplewebauthn/browser';
 
 import { useI18n } from '../app/providers.jsx';
-import { fetchPasskeys, startPasskeyAuthentication } from '../api/profileApi.js';
+import { fetchPasskeys, fetchProfile, startPasskeyAuthentication } from '../api/profileApi.js';
 import {
   fetchUserById,
   impersonateProfessor,
@@ -27,6 +27,7 @@ function UserShowPage() {
   const [recaptchaResetCounter, setRecaptchaResetCounter] = useState(0);
   const [hasPasskeys, setHasPasskeys] = useState(false);
   const [lastLoginAt, setLastLoginAt] = useState(null);
+  const [currentProfile, setCurrentProfile] = useState(null);
   const passkeysAvailable = typeof window !== 'undefined' && Boolean(window.PublicKeyCredential);
   const usePasskeyStepUp = hasPasskeys;
   const passkeyActionsDisabled = usePasskeyStepUp && !passkeysAvailable;
@@ -42,6 +43,10 @@ function UserShowPage() {
     emailConfirmed: true,
     admin_password: ''
   });
+  const isOwnSuperAdminAccount =
+    currentProfile?.role === 'S' &&
+    form.role === 'S' &&
+    Number(currentProfile.id) === Number(id);
 
   useEffect(() => {
     let isMounted = true;
@@ -51,9 +56,10 @@ function UserShowPage() {
       setError('');
 
       try {
-        const [user, passkeysResult] = await Promise.all([
+        const [user, passkeysResult, profileResult] = await Promise.all([
           fetchUserById(id),
-          fetchPasskeys()
+          fetchPasskeys(),
+          fetchProfile()
         ]);
 
         if (!isMounted) {
@@ -73,6 +79,7 @@ function UserShowPage() {
         });
         setLastLoginAt(user.lastLoginAt || null);
         setHasPasskeys((passkeysResult.passkeys || []).length > 0);
+        setCurrentProfile(profileResult);
       } catch (requestError) {
         if (isMounted) {
           setError(requestError.message || 'Unable to load user');
@@ -159,6 +166,10 @@ function UserShowPage() {
   }
 
   async function onTriggerPasswordReset() {
+    if (isOwnSuperAdminAccount) {
+      return;
+    }
+
     setError('');
     setResetMessage('');
 
@@ -332,15 +343,17 @@ function UserShowPage() {
               <i className="fa-solid fa-xmark me-2" aria-hidden="true" />
               {t('pages.userShow.actions.cancel')}
             </Button>
-            <Button
-              type="button"
-              variant="warning"
-              onClick={onTriggerPasswordReset}
-              disabled={passkeyActionsDisabled}
-            >
-              <i className="fa-solid fa-key me-2" aria-hidden="true" />
-              {t('pages.userShow.actions.triggerPasswordReset')}
-            </Button>
+            {!isOwnSuperAdminAccount ? (
+              <Button
+                type="button"
+                variant="warning"
+                onClick={onTriggerPasswordReset}
+                disabled={passkeyActionsDisabled}
+              >
+                <i className="fa-solid fa-key me-2" aria-hidden="true" />
+                {t('pages.userShow.actions.triggerPasswordReset')}
+              </Button>
+            ) : null}
             {form.role === 'P' ? (
               <Button
                 type="button"
