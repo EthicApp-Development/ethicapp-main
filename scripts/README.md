@@ -10,6 +10,26 @@ npm run pgdump
 npm run pgrestore -- database/dumps/ethicapp-YYYYMMDD-HHMMSS.dump
 ```
 
+Production PostgreSQL and protected uploads backups are intended for host-level
+cron jobs:
+
+```bash
+npm run backup:production
+npm run backup:production -- prune
+PRODUCTION_RESTORE_FORCE=true npm run restore:production -- /var/backups/ethicapp/ethicapp-YYYYMMDD-HHMMSS.dump
+```
+
+For image-based deployments, export the minimal host-side backup kit instead of
+copying the repository:
+
+```bash
+npm run backup:package
+```
+
+See [`../deploy/production-backup-runbook.md`](../deploy/production-backup-runbook.md)
+for cron installation, retention, verification, restore testing, and alerting
+guidance.
+
 Production image publishing is handled by `ghcr-build-push.sh`:
 
 ```bash
