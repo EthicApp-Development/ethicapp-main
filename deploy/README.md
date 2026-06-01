@@ -110,6 +110,17 @@ The `/healthz` and `/readyz` endpoints return `200` with the text
 services are intentionally stopped. Disable maintenance mode by starting NGINX
 again with `NGINX_MAINTENANCE_MODE=false` or by unsetting the variable.
 
+## Student Anonymization
+
+Periodic student data anonymization is documented in
+[`student-anonymization-overview.md`](./student-anonymization-overview.md).
+That document explains the implemented components, data coverage, audit model,
+runtime variables, and verification approach. Operators should use
+[`student-anonymization-maintenance-runbook.md`](./student-anonymization-maintenance-runbook.md)
+for the step-by-step maintenance window procedure and
+[`student-anonymization-data-map.md`](./student-anonymization-data-map.md) for
+field-level coverage decisions.
+
 Database schema changes are delivered through the `db-migrations` image. This
 image is based on Flyway and includes `database/migrations` from the release.
 Run it as a short-lived migration job before starting or updating application

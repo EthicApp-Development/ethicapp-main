@@ -3,6 +3,9 @@
 This runbook is the repository-owned command contract for the student
 anonymization maintenance window.
 
+The capability overview is maintained in
+`deploy/student-anonymization-overview.md`.
+
 The field-level coverage map is maintained in
 `deploy/student-anonymization-data-map.md`.
 
