@@ -51,6 +51,54 @@ async function getFirstQuestionIdForPhase(phaseId) {
     return rows.length > 0 ? Number(rows[0].question_id) : null;
 }
 
+async function getFirstQuestionForPhase(phaseId) {
+    const rows = await rpg2.execSQL({
+        sql: `
+            SELECT d.id AS question_id, d.title, d.tleft, d.tright
+            FROM differential AS d
+            WHERE d.stageid = $1
+            ORDER BY d.orden, d.id
+            LIMIT 1
+        `,
+        dbcon: config.dbconnString,
+        sqlParams: [rpg2.param("plain", phaseId)],
+    });
+    if (rows.length === 0) {
+        return null;
+    }
+    return {
+        id: Number(rows[0].question_id),
+        title: rows[0].title || "",
+        tleft: rows[0].tleft || "",
+        tright: rows[0].tright || "",
+    };
+}
+
+function formatQuestionText(question) {
+    if (!question) {
+        return null;
+    }
+    const parts = [];
+    if (question.title) {
+        parts.push(question.title.trim());
+    }
+    if (question.tleft && question.tright) {
+        parts.push(`${question.tleft.trim()} vs. ${question.tright.trim()}`);
+    } else if (question.tleft) {
+        parts.push(question.tleft.trim());
+    }
+    return parts.length > 0 ? parts.join(" — ") : null;
+}
+
+function composeTopic(caseText, preguntaCentral) {
+    if (!preguntaCentral) {
+        return caseText;
+    }
+    const base = caseText || "";
+    const delimiter = "\n\n===\n\n";
+    return `${base}${delimiter}La pregunta central a discutir es: ${preguntaCentral}`;
+}
+
 export async function register({ service, subscribe, publishGroupChatMessage }) {
     const phaseRooms = new Map();
     const roomContext = new Map();
@@ -171,13 +219,16 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
         }
 
         const teamIds = await getTeamIdsForPhase(phaseId);
-        const questionId = await getFirstQuestionIdForPhase(phaseId);
+        const question = await getFirstQuestionForPhase(phaseId);
+        const questionId = question ? question.id : null;
+        const preguntaCentral = formatQuestionText(question);
+        const basePrompt = caseText || `EthicApp session ${sessionId} phase ${phaseId}`;
+        const prompt = composeTopic(basePrompt, preguntaCentral);
         const createdRooms = new Set();
 
         if (teamIds.length > 0) {
             for (const groupId of teamIds) {
                 const roomName = getRoomName(sessionId, phaseId, groupId);
-                const prompt = caseText || `EthicApp session ${sessionId} phase ${phaseId}`;
                 const created = await ensurePolyadicSession(roomName, prompt);
                 if (created) {
                     createdRooms.add(roomName);
@@ -228,6 +279,10 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
                     }
                 }
             } catch (_) {}
+
+            const questionDeferred = await getFirstQuestionForPhase(phaseId);
+            const preguntaCentralDeferred = formatQuestionText(questionDeferred);
+            prompt = composeTopic(prompt, preguntaCentralDeferred);
 
             const created = await ensurePolyadicSession(
                 roomName,
