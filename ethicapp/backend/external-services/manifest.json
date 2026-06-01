@@ -30,7 +30,8 @@
         "chat-message-received",
         "phaseStarted",
         "phaseEnded",
-        "external-service-result"
+        "external-service-result",
+        "sessionEnded"
       ],
       "enabled": true
     }

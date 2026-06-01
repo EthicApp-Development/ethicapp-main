@@ -358,15 +358,15 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
         }
 
         const { room: roomName, evaluations } = requestPayload;
-        const ctx = roomContext.get(roomName) || parseRoomName(roomName);
+        const ctx = roomContext.get(roomName);
 
         if (!ctx) {
-            console.warn(`[polyadic-bridge] Cannot resolve context for room ${roomName}. Known rooms: [${[...roomContext.keys()].join(', ')}]`);
+            console.warn(`[polyadic-bridge] Ignoring callback for unknown/closed room ${roomName}`);
             await callback({
                 serviceId: service.id,
                 hook: "external-service-result",
                 status: "failed",
-                payload: { reason: "unknown_room", room: roomName },
+                payload: { reason: "room_not_found_or_closed", room: roomName },
             });
             return;
         }
@@ -427,6 +427,7 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
         if (rooms) {
             for (const roomName of rooms) {
                 await closePolyadicSession(roomName);
+                roomContext.delete(roomName);
             }
             phaseRooms.delete(phaseId);
         }
@@ -439,6 +440,48 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
                 sessionId,
                 phaseId,
                 roomsClosed: rooms ? rooms.size : 0,
+            },
+        });
+    });
+
+    subscribe("sessionEnded", async (context, { callback }) => {
+        const { sessionId } = context;
+        let cleanedRooms = 0;
+        let cleanedPhases = 0;
+
+        for (const [roomName, ctx] of roomContext.entries()) {
+            if (ctx.sessionId === sessionId) {
+                await closePolyadicSession(roomName);
+                roomContext.delete(roomName);
+                cleanedRooms++;
+            }
+        }
+
+        for (const [phaseId, rooms] of phaseRooms.entries()) {
+            let belongsToSession = false;
+            for (const roomName of rooms) {
+                const parsed = parseRoomName(roomName);
+                if (parsed && parsed.sessionId === sessionId) {
+                    belongsToSession = true;
+                    break;
+                }
+            }
+            if (belongsToSession) {
+                phaseRooms.delete(phaseId);
+                cleanedPhases++;
+            }
+        }
+
+        console.info(`[polyadic-bridge] Session ${sessionId} ended. Cleaned ${cleanedRooms} rooms, ${cleanedPhases} phases.`);
+
+        await callback({
+            serviceId: service.id,
+            hook: "sessionEnded",
+            status: "completed",
+            payload: {
+                sessionId,
+                cleanedRooms,
+                cleanedPhases,
             },
         });
     });

@@ -376,6 +376,14 @@ router.post("/activities/:session_id/finish", async (req, res) => {
 
         studentNotifications.endSession(sessionId);
 
+        try {
+            await externalServicesRegistry.dispatchServiceHook("sessionEnded", "polyadic-devils-advocate", {
+                sessionId: Number(sessionId),
+            });
+        } catch (hookErr) {
+            console.error("[external-services] Error dispatching sessionEnded hook:", hookErr);
+        }
+
         res.status(200).json({ status: "ok", message: "Activity session finished successfully." });
     } catch (err) {
         console.error("Error finishing activity session:", err);
