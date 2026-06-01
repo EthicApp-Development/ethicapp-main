@@ -141,6 +141,10 @@ const esCL = {
   },
   legal: {
     back: 'Volver',
+    fallbacks: {
+      institutionName: 'la institución operadora de esta instalación de EthicApp',
+      privacyContact: 'el contacto institucional de protección de datos'
+    },
     privacy: {
       title: 'Política de Privacidad',
       updatedAt: 'Última actualización: 15 de abril de 2026'

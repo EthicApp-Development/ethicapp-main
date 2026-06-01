@@ -4,7 +4,7 @@ import { Alert, Button, Card, Col, Form, Image, Row, Spinner } from 'react-boots
 import { useI18n } from '../app/providers.jsx';
 import { fetchInstitution, updateInstitution } from '../api/institutionApi.js';
 
-const CONTACT_TYPES = ['technical', 'academic'];
+const CONTACT_TYPES = ['technical', 'academic', 'data_privacy'];
 const EMPTY_CONTACT = {
   firstname: '',
   lastname: '',

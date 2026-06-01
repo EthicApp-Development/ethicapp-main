@@ -156,6 +156,13 @@
   margin-bottom: 0.75rem;
 }
 
+.auth-institution-name {
+  margin: -0.2rem 0 0.95rem;
+  color: var(--auth-muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
 .cookie-notice-overlay {
   position: fixed;
   inset: 0;

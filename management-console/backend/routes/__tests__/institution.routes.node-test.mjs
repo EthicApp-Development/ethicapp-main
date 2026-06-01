@@ -107,6 +107,13 @@ describe('management-console institution routes', () => {
               email: 'academic@example.com',
               phoneCountryCode: '+56',
               phoneNumber: '987654321'
+            },
+            data_privacy: {
+              firstname: 'Privacy',
+              lastname: 'Contact',
+              email: 'privacy@example.com',
+              phoneCountryCode: '+56',
+              phoneNumber: '923456789'
             }
           }
         })
@@ -119,6 +126,7 @@ describe('management-console institution routes', () => {
     assert.equal(calls.length, 1);
     assert.equal(calls[0].contacts.technical.email, 'tech@example.com');
     assert.equal(calls[0].contacts.academic.phoneNumber, '987654321');
+    assert.equal(calls[0].contacts.data_privacy.email, 'privacy@example.com');
   });
 
   it('maps logo validation failures to bad requests', async () => {

@@ -1,6 +1,6 @@
 import { query } from '../config/database.js';
 
-const CONTACT_TYPES = ['technical', 'academic'];
+const CONTACT_TYPES = ['technical', 'academic', 'data_privacy'];
 const IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg']);
 const MAX_LOGO_BYTES = 1024 * 1024;
 
@@ -128,7 +128,12 @@ export async function getInstitutionSettings() {
       SELECT contact_type, firstname, lastname, email, phone_country_code, phone_number
       FROM institutional_contacts
       WHERE institution_id = 1
-      ORDER BY CASE contact_type WHEN 'technical' THEN 1 WHEN 'academic' THEN 2 ELSE 3 END
+      ORDER BY CASE contact_type
+        WHEN 'technical' THEN 1
+        WHEN 'academic' THEN 2
+        WHEN 'data_privacy' THEN 3
+        ELSE 4
+      END
     `
   );
 

@@ -112,6 +112,41 @@ describe('Auth Routes', () => {
     assert.strictEqual(dbMock.query.mock.calls.length, 0);
   });
 
+  test('GET /institution - returns the configured institution name', async () => {
+    dbMock.query.mock.mockImplementation((sql) => {
+      if (sql.includes('FROM institutional_contacts')) {
+        return Promise.resolve({
+          rowCount: 1,
+          rows: [{
+            firstname: 'Privacy',
+            lastname: 'Officer',
+            email: 'privacy@example.com'
+          }]
+        });
+      }
+
+      if (sql.includes('FROM institution')) {
+        return Promise.resolve({
+          rowCount: 1,
+          rows: [{ name: '  Universidad de Prueba  ' }]
+        });
+      }
+
+      return Promise.resolve({ rowCount: 0, rows: [] });
+    });
+
+    const res = await supertest(app)
+      .get('/institution');
+
+    assert.strictEqual(res.status, 200);
+    assert.deepStrictEqual(res.body, {
+      name: 'Universidad de Prueba',
+      privacyContact: 'Privacy Officer <privacy@example.com>'
+    });
+    assert.match(dbMock.query.mock.calls[0].arguments[0], /FROM institution/);
+    assert.match(dbMock.query.mock.calls[1].arguments[0], /FROM institutional_contacts/);
+  });
+
   test('POST /login - invalid credentials when user is not found', async () => {
     dbMock.query.mock.mockImplementationOnce(() => Promise.resolve({ rowCount: 0, rows: [] }));
 

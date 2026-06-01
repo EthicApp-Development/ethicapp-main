@@ -159,7 +159,8 @@ export default {
       },
       contacts: {
         technical: 'Technical contact',
-        academic: 'Academic contact'
+        academic: 'Academic contact',
+        data_privacy: 'Data privacy contact'
       },
       errors: {
         nameRequired: 'Institution name is required.',

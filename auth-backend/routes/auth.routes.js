@@ -120,6 +120,21 @@ function getUserDisplayName(user) {
   return displayName || user.mail;
 }
 
+function formatInstitutionContact(row) {
+  if (!row) {
+    return '';
+  }
+
+  const displayName = [row.firstname, row.lastname].filter(Boolean).join(' ').trim();
+  const email = String(row.email || '').trim();
+
+  if (displayName && email) {
+    return `${displayName} <${email}>`;
+  }
+
+  return email || displayName;
+}
+
 function cleanPasskeyName(name) {
   const cleanName = String(name || '').trim();
   return cleanName ? cleanName.slice(0, 120) : null;
@@ -257,6 +272,36 @@ function t(req, key) {
 }
 
 router.get('/csrf-token', csrfTokenHandler);
+
+router.get('/institution', async (req, res, next) => {
+  try {
+    const institutionResult = await db.query(
+      `
+        SELECT name
+        FROM institution
+        WHERE id = 1
+        LIMIT 1
+      `
+    );
+
+    const contactResult = await db.query(
+      `
+        SELECT firstname, lastname, email
+        FROM institutional_contacts
+        WHERE institution_id = 1
+          AND contact_type = 'data_privacy'
+        LIMIT 1
+      `
+    );
+
+    return res.status(200).json({
+      name: String(institutionResult.rows[0]?.name || '').trim(),
+      privacyContact: formatInstitutionContact(contactResult.rows[0])
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
 
 router.post('/login', async (req, res, next) => {
   try {

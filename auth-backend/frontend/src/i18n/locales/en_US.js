@@ -139,6 +139,10 @@ const enUS = {
   },
   legal: {
     back: 'Back',
+    fallbacks: {
+      institutionName: 'the institution operating this EthicApp installation',
+      privacyContact: 'the institution data privacy contact'
+    },
     privacy: {
       title: 'Privacy Policy',
       updatedAt: 'Last updated: April 15, 2026'
