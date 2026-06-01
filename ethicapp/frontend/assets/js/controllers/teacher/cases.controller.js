@@ -69,6 +69,7 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             commercialSource: "",
             languageCode: LanguageCatalogService.getDefaultLanguageCode(vm.languages, "es_CL"),
             tags: [],
+            uploadErrorKey: "",
         };
     };
     vm.form = vm.createEmptyCaseForm();
@@ -328,16 +329,46 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
 
     vm.handlePdfSelected = function(files) {
         vm.form.pdf = files && files.length > 0 ? files[0] : null;
+        vm.form.uploadErrorKey = "";
+    };
+
+    vm.getCaseSaveErrorMessageKey = function(error) {
+        switch (error?.data?.code) {
+        case "CASE_PDF_REQUIRED":
+            return "ethical_cases_validation_pdf_required";
+        case "INVALID_FILE_TYPE":
+        case "UNEXPECTED_FILE_FIELD":
+            return "ethical_cases_validation_pdf_type";
+        case "FILE_TOO_LARGE":
+            return "ethical_cases_validation_pdf_too_large";
+        case "CASE_VALIDATION_FAILED":
+            return "ethical_cases_validation_required";
+        default:
+            return "ethical_cases_save_error";
+        }
+    };
+
+    vm.isCaseUploadError = function(messageKey) {
+        return [
+            "ethical_cases_validation_pdf_required",
+            "ethical_cases_validation_pdf_type",
+            "ethical_cases_validation_pdf_too_large",
+        ].includes(messageKey);
     };
 
     vm.createCase = async function() {
         try {
+            vm.form.uploadErrorKey = "";
             await CasesCatalogService.createCase(vm.form);
             vm.showInfoToast(vm.translate("ethical_cases_create_success"));
             $scope.navigateTo("/cases");
         } catch (error) {
             console.error("[CasesController::createCase] Error creating case.", error);
-            vm.showErrorToast(vm.translate("ethical_cases_save_error"));
+            const messageKey = vm.getCaseSaveErrorMessageKey(error);
+            if (vm.isCaseUploadError(messageKey)) {
+                vm.form.uploadErrorKey = messageKey;
+            }
+            vm.showErrorToast(vm.translate(messageKey));
             $scope.$applyAsync();
         }
     };
@@ -349,6 +380,7 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
         }
 
         try {
+            vm.form.uploadErrorKey = "";
             await CasesCatalogService.updateCase(caseId, vm.form);
             vm.showInfoToast(vm.translate("ethical_cases_update_success"));
             $scope.$applyAsync();
@@ -356,7 +388,10 @@ export function CasesController($scope, $routeParams, $window, $interval, $trans
             console.error("[CasesController::updateCase] Error updating case.", error);
             const messageKey = error?.data?.code === "CASE_USED_BY_LAUNCHED_ACTIVITY"
                 ? "case_cannot_delete_used_by_activity"
-                : "ethical_cases_save_error";
+                : vm.getCaseSaveErrorMessageKey(error);
+            if (vm.isCaseUploadError(messageKey)) {
+                vm.form.uploadErrorKey = messageKey;
+            }
             vm.showErrorToast(vm.translate(messageKey));
             $scope.$applyAsync();
         }
