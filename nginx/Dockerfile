@@ -1,6 +1,6 @@
 FROM nginx:1.28-alpine
 
-COPY conf.d/default.conf /etc/nginx/conf.d/default.conf
+COPY conf.d/default.conf.template /etc/nginx/default.conf.template
 COPY conf.d/maintenance.conf.template /etc/nginx/maintenance.conf.template
 COPY docker-entrypoint.d /docker-entrypoint.d
 COPY static /usr/share/nginx/html/static
