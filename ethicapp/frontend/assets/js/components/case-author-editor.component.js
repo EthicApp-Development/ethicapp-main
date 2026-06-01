@@ -18,6 +18,27 @@ const CaseAuthorEditorController = function() {
     vm.onUseCurrentUserChanged = function() {
         vm.applyCurrentUserAsAuthor();
     };
+
+    vm.getFieldValue = function(fieldName) {
+        return String(vm.author?.[fieldName] || "").trim();
+    };
+
+    vm.isFieldMissing = function(fieldName) {
+        return !vm.getFieldValue(fieldName);
+    };
+
+    vm.isEmailInvalid = function() {
+        const email = vm.getFieldValue("authorEmail");
+        return Boolean(email) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    };
+
+    vm.shouldShowRequiredError = function(fieldName) {
+        return vm.hasAttemptedSubmit && vm.isFieldMissing(fieldName);
+    };
+
+    vm.shouldShowEmailError = function() {
+        return vm.hasAttemptedSubmit && vm.isEmailInvalid();
+    };
 };
 
 const caseAuthorEditorComponent = {
@@ -27,6 +48,7 @@ const caseAuthorEditorComponent = {
         isPrimary:          "<",
         canRemove:          "<",
         isDuplicateEmail:   "<",
+        hasAttemptedSubmit: "<",
         currentUserProfile: "<",
         useCurrentUser:     "=",
         isReadonly:         "<",

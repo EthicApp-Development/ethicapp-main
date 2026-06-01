@@ -626,6 +626,8 @@
 	"ethical_cases_validation_required": "This field is required.",
 	"ethical_cases_validation_email": "Please enter a valid email address.",
 	"ethical_cases_validation_pdf_required": "A PDF file is required.",
+	"ethical_cases_validation_pdf_type": "The selected file must be a PDF.",
+	"ethical_cases_validation_pdf_too_large": "The PDF cannot exceed 5 MB.",
 	"required_field_note": "* required field",
 	"empty_cases_message": "There are no ethical cases yet, but you can",
 	"empty_cases_link": "create one now",

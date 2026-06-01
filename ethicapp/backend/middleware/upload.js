@@ -35,11 +35,24 @@ function createFileFilter(allowedMimeTypes) {
         if (!allowedMimeTypes.has(file.mimetype)) {
             const error = new Error("Invalid file type.");
             error.status = 400;
+            error.code = "INVALID_FILE_TYPE";
             return callback(error);
         }
 
         return callback(null, true);
     };
+}
+
+function getUploadErrorCode(error) {
+    if (error?.code === "LIMIT_FILE_SIZE") {
+        return "FILE_TOO_LARGE";
+    }
+
+    if (error?.code === "LIMIT_UNEXPECTED_FILE") {
+        return "UNEXPECTED_FILE_FIELD";
+    }
+
+    return error?.code || "UPLOAD_FAILED";
 }
 
 function createUpload(allowedMimeTypes) {
@@ -63,6 +76,7 @@ function withUpload(uploadMiddleware) {
             return res.status(status).json({
                 status: "err",
                 message: error.message || "File upload failed.",
+                code: getUploadErrorCode(error),
             });
         });
     };

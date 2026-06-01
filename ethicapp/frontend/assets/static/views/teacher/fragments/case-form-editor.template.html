@@ -40,6 +40,7 @@
             is-primary="$index === 0"
             can-remove="$ctrl.formModel.authors.length > 1"
             is-duplicate-email="$ctrl.isDuplicateAuthorEmail(author)"
+            has-attempted-submit="$ctrl.hasAttemptedSubmit"
             current-user-profile="$ctrl.currentUserProfile"
             use-current-user="$ctrl.formModel.isFirstAuthorCurrentUser"
             is-readonly="$ctrl.isLocked()"
@@ -122,11 +123,14 @@
                 class="form-control"
                 accept="application/pdf"
                 ngf-select="$ctrl.handlePdfSelected($files)"
-                ng-class="{'input-warning': $ctrl.shouldShowError(caseForm.pdf)}"
+                ng-class="{'input-warning': $ctrl.shouldShowPdfRequiredError(caseForm.pdf) || $ctrl.hasUploadError()}"
                 ng-disabled="$ctrl.isLocked()"
                 ng-required="$ctrl.isPdfRequired">
-            <p class="help-block text-danger" ng-if="$ctrl.shouldShowError(caseForm.pdf) && caseForm.pdf.$error.required">
+            <p class="help-block text-danger" ng-if="$ctrl.shouldShowPdfRequiredError(caseForm.pdf)">
                 {{ 'ethical_cases_validation_pdf_required' | translate }}
+            </p>
+            <p class="help-block text-danger" ng-if="$ctrl.hasUploadError()">
+                {{ $ctrl.formModel.uploadErrorKey | translate }}
             </p>
         </div>
 
