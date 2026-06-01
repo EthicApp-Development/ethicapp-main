@@ -154,6 +154,11 @@ describe('Auth Routes', () => {
 
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.redirectTo, '/mng');
+    assert.strictEqual(dbMock.query.mock.calls.length, 2);
+
+    const updateCall = dbMock.query.mock.calls[1];
+    assert.match(updateCall.arguments[0], /UPDATE users\s+SET last_login_at = NOW\(\)\s+WHERE id = \$1/);
+    assert.deepStrictEqual(updateCall.arguments[1], [1]);
   });
 
   test('POST /register - missing fields are rejected before reCAPTCHA', async () => {
