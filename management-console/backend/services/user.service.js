@@ -7,14 +7,10 @@ function normalizeRoleFilter(role) {
   return ALLOWED_ROLE_FILTERS.has(normalized) ? normalized : null;
 }
 
-export async function listUsers({ keywords = '', role = null, page = 1, pageSize = 10 }) {
+export function buildListUsersFilter({ keywords = '', role = null } = {}) {
   const normalizedKeywords = String(keywords || '').trim().toLowerCase();
   const normalizedRole = normalizeRoleFilter(role);
-  const safePageSize = Math.min(Math.max(Number(pageSize) || 10, 1), 50);
-  const safePage = Math.max(Number(page) || 1, 1);
-  const offset = (safePage - 1) * safePageSize;
-
-  const filterClauses = [];
+  const filterClauses = ['anonymized_at IS NULL'];
   const params = [];
 
   if (normalizedKeywords) {
@@ -35,7 +31,17 @@ export async function listUsers({ keywords = '', role = null, page = 1, pageSize
     filterClauses.push(`role = $${params.length}`);
   }
 
-  const whereSql = filterClauses.length ? `WHERE ${filterClauses.join(' AND ')}` : '';
+  return {
+    whereSql: `WHERE ${filterClauses.join(' AND ')}`,
+    params
+  };
+}
+
+export async function listUsers({ keywords = '', role = null, page = 1, pageSize = 10 }) {
+  const safePageSize = Math.min(Math.max(Number(pageSize) || 10, 1), 50);
+  const safePage = Math.max(Number(page) || 1, 1);
+  const offset = (safePage - 1) * safePageSize;
+  const { whereSql, params } = buildListUsersFilter({ keywords, role });
 
   const countResult = await query(
     `
@@ -108,7 +114,8 @@ export async function getUserById(userId) {
         mail,
         role,
         active,
-        email_confirmed
+        email_confirmed,
+        last_login_at
       FROM users
       WHERE id = $1
       LIMIT 1
@@ -130,7 +137,8 @@ export async function getUserById(userId) {
     email: row.mail || '',
     role: row.role || '',
     active: row.active !== false,
-    emailConfirmed: row.email_confirmed !== false
+    emailConfirmed: row.email_confirmed !== false,
+    lastLoginAt: row.last_login_at || null
   };
 }
 

@@ -68,6 +68,7 @@ export default {
         gender: 'Gender',
         role: 'Role',
         status: 'Account status',
+        lastLogin: 'Last login',
         email: 'Email',
         emailConfirmation: 'Confirm email',
         adminPassword: 'Administrator password'
@@ -76,7 +77,8 @@ export default {
         active: 'Active account',
         inactive: 'Inactive account',
         emailConfirmed: 'Email confirmed',
-        emailPending: 'Email confirmation pending'
+        emailPending: 'Email confirmation pending',
+        neverLoggedIn: 'Never'
       },
       actions: {
         save: 'Save changes',

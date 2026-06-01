@@ -112,11 +112,13 @@ services:
       - auth_frontend_node_modules:/app/frontend/node_modules
     command: >
       sh -c "
-        npm install &&
-        cd frontend && npm install &&
+        npm install --include=dev &&
+        cd frontend && npm install --include=dev &&
         cd /app &&
-        npx nodemon server.js &
-        cd frontend && npx vite --host 0.0.0.0 --port 5173
+        (
+          npm run dev &
+          npm run frontend:dev
+        )
       "
     expose:
       - "8502"

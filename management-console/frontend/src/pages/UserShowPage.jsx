@@ -17,7 +17,7 @@ import { recaptchaSiteKey } from '../config/env.js';
 function UserShowPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -26,6 +26,7 @@ function UserShowPage() {
   const [recaptchaToken, setRecaptchaToken] = useState('');
   const [recaptchaResetCounter, setRecaptchaResetCounter] = useState(0);
   const [hasPasskeys, setHasPasskeys] = useState(false);
+  const [lastLoginAt, setLastLoginAt] = useState(null);
   const passkeysAvailable = typeof window !== 'undefined' && Boolean(window.PublicKeyCredential);
   const usePasskeyStepUp = hasPasskeys;
   const passkeyActionsDisabled = usePasskeyStepUp && !passkeysAvailable;
@@ -70,6 +71,7 @@ function UserShowPage() {
           emailConfirmed: user.emailConfirmed !== false,
           admin_password: ''
         });
+        setLastLoginAt(user.lastLoginAt || null);
         setHasPasskeys((passkeysResult.passkeys || []).length > 0);
       } catch (requestError) {
         if (isMounted) {
@@ -120,6 +122,17 @@ function UserShowPage() {
       ...extraPayload,
       passkey_assertion: passkeyAssertion
     };
+  }
+
+  function formatLastLogin(value) {
+    if (!value) {
+      return t('pages.userShow.status.neverLoggedIn');
+    }
+
+    return new Intl.DateTimeFormat(locale.replace('_', '-'), {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(new Date(value));
   }
 
   async function onSubmit(event) {
@@ -251,6 +264,11 @@ function UserShowPage() {
                   ? t('pages.userShow.status.emailConfirmed')
                   : t('pages.userShow.status.emailPending')}
               </Form.Text>
+            </Col>
+
+            <Col md={6}>
+              <Form.Label>{t('pages.userShow.fields.lastLogin')}</Form.Label>
+              <Form.Control plaintext readOnly value={formatLastLogin(lastLoginAt)} />
             </Col>
 
             <Col md={6}>
