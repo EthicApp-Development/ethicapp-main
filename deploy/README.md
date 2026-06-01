@@ -110,6 +110,25 @@ The `/healthz` and `/readyz` endpoints return `200` with the text
 services are intentionally stopped. Disable maintenance mode by starting NGINX
 again with `NGINX_MAINTENANCE_MODE=false` or by unsetting the variable.
 
+In normal production mode, NGINX renders its upstream configuration from
+`nginx/conf.d/default.conf.template` at container startup. The upstream service
+names remain stable Docker DNS names, while the ports come from the same
+deployment contract variables used by the application services:
+
+| Upstream | Service DNS name | Port variable |
+| --- | --- | --- |
+| Legacy EthicApp | `ethicapp` | `ETHICAPP_NODE_PORT` |
+| Auth backend | `auth-backend` | `PORT` |
+| Student app | `ethicapp-student` | `ETHICAPP_STUDENT_NODE_PORT` |
+| Management console | `management-console` | `MNG_PORT` |
+
+Provide these variables to the NGINX container as well as the owning
+application containers. This keeps production proxy routing aligned with the
+deployment contract and avoids hard-coded internal ports. The rendered
+production config also preserves the `auth_request` session-renewal behavior:
+protected routes read `Set-Cookie` from the auth check response and propagate it
+back to the browser so sliding sessions continue to work in production.
+
 ## Student Anonymization
 
 Periodic student data anonymization is documented in
