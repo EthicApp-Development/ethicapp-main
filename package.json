@@ -7,6 +7,7 @@
     "lint-js": "npx eslint './ethicapp/**/*.js' ./ethicapp/backend/ethicapp",
     "lint-html": "npx htmlhint './ethicapp/frontend/assets/static/**/*.html'",
     "lint-css": "npx stylelint './ethicapp/frontend/assets/css/**/*.css'",
+    "audit:teacher-css": "node ./scripts/audit-teacher-css.mjs",
     "lint-sql": "sqlfluff lint ./database/",
     "fix-js": "npx eslint --fix './ethicapp/**/*.js' ./ethicapp/backend/ethicapp",
     "fix-css": "npx stylelint --fix './ethicapp/frontend/assets/css/**/*.css'",

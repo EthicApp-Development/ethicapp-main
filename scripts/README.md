@@ -10,6 +10,18 @@ npm run pgdump
 npm run pgrestore -- database/dumps/ethicapp-YYYYMMDD-HHMMSS.dump
 ```
 
+Teacher CSS selector usage can be audited with:
+
+```bash
+npm run audit:teacher-css
+npm run audit:teacher-css -- --json
+```
+
+The audit is conservative: suspicious selectors are review candidates, not
+automatic deletion targets. It scans `custom.css` and `main.css` against
+teacher-facing AngularJS templates, controllers, components, directives,
+services, and helpers.
+
 Production PostgreSQL and protected uploads backups are intended for host-level
 cron jobs:
 
