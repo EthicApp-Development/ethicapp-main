@@ -28,4 +28,6 @@ npm run anonymization:maintenance -- restore
 ```
 
 See [`../deploy/student-anonymization-maintenance-runbook.md`](../deploy/student-anonymization-maintenance-runbook.md)
-for the full operator runbook.
+for the full operator runbook and
+[`../deploy/student-anonymization-overview.md`](../deploy/student-anonymization-overview.md)
+for the capability overview.
