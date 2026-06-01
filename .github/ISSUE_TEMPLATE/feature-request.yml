@@ -1,0 +1,80 @@
+name: Nueva funcionalidad
+description: Propón una nueva capacidad para EthicApp. Requests in English are also welcome.
+title: "[Feature]: "
+labels:
+  - new-feature
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por proponer una nueva funcionalidad. Intenta describir el problema o necesidad antes de la solución.
+
+  - type: textarea
+    id: problema
+    attributes:
+      label: Problema o necesidad
+      description: ¿Qué necesidad de usuarios, docentes, estudiantes u operadores busca resolver?
+      placeholder: Como..., necesito..., para...
+    validations:
+      required: true
+
+  - type: textarea
+    id: propuesta
+    attributes:
+      label: Propuesta
+      description: Describe la funcionalidad esperada o una posible solución.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: usuarios
+    attributes:
+      label: Usuarios beneficiados
+      multiple: true
+      options:
+        - Estudiantes
+        - Docentes
+        - Administradores institucionales
+        - Superadministradores
+        - Operadores de despliegue
+        - Desarrolladores
+        - Otro / no estoy seguro/a
+    validations:
+      required: true
+
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Criterios de aceptación sugeridos
+      description: Lista condiciones observables para considerar terminada la funcionalidad.
+      placeholder: |
+        - Dado..., cuando..., entonces...
+        - El usuario puede...
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: Alternativas consideradas
+      description: ¿Hay soluciones manuales, flujos existentes o enfoques descartados?
+    validations:
+      required: false
+
+  - type: textarea
+    id: contexto
+    attributes:
+      label: Contexto adicional
+      description: Adjunta enlaces, capturas, referencias o restricciones relevantes.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: Revisé que no exista un issue abierto que cubra esta necesidad.
+          required: true
+        - label: Separé esta solicitud de bugs o tareas no relacionadas.
+          required: true
