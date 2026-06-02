@@ -66,6 +66,7 @@ function createImpersonationRouter(overrides = {}) {
       calls.password.push(payload);
       return true;
     },
+    listAdminPasskeysWithAuthBackendService: async () => ({ passkeys: [] }),
     impersonateProfessorInEthicappService: async (payload) => {
       calls.impersonation.push(payload);
       return {
@@ -100,6 +101,7 @@ describe('management-console user routes', () => {
         calls.password.push(payload);
         return true;
       },
+      listAdminPasskeysWithAuthBackendService: async () => ({ passkeys: [] }),
       updateUserByIdService: async (id, payload) => {
         calls.update.push({ id, payload });
         return {
@@ -159,6 +161,134 @@ describe('management-console user routes', () => {
     ]);
   });
 
+  it('updates account data after passkey confirmation without reCAPTCHA or password', async () => {
+    const calls = {
+      recaptcha: [],
+      password: [],
+      passkey: [],
+      update: []
+    };
+    const router = createUsersRouter({
+      verifyRecaptchaTokenService: async (payload) => {
+        calls.recaptcha.push(payload);
+        return true;
+      },
+      verifyAdminPasswordWithAuthBackendService: async (payload) => {
+        calls.password.push(payload);
+        return true;
+      },
+      verifyAdminPasskeyWithAuthBackendService: async (payload) => {
+        calls.passkey.push(payload);
+        return true;
+      },
+      listAdminPasskeysWithAuthBackendService: async () => ({ passkeys: [{ id: 4 }] }),
+      updateUserByIdService: async (id, payload) => {
+        calls.update.push({ id, payload });
+        return {
+          id: Number(id),
+          active: payload.active,
+          emailConfirmed: payload.active
+        };
+      }
+    });
+    const app = createTestApp(router);
+
+    await withServer(app, async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/mng/api/users/22`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: 'auth.sid=auth-session',
+          Origin: 'http://localhost',
+          'Accept-Language': 'en-US'
+        },
+        body: JSON.stringify({
+          firstname: 'Pat',
+          lastname: 'Teacher',
+          sex: 'O',
+          email: 'pat@example.com',
+          email_confirmation: 'pat@example.com',
+          role: 'P',
+          active: true,
+          passkey_assertion: { id: 'credential-123' }
+        })
+      });
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), {
+        id: 22,
+        active: true,
+        emailConfirmed: true
+      });
+    });
+
+    assert.equal(calls.recaptcha.length, 0);
+    assert.equal(calls.password.length, 0);
+    assert.deepEqual(calls.passkey, [
+      {
+        assertion: { id: 'credential-123' },
+        cookie: 'auth.sid=auth-session',
+        language: 'en-US',
+        origin: 'http://localhost'
+      }
+    ]);
+  });
+
+  it('rejects password fallback for user updates when the administrator has passkeys', async () => {
+    const calls = {
+      recaptcha: [],
+      password: [],
+      update: []
+    };
+    const router = createUsersRouter({
+      listAdminPasskeysWithAuthBackendService: async () => ({ passkeys: [{ id: 4 }] }),
+      verifyRecaptchaTokenService: async (payload) => {
+        calls.recaptcha.push(payload);
+        return true;
+      },
+      verifyAdminPasswordWithAuthBackendService: async (payload) => {
+        calls.password.push(payload);
+        return true;
+      },
+      updateUserByIdService: async (id, payload) => {
+        calls.update.push({ id, payload });
+        return {};
+      }
+    });
+    const app = createTestApp(router);
+
+    await withServer(app, async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/mng/api/users/22`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: 'auth.sid=auth-session',
+          'Accept-Language': 'en-US'
+        },
+        body: JSON.stringify({
+          firstname: 'Pat',
+          lastname: 'Teacher',
+          sex: 'O',
+          email: 'pat@example.com',
+          email_confirmation: 'pat@example.com',
+          role: 'P',
+          active: true,
+          admin_password: 'admin-secret',
+          recaptcha_token: 'test-recaptcha-token'
+        })
+      });
+
+      assert.equal(response.status, 401);
+      assert.deepEqual(await response.json(), {
+        error: 'PASSKEY_REQUIRED'
+      });
+    });
+
+    assert.equal(calls.recaptcha.length, 0);
+    assert.equal(calls.password.length, 0);
+    assert.equal(calls.update.length, 0);
+  });
+
   it('starts professor impersonation and forwards the EthicApp session cookie', async () => {
     const { calls, router } = createImpersonationRouter();
     const app = createTestApp(router);
@@ -212,6 +342,50 @@ describe('management-console user routes', () => {
         forwardedPort: '443'
       }
     ]);
+  });
+
+  it('starts professor impersonation after passkey confirmation without reCAPTCHA or password', async () => {
+    const { calls, router } = createImpersonationRouter({
+      verifyAdminPasskeyWithAuthBackendService: async (payload) => {
+        calls.passkey = calls.passkey || [];
+        calls.passkey.push(payload);
+        return true;
+      }
+    });
+    const app = createTestApp(router);
+
+    await withServer(app, async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/mng/api/users/22/impersonate-professor`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: 'auth.sid=auth-session; ethicapp.mng.sid=mng-session',
+          Origin: 'http://localhost',
+          'Accept-Language': 'es-CL'
+        },
+        body: JSON.stringify({
+          passkey_assertion: { id: 'credential-123' }
+        })
+      });
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), {
+        ok: true,
+        redirectTo: '/home'
+      });
+    });
+
+    assert.equal(calls.recaptcha.length, 0);
+    assert.equal(calls.password.length, 0);
+    assert.deepEqual(calls.passkey, [
+      {
+        assertion: { id: 'credential-123' },
+        cookie: 'auth.sid=auth-session; ethicapp.mng.sid=mng-session',
+        language: 'es-CL',
+        origin: 'http://localhost'
+      }
+    ]);
+    assert.equal(calls.impersonation.length, 1);
   });
 
   it('rejects professor impersonation when reCAPTCHA validation fails', async () => {

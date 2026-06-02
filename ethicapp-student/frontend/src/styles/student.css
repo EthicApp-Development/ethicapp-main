@@ -2,14 +2,34 @@
   --ea-font-sans: "Nunito", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --ea-primary: #2649ec;
   --ea-primary-hover: #071c78;
+  --ea-surface-gradient:
+    radial-gradient(900px 520px at 0% 0%, rgba(38, 73, 236, 0.08), transparent 62%),
+    radial-gradient(780px 460px at 100% -10%, rgba(38, 73, 236, 0.05), transparent 58%),
+    linear-gradient(180deg, #f8faff 0%, #f5f7ff 42%, #eef3ff 100%);
+  --student-topbar-height: 68px;
+  --student-link-color: #2649ec;
+  --student-link-hover-color: #071c78;
   --bs-font-sans-serif: var(--ea-font-sans);
   --bs-body-font-family: var(--ea-font-sans);
   --bs-primary: var(--ea-primary);
   --bs-primary-rgb: 38, 73, 236;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 body {
   font-family: var(--ea-font-sans);
+  background: var(--ea-surface-gradient);
+  background-attachment: fixed;
+}
+
+.student-app-shell {
+  background: var(--ea-surface-gradient);
+  background-attachment: fixed;
 }
 
 .btn-primary {
@@ -23,10 +43,115 @@ body {
   --bs-btn-disabled-border-color: #8f99bf;
 }
 
+.student-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  min-height: var(--student-topbar-height);
+  color: #071c78;
+  background: linear-gradient(90deg, #f7faff 0%, #eef4ff 42%, #dfe9ff 100%);
+  box-shadow: 0 4px 18px rgba(7, 28, 120, 0.08);
+}
+
+.student-topbar-inner {
+  min-height: var(--student-topbar-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.student-topbar-left,
+.student-topbar-actions {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.student-topbar-left {
+  gap: 18px;
+}
+
+.student-topbar-actions {
+  gap: 16px;
+}
+
+.ethicapp-logo-topbar {
+  display: inline-flex;
+  align-items: center;
+}
+
 .ethicapp-logo-topbar-img {
-  height: 48px;
-  max-width: 180px;
+  display: block;
+  width: 152px;
+  height: auto;
+  max-width: 42vw;
   object-fit: contain;
+}
+
+.student-profile-link {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--student-link-color);
+  text-decoration: none;
+}
+
+.student-profile-name {
+  display: inline-block;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.student-logout-link {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--student-link-color);
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.student-logout-link:hover,
+.student-logout-link:focus {
+  color: var(--student-link-hover-color);
+  background: rgba(38, 73, 236, 0.1);
+  outline: none;
+}
+
+.student-app-shell .nav-tabs {
+  border-bottom-color: rgba(38, 73, 236, 0.22);
+}
+
+.student-app-shell .nav-tabs .nav-link {
+  color: var(--student-link-color);
+  border-radius: 8px 8px 0 0;
+  border-color: transparent;
+}
+
+.student-app-shell .nav-tabs .nav-link:hover,
+.student-app-shell .nav-tabs .nav-link:focus {
+  color: var(--student-link-hover-color);
+  background: rgba(255, 255, 255, 0.48);
+  border-color: rgba(38, 73, 236, 0.16);
+}
+
+.student-app-shell .nav-tabs .nav-link.active {
+  color: var(--student-link-hover-color);
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(38, 73, 236, 0.28) rgba(38, 73, 236, 0.28) rgba(255, 255, 255, 0.92);
+  box-shadow: 0 -1px 0 rgba(38, 73, 236, 0.08);
 }
 
 .nested-card:hover {
@@ -219,6 +344,31 @@ body {
 }
 
 @media (max-width: 575.98px) {
+  :root {
+    --student-topbar-height: 62px;
+  }
+
+  .student-topbar-inner {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .student-topbar-left {
+    gap: 10px;
+  }
+
+  .student-topbar-actions {
+    gap: 8px;
+  }
+
+  .ethicapp-logo-topbar-img {
+    width: 126px;
+  }
+
+  .student-profile-name {
+    display: none;
+  }
+
   .activity-tabs-panel {
     margin-left: -0.5rem;
     margin-right: -0.5rem;

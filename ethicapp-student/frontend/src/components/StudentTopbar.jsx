@@ -6,9 +6,9 @@ export default function StudentTopbar({ loadingSession, userDisplayName, onLogou
   const { t } = useI18n();
 
   return (
-    <header className="navbar navbar-expand-lg bg-white border-bottom sticky-top shadow-sm">
-      <div className="container-fluid container-lg py-1">
-        <span className="navbar-brand mb-0">
+    <header className="student-topbar">
+      <div className="student-topbar-inner container-fluid container-lg">
+        <div className="student-topbar-left">
           <a href="https://www.ethicapp.info" target="_blank" className="ethicapp-logo-topbar" rel="noreferrer">
             <img
               src={ETHICAPP_LOGO_SRC}
@@ -16,16 +16,22 @@ export default function StudentTopbar({ loadingSession, userDisplayName, onLogou
               className="ethicapp-logo-topbar-img"
             />
           </a>
-        </span>
-        <div className="d-flex align-items-center gap-2 ms-auto">
-          <span className="small text-secondary text-truncate" style={{ maxWidth: '180px' }}>
-            {loadingSession ? t('common.loadingUser') : userDisplayName}
-          </span>
-          <button type="button" className="btn btn-outline-danger btn-sm" onClick={onLogout}>
-            <span className="d-inline-flex align-items-center gap-2">
-              <i className="fa-solid fa-right-from-bracket" aria-hidden="true" />
-              <span>{t('common.logout')}</span>
+        </div>
+        <div className="student-topbar-actions">
+          <span className="student-profile-link">
+            <i className="fa-solid fa-user" aria-hidden="true" />
+            <span className="student-profile-name">
+              {loadingSession ? t('common.loadingUser') : userDisplayName}
             </span>
+          </span>
+          <button
+            type="button"
+            className="student-logout-link"
+            onClick={onLogout}
+            title={t('common.logout')}
+            aria-label={t('common.logout')}
+          >
+            <i className="fa-solid fa-right-from-bracket" aria-hidden="true" />
           </button>
         </div>
       </div>

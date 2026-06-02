@@ -64,7 +64,7 @@ export default function StudentLayout() {
   };
 
   return (
-    <div className="d-flex flex-column min-vh-100 bg-body-tertiary">
+    <div className="student-app-shell d-flex flex-column min-vh-100">
       <StudentTopbar
         loadingSession={loadingSession || loadingUser}
         userDisplayName={userDisplayName}

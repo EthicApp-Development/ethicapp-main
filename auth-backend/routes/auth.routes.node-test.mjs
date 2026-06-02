@@ -11,10 +11,19 @@ const mailMock = {
   sendPasswordResetEmail: mock.fn(),
   sendAccountConfirmationEmail: mock.fn()
 };
+const simpleWebAuthnServerMock = {
+  generateAuthenticationOptions: mock.fn(),
+  generateRegistrationOptions: mock.fn(),
+  verifyAuthenticationResponse: mock.fn(),
+  verifyRegistrationResponse: mock.fn()
+};
 
 mock.module('../config/database.js', { defaultExport: dbMock });
 mock.module('../services/recaptcha.service.js', { defaultExport: recaptchaMock });
 mock.module('../services/mail.service.js', { defaultExport: mailMock });
+mock.module('@simplewebauthn/server', {
+  namedExports: simpleWebAuthnServerMock
+});
 
 const { default: authRoutes } = await import('./auth.routes.js');
 
@@ -22,7 +31,15 @@ const app = express();
 app.use(express.json());
 app.use((req, res, next) => {
   req.login = mock.fn((user, cb) => cb());
-  req.isAuthenticated = mock.fn(() => false);
+  req.session = {};
+  const testUserId = Number(req.get('X-Test-User-Id') || 0);
+  req.user = testUserId
+    ? {
+        id: testUserId,
+        role: req.get('X-Test-User-Role') || 'A'
+      }
+    : undefined;
+  req.isAuthenticated = mock.fn(() => Boolean(req.user));
   next();
 });
 app.use('/', authRoutes);
@@ -75,6 +92,14 @@ describe('Auth Routes', () => {
     mailMock.sendPasswordResetEmail.mock.restore();
     mailMock.sendAccountConfirmationEmail.mock.resetCalls();
     mailMock.sendAccountConfirmationEmail.mock.restore();
+    simpleWebAuthnServerMock.generateRegistrationOptions.mock.resetCalls();
+    simpleWebAuthnServerMock.generateRegistrationOptions.mock.restore();
+    simpleWebAuthnServerMock.generateAuthenticationOptions.mock.resetCalls();
+    simpleWebAuthnServerMock.generateAuthenticationOptions.mock.restore();
+    simpleWebAuthnServerMock.verifyRegistrationResponse.mock.resetCalls();
+    simpleWebAuthnServerMock.verifyRegistrationResponse.mock.restore();
+    simpleWebAuthnServerMock.verifyAuthenticationResponse.mock.resetCalls();
+    simpleWebAuthnServerMock.verifyAuthenticationResponse.mock.restore();
   });
 
   test('POST /login - missing credentials', async () => {
@@ -85,6 +110,41 @@ describe('Auth Routes', () => {
     assert.strictEqual(res.status, 400);
     assert.ok(res.body.error);
     assert.strictEqual(dbMock.query.mock.calls.length, 0);
+  });
+
+  test('GET /institution - returns the configured institution name', async () => {
+    dbMock.query.mock.mockImplementation((sql) => {
+      if (sql.includes('FROM institutional_contacts')) {
+        return Promise.resolve({
+          rowCount: 1,
+          rows: [{
+            firstname: 'Privacy',
+            lastname: 'Officer',
+            email: 'privacy@example.com'
+          }]
+        });
+      }
+
+      if (sql.includes('FROM institution')) {
+        return Promise.resolve({
+          rowCount: 1,
+          rows: [{ name: '  Universidad de Prueba  ' }]
+        });
+      }
+
+      return Promise.resolve({ rowCount: 0, rows: [] });
+    });
+
+    const res = await supertest(app)
+      .get('/institution');
+
+    assert.strictEqual(res.status, 200);
+    assert.deepStrictEqual(res.body, {
+      name: 'Universidad de Prueba',
+      privacyContact: 'Privacy Officer <privacy@example.com>'
+    });
+    assert.match(dbMock.query.mock.calls[0].arguments[0], /FROM institution/);
+    assert.match(dbMock.query.mock.calls[1].arguments[0], /FROM institutional_contacts/);
   });
 
   test('POST /login - invalid credentials when user is not found', async () => {
@@ -129,6 +189,11 @@ describe('Auth Routes', () => {
 
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.redirectTo, '/mng');
+    assert.strictEqual(dbMock.query.mock.calls.length, 2);
+
+    const updateCall = dbMock.query.mock.calls[1];
+    assert.match(updateCall.arguments[0], /UPDATE users\s+SET last_login_at = NOW\(\)\s+WHERE id = \$1/);
+    assert.deepStrictEqual(updateCall.arguments[1], [1]);
   });
 
   test('POST /register - missing fields are rejected before reCAPTCHA', async () => {
@@ -457,5 +522,188 @@ describe('Auth Routes', () => {
     assert.deepStrictEqual(deleteCall.arguments[1], ['person@example.com']);
     assert.match(updateCall.arguments[0], /active = CASE WHEN email_confirmed = false THEN true ELSE active END/);
     assert.match(updateCall.arguments[0], /email_confirmed = true/);
+    assert.match(updateCall.arguments[0], /session_version = session_version \+ 1/);
+  });
+
+  test('POST /admin/change-password - updates administrator password after current password verification', async () => {
+    const currentPasswordHash = await bcrypt.hash('CurrentPassword123!@', 1);
+    dbMock.query.mock.mockImplementation((queryStr) => {
+      if (queryStr.includes('SELECT id, mail, password_bcrypt')) {
+        return Promise.resolve({
+          rowCount: 1,
+          rows: [{
+            id: 7,
+            mail: 'admin@example.com',
+            password_bcrypt: currentPasswordHash,
+            firstname: 'Ada',
+            lastname: 'Admin'
+          }]
+        });
+      }
+
+      return Promise.resolve({ rowCount: 1, rows: [] });
+    });
+
+    const res = await supertest(app)
+      .post('/admin/change-password')
+      .set('X-Test-User-Id', '7')
+      .set('X-Test-User-Role', 'S')
+      .send({
+        current_password: 'CurrentPassword123!@',
+        new_password: 'FreshPassword123!@',
+        password_confirmation: 'FreshPassword123!@'
+      });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.message, 'Password updated successfully');
+
+    const updateCall = dbMock.query.mock.calls.find((call) => call.arguments[0].includes('UPDATE users'));
+    assert.ok(updateCall);
+    assert.strictEqual(await bcrypt.compare('FreshPassword123!@', updateCall.arguments[1][0]), true);
+    assert.strictEqual(updateCall.arguments[1][1], 7);
+    assert.match(updateCall.arguments[0], /session_version = session_version \+ 1/);
+  });
+
+  test('POST /admin/change-password - rejects weak new passwords before database access', async () => {
+    const res = await supertest(app)
+      .post('/admin/change-password')
+      .set('X-Test-User-Id', '7')
+      .set('X-Test-User-Role', 'S')
+      .send({
+        current_password: 'CurrentPassword123!@',
+        new_password: 'weak',
+        password_confirmation: 'weak'
+      });
+
+    assert.strictEqual(res.status, 400);
+    assert.strictEqual(res.body.error, 'Password must be at least 10 characters long and contain at least 2 symbols');
+    assert.strictEqual(dbMock.query.mock.calls.length, 0);
+  });
+
+  test('GET /admin/passkeys - lists passkeys for the authenticated administrator', async () => {
+    dbMock.query.mock.mockImplementationOnce(() => Promise.resolve({
+      rowCount: 1,
+      rows: [{
+        id: 4,
+        name: 'Touch ID',
+        credential_device_type: 'multiDevice',
+        credential_backed_up: true,
+        transports: ['internal'],
+        created_at: '2026-05-30T10:00:00.000Z',
+        last_used_at: null
+      }]
+    }));
+
+    const res = await supertest(app)
+      .get('/admin/passkeys')
+      .set('X-Test-User-Id', '7')
+      .set('X-Test-User-Role', 'S');
+
+    assert.strictEqual(res.status, 200);
+    assert.deepStrictEqual(res.body, {
+      passkeys: [{
+        id: 4,
+        name: 'Touch ID',
+        credential_device_type: 'multiDevice',
+        credential_backed_up: true,
+        transports: ['internal'],
+        created_at: '2026-05-30T10:00:00.000Z',
+        last_used_at: null
+      }]
+    });
+    assert.deepStrictEqual(dbMock.query.mock.calls[0].arguments[1], [7]);
+  });
+
+  test('POST /admin/passkeys/registration-options - verifies password and returns WebAuthn options', async () => {
+    const currentPasswordHash = await bcrypt.hash('CurrentPassword123!@', 1);
+    dbMock.query.mock.mockImplementation((queryStr) => {
+      if (queryStr.includes('SELECT id, mail, password_bcrypt')) {
+        return Promise.resolve({
+          rowCount: 1,
+          rows: [{
+            id: 7,
+            mail: 'admin@example.com',
+            password_bcrypt: currentPasswordHash,
+            firstname: 'Ada',
+            lastname: 'Admin'
+          }]
+        });
+      }
+
+      if (queryStr.includes('SELECT credential_id, transports')) {
+        return Promise.resolve({
+          rowCount: 1,
+          rows: [{
+            credential_id: 'existing-credential',
+            transports: ['usb']
+          }]
+        });
+      }
+
+      return Promise.resolve({ rowCount: 0, rows: [] });
+    });
+    simpleWebAuthnServerMock.generateRegistrationOptions.mock.mockImplementationOnce(() => Promise.resolve({
+      challenge: 'challenge-123',
+      rp: {
+        name: 'EthicApp',
+        id: '127.0.0.1'
+      }
+    }));
+
+    const res = await supertest(app)
+      .post('/admin/passkeys/registration-options')
+      .set('X-Test-User-Id', '7')
+      .set('X-Test-User-Role', 'S')
+      .set('Origin', 'http://127.0.0.1')
+      .send({
+        password: 'CurrentPassword123!@'
+      });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.challenge, 'challenge-123');
+    assert.strictEqual(simpleWebAuthnServerMock.generateRegistrationOptions.mock.calls.length, 1);
+
+    const options = simpleWebAuthnServerMock.generateRegistrationOptions.mock.calls[0].arguments[0];
+    assert.strictEqual(options.rpID, '127.0.0.1');
+    assert.strictEqual(options.userName, 'admin@example.com');
+    assert.strictEqual(options.userDisplayName, 'Ada Admin');
+    assert.deepStrictEqual(options.excludeCredentials, [{
+      id: 'existing-credential',
+      transports: ['usb']
+    }]);
+  });
+
+  test('POST /admin/passkeys/authentication-options - returns allowed passkeys', async () => {
+    dbMock.query.mock.mockImplementationOnce(() => Promise.resolve({
+      rowCount: 1,
+      rows: [{
+        credential_id: 'credential-123',
+        transports: ['internal']
+      }]
+    }));
+    simpleWebAuthnServerMock.generateAuthenticationOptions.mock.mockImplementationOnce(() => Promise.resolve({
+      challenge: 'auth-challenge-123',
+      allowCredentials: [{
+        id: 'credential-123',
+        transports: ['internal']
+      }]
+    }));
+
+    const res = await supertest(app)
+      .post('/admin/passkeys/authentication-options')
+      .set('X-Test-User-Id', '7')
+      .set('X-Test-User-Role', 'S')
+      .set('Origin', 'http://127.0.0.1')
+      .send({});
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.challenge, 'auth-challenge-123');
+
+    const options = simpleWebAuthnServerMock.generateAuthenticationOptions.mock.calls[0].arguments[0];
+    assert.strictEqual(options.rpID, '127.0.0.1');
+    assert.deepStrictEqual(options.allowCredentials, [{
+      id: 'credential-123',
+      transports: ['internal']
+    }]);
   });
 });

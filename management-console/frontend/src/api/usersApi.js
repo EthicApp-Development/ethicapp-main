@@ -1,3 +1,5 @@
+import { isLoginResponse, redirectToLogin } from './sessionRedirect.js';
+
 function toQueryString(params) {
   const searchParams = new URLSearchParams();
 
@@ -10,8 +12,16 @@ function toQueryString(params) {
   return searchParams.toString();
 }
 
-async function parseJson(response) {
-  const json = await response.json().catch(() => ({}));
+export async function parseJson(response) {
+  if (response.status === 401 || isLoginResponse(response)) {
+    redirectToLogin();
+    throw new Error('SESSION_EXPIRED');
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  const json = contentType.includes('application/json')
+    ? await response.json().catch(() => ({}))
+    : {};
 
   if (!response.ok) {
     throw new Error(json.error || 'Request failed');
@@ -42,7 +52,7 @@ async function getCsrfToken() {
   return csrfTokenPromise;
 }
 
-async function mutatingJsonHeaders() {
+export async function mutatingJsonHeaders() {
   return {
     'Content-Type': 'application/json',
     Accept: 'application/json',

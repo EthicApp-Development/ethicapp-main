@@ -29,7 +29,8 @@ const enUS = {
     notices: {
       accountConfirmed: 'Your account has been confirmed. You can now sign in.',
       confirmationInvalid: 'The confirmation link is invalid or has expired. Use password recovery to request a new link.',
-      confirmationError: 'We could not confirm your account. Use password recovery to request a new link.'
+      confirmationError: 'We could not confirm your account. Use password recovery to request a new link.',
+      passwordChanged: 'Your password was updated successfully. Please sign in again.'
     }
   },
   register: {
@@ -138,6 +139,10 @@ const enUS = {
   },
   legal: {
     back: 'Back',
+    fallbacks: {
+      institutionName: 'the institution operating this EthicApp installation',
+      privacyContact: 'the institution data privacy contact'
+    },
     privacy: {
       title: 'Privacy Policy',
       updatedAt: 'Last updated: April 15, 2026'

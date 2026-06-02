@@ -1,9 +1,10 @@
-export const ProfileController = function ($scope, $translate, toast, UserProfileService) {
+export const ProfileController = function ($scope, $translate, toast, UserProfileService, LanguageCatalogService) {
     const vm = this;
     const TOAST_INFO_TIMEOUT_MS = 4 * 1000;
     const TOAST_ERROR_TIMEOUT_MS = 6 * 1000;
 
     vm.genderOptions = [];
+    vm.languageOptions = [];
 
     vm.profile = {
         firstname: "",
@@ -12,6 +13,7 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
         email: "",
         role: "",
         name: "",
+        preferred_locale: "en_US",
         profile_image_path: null,
         profile_image_topbar_path: null
     };
@@ -38,6 +40,12 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
             { value: "M", label: vm.translate("male") },
             { value: "O", label: vm.translate("other") }
         ];
+    };
+    vm.refreshLanguageOptions = (languages = []) => {
+        vm.languageOptions = languages.map((language) => ({
+            value: language.code,
+            label: language.native_name || language.name || language.code
+        }));
     };
 
     vm.withCacheToken = (url) => {
@@ -150,8 +158,10 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
             vm.profile = {
                 ...vm.profile,
                 ...data,
-                sex: data.sex || "O"
+                sex: data.sex || "O",
+                preferred_locale: data.preferred_locale || vm.profile.preferred_locale
             };
+            await $translate.use(LanguageCatalogService.getUiLanguageCodeForLocale(vm.profile.preferred_locale));
             vm.avatarCacheToken = Date.now();
             vm.applyChanges();
         } catch (error) {
@@ -173,6 +183,7 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
                 firstname: vm.profile.firstname,
                 lastname: vm.profile.lastname,
                 sex: vm.profile.sex,
+                preferred_locale: vm.profile.preferred_locale,
                 avatar: vm.selectedAvatarFile,
                 g_recaptcha_response: recaptchaResponse
             });
@@ -184,6 +195,7 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
                 };
                 vm.avatarCacheToken = Date.now();
             }
+            await $translate.use(LanguageCatalogService.getUiLanguageCodeForLocale(vm.profile.preferred_locale));
 
             vm.clearSelectedAvatar();
 
@@ -195,6 +207,21 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
         } catch (error) {
             console.error("Could not update profile:", error);
             vm.showErrorToast(vm.getProfileSaveErrorMessage(error));
+            vm.applyChanges();
+        }
+    };
+
+    vm.loadLanguageOptions = async () => {
+        try {
+            const languages = await LanguageCatalogService.getLanguages();
+            vm.refreshLanguageOptions(languages);
+            if (!vm.languageOptions.some((option) => option.value === vm.profile.preferred_locale)) {
+                vm.profile.preferred_locale = LanguageCatalogService.getDefaultLanguageCode(languages, vm.profile.preferred_locale);
+            }
+            vm.applyChanges();
+        } catch (error) {
+            console.error("Could not load languages:", error);
+            vm.showErrorToast(vm.translate("profile_languages_load_error"));
             vm.applyChanges();
         }
     };
@@ -302,6 +329,7 @@ export const ProfileController = function ($scope, $translate, toast, UserProfil
     };
 
     vm.refreshGenderOptions();
+    vm.loadLanguageOptions();
     vm.loadProfile();
     setTimeout(vm.ensureProfileRecaptcha, 300);
     const languageChangeListener = $scope.$on("$translateChangeSuccess", () => {
