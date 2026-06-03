@@ -95,6 +95,7 @@ The repository can build and publish these project images:
 | Service | Context | Default image |
 | --- | --- | --- |
 | `ethicapp` | repository root (`ethicapp/Dockerfile`) | `ghcr.io/<owner>/ethicapp:<tag>` |
+| `external-mock-service` | `external-mock-service/` | `ghcr.io/<owner>/ethicapp-external-mock-service:<tag>` |
 | `auth-backend` | `auth-backend/` | `ghcr.io/<owner>/ethicapp-auth-backend:<tag>` |
 | `ethicapp-student` | `ethicapp-student/` | `ghcr.io/<owner>/ethicapp-student:<tag>` |
 | `management-console` | `management-console/` | `ghcr.io/<owner>/ethicapp-management-console:<tag>` |
@@ -119,6 +120,11 @@ on the production host. The image entrypoint derives `FLYWAY_URL`,
 `POSTGRES_USER`, and `POSTGRES_PASSWORD` when the migration job receives the
 database container env file. Explicit Flyway variables can still override that
 mapping.
+
+`external-mock-service` is the repository-provided PoC service used by mock
+external-service adapters. Publish it with the full image set so deployment
+manifests can pin it, but deploy it only when mock integrations are
+intentionally enabled.
 
 `postgres` and `redis` are not built by this repository. Use the official images
 and pin the desired versions in the deployment repository.
