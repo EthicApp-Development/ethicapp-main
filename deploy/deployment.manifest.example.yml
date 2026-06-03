@@ -22,6 +22,13 @@ images:
     source_ref: "v2026.05.12"
     source_revision: "77d69072a165afa1d335601ac307ea9c60ca2dd8"
 
+  external-mock-service:
+    image: "ghcr.io/example-org/ethicapp-external-mock-service"
+    tag: "v2026.05.12"
+    digest: ""
+    source_ref: "v2026.05.12"
+    source_revision: "77d69072a165afa1d335601ac307ea9c60ca2dd8"
+
   ethicapp-pdf-worker:
     image: "ghcr.io/example-org/ethicapp"
     tag: "v2026.05.12"
@@ -84,6 +91,7 @@ notes:
   - "Prefer digest pins in production once images are published."
   - "The env_contract source_ref/source_revision should match the contract used to render runtime .env files."
   - "For partial releases, only changed services need new image tags, but every deployed service should remain pinned here."
+  - "external-mock-service is the repository-provided PoC service for external-service adapters and should only be deployed when mock integrations are intentionally enabled."
   - "ethicapp-pdf-worker intentionally uses the ethicapp image and must mount the same protected uploads volume as ethicapp."
   - "PostgreSQL now uses the official postgres image directly; this repository no longer publishes an ethicapp-database image."
   - "db-migrations is a short-lived Flyway-based job image with database/migrations baked into the image. Run it before application services start."
