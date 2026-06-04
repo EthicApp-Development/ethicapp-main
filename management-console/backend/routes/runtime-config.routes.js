@@ -11,6 +11,7 @@ const runtimeConfigPath = path.join(__dirname, '../../frontend/dist/runtime-conf
 
 function buildRuntimeConfigScript() {
   const config = {
+    recaptchaProvider: process.env.RECAPTCHA_PROVIDER || '',
     recaptchaSiteKey: process.env.VITE_RECAPTCHA_SITE_KEY || ''
   };
 

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const config = {
+  recaptchaProvider: process.env.RECAPTCHA_PROVIDER || '',
   recaptchaSiteKey: process.env.VITE_RECAPTCHA_SITE_KEY || ''
 };
 

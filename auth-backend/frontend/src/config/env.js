@@ -23,4 +23,9 @@ const recaptchaSiteKey = (
   ''
 ).trim();
 
-export { authApiBaseUrl, recaptchaSiteKey };
+const recaptchaProvider = (
+  runtimeConfig.recaptchaProvider ||
+  'classic'
+).trim().toLowerCase();
+
+export { authApiBaseUrl, recaptchaProvider, recaptchaSiteKey };
