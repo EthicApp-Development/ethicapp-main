@@ -229,10 +229,12 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
         if (teamIds.length > 0) {
             for (const groupId of teamIds) {
                 const roomName = getRoomName(sessionId, phaseId, groupId);
+                registerRoomContext(roomName, sessionId, phaseId, groupId, questionId);
                 const created = await ensurePolyadicSession(roomName, prompt);
                 if (created) {
                     createdRooms.add(roomName);
-                    registerRoomContext(roomName, sessionId, phaseId, groupId, questionId);
+                } else {
+                    roomContext.delete(roomName);
                 }
             }
         } else {
@@ -284,11 +286,13 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
             const preguntaCentralDeferred = formatQuestionText(questionDeferred);
             prompt = composeTopic(prompt, preguntaCentralDeferred);
 
+            registerRoomContext(roomName, sessionId, phaseId, groupId, questionId);
             const created = await ensurePolyadicSession(
                 roomName,
                 prompt
             );
             if (!created) {
+                roomContext.delete(roomName);
                 console.warn(
                     `[polyadic-bridge] Skipping message forwarding: could not create polyadic session.`
                 );
@@ -309,7 +313,6 @@ export async function register({ service, subscribe, publishGroupChatMessage }) 
             if (phaseCreatedRooms) {
                 phaseCreatedRooms.add(roomName);
             }
-            registerRoomContext(roomName, sessionId, phaseId, groupId, questionId);
         }
 
         const messageContent = typeof content === "string" ? content.trim() : "";
