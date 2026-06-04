@@ -28,6 +28,37 @@ The contract distinguishes:
 
 All `VITE_*` variables are public frontend variables. They must never contain secrets.
 
+## reCAPTCHA Enterprise
+
+The recommended reCAPTCHA provider for `auth-backend` and `management-console`
+is Enterprise:
+
+```bash
+RECAPTCHA_ENABLED=true
+RECAPTCHA_PROVIDER=enterprise
+RECAPTCHA_ENTERPRISE_PROJECT_ID=your-google-cloud-project-id
+RECAPTCHA_ENTERPRISE_API_KEY=change-this-in-production
+VITE_RECAPTCHA_SITE_KEY=your-public-enterprise-site-key
+```
+
+`VITE_RECAPTCHA_SITE_KEY` is public runtime frontend configuration.
+`RECAPTCHA_ENTERPRISE_API_KEY` is a backend-only secret and should be restricted
+to the reCAPTCHA Enterprise API where possible.
+
+Without billing, reCAPTCHA Enterprise allows 10,000 assessments per calendar
+month per Google Cloud project. The `CreateAssessment` API fails closed with
+HTTP `429 Resource Exhausted` when quota is exhausted, so production operators
+should enable billing or quota monitoring if traffic might exceed the free
+quota.
+
+`RECAPTCHA_PROVIDER=classic` remains supported for transition or rollback only:
+
+```bash
+RECAPTCHA_PROVIDER=classic
+RECAPTCHA_SECRET_KEY=your-classic-secret
+RECAPTCHA_VERIFY_URL=https://www.google.com/recaptcha/api/siteverify
+```
+
 Use service-specific session secrets where the contract provides them. For
 example, `auth-backend` uses `AUTH_SESSION_SECRET` for `auth.sid`, while
 `management-console` uses `MNG_SESSION_SECRET` for `ethicapp.mng.sid`. These

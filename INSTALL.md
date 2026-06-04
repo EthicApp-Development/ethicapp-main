@@ -36,6 +36,40 @@ matches the environment files being rendered.
 
 Pay special attention to `VITE_*` variables. They are public frontend variables, not secrets. Production images keep frontend bundles environment-neutral; each container writes its frontend `runtime-config.js` from runtime environment variables when it starts.
 
+## reCAPTCHA Enterprise
+
+New deployments should use reCAPTCHA Enterprise for `auth-backend` and
+`management-console`:
+
+```bash
+RECAPTCHA_ENABLED=true
+RECAPTCHA_PROVIDER=enterprise
+RECAPTCHA_ENTERPRISE_PROJECT_ID=your-google-cloud-project-id
+RECAPTCHA_ENTERPRISE_API_KEY=change-this-in-production
+VITE_RECAPTCHA_SITE_KEY=your-public-enterprise-site-key
+```
+
+`VITE_RECAPTCHA_SITE_KEY` is public frontend configuration emitted into
+`runtime-config.js`; it is not a secret. `RECAPTCHA_ENTERPRISE_API_KEY` is
+backend-only secret configuration and should be restricted in Google Cloud to
+the reCAPTCHA Enterprise API when possible.
+
+Without billing, Google Cloud provides 10,000 reCAPTCHA Enterprise assessments
+per calendar month per Google Cloud project. The modern `CreateAssessment` API
+fails closed with HTTP `429 Resource Exhausted` when quota is exhausted, which
+can block registration, forgot-password, and management sensitive-action
+fallback flows. Production environments that may exceed that free quota should
+enable billing or monitor quota before rollout.
+
+`RECAPTCHA_PROVIDER=classic` remains available only as a transition or rollback
+path through the legacy `siteverify` endpoint:
+
+```bash
+RECAPTCHA_PROVIDER=classic
+RECAPTCHA_SECRET_KEY=your-classic-secret
+RECAPTCHA_VERIFY_URL=https://www.google.com/recaptcha/api/siteverify
+```
+
 ## Redis Topology
 
 Production deployments use two Redis instances:
