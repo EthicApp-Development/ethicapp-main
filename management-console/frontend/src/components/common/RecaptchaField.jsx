@@ -1,27 +1,30 @@
 import PropTypes from 'prop-types';
 import { useEffect, useRef } from 'react';
 
+const RECAPTCHA_ENTERPRISE_SCRIPT_URL =
+  'https://www.google.com/recaptcha/enterprise.js?render=explicit';
+
 let recaptchaLoader;
 
-function waitForRecaptchaApi(resolve, reject) {
+function waitForRecaptchaEnterpriseApi(resolve, reject) {
   const grecaptcha = window.grecaptcha;
 
   if (!grecaptcha) {
-    reject(new Error('reCAPTCHA API did not initialize'));
+    reject(new Error('reCAPTCHA Enterprise API did not initialize'));
     return;
   }
 
   const resolveWhenRenderable = () => {
-    if (typeof window.grecaptcha?.render === 'function') {
+    if (typeof window.grecaptcha?.enterprise?.render === 'function') {
       resolve(window.grecaptcha);
       return;
     }
 
-    reject(new Error('reCAPTCHA render API is not available'));
+    reject(new Error('reCAPTCHA Enterprise render API is not available'));
   };
 
-  if (typeof grecaptcha.ready === 'function') {
-    grecaptcha.ready(resolveWhenRenderable);
+  if (typeof grecaptcha.enterprise?.ready === 'function') {
+    grecaptcha.enterprise.ready(resolveWhenRenderable);
     return;
   }
 
@@ -29,53 +32,53 @@ function waitForRecaptchaApi(resolve, reject) {
 }
 
 function loadRecaptchaScript() {
-  if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
-    console.debug('[management-console] reCAPTCHA API already available');
+  if (typeof window.grecaptcha?.enterprise?.render === 'function') {
+    console.debug('[management-console] reCAPTCHA Enterprise API already available');
     return Promise.resolve(window.grecaptcha);
   }
 
   if (recaptchaLoader) {
-    console.debug('[management-console] reusing pending reCAPTCHA loader');
+    console.debug('[management-console] reusing pending reCAPTCHA Enterprise loader');
     return recaptchaLoader;
   }
 
   recaptchaLoader = new Promise((resolve, reject) => {
     const existingScript = document.querySelector(
-      'script[src="https://www.google.com/recaptcha/api.js?render=explicit"]'
+      `script[src="${RECAPTCHA_ENTERPRISE_SCRIPT_URL}"]`
     );
 
     if (existingScript) {
-      console.debug('[management-console] waiting for existing reCAPTCHA script');
+      console.debug('[management-console] waiting for existing reCAPTCHA Enterprise script');
       if (window.grecaptcha) {
-        waitForRecaptchaApi(resolve, reject);
+        waitForRecaptchaEnterpriseApi(resolve, reject);
         return;
       }
 
       existingScript.addEventListener('load', () => {
-        console.debug('[management-console] existing reCAPTCHA script loaded');
-        waitForRecaptchaApi(resolve, reject);
+        console.debug('[management-console] existing reCAPTCHA Enterprise script loaded');
+        waitForRecaptchaEnterpriseApi(resolve, reject);
       });
       existingScript.addEventListener('error', () => {
-        console.warn('[management-console] existing reCAPTCHA script failed to load');
-        reject(new Error('Unable to load reCAPTCHA'));
+        console.warn('[management-console] existing reCAPTCHA Enterprise script failed to load');
+        reject(new Error('Unable to load reCAPTCHA Enterprise'));
       });
       return;
     }
 
     const script = document.createElement('script');
-    script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
+    script.src = RECAPTCHA_ENTERPRISE_SCRIPT_URL;
     script.async = true;
     script.defer = true;
     script.onload = () => {
-      console.debug('[management-console] reCAPTCHA script loaded');
-      waitForRecaptchaApi(resolve, reject);
+      console.debug('[management-console] reCAPTCHA Enterprise script loaded');
+      waitForRecaptchaEnterpriseApi(resolve, reject);
     };
     script.onerror = () => {
-      console.warn('[management-console] reCAPTCHA script failed to load');
-      reject(new Error('Unable to load reCAPTCHA'));
+      console.warn('[management-console] reCAPTCHA Enterprise script failed to load');
+      reject(new Error('Unable to load reCAPTCHA Enterprise'));
     };
 
-    console.debug('[management-console] loading reCAPTCHA script');
+    console.debug('[management-console] loading reCAPTCHA Enterprise script');
     document.head.appendChild(script);
   });
 
@@ -114,7 +117,7 @@ function RecaptchaField({ siteKey, onChange, resetCounter = 0 }) {
 
       if (widgetIdRef.current === null) {
         console.debug('[management-console] rendering reCAPTCHA widget');
-        widgetIdRef.current = grecaptcha.render(containerRef.current, {
+        widgetIdRef.current = grecaptcha.enterprise.render(containerRef.current, {
           sitekey: siteKey,
           callback: (token) => onChange(token),
           'expired-callback': () => onChange(''),
@@ -137,11 +140,11 @@ function RecaptchaField({ siteKey, onChange, resetCounter = 0 }) {
   }, [onChange, siteKey]);
 
   useEffect(() => {
-    if (widgetIdRef.current === null || !window.grecaptcha) {
+    if (widgetIdRef.current === null || !window.grecaptcha?.enterprise) {
       return;
     }
 
-    window.grecaptcha.reset(widgetIdRef.current);
+    window.grecaptcha.enterprise.reset(widgetIdRef.current);
   }, [resetCounter]);
 
   if (!siteKey) {

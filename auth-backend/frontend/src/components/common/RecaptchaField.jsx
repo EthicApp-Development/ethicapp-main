@@ -1,9 +1,37 @@
 import { useEffect, useRef } from 'react';
 
+const RECAPTCHA_ENTERPRISE_SCRIPT_URL =
+  'https://www.google.com/recaptcha/enterprise.js?render=explicit';
+
 let recaptchaLoader;
 
+function waitForRecaptchaEnterpriseApi(resolve, reject) {
+  const grecaptcha = window.grecaptcha;
+
+  if (!grecaptcha) {
+    reject(new Error('reCAPTCHA Enterprise API did not initialize'));
+    return;
+  }
+
+  const resolveWhenRenderable = () => {
+    if (typeof window.grecaptcha?.enterprise?.render === 'function') {
+      resolve(window.grecaptcha);
+      return;
+    }
+
+    reject(new Error('reCAPTCHA Enterprise render API is not available'));
+  };
+
+  if (typeof grecaptcha.enterprise?.ready === 'function') {
+    grecaptcha.enterprise.ready(resolveWhenRenderable);
+    return;
+  }
+
+  resolveWhenRenderable();
+}
+
 function loadRecaptchaScript() {
-  if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+  if (typeof window.grecaptcha?.enterprise?.render === 'function') {
     return Promise.resolve(window.grecaptcha);
   }
 
@@ -13,21 +41,30 @@ function loadRecaptchaScript() {
 
   recaptchaLoader = new Promise((resolve, reject) => {
     const existingScript = document.querySelector(
-      'script[src="https://www.google.com/recaptcha/api.js?render=explicit"]'
+      `script[src="${RECAPTCHA_ENTERPRISE_SCRIPT_URL}"]`
     );
 
     if (existingScript) {
-      existingScript.addEventListener('load', () => resolve(window.grecaptcha));
-      existingScript.addEventListener('error', () => reject(new Error('No se pudo cargar reCAPTCHA')));
+      if (window.grecaptcha) {
+        waitForRecaptchaEnterpriseApi(resolve, reject);
+        return;
+      }
+
+      existingScript.addEventListener('load', () => {
+        waitForRecaptchaEnterpriseApi(resolve, reject);
+      });
+      existingScript.addEventListener('error', () => {
+        reject(new Error('No se pudo cargar reCAPTCHA Enterprise'));
+      });
       return;
     }
 
     const script = document.createElement('script');
-    script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
+    script.src = RECAPTCHA_ENTERPRISE_SCRIPT_URL;
     script.async = true;
     script.defer = true;
-    script.onload = () => resolve(window.grecaptcha);
-    script.onerror = () => reject(new Error('No se pudo cargar reCAPTCHA'));
+    script.onload = () => waitForRecaptchaEnterpriseApi(resolve, reject);
+    script.onerror = () => reject(new Error('No se pudo cargar reCAPTCHA Enterprise'));
 
     document.head.appendChild(script);
   });
@@ -53,7 +90,7 @@ function RecaptchaField({ siteKey, onChange, resetCounter = 0, error = '' }) {
       }
 
       if (widgetIdRef.current === null) {
-        widgetIdRef.current = grecaptcha.render(containerRef.current, {
+        widgetIdRef.current = grecaptcha.enterprise.render(containerRef.current, {
           sitekey: siteKey,
           callback: (token) => onChange(token),
           'expired-callback': () => onChange(''),
@@ -72,11 +109,11 @@ function RecaptchaField({ siteKey, onChange, resetCounter = 0, error = '' }) {
   }, [onChange, siteKey]);
 
   useEffect(() => {
-    if (widgetIdRef.current === null || !window.grecaptcha) {
+    if (widgetIdRef.current === null || !window.grecaptcha?.enterprise) {
       return;
     }
 
-    window.grecaptcha.reset(widgetIdRef.current);
+    window.grecaptcha.enterprise.reset(widgetIdRef.current);
   }, [resetCounter]);
 
   if (!siteKey) {
