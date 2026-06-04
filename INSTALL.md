@@ -49,10 +49,10 @@ RECAPTCHA_ENTERPRISE_API_KEY=change-this-in-production
 VITE_RECAPTCHA_SITE_KEY=your-public-enterprise-site-key
 ```
 
-`VITE_RECAPTCHA_SITE_KEY` is public frontend configuration emitted into
-`runtime-config.js`; it is not a secret. `RECAPTCHA_ENTERPRISE_API_KEY` is
-backend-only secret configuration and should be restricted in Google Cloud to
-the reCAPTCHA Enterprise API when possible.
+`RECAPTCHA_PROVIDER` and `VITE_RECAPTCHA_SITE_KEY` are public frontend
+configuration emitted into `runtime-config.js`; they are not secrets.
+`RECAPTCHA_ENTERPRISE_API_KEY` is backend-only secret configuration and should
+be restricted in Google Cloud to the reCAPTCHA Enterprise API when possible.
 
 Without billing, Google Cloud provides 10,000 reCAPTCHA Enterprise assessments
 per calendar month per Google Cloud project. The modern `CreateAssessment` API

@@ -5,7 +5,7 @@ import TextField from '../common/TextField';
 import SelectField from '../common/SelectField';
 import { register } from '../../api/authApi';
 import RecaptchaField from '../common/RecaptchaField';
-import { recaptchaSiteKey } from '../../config/env';
+import { recaptchaProvider, recaptchaSiteKey } from '../../config/env';
 import { useI18n } from '../../app/i18n-context';
 import { useRegisterDraft } from '../../app/register-draft-context';
 
@@ -313,6 +313,7 @@ function RegisterForm() {
       />
 
       <RecaptchaField
+        provider={recaptchaProvider}
         siteKey={recaptchaSiteKey}
         onChange={(token) => {
           setRecaptchaToken(token);

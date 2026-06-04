@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import TextField from '../common/TextField';
 import { forgotPassword } from '../../api/authApi';
 import RecaptchaField from '../common/RecaptchaField';
-import { recaptchaSiteKey } from '../../config/env';
+import { recaptchaProvider, recaptchaSiteKey } from '../../config/env';
 import { useI18n } from '../../app/i18n-context';
 
 function ForgotPasswordForm() {
@@ -120,6 +120,7 @@ function ForgotPasswordForm() {
       <div className="auth-form-text">{t('forgotPassword.instructions')}</div>
 
       <RecaptchaField
+        provider={recaptchaProvider}
         siteKey={recaptchaSiteKey}
         onChange={(token) => {
           setFormData((current) => ({

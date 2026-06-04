@@ -4,6 +4,7 @@ import path from 'node:path';
 const config = {
   authPublicUrl: process.env.VITE_AUTH_PUBLIC_URL || '',
   authApiBaseUrl: process.env.VITE_AUTH_API_BASE_URL || '',
+  recaptchaProvider: process.env.RECAPTCHA_PROVIDER || '',
   recaptchaSiteKey: process.env.VITE_RECAPTCHA_SITE_KEY || ''
 };
 

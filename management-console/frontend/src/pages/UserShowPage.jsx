@@ -12,7 +12,7 @@ import {
   updateUser
 } from '../api/usersApi.js';
 import RecaptchaField from '../components/common/RecaptchaField.jsx';
-import { recaptchaSiteKey } from '../config/env.js';
+import { recaptchaProvider, recaptchaSiteKey } from '../config/env.js';
 
 function UserShowPage() {
   const { id } = useParams();
@@ -325,6 +325,7 @@ function UserShowPage() {
 
                 <Col md={12} className="d-flex justify-content-center">
                   <RecaptchaField
+                    provider={recaptchaProvider}
                     siteKey={recaptchaSiteKey}
                     resetCounter={recaptchaResetCounter}
                     onChange={setRecaptchaToken}
