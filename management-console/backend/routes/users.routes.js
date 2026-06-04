@@ -59,7 +59,8 @@ export function createUsersRouter({
 
     const isHuman = await verifyRecaptchaTokenService({
       token: recaptchaToken,
-      remoteIp: req.ip
+      remoteIp: req.ip,
+      userAgent: req.get('user-agent') || ''
     });
 
     if (!isHuman) {
