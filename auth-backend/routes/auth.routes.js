@@ -881,7 +881,8 @@ router.post('/register', async (req, res) => {
 
     const isHuman = await recaptchaService.verifyRecaptchaToken({
       token: recaptchaToken,
-      remoteIp: req.ip
+      remoteIp: req.ip,
+      userAgent: req.get('user-agent') || ''
     });
 
     if (!isHuman) {
@@ -1293,7 +1294,8 @@ router.post('/forgot', async (req, res) => {
 
     const isHuman = await recaptchaService.verifyRecaptchaToken({
       token: recaptchaToken,
-      remoteIp: req.ip
+      remoteIp: req.ip,
+      userAgent: req.get('user-agent') || ''
     });
 
     if (!isHuman) {

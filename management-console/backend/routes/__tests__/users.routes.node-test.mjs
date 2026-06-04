@@ -302,7 +302,8 @@ describe('management-console user routes', () => {
           'X-Forwarded-Proto': 'https',
           'X-Forwarded-Host': 'platform.ethicapp.info',
           'X-Forwarded-Port': '443',
-          'Accept-Language': 'es-CL'
+          'Accept-Language': 'es-CL',
+          'User-Agent': 'management-console-test'
         },
         body: JSON.stringify({
           admin_password: 'admin-secret',
@@ -321,7 +322,8 @@ describe('management-console user routes', () => {
     assert.deepEqual(calls.recaptcha, [
       {
         token: 'test-recaptcha-token',
-        remoteIp: '127.0.0.1'
+        remoteIp: '127.0.0.1',
+        userAgent: 'management-console-test'
       }
     ]);
     assert.deepEqual(calls.password, [
